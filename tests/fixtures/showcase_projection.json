@@ -4123,7 +4123,7 @@
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "agent:langchain-service",
-        "label": "LangChain Service Agent",
+        "label": "LangChain Service",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -8231,7 +8231,7 @@
       },
       {
         "attributes": {
-          "agent_id": "LangChain Service Agent",
+          "agent_id": "LangChain Service",
           "allowed_tools": [],
           "expires_at": "2027-01-17T12:00:00+00:00",
           "identity_id": "demo-nhi-langchain-service",
@@ -8266,7 +8266,7 @@
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-langchain-service",
-        "label": "LangChain Service Agent",
+        "label": "LangChain Service",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -12875,7 +12875,7 @@
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "agent:langchain-service",
-        "label": "LangChain Service Agent",
+        "label": "LangChain Service",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -17052,7 +17052,7 @@
       },
       {
         "attributes": {
-          "agent_id": "LangChain Service Agent",
+          "agent_id": "LangChain Service",
           "allowed_tools": [],
           "expires_at": "2027-01-17T12:00:00+00:00",
           "identity_id": "demo-nhi-langchain-service",
@@ -17087,7 +17087,7 @@
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-langchain-service",
-        "label": "LangChain Service Agent",
+        "label": "LangChain Service",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,

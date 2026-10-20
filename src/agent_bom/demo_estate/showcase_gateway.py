@@ -84,7 +84,7 @@ _FEED_EVENTS: tuple[tuple[int, str, str, str, str, str, str, str], ...] = (
     (1, "Cursor IDE Agent", "filesystem-server.read_file", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
     (3, "Claude Desktop Agent", "github-server.create_issue", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
     (5, "Support Copilot", "helpdesk-server.create_ticket", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
-    (7, "LangChain Service Agent", "vector-db-server.query_vectors", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
+    (7, "LangChain Service", "vector-db-server.query_vectors", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
     (9, "Data Pipeline Agent", "warehouse-server.run_query", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
     (12, "Claude Desktop Agent", "team-chat-server.send_message", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
     (15, "Support Copilot", "email-server.list_inbox", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
@@ -119,7 +119,7 @@ _FEED_EVENTS: tuple[tuple[int, str, str, str, str, str, str, str], ...] = (
         "critical",
     ),  # noqa: E501
     # ── rate-limit / replay protection blocks ──
-    (17, "LangChain Service Agent", "llm-orchestrator-server.http_get", _BLOCKED, "rate_limit", "deny", "rate_limited", "medium"),
+    (17, "LangChain Service", "llm-orchestrator-server.http_get", _BLOCKED, "rate_limit", "deny", "rate_limited", "medium"),
     (20, "shadow-agent (unregistered)", "github-server.push_files", _BLOCKED, "replay", "deny", "replay_blocked", "high"),
 )
 
@@ -129,7 +129,7 @@ _FEED_EVENTS: tuple[tuple[int, str, str, str, str, str, str, str], ...] = (
 # AgentFirewallPolicy rule payload shape (source/target/decision/description).
 _FIREWALL_DECISIONS: tuple[tuple[int, str, str, str, dict[str, Any] | None], ...] = (
     (2, "Cursor IDE Agent", "github-server", "allow", None),
-    (5, "LangChain Service Agent", "vector-db-server", "allow", None),
+    (5, "LangChain Service", "vector-db-server", "allow", None),
     (9, "Claude Desktop Agent", "team-chat-server", "allow", None),
     (
         13,

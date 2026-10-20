@@ -64,7 +64,7 @@ SHOWCASE_ORG_ID = "org:corp"
 # the graph while the corresponding finding reports unknown reachability.
 SHOWCASE_AGENTS: dict[str, str] = {
     "cursor": "Cursor IDE Agent",
-    "langchain-service": "LangChain Service Agent",
+    "langchain-service": "LangChain Service",
     "support-copilot": "Support Copilot",
     "data-pipeline": "Data Pipeline Agent",
     "claude-desktop": "Claude Desktop Agent",

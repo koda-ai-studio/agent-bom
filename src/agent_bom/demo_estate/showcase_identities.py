@@ -51,7 +51,7 @@ _DEMO_IDENTITIES: tuple[dict[str, Any], ...] = (
     },
     {
         "slug": "langchain-service",
-        "agent_label": "LangChain Service Agent",
+        "agent_label": "LangChain Service",
         "role": "service",
         "owner": "ml-platform@corp",
         "owner_type": "team",

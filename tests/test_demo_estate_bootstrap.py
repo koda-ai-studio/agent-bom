@@ -318,7 +318,7 @@ def test_demo_estate_graph_is_a_rich_multi_agent_estate(demo_estate_client: Test
 
     labels = {n.get("label") for n in nodes}
     # Realistic, distinct agents render.
-    assert {"Cursor IDE Agent", "LangChain Service Agent", "Support Copilot", "Data Pipeline Agent"} <= labels
+    assert {"Cursor IDE Agent", "LangChain Service", "Support Copilot", "Data Pipeline Agent"} <= labels
 
     # Configuration errors must not masquerade as CVEs or invented packages.
     assert "CVE-2024-S3ACL" not in labels
