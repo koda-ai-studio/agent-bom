@@ -10,7 +10,7 @@ describe("DemoEstateLabel", () => {
     render(<DemoEstateLabel scanSources={["demo"]} />);
     const badge = screen.getByRole("link", { name: "Open the synthetic enterprise demo story" });
     expect(badge).toHaveTextContent("Demo data — sample environment");
-    expect(badge).toHaveClass("block");
+    expect(badge).toHaveClass("flex");
     expect(badge.className).not.toMatch(/(?:^|\s)(?:sm:)?(?:fixed|absolute)(?:\s|$)/);
   });
 });

@@ -103,7 +103,7 @@ export function GraphPresetControls({
       data-testid="graph-preset-controls"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-tertiary)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--text-tertiary)]">
           Saved presets
         </p>
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-[color:var(--text-tertiary)]" /> : null}
@@ -153,13 +153,13 @@ export function GraphPresetControls({
         </ul>
       ) : (
         !loading && (
-          <p className="text-[11px] text-[color:var(--text-tertiary)]">
+          <p className="text-xs text-[color:var(--text-tertiary)]">
             No saved presets yet. Save the current severity / layer / evidence / environment chips.
           </p>
         )
       )}
 
-      {error ? <p className="text-[11px] text-red-400">{error}</p> : null}
+      {error ? <p className="text-xs text-red-400">{error}</p> : null}
     </div>
   );
 }

@@ -11,7 +11,6 @@ export interface RankedPathRow {
   title: string;
   cve: string | null;
   riskScore: number;
-  scoreLabel?: "Evidence priority" | "Queue score";
   nodeCount: number;
   agents: number;
   /** Compact correlated layer sequence, for example agent → server → finding. */
@@ -80,7 +79,7 @@ export function RankedPathList({
           >
             <span className="flex flex-wrap items-center justify-between gap-2">
               <span
-                className={`mb-1 inline-flex rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                className={`mb-1 inline-flex rounded-md px-2 py-1 text-xs font-semibold uppercase tracking-[0.14em] ${
                   row.rank === 1
                     ? "bg-orange-500/15 text-orange-700 dark:text-orange-300"
                     : "bg-surface text-ink-tertiary"
@@ -89,8 +88,8 @@ export function RankedPathList({
                 {row.rank === 1 ? "#1 fix first" : `#${row.rank}`}
               </span>
             <span className="flex items-baseline gap-1.5 text-ink-secondary">
-              <span className="text-[10px]">
-                {row.scoreLabel ?? "Path priority"}
+              <span className="text-xs">
+                Path priority
               </span>
               <span className="font-mono text-xs font-semibold text-foreground">
                 {row.riskScore.toFixed(1)}
@@ -101,7 +100,7 @@ export function RankedPathList({
               {advisory ? (
                 <span
                   data-testid="ranked-path-advisory"
-                  className="mb-0.5 block font-mono text-[11px] font-semibold text-red-700 dark:text-red-200"
+                  className="mb-0.5 block font-mono text-xs font-semibold text-red-700 dark:text-red-200"
                 >
                   {advisory}
                 </span>
@@ -112,12 +111,12 @@ export function RankedPathList({
               >
                 {displayTitle}
               </span>
-              <span className="mt-0.5 block text-[11px] text-ink-tertiary">
+              <span className="mt-0.5 block text-xs text-ink-tertiary">
                 {pathSpanLabel(row.nodeCount)} · {row.agents} agent{row.agents === 1 ? "" : "s"}
               </span>
               {row.roleChain ? (
                 <span
-                  className="mt-0.5 block truncate font-mono text-[10px] text-ink-secondary"
+                  className="mt-0.5 block truncate font-mono text-xs text-ink-secondary"
                   title={row.roleChain}
                 >
                   {row.roleChain}
@@ -128,7 +127,7 @@ export function RankedPathList({
                   {(row.environmentTags ?? []).slice(0, 2).map((tag) => (
                     <span
                       key={`env-${tag}`}
-                      className="rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-sky-800 dark:text-sky-200"
+                      className="rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-xs font-medium uppercase tracking-[0.12em] text-sky-800 dark:text-sky-200"
                     >
                       {tag}
                     </span>
@@ -136,7 +135,7 @@ export function RankedPathList({
                   {(row.capabilityTags ?? []).slice(0, 4).map((tag) => (
                     <span
                       key={`cap-${tag}`}
-                      className="rounded border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-violet-800 dark:text-violet-200"
+                      className="rounded border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-xs font-medium uppercase tracking-[0.12em] text-violet-800 dark:text-violet-200"
                     >
                       {tag === "execute" ? "exec" : tag === "network" ? "net" : tag}
                     </span>

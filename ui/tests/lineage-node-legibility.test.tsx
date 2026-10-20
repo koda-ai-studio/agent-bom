@@ -99,7 +99,7 @@ describe("lineage node labels", () => {
     const Renderer = lineageNodeTypes.containerNode;
     const { container } = render(<ReactFlowProvider><Renderer data={{ label: "image@sha256:abcdef", nodeType: "container" }} /></ReactFlowProvider>);
     expect(container.querySelector('[data-graph-entity="true"] > p')).toHaveClass("w-full", "min-w-0", "break-words", "line-clamp-3");
-    expect(source).toContain("line-clamp-2 text-[11px]");
+    expect(source).toContain("line-clamp-2 text-xs");
   });
 });
 

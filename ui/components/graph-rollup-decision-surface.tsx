@@ -10,7 +10,7 @@ import type {
   GraphRollupEdgeCountMetadata,
 } from "@/lib/api-types";
 import { ScopeProviderSuffix } from "@/components/graph-scope-breadcrumb";
-import { scopeIssueLine } from "@/lib/graph-issue-labels";
+import { scopeContextLine, scopeIssueLine, scopeIssueShare } from "@/lib/graph-issue-labels";
 import { groupRollupByImage, IMAGE_GROUP_PREFIX, priorityScopes, rankScopesByRisk, scopeRiskScore, SCOPE_RISK_WEIGHTS } from "@/lib/graph-rollup-risk";
 
 export const ROLLUP_DECISION_THRESHOLD = 24;
@@ -252,9 +252,9 @@ export function GraphRollupDecisionSurface({
                   <p data-testid="graph-scope-eyebrow" className="flex items-center gap-1 text-xs text-ink-secondary">
                     {item.entity_type.replaceAll("_", " ")}<ScopeProviderSuffix item={item} size="h-4 w-4" />
                   </p>
-                  {item.context && Object.keys(item.context).length > 0 && (
+                  {scopeContextLine(item) && (
                     <p className="mt-1 break-words text-xs text-ink-secondary [overflow-wrap:anywhere]">
-                      {Object.entries(item.context).map(([kind, value]) => `${kind}: ${value}`).join(" · ")}
+                      {scopeContextLine(item)}
                     </p>
                   )}
                 </div>
@@ -270,7 +270,7 @@ export function GraphRollupDecisionSurface({
                 {item.has_children && <div>
                   <p className="text-ink-secondary">Contained critical / high <span className="font-semibold tabular-nums text-foreground">{critical.toLocaleString()} / {high.toLocaleString()}</span></p>
                 </div>}
-                {item.has_children && scopeIssueLine(item, estateIssueCount) && <p className="tabular-nums text-ink-secondary" data-testid="graph-scope-issues">{scopeIssueLine(item, estateIssueCount)}</p>}
+                {item.has_children && scopeIssueLine(item) && <p className="tabular-nums text-ink-secondary" data-testid="graph-scope-issues" title={scopeIssueShare(item, estateIssueCount)}>{scopeIssueLine(item)}</p>}
                 <p className="tabular-nums text-ink-secondary" title={PRIORITY_RULE} data-testid="graph-scope-priority-score">
                   {item.aggregate.exposed_count > 0 && <>{item.aggregate.exposed_count} exposed · </>}Priority score <span className="font-semibold text-foreground">{scopeRiskScore(item).toLocaleString()}</span>
                 </p>
@@ -340,10 +340,10 @@ export function GraphRollupDecisionSurface({
           Showing {visible.length} of {filtered.length} matching nodes and scopes
         </p>
         <div className="flex gap-2">
-          <button type="button" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))} className="graph-page-action disabled:cursor-not-allowed disabled:opacity-40" aria-label="Previous scope page">
+          <button type="button" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))} className="graph-page-action inline-flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Previous scope page">
             <ChevronLeft className="h-3.5 w-3.5" /> Previous
           </button>
-          <button type="button" disabled={page + 1 >= pages} onClick={() => setPage((current) => Math.min(pages - 1, current + 1))} className="graph-page-action disabled:cursor-not-allowed disabled:opacity-40" aria-label="Next scope page">
+          <button type="button" disabled={page + 1 >= pages} onClick={() => setPage((current) => Math.min(pages - 1, current + 1))} className="graph-page-action inline-flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Next scope page">
             Next <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>

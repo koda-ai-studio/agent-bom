@@ -55,12 +55,12 @@ export function GraphCampaignPanel({
                   <span className="text-sm font-medium text-foreground">
                     {campaign.crown_jewel_label || campaign.crown_jewel}
                   </span>
-                  <span className="font-mono text-[11px] text-ink-tertiary">
+                  <span className="font-mono text-xs text-ink-tertiary">
                     {campaign.path_count} path{campaign.path_count === 1 ? "" : "s"}
                   </span>
                 </div>
                 {campaign.top_path_summary ? (
-                  <p className="mt-1 line-clamp-2 text-[11px] text-ink-secondary">
+                  <p className="mt-1 line-clamp-2 text-xs text-ink-secondary">
                     {campaign.top_path_summary}
                   </p>
                 ) : null}

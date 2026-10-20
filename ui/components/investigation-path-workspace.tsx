@@ -15,10 +15,10 @@ export function InvestigationFilterDrawer({ children }: { children: React.ReactN
           <SlidersHorizontal className="h-3.5 w-3.5 text-ink-tertiary" aria-hidden="true" />
           Filters &amp; presets
         </span>
-        <span className="text-[10px] uppercase tracking-[0.14em] text-ink-tertiary group-open:hidden">
+        <span className="text-xs uppercase tracking-[0.14em] text-ink-tertiary group-open:hidden">
           Show
         </span>
-        <span className="hidden text-[10px] uppercase tracking-[0.14em] text-ink-tertiary group-open:inline">
+        <span className="hidden text-xs uppercase tracking-[0.14em] text-ink-tertiary group-open:inline">
           Hide
         </span>
       </summary>

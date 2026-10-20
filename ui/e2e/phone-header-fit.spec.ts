@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 const labels = [
-  ["demo", "/?capture=1", /^Demo data/],
-  ["reference lab", "/?capture=1&scan=reference-evidence-correlation-v1", /^Reference lab/],
+  ["demo", "/?capture=1", /^Demo/],
+  ["reference lab", "/?capture=1&scan=reference-evidence-correlation-v1", /^(Reference )?lab/i],
 ] as const;
 
 for (const [name, url, text] of labels) {
@@ -14,6 +14,8 @@ for (const [name, url, text] of labels) {
     const label = page.locator("#demo-estate-watermark");
     await expect(label).toBeVisible();
     await expect(label.locator("span:visible")).toHaveText(text);
+    // A label that does not fit swaps to a shorter one; it never clips mid-word.
+    expect(await label.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
     const controls = [
       page.getByRole("link", { name: "agent-bom", exact: true }),
       label,

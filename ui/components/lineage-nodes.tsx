@@ -149,7 +149,7 @@ function RuntimeEvidenceChip({ tier }: { tier: RuntimeEvidenceTier }) {
   const chip = RUNTIME_EVIDENCE_CHIP[tier];
   return (
     <span
-      className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${chip.className}`}
+      className={`rounded border px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${chip.className}`}
     >
       {chip.label}
     </span>
@@ -227,7 +227,7 @@ function NodeCard({
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
           {repository ? "Repository" : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider })}
         </span>
-        {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 10px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-[10px] font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
+        {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
       {repository && !repository.source && <span className="text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{repository.host}</span>}
       {data.identityContext && <p data-testid="graph-identity-context" className="mt-1 max-w-full break-words text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{data.identityContext}</p>}
@@ -272,7 +272,7 @@ function AgentNode({ data }: { data: LineageNodeData }) {
       target={false}
       subtitle={entitySource(data)?.label ?? data.agentType}
       footer={
-        <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[10px] text-ink-secondary">
+        <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-xs text-ink-secondary">
           {data.serverCount !== undefined && (
             <span>{linkedCount(data.serverCount, "server")}</span>
           )}
@@ -299,7 +299,7 @@ function ProviderNode({ data }: { data: LineageNodeData }) {
       target={false}
       footer={
         data.agentCount !== undefined ? (
-          <div className="mt-1 text-[10px] text-ink-tertiary">
+          <div className="mt-1 text-xs text-ink-tertiary">
             {linkedCount(data.agentCount, "agent")}
           </div>
         ) : undefined
@@ -396,7 +396,7 @@ function StructureNode({
       iconClass={iconClass}
       subtitle={data.description}
       footer={
-        <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[10px] text-ink-secondary">
+        <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-xs text-ink-secondary">
           {data.agentCount !== undefined && (
             <span>{linkedCount(data.agentCount, "agent")}</span>
           )}
@@ -457,17 +457,17 @@ function ServerNode({ data }: { data: LineageNodeData }) {
       footer={(data.toolCount ?? 0) + (data.credentialCount ?? 0) + (data.packageCount ?? 0) > 0 ? (
         <div className="mt-1 flex flex-wrap justify-center gap-2">
           {data.toolCount !== undefined && data.toolCount > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] text-purple-700 dark:text-purple-300">
+            <span className="flex items-center gap-0.5 text-xs text-purple-700 dark:text-purple-300">
               <Wrench className="w-2.5 h-2.5" /> {data.toolCount}
             </span>
           )}
           {data.credentialCount !== undefined && data.credentialCount > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] text-amber-800 dark:text-amber-300">
+            <span className="flex items-center gap-0.5 text-xs text-amber-800 dark:text-amber-300">
               <KeyRound className="w-2.5 h-2.5" /> {data.credentialCount}
             </span>
           )}
           {data.packageCount !== undefined && data.packageCount > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] text-ink-secondary">
+            <span className="flex items-center gap-0.5 text-xs text-ink-secondary">
               <Package className="w-2.5 h-2.5" /> {data.packageCount}
             </span>
           )}
@@ -498,7 +498,7 @@ function PackageNode({ data }: { data: LineageNodeData }) {
       }
       footer={
         hasVulns ? (
-          <div className="mt-1 text-[10px] text-red-700 dark:text-red-300">
+          <div className="mt-1 text-xs text-red-700 dark:text-red-300">
             <Bug className="w-2.5 h-2.5 inline mr-0.5" />
             {data.vulnCount}
           </div>
@@ -678,12 +678,12 @@ function SharedServerNode({ data }: { data: LineageNodeData }) {
       footer={
         <div className="flex gap-2 mt-1">
           {data.sharedBy && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700 border border-cyan-300 font-mono dark:bg-cyan-900/60 dark:text-cyan-300 dark:border-cyan-700">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-100 text-cyan-700 border border-cyan-300 font-mono dark:bg-cyan-900/60 dark:text-cyan-300 dark:border-cyan-700">
               Shared by {data.sharedBy}
             </span>
           )}
           {data.packageCount !== undefined && data.packageCount > 0 && (
-            <span className="flex items-center gap-0.5 text-[10px] text-ink-secondary">
+            <span className="flex items-center gap-0.5 text-xs text-ink-secondary">
               <Package className="w-2.5 h-2.5" /> {data.packageCount}
             </span>
           )}
@@ -730,11 +730,11 @@ function SummaryNode({ data }: { data: LineageNodeData }) {
       />
       <ContextHandles />
       <div className="flex items-center gap-1">
-        <span className="min-w-0 flex-1 break-words line-clamp-2 text-[11px] font-semibold leading-tight">
+        <span className="min-w-0 flex-1 break-words line-clamp-2 text-xs font-semibold leading-tight">
           {data.label}
         </span>
         {vulnCount > 0 && (
-          <span className="ml-auto rounded bg-white/70 px-1 text-[9px] font-mono dark:bg-black/40">
+          <span className="ml-auto rounded bg-white/70 px-1 text-xs font-mono dark:bg-black/40">
             {vulnCount}
           </span>
         )}

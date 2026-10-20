@@ -563,7 +563,6 @@ function AttackPathInvestigationContent() {
           title: descriptiveAttackPathTitle(pathNodes),
           cve: path.vuln_ids[0] ?? null,
           riskScore: path.composite_risk,
-          scoreLabel: card ? "Evidence priority" : "Queue score",
           nodeCount: path.hops.length,
           agents: labelsForAttackPathType(path, graphNodeById, "agent").length,
           roleChain: attackPathRoleChain(path, graphNodeById),

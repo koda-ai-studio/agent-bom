@@ -31,7 +31,7 @@ function Chip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition ${
+      className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
         active
           ? "border-sky-600/50 bg-sky-500/10 text-sky-800 dark:text-sky-200"
           : "border-[color:var(--border-subtle)] bg-[color:var(--surface)] text-[color:var(--text-tertiary)] hover:border-[color:var(--border-strong)] hover:text-[color:var(--foreground)]"
@@ -59,7 +59,7 @@ export function InvestigationFilterChips({
   return (
     <div className="space-y-2" data-testid="investigation-filter-chips">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+        <span className="mr-1 text-xs uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
           Severity
         </span>
         {SEVERITIES.map((severity) => (
@@ -77,7 +77,7 @@ export function InvestigationFilterChips({
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+        <span className="mr-1 text-xs uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
           Layer
         </span>
         {LAYERS.map((layer) => (
@@ -95,7 +95,7 @@ export function InvestigationFilterChips({
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="mr-1 text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+        <span className="mr-1 text-xs uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
           Evidence
         </span>
         {EVIDENCE_TIERS.map((tier) => (
@@ -114,7 +114,7 @@ export function InvestigationFilterChips({
       </div>
       {environments.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+          <span className="mr-1 text-xs uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
             Environment
           </span>
           {environments.map((environment) => (

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { estateIssueLine, scopeIssueLine } from "@/lib/graph-issue-labels";
+import { estateIssueLine, scopeContextLine, scopeIssueLine, scopeIssueShare } from "@/lib/graph-issue-labels";
 
 describe("estateIssueLine", () => {
   it("names issues and occurrences together so neither reads as the other", () => {
@@ -15,13 +15,23 @@ describe("estateIssueLine", () => {
 });
 
 describe("scopeIssueLine", () => {
-  it("states a scope's share of the estate's issues instead of an unlabelled smaller total", () => {
-    expect(scopeIssueLine({ entity_type: "org", aggregate: { issue_count: 1933, finding_occurrence_count: 2700 } }, 1957)).toBe("1,933 of 1,957 issues in this org");
+  it("reads the same whether or not the estate total has loaded", () => {
+    const item = { entity_type: "account", aggregate: { issue_count: 372, finding_occurrence_count: 372 } };
+    expect(scopeIssueLine(item)).toBe("372 issues · 372 occurrences");
+    expect(scopeIssueLine({ entity_type: "org", aggregate: {} })).toBeNull();
   });
 
-  it("drops the share when the scope holds every issue or the estate total is unknown", () => {
-    expect(scopeIssueLine({ entity_type: "account", aggregate: { issue_count: 88, finding_occurrence_count: 121 } }, undefined)).toBe("88 issues · 121 occurrences");
-    expect(scopeIssueLine({ entity_type: "org", aggregate: { issue_count: 10, finding_occurrence_count: 10 } }, 10)).toBe("10 issues · 10 occurrences");
-    expect(scopeIssueLine({ entity_type: "org", aggregate: {} }, 10)).toBeNull();
+  it("states the estate share separately, for a tooltip", () => {
+    expect(scopeIssueShare({ entity_type: "account", aggregate: { issue_count: 372 } }, 1969)).toBe("372 of 1,969 estate issues are in this account");
+    expect(scopeIssueShare({ entity_type: "org", aggregate: { issue_count: 10 } }, 10)).toBeUndefined();
+    expect(scopeIssueShare({ entity_type: "org", aggregate: { issue_count: 10 } }, undefined)).toBeUndefined();
+  });
+});
+
+describe("scopeContextLine", () => {
+  it("drops context that only repeats the scope's own name", () => {
+    expect(scopeContextLine({ label: "NORTHSTAR_02", context: { account: "NORTHSTAR_02" } })).toBeNull();
+    expect(scopeContextLine({ label: "prod", context: { account: "PROD", region: "us-east-1" } })).toBe("region: us-east-1");
+    expect(scopeContextLine({ label: "x", context: undefined })).toBeNull();
   });
 });

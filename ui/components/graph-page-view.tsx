@@ -229,7 +229,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
         aria-label="Graph snapshot"
         value={selectedScanId}
         onChange={(event) => setSelectedScanId(event.target.value)}
-        className="graph-page-select max-w-full sm:max-w-72"
+        className="graph-page-select max-w-full sm:max-w-56"
       >
         {selectedScanId && selectedScanId !== currentEstateId && !snapshots.some(item => item.scan_id === selectedScanId) && <option value={selectedScanId}>{selectedScanId}</option>}
         {currentEstateId && !snapshots.some(item => item.scan_id === currentEstateId) && <option value={currentEstateId}>Current tenant estate</option>}
@@ -268,7 +268,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
         event.preventDefault();
         void runSearch();
       }}
-      className="flex min-w-[min(100%,22rem)] flex-1 items-center gap-2"
+      className="flex min-w-[min(100%,16rem)] flex-1 items-center gap-2"
     >
       <input
         aria-label="Search nodes, tags, severities, or attributes"
@@ -302,8 +302,8 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
 
       <div className="graph-page-header">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+            <div className="shrink-0">
               <h1 className="text-lg font-semibold text-foreground sm:mt-1">
                 Investigation
               </h1>
