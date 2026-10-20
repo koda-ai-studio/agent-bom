@@ -297,11 +297,11 @@ def test_should_i_deploy_finds_a_candidate_ranked_beyond_the_first_page(showcase
     from agent_bom.mcp_tools.graph import deploy_decision_impl
 
     generation = _rest_queue(showcase, limit=1)["snapshot_generation"]
-    queue = _rest_queue(showcase, offset=600, limit=1, snapshot_generation=generation)
-    deep = queue["attack_paths"][0]
-    first_page_targets = {row["target"] for row in _rest_queue(showcase, limit=100)["attack_paths"]}
-    candidate = deep["target"]
-    assert candidate not in first_page_targets
+    first_page_targets = {row["target"] for row in _rest_queue(showcase, limit=100, snapshot_generation=generation)["attack_paths"]}
+    # The first target the real ranking places only beyond the first page.
+    queue = _rest_queue(showcase, offset=100, limit=1000, snapshot_generation=generation)
+    candidate = next((row["target"] for row in queue["attack_paths"] if row["target"] not in first_page_targets), None)
+    assert candidate is not None, "the showcase queue must rank some target only beyond its first page"
     payload = showcase.mcp(deploy_decision_impl, candidate=candidate)
     assert payload["matchedPathCount"] >= 1
     assert payload["searchedPaths"] == payload["total"] == queue["pagination"]["total"]
@@ -541,7 +541,9 @@ def test_finding_detail_joins_graph_paths(demo: _Estate) -> None:
 
 # ── graph_diff: bounded snapshot diff for agents and the dashboard ──────────
 
-_LEGACY_DIFF_BYTES_FLOOR = 5_000_000
+# The full view is capped at FULL_BYTE_CAP plus envelope slack; the test only proves bounding
+# when the unbounded diff it replaces is larger than every bounded view, so the full view must truncate.
+_FULL_VIEW_SLACK = 50_000
 
 
 def test_showcase_graph_diff_payloads_are_bounded(showcase: _Estate) -> None:
@@ -550,7 +552,7 @@ def test_showcase_graph_diff_payloads_are_bounded(showcase: _Estate) -> None:
 
     legacy = showcase.store.diff_snapshots("showcase-baseline", "showcase", tenant_id="default")
     legacy_bytes = len(json.dumps(legacy, separators=(",", ":"), default=str))
-    assert legacy_bytes >= _LEGACY_DIFF_BYTES_FLOOR, "the unbounded diff this view replaces"
+    assert legacy_bytes > FULL_BYTE_CAP + _FULL_VIEW_SLACK, "the unbounded diff must exceed the largest bounded view"
 
     summary_response = showcase.client.get("/v1/graph/diff")
     assert summary_response.status_code == 200
@@ -567,10 +569,12 @@ def test_showcase_graph_diff_payloads_are_bounded(showcase: _Estate) -> None:
 
     detail = showcase.client.get("/v1/graph/diff", params={"view": "detail", "limit": 200})
     assert len(detail.content) <= 80_000 and len(detail.json()["items"]) == 200
+    # Much smaller than what they replace: the summary and a detail page are a few percent of it.
+    assert len(summary_response.content) * 100 <= legacy_bytes and len(detail.content) * 20 <= legacy_bytes
 
     full = showcase.client.get("/v1/graph/diff", params={"view": "full"})
     body = full.json()
-    assert len(full.content) <= FULL_BYTE_CAP + 50_000
+    assert len(full.content) <= FULL_BYTE_CAP + _FULL_VIEW_SLACK
     assert body["truncated"] is True and body["complete"] is False
     assert body["total_changes"] == summary["summary"]["total_changes"] > body["returned_changes"]
     assert len(body["change_kind_index"]["nodes"]) == len(body["nodes_added"]) + len(body["nodes_removed"]) + len(body["nodes_changed"])
@@ -586,7 +590,11 @@ def test_graph_diff_mcp_matches_rest(showcase: _Estate) -> None:
     mcp = showcase.mcp(graph_diff_impl)
     assert mcp["summary"] == rest["summary"] and (mcp["old"], mcp["new"]) == (rest["old"], rest["new"])
 
-    filters = {"change": "added", "entity_type": "vulnerability"}
+    # Page the entity type with the most added nodes, so parity is checked across several cursors.
+    added = {kind: counts["added"] for kind, counts in rest["summary"]["nodes_by_entity_type"].items() if counts.get("added")}
+    entity_type = max(sorted(added), key=lambda kind: added[kind])
+    assert added[entity_type] > 150, added
+    filters = {"change": "added", "entity_type": entity_type}
     seen_mcp: list[str] = []
     seen_rest: list[str] = []
     mcp_cursor = rest_cursor = None
@@ -596,17 +604,24 @@ def test_graph_diff_mcp_matches_rest(showcase: _Estate) -> None:
         if rest_cursor:
             rest_params["cursor"] = rest_cursor
         rest_page = showcase.rest("/v1/graph/diff", **rest_params)
-        assert page["total"] == rest_page["total"] == rest["summary"]["nodes_by_entity_type"]["vulnerability"]["added"]
+        assert page["total"] == rest_page["total"] == added[entity_type]
         assert page["items"] == rest_page["items"]
         seen_mcp.extend(row["id"] for row in page["items"])
         seen_rest.extend(row["id"] for row in rest_page["items"])
         mcp_cursor, rest_cursor = page["pagination"]["next_cursor"], rest_page["pagination"]["next_cursor"]
         assert mcp_cursor == rest_cursor
-    assert seen_mcp == seen_rest and len(seen_mcp) == len(set(seen_mcp)) == 200
+        if not mcp_cursor:
+            break
+    assert seen_mcp == seen_rest and len(seen_mcp) == len(set(seen_mcp)) == min(added[entity_type], 200)
     assert all(
-        row["change"] == "added" and row["entity_type"] == "vulnerability"
+        row["change"] == "added" and row["entity_type"] == entity_type
         for row in showcase.mcp(graph_diff_impl, view="detail", limit=200, **filters)["items"]
     )
+    # One node per advisory: the vulnerability diff lists each advisory once, in both surfaces.
+    vulns = showcase.rest("/v1/graph/diff", view="detail", limit=200, change="added", entity_type="vulnerability")["items"]
+    mcp_vulns = showcase.mcp(graph_diff_impl, view="detail", limit=200, change="added", entity_type="vulnerability")["items"]
+    assert [row["id"] for row in vulns] == [row["id"] for row in mcp_vulns]
+    assert len(vulns) == len({row["id"] for row in vulns})
 
 
 def test_graph_diff_tool_errors_match_rest(demo: _Estate) -> None:
