@@ -333,8 +333,10 @@ def _row_evidence(row: dict[str, Any], path_index: _PathIndex) -> _ReachabilityE
     for vulnerability_id in _row_vulnerability_ids(row):
         candidates.update((id(path), path) for path in path_index.by_vulnerability.get(vulnerability_id, ()))
     evidence: _ReachabilityEvidence | None = None
+    holders = _row_node_ids(row)
     for path in candidates.values():
-        if not _path_matches_row(path, row):
+        # A path that starts at the finding's own holder is the occurrence, not inbound reach.
+        if path.source in holders or not _path_matches_row(path, row):
             continue
         distance = _path_hop_distance(path, row)
         if evidence is None:

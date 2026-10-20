@@ -462,6 +462,12 @@ These gaps are tracked as roadmap work. None of them block the guarantees in §2
 - **Package CVEs.** A package's CVE is `vulnerable_to` (package -> advisory)
   plus `affects` (advisory -> package); the roll-up parents the advisory under
   the package through `vulnerable_to`, not a separate `contains` copy.
+- **VM CVEs.** A CVE found on a VM is `vulnerable_to` (cloud resource ->
+  advisory); the roll-up parents it under that instance. Its node carries the
+  occurrence's `reachability` / `reachability_basis` and, when the finding has
+  one, `effective_reach_score` / `effective_reach_band`. A path that starts at
+  the finding's own holder is the occurrence itself, so it never makes the
+  finding `graph_reachable` and the holder is never listed as a reach source.
 
 ## Correlated runtime identity and path proof
 

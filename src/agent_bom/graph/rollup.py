@@ -59,10 +59,8 @@ _ACCOUNT_RESOURCE_CONTAINMENT_RELS: frozenset[str] = frozenset({RelationshipType
 _ACCOUNT_RESOURCE_CONTAINMENT_SOURCES: frozenset[str] = frozenset({EntityType.ACCOUNT.value})
 _ACCOUNT_RESOURCE_CONTAINMENT_TARGETS: frozenset[str] = frozenset({EntityType.CLOUD_RESOURCE.value})
 
-# The agent stack is the containment of a local/AI estate that has no cloud
-# tree: an agent owns the MCP servers it uses, a server owns its packages, tools
-# and credentials, and a package owns its vulnerabilities. Typed by endpoint so
-# an unrelated USES / DEPENDS_ON edge never becomes a parent link.
+# Agent-stack containment (no cloud tree): agent -> servers -> packages, tools, credentials; a package or
+# VM instance owns its vulnerabilities. Typed by endpoint so an unrelated USES / DEPENDS_ON edge never parents.
 _AGENT_STACK_CONTAINMENT: frozenset[tuple[str, str, str]] = frozenset(
     {
         (RelationshipType.USES.value, EntityType.AGENT.value, EntityType.SERVER.value),
@@ -74,6 +72,7 @@ _AGENT_STACK_CONTAINMENT: frozenset[tuple[str, str, str]] = frozenset(
         (RelationshipType.EXPOSES_CRED.value, EntityType.SERVER.value, EntityType.CREDENTIAL.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.PACKAGE.value, EntityType.VULNERABILITY.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.SERVER.value, EntityType.VULNERABILITY.value),
+        (RelationshipType.VULNERABLE_TO.value, EntityType.CLOUD_RESOURCE.value, EntityType.VULNERABILITY.value),
     }
 )
 _AGENT_STACK_RELS: frozenset[str] = frozenset(rel for rel, _source, _target in _AGENT_STACK_CONTAINMENT)
