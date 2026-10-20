@@ -136,6 +136,7 @@ def _glob(pattern: str) -> list[str]:
 
 _DSPM_STORE_PROVIDER = {"s3": "aws", "gcs": "gcp", "azure_blob": "azure", "db": "database"}
 
+_P_PLATFORM_CLI = f"{PKG}/cli/_cloud_group.py"
 _P_ENTRY = f"{PKG}/cli/_connect_sources.py"
 _P_CONN = f"{PKG}/api/connection_store.py"
 _P_SCHED = f"{PKG}/api/connection_scheduler.py"
@@ -189,6 +190,53 @@ def _membership_lane(lane_id: str, title: str, members: list[str], source: Sourc
     return {"id": lane_id, "title": title, "members": members, "source": source}
 
 
+def _platform_inventory_commands() -> dict[str, Source]:
+    """Read registered standalone inventory commands, not inferred API parity."""
+    tree = _module(_P_PLATFORM_CLI)
+    imports = {
+        alias.asname or alias.name: (node.module.replace(".", "/") + ".py", alias.name)
+        for node in tree.body
+        if isinstance(node, ast.ImportFrom)
+        and node.module
+        and node.module.startswith("agent_bom.cli._")
+        and node.module.endswith("_inventory")
+        for alias in node.names
+    }
+    commands: dict[str, Source] = {}
+    for node in tree.body:
+        call = node.value if isinstance(node, ast.Expr) else None
+        if not (
+            isinstance(call, ast.Call)
+            and isinstance(call.func, ast.Attribute)
+            and isinstance(call.func.value, ast.Name)
+            and call.func.value.id == "cloud_group"
+            and call.func.attr == "add_command"
+            and len(call.args) == 2
+            and isinstance(call.args[0], ast.Name)
+            and call.args[0].id in imports
+            and isinstance(call.args[1], ast.Constant)
+            and isinstance(call.args[1].value, str)
+        ):
+            continue
+        provider = call.args[1].value
+        module, symbol = imports[call.args[0].id]
+        path = "src/" + module
+        function = _function(path, symbol)
+        for decorator in function.decorator_list:
+            if (
+                isinstance(decorator, ast.Call)
+                and isinstance(decorator.func, ast.Attribute)
+                and isinstance(decorator.func.value, ast.Name)
+                and decorator.func.value.id == "click"
+                and decorator.func.attr == "command"
+                and decorator.args
+                and isinstance(decorator.args[0], ast.Constant)
+                and decorator.args[0].value == provider
+            ):
+                commands[provider] = _src(f"{_P_PLATFORM_CLI}; {path}", f"cloud_group.add_command; {symbol}")
+    return commands
+
+
 def build_cloud_matrix() -> dict[str, Any]:
     connect_src = _src(_P_ENTRY, "_CONNECT_SOURCES")
     api_src = _src(_P_CONN, "SUPPORTED_PROVIDERS")
@@ -232,7 +280,8 @@ def build_cloud_matrix() -> dict[str, Any]:
 
     runtime = _strings(_P_RUNTIME, "_VALID_PROVIDERS")
 
-    providers: set[str] = set()
+    platform_commands = _platform_inventory_commands()
+    providers: set[str] = set(platform_commands)
     for lane in membership:
         providers.update(lane["members"])
     providers.update(inventory)
@@ -253,6 +302,7 @@ def build_cloud_matrix() -> dict[str, Any]:
         {"id": "side_scan", "title": "Side-scan", "source": _src(_P_SIDESCAN, "side_scan_provider_capabilities")},
         {"id": "change_events", "title": "Change-event ingest", "source": _src(f"{PKG}/cloud/*event_ingest.py", "module files", "glob")},
         {"id": "runtime_workload", "title": "Runtime workload evidence", "source": runtime_src},
+        {"id": "platform_inventory_cli", "title": "Platform inventory (CLI)", "source": _src(_P_PLATFORM_CLI, "cloud_group.add_command")},
     ]
 
     rows: list[dict[str, Any]] = []
@@ -327,6 +377,12 @@ def build_cloud_matrix() -> dict[str, Any]:
 
         present = provider in runtime
         cells["runtime_workload"] = _cell(present, YES if present else GAP, runtime_src)
+
+        cells["platform_inventory_cli"] = _cell(
+            provider in platform_commands,
+            YES if provider in platform_commands else GAP,
+            platform_commands.get(provider, _src(_P_PLATFORM_CLI, "cloud_group.add_command")),
+        )
 
         gap_count += sum(1 for c in cells.values() if c["display"] == GAP)
         rows.append({"cells": cells, "provider": provider})
@@ -611,7 +667,22 @@ def render_markdown(data: dict[str, Any]) -> str:
     for row in matrix["rows"]:
         lines.append(f"| {row['provider']} | " + " | ".join(row["cells"][lane["id"]]["display"] for lane in lanes) + " |")
 
-    lines += ["", "Benchmarks:", ""]
+    lines += [
+        "",
+        "Platform inventory (CLI) lists standalone `agent-bom cloud <provider>` commands.",
+        "It does not imply `connect`, hosted connection onboarding, scheduled scans,",
+        "or deep-inventory API support; those columns retain their own source declarations.",
+        "",
+        "- Supabase: `agent-bom cloud supabase --project-ref <ref> --token-file <private.json> "
+        "--output supabase.json` → scoped project metadata and native advisor report → inspect "
+        "coverage before importing or persisting; empty advisors do not establish clean posture.",
+        "- Vercel: `agent-bom cloud vercel --team-id <team> --token-file <private.json> "
+        "--output vercel.json` → team project metadata and a bounded deployment report → inspect "
+        "coverage and the recorded deployment window before importing or persisting.",
+        "",
+        "Benchmarks:",
+        "",
+    ]
     for row in matrix["rows"]:
         value = row["cells"]["cis_posture"]["value"]
         if value:

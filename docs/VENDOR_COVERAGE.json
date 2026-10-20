@@ -1,6 +1,6 @@
 {
   "cloud_matrix": {
-    "gap_count": 140,
+    "gap_count": 180,
     "lanes": [
       {
         "id": "connect",
@@ -100,6 +100,15 @@
           "symbol": "_VALID_PROVIDERS"
         },
         "title": "Runtime workload evidence"
+      },
+      {
+        "id": "platform_inventory_cli",
+        "source": {
+          "method": "ast",
+          "path": "src/agent_bom/cli/_cloud_group.py",
+          "symbol": "cloud_group.add_command"
+        },
+        "title": "Platform inventory (CLI)"
       }
     ],
     "rows": [
@@ -183,6 +192,15 @@
               "symbol": "module file"
             },
             "value": "module"
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "✓",
@@ -298,6 +316,15 @@
             },
             "value": "authorization_evidence"
           },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
+          },
           "runtime_workload": {
             "display": "✓",
             "source": {
@@ -405,6 +432,15 @@
             },
             "value": null
           },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
+          },
           "runtime_workload": {
             "display": "—",
             "source": {
@@ -508,6 +544,15 @@
               "symbol": "AuthorizationProvider"
             },
             "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "—",
@@ -614,6 +659,15 @@
               "symbol": "AuthorizationProvider"
             },
             "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "—",
@@ -723,6 +777,15 @@
               "symbol": "AuthorizationProvider"
             },
             "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "—",
@@ -835,6 +898,15 @@
             },
             "value": "authorization_evidence"
           },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
+          },
           "runtime_workload": {
             "display": "✓",
             "source": {
@@ -941,6 +1013,15 @@
               "symbol": "AuthorizationProvider"
             },
             "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "—",
@@ -1051,6 +1132,15 @@
             },
             "value": null
           },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
+          },
           "runtime_workload": {
             "display": "—",
             "source": {
@@ -1154,6 +1244,15 @@
               "symbol": "AuthorizationProvider"
             },
             "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "—",
@@ -1259,6 +1358,15 @@
             },
             "value": null
           },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
+          },
           "runtime_workload": {
             "display": "—",
             "source": {
@@ -1362,6 +1470,15 @@
               "symbol": "AuthorizationProvider"
             },
             "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "—",
@@ -1467,6 +1584,15 @@
             },
             "value": null
           },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
+          },
           "runtime_workload": {
             "display": "—",
             "source": {
@@ -1571,6 +1697,15 @@
             },
             "value": null
           },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
+          },
           "runtime_workload": {
             "display": "—",
             "source": {
@@ -1674,6 +1809,15 @@
               "symbol": "AuthorizationProvider"
             },
             "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "—",
@@ -1784,6 +1928,15 @@
             },
             "value": null
           },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
+          },
           "runtime_workload": {
             "display": "—",
             "source": {
@@ -1813,6 +1966,119 @@
           }
         },
         "provider": "snowflake"
+      },
+      {
+        "cells": {
+          "ai_discovery": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/__init__.py",
+              "symbol": "_PROVIDERS"
+            },
+            "value": false
+          },
+          "api_connection": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/api/connection_store.py",
+              "symbol": "SUPPORTED_PROVIDERS"
+            },
+            "value": false
+          },
+          "change_events": {
+            "display": "—",
+            "source": {
+              "method": "glob",
+              "path": "src/agent_bom/cloud/*event_ingest.py",
+              "symbol": "module files"
+            },
+            "value": false
+          },
+          "cis_posture": {
+            "display": "—",
+            "source": {
+              "method": "json",
+              "path": "src/agent_bom/cloud/benchmark_inventory.json",
+              "symbol": "providers"
+            },
+            "value": null
+          },
+          "connect": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_connect_sources.py",
+              "symbol": "_CONNECT_SOURCES"
+            },
+            "value": false
+          },
+          "data_dspm": {
+            "display": "—",
+            "source": {
+              "method": "glob",
+              "path": "src/agent_bom/cloud/*_data_classifier.py",
+              "symbol": "module files"
+            },
+            "value": null
+          },
+          "deep_inventory": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
+              "symbol": "_INVENTORY_PROVIDERS"
+            },
+            "value": false
+          },
+          "identity_ciem": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/authorization_evidence.py",
+              "symbol": "AuthorizationProvider"
+            },
+            "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "✓",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py; src/agent_bom/cli/_supabase_inventory.py",
+              "symbol": "cloud_group.add_command; supabase_cmd"
+            },
+            "value": true
+          },
+          "runtime_workload": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/runtime_workload_evidence.py",
+              "symbol": "_VALID_PROVIDERS"
+            },
+            "value": false
+          },
+          "scheduled": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/api/connection_scheduler.py",
+              "symbol": "_SCHEDULABLE_PROVIDERS"
+            },
+            "value": false
+          },
+          "side_scan": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/side_scan_lifecycle_status.py",
+              "symbol": "side_scan_provider_capabilities"
+            },
+            "value": null
+          }
+        },
+        "provider": "supabase"
       },
       {
         "cells": {
@@ -1887,6 +2153,15 @@
               "symbol": "AuthorizationProvider"
             },
             "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "—",
@@ -1921,6 +2196,119 @@
       {
         "cells": {
           "ai_discovery": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/__init__.py",
+              "symbol": "_PROVIDERS"
+            },
+            "value": false
+          },
+          "api_connection": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/api/connection_store.py",
+              "symbol": "SUPPORTED_PROVIDERS"
+            },
+            "value": false
+          },
+          "change_events": {
+            "display": "—",
+            "source": {
+              "method": "glob",
+              "path": "src/agent_bom/cloud/*event_ingest.py",
+              "symbol": "module files"
+            },
+            "value": false
+          },
+          "cis_posture": {
+            "display": "—",
+            "source": {
+              "method": "json",
+              "path": "src/agent_bom/cloud/benchmark_inventory.json",
+              "symbol": "providers"
+            },
+            "value": null
+          },
+          "connect": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_connect_sources.py",
+              "symbol": "_CONNECT_SOURCES"
+            },
+            "value": false
+          },
+          "data_dspm": {
+            "display": "—",
+            "source": {
+              "method": "glob",
+              "path": "src/agent_bom/cloud/*_data_classifier.py",
+              "symbol": "module files"
+            },
+            "value": null
+          },
+          "deep_inventory": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
+              "symbol": "_INVENTORY_PROVIDERS"
+            },
+            "value": false
+          },
+          "identity_ciem": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/authorization_evidence.py",
+              "symbol": "AuthorizationProvider"
+            },
+            "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "✓",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py; src/agent_bom/cli/_vercel_inventory.py",
+              "symbol": "cloud_group.add_command; vercel_cmd"
+            },
+            "value": true
+          },
+          "runtime_workload": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/runtime_workload_evidence.py",
+              "symbol": "_VALID_PROVIDERS"
+            },
+            "value": false
+          },
+          "scheduled": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/api/connection_scheduler.py",
+              "symbol": "_SCHEDULABLE_PROVIDERS"
+            },
+            "value": false
+          },
+          "side_scan": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/side_scan_lifecycle_status.py",
+              "symbol": "side_scan_provider_capabilities"
+            },
+            "value": null
+          }
+        },
+        "provider": "vercel"
+      },
+      {
+        "cells": {
+          "ai_discovery": {
             "display": "✓",
             "source": {
               "method": "ast",
@@ -1991,6 +2379,15 @@
               "symbol": "AuthorizationProvider"
             },
             "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
           },
           "runtime_workload": {
             "display": "—",

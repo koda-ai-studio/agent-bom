@@ -51,3 +51,38 @@ def test_every_integration_category_cites_a_source() -> None:
     for group in data["disagreements"]:
         assert group["providers_not_in_every_list"], group["id"]
         assert all(entry["source"]["path"] for entry in group["lists"]), group["id"]
+
+
+def _generator():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("vendor_coverage_generator", ROOT / "scripts/generate_vendor_coverage.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_platform_collectors_are_visible_without_claiming_hosted_connections() -> None:
+    generator = _generator()
+    rows = {row["provider"]: row["cells"] for row in generator.build_cloud_matrix()["rows"]}
+    for provider in ("supabase", "vercel"):
+        assert provider in rows
+        cell = rows[provider]["platform_inventory_cli"]
+        assert cell["value"] is True
+        assert f"cli/_{provider}_inventory.py" in cell["source"]["path"]
+        for lane in ("connect", "api_connection", "scheduled", "ai_discovery", "deep_inventory"):
+            assert rows[provider][lane]["value"] is False, (provider, lane)
+
+
+def test_unregistered_platform_collector_is_not_declared(monkeypatch) -> None:
+    import ast
+
+    generator = _generator()
+    original = generator._module
+    path = "src/agent_bom/cli/_cloud_group.py"
+    tree = ast.parse((ROOT / path).read_text().replace('cloud_group.add_command(vercel_cmd, "vercel")', ""))
+    monkeypatch.setattr(generator, "_module", lambda source: tree if source == path else original(source))
+    providers = {row["provider"] for row in generator.build_cloud_matrix()["rows"]}
+    assert "supabase" in providers
+    assert "vercel" not in providers

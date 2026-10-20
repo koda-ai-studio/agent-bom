@@ -12,7 +12,7 @@ credentialed run against that provider.
 
 ## Cloud and AI-infrastructure providers
 
-18 providers × 11 lanes; 140 cells are gaps (—).
+20 providers × 12 lanes; 180 cells are gaps (—).
 
 Legend: `✓` declared · `—` not declared in that source · benchmark posture is
 `implemented/official` control count (`n/a` = official count withheld because the
@@ -21,26 +21,35 @@ rather than the shared enum. The Kubernetes posture run in `src/agent_bom/k8s.py
 attaches `KUBERNETES_BENCHMARK_PROVENANCE`; `benchmark_inventory.json` carries no
 Kubernetes control count.
 
-| Provider | Connect (CLI) | API connection | Scheduled scans | AI/agent discovery | Deep inventory | Benchmark posture | Identity/CIEM | Data/DSPM | Side-scan | Change-event ingest | Runtime workload evidence |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| aws | ✓ | ✓ | ✓ | ✓ | ✓ | 59/n/a | ✓ (module) | s3 | shipped (no live smoke) | ✓ | ✓ |
-| azure | ✓ | ✓ | ✓ | ✓ | ✓ | 94/n/a | ✓ | azure_blob | shipped (no live smoke) | ✓ | ✓ |
-| coreweave | — | — | — | ✓ | — | — | — | — | — | — | — |
-| crusoe | — | — | — | ✓ | — | — | — | — | — | — | — |
-| database | — | ✓ | — | — | — | — | — | db | — | — | — |
-| databricks | ✓ | ✓ | ✓ | ✓ | — | 12/n/a | — | — | — | — | — |
-| gcp | ✓ | ✓ | ✓ | ✓ | ✓ | 59/n/a | ✓ | gcs | shipped (no live smoke) | ✓ | ✓ |
-| huggingface | — | — | — | ✓ | — | — | — | — | — | — | — |
-| kubernetes | — | — | — | — | — | provenance; count n/a | — | — | — | — | — |
-| lambda | — | — | — | ✓ | — | — | — | — | — | — | — |
-| mlflow | — | — | — | ✓ | — | — | — | — | — | — | — |
-| nebius | — | — | — | ✓ | — | — | — | — | — | — | — |
-| ollama | — | — | — | ✓ | — | — | — | — | — | — | — |
-| openai | — | — | — | ✓ | — | — | — | — | — | — | — |
-| runpod | — | — | — | ✓ | — | — | — | — | — | — | — |
-| snowflake | ✓ | ✓ | ✓ | ✓ | ✓ | 14/n/a | — | — | — | — | — |
-| vastai | — | — | — | ✓ | — | — | — | — | — | — | — |
-| wandb | — | — | — | ✓ | — | — | — | — | — | — | — |
+| Provider | Connect (CLI) | API connection | Scheduled scans | AI/agent discovery | Deep inventory | Benchmark posture | Identity/CIEM | Data/DSPM | Side-scan | Change-event ingest | Runtime workload evidence | Platform inventory (CLI) |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| aws | ✓ | ✓ | ✓ | ✓ | ✓ | 59/n/a | ✓ (module) | s3 | shipped (no live smoke) | ✓ | ✓ | — |
+| azure | ✓ | ✓ | ✓ | ✓ | ✓ | 94/n/a | ✓ | azure_blob | shipped (no live smoke) | ✓ | ✓ | — |
+| coreweave | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| crusoe | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| database | — | ✓ | — | — | — | — | — | db | — | — | — | — |
+| databricks | ✓ | ✓ | ✓ | ✓ | — | 12/n/a | — | — | — | — | — | — |
+| gcp | ✓ | ✓ | ✓ | ✓ | ✓ | 59/n/a | ✓ | gcs | shipped (no live smoke) | ✓ | ✓ | — |
+| huggingface | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| kubernetes | — | — | — | — | — | provenance; count n/a | — | — | — | — | — | — |
+| lambda | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| mlflow | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| nebius | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| ollama | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| openai | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| runpod | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| snowflake | ✓ | ✓ | ✓ | ✓ | ✓ | 14/n/a | — | — | — | — | — | — |
+| supabase | — | — | — | — | — | — | — | — | — | — | — | ✓ |
+| vastai | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| vercel | — | — | — | — | — | — | — | — | — | — | — | ✓ |
+| wandb | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+
+Platform inventory (CLI) lists standalone `agent-bom cloud <provider>` commands.
+It does not imply `connect`, hosted connection onboarding, scheduled scans,
+or deep-inventory API support; those columns retain their own source declarations.
+
+- Supabase: `agent-bom cloud supabase --project-ref <ref> --token-file <private.json> --output supabase.json` → scoped project metadata and native advisor report → inspect coverage before importing or persisting; empty advisors do not establish clean posture.
+- Vercel: `agent-bom cloud vercel --team-id <team> --token-file <private.json> --output vercel.json` → team project metadata and a bounded deployment report → inspect coverage and the recorded deployment window before importing or persisting.
 
 Benchmarks:
 
@@ -143,6 +152,7 @@ Provider lanes:
 - Side-scan: `src/agent_bom/cloud/side_scan_lifecycle_status.py` `side_scan_provider_capabilities`
 - Change-event ingest: `src/agent_bom/cloud/*event_ingest.py` `module files`
 - Runtime workload evidence: `src/agent_bom/cloud/runtime_workload_evidence.py` `_VALID_PROVIDERS`
+- Platform inventory (CLI): `src/agent_bom/cli/_cloud_group.py` `cloud_group.add_command`
 - Benchmark names and versions: `src/agent_bom/cloud/benchmark_provenance.py` `BENCHMARK_PROVENANCE`, `KUBERNETES_BENCHMARK_PROVENANCE`
 - AWS identity signal: `src/agent_bom/cloud/aws_iam_evaluator.py` (module present)
 
