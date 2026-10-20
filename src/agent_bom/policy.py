@@ -245,8 +245,7 @@ class _ExprParser:
         if self.peek() and self.peek()[0] == "CMP":  # type: ignore[index]
             _, op_str = self.consume()
             right = self._primary()
-            op_func = _COMPARISON_OPS[op_str]
-            return op_func(left, right)
+            return False if (left is None or right is None) and op_str not in ("==", "!=") else _COMPARISON_OPS[op_str](left, right)
         return left
 
     def _primary(self):

@@ -283,6 +283,7 @@ def _many_findings_report(n: int) -> tuple[AIBOMReport, list[BlastRadius]]:
                 exposed_tools=[],
             )
         )
+        brs[-1].calculate_risk_score()  # a scan scores every blast radius before output
     report = AIBOMReport(agents=[], blast_radii=brs, scan_id="prom-test")
     return report, brs
 

@@ -59,7 +59,7 @@ class BlastRadius:
     exposed_credentials: list[str]  # Credential env var names at risk
     exposed_tools: list[MCPTool]  # Introspected / confirmed tools on the impacted path
     phantom_tools: list[MCPTool] = field(default_factory=list)  # Registry-only, unverified tools (listed, not scored)
-    risk_score: float = 0.0  # 0-10
+    risk_score: Optional[float] = None  # 0-10; None until calculate_risk_score() assesses it
     ai_risk_context: Optional[str] = None  # AI-native risk explanation when relevant
     owasp_tags: list[str] = field(default_factory=list)  # OWASP LLM Top 10 codes, e.g. ["LLM03", "LLM02"]
     atlas_tags: list[str] = field(default_factory=list)  # MITRE ATLAS technique IDs (AI/ML-specific), e.g. ["AML.T0010"]

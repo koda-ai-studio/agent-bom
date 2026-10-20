@@ -793,7 +793,7 @@ async def scan_agents(
             blast_radii.append(br)
 
     # Sort by risk score descending
-    blast_radii.sort(key=lambda br: br.risk_score, reverse=True)
+    blast_radii.sort(key=lambda br: br.risk_score or 0.0, reverse=True)
 
     _print_vulnerability_summary(total_vulns, len(blast_radii), agents=agents)
 
@@ -881,7 +881,7 @@ async def scan_agents_with_enrichment(
             apply_effective_blast_radius_tags(br)
 
         # Re-sort by updated risk scores
-        blast_radii.sort(key=lambda br: br.risk_score, reverse=True)
+        blast_radii.sort(key=lambda br: br.risk_score or 0.0, reverse=True)
 
     return blast_radii
 

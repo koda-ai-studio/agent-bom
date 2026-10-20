@@ -1766,6 +1766,7 @@ def _make_report_with_vuln() -> tuple:
         exposed_credentials=["API_KEY"],
         exposed_tools=[],
     )
+    br.calculate_risk_score()  # a scan scores every blast radius before output
     return report, [br]
 
 

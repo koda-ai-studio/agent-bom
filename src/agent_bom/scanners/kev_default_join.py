@@ -45,5 +45,5 @@ def join_default_kev_catalog(blast_radii: list[BlastRadius], *, offline: bool) -
         for br in blast_radii:
             br.calculate_risk_score()
             apply_effective_blast_radius_tags(br)
-        blast_radii.sort(key=lambda br: br.risk_score, reverse=True)
+        blast_radii.sort(key=lambda br: br.risk_score or 0.0, reverse=True)
     return sum(1 for br in blast_radii if br.vulnerability.is_kev)

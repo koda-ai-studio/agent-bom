@@ -49,7 +49,7 @@ def _add_blast_node(
             entity_type=EntityType.VULNERABILITY,
             label=vuln_id_str,
             severity=severity,
-            risk_score=br_dict.get("risk_score", 0),
+            risk_score=br_dict.get("risk_score") or 0.0,
             attributes={
                 "canonical_id": canonical_graph_node_id(EntityType.VULNERABILITY.value, vuln_node_id),
                 "source_ids": source_ids(vulnerability_id=vuln_id_str),

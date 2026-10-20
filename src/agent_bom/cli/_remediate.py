@@ -17,6 +17,7 @@ from packaging.utils import canonicalize_name
 from agent_bom import __version__
 from agent_bom.cli._common import _make_console, _sync_runtime_consoles, logger
 from agent_bom.cli._scan_runner import ScanConfig, run_default_scan
+from agent_bom.core.risk_display import assessed_risk_score
 from agent_bom.remediation_apply import RemediationApplyError, apply_remediation_plan
 
 # ---------------------------------------------------------------------------
@@ -28,7 +29,7 @@ _PRIORITY_RANK = {"P1": 1, "P2": 2, "P3": 3, "P4": 4}
 
 def _compute_blast_radius_score(blast_radii, package_name: str) -> float:
     """Compute max risk_score across blast radii matching the given package."""
-    scores = [br.risk_score for br in blast_radii if br.package.name == package_name]
+    scores = [assessed_risk_score(br) for br in blast_radii if br.package.name == package_name]
     return max(scores) if scores else 0.0
 
 

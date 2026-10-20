@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from agent_bom.core.risk_display import assessed_risk_score
 from agent_bom.domain.report_payloads import CorrelatedFindingPayload, RuntimeCorrelationPayload, UncalledVulnerableToolPayload
 from agent_bom.runtime.name_candidates import candidate_name_basis
 
@@ -344,8 +345,8 @@ def correlate(
                         first_called=call_info["first_called"],
                         was_blocked=call_info["was_blocked"],
                         risk_amplifier=amplifier,
-                        original_risk_score=br.risk_score,
-                        correlated_risk_score=min(br.risk_score * amplifier, 10.0),
+                        original_risk_score=assessed_risk_score(br),
+                        correlated_risk_score=min(assessed_risk_score(br) * amplifier, 10.0),
                         affected_agents=[a.name if hasattr(a, "name") else str(a) for a in br.affected_agents],
                         exposed_credentials=br.exposed_credentials,
                     )
@@ -356,7 +357,7 @@ def correlate(
                         "vulnerability_id": vuln.id,
                         "tool_name": tool_name,
                         "severity": vuln.severity.value,
-                        "risk_score": round(br.risk_score, 2),
+                        "risk_score": round(assessed_risk_score(br), 2),
                         "note": "vulnerable but never called (theoretical risk only)",
                     }
                 )

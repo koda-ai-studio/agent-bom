@@ -1892,8 +1892,8 @@ export interface BlastRadius {
   /** API v2 field — same as reachable_tools */
   exposed_tools?: string[] | undefined;
   reachable_tools: string[];
-  /** API v2 field — same as blast_score (0-100) */
-  risk_score?: number | undefined;
+  /** API v2 field — same as blast_score (0-100); `null` when not assessed. */
+  risk_score?: number | null | undefined;
   blast_score: number;
   cvss_score?: number | null | undefined;
   epss_score?: number | null | undefined;
