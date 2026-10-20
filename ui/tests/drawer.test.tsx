@@ -95,3 +95,59 @@ it("keeps keyboard focus inside an open drawer when its close callback changes",
     vi.unstubAllGlobals();
   }
 });
+
+it("returns focus to the trigger when a re-render drops it to the page body after close", () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.set(++frameId, callback);
+    return frameId;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+  const flushFrames = () => act(() => {
+    const pending = [...frames.values()];
+    frames.clear();
+    pending.forEach(callback => callback(0));
+  });
+  const trigger = document.createElement("button");
+  document.body.append(trigger);
+  trigger.focus();
+  const view = render(<Drawer open title="Relationship" onClose={vi.fn()}><p>body</p></Drawer>);
+  try {
+    flushFrames();
+    view.unmount();
+    expect(trigger).toHaveFocus();
+    trigger.blur();
+    expect(document.body).toHaveFocus();
+    flushFrames();
+    expect(trigger).toHaveFocus();
+  } finally {
+    trigger.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it("does not pull focus back once the user has moved it elsewhere after close", () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0;
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    frames.set(++frameId, callback);
+    return frameId;
+  });
+  vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+  const trigger = document.createElement("button");
+  const other = document.createElement("button");
+  document.body.append(trigger, other);
+  trigger.focus();
+  const view = render(<Drawer open title="Relationship" onClose={vi.fn()}><p>body</p></Drawer>);
+  try {
+    view.unmount();
+    other.focus();
+    act(() => { [...frames.values()].forEach(callback => callback(0)); frames.clear(); });
+    expect(other).toHaveFocus();
+  } finally {
+    trigger.remove();
+    other.remove();
+    vi.unstubAllGlobals();
+  }
+});
