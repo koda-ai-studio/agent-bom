@@ -5,10 +5,12 @@ const ADVISORY_ID = /((?:CVE|PYSEC|RUSTSEC|GO|GSD|OSV|MAL)-\d{4}-\d+|GHSA(?:-[0-
 const NAME_BREAK = /(?<=[_/-])|(?<=.)(?=@)/;
 
 /** Split a label into wrap segments; an advisory id is always one segment. */
-export function labelSegments(text: string): { part: string; atomic: boolean }[] {
+type Segment = { part: string; atomic: boolean };
+
+export function labelSegments(text: string): Segment[] {
   return canvasNodeLabel(text)
     .split(ADVISORY_ID)
-    .flatMap((chunk, index) => {
+    .flatMap((chunk, index): Segment[] => {
       if (!chunk) return [];
       if (index % 2 === 1) return [{ part: chunk, atomic: true }];
       return chunk.split(NAME_BREAK).filter(Boolean).map((part) => ({ part, atomic: false }));
