@@ -278,10 +278,15 @@ def test_mcp_context_graph_pages_the_current_estate_rest_serves(demo_estate_clie
         payload = _context_graph(offset=offset, limit=40)
         assert payload["source"] == "current_estate_graph"
         rest = _get(client, "/v1/graph", entity_types="agent", offset=offset, limit=40, snapshot_generation=generation)
-        rest_agents = sorted(node["label"] for node in rest["nodes"] if node["entity_type"] == "agent")
+        # REST returns the ranked page first, then containment ancestors and the
+        # off-page endpoints of returned edges (``completeness`` counts each).
+        # MCP pages the same ranked set; the extras are context, not page members.
+        ranked = rest["nodes"][: rest["completeness"]["ranked"]]
+        rest_agents = sorted(node["label"] for node in ranked if node["entity_type"] == "agent")
+        extra_agents = [node for node in rest["nodes"][len(ranked) :] if node["entity_type"] == "agent"]
         agents = sorted(node["label"] for node in payload["nodes"] if node["kind"] == "agent")
-        # The REST page can add agents its attack paths reference beside the paged ones; the paged set is shared.
-        assert set(agents) <= set(rest_agents), offset
+        assert agents == rest_agents, offset
+        assert len(extra_agents) <= rest["completeness"]["endpoint_nodes"] + rest["completeness"]["context_nodes"], offset
         assert len(agents) == min(40, estate_agents - offset) == rest["pagination"]["limit"] - max(0, offset + 40 - estate_agents)
         coverage = payload["estate_coverage"]
         assert coverage["current_estate_agents"] == estate_agents == rest["pagination"]["total"]
