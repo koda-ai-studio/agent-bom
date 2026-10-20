@@ -54,7 +54,7 @@ function ContinueOfflineButton() {
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { session, loading, error, reconnecting, signedOut } = useAuthState();
+  const { session, loading, error, reconnecting, starting, signedOut } = useAuthState();
   const offlineReportMode = useOfflineReportMode();
 
   const needsAuth =
@@ -72,7 +72,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-[calc(100vh-5rem)] flex-col items-center justify-center gap-3">
         <Loader2 className="h-6 w-6 animate-spin text-[var(--text-tertiary)]" />
-        {reconnecting ? (
+        {starting ? (
+          <div role="status" className="text-center">
+            <p className="text-sm text-[var(--foreground)]">Starting the control plane…</p>
+            <p className="mt-1 text-xs text-[var(--text-tertiary)]">The API is still booting. This page continues on its own when it is ready.</p>
+          </div>
+        ) : reconnecting ? (
           <p className="text-xs text-[var(--text-tertiary)]">Reconnecting to the control plane…</p>
         ) : null}
       </div>
