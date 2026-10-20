@@ -29,8 +29,9 @@ SHOWCASE_BASELINE_SCAN_ID = "showcase-baseline"
 # ``Remediation`` object frozen to its Python repr, and a running demo would have
 # served that snapshot forever. The seven-day gap is the drift lens's window and
 # is preserved on every bump.
-# The October 17 02:00 seed draws one finding set shared with the demo scan.
-_SHOWCASE_CURRENT_TARGET = datetime(2026, 10, 17, 2, 0, 0, tzinfo=timezone.utc)
+# The October 19 02:00 seed mints one vulnerability node per advisory, every recorded
+# package holder, hosted MCP servers and multi-level package trees.
+_SHOWCASE_CURRENT_TARGET = datetime(2026, 10, 19, 2, 0, 0, tzinfo=timezone.utc)
 
 
 _SHOWCASE_IMPORT_NOW = datetime.now(timezone.utc)
@@ -98,6 +99,6 @@ SHOWCASE_PACKAGES: dict[str, tuple[str, str, str, float]] = {
     "express@4.17.1": ("filesystem-server", "CVE-2024-29041", "medium", 6.1),
     "requests@2.28.0": ("vector-db-server", "CVE-2023-32681", "medium", 6.1),
     "jinja2@3.0.0": ("team-chat-server", "CVE-2024-22195", "medium", 5.4),
-    "node-fetch@2.6.1": ("filesystem-server", "CVE-2022-0235", "medium", 6.1),
+    "node-fetch@2.6.1": ("filesystem-server", "CVE-2022-0235", "high", 8.8),
     "werkzeug@2.2.2": ("team-chat-server", "CVE-2023-25577", "high", 7.5),
 }
