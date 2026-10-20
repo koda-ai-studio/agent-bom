@@ -12,7 +12,7 @@ import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href"
 import { groupFindingControls } from "@/lib/finding-controls";
 import { FindingAffectedAsset } from "@/components/finding-affected-asset";
 import { FindingExposureSummary } from "@/components/finding-exposure-summary";
-import { FindingExploitStory } from "@/components/finding-exploit-story";
+import { FindingExploitStory, storyHostServers, useFindingExploitStory } from "@/components/finding-exploit-story";
 import { findingAssetKind } from "@/lib/finding-exposure";
 import { FindingControlGroups } from "@/components/finding-control-groups";
 import { exposurePriorityLabel } from "@/lib/plain-labels";
@@ -123,6 +123,7 @@ export function FindingDrawer({
 
 function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: string | undefined }) {
   const scope = findingWorkloadScope(vuln);
+  const story = useFindingExploitStory(vuln, graphScanId);
   const summary = vuln.attack_vector_summary ?? vuln.summary ?? vuln.description ?? "No advisory summary available.";
   const fixCandidates = vuln.remediation_items.filter((item) => item.fixed_version || item.command || item.verify_command);
   const packageLabel = vuln.packages.join(", ") || "Affected asset";
@@ -164,10 +165,10 @@ function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
 
       <Section title="Exposure">
         {scope.sbomSources.length > 0 && scope.agents.length === 0 && scope.servers.length === 0 ? <p className="mb-2 text-sm text-ink-secondary">SBOM evidence; workload not identified</p> : null}
-        <FindingExposureSummary vuln={vuln} />
+        <FindingExposureSummary vuln={vuln} hostServers={storyHostServers(story.state)} />
         {impact.length ? <p className="mt-2 text-xs text-ink-secondary">{impact.join(" · ")}</p> : null}
         {scope.sbomSources.map((source) => <p key={source} className="mt-1 break-words text-xs text-ink-secondary">SBOM source: {sbomSourceName(source)}</p>)}
-        <FindingExploitStory vuln={vuln} graphScanId={graphScanId} />
+        <FindingExploitStory vuln={vuln} graphScanId={graphScanId} story={story} />
       </Section>
 
       {fixCandidates.length > 0 ? (

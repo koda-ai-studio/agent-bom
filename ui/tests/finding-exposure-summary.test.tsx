@@ -49,6 +49,22 @@ describe("finding exposure summary", () => {
     expect(screen.getByRole("link", { name: "cursor" })).toHaveAttribute("href", "/agents?name=cursor");
   });
 
+  it("falls back to the graph's hosting MCP servers when the occurrence names none", () => {
+    const hostServers = [{ id: "server:811cd4af", label: "Provider Directory MCP" }];
+    render(<FindingExposureSummary vuln={vuln({ graph_reachable: true, graph_reachable_from_agents: ["agent:reviewer-20"] })} hostServers={hostServers} />);
+    expect(screen.getByText("Hosting MCP servers")).toBeVisible();
+    const server = screen.getByRole("link", { name: "Provider Directory MCP" });
+    expect(server).toHaveAttribute("title", "server:811cd4af");
+    expect(server).toHaveAttribute("href", "/findings?q=Provider+Directory+MCP");
+    expect(screen.queryByText(/No agent or MCP server is recorded/)).toBeNull();
+  });
+
+  it("keeps the occurrence's own servers over the graph's hosts", () => {
+    render(<FindingExposureSummary vuln={vuln({ affected_servers: ["etl-server"] })} hostServers={[{ id: "server:x", label: "Other" }]} />);
+    expect(screen.getByText("MCP servers")).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Other" })).toBeNull();
+  });
+
   it("says plainly when no agent or server is recorded", () => {
     render(<FindingExposureSummary vuln={vuln({})} />);
     expect(screen.getByText(/No agent or MCP server is recorded/)).toBeVisible();
