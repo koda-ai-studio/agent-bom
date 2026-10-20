@@ -1,19 +1,18 @@
 "use client";
 
-import { InvestigationLifecycle } from "@/components/investigation-lifecycle";
-import { AdvisoryFreshness } from "@/components/advisory-freshness";
+import { InvestigationLifecyclePanel, InvestigationLifecycleStrip } from "@/components/investigation-lifecycle";
+import { InvestigationPageHeader } from "@/components/investigation-page-header";
+import { InvestigationExploreMenu } from "@/components/investigation-explore-menu";
+import { InvestigationNotices } from "@/components/investigation-notices";
+import { InvestigationScanEvidence } from "@/components/investigation-scan-evidence";
+import { InvestigationLoadError } from "@/components/investigation-load-error";
+import { InvestigationFilteredEmpty } from "@/components/investigation-filtered-empty";
 
 import { investigationHref, investigationView } from "@/lib/investigation-url";
 import { selectAttackPathQueue } from "@/lib/attack-path-queue";
-import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
-import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowRight,
-  GitBranch,
-  Loader2,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { ApiOfflineState } from "@/components/api-offline-state";
 import { ApiAuthError, ApiForbiddenError, userFacingApiErrorMessage } from "@/lib/api-errors";
@@ -28,22 +27,12 @@ import type { RankedPathRow } from "@/components/ranked-path-list";
 import { AttackPathTechniqueChain } from "@/components/attack-path-technique-chain";
 import { AttackPathCorrelationProof } from "@/components/attack-path-correlation-proof";
 import { ExposurePathCommandCenter, type ExposurePathView } from "@/components/exposure-path-command-center";
-import {
-  InvestigationFilterDrawer,
-  InvestigationPathWorkspace,
-  InvestigationTools,
-} from "@/components/investigation-path-workspace";
-import { InvestigationExportButton } from "@/components/investigation-export-button";
-import { GraphLensSwitcher } from "@/components/graph-lens-switcher";
+import { InvestigationPathWorkspace, InvestigationTools } from "@/components/investigation-path-workspace";
 import { DeployGatePanel } from "@/components/deploy-gate-panel";
 import { ExposurePathLens } from "@/components/exposure-path-lens";
-import { GraphEmptyState, GraphPanelSkeleton } from "@/components/graph-state-panels";
-import { graphAnalysisStatusCopy } from "@/components/graph-analysis-status";
+import { GraphPanelSkeleton } from "@/components/graph-state-panels";
 import { GraphCampaignPanel } from "@/components/graph-campaign-panel";
-import {
-  GraphCorrelationWorkflow,
-  type GraphCorrelationOutcome,
-} from "@/components/graph-correlation-workflow";
+import { GraphCorrelationWorkflow } from "@/components/graph-correlation-workflow";
 import { GraphPathQueueContinuation } from "@/components/graph-path-queue-continuation";
 import { useAuthState } from "@/components/auth-provider";
 import {
@@ -54,7 +43,6 @@ import { InvestigationFilterChips } from "@/components/investigation-filter-chip
 import { parseInvestigationStep, type InvestigationStep } from "@/components/investigation-step-strip";
 import {
   api,
-  formatDate,
   type FixFirstGraphViewResponse,
   type FixFirstPathCard,
   type GraphAttackCampaign,
@@ -64,48 +52,30 @@ import {
   type UnifiedGraphResponse,
 } from "@/lib/api";
 import {
-  attackPathKey,
-  attackPathRoleChain,
-  buildFindingsHref,
-  buildGraphInvestigationHref,
-  buildSecurityGraphHref,
-  descriptiveAttackPathTitle,
-  dedupeAttackPathsForPresentation,
-  graphPathQueueCounts,
-  investigationRootForAttackPath,
-  labelsForAttackPathType,
-  matchesAttackPathFocus,
-  mergeAttackPathGraphPages,
-  rankedAttackPathRows,
-  recommendedAttackPathActions,
-  toAttackCardNodes,
-  toExposurePathFromAttackPath,
+  attackPathKey, attackPathRoleChain, buildFindingsHref, buildGraphInvestigationHref, buildSecurityGraphHref,
+  descriptiveAttackPathTitle, dedupeAttackPathsForPresentation, graphPathQueueCounts,
+  investigationRootForAttackPath, labelsForAttackPathType, matchesAttackPathFocus, mergeAttackPathGraphPages,
+  rankedAttackPathRows, recommendedAttackPathActions, toAttackCardNodes, toExposurePathFromAttackPath,
   withCanonicalExposurePresentation,
 } from "@/lib/attack-paths";
 import { FindingInvestigationContext } from "@/components/finding-investigation-context";
 import { buildFindingAssetHref, withFindingContext } from "@/lib/finding-investigation-href";
+import { attackPathLoadErrorCopy, emptyAttackPathQueueCopy } from "@/lib/investigation-queue-copy";
+import { buildCorrelationOutcome } from "@/lib/correlation-outcome";
 import { clientQueueFocus, emptyQueueCopy, focusedPathEmptyState, serverPathFocus, sourceSnapshotFallback } from "@/lib/finding-path-focus";
 import { InvestigationEmptyQueue } from "@/components/investigation-empty-queue";
 import { SecurityGraphInvestigation } from "@/components/security-graph-investigation";
 import { GraphSurface } from "@/app/graph/graph-surface";
 import type { UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
-import { tonedChipClass } from "@/lib/toned-chip";
 import { investigationEstateMode } from "@/lib/investigation-estate-mode";
 import { useCaptureMode } from "@/lib/use-capture-mode";
 import { useSelectedPathGraph } from "@/hooks/use-selected-path-graph";
 import {
-  buildCorrelationPathHref,
-  buildCorrelationRemediationHref,
-  completeDirectedHopCount,
-  correlationOutcomeMatchesOutput,
-  focusCorrelationPathTarget,
-  latestCompletedCorrelation,
-  selectInitialGraphSnapshot,
+  buildCorrelationPathHref, buildCorrelationRemediationHref, focusCorrelationPathTarget,
+  latestCompletedCorrelation, selectInitialGraphSnapshot,
 } from "@/lib/security-graph-focus";
 import {
-  collectPathEnvironments,
-  filterAttackPathsForInvestigation,
-  filterInvestigationQuestion,
+  collectPathEnvironments, filterAttackPathsForInvestigation, filterInvestigationQuestion,
 } from "@/lib/investigation-path-filters";
 
 const EMPTY_INVESTIGATION_FILTERS: InvestigationPresetFilters = {
@@ -165,7 +135,7 @@ function AttackPathInvestigationContent() {
   }, [pathname, searchParams]);
   const [investigationFilters, setInvestigationFilters] =
     useState<InvestigationPresetFilters>(EMPTY_INVESTIGATION_FILTERS);
-  const [pinnedNodeId, setPinnedNodeId] = useState<string | null>(null);
+  const [, setPinnedNodeId] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Partial<Record<InvestigationStep, boolean>>>(
     {},
   );
@@ -702,45 +672,10 @@ function AttackPathInvestigationContent() {
       ? { ...action, href: buildCorrelationRemediationHref(action.href, selectedScanId, finding, packageNode?.label) }
       : action);
   }, [graphNodeById, selectedAttackPath, selectedFixFirstCard, selectedScanId]);
-  const correlationOutcome = useMemo<GraphCorrelationOutcome | null>(() => {
-    if (
-      !selectedAttackPath ||
-      !correlationOutcomeMatchesOutput(selectedScanId, graphData?.scan_id, fixFirstView?.scan_id)
-    ) return null;
-    const labels = selectedFixFirstCard?.sequence_labels ?? selectedAttackPath.hops.map((hop) => graphNodeById.get(hop)?.label ?? hop);
-    const packageNode = selectedAttackPath.hops
-      .map((hop) => graphNodeById.get(hop))
-      .find((node) => node?.entity_type === "package");
-    const finding = selectedFixFirstCard?.affected.finding_labels?.[0] ?? selectedAttackPath.vuln_ids[0];
-    const reasons = selectedFixFirstCard?.risk_reasons ?? [];
-    const hopReceipts = selectedAttackPath.hop_evidence ?? [];
-    const directedHopCount = completeDirectedHopCount(selectedAttackPath);
-    if (directedHopCount === null) return null;
-    const action = selectedFixFirstCard?.next_actions?.[0] ?? selectedPathActions[0];
-    const actionIsRemediation = action?.href.split("?", 1)[0] === "/remediation";
-    return {
-      scanId: selectedScanId,
-      summary: finding && packageNode?.label
-        ? `${finding} in ${packageNode.label} appears on this correlated path. Inspect the evidence and conditions at each hop.`
-        : "Review the recorded relationships and per-hop evidence for this selected path.",
-      source: labels[0] ?? selectedAttackPath.source,
-      target: labels.at(-1) ?? selectedAttackPath.target,
-      finding,
-      packageName: packageNode?.label,
-      risk: selectedAttackPath.composite_risk,
-      hops: directedHopCount,
-      runtimeObserved: reasons.some((reason) => reason.kind === "runtime_observed") || hopReceipts.some((receipt) => receipt.runtime_observed_state === "observed"),
-      runtimeBlocked: reasons.some((reason) => reason.kind === "runtime_blocked") || hopReceipts.some((receipt) => receipt.runtime_observed_state === "blocked"),
-      action: action ? {
-        title: actionIsRemediation
-          ? `Open ${packageNode?.label ?? finding ?? "finding"} remediation`
-          : action.title,
-        href: actionIsRemediation
-          ? buildCorrelationRemediationHref(action.href, selectedScanId, finding, packageNode?.label)
-          : action.href,
-      } : undefined,
-    };
-  }, [fixFirstView?.scan_id, graphData?.scan_id, graphNodeById, selectedAttackPath, selectedFixFirstCard, selectedPathActions, selectedScanId]);
+  const correlationOutcome = useMemo(() => buildCorrelationOutcome({
+    path: selectedAttackPath, card: selectedFixFirstCard, actions: selectedPathActions, nodeById: graphNodeById,
+    scanId: selectedScanId, graphScanId: graphData?.scan_id, fixFirstScanId: fixFirstView?.scan_id,
+  }), [fixFirstView?.scan_id, graphData?.scan_id, graphNodeById, selectedAttackPath, selectedFixFirstCard, selectedPathActions, selectedScanId]);
 
   const showCorrelationOverview = searchParams.get("correlation") === "1"
     && latestCorrelationRun?.output_scan_id === selectedScanId
@@ -748,67 +683,11 @@ function AttackPathInvestigationContent() {
     && requestedPathMode !== "top"
     && (!hasFocusContext || correlationCaptureMode);
 
-  const emptyGraphState = useMemo(() => {
-    const analysis = graphData?.stats.analysis_status?.attack_path_fusion;
-    const executionCopy = graphAnalysisStatusCopy(analysis);
-    if (analysis?.status === "skipped" || analysis?.status === "failed") {
-      return {
-        title: executionCopy.label,
-        detail: executionCopy.detail,
-        suggestions: [
-          "Run a fresh scan after reviewing the recorded analysis limit or failure.",
-          "Open the full graph to inspect the inventory and findings that did persist.",
-          "Do not treat this snapshot as proof that no attack paths exist.",
-        ],
-      };
-    }
-    if (analysis?.status === "limited") {
-      return {
-        title: "No paths in the retained partial result",
-        detail: executionCopy.detail,
-        suggestions: [
-          "Review the recorded execution limits before relying on this result.",
-          "Open the full graph to inspect topology outside the retained path set.",
-          "Run a narrower or higher-capacity scan for complete path coverage.",
-        ],
-      };
-    }
-    if (hasFocusContext) {
-      return {
-        title: "No attack paths matched the current focus",
-        detail: `No recorded path matched ${focusLabel ?? "the current filters"} in this snapshot. This does not establish whether the vulnerability is exploitable or whether another path exists.`,
-        suggestions: [
-          "Clear focus to review every persisted path in this snapshot.",
-          "Open the full graph to inspect broader topology.",
-          "Review the finding and its missing evidence before choosing a remediation.",
-        ],
-      };
-    }
-
-    return {
-      title: "No precomputed attack paths are available for this snapshot",
-      detail:
-        "This snapshot has no recorded attack paths. Vulnerability presence, structural reachability, and exploitation are separate assessments.",
-      suggestions: [
-        "Run a fresh scan to refresh the persisted graph snapshot.",
-        "Open the full graph to inspect inventory and findings that did persist.",
-        "Check the vulnerabilities page if you need fix context before the next scan completes.",
-      ],
-    };
-  }, [focusLabel, graphData?.stats.analysis_status, hasFocusContext]);
-
-  const graphErrorState = useMemo(() => {
-    const detail = graphLoadError ?? "The graph API did not return attack-path data for this snapshot.";
-    return {
-      title: "Cannot load attack paths for this snapshot",
-      detail,
-      suggestions: [
-        "Retry the graph load after confirming the API is reachable.",
-        "Open the full graph only after this error clears.",
-        "Check API logs for the rejected or failed attack-path request.",
-      ],
-    };
-  }, [graphLoadError]);
+  const emptyGraphState = useMemo(
+    () => emptyAttackPathQueueCopy(graphData?.stats.analysis_status?.attack_path_fusion, hasFocusContext, focusLabel),
+    [focusLabel, graphData?.stats.analysis_status, hasFocusContext],
+  );
+  const graphErrorState = useMemo(() => attackPathLoadErrorCopy(graphLoadError), [graphLoadError]);
 
   const loadingGraphMessage = focusLabel
     ? `Loading paths for ${focusLabel}…`
@@ -871,66 +750,35 @@ function AttackPathInvestigationContent() {
 
   return (
     <div className={captureMode ? "space-y-2" : "space-y-4"}>
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Investigation</h1>
-        <p className="text-sm text-ink-secondary">{focusLabel || (selectedScanId?.startsWith("current-estate:") ? "Current tenant estate" : "Selected scan snapshot")}</p>
-      </header>
-      <details className="investigation-navigation rounded-lg border border-outline bg-surface px-3 py-2">
-        <summary className="cursor-pointer text-sm font-medium">Explore &amp; evidence <span className="ml-2 font-normal text-ink-tertiary">Scope, views and exports</span></summary>
-        <div className="mt-3 space-y-3">
-      <div role="group" aria-label="Investigation starting questions" className="flex flex-wrap gap-2">
-        <button type="button" className="sg-action" aria-pressed={!requestedQuestion} onClick={() => router.replace(investigationHref(pathname, searchParams.toString(), { question: null, selected_path: null }), { scroll: false })}>All ranked paths</button>
-        <button type="button" className="sg-action" aria-pressed={requestedQuestion === "credentials"} onClick={() => router.replace(investigationHref(pathname, searchParams.toString(), { question: "credentials", selected_path: null }), { scroll: false })}>Credential exposure</button>
-        <button type="button" className="sg-action" aria-pressed={requestedQuestion === "critical"} onClick={() => router.replace(investigationHref(pathname, searchParams.toString(), { question: "critical", selected_path: null }), { scroll: false })}>Critical dependencies</button>
-        <button type="button" className="sg-action" onClick={() => setInvestigationStep("impact")}>Potential blast radius</button>
-      </div>
-          <GraphLensSwitcher variant="compact" />
-          <GraphSnapshotReceipt snapshot={selectedSnapshot} scanId={selectedScanId} />
-          <AdvisoryFreshness />
-          <div className="flex flex-wrap gap-2">
-            <InvestigationExportButton path={selectedExposurePath} scanId={selectedScanId} />
-            <Link href={fullGraphHref} className="sg-action">Open lineage lens <GitBranch className="h-4 w-4" /></Link>
-            <Link href="/remediation" className="sg-action">Remediation <ArrowRight className="h-4 w-4" /></Link>
-          </div>
-        </div>
-      </details>
-      {requestedQuestion && <p role="status" className="text-xs text-ink-secondary">Question filters apply to the loaded ranked paths. Load another page to widen this search; an empty page does not establish complete coverage.</p>}
-      {requestedSelectedPath && graphData && !allAttackPaths.some(path => attackPathKey(path) === requestedSelectedPath) && <p role="status" className="graph-callout-amber">The shared path is not in this loaded queue page. Load more paths or inspect its retained evidence scope; the currently shown path is a different result.</p>}
-
-      {searchParams.get("source_snapshot") === "1" && focus.scanId ? (
-        <p role="note" aria-label="Source snapshot" className="graph-callout-sky">
-          No path for this finding in the current estate. Showing the snapshot it was found in ({focus.scanId}).
-        </p>
-      ) : null}
-      {searchParams.get("related_finding") ? (
-        <p role="note" aria-label="Finding association" className="graph-callout-sky">
-          Related package and advisory paths. This scope does not establish a link to the selected finding record.
-        </p>
-      ) : null}
-
-      {selectedScenarioId ? (
-        <div className="graph-callout-sky">
-          Attack Paths remains observed-only. Open Estate, Cloud, Repository,
-          Identity, or Lineage to compare this scenario's modeled state.
-        </div>
-      ) : null}
-
-      {/* The loop is a control, not content: it rides in the toolbar row rather
-          than owning a full-width band with an explanatory paragraph. The page
-          stacked eight such bands above the graph, pushing the ranked paths —
-          the reason the page exists — below the fold. */}
+      <InvestigationPageHeader
+        focus={focusLabel || (selectedScanId?.startsWith("current-estate:") ? "Current tenant estate" : "Selected scan snapshot")}
+        context={<FindingInvestigationContext compact />}
+        steps={!captureMode ? (
+          <InvestigationLifecycleStrip step={investigationStep} onStepChange={setInvestigationStep} completed={completedSteps}
+            path={selectedAttackPath} nodeById={graphNodeById} scanId={selectedScanId} />
+        ) : null}
+        menu={
+          <InvestigationExploreMenu
+            question={requestedQuestion}
+            onQuestion={(question) => router.replace(investigationHref(pathname, searchParams.toString(), { question, selected_path: null }), { scroll: false })}
+            onBlastRadius={() => setInvestigationStep("impact")}
+            snapshot={selectedSnapshot}
+            scanId={selectedScanId}
+            exposurePath={selectedExposurePath}
+            fullGraphHref={fullGraphHref}
+          />
+        }
+      />
+      <InvestigationNotices
+        question={Boolean(requestedQuestion)}
+        sharedPathMissing={Boolean(requestedSelectedPath && graphData && !allAttackPaths.some(path => attackPathKey(path) === requestedSelectedPath))}
+        sourceSnapshot={searchParams.get("source_snapshot") === "1" && focus.scanId ? focus.scanId : null}
+        relatedFinding={Boolean(searchParams.get("related_finding"))}
+        scenario={Boolean(selectedScenarioId)}
+      />
       {!captureMode ? (
-        <InvestigationLifecycle
-          step={investigationStep}
-          onStepChange={setInvestigationStep}
-          completed={completedSteps}
-          path={selectedAttackPath}
-          nodeById={graphNodeById}
-          scanId={selectedScanId}
-          tenantId={graphData?.tenant_id}
-          snapshotGeneration={graphData?.snapshot_generation}
-          pinnedNodeId={pinnedNodeId}
-        />
+        <InvestigationLifecyclePanel step={investigationStep} path={selectedAttackPath} nodeById={graphNodeById}
+          scanId={selectedScanId} tenantId={graphData?.tenant_id} snapshotGeneration={graphData?.snapshot_generation} />
       ) : null}
       {showCorrelationOverview ? (
         <GraphCorrelationWorkflow snapshots={snapshots} initialRun={latestCorrelationRun} outcome={correlationOutcome} onOpenSnapshot={openCorrelationPath} />
@@ -944,32 +792,7 @@ function AttackPathInvestigationContent() {
           />
         </section>
       ) : graphLoadError ? (
-        <section className="rounded-3xl border border-[color:var(--severity-critical-border)] bg-[color:var(--severity-critical-bg)] p-4">
-          <GraphEmptyState
-            title={graphErrorState.title}
-            detail={graphErrorState.detail}
-            suggestions={graphErrorState.suggestions}
-            command="agent-bom serve --api"
-          />
-          <div className="mt-4 flex flex-wrap gap-3 border-t border-red-900/40 pt-4">
-            <Link
-              href={fullGraphHref}
-              className="sg-danger-chip"
-            >
-              Retry in full graph
-              <GitBranch className="h-3.5 w-3.5" />
-            </Link>
-            {hasFocusContext && (
-              <Link
-                href={resetFocusHref}
-                className="sg-danger-chip"
-              >
-                Clear focus
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            )}
-          </div>
-        </section>
+        <InvestigationLoadError copy={graphErrorState} retryHref={fullGraphHref} resetFocusHref={hasFocusContext ? resetFocusHref : null} />
       ) : allAttackPaths.length === 0 ? (
         <InvestigationEmptyQueue
           analysisStatus={graphData?.stats.analysis_status?.attack_path_fusion}
@@ -987,36 +810,14 @@ function AttackPathInvestigationContent() {
           resetFocusHref={hasFocusContext ? resetFocusHref : null}
         />
       ) : attackPaths.length === 0 ? (
-        <section className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4 space-y-4">
-          <InvestigationFilterDrawer>
-            <InvestigationFilterChips
-              filters={investigationFilters}
-              onChange={setInvestigationFilters}
-              environments={pathEnvironments}
-            />
-            <GraphPresetControls
-              filters={investigationFilters}
-              onApply={setInvestigationFilters}
-            />
-          </InvestigationFilterDrawer>
-          <GraphEmptyState
-            title={pathHasMoreFromApi ? "No matching paths in loaded pages" : "No paths match the current investigation filters"}
-            detail={pathHasMoreFromApi ? "Continue through the queue with these filters. Matches outside loaded pages are unknown." : "No loaded paths match. Clear severity, layer, evidence, or environment chips to widen the queue."}
-            suggestions={[
-              "Clear one filter chip at a time to widen the queue.",
-              "Load a saved preset that matches this estate.",
-              "Open the full graph for topology outside the filtered set.",
-            ]}
-          />
-          <button
-            type="button"
-            onClick={() => setInvestigationFilters(EMPTY_INVESTIGATION_FILTERS)}
-            className="rounded-lg border border-[color:var(--border-subtle)] px-3 py-1.5 text-xs text-[color:var(--text-secondary)] transition hover:border-[color:var(--border-strong)] hover:text-[color:var(--foreground)]"
-          >
-            Clear investigation filters
-          </button>
-          {queueContinuation}
-        </section>
+        <InvestigationFilteredEmpty
+          filters={investigationFilters}
+          onFiltersChange={setInvestigationFilters}
+          onClear={() => setInvestigationFilters(EMPTY_INVESTIGATION_FILTERS)}
+          environments={pathEnvironments}
+          morePages={pathHasMoreFromApi}
+          continuation={queueContinuation}
+        />
       ) : showCorrelationOverview ? null : (
         <InvestigationPathWorkspace
           rows={rankedRows}
@@ -1134,23 +935,6 @@ function AttackPathInvestigationContent() {
       <InvestigationTools
         scope={
         <div className="space-y-4">
-          {!captureMode ? <div className="flex flex-wrap gap-2 sm:hidden">
-            <InvestigationExportButton path={selectedExposurePath} scanId={selectedScanId} />
-            <Link
-              href={fullGraphHref}
-              className="sg-action"
-            >
-              Open lineage lens
-              <GitBranch className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/remediation"
-              className="sg-action"
-            >
-              Remediation
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div> : null}
           {!showCorrelationOverview && (!captureMode || correlationCaptureMode) && snapshots.length > 0 ? (
             <GraphCorrelationWorkflow
               snapshots={snapshots}
@@ -1159,97 +943,21 @@ function AttackPathInvestigationContent() {
               onOpenSnapshot={openCorrelationPath}
             />
           ) : null}
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]">
-                Current scan evidence
-              </p>
-              <p className="mt-1 font-mono text-sm text-[color:var(--foreground)]">
-                {selectedScanId.startsWith("current-estate:") ? "Current tenant estate" : selectedSnapshot ? selectedSnapshot.scan_id : "No scan selected"}
-              </p>
-              {selectedSnapshot ? <p className="mt-1 text-xs text-ink-tertiary">{formatDate(selectedSnapshot.created_at)} · {selectedSnapshot.node_count} nodes · {selectedSnapshot.edge_count} edges</p> : null}
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs">
-              {posture ? <QuickStat label="Posture" value={`${posture.grade} ${posture.score}`} tone="red" /> : null}
-              {fixFirstView ? (
-                <>
-                  <QuickStat label="Matched paths" value={String(fixFirstView.summary.matched_paths)} tone="blue" />
-                  <QuickStat label="Covered findings" value={String(fixFirstView.summary.covered_findings)} tone="amber" />
-                  <QuickStat label="Highest risk" value={fixFirstView.summary.highest_risk.toFixed(1)} tone="red" />
-                </>
-              ) : null}
-            </div>
-          </div>
-
-          {loadingSnapshots ? (
-            <span className="inline-flex items-center gap-2 text-xs text-sky-400">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Loading scan evidence
-            </span>
-          ) : snapshots.length > 0 ? (
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]">
-                Manage snapshots
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {currentEstateId && <button type="button" className="graph-chip-neutral" aria-pressed={selectedScanId === currentEstateId} onClick={() => selectSnapshot(currentEstateId)}>Current tenant estate</button>}
-                {displayedSnapshots.map((snapshot) => {
-                  const selected = snapshot.scan_id === selectedScanId;
-                  return (
-                    <button
-                      key={snapshot.scan_id}
-                      type="button"
-                      onClick={() => selectSnapshot(snapshot.scan_id)}
-                      className={`rounded-xl border px-3 py-2 text-left text-xs transition ${
-                        selected
-                          ? "border-emerald-700 bg-emerald-500/10 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200"
-                          : "border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-strong)] hover:text-[color:var(--foreground)]"
-                      }`}
-                    >
-                      <span className="block font-mono">{snapshot.scan_id.slice(0, 8)}…</span>
-                      <span className="mt-1 block text-[11px] opacity-80">{snapshot.node_count} nodes</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {hiddenSnapshotCount > 0 || showAllSnapshots ? (
-                <button
-                  type="button"
-                  onClick={() => setShowAllSnapshots((current) => !current)}
-                  className="mt-3 rounded-lg border border-[color:var(--border-subtle)] px-3 py-1.5 text-xs text-[color:var(--text-secondary)] transition hover:border-[color:var(--border-strong)] hover:text-[color:var(--foreground)]"
-                >
-                  {showAllSnapshots
-                    ? "Show active snapshots"
-                    : `Show all ${snapshots.length} snapshots (${hiddenSnapshotCount} empty or older)`}
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <GraphEmptyState
-              title="No persisted graph snapshots yet"
-              detail="Run a scan first so Investigation can rank paths from persisted graph evidence."
-              suggestions={[
-                "Run a local scan with graph output enabled.",
-                "Confirm the graph persistence backend is enabled.",
-              ]}
-              command="agent-bom scan -p . -f graph"
-              actions={[{ label: "Run a scan", href: "/scan" }]}
-            />
-          )}
-
-          {selectedSnapshot && estateMode.large ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--border-subtle)] pt-3 text-xs text-[color:var(--text-secondary)]">
-              <span>{estateMode.summary}. Use a focused lens before opening the full topology.</span>
-              <div className="flex flex-wrap gap-3">
-                <Link href={estateMode.clusteredHref} className="font-medium text-[color:var(--accent-mint)] hover:underline">
-                  Explore clusters
-                </Link>
-                <Link href={estateMode.rawHref} className="font-medium text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)] hover:underline">
-                  Open raw topology
-                </Link>
-              </div>
-            </div>
-          ) : null}
+          <InvestigationScanEvidence
+            selectedScanId={selectedScanId}
+            selectedSnapshot={selectedSnapshot}
+            posture={posture}
+            fixFirstView={fixFirstView}
+            loadingSnapshots={loadingSnapshots}
+            snapshots={snapshots}
+            currentEstateId={currentEstateId}
+            displayedSnapshots={displayedSnapshots}
+            onSelect={selectSnapshot}
+            hiddenSnapshotCount={hiddenSnapshotCount}
+            showAll={showAllSnapshots}
+            onToggleShowAll={() => setShowAllSnapshots((current) => !current)}
+            estateMode={estateMode}
+          />
         </div>
 
         }
@@ -1264,7 +972,7 @@ function SecurityGraphPageContent() {
   const { session } = useAuthState();
   const searchParams = useSearchParams();
   return resolveSecurityGraphSurface(searchParams) === "attack-path"
-    ? <><FindingInvestigationContext /><AttackPathInvestigationContent key={JSON.stringify(session)} /></>
+    ? <AttackPathInvestigationContent key={JSON.stringify(session)} />
     : <GraphSurface />;
 }
 
@@ -1276,25 +984,3 @@ export default function SecurityGraphPage() {
   );
 }
 
-function QuickStat({
-  label,
-  value,
-  tone = "zinc",
-}: {
-  label: string;
-  value: string;
-  tone?: "zinc" | "red" | "amber" | "blue";
-}) {
-  const tones = {
-    zinc: "border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] text-[color:var(--foreground)]",
-    red: tonedChipClass("danger"),
-    amber: tonedChipClass("warn"),
-    blue: tonedChipClass("low"),
-  };
-  return (
-    <div className={`rounded-2xl border px-4 py-3 ${tones[tone]}`}>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]">{label}</div>
-      <div className="mt-1 font-mono text-xl">{value}</div>
-    </div>
-  );
-}
