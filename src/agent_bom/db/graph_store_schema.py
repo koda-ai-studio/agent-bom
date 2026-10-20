@@ -30,7 +30,7 @@ DEFAULT_GRAPH_TENANT_ID = "default"
 GRAPH_SNAPSHOT_KINDS = frozenset({"scan", "correlation"})
 
 
-_GRAPH_SCHEMA_VERSION = 10
+_GRAPH_SCHEMA_VERSION = 11
 
 
 _DEFAULT_GRAPH_WRITE_BATCH_SIZE = 1000
@@ -291,6 +291,8 @@ CREATE TABLE IF NOT EXISTS graph_attack_paths (
     severity_rank       INTEGER NOT NULL DEFAULT 0,
     has_credential      INTEGER NOT NULL DEFAULT 0,
     source_type         TEXT NOT NULL DEFAULT '',
+    source_vendor       TEXT NOT NULL DEFAULT '',
+    target_vendor       TEXT NOT NULL DEFAULT '',
     path_json           TEXT NOT NULL,
     computed_at         TEXT NOT NULL,
     PRIMARY KEY (tenant_id, scan_id, path_key)
@@ -529,3 +531,15 @@ def normalize_snapshot_kind(snapshot_kind: str) -> str:
 def _digest_payload(payload: Any) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def upgrade_attack_path_tables(conn: sqlite3.Connection) -> None:
+    """Bring both attack-path tables of an existing store to the current schema."""
+    upgrade_attack_path_identity(conn)
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(graph_attack_paths)").fetchall()}
+    for column in ("source_vendor", "target_vendor"):
+        if column not in columns:
+            conn.execute(f"ALTER TABLE graph_attack_paths ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")  # nosec B608 - fixed names
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_gap_vendor ON graph_attack_paths(tenant_id, scan_id, source_vendor, target_vendor, queue_rank)"
+    )

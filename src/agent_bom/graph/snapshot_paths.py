@@ -33,11 +33,12 @@ from agent_bom.graph.attack_path_queue_rank import (
 )
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.path_derivation import _derived_attack_paths
+from agent_bom.graph.path_vendors import node_vendor
 
 logger = logging.getLogger(__name__)
 
 # Bump whenever derived paths, their order/fields, or the stored queue rank/facets can change for the same snapshot.
-DERIVATION_VERSION = 6
+DERIVATION_VERSION = 7
 PATHS_ANALYSIS_KEY = "paths"
 
 SNAPSHOT_PATH_COLUMNS = (
@@ -56,6 +57,8 @@ SNAPSHOT_PATH_COLUMNS = (
     "severity_rank",
     "has_credential",
     "source_type",
+    "source_vendor",
+    "target_vendor",
     "path_json",
     "computed_at",
 )
@@ -73,6 +76,9 @@ class SnapshotPath:
     severity_rank: int = 0
     has_credential: bool = False
     source_type: str = ""
+    # Vendor recorded on the path's own source and target nodes ('' when none).
+    source_vendor: str = ""
+    target_vendor: str = ""
 
 
 def path_identity(path: AttackPath) -> str:
@@ -140,6 +146,8 @@ def materialize_snapshot_paths(graph: UnifiedGraph) -> list[SnapshotPath]:
                 severity_rank=severity_rank(path_severity(path, nodes)),
                 has_credential=path_has_credential(path, nodes),
                 source_type=source_entity_type(path, nodes),
+                source_vendor=node_vendor(nodes.get(path.hops[0] if path.hops else path.source)),
+                target_vendor=node_vendor(nodes.get(path.hops[-1] if path.hops else path.target)),
             )
         )
     return rows
@@ -200,6 +208,8 @@ def snapshot_path_rows(rows: Iterable[SnapshotPath], *, tenant: str, scan: str, 
             row.severity_rank,
             int(row.has_credential),
             row.source_type,
+            row.source_vendor,
+            row.target_vendor,
             json.dumps(payload, sort_keys=True, separators=(",", ":")),
             now,
         )
