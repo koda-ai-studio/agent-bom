@@ -20,7 +20,7 @@ from agent_bom.api.connection_store import (
 from agent_bom.api.cost_store import LLMCostRecord, get_cost_store
 from agent_bom.api.models import SourceKind, SourceRecord, SourceStatus
 from agent_bom.api.stores import _get_source_store
-from agent_bom.demo_estate.showcase_graph import SHOWCASE_TENANT
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_TENANT
 
 _logger = logging.getLogger(__name__)
 

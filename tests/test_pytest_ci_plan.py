@@ -263,6 +263,8 @@ def test_report_projection_edits_select_builder_store_and_runtime_contracts(tmp_
             "test_graph_projection_contracts.py",
             "test_runtime_incident_feedback.py",
             "graph/test_store_backed_unified_graph.py",
+            "graph/test_snowflake_account_staging.py",
+            "graph/projection/test_workspace_cleanup.py",
         )
     )
     for path in expected:
@@ -276,6 +278,13 @@ def test_report_projection_edits_select_builder_store_and_runtime_contracts(tmp_
         "cloud_compute_projection",
         "cloud_service_projection",
         "cloud_storage_projection",
+        "agent_cloud_lineage",
+        "organization_aws",
+        "organization_gcp",
+        "organization_findings",
+        "normalized_resource_projection",
+        "network_entry_projection",
+        "snowflake_source_lanes",
     ):
         assert select_targeted_tests(changed_files=[Path(f"src/agent_bom/graph/{module}.py")], root=tmp_path) == expected
 

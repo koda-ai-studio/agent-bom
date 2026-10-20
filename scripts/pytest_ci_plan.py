@@ -62,6 +62,13 @@ MCP_TOOL_CONTRACTS = (
 GRAPH_PROJECTION_SOURCES = frozenset(
     {
         "src/agent_bom/graph/builder.py",
+        "src/agent_bom/graph/agent_cloud_lineage.py",
+        "src/agent_bom/graph/organization_aws.py",
+        "src/agent_bom/graph/organization_gcp.py",
+        "src/agent_bom/graph/organization_findings.py",
+        "src/agent_bom/graph/normalized_resource_projection.py",
+        "src/agent_bom/graph/network_entry_projection.py",
+        "src/agent_bom/graph/snowflake_source_lanes.py",
         "src/agent_bom/graph/ast_tool_projection.py",
         "src/agent_bom/graph/framework_topology_projection.py",
         "src/agent_bom/graph/cloud_compute_projection.py",
@@ -571,7 +578,11 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             )
         if normalized.as_posix() in GRAPH_PROJECTION_SOURCES:
             selected.update(
-                candidate for candidate in available if "graph" in candidate.stem or candidate.stem == "test_runtime_incident_feedback"
+                candidate
+                for candidate in available
+                if candidate.is_relative_to(test_root / "graph")
+                or "graph" in candidate.stem
+                or candidate.stem == "test_runtime_incident_feedback"
             )
         if normalized.as_posix() == "src/agent_bom/graph/credential_bindings.py":
             selected.update(

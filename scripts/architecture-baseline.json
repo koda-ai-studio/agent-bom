@@ -2960,7 +2960,7 @@
     "demo_estate/bootstrap.py": {
       "api_imports": 8,
       "broad_except": 14,
-      "deferred_imports": 27,
+      "deferred_imports": 25,
       "raw_env_reads": 1
     },
     "demo_estate/bootstrap.py::maybe_bootstrap_demo_estate": {
@@ -3029,6 +3029,10 @@
       "api_imports": 1,
       "deferred_imports": 1
     },
+    "demo_estate/showcase_fleet.py": {
+      "api_imports": 3,
+      "deferred_imports": 4
+    },
     "demo_estate/showcase_gateway.py": {
       "api_imports": 3,
       "deferred_imports": 3
@@ -3038,19 +3042,19 @@
       "deferred_imports": 2
     },
     "demo_estate/showcase_graph.py": {
-      "api_imports": 5,
+      "api_imports": 1,
       "broad_except": 2,
-      "deferred_imports": 15,
-      "file_lines": 1007
+      "deferred_imports": 10,
+      "file_lines": 648
     },
     "demo_estate/showcase_graph.py::build_showcase_graph": {
       "function_lines": 231
     },
-    "demo_estate/showcase_graph.py::seed_showcase_fleet_and_runtime": {
-      "function_lines": 116
-    },
     "demo_estate/showcase_graph.py::seed_showcase_graph_if_empty": {
       "function_lines": 95
+    },
+    "demo_estate/showcase_identities.py": {
+      "api_imports": 1
     },
     "demo_estate/showcase_surfaces.py": {
       "api_imports": 2,
@@ -3421,38 +3425,17 @@
       "raw_env_reads": 3
     },
     "graph/builder.py": {
-      "deferred_imports": 4,
-      "file_lines": 1750,
+      "file_lines": 982,
       "graph_api_imports": 1
-    },
-    "graph/builder.py::_add_aws_organization": {
-      "function_lines": 104
     },
     "graph/builder.py::_add_cloud_inventory": {
       "function_lines": 213
-    },
-    "graph/builder.py::_add_cloud_org_architecture_findings": {
-      "function_lines": 83
-    },
-    "graph/builder.py::_add_gcp_organization": {
-      "complexity": 20,
-      "function_lines": 171
     },
     "graph/builder.py::_add_inventory_group": {
       "function_lines": 107
     },
     "graph/builder.py::_add_inventory_principal": {
       "function_lines": 153
-    },
-    "graph/builder.py::_add_normalized_cloud_resources": {
-      "function_lines": 109
-    },
-    "graph/builder.py::_add_snowflake_source_lanes": {
-      "function_lines": 90
-    },
-    "graph/builder.py::_wire_network_entry_exposure_paths": {
-      "complexity": 28,
-      "function_lines": 104
     },
     "graph/builder_frameworks.py": {
       "deferred_imports": 1
@@ -3569,6 +3552,9 @@
     "graph/nhi_overlay.py": {
       "broad_except": 1
     },
+    "graph/normalized_resource_projection.py": {
+      "deferred_imports": 1
+    },
     "graph/path_derivation.py": {
       "deferred_imports": 1
     },
@@ -3629,6 +3615,9 @@
     },
     "graph/snapshot_paths.py": {
       "broad_except": 1
+    },
+    "graph/snowflake_source_lanes.py": {
+      "deferred_imports": 3
     },
     "graph/toxic_findings.py": {
       "broad_except": 1,

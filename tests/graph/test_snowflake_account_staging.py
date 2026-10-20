@@ -55,7 +55,7 @@ def test_store_backed_account_staging_eviction_matches_memory_and_cleans_workspa
 
 
 def test_store_backed_account_staging_closes_workspace_on_projection_error(monkeypatch):
-    from agent_bom.graph import builder, store_backed
+    from agent_bom.graph import snowflake_source_lanes, store_backed
 
     staged = []
     with open_store_backed_unified_graph(backend="sqlite") as output:
@@ -69,7 +69,7 @@ def test_store_backed_account_staging_closes_workspace_on_projection_error(monke
             raise RuntimeError("controlled projection failure")
 
         monkeypatch.setattr(store_backed, "open_store_backed_unified_graph", stage)
-        monkeypatch.setattr(builder, "_project_snowflake_lanes", fail)
+        monkeypatch.setattr(snowflake_source_lanes, "_project_snowflake_lanes", fail)
         with pytest.raises(RuntimeError, match="controlled projection failure"):
             build_unified_graph_from_report(_report(), container=output)
         assert len(staged) == 1

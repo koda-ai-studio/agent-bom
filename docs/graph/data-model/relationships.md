@@ -38,7 +38,7 @@ Class `finding` · directed · traversable · required evidence `source`, `tier`
 - `misconfiguration` → `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `framework`, `model`, `org`, `package`, `role`, `server`, `service_account`, `service_principal`, `source_file`, `tool`
 - `vulnerability` → `config_file`, `container`, `package`, `resource`, `server`, `source_file`
 
-Emitted by: `graph/benchmark_projection.py`, `graph/builder.py`, `graph/finding_projection.py`, `graph/repo_structure_overlay.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/benchmark_projection.py`, `graph/finding_projection.py`, `graph/organization_findings.py`, `graph/repo_structure_overlay.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `assumes`
 
@@ -164,7 +164,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `source_file` → `package`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/repo_structure_overlay.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/repo_structure_overlay.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `correlates_with`
 
@@ -246,7 +246,7 @@ Class `exposure` · directed · traversable · required evidence `source`, `tier
 - `data_store` → `account`, `cloud_resource`, `data_store`, `resource`
 - `server` → `agent`, `cloud_resource`, `data_store`, `resource`
 
-Emitted by: `graph/builder.py`, `graph/builder_network_exposure.py`, `graph/builder_snowflake_data_movement.py`, `graph/cloud_compute_projection.py`, `graph/cnapp_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder_network_exposure.py`, `graph/builder_snowflake_data_movement.py`, `graph/cloud_compute_projection.py`, `graph/cnapp_overlay.py`, `graph/normalized_resource_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `exposes_cred`
 
@@ -265,7 +265,7 @@ Class `governance` · directed · not traversable · required evidence `source`,
 - `blueprint` → `agent`, `drift_incident`, `managed_identity`, `tool`
 - `policy` → `account`, `org`
 
-Emitted by: `graph/builder.py`, `graph/governance_overlay.py`
+Emitted by: `graph/governance_overlay.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`
 
 ## `has_permission`
 
@@ -278,7 +278,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `service_principal` → `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool`
 - `user` → `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool`
 
-Emitted by: `graph/builder.py`, `graph/builder_cloud_principals.py`, `graph/builder_snowflake_objects.py`, `graph/cloud_rbac.py`, `graph/effective_permissions.py`
+Emitted by: `graph/builder_cloud_principals.py`, `graph/builder_snowflake_objects.py`, `graph/cloud_rbac.py`, `graph/effective_permissions.py`, `graph/organization_gcp.py`
 
 ## `hosted_on`
 
@@ -392,7 +392,7 @@ Class `governance` · directed · traversable · required evidence `source`, `ti
 - `service_principal` → `agent`, `cloud_resource`, `environment`
 - `user` → `agent`, `cloud_resource`, `environment`
 
-Emitted by: `graph/builder.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/cloud_audit_projection.py`, `graph/cloud_context.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`
+Emitted by: `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/cloud_audit_projection.py`, `graph/cloud_context.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`
 
 ## `part_of`
 

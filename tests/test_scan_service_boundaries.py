@@ -18,8 +18,9 @@ def test_finding_helpers_do_not_depend_on_scan_router(module):
             assert all(alias.name != "agent_bom.api.routes.scan" for alias in node.names)
 
 
-def test_demo_graph_uses_graph_services_without_http_composition():
-    path = Path(__file__).resolve().parents[1] / "src/agent_bom/demo_estate/showcase_graph.py"
+@pytest.mark.parametrize("module", ["showcase_graph", "showcase_constants", "showcase_identities", "showcase_fleet"])
+def test_demo_graph_uses_graph_services_without_http_composition(module):
+    path = Path(__file__).resolve().parents[1] / "src/agent_bom/demo_estate" / f"{module}.py"
     for node in ast.walk(ast.parse(path.read_text())):
         if isinstance(node, ast.ImportFrom):
             assert not (node.module or "").startswith("agent_bom.api.routes")
