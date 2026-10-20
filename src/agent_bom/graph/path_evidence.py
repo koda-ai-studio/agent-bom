@@ -258,7 +258,9 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_
         basis.append("correlation_recomputation_required")
     basis.extend([*([analysis_reason] if analysis_reason else []), *unassessed_basis(receipts)])
     path.hop_evidence = receipts
-    path.analysis = analysis
+    # The analyzer status replaces the old one; derivation evidence (alternate chains) stays.
+    kept = {key: value for key, value in (path.analysis or {}).items() if key.startswith("alternate_chain")}
+    path.analysis = {**analysis, **kept}
 
     # A path must contain at least one relationship. Without this guard a
     # single-node structural finding satisfies ``all([])`` and is promoted to
