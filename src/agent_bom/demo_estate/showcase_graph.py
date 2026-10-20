@@ -564,7 +564,7 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
     _record_showcase_attack_path_analysis(graph, count_paths=False)
     try:
         from agent_bom.graph.edge_freshness import stamp_edge_freshness
-        from agent_bom.graph.path_derivation import _derived_attack_paths
+        from agent_bom.graph.path_derivation import _derived_attack_paths, leads_somewhere
         from agent_bom.graph.path_evidence import with_technique_mappings
 
         # The seed is this snapshot's collection: stamp edge freshness as the scan build does,
@@ -596,7 +596,8 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
         reverse=True,
     )
     for path in ranked:
-        unique_paths.setdefault(path_identity(path), path)
+        if leads_somewhere(path):
+            unique_paths.setdefault(path_identity(path), path)
     graph.attack_paths = list(unique_paths.values())
 
     return True

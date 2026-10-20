@@ -128,18 +128,11 @@ def test_two_factor_is_a_toxic_combination_not_crown_jewel():
             attributes={"internet_exposed": True},
         )
     )
-    g.add_node(
-        UnifiedNode(
-            id="vuln:x",
-            entity_type=EntityType.VULNERABILITY,
-            label="CVE-X",
-            severity="high",
-            attributes={"reachability": "likely", "reachability_basis": ["dependency_path"]},
-        )
-    )
-    g.add_edge(UnifiedEdge(source="cloud:vm", target="vuln:x", relationship=RelationshipType.VULNERABLE_TO))
+    g.add_node(UnifiedNode(id="ds:pii", entity_type=EntityType.DATA_STORE, label="pii", attributes={"data_sensitivity": "pii"}))
+    g.add_edge(UnifiedEdge(source="cloud:vm", target="ds:pii", relationship=RelationshipType.EXPOSED_TO))
     paths = _derived_toxic_combination_paths(g)
     assert len(paths) == 1
+    assert paths[0].hops == ["cloud:vm", "ds:pii"]
     assert "Toxic combination" in paths[0].summary
     assert 80 <= paths[0].composite_risk < 95
 
