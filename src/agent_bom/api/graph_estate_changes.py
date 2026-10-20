@@ -4,8 +4,10 @@ The current estate is a projection over the newest completed scan per target
 scope. A tenant-wide "latest two snapshots" diff therefore compares unrelated
 sources. Here every scope's current snapshot is compared with that same
 scope's previous completed snapshot, using the bounded ``/v1/graph/diff`` rows,
-and the per-scope answers are aggregated. A scope without an earlier snapshot
-is a first observation, never an addition.
+and the per-scope answers are aggregated. A scope scanned only once falls back
+to the store's declared continuity baseline (the earlier same-kind snapshot)
+when no other scope's scan owns it. A scope with neither is a first
+observation, never an addition.
 """
 
 from __future__ import annotations
@@ -19,12 +21,13 @@ from fastapi import HTTPException, Request
 from agent_bom.api.current_graph import available_sources, graph_scan_id
 from agent_bom.api.finding_job_metadata import scan_evidence_authority_key, scan_scope_key
 from agent_bom.api.finding_row_shapes import _scan_source_labels
-from agent_bom.api.graph_diff_read import _compute_rows
+from agent_bom.api.graph_diff_read import _compute_rows, _stored_paths
 from agent_bom.api.models import JobStatus, ScanJob
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.stores import _get_store
+from agent_bom.graph.attack_path_queue import attack_path_rank_window
 from agent_bom.graph.completeness import graph_completeness
-from agent_bom.graph.diff_view import diff_summary
+from agent_bom.graph.diff_view import diff_summary, new_attack_paths
 
 SOURCE_LIMIT_DEFAULT = 50
 SOURCE_LIMIT_MAX = 100
@@ -35,10 +38,21 @@ _FIELD_LABELS = {"images": "image", "repo_url": "repo", "k8s": "kubernetes", "fi
 
 
 @dataclass(frozen=True)
+class _Baseline:
+    """The snapshot a scope is compared with, and why it is comparable."""
+
+    scan_id: str
+    job_id: str
+    captured_at: str
+    # "scope_history": the scope's own earlier scan; "snapshot_continuity": the store's declared predecessor.
+    basis: str
+
+
+@dataclass(frozen=True)
 class _Scope:
     key: str
     current: Any
-    previous: Any | None
+    previous: _Baseline | None
     skipped: int
     searched_out: bool
 
@@ -74,8 +88,10 @@ def _plan(store: Any, job_store: Any, tenant: str) -> tuple[list[_Scope], set[st
         if scope not in current or scan_evidence_authority_key(job) > scan_evidence_authority_key(current[scope]):
             current[scope] = job
     history: dict[str, list[Any]] = {}
+    owner: dict[str, str] = {}
     for job in jobs:
         history.setdefault(scan_scope_key(job), []).append(job)
+        owner.setdefault(graph_scan_id(job), scan_scope_key(job))
     scopes: list[_Scope] = []
     for scope, job in current.items():
         authority, new_id = scan_evidence_authority_key(job), graph_scan_id(job)
@@ -88,17 +104,51 @@ def _plan(store: Any, job_store: Any, tenant: str) -> tuple[list[_Scope], set[st
             key=scan_evidence_authority_key,
             reverse=True,
         )
-        previous, skipped = None, 0
+        previous: _Baseline | None = None
+        skipped = 0
         for other in older[:PREVIOUS_SEARCH_LIMIT]:
             if _has_graph(store, tenant, graph_scan_id(other)):
-                previous = other
+                previous = _Baseline(graph_scan_id(other), str(other.job_id), scan_evidence_authority_key(other)[0], "scope_history")
                 break
             skipped += 1
+        if previous is None and not older:
+            previous = _continuity_baseline(store, tenant, new_id, scope, owner)
+            if previous is not None:
+                reasons.add("snapshot_baseline")
         scopes.append(_Scope(scope, job, previous, skipped, previous is None and len(older) > PREVIOUS_SEARCH_LIMIT))
         if skipped:
             reasons.add("previous_graph_unavailable")
     scopes.sort(key=lambda item: (scan_evidence_authority_key(item.current), item.key), reverse=True)
     return scopes, reasons
+
+
+def _continuity_baseline(store: Any, tenant: str, scan_id: str, scope: str, owner: dict[str, str]) -> _Baseline | None:
+    """The store's earlier same-kind snapshot, unless another scope's scan owns it.
+
+    Snapshot writes already treat this predecessor as the continuity baseline
+    for edge history. A snapshot recorded by a different scope is an unrelated
+    source and is never compared.
+    """
+    try:
+        candidate = store.previous_snapshot_id(tenant_id=tenant, before_scan_id=scan_id)
+    except NotImplementedError:
+        return None
+    if not candidate or owner.get(candidate, scope) != scope or not _has_graph(store, tenant, candidate):
+        return None
+    rows = store.snapshots_by_ids(tenant_id=tenant, scan_ids={candidate})
+    captured = str(rows[0].get("created_at") or "") if rows else ""
+    return _Baseline(candidate, "", captured, "snapshot_continuity")
+
+
+def _path_changes(store: Any, tenant: str, old_id: str, new_id: str) -> dict[str, Any]:
+    """Stored attack paths added and removed between the pair, bounded by the rank window."""
+    window = attack_path_rank_window()
+    old_paths, old_total = _stored_paths(store, tenant, old_id, window)
+    new_paths, new_total = _stored_paths(store, tenant, new_id, window)
+    return {
+        "new_attack_paths": new_attack_paths(old_paths, new_paths, old_total=old_total, new_total=new_total, window=window),
+        "removed_attack_paths": new_attack_paths(new_paths, old_paths, old_total=new_total, new_total=old_total, window=window),
+    }
 
 
 def scope_label(job: Any) -> str:
@@ -162,9 +212,11 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
             )
             totals["new_sources"] += 1
             continue
-        old_id, new_id = graph_scan_id(scope.previous), graph_scan_id(scope.current)
+        old_id, new_id = scope.previous.scan_id, graph_scan_id(scope.current)
         _diff, rows = _compute_rows(store, tenant, old_id, new_id)
         summary = diff_summary(rows)
+        if summary["total_changes"]:
+            summary["highlights"].update(_path_changes(store, tenant, old_id, new_id))
         for kind in ("nodes", "edges"):
             for change, count in summary["totals"][kind].items():
                 totals[kind][change] += count
@@ -172,7 +224,8 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
         sources.append(
             {
                 **base,
-                "old": _snapshot_ref(scope.previous),
+                "old": {"scan_id": scope.previous.scan_id, "job_id": scope.previous.job_id, "captured_at": scope.previous.captured_at},
+                "baseline": scope.previous.basis,
                 "counts": summary["totals"],
                 "total_changes": summary["total_changes"],
                 "nodes_by_entity_type": summary["nodes_by_entity_type"],

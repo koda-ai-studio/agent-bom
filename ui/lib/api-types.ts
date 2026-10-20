@@ -1100,16 +1100,48 @@ export interface GraphEstateSnapshotRef {
   captured_at: string;
 }
 
-/** One target scope compared with its own previous completed snapshot. */
+/** A changed node named by the diff summary's highlights. */
+export interface GraphEstateHighlightNode {
+  kind: "node" | "edge";
+  change: "added" | "removed" | "changed";
+  id?: string;
+  entity_type?: string;
+  label?: string;
+  severity?: string;
+  source?: string;
+  target?: string;
+  relationship?: string;
+}
+
+/** A stored attack path present on one side of the comparison only. */
+export interface GraphEstatePathChange {
+  source: string;
+  target: string;
+  hops: string[];
+  composite_risk: number;
+  summary: string;
+}
+
+export interface GraphEstateHighlights {
+  new_critical_findings?: { count: number; top: GraphEstateHighlightNode[] };
+  new_credential_reach?: { count: number; top: GraphEstateHighlightNode[] };
+  removed_controls?: { count: number; top: GraphEstateHighlightNode[] };
+  new_attack_paths?: { status: string; count: number; count_is_lower_bound?: boolean; top: GraphEstatePathChange[] };
+  removed_attack_paths?: { status: string; count: number; count_is_lower_bound?: boolean; top: GraphEstatePathChange[] };
+}
+
+/** One target scope compared with its comparable previous snapshot. */
 export interface GraphEstateChangeSource {
   scope_id: string;
   label: string;
   old: GraphEstateSnapshotRef;
   new: GraphEstateSnapshotRef;
+  /** The scope's own earlier scan, or the store's declared earlier snapshot for a scope scanned once. */
+  baseline?: "scope_history" | "snapshot_continuity";
   counts: Record<"nodes" | "edges", GraphDiffChangeCounts>;
   total_changes: number;
   nodes_by_entity_type: Record<string, GraphDiffChangeCounts>;
-  highlights: Record<string, unknown>;
+  highlights: GraphEstateHighlights;
   skipped_snapshots: number;
 }
 

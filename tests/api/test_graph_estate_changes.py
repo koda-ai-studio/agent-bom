@@ -13,6 +13,7 @@ from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.server import app
 from agent_bom.api.store import InMemoryJobStore
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
+from agent_bom.graph.container import AttackPath
 from tests.api.test_scan_job_sla_history import job
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
@@ -177,3 +178,66 @@ def test_mcp_estate_mode_matches_rest(estate, monkeypatch):
     assert mcp["tool"] == "graph_diff" and mcp["source"] == "v1_graph_changes"
     for key in ("sources", "new_sources", "totals", "pagination", "completeness"):
         assert mcp[key] == rest[key]
+
+
+def save_snapshot(estate, scan_id, created_at, nodes, *, paths=()):
+    _jobs, graph_store = estate
+    graph = UnifiedGraph(scan_id=scan_id, tenant_id=TENANT, created_at=created_at)
+    for name in nodes:
+        kind = EntityType.SERVER if name.endswith("srv") else EntityType.PACKAGE
+        graph.add_node(UnifiedNode(id=name, entity_type=kind, label=name))
+    for hops in paths:
+        graph.attack_paths.append(AttackPath(source=hops[0], target=hops[-1], hops=list(hops), composite_risk=7.0))
+    graph_store.save_graph(graph)
+
+
+def test_single_scan_scope_compares_with_declared_snapshot_baseline(estate):
+    """A scope seen once is still comparable with the store's earlier same-kind snapshot no other scope owns."""
+    save_snapshot(estate, "baseline", "2026-07-01T00:00:00+00:00", ["asrv", "a1"])
+    record(estate, 8, "repo-a", ["asrv", "a2", "a3"])
+    with client() as http:
+        body = http.get("/v1/graph/changes").json()
+    assert body["new_sources"] == []
+    row = by_label(body)["repo-a"]
+    assert row["old"]["scan_id"] == "baseline" and row["old"]["job_id"] == ""
+    assert row["baseline"] == "snapshot_continuity"
+    assert row["counts"]["nodes"] == {"added": 2, "removed": 1, "changed": 0}
+    assert body["totals"]["changed_sources"] == 1 and body["totals"]["new_sources"] == 0
+    assert "snapshot_baseline" in body["completeness_reasons"]
+
+
+def test_scope_history_baseline_is_labelled(estate):
+    seed(estate)
+    with client() as http:
+        body = http.get("/v1/graph/changes").json()
+    assert {row["baseline"] for row in body["sources"]} == {"scope_history"}
+    assert "snapshot_baseline" not in body["completeness_reasons"]
+
+
+def test_another_scopes_snapshot_is_never_a_baseline(estate):
+    """The tenant-wide predecessor belongs to repo-b's scan, so repo-c stays a first observation."""
+    record(estate, 7, "repo-b", ["bsrv"])
+    record(estate, 8, "repo-c", ["c1"])
+    with client() as http:
+        body = http.get("/v1/graph/changes").json()
+    assert {row["label"] for row in body["new_sources"]} == {"repo-b", "repo-c"}
+    assert body["sources"] == []
+
+
+def test_source_lists_new_and_removed_attack_paths(estate):
+    save_snapshot(estate, "baseline", "2026-07-01T00:00:00+00:00", ["asrv", "a1"], paths=[("asrv", "a1")])
+    jobs, graph_store = estate
+    scan = job(8, tenant=TENANT, target="repo-a", findings=[])
+    scan.result.update(scan_id=scan.job_id, scan_run={"outcome": "complete"})
+    graph = UnifiedGraph(scan_id=scan.job_id, tenant_id=TENANT, created_at=scan.completed_at)
+    for name, kind in (("asrv", EntityType.SERVER), ("a2", EntityType.PACKAGE)):
+        graph.add_node(UnifiedNode(id=name, entity_type=kind, label=name))
+    graph.attack_paths.append(AttackPath(source="asrv", target="a2", hops=["asrv", "a2"], composite_risk=9.0))
+    graph_store.save_graph(graph)
+    jobs.put(scan)
+    with client() as http:
+        row = by_label(http.get("/v1/graph/changes").json())["repo-a"]
+    added = row["highlights"]["new_attack_paths"]
+    removed = row["highlights"]["removed_attack_paths"]
+    assert added["count"] == 1 and added["top"][0]["hops"] == ["asrv", "a2"]
+    assert removed["count"] == 1 and removed["top"][0]["hops"] == ["asrv", "a1"]

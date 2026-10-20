@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Drawer } from "@/components/drawer";
-import type { GraphEstateChangesResponse } from "@/lib/api-types";
+import { GraphChangeExposures } from "@/components/graph-change-exposures";
+import type { GraphEstateChangesResponse, GraphEstatePathChange } from "@/lib/api-types";
 import { countsLine, type SnapshotPair } from "@/lib/graph-estate-changes";
 
 export interface GraphChangesPanelProps {
@@ -25,6 +26,10 @@ export interface GraphChangesPanelProps {
   onClose: () => void;
   onHighlight: () => void;
   onOpenDiff: (pair: SnapshotPair, label: string) => void;
+  /** Open a new finding or asset on the canvas. */
+  onInvestigateNode?: ((id: string, label: string) => void) | undefined;
+  /** Open a new attack path on the canvas. */
+  onInvestigatePath?: ((path: GraphEstatePathChange) => void) | undefined;
 }
 
 const when = (stamp: string) => {
@@ -37,6 +42,7 @@ const REASONS: Record<string, string> = {
   graph_evidence_unavailable: "A current scan has no graph yet; its earlier graph stays in the estate.",
   scan_history_unavailable: "Snapshots exist without scan history, so sources cannot be paired.",
   scan_partial: "A current scan was partial; removals may reflect incomplete collection.",
+  snapshot_baseline: "A source scanned once is compared with the earlier retained snapshot no other source owns.",
 };
 
 function CompletenessNote({ changes }: { changes: GraphEstateChangesResponse }) {
@@ -69,6 +75,8 @@ export function GraphChangesPanel({
   onClose,
   onHighlight,
   onOpenDiff,
+  onInvestigateNode,
+  onInvestigatePath,
 }: GraphChangesPanelProps) {
   const changed = changes?.totals.changed_sources ?? 0;
   const canHighlight = changes ? changed > 0 : highlightAvailable;
@@ -79,7 +87,7 @@ export function GraphChangesPanel({
       size="md"
       eyebrow="What changed"
       title={title}
-      subtitle={changes ? "Each source is compared with its own previous scan." : undefined}
+      subtitle={changes ? "Each source is compared with its previous comparable snapshot." : undefined}
       ariaLabel={title}
       bodyClassName="space-y-3"
     >
@@ -128,10 +136,14 @@ export function GraphChangesPanel({
                     {source.total_changes > 0 ? countsLine(source.counts.nodes, source.counts.edges) : "No changes"}
                     {source.counts.nodes.changed > 0 && ` · ${source.counts.nodes.changed.toLocaleString()} nodes changed`}
                   </p>
-                  <p className="text-[11px] text-ink-tertiary">
+                  <p className="text-xs text-ink-tertiary">
                     {when(source.old.captured_at)} → {when(source.new.captured_at)}
                     {source.skipped_snapshots > 0 && ` · ${source.skipped_snapshots} snapshot${source.skipped_snapshots === 1 ? "" : "s"} without graph skipped`}
                   </p>
+                  {source.baseline === "snapshot_continuity" && (
+                    <p className="text-xs text-ink-tertiary [overflow-wrap:anywhere]">Compared with earlier snapshot {source.old.scan_id}</p>
+                  )}
+                  <GraphChangeExposures highlights={source.highlights ?? {}} onInvestigateNode={onInvestigateNode} onInvestigatePath={onInvestigatePath} />
                   {selected && diffDetails}
                 </li>
               );

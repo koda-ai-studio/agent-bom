@@ -3728,7 +3728,14 @@ function GraphPageInner() {
             selectedPair={viewingCurrentEstate ? driftScrubberPair : null}
             diffDetails={<GraphSnapshotDiff diff={graphDiff} counts={diffCounts} loading={loadingDiff} error={diffError} showCounts={!viewingCurrentEstate} />}
             onClose={() => setChangesOpen(false)} onHighlight={() => void highlight.highlight()}
-            onOpenDiff={pair => { highlight.openPair(pair); setComparisonRequested(true); }} />
+            onOpenDiff={pair => { highlight.openPair(pair); setComparisonRequested(true); }}
+            onInvestigateNode={(rootId, rootLabel) => { setChangesOpen(false); void loadRootInvestigation({ rootId, rootLabel }); }}
+            onInvestigatePath={path => {
+              setChangesOpen(false);
+              const key = `${path.source}::${path.target}::${path.hops.join("->")}`;
+              if (attackPaths.some(item => attackPathKey(item) === key)) setSelectedAttackPathKey(key);
+              else void loadRootInvestigation({ rootId: path.target, rootLabel: path.target });
+            }} />
           {narrowViewport && investigationMode && displayNodes.length > 0 && <div role="group" aria-label="Investigation view" className="flex gap-2">
             {(["list", "graph"] as const).map(view => <button key={view} type="button" aria-pressed={mobileGraphView === view} onClick={() => setMobileGraphView(view)}
               className="graph-page-action min-h-11 flex-1 aria-pressed:bg-surface-elevated">{view === "list" ? "List" : "Graph"}</button>)}

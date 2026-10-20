@@ -144,7 +144,11 @@ class GraphEstateChangesPagination(ReadModel):
 class GraphEstateChangesResponse(ReadResponse):
     """``GET /v1/graph/changes``: each target scope's current snapshot against its own previous snapshot.
 
-    ``sources`` are scopes with a previous snapshot; ``new_sources`` are first
+    ``sources`` are scopes with a comparable previous snapshot: the scope's own
+    earlier scan (``baseline: scope_history``) or, for a scope scanned once, the
+    store's earlier same-kind snapshot that no other scope owns
+    (``baseline: snapshot_continuity``). Each changed source carries added and
+    removed stored attack paths in ``highlights``. ``new_sources`` are first
     observations and are never counted as additions. ``totals`` cover the
     returned page of scopes; ``completeness`` says whether more scopes exist.
     """
