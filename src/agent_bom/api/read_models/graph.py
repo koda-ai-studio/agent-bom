@@ -149,7 +149,9 @@ class GraphEstateChangesResponse(ReadResponse):
     earlier scan (``baseline: scope_history``) or, for a scope scanned once, the
     store's earlier same-kind snapshot that no other scope owns
     (``baseline: snapshot_continuity``). Each changed source carries added and
-    removed stored attack paths in ``highlights``. ``new_sources`` are first
+    removed stored attack paths in ``highlights`` and ``changes_by_source``:
+    changed nodes per vendor and account the collector recorded on each node,
+    since one scan can collect many vendors. ``new_sources`` are first
     observations and are never counted as additions. ``totals`` cover the
     returned page of scopes; ``completeness`` says whether more scopes exist.
     """

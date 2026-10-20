@@ -82,3 +82,20 @@ export function mergeDriftDiffs(diffs: GraphDiffResponse[]): GraphDiffResponse {
   }
   return merged;
 }
+
+/** The path queue with this exact new path selected, in the snapshot that recorded it. */
+export function changedPathInvestigationHref(path: { source: string; target: string; hops: string[] }, scanId?: string): string {
+  const params = new URLSearchParams();
+  if (scanId) params.set("scan", scanId);
+  params.set("node", path.source);
+  params.set("selected_path", `${path.source}::${path.target}::${path.hops.join("->")}`);
+  params.set("path_view", "path");
+  return `/security-graph?${params.toString()}`;
+}
+
+/** One changed node on the lineage graph, in the snapshot where it exists (removed nodes live in the old one). */
+export function changedNodeHref(id: string, label: string, scanId?: string): string {
+  const params = new URLSearchParams({ investigate: "1", root: id, q: label });
+  if (scanId) params.set("scan", scanId);
+  return `/graph?${params.toString()}`;
+}

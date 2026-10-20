@@ -27,6 +27,7 @@ from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.stores import _get_store
 from agent_bom.graph.attack_path_queue import attack_path_rank_window
 from agent_bom.graph.completeness import graph_completeness
+from agent_bom.graph.diff_sources import changes_by_collected_source
 from agent_bom.graph.diff_view import diff_summary, new_attack_paths
 
 SOURCE_LIMIT_DEFAULT = 50
@@ -245,6 +246,7 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
                 "counts": summary["totals"],
                 "total_changes": summary["total_changes"],
                 "nodes_by_entity_type": summary["nodes_by_entity_type"],
+                "changes_by_source": changes_by_collected_source(store, tenant, old_id, new_id, rows),
                 "highlights": summary["highlights"],
                 "skipped_snapshots": scope.skipped,
             }

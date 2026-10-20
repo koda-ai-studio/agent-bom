@@ -269,3 +269,42 @@ def test_highlighted_paths_and_reach_carry_node_display_names(estate):
     assert (added["source_label"], added["target_label"]) == ("Billing server", "New package")
     assert (removed["source_label"], removed["target_label"]) == ("Billing server", "Old package")
     assert (reach["source_label"], reach["target_label"]) == ("Billing server", "Stripe key")
+
+
+def _vendor_graph(scan_id, nodes):
+    graph = UnifiedGraph(scan_id=scan_id, tenant_id=TENANT, created_at="2026-10-01T00:00:00Z")
+    for node_id, vendor, account in nodes:
+        attributes = {"cloud_provider": vendor, "account_id": account} if vendor else {}
+        graph.add_node(UnifiedNode(id=node_id, entity_type=EntityType.CLOUD_RESOURCE, label=node_id, attributes=attributes))
+    return graph
+
+
+def test_changes_are_attributed_to_the_collected_vendor_and_account(estate):
+    jobs, graph_store = estate
+    old = record(estate, 7, "estate", [], save_graph=False)
+    new = record(estate, 8, "estate", [], save_graph=False)
+    graph_store.save_graph(_vendor_graph(old, [("aws:old", "aws", "111"), ("keep", "aws", "111")]))
+    graph_store.save_graph(
+        _vendor_graph(
+            new,
+            [
+                ("keep", "aws", "111"),
+                ("aws:new", "aws", "111"),
+                ("sf:a", "snowflake", "NS_02"),
+                ("sf:b", "snowflake", "NS_02"),
+                ("bare", "", ""),
+            ],
+        )
+    )
+    with client() as http:
+        body = http.get("/v1/graph/changes").json()
+    row = by_label(body)["estate"]
+    attribution = row["changes_by_source"]
+    assert attribution["unit"] == "nodes"
+    # Most changes first; equal totals order by vendor.
+    assert attribution["sources"] == [
+        {"vendor": "aws", "account": "111", "added": 1, "removed": 1, "changed": 0},
+        {"vendor": "snowflake", "account": "NS_02", "added": 2, "removed": 0, "changed": 0},
+    ]
+    assert attribution["unattributed"] == {"added": 1, "removed": 0, "changed": 0}
+    assert attribution["omitted_sources"] == 0

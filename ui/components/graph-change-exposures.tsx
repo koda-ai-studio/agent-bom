@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
+
 import type { GraphEstateHighlightNode, GraphEstateHighlights, GraphEstatePathChange } from "@/lib/api-types";
+import { changedPathInvestigationHref } from "@/lib/graph-estate-changes";
 
 const PREVIEW = 3;
 
 type Handlers = {
   onInvestigateNode?: ((id: string, label: string) => void) | undefined;
-  onInvestigatePath?: ((path: GraphEstatePathChange) => void) | undefined;
 };
 
 type Endpoints = { source?: string | undefined; target?: string | undefined; source_label?: string | undefined; target_label?: string | undefined };
@@ -51,23 +53,23 @@ function NodeRow({ node, drill, onInvestigateNode }: { node: GraphEstateHighligh
   );
 }
 
-function PathRow({ path, drill, onInvestigatePath }: { path: GraphEstatePathChange; drill: boolean } & Handlers) {
+function PathRow({ path, drill, scanId }: { path: GraphEstatePathChange; drill: boolean; scanId?: string | undefined }) {
   return (
     <li className="flex items-start justify-between gap-2 text-xs text-ink-secondary">
       <span className="min-w-0 break-words [overflow-wrap:anywhere]">
         <span className="font-medium text-foreground"><EndpointNames path={path} /></span>
         <span className="text-ink-tertiary"> · {path.hops.length - 1} {path.hops.length === 2 ? "hop" : "hops"} · risk {path.composite_risk.toFixed(1)}</span>
       </span>
-      {drill && onInvestigatePath && (
-        <button type="button" aria-label={`Investigate path ${pathLabel(path)}`} onClick={() => onInvestigatePath(path)}
-          className="shrink-0 text-foreground underline underline-offset-4">Investigate</button>
+      {drill && (
+        <Link href={changedPathInvestigationHref(path, scanId)} aria-label={`Investigate path ${pathLabel(path)}`}
+          className="shrink-0 text-foreground underline underline-offset-4">Investigate</Link>
       )}
     </li>
   );
 }
 
-/** New and removed exposure for one compared source; only current-side items can be opened on this canvas. */
-export function GraphChangeExposures({ highlights, onInvestigateNode, onInvestigatePath }: { highlights: GraphEstateHighlights } & Handlers) {
+/** New and removed exposure for one compared source; a new path opens in the path queue of `scanId`, the snapshot that recorded it. */
+export function GraphChangeExposures({ highlights, scanId, onInvestigateNode }: { highlights: GraphEstateHighlights; scanId?: string | undefined } & Handlers) {
   const findings = highlights.new_critical_findings;
   const added = highlights.new_attack_paths;
   const removed = highlights.removed_attack_paths;
@@ -81,7 +83,7 @@ export function GraphChangeExposures({ highlights, onInvestigateNode, onInvestig
         {findings.top.slice(0, PREVIEW).map(node => <NodeRow key={node.id ?? node.label} node={node} drill onInvestigateNode={onInvestigateNode} />)}
       </Group>}
       {added && added.count > 0 && <Group title="New attack paths" count={added.count} lowerBound={added.count_is_lower_bound} tone="added">
-        {added.top.slice(0, PREVIEW).map(path => <PathRow key={path.hops.join(">")} path={path} drill onInvestigatePath={onInvestigatePath} />)}
+        {added.top.slice(0, PREVIEW).map(path => <PathRow key={path.hops.join(">")} path={path} drill scanId={scanId} />)}
       </Group>}
       {reach && reach.count > 0 && <Group title="New credential reach" count={reach.count} tone="added">
         {reach.top.slice(0, PREVIEW).map(edge => (

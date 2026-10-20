@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Drawer } from "@/components/drawer";
+import { GraphChangeAttribution } from "@/components/graph-change-attribution";
 import { GraphChangeExposures } from "@/components/graph-change-exposures";
-import type { GraphEstateChangesResponse, GraphEstatePathChange } from "@/lib/api-types";
+import type { GraphEstateChangesResponse } from "@/lib/api-types";
 import { countsLine, type SnapshotPair } from "@/lib/graph-estate-changes";
 
 export interface GraphChangesPanelProps {
@@ -28,8 +29,6 @@ export interface GraphChangesPanelProps {
   onOpenDiff: (pair: SnapshotPair, label: string) => void;
   /** Open a new finding or asset on the canvas. */
   onInvestigateNode?: ((id: string, label: string) => void) | undefined;
-  /** Open a new attack path on the canvas. */
-  onInvestigatePath?: ((path: GraphEstatePathChange) => void) | undefined;
 }
 
 const when = (stamp: string) => {
@@ -76,7 +75,6 @@ export function GraphChangesPanel({
   onHighlight,
   onOpenDiff,
   onInvestigateNode,
-  onInvestigatePath,
 }: GraphChangesPanelProps) {
   const changed = changes?.totals.changed_sources ?? 0;
   const canHighlight = changes ? changed > 0 : highlightAvailable;
@@ -87,7 +85,7 @@ export function GraphChangesPanel({
       size="md"
       eyebrow="What changed"
       title={title}
-      subtitle={changes ? "Each source is compared with its previous comparable snapshot." : undefined}
+      subtitle={changes ? "Each source is compared with its previous comparable snapshot. Counts are graph nodes and links between the two snapshots, not finding occurrences." : undefined}
       ariaLabel={title}
       bodyClassName="space-y-3"
     >
@@ -143,7 +141,8 @@ export function GraphChangesPanel({
                   {source.baseline === "snapshot_continuity" && (
                     <p className="text-xs text-ink-tertiary [overflow-wrap:anywhere]">Compared with earlier snapshot {source.old.scan_id}</p>
                   )}
-                  <GraphChangeExposures highlights={source.highlights ?? {}} onInvestigateNode={onInvestigateNode} onInvestigatePath={onInvestigatePath} />
+                  <GraphChangeAttribution attribution={source.changes_by_source} />
+                  <GraphChangeExposures highlights={source.highlights ?? {}} scanId={source.new.scan_id} onInvestigateNode={onInvestigateNode} />
                   {selected && diffDetails}
                 </li>
               );
