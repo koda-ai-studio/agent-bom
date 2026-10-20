@@ -2149,7 +2149,7 @@
           "subscription_id": "00000000-0000-0000-0000-00000000aaaa"
         },
         {
-          "group_id": "empty-nsg",
+          "group_id": "subscriptions/00000000-0000-0000-0000-00000000aaaa/networkSecurityGroups/empty-nsg",
           "name": "empty-nsg",
           "location": "",
           "resource_group": "",

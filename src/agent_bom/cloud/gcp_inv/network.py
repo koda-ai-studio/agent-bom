@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..aws_inventory import record_discovery_failure
-from ._base import _leaf, _segment
+from ._base import _leaf, _loc, _scoped_name, _segment
 
 
 def _discover_vpc_networks(
@@ -42,7 +42,7 @@ def _discover_vpc_networks(
             networks.append(
                 {
                     "name": name,
-                    "id": str(getattr(network, "id", "") or "") or name,
+                    "id": str(getattr(network, "id", "") or "") or _scoped_name(project_id, "global", "networks", name) or name,
                     "location": "global",
                     "auto_create_subnetworks": bool(getattr(network, "auto_create_subnetworks", False)),
                     "subnets": network_subnets,
@@ -78,11 +78,15 @@ def _discover_subnets_by_network(
                 network_link = str(getattr(subnet, "network", "") or "")
                 flow_logs = getattr(subnet, "enable_flow_logs", None)
                 subnet_name = str(getattr(subnet, "name", "") or "")
+                subnet_region = _leaf(getattr(subnet, "region", ""))
                 entry = {
-                    "id": str(getattr(subnet, "self_link", "") or "") or str(getattr(subnet, "id", "") or "") or subnet_name,
+                    "id": str(getattr(subnet, "self_link", "") or "")
+                    or str(getattr(subnet, "id", "") or "")
+                    or _scoped_name(project_id, _loc("regions", subnet_region), "subnetworks", subnet_name)
+                    or subnet_name,
                     "name": subnet_name,
                     "network": network_link,
-                    "region": _leaf(getattr(subnet, "region", "")),
+                    "region": subnet_region,
                     "cidr": str(getattr(subnet, "ip_cidr_range", "") or ""),
                     "flow_logs": bool(flow_logs) if flow_logs is not None else False,
                 }
@@ -149,7 +153,7 @@ def _discover_target_proxies(
             proxies.append(
                 {
                     "name": name,
-                    "id": str(getattr(proxy, "id", "") or "") or name,
+                    "id": str(getattr(proxy, "id", "") or "") or _scoped_name(project_id, "global", "targetHttpProxies", name) or name,
                     "lb_type": "target-proxy",
                     "scheme": "",
                     "internet_exposed": False,
@@ -176,7 +180,7 @@ def _discover_target_proxies(
             proxies.append(
                 {
                     "name": name,
-                    "id": str(getattr(proxy, "id", "") or "") or name,
+                    "id": str(getattr(proxy, "id", "") or "") or _scoped_name(project_id, "global", "targetHttpsProxies", name) or name,
                     "lb_type": "target-proxy",
                     "scheme": "",
                     "internet_exposed": False,
@@ -227,7 +231,7 @@ def _discover_security_policies(
             policies.append(
                 {
                     "name": name,
-                    "id": str(getattr(policy, "id", "") or "") or name,
+                    "id": str(getattr(policy, "id", "") or "") or _scoped_name(project_id, "global", "securityPolicies", name) or name,
                     "arn": "",
                     "scope": "cloud-armor",
                     "protected_targets": list(by_policy.get(name, [])),
@@ -324,7 +328,8 @@ def _discover_routers(
                     continue
                 network = _leaf(getattr(router, "network", ""))
                 region = _leaf(getattr(router, "region", ""))
-                router_id = str(getattr(router, "id", "") or "") or name
+                router_path = _scoped_name(project_id, _loc("regions", region), "routers", name)
+                router_id = str(getattr(router, "id", "") or "") or router_path or name
                 nats = list(getattr(router, "nats", None) or [])
                 route_tables.append(
                     {
@@ -342,7 +347,9 @@ def _discover_routers(
                         continue
                     nat_gateways.append(
                         {
-                            "id": f"{name}/{nat_name}",
+                            # A NAT config has no id of its own; router names are unique
+                            # only per project + region, so scope it by its router's path.
+                            "id": f"{router_path}/nats/{nat_name}" if router_path else f"{name}/{nat_name}",
                             "name": nat_name,
                             "vpc_id": network,
                             "subnet_id": "",

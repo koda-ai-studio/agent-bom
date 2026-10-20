@@ -188,6 +188,24 @@ def _segment(self_link: str, key: str) -> str:
     return ""
 
 
+def _loc(kind: str, value: str) -> str:
+    """Return ``kind/value`` for a location path segment, or '' when the value is unknown."""
+    return f"{kind}/{value}" if value else ""
+
+
+def _scoped_name(project_id: str, *parts: str) -> str:
+    """Return the project-scoped relative resource name, '' when the project is unknown.
+
+    GCP resource names are unique only inside their project (and zone/region),
+    so an id fallback must keep that scope; empty parts (an unknown location)
+    are dropped rather than emitted as blank segments, and a blank resource
+    name (the last part) yields '' so no id is invented.
+    """
+    if not project_id or not parts or not parts[-1]:
+        return ""
+    return "/".join(["projects", project_id, *(part for part in parts if part)])
+
+
 def _leaf(value: Any) -> str:
     """Return the last path segment of a GCP self-link / type URL, else ''."""
     text = str(value or "").strip()

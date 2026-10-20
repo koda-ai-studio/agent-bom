@@ -5816,7 +5816,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/proj-1/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -5826,7 +5826,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/proj-1/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -5976,7 +5976,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/proj-1/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -5988,7 +5988,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/proj-1/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -6095,7 +6095,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -6147,7 +6147,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "int-backend",
+            "id": "projects/proj-1/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -6210,7 +6210,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "https-proxy",
+            "id": "projects/proj-1/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -6222,7 +6222,7 @@
         "nat_gateways": [
           {
             "account_id": "proj-1",
-            "id": "nat-router/egress-nat",
+            "id": "projects/proj-1/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -6273,7 +6273,7 @@
           {
             "account_id": "proj-1",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/proj-1/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -6413,7 +6413,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/proj-1/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -6426,7 +6426,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/proj-1/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -6480,7 +6480,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/proj-1/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "proj-1",
@@ -6533,7 +6533,7 @@
           {
             "account_id": "proj-1",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/proj-1/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -7218,7 +7218,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/proj-1/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -7228,7 +7228,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/proj-1/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -7378,7 +7378,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/proj-1/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -7390,7 +7390,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/proj-1/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -7497,7 +7497,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -7549,7 +7549,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "int-backend",
+            "id": "projects/proj-1/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -7612,7 +7612,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "https-proxy",
+            "id": "projects/proj-1/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -7624,7 +7624,7 @@
         "nat_gateways": [
           {
             "account_id": "proj-1",
-            "id": "nat-router/egress-nat",
+            "id": "projects/proj-1/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -7675,7 +7675,7 @@
           {
             "account_id": "proj-1",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/proj-1/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -7824,7 +7824,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/proj-1/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -7837,7 +7837,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/proj-1/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -7891,7 +7891,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/proj-1/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "proj-1",
@@ -7944,7 +7944,7 @@
           {
             "account_id": "proj-1",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/proj-1/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -8629,7 +8629,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/proj-1/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -8639,7 +8639,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/proj-1/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -8789,7 +8789,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/proj-1/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -8801,7 +8801,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/proj-1/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -8908,7 +8908,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -8960,7 +8960,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "int-backend",
+            "id": "projects/proj-1/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -9023,7 +9023,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "https-proxy",
+            "id": "projects/proj-1/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -9035,7 +9035,7 @@
         "nat_gateways": [
           {
             "account_id": "proj-1",
-            "id": "nat-router/egress-nat",
+            "id": "projects/proj-1/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -9086,7 +9086,7 @@
           {
             "account_id": "proj-1",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/proj-1/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -9226,7 +9226,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/proj-1/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -9239,7 +9239,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/proj-1/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -9293,7 +9293,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/proj-1/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "proj-1",
@@ -9346,7 +9346,7 @@
           {
             "account_id": "proj-1",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/proj-1/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -9980,7 +9980,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/proj-1/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -9990,7 +9990,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/proj-1/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -10140,7 +10140,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/proj-1/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -10152,7 +10152,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/proj-1/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -10253,7 +10253,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -10305,7 +10305,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "int-backend",
+            "id": "projects/proj-1/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -10359,7 +10359,7 @@
         "nat_gateways": [
           {
             "account_id": "proj-1",
-            "id": "nat-router/egress-nat",
+            "id": "projects/proj-1/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -10410,7 +10410,7 @@
           {
             "account_id": "proj-1",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/proj-1/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -10545,7 +10545,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/proj-1/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -10558,7 +10558,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/proj-1/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -10575,7 +10575,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/proj-1/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "proj-1",
@@ -10618,7 +10618,7 @@
           {
             "account_id": "proj-1",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/proj-1/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -11201,7 +11201,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "int-backend",
+            "id": "projects/proj-1/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -11264,7 +11264,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "https-proxy",
+            "id": "projects/proj-1/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -11276,7 +11276,7 @@
         "nat_gateways": [
           {
             "account_id": "proj-1",
-            "id": "nat-router/egress-nat",
+            "id": "projects/proj-1/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -11302,7 +11302,7 @@
           {
             "account_id": "proj-1",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/proj-1/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -11360,7 +11360,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/proj-1/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "proj-1",
@@ -11409,7 +11409,7 @@
           {
             "account_id": "proj-1",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/proj-1/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -12501,7 +12501,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/adc-proj/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -12511,7 +12511,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/adc-proj/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -12661,7 +12661,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/adc-proj/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -12673,7 +12673,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/adc-proj/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -12714,7 +12714,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/adc-proj/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -12766,7 +12766,7 @@
           },
           {
             "account_id": "adc-proj",
-            "id": "int-backend",
+            "id": "projects/adc-proj/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -12829,7 +12829,7 @@
           },
           {
             "account_id": "adc-proj",
-            "id": "https-proxy",
+            "id": "projects/adc-proj/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -12841,7 +12841,7 @@
         "nat_gateways": [
           {
             "account_id": "adc-proj",
-            "id": "nat-router/egress-nat",
+            "id": "projects/adc-proj/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -12884,7 +12884,7 @@
           {
             "account_id": "adc-proj",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/adc-proj/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -12915,7 +12915,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/adc-proj/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -12928,7 +12928,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/adc-proj/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -12982,7 +12982,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/adc-proj/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "adc-proj",
@@ -13033,7 +13033,7 @@
           {
             "account_id": "adc-proj",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/adc-proj/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -13625,7 +13625,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/env-proj/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -13635,7 +13635,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/env-proj/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -13785,7 +13785,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/env-proj/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -13797,7 +13797,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/env-proj/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -13838,7 +13838,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/env-proj/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -13890,7 +13890,7 @@
           },
           {
             "account_id": "env-proj",
-            "id": "int-backend",
+            "id": "projects/env-proj/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -13953,7 +13953,7 @@
           },
           {
             "account_id": "env-proj",
-            "id": "https-proxy",
+            "id": "projects/env-proj/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -13965,7 +13965,7 @@
         "nat_gateways": [
           {
             "account_id": "env-proj",
-            "id": "nat-router/egress-nat",
+            "id": "projects/env-proj/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -14008,7 +14008,7 @@
           {
             "account_id": "env-proj",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/env-proj/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -14039,7 +14039,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/env-proj/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -14052,7 +14052,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/env-proj/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -14106,7 +14106,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/env-proj/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "env-proj",
@@ -14157,7 +14157,7 @@
           {
             "account_id": "env-proj",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/env-proj/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -14791,7 +14791,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/proj-1/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -14801,7 +14801,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/proj-1/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -14951,7 +14951,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/proj-1/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -14963,7 +14963,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/proj-1/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -15004,7 +15004,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -15056,7 +15056,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "int-backend",
+            "id": "projects/proj-1/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -15119,7 +15119,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "https-proxy",
+            "id": "projects/proj-1/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -15131,7 +15131,7 @@
         "nat_gateways": [
           {
             "account_id": "proj-1",
-            "id": "nat-router/egress-nat",
+            "id": "projects/proj-1/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -15174,7 +15174,7 @@
           {
             "account_id": "proj-1",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/proj-1/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -15205,7 +15205,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/proj-1/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -15218,7 +15218,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/proj-1/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -15272,7 +15272,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/proj-1/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "proj-1",
@@ -15323,7 +15323,7 @@
           {
             "account_id": "proj-1",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/proj-1/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -15915,7 +15915,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/proj-1/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -15925,7 +15925,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/proj-1/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -16075,7 +16075,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/proj-1/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -16087,7 +16087,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/proj-1/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -16128,7 +16128,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -16180,7 +16180,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "int-backend",
+            "id": "projects/proj-1/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -16243,7 +16243,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "https-proxy",
+            "id": "projects/proj-1/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -16255,7 +16255,7 @@
         "nat_gateways": [
           {
             "account_id": "proj-1",
-            "id": "nat-router/egress-nat",
+            "id": "projects/proj-1/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -16298,7 +16298,7 @@
           {
             "account_id": "proj-1",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/proj-1/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -16329,7 +16329,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/proj-1/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -16342,7 +16342,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/proj-1/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -16396,7 +16396,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/proj-1/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "proj-1",
@@ -16448,7 +16448,7 @@
           {
             "account_id": "proj-1",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/proj-1/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -16983,7 +16983,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/proj-1/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -16993,7 +16993,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/proj-1/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -17143,7 +17143,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/proj-1/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -17155,7 +17155,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/proj-1/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -17196,7 +17196,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -17248,7 +17248,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "int-backend",
+            "id": "projects/proj-1/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -17311,7 +17311,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "https-proxy",
+            "id": "projects/proj-1/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -17323,7 +17323,7 @@
         "nat_gateways": [
           {
             "account_id": "proj-1",
-            "id": "nat-router/egress-nat",
+            "id": "projects/proj-1/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -17366,7 +17366,7 @@
           {
             "account_id": "proj-1",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/proj-1/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -17397,7 +17397,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/proj-1/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -17410,7 +17410,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/proj-1/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -17464,7 +17464,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/proj-1/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "proj-1",
@@ -17515,7 +17515,7 @@
           {
             "account_id": "proj-1",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/proj-1/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],
@@ -18143,7 +18143,7 @@
           },
           {
             "encrypted": false,
-            "id": "data",
+            "id": "projects/proj-1/disks/data",
             "labels": {},
             "location": "",
             "name": "data",
@@ -18153,7 +18153,7 @@
           },
           {
             "encrypted": false,
-            "id": "scratch",
+            "id": "projects/proj-1/disks/scratch",
             "labels": {},
             "location": "",
             "name": "scratch",
@@ -18303,7 +18303,7 @@
           },
           {
             "endpoint": "10.9.9.9",
-            "id": "private-gke",
+            "id": "projects/proj-1/locations/europe-west1-b/clusters/private-gke",
             "internet_exposed": false,
             "labels": {},
             "location": "europe-west1-b",
@@ -18315,7 +18315,7 @@
           },
           {
             "endpoint": "",
-            "id": "nodes-only",
+            "id": "projects/proj-1/clusters/nodes-only",
             "internet_exposed": true,
             "labels": {},
             "location": "",
@@ -18422,7 +18422,7 @@
             "zone": "us-central1-a"
           },
           {
-            "instance_id": "static-ip-vm",
+            "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
             "name": "static-ip-vm",
@@ -18474,7 +18474,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "int-backend",
+            "id": "projects/proj-1/regions/us-central1/backendServices/int-backend",
             "internet_exposed": false,
             "lb_type": "backend-service",
             "location": "us-central1",
@@ -18537,7 +18537,7 @@
           },
           {
             "account_id": "proj-1",
-            "id": "https-proxy",
+            "id": "projects/proj-1/global/targetHttpsProxies/https-proxy",
             "internet_exposed": false,
             "lb_type": "target-proxy",
             "location": "global",
@@ -18549,7 +18549,7 @@
         "nat_gateways": [
           {
             "account_id": "proj-1",
-            "id": "nat-router/egress-nat",
+            "id": "projects/proj-1/regions/us-central1/routers/nat-router/nats/egress-nat",
             "location": "us-central1",
             "name": "egress-nat",
             "subnet_id": "",
@@ -18600,7 +18600,7 @@
           {
             "account_id": "proj-1",
             "has_internet_route": false,
-            "id": "plain-router",
+            "id": "projects/proj-1/routers/plain-router",
             "location": "",
             "name": "plain-router",
             "vpc_id": "backend"
@@ -18740,7 +18740,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "data",
+            "target_id": "projects/proj-1/disks/data",
             "target_type": "persistent_disk"
           },
           {
@@ -18753,7 +18753,7 @@
             "requires_snapshot_role": true,
             "size_gb": 0,
             "status": "eligible",
-            "target_id": "scratch",
+            "target_id": "projects/proj-1/disks/scratch",
             "target_type": "persistent_disk"
           }
         ],
@@ -18807,7 +18807,7 @@
           },
           {
             "auto_create_subnetworks": false,
-            "id": "backend",
+            "id": "projects/proj-1/global/networks/backend",
             "location": "global",
             "name": "backend",
             "project_id": "proj-1",
@@ -18859,7 +18859,7 @@
           {
             "account_id": "proj-1",
             "arn": "",
-            "id": "unused-waf",
+            "id": "projects/proj-1/global/securityPolicies/unused-waf",
             "location": "global",
             "name": "unused-waf",
             "protected_targets": [],

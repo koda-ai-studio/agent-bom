@@ -6,7 +6,7 @@ from typing import Any
 
 from ..aws_inventory import record_discovery_failure
 from ..normalization import sanitize_discovery_warning
-from ._base import _INTERNET_RANGES, _PUBLIC_MEMBERS, _clean_labels, _leaf, _parse_port, _safe_int, _segment
+from ._base import _INTERNET_RANGES, _PUBLIC_MEMBERS, _clean_labels, _leaf, _loc, _parse_port, _safe_int, _scoped_name, _segment
 from .iam import _policy_bindings
 
 
@@ -130,11 +130,12 @@ def _normalize_instance(instance: Any, *, name: str, project_id: str) -> dict[st
     service_accounts = [
         str(getattr(sa, "email", "") or "") for sa in (getattr(instance, "service_accounts", None) or []) if getattr(sa, "email", "")
     ]
+    zone = _leaf(getattr(instance, "zone", ""))
     return {
-        "instance_id": str(getattr(instance, "id", "") or "") or name,
+        "instance_id": str(getattr(instance, "id", "") or "") or _scoped_name(project_id, _loc("zones", zone), "instances", name) or name,
         "name": name,
         "instance_type": _leaf(getattr(instance, "machine_type", "")),
-        "zone": _leaf(getattr(instance, "zone", "")),
+        "zone": zone,
         "status": str(getattr(instance, "status", "") or ""),
         "public_ip": public_ip,
         "private_ip": private_ip,
@@ -253,11 +254,13 @@ def _discover_gke_clusters(
                 continue
             private_cfg = getattr(cluster, "private_cluster_config", None)
             private_endpoint = bool(getattr(private_cfg, "enable_private_endpoint", False)) if private_cfg else False
+            location = str(getattr(cluster, "location", "") or "")
+            cluster_path = _scoped_name(project_id, _loc("locations", location), "clusters", name)
             clusters.append(
                 {
                     "name": name,
-                    "id": str(getattr(cluster, "id", "") or "") or name,
-                    "location": str(getattr(cluster, "location", "") or ""),
+                    "id": str(getattr(cluster, "id", "") or "") or cluster_path or name,
+                    "location": location,
                     "endpoint": str(getattr(cluster, "endpoint", "") or ""),
                     "private_cluster": bool(getattr(private_cfg, "enable_private_nodes", False)) if private_cfg else False,
                     "internet_exposed": not private_endpoint,
@@ -460,11 +463,12 @@ def _discover_disks(
                 if not name:
                     continue
                 encryption = getattr(disk, "disk_encryption_key", None)
+                zone = _leaf(getattr(disk, "zone", ""))
                 disks.append(
                     {
                         "name": name,
-                        "id": str(getattr(disk, "id", "") or "") or name,
-                        "location": _leaf(getattr(disk, "zone", "")),
+                        "id": str(getattr(disk, "id", "") or "") or _scoped_name(project_id, _loc("zones", zone), "disks", name) or name,
+                        "location": zone,
                         "size_gb": _safe_int(str(getattr(disk, "size_gb", "") or "")) or 0,
                         "encrypted": bool(getattr(encryption, "kms_key_name", "") if encryption else False),
                         "source_image": _leaf(getattr(disk, "source_image", "")),

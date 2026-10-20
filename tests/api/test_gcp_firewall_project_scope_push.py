@@ -92,3 +92,15 @@ def test_separate_project_pushes_keep_both_firewalls(client, reverse: bool) -> N
         _push(client, f"gcp-{inventory['project_id']}", [inventory])
     _assert_both_projects_survive(_current_graph(client))
 
+
+@pytest.mark.parametrize("legacy", [False, True], ids=["scoped-collector-ids", "legacy-router-nat-ids"])
+def test_same_named_router_nats_survive_separate_project_pushes(client, legacy: bool) -> None:
+    from tests.graph.test_gcp_nat_project_scope import NAT_A, NAT_B, nat_inventories
+
+    for inventory in nat_inventories(legacy=legacy):
+        _push(client, f"gcp-nat-{inventory['project_id']}", [inventory])
+    nodes = {node["id"]: node for node in _current_graph(client)["nodes"]}
+    nats = {nid for nid in nodes if nid.startswith("cloud_resource:gcp:network:nat_gateway:")}
+    assert nats == {NAT_A, NAT_B}
+    assert nodes[NAT_A]["attributes"]["account_id"] == "proj-a"
+    assert nodes[NAT_B]["attributes"]["account_id"] == "proj-b"

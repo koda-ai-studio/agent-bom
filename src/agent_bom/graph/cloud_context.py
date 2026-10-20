@@ -371,6 +371,20 @@ def _gcp_firewall_identity(firewall: dict[str, Any], inventory_project: str) -> 
     return project_id, f"projects/{project_id}/global/firewalls/{name}"
 
 
+_LEGACY_GCP_NAT_ID = re.compile(r"^(?P<router>[^/]+)/(?P<nat>[^/]+)$")
+
+
+def _gcp_scoped_nat(nat: dict[str, Any], inventory_project: str) -> dict[str, Any]:
+    """Scope a pre-path ``{router}/{nat}`` id by project + region (router names repeat across both)."""
+    match = _LEGACY_GCP_NAT_ID.match(_clean_graph_part(nat.get("id")))
+    project_id = _clean_graph_part(nat.get("account_id")) or _clean_graph_part(nat.get("project_id")) or inventory_project
+    if not match or not project_id:
+        return nat
+    region = _clean_graph_part(nat.get("location"))
+    parts = ["projects", project_id, *(["regions", region] if region else []), "routers", match.group("router"), "nats", match.group("nat")]
+    return {**nat, "id": "/".join(parts)}
+
+
 def _normalize_gcp_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
     """Translate a GCP inventory payload into the canonical builder shape."""
     buckets: list[dict[str, Any]] = []
@@ -400,6 +414,7 @@ def _normalize_gcp_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(instance, dict):
             continue
         instances.append({**instance, "_service": "compute", "_kind": "gce-instance", "_label": "gce"})
+    nat_gateways = [_gcp_scoped_nat(nat, inventory_project) for nat in inventory.get("nat_gateways", []) or [] if isinstance(nat, dict)]
     principals = [p for p in inventory.get("service_accounts", []) or [] if isinstance(p, dict)]
     identity_groups = [g for g in inventory.get("groups", []) or [] if isinstance(g, dict)]
     return {
@@ -407,6 +422,7 @@ def _normalize_gcp_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
         "buckets": buckets,
         "security_groups": groups,
         "instances": instances,
+        "nat_gateways": nat_gateways,
         "roles": [],
         "users": principals,
         "groups": identity_groups,
