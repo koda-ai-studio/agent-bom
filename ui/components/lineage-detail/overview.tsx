@@ -52,25 +52,25 @@ export function OverviewDetails({ data, onShowBlastRadius, blastRadiusActive = f
     <RuntimeEvidenceBadge tier={data.runtimeEvidenceTier} />
     <LifecycleDetails data={data} />
     <NodeIdentifier data={data} />
-{onShowBlastRadius && (
-        <button
-          type="button"
-          onClick={onShowBlastRadius}
-          disabled={blastRadiusLoading}
-          aria-pressed={blastRadiusActive}
-          className={`flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
-            blastRadiusActive
-              ? "border-violet-400/50 bg-violet-500/20 text-violet-100"
-              : "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-200 hover:border-violet-400/60 hover:bg-violet-500/20"
-          }`}
-        >
-          {blastRadiusLoading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Radar className="h-3.5 w-3.5" />
-          )}
-          {blastRadiusActive ? "Blast radius shown" : "Show blast radius"}
-        </button>
-      )}
+{onShowBlastRadius && <BlastRadiusButton onClick={onShowBlastRadius} active={blastRadiusActive} loading={blastRadiusLoading} />}
   </>);
+}
+
+export function BlastRadiusButton({ onClick, active, loading }: { onClick: () => void; active: boolean; loading: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      aria-pressed={active}
+      className={`flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        active
+          ? "border-violet-400/50 bg-violet-500/20 text-violet-800 dark:text-violet-100"
+          : "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-200 hover:border-violet-400/60 hover:bg-violet-500/20"
+      }`}
+    >
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radar className="h-3.5 w-3.5" />}
+      {active ? "Blast radius shown" : "Show blast radius"}
+    </button>
+  );
 }

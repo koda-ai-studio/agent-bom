@@ -287,8 +287,10 @@ export function GraphRollupDecisionSurface({
 
 
               <div className="flex items-center justify-end gap-3 md:min-w-36">
-                {item.has_children && !item.id.startsWith(IMAGE_GROUP_PREFIX) && <button type="button" onClick={() => onInvestigate(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-600 dark:text-sky-300">
-                  <GitBranch className="h-3.5 w-3.5" /> Connections
+                {item.has_children && !item.id.startsWith(IMAGE_GROUP_PREFIX) && <button type="button" onClick={() => onInvestigate(item)} aria-label={`Show direct neighbors of ${item.label} on the canvas`}
+                  title="Opens this scope and its directly related nodes on the canvas; cross-scope links are listed under Details"
+                  className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-600 dark:text-sky-300">
+                  <GitBranch className="h-3.5 w-3.5" /> Neighbors
                 </button>}
                 {item.has_children ? (
                   <button type="button" onClick={() => drill(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-600 dark:text-emerald-300">

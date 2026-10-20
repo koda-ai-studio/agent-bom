@@ -1338,7 +1338,7 @@ for (const theme of ["light", "dark"] as const) {
     const scopes = page.getByTestId("graph-rollup-decision-surface");
     await expect(scopes).toBeVisible();
     await expect(page.locator(".react-flow__node")).toHaveCount(0);
-    await scopes.getByRole("button", { name: "Connections", exact: true }).first().click();
+    await scopes.getByRole("button", { name: /^Show direct neighbors of / }).first().click();
     await expect(page.locator(".react-flow__node")).toHaveCount(2);
     expect(queries[0]).toMatchObject({ max_nodes: 4, max_depth: 1, scan_id: scanId });
     await page.getByRole("button", { name: "Fit all", exact: true }).click();

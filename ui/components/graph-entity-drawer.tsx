@@ -11,6 +11,8 @@ import { GraphRecordedRelationships, GraphRecordedRelationshipScope } from "@/co
 import { AdminAssessment } from "@/components/graph-admin-assessment";
 import { GraphConsequencePanel } from "@/components/graph-consequence-panel";
 import { LineageDetailPanel } from "@/components/lineage-detail";
+import { BlastRadiusButton } from "@/components/lineage-detail/overview";
+import { NodePathsLink } from "@/components/node-paths-link";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { api } from "@/lib/api";
 import {
@@ -178,6 +180,8 @@ export function GraphEntityDrawer({
 
   const footerSlot = (
     <div className="space-y-2 border-t border-outline pt-3">
+      {onShowBlastRadius && <BlastRadiusButton onClick={onShowBlastRadius} active={blastRadiusActive} loading={blastRadiusLoading} />}
+      {nodeId && <NodePathsLink scanId={scanId} nodeId={nodeId} />}
       {showNextAction && <p className="text-[10px] uppercase tracking-[0.16em] text-ink-tertiary">Next action</p>}
       {showNextAction && <Link
         href={nextAction.href}
@@ -234,9 +238,6 @@ export function GraphEntityDrawer({
       data={enriched}
       onClose={onClose}
       variant={variant}
-      onShowBlastRadius={onShowBlastRadius}
-      blastRadiusActive={blastRadiusActive}
-      blastRadiusLoading={blastRadiusLoading}
       relationshipSlot={relationshipSlot}
       headerSlot={headerSlot}
       footerSlot={footerSlot}
