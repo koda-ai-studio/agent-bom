@@ -785,6 +785,9 @@ export interface GraphImpactResponse {
   affected_by_type: Record<string, number>;
   affected_count: number;
   max_depth_reached: number;
+  direction?: "reverse" | "forward" | undefined;
+  /** The nodes behind each count, nearest first (bounded server-side). */
+  affected_nodes_detail?: { id: string; label: string; entity_type: string; depth: number }[] | undefined;
 }
 
 /** Saved tenant graph filter preset from GET/POST /v1/graph/presets */

@@ -27,12 +27,13 @@ def read_node_impact(
     node_id: str,
     max_depth: int = 4,
     snapshot_generation: str | None = None,
+    direction: str = "reverse",
 ) -> dict[str, Any] | None:
-    """The node's reverse impact walk on the pinned snapshot, or ``None`` when absent."""
+    """The node's impact walk (reverse: upstream holders; forward: what it reaches) on the pinned snapshot, or ``None``."""
     identity = optional_generation(store, tenant=tenant_id, scan_id=scan_id or "", generation=snapshot_generation, offset=0)
     effective_scan_id = identity[0] if identity else scan_id or ""
     read_id, resolved_from = resolve_snapshot_node_id(store, tenant_id=tenant_id, scan_id=effective_scan_id, node_id=node_id)
-    impact = store.impact_of(scan_id=effective_scan_id, tenant_id=tenant_id, node_id=read_id, max_depth=max_depth)
+    impact = store.impact_of(scan_id=effective_scan_id, tenant_id=tenant_id, node_id=read_id, max_depth=max_depth, direction=direction)
     if impact is None:
         return None
     return {
@@ -40,7 +41,8 @@ def read_node_impact(
         "scan_id": effective_scan_id,
         "tenant_id": tenant_id,
         "snapshot_generation": identity[1] if identity else None,
-        "interpretation": reach_interpretation(max_depth=max_depth),
+        "direction": direction,
+        "interpretation": reach_interpretation(max_depth=max_depth, direction="in" if direction == "reverse" else "out"),
         "resolved_from": resolved_from,
         "_identity": identity,
     }

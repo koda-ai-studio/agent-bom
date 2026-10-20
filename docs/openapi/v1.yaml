@@ -43320,7 +43320,8 @@ paths:
       - graph
   /v1/graph/impact:
     get:
-      description: "Compute blast radius of a node \u2014 what depends on it?"
+      description: "Compute blast radius of a node \u2014 what depends on it, or what\
+        \ it can reach."
       operationId: get_graph_impact_v1_graph_impact_get
       parameters:
       - description: Node ID to compute impact for
@@ -43350,17 +43351,31 @@ paths:
             type: string
           - type: 'null'
           title: Snapshot Generation
-      - description: Maximum reverse BFS depth
+      - description: Maximum traversal depth
         in: query
         name: max_depth
         required: false
         schema:
           default: 4
-          description: Maximum reverse BFS depth
+          description: Maximum traversal depth
           maximum: 10
           minimum: 1
           title: Max Depth
           type: integer
+      - description: 'reverse: what depends on the node (upstream); forward: what
+          the node can reach (downstream)'
+        in: query
+        name: direction
+        required: false
+        schema:
+          default: reverse
+          description: 'reverse: what depends on the node (upstream); forward: what
+            the node can reach (downstream)'
+          enum:
+          - reverse
+          - forward
+          title: Direction
+          type: string
       responses:
         '200':
           content:

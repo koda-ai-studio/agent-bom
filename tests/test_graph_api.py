@@ -1611,7 +1611,7 @@ class _RecordingGraphStore:
         )
         return paths, reachable, self.graph.completeness.truncated, walked.completeness.depth_limited
 
-    def impact_of(self, *, tenant_id: str = "", scan_id: str = "", node_id: str, max_depth: int = 4):
+    def impact_of(self, *, tenant_id: str = "", scan_id: str = "", node_id: str, max_depth: int = 4, direction: str = "reverse"):
         self.calls.append(("impact_of", tenant_id, scan_id, node_id, max_depth))
         if not self.graph.has_node(node_id):
             return None

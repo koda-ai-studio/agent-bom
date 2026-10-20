@@ -48,9 +48,12 @@ async def get_graph_impact(
     node: str = Query(..., description="Node ID to compute impact for"),
     scan_id: Optional[str] = Query(None, description="Scan ID"),
     snapshot_generation: Optional[str] = Query(None, max_length=128),
-    max_depth: int = Query(4, ge=1, le=10, description="Maximum reverse BFS depth"),
+    max_depth: int = Query(4, ge=1, le=10, description="Maximum traversal depth"),
+    direction: Literal["reverse", "forward"] = Query(
+        "reverse", description="reverse: what depends on the node (upstream); forward: what the node can reach (downstream)"
+    ),
 ) -> dict:
-    """Compute blast radius of a node — what depends on it?"""
+    """Compute blast radius of a node — what depends on it, or what it can reach."""
     graph_store = _runtime._get_graph_store_or_503()
     tenant_id = _runtime._tenant(request)
     impact = await _runtime._graph_store_call(
@@ -61,6 +64,7 @@ async def get_graph_impact(
         node_id=node,
         max_depth=max_depth,
         snapshot_generation=snapshot_generation,
+        direction=direction,
     )
     if impact is None:
         raise HTTPException(status_code=404, detail=f"Node '{node}' not found")

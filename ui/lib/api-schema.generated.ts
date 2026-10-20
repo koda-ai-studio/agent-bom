@@ -4572,7 +4572,7 @@ export interface paths {
         };
         /**
          * Get Graph Impact
-         * @description Compute blast radius of a node — what depends on it?
+         * @description Compute blast radius of a node — what depends on it, or what it can reach.
          */
         get: operations["get_graph_impact_v1_graph_impact_get"];
         put?: never;
@@ -34663,8 +34663,10 @@ export interface operations {
                 /** @description Scan ID */
                 scan_id?: string | null;
                 snapshot_generation?: string | null;
-                /** @description Maximum reverse BFS depth */
+                /** @description Maximum traversal depth */
                 max_depth?: number;
+                /** @description reverse: what depends on the node (upstream); forward: what the node can reach (downstream) */
+                direction?: "reverse" | "forward";
             };
             header?: never;
             path?: never;

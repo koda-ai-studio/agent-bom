@@ -49,6 +49,8 @@ export type GraphInvestigationRequest = {
   rootId: string;
   rootLabel?: string | undefined;
   direction?: "forward" | "reverse" | "both";
+  /** Traversal depth the lineage view expands to (URL `depth`). */
+  depth?: number | undefined;
 };
 
 export type AttackPathAction = {
@@ -563,6 +565,7 @@ export function buildGraphInvestigationHref(
   params.set("investigate", "1");
   params.set("root", request.rootId);
   if (request.direction) params.set("direction", request.direction);
+  if (request.depth) params.set("depth", String(request.depth));
   if (request.rootLabel && request.rootLabel !== request.rootId) {
     params.set("q", request.rootLabel);
   }
