@@ -6,80 +6,70 @@ import base64
 import binascii
 import hashlib
 import ipaddress
-import json
 import logging
 import math
 import os
 import re
 from collections import Counter
-from collections.abc import Sequence
-from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlsplit, urlunsplit
 
+from agent_bom.core.security_validation import (
+    _CLOUD_METADATA_HOSTS as _CLOUD_METADATA_HOSTS,
+)
+from agent_bom.core.security_validation import (
+    _IMAGE_REF_RE as _IMAGE_REF_RE,
+)
+from agent_bom.core.security_validation import (
+    DANGEROUS_ENV_VARS as DANGEROUS_ENV_VARS,
+)
+from agent_bom.core.security_validation import (
+    KNOWN_MCP_LAUNCHERS as KNOWN_MCP_LAUNCHERS,
+)
+from agent_bom.core.security_validation import (
+    SHELL_METACHARACTERS as SHELL_METACHARACTERS,
+)
+from agent_bom.core.security_validation import (
+    SecurityError as SecurityError,
+)
+from agent_bom.core.security_validation import (
+    _is_non_public_ip as _is_non_public_ip,
+)
+from agent_bom.core.security_validation import (
+    _unwrap_ip as _unwrap_ip,
+)
+from agent_bom.core.security_validation import (
+    create_safe_subprocess_env as create_safe_subprocess_env,
+)
+from agent_bom.core.security_validation import (
+    require_recognized_launcher as require_recognized_launcher,
+)
+from agent_bom.core.security_validation import (
+    validate_arguments as validate_arguments,
+)
+from agent_bom.core.security_validation import (
+    validate_environment as validate_environment,
+)
+from agent_bom.core.security_validation import (
+    validate_file_size as validate_file_size,
+)
+from agent_bom.core.security_validation import (
+    validate_image_ref as validate_image_ref,
+)
+from agent_bom.core.security_validation import (
+    validate_json_file as validate_json_file,
+)
+from agent_bom.core.security_validation import (
+    validate_package_name as validate_package_name,
+)
+from agent_bom.core.security_validation import (
+    validate_path as validate_path,
+)
 from agent_bom.redaction.emails import _contains_email, mask_email
 from agent_bom.redaction.env_values import container_has_secret
 
 logger = logging.getLogger(__name__)
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-
-# Recognized MCP server launcher binaries (package managers, runtimes, and
-# container tools commonly used to launch MCP servers).
-#
-# This list is a misconfiguration/typo guard for the stdio proxy spawn path —
-# it is NOT a sandbox and NOT an isolation boundary. Every binary here can
-# execute arbitrary code with the proxy's full host privileges; membership
-# only means the command *shape* looks like a plausible MCP launcher. The
-# actual execution control is container isolation via
-# ``agent_bom.proxy_sandbox`` (``--isolate`` / AGENT_BOM_MCP_SANDBOX).
-KNOWN_MCP_LAUNCHERS = {
-    # JavaScript/TypeScript runtimes & package managers
-    "npx",
-    "npm",
-    "node",
-    "deno",
-    "bun",
-    "tsx",
-    # Python runtimes & package managers
-    "python",
-    "python3",
-    "uvx",
-    "uv",
-    "pipx",
-    # Go
-    "go",
-    # Java/JVM
-    "java",
-    "mvn",
-    "gradle",
-    # .NET
-    "dotnet",
-    # Ruby
-    "ruby",
-    "bundle",
-    # Rust
-    "cargo",
-    # Container tools (MCP servers often run in containers)
-    "docker",
-    "podman",
-    # Common MCP server launchers
-    "mcp",
-    "mcp-server",
-}
-
-# Dangerous environment variables that should never be set
-DANGEROUS_ENV_VARS = {
-    "LD_PRELOAD",
-    "DYLD_INSERT_LIBRARIES",
-    "PYTHONPATH",  # Can be used for code injection
-    "NODE_OPTIONS",  # Can inject malicious code
-}
-
-# Shell metacharacters rejected by validate_arguments. agent-bom itself spawns
-# MCP servers via an exec array (never a shell), so these characters are not
-# interpreted on our spawn path; the check flags configs that appear to expect
-# shell interpolation. Config hygiene, not an execution control.
-SHELL_METACHARACTERS = {";", "|", "&", "$", "`", "<", ">", "\n", "\r"}
 
 # Patterns for sensitive data (for redaction)
 SENSITIVE_PATTERNS = [
@@ -110,130 +100,6 @@ def sanitize_log_label(value: object, max_len: int = 500) -> str:
     if "  " in text:
         text = _MULTI_SPACE_RE.sub(" ", text)
     return text.strip()[:max_len]
-
-
-class SecurityError(Exception):
-    """Raised when a security validation fails."""
-
-    pass
-
-
-def require_recognized_launcher(command: str) -> None:
-    """
-    Require that *command* is a recognized MCP launcher binary.
-
-    This is a launch-hygiene check that catches typos and obviously
-    misconfigured server commands before the proxy spawns them. It provides
-    NO isolation: every recognized launcher (``python``, ``node``,
-    ``docker``, …) can still execute arbitrary code as the host user.
-    Passing this check must never be read as "the server is sandboxed" —
-    the real execution control is container isolation via
-    ``agent_bom.proxy_sandbox`` (``--isolate``).
-
-    Args:
-        command: The launcher command to check
-
-    Raises:
-        SecurityError: If command is not a recognized MCP launcher
-    """
-    if command not in KNOWN_MCP_LAUNCHERS:
-        raise SecurityError(
-            f"Command '{command}' is not a recognized MCP launcher. Recognized launchers: "
-            f"{', '.join(sorted(KNOWN_MCP_LAUNCHERS))}. This check guards against misconfigured "
-            "server commands only — it is not a sandbox. Use container isolation (--isolate) "
-            "to restrict what a server can do."
-        )
-    logger.debug(f"Command '{command}' is a recognized MCP launcher")
-
-
-def validate_arguments(args: list[str]) -> None:
-    """
-    Reject command arguments containing shell metacharacters.
-
-    Config-hygiene check: agent-bom spawns MCP servers via an exec array
-    (never through a shell), so these characters are not interpreted on our
-    spawn path. An argument that contains them was almost certainly written
-    for shell interpolation and indicates a misconfigured server entry.
-    This is not an execution control and confers no isolation.
-
-    Args:
-        args: List of command arguments
-
-    Raises:
-        SecurityError: If shell metacharacters found
-    """
-    for arg in args:
-        for char in SHELL_METACHARACTERS:
-            if char in arg:
-                raise SecurityError(f"Dangerous character '{char}' found in argument: {arg}")
-    logger.debug(f"Validated {len(args)} argument(s) successfully")
-
-
-def validate_environment(env: dict[str, str]) -> None:
-    """
-    Validate environment variables for dangerous settings.
-
-    Args:
-        env: Dictionary of environment variables
-
-    Raises:
-        SecurityError: If dangerous environment variable found
-    """
-    for var in env:
-        if var in DANGEROUS_ENV_VARS:
-            raise SecurityError(f"Dangerous environment variable '{var}' not allowed")
-    logger.debug(f"Validated {len(env)} environment variable(s)")
-
-
-def validate_path(
-    path: str | Path,
-    must_exist: bool = False,
-    restrict_to_home: bool = False,
-    allowed_roots: Sequence[Path] = (),
-) -> Path:
-    """
-    Validate and normalize a file path.
-
-    Args:
-        path: Path to validate
-        must_exist: If True, path must exist
-        restrict_to_home: If True, path must resolve inside the user's home directory
-            or inside one of ``allowed_roots``
-        allowed_roots: Additional already-resolved directories accepted when
-            ``restrict_to_home`` is set
-
-    Returns:
-        Validated and normalized Path object
-
-    Raises:
-        SecurityError: If path is invalid or contains path traversal
-    """
-    path = Path(path).expanduser()
-
-    # Resolve to absolute path (prevents path traversal)
-    try:
-        resolved = path.resolve()
-    except (OSError, RuntimeError) as e:
-        raise SecurityError(f"Invalid path '{path}': {e}")
-
-    # Restrict to home / configured roots (MCP server user-provided paths). The
-    # check runs on the resolved path, so a symlink out of a root is rejected.
-    if restrict_to_home and not any(resolved.is_relative_to(root) for root in (Path.home().resolve(), *allowed_roots)):
-        if allowed_roots:
-            raise SecurityError(f"Path resolves outside home directory and configured workspace roots: {path}")
-        raise SecurityError(f"Path resolves outside home directory: {path}")
-
-    # Check for path traversal attempts (on unresolved path)
-    if ".." in path.parts:
-        logger.warning(f"Path traversal attempt detected: {path}")
-        raise SecurityError(f"Path traversal not allowed: {path}")
-
-    # Check if path must exist
-    if must_exist and not resolved.exists():
-        raise SecurityError(f"Path does not exist: {resolved}")
-
-    logger.debug(f"Validated path: {resolved}")
-    return resolved
 
 
 _VALUE_CREDENTIAL_PATTERNS = [
@@ -941,84 +807,6 @@ def sanitize_sensitive_payload(
     return redact_payload(value, key, max_str_len, depth, string_cache, {} if _key_cache is None else _key_cache)
 
 
-def validate_file_size(path: Path, max_size_bytes: int = 10 * 1024 * 1024) -> None:
-    """
-    Validate that a file is not too large (DoS prevention).
-
-    Args:
-        path: Path to file
-        max_size_bytes: Maximum allowed file size (default 10MB)
-
-    Raises:
-        SecurityError: If file is too large
-    """
-    try:
-        size = os.path.getsize(path)
-        if size > max_size_bytes:
-            raise SecurityError(f"File too large: {size} bytes (max: {max_size_bytes} bytes)")
-        logger.debug(f"File size OK: {size} bytes")
-    except OSError as e:
-        raise SecurityError(f"Cannot check file size: {e}")
-
-
-def validate_json_file(path: Path) -> dict:
-    """
-    Safely load and validate a JSON file.
-
-    Args:
-        path: Path to JSON file
-
-    Returns:
-        Parsed JSON data
-
-    Raises:
-        SecurityError: If file is invalid or too large
-    """
-    # Validate path
-    path = validate_path(path, must_exist=True)
-
-    # Check file size (DoS prevention)
-    validate_file_size(path)
-
-    # Load JSON safely (json.load is safe, doesn't execute code)
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        logger.debug(f"Successfully loaded JSON from {path}")
-        return data
-    except json.JSONDecodeError as e:
-        raise SecurityError(f"Invalid JSON in {path}: {e}")
-    except (OSError, UnicodeDecodeError) as e:
-        raise SecurityError(f"Cannot read file {path}: {e}")
-
-
-# Cloud instance-metadata endpoints are never a legitimate egress target, even
-# under the private-egress operator override (AWS/GCP/Azure/OCI, Alibaba Cloud).
-_CLOUD_METADATA_HOSTS = frozenset({"169.254.169.254", "100.100.100.200", "metadata.google.internal"})
-
-
-def _unwrap_ip(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> ipaddress.IPv4Address | ipaddress.IPv6Address:
-    mapped = getattr(addr, "ipv4_mapped", None)
-    return mapped if mapped is not None else addr
-
-
-def _is_non_public_ip(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    """True for any address that is not publicly routable unicast.
-
-    ``is_private`` alone misses CGNAT shared space (100.64.0.0/10, where the
-    Alibaba Cloud metadata service lives) and multicast.
-    """
-    return (
-        addr.is_private
-        or addr.is_loopback
-        or addr.is_link_local
-        or addr.is_reserved
-        or addr.is_multicast
-        or addr.is_unspecified
-        or not addr.is_global
-    )
-
-
 def validate_url(url: str, *, allowed_schemes: tuple[str, ...] = ("https",), allow_private: bool = False) -> None:
     """
     Validate a URL for safety, including DNS rebinding protection.
@@ -1112,65 +900,6 @@ def validate_url(url: str, *, allowed_schemes: tuple[str, ...] = ("https",), all
     logger.debug("URL validated successfully")
 
 
-def validate_package_name(name: str, ecosystem: str) -> None:
-    """
-    Validate package name follows ecosystem conventions.
-
-    Args:
-        name: Package name
-        ecosystem: Package ecosystem (npm, pypi, go, cargo)
-
-    Raises:
-        SecurityError: If package name is invalid
-    """
-    if not name or not isinstance(name, str):
-        raise SecurityError(f"Invalid package name: {name}")
-
-    # Ecosystem-specific validation
-    if ecosystem == "npm":
-        # npm: lowercase, alphanumeric, hyphens, underscores, @ for scoped
-        if not re.match(r"^(@[a-z0-9-_]+/)?[a-z0-9-_]+$", name.lower()):
-            raise SecurityError(f"Invalid npm package name: {name}")
-
-    elif ecosystem == "pypi":
-        # PyPI: alphanumeric, hyphens, underscores, dots
-        if not re.match(r"^[a-zA-Z0-9-_.]+$", name):
-            raise SecurityError(f"Invalid PyPI package name: {name}")
-
-    elif ecosystem == "go":
-        # Go: domain/path format
-        if not re.match(r"^[a-zA-Z0-9-_.\/]+$", name):
-            raise SecurityError(f"Invalid Go package name: {name}")
-
-    elif ecosystem == "cargo":
-        # Rust: alphanumeric, hyphens, underscores
-        if not re.match(r"^[a-zA-Z0-9-_]+$", name):
-            raise SecurityError(f"Invalid Cargo package name: {name}")
-
-    logger.debug(f"Package name validated: {name} ({ecosystem})")
-
-
-def create_safe_subprocess_env() -> dict[str, str]:
-    """
-    Create a minimal, safe environment for subprocess execution.
-
-    Returns:
-        Dictionary with minimal safe environment variables
-    """
-    # Only include essential environment variables
-    safe_env = {
-        "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
-        "HOME": os.environ.get("HOME", "/tmp"),  # nosec B108 - safe fallback for subprocess when HOME not set
-        "LANG": os.environ.get("LANG", "en_US.UTF-8"),
-    }
-
-    # Add npm/node specific vars if present
-    if "NPM_CONFIG_REGISTRY" in os.environ:
-        safe_env["NPM_CONFIG_REGISTRY"] = os.environ["NPM_CONFIG_REGISTRY"]
-
-    return safe_env
-
-
 def validate_mcp_server_config(server_config: dict) -> None:
     """
     Validate an MCP server configuration for hygiene issues before launch.
@@ -1205,27 +934,6 @@ def validate_mcp_server_config(server_config: dict) -> None:
     validate_environment(env)
 
     logger.info("MCP server config validated: %s", sanitize_text(command or server_config.get("url", "unknown")))
-
-
-# Docker/OCI image reference pattern — must start with alphanum, no shell metacharacters
-_IMAGE_REF_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._\-/:@]+$")
-
-
-def validate_image_ref(ref: str) -> str:
-    """Validate a Docker/OCI image reference.
-
-    Rejects references starting with ``-`` (argument injection) and those
-    containing shell metacharacters.
-
-    Returns:
-        The validated reference string.
-
-    Raises:
-        SecurityError: If the reference is invalid.
-    """
-    if not ref or not _IMAGE_REF_RE.match(ref):
-        raise SecurityError(f"Invalid image reference: {ref!r}")
-    return ref
 
 
 def sanitize_error(exc: Exception | str, generic: bool = False, *, max_length: int = 200) -> str:
