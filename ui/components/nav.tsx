@@ -993,10 +993,12 @@ function ApiStatus({ collapsed }: { collapsed: boolean }) {
   }
 
   const statusLabel = status === "online" ? `Control plane · v${version}` : status === "offline" ? "Control plane offline" : "Connecting…";
+  const phoneLabel = status === "online" ? `v${version}` : status === "offline" ? "Offline" : "Connecting…";
   return (
-    <details className="relative shrink-0 text-xs text-ink-secondary sm:min-w-0 sm:shrink">
-      <summary aria-label={statusLabel} title={statusLabel} className="flex min-w-0 cursor-pointer list-none items-center gap-2 rounded-lg px-1 py-1.5 sm:px-2 marker:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-emerald-500">
+    <details className="relative min-w-0 text-xs text-ink-secondary">
+      <summary aria-label={statusLabel} title={statusLabel} className="flex min-w-0 cursor-pointer list-none items-center gap-2 overflow-hidden rounded-lg px-1 py-1.5 sm:px-2 marker:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-emerald-500">
         <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`} aria-hidden="true" />
+        <span className="shrink-0 sm:hidden" aria-hidden="true">{phoneLabel}</span>
         <span className="hidden truncate sm:block" aria-hidden="true">{statusLabel}</span>
       </summary>
       <p className="fixed inset-x-3 z-10 mt-2 w-auto max-w-[calc(100vw-2rem)] rounded-lg border border-outline bg-surface p-3 shadow-lg [overflow-wrap:anywhere] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:w-max">{statusLabel}</p>

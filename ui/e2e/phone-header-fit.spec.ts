@@ -29,8 +29,8 @@ for (const [name, url, text] of labels) {
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
     }
-    // Phones show the status dot; the full label stays in the summary's accessible name and its popover.
-    await expect(page.locator("header summary[aria-label^='Control plane'] span:not([class*='rounded-full'])")).toBeHidden();
+    // Phones show the short release version; the full label stays in the accessible name and popover.
+    await expect(page.locator("header summary[aria-label^='Control plane'] span:visible")).toHaveText(["", "v1.0.0"]);
     const mark = await page.getByRole("link", { name: "agent-bom", exact: true }).boundingBox();
     expect(mark!.width).toBeGreaterThanOrEqual(36);
     await page.getByRole("banner").screenshot({ path: test.info().outputPath(`header-${name.replace(" ", "-")}-390.png`) });
