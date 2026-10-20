@@ -262,8 +262,33 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
     available = discover_test_files(test_root)
     selected: set[Path] = set()
 
+    # Extracted owners retain the original surface's contract selection as well
+    # as their own basename tests.
+    extracted_owners = {
+        "src/agent_bom/core/security_validation.py": "src/agent_bom/security.py",
+        "src/agent_bom/api/identity_models.py": "src/agent_bom/api/agent_identity_store.py",
+        "src/agent_bom/api/identity_local_store.py": "src/agent_bom/api/agent_identity_store.py",
+        "src/agent_bom/output/json_inventory.py": "src/agent_bom/output/json_fmt.py",
+    }
+    changed_files = list(changed_files)
+    changed_files += [Path(owner) for path in changed_files if (owner := extracted_owners.get(path.as_posix().removeprefix("./")))]
     for changed in changed_files:
         normalized = Path(changed.as_posix().removeprefix("./"))
+        if normalized.as_posix() in {"src/agent_bom/api/agent_identity_store.py", "src/agent_bom/api/identity_local_store.py"}:
+            selected.update(candidate for candidate in available if candidate.name == "test_graph_data_model_generator.py")
+        if normalized.as_posix() in {"src/agent_bom/cli/_server.py", "src/agent_bom/cli/_server_posture.py"}:
+            selected.update(
+                candidate
+                for candidate in available
+                if candidate.name
+                in {
+                    "test_cli_server.py",
+                    "test_cli_serve_auth_enforce.py",
+                    "test_cli_storage_summary.py",
+                    "test_serve_command.py",
+                    "test_settings_migration_parity.py",
+                }
+            )
         if normalized.as_posix() in {
             "src/agent_bom/output/impact_brief.py",
             "src/agent_bom/output/impact_html.py",

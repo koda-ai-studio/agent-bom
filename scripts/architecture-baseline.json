@@ -86,7 +86,7 @@
     "api/agent_identity_store.py": {
       "broad_except": 11,
       "deferred_imports": 7,
-      "file_lines": 1303
+      "file_lines": 763
     },
     "api/agent_identity_store.py::cleanup_expired_grants": {
       "function_lines": 85
@@ -1839,10 +1839,10 @@
       "deferred_imports": 3
     },
     "cli/_server.py": {
-      "api_imports": 16,
-      "broad_except": 2,
-      "deferred_imports": 26,
-      "file_lines": 1279
+      "api_imports": 8,
+      "broad_except": 1,
+      "deferred_imports": 18,
+      "file_lines": 950
     },
     "cli/_server.py::api_cmd": {
       "function_lines": 160
@@ -1852,6 +1852,11 @@
     },
     "cli/_server.py::serve_cmd": {
       "function_lines": 167
+    },
+    "cli/_server_posture.py": {
+      "api_imports": 8,
+      "broad_except": 1,
+      "deferred_imports": 8
     },
     "cli/_skills_group.py": {
       "deferred_imports": 2,
@@ -4373,14 +4378,10 @@
     },
     "output/json_fmt.py": {
       "deferred_imports": 22,
-      "file_lines": 1256
+      "file_lines": 980
     },
     "output/json_fmt.py::_blast_radius_json_entry": {
       "function_lines": 129
-    },
-    "output/json_fmt.py::_build_ai_bom_entities_snapshot": {
-      "complexity": 16,
-      "function_lines": 133
     },
     "output/json_fmt.py::_build_framework_summary": {
       "function_lines": 150
@@ -5189,8 +5190,8 @@
     "security.py": {
       "broad_except": 1,
       "deferred_imports": 4,
-      "file_lines": 1282,
-      "raw_env_reads": 5
+      "file_lines": 990,
+      "raw_env_reads": 1
     },
     "security.py::validate_url": {
       "complexity": 19,
