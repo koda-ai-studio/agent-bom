@@ -18,7 +18,7 @@ _UNSUPPORTED_LOCK_ERRNOS = frozenset({errno.ENOLCK, errno.EOPNOTSUPP, errno.ENOT
 if os.name == "nt":  # pragma: no cover - exercised on Windows CI
     import msvcrt
 
-    def lock_file_descriptor(fd: int) -> None:
+    def lock_file_descriptor(fd: int, *, blocking: bool = True) -> None:
         if os.fstat(fd).st_size == 0:
             os.write(fd, b"\0")
         while True:
@@ -29,6 +29,8 @@ if os.name == "nt":  # pragma: no cover - exercised on Windows CI
             except OSError as exc:
                 if exc.errno not in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
                     raise
+                if not blocking:
+                    raise BlockingIOError(errno.EAGAIN, "lock is held") from exc
                 threading.Event().wait(0.05)
 
     def unlock_file_descriptor(fd: int) -> None:
@@ -38,24 +40,27 @@ if os.name == "nt":  # pragma: no cover - exercised on Windows CI
 else:
     import fcntl
 
-    def lock_file_descriptor(fd: int) -> None:
-        fcntl.flock(fd, fcntl.LOCK_EX)
+    def lock_file_descriptor(fd: int, *, blocking: bool = True) -> None:
+        fcntl.flock(fd, fcntl.LOCK_EX if blocking else fcntl.LOCK_EX | fcntl.LOCK_NB)
 
     def unlock_file_descriptor(fd: int) -> None:
         fcntl.flock(fd, fcntl.LOCK_UN)
 
 
 @contextmanager
-def exclusive_file_lock(path: str | Path) -> Iterator[bool]:
+def exclusive_file_lock(path: str | Path, *, blocking: bool = True) -> Iterator[bool]:
     """Hold an exclusive advisory lock on *path* across processes; yield whether it is held.
 
     Where the filesystem cannot lock, yield ``False`` instead of failing the
-    caller, which then keeps only its in-process guarantees.
+    caller, which then keeps only its in-process guarantees. With
+    ``blocking=False`` a lock held elsewhere raises ``BlockingIOError``.
     """
     fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
     try:
         try:
-            lock_file_descriptor(fd)
+            lock_file_descriptor(fd, blocking=blocking)
+        except BlockingIOError:
+            raise
         except OSError as exc:
             if exc.errno not in _UNSUPPORTED_LOCK_ERRNOS:
                 raise

@@ -2,10 +2,8 @@
 
 from concurrent.futures import ThreadPoolExecutor
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from starlette.exceptions import HTTPException
 
 from agent_bom.api import stores
 from agent_bom.api.finding_read_context import finding_read_snapshot
@@ -61,7 +59,7 @@ def test_graph_http_request_establishes_read_context(estate, monkeypatch):
     assert calls == ["history-tenant"]
 
 
-def test_concurrent_replacement_rejects_retired_generation_instead_of_empty_graph(estate):
+def test_concurrent_replacement_keeps_the_scoped_generation_instead_of_empty_graph(estate):
     record(estate, 8, "repo-a", "package-a")
     graph = stores._get_graph_store()
 
@@ -72,9 +70,10 @@ def test_concurrent_replacement_rejects_retired_generation_instead_of_empty_grap
         with ThreadPoolExecutor(max_workers=1) as workers:
             replacement = workers.submit(graph.load_graph, tenant_id="history-tenant").result(timeout=5)
         assert replacement.scan_id != original
-        with pytest.raises(HTTPException) as error:
-            graph.load_graph(tenant_id="history-tenant")
-        assert error.value.status_code == 409
+        # The scope pinned its generation: the same request keeps reading one whole view.
+        same_request = graph.load_graph(tenant_id="history-tenant")
+        assert same_request.scan_id == original
+        assert set(same_request.nodes) == {"package-a"}
 
     read_old()
     assert set(graph.load_graph(tenant_id="history-tenant").nodes) == {"package-b"}

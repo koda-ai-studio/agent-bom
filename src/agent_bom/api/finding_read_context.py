@@ -26,6 +26,23 @@ def read_once(key: tuple[str, str], load: Callable[[], _T]) -> _T:
     return cast(_T, cache[key])
 
 
+def forget_read(key: tuple[str, str]) -> None:
+    """Drop one memoized value so the next ``read_once`` in this scope reloads it."""
+    cache = _read_cache.get()
+    if cache is not None:
+        cache.pop(key, None)
+
+
+def on_scope_exit(callback: Callable[[], None]) -> bool:
+    """Run *callback* when the active read scope ends; return False when no scope is active."""
+    cache = _read_cache.get()
+    if cache is None:
+        return False
+    cache.setdefault(_EXIT_KEY, []).append(callback)
+    return True
+
+
+_EXIT_KEY = ("__scope_exit__", "")
 _shared_lock = threading.Lock()
 _shared_values: weakref.WeakValueDictionary[tuple[str, str], Any] = weakref.WeakValueDictionary()
 _inflight: dict[tuple[str, str], threading.Lock] = {}
@@ -73,11 +90,14 @@ def finding_read_scope() -> Iterator[None]:
     if _read_cache.get() is not None:
         yield
         return
-    token = _read_cache.set({})
+    cache: dict[tuple[str, str], Any] = {}
+    token = _read_cache.set(cache)
     try:
         yield
     finally:
         _read_cache.reset(token)
+        for callback in cache.pop(_EXIT_KEY, ()):
+            callback()
 
 
 def finding_read_snapshot(fn: Callable[_P, _T]) -> Callable[_P, _T]:

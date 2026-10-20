@@ -5,7 +5,6 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 
 import pytest
-from starlette.exceptions import HTTPException
 
 from agent_bom.api.current_graph import CurrentGraphStore
 from tests.api import test_current_graph_estate as estate_helpers
@@ -70,40 +69,18 @@ def test_retirement_waits_for_active_readers_of_the_old_generation(estate):
     assert set(store.load_graph(tenant_id=TENANT).nodes) == {"package-b"}
 
 
-def test_rebuild_requested_while_iterating_the_same_generation_is_a_conflict_not_a_deadlock(estate):
-    record(estate, 8, "repo-a", "package-a")
-    store = CurrentGraphStore(estate[1], estate[0])
-    old = store.latest_snapshot_id(tenant_id=TENANT)
-    nodes = store.iter_nodes(tenant_id=TENANT)
-    first = next(nodes)
-    record(estate, 9, "repo-a", "package-b")
-    outcome: list[object] = []
-
-    def rebuild_inside_iteration() -> None:
-        try:
-            outcome.append(store.load_graph(tenant_id=TENANT))
-        except HTTPException as exc:
-            outcome.append(exc.status_code)
-
-    rebuild_inside_iteration()
-    assert outcome == [409]
-    assert getattr(first, "id", first) == "package-a" or "package-a" in str(first)
-    assert list(nodes) == []
-    assert store.latest_snapshot_id(tenant_id=TENANT) != old
-
-
-def _pause_exclusive_for(store: CurrentGraphStore, thread_name: str) -> tuple[threading.Event, threading.Event]:
-    """Hold *thread_name* at the resolve lock after it has read the evidence fingerprint."""
+def _pause_before_build(store: CurrentGraphStore, thread_name: str) -> tuple[threading.Event, threading.Event]:
+    """Hold *thread_name* before it becomes the builder, after it has read the evidence fingerprint."""
     paused, resume = threading.Event(), threading.Event()
-    exclusive = store._lock.exclusive
+    building = store._building
 
-    def gated():
+    def gated(*args, **kwargs):
         if threading.current_thread().name == thread_name and not paused.is_set():
             paused.set()
             assert resume.wait(10), "test never resumed the stale resolver"
-        return exclusive()
+        return building(*args, **kwargs)
 
-    store._lock.exclusive = gated  # type: ignore[method-assign]
+    store._building = gated  # type: ignore[method-assign]
     return paused, resume
 
 
@@ -122,7 +99,7 @@ def test_a_resolver_that_read_older_evidence_never_retires_the_newer_generation(
     estate = revisioned_estate
     record(estate, 8, "repo-a", "package-a")
     store = CurrentGraphStore(estate[1], estate[0])
-    paused, resume = _pause_exclusive_for(store, "stale-resolver")
+    paused, resume = _pause_before_build(store, "stale-resolver")
     stale: list[str] = []
     resolver = threading.Thread(target=lambda: stale.append(store._resolve_current_id(TENANT)), name="stale-resolver")
     resolver.start()
