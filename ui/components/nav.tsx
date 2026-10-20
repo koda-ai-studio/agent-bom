@@ -834,7 +834,7 @@ export function Nav() {
   return (
     <>
       {/* Product chrome — Snowflake-style top bar with canonical agent-bom lockup */}
-      <header className="fixed inset-x-0 top-0 z-[60] flex h-16 items-center gap-3 border-b border-outline bg-surface/95 px-4 backdrop-blur-sm">
+      <header className="fixed inset-x-0 top-0 z-[60] flex h-16 items-center gap-2 border-b border-outline bg-surface/95 px-3 backdrop-blur-sm sm:gap-3 sm:px-4">
         <Link href="/" aria-label="agent-bom" className="group flex min-w-0 items-center transition-opacity hover:opacity-90">
           <BrandLogo
             showWordmark={!collapsed}
@@ -852,7 +852,7 @@ export function Nav() {
           </span>
         )}
         <DemoEstateLabel scanSources={counts?.scan_sources} />
-        <div className="ml-auto flex min-w-0 items-center gap-2">
+        <div className="ml-auto flex min-w-0 items-center gap-0.5 sm:gap-2">
           <button
             onClick={() => setSearchOpen(true)}
             className="hidden items-center gap-2 rounded-lg border border-outline bg-surface-muted px-3 py-1.5 text-xs text-ink-secondary transition-colors hover:border-outline-strong hover:text-foreground lg:flex"
