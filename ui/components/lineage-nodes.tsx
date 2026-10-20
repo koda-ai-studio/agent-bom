@@ -199,7 +199,9 @@ function NodeCard({
   const { badges: allBadges, ring } = nodeBadges(data);
   const badges = allBadges.filter((badge) => badge.kind !== "provider" && (badge.kind !== "environment" || showsEnvironmentChip(data)));
   const environmentRaw = allBadges.find((badge) => badge.kind === "environment")?.raw;
-  const shownSubtitle = typeof subtitle === "string" && environmentRaw && subtitle.trim().toLowerCase() === environmentRaw.toLowerCase()
+  // The environment chip and the vendor mark already name these; a caption repeating them is noise.
+  const named = [environmentRaw, provider ? data.dimensions?.cloud_provider ?? data.attributes?.cloud_provider : undefined, provider?.label];
+  const shownSubtitle = typeof subtitle === "string" && named.some(value => typeof value === "string" && value && subtitle.trim().toLowerCase() === value.toLowerCase())
     ? undefined : subtitle;
   return (
     <div title={graphNodeTooltip(data)} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}

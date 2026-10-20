@@ -434,6 +434,7 @@ body {
 .ep-header-action { @apply shrink-0 self-center; }
 .ep-badges { @apply flex flex-wrap items-center gap-2; }
 .ep-severity { @apply rounded-md bg-red-500/10 px-2.5 py-1 text-[15px] font-semibold text-red-700 dark:text-red-200; }
+.ep-basis { @apply rounded-md border border-outline bg-surface-elevated px-2.5 py-1 text-[0.8125rem] font-medium text-ink-secondary; }
 .ep-kev { @apply rounded-md bg-amber-500/10 px-2.5 py-1 text-[15px] font-semibold text-amber-700 dark:text-amber-200; }
 .ep-summary { @apply max-w-3xl text-[15px] leading-6 text-[color:var(--text-secondary)]; }
 .ep-metrics { @apply flex w-full flex-wrap gap-x-5 gap-y-2 text-[15px]; }
@@ -678,6 +679,8 @@ body {
 .graph-page-header { @apply px-4 py-2; background: var(--background); }
 .graph-page-select { @apply rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] focus:border-sky-600 focus:outline-none; }
 .graph-page-search { @apply min-w-[260px] flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus:border-sky-600 focus:outline-none; }
+/* In the phone search panel the field shrinks so the submit button stays inside the panel. */
+[data-testid="mobile-graph-search"] form, [data-testid="mobile-graph-search"] .graph-page-search { min-width: 0; }
 .graph-page-action { @apply cursor-pointer rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40; }
 .graph-page-result { @apply rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-2 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface)]; }
 .graph-page-secondary-action { @apply rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-1.5 text-xs text-[var(--text-secondary)] transition hover:border-[var(--border-strong)] hover:text-[var(--foreground)]; }

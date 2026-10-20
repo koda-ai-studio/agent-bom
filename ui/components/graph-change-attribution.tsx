@@ -17,11 +17,11 @@ export function GraphChangeAttribution({ attribution }: { attribution: Attributi
   const bare = attribution.unattributed.added + attribution.unattributed.removed + attribution.unattributed.changed;
   return (
     <div className="space-y-1">
-      <p className="text-[11px] font-medium text-ink-tertiary">Collected from</p>
+      <p className="text-[0.6875rem] font-medium text-ink-tertiary">Collected from</p>
       <ul aria-label="Changed nodes by collected source" className="flex flex-wrap gap-1.5">
         {attribution.sources.map(source => (
           <li key={`${source.vendor}:${source.account}`} title={`${vendorDisplayName(source.vendor)} ${source.account}`.trim()}
-            className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md border border-outline bg-surface px-2 py-0.5 text-[11px] text-ink-secondary">
+            className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md border border-outline bg-surface px-2 py-0.5 text-[0.6875rem] text-ink-secondary">
             <VendorMark vendor={source.vendor} className="h-3.5 w-3.5" />
             <span className="truncate text-foreground">{vendorDisplayName(source.vendor)}{source.account ? ` · ${source.account}` : ""}</span>
             <span className="shrink-0 font-mono tabular-nums">{delta(source)}</span>
@@ -29,7 +29,7 @@ export function GraphChangeAttribution({ attribution }: { attribution: Attributi
         ))}
       </ul>
       {(attribution.omitted_sources > 0 || bare > 0) && (
-        <p className="text-[11px] text-ink-tertiary">
+        <p className="text-[0.6875rem] text-ink-tertiary">
           {attribution.omitted_sources > 0 && `${n(attribution.omitted_sources)} more sources not shown. `}
           {bare > 0 && `${n(bare)} nodes without a recorded vendor.`}
         </p>

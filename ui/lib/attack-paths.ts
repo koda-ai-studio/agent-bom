@@ -243,7 +243,10 @@ export function toAttackCardNodes(path: AttackPath, nodeById: Map<string, Unifie
 export function attackPathRoleChain(path: AttackPath, nodeById: Map<string, UnifiedNode>): string {
   const roles: string[] = [];
   for (const node of toAttackCardNodes(path, nodeById)) {
-    const role = node.type === "cve" ? "finding" : node.type;
+    // Agents, packages, tools and credentials keep their role; every other hop is named by its recorded kind.
+    const provider = typeof node.attributes?.cloud_provider === "string" ? node.attributes.cloud_provider : null;
+    const role = node.type === "cve" ? "finding" : ["agent", "package", "tool", "credential"].includes(node.type)
+      ? node.type : assetKindLabel({ entityType: node.entityType, attributes: node.attributes, provider }).toLowerCase();
     if (roles[roles.length - 1] !== role) roles.push(role);
   }
   return roles.join(" → ");

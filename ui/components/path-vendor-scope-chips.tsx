@@ -8,7 +8,7 @@ import type { GraphVendorFacets } from "@/lib/api-types";
 import { scopeVendors, vendorDisplayName } from "@/lib/path-vendor-scope";
 
 const chipClass = (active: boolean) =>
-  `inline-flex min-h-8 sm:min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition ${
+  `inline-flex min-h-8 sm:min-h-7 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[0.6875rem] font-medium transition ${
     active
       ? "border-sky-600/50 bg-sky-500/10 text-sky-800 dark:text-sky-200"
       : "border-[color:var(--border-subtle)] bg-[color:var(--surface)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-strong)] hover:text-[color:var(--foreground)]"
@@ -29,7 +29,7 @@ function VendorChip({ vendor, count, prefix, active, onClick }: { vendor: string
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <li aria-hidden className="self-center pr-0.5 text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">{children}</li>;
+  return <li aria-hidden className="self-center pr-0.5 text-[0.625rem] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">{children}</li>;
 }
 
 /**
@@ -91,7 +91,7 @@ export function PathVendorScopeChips({ scanId, value, onChange }: {
         {source && !pickingSource && sources.length > 1 && (
           <li>
             <button type="button" aria-label="Change source vendor" onClick={() => setPickingSource(true)}
-              className="min-h-8 px-1 text-[11px] text-[color:var(--text-secondary)] underline underline-offset-4 sm:min-h-7">Change</button>
+              className="min-h-8 px-1 text-[0.6875rem] text-[color:var(--text-secondary)] underline underline-offset-4 sm:min-h-7">Change</button>
           </li>
         )}
       </ul>

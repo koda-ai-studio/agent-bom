@@ -44,7 +44,7 @@ export function GraphSnapshotDiff({
         <span className="text-emerald-700 dark:text-emerald-300">+{counts.edgesAdded}</span>{" "}
         <span className="text-amber-700 dark:text-amber-300">−{counts.edgesRemoved}</span> links
       </p>}
-      {counts.truncated && <p className="text-[11px] text-ink-tertiary">Lists show the first changes only; counts are exact.</p>}
+      {counts.truncated && <p className="text-[0.6875rem] text-ink-tertiary">Lists show the first changes only; counts are exact.</p>}
       {lists.length > 0 && (
         <div className="grid min-w-0 gap-2">
           {lists.map(list => <DiffPreview key={list.label} label={list.label} items={list.items} total={list.total} scanId={list.scanId} />)}
@@ -100,8 +100,8 @@ export function DiffPreview({
   return (
     <div className="min-w-0 rounded-xl border border-outline bg-surface/70 p-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">{label}</p>
-        <span className="font-mono text-[11px] tabular-nums text-ink-tertiary">{exact.toLocaleString()} nodes</span>
+        <p className="text-[0.625rem] uppercase tracking-[0.18em] text-ink-tertiary">{label}</p>
+        <span className="font-mono text-[0.6875rem] tabular-nums text-ink-tertiary">{exact.toLocaleString()} nodes</span>
       </div>
       <ul aria-label={`${label} nodes`} className="mt-2 space-y-0.5">
         {visible.map((item) => {
@@ -109,7 +109,7 @@ export function DiffPreview({
           return (
             <li key={`${label}-${diffItemKey(item)}`} className="min-w-0">
               <Link href={changedNodeHref(diffItemKey(item), text, scanId)} title={text}
-                className="block truncate rounded px-1 py-0.5 font-mono text-[11px] text-ink-secondary hover:bg-surface-elevated hover:text-foreground">
+                className="block truncate rounded px-1 py-0.5 font-mono text-[0.6875rem] text-ink-secondary hover:bg-surface-elevated hover:text-foreground">
                 {middleTruncate(text)}
               </Link>
             </li>
@@ -117,7 +117,7 @@ export function DiffPreview({
         })}
       </ul>
       {(pages > 1 || exact > items.length) && (
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-ink-tertiary">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[0.6875rem] text-ink-tertiary">
           <span className="tabular-nums">
             {range} of {items.length.toLocaleString()}{exact !== items.length ? ` listed · ${exact.toLocaleString()} ${label.toLowerCase()}` : ""}
           </span>

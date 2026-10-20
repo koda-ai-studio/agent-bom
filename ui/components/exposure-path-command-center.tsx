@@ -1,5 +1,6 @@
 "use client";
 
+import { pathHasFinding, pathRiskBasisLabel } from "@/lib/path-risk-basis";
 import { countLabel } from "@/lib/count-label";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -163,9 +164,11 @@ export function ExposurePathCommandCenter({
               <span className="ep-header-copy">
                 <span className="ep-badges">
                   <h2 className="ep-outcome-title">{headline}</h2>
-                  <span className="ep-severity" data-severity={String(path.severity).toLowerCase()}>
+                  {pathHasFinding(path) ? <span className="ep-severity" data-severity={String(path.severity).toLowerCase()}>
                     {String(path.severity)} severity
-                  </span>
+                  </span> : <span className="ep-basis" data-testid="path-risk-basis" title="No finding is on this path; its rank rests on this recorded basis.">
+                    Risk basis · {pathRiskBasisLabel(path.reachabilityBasis)}
+                  </span>}
                   {evidence?.isKev ? <span className="ep-kev">CISA KEV</span> : null}
                 </span>
                 <span className="ep-header-context">Path context &amp; evidence · {pathSpanLabel(path.hops.length)} · {countLabel(path.affectedAgents.length, "agent")}</span>

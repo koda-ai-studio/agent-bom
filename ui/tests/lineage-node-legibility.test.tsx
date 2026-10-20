@@ -28,6 +28,26 @@ describe("lineage node labels", () => {
     expect(screen.queryByText("Loaded graph")).not.toBeInTheDocument();
     expect(screen.getByTitle(/Servers: 1 hop; packages: 3 hops/)).toHaveTextContent("0 linked servers");
   });
+  it("does not repeat the provider the vendor mark already names as a caption", () => {
+    const Renderer = lineageNodeTypes.dataStoreNode;
+    render(<ReactFlowProvider><Renderer data={{
+      label: "risk-scores-staging-2", nodeType: "dataStore", entityType: "data_store", description: "snowflake",
+      attributes: { cloud_provider: "snowflake", resource_type: "table" }, dimensions: { cloud_provider: "snowflake" },
+    }} /></ReactFlowProvider>);
+    expect(screen.getByText("Table", { exact: true })).toBeVisible();
+    expect(screen.queryByText("snowflake", { exact: true })).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Snowflake/ })).toBeInTheDocument();
+  });
+
+  it("keeps a caption that says something the mark does not", () => {
+    const Renderer = lineageNodeTypes.dataStoreNode;
+    render(<ReactFlowProvider><Renderer data={{
+      label: "orders", nodeType: "dataStore", entityType: "data_store", description: "ANALYTICS.PUBLIC",
+      attributes: { cloud_provider: "snowflake" }, dimensions: { cloud_provider: "snowflake" },
+    }} /></ReactFlowProvider>);
+    expect(screen.getByText("ANALYTICS.PUBLIC")).toBeInTheDocument();
+  });
+
   it("does not show a count-scope label on a server without counts", () => {
     const Renderer = lineageNodeTypes.serverNode;
     render(<ReactFlowProvider><Renderer data={{ label: "Image processing MCP server", nodeType: "server", countScope: "loaded_graph" }} /></ReactFlowProvider>);

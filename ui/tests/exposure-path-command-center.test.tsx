@@ -6,6 +6,26 @@ import type { ExposurePath } from "@/lib/exposure-path";
 
 beforeEach(() => { HTMLElement.prototype.scrollIntoView = vi.fn(); });
 
+describe("risk basis on paths without a finding", () => {
+  it("states the recorded basis instead of an 'unknown severity' pill", () => {
+    const configured: ExposurePath = {
+      ...basePath, id: "path-cv", severity: "unknown", findings: [], evidence: undefined,
+      reachability: "likely", reachabilityBasis: ["recorded_identifier_match"],
+      hops: basePath.hops.slice(0, 2), target: { id: "server:database", label: "database", role: "server" },
+    };
+    const { container } = render(<ExposurePathCommandCenter path={configured} />);
+    expect(container.querySelector(".ep-severity")).toBeNull();
+    expect(screen.queryByText(/unknown severity/i)).toBeNull();
+    expect(screen.getByTestId("path-risk-basis")).toHaveTextContent("Recorded identifier match");
+  });
+
+  it("keeps the severity pill when a finding is on the path", () => {
+    const { container } = render(<ExposurePathCommandCenter path={basePath} />);
+    expect(container.querySelector(".ep-severity")).toHaveTextContent("critical severity");
+    expect(screen.queryByTestId("path-risk-basis")).toBeNull();
+  });
+});
+
 const basePath: ExposurePath = {
   id: "path-1",
   label: "analyst-agent -> database -> werkzeug -> CVE-2026-0002",

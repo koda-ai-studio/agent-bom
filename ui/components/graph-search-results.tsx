@@ -20,7 +20,7 @@ export function GraphSearchResults({ results, severity, onSelect }: {
   if (results.length === 0) return null;
   return (
     <div className="mt-2 rounded-2xl border border-outline bg-background/90 p-2">
-      <div className="mb-2 px-1 text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">
+      <div className="mb-2 px-1 text-[0.625rem] uppercase tracking-[0.18em] text-ink-tertiary">
         Search respects current entity scope{severity ? ` and ${severity}+ severity` : ""}
       </div>
       <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
@@ -35,13 +35,13 @@ export function GraphSearchResults({ results, severity, onSelect }: {
                 {vendor && <VendorMark vendor={vendor} />}
                 <span className="truncate">{result.label}</span>
               </p>
-              <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 text-[11px] text-ink-secondary">
+              <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 text-[0.6875rem] text-ink-secondary">
                 <span className="font-medium">{kind}</span>
                 {vendor && <span aria-hidden>·</span>}
                 {vendor && <span className="truncate">{vendorDisplayName(vendor)}{account ? ` · ${account}` : ""}</span>}
               </p>
               {(result.severity || assessed) && (
-                <div className="mt-1.5 flex flex-wrap gap-2 text-[10px] text-ink-tertiary">
+                <div className="mt-1.5 flex flex-wrap gap-2 text-[0.625rem] text-ink-tertiary">
                   {result.severity && <span>{result.severity}</span>}
                   {assessed && <span>risk {nodeRiskLabel(result.risk_score, result.risk_assessment)}</span>}
                 </div>

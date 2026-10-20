@@ -457,7 +457,23 @@ describe("attack path helpers", () => {
       vuln_ids: ["CVE-2025-7783"],
     };
 
-    expect(attackPathRoleChain(path, nodes)).toBe("agent → server → package → finding");
+    expect(attackPathRoleChain(path, nodes)).toBe("agent → server → cloud → package → finding");
+  });
+
+  it("names each hop by its recorded kind, so a Snowflake to S3 chain is not 'data → server → data'", () => {
+    const withKind = (id: string, entityType: EntityType, resource_type: string, cloud_provider: string): UnifiedNode =>
+      ({ ...graphNode(id, entityType, id), attributes: { resource_type, cloud_provider } });
+    const nodes = new Map<string, UnifiedNode>([
+      ["t", withKind("t", EntityType.DATA_STORE, "table", "snowflake")],
+      ["s", withKind("s", EntityType.DATA_STORE, "stage", "snowflake")],
+      ["i", withKind("i", EntityType.CLOUD_RESOURCE, "storage_integration", "snowflake")],
+      ["b", withKind("b", EntityType.DATA_STORE, "bucket", "aws")],
+    ]);
+    const path: AttackPath = {
+      source: "t", target: "b", hops: ["t", "s", "i", "b"], edges: ["depends_on", "depends_on", "can_access"], composite_risk: 52,
+      summary: "", credential_exposure: [], tool_exposure: [], vuln_ids: [],
+    };
+    expect(attackPathRoleChain(path, nodes)).toBe("table → stage → integration → bucket");
   });
 
   it("preserves legacy mesh/context exact agent identifiers without applying them as display names", () => {
