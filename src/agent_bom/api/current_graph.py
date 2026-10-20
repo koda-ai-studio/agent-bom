@@ -71,6 +71,14 @@ _READS = frozenset(
 )
 
 
+def _build_wait_seconds() -> float:
+    """How long a read waits for another request's rebuild before serving the previous generation."""
+    try:
+        return max(0.0, float(env_raw("AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS") or 2000) / 1000)
+    except ValueError:
+        return 2.0
+
+
 def _digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str, separators=(",", ":")).encode()).hexdigest()
 
@@ -371,23 +379,35 @@ class CurrentGraphStore:
 
     @contextmanager
     def _building(self, tenant: str, *, wait: bool) -> Iterator[bool]:
-        """Become the tenant's one builder; without *wait*, yield False when another build is in flight."""
+        """Become the tenant's one builder.
+
+        Without *wait*, give an in-flight build (often the post-push warm-up
+        building this reader's own evidence) a bounded head start, then yield
+        False so the caller serves the previous generation instead of queueing.
+        """
         with self._state_lock:
             gate = self._build_gates.setdefault(tenant, threading.RLock())
-        if not gate.acquire(blocking=wait):
+        deadline = None if wait else time.monotonic() + _build_wait_seconds()
+        if not gate.acquire(timeout=-1 if deadline is None else _build_wait_seconds()):
             yield False
             return
         try:
             with ExitStack() as stack:
-                try:
-                    stack.enter_context(self._promotion_lock(tenant, blocking=wait))
-                except BlockingIOError:
-                    acquired = False
-                else:
-                    acquired = True
+                acquired = self._enter_promotion_lock(stack, tenant, deadline)
                 yield acquired
         finally:
             gate.release()
+
+    def _enter_promotion_lock(self, stack: ExitStack, tenant: str, deadline: float | None) -> bool:
+        while True:
+            try:
+                stack.enter_context(self._promotion_lock(tenant, blocking=deadline is None))
+                return True
+            except BlockingIOError:
+                # flock has no timed acquire; poll another worker's build until the budget is spent.
+                if deadline is None or time.monotonic() >= deadline:
+                    return False
+                threading.Event().wait(0.02)
 
     @contextmanager
     def _promoting(self) -> Iterator[bool]:

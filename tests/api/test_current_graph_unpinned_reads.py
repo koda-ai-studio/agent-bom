@@ -45,7 +45,8 @@ def _hold_materialize(store: CurrentGraphStore) -> tuple[threading.Event, thread
     return entered, release
 
 
-def test_reads_serve_the_previous_generation_while_a_rebuild_is_in_flight(revisioned_estate):
+def test_reads_serve_the_previous_generation_while_a_rebuild_is_in_flight(revisioned_estate, monkeypatch):
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS", "50")
     estate = revisioned_estate
     record(estate, 8, "repo-a", "package-a")
     store = CurrentGraphStore(estate[1], estate[0])
@@ -174,3 +175,21 @@ def test_concurrent_unpinned_reads_never_conflict_during_pushes(estate):
     assert not failures, failures[:5]
     assert reads[0] > 0
     assert set(store.load_graph(tenant_id=TENANT).nodes) == {f"package-{index}" for index in range(51)}
+
+
+def test_a_read_waits_briefly_for_an_in_flight_build_of_its_own_evidence(estate, monkeypatch):
+    """Read-your-writes: a background warm-up that starts the rebuild must not make the next read stale."""
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS", "5000")
+    record(estate, 8, "repo-a", "package-a")
+    store = CurrentGraphStore(estate[1], estate[0])
+    store.latest_snapshot_id(tenant_id=TENANT)
+    entered, release = _hold_materialize(store)
+    record(estate, 9, "repo-b", "package-b")
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        warming = workers.submit(store.latest_snapshot_id, tenant_id=TENANT)
+        assert entered.wait(5)
+        reader = workers.submit(lambda: set(store.load_graph(tenant_id=TENANT).nodes))
+        threading.Timer(0.2, release.set).start()
+        nodes = reader.result(timeout=10)
+        warming.result(timeout=10)
+    assert nodes == {"package-a", "package-b"}
