@@ -166,3 +166,22 @@ describe("controlMatchesQuery", () => {
     expect(controlMatchesQuery(control, "missing")).toBe(false);
   });
 });
+
+
+it("keeps benchmark collection errors separate from failed controls", () => {
+  const data = sampleCompliance();
+  data.summary.cis_foundations_pass = 45;
+  data.summary.cis_foundations_fail = 77;
+  data.summary.cis_foundations_error = 44;
+  data.summary.cis_foundations_evaluated = 166;
+  data.summary.aisvs_pass = 1;
+  data.summary.aisvs_fail = 2;
+  data.summary.aisvs_error = 3;
+  const summaries = complianceFrameworkSummaries(data);
+  expect(summaries.find((row) => row.id === "cis-foundations")).toMatchObject({
+    pass: 45, fail: 77, warn: 44,
+  });
+  expect(summaries.find((row) => row.id === "aisvs")).toMatchObject({
+    pass: 1, fail: 2, warn: 3,
+  });
+});

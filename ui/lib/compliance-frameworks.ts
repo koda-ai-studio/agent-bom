@@ -124,14 +124,14 @@ export function complianceFrameworkSummaries(
       "cis-foundations",
       "CIS Foundations Benchmark",
       "CIS Bench",
-      { pass: s.cis_foundations_pass, fail: (s.cis_foundations_fail ?? 0) + (s.cis_foundations_error ?? 0) },
+      { pass: s.cis_foundations_pass, fail: s.cis_foundations_fail, warn: s.cis_foundations_error },
       (s.cis_foundations_evaluated ?? 0) + (s.cis_foundations_not_applicable ?? 0),
     ),
     scored(
       "aisvs",
       "OWASP AISVS",
       "AISVS",
-      { pass: s.aisvs_pass, fail: (s.aisvs_fail ?? 0) + (s.aisvs_error ?? 0) },
+      { pass: s.aisvs_pass, fail: s.aisvs_fail, warn: s.aisvs_error },
       (s.aisvs_pass ?? 0) + (s.aisvs_fail ?? 0) + (s.aisvs_error ?? 0) + (s.aisvs_not_applicable ?? 0),
     ),
   ];
