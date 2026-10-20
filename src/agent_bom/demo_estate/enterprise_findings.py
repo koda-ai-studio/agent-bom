@@ -864,7 +864,7 @@ def build_estate_findings(
     findings.extend(kept_risk_findings)
     current_snapshot = next(snapshot for snapshot in estate.snapshots if snapshot.stage.value == "current")
     first_seen = current_snapshot.observed_at.isoformat()
-    from agent_bom.demo_estate.estate_vulnerabilities import estate_finding_node_id
+    from agent_bom.demo_estate.estate_finding_nodes import estate_finding_node_id
 
     for finding in findings:
         finding.node_id = finding.asset.identifier

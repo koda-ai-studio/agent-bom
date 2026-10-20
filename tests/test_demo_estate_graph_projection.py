@@ -142,11 +142,10 @@ def test_findings_attach_to_the_inventoried_asset(projected, estate, estate_find
     # MISCONFIGURATION. Projecting all of them as misconfigurations left the
     # CNAPP overlay unable to see a single vulnerable resource, so its
     # internet-exposed-AND-vulnerable combination could never fire.
-    # One misconfiguration node per finding; one vulnerability node per advisory.
+    # One node per product finding id: per advisory, per failed benchmark check, per IaC hit, else per finding.
     finding_nodes = [n for n in graph.nodes.values() if n.entity_type in (EntityType.MISCONFIGURATION, EntityType.VULNERABILITY)]
-    advisories = {f.vulnerability_id for f in estate_findings if f.finding_type.value == "CVE"}
-    misconfigurations = [f for f in estate_findings if f.finding_type.value != "CVE"]
-    assert len(finding_nodes) == len(misconfigurations) + len(advisories), (len(finding_nodes), len(estate_findings))
+    assert {n.id for n in finding_nodes} == {f.finding_node_id for f in estate_findings}
+    assert len(finding_nodes) < len(estate_findings)
     assert any(n.entity_type is EntityType.VULNERABILITY for n in finding_nodes), "no CVE was projected as a vulnerability node"
     assert any(n.entity_type is EntityType.MISCONFIGURATION for n in finding_nodes)
 
@@ -175,11 +174,8 @@ def test_findings_attach_to_the_inventoried_asset(projected, estate, estate_find
     # findings list and the graph join without a heuristic.
     finding_ids = {f.id for f in estate_findings}
     for node in finding_nodes:
-        if node.entity_type is EntityType.VULNERABILITY:
-            occurrences = {fid for ids in node.attributes["finding_ids_by_asset"].values() for fid in ids}
-            assert occurrences and occurrences <= finding_ids
-        else:
-            assert node.attributes.get("finding_id") in finding_ids
+        occurrences = {fid for ids in node.attributes["finding_ids_by_asset"].values() for fid in ids}
+        assert occurrences and occurrences <= finding_ids
 
 
 def test_incident_chain_is_traversable_end_to_end(projected) -> None:
@@ -366,8 +362,7 @@ def test_projected_finding_nodes_carry_readable_remediation_text(projected, esta
         for node in graph.nodes.values()
         if node.entity_type in (EntityType.MISCONFIGURATION, EntityType.VULNERABILITY) and node.attributes.get("estate_id")
     ]
-    advisories = {f.vulnerability_id for f in estate_findings if f.finding_type.value == "CVE"}
-    assert len(finding_nodes) == len(estate_findings) - sum(f.finding_type.value == "CVE" for f in estate_findings) + len(advisories)
+    assert len(finding_nodes) == len({f.finding_node_id for f in estate_findings})
     for node in finding_nodes:
         recommendation = node.attributes.get("recommendation")
         assert isinstance(recommendation, str), (node.id, type(recommendation).__name__)
@@ -476,10 +471,7 @@ def test_estate_finding_fks_resolve_exact_occurrence_in_projected_graph(projecte
         assert finding.node_id in graph.nodes
         assert finding.finding_node_id in graph.nodes
         node = graph.nodes[finding.finding_node_id]
-        if node.entity_type is EntityType.VULNERABILITY:
-            assert finding.id in node.attributes["finding_ids_by_asset"][finding.node_id]
-        else:
-            assert node.attributes["finding_id"] == finding.id
+        assert finding.id in node.attributes["finding_ids_by_asset"][finding.node_id]
 
 
 def test_package_identity_context_does_not_grant_authority(projected, estate, estate_findings):

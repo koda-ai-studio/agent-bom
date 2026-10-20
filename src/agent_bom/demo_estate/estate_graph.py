@@ -37,8 +37,8 @@ from agent_bom.core.severity import SEVERITY_RISK_SCORE, normalize_severity
 from agent_bom.demo_estate.enterprise import EnterpriseEstate, EstateAsset
 from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE, add_estate_edge, oriented_topology_edge
 from agent_bom.demo_estate.estate_external_stages import project_external_stages
+from agent_bom.demo_estate.estate_finding_nodes import project_estate_finding
 from agent_bom.demo_estate.estate_packages import project_estate_package_lineage
-from agent_bom.demo_estate.estate_vulnerabilities import estate_finding_node_id, is_vulnerability_finding, project_estate_vulnerability
 from agent_bom.demo_estate.id_schemes import retired_estate_asset_ids
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.container_kind import container_kind_attributes
@@ -301,73 +301,6 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
     return node
 
 
-def _finding_node_id(finding: Finding) -> str:
-    return estate_finding_node_id(finding)
-
-
-def _add_misconfiguration_edges(graph: UnifiedGraph, finding_node: str, asset_id: str) -> None:
-    """AFFECTS for correlation (fusion, CNAPP overlay) plus the CONTAINS roll-up parent.
-
-    Without a parent, findings blow past the 200-orphan cap.
-    """
-    add_estate_edge(graph, finding_node, asset_id, RelationshipType.AFFECTS)
-    add_estate_edge(graph, asset_id, finding_node, RelationshipType.CONTAINS)
-
-
-def _add_misconfiguration(graph: UnifiedGraph, finding: Finding, asset_id: str, *, severity: str, estate_id: str) -> None:
-    """One misconfiguration node per finding, AFFECTS-linked to the asset it was raised against."""
-    node_id = _finding_node_id(finding)
-    graph.add_node(
-        UnifiedNode(
-            id=node_id,
-            entity_type=EntityType.MISCONFIGURATION,
-            label=finding.title,
-            severity=severity,
-            risk_score=SEVERITY_RISK_SCORE.get(severity, 0.0),
-            attributes={
-                **(
-                    {
-                        "risk_assessment": {
-                            "status": "assessed",
-                            "basis": "recorded_finding_severity_weight",
-                            "scope": "synthetic_estate_finding",
-                        }
-                    }
-                    if severity in SEVERITY_RISK_SCORE and severity != "unknown"
-                    else {}
-                ),
-                "finding_id": finding.id,
-                "canonical_finding_id": finding.canonical_id,
-                "finding_type": finding.finding_type.value,
-                "check_id": str(finding.evidence.get("control_id") or ""),
-                "cloud_provider": finding.provider or "",
-                "resource_ids": [asset_id],
-                # The prose, not the ``Remediation`` dataclass: the store
-                # persists attributes with ``json.dumps(default=str)``, which
-                # would freeze the object's ``repr`` as remediation text.
-                "recommendation": finding.remediation_guidance or "",
-                "configuration": finding.evidence.get("configuration") or {},
-                "synthetic": True,
-                "estate_id": estate_id,
-            },
-            compliance_tags=[f"{tag.framework}:{tag.control}" for tag in finding.normalized_controls()],
-            data_sources=[ESTATE_DATA_SOURCE],
-            dimensions=NodeDimensions(
-                cloud_provider=finding.provider or "",
-                environment=finding.environment or "",
-            ),
-        )
-    )
-    _add_misconfiguration_edges(graph, node_id, asset_id)
-
-
-def _project_finding(graph: UnifiedGraph, finding: Finding, asset_id: str, *, severity: str, estate_id: str) -> None:
-    if is_vulnerability_finding(finding):
-        project_estate_vulnerability(graph, finding, asset_id, severity=severity, estate_id=estate_id)
-    else:
-        _add_misconfiguration(graph, finding, asset_id, severity=severity, estate_id=estate_id)
-
-
 def project_estate_into_graph(
     graph: UnifiedGraph,
     estate: EnterpriseEstate,
@@ -531,7 +464,7 @@ def project_estate_into_graph(
         severity = normalize_severity(finding.severity)
         risk = SEVERITY_RISK_SCORE.get(severity, 0.0)
         risk_by_asset[asset_id] = max(risk_by_asset.get(asset_id, 0.0), risk)
-        _project_finding(graph, finding, asset_id, severity=severity, estate_id=estate.estate_id)
+        project_estate_finding(graph, finding, asset_id, severity=severity, estate_id=estate.estate_id)
         finding_count += 1
 
         principal = str(finding.evidence.get("identity_asset_id") or "")
