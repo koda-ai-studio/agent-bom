@@ -22,7 +22,7 @@ export function GraphProviderMark({ source, attributes, className = "", style }:
       data-agent-source={source.id} data-agent-source-badge="true" data-graph-source-badge="true"
       data-provider-basis={basis.inherited ? "inherited" : "declared"}
       className={`graph-provider-mark ${source.darkMark ? "graph-provider-mark-dark" : source.mono ? "graph-provider-mark-mono" : ""} ${className}`} style={style}>
-      {source.src && source.src !== failedSrc
+      {source.src && !source.badgeMonogram && source.src !== failedSrc
         // eslint-disable-next-line @next/next/no-img-element
         ? <img src={source.src} alt="" className={`graph-provider-mark-glyph graph-provider-mark-glyph-${source.id}`} onError={() => setFailedSrc(source.src)} />
         : <span className="text-[0.4em] font-semibold leading-none">{source.monogram}</span>}

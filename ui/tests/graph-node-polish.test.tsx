@@ -25,7 +25,8 @@ describe("finding nodes on the canvas", () => {
     const nodeType = type === "vulnNode" ? "vulnerability" : "misconfiguration";
     const root = renderNode(type, { label: "finding", nodeType, severity: "medium" });
     expect(visibleText(root).filter((text) => /^(critical|high|medium|low)$/i.test(text))).toEqual([]);
-    expect(root.querySelector(".graph-entity-glyph")?.className).toContain("border-amber-500");
+    expect(root.querySelector(".graph-entity-glyph")?.className).toContain("var(--severity-ring-medium)");
+    expect(root.querySelector(".graph-entity-glyph")?.getAttribute("data-severity-ring")).toBe("medium");
     expect(root.querySelectorAll("[data-finding-severity]")).toHaveLength(1);
     expect(root.querySelector("[data-finding-severity]")?.textContent).toBe("medium severity");
   });
@@ -39,6 +40,16 @@ describe("finding nodes on the canvas", () => {
   it("keeps KEV as a separate marker", () => {
     const root = renderNode("vulnNode", { label: "CVE-2023-4863", nodeType: "vulnerability", severity: "critical", isKev: true });
     expect(visibleText(root)).toContain("KEV");
+  });
+});
+
+describe("assets with linked findings", () => {
+  it("carry a small severity dot, never the full ring reserved for findings", () => {
+    const root = renderNode("packageNode", { label: "next@15.2.2", nodeType: "package", severity: "high", vulnCount: 2 });
+    expect(root.querySelectorAll("[data-severity-ring]")).toHaveLength(0);
+    const dot = root.querySelector("[data-finding-signal]");
+    expect(dot?.getAttribute("data-finding-signal")).toBe("high");
+    expect(dot?.getAttribute("aria-label")).toBe("Recorded severity: high · 2 linked findings");
   });
 });
 

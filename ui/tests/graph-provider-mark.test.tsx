@@ -137,3 +137,13 @@ describe("segmented label", () => {
     expect(host).toHaveTextContent("customer-pii-bucket");
   });
 });
+
+describe("provider marks that are not legible at badge size", () => {
+  it("draw Okta as its monogram instead of a bare ring", () => {
+    const source = entitySource({ nodeType: "user", dimensions: { cloud_provider: "okta" } })!;
+    const { container } = render(<GraphProviderMark source={source} />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.textContent).toBe("Ok");
+    expect(container.querySelector("[data-graph-source-badge]")?.getAttribute("aria-label")).toBe("Source: Okta");
+  });
+});

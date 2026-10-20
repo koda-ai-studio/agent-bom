@@ -8,7 +8,7 @@ import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
 import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { entitySource } from "@/lib/agent-source";
-import { NodeBadgeRow, SeverityRingMark } from "@/components/graph-node-badges";
+import { FindingSignalDot, NodeBadgeRow } from "@/components/graph-node-badges";
 import { assetKindLabel } from "@/lib/asset-icon-registry";
 import { findingSeverity, graphNodeTooltip } from "@/lib/graph-node-tooltip";
 import { showsEnvironmentChip, showsProviderMark, type ScopeContext } from "@/lib/graph-scope-context";
@@ -16,7 +16,7 @@ import { GraphScopeNode } from "@/components/graph-scope-node";
 import type { GraphRollupContainer, GraphCompleteness } from "@/lib/api-types";
 import type { ReachBreakdown } from "@/lib/effective-reach";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
-import { nodeBadges } from "@/lib/graph-node-badges";
+import { SEVERITY_RING_CLASSES, findingRingSeverity, nodeBadges } from "@/lib/graph-node-badges";
 import { nodeGlyph } from "@/lib/graph-container-kind";
 import {
   ENTITY_ICONS,
@@ -205,10 +205,10 @@ function NodeCard({
     <div title={graphNodeTooltip(data)} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
       style={{ width: "var(--graph-node-card-width, 220px)" }}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      <div ref={glyphRef} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+      <div ref={glyphRef} data-severity-ring={severity} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ${ring ? "ring-offset-[10px]" : "ring-offset-4"} ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
-        {ring && !isRollupContainer && <SeverityRingMark ring={ring} />}
+        {ring && !isRollupContainer && <FindingSignalDot ring={ring} />}
         {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
         <Handle type="target" position={data.reverseFlow ? Position.Right : Position.Left}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${target ? "" : "!opacity-0"}`} />
@@ -484,16 +484,9 @@ function PackageNode({ data }: { data: LineageNodeData }) {
   return (
     <NodeCard
       data={data}
-      borderClass={
-        hasVulns
-          ? "border-red-400 dark:border-red-600/60"
-          : "border-outline"
-      }
-      bgClass={
-        hasVulns
-          ? "bg-red-50 dark:bg-red-950/40"
-          : "bg-surface"
-      }
+      // The full ring belongs to findings; linked vulnerabilities show as the dot and the count below.
+      borderClass="border-outline"
+      bgClass="bg-surface"
       ringClass="ring-[var(--border-strong)]"
       iconClass="text-ink-tertiary"
       subtitle={
@@ -513,22 +506,16 @@ function PackageNode({ data }: { data: LineageNodeData }) {
   );
 }
 
-/** A finding's ring is its one severity indicator; KEV is a separate fact. */
-const FINDING_RING: Record<string, { border: string; bg: string }> = {
-  critical: { border: "border-red-600 dark:border-red-500", bg: "bg-red-100 dark:bg-red-950/80" },
-  high: { border: "border-orange-500 dark:border-orange-400", bg: "bg-orange-100 dark:bg-orange-950/80" },
-  medium: { border: "border-amber-500 dark:border-amber-400", bg: "bg-amber-100 dark:bg-amber-950/70" },
-  low: { border: "border-sky-500 dark:border-sky-400", bg: "bg-sky-100 dark:bg-sky-950/70" },
-};
-const UNRATED_RING = { border: "border-outline-strong border-dashed", bg: "bg-surface" };
+/** A finding's ring is its one severity indicator (shared ring tokens); KEV is a separate fact. */
+const UNRATED_RING = "border-outline-strong border-dashed";
 
 function FindingNode({ data, accentClass }: { data: LineageNodeData; accentClass: string }) {
-  const ring = FINDING_RING[findingSeverity(data) ?? ""] ?? UNRATED_RING;
+  const severity = findingRingSeverity(data);
   return (
     <NodeCard
       data={data}
-      borderClass={ring.border}
-      bgClass={ring.bg}
+      borderClass={severity ? SEVERITY_RING_CLASSES[severity] : UNRATED_RING}
+      bgClass="bg-surface"
       ringClass="ring-white/50"
       iconClass={accentClass}
       source={false}

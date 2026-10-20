@@ -199,12 +199,28 @@ export function nodeBadgeClass(badge: Pick<NodeBadge, "kind" | "value">): string
   return styles[badge.value] ?? styles.default;
 }
 
+/** The full ring is reserved for findings and CVEs; it is their one severity signal on the canvas. */
 export const SEVERITY_RING_CLASSES: Record<RingSeverity, string> = {
-  critical: "border-red-600 dark:border-red-500",
-  high: "border-orange-500 dark:border-orange-400",
-  medium: "border-amber-500 dark:border-amber-400",
-  low: "border-sky-500 dark:border-sky-400",
+  critical: "border-[color:var(--severity-ring-critical)]",
+  high: "border-[color:var(--severity-ring-high)]",
+  medium: "border-[color:var(--severity-ring-medium)]",
+  low: "border-[color:var(--severity-ring-low)]",
 };
+
+/** An asset that links to findings gets a small dot in the same hue, never a ring. */
+export const FINDING_SIGNAL_CLASSES: Record<RingSeverity, string> = {
+  critical: "bg-[color:var(--severity-ring-critical)]",
+  high: "bg-[color:var(--severity-ring-high)]",
+  medium: "bg-[color:var(--severity-ring-medium)]",
+  low: "bg-[color:var(--severity-ring-low)]",
+};
+
+/** A finding's recorded severity when it is one of the four rated tiers. */
+export function findingRingSeverity(data: Pick<NodeBadgeInput, "nodeType" | "severity">): RingSeverity | null {
+  if (!FINDING_TYPES.has(data.nodeType)) return null;
+  const severity = text(data.severity).toLowerCase();
+  return RING_SEVERITIES.has(severity) ? severity as RingSeverity : null;
+}
 
 const RING_ORDER: RingSeverity[] = ["critical", "high", "medium", "low"];
 const KIND_ORDER: NodeBadgeKind[] = ["provider", "environment", "ecosystem"];
@@ -218,12 +234,15 @@ function badgeLegendLabel(badge: NodeBadge): string {
 export function badgeLegendItems(nodes: Array<{ data?: unknown }>): LegendItem[] {
   const badges = new Map<string, NodeBadge>();
   const rings = new Set<RingSeverity>();
+  const findings = new Set<RingSeverity>();
   for (const node of nodes) {
     const data = node.data as Partial<NodeBadgeInput> | undefined;
     if (!data || typeof data.nodeType !== "string") continue;
     const result = nodeBadges(data as NodeBadgeInput);
     for (const badge of result.badges) badges.set(`${badge.kind}:${badge.value}`, badge);
     if (result.ring) rings.add(result.ring.severity);
+    const finding = findingRingSeverity(data as NodeBadgeInput);
+    if (finding) findings.add(finding);
   }
   const ordered = [...badges.values()].sort((left, right) =>
     KIND_ORDER.indexOf(left.kind) - KIND_ORDER.indexOf(right.kind) || left.label.localeCompare(right.label));
@@ -232,10 +251,16 @@ export function badgeLegendItems(nodes: Array<{ data?: unknown }>): LegendItem[]
       label: badgeLegendLabel(badge), color: "", layer: "badge", kind: "badge",
       badge: { kind: badge.kind, value: badge.value, label: badge.label },
     })),
-    ...RING_ORDER.filter((severity) => rings.has(severity)).map((severity): LegendItem => ({
-      label: `${severity.charAt(0).toUpperCase()}${severity.slice(1)} severity ring`,
+    // A visible finding earns the whole ring scale, so every tier can be read from one key.
+    ...(findings.size ? RING_ORDER : []).map((severity): LegendItem => ({
+      label: `${severity.charAt(0).toUpperCase()}${severity.slice(1)} finding`,
       color: "", layer: "badge", kind: "badge", ring: severity,
-      description: "Severity recorded on a node that links to findings or carries an assessed risk",
+      description: "The ring around a finding or CVE is its severity; scores are in the tooltip and inspector",
+    })),
+    ...RING_ORDER.filter((severity) => rings.has(severity)).map((severity): LegendItem => ({
+      label: `Linked ${severity} findings`,
+      color: "", layer: "badge", kind: "badge", signal: severity,
+      description: "Dot on an asset that links to findings or carries an assessed risk, in the highest severity's colour",
     })),
   ];
 }

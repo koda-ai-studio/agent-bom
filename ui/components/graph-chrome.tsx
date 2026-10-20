@@ -18,7 +18,7 @@ import { api, type GraphExportFormat } from "@/lib/api";
 import type { LegendItem } from "@/lib/graph-utils";
 import { RelationshipIcon } from "@/components/relationship-edge";
 import { entityIcon, type LineageNodeType } from "@/lib/entity-icons";
-import { NodeBadgeChip, SeverityRingSwatch } from "@/components/graph-node-badges";
+import { FindingSignalSwatch, NodeBadgeChip, SeverityRingSwatch } from "@/components/graph-node-badges";
 
 // ─── Legend Bar ──────────────────────────────────────────────────────────────
 
@@ -257,6 +257,7 @@ function LegendSection({ title, items }: { title: string; items: LegendItem[] })
 function LegendGlyph({ item }: { item: LegendItem }) {
   if (item.kind === "badge") {
     if (item.ring) return <span className="flex w-5 shrink-0 justify-center"><SeverityRingSwatch severity={item.ring} /></span>;
+    if (item.signal) return <span className="flex w-5 shrink-0 justify-center"><FindingSignalSwatch severity={item.signal} /></span>;
     if (item.badge) return <NodeBadgeChip badge={item.badge} />;
   }
   if (item.kind === "edge") {

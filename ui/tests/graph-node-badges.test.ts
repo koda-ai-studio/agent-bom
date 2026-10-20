@@ -80,13 +80,19 @@ describe("badgeLegendItems", () => {
       { data: input({ nodeType: "container", dimensions: { environment: "prod", cloud_provider: "aws" } }) },
       { data: input({ nodeType: "cluster", dimensions: { environment: "production", cloud_provider: "aws" } }) },
       { data: input({ nodeType: "package", ecosystem: "npm", severity: "critical", vulnCount: 1 }) },
+      { data: input({ nodeType: "vulnerability", severity: "high" }) },
+      { data: input({ nodeType: "misconfiguration", severity: "critical" }) },
       { data: { label: "no data" } },
     ]);
     expect(items.map((item) => item.label)).toEqual([
       "AWS provider",
       "Production environment",
       "npm ecosystem",
-      "Critical severity ring",
+      "Critical finding",
+      "High finding",
+      "Medium finding",
+      "Low finding",
+      "Linked critical findings",
     ]);
     expect(items.every((item) => item.kind === "badge" && item.layer === "badge")).toBe(true);
   });

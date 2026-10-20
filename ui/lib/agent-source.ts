@@ -8,6 +8,8 @@ export interface AgentSource {
   darkMark?: boolean;
   /** Black-ink artwork that must be lightened on a dark surface. */
   mono?: boolean;
+  /** The official mark is not legible at graph badge size (~14px); badges show the monogram. */
+  badgeMonogram?: boolean;
 }
 
 type SourceInput = {
@@ -18,7 +20,7 @@ type SourceInput = {
 };
 
 const BRANDS: Record<string, AgentSource> = {
-  okta: { id: "okta", label: "Okta", src: "/logos/okta.svg", monogram: "Ok", accent: "#70809c", mono: true },
+  okta: { id: "okta", label: "Okta", src: "/logos/okta.svg", monogram: "Ok", accent: "#70809c", mono: true, badgeMonogram: true },
   databricks: { id: "databricks", label: "Databricks", src: "/logos/databricks.svg", monogram: "Da", accent: "#70809c", mono: true },
   kubernetes: { id: "kubernetes", label: "Kubernetes", src: "/logos/kubernetes.svg", monogram: "Ku", accent: "#70809c", mono: true },
   clickhouse: { id: "clickhouse", label: "ClickHouse", src: "/logos/clickhouse.svg", monogram: "Cl", accent: "#70809c", mono: true },
