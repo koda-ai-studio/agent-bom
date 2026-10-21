@@ -7,17 +7,26 @@ stuck, a workflow fails unexpectedly, or you need to retrigger checks.
 
 ## CI lanes
 
-PR CI proves GitHub's merge result: the full suite on Python 3.13, split into
-4 parallel shards by `scripts/pytest_ci_plan.py shard` (every test module runs
-in exactly one shard), alongside changed-domain tests and contract smoke, lint
-and type checks, the package build, the security scan, drift gates, the live
-Postgres contract, and path-gated validators. Push to `main` and nightly runs
-keep the full four-version suite with the coverage floor, plus the
-deployment and performance lanes. All lanes live in `ci.yml` unless noted.
-The changed-domain lane has a 30-minute bound because broad changes can select
-most of the suite, in addition to setup and contract checks. A timeout remains
-a failed gate until a successful replacement run completes; passing sibling
-jobs does not establish a green main commit.
+PR CI tests GitHub's merge result with changed-domain tests and shared contract
+smoke. Full correctness is split into 4 parallel shards when dependency,
+shared test infrastructure, security/identity foundations, or unmapped source
+inputs change. `scripts/classify_ci_changes.py` checks each source independently
+against `scripts/pytest_ci_plan.py`; a mapped sibling cannot hide an unmapped
+input. Missing/deleted source, unknown paths and failed classification require
+the full suite. Direct test edits run through the changed-domain selector.
+
+Postgres runs for its writer/migration inputs, shared model, API, storage,
+authorization and dependency changes. UI browser checks build the standalone
+app; the additional Docker build runs only for container, dependency or build
+configuration changes on PRs. Main and nightly runs retain the full four-version
+suite, coverage floor, Postgres, container, deployment and performance checks.
+This is selective PR regression coverage, not a claim that every PR runs every
+test. Full foundational and main runs can still exceed twenty minutes.
+
+All lanes live in `ci.yml` unless noted. Python correctness jobs have a
+45-minute safety bound; it is not a target duration. A timeout remains a failed
+gate until a successful replacement run completes; passing sibling jobs does
+not establish a green main commit.
 
 | Lane | Pull request | Push to `main` | Nightly / manual |
 |---|---|---|---|
@@ -32,13 +41,13 @@ jobs does not establish a green main commit.
 | Docs Strict, Helm, Compose, Endpoint packaging | when their inputs change | when their inputs change | yes |
 | Native App image and persistence | when its inputs change | yes | yes |
 | Changed-domain and cross-surface contract smoke | yes (required through aggregation) | yes | yes |
-| Full correctness suite, Python 3.13 in 4 shards | yes (required through aggregation) | no | no |
+| Full correctness suite, Python 3.13 in 4 shards | shared, dependency, security or unmapped inputs (required when selected) | no | no |
 | Full correctness suite, Python 3.11/3.12/3.13/3.14 (3.11 with coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
-| Postgres Integration Contract (live RLS, migrations, schema parity) | yes (required through aggregation) | yes | yes |
+| Postgres Integration Contract (live RLS, migrations, schema parity) | relevant inputs (required when selected) | yes | yes |
 | Test (Alpine/musl, shard N) | subset on relevant changes; full in 2 shards on dependencies | subset; full in 2 shards on dependency changes | full in 2 shards nightly, subset manual |
 | Docker (multi-arch) + image scans | no | yes | nightly only |
-| UI E2E and container smoke (Playwright, bundle budget) | when UI inputs or CI setup change | every main push | yes |
+| UI E2E (Playwright, bundle budget); container smoke | UI inputs; container/build inputs for Docker | every main push | yes |
 | Dogfood GitHub Action | no | when action inputs change | yes |
 | ClusterFuzzLite (`cflite-pr.yml`) | no | short batch on parser changes | weekly long batch |
 | Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | API/Helm/Postgres/UI-gateway changes | manual |
@@ -53,7 +62,7 @@ shards retain the same markers and must pass; a failed shard does not cancel
 its sibling.
 
 Branch protection stays strict (PR branches must be up to date with `main`),
-so the sharded suite always runs on the merge result that lands. If a shard
+so selected tests always run on the merge result that lands. If a shard
 becomes the long pole, raise the shard matrix and `--total` together; the
 contract tests tie them and check that the shards still partition the suite.
 
@@ -86,8 +95,8 @@ mixed, malformed, workflow, dependency, source, UI, and deployment path sets
 fail closed to the normal validation lanes.
 
 For a documentation-only pull request, the five branch-protection contexts
-still attach to the head SHA. The sharded full correctness suite remains
-mandatory.
+still attach to the head SHA. Changed-domain and shared contract smoke remain
+mandatory; unrelated full-suite shards, Postgres and UI container checks skip.
 Selected smoke, dependency scanning, type checking and package construction
 use explicit fast-success steps instead of disappearing
 through workflow-level path filters. Public-doc hygiene, release-copy/count
