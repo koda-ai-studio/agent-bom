@@ -151,6 +151,34 @@ def test_blank_name_or_project_never_invents_a_scoped_id() -> None:
     assert _scoped_name("proj-a", "", "disks", "boot") == "projects/proj-a/disks/boot"
 
 
+@pytest.mark.parametrize("self_link", [None, "", "https://sqladmin.googleapis.com/sql/v1beta4/projects/proj-a/instances/db"])
+def test_cloud_sql_fallback_keeps_project_scope_with_discovery_client(self_link: str | None) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Instances:
+        def list(self, **kwargs: Any) -> Any:
+            calls.append(kwargs)
+            item = {"name": "db", "region": "us-central1"}
+            if self_link is not None:
+                item["selfLink"] = self_link
+            return _Obj(execute=lambda: {"items": [item]})
+
+    discovery = types.ModuleType("googleapiclient.discovery")
+    discovery.build = lambda *a, **k: _Obj(instances=Instances)  # type: ignore[attr-defined]
+    sdk = types.ModuleType("googleapiclient")
+    sdk.discovery = discovery  # type: ignore[attr-defined]
+    warnings: list[str] = []
+    with patch_sdk_namespace({"googleapiclient": sdk, "googleapiclient.discovery": discovery}, "googleapiclient"):
+        first = compute_storage._discover_cloud_sql_instances("proj-a", credentials=None, warnings=warnings)
+        second = compute_storage._discover_cloud_sql_instances("proj-b", credentials=None, warnings=warnings)
+    assert not warnings
+    assert calls == [{"project": "proj-a"}, {"project": "proj-b"}]
+    assert first[0]["id"] == (self_link or "projects/proj-a/instances/db")
+    assert second[0]["id"] == (self_link or "projects/proj-b/instances/db")
+    if not self_link:
+        assert first[0]["id"] != second[0]["id"]
+
+
 @pytest.mark.parametrize(
     ("nsg_id", "expected"),
     [

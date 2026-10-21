@@ -232,6 +232,7 @@ def test_deferred_imports_are_counted_per_file_excluding_optional_extras(tmp_pat
                 "import json\n"
                 "def f():\n import os\n from agent_bom import models\n from . import other\n"
                 "class C:\n async def g(self):\n  import boto3\n  from azure.identity import DefaultAzureCredential\n"
+                "  from modal import Workspace\n  from ngcsdk import Client\n"
             ),
             "eager.py": "import os\nif os:\n import json\nclass C:\n import re\n",
         },
