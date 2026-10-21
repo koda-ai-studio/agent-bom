@@ -273,6 +273,7 @@ def test_postgres_atomic_store_invalidates_cached_finding_totals(monkeypatch):
     store = module.PostgresComplianceHubStore.__new__(module.PostgresComplianceHubStore)
     store._pool = object()
     monkeypatch.setattr(module, "_tenant_connection", _connection)
+    monkeypatch.setattr(module, "current_ledger_candidates", lambda _tx, _tenant, rows, **_k: rows)
     monkeypatch.setattr(store, "_write_ledger_batch", lambda *_a, **_k: 2)
     monkeypatch.setattr(store, "_write_current_batch", lambda *_a, **_k: None)
 

@@ -7,7 +7,7 @@ from typing import Any
 
 from agent_bom.api.finding_rank import compute_effective_reach_score as compute_effective_reach_score
 from agent_bom.api.storage.finding_current_reads import SqlCurrentFindingReads
-from agent_bom.api.storage.finding_current_writes import reconcile_current, write_current_batch
+from agent_bom.api.storage.finding_current_writes import current_ledger_candidates, reconcile_current, write_current_batch
 from agent_bom.api.storage.finding_ingest_state import LedgerIngestState, read_ingest_state, write_ingest_state
 from agent_bom.api.storage.finding_ledger_writes import write_ledger_batch
 from agent_bom.api.storage.finding_reads import SqlFindingReads
@@ -90,7 +90,9 @@ class SQLiteComplianceHubStore(SQLiteHubSchema):
         tenant_id = require_explicit_tenant_id(tenant_id)
         conn = self._conn
         with conn:  # sqlite3 connection: commit on success, rollback on exception
-            new_total, _ = self._ledger_insert_no_commit(tenant_id, findings)
+            tx = finding_write_session(conn, "sqlite", tenant_id)
+            candidates = current_ledger_candidates(tx, tenant_id, findings, observed_at=observed_at, batch_id=batch_id, source=source)
+            new_total, _ = self._ledger_insert_no_commit(tenant_id, candidates)
             self._upsert_current_no_commit(
                 tenant_id,
                 findings,

@@ -65,6 +65,11 @@ def finding_from_dict(item: dict) -> Finding | None:
         asset_type=str(asset_data.get("asset_type", "cloud_resource")),
         identifier=asset_data.get("identifier"),
         location=asset_data.get("location"),
+        provider=asset_data.get("provider") or item.get("provider"),
+        account_ref=asset_data.get("account_ref") or item.get("account_ref"),
+        region=asset_data.get("region") or item.get("region"),
+        environment=asset_data.get("environment") or item.get("environment"),
+        _recorded_canonical_id=str(asset_data.get("canonical_id") or asset_data.get("stable_id") or ""),
     )
     try:
         finding_type = FindingType(_legacy(item.get("finding_type", "COMBINATION")))

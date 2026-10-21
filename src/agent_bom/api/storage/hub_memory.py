@@ -11,6 +11,7 @@ from agent_bom.api.finding_cursor import (
     decode_finding_cursor,
     row_is_after_cursor,
 )
+from agent_bom.api.finding_lifecycle import apply_observation_to_current, lifecycle_metrics, observation_at_least, resolve_canonical_id
 from agent_bom.api.finding_rank import compute_effective_reach_score as compute_effective_reach_score
 from agent_bom.api.hub_current_payload import (
     batch_ledger_payloads,
@@ -149,7 +150,16 @@ class InMemoryComplianceHubStore:
             snap_current = {k: dict(v) for k, v in self._current.get(tenant_id, {}).items()}
             snap_obs = set(self._current_observations.get(tenant_id, set()))
             try:
-                total = self._add_locked(tenant_id, findings)
+                by_id: dict[str, dict[str, Any]] = {}
+                for original, payload in zip(findings, clean):
+                    by_id.setdefault(resolve_canonical_id(payload, source=source), original)
+                candidates = [
+                    payload
+                    for key, payload in by_id.items()
+                    if (key, batch_id) not in snap_obs
+                    and (key not in snap_current or observation_at_least(observed_at, str(snap_current[key]["last_seen"])))
+                ]
+                total = self._add_locked(tenant_id, candidates)
                 self._upsert_current_locked(
                     tenant_id,
                     clean,
@@ -310,12 +320,6 @@ class InMemoryComplianceHubStore:
         source: str = "",
     ) -> None:
         """Upsert current-state for a redacted batch. Caller MUST hold the lock."""
-        from agent_bom.api.finding_lifecycle import (
-            apply_observation_to_current,
-            lifecycle_metrics,
-            resolve_canonical_id,
-        )
-
         now = _now_utc_iso()
         current = self._current.setdefault(tenant_id, {})
         observations = self._current_observations.setdefault(tenant_id, set())
@@ -559,6 +563,8 @@ class InMemoryComplianceHubStore:
             if str(row.get("status") or "") not in ("open", "reopened"):
                 continue
             if canonical_id in present_canonical_ids:
+                continue
+            if not observation_at_least(observed_at, str(row["last_seen"])):
                 continue
             payload = row.get("payload") or {}
             payload_scope = str(payload.get("ingest_source") or payload.get("source") or "")
