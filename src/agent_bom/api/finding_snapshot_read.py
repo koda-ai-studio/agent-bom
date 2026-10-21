@@ -34,6 +34,7 @@ def issue_severity_counts(request: Request) -> dict[str, Any]:
         None,
         True,
         include_facets=True,
+        summary_only=True,
     )
     severity = (page.get("facets") or {}).get("severity") or {}
     counts: dict[str, Any] = {key: int(severity.get(key) or 0) for key in ("critical", "high", "medium", "low")}

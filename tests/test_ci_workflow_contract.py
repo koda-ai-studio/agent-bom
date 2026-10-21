@@ -1026,3 +1026,10 @@ def test_required_context_rejects_missing_or_failed_compatibility_proof() -> Non
                 result = subprocess.run(["bash", "-c", step["run"]], env=env, capture_output=True)
                 expected = outcome == "success" or (outcome == "skipped" and required == "false")
                 assert (result.returncode == 0) == expected, (lane, required, outcome)
+
+
+def test_changed_domain_smoke_distributes_large_test_modules_between_workers() -> None:
+    job = _ci()["jobs"]["test-smoke"]
+    command = next(step["run"] for step in job["steps"] if step.get("name") == "Run changed-domain and cross-surface smoke")
+    assert "-n 2 --dist worksteal" in command
+    assert "-v --tb=short" in command

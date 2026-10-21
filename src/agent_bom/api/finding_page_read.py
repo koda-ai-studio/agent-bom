@@ -354,14 +354,15 @@ def _list_finding_groups_impl(
     reachability: str | None = None,
     triage: str | None = None,
     lane: str | None = None,
+    *,
+    summary_only: bool = False,
 ) -> dict[str, Any]:
     """Build a bounded server-side issue queue over canonical occurrence rows.
 
-    Raw ``GET /v1/findings`` remains the authoritative per-asset workflow
-    surface. This view walks that exact filtered queue, groups only rows sharing
-    the canonical asset-independent issue identity, and returns bounded
-    occurrence summaries for expansion. A row-budget hit is explicit partial
-    evidence; it is never described as a complete group count.
+    Group the canonical per-asset queue by asset-independent issue identity,
+    with bounded occurrence summaries. ``summary_only`` omits occurrence facets
+    and graph page details for internal counts; grouping and bounds are unchanged.
+    A row-budget hit is explicit partial evidence, never a complete group count.
     """
     sort_key = _normalize_finding_sort(sort)
     group_offset = _finding_group_offset(cursor, offset, sort_key)
@@ -370,7 +371,8 @@ def _list_finding_groups_impl(
         # Severity applies after grouping so the issue histogram stays
         # self-excluding: two occurrences of one advisory are one issue.
         head = (q, None, scan_id, sort_key, budget, 0, source_cursor, True, provider, account, environment, domain, window_days, status)
-        tail = (finding_class, kev, include_facets and first, framework, control, owner, sla, reachability, triage, False, False)
+        occurrence_facets = include_facets and first and not summary_only
+        tail = (finding_class, kev, occurrence_facets, framework, control, owner, sla, reachability, triage, False, False)
         return _list_findings_view_impl(request, *head, *tail)
 
     rows, first_page, warnings, source_cursor = _collect_group_occurrences(fetch_page)
@@ -380,12 +382,11 @@ def _list_finding_groups_impl(
     truncated = source_cursor is not None
     if truncated:
         warnings.append("Issue grouping stopped after 50,000 occurrence rows; group and occurrence counts are lower bounds.")
-    page_groups, reachability_warnings = _project_findings_reachability(
-        groups[group_offset : group_offset + limit], tenant_id=_tenant_id(request), scan_id=scan_id
+    page_groups, reachability_warnings = _finding_group_page(
+        [] if summary_only else groups[group_offset : group_offset + limit], tenant_id=_tenant_id(request), scan_id=scan_id
     )
-    page_groups = [_serialize_finding_group(group) for group in page_groups]
     warnings.extend(reachability_warnings)
-    next_offset = group_offset + len(page_groups)
+    next_offset = len(groups) if summary_only else group_offset + len(page_groups)
     next_cursor = finding_cursor.encode_finding_group_cursor(sort=sort_key, offset=next_offset) if next_offset < len(groups) else ""
     envelope = _groups_envelope(
         page_groups,
@@ -407,3 +408,10 @@ def _list_finding_groups_impl(
     )
     attach_lane_counts(envelope, lane, counts_by_lane, truncated, include_facets)
     return envelope
+
+
+def _finding_group_page(groups: list[dict[str, Any]], *, tenant_id: str, scan_id: str | None) -> tuple[list[dict[str, Any]], list[str]]:
+    if not groups:
+        return [], []
+    projected, warnings = _project_findings_reachability(groups, tenant_id=tenant_id, scan_id=scan_id)
+    return [_serialize_finding_group(group) for group in projected], warnings

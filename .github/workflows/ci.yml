@@ -1098,7 +1098,7 @@ jobs:
             tests/api/test_live_export_contracts.py
           )
           mapfile -t TESTS < <(printf '%s\n' "${SMOKE[@]}" "${TARGETED[@]}" | sort -u)
-          uv run pytest "${TESTS[@]}" -q --tb=short --durations=15 -m "not network and not slow and not graph_performance" -n 2 --dist loadfile
+          uv run pytest "${TESTS[@]}" -v --tb=short --durations=15 -m "not network and not slow and not graph_performance" -n 2 --dist worksteal
 
       - name: Graph accuracy fixture guard (#2259)
         if: >-
@@ -1212,7 +1212,7 @@ jobs:
             exit 1
           fi
           echo "Shard ${{ matrix.shard }}/4: ${#TESTS[@]} test modules"
-          uv run pytest "${TESTS[@]}" -q --tb=short --durations=25 -m "not network and not slow and not graph_performance" -n 2 --dist worksteal
+          uv run pytest "${TESTS[@]}" -v --tb=short --durations=25 -m "not network and not slow and not graph_performance" -n 2 --dist worksteal
 
   graph-performance:
     name: Graph performance

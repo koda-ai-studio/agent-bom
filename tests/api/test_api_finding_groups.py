@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
 from starlette.testclient import TestClient
 
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
@@ -400,3 +401,40 @@ def test_group_identity_does_not_coalesce_distinct_purl_only_packages() -> None:
     assert _finding_group_identity({**common, "asset": {"identifier": "pkg:pypi/one@1"}}) != _finding_group_identity(
         {**common, "asset": {"identifier": "pkg:pypi/two@1"}}
     )
+
+
+@pytest.mark.parametrize("budget", [2, 50_000])
+def test_issue_counts_preserve_groups_without_unused_facets_or_path_projection(monkeypatch, budget) -> None:
+    """A count read uses canonical groups without computing discarded page detail."""
+    from starlette.requests import Request
+
+    from agent_bom.api import finding_grouping, finding_page_read, finding_snapshot_read
+    from agent_bom.api.compliance_hub_store import get_compliance_hub_store
+
+    tenant = "finding-group-count-only"
+    set_job_store(InMemoryJobStore())
+    get_compliance_hub_store().clear(tenant)
+    _put_group_fixture(tenant, "scan-count-only")
+    request = Request({"type": "http", "method": "GET", "path": "/v1/posture/counts", "headers": [], "state": {}})
+    request.state.tenant_id = tenant
+    monkeypatch.setattr(finding_grouping, "_FINDING_GROUP_MAX_OCCURRENCES", budget)
+    real_groups = finding_snapshot_read._list_finding_groups_impl
+    with monkeypatch.context() as original_path:
+
+        def detailed_groups(*args, **kwargs):
+            return real_groups(*args, **{**kwargs, "summary_only": False})
+
+        original_path.setattr(finding_snapshot_read, "_list_finding_groups_impl", detailed_groups)
+        expected = finding_snapshot_read.issue_severity_counts(request)
+    assert expected["approximate"] is (budget == 2)
+    if budget == 50_000:
+        assert expected["total"] == 2
+        assert expected["critical"] == expected["high"] == 1
+
+    def unused_detail(*args, **kwargs):
+        raise AssertionError("count-only read must not build occurrence facets or graph page details")
+
+    monkeypatch.setattr(finding_page_read, "_finding_facets_bounded", unused_detail)
+    monkeypatch.setattr(finding_page_read, "_project_findings_reachability", unused_detail)
+    actual = finding_snapshot_read.issue_severity_counts(request)
+    assert {k: v for k, v in actual.items() if k != "window"} == {k: v for k, v in expected.items() if k != "window"}
