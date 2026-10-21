@@ -123,4 +123,3 @@ def test_mcp_inventory_agent_rows_carry_the_display_name() -> None:
     assert asset_row(node(EntityType.AGENT, "support-copilot"))["display_name"] == "Support Copilot"
     assert asset_row(node(EntityType.AGENT, "laptop-7f3a", display_name="Finance laptops"))["display_name"] == "Finance laptops"
     assert "display_name" not in asset_row(node(EntityType.PACKAGE, "requests"))
-
