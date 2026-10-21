@@ -286,6 +286,7 @@ function buildGraph() {
       credential_exposure: ["DEMO_CRED_REF"],
       tool_exposure: ["create_pull_request"],
       vuln_ids: ["CVE-2025-29927"],
+      severity: advisory("CVE-2025-29927").severity,
     },
     {
       source: "agent:sre-runbook",
@@ -297,6 +298,7 @@ function buildGraph() {
       credential_exposure: ["AWS_ROLE_SESSION"],
       tool_exposure: ["execute_command"],
       vuln_ids: ["CVE-2024-37891"],
+      severity: advisory("CVE-2024-37891").severity,
     },
     {
       source: "agent:finance-rag",
@@ -308,6 +310,7 @@ function buildGraph() {
       credential_exposure: ["SNOWFLAKE_PROD_KEY"],
       tool_exposure: ["run_sql"],
       vuln_ids: ["CVE-2025-4565"],
+      severity: advisory("CVE-2025-4565").severity,
     },
   ];
 
@@ -3343,13 +3346,14 @@ async function main() {
       await riskTab.click();
       await expect(riskTab).toHaveAttribute("aria-selected", "true");
       const rows = dashboardPage.getByRole("group", { name: "Select a risk", exact: true }).getByRole("button");
-      await expect(rows).toHaveCount(5);
+      await expect(rows).toHaveCount(3);
       if (dashboardPage.viewportSize().width >= 1440) {
         await dashboardPage.getByRole("region", { name: "Selected risk", exact: true }).waitFor({ state: "visible" });
       }
     };
     const executiveRiskAssertions = {
       expectedText: [/Review these findings first/i, /Top risks/i, /Assets & coverage/i],
+      rejectedText: ["Severity unavailable"],
       expectedApiPaths: ["/v1/overview", "/v1/inventory/summary"], assertNoHorizontalOverflow: true,
     };
     const overviewPage = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 900 });

@@ -10,6 +10,15 @@ const graphPage = ["app/graph/graph-page-client.tsx", "hooks/use-graph-page-data
 const exposurePath = fs.readFileSync(path.join(process.cwd(), "components", "exposure-path-command-center.tsx"), "utf8");
 
 describe("product proof capture contract", () => {
+  it("carries advisory severity on every overview queue fixture path", () => {
+    const pathSource = source.slice(source.indexOf("  const attackPaths = ["), source.indexOf("  const stats = {", source.indexOf("  const attackPaths = [")));
+    const advisories = JSON.parse(fs.readFileSync(path.join(process.cwd(), "fixtures/gallery-advisories.json"), "utf8")).advisories;
+    const advisory = (id: string) => advisories.find((item: { id: string }) => item.id === id);
+    const paths = new Function("edgeIdsFor", "hopEvidenceFor", "advisory", `${pathSource}; return attackPaths;`)(() => [], () => [], advisory);
+    expect(paths).toHaveLength(3);
+    for (const item of paths) expect(item.severity).toBe(advisory(item.vuln_ids[0]).severity);
+  });
+
   it("verifies its own spawned listener before opening a capture browser", () => {
     expect(source).toContain("await waitForOwnedServer(BASE_URL, server)");
     expect(source.indexOf("await waitForOwnedServer(BASE_URL, server)")).toBeLessThan(source.indexOf("browser = await chromium.launch()"));
