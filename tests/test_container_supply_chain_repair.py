@@ -64,9 +64,10 @@ def test_floating_latest_uses_reviewed_runtime_security_overlay() -> None:
     assert crypto_entry.count("--hash=sha256:") == 2
 
 
-def test_release_refresh_replaces_vulnerable_certifi_with_hashed_universal_wheel() -> None:
+@pytest.mark.parametrize("manifest", ["runtime-security-requirements.txt", "collector-security-requirements.txt"])
+def test_release_refresh_replaces_vulnerable_certifi_with_hashed_universal_wheel(manifest: str) -> None:
     """The released lock stays frozen, so main's dependency floor is insufficient."""
-    overlay = (ROOT / "deploy/docker/runtime-security-requirements.txt").read_text(encoding="utf-8")
+    overlay = (ROOT / "deploy/docker" / manifest).read_text(encoding="utf-8")
     entries = overlay.replace("\\\n", "").splitlines()
     certifi_entry = next((entry for entry in entries if entry.startswith("certifi==")), "")
     assert certifi_entry, "release refresh must replace certifi from the old release lock"
@@ -181,10 +182,25 @@ def test_container_rescan_normalizes_sarif_without_making_upload_gating() -> Non
 
 def test_container_rescan_runs_after_release_and_records_immutable_image_evidence() -> None:
     workflow = (ROOT / ".github/workflows/container-rescan.yml").read_text(encoding="utf-8")
-    assert 'workflows: ["Release"]' in workflow
+    assert 'workflows: ["Release", "Refresh Docker Latest"]' in workflow
     assert "github.event.workflow_run.conclusion == 'success'" in workflow
     assert "Resolve pulled image identity" in workflow
     assert "IMAGE_ID:" in workflow
     assert "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" in workflow
     assert 'elif [ "${{ steps.image_scan_table.outcome }}" = "success" ] && [ -n "$EXISTING" ]; then' in workflow
     assert "latest rescan was inconclusive, so this finding remains open" in workflow
+
+
+def test_collector_refresh_applies_certifi_overlay_after_released_lock() -> None:
+    dockerfile = (ROOT / "deploy/docker/Dockerfile.collector").read_text(encoding="utf-8")
+    manifest = "deploy/docker/collector-security-requirements.txt"
+    assert f"COPY {manifest} ./{manifest}" in dockerfile
+    lock_install = dockerfile.index("uv sync --locked --no-dev --no-editable")
+    security_install = dockerfile.index("uv pip install --no-config --python /app/.venv/bin/python --no-deps --require-hashes")
+    assert lock_install < security_install < dockerfile.index("## ── Runtime stage")
+    assert f"-r {manifest}" in dockerfile
+    _, overlay = _refresh_step("refresh-collector-latest", "Apply current runtime security overlay")
+    assert manifest in overlay["run"], "refresh must load current manifest after checking out the old release"
+    requirements = (ROOT / manifest).read_text(encoding="utf-8")
+    entries = [line for line in requirements.replace("\\\n", "").splitlines() if line and not line.startswith("#")]
+    assert len(entries) == 1 and entries[0].startswith("certifi=="), "collector overlay is limited to the universal certifi wheel"
