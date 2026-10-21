@@ -54,3 +54,45 @@ describe("trend basis versus the posture headline", () => {
     expect(screen.queryByText(/posture headline counts/)).toBeNull();
   });
 });
+
+describe("trend on the posture headline's issue basis", () => {
+  const issuePoint = (timestamp: string, critical: number, high: number, issues: [number, number]) => ({
+    timestamp, critical, high, issues: { critical: issues[0], high: issues[1] },
+  });
+  const points = [
+    issuePoint("2026-09-22T02:00:00Z", 103, 449, [290, 760]),
+    issuePoint("2026-09-27T02:00:00Z", 103, 449, [305, 771]),
+    issuePoint("2026-10-02T02:00:00Z", 103, 449, [298, 790]),
+    issuePoint("2026-10-07T02:00:00Z", 103, 449, [311, 795]),
+    issuePoint("2026-10-12T02:00:00Z", 103, 449, [300, 788]),
+    issuePoint("2026-10-19T02:00:00Z", 103, 449, [332, 817]),
+  ];
+
+  it("plots open issues so the latest point is the headline", () => {
+    const trend = severityTrend(points);
+    expect(trend.basis).toBe("issues");
+    expect(trend.points.map((p) => p.critical)).toEqual([290, 305, 298, 311, 300, 332]);
+    render(<SeverityTrend points={points} headline={{ critical: 332, high: 817 }} />);
+    expect(screen.getByText("Critical and high open issues (posture headline basis)")).toBeVisible();
+    expect(screen.getByText("332")).toBeVisible();
+    expect(screen.getByText(/critical now · 42 more than the first snapshot/)).toBeVisible();
+    expect(screen.getByRole("img", { name: /Critical and high open issues across 6 snapshots/ })).toBeVisible();
+    expect(screen.queryByText(/Different basis/)).toBeNull();
+  });
+
+  it("keeps the occurrence count visible under its own label", () => {
+    render(<SeverityTrend points={points} headline={{ critical: 332, high: 817 }} />);
+    expect(screen.getByText(/Vulnerability occurrences in this scan scope, a different unit: 103 critical · 449 high in the latest scan/)).toBeVisible();
+  });
+
+  it("says when the headline moved after the latest recorded point", () => {
+    render(<SeverityTrend points={points} headline={{ critical: 335, high: 817 }} />);
+    expect(screen.getByText(/The headline now counts 335 critical and 817 high open issues; the latest point was recorded/)).toBeVisible();
+  });
+
+  it("falls back to occurrences when any point lacks issue counts", () => {
+    const mixed = [{ timestamp: "2026-10-01T02:00:00Z", critical: 100, high: 400 }, ...points.slice(-2)];
+    expect(severityTrend(mixed).basis).toBe("occurrences");
+    expect(severityTrend(mixed).points.map((p) => p.critical)).toEqual([100, 103, 103]);
+  });
+});

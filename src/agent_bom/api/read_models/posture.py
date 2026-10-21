@@ -398,6 +398,8 @@ class TrendPoint(ReadModel):
     measurement_version: int
     collection_coverage: str
     comparison: TrendComparison
+    # Open issue groups on the posture headline's basis when the point was recorded; occurrence counts are below.
+    issues: IssueCounts | None = None
     critical: int
     high: int
     medium: int

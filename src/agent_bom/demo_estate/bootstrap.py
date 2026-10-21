@@ -18,9 +18,7 @@ from agent_bom.demo_estate.boot_seed import serialized_seed
 from agent_bom.demo_estate.showcase_findings import append_showcase_graph_findings, bind_mcp_auth_findings, estate_scan_evidence
 from agent_bom.demo_estate.showcase_graph import (
     SHOWCASE_AGENTS,
-    SHOWCASE_BASELINE_CREATED_AT,
     SHOWCASE_BASELINE_SCAN_ID,
-    SHOWCASE_CURRENT_CREATED_AT,
     SHOWCASE_PACKAGES,
     SHOWCASE_SCAN_ID,
     SHOWCASE_SERVERS,
@@ -29,6 +27,7 @@ from agent_bom.demo_estate.showcase_graph import (
     seed_showcase_graph_if_empty,
     seed_showcase_identities,
 )
+from agent_bom.demo_estate.showcase_history import HISTORY_SCOPE_ID, HistoryStage, history_stages, stage_report
 from agent_bom.demo_estate.showcase_packages import showcase_package_holders
 from agent_bom.security import sanitize_error
 
@@ -311,18 +310,18 @@ def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
     return report
 
 
-def _store_demo_scan_job(report: dict[str, Any], *, tenant_id: str) -> str:
+def _store_demo_scan_job(report: dict[str, Any], *, tenant_id: str, job_id: str = "", completed_at: str = "") -> str:
     from agent_bom.api.stores import _get_store, _jobs_put
 
     job = ScanJob(
-        job_id=str(uuid.uuid4()),
+        job_id=job_id or str(uuid.uuid4()),
         tenant_id=tenant_id,
         triggered_by=DEMO_ESTATE_TRIGGERED_BY,
-        created_at=_now(),
+        created_at=completed_at or _now(),
         request=ScanRequest(offline=True),
     )
     job.status = JobStatus.DONE
-    job.completed_at = _now()
+    job.completed_at = completed_at or _now()
     job.result = report
     job.progress.append("Seeded demo estate scan (offline curated sample)")
     store = _get_store()
@@ -331,39 +330,33 @@ def _store_demo_scan_job(report: dict[str, Any], *, tenant_id: str) -> str:
     return job.job_id
 
 
-def _seed_showcase_posture_trends(report: dict[str, Any], *, tenant_id: str) -> int:
-    """Record two labeled observations of the same curated finding inventory.
+def _record_showcase_trend(report: dict[str, Any], stage: HistoryStage, *, tenant_id: str) -> int:
+    from agent_bom.api.trend_recording import record_scan_trend_best_effort
 
-    Each point carries its own bounded finding comparison metadata through the
-    live scan adapter. The stable sample shows still-open findings; historical
-    count and score improvements require separate historical evidence.
-    Stable scan IDs keep repeated bootstrap calls idempotent.
-    """
-    from agent_bom.api.exec_posture import tenant_headline_posture
-    from agent_bom.api.stores import _get_trend_store
-    from agent_bom.api.trend_recording import trend_point_from_scan_result
-
-    headline = tenant_headline_posture(tenant_id)
-    observations = (
-        (SHOWCASE_BASELINE_SCAN_ID, SHOWCASE_BASELINE_CREATED_AT),
-        (SHOWCASE_SCAN_ID, SHOWCASE_CURRENT_CREATED_AT),
+    recorded = record_scan_trend_best_effort(
+        report,
+        tenant_id=tenant_id,
+        scan_id=stage.scan_id,
+        completed_at=stage.timestamp,
+        scope_id=HISTORY_SCOPE_ID,
+        headline_posture=True,
     )
-    points = [
-        trend_point_from_scan_result(
-            report,
-            tenant_id=tenant_id,
-            scan_id=scan_id,
-            completed_at=timestamp,
-            scope_id="demo-estate:showcase-findings:v1",
-            headline=headline,
-        )
-        for scan_id, timestamp in observations
-    ]
-    trend_store = _get_trend_store()
-    for point in points:
-        if point is not None:
-            trend_store.record(point)
-    return sum(point is not None for point in points)
+    return int(recorded)
+
+
+def _seed_showcase_history_stages(report: dict[str, Any], *, tenant_id: str) -> int:
+    """Persist and trend every earlier scan of the showcase scope, oldest first.
+
+    Each stage is stored as its own demo job before its point is recorded, so
+    the point's grade and issue counts are what the posture endpoints served
+    once that scan landed. Stable job and scan ids keep reseeds idempotent.
+    """
+    recorded = 0
+    for index, stage in enumerate(history_stages()[:-1]):
+        staged = stage_report(report, index)
+        _store_demo_scan_job(staged, tenant_id=tenant_id, job_id=stage.job_id, completed_at=stage.timestamp)
+        recorded += _record_showcase_trend(staged, stage, tenant_id=tenant_id)
+    return recorded
 
 
 def _graph_owner_scan_id(graph_store: Any, tenant_id: str) -> str:
@@ -525,18 +518,16 @@ def maybe_bootstrap_demo_estate(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str
         finding_count = len(report.get("findings") or report.get("vulnerabilities") or [])
         if finding_count < 1:
             raise RuntimeError("demo estate scan produced zero findings")
-        job_id = _store_demo_scan_job(report, tenant_id=tenant_id)
+        trend_points = 0
         try:
-            summary["posture_trend_points"] = _seed_showcase_posture_trends(
-                report,
-                tenant_id=tenant_id,
-            )
+            trend_points = _seed_showcase_history_stages(report, tenant_id=tenant_id)
         except Exception as exc:
-            _logger.warning(
-                "demo estate posture trend seeding failed: %s",
-                sanitize_error(exc, generic=True),
-            )
+            _logger.warning("demo estate scan history seeding failed: %s", sanitize_error(exc, generic=True))
             summary["posture_trend_error"] = True
+        stages = history_stages()
+        current = stage_report(report, len(stages) - 1)
+        job_id = _store_demo_scan_job(current, tenant_id=tenant_id)
+        summary["posture_trend_points"] = trend_points + _record_showcase_trend(current, stages[-1], tenant_id=tenant_id)
         summary.update(
             {
                 "seeded": True,

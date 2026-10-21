@@ -213,7 +213,7 @@ describe("GraphChangesPanel exposures", () => {
       selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null}
       onInvestigateNode={onInvestigateNode} />);
     const exposure = screen.getByTestId("graph-changes-exposure");
-    expect(exposure).toHaveTextContent("New critical findings · 426");
+    expect(exposure).toHaveTextContent("New critical finding nodes · 426");
     expect(exposure).toHaveTextContent("New attack paths · 3");
     expect(exposure).toHaveTextContent("Removed attack paths · 1");
     expect(exposure).toHaveTextContent("Removed controls · 1");
@@ -228,6 +228,21 @@ describe("GraphChangesPanel exposures", () => {
     expect(href.searchParams.get("selected_path")).toBe("agent:x::vuln:y::agent:x->server:z->vuln:y");
     expect(href.searchParams.get("path_view")).toBe("path");
     expect(within(exposure).queryByRole("link", { name: /investigate path agent:x → vuln:old/i })).toBeNull();
+  });
+
+  it("states the trend's issue counts for the same two scans beside the graph-node counts", () => {
+    const issueChange = { basis: "issue_groups", old: { critical: 291, high: 710, medium: 0, low: 0, total: 1701 }, new: { critical: 332, high: 817, medium: 0, low: 0, total: 1969 } };
+    const paired = response({ ...changes, sources: [{ ...baselineSource, issue_change: issueChange }] });
+    render(<GraphChangesPanel open changes={paired} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} />);
+    const line = screen.getByTestId("graph-changes-issue-basis");
+    expect(line).toHaveTextContent("Open issues, the posture trend's unit: critical 291 → 332 (+41) · high 710 → 817 (+107)");
+  });
+
+  it("omits the issue line when the trend recorded neither scan", () => {
+    render(<GraphChangesPanel open changes={changes} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} />);
+    expect(screen.queryByTestId("graph-changes-issue-basis")).toBeNull();
   });
 
   it("names path and reach endpoints by display name with the raw id as a tooltip", () => {

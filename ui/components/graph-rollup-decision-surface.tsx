@@ -10,7 +10,7 @@ import type {
   GraphRollupEdgeCountMetadata,
 } from "@/lib/api-types";
 import { ScopeProviderSuffix } from "@/components/graph-scope-breadcrumb";
-import { scopeContextLine, scopeIssueLine, scopeIssueShare } from "@/lib/graph-issue-labels";
+import { scopeContextLine, scopeEstateComparison, scopeIssueLine, scopeIssueShare } from "@/lib/graph-issue-labels";
 import { groupRollupByImage, IMAGE_GROUP_PREFIX, priorityScopes, rankScopesByRisk, scopeRiskScore, SCOPE_RISK_WEIGHTS } from "@/lib/graph-rollup-risk";
 
 export const ROLLUP_DECISION_THRESHOLD = 24;
@@ -67,9 +67,12 @@ export function GraphRollupDecisionSurface({
   onDrill,
   onInvestigate,
   estateIssueCount,
+  estateIssueBasis,
 }: {
   /** Estate-wide issue total, so a scope reads as "N of TOTAL issues". */
   estateIssueCount?: number | undefined;
+  /** Estate-wide issues by severity, so a partial scope's critical/high read against the headline. */
+  estateIssueBasis?: Parameters<typeof scopeEstateComparison>[1];
   items: GraphRollupContainer[];
   edges: GraphRollupEdge[];
   completeness?: GraphCompleteness | undefined;
@@ -263,7 +266,7 @@ export function GraphRollupDecisionSurface({
                 </span>
               </div>
 
-              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs md:w-60">
+              <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs md:col-span-1 md:w-60">
                 {item.has_children && <div>
                   <p className="text-ink-secondary">Contains <span className="font-semibold tabular-nums text-foreground">{item.aggregate.descendant_count.toLocaleString()} nodes</span>{item.direct_child_count > 0 && <> · {item.direct_child_count} direct</>}</p>
                 </div>}
@@ -271,6 +274,7 @@ export function GraphRollupDecisionSurface({
                   <p className="text-ink-secondary">Contained critical / high <span className="font-semibold tabular-nums text-foreground">{critical.toLocaleString()} / {high.toLocaleString()}</span></p>
                 </div>}
                 {item.has_children && scopeIssueLine(item) && <p className="tabular-nums text-ink-secondary" data-testid="graph-scope-issues" title={scopeIssueShare(item, estateIssueCount)}>{scopeIssueLine(item)}</p>}
+                {item.has_children && scopeEstateComparison(item, estateIssueBasis) && <p className="basis-full text-ink-secondary [overflow-wrap:anywhere]" data-testid="graph-scope-estate-comparison">{scopeEstateComparison(item, estateIssueBasis)}</p>}
                 <p className="tabular-nums text-ink-secondary" title={PRIORITY_RULE} data-testid="graph-scope-priority-score">
                   {item.aggregate.exposed_count > 0 && <>{item.aggregate.exposed_count} exposed · </>}Priority score <span className="font-semibold text-foreground">{scopeRiskScore(item).toLocaleString()}</span>
                 </p>
@@ -286,7 +290,7 @@ export function GraphRollupDecisionSurface({
 
 
 
-              <div className="flex items-center justify-end gap-3 md:min-w-36">
+              <div className="col-span-2 flex flex-wrap items-center justify-start gap-3 md:col-span-1 md:min-w-36 md:justify-end">
                 {item.has_children && !item.id.startsWith(IMAGE_GROUP_PREFIX) && <button type="button" onClick={() => onInvestigate(item)} aria-label={`Show direct neighbors of ${item.label} on the canvas`}
                   title="Opens this scope and its directly related nodes on the canvas; cross-scope links are listed under Details"
                   className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-600 dark:text-sky-300">

@@ -678,6 +678,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               onDrill={drillIntoRollup}
               onInvestigate={investigateRollup}
               estateIssueCount={estateIssueSummary?.issue_count}
+              estateIssueBasis={estateIssueSummary}
             />
           ) : displayNodes.length === 0 && scenarioElements.unconnected.length > 0 ? (
             <div className="flex h-full items-center justify-center p-6 text-sm text-ink-secondary">No connected nodes in this proposal view. Select an unconnected item to inspect its details.</div>

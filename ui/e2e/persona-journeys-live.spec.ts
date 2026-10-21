@@ -13,7 +13,7 @@ test.skip(!LIVE_API, "Set AGENT_BOM_E2E_LIVE_API to a demo-estate API the UI dev
 test.describe.configure({ timeout: 240_000 });
 
 type AttackPaths = { attack_paths: { source: string; vuln_ids: string[]; hops: string[] }[]; nodes: { id: string; label: string }[] };
-type Counts = { issues: { critical: number; high: number } };
+type Counts = { issues: { critical: number; high: number; total: number } };
 
 async function liveJson<T>(request: APIRequestContext, path: string): Promise<T> {
   const response = await request.get(`${LIVE_API}${path}`, { timeout: 120_000 });
@@ -31,6 +31,8 @@ test("CISO: overview's #1 risk is Investigation's #1 path, and Open investigatio
   const first = queue.attack_paths[0]!;
   const firstCve = first.vuln_ids[0]!;
 
+  // Side-by-side layout: below it the selected risk opens as a modal drawer over the list.
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await open(page, "/");
   await page.getByRole("tab", { name: "Top risks" }).click();
   await expect(page.getByText(/Same order as Investigation/)).toBeVisible({ timeout: 60_000 });
@@ -44,18 +46,57 @@ test("CISO: overview's #1 risk is Investigation's #1 path, and Open investigatio
   await expect(link).toHaveAttribute("href", new RegExp(`cve=${secondCve}`));
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/security-graph\\?.*cve=${secondCve}`));
-  await expect(page.getByText(new RegExp(`→ ${secondCve}`)).first()).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByText(new RegExp(`→ ${secondCve}`)).filter({ visible: true }).first()).toBeVisible({ timeout: 120_000 });
 });
 
-test("CISO: the trend states its basis whenever it differs from the posture headline", async ({ page, request }) => {
+test("CISO: the trend's latest point is the posture headline, over five or more recorded scans", async ({ page, request }) => {
   const { issues } = await liveJson<Counts>(request, "/v1/posture/counts");
+  const trends = await liveJson<{ data_points: { issues: { critical: number; high: number } | null }[] }>(request, "/v1/trends?limit=30&days=90");
+  expect(trends.data_points.length).toBeGreaterThanOrEqual(5);
+  expect(trends.data_points[0]!.issues).toMatchObject({ critical: issues.critical, high: issues.high });
+
   await open(page, "/");
   await page.getByText("Changes over time").click();
-  const chart = page.getByRole("figure").filter({ hasText: "vulnerability occurrences in this scan scope" });
+  await page.getByLabel("History window").selectOption("90");
+  const chart = page.getByRole("figure").filter({ hasText: "Critical and high open issues (posture headline basis)" });
   await expect(chart).toBeVisible({ timeout: 60_000 });
   const now = Number(((await chart.locator("p").first().textContent()) ?? "").match(/^\s*([\d,]+)/)?.[1]?.replace(/,/g, "") ?? NaN);
-  if (now !== issues.critical) {
-    await expect(chart).toContainText(`posture headline counts ${issues.critical.toLocaleString()} critical`);
+  expect(now).toBe(issues.critical);
+  await expect(chart).toContainText(`${trends.data_points.length} snapshots`);
+  await expect(chart).not.toContainText("Different basis");
+});
+
+test("SOC: the change pair's issue counts are the trend's points for the same two scans", async ({ page, request }) => {
+  type Points = { data_points: { scan_id: string; issues: { critical: number; high: number } | null }[] };
+  type Change = { sources: { old: { scan_id: string }; new: { scan_id: string }; issue_change: { old: { critical: number; high: number }; new: { critical: number; high: number } } | null }[] };
+  const trend = await liveJson<Points>(request, "/v1/trends?limit=30&days=90");
+  const changes = await liveJson<Change>(request, "/v1/graph/changes");
+  const source = changes.sources[0]!;
+  const byScan = new Map(trend.data_points.map((point) => [point.scan_id, point.issues]));
+  expect(source.issue_change).not.toBeNull();
+  const pick = (counts: { critical: number; high: number }) => ({ critical: counts.critical, high: counts.high });
+  expect(pick(source.issue_change!.old)).toEqual(pick(byScan.get(source.old.scan_id)!));
+  expect(pick(source.issue_change!.new)).toEqual(pick(byScan.get(source.new.scan_id)!));
+
+  await open(page, "/graph");
+  await page.getByTestId("graph-changes-entry").getByRole("button", { name: /changed since/i }).click();
+  const line = page.getByTestId("graph-changes-issue-basis").first();
+  await expect(line).toBeVisible({ timeout: 120_000 });
+  await expect(line).toContainText(`critical ${source.issue_change!.old.critical.toLocaleString()} → ${source.issue_change!.new.critical.toLocaleString()}`);
+});
+
+test("CISO: the org card reads its high against the estate-wide headline", async ({ page, request }) => {
+  const { issues } = await liveJson<Counts>(request, "/v1/posture/counts");
+  const rollup = await liveJson<{ top_level: { entity_type: string; aggregate: { issue_count: number } }[] }>(request, "/v1/graph/rollup");
+  const org = rollup.top_level.find((item) => item.entity_type === "org")!;
+  await open(page, "/graph");
+  const outside = issues.total - org.aggregate.issue_count;
+  const comparison = page.getByTestId("graph-scope-estate-comparison").first();
+  if (outside > 0) {
+    await expect(comparison).toBeVisible({ timeout: 120_000 });
+    await expect(comparison).toContainText(`${outside.toLocaleString()} of ${issues.total.toLocaleString()} issues`);
+  } else {
+    await expect(comparison).toHaveCount(0);
   }
 });
 

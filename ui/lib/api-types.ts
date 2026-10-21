@@ -903,6 +903,8 @@ export interface GraphRollupSummary {
   /** Estate-wide distinct open issues; equals the overview's issue total. */
   issue_count?: number;
   finding_occurrence_count?: number;
+  /** Estate-wide open issues by severity, the same basis as `issue_count`. */
+  issue_severity_counts?: Partial<Record<"critical" | "high" | "medium" | "low" | "info" | "none", number>>;
 }
 
 /** Offset page over a drill-down's ranked direct children. */
@@ -1187,7 +1189,17 @@ export interface GraphEstateChangeSource {
   /** Changed nodes per vendor and account recorded on each node; absent on older servers. */
   changes_by_source?: GraphChangeAttribution | undefined;
   highlights: GraphEstateHighlights;
+  /** Open issue groups the posture trend recorded for both scans; null when either scan has no recorded point. */
+  issue_change?: GraphEstateIssueChange | null | undefined;
   skipped_snapshots: number;
+}
+
+type IssueSnapshotCounts = Record<"critical" | "high" | "medium" | "low" | "total", number>;
+
+export interface GraphEstateIssueChange {
+  basis: string;
+  old: IssueSnapshotCounts;
+  new: IssueSnapshotCounts;
 }
 
 /** A scope with no earlier snapshot to compare: never counted as additions. */
@@ -3483,6 +3495,8 @@ export interface TrendPointResponse {
   evidence_age_days?: number | null;
   age_sample_count?: number;
   evidence_sample_count?: number;
+  /** Open issue groups the posture headline counted when this point was recorded; null on older points. */
+  issues?: { critical: number; high: number; medium: number; low: number; total: number; basis: string } | null;
   scan_id?: string | null;
   timestamp: string;
   total_vulns: number;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { estateIssueLine, scopeContextLine, scopeIssueLine, scopeIssueShare } from "@/lib/graph-issue-labels";
+import { estateIssueLine, scopeContextLine, scopeEstateComparison, scopeIssueLine, scopeIssueShare } from "@/lib/graph-issue-labels";
 
 describe("estateIssueLine", () => {
   it("names issues and occurrences together so neither reads as the other", () => {
@@ -33,5 +33,25 @@ describe("scopeContextLine", () => {
     expect(scopeContextLine({ label: "NORTHSTAR_02", context: { account: "NORTHSTAR_02" } })).toBeNull();
     expect(scopeContextLine({ label: "prod", context: { account: "PROD", region: "us-east-1" } })).toBe("region: us-east-1");
     expect(scopeContextLine({ label: "x", context: undefined })).toBeNull();
+  });
+});
+
+describe("scopeEstateComparison", () => {
+  const org = (critical: number, high: number, issues: number) => ({
+    entity_type: "org", aggregate: { issue_count: issues, severity_counts: { critical, high } },
+  });
+  const estate = { issue_count: 1969, severity_counts: { critical: 332, high: 818 } };
+
+  it("puts the scope's high beside the estate-wide high and names what lies outside", () => {
+    expect(scopeEstateComparison(org(332, 813, 1947), estate)).toBe("813 high in this org · 818 estate-wide · 22 of 1,969 issues are outside this org");
+  });
+
+  it("names only the count outside when severity already agrees", () => {
+    expect(scopeEstateComparison(org(332, 818, 1966), estate)).toBe("3 of 1,969 issues are outside this org (none critical or high)");
+  });
+
+  it("says nothing when the scope holds the whole estate or the estate total is unknown", () => {
+    expect(scopeEstateComparison(org(332, 818, 1969), estate)).toBeNull();
+    expect(scopeEstateComparison(org(332, 818, 1966), null)).toBeNull();
   });
 });

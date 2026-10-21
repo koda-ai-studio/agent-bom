@@ -16512,7 +16512,10 @@ export interface components {
          *     (``baseline: snapshot_continuity``). Each changed source carries added and
          *     removed stored attack paths in ``highlights`` and ``changes_by_source``:
          *     changed nodes per vendor and account the collector recorded on each node,
-         *     since one scan can collect many vendors. ``new_sources`` are first
+         *     since one scan can collect many vendors. ``issue_change`` gives the open
+         *     issue-group counts the posture trend recorded for the pair's two scans
+         *     (``None`` when either scan has no recorded point): the graph counts are
+         *     nodes and links, the issue counts are the headline's unit. ``new_sources`` are first
          *     observations and are never counted as additions. ``totals`` cover the
          *     returned page of scopes; ``completeness`` says whether more scopes exist.
          */
@@ -24039,6 +24042,7 @@ export interface components {
             evidence_sample_count: number;
             /** High */
             high: number;
+            issues?: components["schemas"]["IssueCounts"] | null;
             /** Low */
             low: number;
             /** Measurement Version */

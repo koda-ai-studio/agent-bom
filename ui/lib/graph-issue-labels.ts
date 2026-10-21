@@ -36,3 +36,25 @@ export function scopeContextLine(item: { label: string; context?: Record<string,
   const entries = Object.entries(item.context ?? {}).filter(([, value]) => String(value).trim().toLowerCase() !== label);
   return entries.length ? entries.map(([kind, value]) => `${kind}: ${value}`).join(" · ") : null;
 }
+
+type SeverityPair = { critical?: number | undefined; high?: number | undefined };
+type EstateIssueBasis = { issue_count?: number | undefined; severity_counts?: SeverityPair | undefined };
+
+/**
+ * A scope that holds part of the estate, read against the estate-wide headline:
+ * the critical/high that differ, and how many issues sit on entities outside it.
+ */
+export function scopeEstateComparison(
+  item: { entity_type: string; aggregate?: (IssueCounts & { severity_counts?: SeverityPair | undefined }) | undefined },
+  estate: EstateIssueBasis | null | undefined,
+): string | null {
+  const issues = item.aggregate?.issue_count;
+  const total = estate?.issue_count;
+  if (typeof issues !== "number" || typeof total !== "number" || issues >= total) return null;
+  const noun = SCOPE_NOUN[item.entity_type] ?? "scope";
+  const outside = `${(total - issues).toLocaleString()} of ${count(total, "issue", "issues")} ${total - issues === 1 ? "is" : "are"} outside this ${noun}`;
+  const differing = (["critical", "high"] as const).filter((key) => (item.aggregate?.severity_counts?.[key] ?? 0) !== (estate?.severity_counts?.[key] ?? 0));
+  if (!differing.length) return `${outside} (none critical or high)`;
+  const pairs = differing.map((key) => `${(item.aggregate?.severity_counts?.[key] ?? 0).toLocaleString()} ${key} in this ${noun} · ${(estate?.severity_counts?.[key] ?? 0).toLocaleString()} estate-wide`);
+  return `${pairs.join(" · ")} · ${outside}`;
+}

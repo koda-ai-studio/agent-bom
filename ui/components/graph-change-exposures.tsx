@@ -79,7 +79,7 @@ export function GraphChangeExposures({ highlights, scanId, onInvestigateNode }: 
   if (!any) return null;
   return (
     <div data-testid="graph-changes-exposure" className="space-y-2 rounded-lg border border-outline bg-surface/70 p-2">
-      {findings && findings.count > 0 && <Group title="New critical findings" count={findings.count} tone="added">
+      {findings && findings.count > 0 && <Group title="New critical finding nodes" count={findings.count} tone="added">
         {findings.top.slice(0, PREVIEW).map(node => <NodeRow key={node.id ?? node.label} node={node} drill onInvestigateNode={onInvestigateNode} />)}
       </Group>}
       {added && added.count > 0 && <Group title="New attack paths" count={added.count} lowerBound={added.count_is_lower_bound} tone="added">

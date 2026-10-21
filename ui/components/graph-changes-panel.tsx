@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Drawer } from "@/components/drawer";
 import { GraphChangeAttribution } from "@/components/graph-change-attribution";
 import { GraphChangeExposures } from "@/components/graph-change-exposures";
+import { GraphChangeIssueBasis } from "@/components/graph-change-issue-basis";
 import type { GraphEstateChangesResponse } from "@/lib/api-types";
 import { countsLine, type SnapshotPair } from "@/lib/graph-estate-changes";
 
@@ -141,6 +142,7 @@ export function GraphChangesPanel({
                   {source.baseline === "snapshot_continuity" && (
                     <p className="text-xs text-ink-tertiary [overflow-wrap:anywhere]">Compared with earlier snapshot {source.old.scan_id}</p>
                   )}
+                  <GraphChangeIssueBasis change={source.issue_change} />
                   <GraphChangeAttribution attribution={source.changes_by_source} />
                   <GraphChangeExposures highlights={source.highlights ?? {}} scanId={source.new.scan_id} onInvestigateNode={onInvestigateNode} />
                   {selected && diffDetails}

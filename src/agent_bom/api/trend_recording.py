@@ -6,12 +6,13 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from agent_bom.api.exec_posture import tenant_headline_posture
+from agent_bom.api.exec_posture import tenant_headline_posture, tenant_issue_counts
 from agent_bom.baseline import TrendPoint
 from agent_bom.security import sanitize_error, sanitize_text
 
 _logger = logging.getLogger(__name__)
 _SEVERITIES = ("critical", "high", "medium", "low")
+_ISSUE_KEYS = ("critical", "high", "medium", "low", "unrated", "total", "kev", "approximate", "basis")
 
 
 def _vulnerability_severities(result: Mapping[str, Any]) -> list[str]:
@@ -45,13 +46,16 @@ def trend_point_from_scan_result(
     completed_at: str | None = None,
     scope_id: str | None = None,
     headline: Mapping[str, Any] | None = None,
+    issue_counts: Mapping[str, Any] | None = None,
 ) -> TrendPoint | None:
     """Build one honest, retry-safe trend point from canonical scan JSON.
 
     ``headline`` is the tenant posture the overview serves after this scan was
     persisted; when given, the point records that grade and score so the trend
-    and the posture endpoints are one derivation. The scan must still carry a
-    gradable scorecard: an ungradable scan never adds a point.
+    and the posture endpoints are one derivation. ``issue_counts`` are the open
+    issue groups ``/v1/posture/counts`` serves at that moment; only that basis
+    is recorded, so a plotted point is the headline's own unit. The scan must
+    still carry a gradable scorecard: an ungradable scan never adds a point.
     """
     from agent_bom.api.trend_comparison import comparison_metadata
 
@@ -82,6 +86,9 @@ def trend_point_from_scan_result(
         return None
     severities = _vulnerability_severities(result)
     counts = {severity: severities.count(severity) for severity in _SEVERITIES}
+    metadata = comparison_metadata(result, scope_id, timestamp)
+    if issue_counts is not None and issue_counts.get("basis") == "issue_groups":
+        metadata["issue_counts"] = {key: issue_counts.get(key) for key in _ISSUE_KEYS}
     return TrendPoint(
         timestamp=timestamp,
         total_vulns=len(severities),
@@ -93,7 +100,7 @@ def trend_point_from_scan_result(
         posture_grade=grade,
         tenant_id=str(tenant_id or "default"),
         scan_id=resolved_scan_id,
-        comparison_metadata=comparison_metadata(result, scope_id, timestamp),
+        comparison_metadata=metadata,
     )
 
 
@@ -109,9 +116,11 @@ def record_scan_trend_best_effort(
     """Persist one trend point; return whether a gradable point was recorded.
 
     ``headline_posture`` is for callers that have already persisted the job:
-    the point then records the tenant's current headline posture.
+    the point then records the tenant's current headline posture and issue counts.
     """
-    headline = tenant_headline_posture(str(tenant_id or "default")) if headline_posture else None
+    tenant = str(tenant_id or "default")
+    headline = tenant_headline_posture(tenant) if headline_posture else None
+    issue_counts = tenant_issue_counts(tenant) if headline_posture else None
     point = trend_point_from_scan_result(
         result,
         tenant_id=tenant_id,
@@ -119,6 +128,7 @@ def record_scan_trend_best_effort(
         completed_at=completed_at,
         scope_id=scope_id,
         headline=headline,
+        issue_counts=issue_counts,
     )
     if point is None:
         return False

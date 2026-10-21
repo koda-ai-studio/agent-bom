@@ -13,6 +13,7 @@ observation, never an addition.
 from __future__ import annotations
 
 import hashlib
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,6 +30,8 @@ from agent_bom.graph.attack_path_queue import attack_path_rank_window
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.diff_sources import changes_by_collected_source
 from agent_bom.graph.diff_view import diff_summary, new_attack_paths
+
+_logger = logging.getLogger(__name__)
 
 SOURCE_LIMIT_DEFAULT = 50
 SOURCE_LIMIT_MAX = 100
@@ -201,6 +204,38 @@ def _scope_id(scope: str) -> str:
     return hashlib.sha256(scope.encode()).hexdigest()[:16]
 
 
+_ISSUE_CHANGE_KEYS = ("critical", "high", "medium", "low", "total")
+
+
+def _recorded_issue_counts(tenant: str) -> dict[str, dict[str, Any]]:
+    """Posture-basis issue counts each trended scan recorded, by scan id."""
+    from agent_bom.api.stores import _get_trend_store
+
+    try:
+        history = _get_trend_store().get_history(limit=365, tenant_id=tenant)
+    except Exception:  # broad-except: the issue overlay is optional and never fails the graph diff it annotates
+        _logger.warning("Trend history unavailable for the change issue basis")
+        return {}
+    counts: dict[str, dict[str, Any]] = {}
+    for point in history:
+        recorded = point.comparison_metadata.get("issue_counts")
+        if point.scan_id and isinstance(recorded, dict) and recorded.get("basis") == "issue_groups":
+            counts[str(point.scan_id)] = recorded
+    return counts
+
+
+def _issue_change(recorded: dict[str, dict[str, Any]], old_id: str, new_id: str) -> dict[str, Any] | None:
+    """The trend's open-issue counts for both scans of a pair; ``None`` unless both were recorded."""
+    old, new = recorded.get(old_id), recorded.get(new_id)
+    if old is None or new is None:
+        return None
+    return {
+        "basis": "issue_groups",
+        "old": {key: int(old.get(key) or 0) for key in _ISSUE_CHANGE_KEYS},
+        "new": {key: int(new.get(key) or 0) for key in _ISSUE_CHANGE_KEYS},
+    }
+
+
 def _empty_totals() -> dict[str, Any]:
     zero = {"added": 0, "removed": 0, "changed": 0}
     return {"nodes": dict(zero), "edges": dict(zero), "changed_sources": 0, "unchanged_sources": 0, "new_sources": 0}
@@ -213,6 +248,7 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
     totals = _empty_totals()
     unpaired = {graph_scan_id(scope.current) for scope in page if scope.previous is None}
     stats = {str(row.get("scan_id")): row for row in store.snapshots_by_ids(tenant_id=tenant, scan_ids=unpaired)} if unpaired else {}
+    recorded = _recorded_issue_counts(tenant) if len(unpaired) < len(page) else {}
     for scope in page:
         base = {"scope_id": _scope_id(scope.key), "label": scope_label(scope.current), "new": _snapshot_ref(scope.current)}
         if scope.previous is None:
@@ -248,6 +284,7 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
                 "nodes_by_entity_type": summary["nodes_by_entity_type"],
                 "changes_by_source": changes_by_collected_source(store, tenant, old_id, new_id, rows),
                 "highlights": summary["highlights"],
+                "issue_change": _issue_change(recorded, old_id, new_id),
                 "skipped_snapshots": scope.skipped,
             }
         )
