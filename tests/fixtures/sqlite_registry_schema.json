@@ -1,0 +1,70 @@
+{
+  "dataset": [
+    [
+      "index",
+      "idx_dataset_versions_tenant_dataset_created",
+      "CREATE INDEX idx_dataset_versions_tenant_dataset_created ON dataset_versions(tenant_id, dataset_id, created_at DESC)"
+    ],
+    [
+      "table",
+      "control_plane_schema_versions",
+      "CREATE TABLE control_plane_schema_versions (\n            component TEXT PRIMARY KEY,\n            version INTEGER NOT NULL,\n            updated_at TEXT NOT NULL\n        )"
+    ],
+    [
+      "table",
+      "dataset_versions",
+      "CREATE TABLE dataset_versions (\n                tenant_id TEXT NOT NULL,\n                dataset_id TEXT NOT NULL,\n                version_id TEXT NOT NULL,\n                created_at TEXT NOT NULL,\n                data TEXT NOT NULL,\n                PRIMARY KEY (tenant_id, dataset_id, version_id)\n            )"
+    ]
+  ],
+  "evaluation": [
+    [
+      "index",
+      "idx_evaluation_runs_tenant_dataset_created",
+      "CREATE INDEX idx_evaluation_runs_tenant_dataset_created ON evaluation_runs(tenant_id, dataset_id, created_at DESC)"
+    ],
+    [
+      "table",
+      "control_plane_schema_versions",
+      "CREATE TABLE control_plane_schema_versions (\n            component TEXT PRIMARY KEY,\n            version INTEGER NOT NULL,\n            updated_at TEXT NOT NULL\n        )"
+    ],
+    [
+      "table",
+      "evaluation_runs",
+      "CREATE TABLE evaluation_runs (\n                tenant_id TEXT NOT NULL,\n                evaluation_id TEXT NOT NULL,\n                dataset_id TEXT,\n                created_at TEXT NOT NULL,\n                data TEXT NOT NULL,\n                PRIMARY KEY (tenant_id, evaluation_id)\n            )"
+    ]
+  ],
+  "drift": [
+    [
+      "index",
+      "idx_drift_incidents_tenant_open",
+      "CREATE INDEX idx_drift_incidents_tenant_open ON drift_incidents(tenant_id, resolved, last_detected_at DESC)"
+    ],
+    [
+      "table",
+      "control_plane_schema_versions",
+      "CREATE TABLE control_plane_schema_versions (\n            component TEXT PRIMARY KEY,\n            version INTEGER NOT NULL,\n            updated_at TEXT NOT NULL\n        )"
+    ],
+    [
+      "table",
+      "drift_incidents",
+      "CREATE TABLE drift_incidents (\n                tenant_id TEXT NOT NULL,\n                incident_id TEXT NOT NULL,\n                data TEXT NOT NULL,\n                resolved INTEGER NOT NULL DEFAULT 0,\n                last_detected_at TEXT NOT NULL,\n                PRIMARY KEY (tenant_id, incident_id)\n            )"
+    ]
+  ],
+  "webhook": [
+    [
+      "index",
+      "idx_webhook_subs_tenant",
+      "CREATE INDEX idx_webhook_subs_tenant ON webhook_subscriptions(tenant_id, status)"
+    ],
+    [
+      "table",
+      "control_plane_schema_versions",
+      "CREATE TABLE control_plane_schema_versions (\n            component TEXT PRIMARY KEY,\n            version INTEGER NOT NULL,\n            updated_at TEXT NOT NULL\n        )"
+    ],
+    [
+      "table",
+      "webhook_subscriptions",
+      "CREATE TABLE webhook_subscriptions (\n                subscription_id TEXT PRIMARY KEY,\n                tenant_id TEXT NOT NULL,\n                status TEXT NOT NULL,\n                created_at TEXT NOT NULL,\n                data TEXT NOT NULL\n            )"
+    ]
+  ]
+}
