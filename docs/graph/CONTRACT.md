@@ -472,7 +472,7 @@ These gaps are tracked as roadmap work. None of them block the guarantees in §2
 ## Correlated runtime identity and path proof
 
 Correlation manifests and edge receipts identify the join contract as
-`scoped-identity.v6`. Container occurrences join only when an authoritative
+`scoped-identity.v7`. Container occurrences join only when an authoritative
 runtime identifier and its provider and account, cluster, or host scope match
 within the requesting tenant. Kubernetes pod identifiers additionally require
 container names. Missing identity stays specific to the source snapshot. Image
@@ -1000,7 +1000,7 @@ SQLite graph mutations use bounded FIFO admission per resolved database path wit
 
 ### Correlation identity scope
 
-New correlations record `scoped-identity.v6`. Assets that carry a strong
+New correlations record `scoped-identity.v7`. Assets that carry a strong
 provider-native key (qualified ARN, AWS instance id bound to account and region,
 Azure ARM id, GCP self link, Kubernetes uid, image digest, principal id,
 Snowflake account-qualified name; see `graph/asset_identity.py`) join on that
@@ -1016,6 +1016,14 @@ Fully qualified regional ARNs and global S3 ARNs keep their identity when only
 redundant collection location metadata differs in presence. A recorded region
 that contradicts an ARN stays separate; incomplete ARN forms retain local scope.
 No missing provider, location or identity is inferred from labels.
+
+Repository entities additionally require an absolute HTTP(S), SSH or Git repository
+URL with a host and repository path, plus the commit and file path. `repository`, `repository_url` and `repo_url` are accepted when their
+non-empty string values agree exactly after trimming. Forks with the same commit
+and path remain separate. Missing or contradictory repository values keep each
+observation snapshot-scoped. Local checkout roots and display labels do not
+establish repository identity; URL aliases are not guessed. This deliberately
+prefers separate evidence over an unproven join.
 
 Existing correlation receipts remain available without rewriting their source
 evidence. Earlier identity versions require recomputation from original source

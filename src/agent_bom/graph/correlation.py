@@ -215,25 +215,7 @@ def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str,
         return _snapshot_scoped_identity(node, scan_id=scan_id)
 
     if entity_type in _REPOSITORY_ENTITY_TYPES:
-        commit = next(
-            (
-                str(node.attributes[key]).strip().lower()
-                for key in ("repository_commit", "commit_sha", "git_commit")
-                if node.attributes.get(key)
-            ),
-            "",
-        )
-        path = next(
-            (
-                str(node.attributes[key]).strip().replace("\\", "/")
-                for key in ("repository_path", "path", "source_file", "config_path")
-                if node.attributes.get(key)
-            ),
-            "",
-        )
-        if commit and path:
-            return entity_type, _digest({"commit": commit, "path": path}), "repository_commit_path"
-        return _snapshot_scoped_identity(node, scan_id=scan_id)
+        return _scope.repository_identity(node, scan_id=scan_id)
 
     if entity_type in _CLOUD_RESOURCE_ENTITY_TYPES:
         exact = _scope.strong_identity(node, entity_type) or _exact_attribute_identity(

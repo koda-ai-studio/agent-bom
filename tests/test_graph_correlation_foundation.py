@@ -345,7 +345,7 @@ def test_repository_nodes_require_exact_commit_and_path_identity() -> None:
                 id="source_file:app/main.py",
                 entity_type=EntityType.SOURCE_FILE,
                 label="main.py",
-                attributes={"path": "app/main.py"},
+                attributes={"path": "app/main.py", "repository_url": "https://git.example/acme/app"},
             )
         )
 
@@ -365,6 +365,72 @@ def test_repository_nodes_require_exact_commit_and_path_identity() -> None:
     )
     assert len(pinned.graph.nodes) == 1
     assert next(iter(pinned.graph.nodes.values())).attributes["correlation"]["identity_basis"] == "repository_commit_path"
+
+
+@pytest.mark.parametrize(
+    "entity_type",
+    [
+        EntityType.SOURCE_FILE,
+        EntityType.CODE_MODULE,
+        EntityType.CONFIG_FILE,
+        EntityType.EXTERNAL_IMPORT,
+        EntityType.CI_JOB,
+        EntityType.DIRECTORY,
+    ],
+)
+@pytest.mark.parametrize(
+    "repositories",
+    [
+        ("https://git.example/acme/app", "https://git.example/other/app"),
+        ("", ""),
+        ("acme/app", "acme/app"),
+        ("file:///workspace/app", "file:///workspace/app"),
+        ("https://git.example/acme/app", ""),
+    ],
+)
+def test_repository_correlation_does_not_join_forks_or_unknown_repositories(entity_type: EntityType, repositories: tuple[str, str]) -> None:
+    graphs = [_graph("scan-1"), _graph("scan-2")]
+    for graph, repository in zip(graphs, repositories):
+        graph.add_node(
+            UnifiedNode(
+                id="file:main",
+                entity_type=entity_type,
+                label="main.py",
+                attributes={
+                    "repository_url": repository,
+                    "repository_commit": "a" * 40,
+                    "path": "app/main.py",
+                },
+            )
+        )
+    merged = merge_graph_snapshots(
+        correlation_id="corr-repository-boundary", tenant_id="acme", snapshots=[CorrelationSnapshot.from_graph(graph) for graph in graphs]
+    )
+    assert len(merged.graph.nodes) == 2
+
+
+def test_repository_correlation_rejects_contradictory_repository_aliases() -> None:
+    graphs = [_graph("scan-1"), _graph("scan-2")]
+    for graph in graphs:
+        graph.add_node(
+            UnifiedNode(
+                id="file:main",
+                entity_type=EntityType.SOURCE_FILE,
+                label="main.py",
+                attributes={
+                    "repository_url": "https://git.example/acme/app",
+                    "repository": "https://git.example/other/app",
+                    "repository_commit": "a" * 40,
+                    "path": "app/main.py",
+                },
+            )
+        )
+    merged = merge_graph_snapshots(
+        correlation_id="corr-conflicting-repository",
+        tenant_id="acme",
+        snapshots=[CorrelationSnapshot.from_graph(graph) for graph in graphs],
+    )
+    assert len(merged.graph.nodes) == 2
 
 
 def test_snapshot_scoped_mutable_images_with_same_node_id_remain_distinct() -> None:
@@ -539,3 +605,28 @@ def test_merge_rejects_invalid_snapshot_sets() -> None:
             tenant_id="acme",
             snapshots=[CorrelationSnapshot.from_graph(one), CorrelationSnapshot.from_graph(other_tenant)],
         )
+
+
+@pytest.mark.parametrize("key", ["repository", "repository_url", "repo_url"])
+def test_repository_aliases_join_only_with_the_same_explicit_locator(key: str) -> None:
+    graphs = [_graph("scan-1"), _graph("scan-2")]
+    for graph, repository_key in zip(graphs, ("repository_url", key)):
+        graph.add_node(
+            UnifiedNode(
+                id="file:main",
+                entity_type=EntityType.SOURCE_FILE,
+                label="main.py",
+                attributes={
+                    repository_key: " https://git.example/acme/app ",
+                    "repository_commit": "a" * 40,
+                    "path": "app/main.py",
+                },
+            )
+        )
+    merged = merge_graph_snapshots(
+        correlation_id="corr-explicit-repository", tenant_id="acme", snapshots=[CorrelationSnapshot.from_graph(graph) for graph in graphs]
+    )
+    assert len(merged.graph.nodes) == 1
+    node = next(iter(merged.graph.nodes.values()))
+    assert node.attributes["correlation"]["identity_version"] == "scoped-identity.v7"
+    assert node.attributes["correlation"]["observation_count"] == 2
