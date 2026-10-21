@@ -372,6 +372,7 @@ def test_bulk_fallback_ids_preserve_explicit_asset_identity():
 @pytest.mark.parametrize("field", ["provider", "account_ref", "region"])
 def test_bulk_fallback_rejects_malformed_scope_without_server_error(field):
     from fastapi import HTTPException
+
     from agent_bom.api.bulk_findings_ingest import _normalized_bulk_finding
 
     with pytest.raises(HTTPException) as error:
