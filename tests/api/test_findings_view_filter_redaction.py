@@ -113,8 +113,10 @@ def leftover_triage_entry():
 
 
 def test_demo_client_starts_from_an_empty_exception_store(
-    leftover_triage_entry, demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:  # noqa: F811
+    leftover_triage_entry,
+    demo_estate_client: TestClient,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls = {"n": 0}
     original = finding_scope.safe_finding_response_payload
 
