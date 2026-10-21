@@ -282,6 +282,8 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
     changed_files += [Path(owner) for path in changed_files if (owner := extracted_owners.get(path.as_posix().removeprefix("./")))]
     for changed in changed_files:
         normalized = Path(changed.as_posix().removeprefix("./"))
+        if normalized.as_posix() in {"ui/lib/graph-schema.ts", "ui/lib/graph-schema.generated.ts", "ui/scripts/codegen-graph-schema.mjs"}:
+            selected.update(candidate for candidate in available if candidate.name == "test_graph_schema_ui_parity.py")
         if normalized.as_posix() in {"src/agent_bom/api/agent_identity_store.py", "src/agent_bom/api/identity_local_store.py"}:
             selected.update(candidate for candidate in available if candidate.name == "test_graph_data_model_generator.py")
         if normalized.as_posix() in {"src/agent_bom/cli/_server.py", "src/agent_bom/cli/_server_posture.py"}:
