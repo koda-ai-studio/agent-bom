@@ -248,8 +248,10 @@ account and region. Environment labels do not rename an asset. Qualified native
 identifiers and portable package PURLs retain their existing identity scheme;
 unscoped legacy inputs remain distinguishable from newly scoped inputs.
 Provide account scope when importing account-local names or IDs. Source-code
-occurrences also retain recorded scanner and repository/revision discriminators
-when present, so equal paths and rules from distinct sources stay separate.
+occurrences also retain recorded scanner and repository discriminators when
+present, so equal paths and rules from distinct sources stay separate. A code
+revision is observation context: it constrains candidate correlation without
+renaming an otherwise unchanged finding.
 
 Persisted explicit finding and asset IDs are preserved during rehydration.
 There is no automatic alias from an older unscoped ID to a newly scoped ID: the

@@ -305,6 +305,8 @@ def test_source_native_scanner_and_repository_namespaces_keep_distinct_occurrenc
     ]
     assert len({f.id for f in findings}) == 3
     assert finding(external_tool="scanner-a", repository="repo-a").id == findings[0].id
+    assert finding(external_tool="scanner-a", repository="repo-a", repository_commit="new-revision").id == findings[0].id
+    assert finding(external_tool="scanner-a", repository="repo-a", commit_sha="new-revision").id == findings[0].id
 
 
 def test_ingest_normalization_preserves_subseconds_and_negative_offsets():

@@ -272,8 +272,6 @@ _OCCURRENCE_EVIDENCE_KEYS: tuple[str, ...] = (
     "external_tool",
     "repository",
     "repository_url",
-    "repository_commit",
-    "commit_sha",
     "path",
     "file",
     "file_path",
@@ -310,7 +308,7 @@ def _occurrence_evidence_qualifier(evidence: object) -> dict[str, object]:
     """Return stable location/source fields that distinguish one occurrence.
 
     Findings deliberately ignore volatile evidence such as confidence, score,
-    timestamps, and remediation state so repeated scans preserve identity. The
+    timestamps, code revisions, and remediation state so repeated scans preserve identity. The
     allowlist contains source-native locators that identify *where* the issue
     occurred; when present, those locators prevent two occurrences on the same
     canonical asset from silently collapsing.
