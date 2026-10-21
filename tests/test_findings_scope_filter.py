@@ -141,8 +141,9 @@ def test_filter_by_finding_class_precedes_pagination_and_echoes_filter() -> None
     assert len(payload["findings"]) == 1
     assert payload["findings"][0]["finding_type"] == "CVE"
     assert payload["filters"] == {"finding_class": "vulnerability"}
-    assert payload["total"] is None
-    assert payload["total_approximate"] is True
+    # A scoped first page counts its matches exactly within the counting budget.
+    every = client.get("/v1/findings?finding_class=vulnerability&limit=50", headers=_AUTH).json()["findings"]
+    assert payload["total"] == len(every) == 3
 
 
 def test_invalid_finding_class_is_rejected() -> None:
@@ -247,8 +248,8 @@ def test_applied_filters_are_echoed_and_a_complete_scoped_page_reports_its_total
     assert kev["total"] == 2
 
 
-def test_a_scoped_page_with_more_rows_keeps_an_unknown_total() -> None:
+def test_a_scoped_page_with_more_rows_counts_its_total_exactly() -> None:
     _seed_scan_findings()
     payload = TestClient(app).get("/v1/findings?provider=aws&limit=1", headers=_AUTH).json()
     assert payload["has_more"] is True
-    assert payload["total"] is None
+    assert payload["total"] == 2
