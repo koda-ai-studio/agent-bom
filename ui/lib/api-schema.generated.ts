@@ -15839,12 +15839,32 @@ export interface components {
         GraphActiveEdgesResponse: {
             [key: string]: unknown;
         }[];
+        /** GraphAgentRecord */
+        GraphAgentRecord: {
+            /** Data Sources */
+            data_sources: string[];
+            /** First Seen */
+            first_seen: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Last Seen */
+            last_seen: string;
+            risk_assessment: components["schemas"]["GraphNodeRiskAssessment"];
+            /** Risk Score */
+            risk_score: number;
+            /** Severity */
+            severity: string;
+            /** Status */
+            status: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphAgentsResponse */
         GraphAgentsResponse: {
             /** Agents */
-            agents: {
-                [key: string]: unknown;
-            }[];
+            agents: components["schemas"]["GraphAgentRecord"][];
             completeness: components["schemas"]["GraphCompleteness"];
             /** Created At */
             created_at: string;
@@ -15855,6 +15875,78 @@ export interface components {
             snapshot_generation?: string | null;
             /** Tenant Id */
             tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphAttackPathRecord
+         * @description Serialized attack path; recorded reachability never implies execution.
+         */
+        GraphAttackPathRecord: {
+            /** Analysis */
+            analysis: {
+                [key: string]: unknown;
+            };
+            /** Composite Risk */
+            composite_risk: number;
+            /** Credential Exposure */
+            credential_exposure: string[];
+            /** Edges */
+            edges: string[];
+            /** Exposure Path */
+            exposure_path?: {
+                [key: string]: unknown;
+            } | null;
+            /** Finding Ids */
+            finding_ids: string[];
+            /** Hop Evidence */
+            hop_evidence: {
+                [key: string]: unknown;
+            }[];
+            /** Hops */
+            hops: string[];
+            /** Mitre Technique Ids */
+            mitre_technique_ids: string[];
+            /** Ranking Factors */
+            ranking_factors?: {
+                [key: string]: unknown;
+            } | null;
+            /** Reachability */
+            reachability: string;
+            /** Reachability Basis */
+            reachability_basis: string[];
+            /** Severity */
+            severity?: string | null;
+            /** Source */
+            source: string;
+            /** Summary */
+            summary: string;
+            /** Target */
+            target: string;
+            /** Technique Mappings */
+            technique_mappings: components["schemas"]["TechniqueMapping"][];
+            /** Tool Exposure */
+            tool_exposure: string[];
+            /** Vuln Ids */
+            vuln_ids: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphAttackPathSummary
+         * @description The bounded roll-up projection intentionally omits detailed hop evidence.
+         */
+        GraphAttackPathSummary: {
+            /** Composite Risk */
+            composite_risk: number;
+            /** Hops */
+            hops: string[];
+            /** Source */
+            source: string;
+            /** Summary */
+            summary: string;
+            /** Target */
+            target: string;
         } & {
             [key: string]: unknown;
         };
@@ -15874,9 +15966,7 @@ export interface components {
             /** Available Kinds */
             available_kinds: string[];
             /** Clusters */
-            clusters: {
-                [key: string]: unknown;
-            }[];
+            clusters: components["schemas"]["SemanticCluster"][];
             completeness: components["schemas"]["GraphCompleteness"];
             /** Created At */
             created_at: string;
@@ -16485,6 +16575,58 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GraphEdgeRecord
+         * @description The public ``UnifiedEdge.to_dict`` shape, including temporal validity.
+         */
+        GraphEdgeRecord: {
+            /** Activity Id */
+            activity_id: number;
+            /** Canonical Id */
+            canonical_id: string;
+            /** Confidence */
+            confidence: number;
+            /** Direction */
+            direction: string;
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** First Seen */
+            first_seen: string;
+            /** Id */
+            id: string;
+            /** Last Seen */
+            last_seen: string;
+            /** Provenance */
+            provenance: {
+                [key: string]: unknown;
+            };
+            /** Relationship */
+            relationship: string;
+            /** Source */
+            source: string;
+            /** Source Id */
+            source_id: string;
+            /** Source Run Id */
+            source_run_id: string;
+            /** Source Scan Id */
+            source_scan_id: string;
+            /** Target */
+            target: string;
+            /** Target Id */
+            target_id: string;
+            /** Traversable */
+            traversable: boolean;
+            /** Valid From */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+            /** Weight */
+            weight: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphEstateChangesPagination */
         GraphEstateChangesPagination: {
             /** Has More */
@@ -16642,9 +16784,7 @@ export interface components {
             /** Created At */
             created_at?: string | null;
             /** Edges */
-            edges?: {
-                [key: string]: unknown;
-            }[] | null;
+            edges?: components["schemas"]["GraphEdgeRecord"][] | null;
             /** Evidence Scope */
             evidence_scope?: string | null;
             /** Filters */
@@ -16654,9 +16794,7 @@ export interface components {
             /** Message */
             message?: string | null;
             /** Nodes */
-            nodes?: {
-                [key: string]: unknown;
-            }[] | null;
+            nodes?: components["schemas"]["GraphNodeRecord"][] | null;
             /** Pagination */
             pagination?: {
                 [key: string]: unknown;
@@ -16700,25 +16838,19 @@ export interface components {
         GraphGovernanceResponse: {
             attack_path_pagination: components["schemas"]["GraphBoundedPage"];
             /** Attack Paths */
-            attack_paths: {
-                [key: string]: unknown;
-            }[];
+            attack_paths: components["schemas"]["GraphAttackPathRecord"][];
             completeness: components["schemas"]["GraphCompleteness"];
             /** Created At */
             created_at: string;
             edge_pagination: components["schemas"]["GraphBoundedPage"];
             /** Edges */
-            edges: {
-                [key: string]: unknown;
-            }[];
+            edges: components["schemas"]["GraphEdgeRecord"][];
             /** Governance Counts */
             governance_counts: {
                 [key: string]: number;
             };
             /** Nodes */
-            nodes: {
-                [key: string]: unknown;
-            }[];
+            nodes: components["schemas"]["GraphNodeRecord"][];
             /** Overlay */
             overlay: {
                 [key: string]: number;
@@ -16890,23 +17022,16 @@ export interface components {
                 [key: string]: unknown;
             };
             /** Edges In */
-            edges_in: {
-                [key: string]: unknown;
-            }[];
+            edges_in: components["schemas"]["GraphEdgeRecord"][];
             /** Edges Out */
-            edges_out: {
-                [key: string]: unknown;
-            }[];
+            edges_out: components["schemas"]["GraphEdgeRecord"][];
             /** Impact */
             impact: {
                 [key: string]: unknown;
             };
             /** Neighbors */
             neighbors: unknown[];
-            /** Node */
-            node: {
-                [key: string]: unknown;
-            };
+            node: components["schemas"]["GraphNodeRecord"];
             /** Resolved From */
             resolved_from?: string | null;
             /** Scan Id */
@@ -16920,23 +17045,34 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** GraphNodeDimensions */
+        GraphNodeDimensions: {
+            /** Agent Type */
+            agent_type?: string;
+            /** Cloud Provider */
+            cloud_provider?: string;
+            /** Ecosystem */
+            ecosystem?: string;
+            /** Environment */
+            environment?: string;
+            /** Surface */
+            surface?: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphNodeNeighborsResponse */
         GraphNodeNeighborsResponse: {
             completeness: components["schemas"]["GraphCompleteness"];
             /** Direction */
             direction: string;
             /** Edges */
-            edges: {
-                [key: string]: unknown;
-            }[];
+            edges: components["schemas"]["GraphEdgeRecord"][];
             /** Found */
             found: boolean;
             /** Limit */
             limit: number;
             /** Neighbors */
-            neighbors: {
-                [key: string]: unknown;
-            }[];
+            neighbors: components["schemas"]["GraphNodeRecord"][];
             /** Node Id */
             node_id: string;
             /** Resolved From */
@@ -16947,6 +17083,86 @@ export interface components {
             total_neighbors: number | null;
             /** Truncated */
             truncated: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphNodeProvenance */
+        GraphNodeProvenance: {
+            /** Execution */
+            execution: string;
+            /** First Seen */
+            first_seen: string | null;
+            /** Last Seen */
+            last_seen: string | null;
+            /** Schema Version */
+            schema_version: string;
+            /** Source Snapshot Ids */
+            source_snapshot_ids: string[];
+            /** Sources */
+            sources: string[];
+            /** Tier */
+            tier: string;
+            /** Time Basis */
+            time_basis: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphNodeRecord
+         * @description The public ``UnifiedNode.to_dict`` shape; storage-only fields are excluded.
+         */
+        GraphNodeRecord: {
+            /** Attributes */
+            attributes: {
+                [key: string]: unknown;
+            };
+            /** Canonical Id */
+            canonical_id: string;
+            /** Category Uid */
+            category_uid: number;
+            /** Class Uid */
+            class_uid: number;
+            /** Compliance Tags */
+            compliance_tags: string[];
+            /** Data Sources */
+            data_sources: string[];
+            dimensions: components["schemas"]["GraphNodeDimensions"];
+            /** Entity Type */
+            entity_type: string;
+            evidence_provenance: components["schemas"]["GraphNodeProvenance"];
+            /** First Seen */
+            first_seen: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Last Seen */
+            last_seen: string;
+            risk_assessment: components["schemas"]["GraphNodeRiskAssessment"];
+            /** Risk Score */
+            risk_score: number;
+            /** Severity */
+            severity: string;
+            /** Severity Id */
+            severity_id: number;
+            /** Status */
+            status: string;
+            /** Type Uid */
+            type_uid: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphNodeRiskAssessment */
+        GraphNodeRiskAssessment: {
+            /** Basis */
+            basis: string | null;
+            /** Scope */
+            scope: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "assessed" | "not_assessed";
         } & {
             [key: string]: unknown;
         };
@@ -16961,9 +17177,7 @@ export interface components {
             }[] | null;
             attack_path_pagination?: components["schemas"]["GraphBoundedPage"] | null;
             /** Attack Paths */
-            attack_paths: {
-                [key: string]: unknown;
-            }[];
+            attack_paths: components["schemas"]["GraphAttackPathRecord"][];
             /** Collection Coverage */
             collection_coverage?: {
                 [key: string]: unknown;
@@ -16972,9 +17186,7 @@ export interface components {
             /** Created At */
             created_at: string;
             /** Edges */
-            edges: {
-                [key: string]: unknown;
-            }[];
+            edges: components["schemas"]["GraphEdgeRecord"][];
             /** Evidence Scope */
             evidence_scope?: string | null;
             /** Interaction Risks */
@@ -16982,9 +17194,7 @@ export interface components {
                 [key: string]: unknown;
             }[];
             /** Nodes */
-            nodes: {
-                [key: string]: unknown;
-            }[];
+            nodes: components["schemas"]["GraphNodeRecord"][];
             pagination: components["schemas"]["GraphPagination"];
             /** Scan Id */
             scan_id: string;
@@ -17032,9 +17242,7 @@ export interface components {
         /** GraphPathsResponse */
         GraphPathsResponse: {
             /** Attack Paths */
-            attack_paths: {
-                [key: string]: unknown;
-            }[];
+            attack_paths: components["schemas"]["GraphAttackPathRecord"][];
             completeness: components["schemas"]["GraphCompleteness"];
             /** Depth Limited */
             depth_limited: boolean;
@@ -17183,9 +17391,7 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /** Attack Paths */
-            attack_paths?: {
-                [key: string]: unknown;
-            }[] | null;
+            attack_paths?: components["schemas"]["GraphAttackPathSummary"][] | null;
             /** Children */
             children?: {
                 [key: string]: unknown;
@@ -17222,13 +17428,9 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /** Path Edges */
-            path_edges?: {
-                [key: string]: unknown;
-            }[] | null;
+            path_edges?: components["schemas"]["GraphEdgeRecord"][] | null;
             /** Path Nodes */
-            path_nodes?: {
-                [key: string]: unknown;
-            }[] | null;
+            path_nodes?: components["schemas"]["GraphNodeRecord"][] | null;
             /** Resolved From */
             resolved_from?: string | null;
             /** Scan Id */
@@ -17493,9 +17695,7 @@ export interface components {
             /** Query */
             query: string;
             /** Results */
-            results: {
-                [key: string]: unknown;
-            }[];
+            results: components["schemas"]["GraphNodeRecord"][];
             /** Snapshot Generation */
             snapshot_generation: string | null;
         } & {
@@ -22772,6 +22972,56 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** SemanticCluster */
+        SemanticCluster: {
+            /** Count */
+            count: number;
+            /** Entity Types */
+            entity_types: string[];
+            expansion: components["schemas"]["SemanticClusterExpansion"];
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Layer */
+            layer: string;
+            /** Max Risk */
+            max_risk: number;
+            /** Member Ids */
+            member_ids: string[];
+            /** Relationship Counts */
+            relationship_counts: {
+                [key: string]: number;
+            };
+            /** Risk Summary */
+            risk_summary: {
+                [key: string]: number;
+            };
+            /** Severity */
+            severity: string;
+        };
+        /** SemanticClusterExpansion */
+        SemanticClusterExpansion: {
+            /**
+             * Collapse Id
+             * @default
+             */
+            collapse_id: string;
+            /** Member Ids */
+            member_ids?: string[];
+            /**
+             * Mode
+             * @default members
+             */
+            mode: string;
+            /**
+             * Reversible
+             * @default true
+             */
+            reversible: boolean;
+        };
         /** ServiceState */
         ServiceState: {
             /** Connections */
@@ -23605,6 +23855,44 @@ export interface components {
             unauthenticated_allowed: boolean;
             /** Version */
             version: string;
+        };
+        /**
+         * TechniqueMapping
+         * @description A typed MITRE ATT&CK / ATLAS technique mapped to one hop of an attack path.
+         *
+         *     These are *potential* techniques derived from the graph's recorded evidence
+         *     (the hop's edge relationship type + the target node's entity type + the
+         *     edge's evidence), NOT a claim that the technique was detected being used.
+         *     ``technique_id`` / ``tactics`` always resolve against the bundled catalog
+         *     (see :mod:`agent_bom.graph.attack_path_mitre`); a hop whose evidence maps to
+         *     no known technique is simply left without a mapping (fail-closed).
+         */
+        TechniqueMapping: {
+            /**
+             * Catalog
+             * @default attack
+             */
+            catalog: string;
+            /** Confidence */
+            confidence?: number | null;
+            /** Evidence Basis */
+            evidence_basis?: string | null;
+            /** Hop Index */
+            hop_index: number;
+            /**
+             * Provenance
+             * @default
+             */
+            provenance: string;
+            /** Tactics */
+            tactics?: string[];
+            /** Technique Id */
+            technique_id: string;
+            /**
+             * Technique Name
+             * @default
+             */
+            technique_name: string;
         };
         /** TenantDataCounts */
         TenantDataCounts: {

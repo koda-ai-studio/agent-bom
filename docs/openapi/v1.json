@@ -19960,13 +19960,68 @@
         "title": "GraphActiveEdgesResponse",
         "type": "array"
       },
+      "GraphAgentRecord": {
+        "additionalProperties": true,
+        "properties": {
+          "data_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Data Sources",
+            "type": "array"
+          },
+          "first_seen": {
+            "title": "First Seen",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_seen": {
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "risk_assessment": {
+            "$ref": "#/components/schemas/GraphNodeRiskAssessment"
+          },
+          "risk_score": {
+            "title": "Risk Score",
+            "type": "number"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "risk_score",
+          "risk_assessment",
+          "severity",
+          "status",
+          "data_sources",
+          "first_seen",
+          "last_seen"
+        ],
+        "title": "GraphAgentRecord",
+        "type": "object"
+      },
       "GraphAgentsResponse": {
         "additionalProperties": true,
         "properties": {
           "agents": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphAgentRecord"
             },
             "title": "Agents",
             "type": "array"
@@ -20012,6 +20067,201 @@
         "title": "GraphAgentsResponse",
         "type": "object"
       },
+      "GraphAttackPathRecord": {
+        "additionalProperties": true,
+        "description": "Serialized attack path; recorded reachability never implies execution.",
+        "properties": {
+          "analysis": {
+            "additionalProperties": true,
+            "title": "Analysis",
+            "type": "object"
+          },
+          "composite_risk": {
+            "title": "Composite Risk",
+            "type": "number"
+          },
+          "credential_exposure": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Credential Exposure",
+            "type": "array"
+          },
+          "edges": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "exposure_path": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Path"
+          },
+          "finding_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Finding Ids",
+            "type": "array"
+          },
+          "hop_evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Hop Evidence",
+            "type": "array"
+          },
+          "hops": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hops",
+            "type": "array"
+          },
+          "mitre_technique_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Mitre Technique Ids",
+            "type": "array"
+          },
+          "ranking_factors": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranking Factors"
+          },
+          "reachability": {
+            "title": "Reachability",
+            "type": "string"
+          },
+          "reachability_basis": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reachability Basis",
+            "type": "array"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "technique_mappings": {
+            "items": {
+              "$ref": "#/components/schemas/TechniqueMapping"
+            },
+            "title": "Technique Mappings",
+            "type": "array"
+          },
+          "tool_exposure": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tool Exposure",
+            "type": "array"
+          },
+          "vuln_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Vuln Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "hops",
+          "composite_risk",
+          "summary",
+          "edges",
+          "credential_exposure",
+          "tool_exposure",
+          "vuln_ids",
+          "finding_ids",
+          "reachability",
+          "reachability_basis",
+          "hop_evidence",
+          "analysis",
+          "technique_mappings",
+          "mitre_technique_ids"
+        ],
+        "title": "GraphAttackPathRecord",
+        "type": "object"
+      },
+      "GraphAttackPathSummary": {
+        "additionalProperties": true,
+        "description": "The bounded roll-up projection intentionally omits detailed hop evidence.",
+        "properties": {
+          "composite_risk": {
+            "title": "Composite Risk",
+            "type": "number"
+          },
+          "hops": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hops",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "hops",
+          "composite_risk",
+          "summary"
+        ],
+        "title": "GraphAttackPathSummary",
+        "type": "object"
+      },
       "GraphBoundedPage": {
         "additionalProperties": true,
         "properties": {
@@ -20048,8 +20298,7 @@
           },
           "clusters": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/SemanticCluster"
             },
             "title": "Clusters",
             "type": "array"
@@ -21591,6 +21840,125 @@
         "title": "GraphEdgeChangesResponse",
         "type": "object"
       },
+      "GraphEdgeRecord": {
+        "additionalProperties": true,
+        "description": "The public ``UnifiedEdge.to_dict`` shape, including temporal validity.",
+        "properties": {
+          "activity_id": {
+            "title": "Activity Id",
+            "type": "integer"
+          },
+          "canonical_id": {
+            "title": "Canonical Id",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "title": "Evidence",
+            "type": "object"
+          },
+          "first_seen": {
+            "title": "First Seen",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen": {
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "title": "Provenance",
+            "type": "object"
+          },
+          "relationship": {
+            "title": "Relationship",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_run_id": {
+            "title": "Source Run Id",
+            "type": "string"
+          },
+          "source_scan_id": {
+            "title": "Source Scan Id",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          },
+          "traversable": {
+            "title": "Traversable",
+            "type": "boolean"
+          },
+          "valid_from": {
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "canonical_id",
+          "source",
+          "target",
+          "source_id",
+          "target_id",
+          "relationship",
+          "direction",
+          "weight",
+          "traversable",
+          "first_seen",
+          "last_seen",
+          "valid_from",
+          "valid_to",
+          "confidence",
+          "provenance",
+          "source_scan_id",
+          "source_run_id",
+          "evidence",
+          "activity_id"
+        ],
+        "title": "GraphEdgeRecord",
+        "type": "object"
+      },
       "GraphEstateChangesPagination": {
         "additionalProperties": true,
         "properties": {
@@ -22053,8 +22421,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphEdgeRecord"
                 },
                 "type": "array"
               },
@@ -22102,8 +22469,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphNodeRecord"
                 },
                 "type": "array"
               },
@@ -22255,8 +22621,7 @@
           },
           "attack_paths": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphAttackPathRecord"
             },
             "title": "Attack Paths",
             "type": "array"
@@ -22273,8 +22638,7 @@
           },
           "edges": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphEdgeRecord"
             },
             "title": "Edges",
             "type": "array"
@@ -22288,8 +22652,7 @@
           },
           "nodes": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphNodeRecord"
             },
             "title": "Nodes",
             "type": "array"
@@ -22745,16 +23108,14 @@
           },
           "edges_in": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphEdgeRecord"
             },
             "title": "Edges In",
             "type": "array"
           },
           "edges_out": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphEdgeRecord"
             },
             "title": "Edges Out",
             "type": "array"
@@ -22770,9 +23131,7 @@
             "type": "array"
           },
           "node": {
-            "additionalProperties": true,
-            "title": "Node",
-            "type": "object"
+            "$ref": "#/components/schemas/GraphNodeRecord"
           },
           "resolved_from": {
             "anyOf": [
@@ -22825,6 +23184,33 @@
         "title": "GraphNodeContextResponse",
         "type": "object"
       },
+      "GraphNodeDimensions": {
+        "additionalProperties": true,
+        "properties": {
+          "agent_type": {
+            "title": "Agent Type",
+            "type": "string"
+          },
+          "cloud_provider": {
+            "title": "Cloud Provider",
+            "type": "string"
+          },
+          "ecosystem": {
+            "title": "Ecosystem",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "surface": {
+            "title": "Surface",
+            "type": "string"
+          }
+        },
+        "title": "GraphNodeDimensions",
+        "type": "object"
+      },
       "GraphNodeNeighborsResponse": {
         "additionalProperties": true,
         "properties": {
@@ -22837,8 +23223,7 @@
           },
           "edges": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphEdgeRecord"
             },
             "title": "Edges",
             "type": "array"
@@ -22853,8 +23238,7 @@
           },
           "neighbors": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphNodeRecord"
             },
             "title": "Neighbors",
             "type": "array"
@@ -22909,6 +23293,226 @@
         "title": "GraphNodeNeighborsResponse",
         "type": "object"
       },
+      "GraphNodeProvenance": {
+        "additionalProperties": true,
+        "properties": {
+          "execution": {
+            "title": "Execution",
+            "type": "string"
+          },
+          "first_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Seen"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "source_snapshot_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Snapshot Ids",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          },
+          "time_basis": {
+            "title": "Time Basis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "tier",
+          "sources",
+          "source_snapshot_ids",
+          "first_seen",
+          "last_seen",
+          "time_basis",
+          "execution"
+        ],
+        "title": "GraphNodeProvenance",
+        "type": "object"
+      },
+      "GraphNodeRecord": {
+        "additionalProperties": true,
+        "description": "The public ``UnifiedNode.to_dict`` shape; storage-only fields are excluded.",
+        "properties": {
+          "attributes": {
+            "additionalProperties": true,
+            "title": "Attributes",
+            "type": "object"
+          },
+          "canonical_id": {
+            "title": "Canonical Id",
+            "type": "string"
+          },
+          "category_uid": {
+            "title": "Category Uid",
+            "type": "integer"
+          },
+          "class_uid": {
+            "title": "Class Uid",
+            "type": "integer"
+          },
+          "compliance_tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Compliance Tags",
+            "type": "array"
+          },
+          "data_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Data Sources",
+            "type": "array"
+          },
+          "dimensions": {
+            "$ref": "#/components/schemas/GraphNodeDimensions"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "evidence_provenance": {
+            "$ref": "#/components/schemas/GraphNodeProvenance"
+          },
+          "first_seen": {
+            "title": "First Seen",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_seen": {
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "risk_assessment": {
+            "$ref": "#/components/schemas/GraphNodeRiskAssessment"
+          },
+          "risk_score": {
+            "title": "Risk Score",
+            "type": "number"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "severity_id": {
+            "title": "Severity Id",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "type_uid": {
+            "title": "Type Uid",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "risk_score",
+          "risk_assessment",
+          "severity",
+          "status",
+          "data_sources",
+          "first_seen",
+          "last_seen",
+          "canonical_id",
+          "evidence_provenance",
+          "entity_type",
+          "category_uid",
+          "class_uid",
+          "type_uid",
+          "severity_id",
+          "attributes",
+          "compliance_tags",
+          "dimensions"
+        ],
+        "title": "GraphNodeRecord",
+        "type": "object"
+      },
+      "GraphNodeRiskAssessment": {
+        "additionalProperties": true,
+        "properties": {
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basis"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "status": {
+            "enum": [
+              "assessed",
+              "not_assessed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "basis",
+          "scope"
+        ],
+        "title": "GraphNodeRiskAssessment",
+        "type": "object"
+      },
       "GraphPageResponse": {
         "additionalProperties": true,
         "description": "``GET /v1/graph``: one ranked node page plus incident edges and context.",
@@ -22940,8 +23544,7 @@
           },
           "attack_paths": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphAttackPathRecord"
             },
             "title": "Attack Paths",
             "type": "array"
@@ -22967,8 +23570,7 @@
           },
           "edges": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphEdgeRecord"
             },
             "title": "Edges",
             "type": "array"
@@ -22994,8 +23596,7 @@
           },
           "nodes": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphNodeRecord"
             },
             "title": "Nodes",
             "type": "array"
@@ -23138,8 +23739,7 @@
         "properties": {
           "attack_paths": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphAttackPathRecord"
             },
             "title": "Attack Paths",
             "type": "array"
@@ -23453,8 +24053,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphAttackPathSummary"
                 },
                 "type": "array"
               },
@@ -23576,8 +24175,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphEdgeRecord"
                 },
                 "type": "array"
               },
@@ -23591,8 +24189,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphNodeRecord"
                 },
                 "type": "array"
               },
@@ -24362,8 +24959,7 @@
           },
           "results": {
             "items": {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/components/schemas/GraphNodeRecord"
             },
             "title": "Results",
             "type": "array"
@@ -39887,6 +40483,113 @@
         "title": "SelfPostureResponse",
         "type": "object"
       },
+      "SemanticCluster": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "entity_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Entity Types",
+            "type": "array"
+          },
+          "expansion": {
+            "$ref": "#/components/schemas/SemanticClusterExpansion"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "string"
+          },
+          "max_risk": {
+            "title": "Max Risk",
+            "type": "number"
+          },
+          "member_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Member Ids",
+            "type": "array"
+          },
+          "relationship_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Relationship Counts",
+            "type": "object"
+          },
+          "risk_summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Risk Summary",
+            "type": "object"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "layer",
+          "entity_types",
+          "count",
+          "member_ids",
+          "max_risk",
+          "severity",
+          "risk_summary",
+          "relationship_counts",
+          "expansion"
+        ],
+        "title": "SemanticCluster",
+        "type": "object"
+      },
+      "SemanticClusterExpansion": {
+        "properties": {
+          "collapse_id": {
+            "default": "",
+            "title": "Collapse Id",
+            "type": "string"
+          },
+          "member_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Member Ids",
+            "type": "array"
+          },
+          "mode": {
+            "default": "members",
+            "title": "Mode",
+            "type": "string"
+          },
+          "reversible": {
+            "default": true,
+            "title": "Reversible",
+            "type": "boolean"
+          }
+        },
+        "title": "SemanticClusterExpansion",
+        "type": "object"
+      },
       "ServiceState": {
         "additionalProperties": true,
         "properties": {
@@ -42044,6 +42747,69 @@
           "storage"
         ],
         "title": "SystemHealthResponse",
+        "type": "object"
+      },
+      "TechniqueMapping": {
+        "description": "A typed MITRE ATT&CK / ATLAS technique mapped to one hop of an attack path.\n\nThese are *potential* techniques derived from the graph's recorded evidence\n(the hop's edge relationship type + the target node's entity type + the\nedge's evidence), NOT a claim that the technique was detected being used.\n``technique_id`` / ``tactics`` always resolve against the bundled catalog\n(see :mod:`agent_bom.graph.attack_path_mitre`); a hop whose evidence maps to\nno known technique is simply left without a mapping (fail-closed).",
+        "properties": {
+          "catalog": {
+            "default": "attack",
+            "title": "Catalog",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "evidence_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Basis"
+          },
+          "hop_index": {
+            "title": "Hop Index",
+            "type": "integer"
+          },
+          "provenance": {
+            "default": "",
+            "title": "Provenance",
+            "type": "string"
+          },
+          "tactics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tactics",
+            "type": "array"
+          },
+          "technique_id": {
+            "title": "Technique Id",
+            "type": "string"
+          },
+          "technique_name": {
+            "default": "",
+            "title": "Technique Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hop_index",
+          "technique_id"
+        ],
+        "title": "TechniqueMapping",
         "type": "object"
       },
       "TenantDataCounts": {
