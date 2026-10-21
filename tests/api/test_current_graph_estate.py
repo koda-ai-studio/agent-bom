@@ -370,8 +370,22 @@ def test_current_estate_does_not_inherit_source_stored_path_state(estate):
     scan_id = _record_path(estate, 8, "repo-a", 90.0, GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE))
     source = graph_store.load_graph(scan_id=scan_id, tenant_id="path-tenant")
     source.analysis_status["paths"] = GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE, observed={"count": 1})
-    graph_store.save_graph(source)
-    assert "paths" not in current("path-tenant").analysis_status
+    # Retain an old source receipt without regenerating its index.
+    graph_store.save_graph_streaming(
+        scan_id=source.scan_id,
+        tenant_id=source.tenant_id,
+        nodes=source.nodes.values(),
+        edges=source.edges,
+        attack_paths=source.attack_paths,
+        analysis_status=source.analysis_status,
+        created_at=source.created_at,
+    )
+    from agent_bom.graph.snapshot_paths import DERIVATION_VERSION
+
+    projected = current("path-tenant")
+    page = stores._get_graph_store().snapshot_attack_paths(tenant_id="path-tenant", scan_id=projected.scan_id)
+    assert page is not None
+    assert projected.analysis_status["paths"].observed == {"version": DERIVATION_VERSION, "count": len(page.paths)}
 
 
 def test_merged_analysis_status_ranks_failure_above_limits():
@@ -413,3 +427,26 @@ def test_search_and_compliance_accept_the_returned_current_estate_id(estate):
             assert "langchain-package" not in foreign.text
     finally:
         disable_trusted_proxy_env()
+
+
+@pytest.mark.parametrize("reader", ["snapshot_attack_paths", "snapshot_queue_page", "snapshot_cross_vendor_page"])
+@pytest.mark.parametrize("explicit_generation", [False, True])
+def test_current_estate_path_indexes_follow_the_resolved_generation(estate, reader, explicit_generation):
+    from agent_bom.api.current_graph import CurrentGraphStore
+    from tests.test_graph_cross_vendor_queue import _graph
+
+    scan = record(estate, 8, "repo-paths", tenant="history-tenant")
+    graph = _graph("history-tenant")
+    graph.scan_id = scan
+    estate[1].save_graph(graph)
+    current_store = CurrentGraphStore(estate[1], estate[0])
+    generation = current_store.latest_snapshot_id(tenant_id="history-tenant")
+    args = {"tenant_id": "history-tenant", "scan_id": generation if explicit_generation else ""}
+    if reader != "snapshot_attack_paths":
+        args.update(offset=0, limit=10)
+    page = getattr(current_store, reader)(**args)
+    assert page is not None, "the index must read the current projection, not the backing scan store"
+    assert page.scan_id == generation
+    assert len(page.paths) == (2 if reader == "snapshot_cross_vendor_page" else 4)
+    historical = getattr(current_store, reader)(**{**args, "scan_id": scan})
+    assert historical is not None and historical.scan_id == scan

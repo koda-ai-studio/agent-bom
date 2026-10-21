@@ -39,7 +39,7 @@ from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuse
 from agent_bom.storage.state_home import state_dir
 
 CURRENT_PREFIX = "current-estate:"
-_PROJECTION_FORMAT = 2
+_PROJECTION_FORMAT = 3
 # Restarts of an unpinned read whose generation another worker retired between
 # resolve and read. In-process readers are pinned and never need one.
 _UNPINNED_READ_ATTEMPTS = 3
@@ -62,6 +62,9 @@ _READS = frozenset(
         "attack_paths_for_sources",
         "longest_path_to",
         "attack_paths",
+        "snapshot_attack_paths",
+        "snapshot_queue_page",
+        "snapshot_cross_vendor_page",
         "incident_edges_page",
         "node_context",
         "resolve_node_aliases",
@@ -541,11 +544,15 @@ class CurrentGraphStore:
                 graph.add_edge(edge)
             graph.attack_paths.extend(source.attack_paths)
             graph.interaction_risks.extend(source.interaction_risks)
-            # Stored-path state describes the source snapshot's own rows, not this
-            # projection; omitting it makes reads derive paths for the merged view.
+            # Source index receipts describe their own rows. Build a new index
+            # for the combined projection rather than inheriting those receipts.
             source_statuses.append({name: entry for name, entry in source.analysis_status.items() if name != "paths"})
         if self._revisions(tenant, (scan for scan, _ in revisions)) != revisions:
             raise HTTPException(409, "Current estate evidence changed during assembly; retry the read.")
+        from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
+
+        graph.analysis_status = merge_analysis_statuses(source_statuses)
+        snapshot_paths = prepare_snapshot_paths(graph)
         try:
             self._projection_store.save_graph_streaming(
                 tenant_id=tenant,
@@ -555,7 +562,8 @@ class CurrentGraphStore:
                 attack_paths=graph.attack_paths,
                 interaction_risks=graph.interaction_risks,
                 # A bound hit while analysing any source still bounds the view.
-                analysis_status=merge_analysis_statuses(source_statuses),
+                analysis_status=graph.analysis_status,
+                snapshot_paths=snapshot_paths,
                 created_at=graph.created_at,
                 snapshot_kind="correlation",
                 correlation_id=identity,
