@@ -131,6 +131,31 @@ def _graph_page_modules() -> list[pathlib.Path]:
     return sorted(path for path in seen if not re.search(r"\.(test|spec)\.", path.name))
 
 
+def _runtime_field_pattern_matches(line: str, pattern: re.Pattern[str], *, relative: str) -> bool:
+    if relative == "lib/graph-schema.ts":
+        # GraphApiSchemas is a type alias of the generated API components. Indexed
+        # type lookups emit no JavaScript; keep checking actual reads on the line.
+        line = re.sub(r'(:\s*)GraphApiSchemas(?:\["[A-Za-z_][A-Za-z_0-9]*"\])+', r"\1", line)
+    return pattern.search(line) is not None
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ('activity_id?: GraphApiSchemas["GraphEdgeRecord"]["activity_id"];', False),
+        ("const value = edge.activity_id;", True),
+        ('const value = GraphApiSchemas["GraphEdgeRecord"]["activity_id"];', True),
+        ("const value = edge?.activity_id;", True),
+        ('const value = edge["activity_id"];', True),
+        ('const key = "activity_id";', True),
+        ('const value: GraphApiSchemas["GraphEdgeRecord"]["activity_id"] = edge.activity_id;', True),
+    ],
+)
+def test_canvas_guard_distinguishes_type_lookups_from_runtime_reads(line, expected):
+    pattern = re.compile(r"(?:\?\.|\.)activity_id\b|[\"'`]activity_id[\"'`]")
+    assert _runtime_field_pattern_matches(line, pattern, relative="lib/graph-schema.ts") is expected
+
+
 def test_no_graph_page_module_reads_a_field_the_canvas_view_drops() -> None:
     modules = _graph_page_modules()
     assert len(modules) > 50, "graph page import closure did not resolve"
@@ -143,7 +168,7 @@ def test_no_graph_page_module_reads_a_field_the_canvas_view_drops() -> None:
             if (key, relative) in NOT_CANVAS_READS:
                 continue
             for number, line in enumerate(module.read_text(encoding="utf-8").splitlines(), 1):
-                if pattern.search(line):
+                if _runtime_field_pattern_matches(line, pattern, relative=relative):
                     reads.append(f"{relative}:{number} reads {key}")
     assert reads == []
 

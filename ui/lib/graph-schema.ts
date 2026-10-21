@@ -318,9 +318,11 @@ export type UnifiedNode = Pick<GraphApiSchemas["GraphNodeRecord"],
   "id" | "entity_type" | "label" |
   "status" | "risk_score" | "severity" | "first_seen" | "last_seen" |
   "attributes" | "compliance_tags" | "data_sources"
-> & Partial<Pick<GraphApiSchemas["GraphNodeRecord"],
-  "category_uid" | "class_uid" | "type_uid" | "severity_id"
->> & {
+> & {
+  category_uid?: GraphApiSchemas["GraphNodeRecord"]["category_uid"];
+  class_uid?: GraphApiSchemas["GraphNodeRecord"]["class_uid"];
+  type_uid?: GraphApiSchemas["GraphNodeRecord"]["type_uid"];
+  severity_id?: GraphApiSchemas["GraphNodeRecord"]["severity_id"];
   dimensions: NodeDimensions;
   evidence_provenance?: GraphApiSchemas["GraphNodeRecord"]["evidence_provenance"];
   risk_assessment?: import("@/lib/node-risk-assessment").NodeRiskAssessment | undefined;
