@@ -1,0 +1,1449 @@
+{
+  "checks": {
+    "aws-4.1": {
+      "check_id": "4.1",
+      "title": "Metric filter and alarm for unauthorized API calls",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for unauthorized API calls.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.2": {
+      "check_id": "4.2",
+      "title": "Metric filter and alarm for console sign-in without MFA",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for console sign-in without MFA.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.3": {
+      "check_id": "4.3",
+      "title": "Metric filter and alarm for root account usage",
+      "severity": "high",
+      "recommendation": "Create a CloudWatch metric filter and alarm for root account usage.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.4": {
+      "check_id": "4.4",
+      "title": "Metric filter and alarm for IAM policy changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for IAM policy changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.5": {
+      "check_id": "4.5",
+      "title": "Metric filter and alarm for CloudTrail config changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for CloudTrail configuration changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.6": {
+      "check_id": "4.6",
+      "title": "Metric filter and alarm for console auth failures",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for console authentication failures.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.7": {
+      "check_id": "4.7",
+      "title": "Metric filter and alarm for CMK disable or deletion",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for KMS key disabling/deletion.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.8": {
+      "check_id": "4.8",
+      "title": "Metric filter and alarm for S3 bucket policy changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for S3 bucket policy changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.9": {
+      "check_id": "4.9",
+      "title": "Metric filter and alarm for AWS Config changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for AWS Config changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.10": {
+      "check_id": "4.10",
+      "title": "Metric filter and alarm for security group changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for security group changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.11": {
+      "check_id": "4.11",
+      "title": "Metric filter and alarm for NACL changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for NACL changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.12": {
+      "check_id": "4.12",
+      "title": "Metric filter and alarm for network gateway changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for network gateway changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.13": {
+      "check_id": "4.13",
+      "title": "Metric filter and alarm for route table changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for route table changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.14": {
+      "check_id": "4.14",
+      "title": "Metric filter and alarm for VPC changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for VPC changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "aws-4.15": {
+      "check_id": "4.15",
+      "title": "Metric filter and alarm for AWS Organizations changes",
+      "severity": "medium",
+      "recommendation": "Create a CloudWatch metric filter and alarm for AWS Organizations changes.",
+      "cis_section": "4 - Monitoring",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "gcp-6.1": {
+      "check_id": "6.1",
+      "title": "Cloud SQL requires SSL for all connections",
+      "severity": "high",
+      "recommendation": "Enable 'Require SSL' (requireSsl) on all Cloud SQL instances to encrypt connections in transit.",
+      "cis_section": "6 - Cloud SQL",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "gcp-6.2": {
+      "check_id": "6.2",
+      "title": "Cloud SQL instances lack public IPs",
+      "severity": "high",
+      "recommendation": "Remove public IP addresses from Cloud SQL instances and use private IP or Cloud SQL Proxy instead.",
+      "cis_section": "6 - Cloud SQL",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "gcp-6.3": {
+      "check_id": "6.3",
+      "title": "Cloud SQL automated backups enabled",
+      "severity": "high",
+      "recommendation": "Enable automated backups on all Cloud SQL instances.",
+      "cis_section": "6 - Cloud SQL",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "gcp-6.4": {
+      "check_id": "6.4",
+      "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter",
+      "severity": "medium",
+      "recommendation": "Set the log_error_verbosity database flag to DEFAULT or TERSE on PostgreSQL instances.",
+      "cis_section": "6 - Cloud SQL",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "gcp-6.5": {
+      "check_id": "6.5",
+      "title": "Cloud SQL PostgreSQL log_connections flag on",
+      "severity": "medium",
+      "recommendation": "Set the log_connections database flag to 'on' on all PostgreSQL instances.",
+      "cis_section": "6 - Cloud SQL",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "gcp-6.6": {
+      "check_id": "6.6",
+      "title": "Cloud SQL PostgreSQL log_disconnections flag on",
+      "severity": "medium",
+      "recommendation": "Set the log_disconnections database flag to 'on' on all PostgreSQL instances.",
+      "cis_section": "6 - Cloud SQL",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    },
+    "gcp-6.7": {
+      "check_id": "6.7",
+      "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1",
+      "severity": "medium",
+      "recommendation": "Set the log_min_duration_statement database flag to '-1' to disable logging of statement durations (prevents sensitive data leakage).",
+      "cis_section": "6 - Cloud SQL",
+      "account_id": "",
+      "network_exposure": [],
+      "remediation": {}
+    }
+  },
+  "outcomes": {
+    "aws-4.1-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for unauthorized API calls.",
+      "resource_ids": []
+    },
+    "aws-4.2-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for console sign-in without MFA.",
+      "resource_ids": []
+    },
+    "aws-4.3-empty": {
+      "status": "fail",
+      "evidence": "No metric filter with a usable metric transformation found for root account usage.",
+      "resource_ids": []
+    },
+    "aws-4.4-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for IAM policy changes.",
+      "resource_ids": []
+    },
+    "aws-4.5-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for CloudTrail configuration changes.",
+      "resource_ids": []
+    },
+    "aws-4.6-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for console authentication failures.",
+      "resource_ids": []
+    },
+    "aws-4.7-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for CMK disabling/deletion.",
+      "resource_ids": []
+    },
+    "aws-4.8-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for S3 bucket policy changes.",
+      "resource_ids": []
+    },
+    "aws-4.9-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for AWS Config changes.",
+      "resource_ids": []
+    },
+    "aws-4.10-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for security group changes.",
+      "resource_ids": []
+    },
+    "aws-4.11-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for NACL changes.",
+      "resource_ids": []
+    },
+    "aws-4.12-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for network gateway changes.",
+      "resource_ids": []
+    },
+    "aws-4.13-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for route table changes.",
+      "resource_ids": []
+    },
+    "aws-4.14-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for VPC changes.",
+      "resource_ids": []
+    },
+    "aws-4.15-empty": {
+      "status": "fail",
+      "evidence": "No metric filter found for AWS Organizations changes.",
+      "resource_ids": []
+    },
+    "aws-4.1-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for unauthorized API calls.",
+      "resource_ids": []
+    },
+    "aws-4.2-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for console sign-in without MFA.",
+      "resource_ids": []
+    },
+    "aws-4.3-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter with a usable metric transformation found for root account usage.",
+      "resource_ids": []
+    },
+    "aws-4.4-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for IAM policy changes.",
+      "resource_ids": []
+    },
+    "aws-4.5-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for CloudTrail configuration changes.",
+      "resource_ids": []
+    },
+    "aws-4.6-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for console authentication failures.",
+      "resource_ids": []
+    },
+    "aws-4.7-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for CMK disabling/deletion.",
+      "resource_ids": []
+    },
+    "aws-4.8-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for S3 bucket policy changes.",
+      "resource_ids": []
+    },
+    "aws-4.9-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for AWS Config changes.",
+      "resource_ids": []
+    },
+    "aws-4.10-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for security group changes.",
+      "resource_ids": []
+    },
+    "aws-4.11-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for NACL changes.",
+      "resource_ids": []
+    },
+    "aws-4.12-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for network gateway changes.",
+      "resource_ids": []
+    },
+    "aws-4.13-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for route table changes.",
+      "resource_ids": []
+    },
+    "aws-4.14-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for VPC changes.",
+      "resource_ids": []
+    },
+    "aws-4.15-unmatched": {
+      "status": "fail",
+      "evidence": "No metric filter found for AWS Organizations changes.",
+      "resource_ids": []
+    },
+    "aws-4.1-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.2-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.3-no_transform": {
+      "status": "fail",
+      "evidence": "No metric filter with a usable metric transformation found for root account usage.",
+      "resource_ids": []
+    },
+    "aws-4.4-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.5-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.6-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.7-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.8-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.9-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.10-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.11-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.12-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.13-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.14-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.15-no_transform": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but it has no usable metric transformation.",
+      "resource_ids": []
+    },
+    "aws-4.1-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.2-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.3-no_alarm": {
+      "status": "fail",
+      "evidence": "A root account usage metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.4-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.5-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.6-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.7-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.8-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.9-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.10-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.11-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.12-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.13-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.14-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.15-no_alarm": {
+      "status": "fail",
+      "evidence": "A matching metric filter exists, but no CloudWatch alarm targets its metric.",
+      "resource_ids": []
+    },
+    "aws-4.1-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for unauthorized API calls exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.2-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for console sign-in without MFA exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.3-pass": {
+      "status": "pass",
+      "evidence": "Metric filter and CloudWatch alarm for root account usage exist.",
+      "resource_ids": []
+    },
+    "aws-4.4-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for IAM policy changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.5-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for CloudTrail configuration changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.6-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for console authentication failures exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.7-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for CMK disabling/deletion exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.8-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for S3 bucket policy changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.9-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for AWS Config changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.10-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for security group changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.11-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for NACL changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.12-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for network gateway changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.13-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for route table changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.14-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for VPC changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.15-pass": {
+      "status": "pass",
+      "evidence": "Metric filter for AWS Organizations changes exists and a targeting CloudWatch alarm exists.",
+      "resource_ids": []
+    },
+    "aws-4.1-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.2-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.3-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.4-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.5-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters.",
+      "resource_ids": []
+    },
+    "aws-4.6-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.7-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.8-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.9-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.10-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.11-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.12-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.13-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.14-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters: provider unavailable",
+      "resource_ids": []
+    },
+    "aws-4.15-read_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters.",
+      "resource_ids": []
+    },
+    "aws-4.1-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.2-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.3-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.4-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.5-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.6-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.7-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.8-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.9-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.10-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.11-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.12-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.13-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.14-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "aws-4.15-alarm_error": {
+      "status": "error",
+      "evidence": "Could not query metric filters and alarms.",
+      "resource_ids": []
+    },
+    "gcp-6.1-empty": {
+      "status": "pass",
+      "evidence": "All 0 Cloud SQL instance(s) require SSL connections.",
+      "resource_ids": []
+    },
+    "gcp-6.2-empty": {
+      "status": "pass",
+      "evidence": "No Cloud SQL instances have public IP addresses across 0 instance(s).",
+      "resource_ids": []
+    },
+    "gcp-6.3-empty": {
+      "status": "pass",
+      "evidence": "All 0 Cloud SQL instance(s) have automated backups enabled.",
+      "resource_ids": []
+    },
+    "gcp-6.4-empty": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_error_verbosity set to DEFAULT or stricter.",
+      "resource_ids": []
+    },
+    "gcp-6.5-empty": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_connections enabled.",
+      "resource_ids": []
+    },
+    "gcp-6.6-empty": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_disconnections enabled.",
+      "resource_ids": []
+    },
+    "gcp-6.7-empty": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_min_duration_statement set to -1.",
+      "resource_ids": []
+    },
+    "gcp-6.1-malformed_name": {
+      "status": "error",
+      "evidence": "Could not check Cloud SQL SSL configuration: sequence item 0: expected str instance, int found",
+      "resource_ids": []
+    },
+    "gcp-6.2-malformed_name": {
+      "status": "error",
+      "evidence": "Could not check Cloud SQL public IPs: sequence item 0: expected str instance, int found",
+      "resource_ids": []
+    },
+    "gcp-6.3-malformed_name": {
+      "status": "error",
+      "evidence": "Could not check Cloud SQL backup configuration: sequence item 0: expected str instance, int found",
+      "resource_ids": []
+    },
+    "gcp-6.4-malformed_name": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: sequence item 0: expected str instance, int found",
+      "resource_ids": []
+    },
+    "gcp-6.5-malformed_name": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_connections: sequence item 0: expected str instance, int found",
+      "resource_ids": []
+    },
+    "gcp-6.6-malformed_name": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_disconnections: sequence item 0: expected str instance, int found",
+      "resource_ids": []
+    },
+    "gcp-6.7-malformed_name": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_min_duration_statement: sequence item 0: expected str instance, int found",
+      "resource_ids": []
+    },
+    "gcp-6.1-list_flag": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances not requiring SSL (1/1): good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.2-list_flag": {
+      "status": "pass",
+      "evidence": "No Cloud SQL instances have public IP addresses across 1 instance(s).",
+      "resource_ids": []
+    },
+    "gcp-6.3-list_flag": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances without automated backups (1/1): good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.4-list_flag": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without proper log_error_verbosity: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.5-list_flag": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_connections enabled: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.6-list_flag": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_disconnections enabled: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.7-list_flag": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_min_duration_statement=-1: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.1-null_flags": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances not requiring SSL (1/1): good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.2-null_flags": {
+      "status": "pass",
+      "evidence": "No Cloud SQL instances have public IP addresses across 1 instance(s).",
+      "resource_ids": []
+    },
+    "gcp-6.3-null_flags": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances without automated backups (1/1): good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.4-null_flags": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: 'NoneType' object has no attribute 'lower'",
+      "resource_ids": []
+    },
+    "gcp-6.5-null_flags": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_connections: 'NoneType' object has no attribute 'lower'",
+      "resource_ids": []
+    },
+    "gcp-6.6-null_flags": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_disconnections: 'NoneType' object has no attribute 'lower'",
+      "resource_ids": []
+    },
+    "gcp-6.7-null_flags": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_min_duration_statement=-1: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.1-numeric_flags": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances not requiring SSL (1/1): good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.2-numeric_flags": {
+      "status": "pass",
+      "evidence": "No Cloud SQL instances have public IP addresses across 1 instance(s).",
+      "resource_ids": []
+    },
+    "gcp-6.3-numeric_flags": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances without automated backups (1/1): good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.4-numeric_flags": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: 'int' object has no attribute 'lower'",
+      "resource_ids": []
+    },
+    "gcp-6.5-numeric_flags": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_connections: 'int' object has no attribute 'lower'",
+      "resource_ids": []
+    },
+    "gcp-6.6-numeric_flags": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_disconnections: 'int' object has no attribute 'lower'",
+      "resource_ids": []
+    },
+    "gcp-6.7-numeric_flags": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_min_duration_statement=-1: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.1-duplicate_flags": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances not requiring SSL (1/1): good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.2-duplicate_flags": {
+      "status": "pass",
+      "evidence": "No Cloud SQL instances have public IP addresses across 1 instance(s).",
+      "resource_ids": []
+    },
+    "gcp-6.3-duplicate_flags": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances without automated backups (1/1): good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.4-duplicate_flags": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without proper log_error_verbosity: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.5-duplicate_flags": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_connections enabled: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.6-duplicate_flags": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_disconnections enabled: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.7-duplicate_flags": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_min_duration_statement=-1: good",
+      "resource_ids": [
+        "good"
+      ]
+    },
+    "gcp-6.1-malformed_settings": {
+      "status": "error",
+      "evidence": "Could not check Cloud SQL SSL configuration: 'NoneType' object has no attribute 'get'",
+      "resource_ids": []
+    },
+    "gcp-6.2-malformed_settings": {
+      "status": "pass",
+      "evidence": "No Cloud SQL instances have public IP addresses across 1 instance(s).",
+      "resource_ids": []
+    },
+    "gcp-6.3-malformed_settings": {
+      "status": "error",
+      "evidence": "Could not check Cloud SQL backup configuration: 'NoneType' object has no attribute 'get'",
+      "resource_ids": []
+    },
+    "gcp-6.4-malformed_settings": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: 'NoneType' object has no attribute 'get'",
+      "resource_ids": []
+    },
+    "gcp-6.5-malformed_settings": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_connections: 'NoneType' object has no attribute 'get'",
+      "resource_ids": []
+    },
+    "gcp-6.6-malformed_settings": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_disconnections: 'NoneType' object has no attribute 'get'",
+      "resource_ids": []
+    },
+    "gcp-6.7-malformed_settings": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_min_duration_statement: 'NoneType' object has no attribute 'get'",
+      "resource_ids": []
+    },
+    "gcp-6.1-missing_name": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances not requiring SSL (1/1): unknown",
+      "resource_ids": [
+        "unknown"
+      ]
+    },
+    "gcp-6.2-missing_name": {
+      "status": "pass",
+      "evidence": "No Cloud SQL instances have public IP addresses across 1 instance(s).",
+      "resource_ids": []
+    },
+    "gcp-6.3-missing_name": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances without automated backups (1/1): unknown",
+      "resource_ids": [
+        "unknown"
+      ]
+    },
+    "gcp-6.4-missing_name": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without proper log_error_verbosity: unknown",
+      "resource_ids": [
+        "unknown"
+      ]
+    },
+    "gcp-6.5-missing_name": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_connections enabled: unknown",
+      "resource_ids": [
+        "unknown"
+      ]
+    },
+    "gcp-6.6-missing_name": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_disconnections enabled: unknown",
+      "resource_ids": [
+        "unknown"
+      ]
+    },
+    "gcp-6.7-missing_name": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_min_duration_statement=-1: unknown",
+      "resource_ids": [
+        "unknown"
+      ]
+    },
+    "gcp-6.1-good": {
+      "status": "pass",
+      "evidence": "All 1 Cloud SQL instance(s) require SSL connections.",
+      "resource_ids": []
+    },
+    "gcp-6.2-good": {
+      "status": "pass",
+      "evidence": "No Cloud SQL instances have public IP addresses across 1 instance(s).",
+      "resource_ids": []
+    },
+    "gcp-6.3-good": {
+      "status": "pass",
+      "evidence": "All 1 Cloud SQL instance(s) have automated backups enabled.",
+      "resource_ids": []
+    },
+    "gcp-6.4-good": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_error_verbosity set to DEFAULT or stricter.",
+      "resource_ids": []
+    },
+    "gcp-6.5-good": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_connections enabled.",
+      "resource_ids": []
+    },
+    "gcp-6.6-good": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_disconnections enabled.",
+      "resource_ids": []
+    },
+    "gcp-6.7-good": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_min_duration_statement set to -1.",
+      "resource_ids": []
+    },
+    "gcp-6.1-bad": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances not requiring SSL (1/1): bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.2-bad": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances with public IPs (1/1): bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.3-bad": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances without automated backups (1/1): bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.4-bad": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without proper log_error_verbosity: bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.5-bad": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_connections enabled: bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.6-bad": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_disconnections enabled: bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.7-bad": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_min_duration_statement=-1: bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.1-mixed": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances not requiring SSL (1/2): bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.2-mixed": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances with public IPs (1/2): bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.3-mixed": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances without automated backups (1/2): bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.4-mixed": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without proper log_error_verbosity: bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.5-mixed": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_connections enabled: bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.6-mixed": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_disconnections enabled: bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.7-mixed": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_min_duration_statement=-1: bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.1-mysql": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances not requiring SSL (1/1): bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.2-mysql": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances with public IPs (1/1): bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.3-mysql": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances without automated backups (1/1): bad",
+      "resource_ids": [
+        "bad"
+      ]
+    },
+    "gcp-6.4-mysql": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_error_verbosity set to DEFAULT or stricter.",
+      "resource_ids": []
+    },
+    "gcp-6.5-mysql": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_connections enabled.",
+      "resource_ids": []
+    },
+    "gcp-6.6-mysql": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_disconnections enabled.",
+      "resource_ids": []
+    },
+    "gcp-6.7-mysql": {
+      "status": "pass",
+      "evidence": "All PostgreSQL instances have log_min_duration_statement set to -1.",
+      "resource_ids": []
+    },
+    "gcp-6.1-many": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances not requiring SSL (12/12): bad-0, bad-1, bad-2, bad-3, bad-4, bad-5, bad-6, bad-7, bad-8, bad-9",
+      "resource_ids": [
+        "bad-0",
+        "bad-1",
+        "bad-2",
+        "bad-3",
+        "bad-4",
+        "bad-5",
+        "bad-6",
+        "bad-7",
+        "bad-8",
+        "bad-9",
+        "bad-10",
+        "bad-11"
+      ]
+    },
+    "gcp-6.2-many": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances with public IPs (12/12): bad-0, bad-1, bad-2, bad-3, bad-4, bad-5, bad-6, bad-7, bad-8, bad-9",
+      "resource_ids": [
+        "bad-0",
+        "bad-1",
+        "bad-2",
+        "bad-3",
+        "bad-4",
+        "bad-5",
+        "bad-6",
+        "bad-7",
+        "bad-8",
+        "bad-9",
+        "bad-10",
+        "bad-11"
+      ]
+    },
+    "gcp-6.3-many": {
+      "status": "fail",
+      "evidence": "Cloud SQL instances without automated backups (12/12): bad-0, bad-1, bad-2, bad-3, bad-4, bad-5, bad-6, bad-7, bad-8, bad-9",
+      "resource_ids": [
+        "bad-0",
+        "bad-1",
+        "bad-2",
+        "bad-3",
+        "bad-4",
+        "bad-5",
+        "bad-6",
+        "bad-7",
+        "bad-8",
+        "bad-9",
+        "bad-10",
+        "bad-11"
+      ]
+    },
+    "gcp-6.4-many": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without proper log_error_verbosity: bad-0, bad-1, bad-2, bad-3, bad-4, bad-5, bad-6, bad-7, bad-8, bad-9",
+      "resource_ids": [
+        "bad-0",
+        "bad-1",
+        "bad-2",
+        "bad-3",
+        "bad-4",
+        "bad-5",
+        "bad-6",
+        "bad-7",
+        "bad-8",
+        "bad-9",
+        "bad-10",
+        "bad-11"
+      ]
+    },
+    "gcp-6.5-many": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_connections enabled: bad-0, bad-1, bad-2, bad-3, bad-4, bad-5, bad-6, bad-7, bad-8, bad-9",
+      "resource_ids": [
+        "bad-0",
+        "bad-1",
+        "bad-2",
+        "bad-3",
+        "bad-4",
+        "bad-5",
+        "bad-6",
+        "bad-7",
+        "bad-8",
+        "bad-9",
+        "bad-10",
+        "bad-11"
+      ]
+    },
+    "gcp-6.6-many": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_disconnections enabled: bad-0, bad-1, bad-2, bad-3, bad-4, bad-5, bad-6, bad-7, bad-8, bad-9",
+      "resource_ids": [
+        "bad-0",
+        "bad-1",
+        "bad-2",
+        "bad-3",
+        "bad-4",
+        "bad-5",
+        "bad-6",
+        "bad-7",
+        "bad-8",
+        "bad-9",
+        "bad-10",
+        "bad-11"
+      ]
+    },
+    "gcp-6.7-many": {
+      "status": "fail",
+      "evidence": "PostgreSQL instances without log_min_duration_statement=-1: bad-0, bad-1, bad-2, bad-3, bad-4, bad-5, bad-6, bad-7, bad-8, bad-9",
+      "resource_ids": [
+        "bad-0",
+        "bad-1",
+        "bad-2",
+        "bad-3",
+        "bad-4",
+        "bad-5",
+        "bad-6",
+        "bad-7",
+        "bad-8",
+        "bad-9",
+        "bad-10",
+        "bad-11"
+      ]
+    },
+    "gcp-6.1-missing_sdk": {
+      "status": "error",
+      "evidence": "google-api-python-client not installed. Install with: pip install google-api-python-client",
+      "resource_ids": []
+    },
+    "gcp-6.2-missing_sdk": {
+      "status": "error",
+      "evidence": "google-api-python-client not installed. Install with: pip install google-api-python-client",
+      "resource_ids": []
+    },
+    "gcp-6.3-missing_sdk": {
+      "status": "error",
+      "evidence": "google-api-python-client not installed. Install with: pip install google-api-python-client",
+      "resource_ids": []
+    },
+    "gcp-6.4-missing_sdk": {
+      "status": "error",
+      "evidence": "google-api-python-client not installed.",
+      "resource_ids": []
+    },
+    "gcp-6.5-missing_sdk": {
+      "status": "error",
+      "evidence": "google-api-python-client not installed.",
+      "resource_ids": []
+    },
+    "gcp-6.6-missing_sdk": {
+      "status": "error",
+      "evidence": "google-api-python-client not installed.",
+      "resource_ids": []
+    },
+    "gcp-6.7-missing_sdk": {
+      "status": "error",
+      "evidence": "google-api-python-client not installed.",
+      "resource_ids": []
+    },
+    "gcp-6.1-read_error": {
+      "status": "error",
+      "evidence": "Could not check Cloud SQL SSL configuration: provider unavailable",
+      "resource_ids": []
+    },
+    "gcp-6.2-read_error": {
+      "status": "error",
+      "evidence": "Could not check Cloud SQL public IPs: provider unavailable",
+      "resource_ids": []
+    },
+    "gcp-6.3-read_error": {
+      "status": "error",
+      "evidence": "Could not check Cloud SQL backup configuration: provider unavailable",
+      "resource_ids": []
+    },
+    "gcp-6.4-read_error": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: provider unavailable",
+      "resource_ids": []
+    },
+    "gcp-6.5-read_error": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_connections: provider unavailable",
+      "resource_ids": []
+    },
+    "gcp-6.6-read_error": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_disconnections: provider unavailable",
+      "resource_ids": []
+    },
+    "gcp-6.7-read_error": {
+      "status": "error",
+      "evidence": "Could not check PostgreSQL log_min_duration_statement: provider unavailable",
+      "resource_ids": []
+    }
+  }
+}

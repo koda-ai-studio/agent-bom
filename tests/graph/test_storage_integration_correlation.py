@@ -138,7 +138,7 @@ def test_an_identifier_two_nodes_claim_joins_nothing() -> None:
     assert not [e for e in graph.edges if e.relationship is RelationshipType.CAN_ACCESS]
 
 
-def _correlation_peak_bytes(node_count: int) -> int:
+def _correlation_peak_bytes(node_count: int, *, materialize: bool = False) -> int:
     import tracemalloc
 
     from agent_bom.graph.store_backed import open_store_backed_unified_graph
@@ -156,16 +156,39 @@ def _correlation_peak_bytes(node_count: int) -> int:
         graph.flush()
         tracemalloc.start()
         try:
-            correlate_storage_integrations(graph)
+            if materialize:
+                retained = list(graph.nodes.values())
+                assert len(retained) == node_count
+            else:
+                correlate_storage_integrations(graph)
             return tracemalloc.get_traced_memory()[1]
         finally:
             tracemalloc.stop()
 
 
 def test_correlation_streams_a_store_backed_graph_instead_of_loading_every_node() -> None:
-    """The store-backed build keeps nodes in its workspace; the correlator must not pull them all into RAM."""
-    small, large = _correlation_peak_bytes(500), _correlation_peak_bytes(4000)
-    # Holding every node grows with the graph (8x nodes, ~8x peak); a streaming
-    # pass holds at most the node cache and one page, so past the cache size its
-    # peak stays flat.
-    assert large < small * 2, (small, large)
+    """Measure only this collector, not allocations from other tests' background threads."""
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import json, runpy, sys; "
+            "measure = runpy.run_path(sys.argv[1])['_correlation_peak_bytes']; "
+            "print(json.dumps([[measure(n, materialize=m) for n in (500, 4000)] for m in (False, True)]))",
+            str(Path(__file__).resolve()),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=120,
+    )
+    streaming, materialized = json.loads(result.stdout)
+    # Preserve the same 8x input and 2x bound. The negative control proves this
+    # measurement still rejects retaining every node rather than streaming pages.
+    assert streaming[1] < streaming[0] * 2, streaming
+    assert materialized[1] > materialized[0] * 2, materialized

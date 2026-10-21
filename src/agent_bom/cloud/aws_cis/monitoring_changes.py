@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ._base import CheckStatus, CISCheckResult, _safe_error_evidence
-from .monitoring import _MONITORING_SECTION, _require_targeting_alarm
+from .monitoring import _MONITORING_SECTION, _check_metric_filter, _require_targeting_alarm
 
 
 def _check_4_8(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -29,35 +29,13 @@ def _check_4_8(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResul
         "DeleteBucketLifecycle",
         "DeleteBucketReplication",
     ]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                matches = sum(1 for e in s3_event_names if e in pattern)
-                if matches >= 3:
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for S3 bucket policy changes."
-        else:
-            result.evidence = "Metric filter for S3 bucket policy changes exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: sum(1 for event in s3_event_names if event in pattern) >= 3,
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="S3 bucket policy changes",
+        matches_filter=lambda pattern: sum((1 for event in s3_event_names if event in pattern)) >= 3,
+    )
 
 
 def _check_4_9(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -76,35 +54,13 @@ def _check_4_9(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResul
         "PutDeliveryChannel",
         "PutConfigurationRecorder",
     ]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                matches = sum(1 for e in config_event_names if e in pattern)
-                if matches >= 2:
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for AWS Config changes."
-        else:
-            result.evidence = "Metric filter for AWS Config changes exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: sum(1 for event in config_event_names if event in pattern) >= 2,
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="AWS Config changes",
+        matches_filter=lambda pattern: sum((1 for event in config_event_names if event in pattern)) >= 2,
+    )
 
 
 def _check_4_10(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -125,35 +81,13 @@ def _check_4_10(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResu
         "CreateSecurityGroup",
         "DeleteSecurityGroup",
     ]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                matches = sum(1 for e in sg_event_names if e in pattern)
-                if matches >= 3:
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for security group changes."
-        else:
-            result.evidence = "Metric filter for security group changes exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: sum(1 for event in sg_event_names if event in pattern) >= 3,
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="security group changes",
+        matches_filter=lambda pattern: sum((1 for event in sg_event_names if event in pattern)) >= 3,
+    )
 
 
 def _check_4_11(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -174,35 +108,13 @@ def _check_4_11(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResu
         "ReplaceNetworkAclEntry",
         "ReplaceNetworkAclAssociation",
     ]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                matches = sum(1 for e in nacl_event_names if e in pattern)
-                if matches >= 3:
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for NACL changes."
-        else:
-            result.evidence = "Metric filter for NACL changes exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: sum(1 for event in nacl_event_names if event in pattern) >= 3,
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="NACL changes",
+        matches_filter=lambda pattern: sum((1 for event in nacl_event_names if event in pattern)) >= 3,
+    )
 
 
 def _check_4_12(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -223,35 +135,13 @@ def _check_4_12(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResu
         "DeleteInternetGateway",
         "DetachInternetGateway",
     ]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                matches = sum(1 for e in gw_event_names if e in pattern)
-                if matches >= 3:
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for network gateway changes."
-        else:
-            result.evidence = "Metric filter for network gateway changes exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: sum(1 for event in gw_event_names if event in pattern) >= 3,
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="network gateway changes",
+        matches_filter=lambda pattern: sum((1 for event in gw_event_names if event in pattern)) >= 3,
+    )
 
 
 def _check_4_13(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -273,35 +163,13 @@ def _check_4_13(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResu
         "DeleteRoute",
         "DisassociateRouteTable",
     ]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                matches = sum(1 for e in rt_event_names if e in pattern)
-                if matches >= 3:
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for route table changes."
-        else:
-            result.evidence = "Metric filter for route table changes exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: sum(1 for event in rt_event_names if event in pattern) >= 3,
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="route table changes",
+        matches_filter=lambda pattern: sum((1 for event in rt_event_names if event in pattern)) >= 3,
+    )
 
 
 def _check_4_14(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -327,35 +195,13 @@ def _check_4_14(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResu
         "DisableVpcClassicLink",
         "EnableVpcClassicLink",
     ]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                matches = sum(1 for e in vpc_event_names if e in pattern)
-                if matches >= 3:
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for VPC changes."
-        else:
-            result.evidence = "Metric filter for VPC changes exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: sum(1 for event in vpc_event_names if event in pattern) >= 3,
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="VPC changes",
+        matches_filter=lambda pattern: sum((1 for event in vpc_event_names if event in pattern)) >= 3,
+    )
 
 
 def _check_4_15(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:

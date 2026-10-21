@@ -37,19 +37,34 @@ def test_seed_preserves_tenant_counts_and_refuses_existing_state(tmp_path):
         evidence.seed(db, tenants=2, findings=12, assets=3, agents=2, servers=2)
 
 
-def test_seed_closes_all_sqlite_handles_before_container_handoff(tmp_path, monkeypatch):
+@pytest.mark.parametrize("concurrent_connection", [False, True])
+def test_seed_closes_all_sqlite_handles_before_container_handoff(tmp_path, monkeypatch, concurrent_connection):
     # Keep strong references: garbage collection must not be the mechanism
     # releasing host-owned WAL/SHM files to a different container UID.
     connections = []
     connect = sqlite3.connect
+    db = tmp_path / "graph.db"
 
     def tracked_connect(*args, **kwargs):
         conn = connect(*args, **kwargs)
-        connections.append(conn)
+        database = args[0] if args else kwargs.get("database")
+        if database is not None and Path(database) == db:
+            connections.append(conn)
         return conn
 
     monkeypatch.setattr(evidence.sqlite3, "connect", tracked_connect)
-    db = tmp_path / "graph.db"
+    if concurrent_connection:
+        from concurrent.futures import ThreadPoolExecutor
+
+        # Exercise the spy while an unrelated connection is created on another
+        # thread, as happens during the full suite.
+        def unrelated_tracked_read():
+            conn = sqlite3.connect(tmp_path / "other.db")
+            conn.execute("SELECT 1")
+            conn.close()
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pool.submit(unrelated_tracked_read).result()
     evidence.seed(db, tenants=2, findings=12, assets=3, agents=2, servers=2)
     assert connections
     for conn in connections:
