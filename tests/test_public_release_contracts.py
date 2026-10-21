@@ -77,6 +77,12 @@ def test_public_registry_and_client_counts_match_code() -> None:
     assert f"{client_count} first-class client types" in _read("integrations/openclaw/SKILL.md")
 
 
+def test_release_consistency_accepts_the_current_public_catalog() -> None:
+    from scripts.check_release_consistency import main
+
+    assert main() == 0
+
+
 def test_each_mcp_reference_contains_complete_catalog() -> None:
     tool_names = {str(tool["name"]) for tool in _SERVER_CARD_TOOLS}
     prompt_names = {str(prompt["name"]) for prompt in _SERVER_CARD_PROMPTS}
