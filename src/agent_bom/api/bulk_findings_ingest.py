@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from agent_bom.canonical_ids import canonical_finding_id
+from agent_bom.domain.asset_identity import canonical_asset_id
 from agent_bom.evidence.finding_reach_sources import CLIENT_REACH_CLAIM_FIELDS, without_fields
 
 _BULK_FINDINGS_MAX_ITEMS = 1000
@@ -92,6 +93,27 @@ def _derive_bulk_finding_id(row: dict[str, Any], *, source: str) -> str:
     rule = row.get("vulnerability_id") or row.get("cve_id") or row.get("rule_id") or row.get("title") or ""
     location = row.get("location") or row.get("file_path") or asset.get("location") or ""
     package = row.get("package") or row.get("package_name") or asset.get("name") or asset.get("identifier") or ""
+    stable_asset = asset.get("stable_id") or asset.get("canonical_id")
+    provider = asset.get("provider") or row.get("provider")
+    account = asset.get("account_ref") or row.get("account_ref")
+    region = asset.get("region") or row.get("region")
+    identifier = asset.get("identifier")
+    if any(value is not None and not isinstance(value, str) for value in (stable_asset, identifier, provider, account, region)):
+        raise HTTPException(status_code=422, detail="finding asset identity and scope fields must be strings")
+    if not stable_asset and (identifier or provider or account or region):
+        stable_asset = canonical_asset_id(
+            str(asset.get("asset_type") or "external"),
+            str(identifier or f"{package}:{location}"),
+            provider=provider,
+            account_ref=account,
+            region=region,
+        )
+    if stable_asset:
+        # A discovered asset label may change without replacing the resource.
+        package_key = row.get("package") or row.get("package_name") or ""
+        return canonical_finding_id(
+            source, str(rule), str(location), str(stable_asset), str(package_key), str(row.get("package_version") or "")
+        )
     return canonical_finding_id(source, str(rule), str(location), str(package))
 
 
