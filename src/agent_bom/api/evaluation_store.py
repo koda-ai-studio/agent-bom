@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 import threading
 from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol
 
-from agent_bom.api.storage_schema import ensure_sqlite_schema_version
+from agent_bom.api.storage.registry_sqlite import SQLiteRegistryStore
 from agent_bom.storage.base import BackendKind
-from agent_bom.storage.factory import resolve_backend, validate_sqlite_path
+from agent_bom.storage.factory import resolve_backend
 
 
 @dataclass(frozen=True)
@@ -66,24 +65,12 @@ class InMemoryEvaluationRunStore:
         return ordered[offset : offset + limit]
 
 
-class SQLiteEvaluationRunStore:
-    def __init__(self, db_path: str = "agent_bom.db") -> None:
-        self._db_path = validate_sqlite_path(db_path)
-        self._local = threading.local()
-        self._init_db()
+class SQLiteEvaluationRunStore(SQLiteRegistryStore[EvaluationRunRecord]):
+    table = "evaluation_runs"
+    columns = ("tenant_id", "evaluation_id", "dataset_id", "created_at")
 
-    @property
-    def _conn(self) -> sqlite3.Connection:
-        if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(self._db_path, check_same_thread=False)
-            self._local.conn.execute("PRAGMA journal_mode=WAL")
-        conn: sqlite3.Connection = self._local.conn
-        return conn
-
-    def _init_db(self) -> None:
-        ensure_sqlite_schema_version(self._conn, "evaluation_runs")
-        self._conn.execute(
-            """
+    ddl = (
+        """
             CREATE TABLE IF NOT EXISTS evaluation_runs (
                 tenant_id TEXT NOT NULL,
                 evaluation_id TEXT NOT NULL,
@@ -92,60 +79,27 @@ class SQLiteEvaluationRunStore:
                 data TEXT NOT NULL,
                 PRIMARY KEY (tenant_id, evaluation_id)
             )
-            """
-        )
-        self._conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_evaluation_runs_tenant_dataset_created "
-            "ON evaluation_runs(tenant_id, dataset_id, created_at DESC)"
-        )
-        self._conn.commit()
+            """,
+        "CREATE INDEX IF NOT EXISTS idx_evaluation_runs_tenant_dataset_created ON evaluation_runs(tenant_id, dataset_id, created_at DESC)",
+    )
+
+    def _decode(self, raw: str) -> EvaluationRunRecord:
+        return _record_from_json(raw)
 
     def put(self, record: EvaluationRunRecord) -> None:
-        self._conn.execute(
-            """
-            INSERT OR REPLACE INTO evaluation_runs
-                (tenant_id, evaluation_id, dataset_id, created_at, data)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                record.tenant_id,
-                record.evaluation_id,
-                record.dataset_id,
-                record.created_at,
-                json.dumps(record.to_dict(), sort_keys=True),
-            ),
-        )
-        self._conn.commit()
+        self._put_payload((record.tenant_id, record.evaluation_id, record.dataset_id, record.created_at), record.to_dict())
 
     def get(self, tenant_id: str, evaluation_id: str) -> EvaluationRunRecord | None:
-        row = self._conn.execute(
-            "SELECT data FROM evaluation_runs WHERE tenant_id = ? AND evaluation_id = ?",
-            (tenant_id, evaluation_id),
-        ).fetchone()
-        return _record_from_json(row[0]) if row else None
+        return self._get("tenant_id = ? AND evaluation_id = ?", (tenant_id, evaluation_id))
 
     def list(self, tenant_id: str, *, dataset_id: str | None = None, limit: int = 100, offset: int = 0) -> list[EvaluationRunRecord]:
-        if dataset_id is None:
-            rows = self._conn.execute(
-                """
-                SELECT data FROM evaluation_runs
-                WHERE tenant_id = ?
-                ORDER BY created_at DESC
-                LIMIT ? OFFSET ?
-                """,
-                (tenant_id, limit, offset),
-            ).fetchall()
-        else:
-            rows = self._conn.execute(
-                """
-                SELECT data FROM evaluation_runs
-                WHERE tenant_id = ? AND dataset_id = ?
-                ORDER BY created_at DESC
-                LIMIT ? OFFSET ?
-                """,
-                (tenant_id, dataset_id, limit, offset),
-            ).fetchall()
-        return [_record_from_json(row[0]) for row in rows]
+        return self._list(
+            "tenant_id = ?" + (" AND dataset_id = ?" if dataset_id is not None else ""),
+            (tenant_id, dataset_id) if dataset_id is not None else (tenant_id,),
+            order="created_at DESC",
+            limit=limit,
+            offset=offset,
+        )
 
 
 def _record_from_json(raw: str) -> EvaluationRunRecord:

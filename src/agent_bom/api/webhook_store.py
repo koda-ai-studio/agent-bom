@@ -19,17 +19,16 @@ import hashlib
 import json
 import logging
 import secrets
-import sqlite3
 import threading
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from agent_bom.api.connection_crypto import ConnectionSecretError, connections_key_configured, decrypt_secret, encrypt_secret
-from agent_bom.api.storage_schema import ensure_sqlite_schema_version
+from agent_bom.api.storage.registry_sqlite import SQLiteRegistryStore
 from agent_bom.security import redact_secret_url
 from agent_bom.storage.base import BackendKind
-from agent_bom.storage.factory import resolve_backend, validate_sqlite_path
+from agent_bom.storage.factory import resolve_backend
 
 logger = logging.getLogger(__name__)
 
@@ -161,24 +160,12 @@ class InMemoryWebhookSubscriptionStore:
             return [s for s in self._by_id.values() if s.tenant_id == tenant_id and s.wants(event_type)]
 
 
-class SQLiteWebhookSubscriptionStore:
-    def __init__(self, db_path: str = "agent_bom.db") -> None:
-        self._db_path = validate_sqlite_path(db_path)
-        self._local = threading.local()
-        self._init_db()
+class SQLiteWebhookSubscriptionStore(SQLiteRegistryStore[WebhookSubscription]):
+    table = "webhook_subscriptions"
+    columns = ("subscription_id", "tenant_id", "status", "created_at")
 
-    @property
-    def _conn(self) -> sqlite3.Connection:
-        if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(self._db_path, check_same_thread=False)
-            self._local.conn.execute("PRAGMA journal_mode=WAL")
-        conn: sqlite3.Connection = self._local.conn
-        return conn
-
-    def _init_db(self) -> None:
-        ensure_sqlite_schema_version(self._conn, "webhook_subscriptions")
-        self._conn.execute(
-            """
+    ddl = (
+        """
             CREATE TABLE IF NOT EXISTS webhook_subscriptions (
                 subscription_id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
@@ -186,39 +173,29 @@ class SQLiteWebhookSubscriptionStore:
                 created_at TEXT NOT NULL,
                 data TEXT NOT NULL
             )
-            """
-        )
-        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_webhook_subs_tenant ON webhook_subscriptions(tenant_id, status)")
-        self._conn.commit()
+            """,
+        "CREATE INDEX IF NOT EXISTS idx_webhook_subs_tenant ON webhook_subscriptions(tenant_id, status)",
+    )
+
+    def _decode(self, raw: str) -> WebhookSubscription:
+        return unseal_subscription(WebhookSubscription(**json.loads(raw)))
 
     def put(self, subscription: WebhookSubscription) -> None:
-        self._conn.execute(
-            "INSERT OR REPLACE INTO webhook_subscriptions (subscription_id, tenant_id, status, created_at, data) VALUES (?, ?, ?, ?, ?)",
-            (
-                subscription.subscription_id,
-                subscription.tenant_id,
-                subscription.status,
-                subscription.created_at,
-                json.dumps(storage_payload(subscription), sort_keys=True),
-            ),
+        self._put_payload(
+            (subscription.subscription_id, subscription.tenant_id, subscription.status, subscription.created_at),
+            storage_payload(subscription),
         )
-        self._conn.commit()
 
     def get(self, subscription_id: str) -> WebhookSubscription | None:
-        row = self._conn.execute("SELECT data FROM webhook_subscriptions WHERE subscription_id = ?", (subscription_id,)).fetchone()
-        return unseal_subscription(WebhookSubscription(**json.loads(row[0]))) if row else None
+        return self._get("subscription_id = ?", (subscription_id,))
 
     def list(self, tenant_id: str, *, include_disabled: bool = False, limit: int = 200) -> builtins.list[WebhookSubscription]:
-        if include_disabled:
-            rows = self._conn.execute(
-                "SELECT data FROM webhook_subscriptions WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?", (tenant_id, limit)
-            ).fetchall()
-        else:
-            rows = self._conn.execute(
-                "SELECT data FROM webhook_subscriptions WHERE tenant_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT ?",
-                (tenant_id, limit),
-            ).fetchall()
-        return [unseal_subscription(WebhookSubscription(**json.loads(r[0]))) for r in rows]
+        return self._list(
+            "tenant_id = ?" + ("" if include_disabled else " AND status = 'active'"),
+            (tenant_id,),
+            order="created_at DESC",
+            limit=limit,
+        )
 
     def delete(self, subscription_id: str) -> bool:
         cur = self._conn.execute("DELETE FROM webhook_subscriptions WHERE subscription_id = ?", (subscription_id,))
