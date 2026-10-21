@@ -58,6 +58,32 @@ def _require_targeting_alarm(
     return result
 
 
+def _check_metric_filter(
+    result: CISCheckResult,
+    logs_client: Any,
+    cloudwatch_client: Any,
+    *,
+    subject: str,
+    matches_filter: Callable[[str], bool],
+) -> CISCheckResult:
+    """Evaluate a filter's presence, then retain the targeting-alarm check."""
+    try:
+        pages = logs_client.get_paginator("describe_metric_filters").paginate()
+        found = any(matches_filter(metric.get("filterPattern", "")) for page in pages for metric in page.get("metricFilters", []))
+        if not found:
+            result.status = CheckStatus.FAIL
+            result.evidence = f"No metric filter found for {subject}."
+        else:
+            result.evidence = f"Metric filter for {subject} exists."
+    except Exception as exc:
+        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+        result.status = CheckStatus.ERROR
+        result.evidence = f"Could not query metric filters: {sanitize_text(error_code or exc)}"
+    if result.status is CheckStatus.PASS:
+        return _require_targeting_alarm(result, logs_client, cloudwatch_client, matches_filter=matches_filter)
+    return result
+
+
 def _check_4_3(logs_client: Any, cloudwatch_client: Any) -> CISCheckResult:
     """CIS 4.3 — Metric filter and alarm for root account usage."""
     result = CISCheckResult(
@@ -246,34 +272,13 @@ def _check_4_1(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResul
         recommendation="Create a CloudWatch metric filter and alarm for unauthorized API calls.",
     )
     patterns = ["UnauthorizedAccess", "AccessDenied"]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                if any(p.lower() in pattern.lower() for p in patterns):
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for unauthorized API calls."
-        else:
-            result.evidence = "Metric filter for unauthorized API calls exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: any(token.lower() in pattern.lower() for token in patterns),
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="unauthorized API calls",
+        matches_filter=lambda pattern: any((token.lower() in pattern.lower() for token in patterns)),
+    )
 
 
 def _check_4_2(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -287,34 +292,13 @@ def _check_4_2(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResul
         recommendation="Create a CloudWatch metric filter and alarm for console sign-in without MFA.",
     )
     patterns = ["ConsoleLogin", "MFAUsed"]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                if all(p.lower() in pattern.lower() for p in patterns):
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for console sign-in without MFA."
-        else:
-            result.evidence = "Metric filter for console sign-in without MFA exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: all(token.lower() in pattern.lower() for token in patterns),
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="console sign-in without MFA",
+        matches_filter=lambda pattern: all((token.lower() in pattern.lower() for token in patterns)),
+    )
 
 
 def _check_4_6(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -328,34 +312,13 @@ def _check_4_6(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResul
         recommendation="Create a CloudWatch metric filter and alarm for console authentication failures.",
     )
     patterns = ["ConsoleLogin", "Failed"]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                if all(p.lower() in pattern.lower() for p in patterns):
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for console authentication failures."
-        else:
-            result.evidence = "Metric filter for console authentication failures exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: all(token.lower() in pattern.lower() for token in patterns),
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="console authentication failures",
+        matches_filter=lambda pattern: all((token.lower() in pattern.lower() for token in patterns)),
+    )
 
 
 def _check_4_7(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResult:
@@ -369,32 +332,10 @@ def _check_4_7(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResul
         recommendation="Create a CloudWatch metric filter and alarm for KMS key disabling/deletion.",
     )
     kms_event_names = ["DisableKey", "ScheduleKeyDeletion"]
-    try:
-        paginator = logs_client.get_paginator("describe_metric_filters")
-        found = False
-        for page in paginator.paginate():
-            for mf in page.get("metricFilters", []):
-                pattern = mf.get("filterPattern", "")
-                matches = sum(1 for e in kms_event_names if e in pattern)
-                if matches >= 1:
-                    found = True
-                    break
-            if found:
-                break
-        if not found:
-            result.status = CheckStatus.FAIL
-            result.evidence = "No metric filter found for CMK disabling/deletion."
-        else:
-            result.evidence = "Metric filter for CMK disabling/deletion exists."
-    except Exception as exc:
-        error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
-    if result.status is CheckStatus.PASS:
-        return _require_targeting_alarm(
-            result,
-            logs_client,
-            cloudwatch_client,
-            matches_filter=lambda pattern: any(event in pattern for event in kms_event_names),
-        )
-    return result
+    return _check_metric_filter(
+        result,
+        logs_client,
+        cloudwatch_client,
+        subject="CMK disabling/deletion",
+        matches_filter=lambda pattern: any((event in pattern for event in kms_event_names)),
+    )
