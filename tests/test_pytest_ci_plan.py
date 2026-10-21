@@ -118,6 +118,32 @@ def test_shard_plan_is_deterministic_disjoint_and_complete(tmp_path: Path, total
     assert max(loads) - min(loads) <= largest
 
 
+@pytest.mark.parametrize("total", [2, 4])
+def test_expensive_demo_rebuild_suite_has_a_dedicated_shard(tmp_path, total):
+    # CI timings show this small module rebuilding the whole demo per test;
+    # source-byte balancing must not stack other suites on that runner.
+    expensive = tmp_path / "tests/test_demo_estate_bootstrap.py"
+    _write(expensive, 1)
+    files = [expensive]
+    for index in range(12):
+        path = tmp_path / f"tests/test_regular_{index}.py"
+        _write(path, 100 + index)
+        files.append(path)
+    shards = plan_shards(files, total=total)
+    assert [expensive] in shards
+    assert all(shards)
+    assert {path for shard in shards for path in shard} == set(files)
+    assert sum(map(len, shards)) == len(files)
+    assert shards == plan_shards(reversed(files), total=total)
+
+
+def test_single_shard_preserves_the_demo_and_other_modules(tmp_path):
+    files = [tmp_path / "tests/test_demo_estate_bootstrap.py", tmp_path / "tests/test_regular.py"]
+    for path in files:
+        _write(path, 1)
+    assert plan_shards(files, total=1) == [sorted(files)]
+
+
 def test_explicit_file_shards_preserve_only_the_selected_suite(tmp_path, monkeypatch, capsys) -> None:
     import sys
 

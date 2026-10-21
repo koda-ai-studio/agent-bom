@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build deterministic, exhaustive pytest plans for CI.
 
-The PR suite is split by test-file byte weight.  Every file is assigned to
-exactly one shard, while the largest files are greedily spread across runners.
+The expensive demo rebuild suite gets a dedicated shard; remaining files use
+byte-weight balancing. Every file is assigned to exactly one shard.
 The changed-domain selector is intentionally conservative: it includes tests
 changed directly and tests whose basename matches a changed source/script
 module.  Cross-surface smoke tests are added by the workflow itself.
@@ -241,9 +241,17 @@ def discover_test_files(root: Path) -> list[Path]:
 
 
 def plan_shards(files: Iterable[Path], *, total: int) -> list[list[Path]]:
-    """Assign all files once using deterministic largest-first balancing."""
+    """Isolate measured demo rebuild cost, then balance remaining files largest-first."""
     if total < 1:
         raise ValueError("total shards must be positive")
+
+    files = list(files)
+    # CI timings show dozens of full estate rebuilds dominating this module,
+    # despite its modest source size. Reserve one existing runner rather than
+    # stacking other suites behind it or raising the job timeout/worker count.
+    isolated = [path for path in files if path.parts[-2:] == ("tests", "test_demo_estate_bootstrap.py")]
+    if total > 1 and len(isolated) == 1 and len(files) > 1:
+        return [isolated] + plan_shards((path for path in files if path != isolated[0]), total=total - 1)
 
     shards: list[list[Path]] = [[] for _ in range(total)]
     loads = [0] * total
