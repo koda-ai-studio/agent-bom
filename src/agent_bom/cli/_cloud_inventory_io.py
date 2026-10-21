@@ -66,7 +66,7 @@ def persist_graph(
         if os.name != "nt" and graph_db.stat().st_mode & 0o077:
             raise ValueError("Graph database must be private (chmod 600)")
         for receipt in report["coverage"]:
-            receipt["persisted"] = receipt["complete"]
+            receipt["persisted"] = receipt["complete"] and receipt.get("graph_supported", True)
         graph = build_unified_graph_from_report(report, scan_id=report["scan_id"], tenant_id=tenant)
         with open_graph_db(graph_db) as conn:
             conn.execute("BEGIN IMMEDIATE")
