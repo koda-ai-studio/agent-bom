@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from agent_bom.canonical_ids import canonical_finding_id
-from agent_bom.domain.asset_identity import canonical_asset_id
+from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
 from agent_bom.evidence.finding_reach_sources import CLIENT_REACH_CLAIM_FIELDS, without_fields
 
 _BULK_FINDINGS_MAX_ITEMS = 1000
@@ -109,6 +109,7 @@ def _derive_bulk_finding_id(row: dict[str, Any], *, source: str) -> str:
             region=region,
         )
     if stable_asset:
+        stable_asset = finding_asset_occurrence_id(stable_asset, identifier, provider=provider, account_ref=account, region=region)
         # A discovered asset label may change without replacing the resource.
         package_key = row.get("package") or row.get("package_name") or ""
         return canonical_finding_id(

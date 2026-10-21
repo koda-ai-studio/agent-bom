@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from starlette.testclient import TestClient
 
 from agent_bom.api.compliance_hub_store import SQLiteComplianceHubStore, reset_compliance_hub_store
@@ -345,7 +346,8 @@ def test_typed_external_push_preserves_file_evidence_without_fake_package():
     assert any(tag["framework"] == "nist_csf" and tag["control"] == "PR.PS-06" for tag in finding["controls"])
 
 
-def test_bulk_fallback_ids_keep_accounts_distinct_and_replay_idempotent():
+@pytest.mark.parametrize("identifier", ["local-resource", "pkg:pypi/requests@2.0"])
+def test_bulk_fallback_ids_keep_accounts_distinct_and_replay_idempotent(identifier):
     client = _client(tenant=f"bulk-scoped-{uuid4().hex}")
     rows = [
         {
@@ -354,7 +356,7 @@ def test_bulk_fallback_ids_keep_accounts_distinct_and_replay_idempotent():
             "severity": "high",
             "provider": "aws",
             "account_ref": f"aws:{account}",
-            "asset": {"asset_type": "cloud_resource", "identifier": "local-resource", "name": "resource"},
+            "asset": {"asset_type": "cloud_resource", "identifier": identifier, "name": "resource"},
         }
         for account in ("111111111111", "222222222222")
     ]

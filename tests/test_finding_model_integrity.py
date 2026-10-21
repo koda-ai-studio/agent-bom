@@ -327,7 +327,8 @@ def test_missing_scanner_evidence_cannot_create_a_correlation():
     "field,values",
     [("account_ref", ("aws:111111111111", "aws:222222222222")), ("provider", ("aws", "gcp")), ("region", ("us-east-1", "eu-west-1"))],
 )
-def test_bulk_fallback_ids_preserve_recorded_asset_scope(store, field, values):
+@pytest.mark.parametrize("identifier", ["resource-01", "pkg:pypi/requests@2.0"])
+def test_bulk_fallback_ids_preserve_recorded_asset_scope(store, field, values, identifier):
     from agent_bom.api.bulk_findings_ingest import _normalized_bulk_finding
 
     rows = []
@@ -338,7 +339,7 @@ def test_bulk_fallback_ids_preserve_recorded_asset_scope(store, field, values):
             "provider": "aws",
             "account_ref": "aws:111111111111",
             "region": "us-east-1",
-            "asset": {"asset_type": "cloud_resource", "identifier": "resource-01", "name": "resource"},
+            "asset": {"asset_type": "cloud_resource", "identifier": identifier, "name": "resource"},
         }
         row[field] = value
         rows.append(_normalized_bulk_finding(row, source="vendor-a", batch_id="scope", ordinal=ordinal))
@@ -380,14 +381,15 @@ def test_bulk_fallback_rejects_malformed_scope_without_server_error(field):
     assert error.value.status_code == 422
 
 
-def test_bulk_fallback_replays_and_mutable_environment_do_not_rename_identity():
+@pytest.mark.parametrize("identifier", ["local-resource", "pkg:pypi/requests@2.0"])
+def test_bulk_fallback_replays_and_mutable_environment_do_not_rename_identity(identifier):
     from agent_bom.api.bulk_findings_ingest import _normalized_bulk_finding
 
     row = {
         "rule_id": "rule",
         "provider": "aws",
         "account_ref": "aws:111111111111",
-        "asset": {"asset_type": "cloud_resource", "identifier": "local-resource"},
+        "asset": {"asset_type": "cloud_resource", "identifier": identifier},
     }
     first = _normalized_bulk_finding(row, source="vendor-a", batch_id="first", ordinal=0)
     second = _normalized_bulk_finding(
@@ -408,3 +410,63 @@ def test_bulk_fallback_asset_display_name_is_not_identity():
         row = {"rule_id": "rule", "provider": "aws", "asset": {"identifier": "local-resource", "name": label}}
         ids.append(_normalized_bulk_finding(row, source="vendor", batch_id="batch", ordinal=0)["id"])
     assert len(set(ids)) == 1
+
+
+@pytest.mark.parametrize("mode", ["model", "lifecycle"])
+@pytest.mark.parametrize(
+    "field,values",
+    [("account_ref", ("aws:111111111111", "aws:222222222222")), ("provider", ("aws", "gcp")), ("region", ("us-east-1", "eu-west-1"))],
+)
+def test_package_artifact_identity_does_not_collapse_scoped_finding_occurrences(mode, field, values):
+    from agent_bom.api.finding_lifecycle import resolve_canonical_id
+
+    assets = [Asset("requests", "package", identifier="pkg:pypi/requests@2.0", **{field: value}) for value in values]
+    assert assets[0].stable_id == assets[1].stable_id
+    if mode == "model":
+        ids = [Finding(FindingType.CVE, FindingSource.CONTAINER, asset, "high", cve_id="CVE-2099-0001").id for asset in assets]
+    else:
+        ids = [
+            resolve_canonical_id(
+                {"cve_id": "CVE-2099-0001", "asset": {"identifier": asset.identifier, "stable_id": asset.stable_id, field: value}}
+            )
+            for asset, value in zip(assets, values)
+        ]
+    assert len(set(ids)) == 2
+
+
+def test_package_occurrences_keep_global_artifacts_and_stable_workflow_identity():
+    from agent_bom.canonical_ids import canonical_finding_id
+
+    def finding(**scope):
+        asset = Asset("requests", "package", identifier="pkg:pypi/requests@2.0", **scope)
+        return Finding(FindingType.CVE, FindingSource.CONTAINER, asset, "high", cve_id="CVE-2099-0001")
+
+    legacy = finding()
+    assert legacy.id == canonical_finding_id(legacy.asset.stable_id, "CVE-2099-0001", "requests", "2.0")
+    first = finding(provider="aws", account_ref="aws:111111111111", region="us-east-1")
+    replay = finding(provider="AWS", account_ref="111111111111", region="us-east-1", environment="production")
+    assert first.id == replay.id
+    assert first.asset.stable_id == legacy.asset.stable_id
+    assert first.id != legacy.id
+    explicit = Finding(FindingType.CVE, FindingSource.CONTAINER, first.asset, "high", cve_id="CVE-2099-0001", id="caller-owned")
+    assert explicit.id == "caller-owned"
+
+
+@pytest.mark.parametrize("mode", ["bulk", "lifecycle"])
+def test_recorded_package_artifact_purl_is_not_an_unscoped_workflow_key(mode):
+    from agent_bom.api.bulk_findings_ingest import _normalized_bulk_finding
+    from agent_bom.api.finding_lifecycle import resolve_canonical_id
+
+    ids = []
+    for account in ("aws:111111111111", "aws:222222222222"):
+        row = {
+            "cve_id": "CVE-2099-0001",
+            "account_ref": account,
+            "asset": {"identifier": "pkg:pypi/requests@2.0", "canonical_id": "pkg:pypi/requests@2.0"},
+        }
+        ids.append(
+            _normalized_bulk_finding(row, source="vendor", batch_id="batch", ordinal=0)["id"]
+            if mode == "bulk"
+            else resolve_canonical_id(row)
+        )
+    assert len(set(ids)) == 2

@@ -9,7 +9,7 @@ from agent_bom.advisory_ids import derive_cve_from_advisory_id, finding_advisory
 from agent_bom.canonical_ids import canonical_finding_id, source_ids
 from agent_bom.core.asset_types import entity_type_for_asset_type
 from agent_bom.core.sla import finding_owner, finding_sla_fields
-from agent_bom.domain.asset_identity import canonical_asset_id
+from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
 from agent_bom.evidence.finding_lanes import model_lane_fields
 
 if TYPE_CHECKING:
@@ -273,7 +273,14 @@ class Finding:
             occurrence_qualifier = _occurrence_evidence_qualifier(self.evidence)
             if occurrence_qualifier:
                 qualifiers.append(occurrence_qualifier)
-            self.id = canonical_finding_id(self.asset.stable_id, cve_part, *qualifiers)
+            asset_occurrence = finding_asset_occurrence_id(
+                self.asset.stable_id,
+                self.asset.identifier,
+                provider=self.asset.provider,
+                account_ref=self.asset.account_ref,
+                region=self.asset.region,
+            )
+            self.id = canonical_finding_id(asset_occurrence, cve_part, *qualifiers)
 
     @property
     def canonical_id(self) -> str:
