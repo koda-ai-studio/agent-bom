@@ -541,6 +541,7 @@ jobs:
           # old tag never keeps rebuilding a known-vulnerable collector.
           git checkout "${{ steps.release.outputs.main_sha }}" -- \
             deploy/docker/Dockerfile.collector \
+            deploy/docker/collector-security-requirements.txt \
             .dockerignore \
             .image-scan-ignore \
             docs/security/image-exceptions.yaml

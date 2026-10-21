@@ -1,0 +1,7 @@
+# Security-only overlay for collector images rebuilt from a released lock.
+# Keep provider SDK versions frozen; replace only the affected CA bundle.
+# The universal certifi wheel works on Debian amd64 and arm64. The API image's
+# cryptography hashes target Alpine and must not be applied to this image.
+# GHSA-6q48-6c7w-9gw2
+certifi==2026.10.19 \
+    --hash=sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b
