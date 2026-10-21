@@ -808,3 +808,19 @@ describe('Nav', () => {
     expect(agentsLink).toHaveAttribute('title', 'Hidden until this deployment mode is detected')
   })
 })
+
+describe('control plane status without a reported version', () => {
+  it('never shows a bare "v" when the API reports no version', async () => {
+    const { api } = await import('@/lib/api')
+    vi.mocked(api.health).mockResolvedValue({ status: 'ok' } as Awaited<ReturnType<typeof api.health>>)
+    renderNav()
+    const summary = await waitFor(() => {
+      const found = document.querySelector('header summary[aria-label^="Control plane"]')
+      expect(found).not.toBeNull()
+      return found as HTMLElement
+    })
+    expect(summary.getAttribute('aria-label')).toBe('Control plane online')
+    expect(summary.textContent).not.toMatch(/(^|\W)v(\W|$)/)
+    vi.mocked(api.health).mockResolvedValue({ status: 'ok', version: '0.109.0' })
+  })
+})
