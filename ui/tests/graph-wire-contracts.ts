@@ -56,3 +56,16 @@ export const invalidAssessment: NodeRiskAssessment = {
   // @ts-expect-error A score does not imply a valid assessment status.
   status: "clean", basis: null, scope: null,
 };
+
+// Canvas projection omits OCSF fields until full node details are fetched.
+export const canvasNode: UnifiedNode = {
+  id: "agent:example", entity_type: "agent", label: "Example agent",
+  status: "active", risk_score: 0, severity: "none",
+  first_seen: "", last_seen: "", attributes: {},
+  compliance_tags: [], data_sources: [], dimensions: {},
+};
+export const canvasEdge: UnifiedEdge = {
+  id: "edge:example", source: "agent:example", target: "package:example",
+  relationship: "depends_on", direction: "directed", weight: 1, traversable: true,
+  first_seen: "", last_seen: "", evidence: {},
+};

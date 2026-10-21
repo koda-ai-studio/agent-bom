@@ -172,6 +172,36 @@ def test_live_graph_body_matches_documented_model(graph_client: TestClient, path
     assert _top_level_undeclared(model, body) == []
 
 
+def test_canvas_graph_body_matches_documented_model(graph_client):
+    body = graph_client.get("/v1/graph?scan_id=contract-s2&view=canvas").json()
+    assert body["view"] == "canvas"
+    assert body["nodes"] and body["edges"]
+    assert "canonical_id" not in body["nodes"][0]
+    assert "activity_id" not in body["edges"][0]
+    parsed = graph_models.GraphPageResponse.model_validate(body, context={STRICT_CONTRACT: True})
+    assert parsed.model_dump(mode="json", exclude_unset=True) == body
+
+
+@pytest.mark.parametrize(("collection", "field"), [("nodes", "canonical_id"), ("edges", "valid_from")])
+def test_full_projection_cannot_fall_back_to_canvas_contract(graph_client, collection, field):
+    from pydantic import ValidationError
+
+    body = graph_client.get("/v1/graph?scan_id=contract-s2").json()
+    del body[collection][0][field]
+    with pytest.raises(ValidationError):
+        graph_models.GraphPageResponse.model_validate(body, context={STRICT_CONTRACT: True})
+
+
+@pytest.mark.parametrize(("collection", "field"), [("nodes", "id"), ("edges", "confidence")])
+def test_canvas_requires_shared_wire_fields(graph_client, collection, field):
+    from pydantic import ValidationError
+
+    body = graph_client.get("/v1/graph?scan_id=contract-s2&view=canvas").json()
+    del body[collection][0][field]
+    with pytest.raises(ValidationError):
+        graph_models.GraphPageResponse.model_validate(body, context={STRICT_CONTRACT: True})
+
+
 def test_missing_node_neighbors_body_matches_documented_model(graph_client: TestClient) -> None:
     body = graph_client.get("/v1/graph/node-neighbors?node_id=missing:node").json()
     assert body["found"] is False
@@ -200,12 +230,24 @@ def test_nested_graph_contract_detects_invalid_wire_fields(graph_client, collect
         graph_models.GraphPageResponse.model_validate(body, context={STRICT_CONTRACT: True})
 
 
+def test_full_projection_drift_keeps_lenient_validation(graph_client):
+    body = graph_client.get("/v1/graph?scan_id=contract-s2").json()
+    del body["nodes"][0]["canonical_id"]
+    parsed = graph_models.GraphPageResponse.model_validate(body)
+    assert parsed.model_dump(mode="json", exclude_unset=True) == body
+
+
 def test_graph_openapi_reuses_nested_wire_contracts():
     app.openapi_schema = None
     schemas = app.openapi()["components"]["schemas"]
-    expected = {"nodes": "GraphNodeRecord", "edges": "GraphEdgeRecord", "attack_paths": "GraphAttackPathRecord"}
-    for field, name in expected.items():
-        assert schemas["GraphPageResponse"]["properties"][field]["items"] == {"$ref": f"#/components/schemas/{name}"}
+    for field, full, canvas in (
+        ("nodes", "GraphNodeRecord", "GraphCanvasNodeRecord"),
+        ("edges", "GraphEdgeRecord", "GraphCanvasEdgeRecord"),
+    ):
+        assert schemas["GraphPageResponse"]["properties"][field]["items"] == {
+            "anyOf": [{"$ref": f"#/components/schemas/{full}"}, {"$ref": f"#/components/schemas/{canvas}"}]
+        }
+    assert schemas["GraphPageResponse"]["properties"]["attack_paths"]["items"] == {"$ref": "#/components/schemas/GraphAttackPathRecord"}
     assert schemas["GraphNodeNeighborsResponse"]["properties"]["neighbors"]["items"] == {"$ref": "#/components/schemas/GraphNodeRecord"}
     assert schemas["GraphClustersResponse"]["properties"]["clusters"]["items"] == {"$ref": "#/components/schemas/SemanticCluster"}
     assert schemas["GraphAttackPathRecord"]["properties"]["technique_mappings"]["items"] == {

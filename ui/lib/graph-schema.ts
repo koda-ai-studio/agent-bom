@@ -315,10 +315,12 @@ export type NodeDimensions = Pick<GraphApiSchemas["GraphNodeDimensions"],
 
 /** Current wire fields, with provenance optional for legacy snapshots. */
 export type UnifiedNode = Pick<GraphApiSchemas["GraphNodeRecord"],
-  "id" | "entity_type" | "label" | "category_uid" | "class_uid" | "type_uid" |
-  "status" | "risk_score" | "severity" | "severity_id" | "first_seen" | "last_seen" |
+  "id" | "entity_type" | "label" |
+  "status" | "risk_score" | "severity" | "first_seen" | "last_seen" |
   "attributes" | "compliance_tags" | "data_sources"
-> & {
+> & Partial<Pick<GraphApiSchemas["GraphNodeRecord"],
+  "category_uid" | "class_uid" | "type_uid" | "severity_id"
+>> & {
   dimensions: NodeDimensions;
   evidence_provenance?: GraphApiSchemas["GraphNodeRecord"]["evidence_provenance"];
   risk_assessment?: import("@/lib/node-risk-assessment").NodeRiskAssessment | undefined;
@@ -326,8 +328,9 @@ export type UnifiedNode = Pick<GraphApiSchemas["GraphNodeRecord"],
 
 export type UnifiedEdge = Pick<GraphApiSchemas["GraphEdgeRecord"],
   "id" | "source" | "target" | "relationship" | "weight" | "traversable" |
-  "first_seen" | "last_seen" | "evidence" | "activity_id"
+  "first_seen" | "last_seen" | "evidence"
 > & {
+  activity_id?: GraphApiSchemas["GraphEdgeRecord"]["activity_id"];
   direction: "directed" | "bidirectional";
   source_scan_id?: GraphApiSchemas["GraphEdgeRecord"]["source_scan_id"] | null | undefined;
 };

@@ -52,43 +52,53 @@ class GraphAgentRecord(ReadModel):
     last_seen: str
 
 
-class GraphNodeRecord(GraphAgentRecord):
-    """The public ``UnifiedNode.to_dict`` shape; storage-only fields are excluded."""
+class GraphCanvasNodeRecord(GraphAgentRecord):
+    """Fields retained by the compact canvas projection."""
 
-    canonical_id: str
-    evidence_provenance: GraphNodeProvenance
     entity_type: str
-    category_uid: int
-    class_uid: int
-    type_uid: int
-    severity_id: int
     attributes: dict[str, Any]
     compliance_tags: list[str]
     dimensions: GraphNodeDimensions
 
 
-class GraphEdgeRecord(ReadModel):
-    """The public ``UnifiedEdge.to_dict`` shape, including temporal validity."""
+class GraphNodeRecord(GraphCanvasNodeRecord):
+    """The full public ``UnifiedNode.to_dict`` shape."""
+
+    canonical_id: str
+    evidence_provenance: GraphNodeProvenance
+    category_uid: int
+    class_uid: int
+    type_uid: int
+    severity_id: int
+
+
+class GraphCanvasEdgeRecord(ReadModel):
+    """Fields retained by the compact canvas projection."""
 
     id: str
-    canonical_id: str
     source: str
     target: str
-    source_id: str
-    target_id: str
     relationship: str
     direction: str
     weight: float
     traversable: bool
     first_seen: str
     last_seen: str
-    valid_from: str
-    valid_to: str | None
     confidence: float
     provenance: dict[str, Any]
     source_scan_id: str
-    source_run_id: str
     evidence: dict[str, Any]
+
+
+class GraphEdgeRecord(GraphCanvasEdgeRecord):
+    """The full public ``UnifiedEdge.to_dict`` shape, including validity."""
+
+    canonical_id: str
+    source_id: str
+    target_id: str
+    valid_from: str
+    valid_to: str | None
+    source_run_id: str
     activity_id: int
 
 

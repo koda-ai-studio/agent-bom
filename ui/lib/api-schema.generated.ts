@@ -15961,6 +15961,78 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GraphCanvasEdgeRecord
+         * @description Fields retained by the compact canvas projection.
+         */
+        GraphCanvasEdgeRecord: {
+            /** Confidence */
+            confidence: number;
+            /** Direction */
+            direction: string;
+            /** Evidence */
+            evidence: {
+                [key: string]: unknown;
+            };
+            /** First Seen */
+            first_seen: string;
+            /** Id */
+            id: string;
+            /** Last Seen */
+            last_seen: string;
+            /** Provenance */
+            provenance: {
+                [key: string]: unknown;
+            };
+            /** Relationship */
+            relationship: string;
+            /** Source */
+            source: string;
+            /** Source Scan Id */
+            source_scan_id: string;
+            /** Target */
+            target: string;
+            /** Traversable */
+            traversable: boolean;
+            /** Weight */
+            weight: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphCanvasNodeRecord
+         * @description Fields retained by the compact canvas projection.
+         */
+        GraphCanvasNodeRecord: {
+            /** Attributes */
+            attributes: {
+                [key: string]: unknown;
+            };
+            /** Compliance Tags */
+            compliance_tags: string[];
+            /** Data Sources */
+            data_sources: string[];
+            dimensions: components["schemas"]["GraphNodeDimensions"];
+            /** Entity Type */
+            entity_type: string;
+            /** First Seen */
+            first_seen: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Last Seen */
+            last_seen: string;
+            risk_assessment: components["schemas"]["GraphNodeRiskAssessment"];
+            /** Risk Score */
+            risk_score: number;
+            /** Severity */
+            severity: string;
+            /** Status */
+            status: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphClustersResponse */
         GraphClustersResponse: {
             /** Available Kinds */
@@ -16577,7 +16649,7 @@ export interface components {
         };
         /**
          * GraphEdgeRecord
-         * @description The public ``UnifiedEdge.to_dict`` shape, including temporal validity.
+         * @description The full public ``UnifiedEdge.to_dict`` shape, including validity.
          */
         GraphEdgeRecord: {
             /** Activity Id */
@@ -17109,7 +17181,7 @@ export interface components {
         };
         /**
          * GraphNodeRecord
-         * @description The public ``UnifiedNode.to_dict`` shape; storage-only fields are excluded.
+         * @description The full public ``UnifiedNode.to_dict`` shape.
          */
         GraphNodeRecord: {
             /** Attributes */
@@ -17186,7 +17258,7 @@ export interface components {
             /** Created At */
             created_at: string;
             /** Edges */
-            edges: components["schemas"]["GraphEdgeRecord"][];
+            edges: (components["schemas"]["GraphEdgeRecord"] | components["schemas"]["GraphCanvasEdgeRecord"])[];
             /** Evidence Scope */
             evidence_scope?: string | null;
             /** Interaction Risks */
@@ -17194,7 +17266,7 @@ export interface components {
                 [key: string]: unknown;
             }[];
             /** Nodes */
-            nodes: components["schemas"]["GraphNodeRecord"][];
+            nodes: (components["schemas"]["GraphNodeRecord"] | components["schemas"]["GraphCanvasNodeRecord"])[];
             pagination: components["schemas"]["GraphPagination"];
             /** Scan Id */
             scan_id: string;

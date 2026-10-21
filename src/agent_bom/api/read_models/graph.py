@@ -8,13 +8,15 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, RootModel, WithJsonSchema
+from pydantic import BaseModel, Field, RootModel, ValidationInfo, WithJsonSchema, field_validator
 
 from agent_bom.api.read_models._base import ReadModel, ReadResponse
 from agent_bom.api.read_models.graph_records import (
     GraphAgentRecord,
     GraphAttackPathRecord,
     GraphAttackPathSummary,
+    GraphCanvasEdgeRecord,
+    GraphCanvasNodeRecord,
     GraphEdgeRecord,
     GraphNodeRecord,
 )
@@ -62,8 +64,9 @@ class GraphPageResponse(ReadResponse):
     tenant_id: str
     created_at: str
     collection_coverage: Row | None = None
-    nodes: list[GraphNodeRecord]
-    edges: list[GraphEdgeRecord]
+    view: Literal["canvas"] | None = None
+    nodes: list[GraphNodeRecord | GraphCanvasNodeRecord]
+    edges: list[GraphEdgeRecord | GraphCanvasEdgeRecord]
     attack_paths: list[GraphAttackPathRecord]
     attack_campaigns: list[Row] | None = None
     interaction_risks: list[Row]
@@ -72,7 +75,20 @@ class GraphPageResponse(ReadResponse):
     completeness: GraphCompleteness
     attack_path_pagination: GraphBoundedPage | None = None
     evidence_scope: str | None = None
-    view: Literal["canvas"] | None = None
+
+    @field_validator("nodes", "edges", mode="before")
+    @classmethod
+    def validate_projection_records(cls, value: Any, info: ValidationInfo) -> Any:
+        """Select the projection before union validation can accept partial records."""
+        if not isinstance(value, list):
+            return value
+        canvas = info.data.get("view") == "canvas"
+        record: type[ReadModel]
+        if info.field_name == "nodes":
+            record = GraphCanvasNodeRecord if canvas else GraphNodeRecord
+        else:
+            record = GraphCanvasEdgeRecord if canvas else GraphEdgeRecord
+        return [record.model_validate(item, context=info.context) for item in value]
 
 
 class GraphAgentsResponse(ReadResponse):

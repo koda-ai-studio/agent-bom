@@ -13959,6 +13959,129 @@ components:
       - has_more
       title: GraphBoundedPage
       type: object
+    GraphCanvasEdgeRecord:
+      additionalProperties: true
+      description: Fields retained by the compact canvas projection.
+      properties:
+        confidence:
+          title: Confidence
+          type: number
+        direction:
+          title: Direction
+          type: string
+        evidence:
+          additionalProperties: true
+          title: Evidence
+          type: object
+        first_seen:
+          title: First Seen
+          type: string
+        id:
+          title: Id
+          type: string
+        last_seen:
+          title: Last Seen
+          type: string
+        provenance:
+          additionalProperties: true
+          title: Provenance
+          type: object
+        relationship:
+          title: Relationship
+          type: string
+        source:
+          title: Source
+          type: string
+        source_scan_id:
+          title: Source Scan Id
+          type: string
+        target:
+          title: Target
+          type: string
+        traversable:
+          title: Traversable
+          type: boolean
+        weight:
+          title: Weight
+          type: number
+      required:
+      - id
+      - source
+      - target
+      - relationship
+      - direction
+      - weight
+      - traversable
+      - first_seen
+      - last_seen
+      - confidence
+      - provenance
+      - source_scan_id
+      - evidence
+      title: GraphCanvasEdgeRecord
+      type: object
+    GraphCanvasNodeRecord:
+      additionalProperties: true
+      description: Fields retained by the compact canvas projection.
+      properties:
+        attributes:
+          additionalProperties: true
+          title: Attributes
+          type: object
+        compliance_tags:
+          items:
+            type: string
+          title: Compliance Tags
+          type: array
+        data_sources:
+          items:
+            type: string
+          title: Data Sources
+          type: array
+        dimensions:
+          $ref: '#/components/schemas/GraphNodeDimensions'
+        entity_type:
+          title: Entity Type
+          type: string
+        first_seen:
+          title: First Seen
+          type: string
+        id:
+          title: Id
+          type: string
+        label:
+          title: Label
+          type: string
+        last_seen:
+          title: Last Seen
+          type: string
+        risk_assessment:
+          $ref: '#/components/schemas/GraphNodeRiskAssessment'
+        risk_score:
+          title: Risk Score
+          type: number
+        severity:
+          title: Severity
+          type: string
+        status:
+          title: Status
+          type: string
+      required:
+      - id
+      - label
+      - risk_score
+      - risk_assessment
+      - severity
+      - status
+      - data_sources
+      - first_seen
+      - last_seen
+      - entity_type
+      - attributes
+      - compliance_tags
+      - dimensions
+      title: GraphCanvasNodeRecord
+      type: object
     GraphClustersResponse:
       additionalProperties: true
       properties:
@@ -15002,7 +15125,7 @@ components:
       type: object
     GraphEdgeRecord:
       additionalProperties: true
-      description: The public ``UnifiedEdge.to_dict`` shape, including temporal validity.
+      description: The full public ``UnifiedEdge.to_dict`` shape, including validity.
       properties:
         activity_id:
           title: Activity Id
@@ -15070,24 +15193,24 @@ components:
           type: number
       required:
       - id
-      - canonical_id
       - source
       - target
-      - source_id
-      - target_id
       - relationship
       - direction
       - weight
       - traversable
       - first_seen
       - last_seen
-      - valid_from
-      - valid_to
       - confidence
       - provenance
       - source_scan_id
-      - source_run_id
       - evidence
+      - canonical_id
+      - source_id
+      - target_id
+      - valid_from
+      - valid_to
+      - source_run_id
       - activity_id
       title: GraphEdgeRecord
       type: object
@@ -16015,8 +16138,7 @@ components:
       type: object
     GraphNodeRecord:
       additionalProperties: true
-      description: The public ``UnifiedNode.to_dict`` shape; storage-only fields are
-        excluded.
+      description: The full public ``UnifiedNode.to_dict`` shape.
       properties:
         attributes:
           additionalProperties: true
@@ -16087,16 +16209,16 @@ components:
       - data_sources
       - first_seen
       - last_seen
+      - entity_type
+      - attributes
+      - compliance_tags
+      - dimensions
       - canonical_id
       - evidence_provenance
-      - entity_type
       - category_uid
       - class_uid
       - type_uid
       - severity_id
-      - attributes
-      - compliance_tags
-      - dimensions
       title: GraphNodeRecord
       type: object
     GraphNodeRiskAssessment:
@@ -16159,7 +16281,9 @@ components:
           type: string
         edges:
           items:
-            $ref: '#/components/schemas/GraphEdgeRecord'
+            anyOf:
+            - $ref: '#/components/schemas/GraphEdgeRecord'
+            - $ref: '#/components/schemas/GraphCanvasEdgeRecord'
           title: Edges
           type: array
         evidence_scope:
@@ -16175,7 +16299,9 @@ components:
           type: array
         nodes:
           items:
-            $ref: '#/components/schemas/GraphNodeRecord'
+            anyOf:
+            - $ref: '#/components/schemas/GraphNodeRecord'
+            - $ref: '#/components/schemas/GraphCanvasNodeRecord'
           title: Nodes
           type: array
         pagination:
