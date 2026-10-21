@@ -10,6 +10,7 @@ from typing import Any, Callable
 import httpx
 
 from agent_bom.cloud.management_http import read_json
+from agent_bom.cloud.platform_directory import collect_vercel_directory
 from agent_bom.cloud.vercel_model import deployment, evaluate, native_id, project
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
@@ -97,14 +98,14 @@ def _collect(
     return list(rows.values()), receipt
 
 
-def collect_report(*, team_id: str, token: str, client: httpx.Client | None = None) -> dict[str, Any]:
+def collect_report(*, team_id: str, token: str, client: httpx.Client | None = None, include_members: bool = False) -> dict[str, Any]:
     """Collect metadata, with unknown coverage distinct from an empty inventory."""
     native_id(team_id, "team_")
     if not isinstance(token, str) or not token.strip() or "\n" in token or "\r" in token:
         raise ValueError("A Vercel token is required")
     if client is None:
         with httpx.Client(trust_env=False) as owned:
-            return collect_report(team_id=team_id, token=token, client=owned)
+            return collect_report(team_id=team_id, token=token, client=owned, include_members=include_members)
     now = datetime.now(timezone.utc)
     observed = now.isoformat().replace("+00:00", "Z")
     projects, project_receipt = _collect(client, token, team_id, "projects", lambda row: project(row, team_id))
@@ -136,7 +137,7 @@ def collect_report(*, team_id: str, token: str, client: httpx.Client | None = No
     checks, findings = evaluate(projects, team_id, observed)
     for receipt in coverage:
         receipt["observed_at"] = observed
-    inventory = {
+    inventory: dict[str, Any] = {
         "provider": "vercel",
         "account_id": team_id,
         "projects": projects,
@@ -144,6 +145,9 @@ def collect_report(*, team_id: str, token: str, client: httpx.Client | None = No
         "findings": findings,
         "coverage": coverage,
     }
+    if include_members:
+        inventory["directory"] = collect_vercel_directory(team=team_id, token=token, client=client)
+        coverage.extend(inventory["directory"]["coverage"])
     report = {
         "schema_version": "vercel.inventory.v1",
         "status": "ok" if all(c["complete"] for c in coverage) else "partial",

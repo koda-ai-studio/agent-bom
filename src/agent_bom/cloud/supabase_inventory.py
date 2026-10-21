@@ -16,6 +16,7 @@ from typing import Any
 import httpx
 
 from agent_bom.cloud.management_http import read_json
+from agent_bom.cloud.platform_directory import collect_supabase_directory
 from agent_bom.cloud.resource_model import supabase_project_node_id as project_node_id
 from agent_bom.compliance_hub import apply_hub_classification
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType, stable_id
@@ -155,7 +156,9 @@ def _new_receipt(ref: str, capability: str, observed_at: str) -> dict[str, Any]:
     }
 
 
-def collect_report(*, project_refs: list[str], token: str, client: httpx.Client | None = None) -> dict[str, Any]:
+def collect_report(
+    *, project_refs: list[str], token: str, client: httpx.Client | None = None, organization: str | None = None
+) -> dict[str, Any]:
     """Collect a report with independent capability receipts; errors never mean clean.
 
     Scope is required and bounded before networking. Partial reads retain validated
@@ -163,7 +166,8 @@ def collect_report(*, project_refs: list[str], token: str, client: httpx.Client 
     recorded so an operator can retry without a hidden unbounded request loop.
     """
     if (
-        not project_refs
+        (not project_refs and not organization)
+        or bool(project_refs and organization)
         or len(project_refs) > MAX_PROJECTS
         or any(not isinstance(r, str) or not re.fullmatch(r"[a-z]{20}", r) for r in project_refs)
     ):
@@ -172,7 +176,7 @@ def collect_report(*, project_refs: list[str], token: str, client: httpx.Client 
         raise ValueError("A Supabase management token is required")
     if client is None:
         with httpx.Client(trust_env=False) as owned:
-            return collect_report(project_refs=project_refs, token=token, client=owned)
+            return collect_report(project_refs=project_refs, token=token, client=owned, organization=organization)
     observed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     report: dict[str, Any] = {
         "schema_version": "supabase.inventory.v1",
@@ -184,6 +188,36 @@ def collect_report(*, project_refs: list[str], token: str, client: httpx.Client 
         "coverage": [],
         "reconcile_absent": False,
     }
+    if organization is not None:
+        directory = collect_supabase_directory(organization=organization, token=token, client=client)
+        report["cloud_inventory"].append(
+            {
+                "provider": "supabase",
+                "account_id": organization,
+                "projects": [],
+                "directory": directory,
+                "coverage": directory["coverage"],
+                "findings": [],
+            }
+        )
+        report["coverage"].extend(directory["coverage"])
+        project_refs = directory["project_refs"]
+        if not all(row["complete"] for row in directory["coverage"]):
+            report["status"] = "partial"
+    _collect_projects(report, project_refs, client, token, organization, observed_at)
+    # Content hash covers normalized evidence, not secrets or a provider-signed attestation.
+    report["evidence_sha256"] = hashlib.sha256(json.dumps(report, sort_keys=True).encode()).hexdigest()
+    return report
+
+
+def _collect_projects(
+    report: dict[str, Any],
+    project_refs: list[str],
+    client: httpx.Client,
+    token: str,
+    organization: str | None,
+    observed_at: str,
+) -> None:
     for ref in dict.fromkeys(project_refs):
         project: dict[str, Any] | None = None
         inventory: dict[str, Any] | None = None
@@ -203,7 +237,10 @@ def collect_report(*, project_refs: list[str], token: str, client: httpx.Client 
             receipt["read"] = True
             try:
                 if capability == "project":
-                    project = _project(payload, ref)
+                    candidate = _project(payload, ref)
+                    if organization is not None and candidate["organization_id"] != organization:
+                        raise ValueError("Project belongs to another organization")
+                    project = candidate
                     inventory = {
                         "provider": "supabase",
                         "status": "ok",
@@ -230,6 +267,3 @@ def collect_report(*, project_refs: list[str], token: str, client: httpx.Client 
             except (ValueError, TypeError):
                 receipt["state"] = "invalid_response"
                 report["status"] = "partial"
-    # Content hash covers normalized evidence, not secrets or a provider-signed attestation.
-    report["evidence_sha256"] = hashlib.sha256(json.dumps(report, sort_keys=True).encode()).hexdigest()
-    return report
