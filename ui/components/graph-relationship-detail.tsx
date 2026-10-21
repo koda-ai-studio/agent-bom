@@ -31,9 +31,23 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
   useEffect(() => {
     if (mobile) return;
     const previous = document.activeElement;
+    const canvas = previous?.closest(".react-flow");
+    const invokingEdgeId = previous?.closest(".react-flow__edge")?.getAttribute("data-id");
+    const restore = () => {
+      // React Flow can replace an SVG edge during inspector/camera updates.
+      // Resolve only inside the invoking canvas, never another investigation.
+      const target = previous?.isConnected ? previous : invokingEdgeId
+        ? Array.from(canvas?.querySelectorAll(".react-flow__edge") ?? []).find(element => element.getAttribute("data-id") === invokingEdgeId)
+        : null;
+      if (target instanceof HTMLElement || target instanceof SVGElement) target.focus({ preventScroll: true });
+    };
     closeButtonRef.current?.focus();
     return () => {
-      if ((previous instanceof HTMLElement || previous instanceof SVGElement) && previous.isConnected) previous.focus();
+      restore();
+      // Closing the dock can replace the edge again in the same commit.
+      requestAnimationFrame(() => {
+        if (document.activeElement === document.body) restore();
+      });
     };
   }, [mobile, edge.id]);
   const title = relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });

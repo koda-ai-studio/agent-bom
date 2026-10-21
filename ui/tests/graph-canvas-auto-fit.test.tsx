@@ -258,3 +258,20 @@ it("does not restart an exhausted settling budget when virtualized measurements 
   await act(() => vi.advanceTimersByTimeAsync(100));
   expect(flow.fitView).toHaveBeenCalledTimes(4);
 });
+
+
+it("reports camera settling until the asynchronous fit and measurements finish", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  let finish!: (value: boolean) => void;
+  flow.fitView.mockImplementationOnce(() => new Promise<boolean>(resolve => { finish = resolve; }));
+  render(<GraphCanvasAutoFit enabled layoutKey="pending" inspector preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(flow.frame).toHaveAttribute("data-graph-camera-settled", "false");
+  await act(async () => { finish(true); await vi.advanceTimersByTimeAsync(100); });
+  expect(flow.frame).toHaveAttribute("data-graph-camera-settled", "true");
+});

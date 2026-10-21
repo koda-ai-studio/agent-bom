@@ -60,6 +60,10 @@ for (const theme of ["light", "dark"] as const) for (const width of [390, 1440])
       await expect(page.getByTestId("graph-entity-drawer")).toBeVisible();
     }
     await settledViewportZoom(page);
+    // A transform can look stable while an asynchronous fit is waiting for
+    // React Flow measurements. Wait for its bounded convergence before saving
+    // the camera that the passive snapshot notification must preserve.
+    await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
     const before = await canvas.locator(".react-flow__viewport").getAttribute("style");
     available = true;
     await page.clock.fastForward(30_000);
