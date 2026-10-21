@@ -73,7 +73,7 @@ runtime response validation. The generated UI types consume the same OpenAPI.
 | `config/schemas/inventory.schema.json` | `Package.ecosystem` enum values | 9 |
 | `config/schemas/inventory.schema.json` | `MCPServer.transport` enum values | 3 |
 | `docs/openapi/v1.json` | paths | 369 |
-| `docs/openapi/v1.json` | component schemas | 667 |
+| `docs/openapi/v1.json` | component schemas | 680 |
 
 <!-- DATA_MODEL_ATLAS:END -->
 

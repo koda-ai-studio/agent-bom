@@ -4,9 +4,9 @@
  * As of #2255 the canonical taxonomy (entity types + relationship types)
  * is generated from the Python source via `npm run codegen:graph-schema`
  * into ./graph-schema.generated.ts. This file re-exports the generated
- * kind enums and continues to host the richer TypeScript-specific types
- * (UnifiedNode/UnifiedEdge interfaces, OCSF mappings, severity helpers,
- * legend data) that are not part of the cross-language contract.
+ * kind enums. Wire fields come from the generated OpenAPI contract; legacy
+ * snapshot compatibility, OCSF mappings, severity helpers and legend data
+ * remain here.
  *
  * When adding a new entity / edge type:
  *   1. Add it to agent_bom.graph.types in Python.
@@ -15,6 +15,10 @@
  *   3. Extend any UI-only maps in this file (ENTITY_OCSF_MAP, color
  *      maps, etc.) to cover the new key.
  */
+
+import type { components } from "./api-schema.generated";
+
+type GraphApiSchemas = components["schemas"];
 
 // Re-export the codegen output so consumers can keep the
 // `from "@/lib/graph-schema"` import path while still resolving the
@@ -305,78 +309,33 @@ export const ENTITY_OCSF_MAP: Record<
 // Core interfaces
 // ═══════════════════════════════════════════════════════════════════════════
 
-export interface NodeDimensions {
-  ecosystem?: string;
-  cloud_provider?: string;
-  agent_type?: string;
-  surface?: string;
-  environment?: string;
-}
+export type NodeDimensions = Pick<GraphApiSchemas["GraphNodeDimensions"],
+  "ecosystem" | "cloud_provider" | "agent_type" | "surface" | "environment"
+>;
 
-export interface UnifiedNode {
-  evidence_provenance?: {
-    schema_version: string;
-    tier: string;
-    sources: string[];
-    source_snapshot_ids: string[];
-    first_seen: string | null;
-    last_seen: string | null;
-    time_basis: string;
-    execution: string;
-  };
-  risk_assessment?: import("@/lib/node-risk-assessment").NodeRiskAssessment | undefined;
-  id: string;
-  entity_type: EntityType | string;
-  label: string;
-
-  // OCSF classification (absent from `/v1/graph?view=canvas`)
-  category_uid?: number;
-  class_uid?: number;
-  type_uid?: number;
-
-  // State
-  status: NodeStatus | string;
-  risk_score: number;
-  severity: string;
-  severity_id?: number;
-
-  // Temporal
-  first_seen: string;
-  last_seen: string;
-
-  // Entity-specific
-  attributes: Record<string, unknown>;
-
-  // Tags
-  compliance_tags: string[];
-  data_sources: string[];
-
-  // Dimensions
+/** Current wire fields, with provenance optional for legacy snapshots. */
+export type UnifiedNode = Pick<GraphApiSchemas["GraphNodeRecord"],
+  "id" | "entity_type" | "label" |
+  "status" | "risk_score" | "severity" | "first_seen" | "last_seen" |
+  "attributes" | "compliance_tags" | "data_sources"
+> & {
+  category_uid?: GraphApiSchemas["GraphNodeRecord"]["category_uid"];
+  class_uid?: GraphApiSchemas["GraphNodeRecord"]["class_uid"];
+  type_uid?: GraphApiSchemas["GraphNodeRecord"]["type_uid"];
+  severity_id?: GraphApiSchemas["GraphNodeRecord"]["severity_id"];
   dimensions: NodeDimensions;
-}
+  evidence_provenance?: GraphApiSchemas["GraphNodeRecord"]["evidence_provenance"];
+  risk_assessment?: import("@/lib/node-risk-assessment").NodeRiskAssessment | undefined;
+};
 
-export interface UnifiedEdge {
-  id: string;
-  source: string;
-  target: string;
-  relationship: RelationshipType | string;
-
-  // Traversal
+export type UnifiedEdge = Pick<GraphApiSchemas["GraphEdgeRecord"],
+  "id" | "source" | "target" | "relationship" | "weight" | "traversable" |
+  "first_seen" | "last_seen" | "evidence"
+> & {
+  activity_id?: GraphApiSchemas["GraphEdgeRecord"]["activity_id"];
   direction: "directed" | "bidirectional";
-  weight: number;
-  traversable: boolean;
-
-  // Temporal
-  first_seen: string;
-  last_seen: string;
-
-  // Evidence
-  evidence: Record<string, unknown>;
-  source_scan_id?: string | null | undefined;
-
-  // OCSF (absent from `/v1/graph?view=canvas`)
-  activity_id?: number;
-}
+  source_scan_id?: GraphApiSchemas["GraphEdgeRecord"]["source_scan_id"] | null | undefined;
+};
 
 /**
  * A typed MITRE ATT&CK / ATLAS technique mapped to one hop of an attack path.
@@ -387,21 +346,11 @@ export interface UnifiedEdge {
  * to no known technique is simply left without a mapping (fail-closed). Mirrors
  * the Python `TechniqueMapping` (agent_bom.graph.container).
  */
-export interface TechniqueMapping {
-  /** 0-based position in the kill-chain edge sequence. */
-  hop_index: number;
-  /** e.g. "T1078" (ATT&CK) or "AML.T0053" (ATLAS). */
-  technique_id: string;
-  technique_name: string;
-  /** "attack" | "atlas". */
-  catalog: string;
-  tactics: string[];
-  /** Observed evidence that produced the mapping. */
-  provenance: string;
-  /** 0..1 signal, never an assertion of activity. */
-  confidence: number | null;
+export type TechniqueMapping = Required<Pick<GraphApiSchemas["TechniqueMapping"],
+  "hop_index" | "technique_id" | "technique_name" | "catalog" | "tactics" | "provenance" | "confidence"
+>> & {
   evidence_basis?: "observed" | "runtime_observed" | "inferred" | "modeled" | null;
-}
+};
 
 export type HopAuthorityEvidence = {
   status: "recorded" | "partial";
@@ -460,43 +409,29 @@ export interface GraphHopEvidence {
   authority?: HopAuthorityEvidence | null;
 }
 
-export interface AttackPath {
+/** Stored paths may predate reachability, technique and finding-ID evidence. */
+export type AttackPath = Pick<GraphApiSchemas["GraphAttackPathRecord"],
+  "source" | "target" | "hops" | "edges" | "composite_risk" | "summary" |
+  "credential_exposure" | "tool_exposure" | "vuln_ids"
+> & Partial<Pick<GraphApiSchemas["GraphAttackPathRecord"],
+  "finding_ids" | "reachability" | "reachability_basis" | "mitre_technique_ids"
+>> & {
   /** Server-ranked finding severity; never inferred from composite_risk. */
   severity?: string;
-  source: string;
-  target: string;
-  hops: string[];
-  edges: string[];
-  composite_risk: number;
-  summary: string;
-  credential_exposure: string[];
-  tool_exposure: string[];
-  vuln_ids: string[];
-  /** Stable Finding.id anchors when stamped (preferred over CVE labels). */
-  finding_ids?: string[];
-  /** Executability evidence tier; optional on legacy graph snapshots. */
-  reachability?: "confirmed" | "likely" | "unknown" | "unlikely" | string;
-  reachability_basis?: string[];
   /** Immutable source receipts for every directed hop in correlated snapshots. */
   hop_evidence?: GraphHopEvidence[];
   /** Completeness and limits for the analysis that produced this path. */
   analysis?: {
-    status?: "complete" | "limited" | "skipped" | "failed" | "not_recorded" | string;
+    status?: GraphAnalysisState | string;
     reason_codes?: string[];
     limits?: Record<string, number>;
     observed?: Record<string, number>;
   };
-  /**
-   * Potential ATT&CK/ATLAS techniques mapped from this path's observed
-   * evidence, ordered by hop. Optional so older graph snapshots without the
-   * field still parse. Mapped/potential — never observed attacker activity.
-   */
+  /** Potential mapped techniques, not observed attacker activity. */
   technique_mappings?: TechniqueMapping[];
-  /** Deduped, sorted technique IDs across all hops (convenience). */
-  mitre_technique_ids?: string[];
-  /** The values the server's queue sorts on, in sort order; absent on legacy payloads. */
+  /** Server queue sort values; absent on legacy payloads. */
   ranking_factors?: AttackPathRankingFactors;
-}
+};
 
 export type AttackPathEvidenceConfidence = "verified" | "likely" | "structural" | "unassessed" | "disproven";
 
