@@ -492,6 +492,16 @@ def _drain_scan_executor() -> None:
         pass
 
 
+def _drain_graph_warmups() -> None:
+    # A scan commit queues background readers that resolve the active stores.
+    # Finish them before restoring those stores: otherwise an earlier test's
+    # warm-up can read the next test's graph and alter its cache/load counts.
+    for name in ("agent_bom.api.graph_rollup_prewarm", "agent_bom.api.finding_reachability_prewarm"):
+        module = sys.modules.get(name)
+        if module is not None:
+            assert module.wait_idle(10), f"Background graph warm-up did not finish: {name}"
+
+
 def _reset_proxy_route_state() -> None:
     # The proxy status/alerts route keeps process-global in-memory buffers:
     # a bounded _proxy_alerts deque, its _proxy_alerts_total counter, the latest
@@ -987,6 +997,7 @@ def reset_global_test_state():
     # Drain first: stop any scan worker thread the test left running before we
     # restore globals it may still be mutating (scanner offline flags, stores).
     _drain_scan_executor()
+    _drain_graph_warmups()
     _restore_stub_sdk_modules(stub_sdk_modules_snapshot)
     root_logger.handlers[:] = logging_handlers_snapshot
     root_logger.setLevel(logging_level_snapshot)
