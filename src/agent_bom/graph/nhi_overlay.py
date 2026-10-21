@@ -23,9 +23,24 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, NodeStatus, RelationshipType
+from agent_bom.identity.okta_http import org_origin
 from agent_bom.identity.okta_nhi import DiscoveredNonHumanIdentity
 
 _OVERLAY_SOURCE = "nhi-discovery"
+
+
+def _correlation_attributes(identity: DiscoveredNonHumanIdentity, node_id: str) -> dict[str, str]:
+    """Publish a stable key only for a validated, already normalized Okta scope."""
+    if identity.provider != "okta" or not identity.source_scope:
+        return {}
+    try:
+        if org_origin(identity.source_scope) != identity.source_scope:
+            return {}
+    except ValueError:
+        return {}
+    # The node id includes provider + org and, for NHIs, kind + native id.
+    # Preserve the native id separately; display names never enter this key.
+    return {"canonical_id": node_id}
 
 
 def _org_membership(graph: UnifiedGraph, identity: DiscoveredNonHumanIdentity, nid: str) -> tuple[int, int]:
@@ -39,7 +54,11 @@ def _org_membership(graph: UnifiedGraph, identity: DiscoveredNonHumanIdentity, n
                     entity_type=EntityType.ACCOUNT,
                     label=identity.source_scope,
                     data_sources=[_OVERLAY_SOURCE],
-                    attributes={"provider": "okta", "org_url": identity.source_scope},
+                    attributes={
+                        "provider": "okta",
+                        "org_url": identity.source_scope,
+                        **_correlation_attributes(identity, account_id),
+                    },
                 )
             )
             added_nodes += 1
@@ -100,6 +119,7 @@ def apply_nhi_overlay(
                         "last_used_at": identity.last_used_at,
                         "credential_expires_at": identity.credential_expires_at,
                         "scopes": list(identity.scopes),
+                        **_correlation_attributes(identity, nid),
                     },
                 )
             )

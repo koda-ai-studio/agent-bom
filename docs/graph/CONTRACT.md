@@ -76,6 +76,20 @@ source. Ordinary metadata still follows the existing precedence rules. Collect
 fresh evidence and review its scope before treating an earlier positive claim
 as resolved.
 
+### Discovered Okta identities
+
+New graph projections record canonical keys for Okta organizations and their
+discovered non-human identities when the provider tenant origin is valid and
+normalized. Repeated snapshots correlate on organization, identity kind and
+native ID; a display-name change does not create a new identity. Equal native
+IDs in different organizations or different identity kinds remain separate.
+Correlation retains both source observation receipts and the recorded organization
+membership. It does not infer tool-access grants from scope names.
+
+Missing, invalid or unnormalized imported origins remain snapshot scoped.
+Historical snapshots without these keys are unchanged; collect a new snapshot
+to record the qualified identity fields.
+
 ### Canonical identity version 3
 
 New scan exports declare `canonical_id_schema_version: "3"`. Structured,
