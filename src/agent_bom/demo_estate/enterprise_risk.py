@@ -81,7 +81,7 @@ def advisory_catalog() -> tuple[tuple[str, str, str, DemoAdvisory], ...]:
 
 # One ``Asset.asset_type`` per estate asset, for every lane.
 #
-# ``Asset.canonical_id`` is ``stable_id(asset_type, identifier)``, so two lanes
+# ``Asset.canonical_id`` includes asset_type, identifier and provider scope, so lanes
 # that describe the SAME inventoried row with different asset_types mint two
 # canonical ids for one asset — and the findings list, the graph and the exports
 # stop joining. The posture lane goes through ``cloud_cis_check_to_finding``,

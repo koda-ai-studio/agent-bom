@@ -18,6 +18,15 @@ resolves open findings absent from the batch. Strings, numbers and `null` are
 rejected before ingestion, so a malformed flag cannot trigger reconciliation.
 Incremental or partial batches should leave it `false`.
 
+Finding lifecycle follows observation time. An older observation can extend
+`first_seen` and increment the distinct scan count, but cannot replace a newer
+current payload or severity. Replaying the same finding/batch preserves its
+admitted payload. Absence cannot resolve a finding observed after that absence
+report; reopening requires an observation strictly after `resolved_at`.
+These guards run inside the atomic hub ingest transaction in each backend.
+The observation log records sightings; it is not a full archive of every
+historical vendor payload.
+
 Local JSON report exports to regular files publish only after encoding and writing succeed.
 If either step fails, an existing report stays intact and no partial new report
 is published. Inspect the command's failure before treating a retained report
@@ -51,6 +60,12 @@ agent-bom findings push findings.sarif \
 ```
 
 The importer retains file, line, rule and scanner provenance as SAST findings.
+Local scan correlation retains native and external SAST occurrences separately,
+including their severities and evidence. Exact file/line and shared CWE or rule
+can produce symmetric `related_findings` links with `correlation_candidates`
+receipts; these are candidates, not proof of issue equivalence. Conflicting
+repository/revision scope and path suffixes cannot establish a link.
+Counts can therefore include both scanner observations of a possible issue.
 Control-plane persistence applies its existing redaction policy to raw paths and
 evidence; stable finding and asset identities preserve correlation.
 Dependency findings use the package coordinates supplied by the report. Missing
@@ -225,3 +240,23 @@ migration intentionally has no destructive downgrade. Transaction atomicity
 does not establish independent audit retention or acknowledged-write survival
 under host/storage loss. SQLite WAL uses NORMAL synchronous mode; replication,
 backup recovery, failover and power-loss durability require separate qualification.
+
+## Provider-local finding identities
+
+New findings qualify provider-local asset identifiers with recorded provider,
+account and region. Environment labels do not rename an asset. Qualified native
+identifiers and portable package PURLs retain their existing identity scheme;
+unscoped legacy inputs remain distinguishable from newly scoped inputs.
+Provide account scope when importing account-local names or IDs. Source-code
+occurrences also retain recorded scanner and repository discriminators when
+present, so equal paths and rules from distinct sources stay separate. A code
+revision is observation context: it constrains candidate correlation without
+renaming an otherwise unchanged finding.
+
+Persisted explicit finding and asset IDs are preserved during rehydration.
+There is no automatic alias from an older unscoped ID to a newly scoped ID: the
+older ID may have collapsed several accounts, so transferring suppression,
+resolution or ownership would be ambiguous. Rescan with complete scope and
+review historical workflow state before retiring the older occurrence. Rolling
+back the application does not rewrite stored records; avoid mixing old and new
+collectors for account-local identities during an upgrade.

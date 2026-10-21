@@ -12,6 +12,16 @@ def _write(path: Path, lines: int) -> None:
     path.write_text("x\n" * lines, encoding="utf-8")
 
 
+@pytest.mark.parametrize(
+    "source", ["src/agent_bom/domain/asset_identity.py", "src/agent_bom/domain/finding_model.py", "tests/fixtures/domain_contracts.json"]
+)
+def test_domain_identity_edits_select_serialized_projection_contract(tmp_path: Path, source: str) -> None:
+    contracts = [tmp_path / "tests" / name for name in ("test_domain_split_characterization.py", "test_output_render_characterization.py")]
+    for contract in contracts:
+        _write(contract, 1)
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == contracts
+
+
 @pytest.mark.parametrize("source", ["demo_estate/bootstrap.py", "api/read_models/posture.py"])
 def test_seeded_estate_and_read_models_select_live_body_contracts(tmp_path: Path, source: str) -> None:
     contract = tmp_path / "tests/test_api_read_contracts.py"

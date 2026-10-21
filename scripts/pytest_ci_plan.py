@@ -471,6 +471,12 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                 for candidate in available
                 if candidate.name in {"test_ast_analysis_characterization.py", "test_console_reconciliation.py"}
             )
+        if normalized.as_posix().startswith("src/agent_bom/domain/") or normalized.as_posix() == "tests/fixtures/domain_contracts.json":
+            selected.update(
+                candidate
+                for candidate in available
+                if candidate.name in {"test_domain_split_characterization.py", "test_output_render_characterization.py"}
+            )
         if normalized.as_posix().startswith("src/agent_bom/iac/"):
             selected.update(candidate for candidate in available if candidate.name.startswith("test_iac_"))
         if normalized.as_posix() == "src/agent_bom/secret_scanner.py":

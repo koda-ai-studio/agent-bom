@@ -14,28 +14,37 @@ from typing import Any
 
 from agent_bom.api.finding_rank import compute_effective_reach_score
 from agent_bom.api.storage.hub_filters import _cvss_value, _severity_rank
-from agent_bom.canonical_ids import canonical_finding_id, canonical_id
+from agent_bom.canonical_ids import canonical_finding_id
+from agent_bom.domain.asset_identity import canonical_asset_id
 
 FindingLifecycleMetrics = dict[str, Any]
+
+
+def observation_at_least(observed_at: str, prior_at: str, *, strictly: bool = False) -> bool:
+    """Compare recorded instants, including offsets and subsecond precision.
+
+    Unparseable historical times cannot authorize replacing or resolving state.
+    Legacy naive values retain their established UTC interpretation.
+    """
+    try:
+        values = [datetime.fromisoformat(value.replace("Z", "+00:00")) for value in (observed_at, prior_at)]
+        left, right = [value if value.tzinfo else value.replace(tzinfo=timezone.utc) for value in values]
+        return left > right if strictly else left >= right
+    except (ValueError, TypeError):
+        return False
 
 
 def normalize_observed_at(value: str | datetime | None) -> str:
     """Return a UTC ISO-8601 timestamp suitable for monotone comparisons."""
     if value is None or value == "":
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    if isinstance(value, datetime):
-        dt = value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    text = str(value).strip()
-    if text.endswith("Z"):
-        return text
-    if "+" in text[10:] or text.endswith("+00:00"):
-        try:
-            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
-            return parsed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        except ValueError:
-            return text
-    return text
+    try:
+        parsed = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+    except ValueError:
+        return str(value).strip()
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def resolve_canonical_id(payload: dict[str, Any], *, source: str = "") -> str:
@@ -50,7 +59,13 @@ def resolve_canonical_id(payload: dict[str, Any], *, source: str = "") -> str:
     if not asset_stable:
         asset_type = str(asset.get("asset_type") or "external")
         identifier = asset.get("identifier") or f"{asset.get('name', '')}:{asset.get('location') or ''}"
-        asset_stable = canonical_id(asset_type, identifier)
+        asset_stable = canonical_asset_id(
+            asset_type,
+            identifier,
+            provider=asset.get("provider") or payload.get("provider"),
+            account_ref=asset.get("account_ref") or payload.get("account_ref"),
+            region=asset.get("region") or payload.get("region"),
+        )
 
     rule = payload.get("vulnerability_id") or payload.get("cve_id") or payload.get("rule_id") or payload.get("title") or ""
     location = payload.get("location") or payload.get("file_path") or asset.get("location") or ""
@@ -93,7 +108,11 @@ def apply_observation_to_current(
     """Return the merged current-state row after a new observation timestamp."""
     from agent_bom.graph.sla import merge_finding_sla
 
-    first_seen = min(observed_at, str(existing["first_seen"])) if existing is not None else observed_at
+    first_seen = (
+        str(existing["first_seen"])
+        if existing is not None and not observation_at_least(str(existing["first_seen"]), observed_at)
+        else observed_at
+    )
     payload = merge_finding_sla(payload, (existing or {}).get("payload") or {}, first_seen=first_seen)
     if existing is None:
         return {
@@ -113,25 +132,28 @@ def apply_observation_to_current(
         }
 
     prior_status = str(existing.get("status") or "open")
-    first_seen = observed_at if observed_at < str(existing["first_seen"]) else str(existing["first_seen"])
-    last_seen = observed_at if observed_at > str(existing["last_seen"]) else str(existing["last_seen"])
+    latest = observation_at_least(observed_at, str(existing["last_seen"]))
+    last_seen = observed_at if latest else str(existing["last_seen"])
     reopened_at = existing.get("reopened_at")
-    if prior_status == "resolved":
+    reopen = prior_status == "resolved" and observation_at_least(
+        observed_at, str(existing.get("resolved_at") or existing["last_seen"]), strictly=True
+    )
+    if reopen:
         reopened_at = observed_at
     return {
         "canonical_id": canonical_id,
         "first_seen": first_seen,
         "last_seen": last_seen,
-        "status": merge_status_on_observation(prior_status, is_new_row=False),
-        "severity": metrics["severity"],
-        "severity_rank": metrics["severity_rank"],
-        "cvss_score": metrics["cvss_score"],
-        "effective_reach_score": metrics["effective_reach_score"],
+        "status": "reopened" if reopen else prior_status,
+        "severity": metrics["severity"] if latest else existing["severity"],
+        "severity_rank": metrics["severity_rank"] if latest else existing["severity_rank"],
+        "cvss_score": metrics["cvss_score"] if latest else existing["cvss_score"],
+        "effective_reach_score": metrics["effective_reach_score"] if latest else existing["effective_reach_score"],
         "scan_count": int(existing.get("scan_count") or 0) + 1,
         "resolved_at": existing.get("resolved_at"),
         "reopened_at": reopened_at,
         "updated_at": updated_at,
-        "payload": payload,
+        "payload": payload if latest else merge_finding_sla(existing.get("payload") or {}, {}, first_seen=first_seen),
     }
 
 

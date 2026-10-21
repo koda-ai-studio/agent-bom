@@ -9,6 +9,7 @@ from agent_bom.advisory_ids import derive_cve_from_advisory_id, finding_advisory
 from agent_bom.canonical_ids import canonical_finding_id, source_ids
 from agent_bom.core.asset_types import entity_type_for_asset_type
 from agent_bom.core.sla import finding_owner, finding_sla_fields
+from agent_bom.domain.asset_identity import canonical_asset_id
 from agent_bom.evidence.finding_lanes import model_lane_fields
 
 if TYPE_CHECKING:
@@ -24,7 +25,6 @@ from agent_bom.domain.finding_types import (
     _control_tag_from_compliance_tag,
     _dedupe_control_tags,
     _occurrence_evidence_qualifier,
-    _stable_id,
     stable_id,
 )
 
@@ -45,16 +45,19 @@ class Asset:
     account_ref: Optional[str] = None  # normalized ``<provider>:<account>``
     region: Optional[str] = None
     environment: Optional[str] = None  # prod | staging | dev | ...
+    _recorded_canonical_id: str = field(default="", repr=False, compare=False)
 
     @property
     def stable_id(self) -> str:
         """Deterministic UUID derived from asset content.
 
-        Same asset type + identifier always produces the same ID across scans.
+        Provider-local identifiers include their recorded account and region.
         This enables tracking: first seen, last seen, resolved, re-emerged.
         """
         identifier = self.identifier or f"{self.name}:{self.location or ''}"
-        return _stable_id(self.asset_type, identifier)
+        return self._recorded_canonical_id or canonical_asset_id(
+            self.asset_type, identifier, provider=self.provider, account_ref=self.account_ref, region=self.region
+        )
 
     @property
     def canonical_id(self) -> str:

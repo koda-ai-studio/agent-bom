@@ -891,7 +891,7 @@ def _report_with_native_ast_flow(line: int):
     return report
 
 
-def test_external_sast_merges_with_native_sast_at_same_file_line():
+def test_external_sast_links_without_discarding_native_or_vendor_observation():
     from agent_bom.finding import FindingSource, FindingType
     from agent_bom.parsers.external_scanners import ingest_external_report
 
@@ -900,10 +900,14 @@ def test_external_sast_merges_with_native_sast_at_same_file_line():
 
     sast = [f for f in report.to_findings() if f.finding_type is FindingType.SAST]
 
-    assert len(sast) == 1
-    assert sast[0].source is FindingSource.SAST
-    assert sast[0].sources == ["native", "external:CodeScanner"]
-    assert sast[0].evidence["external_matches"][0]["rule_id"] == "python.lang.security.audit.subprocess-shell-true"
+    assert len(sast) == 2
+    native = next(f for f in sast if f.source is FindingSource.SAST)
+    external = next(f for f in sast if f.source is FindingSource.EXTERNAL)
+    assert external.sources == ["external:CodeScanner"]
+    assert external.id in native.related_findings
+    assert native.id in external.related_findings
+    assert native.evidence["correlation_candidates"][0]["status"] == "candidate"
+    assert external.evidence["rule_id"] == "python.lang.security.audit.subprocess-shell-true"
 
 
 def test_sarif_output_carries_unresolved_external_advisory_and_external_sast():
