@@ -255,6 +255,7 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
   await fixture(page, nodes, [edge("agent", "cluster", "contains"), edge("cluster", "worker", "hosts"), edge("agent", "bucket", "contains"),
     edge("worker", "warehouse", "can_access")]);
   await openAgentContext(page, 1440);
+  await expect(page.locator(".react-flow [data-finding-signal]")).toHaveCount(0);
   const marks = page.locator(".react-flow [data-graph-source-badge]");
   // One mark per scope: the AWS account root and the cross-vendor Snowflake hop; children that match their scope stay unmarked.
   await expect(marks).toHaveCount(2);
@@ -268,11 +269,14 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
       const style = getComputedStyle(mark);
       const [hi, lo] = [luminance(style.outlineColor), luminance(canvas)].sort((a, b) => b - a);
       return { basis: mark.getAttribute("data-provider-basis"), title: mark.getAttribute("title"), outline: style.outlineStyle,
+        background: style.backgroundColor, filter: getComputedStyle(mark.querySelector("img")!).filter,
         glyph: mark.querySelector("img")!.getBoundingClientRect().width, contrast: (hi! + 0.05) / (lo! + 0.05) };
     });
   });
   for (const mark of measured) {
-    expect(mark.glyph, "glyph renders at least 14px").toBeGreaterThanOrEqual(14);
+    expect(mark.glyph, "vendor logo remains legible on the fitted canvas").toBeGreaterThanOrEqual(24);
+    expect(mark.background).toBe("rgb(255, 255, 255)");
+    expect(mark.filter).toBe("none");
     expect(mark.contrast, "mark outline contrast against the canvas").toBeGreaterThanOrEqual(3);
   }
   expect(measured.map(mark => mark.title).sort()).toEqual(["Source: AWS", "Source: Snowflake"]);

@@ -8,7 +8,7 @@ import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
 import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { entitySource } from "@/lib/agent-source";
-import { FindingSignalDot, NodeBadgeRow } from "@/components/graph-node-badges";
+import { NodeBadgeRow } from "@/components/graph-node-badges";
 import { assetKindLabel } from "@/lib/asset-icon-registry";
 import { findingSeverity, graphNodeTooltip } from "@/lib/graph-node-tooltip";
 import { showsEnvironmentChip, showsProviderMark, type ScopeContext } from "@/lib/graph-scope-context";
@@ -204,13 +204,12 @@ function NodeCard({
   const shownSubtitle = typeof subtitle === "string" && named.some(value => typeof value === "string" && value && subtitle.trim().toLowerCase() === value.toLowerCase())
     ? undefined : subtitle;
   return (
-    <div title={graphNodeTooltip(data)} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
+    <div title={[graphNodeTooltip(data), ring?.description].filter(Boolean).join(" · ")} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
       style={{ width: "var(--graph-node-card-width, 220px)" }}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
       <div ref={glyphRef} data-severity-ring={severity} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
-      } ${data.highlighted ? `ring-2 ${ring ? "ring-offset-[10px]" : "ring-offset-4"} ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
-        {ring && !isRollupContainer && <FindingSignalDot ring={ring} />}
+      } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
         {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
         <Handle type="target" position={data.reverseFlow ? Position.Right : Position.Left}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${target ? "" : "!opacity-0"}`} />
@@ -218,7 +217,7 @@ function NodeCard({
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
         <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
-        {/* A small vendor mark centred on the ring at 4:30, like a status badge; shown once per scope. */}
+        {/* A contrasting vendor badge at 4:30, shown once per scope. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
       </div>
       <SegmentedLabel text={repository?.slug || displayTitle} className="mb-1 w-full min-w-0 line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />

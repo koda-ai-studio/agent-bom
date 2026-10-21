@@ -2668,11 +2668,12 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       if (audit.renderedEdges !== options.repositoryVisualAudit.length || audit.crossings.length) {
         throw new Error(`Repository relationships cross or are missing: ${JSON.stringify(audit)}`);
       }
-      if (!audit.logos.some(logo => logo.source === "github" && logo.loaded && logo.size >= 18 && !logo.overlapsGlyph)) {
+      if (!audit.logos.some(logo => logo.source === "github" && logo.loaded && logo.size >= 24 && !logo.overlapsGlyph)) {
         throw new Error(`Repository host logo is missing or too small: ${JSON.stringify(audit.logos)}`);
       }
     }
     if (options.minGraphNodes) {
+      await expect(page.locator(".react-flow [data-finding-signal]")).toHaveCount(0);
       const graphNodeCount = await page.locator(".react-flow__node:visible").count();
       const graphEdgeCount = await page.locator(".react-flow__edge").count();
       if (graphNodeCount < options.minGraphNodes || graphEdgeCount < (options.minGraphEdges ?? 1)) {

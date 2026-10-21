@@ -48,13 +48,12 @@ describe("provider basis", () => {
 });
 
 describe("graph provider mark", () => {
-  it("renders a themed disc sized to the glyph with a solid border when declared", () => {
+  it("uses a stable logo asset and a solid border when declared", () => {
     render(<GraphProviderMark source={aws} attributes={{}} />);
     const mark = screen.getByRole("img", { name: "Source: AWS" });
     expect(mark).toHaveAttribute("data-graph-source-badge", "true");
     expect(mark).toHaveAttribute("data-provider-basis", "declared");
     expect(mark.className).toContain("graph-provider-mark");
-    expect(mark.getAttribute("style") ?? "").not.toMatch(/#fff|white/i);
     expect(mark.querySelector('img[src="/logos/aws.svg"]')).not.toBeNull();
   });
 

@@ -144,8 +144,6 @@ export interface LegendItem {
   /** Badge rows render the same chip or ring the node renderer shows. */
   badge?: { kind: NodeBadgeKind; value: string; label: string } | undefined;
   ring?: RingSeverity | undefined;
-  /** Asset "has findings" dot, distinct from the finding ring. */
-  signal?: RingSeverity | undefined;
   lineStyle?: "solid" | "dashed" | undefined;
   shape?: "dot" | "square" | "diamond" | "pill" | undefined;
   // Entity type drives the legend glyph from the same ENTITY_ICONS map the
