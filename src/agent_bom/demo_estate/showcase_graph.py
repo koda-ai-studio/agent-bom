@@ -550,63 +550,21 @@ def project_estate_onto_showcase(
 
 
 def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
-    """Persist derived attack paths so the materialized exposure-path queue is
-    non-empty for the demo.
-
-    ``/v1/graph/attack-paths`` derives paths on the fly, but
-    ``/v1/graph/exposure-paths`` reads the materialized ``attack_paths`` table
-    populated from ``graph.attack_paths`` at save time. The showcase graph never
-    set that, so exposure paths came back empty. Reuse the exact same deriver the
-    attack-path endpoint uses (pure seed-shaping — no algorithm change) and pin
-    the hero chains onto the snapshot before it is saved.
-    """
-    # Estate projection contributes correlation-backed paths before this call.
-    # ``_derived_attack_paths`` treats any materialized row as authoritative and
-    # otherwise skips topology-derived vulnerability paths, which would erase
-    # the hand-built CVE hero chains from the persisted queue. Derive once with
-    # that list temporarily detached, then merge both evidence families.
-    materialized = list(graph.attack_paths)
-    graph.attack_paths = []
-    # Hop receipts copy the analyzer status at annotation time, so record it before derivation.
+    """Populate the demo queue with the production snapshot path projection."""
+    # Hop receipts copy the analyzer status at annotation time.
     _record_showcase_attack_path_analysis(graph, count_paths=False)
     try:
         from agent_bom.graph.edge_freshness import stamp_edge_freshness
-        from agent_bom.graph.path_derivation import _derived_attack_paths, leads_somewhere
-        from agent_bom.graph.path_evidence import with_technique_mappings
+        from agent_bom.graph.snapshot_paths import materialize_snapshot_paths
 
-        # The seed is this snapshot's collection: stamp edge freshness as the scan build does,
-        # then give pre-built estate chains the same hop receipts as every derived path family.
         stamp_edge_freshness(graph)
-        with_technique_mappings(materialized, graph)
-        derived = _derived_attack_paths(graph)
+        # The projector detaches existing rows, applies occurrence-specific
+        # exclusions, and ranks all path families without mutating the originals.
+        graph.attack_paths = [row.path for row in materialize_snapshot_paths(graph)]
     except Exception:  # noqa: BLE001 — never block the snapshot save on path shaping
         _logger.warning("demo estate attack-path materialization failed", exc_info=True)
         graph.analysis_status.pop("attack_path_fusion", None)
-        graph.attack_paths = materialized
         return False
-
-    # The route deriver merges materialized and governance paths. Persistence
-    # keys a path by its chain (``path_identity``): keep the highest-ranked
-    # representation of each chain. Keying by endpoints instead collapsed two
-    # occurrences of one advisory reached from one entry onto a single path.
-    from agent_bom.graph.snapshot_paths import path_identity
-
-    unique_paths: dict[str, Any] = {}
-    ranked = sorted(
-        [*materialized, *derived],
-        key=lambda path: (
-            path.composite_risk,
-            len(path.hops),
-            len(path.credential_exposure),
-            len(path.tool_exposure),
-        ),
-        reverse=True,
-    )
-    for path in ranked:
-        if leads_somewhere(path):
-            unique_paths.setdefault(path_identity(path), path)
-    graph.attack_paths = list(unique_paths.values())
-
     return True
 
 

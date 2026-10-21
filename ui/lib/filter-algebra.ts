@@ -254,8 +254,7 @@ interface ReachIndex {
  *
  * The traversal is intentionally direction-agnostic because the operator
  * mental model is "show me everything connected to agent X", not
- * "follow only USES → PROVIDES_TOOL". Direction-aware traversal lives
- * in graph-schema.reachableFrom and is used elsewhere.
+ * "follow only USES → PROVIDES_TOOL".
  */
 function buildAgentReachIndex(
   nodes: UnifiedNode[],
