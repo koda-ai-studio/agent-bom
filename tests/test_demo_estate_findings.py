@@ -61,7 +61,7 @@ def test_findings_reuse_the_inventory_asset_id_and_never_a_stub(estate, findings
         identifier = finding.asset.identifier
         assert identifier in by_id, f"{finding.id} targets a stub asset {identifier!r}"
         asset = by_id[identifier]
-        # The canonical id must be a pure function of (asset_type, asset_id),
+        # The canonical id must be a pure function of inventory identity and scope,
         # and the estate must use ONE asset_type per inventoried row — that is
         # what makes every finding on one asset join to one node. The expected
         # asset_type comes from ``estate_asset_type``, the single place every
@@ -76,6 +76,9 @@ def test_findings_reuse_the_inventory_asset_id_and_never_a_stub(estate, findings
                     name=asset.asset_id,
                     asset_type=estate_asset_type(asset),
                     identifier=asset.asset_id,
+                    provider=asset.provider,
+                    account_ref=asset.account_scope,
+                    region=asset.region or None,
                 ),
                 severity="medium",
                 title="probe",

@@ -163,7 +163,11 @@ def test_ingest_reconcile_absent_uses_the_import_stream_not_parser_source():
     client = _client()
     first = client.post(
         "/v1/compliance/ingest",
-        json={"format": "csv", "content": "Title,Severity\nkept,high\ndropped,medium\n"},
+        json={
+            "format": "csv",
+            "content": "Title,Severity\nkept,high\ndropped,medium\n",
+            "observed_at": "2026-08-17T12:00:00Z",
+        },
     )
     assert first.status_code == 201, first.text
 

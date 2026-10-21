@@ -22,7 +22,7 @@ from agent_bom.api.hub_reference_store import (
 )
 from agent_bom.api.postgres_common import ConnectionPool, _ensure_tenant_rls, _get_pool, _tenant_connection
 from agent_bom.api.storage.finding_current_reads import SqlCurrentFindingReads
-from agent_bom.api.storage.finding_current_writes import reconcile_current, write_current_batch
+from agent_bom.api.storage.finding_current_writes import current_ledger_candidates, reconcile_current, write_current_batch
 from agent_bom.api.storage.finding_ingest_state import INGEST_STATE_DDL, LedgerIngestState, read_ingest_state, write_ingest_state
 from agent_bom.api.storage.finding_ledger_writes import write_ledger_batch
 from agent_bom.api.storage.finding_reads import SqlFindingReads
@@ -647,17 +647,15 @@ class PostgresComplianceHubStore:
     ) -> tuple[int, int]:
         """Ledger append + current upsert (+ reconcile) in ONE transaction.
 
-        Each write method used to open its own tenant connection and commit
-        independently, so a failure between the ledger ``add`` and the
-        current-state upsert left the ledger committed but current-state not:
-        the ledger inflated while the findings stayed invisible (wave-2 residual
-        #1). Threading a single ``_tenant_connection`` through all three writes
-        and committing once makes a mid-batch failure roll BOTH back. Durable
-        tenant counts commit or roll back in that same transaction. Returns ``(new_total, reconciled)``.
+        The tenant lock covers payload admission, ledger/current writes and
+        reconciliation. Any failure rolls back all writes, including counts.
+        Returns ``(new_total, reconciled)``.
         """
         tenant_id = require_explicit_tenant_id(tenant_id)
         with _tenant_connection(self._pool) as conn:
-            new_total = self._write_ledger_batch(conn, tenant_id, findings)
+            tx = finding_write_session(conn, "postgres", tenant_id)
+            candidates = current_ledger_candidates(tx, tenant_id, findings, observed_at=observed_at, batch_id=batch_id, source=source)
+            new_total = self._write_ledger_batch(conn, tenant_id, candidates)
             self._write_current_batch(
                 conn,
                 tenant_id,
