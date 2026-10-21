@@ -2674,6 +2674,10 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
     }
     if (options.minGraphNodes) {
       await expect(page.locator(".react-flow [data-finding-signal]")).toHaveCount(0);
+      const badgeAudit = await page.evaluate(auditRenderedGraph, { edges: [] });
+      if (badgeAudit.logos.some(logo => logo.overlapsCaption)) {
+        throw new Error(`Vendor badge overlaps a node caption on ${filename}: ${JSON.stringify(badgeAudit.logos)}`);
+      }
       const graphNodeCount = await page.locator(".react-flow__node:visible").count();
       const graphEdgeCount = await page.locator(".react-flow__edge").count();
       if (graphNodeCount < options.minGraphNodes || graphEdgeCount < (options.minGraphEdges ?? 1)) {

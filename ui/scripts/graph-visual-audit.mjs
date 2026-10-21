@@ -41,7 +41,10 @@ export function auditRenderedGraph({ edges }) {
     badge.width = badge.right - badge.left;
     badge.height = badge.bottom - badge.top;
     const glyph = img.closest(".graph-entity-glyph")?.querySelector(":scope > svg")?.getBoundingClientRect();
+    const caption = img.closest("[data-graph-entity]")?.querySelector(":scope > p");
+    const captionRects = [...(caption?.querySelectorAll("span") ?? [])].map(span => span.getBoundingClientRect());
     return {
+      overlapsCaption: captionRects.some(rect => clip.left < rect.right && clip.right > rect.left && clip.top < rect.bottom && clip.bottom > rect.top),
       source: img.parentElement.getAttribute("data-agent-source"),
       loaded: img.complete && img.naturalWidth > 0,
       size: Math.min(badge.width, badge.height),

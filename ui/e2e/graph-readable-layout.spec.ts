@@ -268,7 +268,11 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
     return all.map(mark => {
       const style = getComputedStyle(mark);
       const [hi, lo] = [luminance(style.outlineColor), luminance(canvas)].sort((a, b) => b - a);
-      return { basis: mark.getAttribute("data-provider-basis"), title: mark.getAttribute("title"), outline: style.outlineStyle,
+      const badgeRect = mark.getBoundingClientRect();
+      const caption = mark.closest("[data-graph-entity]")?.querySelector(":scope > p");
+      const captionRects = [...(caption?.querySelectorAll("span") ?? [])].map(span => span.getBoundingClientRect());
+      const overlapsCaption = captionRects.some(rect => badgeRect.left < rect.right && badgeRect.right > rect.left && badgeRect.top < rect.bottom && badgeRect.bottom > rect.top);
+      return { overlapsCaption, basis: mark.getAttribute("data-provider-basis"), title: mark.getAttribute("title"), outline: style.outlineStyle,
         background: style.backgroundColor, filter: getComputedStyle(mark.querySelector("img")!).filter,
         glyph: mark.querySelector("img")!.getBoundingClientRect().width, contrast: (hi! + 0.05) / (lo! + 0.05) };
     });
@@ -277,6 +281,7 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
     expect(mark.glyph, "vendor logo remains legible on the fitted canvas").toBeGreaterThanOrEqual(24);
     expect(mark.background).toBe("rgb(255, 255, 255)");
     expect(mark.filter).toBe("none");
+    expect(mark.overlapsCaption).toBe(false);
     expect(mark.contrast, "mark outline contrast against the canvas").toBeGreaterThanOrEqual(3);
   }
   expect(measured.map(mark => mark.title).sort()).toEqual(["Source: AWS", "Source: Snowflake"]);
