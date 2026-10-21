@@ -3352,9 +3352,9 @@ async function main() {
       }
     };
     const executiveRiskAssertions = {
-      expectedText: [/Review these findings first/i, /Top risks/i, /Assets & coverage/i],
+      expectedText: ["Same order as Investigation · top 3 advisories from 3 ranked paths", /Top risks/i, /Assets & coverage/i],
       rejectedText: ["Severity unavailable"],
-      expectedApiPaths: ["/v1/overview", "/v1/inventory/summary"], assertNoHorizontalOverflow: true,
+      expectedApiPaths: ["/v1/overview", "/v1/inventory/summary", "/v1/graph/attack-paths"], assertNoHorizontalOverflow: true,
     };
     const overviewPage = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 900 });
     await capture(overviewPage, "/?capture=1", "dashboard-live.png", async (dashboardPage) => {
