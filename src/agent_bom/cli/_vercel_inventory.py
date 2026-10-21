@@ -21,6 +21,7 @@ from agent_bom.security import sanitize_error
 
 @click.command("vercel")
 @click.option("--team-id", required=True, help="Explicit approved Vercel team ID.")
+@click.option("--include-members", is_flag=True, help="Read team members and configured roles; effective access stays unevaluated.")
 @click.option(
     "--token-file",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
@@ -41,6 +42,7 @@ from agent_bom.security import sanitize_error
 @click.option("--push-api-key", default=None, envvar="AGENT_BOM_PUSH_API_KEY", metavar="KEY", help="API key for push authentication.")
 def vercel_cmd(
     team_id: str,
+    include_members: bool,
     token_file: Path,
     output: Path,
     graph_db: Path | None,
@@ -59,7 +61,7 @@ def vercel_cmd(
     try:
         token = read_token(token_file, output, graph_db)
         tenant_id = resolve_cli_tenant_id_strict(tenant)
-        report = collect_report(team_id=team_id, token=token)
+        report = collect_report(team_id=team_id, token=token, include_members=include_members)
         report["scan_id"] = str(uuid4())
         report["persistence"] = {
             "graph": "not_requested" if graph_db is None else "pending" if report["status"] == "ok" else "skipped_incomplete"

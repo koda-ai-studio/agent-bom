@@ -69,8 +69,8 @@ def _payload(report: dict[str, Any], provider: str, target: str, **evidence: Any
 
 
 def _supabase_payloads(report: dict[str, Any]) -> list[dict[str, Any]]:
-    refs = list(dict.fromkeys(str(receipt["project_ref"]) for receipt in report["coverage"]))
-    return [
+    refs = list(dict.fromkeys(str(receipt["project_ref"]) for receipt in report["coverage"] if "project_ref" in receipt))
+    projects = [
         _payload(
             report,
             "supabase",
@@ -78,11 +78,25 @@ def _supabase_payloads(report: dict[str, Any]) -> list[dict[str, Any]]:
             cloud_inventory=[
                 inventory for inventory in report["cloud_inventory"] if any(project["ref"] == ref for project in inventory["projects"])
             ],
-            coverage=[receipt for receipt in report["coverage"] if receipt["project_ref"] == ref],
+            coverage=[receipt for receipt in report["coverage"] if receipt.get("project_ref") == ref],
             findings=[finding for finding in report["findings"] if finding["evidence"]["project_ref"] == ref],
         )
         for ref in refs
     ]
+
+    directories = [
+        _payload(
+            report,
+            "supabase",
+            "organization:" + inventory["account_id"],
+            cloud_inventory=[inventory],
+            coverage=inventory["coverage"],
+            findings=[],
+        )
+        for inventory in report["cloud_inventory"]
+        if "directory" in inventory
+    ]
+    return directories + projects
 
 
 def connector_push_payloads(report: dict[str, Any]) -> list[dict[str, Any]]:
