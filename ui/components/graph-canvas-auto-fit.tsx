@@ -68,11 +68,18 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     });
     onLayoutAspect(frameSize.layoutAspect);
     frameElement.style.setProperty("--graph-adaptive-height", `${frameSize.height}px`);
-    if (preserveViewport) return;
+    if (preserveViewport) {
+      frameElement.dataset.graphCameraSettled = "true";
+      return;
+    }
     // Virtualization toggles initialized while the operator pans or zooms.
     // Only a new layout/frame may replace that deliberate camera position.
     const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove, padding]);
-    if (lastAutoFitKey.current === autoFitKey) return;
+    if (lastAutoFitKey.current === autoFitKey) {
+      frameElement.dataset.graphCameraSettled = "true";
+      return;
+    }
+    frameElement.dataset.graphCameraSettled = "false";
     // Frame every loaded node whenever captions stay legible at that fit; a
     // capped zoom keeps small graphs from opening as two giant cards. A graph
     // too dense to read whole opens on the anchor's neighbourhood, never a
@@ -103,7 +110,10 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
           // Caption dimensions can oscillate around a zoom threshold. Once
           // the bounded budget is spent, keep this camera until geometry or
           // scope changes instead of restarting on virtualization updates.
-          if (fitted && ((pass > 0 && stable) || pass === 3)) lastAutoFitKey.current = autoFitKey;
+          if (fitted && ((pass > 0 && stable) || pass === 3)) {
+            lastAutoFitKey.current = autoFitKey;
+            frameElement.dataset.graphCameraSettled = "true";
+          }
           else if (pass < 3) settle(pass + 1);
         }))));
       });

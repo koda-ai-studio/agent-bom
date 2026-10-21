@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { GraphRelationshipDetail } from "@/components/graph-relationship-detail";
 import type { UnifiedEdge } from "@/lib/graph-schema";
@@ -151,4 +151,23 @@ it("keeps source observation, receipt timestamp and graph freshness distinct", (
 it("labels a scan-recorded link without a per-edge receipt by its snapshot origin", () => {
   show(<GraphRelationshipDetail edge={{ ...edge, evidence: {}, source_scan_id: "scan-1" }} scanId="s" sourceLabel="Agent" targetLabel="Server" onClose={vi.fn()} />);
   expect(screen.getByText("Evidence type").nextElementSibling).toHaveTextContent("Scan inventory · no per-edge receipt");
+});
+
+
+it("restores the invoking edge after React Flow replaces its element", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  const canvas = document.createElement("div");
+  canvas.className = "react-flow";
+  const trigger = document.createElement("button");
+  trigger.className = "react-flow__edge";
+  trigger.setAttribute("data-id", edge.id);
+  canvas.append(trigger); document.body.append(canvas); trigger.focus();
+  const view = render(<GraphRelationshipDetail edge={edge} scanId="s" sourceLabel="Planner" targetLabel="Worker" onClose={vi.fn()} />);
+  const replacement = trigger.cloneNode() as HTMLButtonElement;
+  trigger.replaceWith(replacement);
+  view.unmount();
+  await act(() => vi.runAllTimersAsync());
+  expect(replacement).toHaveFocus();
+  canvas.remove(); vi.useRealTimers(); vi.unstubAllGlobals();
 });
