@@ -1181,3 +1181,32 @@ test("changing layers leaves a focused path instead of overriding hidden layers"
   await expect(controls.getByLabel("Active graph filters")).toContainText("0/");
   expect(new URL(page.url()).searchParams.has("path")).toBe(false);
 });
+
+test("org scope cards keep counts readable and actions clear at 200% text on a phone", async ({ page }) => {
+  await routeLargeGraphPage(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/v1/graph/rollup?**", route => route.fulfill({ json: {
+    scan_id: scanId, tenant_id: "default", created_at: createdAt, mode: "rollup", filters: {},
+    top_level: Array.from({ length: 3 }, (_, i) => ({ id: `org:${i}`, label: `northstar-organization-${i}`, entity_type: "cloud_org", severity: "high",
+      is_container: true, has_children: true, direct_child_count: 12,
+      aggregate: { descendant_count: 640, by_type: {}, severity_counts: { critical: 332, high: 817 }, worst_severity: "critical", worst_severity_rank: 4,
+        internet_exposed: true, toxic_combo: false, exposed_count: 4, toxic_count: 0, issue_count: 1966, finding_occurrence_count: 2734 } })),
+    edges: [], summary: { total_nodes: 3, total_edges: 0, top_level_count: 3, container_count: 3 },
+    completeness: { status: "complete", complete: true, truncated: false, returned: 3, total: 3 },
+  } }));
+  await page.goto(`/graph?scan=${scanId}`);
+  await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
+  const summary = page.getByTestId("graph-rollup-decision-surface");
+  await expect(summary.getByRole("article").first()).toBeVisible();
+  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+  const layout = await summary.getByRole("article").first().evaluate(el => {
+    const texts = [...el.querySelectorAll("p")].map(p => p.getBoundingClientRect());
+    const buttons = [...el.querySelectorAll("button")].map(b => b.getBoundingClientRect());
+    return {
+      overlapping: buttons.filter(b => texts.some(t => t.left < b.right && t.right > b.left && t.top < b.bottom && t.bottom > b.top)).length,
+      countsWidth: el.querySelector("[data-testid=graph-scope-priority-score]")!.getBoundingClientRect().width,
+    };
+  });
+  expect(layout.overlapping).toBe(0);
+  expect(layout.countsWidth).toBeGreaterThan(160);
+});
