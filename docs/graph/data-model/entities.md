@@ -94,7 +94,7 @@ Id formats:
 
 ## `credential`
 
-Emitted by: `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_credentials.py`
 
 ## `credential_ref`
 

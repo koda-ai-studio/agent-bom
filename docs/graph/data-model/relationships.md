@@ -255,7 +255,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `agent` → `credential`
 - `server` → `credential`
 
-Emitted by: `graph/component_paths.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/component_paths.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_credentials.py`
 
 ## `governs`
 

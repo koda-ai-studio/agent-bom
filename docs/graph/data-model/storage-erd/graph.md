@@ -166,7 +166,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `attack_paths` | Postgres, SQLite | 20 |  | persistent |
 | `edge_groups` | SQLite | 5 |  | scratch |
 | `edge_observations` | SQLite | 11 |  | scratch |
-| `graph_attack_paths` | Postgres, SQLite | 17 |  | persistent |
+| `graph_attack_paths` | Postgres, SQLite | 19 |  | persistent |
 | `graph_build_workspace_edges` | Postgres | 7 |  | persistent |
 | `graph_build_workspace_nodes` | Postgres | 6 |  | persistent |
 | `graph_correlation_runs` | Postgres, SQLite | 17 |  | persistent |
