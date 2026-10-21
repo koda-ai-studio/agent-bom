@@ -1,9 +1,7 @@
+import type { components } from "./api-schema.generated";
+
 /** A numeric graph-node score alone does not establish an assessment. */
-export interface NodeRiskAssessment {
-  status: "assessed" | "not_assessed";
-  basis: string | null;
-  scope: string | null;
-}
+export type NodeRiskAssessment = Pick<components["schemas"]["GraphNodeRiskAssessment"], "status" | "basis" | "scope">;
 
 export function nodeRiskAssessment(value: unknown): NodeRiskAssessment {
   const record = (value ?? {}) as Record<string, unknown>;

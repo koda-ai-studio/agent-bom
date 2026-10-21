@@ -820,18 +820,13 @@ export interface GraphNodeDetailResponse {
 
 export type GraphNeighborDirection = "out" | "in" | "both";
 
-export interface GraphNodeNeighborsResponse {
-  node_id: string;
-  scan_id: string;
-  found: boolean;
+export type GraphNodeNeighborsResponse = Pick<ApiSchemas["GraphNodeNeighborsResponse"],
+  "node_id" | "scan_id" | "found" | "limit" | "total_neighbors" | "truncated"
+> & {
   direction: GraphNeighborDirection;
-  limit: number;
-  /** Null when upstream evidence or endpoint hydration is incomplete. */
-  total_neighbors: number | null;
-  truncated: boolean;
   neighbors: UnifiedNode[];
   edges: UnifiedEdge[];
-}
+};
 
 export interface GraphRollupAggregate {
   descendant_count: number;
@@ -1001,57 +996,31 @@ export type GraphSemanticClusterKind =
   | "tool_capability"
   | "source_environment";
 
-export interface GraphSemanticClusterExpansion {
-  mode: "members" | string;
-  member_ids: string[];
-  collapse_id: string;
-  reversible: boolean;
-}
+export type GraphSemanticClusterExpansion = Required<ApiSchemas["SemanticClusterExpansion"]>;
 
-export interface GraphSemanticCluster {
-  id: string;
+export type GraphSemanticCluster = Omit<ApiSchemas["SemanticCluster"], "kind" | "expansion"> & {
   kind: GraphSemanticClusterKind;
-  label: string;
-  layer: string;
-  entity_types: string[];
-  count: number;
-  member_ids: string[];
-  max_risk: number;
-  severity: "critical" | "high" | "medium" | "low" | "none" | string;
-  risk_summary: Record<string, number>;
-  relationship_counts: Record<string, number>;
   expansion: GraphSemanticClusterExpansion;
-}
+};
 
-export interface GraphSemanticClustersResponse {
-  scan_id: string;
-  tenant_id: string;
-  created_at: string;
+export type GraphSemanticClustersResponse = Pick<ApiSchemas["GraphClustersResponse"],
+  "scan_id" | "tenant_id" | "created_at" | "stats"
+> & {
   clusters: GraphSemanticCluster[];
-  stats: Record<string, number>;
   available_kinds: GraphSemanticClusterKind[];
-}
+};
 
-export interface GraphAgentSelectorItem {
+export type GraphAgentSelectorItem = Pick<ApiSchemas["GraphAgentRecord"],
+  "id" | "label" | "risk_score" | "severity" | "status" | "data_sources" | "first_seen" | "last_seen"
+> & {
   risk_assessment?: import("@/lib/node-risk-assessment").NodeRiskAssessment | undefined;
-  id: string;
-  label: string;
-  risk_score: number;
-  severity: string;
-  status: string;
-  data_sources: string[];
-  first_seen: string;
-  last_seen: string;
-}
+};
 
-export interface GraphAgentsResponse {
+export type GraphAgentsResponse = Pick<ApiSchemas["GraphAgentsResponse"], "scan_id" | "tenant_id" | "created_at"> & {
   snapshot_generation?: string;
-  scan_id: string;
-  tenant_id: string;
-  created_at: string;
   agents: GraphAgentSelectorItem[];
   pagination: GraphPagination;
-}
+};
 
 /** Lifecycle classification the drift lens paints onto graph nodes/edges. */
 export type GraphChangeKind = "new" | "removed" | "changed" | "unchanged";
