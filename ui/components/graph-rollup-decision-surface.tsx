@@ -266,7 +266,7 @@ export function GraphRollupDecisionSurface({
                 </span>
               </div>
 
-              <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs md:col-span-1 md:w-60">
+              <div className="flex min-w-[9rem] flex-wrap items-center gap-x-3 gap-y-1 text-xs md:w-60">
                 {item.has_children && <div>
                   <p className="text-ink-secondary">Contains <span className="font-semibold tabular-nums text-foreground">{item.aggregate.descendant_count.toLocaleString()} nodes</span>{item.direct_child_count > 0 && <> · {item.direct_child_count} direct</>}</p>
                 </div>}
@@ -290,7 +290,7 @@ export function GraphRollupDecisionSurface({
 
 
 
-              <div className="col-span-2 flex flex-wrap items-center justify-start gap-3 md:col-span-1 md:min-w-36 md:justify-end">
+              <div className="flex items-center justify-end gap-3 md:min-w-36">
                 {item.has_children && !item.id.startsWith(IMAGE_GROUP_PREFIX) && <button type="button" onClick={() => onInvestigate(item)} aria-label={`Show direct neighbors of ${item.label} on the canvas`}
                   title="Opens this scope and its directly related nodes on the canvas; cross-scope links are listed under Details"
                   className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-600 dark:text-sky-300">
