@@ -500,13 +500,15 @@ def test_graph_emits_inventory_nodes_and_overlays(monkeypatch: pytest.MonkeyPatc
     assert f"data_store:{account_id}" in nodes
     assert nodes[f"data_store:{account_id}"].entity_type == EntityType.DATA_STORE
 
-    # VM + NSG present. The VM node id keys off the full ARM resource id.
+    # ARM identities are case-insensitive; retain the original ID as evidence.
     vm_arn = "/subscriptions/sub-1/resourceGroups/rg-web/providers/Microsoft.Compute/virtualMachines/web-1"
-    vm_id = f"cloud_resource:azure:compute:instance:{vm_arn}"
+    vm_id = f"cloud_resource:azure:compute:instance:{vm_arn.casefold()}"
     nsg_arn = "/subscriptions/sub-1/resourceGroups/rg-web/providers/Microsoft.Network/networkSecurityGroups/web-nsg"
-    nsg_id = f"cloud_resource:azure:network:network-security-group:{nsg_arn}"
+    nsg_id = f"cloud_resource:azure:network:network-security-group:{nsg_arn.casefold()}"
     assert vm_id in nodes
     assert nsg_id in nodes
+    assert nodes[vm_id].attributes["resource_id"] == vm_arn
+    assert nodes[vm_id].attributes.get("internet_exposed") is None
     assert nodes[nsg_id].attributes["internet_exposed"] is True
 
     # Managed identity as a MANAGED_IDENTITY principal node.
