@@ -6,7 +6,6 @@ Start with:
     agent-bom mcp server --transport streamable-http
 
 Default: 8 focused tools; select a task profile with --profile.
-
 Full profile Tools (95):
     scan                — Full discovery → scan → output pipeline
     check               — Check a specific package for CVEs before installing

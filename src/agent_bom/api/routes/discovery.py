@@ -30,7 +30,7 @@ from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.asset_provenance import agent_discovery_provenance, package_discovery_provenance, package_version_provenance
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.core.severity import normalize_severity
-from agent_bom.display_names import agent_payload_display_name
+from agent_bom.domain.display_names import agent_payload_display_name
 from agent_bom.inventory import build_agents_from_inventory
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.security import (

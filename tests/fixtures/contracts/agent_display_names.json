@@ -1,5 +1,5 @@
 {
-  "description": "One agent display-name rule shared by the API (agent_bom.display_names) and the UI (ui/lib/display-name.ts). A recorded name wins; otherwise the identifier is formatted.",
+  "description": "One agent display-name rule shared by the API (agent_bom.domain.display_names) and the UI (ui/lib/display-name.ts). A recorded name wins; otherwise the identifier is formatted.",
   "cases": [
     {"id": "langchain-service", "recorded": null, "expected": "LangChain Service"},
     {"id": "claude_desktop", "recorded": null, "expected": "Claude Desktop"},

@@ -31,8 +31,8 @@ from agent_bom.api.stores import (
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.demo_estate.boot_seed import DEMO_SEEDING_SUMMARY as _DEMO_SEEDING_SUMMARY
 from agent_bom.demo_estate.boot_seed import demo_estate_seeding
+from agent_bom.domain.framework_evidence import framework_evidence_slugs
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
-from agent_bom.framework_evidence import framework_evidence_slugs
 from agent_bom.security import sanitize_text
 
 _logger = logging.getLogger(__name__)

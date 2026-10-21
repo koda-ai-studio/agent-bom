@@ -279,7 +279,7 @@ def _fold_findings(
     compliance driver, #3962).
     """
     from agent_bom.compliance_coverage import scored_framework_slugs
-    from agent_bom.framework_evidence import framework_evidence_slugs
+    from agent_bom.domain.framework_evidence import framework_evidence_slugs
 
     added = 0
     kev = 0

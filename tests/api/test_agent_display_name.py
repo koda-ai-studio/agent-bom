@@ -1,6 +1,6 @@
 """Agent routes and the MCP inventory carry the one display name the UI shows.
 
-The rule lives in ``agent_bom.display_names`` and in ``ui/lib/display-name.ts``;
+The rule lives in ``agent_bom.domain.display_names`` and in ``ui/lib/display-name.ts``;
 both read the same case table so the two cannot drift.
 """
 
@@ -21,7 +21,7 @@ from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.server import app
 from agent_bom.api.store import InMemoryJobStore
 from agent_bom.api.stores import set_job_store
-from agent_bom.display_names import agent_display_name
+from agent_bom.domain.display_names import agent_display_name
 from tests._clock_helpers import recent
 
 _CASES = json.loads((Path(__file__).parents[1] / "fixtures" / "contracts" / "agent_display_names.json").read_text())["cases"]

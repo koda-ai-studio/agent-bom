@@ -20,7 +20,7 @@ import asyncio
 from typing import Any, Awaitable, Callable, Optional
 
 from agent_bom.api.graph_store import MAX_NODE_PAGE_OFFSET
-from agent_bom.display_names import agent_display_name
+from agent_bom.domain.display_names import agent_display_name
 from agent_bom.graph import SEVERITY_RANK, EntityType
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.ocsf import FINDING_ENTITY_TYPES

@@ -25,13 +25,13 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, normalize_framework_slug
+from agent_bom.domain.framework_evidence import _framework_control_codes as _framework_control_codes
+from agent_bom.domain.framework_evidence import framework_evidence_slugs as framework_evidence_slugs
 from agent_bom.evidence.asset_display import iac_source_label
 from agent_bom.evidence.finding_lanes import finding_lane, lane_response_fields
 from agent_bom.evidence.finding_reach_sources import safe_reach_sources
 from agent_bom.evidence.finding_response_fields import restore_atlas_receipts, restored_public_fields, safe_lineage_fields
 from agent_bom.evidence.finding_status import public_finding_status
-from agent_bom.framework_evidence import _framework_control_codes as _framework_control_codes
-from agent_bom.framework_evidence import framework_evidence_slugs as framework_evidence_slugs
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.finding import FindingSource, FindingType
