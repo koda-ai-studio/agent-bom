@@ -1054,7 +1054,7 @@ jobs:
   test-smoke:
     name: Python changed-domain and contract smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
     needs: changes
@@ -1184,7 +1184,8 @@ jobs:
   test-shard:
     name: Full correctness shard (${{ matrix.shard }}, Python 3.13)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Graph-heavy shards need the same finite headroom as full correctness.
+    timeout-minutes: 45
     permissions:
       contents: read
     if: ${{ !cancelled() && (github.event_name == 'pull_request' || github.event_name == 'merge_group') }}

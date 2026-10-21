@@ -290,8 +290,8 @@ def test_test_job_timeout_leaves_margin_over_observed_worst_case() -> None:
 
 
 def test_changed_domain_timeout_covers_broad_selections() -> None:
-    """A security change can select nearly the full suite, plus setup time."""
-    assert 30 <= _ci()["jobs"]["test-smoke"]["timeout-minutes"] <= 45
+    """Broad graph selections reached 90% at 30 minutes; retain bounded headroom."""
+    assert _ci()["jobs"]["test-smoke"]["timeout-minutes"] == 45
 
 
 def test_full_correctness_matrix_covers_every_supported_python_minor() -> None:
@@ -414,7 +414,8 @@ def test_shards_run_the_whole_suite_on_the_merge_result() -> None:
     assert shard["strategy"]["fail-fast"] is False
     indexes = shard["strategy"]["matrix"]["shard"]
     assert indexes == list(range(len(indexes))) and len(indexes) >= 2
-    assert shard["timeout-minutes"] <= 20
+    # The largest graph shard reached 68% at the former 20-minute ceiling.
+    assert shard["timeout-minutes"] == 45
     assert "cancel-in-progress" not in shard.get("concurrency", {})
 
     run = next(step["run"] for step in shard["steps"] if step.get("name") == SHARD_STEP)

@@ -775,6 +775,10 @@ def _snapshot_store_singletons() -> list[tuple[Any, str, Any]]:
                 continue
             if inspect.isroutine(value) or inspect.isclass(value):
                 continue
+            if getattr(getattr(value, "_pool", None), "closed", False) is True:
+                # An earlier lifespan may have closed the shared pool after teardown.
+                value = None
+                setattr(mod, name, None)
             snapshot.append((mod, name, value))
     return snapshot
 
@@ -782,6 +786,10 @@ def _snapshot_store_singletons() -> list[tuple[Any, str, Any]]:
 def _restore_store_singletons(snapshot: list[tuple[Any, str, Any]]) -> None:
     for mod, name, value in snapshot:
         try:
+            # A restart can close the pool while the captured store stays alive.
+            # Reselect its configured backend instead of reviving a dead handle.
+            if getattr(getattr(value, "_pool", None), "closed", False) is True:
+                value = None
             setattr(mod, name, value)
         except Exception:
             pass
