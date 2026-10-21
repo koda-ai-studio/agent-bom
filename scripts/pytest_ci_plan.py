@@ -799,6 +799,9 @@ def _parse_args() -> argparse.Namespace:
     shard.add_argument("--index", type=int, required=True, help="zero-based shard index")
     shard.add_argument("--total", type=int, required=True, help="total shard count")
     shard.add_argument("--root", type=Path, default=Path("tests"), help="test root")
+    shard.add_argument(
+        "--files", nargs="+", type=Path, help="partition only these selected test files instead of discovering the test root"
+    )
 
     targeted = subparsers.add_parser("targeted", help="print tests related to changed files")
     targeted.add_argument("--root", type=Path, default=Path("."), help="repository root")
@@ -812,7 +815,9 @@ def main() -> int:
     if args.command == "shard":
         if args.index < 0 or args.index >= args.total:
             raise SystemExit(f"shard index {args.index} is outside 0..{args.total - 1}")
-        files = discover_test_files(args.root.resolve())
+        files = sorted({path.resolve() for path in args.files}) if args.files is not None else discover_test_files(args.root.resolve())
+        if any(not path.is_file() or not path.name.startswith("test_") or path.suffix != ".py" for path in files):
+            raise SystemExit("shard selection must contain existing test_*.py files")
         selected = plan_shards(files, total=args.total)[args.index]
     else:
         selected = select_targeted_tests(changed_files=args.changed_files, root=args.root.resolve())

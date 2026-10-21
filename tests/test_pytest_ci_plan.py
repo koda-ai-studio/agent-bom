@@ -118,6 +118,45 @@ def test_shard_plan_is_deterministic_disjoint_and_complete(tmp_path: Path, total
     assert max(loads) - min(loads) <= largest
 
 
+def test_explicit_file_shards_preserve_only_the_selected_suite(tmp_path, monkeypatch, capsys) -> None:
+    import sys
+
+    from scripts.pytest_ci_plan import main
+
+    files = [tmp_path / f"test_selected_{i}.py" for i in range(7)]
+    for i, path in enumerate(files):
+        _write(path, (i + 1) * 20)
+    _write(tmp_path / "test_unrelated.py", 100)
+    shards = []
+    for index in range(2):
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["plan", "shard", "--root", str(tmp_path), "--index", str(index), "--total", "2", "--files", *map(str, files), str(files[0])],
+        )
+        assert main() == 0
+        shards.append(set(map(Path, capsys.readouterr().out.splitlines())))
+    assert all(shards)
+    assert shards[0].isdisjoint(shards[1])
+    assert shards[0] | shards[1] == set(files)
+
+
+@pytest.mark.parametrize("invalid", ["missing", "not_test", "empty"])
+def test_explicit_file_shards_reject_invalid_selection(tmp_path, monkeypatch, invalid) -> None:
+    import sys
+
+    from scripts.pytest_ci_plan import main
+
+    path = tmp_path / ("config.py" if invalid == "not_test" else "test_missing.py")
+    if invalid == "not_test":
+        _write(path, 1)
+    args = [] if invalid == "empty" else [str(path)]
+    monkeypatch.setattr(sys, "argv", ["plan", "shard", "--index", "0", "--total", "2", "--files", *args])
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code != 0
+
+
 def test_targeted_tests_include_changed_tests_and_source_name_matches(tmp_path: Path) -> None:
     direct = tmp_path / "tests" / "test_direct.py"
     matching = tmp_path / "tests" / "db" / "test_local_analytics.py"

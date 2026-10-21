@@ -1048,13 +1048,18 @@ jobs:
   # Every event runs changed-domain tests plus cross-surface contracts and the
   # Postgres contract. PRs add the full suite sharded on 3.13; main pushes and
   # nightly add the full four-version suite with coverage.
-  # Broad source changes can select nearly the full suite here, so allow
-  # bounded headroom for setup and execution. The aggregator retains every
+  # Broad source changes can select nearly the full suite here, so partition
+  # the unchanged selection across two jobs. The aggregator retains every
   # applicable lane; Test (Python 3.13) is the protection context.
   test-smoke:
-    name: Python changed-domain and contract smoke
+    name: Python changed-domain and contract smoke (${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        shard: [0, 1]
     permissions:
       contents: read
     needs: changes
@@ -1098,6 +1103,13 @@ jobs:
             tests/api/test_live_export_contracts.py
           )
           mapfile -t TESTS < <(printf '%s\n' "${SMOKE[@]}" "${TARGETED[@]}" | sort -u)
+          # Keep the full selected set, assigning each module to exactly one job.
+          SELECTION=$(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 2 --files "${TESTS[@]}")
+          mapfile -t TESTS < <(printf '%s\n' "$SELECTION")
+          if [ "${#TESTS[@]}" -eq 0 ] || [ -z "${TESTS[0]}" ]; then
+            echo "Changed-domain shard selected no tests" >&2
+            exit 1
+          fi
           uv run pytest "${TESTS[@]}" -v --tb=short --durations=15 -m "not network and not slow and not graph_performance" -n 2 --dist worksteal
 
       - name: Graph accuracy fixture guard (#2259)

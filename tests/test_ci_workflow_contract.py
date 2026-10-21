@@ -1033,3 +1033,18 @@ def test_changed_domain_smoke_distributes_large_test_modules_between_workers() -
     command = next(step["run"] for step in job["steps"] if step.get("name") == "Run changed-domain and cross-surface smoke")
     assert "-n 2 --dist worksteal" in command
     assert "-v --tb=short" in command
+
+
+def test_changed_domain_smoke_shards_keep_every_selected_test_required() -> None:
+    jobs = _ci()["jobs"]
+    smoke = jobs["test-smoke"]
+    assert smoke["strategy"] == {"fail-fast": False, "max-parallel": 2, "matrix": {"shard": [0, 1]}}
+    command = next(step["run"] for step in smoke["steps"] if step.get("name") == "Run changed-domain and cross-surface smoke")
+    assert 'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 2 --files "${TESTS[@]}"' in command
+    assert 'if [ "${#TESTS[@]}" -eq 0 ]' in command
+    assert '[ -z "${TESTS[0]}" ]' in command
+    assert "test-smoke" in jobs["test-core"]["needs"]
+    assert "test-core" in jobs["test"]["needs"]
+    gate = next(step for step in jobs["test-core"]["steps"] if step.get("name") == "Require every applicable correctness lane")
+    assert gate["env"]["SMOKE_RESULT"] == "${{ needs.test-smoke.result }}"
+    assert 'if [ "$SMOKE_RESULT" != "success" ]; then' in gate["run"]
