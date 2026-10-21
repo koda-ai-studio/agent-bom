@@ -9,7 +9,7 @@ on:
     - cron: "0 8 * * *"   # daily at 08:00 UTC
   workflow_dispatch:
   workflow_run:
-    workflows: ["Release"]
+    workflows: ["Release", "Refresh Docker Latest"]
     types: [completed]
 
 permissions: {}  # deny all by default; jobs declare only what they need
