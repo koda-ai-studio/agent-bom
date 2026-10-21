@@ -108,94 +108,20 @@ def _merged_page(
 
 def _bulk_page(query: _FindingListQuery, bulk_list: Callable[..., Any], **kwargs: Any) -> tuple[list[dict[str, Any]], Any, str | None]:
     """One keyset/offset page from the hub's bulk-ingest source."""
-    result = bulk_list(
-        query.tenant_id,
-        limit=query.limit,
-        offset=0 if query.cursor else query.offset,
-        sort=query.sort_key,
-        severity=query.severity,
-        scan_id=query.scan_id,
-        origin="bulk_ingest",
-        cursor=query.bulk_cursor_in,
-        since=query.window_since,
-        status=query.status_key,
+    params = {
+        "limit": query.limit,
+        "offset": 0 if query.cursor else query.offset,
+        "sort": query.sort_key,
+        "severity": query.severity,
+        "scan_id": query.scan_id,
+        "origin": "bulk_ingest",
+        "cursor": query.bulk_cursor_in,
+        "since": query.window_since,
+        "status": query.status_key,
         **kwargs,
-    )
+    }
+    result = bulk_list(query.tenant_id, **params)
     return result[0], result[1], (result[2] if len(result) > 2 else None)
-
-
-def _scoped_findings_page(
-    query: _FindingListQuery,
-    scan_findings: list[dict[str, Any]],
-    bulk_list: Callable[..., Any],
-    *,
-    use_merged: bool,
-    scope_metadata: dict[str, Any],
-) -> _FindingListPage:
-    """Scope filters run inside the store, batched and keyset-paged; first pages count their exact ``total``."""
-    scope_kwargs = {"scope": dict(query.scope_filters), "scope_metadata": scope_metadata}
-    if use_merged:
-        rows, next_cursor = _merged_page(query, scan_findings, bulk_list, **scope_kwargs)
-    else:
-        rows, _total, next_cursor = _bulk_page(query, bulk_list, include_total=False, **scope_kwargs)
-    total = exact_kev_total(query, len(scan_findings), bulk_list, compliance_hub_store.get_compliance_hub_store())
-    if total is None:
-        total = exact_scoped_total(query, len(scan_findings), bulk_list)
-    return _FindingListPage(rows=rows, total=total, total_approximate=total is None, next_cursor=next_cursor)
-
-
-def _merged_unscoped_page(query: _FindingListQuery, scan_findings: list[dict[str, Any]], bulk_list: Callable[..., Any]) -> _FindingListPage:
-    if query.merged_cursor is not None:
-        rows, next_cursor = _merged_page(query, scan_findings, bulk_list)
-        total, approximate = resume_page_total(query, bulk_list, scan_count=len(scan_findings))
-        return _FindingListPage(rows=rows, total=total, total_approximate=approximate, next_cursor=next_cursor)
-    probe = bulk_list(
-        query.tenant_id,
-        limit=1,
-        offset=0,
-        sort=query.sort_key,
-        severity=query.severity,
-        scan_id=query.scan_id,
-        origin="bulk_ingest",
-        include_total=query.include_bulk_total,
-        since=query.window_since,
-        status=query.status_key,
-    )
-    rows, next_cursor = _merged_page(query, scan_findings, bulk_list)
-    resolved_bulk, total_approximate = _resolve_bulk_findings_total(
-        tenant_id=query.tenant_id,
-        severity=query.severity,
-        scan_id=query.scan_id,
-        approximate_total=query.approximate_total,
-        offset=query.offset,
-        bulk_total=probe[1],
-        request_cached_total=query.cached_bulk_total,
-        page_len=len(rows),
-        limit=query.limit,
-        window_days=query.window_days,
-        status=query.status_key,
-    )
-    total = None if resolved_bulk is None else len(scan_findings) + resolved_bulk
-    return _FindingListPage(rows=rows, total=total, total_approximate=total_approximate, next_cursor=next_cursor)
-
-
-def _bulk_only_page(query: _FindingListQuery, bulk_list: Callable[..., Any]) -> _FindingListPage:
-    rows, bulk_total, next_cursor = _bulk_page(query, bulk_list, include_total=query.include_bulk_total)
-    total, total_approximate = _resolve_bulk_findings_total(
-        tenant_id=query.tenant_id,
-        severity=query.severity,
-        scan_id=query.scan_id,
-        approximate_total=query.approximate_total,
-        offset=0 if query.cursor else query.offset,
-        bulk_total=bulk_total,
-        request_cached_total=query.cached_bulk_total,
-        page_len=len(rows),
-        limit=query.limit,
-        window_days=query.window_days,
-        status=query.status_key,
-    )
-    total, total_approximate = fill_resume_total(query, bulk_list, total, total_approximate)
-    return _FindingListPage(rows=rows, total=total, total_approximate=total_approximate, next_cursor=next_cursor)
 
 
 def _in_memory_findings_page(query: _FindingListQuery, scan_findings: list[dict[str, Any]]) -> _FindingListPage:
@@ -224,15 +150,46 @@ def _findings_page(
     store: Any,
     scope_metadata: dict[str, Any],
 ) -> _FindingListPage:
-    """Pick the page strategy the store supports for this query."""
-    bulk_list = getattr(store, "list_current_page", None) or getattr(store, "list_page", None)
-    has_current_page = callable(getattr(store, "list_current_page", None))
-    # Take the merged (scan + hub) keyset walk whenever the scan half is in play.
-    use_merged = has_current_page and (query.merged_cursor is not None or (not query.cursor and bool(scan_findings)))
-    if query.scope_filters and has_current_page and callable(bulk_list):
-        return _scoped_findings_page(query, scan_findings, bulk_list, use_merged=use_merged, scope_metadata=scope_metadata)
-    if callable(bulk_list) and not query.scope_filters:
-        if use_merged:
-            return _merged_unscoped_page(query, scan_findings, bulk_list)
-        return _bulk_only_page(query, bulk_list)
-    return _in_memory_findings_page(query, scan_findings)
+    """Read one page, then resolve its totals under the same query contract."""
+    current = getattr(store, "list_current_page", None)
+    bulk_list = current or getattr(store, "list_page", None)
+    if not callable(bulk_list) or (query.scope_filters and not callable(current)):
+        return _in_memory_findings_page(query, scan_findings)
+
+    scoped = bool(query.scope_filters)
+    merged = callable(current) and (query.merged_cursor is not None or (not query.cursor and bool(scan_findings)))
+    extra = {"scope": dict(query.scope_filters), "scope_metadata": scope_metadata} if scoped else {}
+    bulk_total = None
+    if merged:
+        if not scoped and query.merged_cursor is None:
+            _, bulk_total, _ = _bulk_page(query, bulk_list, limit=1, offset=0, cursor=None, include_total=query.include_bulk_total)
+        rows, next_cursor = _merged_page(query, scan_findings, bulk_list, **extra)
+    else:
+        rows, bulk_total, next_cursor = _bulk_page(query, bulk_list, include_total=not scoped and query.include_bulk_total, **extra)
+
+    if scoped:
+        total = exact_kev_total(query, len(scan_findings), bulk_list, compliance_hub_store.get_compliance_hub_store())
+        if total is None:
+            total = exact_scoped_total(query, len(scan_findings), bulk_list)
+        approximate = total is None
+    elif merged and query.merged_cursor is not None:
+        total, approximate = resume_page_total(query, bulk_list, scan_count=len(scan_findings))
+    else:
+        total, approximate = _resolve_bulk_findings_total(
+            tenant_id=query.tenant_id,
+            severity=query.severity,
+            scan_id=query.scan_id,
+            approximate_total=query.approximate_total,
+            offset=0 if query.cursor else query.offset,
+            bulk_total=bulk_total,
+            request_cached_total=query.cached_bulk_total,
+            page_len=len(rows),
+            limit=query.limit,
+            window_days=query.window_days,
+            status=query.status_key,
+        )
+        if merged:
+            total = None if total is None else len(scan_findings) + total
+        else:
+            total, approximate = fill_resume_total(query, bulk_list, total, approximate)
+    return _FindingListPage(rows=rows, total=total, total_approximate=approximate, next_cursor=next_cursor)

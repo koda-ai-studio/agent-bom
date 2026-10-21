@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from heapq import merge
 from typing import Any, NamedTuple
 
 from agent_bom.api import finding_cursor
@@ -29,36 +30,20 @@ def _resolve_bulk_findings_total(
     # Preserve the count that justified skipping COUNT at request start. It may
     # expire while scan rows are assembled; using the snapshot does not renew TTL.
     key = cache_key(tenant_id=tenant_id, severity=severity, scan_id=scan_id, origin="bulk_ingest", window_days=window_days, status=status)
-    if not approximate_total:
-        if bulk_total is not None:
-            set_cached_total(key, bulk_total)
-            return bulk_total, False
-        cached = get_cached_total(key)
-        if cached is None:
-            cached = request_cached_total
-        if cached is not None:
-            # Cache entries are populated only from an exact store COUNT.  A
-            # normal request reusing that value remains complete; labelling it
-            # approximate made the campaign workflow reject a second request
-            # as provisional even though the underlying membership was exact.
-            return cached, False
-        return bulk_total, False
-
-    if offset == 0 and bulk_total is not None:
+    if bulk_total is not None and (not approximate_total or offset == 0):
         set_cached_total(key, bulk_total)
         return bulk_total, False
 
     cached = get_cached_total(key)
     if cached is None:
         cached = request_cached_total
-    if cached is not None:
-        return cached, True
+    if cached is not None or not approximate_total:
+        # Normal reads retain the exact-count contract; only callers opting
+        # into approximate totals label a reused count approximate.
+        return cached, bool(approximate_total)
 
-    # Cold cache on a deep page: expose a conservative lower bound so paging
-    # controls stay usable until the client revisits offset=0.
-    if page_len < limit:
-        return offset + page_len, True
-    return offset + limit, True
+    # Cold approximate reads expose a lower bound until offset=0 is counted.
+    return offset + min(page_len, limit), True
 
 
 _BULK_MERGE_CHUNK = 256
@@ -69,7 +54,7 @@ class MergedScanBulkPage(NamedTuple):
 
     ``next_scan_index`` is how many pre-sorted scan findings have been consumed
     (skipped + emitted); ``next_bulk_cursor`` is the hub keyset cursor of the
-    last consumed bulk row (``""`` when no bulk row was consumed). Together they
+    last consumed bulk row, or a bounded scope walk's checkpoint. Together they
     let ``/v1/findings`` emit ONE compound cursor so a keyset caller walks the
     full merged set with 0 dups / 0 drops instead of losing the scan half after
     page 1.
@@ -81,79 +66,30 @@ class MergedScanBulkPage(NamedTuple):
     has_more: bool
 
 
-class _ScanBulkMerge:
-    """Two-pointer walk over pre-sorted scan findings and keyset-refilled hub pages.
+class _MergeInput(NamedTuple):
+    row: dict[str, Any] | None
+    scan_index: int | None = None
+    bulk_cursor: str = ""
 
-    Each source is consumed strictly in order, so a page consumes a contiguous
-    prefix of each source after its resume point.
-    """
 
-    def __init__(
-        self,
-        scan_findings: list[dict[str, Any]],
-        fetch_bulk: Callable[[str | None], Any],
-        *,
-        sort_key: str,
-        scan_start: int,
-        bulk_cursor: str | None,
-    ) -> None:
-        self.scan_findings = scan_findings
-        self.sort_key = sort_key
-        self.scan_i = scan_start
-        self.bulk_buf: list[dict[str, Any]] = []
-        self.bulk_i = 0
-        self.last_bulk_consumed: dict[str, Any] | None = None
-        self._fetch_bulk = fetch_bulk
-        self._fetch_cursor: str | None = bulk_cursor or None
-        self._bulk_exhausted = False
+def _bulk_inputs(fetch: Callable[[str | None], Any], cursor: str | None) -> Iterator[_MergeInput]:
+    while True:
+        result = fetch(cursor)
+        rows = result[0]
+        cursor = result[2] if len(result) > 2 else None
+        for row in rows:
+            yield _MergeInput(row)
+        if not cursor:
+            return
+        if not rows:
+            # A bounded scope walk can advance without finding a match. Pause
+            # both sources: the next bulk head could outrank the next scan row.
+            yield _MergeInput(None, bulk_cursor=cursor)
+            return
 
-    def _refill_bulk(self) -> bool:
-        if self._bulk_exhausted:
-            self.bulk_buf = []
-            self.bulk_i = 0
-            return False
-        result = self._fetch_bulk(self._fetch_cursor)
-        self.bulk_buf = result[0]
-        self._fetch_cursor = result[2] if len(result) > 2 else None
-        if not self._fetch_cursor:
-            self._bulk_exhausted = True
-        self.bulk_i = 0
-        return bool(self.bulk_buf)
 
-    def bulk_head(self) -> dict[str, Any] | None:
-        if self.bulk_i >= len(self.bulk_buf) and not self._refill_bulk():
-            return None
-        return self.bulk_buf[self.bulk_i]
-
-    def scan_head(self) -> dict[str, Any] | None:
-        return self.scan_findings[self.scan_i] if self.scan_i < len(self.scan_findings) else None
-
-    def _take_scan(self) -> dict[str, Any]:
-        row = self.scan_findings[self.scan_i]
-        self.scan_i += 1
-        return row
-
-    def _take_bulk(self) -> dict[str, Any]:
-        row = self.bulk_buf[self.bulk_i]
-        self.bulk_i += 1
-        self.last_bulk_consumed = row
-        return row
-
-    def pick_next(self) -> dict[str, Any] | None:
-        scan_row = self.scan_head()
-        bulk_row = self.bulk_head()
-        if scan_row is None and bulk_row is None:
-            return None
-        if bulk_row is None:
-            return self._take_scan()
-        if scan_row is None:
-            return self._take_bulk()
-        if _finding_sort_key(scan_row, self.sort_key) <= _finding_sort_key(bulk_row, self.sort_key):
-            return self._take_scan()
-        return self._take_bulk()
-
-    def has_more(self) -> bool:
-        return self.scan_head() is not None or self.bulk_head() is not None
+def _merge_input_key(item: _MergeInput, sort: str) -> tuple[float, float, float]:
+    return _finding_sort_key(item.row, sort) if item.row is not None else (float("-inf"),) * 3
 
 
 def _merge_bulk_kwargs(
@@ -190,22 +126,12 @@ def _merged_scan_bulk_page(
     status: str | None = None,
     scope_metadata: dict[str, Any] | None = None,
 ) -> MergedScanBulkPage:
-    """Merge pre-sorted scan findings with bulk hub pages without O(table) work.
+    """Merge bounded bulk pages with sorted scans and retain consumed frontiers.
 
-    Streams two sorted sources with a two-pointer walk so deep ``offset`` does
-    not require loading ``offset + limit`` bulk rows up front or re-sorting the
-    full combined window in memory. The bulk source is refilled by keyset cursor
-    (``list_current_page``) so the merge stays sargable and — critically — the
-    frontier it stops at is expressible as one resumable cursor. ``scan_start``
-    (index into ``scan_findings``) and ``bulk_cursor`` (hub keyset position)
-    resume a prior page; ``status`` filters the bulk source's lifecycle status
-    to match the merged scan findings' basis (default open) so both halves
-    reconcile.
-
-    Each source is consumed strictly in order (scan by ascending index, bulk in
-    the store's keyset order), so a page consumes a contiguous prefix of each
-    source after its resume point — that is what makes the walk drop-free and
-    dup-free regardless of the merge comparator's tiebreakers.
+    The stable merge preserves each source's order and prefers scans on ties.
+    Lookahead can fetch a row, but only emitted/skipped rows advance cursors.
+    Empty scoped pages with a continuation pause the walk without losing the
+    store's progress or reading beyond its budget.
     """
     extra_kwargs = _merge_bulk_kwargs(since, status, scope, scope_metadata)
 
@@ -222,16 +148,26 @@ def _merged_scan_bulk_page(
             **extra_kwargs,
         )
 
-    walk = _ScanBulkMerge(scan_findings, fetch_bulk, sort_key=sort_key, scan_start=scan_start, bulk_cursor=bulk_cursor)
-    skipped = 0
-    while skipped < offset and walk.pick_next() is not None:
-        skipped += 1
+    scan_inputs = (_MergeInput(scan_findings[index], scan_index=index + 1) for index in range(scan_start, len(scan_findings)))
+    stream = merge(scan_inputs, _bulk_inputs(fetch_bulk, bulk_cursor), key=lambda item: _merge_input_key(item, sort_key))
     page: list[dict[str, Any]] = []
-    while len(page) < limit and (row := walk.pick_next()) is not None:
-        page.append(row)
-    has_more = walk.has_more()
-    if walk.last_bulk_consumed is not None:
-        next_bulk_cursor = finding_cursor.cursor_from_current_row(walk.last_bulk_consumed, sort=sort_key)
-    else:
-        next_bulk_cursor = bulk_cursor or ""
-    return MergedScanBulkPage(page, walk.scan_i, next_bulk_cursor, has_more)
+    scan_index, next_bulk_cursor = scan_start, bulk_cursor or ""
+    last_bulk: dict[str, Any] | None = None
+    has_more = False
+    for position, item in enumerate(stream):
+        if item.row is None:
+            # Everything before this boundary was consumed; no matching bulk
+            # row was skipped between its last emitted row and this checkpoint.
+            return MergedScanBulkPage(page, scan_index, item.bulk_cursor, True)
+        if position >= offset + limit:
+            has_more = True
+            break
+        if item.scan_index is None:
+            last_bulk = item.row
+        else:
+            scan_index = item.scan_index
+        if position >= offset:
+            page.append(item.row)
+    if last_bulk is not None:
+        next_bulk_cursor = finding_cursor.cursor_from_current_row(last_bulk, sort=sort_key)
+    return MergedScanBulkPage(page, scan_index, next_bulk_cursor, has_more)

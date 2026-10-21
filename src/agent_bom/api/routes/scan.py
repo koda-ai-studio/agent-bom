@@ -45,7 +45,6 @@ from agent_bom.api.finding_merge import MergedScanBulkPage as MergedScanBulkPage
 from agent_bom.api.finding_merge import _merge_bulk_kwargs as _merge_bulk_kwargs
 from agent_bom.api.finding_merge import _merged_scan_bulk_page as _merged_scan_bulk_page
 from agent_bom.api.finding_merge import _resolve_bulk_findings_total as _resolve_bulk_findings_total
-from agent_bom.api.finding_merge import _ScanBulkMerge as _ScanBulkMerge
 from agent_bom.api.finding_page_read import _list_finding_groups_impl, _list_findings_view_impl
 from agent_bom.api.finding_scope_filters import _canonical_group_key as _canonical_group_key
 from agent_bom.api.finding_scope_filters import _canonical_scope_filters as _canonical_scope_filters
@@ -883,9 +882,6 @@ _EXPORTS = {
     "_merged_page_next_cursor": "agent_bom.api.finding_page_filters",
     "_merged_page": "agent_bom.api.finding_page_filters",
     "_bulk_page": "agent_bom.api.finding_page_filters",
-    "_scoped_findings_page": "agent_bom.api.finding_page_filters",
-    "_merged_unscoped_page": "agent_bom.api.finding_page_filters",
-    "_bulk_only_page": "agent_bom.api.finding_page_filters",
     "_in_memory_findings_page": "agent_bom.api.finding_page_filters",
     "_findings_page": "agent_bom.api.finding_page_filters",
     "_redact_finding_page": "agent_bom.api.finding_page_read",
