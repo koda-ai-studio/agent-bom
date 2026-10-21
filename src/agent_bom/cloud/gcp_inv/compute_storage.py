@@ -417,7 +417,7 @@ def _discover_cloud_sql_instances(
                 instances.append(
                     {
                         "name": name,
-                        "id": str(item.get("selfLink", "") or "") or name,
+                        "id": str(item.get("selfLink", "") or "") or _scoped_name(project_id, "instances", name) or name,
                         "location": str(item.get("region", "") or ""),
                         "database_version": str(item.get("databaseVersion", "") or ""),
                         "ip_addresses": ip_addresses,
