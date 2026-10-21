@@ -54,6 +54,7 @@ def _k8s_agent() -> dict:
                     "k8s_namespace": "tools",
                     "k8s_node": "node-a",
                     "k8s_node_provider_id": f"aws:///{REGION}a/{INSTANCE}",
+                    "k8s_cloud_account_id": ACCOUNT,
                 },
             }
         ],
@@ -116,7 +117,11 @@ def test_cloud_origin_agent_is_hosted_on_its_resource_and_account_rollup_is_unch
 
 def test_provider_ids_name_the_inventory_host() -> None:
     aws = provider_id_host(f"aws:///{REGION}a/{INSTANCE}")
-    assert aws is not None and aws.id == f"cloud_resource:aws:ec2:instance:{INSTANCE}" and aws.attributes["region"] == REGION
+    assert (
+        aws is not None
+        and aws.id == f"cloud_resource:aws:ec2:instance:scoped//{REGION}//native/{INSTANCE}"
+        and aws.attributes["region"] == REGION
+    )
     gce = provider_id_host("gce://demo-project/us-central1-a/node-1")
     assert gce is not None and gce.attributes["self_link"] == "projects/demo-project/zones/us-central1-a/instances/node-1"
     assert provider_id_host("kind://docker/kind/kind-control-plane") is None

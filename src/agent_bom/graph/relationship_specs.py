@@ -397,7 +397,14 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         # Grants scoped to a whole subscription / project / organization land on it.
         (E.CLOUD_RESOURCE, E.DATA_STORE, E.RESOURCE, E.TOOL, E.ACCOUNT, E.ORG),
     ),
-    _spec(R.PROTECTS, T.EXPOSURE, "exposure", (E.API_GATEWAY, E.CLOUD_RESOURCE), (E.CLOUD_RESOURCE, E.DATA_STORE, E.RESOURCE)),
+    _spec(
+        R.PROTECTS,
+        T.GOVERNANCE,
+        "exposure",
+        (E.API_GATEWAY, E.CLOUD_RESOURCE),
+        (E.CLOUD_RESOURCE, E.DATA_STORE, E.RESOURCE),
+        traversable=False,
+    ),
     _spec(
         R.BELONGS_TO,
         T.STRUCTURAL,

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping
 from typing import Any
 from urllib.parse import quote
+
+from agent_bom.core.cloud_scope import assess_cloud_scope
 
 
 def cloud_resource_node_id(provider: str, kind: str, record: Mapping[str, Any], account: str, region: str) -> str:
@@ -16,11 +20,33 @@ def cloud_resource_node_id(provider: str, kind: str, record: Mapping[str, Any], 
     account's scope. Original provider identifiers stay in node evidence.
     """
     provider = provider.strip().casefold()
+    scope = assess_cloud_scope(provider, record, account)
+    if scope["status"] == "conflict":
+        # Quarantine before add_node can coalesce contradictory observations.
+        evidence = {
+            key: record[key]
+            for key in (
+                "arn",
+                "id",
+                "resource_id",
+                "self_link",
+                "selfLink",
+                "account_id",
+                "cloud_account_id",
+                "aws_account_id",
+                "subscription_id",
+                "project_id",
+            )
+            if key in record
+        }
+        payload = json.dumps([account, region, evidence], sort_keys=True, default=str)
+        digest = hashlib.sha256(payload.encode()).hexdigest()
+        return f"cloud_resource:{provider}:{kind}:unresolved/{digest}"
     native = str(
         record.get("arn")
         or record.get("id")
         or record.get("resource_id")
-        or record.get("vpc_id")
+        or (record.get("vpc_id") if kind.rsplit(":", 1)[-1] == "virtual_network" else None)
         or record.get("self_link")
         or record.get("selfLink")
         or ""

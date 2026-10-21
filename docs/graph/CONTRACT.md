@@ -472,7 +472,7 @@ These gaps are tracked as roadmap work. None of them block the guarantees in §2
 ## Correlated runtime identity and path proof
 
 Correlation manifests and edge receipts identify the join contract as
-`scoped-identity.v5`. Container occurrences join only when an authoritative
+`scoped-identity.v6`. Container occurrences join only when an authoritative
 runtime identifier and its provider and account, cluster, or host scope match
 within the requesting tenant. Kubernetes pod identifiers additionally require
 container names. Missing identity stays specific to the source snapshot. Image
@@ -1000,7 +1000,7 @@ SQLite graph mutations use bounded FIFO admission per resolved database path wit
 
 ### Correlation identity scope
 
-New correlations record `scoped-identity.v5`. Assets that carry a strong
+New correlations record `scoped-identity.v6`. Assets that carry a strong
 provider-native key (qualified ARN, AWS instance id bound to account and region,
 Azure ARM id, GCP self link, Kubernetes uid, image digest, principal id,
 Snowflake account-qualified name; see `graph/asset_identity.py`) join on that
@@ -1055,3 +1055,24 @@ A validated UUIDv5 component reference imported from an SBOM is retained on re-e
 including through the manifest and JSON inventory. This is declared document
 identity; it does not authorize execution or establish a runtime observation.
 Invalid or executable-source declarations cannot override local instance scope.
+
+
+### Cloud owner scope and network evidence
+
+Cloud asset identity requires mutually consistent owner evidence. Local resource
+IDs need a recorded account, subscription or project to correlate across scans.
+Qualified native IDs may supply that scope; organization, tenant and globally
+qualified resources retain their own scope rather than acquiring the collector's
+account. Native-owner disagreements and conflicting scope fields retain the
+observation with `identity_scope.status = conflict`. Such observations do not
+supply canonical merge keys or traversable hops. Cross-account references in
+trust policies and backend bindings are separate relationship evidence, not
+alternative ownership claims.
+
+Inventory hierarchy, configured access, protection associations and runtime
+calls have distinct relationship and evidence classes. A recorded WAF association
+is non-traversable governance evidence, not a vulnerability mitigation. Public
+addresses, permissive rules, subnet placement and frontend/backend attachments
+alone do not establish effective network reachability. Those bindings remain
+visible with unknown reachability until route, rule and endpoint evidence supports
+a stronger claim. Missing links do not prove isolation.

@@ -70,30 +70,22 @@ def _fusion_signals_for_path(graph: UnifiedGraph, hops: list[str]) -> list[tuple
             continue
         attrs = node.attributes
         port_detail = _exposed_port_detail(attrs)
-        # A WAF / API-gateway in front of the resource mitigates its exposure
-        # (set by the CNAPP overlay). Honesty (§11): a mitigated node is NOT
-        # counted as a full-weight toxic/exposed foothold, but it is NOT hidden
-        # either — it surfaces as an explicitly *mitigated* signal at lower rank.
-        exposure_mitigated = coerce_truthy(attrs.get("exposure_mitigated")) or coerce_truthy(attrs.get("protected_by_waf"))
-        if coerce_truthy(attrs.get("toxic_exposed_vulnerable")):
-            add("toxic_exposed_vulnerable", "Toxic: exposed + vulnerable", f"{node.label}: exposed{port_detail} + vulnerable.", 20.0)
-        elif coerce_truthy(attrs.get("toxic_exposed_vulnerable_mitigated")):
+        # Association and legacy boolean flags do not establish that a control
+        # blocks this vulnerability or that the full network path is reachable.
+        if coerce_truthy(attrs.get("toxic_exposed_vulnerable")) or coerce_truthy(attrs.get("toxic_exposed_vulnerable_mitigated")):
             add(
-                "toxic_exposed_vulnerable_mitigated",
-                "Toxic (mitigated): exposed + vulnerable behind WAF",
-                f"{node.label}: internet-exposed{port_detail} + vulnerable but fronted by a WAF/API gateway (exposure mitigated).",
-                8.0,
+                "toxic_exposed_vulnerable",
+                "Toxic: exposed + vulnerable",
+                f"{node.label}: recorded exposure{port_detail} + vulnerable.",
+                20.0,
             )
         elif coerce_truthy(attrs.get("internet_exposed")):
-            if exposure_mitigated:
-                add(
-                    "internet_exposed_mitigated",
-                    "Internet exposed (mitigated)",
-                    f"{node.label} is internet-exposed{port_detail} but fronted by a WAF/API gateway (exposure mitigated).",
-                    6.0,
-                )
-            else:
-                add("internet_exposed", "Internet exposed", f"{node.label} is reachable from the public internet{port_detail}.", 15.0)
+            add(
+                "internet_exposed",
+                "Recorded public exposure",
+                f"{node.label} has recorded public exposure{port_detail}; end-to-end network reachability is unverified.",
+                15.0,
+            )
         if coerce_truthy(attrs.get("escalates_to_admin")):
             add("privilege_escalation_admin", "Admin escalation", f"{node.label} can assume an admin-privileged role.", 20.0)
         elif coerce_truthy(attrs.get("escalates_to_conditional_admin")):
@@ -372,8 +364,10 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
     """
     vulnerable: set[str] = set()
     admin_reachable: set[str] = set()
-    sensitive_neighbors: dict[str, list[str]] = {}
+    sensitive_neighbors: dict[str, list[tuple[str, str]]] = {}
     for edge in graph.edges:
+        if not edge.traversable:
+            continue
         rel = _rel_value(edge)
         if rel == RelationshipType.VULNERABLE_TO.value:
             vulnerability_node = graph.nodes.get(edge.target)
@@ -389,28 +383,24 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
         elif rel in (RelationshipType.STORES.value, RelationshipType.EXPOSED_TO.value):
             store = graph.nodes.get(edge.target)
             if store is not None and has_sensitive_data_label(store.attributes.get("data_sensitivity")):
-                sensitive_neighbors.setdefault(edge.source, []).append(edge.target)
+                sensitive_neighbors.setdefault(edge.source, []).append((edge.target, rel))
 
     paths: list[AttackPath] = []
     for node in graph.nodes.values():
         if _node_type_value(node) not in _TOXIC_RESOURCE_TYPES or len(paths) >= _MAX_TOXIC_PATHS:
             continue
         attrs = node.attributes
-        # WAF / API-gateway in front of the resource mitigates its exposure
-        # (CNAPP overlay). Honesty (§11): the node still surfaces (marked
-        # mitigated), but its exposure factor is not counted at full weight and
-        # the composite band is capped below an unmitigated peer's.
-        exposure_mitigated = coerce_truthy(attrs.get("exposure_mitigated")) or coerce_truthy(attrs.get("protected_by_waf"))
         factors: list[str] = []
         if coerce_truthy(attrs.get("internet_exposed")):
-            factors.append("internet-exposed (WAF-mitigated)" if exposure_mitigated else "internet-exposed")
+            factors.append("recorded public exposure")
         if (
             node.id in vulnerable
             or coerce_truthy(attrs.get("toxic_exposed_vulnerable"))
             or coerce_truthy(attrs.get("toxic_exposed_vulnerable_mitigated"))
         ):
             factors.append("exploitable vulnerability")
-        sens_ids = sensitive_neighbors.get(node.id, [])
+        sensitive_links = sensitive_neighbors.get(node.id, [])
+        sens_ids = [target for target, _rel in sensitive_links]
         if has_sensitive_data_label(attrs.get("data_sensitivity")) or sens_ids:
             regs = list(attrs.get("data_regulatory_frameworks") or [])
             for sid in sens_ids:
@@ -425,19 +415,13 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
         if len(factors) < 2 or not sens_ids:
             continue
         base = _toxic_band(len(factors))
-        if exposure_mitigated:
-            # Below the unmitigated toxic band — the WAF fronts the exposure — but
-            # still surfaced and marked, never dropped.
-            base = min(base, 65.0)
         prefix = "Crown jewel" if len(factors) >= 3 else "Toxic combination"
-        if exposure_mitigated:
-            prefix += " (exposure mitigated)"
         paths.append(
             AttackPath(
                 source=node.id,
                 target=sens_ids[0],
                 hops=[node.id, sens_ids[0]],
-                edges=["exposed_to"],
+                edges=[sensitive_links[0][1]],
                 composite_risk=round(min(100.0, base), 2),
                 summary=f"{prefix}: {node.label} stacks {len(factors)} toxic factors — " + ", ".join(factors) + ".",
                 vuln_ids=[],

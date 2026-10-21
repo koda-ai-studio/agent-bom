@@ -99,11 +99,11 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | `access_policy` | 9 | — | — |
 | `account` | 7 | — | `account:{provider}:{account_scope}` |
 | `agent` | 2 | `canonical_agent_id` | — |
-| `api_gateway` | 7 | — | `api_gateway:{provider}:{api_id}` |
+| `api_gateway` | 7 | — | — |
 | `application` | 9 | — | — |
 | `blueprint` | 9 | — | — |
 | `ci_job` | 6 | — | — |
-| `cloud_resource` | 7 | — | `cloud_resource:runtime:{stable_id}`, `cloud_resource:snowflake:integration:{name}`, `cloud_resource:snowflake:pipe:{fqn}` (+12) |
+| `cloud_resource` | 7 | — | `cloud_resource:runtime:{stable_id}`, `cloud_resource:snowflake:integration:{name}`, `cloud_resource:snowflake:pipe:{fqn}` (+10) |
 | `cluster` | 7 | — | — |
 | `code_module` | 6 | — | `application_entrypoint:source:{…}` |
 | `config_file` | 6 | — | — |

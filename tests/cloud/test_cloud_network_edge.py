@@ -1,9 +1,8 @@
 """Network-edge inventory (WAF, API Gateway, ENIs, NAT/IGW, subnets, IPs).
 
 Covers AWS live discovery (mocked boto3) and the shared graph wiring: the
-API_GATEWAY node populated from live inventory, the WAF ``PROTECTS`` edge that
-mitigates a fronted resource's exposure verdict, and the ENI mapping that makes
-instance ↔ subnet ↔ security-group traversable.
+API_GATEWAY node populated from live inventory, recorded WAF associations, and
+ENI placements. Configuration bindings do not prove network reachability.
 """
 
 from __future__ import annotations
@@ -46,7 +45,7 @@ class _Ec2Client:
                         {
                             "RouteTableId": "rtb-1",
                             "VpcId": "vpc-1",
-                            "Routes": [{"DestinationCidrBlock": "0.0.0.0/0", "GatewayId": "igw-1"}],
+                            "Routes": [{"DestinationCidrBlock": "0.0.0.0/0", "GatewayId": "igw-1", "State": "active"}],
                             "Associations": [{"SubnetId": "subnet-pub", "Main": False}],
                         }
                     ]
@@ -204,7 +203,7 @@ def test_discover_network_edge_enumerates_plumbing() -> None:
     assert eni["instance_id"] == "i-1" and eni["subnet_id"] == "subnet-pub" and eni["security_group_ids"] == ["sg-1"]
     subnets = {s["id"]: s for s in edge["subnets"]}
     assert subnets["subnet-pub"]["is_public"] is True  # 0.0.0.0/0 → igw route
-    assert subnets["subnet-priv"]["is_public"] is False
+    assert subnets["subnet-priv"]["is_public"] is None  # no collected route association
     assert len(edge["nat_gateways"]) == 1 and len(edge["internet_gateways"]) == 1
     assert len(edge["vpc_endpoints"]) == 1 and len(edge["route_tables"]) == 1 and len(edge["network_acls"]) == 1
 
@@ -265,7 +264,16 @@ def _aws_inventory() -> dict:
         "region": "us-east-1",
         "instances": [{"instance_id": "i-1", "name": "web", "vpc_id": "vpc-1", "subnet_id": "subnet-pub", "security_group_ids": ["sg-1"]}],
         "security_groups": [{"group_id": "sg-1", "name": "open", "vpc_id": "vpc-1", "internet_exposed": True, "network_exposure": []}],
-        "subnets": [{"id": "subnet-pub", "name": "pub", "vpc_id": "vpc-1", "cidr": "10.0.1.0/24", "is_public": True}],
+        "subnets": [
+            {
+                "id": "subnet-pub",
+                "name": "pub",
+                "vpc_id": "vpc-1",
+                "cidr": "10.0.1.0/24",
+                "is_public": True,
+                "internet_gateway_ids": ["igw-1"],
+            }
+        ],
         "internet_gateways": [
             {
                 "id": "igw-1",
@@ -339,7 +347,7 @@ def test_api_gateway_node_populated_from_live_inventory() -> None:
 def test_waf_node_and_protects_edge() -> None:
     g = build_unified_graph_from_report({"cloud_inventory": _aws_inventory()})
     edges = {(e.source, e.target, e.relationship.value) for e in g.edges}
-    waf_id = "cloud_resource:aws:waf:web_acl:acl-id"
+    waf_id = _node_id(g, "cloud_resource:aws:waf:web_acl:")
     alb_id = _node_id(g, "cloud_resource:aws:elbv2:load_balancer:")
     assert waf_id in g.nodes
     assert (waf_id, alb_id, "protects") in edges
@@ -348,18 +356,18 @@ def test_waf_node_and_protects_edge() -> None:
 def test_eni_maps_instance_subnet_and_security_group() -> None:
     g = build_unified_graph_from_report({"cloud_inventory": _aws_inventory()})
     edges = {(e.source, e.target, e.relationship.value) for e in g.edges}
-    eni_id = "cloud_resource:aws:network:network_interface:eni-1"
-    inst_id = "cloud_resource:aws:ec2:instance:i-1"
+    eni_id = "cloud_resource:aws:network:network_interface:scoped/111122223333/us-east-1//native/eni-1"
+    inst_id = "cloud_resource:aws:ec2:instance:scoped/111122223333/us-east-1//native/i-1"
     assert eni_id in g.nodes
     assert (eni_id, inst_id, "part_of") in edges
-    assert (eni_id, "cloud_resource:aws:network:subnet:subnet-pub", "part_of") in edges
-    assert (eni_id, "cloud_resource:aws:ec2:security-group:sg-1", "part_of") in edges
+    assert (eni_id, "cloud_resource:aws:network:subnet:scoped/111122223333/us-east-1//native/subnet-pub", "part_of") in edges
+    assert (eni_id, "cloud_resource:aws:ec2:security-group:scoped/111122223333/us-east-1//native/sg-1", "part_of") in edges
 
 
 def test_eni_public_ip_emits_exposed_to_instance() -> None:
     g = build_unified_graph_from_report({"cloud_inventory": _aws_inventory()})
-    eni_id = "cloud_resource:aws:network:network_interface:eni-1"
-    inst_id = "cloud_resource:aws:ec2:instance:i-1"
+    eni_id = "cloud_resource:aws:network:network_interface:scoped/111122223333/us-east-1//native/eni-1"
+    inst_id = "cloud_resource:aws:ec2:instance:scoped/111122223333/us-east-1//native/i-1"
     exposed = [e for e in g.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source == eni_id and e.target == inst_id]
     assert exposed
     assert exposed[0].evidence.get("reason") == "eni_public_ip"
@@ -369,56 +377,55 @@ def test_elastic_ip_emits_exposed_to_attached_instance() -> None:
     payload = _aws_inventory()
     payload["ip_addresses"] = [{"address": "52.9.9.9", "kind": "elastic", "attached_to": "i-1"}]
     g = build_unified_graph_from_report({"cloud_inventory": payload})
-    ip_id = "cloud_resource:aws:network:ip_address:52.9.9.9"
-    inst_id = "cloud_resource:aws:ec2:instance:i-1"
+    ip_id = "cloud_resource:aws:network:ip_address:scoped/111122223333/us-east-1//native/52.9.9.9"
+    inst_id = "cloud_resource:aws:ec2:instance:scoped/111122223333/us-east-1//native/i-1"
     exposed = [e for e in g.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source == ip_id and e.target == inst_id]
     assert exposed
     assert exposed[0].evidence.get("reason") == "elastic_ip_attachment"
 
 
-def test_internet_facing_lb_emits_exposed_to_reachable_instance() -> None:
+def test_internet_facing_lb_does_not_invent_a_backend() -> None:
     g = build_unified_graph_from_report({"cloud_inventory": _aws_inventory()})
     lb_id = _node_id(g, "cloud_resource:aws:elbv2:load_balancer:")
-    inst_id = "cloud_resource:aws:ec2:instance:i-1"
+    inst_id = "cloud_resource:aws:ec2:instance:scoped/111122223333/us-east-1//native/i-1"
     exposed = [e for e in g.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source == lb_id and e.target == inst_id]
-    assert exposed
-    assert exposed[0].evidence.get("reason") == "internet_facing_load_balancer"
+    assert not exposed
 
 
 def test_internet_facing_api_gateway_emits_exposed_to_frontend() -> None:
     g = build_unified_graph_from_report({"cloud_inventory": _aws_inventory()})
-    api_id = "api_gateway:aws:rest1"
+    api_id = "api_gateway:aws:api_gateway:scoped/111122223333/us-east-1//native/rest1"
     alb_id = _node_id(g, "cloud_resource:aws:elbv2:load_balancer:")
     exposed = [e for e in g.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source == api_id and e.target == alb_id]
     assert exposed
-    assert exposed[0].evidence.get("reason") == "internet_facing_api_gateway"
+    assert exposed[0].evidence.get("reason") == "api_gateway_frontend"
 
 
-def test_waf_emits_internet_entry_exposed_to_frontend() -> None:
+def test_waf_association_does_not_make_a_network_entry_point() -> None:
     g = build_unified_graph_from_report({"cloud_inventory": _aws_inventory()})
-    waf_id = "cloud_resource:aws:waf:web_acl:acl-id"
+    waf_id = _node_id(g, "cloud_resource:aws:waf:web_acl:")
     alb_id = _node_id(g, "cloud_resource:aws:elbv2:load_balancer:")
     exposed = [e for e in g.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source == waf_id and e.target == alb_id]
-    assert exposed
-    assert exposed[0].evidence.get("reason") == "waf_internet_entry"
-    assert g.nodes[waf_id].attributes.get("internet_exposed") is True
+    assert not exposed
+    assert g.nodes[waf_id].attributes.get("internet_exposed") is not True
 
 
 def test_internet_gateway_public_subnet_and_instance_paths() -> None:
     g = build_unified_graph_from_report({"cloud_inventory": _aws_inventory()})
-    igw_id = "cloud_resource:aws:network:internet_gateway:igw-1"
-    subnet_id = "cloud_resource:aws:network:subnet:subnet-pub"
-    inst_id = "cloud_resource:aws:ec2:instance:i-1"
+    igw_id = "cloud_resource:aws:network:internet_gateway:scoped/111122223333/us-east-1//native/igw-1"
+    subnet_id = "cloud_resource:aws:network:subnet:scoped/111122223333/us-east-1//native/subnet-pub"
+    inst_id = "cloud_resource:aws:ec2:instance:scoped/111122223333/us-east-1//native/i-1"
     reasons = {(e.source, e.target): (e.evidence or {}).get("reason") for e in g.edges if e.relationship == RelationshipType.EXPOSED_TO}
     assert reasons.get((igw_id, subnet_id)) == "internet_gateway_public_subnet"
-    assert reasons.get((subnet_id, inst_id)) == "public_subnet_instance"
+    assert (subnet_id, inst_id) not in reasons
+    assert any(e.source == inst_id and e.target == subnet_id and e.relationship == RelationshipType.PART_OF for e in g.edges)
 
 
 def test_permissive_network_acl_exposed_to_subnet_and_instance() -> None:
     g = build_unified_graph_from_report({"cloud_inventory": _aws_inventory()})
-    nacl_id = "cloud_resource:aws:network:network_acl:acl-open"
-    subnet_id = "cloud_resource:aws:network:subnet:subnet-pub"
-    inst_id = "cloud_resource:aws:ec2:instance:i-1"
+    nacl_id = "cloud_resource:aws:network:network_acl:scoped/111122223333/us-east-1//native/acl-open"
+    subnet_id = "cloud_resource:aws:network:subnet:scoped/111122223333/us-east-1//native/subnet-pub"
+    inst_id = "cloud_resource:aws:ec2:instance:scoped/111122223333/us-east-1//native/i-1"
     reasons = {(e.source, e.target): (e.evidence or {}).get("reason") for e in g.edges if e.relationship == RelationshipType.EXPOSED_TO}
     assert reasons.get((nacl_id, subnet_id)) == "permissive_network_acl"
     assert reasons.get((nacl_id, inst_id)) == "permissive_network_acl_instance"
@@ -450,7 +457,7 @@ def _exposed_vuln_graph(*, protected: bool) -> UnifiedGraph:
     return g
 
 
-def test_waf_fronted_exposure_verdict_differs_from_unprotected() -> None:
+def test_waf_presence_alone_does_not_lower_vulnerability_risk() -> None:
     unprotected = _exposed_vuln_graph(protected=False)
     protected = _exposed_vuln_graph(protected=True)
 
@@ -460,10 +467,10 @@ def test_waf_fronted_exposure_verdict_differs_from_unprotected() -> None:
     bare = unprotected.nodes["res"]
     fronted = protected.nodes["res"]
 
-    # Unprotected: full toxic escalation. Protected: mitigated, lower risk.
+    # Both carry the same vulnerability; association alone proves no mitigation.
     assert bare.attributes.get("toxic_exposed_vulnerable") is True
     assert bare.risk_score >= 9.0
-    assert fronted.attributes.get("exposure_mitigated") is True
-    assert fronted.attributes.get("toxic_exposed_vulnerable_mitigated") is True
-    assert fronted.attributes.get("toxic_exposed_vulnerable") is None
-    assert fronted.risk_score < bare.risk_score
+    assert fronted.attributes.get("exposure_mitigated") is not True
+    assert fronted.attributes.get("toxic_exposed_vulnerable_mitigated") is not True
+    assert fronted.attributes.get("toxic_exposed_vulnerable") is True
+    assert fronted.risk_score == bare.risk_score

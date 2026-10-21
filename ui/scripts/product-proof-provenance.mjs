@@ -37,6 +37,8 @@ export const PRODUCT_SCREENSHOT_INPUTS = [
   "src/agent_bom/graph",
   "src/agent_bom/canonical_ids.py",
   "src/agent_bom/core/packages.py",
+  "src/agent_bom/core/cloud_identity.py",
+  "src/agent_bom/core/cloud_scope.py",
 ];
 
 // Defensive: none of the directories above currently contain colocated

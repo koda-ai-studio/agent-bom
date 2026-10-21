@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:3e2aa6d44db94b758a8f6accf82be8d6f1285766644586e3bd1cff2b8f3dbb54",
+  "artifact_sha256": "sha256:be7229e0d8ea915715135f698a1fb3c02c4e0afb94082edca5f10754b4374014",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -490,7 +490,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "snapshot_scoped_runtime_occurrence",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -567,7 +567,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "purl",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -684,7 +684,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "canonical_id",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -1230,7 +1230,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "snapshot_scoped_runtime_occurrence",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -1307,7 +1307,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "purl",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -1424,7 +1424,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "canonical_id",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -1967,7 +1967,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "snapshot_scoped_missing_exact_identity",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2043,7 +2043,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "purl",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -2160,7 +2160,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "canonical_id",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2773,7 +2773,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "runtime_stable_id",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2850,7 +2850,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "runtime_stable_id",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -2968,7 +2968,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "provider_identity_id",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -3046,7 +3046,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "cloud_resource_id",
-                  "identity_version": "scoped-identity.v5",
+                  "identity_version": "scoped-identity.v6",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -3133,9 +3133,9 @@
           },
           "risk_reasons": [
             {
-              "detail": "Public reference-evidence-api service is reachable from the public internet.",
+              "detail": "Public reference-evidence-api service has recorded public exposure; end-to-end network reachability is unverified.",
               "kind": "internet_exposed",
-              "label": "Internet exposed"
+              "label": "Recorded public exposure"
             },
             {
               "detail": "reference-evidence-workload has recorded runtime activity; end-to-end reachability is assessed separately.",
@@ -3416,7 +3416,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -3468,7 +3468,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -3519,7 +3519,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -3572,7 +3572,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -3622,7 +3622,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -3673,7 +3673,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -3723,7 +3723,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -3774,7 +3774,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -3824,7 +3824,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -3864,7 +3864,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 3,
               "observations": [
                 {
@@ -3981,7 +3981,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "snapshot_scoped_runtime_occurrence",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -4057,7 +4057,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "snapshot_scoped_runtime_occurrence",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -4135,7 +4135,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "cloud_resource_id",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -4213,7 +4213,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "provider_identity_id",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -4290,7 +4290,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "purl",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 3,
               "observations": [
                 {
@@ -4407,7 +4407,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -4484,7 +4484,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "snapshot_scoped_missing_exact_identity",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -4564,7 +4564,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 2,
               "observations": [
                 {
@@ -4661,7 +4661,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "canonical_id",
-              "identity_version": "scoped-identity.v5",
+              "identity_version": "scoped-identity.v6",
               "observation_count": 1,
               "observations": [
                 {
@@ -4991,7 +4991,7 @@
         ]
       }
     ],
-    "manifest_sha256": "sha256:039c7f815de39e009c70b3fb0ac9eb0363ec8898850ca3f65881c0ef398f1dd2",
+    "manifest_sha256": "sha256:ca6848fd7991bba726076a7b26c7b6a1bf97deeb66e408691359705e34fbc2a5",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -5154,7 +5154,7 @@
       "output": {
         "attack_path_count": 1,
         "edge_count": 9,
-        "graph_digest_sha256": "sha256:634da4b27dba29d589dd5f8f28a48d50e49c30eef05eacc57c02ae4e458e3053",
+        "graph_digest_sha256": "sha256:b3953a353481faca51c2d4e8e34cc5a618addfe5f5f38c3eb9c294542bbcb3e9",
         "node_count": 10,
         "scan_id": "reference-evidence-correlation-v1"
       },

@@ -148,6 +148,7 @@ def _hosted_mcp_agent() -> dict[str, Any]:
                     "k8s_cluster": "demo-compute",
                     "k8s_node": _hostname(0),
                     "k8s_node_provider_id": f"aws:///{DEMO_COMPUTE_REGION}a/{_instance_id(0)}",
+                    "k8s_cloud_account_id": DEMO_COMPUTE_ACCOUNT,
                 },
             }
         ],

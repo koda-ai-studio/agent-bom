@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.core.cloud_identity import cloud_resource_node_id
+from agent_bom.core.cloud_scope import cloud_scope_attributes
 from agent_bom.graph.cloud_context import _add_account_resource_hierarchy, _recorded_exposure_attributes, _resource_environment
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
@@ -23,8 +24,8 @@ def project_aws_services(
     data_sources: list[str],
     resource_ids: list[str],
 ) -> list[tuple[str, str]]:
-    """Project AWS-shaped service records and return observed public load balancers."""
-    internet_facing_lbs: list[tuple[str, str]] = []
+    """Project AWS-shaped service records and return collected load balancers."""
+    load_balancers: list[tuple[str, str]] = []
     # ── AWS data + compute services (RDS / DynamoDB / Lambda / EKS) ──────
     # (key, service, resource_type, kind, label, is_data_store)
     for coll_key, svc, rtype, kind, label, is_data in (
@@ -70,6 +71,8 @@ def project_aws_services(
                         "encrypted": bool(item.get("encrypted")),
                         "account_id": account_id,
                         "environment": item_env,
+                        **cloud_scope_attributes(provider, item, account_id),
+                        **_backend_attributes(coll_key, item),
                     },
                     data_sources=data_sources,
                     dimensions=NodeDimensions(cloud_provider=provider, surface=svc, environment=item_env),
@@ -83,9 +86,18 @@ def project_aws_services(
                     node_id,
                     evidence={"source": "cloud-inventory"},
                 )
-            if coll_key == "elb_load_balancers" and exposure["internet_exposed"] is True:
-                internet_facing_lbs.append((node_id, _clean_graph_part(item.get("vpc_id"))))
-    return internet_facing_lbs
+            if coll_key == "elb_load_balancers":
+                load_balancers.append((node_id, _clean_graph_part(item.get("vpc_id"))))
+    return load_balancers
+
+
+def _backend_attributes(collection: str, item: dict[str, Any]) -> dict[str, Any]:
+    if collection != "elb_load_balancers":
+        return {}
+    return {
+        "backend_targets": list(item.get("backend_targets", []) or []),
+        "backend_collection_complete": item.get("backend_collection_complete"),
+    }
 
 
 def project_gcp_services(
@@ -143,6 +155,7 @@ def project_gcp_services(
                             "encrypted": bool(item.get("encrypted")),
                             "account_id": account_id,
                             "environment": item_env,
+                            **cloud_scope_attributes(provider, item, account_id),
                         },
                         data_sources=data_sources,
                         dimensions=NodeDimensions(cloud_provider="gcp", surface=svc, environment=item_env),

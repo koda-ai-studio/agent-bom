@@ -8,6 +8,8 @@ from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.graph.builder_network_exposure import _add_exposure_path_edge as _add_exposure_path_edge
 from agent_bom.graph.builder_network_inventory import NETWORK_INVENTORY_STAGES, _NetworkInventoryContext
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.types import RelationshipType
 from agent_bom.graph.util import clean_graph_part as _clean_graph_part
 
 
@@ -31,15 +33,12 @@ def _add_network_edge_inventory(
     - **API gateways** (AWS API Gateway, GCP API Gateway/Apigee, Azure API
       Management) → ``API_GATEWAY`` nodes in the API_GATEWAY semantic layer.
     - **WAF / Cloud Armor** web ACLs → ``CLOUD_RESOURCE`` nodes.
-    - A ``PROTECTS`` edge from each WAF / API gateway to the resource it fronts,
-      so the CNAPP overlay can refine the fronted resource's exposure verdict.
-    - **Subnets** → ``CLOUD_RESOURCE``; a public subnet is ``internet_exposed``.
+    - A ``PROTECTS`` edge records each explicit WAF association; it does not
+      establish vulnerability mitigation.
+    - **Subnets** → ``CLOUD_RESOURCE`` with recorded routing classification.
     - **ENIs / NICs** → ``CLOUD_RESOURCE`` wired ``PART_OF`` their instance,
-      subnet, and security group(s) so the network path is traversable; an ENI
-      carrying a public IP marks its instance internet-reachable and emits
-      ``EXPOSED_TO`` the instance.
-    - **Elastic/public IPs** → ``EXPOSED_TO`` the attached instance when known.
-    - **Internet-facing API gateways** → ``EXPOSED_TO`` protected frontends.
+      subnet, and security groups. Public address attachments and configured
+      frontend bindings remain non-traversable until reachability is assessed.
     - NAT/internet gateways, route tables, network ACLs, VPC endpoints, load
       balancers, and IP addresses → ``CLOUD_RESOURCE`` inventory nodes.
 
@@ -63,6 +62,7 @@ def _add_network_edge_inventory(
         graph,
         inventory,
         provider=provider,
+        network_nodes={str(graph.nodes[nid].attributes.get("resource_id")): nid for nid in ctx.resource_ids if nid in graph.nodes},
         subnet_node_by_id=ctx.subnet_node_by_id,
         instance_node_by_id=instance_node_by_id,
     )
@@ -73,10 +73,11 @@ def _wire_network_entry_exposure_paths(
     inventory: dict[str, Any],
     *,
     provider: str,
+    network_nodes: dict[str, str],
     subnet_node_by_id: dict[str, str],
     instance_node_by_id: dict[str, str],
 ) -> None:
-    """Link IGW / public subnet / permissive NACL nodes to reachable instances."""
+    """Keep explicit network placements and qualified configuration bindings."""
     public_subnet_ids = {
         sn_id
         for sn in inventory.get("subnets", []) or []
@@ -95,16 +96,16 @@ def _wire_network_entry_exposure_paths(
         vpc_id = _clean_graph_part(igw.get("vpc_id"))
         if not ident or not vpc_id:
             continue
-        node_id = f"cloud_resource:{provider}:network:internet_gateway:{ident}"
+        node_id = network_nodes.get(ident, "")
         if node_id in graph.nodes:
             graph.nodes[node_id].attributes["internet_exposed"] = True
             igw_by_vpc[vpc_id] = node_id
 
     _wire_gateway_subnets(graph, inventory, public_subnet_ids, subnet_node_by_id, igw_by_vpc)
 
-    _wire_public_subnet_instances(graph, inventory, public_subnet_ids, subnet_node_by_id, instance_node_by_id)
+    _wire_subnet_instances(graph, inventory, subnet_node_by_id, instance_node_by_id)
 
-    _wire_permissive_acls(graph, inventory, public_subnet_ids, subnet_node_by_id, provider, instance_node_by_id)
+    _wire_permissive_acls(graph, inventory, public_subnet_ids, subnet_node_by_id, network_nodes, instance_node_by_id)
 
 
 def _wire_gateway_subnets(
@@ -119,7 +120,12 @@ def _wire_gateway_subnets(
             if not isinstance(sn, dict):
                 continue
             sn_id = _clean_graph_part(sn.get("id"))
-            if sn_id not in public_subnet_ids or _clean_graph_part(sn.get("vpc_id")) != vpc_id:
+            gateway_id = graph.nodes[igw_node].attributes.get("resource_id")
+            if (
+                sn_id not in public_subnet_ids
+                or _clean_graph_part(sn.get("vpc_id")) != vpc_id
+                or gateway_id not in (sn.get("internet_gateway_ids") or [])
+            ):
                 continue
             sn_node = subnet_node_by_id.get(sn_id)
             if sn_node:
@@ -131,15 +137,13 @@ def _wire_gateway_subnets(
                 )
 
 
-def _wire_public_subnet_instances(
+def _wire_subnet_instances(
     graph: UnifiedGraph,
     inventory: dict[str, Any],
-    public_subnet_ids: set[str],
     subnet_node_by_id: dict[str, str],
     instance_node_by_id: dict[str, str],
 ) -> None:
-    for sn_id in public_subnet_ids:
-        sn_node = subnet_node_by_id.get(sn_id)
+    for sn_id, sn_node in subnet_node_by_id.items():
         if not sn_node:
             continue
         for instance in inventory.get("instances", []) or []:
@@ -149,11 +153,14 @@ def _wire_public_subnet_instances(
                 continue
             inst_node = instance_node_by_id.get(_clean_graph_part(instance.get("instance_id")))
             if inst_node:
-                _add_exposure_path_edge(
-                    graph,
-                    source=sn_node,
-                    target=inst_node,
-                    reason="public_subnet_instance",
+                graph.add_edge(
+                    UnifiedEdge(
+                        source=inst_node,
+                        target=sn_node,
+                        relationship=RelationshipType.PART_OF,
+                        traversable=False,
+                        evidence={"source": "cloud-inventory", "tier": "static_scan", "reason": "instance_subnet_attachment"},
+                    )
                 )
 
 
@@ -162,7 +169,7 @@ def _wire_permissive_acls(
     inventory: dict[str, Any],
     public_subnet_ids: set[str],
     subnet_node_by_id: dict[str, str],
-    provider: str,
+    network_nodes: dict[str, str],
     instance_node_by_id: dict[str, str],
 ) -> None:
     for nacl in inventory.get("network_acls", []) or []:
@@ -171,7 +178,7 @@ def _wire_permissive_acls(
         ident = _clean_graph_part(nacl.get("id"))
         if not ident:
             continue
-        nacl_node = f"cloud_resource:{provider}:network:network_acl:{ident}"
+        nacl_node = network_nodes.get(ident, "")
         if nacl_node not in graph.nodes:
             continue
         for sn_id in nacl.get("subnet_ids", []) or []:

@@ -31,6 +31,7 @@ from agent_bom.graph.asset_identity import (
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
+from agent_bom.graph.identity_scope import guard_cloud_identity_scope
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.node_aliases import drop_live_node_aliases
 from agent_bom.graph.security_assertions import resolve_security_assertions
@@ -235,6 +236,7 @@ def _apply_groups(graph: UnifiedGraph, groups: Iterable[_Group]) -> None:
 
 def canonicalize_assets(graph: UnifiedGraph) -> dict[str, str]:
     """Merge every strong-key group onto one node; returns ``alias id -> canonical id``."""
+    scope_conflicts = guard_cloud_identity_scope(graph)
     observed = _observations(graph)
     components = _components(observed)
     mapping, groups = _groups(observed, components, graph.scan_id)
@@ -246,7 +248,7 @@ def canonicalize_assets(graph: UnifiedGraph) -> dict[str, str]:
     drop_live_node_aliases(graph)
     # A later pass (assets a finding row named after analysis) adds to the first.
     prior = graph.analysis_status.get(ANALYZER)
-    if prior is None and not observed:
+    if prior is None and not observed and not scope_conflicts:
         return mapping  # nothing in the graph carries an asset identity key
     before = prior.observed if prior is not None else {}
     # Count each current asset's disagreements once, including earlier passes.
@@ -259,8 +261,10 @@ def canonicalize_assets(graph: UnifiedGraph) -> dict[str, str]:
     attribute_conflicts = sum(len(identity.get("conflict_fields", [])) for identity in identities)
     security_conflicts = sum(len(identity.get("conflicts", {})) for identity in identities)
     strong_conflicts = components.conflicts + int(before.get("strong_key_conflicts", before.get("conflicts", 0)))
-    conflicts = strong_conflicts + attribute_conflicts
+    conflicts = strong_conflicts + attribute_conflicts + scope_conflicts
     reasons = []
+    if scope_conflicts:
+        reasons.append("conflicting_cloud_scope")
     if strong_conflicts:
         reasons.append("conflicting_strong_keys")
     if attribute_conflicts:
@@ -277,6 +281,7 @@ def canonicalize_assets(graph: UnifiedGraph) -> dict[str, str]:
             "candidate_edges": len(candidates),
             "conflicts": conflicts,
             "strong_key_conflicts": strong_conflicts,
+            "scope_conflicts": scope_conflicts,
             "security_assertion_conflicts": security_conflicts,
             "self_edges_dropped": dropped + int(before.get("self_edges_dropped", 0)),
         },

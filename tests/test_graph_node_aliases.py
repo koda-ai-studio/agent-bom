@@ -17,7 +17,7 @@ REGION = "us-east-1"
 INSTANCE = "i-0a1b2c3d4e5f60718"
 ARN = f"arn:aws:ec2:{REGION}:{ACCOUNT}:instance/{INSTANCE}"
 CANONICAL = f"cloud_resource:aws:aws_instance:{ACCOUNT}/{REGION}/{INSTANCE}"
-INVENTORY_ID = f"cloud_resource:aws:ec2:instance:{INSTANCE}"
+INVENTORY_ID = f"cloud_resource:aws:ec2:instance:scoped/{ACCOUNT}/{REGION}//native/{INSTANCE}"
 
 
 def _report() -> dict:

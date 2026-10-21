@@ -815,7 +815,9 @@ def test_graph_emits_inventory_nodes_and_overlays(monkeypatch: pytest.MonkeyPatc
     assert nodes[f"data_store:{bucket_id}"].entity_type == EntityType.DATA_STORE
 
     # Compute instance + firewall present.
-    inst_id = "cloud_resource:gcp:compute:instance:123"
+    inst_id = next(
+        n.id for n in graph.nodes.values() if n.attributes.get("resource_type") == "instance" and n.attributes.get("resource_id") == "123"
+    )
     fw_id = "cloud_resource:gcp:compute:firewall:projects/proj-1/global/firewalls/allow-ssh"
     assert inst_id in nodes
     assert fw_id in nodes
@@ -919,20 +921,24 @@ def test_graph_promotes_editor_sa_privilege(monkeypatch: pytest.MonkeyPatch) -> 
 # ---------------------------------------------------------------------------
 
 
-def test_graph_marks_instance_exposed_with_edge(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An external-IP instance + a 0.0.0.0/0 firewall on its network is exposed."""
+def test_graph_records_firewall_binding_without_effective_reachability(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A scoped allow rule is configuration; full ingress and outcomes remain unknown."""
     monkeypatch.setenv(gcp_inventory.INVENTORY_ENV_FLAG, "1")
     with _install_fake_gcp():
         payload = gcp_inventory.discover_inventory(project_id="proj-1")
     graph = _build_graph_from_inventory(payload)
     from agent_bom.graph.types import RelationshipType
 
-    inst_id = "cloud_resource:gcp:compute:instance:123"
+    inst_id = next(
+        n.id for n in graph.nodes.values() if n.attributes.get("resource_type") == "instance" and n.attributes.get("resource_id") == "123"
+    )
     fw_id = "cloud_resource:gcp:compute:firewall:projects/proj-1/global/firewalls/allow-ssh"
-    assert graph.nodes[inst_id].attributes["internet_exposed"] is True
+    assert graph.nodes[inst_id].attributes.get("internet_exposed") is not True
     exposed_edges = [e for e in graph.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source == fw_id and e.target == inst_id]
     assert len(exposed_edges) == 1
     assert exposed_edges[0].evidence.get("reason") == "permissive_firewall_external_ip"
+    assert exposed_edges[0].traversable is False
+    assert exposed_edges[0].evidence["network_reachability"] == "unknown"
 
 
 def test_no_exposure_without_external_ip() -> None:
@@ -962,7 +968,11 @@ def test_no_exposure_without_external_ip() -> None:
     graph = _build_graph_from_inventory(payload)
     from agent_bom.graph.types import RelationshipType
 
-    inst_id = "cloud_resource:gcp:compute:instance:i-private"
+    inst_id = next(
+        n.id
+        for n in graph.nodes.values()
+        if n.attributes.get("resource_type") == "instance" and n.attributes.get("resource_id") == "i-private"
+    )
     assert not graph.nodes[inst_id].attributes.get("internet_exposed")
     assert not any(e.relationship == RelationshipType.EXPOSED_TO and e.target == inst_id for e in graph.edges)
 
@@ -993,10 +1003,17 @@ def test_target_tag_scopes_firewall_to_matching_instance() -> None:
         "service_accounts": [],
     }
     graph = _build_graph_from_inventory(payload)
-    web_id = "cloud_resource:gcp:compute:instance:i-web"
-    db_id = "cloud_resource:gcp:compute:instance:i-db"
-    assert graph.nodes[web_id].attributes["internet_exposed"] is True
-    # The db instance does not carry the http-server tag → not exposed by this rule.
+    web_id = next(
+        n.id for n in graph.nodes.values() if n.attributes.get("resource_type") == "instance" and n.attributes.get("resource_id") == "i-web"
+    )
+    db_id = next(
+        n.id for n in graph.nodes.values() if n.attributes.get("resource_type") == "instance" and n.attributes.get("resource_id") == "i-db"
+    )
+    assert graph.nodes[web_id].attributes.get("internet_exposed") is not True
+    bindings = [e for e in graph.edges if e.evidence.get("reason") == "permissive_firewall_external_ip"]
+    assert [e.target for e in bindings] == [web_id]
+    assert bindings[0].traversable is False
+    # The db instance does not carry the tag; even a configured binding is absent.
     assert not graph.nodes[db_id].attributes.get("internet_exposed")
 
 

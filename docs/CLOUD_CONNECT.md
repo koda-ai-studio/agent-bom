@@ -60,6 +60,35 @@ deletions and reappearance in isolated replays before relying on removal behavio
 Cross-cloud links require matching identifiers or recorded relationships; having
 three connected clouds does not itself establish communication between them.
 
+## Interpret network and identity relationships
+
+After collecting inventory, open a relationship in Investigation or Connections
+and inspect its source, configuration receipt and unknowns. Inventory placement,
+group membership, permission grants and observed calls have different meanings;
+account ownership or shared VPC membership does not establish communication.
+
+AWS load-balancer instance links require target-group registration with matching
+account, region and VPC scope. The collector reads `DescribeTargetGroups` and
+`DescribeTargetHealth`; denied reads preserve incomplete backend coverage. IP,
+Lambda and load-balancer target registrations remain metadata until their graph
+resolution is supported. A registered private backend remains visible without a
+claim that the internet can reach it.
+
+Subnet routing classification uses the explicit association, or the collected
+VPC main route table, and active IPv4/IPv6 internet-gateway default routes.
+Missing or transitional route evidence stays unknown. A public address, public
+subnet classification, permissive rule or WAF association alone does not prove
+end-to-end reachability or vulnerability mitigation. Configuration-only network
+bindings are non-traversable for attack-path derivation and retain
+`network_reachability: unknown` in their evidence. This excludes unsupported
+attack paths; it does not assert that the resources are isolated.
+
+Local compute and network identifiers include account and location scope.
+Kubernetes AWS provider IDs lack an account: without a recorded
+`k8s_cloud_account_id` in imported server connection metadata, that host remains
+separate from account-qualified inventory. Existing stored snapshots retain their
+original identifiers; recollection builds the scoped identifiers.
+
 ## Repository Terraform (optional)
 
 The repository also includes `deploy/terraform/connect-*` grants for

@@ -63,3 +63,20 @@ it("never describes blocked access as successful or a recorded inventory receipt
   expect(recorded.kind).toBe("Recorded observation");
   expect(recorded.why).not.toContain("runs on");
 });
+
+it("keeps a registered network binding distinct from effective reachability and observed traffic", () => {
+  const summary = plainRelationshipSummary({ ...base, relationship: "exposed_to",
+    evidence: { source: "cloud-inventory", tier: "static_scan", reason: "registered_load_balancer_target", network_reachability: "unknown" } }, "frontend", "private VM");
+  expect(summary.why).toBe("Collected configuration links frontend to private VM; effective network reachability is unknown.");
+  expect(summary.unknown).toContain("routes, firewall rules and listeners");
+  expect(summary.unknown).toContain("observed traffic");
+  expect(summary.kind).toContain("Static");
+});
+
+it("explains owner-scope conflicts without presenting a confirmed relationship", () => {
+  const summary = plainRelationshipSummary({ ...base, relationship: "owns",
+    evidence: { source: "cloud-inventory", tier: "static_scan", identity_scope_status: "conflict" } }, "account", "asset");
+  expect(summary.why).toContain("owner scope conflicts");
+  expect(summary.kind).toBe("Unresolved identity scope");
+  expect(summary.unknown).toContain("account, subscription or project");
+});

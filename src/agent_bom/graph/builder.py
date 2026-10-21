@@ -602,12 +602,8 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
         sg_node_by_id=sg_node_by_id,
     )
 
-    # ── GCP compute exposure: match permissive firewalls to instances ──────
-    # GCP firewalls apply by network + target tags / target service accounts,
-    # not by a per-instance security-group id list (the AWS path above). Mirror
-    # AWS's EC2-exposure model: an instance with an external IP that a permissive
-    # (0.0.0.0/0) ingress rule reaches is marked internet_exposed with an
-    # EXPOSED_TO edge from the firewall — making it a first-class attack-path entry.
+    # GCP rule applicability uses network and target scope. Recorded bindings
+    # remain distinct from assessed network reachability.
     if provider == "gcp":
         _apply_gcp_firewall_exposure(graph, sg_node_by_id, instance_nodes)
 

@@ -18,11 +18,13 @@ def _gcp_firewall_applies(firewall_attrs: dict[str, Any], instance: dict[str, An
     covers the instance. The target scope is: target tags (instance must carry
     one) OR target service accounts (instance must run as one). An EMPTY target
     set means the rule applies to ALL instances on its network — the GCP default.
-    A blank firewall network also matches (the rule scope is the whole project).
+    Missing network scope cannot establish that the rule applies.
     """
     fw_network = _clean_graph_part(firewall_attrs.get("fw_network"))
     inst_network = _clean_graph_part(instance.get("network"))
-    if fw_network and inst_network and fw_network != inst_network:
+    if not fw_network or not inst_network or fw_network != inst_network:
+        return False
+    if coerce_truthy(firewall_attrs.get("fw_disabled")) or str(firewall_attrs.get("fw_direction") or "INGRESS").upper() != "INGRESS":
         return False
 
     target_tags = {str(t).strip() for t in (firewall_attrs.get("fw_target_tags") or []) if str(t).strip()}
@@ -44,13 +46,10 @@ def _apply_gcp_firewall_exposure(
     sg_node_by_id: dict[str, str],
     instance_nodes: list[tuple[str, dict[str, Any]]],
 ) -> None:
-    """Mark GCP instances internet-exposed when a permissive firewall reaches them.
+    """Record permissive firewall bindings without claiming effective ingress.
 
-    For each instance with an external IP, find every internet-facing
-    (``internet_exposed``) firewall node that applies to it (network + target
-    tags/SA match). Set ``internet_exposed=True`` on the instance node — which the
-    CNAPP overlay preserves — and add an ``EXPOSED_TO`` edge from the firewall to
-    the instance, mirroring how an AWS security group exposes an EC2 instance.
+    Matching network and target scope establishes rule applicability. Priority,
+    policy layers and return routing still require a reachability assessment.
     """
     firewall_nodes = [(graph.nodes.get(node_id), node_id) for node_id in sg_node_by_id.values()]
     permissive = [
@@ -69,15 +68,11 @@ def _apply_gcp_firewall_exposure(
         for fw_node, fw_node_id in permissive:
             if not _gcp_firewall_applies(fw_node.attributes, instance):
                 continue
-            inst_node.attributes["internet_exposed"] = True
-            graph.add_edge(
-                UnifiedEdge(
-                    source=fw_node_id,
-                    target=inst_node_id,
-                    relationship=RelationshipType.EXPOSED_TO,
-                    weight=6.0,
-                    evidence={"source": "cloud-inventory", "reason": "permissive_firewall_external_ip"},
-                )
+            _add_exposure_path_edge(
+                graph,
+                source=fw_node_id,
+                target=inst_node_id,
+                reason="permissive_firewall_external_ip",
             )
 
 
@@ -88,8 +83,14 @@ def _add_exposure_path_edge(
     target: str,
     reason: str,
     weight: float = 6.0,
+    evidence: dict[str, Any] | None = None,
 ) -> None:
-    """Emit a provenance-tagged EXPOSED_TO edge when both endpoints exist."""
+    """Keep a configured network binding without inventing effective reachability.
+
+    A binding alone does not evaluate routing, deny rules, listener state or
+    traffic outcome. It is visible in Connections but cannot establish an
+    attack-path hop until a complete network assessment is recorded.
+    """
     if source not in graph.nodes or target not in graph.nodes or source == target:
         return
     for edge in graph.edges:
@@ -101,7 +102,15 @@ def _add_exposure_path_edge(
             target=target,
             relationship=RelationshipType.EXPOSED_TO,
             weight=weight,
-            evidence={"source": "cloud-inventory", "reason": reason},
+            traversable=False,
+            evidence={
+                **(evidence or {}),
+                "source": "cloud-inventory",
+                "tier": "static_scan",
+                "reason": reason,
+                "network_reachability": "unknown",
+                "missing_evidence": ["effective_route_and_rule_evaluation", "observed_traffic"],
+            },
         )
     )
 
@@ -110,9 +119,15 @@ def _instance_internet_reachable(graph: UnifiedGraph, inst_node_id: str, instanc
     node = graph.nodes.get(inst_node_id)
     if node is None:
         return False
-    if coerce_truthy(node.attributes.get("internet_exposed")) or _clean_graph_part(instance.get("public_ip")):
-        return True
-    return any(e.relationship == RelationshipType.EXPOSED_TO and e.target == inst_node_id for e in graph.edges)
+    assessment = node.attributes.get("network_reachability_assessment")
+    return (
+        isinstance(assessment, dict)
+        and assessment.get("complete") is True
+        and assessment.get("decision") == "allow"
+        and assessment.get("source_scope") == "internet"
+        and assessment.get("target_id") == node.attributes.get("resource_id")
+        and bool(assessment.get("evidence_refs"))
+    )
 
 
 def _link_internet_facing_load_balancers(
@@ -120,19 +135,50 @@ def _link_internet_facing_load_balancers(
     load_balancers: list[tuple[str, str]],
     instance_nodes: list[tuple[str, dict[str, Any]]],
 ) -> None:
-    """Link internet-facing LBs to reachable instances in the same VPC."""
+    """Link only registered instance targets from this inventory scope."""
     for lb_node_id, lb_vpc_id in load_balancers:
         lb_node = graph.nodes.get(lb_node_id)
-        if lb_node is None or not coerce_truthy(lb_node.attributes.get("internet_exposed")):
+        if lb_node is None:
             continue
-        for inst_node_id, instance in instance_nodes:
-            inst_vpc = _clean_graph_part(instance.get("vpc_id"))
-            if lb_vpc_id and inst_vpc and inst_vpc != lb_vpc_id:
+        for binding in lb_node.attributes.get("backend_targets", []) or []:
+            if not isinstance(binding, dict) or binding.get("target_type") != "instance":
                 continue
-            if _instance_internet_reachable(graph, inst_node_id, instance):
-                _add_exposure_path_edge(
-                    graph,
-                    source=lb_node_id,
-                    target=inst_node_id,
-                    reason="internet_facing_load_balancer",
-                )
+            target_id = _clean_graph_part(binding.get("target_id"))
+            group_arn = _clean_graph_part(binding.get("target_group_arn"))
+            group_parts = group_arn.split(":", 5)
+            if (
+                not target_id
+                or len(group_parts) != 6
+                or group_parts[0] != "arn"
+                or group_parts[2] != "elasticloadbalancing"
+                or group_parts[3] != lb_node.attributes.get("location")
+                or group_parts[4] != lb_node.attributes.get("account_id")
+                or not group_parts[5].startswith("targetgroup/")
+            ):
+                continue
+            candidates = [
+                (nid, item)
+                for nid, item in instance_nodes
+                if _clean_graph_part(item.get("instance_id")) == target_id
+                and (node := graph.nodes.get(nid)) is not None
+                and node.attributes.get("account_id") == lb_node.attributes.get("account_id")
+                and node.attributes.get("location") == lb_node.attributes.get("location")
+            ]
+            if len(candidates) != 1:
+                continue
+            inst_node_id, instance = candidates[0]
+            inst_vpc = _clean_graph_part(instance.get("vpc_id"))
+            target_vpc = _clean_graph_part(binding.get("vpc_id"))
+            if not inst_vpc or not target_vpc or target_vpc != inst_vpc or (lb_vpc_id and lb_vpc_id != inst_vpc):
+                continue
+            _add_exposure_path_edge(
+                graph,
+                source=lb_node_id,
+                target=inst_node_id,
+                reason="registered_load_balancer_target",
+                evidence={
+                    key: binding[key]
+                    for key in ("target_id", "target_type", "target_group_arn", "port", "protocol", "health_state")
+                    if key in binding
+                },
+            )

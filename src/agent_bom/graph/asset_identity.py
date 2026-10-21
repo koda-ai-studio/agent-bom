@@ -21,6 +21,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from agent_bom.canonical_ids import snowflake_fqn
+from agent_bom.core.cloud_scope import assess_cloud_scope
 from agent_bom.graph.container_kind import IMAGE_RESOURCE_TYPES
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
@@ -106,6 +107,25 @@ def recorded_dimension_value(attributes: Mapping[str, object], key: str, value: 
 
 def _provider(node: UnifiedNode) -> str:
     return (_attr(node, "cloud_provider", "provider") or recorded_dimension(node, "cloud_provider")).casefold()
+
+
+def cloud_identity_scope(node: UnifiedNode) -> dict[str, object]:
+    """The same recorded-owner rule used before inventory node IDs are minted."""
+    provider = _provider(node)
+    dimension = recorded_dimension(node, "cloud_provider").casefold()
+    if provider and dimension and provider != dimension:
+        return {"status": "conflict", "reason_codes": ["conflicting_recorded_providers"]}
+    if not provider:
+        natives = [_attr(node, key) for key in _NATIVE_ID_KEYS]
+        if any(native.startswith("arn:") for native in natives):
+            provider = "aws"
+        elif any(native.casefold().startswith("/subscriptions/") for native in natives):
+            provider = "azure"
+    assessed = assess_cloud_scope(provider, node.attributes)
+    recorded = node.attributes.get("identity_scope")
+    if assessed["status"] != "conflict" and isinstance(recorded, dict) and recorded.get("status") == "conflict":
+        return recorded
+    return assessed
 
 
 def _parse_arn(value: str) -> tuple[str, str, str, str] | None:
@@ -215,6 +235,8 @@ def strong_keys(node: UnifiedNode) -> list[IdentityKey]:
         }
         return [IdentityKey(100, "image_digest", digest) for digest in sorted(digests)]
     provider = _provider(node)
+    if cloud_identity_scope(node)["status"] == "conflict":
+        return []
     natives = [value for value in dict.fromkeys(_attr(node, key) for key in _NATIVE_ID_KEYS) if value]
     keys: list[IdentityKey] = []
     if provider == "aws" or any(native.startswith("arn:aws") for native in natives):

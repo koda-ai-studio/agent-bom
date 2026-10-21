@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator
 from typing import Any
 
-from ._base import _INTERNET_CIDRS, record_discovery_failure
+from ._base import record_discovery_failure
 
 
 def _discover_vpcs(
@@ -61,70 +61,112 @@ def _collect_edge_rows(
     permission: str,
     warnings: list[str],
     missing: list[dict[str, str]] | None,
-) -> None:
+) -> bool:
     """Append each normalized item to ``rows``; one failing resource type never sinks the others."""
     try:
         for item in items:
             row = normalize(item)
             if row is not None:
                 rows.append(row)
+        return True
     except Exception as exc:  # noqa: BLE001
         record_discovery_failure(
             exc=exc, resource_type=resource_type, permission=permission, cloud="aws", warnings=warnings, missing=missing
         )
+        return False
 
 
-def _route_table_row(
-    rt: Any, region: str, account_id: str | None, public_subnet_ids: set[str], vpc_default_public: set[str]
-) -> dict[str, Any] | None:
-    rt_id = str(rt.get("RouteTableId", "") or "")
+def _route_table_row(rt: Any, region: str, account_id: str | None) -> dict[str, Any] | None:
+    rt_id = str(rt.get("RouteTableId") or "")
     if not rt_id:
         return None
-    vpc_id = str(rt.get("VpcId", "") or "")
-    has_igw_route = any(
-        str(r.get("GatewayId", "") or "").startswith("igw-") and str(r.get("DestinationCidrBlock", "")) in _INTERNET_CIDRS
-        for r in rt.get("Routes", []) or []
-        if isinstance(r, dict)
-    )
-    assocs = rt.get("Associations", []) or []
-    main = any(bool(a.get("Main")) for a in assocs if isinstance(a, dict))
-    if has_igw_route:
-        if main and vpc_id:
-            vpc_default_public.add(vpc_id)
-        for a in assocs:
-            sid = str(a.get("SubnetId", "") or "") if isinstance(a, dict) else ""
-            if sid:
-                public_subnet_ids.add(sid)
+    routes = [
+        {key: row[key] for key in ("DestinationCidrBlock", "DestinationIpv6CidrBlock", "GatewayId", "NatGatewayId", "State") if key in row}
+        for row in rt.get("Routes", []) or []
+        if isinstance(row, dict)
+    ]
+    associations = [
+        {key: row[key] for key in ("SubnetId", "Main", "AssociationState") if key in row}
+        for row in rt.get("Associations", []) or []
+        if isinstance(row, dict)
+    ]
     return {
         "id": rt_id,
         "name": rt_id,
-        "vpc_id": vpc_id,
-        "has_internet_route": has_igw_route,
+        "vpc_id": str(rt.get("VpcId") or ""),
+        "has_internet_route": bool(_active_internet_gateways(routes)),
+        "routes": routes,
+        "associations": associations,
         "location": region,
         "account_id": account_id or "",
     }
 
 
-def _subnet_row(
-    sn: Any, region: str, account_id: str | None, public_subnet_ids: set[str], vpc_default_public: set[str]
-) -> dict[str, Any] | None:
-    sn_id = str(sn.get("SubnetId", "") or "")
+def _active_internet_gateways(routes: list[dict[str, Any]]) -> list[str]:
+    return sorted(
+        {
+            str(route["GatewayId"])
+            for route in routes
+            if str(route.get("GatewayId") or "").startswith("igw-")
+            and route.get("State") == "active"
+            and (route.get("DestinationCidrBlock") == "0.0.0.0/0" or route.get("DestinationIpv6CidrBlock") == "::/0")
+        }
+    )
+
+
+def _subnet_row(sn: Any, region: str, account_id: str | None) -> dict[str, Any] | None:
+    sn_id = str(sn.get("SubnetId") or "")
     if not sn_id:
         return None
-    vpc_id = str(sn.get("VpcId", "") or "")
     tags = {str(t.get("Key", "")): str(t.get("Value", "")) for t in sn.get("Tags", []) if t.get("Key")}
-    # Explicit public route-table association wins; otherwise a subnet
-    # that auto-assigns public IPs in an internet-routed VPC is public.
-    is_public = sn_id in public_subnet_ids or (bool(sn.get("MapPublicIpOnLaunch")) and vpc_id in vpc_default_public)
     return {
         "id": sn_id,
         "name": tags.get("Name", sn_id),
-        "vpc_id": vpc_id,
-        "cidr": str(sn.get("CidrBlock", "") or ""),
-        "is_public": is_public,
-        "location": str(sn.get("AvailabilityZone", "") or region),
+        "vpc_id": str(sn.get("VpcId") or ""),
+        "cidr": str(sn.get("CidrBlock") or ""),
+        "is_public": None,
+        "location": str(sn.get("AvailabilityZone") or region),
         "account_id": account_id or "",
     }
+
+
+def _apply_subnet_routes(out: dict[str, list[dict[str, Any]]], *, complete: bool) -> None:
+    """Resolve explicit subnet association before the VPC's main route table."""
+    for subnet in out["subnets"]:
+        subnet["is_public"] = None
+        subnet["route_table_id"] = None
+        subnet["internet_gateway_ids"] = []
+        if not complete:
+            continue
+        explicit, defaults = [], []
+        uncertain = False
+        for table in out["route_tables"]:
+            if not subnet.get("vpc_id") or table.get("vpc_id") != subnet["vpc_id"]:
+                continue
+            for association in table.get("associations", []):
+                state = (association.get("AssociationState") or {}).get("State")
+                if state not in (None, "associated"):
+                    if association.get("SubnetId") == subnet["id"] or association.get("Main") is True:
+                        uncertain = True
+                    continue
+                if association.get("SubnetId") == subnet["id"]:
+                    explicit.append(table)
+                elif association.get("Main") is True:
+                    defaults.append(table)
+        if uncertain:
+            continue
+        candidates = explicit or defaults
+        candidates = list({table["id"]: table for table in candidates}.values())
+        if len(candidates) != 1:
+            continue
+        table = candidates[0]
+        routes = table.get("routes", [])
+        subnet["route_table_id"] = table["id"]
+        gateways = _active_internet_gateways(routes)
+        subnet["internet_gateway_ids"] = gateways
+        subnet["is_public"] = (
+            True if gateways else None if any(route.get("State") not in {"active", "blackhole"} for route in routes) else False
+        )
 
 
 def _network_interface_row(eni: Any, region: str, account_id: str | None) -> dict[str, Any] | None:
@@ -246,20 +288,18 @@ _EdgeStage = tuple[str, Iterator[Any], Callable[[Any], dict[str, Any] | None], s
 def _network_edge_stages(ec2: Any, region: str, account_id: str | None) -> tuple[_EdgeStage, ...]:
     """(output key, item source, normalizer, resource type, permission) per edge resource, in run order."""
     # Route tables first so subnet public/private classification can use them.
-    public_subnet_ids: set[str] = set()
-    vpc_default_public: set[str] = set()
     return (
         (
             "route_tables",
             _ec2_pages(ec2, "describe_route_tables", "RouteTables"),
-            lambda rt: _route_table_row(rt, region, account_id, public_subnet_ids, vpc_default_public),
+            lambda rt: _route_table_row(rt, region, account_id),
             "route tables",
             "ec2:DescribeRouteTables",
         ),
         (
             "subnets",
             _ec2_pages(ec2, "describe_subnets", "Subnets"),
-            lambda sn: _subnet_row(sn, region, account_id, public_subnet_ids, vpc_default_public),
+            lambda sn: _subnet_row(sn, region, account_id),
             "subnets",
             "ec2:DescribeSubnets",
         ),
@@ -330,11 +370,15 @@ def _discover_network_edge(
         "network_acls": [],
     }
     ec2 = session.client("ec2", region_name=region)
+    route_tables_complete = False
     # Stages run in order, each isolated so one denied describe call never sinks the others.
     for key, items, normalize, resource_type, permission in _network_edge_stages(ec2, region, account_id):
-        _collect_edge_rows(
+        complete = _collect_edge_rows(
             out[key], items, normalize, resource_type=resource_type, permission=permission, warnings=warnings, missing=missing
         )
+        if key == "route_tables":
+            route_tables_complete = complete
+    _apply_subnet_routes(out, complete=route_tables_complete)
     return out
 
 

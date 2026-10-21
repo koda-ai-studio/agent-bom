@@ -78,6 +78,8 @@ _AWS_COMPUTE_PERMISSIONS: tuple[str, ...] = (
 
 _AWS_NETWORK_PERMISSIONS: tuple[str, ...] = (
     "elasticloadbalancing:DescribeLoadBalancers",
+    "elasticloadbalancing:DescribeTargetGroups",
+    "elasticloadbalancing:DescribeTargetHealth",
     "ec2:DescribeVpcs",
     "cloudfront:ListDistributions",
     "sns:ListTopics",

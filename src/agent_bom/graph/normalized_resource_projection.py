@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.core.cloud_identity import cloud_resource_node_id
+from agent_bom.core.cloud_scope import cloud_scope_attributes
+from agent_bom.graph.builder_network_exposure import _add_exposure_path_edge
 from agent_bom.graph.cloud_context import (
     _add_account_resource_hierarchy,
     _environment_from_tags,
@@ -12,9 +14,8 @@ from agent_bom.graph.cloud_context import (
     _resource_environment,
 )
 from agent_bom.graph.container import UnifiedGraph
-from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
-from agent_bom.graph.types import EntityType, RelationshipType
+from agent_bom.graph.types import EntityType
 from agent_bom.graph.util import clean_graph_part as _clean_graph_part
 from agent_bom.security import sanitize_text
 
@@ -37,10 +38,9 @@ def _add_normalized_cloud_resources(
     and load balancers. Each becomes a ``CLOUD_RESOURCE`` owned by the account so
     it shows up in the environment graph and is reachable by blast-radius. Data
     stores and secret stores carry a data-store keyword in their label so the
-    CNAPP/DSPM overlay can attach its companion; resources with a public IP or an
-    internet-facing frontend are flagged ``internet_exposed`` for exposure
-    analysis. Identity / EXPOSED_TO edges between these and compute/identity nodes
-    are added by the overlays once richer relations are available.
+    CNAPP/DSPM overlay can attach its companion. Public IPs and recorded frontend
+    bindings retain unknown effective reachability for exposure analysis.
+    Identity relationships require explicit recorded references.
     """
     from agent_bom.cloud.resource_model import CloudResourceType, normalize_cloud_inventory
 
@@ -71,7 +71,6 @@ def _add_normalized_cloud_resources(
         raw = res.raw or {}
         exposure = _recorded_exposure_attributes(raw, "internet_facing")
         if res.resource_type is CloudResourceType.PUBLIC_IP and raw.get("ip_address"):
-            exposure["internet_exposed"] = True
             exposure["internet_exposure_evidence"]["public_ip_address"] = sanitize_text(str(raw["ip_address"]))
         if res.resource_type is CloudResourceType.PUBLIC_IP and res.resource_id:
             pip_node_by_arm_id[res.resource_id] = node_id
@@ -120,6 +119,7 @@ def _normalized_resource_node(
             "tags": resource_tags,
             "account_id": account_id,
             "environment": resource_env,
+            **cloud_scope_attributes(provider, res.raw or {}, account_id),
         },
         data_sources=data_sources,
         dimensions=NodeDimensions(cloud_provider=provider, surface=surface, environment=resource_env),
@@ -129,20 +129,14 @@ def _normalized_resource_node(
 def _wire_public_ip_frontends(
     graph: UnifiedGraph, load_balancer_nodes: list[tuple[str, dict[str, Any]]], pip_node_by_arm_id: dict[str, str]
 ) -> None:
-    # ── Internet exposure path: public IP → load balancer it fronts ──
-    # The public IP is the internet entry point; the load balancer (and its
-    # backends) sit behind it. EXPOSED_TO from the IP to the LB lets blast-radius
-    # and attack-path analysis start at the internet edge.
+    # Provider-recorded frontend bindings do not establish effective ingress.
     for lb_node_id, lb_raw in load_balancer_nodes:
         for pip_arm_id in lb_raw.get("public_ip_ids", []) or []:
             pip_node_id = pip_node_by_arm_id.get(pip_arm_id)
             if pip_node_id:
-                graph.add_edge(
-                    UnifiedEdge(
-                        source=pip_node_id,
-                        target=lb_node_id,
-                        relationship=RelationshipType.EXPOSED_TO,
-                        weight=6.0,
-                        evidence={"source": "cloud-inventory", "reason": "public_ip_frontend"},
-                    )
+                _add_exposure_path_edge(
+                    graph,
+                    source=pip_node_id,
+                    target=lb_node_id,
+                    reason="public_ip_frontend",
                 )

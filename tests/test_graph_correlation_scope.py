@@ -37,9 +37,13 @@ def test_runtime_local_identifiers_keep_deployment_scope(scope, kind):
 
 
 def test_provider_attribute_and_dimension_agree_but_conflicts_do_not_merge():
-    attrs = _node(EntityType.CLOUD_RESOURCE, {"resource_id": "same", "cloud_provider": "aws"})
-    dims = _node(EntityType.CLOUD_RESOURCE, {"resource_id": "same"}, {"cloud_provider": "aws"})
-    conflict = _node(EntityType.CLOUD_RESOURCE, {"resource_id": "same", "cloud_provider": "aws"}, {"cloud_provider": "azure"})
+    attrs = _node(EntityType.CLOUD_RESOURCE, {"resource_id": "same", "account_id": "123456789012", "cloud_provider": "aws"})
+    dims = _node(EntityType.CLOUD_RESOURCE, {"resource_id": "same", "account_id": "123456789012"}, {"cloud_provider": "aws"})
+    conflict = _node(
+        EntityType.CLOUD_RESOURCE,
+        {"resource_id": "same", "account_id": "123456789012", "cloud_provider": "aws"},
+        {"cloud_provider": "azure"},
+    )
     assert correlation_identity(attrs, scan_id="one") == correlation_identity(dims, scan_id="two")
     assert correlation_identity(attrs, scan_id="one") != correlation_identity(conflict, scan_id="three")
 

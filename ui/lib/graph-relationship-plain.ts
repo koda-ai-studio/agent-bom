@@ -61,6 +61,12 @@ const EVIDENCE_ACTIONS: Record<string, string> = {
 };
 
 function qualifiedRelationship(edge: PlainEdge, source: string, target: string): string | null {
+  if (edge.evidence?.identity_scope_status === "conflict") {
+    return `The snapshot links ${source} to ${target}, but owner scope conflicts; the relationship remains unresolved.`;
+  }
+  if (edge.evidence?.network_reachability === "unknown") {
+    return `Collected configuration links ${source} to ${target}; effective network reachability is unknown.`;
+  }
   if (!Object.hasOwn(EVIDENCE_ACTIONS, edge.relationship)) return null;
   const action = EVIDENCE_ACTIONS[edge.relationship]!;
   const { mode, blocked } = graphEdgeEvidence(edge.evidence ?? {});
@@ -107,7 +113,8 @@ export function plainRelationshipSummary(edge: PlainEdge, sourceLabel: string, t
     ? `${sourceLabel} contains ${packageName}, which is recorded as affected by ${targetLabel}.`
     : qualifiedRelationship(edge, sourceLabel, targetLabel)
       ?? (Object.hasOwn(WHY, edge.relationship) ? WHY[edge.relationship]!(sourceLabel, targetLabel) : `The snapshot records a link from ${sourceLabel} to ${targetLabel}.`);
-  const kind = evidence.tier === "recorded" && !blocked ? "Recorded observation"
+  const kind = evidence.identity_scope_status === "conflict" ? "Unresolved identity scope"
+    : evidence.tier === "recorded" && !blocked ? "Recorded observation"
     : mode === "runtime" ? (blocked ? "Observed at runtime — blocked" : "Observed at runtime")
     : mode === "static" ? "Static — read from files, manifests or configuration"
     : mode === "inferred" ? "Modeled — derived from collected configuration, not observed"
@@ -116,7 +123,11 @@ export function plainRelationshipSummary(edge: PlainEdge, sourceLabel: string, t
   const freshness = observedAt ? `Observed ${formatTime(observedAt)}`
     : receiptAt ? `Receipt ${formatTime(receiptAt)}`
     : lastSeen ? `Recorded ${formatTime(lastSeen)} (link record time, not source activity)` : "Not recorded";
-  const unknown = FINDING.has(edge.relationship) ? "Whether the vulnerable code is loaded or reachable at runtime."
+  const unknown = evidence.identity_scope_status === "conflict"
+    ? "Which account, subscription or project owns this asset; traversal is disabled until the scope conflict is resolved."
+    : evidence.network_reachability === "unknown"
+    ? "Whether routes, firewall rules and listeners permit end-to-end access; no observed traffic is established by this configuration."
+    : FINDING.has(edge.relationship) ? "Whether the vulnerable code is loaded or reachable at runtime."
     : ACCESS.has(edge.relationship) ? (blocked ? "Whether a later attempt succeeded; this attempt was blocked."
       : mode === "runtime" ? "Whether access succeeded unless the receipt records that outcome, and what occurred beyond it." : "Whether this access was ever exercised.")
     : CRED.has(edge.relationship) ? "Whether the secret value was read or used."

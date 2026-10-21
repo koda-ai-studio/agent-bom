@@ -4,10 +4,7 @@ Guards three honesty/CIEM fixes on the READ side (graph route + fusion):
 
 1. ``admin_equivalent`` principals now surface + rank in the CIEM/risk surface
    (previously computed on the node but read by nothing).
-2. CNAPP exposure-mitigation flags (``exposure_mitigated`` / ``protected_by_waf``
-   / ``toxic_exposed_vulnerable_mitigated``) de-prioritize a mitigated node —
-   marked mitigated, never silently dropped — so toxic exposure is not
-   over-reported.
+2. Legacy WAF presence flags cannot lower risk without mitigation evidence.
 3. ``sensitive_data_access_count`` (blast-radius reach) is surfaced on the risk
    signal for a sensitive store.
 """
@@ -76,21 +73,16 @@ def _exposed_node(node_id: str, *, mitigated: bool) -> UnifiedNode:
     return UnifiedNode(id=node_id, entity_type=EntityType.CLOUD_RESOURCE, label=node_id, attributes=attrs)
 
 
-def test_mitigated_exposure_is_marked_and_deprioritized_not_dropped():
+def test_legacy_mitigation_flags_do_not_lower_exposure_risk():
     g = UnifiedGraph(scan_id="s", tenant_id="t")
     g.add_node(_exposed_node("cloud:waf", mitigated=True))
     signals = _fusion_signals_for_path(g, ["cloud:waf"])
-    kinds = {kind for kind, _l, _d, _b in signals}
-    # honesty: it is NOT scored as a full-weight internet exposure...
-    assert "internet_exposed" not in kinds
-    # ...but it is NOT hidden either — surfaced as an explicitly mitigated signal.
-    assert "internet_exposed_mitigated" in kinds
-    mitig_boost = next(b for kind, _l, _d, b in signals if kind == "internet_exposed_mitigated")
-    full_boost = 15.0  # the unmitigated internet_exposed boost
-    assert 0 < mitig_boost < full_boost
+    assert {kind for kind, _l, _d, _b in signals} == {"internet_exposed"}
+    assert signals[0][3] == 15.0
+    assert "unverified" in signals[0][2]
 
 
-def test_mitigated_toxic_combination_scores_below_unmitigated_and_is_marked():
+def test_legacy_waf_association_does_not_discount_toxic_combination():
     g = UnifiedGraph(scan_id="s", tenant_id="t")
     # Unmitigated: exposed + vulnerable.
     g.add_node(
@@ -127,8 +119,8 @@ def test_mitigated_toxic_combination_scores_below_unmitigated_and_is_marked():
     paths = {p.source: p for p in _derived_toxic_combination_paths(g)}
     assert "cloud:bare" in paths, "unmitigated toxic combination must surface"
     assert "cloud:waf" in paths, "mitigated node must still surface (marked), not be dropped"
-    assert paths["cloud:waf"].composite_risk < paths["cloud:bare"].composite_risk
-    assert "mitigat" in paths["cloud:waf"].summary.lower()
+    assert paths["cloud:waf"].composite_risk == paths["cloud:bare"].composite_risk
+    assert "mitigat" not in paths["cloud:waf"].summary.lower()
 
 
 # ── Defect 2b: sensitive_data_access_count surfaces on the risk signal ────────

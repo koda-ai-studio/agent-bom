@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.cloud.normalization import coerce_truthy
+from agent_bom.core.cloud_identity import cloud_resource_node_id
+from agent_bom.core.cloud_scope import cloud_scope_attributes
+from agent_bom.graph.builder_network_exposure import _add_exposure_path_edge
 from agent_bom.graph.cloud_context import _recorded_exposure_attributes, _resource_environment
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -37,7 +40,7 @@ def project_security_groups(
         sg_kind = _clean_graph_part(group.get("_kind")) or "ec2-security-group"
         sg_resource_type = _clean_graph_part(group.get("_resource_type")) or "security-group"
         sg_env = _resource_environment(group)
-        node_id = f"cloud_resource:{provider}:{sg_service}:{sg_resource_type}:{group_id}"
+        node_id = cloud_resource_node_id(provider, f"{sg_service}:{sg_resource_type}", {**group, "id": group_id}, account_id, region)
         sg_node_by_id[group_id] = node_id
         graph.add_node(
             UnifiedNode(
@@ -61,8 +64,11 @@ def project_security_groups(
                     "fw_target_tags": list(group.get("target_tags", []) or []),
                     "fw_target_service_accounts": list(group.get("target_service_accounts", []) or []),
                     "fw_source_ranges": list(group.get("source_ranges", []) or []),
+                    "fw_direction": _clean_graph_part(group.get("direction")),
+                    "fw_disabled": coerce_truthy(group.get("disabled")),
                     "account_id": account_id,
                     "environment": sg_env,
+                    **cloud_scope_attributes(provider, group, account_id),
                     **_native_scope_attributes(group),
                 },
                 data_sources=data_sources,
@@ -104,7 +110,7 @@ def project_instances(
         inst_service = _clean_graph_part(instance.get("_service")) or "ec2"
         inst_kind = _clean_graph_part(instance.get("_kind")) or "ec2-instance"
         inst_label = _clean_graph_part(instance.get("_label")) or "ec2"
-        node_id = f"cloud_resource:{provider}:{inst_service}:instance:{instance_id}"
+        node_id = cloud_resource_node_id(provider, f"{inst_service}:instance", {**instance, "id": instance_id}, account_id, region)
         public_ip = _clean_graph_part(instance.get("public_ip"))
         instance_env = _resource_environment(instance)
         graph.add_node(
@@ -136,6 +142,7 @@ def project_instances(
                     "service_accounts": list(instance.get("service_accounts", []) or []),
                     "account_id": account_id,
                     "environment": instance_env,
+                    **cloud_scope_attributes(provider, instance, account_id),
                 },
                 data_sources=data_sources,
                 dimensions=NodeDimensions(cloud_provider=provider, surface="ec2", environment=instance_env),
@@ -157,17 +164,14 @@ def _link_instance_security_groups(graph: UnifiedGraph, node_id: str, instance: 
         graph.add_edge(
             UnifiedEdge(source=node_id, target=sg_node_id, relationship=RelationshipType.PART_OF, evidence={"source": "cloud-inventory"})
         )
-        # An internet-facing security group exposes the instances in it.
+        # Record the rule binding without claiming end-to-end ingress.
         sg_node = graph.nodes.get(sg_node_id)
         if sg_node is not None and coerce_truthy(sg_node.attributes.get("internet_exposed")):
-            graph.add_edge(
-                UnifiedEdge(
-                    source=sg_node_id,
-                    target=node_id,
-                    relationship=RelationshipType.EXPOSED_TO,
-                    weight=6.0,
-                    evidence={"source": "cloud-inventory", "reason": "internet_facing_security_group"},
-                )
+            _add_exposure_path_edge(
+                graph,
+                source=sg_node_id,
+                target=node_id,
+                reason="internet_facing_security_group",
             )
 
 
