@@ -19,11 +19,11 @@ invoke them.
 scan tools. Use `--profile full` for the complete 90-tool catalog.
 
 <details>
-<summary>Explicit full-profile catalog (94 tools)</summary>
+<summary>Explicit full-profile catalog (95 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
-`graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `findings_query`, `finding_detail`,
+`graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `findings_query`, `finding_detail`,
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
@@ -132,6 +132,12 @@ graph_reach(node_id="vuln:CVE-2023-4863", direction="in", entity_types=["agent"]
 What changed between two graph snapshots, exactly as `GET /v1/graph/diff`: a summary by default (latest two snapshots when no IDs are given), or filtered, cursor-paged change rows.
 ```
 graph_diff(view="detail", change="added", entity_type="vulnerability", limit=50)
+```
+
+### cross_vendor_paths
+Attack paths whose source and target are recorded in different vendors, exactly as `GET /v1/graph/attack-paths/cross-vendor`, in queue order with per-vendor-pair facets.
+```
+cross_vendor_paths(source_vendor="snowflake", target_vendor="aws")
 ```
 
 ### findings_query
