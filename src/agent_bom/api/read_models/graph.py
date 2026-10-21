@@ -1,8 +1,7 @@
 """Documented 200 contracts for the ``/v1/graph`` read endpoints.
 
-Top-level keys are declared exactly; nested node, edge and path rows stay
-open objects because they follow the canonical ``UnifiedNode.to_dict`` /
-``UnifiedEdge.to_dict`` serialization documented by ``/v1/graph/schema``.
+Shared node, edge and attack-path records describe canonical serialization.
+Provider evidence and endpoint-specific projections remain open objects.
 """
 
 from __future__ import annotations
@@ -12,6 +11,14 @@ from typing import Annotated, Any
 from pydantic import BaseModel, RootModel, WithJsonSchema
 
 from agent_bom.api.read_models._base import ReadModel, ReadResponse
+from agent_bom.api.read_models.graph_records import (
+    GraphAgentRecord,
+    GraphAttackPathRecord,
+    GraphAttackPathSummary,
+    GraphEdgeRecord,
+    GraphNodeRecord,
+)
+from agent_bom.graph.semantic_clusters import SemanticCluster
 
 Row = dict[str, Any]
 
@@ -55,9 +62,9 @@ class GraphPageResponse(ReadResponse):
     tenant_id: str
     created_at: str
     collection_coverage: Row | None = None
-    nodes: list[Row]
-    edges: list[Row]
-    attack_paths: list[Row]
+    nodes: list[GraphNodeRecord]
+    edges: list[GraphEdgeRecord]
+    attack_paths: list[GraphAttackPathRecord]
     attack_campaigns: list[Row] | None = None
     interaction_risks: list[Row]
     stats: Row
@@ -72,7 +79,7 @@ class GraphAgentsResponse(ReadResponse):
     scan_id: str
     tenant_id: str
     created_at: str
-    agents: list[Row]
+    agents: list[GraphAgentRecord]
     pagination: GraphPagination
     completeness: GraphCompleteness
 
@@ -81,7 +88,7 @@ class GraphClustersResponse(ReadResponse):
     scan_id: str
     tenant_id: str
     created_at: str
-    clusters: list[Row]
+    clusters: list[SemanticCluster]
     stats: dict[str, int]
     available_kinds: list[str]
     completeness: GraphCompleteness
@@ -222,8 +229,8 @@ class GraphExposurePathsResponse(ReadResponse):
     risk_scale: Row | None = None
     filters: Row | None = None
     paths: list[Row]
-    nodes: list[Row] | None = None
-    edges: list[Row] | None = None
+    nodes: list[GraphNodeRecord] | None = None
+    edges: list[GraphEdgeRecord] | None = None
     stats: Row | None = None
     completeness: GraphCompleteness | None = None
     pagination: Row | None = None
@@ -240,9 +247,9 @@ class GraphGovernanceResponse(ReadResponse):
     scan_id: str
     tenant_id: str
     created_at: str
-    nodes: list[Row]
-    edges: list[Row]
-    attack_paths: list[Row]
+    nodes: list[GraphNodeRecord]
+    edges: list[GraphEdgeRecord]
+    attack_paths: list[GraphAttackPathRecord]
     overlay: dict[str, int]
     governance_counts: dict[str, int]
     stats: GraphGovernanceStats
@@ -316,9 +323,9 @@ class GraphNodeContextResponse(ReadResponse):
     scan_id: str
     tenant_id: str
     snapshot_generation: str | None
-    node: Row
-    edges_out: list[Row]
-    edges_in: list[Row]
+    node: GraphNodeRecord
+    edges_out: list[GraphEdgeRecord]
+    edges_in: list[GraphEdgeRecord]
     neighbors: list[Any]
     sources: list[Any]
     impact: Row
@@ -334,8 +341,8 @@ class GraphNodeNeighborsResponse(ReadResponse):
     limit: int
     total_neighbors: int | None
     truncated: bool
-    neighbors: list[Row]
-    edges: list[Row]
+    neighbors: list[GraphNodeRecord]
+    edges: list[GraphEdgeRecord]
     completeness: GraphCompleteness
     resolved_from: str | None = None
 
@@ -353,7 +360,7 @@ class GraphPathsResponse(ReadResponse):
     reachable_count: int
     reachable_nodes: list[str]
     paths: list[GraphPathHop]
-    attack_paths: list[Row]
+    attack_paths: list[GraphAttackPathRecord]
     pagination: GraphPagination
     truncated: bool
     depth_limited: bool
@@ -395,9 +402,9 @@ class GraphRollupResponse(ReadResponse):
     node: Row | None = None
     children: list[Row] | None = None
     pagination: Row | None = None
-    attack_paths: list[Row] | None = None
-    path_nodes: list[Row] | None = None
-    path_edges: list[Row] | None = None
+    attack_paths: list[GraphAttackPathSummary] | None = None
+    path_nodes: list[GraphNodeRecord] | None = None
+    path_edges: list[GraphEdgeRecord] | None = None
     resolved_from: str | None = None
     collapsed: list[Row] | None = None
 
@@ -424,7 +431,7 @@ class GraphSearchResponse(ReadResponse):
     snapshot_generation: str | None
     query: str
     filters: GraphSearchFilters
-    results: list[Row]
+    results: list[GraphNodeRecord]
     pagination: GraphPagination
     completeness: GraphCompleteness
 
