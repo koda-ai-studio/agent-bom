@@ -631,6 +631,11 @@ class _FakeGraph:
     def __init__(self, mode: str) -> None:
         self._mode = mode
 
+    def list_users(self) -> Any:
+        if self._mode == "denied":
+            raise _denied()
+        return [{"id": "u-1", "displayName": "demo-human", "accountEnabled": True, "userType": "Member"}]
+
     def list_service_principals(self) -> Any:
         if self._mode == "denied":
             raise _denied()

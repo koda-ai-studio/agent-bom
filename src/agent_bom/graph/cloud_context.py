@@ -335,6 +335,7 @@ def _normalize_azure_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
         instances.append({**vm, "_service": "compute", "_kind": "azure-vm", "_label": "vm"})
     principals = [p for p in inventory.get("managed_identities", []) or [] if isinstance(p, dict)]
     principals.extend(p for p in inventory.get("service_principals", []) or [] if isinstance(p, dict))
+    principals.extend(p for p in inventory.get("entra_users", []) or [] if isinstance(p, dict))
     identity_groups = [g for g in inventory.get("entra_groups", []) or [] if isinstance(g, dict)]
     return {
         **inventory,

@@ -2729,7 +2729,8 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
           .filter((label) => label.getBoundingClientRect().width > 0 && (label.textContent ?? "").trim())
           .reduce((total, label) => total + Number(/×(\d+)/.exec(label.textContent ?? "")?.[1] ?? 1), 0));
         if (options.assertQuietGraphLabels && edgeLabelFonts.length) throw new Error(`Overview repeats relationship labels on ${urlPath}`);
-        if ((!onDemandLabels && labelledEdges < graphEdgeCount) || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
+        const quietFindingEdges = await page.locator('.react-flow__edge [data-label-disclosure="on-demand"]').count();
+        if ((!onDemandLabels && labelledEdges + quietFindingEdges < graphEdgeCount) || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
           throw new Error(
             `Unreadable or missing graph relationship labels on ${urlPath}: ${labelledEdges}/${graphEdgeCount} labelled edges, minimum ${Math.min(...edgeLabelFonts)}px`,
           );
@@ -3548,6 +3549,28 @@ async function main() {
       await securityGraphPage
         .getByTestId("selected-exposure-path")
         .waitFor({ state: "visible", timeout: 30_000 });
+      const findingEdge = securityGraphPage.locator('.react-flow__edge[data-id*="vulnerable_to"]');
+      await expect(findingEdge).toHaveCount(1);
+      const findingEdgeId = await findingEdge.getAttribute("data-id");
+      const findingLabel = securityGraphPage.locator(`.graph-relationship-label[data-edge-id="${findingEdgeId}"]`);
+      await expect(findingLabel).toHaveCount(0);
+      await expect(findingEdge.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
+      const point = await findingEdge.locator(".react-flow__edge-path").evaluate((path) => {
+        const at = path.getPointAtLength(path.getTotalLength() / 2);
+        const screen = new DOMPoint(at.x, at.y).matrixTransform(path.getScreenCTM());
+        return { x: screen.x, y: screen.y };
+      });
+      await securityGraphPage.mouse.move(point.x, point.y);
+      await expect(findingLabel).toHaveText(/Has finding/);
+      await securityGraphPage.mouse.move(0, 0);
+      await expect(findingLabel).toHaveCount(0);
+      await findingEdge.focus();
+      await expect(findingLabel).toHaveText(/Has finding/);
+      await securityGraphPage.getByRole("link", { name: "Open lineage", exact: true }).focus();
+      await expect(findingLabel).toHaveCount(0);
+      for (const verb of [/Assumes/i, /Can Access/i, /Depends On/i]) {
+        await expect(securityGraphPage.locator(".graph-relationship-label").filter({ hasText: verb })).toBeVisible();
+      }
     }, {
       expectedText: ["Investigation", "contractor-reviewer", "Developer Copilot", "CVE-2025-29927"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/views/fix-first"],

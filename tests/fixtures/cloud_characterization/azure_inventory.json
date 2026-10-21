@@ -19,6 +19,7 @@
           "deny_assignments": 0,
           "authorization_sources": 3,
           "service_principals": 0,
+          "entra_users": 0,
           "entra_groups": 0,
           "key_vaults": 2,
           "container_registries": 2,
@@ -69,6 +70,7 @@
           "deny_assignments": 0,
           "authorization_sources": 3,
           "service_principals": 0,
+          "entra_users": 0,
           "entra_groups": 0,
           "key_vaults": 2,
           "container_registries": 2,
@@ -124,6 +126,7 @@
           "deny_assignments": 0,
           "authorization_sources": 3,
           "service_principals": 0,
+          "entra_users": 0,
           "entra_groups": 0,
           "key_vaults": 2,
           "container_registries": 2,
@@ -189,6 +192,7 @@
           "deny_assignments": 0,
           "authorization_sources": 3,
           "service_principals": 0,
+          "entra_users": 0,
           "entra_groups": 0,
           "key_vaults": 0,
           "container_registries": 0,
@@ -503,6 +507,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -660,6 +665,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -815,6 +821,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -982,6 +989,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -1040,7 +1048,8 @@
         "Skipped Azure API Management services: role lacks Microsoft.ApiManagement/service/read — add it to the read-only policy to cover this resource type. ((AuthorizationFailed) The client does not have authorization to perform action)",
         "Could not list Azure management groups: (AuthorizationFailed) The client does not have authorization to perform action",
         "Skipped Entra service principals: role lacks Directory.Read.All — add it to the read-only policy to cover this resource type. ((AuthorizationFailed) The client does not have authorization to perform action)",
-        "Could not list Entra groups: (TooManyRequests) Rate limit exceeded, retry after 30s"
+        "Could not list Entra groups: (TooManyRequests) Rate limit exceeded, retry after 30s",
+        "Skipped Entra users: role lacks Directory.Read.All — add it to the read-only policy to cover this resource type. ((AuthorizationFailed) The client does not have authorization to perform action)"
       ],
       "missing_permissions": [
         {
@@ -1202,6 +1211,11 @@
           "cloud": "azure",
           "permission": "Directory.Read.All",
           "resource_type": "Entra service principals"
+        },
+        {
+          "cloud": "azure",
+          "permission": "Directory.Read.All",
+          "resource_type": "Entra users"
         }
       ],
       "discovery_envelope": {
@@ -1272,6 +1286,7 @@
       "authorization_evidence": null,
       "service_principals": [],
       "entra_groups": [],
+      "entra_users": [],
       "key_vaults": [],
       "container_registries": [],
       "databases": [],
@@ -1384,6 +1399,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -1540,6 +1556,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -1695,6 +1712,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -1852,6 +1870,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -2344,6 +2363,18 @@
           "service_principal_type": "",
           "policies": [],
           "trust_principals": [],
+          "privilege_level": "unknown"
+        }
+      ],
+      "entra_users": [
+        {
+          "principal_type": "user",
+          "principal_id": "u-1",
+          "arn": "u-1",
+          "name": "demo-human",
+          "account_enabled": true,
+          "user_type": "Member",
+          "policies": [],
           "privilege_level": "unknown"
         }
       ],
@@ -3413,6 +3444,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -3597,6 +3629,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -3742,6 +3775,7 @@
         ]
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -4034,6 +4068,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [
         {
@@ -4498,6 +4533,7 @@
       "authorization_evidence": null,
       "service_principals": [],
       "entra_groups": [],
+      "entra_users": [],
       "key_vaults": [],
       "container_registries": [],
       "databases": [],
@@ -4548,6 +4584,7 @@
       "authorization_evidence": null,
       "service_principals": [],
       "entra_groups": [],
+      "entra_users": [],
       "key_vaults": [],
       "container_registries": [],
       "databases": [],
@@ -4598,6 +4635,7 @@
       "authorization_evidence": null,
       "service_principals": [],
       "entra_groups": [],
+      "entra_users": [],
       "key_vaults": [],
       "container_registries": [],
       "databases": [],
@@ -4648,6 +4686,7 @@
       "authorization_evidence": null,
       "service_principals": [],
       "entra_groups": [],
+      "entra_users": [],
       "key_vaults": [],
       "container_registries": [],
       "databases": [],
@@ -4743,6 +4782,7 @@
         ]
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -4802,6 +4842,7 @@
       "authorization_evidence": null,
       "service_principals": [],
       "entra_groups": [],
+      "entra_users": [],
       "key_vaults": [],
       "container_registries": [],
       "databases": [],
@@ -4916,6 +4957,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -5136,6 +5178,7 @@
         ]
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],
@@ -5273,6 +5316,7 @@
         "diagnostics": []
       },
       "service_principals": [],
+      "entra_users": [],
       "entra_groups": [],
       "key_vaults": [],
       "container_registries": [],

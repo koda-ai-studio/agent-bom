@@ -29,7 +29,25 @@ for (const theme of ["light", "dark"]) test(`small graph uses its canvas and def
   const requests=await fixture(page);
   await page.goto("/graph?scan=snapshot&root=vuln%3Ademo&lens=context");
   await expect(page.locator(".react-flow__node")).toHaveCount(2);
-  await expect(page.locator(".graph-relationship-label .relationship-badge svg").first()).toBeVisible();
+  const findingEdge = page.locator('.react-flow__edge').filter({ has: page.locator('[data-label-disclosure="on-demand"]') });
+  const findingLabel = page.locator(".graph-relationship-label").filter({ hasText: "Has finding" });
+  await expect(findingEdge).toHaveCount(1);
+  await expect(findingLabel).toHaveCount(0);
+  await expect(findingEdge.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
+  const point = await findingEdge.locator(".react-flow__edge-path").evaluate((element) => {
+    const path = element as SVGPathElement;
+    const at = path.getPointAtLength(path.getTotalLength() / 2);
+    const screen = new DOMPoint(at.x, at.y).matrixTransform(path.getScreenCTM()!);
+    return { x: screen.x, y: screen.y };
+  });
+  await page.mouse.move(point.x, point.y);
+  await expect(findingLabel.locator(".relationship-badge svg")).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(findingLabel).toHaveCount(0);
+  await findingEdge.focus();
+  await expect(findingLabel).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(findingLabel).toHaveCount(0);
   await expect(page.getByTestId("graph-entity-drawer").getByRole("heading",{name:"CVE-2023-4863",exact:true})).toBeVisible();
   await expect.poll(async()=>Math.round((await page.locator(".react-flow").boundingBox())!.height)).toBeLessThanOrEqual(560);
   await expect.poll(async()=>{

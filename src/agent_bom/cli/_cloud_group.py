@@ -15,6 +15,7 @@ import click
 
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.cli._tenant import resolve_cli_tenant_id
+from agent_bom.evidence.cloud_scan import inventory_artifact
 
 
 def _auto_update_db_default() -> bool:
@@ -622,9 +623,8 @@ def inventory_cmd(
 ) -> None:
     """Show an estate-wide AWS / Azure / GCP asset summary (read-only).
 
-    Gated by ``AGENT_BOM_AWS_INVENTORY`` (AWS), ``AGENT_BOM_AZURE_INVENTORY``
-    (Azure), and ``AGENT_BOM_GCP_INVENTORY`` (GCP). A disabled provider reports a
-    ``disabled`` status and runs no network call. Reference only.
+    Enable each provider with its ``AGENT_BOM_<PROVIDER>_INVENTORY`` flag.
+    Disabled providers make no network calls; JSON includes execution coverage.
     """
 
     from agent_bom.cloud import aws_inventory, azure_inventory, gcp_inventory
@@ -640,7 +640,7 @@ def inventory_cmd(
     reports = [_project_authorization_posture(report) for report in reports]
 
     if output_format == "json":
-        click.echo(json.dumps({"providers": reports}, indent=2, sort_keys=True, default=str))
+        click.echo(json.dumps(inventory_artifact(reports), indent=2, sort_keys=True, default=str))
         return
 
     from rich.console import Console

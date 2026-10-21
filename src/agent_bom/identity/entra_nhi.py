@@ -40,6 +40,7 @@ import os
 from collections.abc import Iterable, Iterator
 from typing import Any
 
+from agent_bom.cloud.azure_graph import require_graph_origin
 from agent_bom.identity.okta_nhi import (
     DiscoveredNonHumanIdentity,
     NHIDiscoveryResult,
@@ -79,16 +80,23 @@ class EntraClient:
     def __init__(self, token: str, *, base_url: str = _GRAPH_BASE_URL) -> None:
         self._token = token
         self._base_url = base_url.rstrip("/")
+        self.coverage_warnings: list[str] = []
 
     def _get(self, path: str) -> list[dict[str, Any]]:
-        from agent_bom.cloud.azure_graph import require_graph_origin
         from agent_bom.http_client import fetch_json
 
         items: list[dict[str, Any]] = []
         url: str | None = f"{self._base_url}{path}"
+        visited: set[str] = set()
         # Follow @odata.nextLink pagination, bounded so a hostile/huge tenant
         # cannot make discovery run unbounded.
         while url and len(items) < _MAX_RESULTS:
+            if url in visited or len(visited) >= 100:
+                self.coverage_warnings.append(
+                    "Entra pagination stopped at a repeated cursor or page budget; directory coverage is partial."
+                )
+                break
+            visited.add(url)
             payload = fetch_json(
                 url,
                 headers={
@@ -97,7 +105,8 @@ class EntraClient:
                 },
                 timeout=30,
             )
-            if not isinstance(payload, dict):
+            if not isinstance(payload, dict) or not isinstance(payload.get("value"), list):
+                self.coverage_warnings.append("Entra directory page unavailable or malformed; directory coverage is partial.")
                 break
             for item in payload.get("value", []) or []:
                 if isinstance(item, dict):
@@ -108,7 +117,9 @@ class EntraClient:
             # re-sent a directory-scoped bearer token to whatever host the
             # response body named.
             url = require_graph_origin(next_link, self._base_url) if isinstance(next_link, str) and next_link else None
-        return items
+        if len(items) > _MAX_RESULTS or (url and len(items) >= _MAX_RESULTS):
+            self.coverage_warnings.append("Entra result budget reached; directory coverage is partial.")
+        return items[:_MAX_RESULTS]
 
     def list_service_principals(self) -> list[dict[str, Any]]:
         """List service principals (the directory presence of an NHI)."""
@@ -121,6 +132,10 @@ class EntraClient:
     def list_groups(self) -> list[dict[str, Any]]:
         """List Entra (Azure AD) groups — directory read, no membership expansion."""
         return self._get(f"/groups?$top={_PAGE_LIMIT}")
+
+    def list_users(self) -> list[dict[str, Any]]:
+        """Read human directory identity metadata, excluding credential fields."""
+        return self._get(f"/users?$top={_PAGE_LIMIT}&$select=id,displayName,accountEnabled,userType")
 
     def list_group_members(self, group_id: str) -> list[dict[str, Any]]:
         """List the direct members of one Entra group (users / SPs / nested groups).
@@ -365,18 +380,18 @@ def discover_entra_non_human_identities(
     raw_apps: list[dict[str, Any]] = []
     failures = 0
 
-    try:
-        raw_sps = list(client.list_service_principals() or [])
-    except Exception as exc:  # noqa: BLE001
-        failures += 1
-        warnings.append(f"Entra service-principal listing failed: {exc}")
-    try:
-        raw_apps = list(client.list_applications() or [])
-    except Exception as exc:  # noqa: BLE001
-        failures += 1
-        warnings.append(f"Entra application listing failed: {exc}")
+    for label, read, destination in (
+        ("service-principal", "list_service_principals", raw_sps),
+        ("application", "list_applications", raw_apps),
+    ):
+        try:
+            destination.extend(getattr(client, read)() or [])
+        except Exception:  # noqa: BLE001 — independent directory reads degrade separately
+            failures += 1
+            warnings.append(f"Entra {label} listing failed; directory coverage is partial.")
 
     identities = tuple(_iter_normalized(raw_sps, raw_apps))[:_MAX_RESULTS]
+    warnings.extend(getattr(client, "coverage_warnings", []))
 
     if failures and not identities:
         return NHIDiscoveryResult(

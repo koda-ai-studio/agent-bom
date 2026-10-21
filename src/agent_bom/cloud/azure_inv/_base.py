@@ -158,6 +158,7 @@ def _empty_inventory(resolved_sub: str) -> dict[str, Any]:
         "authorization_evidence": None,
         "service_principals": [],
         "entra_groups": [],
+        "entra_users": [],
         **{key: [] for key in _COLLECTED_TAIL_KEYS},
         "managed_disks": [],
         "app_services": [],

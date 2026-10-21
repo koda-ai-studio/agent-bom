@@ -94,6 +94,29 @@ def _collect_entra_service_principals(client: Any, *, warnings: list[str], missi
     return service_principals
 
 
+def _collect_entra_users(client: Any, *, warnings: list[str], missing: list[dict[str, str]] | None) -> list[dict[str, Any]]:
+    """Keep native object IDs and an explicit user kind for RBAC/group joins."""
+    users: dict[str, dict[str, Any]] = {}
+    try:
+        for user in client.list_users() or []:
+            if not isinstance(user, dict) or not str(user.get("id") or "").strip():
+                continue
+            user_id = str(user["id"]).strip()
+            users[user_id] = {
+                "principal_type": "user",
+                "principal_id": user_id,
+                "arn": user_id,
+                "name": str(user.get("displayName") or user_id),
+                "account_enabled": user.get("accountEnabled") if isinstance(user.get("accountEnabled"), bool) else None,
+                "user_type": str(user.get("userType") or ""),
+                "policies": [],
+                "privilege_level": "unknown",
+            }
+    except Exception as exc:  # noqa: BLE001 — a denied user read must preserve other inventory
+        _record_failure(exc, "Entra users", "Directory.Read.All", warnings, missing)
+    return list(users.values())
+
+
 def _collect_entra_groups(client: Any, *, warnings: list[str], missing: list[dict[str, str]] | None) -> list[dict[str, Any]]:
     """List Entra groups, expanding members for the first ``_ENTRA_MAX_GROUPS_EXPANDED``."""
     try:
