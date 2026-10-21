@@ -688,3 +688,22 @@ def test_narrative_markdown_renders_the_failing_control_drill(tmp_path):
     assert "LLM05" in out, out
     assert "CVE-2025-7788" in out, out
     assert "langchain@0.0.150" in out, out
+
+
+def test_diff_uses_invocation_console_after_another_caller_captures_output(tmp_path, monkeypatch):
+    """A prior library renderer must not redirect a new CLI invocation's output."""
+    import io
+
+    from rich.console import Console
+
+    from agent_bom import output
+
+    previous_stream = io.StringIO()
+    monkeypatch.setattr(output, "console", Console(file=previous_stream))
+    base, current = tmp_path / "base.json", tmp_path / "current.json"
+    base.write_text(json.dumps(_make_report_data()))
+    current.write_text(json.dumps(_make_report_data()))
+    result = CliRunner().invoke(diff_cmd, [str(base), str(current), "--quiet"])
+    assert result.exit_code == 0
+    assert "No changes since baseline." in result.output
+    assert previous_stream.getvalue() == ""

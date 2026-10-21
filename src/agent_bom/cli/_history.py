@@ -364,7 +364,7 @@ def diff_cmd(baseline: str, current: Optional[str], output_format: str, output: 
             output,
         )
     else:
-        print_diff(diff, quiet=quiet)
+        print_diff(diff, quiet=quiet, console=console)
 
     if diff["summary"]["new_findings"] > 0:
         sys.exit(1)
