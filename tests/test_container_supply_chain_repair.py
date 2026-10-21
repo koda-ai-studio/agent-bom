@@ -60,7 +60,24 @@ def test_floating_latest_uses_reviewed_runtime_security_overlay() -> None:
     assert "Dockerfile \\" in workflow
     assert "deploy/docker/runtime-security-requirements.txt \\" in workflow
     assert "cryptography==50.0.0" in requirements
-    assert requirements.count("--hash=sha256:") == 2
+    crypto_entry = next(entry for entry in requirements.replace("\\\n", "").splitlines() if entry.startswith("cryptography=="))
+    assert crypto_entry.count("--hash=sha256:") == 2
+
+
+def test_release_refresh_replaces_vulnerable_certifi_with_hashed_universal_wheel() -> None:
+    """The released lock stays frozen, so main's dependency floor is insufficient."""
+    overlay = (ROOT / "deploy/docker/runtime-security-requirements.txt").read_text(encoding="utf-8")
+    entries = overlay.replace("\\\n", "").splitlines()
+    certifi_entry = next((entry for entry in entries if entry.startswith("certifi==")), "")
+    assert certifi_entry, "release refresh must replace certifi from the old release lock"
+    requirement = Requirement(certifi_entry.split("--hash=")[0].strip())
+    assert "2026.7.22" not in requirement.specifier
+    assert "2026.10.19" in requirement.specifier
+    lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
+    package = next(package for package in lock["package"] if package["name"] == "certifi")
+    assert package["version"] in requirement.specifier
+    wheel = next(wheel for wheel in package["wheels"] if wheel["url"].endswith("-py3-none-any.whl"))
+    assert f"--hash={wheel['hash']}" in certifi_entry
 
 
 def _refresh_step(job: str, name: str) -> tuple[int, dict]:
