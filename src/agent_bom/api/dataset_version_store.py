@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 import threading
 from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol
 
-from agent_bom.api.storage_schema import ensure_sqlite_schema_version
+from agent_bom.api.storage.registry_sqlite import SQLiteRegistryStore
 from agent_bom.storage.base import BackendKind
-from agent_bom.storage.factory import resolve_backend, validate_sqlite_path
+from agent_bom.storage.factory import resolve_backend
 
 
 @dataclass(frozen=True)
@@ -54,24 +53,12 @@ class InMemoryDatasetVersionStore:
         return sorted(records, key=lambda record: record.created_at, reverse=True)
 
 
-class SQLiteDatasetVersionStore:
-    def __init__(self, db_path: str = "agent_bom.db") -> None:
-        self._db_path = validate_sqlite_path(db_path)
-        self._local = threading.local()
-        self._init_db()
+class SQLiteDatasetVersionStore(SQLiteRegistryStore[DatasetVersionRecord]):
+    table = "dataset_versions"
+    columns = ("tenant_id", "dataset_id", "version_id", "created_at")
 
-    @property
-    def _conn(self) -> sqlite3.Connection:
-        if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(self._db_path, check_same_thread=False)
-            self._local.conn.execute("PRAGMA journal_mode=WAL")
-        conn: sqlite3.Connection = self._local.conn
-        return conn
-
-    def _init_db(self) -> None:
-        ensure_sqlite_schema_version(self._conn, "dataset_versions")
-        self._conn.execute(
-            """
+    ddl = (
+        """
             CREATE TABLE IF NOT EXISTS dataset_versions (
                 tenant_id TEXT NOT NULL,
                 dataset_id TEXT NOT NULL,
@@ -80,48 +67,22 @@ class SQLiteDatasetVersionStore:
                 data TEXT NOT NULL,
                 PRIMARY KEY (tenant_id, dataset_id, version_id)
             )
-            """
-        )
-        self._conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_dataset_versions_tenant_dataset_created "
-            "ON dataset_versions(tenant_id, dataset_id, created_at DESC)"
-        )
-        self._conn.commit()
+            """,
+        "CREATE INDEX IF NOT EXISTS idx_dataset_versions_tenant_dataset_created "
+        "ON dataset_versions(tenant_id, dataset_id, created_at DESC)",
+    )
+
+    def _decode(self, raw: str) -> DatasetVersionRecord:
+        return _record_from_json(raw)
 
     def put(self, record: DatasetVersionRecord) -> None:
-        self._conn.execute(
-            """
-            INSERT OR REPLACE INTO dataset_versions
-                (tenant_id, dataset_id, version_id, created_at, data)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                record.tenant_id,
-                record.dataset_id,
-                record.version_id,
-                record.created_at,
-                json.dumps(record.to_dict(), sort_keys=True),
-            ),
-        )
-        self._conn.commit()
+        self._put_payload((record.tenant_id, record.dataset_id, record.version_id, record.created_at), record.to_dict())
 
     def get(self, tenant_id: str, dataset_id: str, version_id: str) -> DatasetVersionRecord | None:
-        row = self._conn.execute(
-            "SELECT data FROM dataset_versions WHERE tenant_id = ? AND dataset_id = ? AND version_id = ?",
-            (tenant_id, dataset_id, version_id),
-        ).fetchone()
-        return _record_from_json(row[0]) if row else None
+        return self._get("tenant_id = ? AND dataset_id = ? AND version_id = ?", (tenant_id, dataset_id, version_id))
 
     def list(self, tenant_id: str, dataset_id: str) -> list[DatasetVersionRecord]:
-        rows = self._conn.execute(
-            """
-            SELECT data FROM dataset_versions
-            WHERE tenant_id = ? AND dataset_id = ?
-            ORDER BY created_at DESC
-            """,
-            (tenant_id, dataset_id),
-        ).fetchall()
-        return [_record_from_json(row[0]) for row in rows]
+        return self._list("tenant_id = ? AND dataset_id = ?", (tenant_id, dataset_id), order="created_at DESC")
 
 
 def _record_from_json(raw: str) -> DatasetVersionRecord:

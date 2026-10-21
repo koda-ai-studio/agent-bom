@@ -11,15 +11,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sqlite3
 import threading
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from typing import Any, Protocol
 
-from agent_bom.api.storage_schema import ensure_sqlite_schema_version
+from agent_bom.api.storage.registry_sqlite import SQLiteRegistryStore
 from agent_bom.storage.base import BackendKind
-from agent_bom.storage.factory import resolve_backend, validate_sqlite_path
+from agent_bom.storage.factory import resolve_backend
 
 
 @dataclass
@@ -105,24 +104,12 @@ class InMemoryDriftIncidentStore:
             return incident
 
 
-class SQLiteDriftIncidentStore:
-    def __init__(self, db_path: str = "agent_bom.db") -> None:
-        self._db_path = validate_sqlite_path(db_path)
-        self._local = threading.local()
-        self._init_db()
+class SQLiteDriftIncidentStore(SQLiteRegistryStore[DriftIncident]):
+    table = "drift_incidents"
+    columns = ("tenant_id", "incident_id", "resolved", "last_detected_at")
 
-    @property
-    def _conn(self) -> sqlite3.Connection:
-        if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(self._db_path, check_same_thread=False)
-            self._local.conn.execute("PRAGMA journal_mode=WAL")
-        conn: sqlite3.Connection = self._local.conn
-        return conn
-
-    def _init_db(self) -> None:
-        ensure_sqlite_schema_version(self._conn, "drift_incidents")
-        self._conn.execute(
-            """
+    ddl = (
+        """
             CREATE TABLE IF NOT EXISTS drift_incidents (
                 tenant_id TEXT NOT NULL,
                 incident_id TEXT NOT NULL,
@@ -131,25 +118,26 @@ class SQLiteDriftIncidentStore:
                 last_detected_at TEXT NOT NULL,
                 PRIMARY KEY (tenant_id, incident_id)
             )
-            """
-        )
-        self._conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_open ON drift_incidents(tenant_id, resolved, last_detected_at DESC)"
-        )
-        self._conn.commit()
+            """,
+        "CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_open ON drift_incidents(tenant_id, resolved, last_detected_at DESC)",
+    )
+
+    def _decode(self, raw: str) -> DriftIncident:
+        return DriftIncident(**json.loads(raw))
 
     def _save(self, incident: DriftIncident) -> None:
-        self._conn.execute(
-            "INSERT OR REPLACE INTO drift_incidents (tenant_id, incident_id, data, resolved, last_detected_at) VALUES (?, ?, ?, ?, ?)",
-            (
-                incident.tenant_id,
-                incident.incident_id,
-                json.dumps(incident.to_dict(), sort_keys=True),
-                int(incident.resolved),
-                incident.last_detected_at,
-            ),
+        self._put_payload((incident.tenant_id, incident.incident_id, int(incident.resolved), incident.last_detected_at), incident.to_dict())
+
+    def list(self, tenant_id: str, *, include_resolved: bool = False, limit: int = 200) -> list[DriftIncident]:
+        return self._list(
+            "tenant_id = ?" + ("" if include_resolved else " AND resolved = 0"),
+            (tenant_id,),
+            order="last_detected_at DESC",
+            limit=limit,
         )
-        self._conn.commit()
+
+    def get(self, tenant_id: str, incident_id: str) -> DriftIncident | None:
+        return self._get("tenant_id = ? AND incident_id = ?", (tenant_id, incident_id))
 
     def upsert(self, incident: DriftIncident) -> DriftIncident:
         existing = self.get(incident.tenant_id, incident.incident_id)
@@ -164,24 +152,6 @@ class SQLiteDriftIncidentStore:
             return existing
         self._save(incident)
         return incident
-
-    def list(self, tenant_id: str, *, include_resolved: bool = False, limit: int = 200) -> list[DriftIncident]:
-        if include_resolved:
-            rows = self._conn.execute(
-                "SELECT data FROM drift_incidents WHERE tenant_id = ? ORDER BY last_detected_at DESC LIMIT ?", (tenant_id, limit)
-            ).fetchall()
-        else:
-            rows = self._conn.execute(
-                "SELECT data FROM drift_incidents WHERE tenant_id = ? AND resolved = 0 ORDER BY last_detected_at DESC LIMIT ?",
-                (tenant_id, limit),
-            ).fetchall()
-        return [DriftIncident(**json.loads(r[0])) for r in rows]
-
-    def get(self, tenant_id: str, incident_id: str) -> DriftIncident | None:
-        row = self._conn.execute(
-            "SELECT data FROM drift_incidents WHERE tenant_id = ? AND incident_id = ?", (tenant_id, incident_id)
-        ).fetchone()
-        return DriftIncident(**json.loads(row[0])) if row else None
 
     def resolve(self, tenant_id: str, incident_id: str, *, by: str, note: str, at: str) -> DriftIncident | None:
         incident = self.get(tenant_id, incident_id)
