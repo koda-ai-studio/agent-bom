@@ -2079,6 +2079,17 @@ async function installRoutes(page, fixtureGraph = graph) {
     const selectedGraph = url.searchParams.get("scan_id") === REFERENCE_CORRELATION_ID ? referenceGraph : graph;
     return fulfill(route, graphResponseWithPagination(selectedGraph, "attack_paths"));
   });
+  await page.route("**/v1/graph/attack-paths/cross-vendor?**", (route) => {
+    const url = new URL(route.request().url());
+    const selectedGraph = url.searchParams.get("scan_id") === REFERENCE_CORRELATION_ID ? referenceGraph : graph;
+    // These fixture paths do not record distinct vendors at both endpoints.
+    // A vendor on a middle hop alone does not establish a crossing.
+    return fulfill(route, {
+      ...graphResponseWithPagination({ ...selectedGraph, nodes: [], edges: [], attack_paths: [] }, "attack_paths"),
+      vendor_facets: { unit: "paths", snapshot_paths: selectedGraph.attack_paths.length, cross_vendor_paths: 0,
+        pairs: [], selected: null, covers_all_paths: true },
+    });
+  });
   await page.route("**/v1/graph/exposure-paths?**", (route) => fulfill(route, {
     schema_version: "exposure-paths.v1",
     tool: "agent_bom_exposure_paths",
