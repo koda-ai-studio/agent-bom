@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from agent_bom.api.exception_store import ExceptionStore, VulnException
+from agent_bom.core.suppression_score import clear_blast_radius_suppression, mark_blast_radius_suppressed
 
 if TYPE_CHECKING:
     from agent_bom.models import BlastRadius
@@ -60,15 +61,7 @@ def apply_tenant_suppression_rules(
     for br in blast_radii:
         # Re-evaluate persisted overlays against current approval and expiry.
         if br.suppressed and br.suppression_state != "vex":
-            br.suppressed = False
-            br.suppression_id = None
-            br.suppression_state = None
-            br.suppression_reason = None
-            if br.unsuppressed_risk_score is not None:
-                br.risk_score = br.unsuppressed_risk_score
-            else:
-                br.calculate_risk_score()
-            br.unsuppressed_risk_score = None
+            clear_blast_radius_suppression(br)
         server_names = [server.name for server in br.affected_servers] or [""]
         match = next(
             (
@@ -81,13 +74,7 @@ def apply_tenant_suppression_rules(
         if match is None or not is_suppressing_exception(match):
             continue
         state, reason = feedback_state_from_reason(match.reason)
-        br.suppressed = True
-        br.suppression_id = match.exception_id
-        br.suppression_state = state or "exception"
-        br.suppression_reason = reason or match.reason
-        br.unsuppressed_risk_score = br.risk_score
-        br.risk_score = 0.0
-        br.transitive_risk_score = 0.0
+        mark_blast_radius_suppressed(br, suppression_id=match.exception_id, state=state or "exception", reason=reason or match.reason)
         summary["suppressed"] += 1
     return summary
 

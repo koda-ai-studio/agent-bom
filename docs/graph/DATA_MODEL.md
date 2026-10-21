@@ -135,7 +135,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `depends_on` | `dependency` | inventory | directed | yes | `cloud_resource`, `config_file`, `container`, `data_store`, `directory`, `framework` (+3 more) | `cloud_resource`, `container`, `data_store`, `package` | 11 | FU, BR | 9 (+2 demo) |
 | `exhibits_drift` | `governance` | governance | bidirectional | yes | `agent` | `drift_incident` | 1 | — | 1 |
 | `exploitable_via` | `finding` | vulnerability | directed | yes | `misconfiguration`, `vulnerability` | `credential`, `tool` | 4 | FU | 1 (+1 demo) |
-| `exposed_to` | `exposure` | exposure | directed | yes | `agent`, `api_gateway`, `cloud_resource`, `container`, `data_store`, `server` | `account`, `agent`, `cloud_resource`, `data_store`, `resource` | 20 | FU | 5 (+2 demo) |
+| `exposed_to` | `exposure` | exposure | directed | yes | `agent`, `api_gateway`, `cloud_resource`, `container`, `data_store`, `server` | `account`, `agent`, `cloud_resource`, `data_store`, `resource` | 20 | FU | 3 (+2 demo) |
 | `exposes_cred` | `authority` | inventory | directed | yes | `agent`, `server` | `credential` | 2 | FU, CR | 2 (+1 demo) |
 | `governs` | `governance` | governance | directed | no | `access_policy`, `blueprint`, `policy` | `account`, `agent`, `drift_incident`, `managed_identity`, `org`, `tool` | 10 | — | 3 |
 | `has_permission` | `authority` | identity | directed | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool` | 36 | FU, LT | 5 |
@@ -149,9 +149,9 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `member_of` | `authority` | governance | directed | yes | `agent`, `federated_identity`, `group`, `managed_identity`, `role`, `service_account` (+2 more) | `account`, `agent`, `fleet`, `group`, `role` | 31 | — | 4 |
 | `observes` | `structural` | inventory | directed | yes | `framework` | `agent`, `server` | 2 | — | 1 |
 | `owns` | `governance` | governance | directed | yes | `account`, `group`, `org`, `role`, `service_account`, `service_principal` (+1 more) | `agent`, `api_gateway`, `cloud_resource`, `data_store`, `environment`, `group` (+5 more) | 30 | — | 8 |
-| `part_of` | `structural` | governance | directed | yes | `account`, `agent`, `ci_job`, `cloud_resource`, `container`, `resource` (+2 more) | `application`, `cloud_resource`, `cluster`, `environment`, `fleet`, `org` (+2 more) | 20 | — | 4 |
+| `part_of` | `structural` | governance | directed | yes | `account`, `agent`, `ci_job`, `cloud_resource`, `container`, `resource` (+2 more) | `application`, `cloud_resource`, `cluster`, `environment`, `fleet`, `org` (+2 more) | 20 | — | 5 |
 | `possibly_correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `cloud_resource`, `cluster`, `container`, `data_store`, `managed_identity` (+5 more) | `agent`, `cloud_resource`, `cluster`, `container`, `data_store`, `managed_identity` (+5 more) | 39 | — | 4 |
-| `protects` | `exposure` | exposure | directed | yes | `api_gateway`, `cloud_resource` | `cloud_resource`, `data_store`, `resource` | 6 | — | 1 |
+| `protects` | `governance` | exposure | directed | no | `api_gateway`, `cloud_resource` | `cloud_resource`, `data_store`, `resource` | 6 | — | 1 |
 | `provides_tool` | `structural` | inventory | directed | yes | `server` | `tool` | 1 | FU, CR, BR | 2 (+1 demo) |
 | `reaches_tool` | `authority` | inventory | directed | yes | `agent`, `credential` | `tool` | 2 | FU, CR | 2 (+1 demo) |
 | `remediates` | `finding` | vulnerability | directed | no | `package` | `misconfiguration`, `vulnerability` | 2 | — | 0 |
@@ -176,12 +176,12 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `structural` | `belongs_to`, `configures`, `contains`, `defines`, `hosts`, `observes`, `part_of`, `provides_tool`, `runs`, `stores` |
 | `dependency` | `depends_on`, `hosted_on`, `imports`, `serves_model`, `uses`, `uses_framework` |
 | `authority` | `assumes`, `attached`, `authenticates_as`, `can_access`, `cross_account_trust`, `exposes_cred`, `has_permission`, `inherits`, `member_of`, `reaches_tool`, `trusts` |
-| `exposure` | `exposed_to`, `protects` |
+| `exposure` | `exposed_to` |
 | `finding` | `affects`, `exploitable_via`, `remediates`, `triggers`, `vulnerable_to` |
 | `runtime` | `accessed`, `acted_as`, `called`, `delegated_to`, `invoked`, `trace_step`, `used_credential` |
 | `correlation` | `correlates_with`, `possibly_correlates_with`, `shares_cred`, `shares_server` |
 | `derived` | `lateral_path` |
-| `governance` | `exhibits_drift`, `governs`, `manages`, `owns`, `scoped_to` |
+| `governance` | `exhibits_drift`, `governs`, `manages`, `owns`, `protects`, `scoped_to` |
 
 ### Analysis edge sets
 

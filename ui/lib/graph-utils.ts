@@ -144,8 +144,6 @@ export interface LegendItem {
   /** Badge rows render the same chip or ring the node renderer shows. */
   badge?: { kind: NodeBadgeKind; value: string; label: string } | undefined;
   ring?: RingSeverity | undefined;
-  /** Asset "has findings" dot, distinct from the finding ring. */
-  signal?: RingSeverity | undefined;
   lineStyle?: "solid" | "dashed" | undefined;
   shape?: "dot" | "square" | "diamond" | "pill" | undefined;
   // Entity type drives the legend glyph from the same ENTITY_ICONS map the
@@ -373,7 +371,7 @@ const RELATIONSHIP_DESCRIPTION_OVERRIDES: Record<string, string> = {
     "Policy or control applies to the connected identity, tool, or environment.",
   exhibits_drift:
     "Observed behavior or posture differs from expected governance state.",
-  exposed_to: "Internet, account, or environment exposure reaches this asset.",
+  exposed_to: "Recorded exposure relationship. Inspect configuration, scope and reachability evidence.",
   stores: "Asset stores or indexes data that may be reachable from the path.",
   has_permission:
     "Recorded permission relationship. Effective permission depends on policy and runtime context.",
@@ -385,7 +383,7 @@ const RELATIONSHIP_DESCRIPTION_OVERRIDES: Record<string, string> = {
   delegated_to:
     "Recorded delegation relationship. Inspect the receipt for configuration, observation and outcome.",
   protects:
-    "A WAF, gateway, or edge control fronts the asset and refines its exposure verdict.",
+    "A security control is associated with the asset; effectiveness and vulnerability mitigation require separate evidence.",
   observes:
     "Inventory evidence that an agent or framework watches the connected asset.",
   belongs_to: "Asset is part of the connected application or service.",

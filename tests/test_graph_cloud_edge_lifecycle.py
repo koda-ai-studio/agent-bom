@@ -104,8 +104,8 @@ def test_cloud_inventory_snapshots_diff_exposed_edges(tmp_path) -> None:
     current.created_at = "2026-06-08T12:00:00+00:00"
     save_graph(conn, current)
 
-    sg_id = "cloud_resource:aws:ec2:security-group:sg-1"
-    inst_id = "cloud_resource:aws:ec2:instance:i-1"
+    sg_id = "cloud_resource:aws:ec2:security-group:scoped/111122223333/us-east-1//native/sg-1"
+    inst_id = "cloud_resource:aws:ec2:instance:scoped/111122223333/us-east-1//native/i-1"
 
     diff = diff_snapshots(conn, "cloud-scan-baseline", "cloud-scan-current", tenant_id="default")
     assert diff["edges_added"], "expected new edges when SG exposure opens"
@@ -214,36 +214,26 @@ def _cross_account_foothold_inventory() -> dict:
     }
 
 
-def test_inventory_instance_profile_assumes_role_and_marks_exposed() -> None:
+def test_inventory_instance_profile_assumes_role_without_inventing_ingress() -> None:
     graph = build_unified_graph_from_report({"cloud_inventory": _cross_account_foothold_inventory()})
-    inst_id = "cloud_resource:aws:ec2:instance:i-foothold"
+    inst_id = "cloud_resource:aws:ec2:instance:scoped/111122223333/us-east-1//native/i-foothold"
     role_id = "role:aws:arn:aws:iam::111122223333:role/cross-account-role"
 
     assert any(edge.source == inst_id and edge.target == role_id and edge.relationship == RelationshipType.ASSUMES for edge in graph.edges)
-    assert graph.nodes[role_id].attributes.get("internet_exposed") is True
+    assert graph.nodes[role_id].attributes.get("internet_exposed") is not True
 
 
 def test_inventory_public_foothold_triggers_public_permission_lateral() -> None:
     graph = build_unified_graph_from_report({"cloud_inventory": _cross_account_foothold_inventory()})
-    instance_id = "cloud_resource:aws:ec2:instance:i-foothold"
+    instance_id = "cloud_resource:aws:ec2:instance:scoped/111122223333/us-east-1//native/i-foothold"
     role_id = "role:aws:arn:aws:iam::111122223333:role/cross-account-role"
     external_account_id = "account:aws:210987654321"
 
     hits = [f for f in build_toxic_combination_findings(graph) if f.evidence.get("rule_id") == "PUBLIC_PERMISSION_LATERAL"]
 
-    # True positive: an internet-exposed instance can pivot to the same-account
-    # admin role it is allowed to assume (a genuine outbound lateral move).
-    assert hits, "expected PUBLIC_PERMISSION_LATERAL from exposed foothold to same-account role"
-    same_account = [f for f in hits if instance_id in f.evidence["node_ids"] and role_id in f.evidence["node_ids"]]
-    assert same_account, "expected same-account instance→role lateral finding"
-
-    # Regression guard: the role→external-account edge is INBOUND trust (the
-    # external account is allowed to assume the role, not vice-versa). It must
-    # NOT be walked as an outbound pivot, so no lateral finding may claim the
-    # exposed role moves INTO the external account.
-    assert not any(external_account_id in f.evidence["node_ids"] for f in hits), (
-        "cross-account trust is inbound and must not fabricate a lateral pivot into the trusting account"
-    )
+    # A public IP and permissive SG do not prove an internet foothold.
+    assert not [f for f in hits if instance_id in f.evidence["node_ids"]]
+    assert not any(external_account_id in f.evidence["node_ids"] for f in hits)
     # The trust edge itself is still present in the graph — we stopped walking
     # it as a lateral vector, we did not delete the relationship.
     assert any(
@@ -267,6 +257,4 @@ def test_inventory_fusion_reaches_sensitive_data_store() -> None:
     )
 
     fused = [path for path in graph.attack_paths if path.summary.startswith("Internet-exposed ")]
-    assert fused, "expected fused kill-chain from inventory-built graph"
-    assert any(path.target == data_store_id for path in fused)
-    assert any(role_id in path.hops for path in fused)
+    assert not any(role_id in path.hops for path in fused), "unassessed ingress must not seed an identity pivot"

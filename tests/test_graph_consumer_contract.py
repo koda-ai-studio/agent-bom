@@ -37,7 +37,9 @@ def test_consumer_preserves_scoped_identity_provenance_and_boundary_edges(api): 
 
 def test_consumer_declares_its_own_page_bound(api):  # noqa: F811
     report = qualify(Consumer(api), page_size=1, max_pages=1)
-    assert report["nodes"] == 1
+    # One ranked node plus the off-page endpoint of its edge.
+    assert report["nodes"] == 2
+    assert report["pages"][0]["response"]["completeness"]["ranked"] == 1
     assert report["node_pages_exhausted"] is False
 
 
@@ -140,7 +142,7 @@ def test_consumer_rejects_duplicate_node_within_page(api):  # noqa: F811
         body = response.json()
         if path == "graph":
             body["nodes"].append(body["nodes"][0].copy())
-            body["completeness"].update(context_nodes=1, returned=2)
+            body["completeness"].update(context_nodes=len(body["nodes"]) - 1, endpoint_nodes=0, returned=len(body["nodes"]))
         return httpx.Response(response.status_code, json=body)
 
     with pytest.raises(ContractError, match="Node repeated within"):
@@ -152,7 +154,7 @@ def test_consumer_rejects_empty_ranked_continuation(api):  # noqa: F811
         body = response.json()
         if path == "graph":
             body["nodes"] = []
-            body["completeness"].update(ranked=0, context_nodes=0, returned=0)
+            body["completeness"].update(ranked=0, context_nodes=0, endpoint_nodes=0, returned=0)
         return httpx.Response(response.status_code, json=body)
 
     with pytest.raises(ContractError, match="Empty ranked page"):

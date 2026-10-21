@@ -12,6 +12,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.asset_provenance import package_version_provenance
+from agent_bom.core.risk_display import risk_label
 from agent_bom.graph import SEVERITY_RANK as _SEVERITY_RANK
 from agent_bom.graph.node import stable_node_id
 from agent_bom.output.finding_views import package_graph_node_id as _package_node_id
@@ -115,9 +116,8 @@ def build_graph_elements(
                     "tip": (f"Agent: {agent.name}\nType: {agent.agent_type.value}\nSource: {source}\nServers: {len(agent.mcp_servers)}"),
                     "agentType": agent.agent_type.value,
                     "configPath": sanitize_path_label(agent.config_path) if agent.config_path else "",
-                    # "source"/"target" are reserved edge fields in the
-                    # Cytoscape element format — a node-level "source" key makes
-                    # standards-following consumers misclassify nodes as edges.
+                    # "source"/"target" are reserved Cytoscape edge fields; a node-level
+                    # "source" key makes standards-following consumers misclassify nodes as edges.
                     "discovery_source": source,
                     "serverCount": len(agent.mcp_servers),
                     "packageCount": agent.total_packages,
@@ -809,7 +809,7 @@ def build_attack_flow_elements(
             kind="cve",
             severity=sev,
             severityClass=f"cve_{sev}",
-            tip=f"{vuln_id}\nSeverity: {sev}{score_text}\nBlast score: {finding.risk_score:.1f}{fix_text}",
+            tip=f"{vuln_id}\nSeverity: {sev}{score_text}\nBlast score: {risk_label(finding.risk_score)}{fix_text}",
         )
 
         # Package node

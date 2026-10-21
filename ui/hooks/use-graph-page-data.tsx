@@ -463,6 +463,7 @@ export function useGraphPageData() {
         // Larger selections are opt-in; preserve the server completeness fields.
         offset: 0,
         limit: graphFetchLimit,
+        view: "canvas",
       })
       .then((result) => {
         if (cancelled) return;
@@ -847,11 +848,17 @@ export function useGraphPageData() {
   }, [soleScopeId, selectedScanId]);
 
   // The root roll-up carries the estate's issue basis; drill-downs do not.
-  const [estateIssues, setEstateIssues] = useState<{ scanId: string; issue_count?: number | undefined; finding_occurrence_count?: number | undefined } | null>(null);
+  const [estateIssues, setEstateIssues] = useState<{
+    scanId: string; issue_count?: number | undefined; finding_occurrence_count?: number | undefined;
+    severity_counts?: { critical?: number | undefined; high?: number | undefined } | undefined;
+  } | null>(null);
   useEffect(() => {
     const summary = rollupView?.summary;
     if (rollupView && typeof summary?.issue_count === "number") {
-      setEstateIssues({ scanId: rollupView.scan_id, issue_count: summary.issue_count, finding_occurrence_count: summary.finding_occurrence_count });
+      setEstateIssues({
+        scanId: rollupView.scan_id, issue_count: summary.issue_count, finding_occurrence_count: summary.finding_occurrence_count,
+        severity_counts: summary.issue_severity_counts,
+      });
     }
   }, [rollupView]);
   const estateIssueSummary = estateIssues?.scanId && rollupView && estateIssues.scanId !== rollupView.scan_id ? null : estateIssues;

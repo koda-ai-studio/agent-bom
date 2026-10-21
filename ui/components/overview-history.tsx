@@ -42,7 +42,7 @@ function HistoryPlot({ points, field, label }: {
   </figure>;
 }
 
-export function OverviewHistory() {
+export function OverviewHistory({ headline = null }: { headline?: { critical: number; high: number } | null } = {}) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"severity" | "changes" | "age">("severity");
   const [days, setDays] = useState(30);
@@ -78,7 +78,7 @@ export function OverviewHistory() {
         <label className="min-w-0 text-sm">History window<select aria-label="History window" value={days} onChange={event => setDays(Number(event.target.value))} className="ml-2 rounded border border-outline bg-surface p-2">{[7, 30, 90].map(value => <option key={value} value={value}>{value} days</option>)}</select></label>
         {scopes.length > 0 && <label className="min-w-0 text-sm">Scan scope<select aria-label="History scan scope" value={scope} onChange={event => { setScope(event.target.value); setPage(0); }} className="ml-2 max-w-full rounded border border-outline bg-surface p-2">{points.some(point => !point.scope_id) && <option value="">Scope unavailable</option>}{scopes.map(value => <option key={value} value={value}>{value}</option>)}</select></label>}
       </div>
-      <p className="text-sm text-ink-secondary">Scan history has its own scope; it does not represent the aggregate posture above. No longer detected does not establish verified remediation.</p>
+      <p className="text-sm text-ink-secondary">{selected.length > 0 && selected.every(point => point.issues) ? "Severity over time plots the open issues the posture headline counted after each scan. Finding changes and ages are measured within this scan scope and count occurrences." : "Scan history has its own scope; it does not represent the aggregate posture above."} No longer detected does not establish verified remediation.</p>
       {status === "ready" && undated > 0 && <p role="status" className="text-sm text-ink-secondary">{undated} retained observations have no valid timestamp and cannot be plotted.</p>}
       {status === "ready" && limited && <p role="status" className="text-sm text-ink-secondary">History is limited to the latest 365 retained observations. Earlier changes may be unavailable.</p>}
       {status === "loading" ? <p role="status">Loading history…</p> : status === "error" ? <div className="flex flex-wrap items-center gap-3"><p role="status">History unavailable.</p><button type="button" onClick={() => setRetry(value => value + 1)} className="rounded-lg border border-outline px-3 py-2 text-sm">Retry history</button></div> : selected.length === 0 ? <p role="status">No recorded history in this window.</p> : <>
@@ -88,7 +88,7 @@ export function OverviewHistory() {
           <button aria-pressed={view === "changes"} onClick={() => setView("changes")} className="rounded-lg border border-outline px-3 py-2 aria-pressed:bg-surface-elevated">Finding changes</button>
           <button aria-pressed={view === "age"} onClick={() => setView("age")} className="rounded-lg border border-outline px-3 py-2 aria-pressed:bg-surface-elevated">Age & freshness</button>
         </div>
-        {view === "severity" ? <SeverityTrend points={selected} /> : <div className="grid gap-3 sm:grid-cols-2">
+        {view === "severity" ? <SeverityTrend points={selected} headline={headline} /> : <div className="grid gap-3 sm:grid-cols-2">
           {view === "changes" ? <>
           <HistoryPlot points={selected} field="new_findings" label="Newly detected findings" />
           <HistoryPlot points={selected} field="no_longer_detected" label="No longer detected" />
@@ -99,9 +99,10 @@ export function OverviewHistory() {
         </div>}
         <p className="text-xs text-ink-secondary">Age and freshness use recorded timestamps and available samples. Missing timestamps are unavailable. Older observations without comparable scope cannot establish change.</p>
         <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="History values">
-          <table className="w-full text-left text-sm"><caption className="sr-only">Recorded history and comparison evidence</caption><thead><tr>{["Completed", "New", "Still open", "No longer detected", "Median open age (days)", "Median evidence age (days)", "Comparison"].map(title => <th key={title} scope="col" className="p-2">{title}</th>)}</tr></thead>
+          <table className="w-full text-left text-sm"><caption className="sr-only">Recorded history and comparison evidence</caption><thead><tr>{["Completed", "Critical / high issues", "New", "Still open", "No longer detected", "Median open age (days)", "Median evidence age (days)", "Comparison"].map(title => <th key={title} scope="col" className="p-2">{title}</th>)}</tr></thead>
           <tbody>{rows.map((point, index) => <tr key={`${point.scan_id}:${point.timestamp}:${index}`} className="border-t border-outline">
             <td className="p-2 whitespace-nowrap">{point.scan_id ? <Link className="underline" href={`/findings?${new URLSearchParams({scan_id: point.scan_id})}`}>{new Date(point.timestamp).toLocaleString()}</Link> : new Date(point.timestamp).toLocaleString()}</td>
+            <td className="p-2 whitespace-nowrap">{point.issues ? `${number(point.issues.critical)} / ${number(point.issues.high)}` : "Not recorded"}</td>
             <td className="p-2">{number(point.comparison?.new_findings)}</td><td className="p-2">{number(point.comparison?.still_open)}</td><td className="p-2">{number(point.comparison?.no_longer_detected)}</td>
             <td className="p-2">{number(point.open_finding_age_days)} · {point.age_sample_count ?? 0} samples</td><td className="p-2">{number(point.evidence_age_days)} · {point.evidence_sample_count ?? 0} samples</td>
             <td className="p-2">{comparisonLabel(point.comparison)}</td>

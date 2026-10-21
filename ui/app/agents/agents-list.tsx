@@ -8,7 +8,7 @@ import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/s
 import { useDeploymentContext } from "@/hooks/use-deployment-context";
 import { Agent, agentClassCounts, api } from "@/lib/api";
 import { isDeploymentSurfaceAvailable } from "@/lib/deployment-context";
-import { agentDisplayName, entityIdHint } from "@/lib/display-name";
+import { agentRecordDisplayName, entityIdHint } from "@/lib/display-name";
 import { FIRST_SCAN_ACTIONS } from "@/lib/empty-state-actions";
 import { AlertCircle, GitBranch, Network, Search, Shield, X } from "lucide-react";
 import { ASSET_KINDS } from "@/lib/asset-icon-registry";
@@ -64,9 +64,9 @@ export function AgentsList() {
       header: "Name",
       cell: (agent) => (
         <div className="min-w-0">
-          <div className="truncate font-medium text-[color:var(--foreground)]">{agentDisplayName(agent.name, agent.enrollment_name)}</div>
+          <div className="truncate font-medium text-[color:var(--foreground)]">{agentRecordDisplayName(agent)}</div>
           <div className="truncate text-xs text-[color:var(--text-tertiary)]">
-            {[entityIdHint(agent.name, agentDisplayName(agent.name, agent.enrollment_name)), agent.source].filter(Boolean).join(" · ")}
+            {[entityIdHint(agent.name, agentRecordDisplayName(agent)), agent.source].filter(Boolean).join(" · ")}
           </div>
         </div>
       ),
@@ -118,7 +118,7 @@ export function AgentsList() {
       key: "name",
       header: "Name",
       cell: (agent) => (
-        <span className="font-medium text-[color:var(--text-secondary)]">{agentDisplayName(agent.name, agent.enrollment_name)}</span>
+        <span className="font-medium text-[color:var(--text-secondary)]">{agentRecordDisplayName(agent)}</span>
       ),
     },
     {

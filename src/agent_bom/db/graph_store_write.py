@@ -274,7 +274,7 @@ def _write_attack_paths(conn: sqlite3.Connection, attack_paths: Iterable[AttackP
             (
                 ap.source,
                 ap.target,
-                len(ap.hops),
+                max(len(ap.hops) - 1, 0),
                 ap.composite_risk,
                 ap.summary,
                 json.dumps(ap.hops),

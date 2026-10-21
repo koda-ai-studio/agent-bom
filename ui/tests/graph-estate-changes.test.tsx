@@ -203,24 +203,46 @@ describe("GraphChangesPanel exposures", () => {
     expect(row).toHaveTextContent("Compared with earlier snapshot showcase-baseline");
     expect(screen.getByTestId("graph-changes-completeness")).toHaveTextContent("scanned once");
     expect(screen.getByRole("button", { name: "Highlight changes" })).toBeEnabled();
+    // The basis is explicit so these numbers are never read as finding counts.
+    expect(screen.getByText(/Counts are graph nodes and links between the two snapshots, not finding occurrences/)).toBeInTheDocument();
   });
 
   it("lists new and removed exposure and drills into it", () => {
     const onInvestigateNode = vi.fn();
-    const onInvestigatePath = vi.fn();
     render(<GraphChangesPanel open changes={changes} loading={false} error={null} highlighting={false} highlightLoading={false}
       selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null}
-      onInvestigateNode={onInvestigateNode} onInvestigatePath={onInvestigatePath} />);
+      onInvestigateNode={onInvestigateNode} />);
     const exposure = screen.getByTestId("graph-changes-exposure");
-    expect(exposure).toHaveTextContent("New critical findings · 426");
+    expect(exposure).toHaveTextContent("New critical finding nodes · 426");
     expect(exposure).toHaveTextContent("New attack paths · 3");
     expect(exposure).toHaveTextContent("Removed attack paths · 1");
     expect(exposure).toHaveTextContent("Removed controls · 1");
     fireEvent.click(within(exposure).getByRole("button", { name: /investigate SSH open to the internet/i }));
     expect(onInvestigateNode).toHaveBeenCalledWith("misconfig:a", "SSH open to the internet");
-    fireEvent.click(within(exposure).getByRole("button", { name: /investigate path agent:x → vuln:y/i }));
-    expect(onInvestigatePath).toHaveBeenCalledWith(baselineSource.highlights.new_attack_paths.top[0]);
-    expect(within(exposure).queryByRole("button", { name: /investigate path agent:x → vuln:old/i })).toBeNull();
+    // A new path opens the path queue with that exact path selected, in the snapshot that recorded it.
+    const link = within(exposure).getByRole("link", { name: /investigate path agent:x → vuln:y/i });
+    const href = new URL(link.getAttribute("href")!, "http://x");
+    expect(href.pathname).toBe("/security-graph");
+    expect(href.searchParams.get("scan")).toBe("showcase");
+    expect(href.searchParams.get("node")).toBe("agent:x");
+    expect(href.searchParams.get("selected_path")).toBe("agent:x::vuln:y::agent:x->server:z->vuln:y");
+    expect(href.searchParams.get("path_view")).toBe("path");
+    expect(within(exposure).queryByRole("link", { name: /investigate path agent:x → vuln:old/i })).toBeNull();
+  });
+
+  it("states the trend's issue counts for the same two scans beside the graph-node counts", () => {
+    const issueChange = { basis: "issue_groups", old: { critical: 291, high: 710, medium: 0, low: 0, total: 1701 }, new: { critical: 332, high: 817, medium: 0, low: 0, total: 1969 } };
+    const paired = response({ ...changes, sources: [{ ...baselineSource, issue_change: issueChange }] });
+    render(<GraphChangesPanel open changes={paired} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} />);
+    const line = screen.getByTestId("graph-changes-issue-basis");
+    expect(line).toHaveTextContent("Open issues, the posture trend's unit: critical 291 → 332 (+41) · high 710 → 817 (+107)");
+  });
+
+  it("omits the issue line when the trend recorded neither scan", () => {
+    render(<GraphChangesPanel open changes={changes} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} />);
+    expect(screen.queryByTestId("graph-changes-issue-basis")).toBeNull();
   });
 
   it("names path and reach endpoints by display name with the raw id as a tooltip", () => {
@@ -229,7 +251,7 @@ describe("GraphChangesPanel exposures", () => {
       new_credential_reach: { count: 1, top: [{ kind: "edge" as const, change: "added" as const, id: "srv|cred|exposes_cred", source: "srv:billing", target: "cred:k", source_label: "Billing server", target_label: "Stripe key", relationship: "exposes_cred" }] },
     } }] });
     render(<GraphChangesPanel open changes={named} loading={false} error={null} highlighting={false} highlightLoading={false}
-      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} onInvestigatePath={() => {}} />);
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} />);
     const exposure = screen.getByTestId("graph-changes-exposure");
     expect(exposure).toHaveTextContent("bob@contractor → prod-bastion (EC2) · 1 hop");
     expect(exposure).toHaveTextContent("Billing server → Stripe key");
@@ -237,7 +259,7 @@ describe("GraphChangesPanel exposures", () => {
     expect(within(exposure).getByText("bob@contractor")).toHaveAttribute("title", "user:bob");
     expect(within(exposure).getByText("prod-bastion (EC2)")).toHaveAttribute("title", "cloud:bastion");
     expect(within(exposure).getByText("Stripe key")).toHaveAttribute("title", "cred:k");
-    expect(within(exposure).getByRole("button", { name: "Investigate path bob@contractor → prod-bastion (EC2)" })).toBeInTheDocument();
+    expect(within(exposure).getByRole("link", { name: "Investigate path bob@contractor → prod-bastion (EC2)" })).toBeInTheDocument();
   });
 
   it("falls back to the raw id when the API names no endpoint", () => {
@@ -257,5 +279,32 @@ describe("GraphSnapshotDiff", () => {
     expect(view).toHaveTextContent("Lists show the first changes only");
     expect(within(view).getByText("Added")).toBeInTheDocument();
     expect(within(view).queryByText("Removed")).toBeNull();
+  });
+
+  it("pages long lists, links every entry to its asset in the right snapshot, and keeps long ids inside the drawer", () => {
+    const added = Array.from({ length: 60 }, (_, index) => ({ id: `arn:aws:ec2:us-east-1:210987654321:instance/i-${index}`, label: `resource: arn:aws:ec2:us-east-1:210987654321:instance/i-${index}` }));
+    const removed = [{ id: "pkg:old", label: "old-package" }];
+    const diff = { nodes_added: added, nodes_removed: removed, nodes_changed: [], edges_added: [], edges_removed: [] } as unknown as GraphDiffResponse;
+    render(<GraphSnapshotDiff diff={diff} loading={false} error={null} pair={{ oldScanId: "base", newScanId: "head" }}
+      counts={{ nodesAdded: 1129, nodesRemoved: 1, nodesChanged: 0, edgesAdded: 0, edgesRemoved: 0, truncated: true }} />);
+    const addedList = screen.getByRole("list", { name: "Added nodes" });
+    expect(within(addedList).getAllByRole("link")).toHaveLength(10);
+    const first = within(addedList).getAllByRole("link")[0]!;
+    expect(first).toHaveAttribute("title", added[0]!.label);
+    expect(first.className).toContain("truncate");
+    // The distinguishing tail of a long id stays visible.
+    expect(first.textContent).toMatch(/…/);
+    expect(first.textContent!.endsWith("210987654321:instance/i-0")).toBe(true);
+    const href = new URL(first.getAttribute("href")!, "http://x");
+    expect(href.pathname).toBe("/graph");
+    expect(href.searchParams.get("root")).toBe(added[0]!.id);
+    expect(href.searchParams.get("scan")).toBe("head");
+    expect(screen.getByText("1–10 of 60 listed · 1,129 added")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next added nodes" }));
+    expect(within(addedList).getAllByRole("link")[0]).toHaveAttribute("title", added[10]!.label);
+    expect(screen.getByText("11–20 of 60 listed · 1,129 added")).toBeInTheDocument();
+    const removedLink = within(screen.getByRole("list", { name: "Removed nodes" })).getByRole("link");
+    expect(new URL(removedLink.getAttribute("href")!, "http://x").searchParams.get("scan")).toBe("base");
+    expect(screen.getByTestId("graph-snapshot-diff").querySelector(".grid")!.className).toContain("min-w-0");
   });
 });

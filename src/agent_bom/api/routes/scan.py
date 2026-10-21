@@ -39,7 +39,7 @@ from agent_bom.api.finding_grouping import _group_occurrence_rows as _group_occu
 from agent_bom.api.finding_grouping import _grouped_severity_counts as _grouped_severity_counts
 from agent_bom.api.finding_grouping import _groups_envelope as _groups_envelope
 from agent_bom.api.finding_list_helpers import _DEFAULT_FINDING_STATUS
-from agent_bom.api.finding_list_projection import FindingListInclude, finding_list_projection, list_include_or_422
+from agent_bom.api.finding_list_projection import FindingListInclude, finding_list_projection, list_query_or_422
 from agent_bom.api.finding_merge import _BULK_MERGE_CHUNK as _BULK_MERGE_CHUNK
 from agent_bom.api.finding_merge import MergedScanBulkPage as MergedScanBulkPage
 from agent_bom.api.finding_merge import _merge_bulk_kwargs as _merge_bulk_kwargs
@@ -646,7 +646,7 @@ async def list_findings(
     ``offset`` is a compatibility path capped at 10,000: past the ceiling the
     endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.
     """
-    includes = list_include_or_422(include)
+    includes = list_query_or_422(include, framework=framework, control=control)
     try:
         async with adaptive_backpressure("findings"):
             implementation = _list_finding_groups_impl if group_occurrences else _list_findings_view_impl

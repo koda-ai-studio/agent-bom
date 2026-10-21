@@ -59,7 +59,7 @@ class BlastRadius:
     exposed_credentials: list[str]  # Credential env var names at risk
     exposed_tools: list[MCPTool]  # Introspected / confirmed tools on the impacted path
     phantom_tools: list[MCPTool] = field(default_factory=list)  # Registry-only, unverified tools (listed, not scored)
-    risk_score: float = 0.0  # 0-10
+    risk_score: Optional[float] = None  # 0-10; None until calculate_risk_score() assesses it
     ai_risk_context: Optional[str] = None  # AI-native risk explanation when relevant
     owasp_tags: list[str] = field(default_factory=list)  # OWASP LLM Top 10 codes, e.g. ["LLM03", "LLM02"]
     atlas_tags: list[str] = field(default_factory=list)  # MITRE ATLAS technique IDs (AI/ML-specific), e.g. ["AML.T0010"]
@@ -140,14 +140,11 @@ class BlastRadius:
         All weights and thresholds are configurable via ``AGENT_BOM_RISK_*``
         environment variables.  See :mod:`agent_bom.config` for defaults and
         documentation.
+
+        A suppressed finding is scored like any other: suppression is a
+        decision recorded beside the score (``agent_bom.core.suppression_score``),
+        never a score of 0.
         """
-        from agent_bom.vex import is_vex_suppressed
-
-        if self.suppressed or is_vex_suppressed(self.vulnerability):
-            self.risk_score = 0.0
-            self.transitive_risk_score = 0.0
-            return self.risk_score
-
         from agent_bom.config import (
             EPSS_CRITICAL_THRESHOLD,
             RISK_AGENT_CAP,

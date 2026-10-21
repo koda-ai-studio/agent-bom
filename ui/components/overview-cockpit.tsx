@@ -47,6 +47,7 @@ export function OverviewCockpit({
   coverage = null,
   topPath,
   exposurePaths,
+  riskRanking,
   compliance = null,
   services = null,
 }: OverviewCockpitProps) {
@@ -76,7 +77,7 @@ export function OverviewCockpit({
           tabs={[{ key: "posture", label: "Posture" }, { key: "risks", label: "Top risks" }, { key: "assets", label: "Assets & coverage" }]} />
         <div role="tabpanel" aria-label="Top risks" hidden={riskTab !== "risks"}>
           <TopRisksPanel localReport={localReport} loading={loading} unavailable={overviewUnavailable} scans={scans}
-            topPath={topPath} exposurePaths={exposurePaths}
+            topPath={topPath} exposurePaths={exposurePaths} ranking={riskRanking}
             agentMeshHref={agents != null && agents > 0 ? "/agents/topology" : null} />
         </div>
         <div role="tabpanel" aria-label="Assets & coverage" hidden={riskTab !== "assets"}>{localReport ? <p className="mt-4 text-sm text-ink-secondary">This report is not linked to a live inventory snapshot.</p> : <OverviewAssets summary={inventorySummary} loading={inventoryLoading} unavailable={inventoryUnavailable} unavailableHref={inventoryUnavailableHref} />}</div>

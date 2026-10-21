@@ -379,8 +379,8 @@ def test_graph_emits_inventory_nodes_and_overlays(monkeypatch: pytest.MonkeyPatc
     assert nodes[f"data_store:{bucket_id}"].entity_type == EntityType.DATA_STORE
 
     # EC2 instance + security group present; instance EXPOSED_TO open SG.
-    instance_id = "cloud_resource:aws:ec2:instance:i-abc123"
-    sg_id = "cloud_resource:aws:ec2:security-group:sg-open"
+    instance_id = next(n.id for n in nodes.values() if n.attributes.get("resource_id") == "i-abc123")
+    sg_id = next(n.id for n in nodes.values() if n.attributes.get("resource_id") == "sg-open")
     assert instance_id in nodes and sg_id in nodes
     exposed = [e for e in graph.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source == sg_id and e.target == instance_id]
     assert exposed

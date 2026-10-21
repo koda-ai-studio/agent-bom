@@ -29,10 +29,6 @@ Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/build
 
 Emitted by: `graph/builder_network_inventory.py`
 
-Id formats:
-
-- `api_gateway:{provider}:{api_id}`
-
 ## `application`
 
 Emitted by: `graph/aspm_overlay.py`, `graph/repo_trust_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`
@@ -61,9 +57,7 @@ Id formats:
 - `cloud_resource:{provider}:audit:resource:{resource}`
 - `cloud_resource:{provider}:database:{db_account}:{db_location}:{db_key}`
 - `cloud_resource:{provider}:{bucket_service}:bucket:{name}`
-- `cloud_resource:{provider}:{inst_service}:instance:{instance_id}`
 - `cloud_resource:{provider}:{kind}:{normalized}`
-- `cloud_resource:{provider}:{sg_service}:{sg_resource_type}:{group_id}`
 - `cloud_resource:{target_provider}:cwpp:{target_type}:{target_id}`
 - `iac_target:{category}:{finding_path}`
 
@@ -94,7 +88,7 @@ Id formats:
 
 ## `credential`
 
-Emitted by: `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_credentials.py`
 
 ## `credential_ref`
 

@@ -2,7 +2,7 @@ import type { ComponentType, CSSProperties } from "react";
 import {
   Activity, AppWindow, Archive, BadgeCheck, Bot, Boxes, CircleDashed, Braces, BrainCircuit, BrickWall, BriefcaseBusiness, Bug, Building2,
   Cable, CalendarClock, Cloud, CloudCog, Container, Cpu, Database, Disc3, DraftingCompass, Earth, FileCode, FileCog,
-  FileStack, Fingerprint, FlaskConical, Folder, FolderGit2, FolderOutput, Gpu, Handshake, HardDrive, IdCard, Inbox, KeyRound,
+  FileStack, Fingerprint, FlaskConical, Folder, FolderGit2, FolderInput, FolderOutput, Gpu, Handshake, HardDrive, IdCard, Inbox, KeyRound,
   Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, Package, PlugZap, ScrollText, Server, Share2,
   ShieldAlert, ShieldCheck, ShipWheel, Siren, Sparkles, SquareFunction, Table, Ticket, User, UserCog, Users, Vault,
   Warehouse, Webhook, Workflow, Wrench, Zap,
@@ -36,6 +36,7 @@ export const ASSET_KINDS = {
   network: { label: "Network", icon: Network },
   firewall: { label: "Firewall", icon: BrickWall },
   bucket: { label: "Bucket", icon: Archive },
+  stage: { label: "Stage", icon: FolderInput },
   database: { label: "Database", icon: Database },
   warehouse: { label: "Warehouse", icon: Warehouse },
   table: { label: "Table", icon: Table },
@@ -125,7 +126,7 @@ const EXACT: Record<string, AssetKind> = {
   server: "mcp_server", agent: "agent", tool: "tool", package: "package", framework: "framework",
   cortex_function: "ai_service", cortex_search_service: "ai_service", openai_deployment: "model",
   hosted_model: "model", model_artifact: "model", repository: "repository", ai_foundry_project: "ml_workspace",
-  share: "data_share", task: "job", pipe: "job", stage: "bucket", external_stage: "bucket", cluster: "cluster",
+  share: "data_share", task: "job", pipe: "job", stage: "stage", external_stage: "stage", internal_stage: "stage", cluster: "cluster",
   container_image: "image", spcs_service: "workload", prompt_template: "prompt", key_vault: "secret",
 };
 

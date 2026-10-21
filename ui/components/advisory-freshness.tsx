@@ -19,6 +19,13 @@ function formatSyncTime(value: string | null | undefined): string {
   return `${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(parsed)} UTC`;
 }
 
+/** One phrase for the feed sync state: which sources synced, and how many never recorded a sync. */
+function syncSummary(recorded: number, total: number): string {
+  if (recorded === total) return "All synced";
+  if (recorded === 0) return "No feed sync recorded yet";
+  return `${recorded} of ${total} synced · ${total - recorded} never recorded`;
+}
+
 /** Feed sync receipts describe advisory data, independently of scan timestamps. */
 export function AdvisoryFreshness() {
   const [sources, setSources] = useState<IntelSource[] | null>(null);
@@ -37,13 +44,10 @@ export function AdvisoryFreshness() {
     return () => { active = false; };
   }, []);
   const recordedSyncs = sources?.filter(source => Boolean(source.feed_run?.last_synced)).length ?? 0;
-  const unknownSyncs = sources ? sources.length - recordedSyncs : 0;
   return <details className="advisory-freshness" aria-label="Advisory data freshness">
     <summary className="advisory-freshness-summary">
-      <span className="min-w-0 font-medium text-foreground">Advisory data · {unavailable ? "source status unavailable" : sources === null ? "loading source receipts" : `${sources.length} enabled sources`}</span>
-      {sources && <span className="advisory-freshness-counts" aria-label={`${recordedSyncs} recorded sync times, ${unknownSyncs} unknown`}>
-        <span>{recordedSyncs} sync {recordedSyncs === 1 ? "time" : "times"} recorded</span><span aria-hidden="true">·</span><span>{unknownSyncs} sync {unknownSyncs === 1 ? "time" : "times"} unknown</span>
-      </span>}
+      <span className="min-w-0 font-medium text-foreground">Advisory data · {unavailable ? "source status unavailable" : sources === null ? "loading source receipts" : `${sources.length} enabled ${sources.length === 1 ? "source" : "sources"}`}</span>
+      {sources?.length ? <span className="advisory-freshness-counts">{syncSummary(recordedSyncs, sources.length)}</span> : null}
     </summary>
     <div className="advisory-freshness-body">
       <p className="text-sm text-ink-secondary">Feed sync receipts are separate from scan time. Missing sync times remain unknown.</p>

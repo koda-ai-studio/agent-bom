@@ -894,6 +894,9 @@ for (const theme of ["light", "dark"] as const) {
     await header.getByText("Snapshot & view", { exact: true }).click();
     await header.getByText("Search graph", { exact: true }).click();
     await header.getByPlaceholder("Search nodes, tags, severities, or attributes").fill("Desktop Agent");
+    // The open search panel keeps its submit button inside the viewport and never widens the page.
+    await expect(header.getByRole("button", { name: "Search", exact: true })).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await header.getByRole("button", { name: "Search", exact: true }).click();
     await expect(page.getByTestId("graph-search-result-agent:desktop")).toContainText("Desktop Agent");
     expect(searched).toEqual([{ query: "Desktop Agent", scanId }]);

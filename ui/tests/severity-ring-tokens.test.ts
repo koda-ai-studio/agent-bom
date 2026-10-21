@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { FINDING_SIGNAL_CLASSES, SEVERITY_RING_CLASSES, type RingSeverity } from "@/lib/graph-node-badges";
+import { SEVERITY_RING_CLASSES, type RingSeverity } from "@/lib/graph-node-badges";
 
 const CSS = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
 const SEVERITIES: RingSeverity[] = ["critical", "high", "medium", "low"];
@@ -42,12 +42,11 @@ const THEMES = {
 };
 
 describe("severity ring tokens", () => {
-  it("maps the four severities to four distinct ring tokens, shared by finding rings and asset signals", () => {
+  it("maps the four severities to four distinct ring tokens, reserved for finding rings", () => {
     const rings = SEVERITIES.map((severity) => SEVERITY_RING_CLASSES[severity]);
     expect(new Set(rings).size).toBe(4);
     for (const severity of SEVERITIES) {
       expect(SEVERITY_RING_CLASSES[severity]).toContain(`var(--severity-ring-${severity})`);
-      expect(FINDING_SIGNAL_CLASSES[severity]).toContain(`var(--severity-ring-${severity})`);
     }
   });
 

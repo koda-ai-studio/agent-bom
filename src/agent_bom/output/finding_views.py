@@ -10,6 +10,7 @@ from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.compliance_utils import effective_blast_radius_tags
 from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import normalize_severity
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.finding import Finding, FindingType, blast_radius_to_finding
 from agent_bom.models import AIBOMReport, BlastRadius, Severity
 from agent_bom.security import sanitize_log_label, sanitize_text, text_requires_redaction
@@ -347,7 +348,7 @@ def ranked_cve_findings(
 ) -> list[Finding]:
     """Return top CVE findings by unified risk score for exposure-path views."""
     findings = cve_findings(report, blast_radii)
-    return sorted(findings, key=lambda finding: float(finding.risk_score or 0.0), reverse=True)[:limit]
+    return sorted(findings, key=risk_rank_key)[:limit]
 
 
 def topology_package_key(finding: Finding) -> tuple[str, str, str]:

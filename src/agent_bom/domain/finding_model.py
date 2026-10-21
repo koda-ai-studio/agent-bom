@@ -156,7 +156,8 @@ class Finding:
     entity_type: Optional[str] = None
 
     # Risk
-    risk_score: float = 0.0  # 0-10 unified risk score
+    # 0-10 unified risk score; None when no scorer assessed this finding (never a silent 0).
+    risk_score: Optional[float] = None
     reachability: Optional[str] = None
     graph_reachable: Optional[bool] = None
     graph_min_hop_distance: Optional[int] = None
@@ -429,7 +430,22 @@ class Finding:
             **self._advisory_payload(),
             **self._compliance_payload(),
             **self._reach_payload(),
+            **self._lineage_payload(),
             **self._workflow_payload(sla),
+        }
+
+    def _lineage_payload(self) -> dict:
+        """Dependency lineage of a package-backed finding, read from the same evidence the graph projects.
+
+        Omitted for findings that do not concern a package.
+        """
+        if "package_is_direct" not in self.evidence:
+            return {}
+        depth = self.evidence.get("package_dependency_depth")
+        return {
+            "is_direct": self.evidence.get("package_is_direct"),
+            "dependency_depth": depth if isinstance(depth, int) and not isinstance(depth, bool) else None,
+            "introduced_via": self.evidence.get("package_parent") or None,
         }
 
     def _identity_payload(self) -> dict:

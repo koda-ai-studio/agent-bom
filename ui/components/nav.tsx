@@ -987,13 +987,14 @@ function ApiStatus({ collapsed }: { collapsed: boolean }) {
   if (collapsed) {
     return (
       <div className="flex justify-center">
-        <span className={`w-2 h-2 rounded-full ${dotColor}`} title={status === "online" ? `Control plane online · v${version}` : status} />
+        <span className={`w-2 h-2 rounded-full ${dotColor}`} title={status === "online" ? (version ? `Control plane online · v${version}` : "Control plane online") : status} />
       </div>
     );
   }
 
-  const statusLabel = status === "online" ? `Control plane · v${version}` : status === "offline" ? "Control plane offline" : "Connecting…";
-  const phoneLabel = status === "online" ? `v${version}` : status === "offline" ? "Offline" : "Connecting…";
+  const onlineLabel = version ? `Control plane · v${version}` : "Control plane online";
+  const statusLabel = status === "online" ? onlineLabel : status === "offline" ? "Control plane offline" : "Connecting…";
+  const phoneLabel = status === "online" ? (version ? `v${version}` : "") : status === "offline" ? "Offline" : "Connecting…";
   return (
     <details className="relative min-w-0 text-xs text-ink-secondary">
       <summary aria-label={statusLabel} title={statusLabel} className="flex min-w-0 cursor-pointer list-none items-center gap-2 overflow-hidden rounded-lg px-1 py-1.5 sm:px-2 marker:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-emerald-500">

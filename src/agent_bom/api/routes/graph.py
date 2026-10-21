@@ -129,17 +129,18 @@ from agent_bom.api.graph_presentation import (
     _serialize_attack_path_batch as _serialize_attack_path_batch,
 )
 from agent_bom.api.graph_query import GraphQueryRequest, _filtered_query_graph, query_payload
-from agent_bom.api.graph_rollup_prewarm import load_rollup_source, rollup_cache_key
+from agent_bom.api.graph_rollup_prewarm import rollup_cache_key
 from agent_bom.api.graph_store import containment_drilldown_graph as containment_drilldown_graph
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import GraphNodeNeighborsResponse, GraphPageResponse, GraphPathsResponse, GraphRollupResponse
-from agent_bom.api.routes.graph_routes import _runtime, reads, schema_routes, views
+from agent_bom.api.routes.graph_routes import _runtime, reads, schema_routes, vendor_paths, views
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes._runtime import _get_graph_store_or_503 as _get_graph_store_or_503
 from agent_bom.api.routes.graph_routes._runtime import _graph_compute_call as _graph_compute_call
 from agent_bom.api.routes.graph_routes._runtime import _graph_store_call as _graph_store_call
 from agent_bom.api.routes.graph_routes._runtime import _tenant as _tenant
+from agent_bom.api.routes.graph_routes.canvas_view import CANVAS_VIEW_DESCRIPTION, GraphView
 from agent_bom.api.routes.graph_routes.page_edges import _page_edges
 from agent_bom.api.routes.graph_routes.params import _FILTERED_GRAPH_ATTACK_PATH_LIMIT as _FILTERED_GRAPH_ATTACK_PATH_LIMIT
 from agent_bom.api.routes.graph_routes.params import (
@@ -159,6 +160,7 @@ from agent_bom.api.routes.graph_routes.payloads import (
 from agent_bom.api.routes.graph_routes.payloads import _filtered_graph_response as _filtered_graph_response
 from agent_bom.api.routes.graph_routes.payloads import _fix_first_graph_view_payload as _fix_first_graph_view_payload
 from agent_bom.api.routes.graph_routes.payloads import _governance_graph_payload as _governance_graph_payload
+from agent_bom.api.routes.graph_routes.rollup_inputs import rollup_source, rollup_suppressions
 from agent_bom.api.routes.graph_routes.schema_routes import _RESERVED_GRAPH_EDGE_KINDS as _RESERVED_GRAPH_EDGE_KINDS
 from agent_bom.api.routes.graph_routes.schema_routes import _RESERVED_GRAPH_NODE_KINDS as _RESERVED_GRAPH_NODE_KINDS
 from agent_bom.api.stores import _get_graph_store as _get_graph_store
@@ -253,15 +255,16 @@ async def get_graph(
     cursor: Optional[str] = Query(None, description="Opaque cursor for keyset node pagination"),
     offset: int = Query(0, ge=0, description="Pagination offset for nodes"),
     limit: int = Query(500, ge=1, le=5000, description="Max nodes to return"),
+    view: GraphView | None = Query(None, description=CANVAS_VIEW_DESCRIPTION),
 ) -> Response:
     """Load the unified graph with filters and pagination.
 
     Nodes are paginated (offset/limit). ``edges`` carries up to 1,000 edges
     incident to the ranked page, plus containment context. Omitted relationships
     are declared by ``completeness.edges_truncated`` and remain pageable through
-    ``/v1/graph/incident-edges`` at the same revision. Edges may reach nodes
-    outside the page; this is not the subgraph induced by ``nodes``;
-    ``completeness.boundary_edges`` counts the edges that cross the boundary.
+    ``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the
+    returned edges ride along (``completeness.endpoint_nodes``), so every edge
+    lands on a returned node; ``completeness.boundary_edges`` counts any that do not.
 
     ``stats`` describe the graph this response was computed from, NOT the page:
     ``stats.total_nodes`` is every node that survived loading, and
@@ -338,7 +341,7 @@ async def get_graph(
                 verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(payload.get("nodes"))
             )
             payload["snapshot_generation"] = identity[1]
-        return await _runtime._graph_compute_call(_encoded_graph_response, payload)
+        return await _runtime._graph_compute_call(_encoded_graph_response, payload, view)
 
     try:
         effective_scan_id, created_at, paged_nodes, total, next_cursor = await _runtime._graph_store_call(
@@ -358,8 +361,13 @@ async def get_graph(
     source_attack_paths, attack_path_nodes = await page_attack_context(
         graph_store, scan_id=effective_scan_id, tenant_id=tenant, node_ids=paged_ids, call_store=_runtime._graph_store_call
     )
-    ancestor_nodes, ancestor_edges, stack_context = await page_context(
-        graph_store, scan_id=effective_scan_id, tenant_id=tenant, page_nodes=paged_nodes, call_store=_runtime._graph_store_call
+    ancestor_nodes, ancestor_edges, stack_context, endpoint_nodes = await page_context(
+        graph_store,
+        scan_id=effective_scan_id,
+        tenant_id=tenant,
+        page_nodes=paged_nodes,
+        call_store=_runtime._graph_store_call,
+        page_edges=paged_edges,
     )
     nodes_by_id = {node.id: node for node in [*paged_nodes, *attack_path_nodes, *ancestor_nodes]}
     snapshot_stats = await _runtime._graph_store_call(
@@ -392,9 +400,12 @@ async def get_graph(
         nodes_by_id=nodes_by_id,
         cursor=cursor,
         stack_context=stack_context,
+        view=view,
+        endpoint_nodes=endpoint_nodes,
     )
 
 
+router.include_router(vendor_paths.router)
 router.include_router(views.investigation_router)
 
 
@@ -795,6 +806,7 @@ async def get_graph_rollup(
     cache_identity = identity
     if identity is None and not offset:
         cache_identity = await _runtime._graph_store_call(snapshot_fingerprint, graph_store, tenant=tenant, scan_id=requested_scan_id)
+    suppressions = await rollup_suppressions(tenant)
     cache_key = None
     if cache_identity and cache_identity[1]:
         cache_key = rollup_cache_key(
@@ -808,6 +820,7 @@ async def get_graph_rollup(
             mode=mode,
             offset=offset,
             limit=limit,
+            suppressions=suppressions,
         )
         cached = graph_rollup_cache.get(cache_key)
         if cached is not None:
@@ -815,22 +828,7 @@ async def get_graph_rollup(
         requested_scan_id = cache_identity[0]
 
     node, resolved_from = await _runtime.resolve_node_id(graph_store, tenant, requested_scan_id, node) if node else (node, None)
-    try:
-        # A drill-down reads only one container's subtree (its cost tracks the
-        # answer, not the estate); the top level uses the store's aggregate-only
-        # roll-up projection when it has one; attack-path mode needs the full
-        # evidence records.
-        graph = await _runtime._graph_store_call(
-            load_rollup_source,
-            graph_store,
-            tenant_id=tenant,
-            scan_id=requested_scan_id,
-            node=node,
-            mode=mode,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
-
+    graph, suppressed = await rollup_source(graph_store, tenant, requested_scan_id, node, mode)
     try:
         payload = await _runtime._graph_compute_call(
             _graph_rollup_payload,
@@ -843,6 +841,7 @@ async def get_graph_rollup(
             offset=offset,
             limit=limit,
             graph_store=graph_store,
+            suppressed_finding_ids=suppressed,
         )
         if identity is not None:
             await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(graph.nodes))

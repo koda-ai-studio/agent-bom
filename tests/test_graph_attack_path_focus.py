@@ -193,3 +193,16 @@ def test_control_focus_requires_both_framework_and_control(api, monkeypatch):  #
     _control_snapshot(monkeypatch, [])
     response = client.get("/v1/graph/attack-paths", params={"scan_id": "advisory-scan", "control": "CIS-02.6"}, headers=headers["tenant-a"])
     assert response.status_code == 400
+
+
+def test_advisory_alone_returns_only_paths_carrying_it(api):  # noqa: F811
+    client, store, headers = api
+    store.save_graph(_advisory_graph("tenant-a"))
+    params = {"scan_id": "advisory-scan", "limit": 10}
+    both = client.get("/v1/graph/attack-paths", params=params | {"advisory_id": "CVE-2023-36258"}, headers=headers["tenant-a"]).json()
+    assert sorted(path["source"] for path in both["attack_paths"]) == ["agent:other", "agent:svc"]
+    assert both["focus"]["matched_by"] == "advisory"
+    unknown = client.get("/v1/graph/attack-paths", params=params | {"advisory_id": "CVE-0000-0000"}, headers=headers["tenant-a"]).json()
+    assert unknown["attack_paths"] == []
+    assert unknown["pagination"]["total"] == 0
+    assert unknown["focus"]["advisory_id"] == "CVE-0000-0000"

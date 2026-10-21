@@ -7,6 +7,7 @@ import type { CISBenchmarkCheck } from "@/lib/api";
 const { apiMock } = vi.hoisted(() => ({
   apiMock: {
     listCisBenchmarkChecks: vi.fn(),
+    searchGraph: vi.fn(),
   },
 }));
 
@@ -41,6 +42,8 @@ const writeText = vi.fn().mockResolvedValue(undefined);
 
 beforeEach(() => {
   apiMock.listCisBenchmarkChecks.mockReset();
+  apiMock.searchGraph.mockReset();
+  apiMock.searchGraph.mockResolvedValue({ query: "", results: [], pagination: { total: 0, offset: 0, limit: 5, has_more: false } });
   writeText.mockClear();
   Object.defineProperty(navigator, "clipboard", {
     value: { writeText },
@@ -189,5 +192,56 @@ describe("CISBenchmarkDetail", () => {
     expect(within(filters).getByRole("button", { name: "AWS" })).toBeInTheDocument();
     expect(within(filters).getByRole("button", { name: "GCP" })).toBeInTheDocument();
     expect(within(filters).queryByRole("button", { name: "Azure" })).not.toBeInTheDocument();
+  });
+
+  it("gives each check exactly one status; the review flag belongs to a fix", async () => {
+    apiMock.listCisBenchmarkChecks.mockResolvedValue({
+      checks: [
+        makeCheck({ check_id: "1.20", title: "Analyzer enabled", status: "pass", requires_human_review: true }),
+        makeCheck({ check_id: "4.1", title: "No open SSH", status: "fail", requires_human_review: true, fix_console: "EC2 > Security groups" }),
+      ],
+      count: 2, source: "scan_jobs",
+    });
+    render(<CISBenchmarkDetail />);
+    const passCard = (await screen.findByText("Analyzer enabled")).closest("[data-testid='cis-check']") as HTMLElement;
+    const passBadges = within(passCard).getAllByTestId("cis-check-status");
+    expect(passBadges.map((badge) => badge.textContent)).toEqual(["Pass"]);
+    expect(within(passCard).queryByText(/review/i)).toBeNull();
+    const failCard = screen.getByText("No open SSH").closest("[data-testid='cis-check']") as HTMLElement;
+    expect(within(failCard).getAllByTestId("cis-check-status").map((badge) => badge.textContent)).toEqual(["Fail"]);
+    expect(within(failCard).getByText("Fix requires human review before applying")).toBeInTheDocument();
+  });
+
+  it("links a failing check's resources to the graph and their findings", async () => {
+    apiMock.listCisBenchmarkChecks.mockResolvedValue({
+      checks: [makeCheck({ check_id: "2.1.5", title: "Block public access", status: "fail", resource_ids: ["customer-pii-prod"] })],
+      count: 1, source: "scan_jobs",
+    });
+    apiMock.searchGraph.mockResolvedValue({
+      query: "customer-pii-prod",
+      results: [
+        { id: "misconfig:showcase:pii-public", entity_type: "misconfiguration", label: "S3 bucket customer-pii-prod is publicly readable" },
+        { id: "cloud:pii-bucket", entity_type: "cloud_resource", label: "customer-pii-prod (S3)" },
+      ],
+      pagination: { total: 2, offset: 0, limit: 5, has_more: false },
+    });
+    render(<CISBenchmarkDetail />);
+    const list = await screen.findByRole("list", { name: "Resources failing 2.1.5" });
+    const graph = await within(list).findByRole("link", { name: "Open customer-pii-prod (S3) in the graph" });
+    expect(graph).toHaveAttribute("href", "/security-graph?lens=lineage&investigate=1&root=cloud%3Apii-bucket&node=cloud%3Apii-bucket");
+    expect(within(list).getByRole("link", { name: "Findings on customer-pii-prod" })).toHaveAttribute("href", "/findings?q=customer-pii-prod");
+    expect(apiMock.searchGraph).toHaveBeenCalledWith("customer-pii-prod", expect.objectContaining({ limit: 5 }));
+  });
+
+  it("keeps an unresolved resource honest: no graph link, findings search only", async () => {
+    apiMock.listCisBenchmarkChecks.mockResolvedValue({
+      checks: [makeCheck({ check_id: "3.7", title: "Storage private", status: "fail", resource_ids: ["stpiiprod"] })],
+      count: 1, source: "scan_jobs",
+    });
+    render(<CISBenchmarkDetail />);
+    const list = await screen.findByRole("list", { name: "Resources failing 3.7" });
+    await waitFor(() => expect(within(list).getByText("Not in the current graph")).toBeInTheDocument());
+    expect(within(list).queryByRole("link", { name: /in the graph/ })).toBeNull();
+    expect(within(list).getByRole("link", { name: "Findings on stpiiprod" })).toBeInTheDocument();
   });
 });

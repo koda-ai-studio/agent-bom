@@ -207,14 +207,6 @@ export const SEVERITY_RING_CLASSES: Record<RingSeverity, string> = {
   low: "border-[color:var(--severity-ring-low)]",
 };
 
-/** An asset that links to findings gets a small dot in the same hue, never a ring. */
-export const FINDING_SIGNAL_CLASSES: Record<RingSeverity, string> = {
-  critical: "bg-[color:var(--severity-ring-critical)]",
-  high: "bg-[color:var(--severity-ring-high)]",
-  medium: "bg-[color:var(--severity-ring-medium)]",
-  low: "bg-[color:var(--severity-ring-low)]",
-};
-
 /** A finding's recorded severity when it is one of the four rated tiers. */
 export function findingRingSeverity(data: Pick<NodeBadgeInput, "nodeType" | "severity">): RingSeverity | null {
   if (!FINDING_TYPES.has(data.nodeType)) return null;
@@ -233,14 +225,12 @@ function badgeLegendLabel(badge: NodeBadge): string {
 /** Legend rows for the badges actually rendered on the given nodes. */
 export function badgeLegendItems(nodes: Array<{ data?: unknown }>): LegendItem[] {
   const badges = new Map<string, NodeBadge>();
-  const rings = new Set<RingSeverity>();
   const findings = new Set<RingSeverity>();
   for (const node of nodes) {
     const data = node.data as Partial<NodeBadgeInput> | undefined;
     if (!data || typeof data.nodeType !== "string") continue;
     const result = nodeBadges(data as NodeBadgeInput);
     for (const badge of result.badges) badges.set(`${badge.kind}:${badge.value}`, badge);
-    if (result.ring) rings.add(result.ring.severity);
     const finding = findingRingSeverity(data as NodeBadgeInput);
     if (finding) findings.add(finding);
   }
@@ -256,11 +246,6 @@ export function badgeLegendItems(nodes: Array<{ data?: unknown }>): LegendItem[]
       label: `${severity.charAt(0).toUpperCase()}${severity.slice(1)} finding`,
       color: "", layer: "badge", kind: "badge", ring: severity,
       description: "The ring around a finding or CVE is its severity; scores are in the tooltip and inspector",
-    })),
-    ...RING_ORDER.filter((severity) => rings.has(severity)).map((severity): LegendItem => ({
-      label: `Linked ${severity} findings`,
-      color: "", layer: "badge", kind: "badge", signal: severity,
-      description: "Dot on an asset that links to findings or carries an assessed risk, in the highest severity's colour",
     })),
   ];
 }

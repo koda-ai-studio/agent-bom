@@ -11,7 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from agent_bom.cloud.normalization import coerce_bool_or_none, coerce_truthy
+from agent_bom.cloud.normalization import coerce_bool_or_none
+from agent_bom.core.cloud_identity import cloud_resource_node_id
 from agent_bom.graph.builder_network_edges import _GCP_LB_COLLECTION, _NETWORK_EDGE_COLLECTIONS
 from agent_bom.graph.builder_network_exposure import _add_exposure_path_edge
 from agent_bom.graph.cloud_context import _add_account_resource_hierarchy, _recorded_exposure_attributes
@@ -36,17 +37,23 @@ class _NetworkInventoryContext:
     ref_to_node: dict[str, str] = field(default_factory=dict)
     subnet_node_by_id: dict[str, str] = field(default_factory=dict)
 
+    def node_id(self, kind: str, record: dict[str, Any], native: str) -> str:
+        return cloud_resource_node_id(self.provider, kind, {**record, "id": native}, self.account_id, self.region)
+
     def index_resource_refs(self) -> None:
-        # Index existing resource nodes by their native id/arn/name so a WAF / API
-        # gateway's protected-target reference resolves to the real node.
+        # Provider identifiers are bindings. Display names are not identity.
         for nid in self.resource_ids:
             node = self.graph.nodes.get(nid)
             if node is None:
                 continue
-            for key in ("resource_id", "resource_name"):
+            # The canonical resource key distinguishes name-only fallbacks.
+            if ":scoped/" in node.id and "/name/" in node.id:
+                continue
+            for key in ("resource_id",):
                 ref = _clean_graph_part(node.attributes.get(key))
                 if ref:
-                    self.ref_to_node.setdefault(ref, nid)
+                    previous = self.ref_to_node.get(ref, nid)
+                    self.ref_to_node[ref] = nid if previous == nid else ""
 
     def link_account(self, node_id: str) -> None:
         self.resource_ids.append(node_id)
@@ -91,6 +98,7 @@ class _NetworkInventoryContext:
                     source=source_node_id,
                     target=target_node_id,
                     relationship=RelationshipType.PROTECTS,
+                    traversable=False,
                     weight=4.0,
                     evidence={"source": "cloud-inventory", "reason": reason},
                 )
@@ -114,12 +122,12 @@ def _dict_items(inventory: dict[str, Any], key: str) -> list[dict[str, Any]]:
 
 
 def _add_subnets(ctx: _NetworkInventoryContext, inventory: dict[str, Any]) -> None:
-    """Subnets (public subnet = internet-reachable)."""
+    """Subnets with recorded route classification, not effective reachability."""
     for sn in _dict_items(inventory, "subnets"):
         sn_id = _clean_graph_part(sn.get("id"))
         if not sn_id:
             continue
-        node_id = f"cloud_resource:{ctx.provider}:network:subnet:{sn_id}"
+        node_id = ctx.node_id("network:subnet", sn, sn_id)
         ctx.subnet_node_by_id[sn_id] = node_id
         ctx.emit_resource(
             node_id=node_id,
@@ -130,6 +138,7 @@ def _add_subnets(ctx: _NetworkInventoryContext, inventory: dict[str, Any]) -> No
             name=_clean_graph_part(sn.get("name")) or sn_id,
             attrs={
                 "resource_id": sn_id,
+                "location": _clean_graph_part(sn.get("location")) or ctx.region,
                 "vpc_id": _clean_graph_part(sn.get("vpc_id")),
                 "cidr": _clean_graph_part(sn.get("cidr")),
                 "is_public": coerce_bool_or_none(sn.get("is_public")),
@@ -149,7 +158,7 @@ def _add_edge_resources(ctx: _NetworkInventoryContext, inventory: dict[str, Any]
             if not ident:
                 continue
             ctx.emit_resource(
-                node_id=f"cloud_resource:{ctx.provider}:{svc}:{rtype}:{ident}",
+                node_id=ctx.node_id(f"{svc}:{rtype}", item, ident),
                 service=svc,
                 rtype=rtype,
                 kind=kind,
@@ -157,6 +166,7 @@ def _add_edge_resources(ctx: _NetworkInventoryContext, inventory: dict[str, Any]
                 name=_clean_graph_part(item.get("name")) or ident,
                 attrs={
                     "resource_id": ident,
+                    "location": _clean_graph_part(item.get("location")) or ctx.region,
                     "vpc_id": _clean_graph_part(item.get("vpc_id")),
                     **_recorded_exposure_attributes(item, "internet_exposed"),
                     "has_internet_route": bool(item.get("has_internet_route")),
@@ -172,7 +182,7 @@ def _add_ip_addresses(ctx: _NetworkInventoryContext, inventory: dict[str, Any]) 
         address = _clean_graph_part(ip.get("address"))
         if not address:
             continue
-        node_id = f"cloud_resource:{ctx.provider}:network:ip_address:{address}"
+        node_id = ctx.node_id("network:ip_address", ip, address)
         ctx.emit_resource(
             node_id=node_id,
             service="network",
@@ -196,11 +206,8 @@ def _wire_network_interface(ctx: _NetworkInventoryContext, eni: dict[str, Any], 
     instance_node_id = ctx.instance_node_by_id.get(_clean_graph_part(eni.get("instance_id")))
     if instance_node_id:
         ctx.part_of(node_id, instance_node_id)
-        # A public IP on the ENI makes the attached instance internet-reachable.
+        # Address attachment is configuration, not effective ingress evidence.
         if public_ip:
-            inst_node = ctx.graph.nodes.get(instance_node_id)
-            if inst_node is not None:
-                inst_node.attributes["internet_exposed"] = True
             _add_exposure_path_edge(ctx.graph, source=node_id, target=instance_node_id, reason="eni_public_ip")
     subnet_node_id = ctx.subnet_node_by_id.get(_clean_graph_part(eni.get("subnet_id")))
     if subnet_node_id:
@@ -217,7 +224,7 @@ def _add_network_interfaces(ctx: _NetworkInventoryContext, inventory: dict[str, 
         eni_id = _clean_graph_part(eni.get("id"))
         if not eni_id:
             continue
-        node_id = f"cloud_resource:{ctx.provider}:network:network_interface:{eni_id}"
+        node_id = ctx.node_id("network:network_interface", eni, eni_id)
         public_ip = _clean_graph_part(eni.get("public_ip"))
         ctx.emit_resource(
             node_id=node_id,
@@ -245,7 +252,7 @@ def _add_web_acls(ctx: _NetworkInventoryContext, inventory: dict[str, Any]) -> N
         if not acl_id:
             continue
         name = _clean_graph_part(acl.get("name")) or acl_id
-        node_id = f"cloud_resource:{ctx.provider}:waf:web_acl:{acl_id}"
+        node_id = ctx.node_id("waf:web_acl", acl, acl_id)
         ctx.emit_resource(
             node_id=node_id,
             service="waf",
@@ -256,10 +263,6 @@ def _add_web_acls(ctx: _NetworkInventoryContext, inventory: dict[str, Any]) -> N
             attrs={"resource_id": _clean_graph_part(acl.get("arn")) or acl_id, "scope": _clean_graph_part(acl.get("scope"))},
         )
         ctx.protect(node_id, acl.get("protected_targets", []), "waf_web_acl_association")
-        waf_node = ctx.graph.nodes.get(node_id)
-        if waf_node is not None:
-            waf_node.attributes["internet_exposed"] = True
-        ctx.expose_targets(node_id, acl.get("protected_targets", []), "waf_internet_entry")
 
 
 def _api_gateway_items(inventory: dict[str, Any]) -> list[Any]:
@@ -272,7 +275,7 @@ def _api_gateway_items(inventory: dict[str, Any]) -> list[Any]:
                     "id": apim.get("id") or apim.get("name"),
                     "protocol": "apim",
                     "endpoint": apim.get("gateway_url") or apim.get("endpoint") or "",
-                    "internet_exposed": True,
+                    "internet_exposed": apim.get("internet_exposed"),
                     "stages": [],
                     "protected_targets": apim.get("protected_targets", []),
                     "location": apim.get("location"),
@@ -283,7 +286,7 @@ def _api_gateway_items(inventory: dict[str, Any]) -> list[Any]:
 
 def _add_api_gateway(ctx: _NetworkInventoryContext, api: dict[str, Any], api_id: str) -> str:
     name = _clean_graph_part(api.get("name")) or api_id
-    node_id = f"api_gateway:{ctx.provider}:{api_id}"
+    node_id = ctx.node_id("api_gateway", api, api_id).replace("cloud_resource:", "api_gateway:", 1)
     ctx.graph.add_node(
         UnifiedNode(
             id=node_id,
@@ -319,9 +322,9 @@ def _add_api_gateways(ctx: _NetworkInventoryContext, inventory: dict[str, Any]) 
         if not api_id:
             continue
         node_id = _add_api_gateway(ctx, api, api_id)
-        ctx.protect(node_id, api.get("protected_targets", []), "api_gateway_frontend")
-        if coerce_truthy(api.get("internet_exposed")):
-            ctx.expose_targets(node_id, api.get("protected_targets", []), "internet_facing_api_gateway")
+        # A configured frontend/backend binding says nothing about security
+        # controls; an API gateway is not itself a WAF mitigation receipt.
+        ctx.expose_targets(node_id, api.get("protected_targets", []), "api_gateway_frontend")
 
 
 NETWORK_INVENTORY_STAGES = (

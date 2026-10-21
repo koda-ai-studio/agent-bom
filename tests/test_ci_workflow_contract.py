@@ -290,8 +290,8 @@ def test_test_job_timeout_leaves_margin_over_observed_worst_case() -> None:
 
 
 def test_changed_domain_timeout_covers_broad_selections() -> None:
-    """A security change can select nearly the full suite, plus setup time."""
-    assert 30 <= _ci()["jobs"]["test-smoke"]["timeout-minutes"] <= 45
+    """Broad graph selections reached 90% at 30 minutes; retain bounded headroom."""
+    assert _ci()["jobs"]["test-smoke"]["timeout-minutes"] == 45
 
 
 def test_full_correctness_matrix_covers_every_supported_python_minor() -> None:
@@ -414,7 +414,8 @@ def test_shards_run_the_whole_suite_on_the_merge_result() -> None:
     assert shard["strategy"]["fail-fast"] is False
     indexes = shard["strategy"]["matrix"]["shard"]
     assert indexes == list(range(len(indexes))) and len(indexes) >= 2
-    assert shard["timeout-minutes"] <= 20
+    # The largest graph shard reached 68% at the former 20-minute ceiling.
+    assert shard["timeout-minutes"] == 45
     assert "cancel-in-progress" not in shard.get("concurrency", {})
 
     run = next(step["run"] for step in shard["steps"] if step.get("name") == SHARD_STEP)
@@ -1025,3 +1026,25 @@ def test_required_context_rejects_missing_or_failed_compatibility_proof() -> Non
                 result = subprocess.run(["bash", "-c", step["run"]], env=env, capture_output=True)
                 expected = outcome == "success" or (outcome == "skipped" and required == "false")
                 assert (result.returncode == 0) == expected, (lane, required, outcome)
+
+
+def test_changed_domain_smoke_distributes_large_test_modules_between_workers() -> None:
+    job = _ci()["jobs"]["test-smoke"]
+    command = next(step["run"] for step in job["steps"] if step.get("name") == "Run changed-domain and cross-surface smoke")
+    assert "-n 2 --dist worksteal" in command
+    assert "-v --tb=short" in command
+
+
+def test_changed_domain_smoke_shards_keep_every_selected_test_required() -> None:
+    jobs = _ci()["jobs"]
+    smoke = jobs["test-smoke"]
+    assert smoke["strategy"] == {"fail-fast": False, "max-parallel": 2, "matrix": {"shard": [0, 1]}}
+    command = next(step["run"] for step in smoke["steps"] if step.get("name") == "Run changed-domain and cross-surface smoke")
+    assert 'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 2 --files "${TESTS[@]}"' in command
+    assert 'if [ "${#TESTS[@]}" -eq 0 ]' in command
+    assert '[ -z "${TESTS[0]}" ]' in command
+    assert "test-smoke" in jobs["test-core"]["needs"]
+    assert "test-core" in jobs["test"]["needs"]
+    gate = next(step for step in jobs["test-core"]["steps"] if step.get("name") == "Require every applicable correctness lane")
+    assert gate["env"]["SMOKE_RESULT"] == "${{ needs.test-smoke.result }}"
+    assert 'if [ "$SMOKE_RESULT" != "success" ]; then' in gate["run"]

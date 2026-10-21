@@ -51,12 +51,12 @@ describe("finding nodes on the canvas", () => {
 });
 
 describe("assets with linked findings", () => {
-  it("carry a small severity dot, never the full ring reserved for findings", () => {
-    const root = renderNode("packageNode", { label: "next@15.2.2", nodeType: "package", severity: "high", vulnCount: 2 });
+  it.each(["packageNode", "containerNode", "providerNode", "serverNode"] as const)("keeps recorded asset risk in the tooltip, without a repeated dot on %s", (type) => {
+    const nodeType = { packageNode: "package", containerNode: "container", providerNode: "account", serverNode: "server" }[type] as LineageNodeData["nodeType"];
+    const root = renderNode(type, { label: "asset", nodeType, severity: "high", vulnCount: 2 });
     expect(root.querySelectorAll("[data-severity-ring]")).toHaveLength(0);
-    const dot = root.querySelector("[data-finding-signal]");
-    expect(dot?.getAttribute("data-finding-signal")).toBe("high");
-    expect(dot?.getAttribute("aria-label")).toBe("Recorded severity: high · 2 linked findings");
+    expect(root.querySelector("[data-finding-signal]")).toBeNull();
+    expect(root.querySelector("[data-graph-entity]")?.getAttribute("title")).toContain("2 linked findings");
   });
 });
 

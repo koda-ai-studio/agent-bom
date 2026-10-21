@@ -57,11 +57,34 @@ def _seed(store: InMemoryJobStore, *, tenant: str, scan_id: str, agent: str, day
 
 
 @pytest.fixture()
-def store():
+def graph_store(tmp_path):
+    from agent_bom.api import stores as api_stores
+    from agent_bom.api.graph_store import SQLiteGraphStore
+
+    original = api_stores._graph_store
+    graph = SQLiteGraphStore(tmp_path / "context-graph.db")
+    api_stores.set_graph_store(graph)
+    yield graph
+    api_stores._graph_store = original
+
+
+@pytest.fixture()
+def store(graph_store):
     job_store = InMemoryJobStore()
     set_job_store(job_store)
     yield job_store
     set_job_store(None)
+
+
+def _seed_estate_graph(graph_store, *, tenant: str, agent: str) -> None:
+    from agent_bom.graph import UnifiedEdge, UnifiedGraph, UnifiedNode
+    from agent_bom.graph.types import EntityType, RelationshipType
+
+    graph = UnifiedGraph(scan_id=f"estate-{tenant}", tenant_id=tenant)
+    graph.add_node(UnifiedNode(id=f"agent:{agent}", entity_type=EntityType.AGENT, label=agent))
+    graph.add_node(UnifiedNode(id=f"server:{agent}", entity_type=EntityType.SERVER, label=f"{agent}-server"))
+    graph.add_edge(UnifiedEdge(source=f"agent:{agent}", target=f"server:{agent}", relationship=RelationshipType.USES))
+    graph_store.save_graph(graph)
 
 
 def _forbidden_pipeline(*_args, **_kwargs):
@@ -153,3 +176,78 @@ async def test_config_path_implies_live_discovery(store) -> None:
 
     assert calls == ["/tmp/cfg"]
     assert "error" in payload
+
+
+@pytest.mark.asyncio
+async def test_another_tenants_estate_graph_is_never_returned(store, graph_store) -> None:
+    _seed(store, tenant="default", scan_id="scan-a", agent="agent-a", day=1)
+    _seed_estate_graph(graph_store, tenant="tenant-b", agent="estate-b")
+
+    payload = await _call(tenant_id="default")
+    assert payload["source"] == "persisted_snapshot"
+    assert _agent_labels(payload) == {"agent-a"}
+    assert "estate-b" not in json.dumps(payload)
+
+
+@pytest.mark.asyncio
+async def test_the_estate_graph_is_the_default_source(store, graph_store) -> None:
+    """The graph REST serves for the tenant answers first, paged, with its own coverage."""
+    _seed_estate_graph(graph_store, tenant="tenant-b", agent="estate-b")
+    _seed_estate_graph(graph_store, tenant="default", agent="estate-a")
+
+    payload = await _call(tenant_id="default")
+    assert payload["source"] == "current_estate_graph"
+    assert _agent_labels(payload) == {"estate-a"}
+    assert payload["estate_coverage"]["current_estate_agents"] == 1
+    assert payload["pagination"]["has_more"] is False
+    assert payload["completeness"]["complete"] is True
+    assert "estate-b" not in json.dumps(payload)
+
+
+def _seed_dependency_chain(graph_store, *, length: int) -> None:
+    from agent_bom.graph import UnifiedEdge, UnifiedGraph, UnifiedNode
+    from agent_bom.graph.types import EntityType, RelationshipType
+
+    graph = UnifiedGraph(scan_id="estate-chain", tenant_id="default")
+    graph.add_node(UnifiedNode(id="agent:chain", entity_type=EntityType.AGENT, label="chain-agent"))
+    graph.add_node(UnifiedNode(id="server:chain", entity_type=EntityType.SERVER, label="chain-server"))
+    graph.add_edge(UnifiedEdge(source="agent:chain", target="server:chain", relationship=RelationshipType.USES))
+    previous = "server:chain"
+    for index in range(length):
+        package = f"pkg:npm:dep{index}@1.0.0"
+        graph.add_node(
+            UnifiedNode(
+                id=package, entity_type=EntityType.PACKAGE, label=f"dep{index}@1.0.0", attributes={"version": "1.0.0", "ecosystem": "npm"}
+            )
+        )
+        graph.add_edge(UnifiedEdge(source=previous, target=package, relationship=RelationshipType.DEPENDS_ON))
+        previous = package
+    graph.add_node(
+        UnifiedNode(
+            id="vuln:CVE-2026-0001",
+            entity_type=EntityType.VULNERABILITY,
+            label="CVE-2026-0001",
+            severity="high",
+            attributes={"vulnerability_id": "CVE-2026-0001"},
+        )
+    )
+    graph.add_edge(UnifiedEdge(source=previous, target="vuln:CVE-2026-0001", relationship=RelationshipType.VULNERABLE_TO))
+    graph_store.save_graph(graph)
+
+
+@pytest.mark.asyncio
+async def test_transitive_dependencies_reach_their_advisories_within_the_holder_depth(store, graph_store) -> None:
+    from agent_bom.graph.component_paths import MAX_HOLDER_DEPTH
+
+    _seed_dependency_chain(graph_store, length=3)
+    payload = await _call(tenant_id="default")
+    assert payload["source"] == "current_estate_graph"
+    labels = {node["label"] for node in payload["nodes"] if node["kind"] == "vulnerability"}
+    assert labels == {"CVE-2026-0001"}, payload["nodes"]
+    assert payload["completeness"]["complete"] is True
+
+    _seed_dependency_chain(graph_store, length=MAX_HOLDER_DEPTH + 2)
+    deep = await _call(tenant_id="default")
+    assert not [node for node in deep["nodes"] if node["kind"] == "vulnerability"]
+    assert deep["completeness"]["complete"] is False
+    assert "depth" in deep["completeness"]["reason"]

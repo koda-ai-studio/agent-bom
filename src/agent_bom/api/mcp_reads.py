@@ -15,12 +15,14 @@ from agent_bom.api.finding_view_filters import _finding_triage_state
 from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.graph_diff_read import graph_diff_read
 from agent_bom.api.graph_estate_changes import graph_estate_changes_read
-from agent_bom.api.mcp_blast_reads import apply_holders as apply_holders
 from agent_bom.api.mcp_blast_reads import blast_holders as blast_holders
 from agent_bom.api.mcp_blast_reads import public_holders as public_holders
 from agent_bom.api.mcp_blast_reads import stamp_rows as stamp_rows
+from agent_bom.api.mcp_context_estate import estate_context_page as estate_context_page
 from agent_bom.api.routes.compliance import get_compliance_by_framework, get_compliance_summary
+from agent_bom.api.routes.compliance_routes.common import estate_agent_count
 from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
+from agent_bom.api.routes.graph_routes.vendor_paths import get_cross_vendor_attack_paths as get_cross_vendor_attack_paths
 from agent_bom.api.routes.scan import list_findings
 from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant, _completed_jobs_for_tenant, iter_tenant_scan_spine_findings
 from agent_bom.finding_scope import safe_finding_response_payload
@@ -57,6 +59,12 @@ def persisted_scan_report(tenant_id: str, scan_id: str | None = None) -> dict[st
     return {"available": bool(jobs), "agents": agents, "blast_radius": blast_radius, "scan_ids": sorted(set(scan_ids))}
 
 
+def current_estate_agent_total(tenant_id: str) -> int | None:
+    """Agents in the tenant's current estate graph, the count ``/v1/posture/counts`` reports."""
+    total = estate_agent_count(tenant_id)["total"]
+    return None if total is None else int(total)
+
+
 def triage_state(tenant_id: str, row: dict[str, Any]) -> dict[str, Any] | None:
     """The newest active triage/VEX decision matching one finding row."""
     return _finding_triage_state(row, build_tenant_triage_state_index(tenant_id))
@@ -64,6 +72,7 @@ def triage_state(tenant_id: str, row: dict[str, Any]) -> dict[str, Any] | None:
 
 __all__ = [
     "HTTPException",
+    "current_estate_agent_total",
     "get_compliance_by_framework",
     "get_compliance_summary",
     "graph_diff_read",

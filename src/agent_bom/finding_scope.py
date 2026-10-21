@@ -24,10 +24,13 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
+from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, normalize_framework_slug
+from agent_bom.domain.framework_evidence import _framework_control_codes as _framework_control_codes
+from agent_bom.domain.framework_evidence import framework_evidence_slugs as framework_evidence_slugs
 from agent_bom.evidence.asset_display import iac_source_label
 from agent_bom.evidence.finding_lanes import finding_lane, lane_response_fields
 from agent_bom.evidence.finding_reach_sources import safe_reach_sources
-from agent_bom.evidence.finding_response_fields import restore_atlas_receipts, restored_public_fields
+from agent_bom.evidence.finding_response_fields import restore_atlas_receipts, restored_public_fields, safe_lineage_fields
 from agent_bom.evidence.finding_status import public_finding_status
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -684,7 +687,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(ordinal, int) and not isinstance(ordinal, bool) and 0 <= ordinal <= 2**63 - 1:
         payload["bulk_ordinal"] = ordinal
 
-    payload.update(public_finding_status(row))
+    payload.update({**public_finding_status(row), **safe_lineage_fields(row)})
 
     for key, max_len in (
         ("source", 64),
@@ -842,36 +845,6 @@ def row_matches_search(row: Mapping[str, object], query: str | None) -> bool:
     return False
 
 
-def _framework_control_codes(row: Mapping[str, Any], tag_field: str, framework_key: str) -> set[str]:
-    """Collect one framework's control codes from every representation on a row.
-
-    A scan finding may carry its framework controls three ways: the per-framework
-    tag list (``soc2_tags``), the structured ``controls`` list, and the flattened
-    ``framework_tags`` (``"soc2:CC6.1"``). All are read, but strictly scoped to
-    ``framework_key`` so a code is never matched against another framework's
-    namespace — the flat ``compliance_tags`` union is deliberately NOT consulted.
-    """
-    codes: set[str] = set()
-    raw = row.get(tag_field)
-    if isinstance(raw, (list, tuple, set)):
-        codes.update(str(tag) for tag in raw)
-    controls = row.get("controls")
-    if isinstance(controls, list):
-        for control in controls:
-            if isinstance(control, dict) and str(control.get("framework") or "") == framework_key:
-                code = control.get("control") or control.get("id")
-                if code:
-                    codes.add(str(code))
-    framework_tags = row.get("framework_tags")
-    if isinstance(framework_tags, list):
-        prefix = f"{framework_key}:"
-        for tag in framework_tags:
-            text = str(tag)
-            if text.startswith(prefix):
-                codes.add(text[len(prefix) :])
-    return codes
-
-
 def _row_matches_framework(row: Mapping[str, Any], filters: Mapping[str, str]) -> bool:
     """Framework / control drill-through predicate (compliance → findings).
 
@@ -899,17 +872,8 @@ def _row_matches_framework(row: Mapping[str, Any], filters: Mapping[str, str]) -
 
     if control:
         return control in codes
-    from agent_bom.compliance_coverage import normalize_framework_slug, scored_control_codes
-
-    if scored_control_codes(tag_field, codes):
-        return True
-    slug = filters.get("framework_slug")
-    if slug and row.get("origin") == "bulk_ingest":
-        wanted = normalize_framework_slug(slug)
-        applicable = row.get("applicable_frameworks")
-        if isinstance(applicable, (list, tuple, set)):
-            return any(normalize_framework_slug(str(item)) == wanted for item in applicable)
-    return False
+    slug = filters.get("framework_slug") or next((m.slug for m in TAG_MAPPED_FRAMEWORKS if m.tag_field == tag_field), "")
+    return bool(slug) and normalize_framework_slug(slug) in framework_evidence_slugs(row)
 
 
 def _row_matches_assignment(row: dict, filters: Mapping[str, str]) -> bool:

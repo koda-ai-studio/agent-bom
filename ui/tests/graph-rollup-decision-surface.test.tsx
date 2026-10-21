@@ -151,7 +151,7 @@ describe("GraphRollupDecisionSurface", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open scope" }));
     expect(onDrill).toHaveBeenCalledWith(critical);
-    fireEvent.click(screen.getByRole("button", { name: /Connections/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Show direct neighbors of Scope critical on the canvas" }));
     expect(onInvestigate).toHaveBeenCalledWith(critical);
   });
 

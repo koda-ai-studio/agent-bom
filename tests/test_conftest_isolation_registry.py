@@ -20,6 +20,7 @@ import importlib
 import os
 import sys
 import time
+from types import SimpleNamespace
 
 import pytest
 
@@ -28,6 +29,31 @@ import pytest
 # path and import it explicitly.
 sys.path.insert(0, os.path.dirname(__file__))
 import conftest  # noqa: E402
+
+
+@pytest.mark.parametrize("closed", [False, True])
+def test_store_restore_never_revives_a_closed_postgres_pool(closed) -> None:
+    pool = SimpleNamespace(closed=False)
+    store = SimpleNamespace(_pool=pool)
+    module = SimpleNamespace(_store=store)
+    snapshot = [(module, "_store", store)]
+    # A lifespan shutdown or explicit restart closes the captured pool.
+    pool.closed = closed
+    module._store = None
+    conftest._restore_store_singletons(snapshot)
+    assert module._store is (None if closed else store)
+
+
+@pytest.mark.parametrize("closed", [False, True])
+def test_store_snapshot_discards_pool_closed_after_previous_teardown(monkeypatch, closed) -> None:
+    from agent_bom.api import stores
+
+    store = SimpleNamespace(_pool=SimpleNamespace(closed=closed))
+    monkeypatch.setattr(stores, "_store", store)
+    snapshot = conftest._snapshot_store_singletons()
+    captured = next(value for module, name, value in snapshot if module is stores and name == "_store")
+    assert captured is (None if closed else store)
+    assert stores._store is captured
 
 
 def test_runtime_reset_clears_mcp_rate_windows_without_disabling_limits(monkeypatch) -> None:
@@ -132,7 +158,8 @@ async def test_api_reset_discards_previous_agents_response(monkeypatch) -> None:
     tenant = "cache-isolation"
     old = {"agents": [{"canonical_id": "previous-app-agent"}], "count": 1}
     current = {"agents": [{"canonical_id": "current-app-agent"}], "count": 1}
-    discovery._agents_response_cache[tenant] = (time.monotonic(), old)
+    revision = discovery.job_revision(discovery._get_store(), tenant)
+    discovery._agents_response_cache[tenant] = (time.monotonic(), revision, old)
     monkeypatch.setattr(discovery, "_tenant_id", lambda request: tenant)
     monkeypatch.setattr(discovery, "_build_agents_response", lambda tenant_id: current)
 

@@ -119,4 +119,5 @@ def test_default_page_shows_a_cve_with_its_full_stack(demo_estate_client: TestCl
     assert any(chain(c, ("package", "server", "agent")) for c in cves), "no CVE reaches package -> server -> agent"
     stack = payload["completeness"]["stack_context"]
     assert stack["nodes"] > 0 and stack["fanout_limit"] == STACK_FANOUT
-    assert payload["completeness"]["context_nodes"] == len(payload["nodes"]) - payload["completeness"]["ranked"]
+    completeness = payload["completeness"]
+    assert completeness["context_nodes"] == len(payload["nodes"]) - completeness["ranked"] - completeness["endpoint_nodes"]

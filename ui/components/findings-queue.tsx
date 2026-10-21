@@ -1,6 +1,8 @@
 "use client";
 
 import { packageVersionLabel } from "@/lib/package-version-label";
+import { agentDisplayName } from "@/lib/display-name";
+import { findingHolder } from "@/lib/finding-holder";
 
 import { ChevronDown, ChevronRight, ChevronUp, ExternalLink } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -579,6 +581,7 @@ function EngineeringCells({
   const sla = formatSlaDue(vuln.sla_due_at);
   const packageName = vuln.packages[0];
   const visibleAgents = vuln.agents.slice(0, 2);
+  const holder = findingHolder(vuln);
   const controlTags = controlLabels(vuln);
   const disposition = triage?.decision?.replaceAll("_", " ");
   const affectedScope = [...vuln.packages, ...vuln.agents, ...vuln.affected_servers];
@@ -626,13 +629,13 @@ function EngineeringCells({
                     onClick={(event) => event.stopPropagation()}
                     className="underline decoration-dotted underline-offset-2 transition hover:text-foreground"
                   >
-                    {agent}
+                    {agentDisplayName(agent)}
                   </a>
                 </span>
               ))}
             </span>
           ) : (
-            <span className="text-ink-tertiary">Agent unavailable</span>
+            <span className="text-ink-tertiary" title={holder.title}>{holder.label}</span>
           )}
         </div>
       </td>),

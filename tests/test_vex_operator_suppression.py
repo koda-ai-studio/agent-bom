@@ -92,7 +92,9 @@ def test_operator_vex_suppresses_matching_finding_across_surfaces(tmp_path):
     assert webp_br.suppressed and webp_br.suppression_state == "vex"
     assert "vulnerable_code_not_in_execute_path" in webp_br.suppression_reason
     assert "https://example.test/vex/pillow-2023-4863" in webp_br.suppression_reason
-    assert webp_br.risk_score == 0.0 and webp_br.unsuppressed_risk_score and webp_br.unsuppressed_risk_score > 0
+    # Suppression keeps the assessed score; the state, not a zero, says it is not open.
+    assert webp_br.risk_score and webp_br.risk_score > 0
+    assert webp_br.unsuppressed_risk_score == webp_br.risk_score
     assert active_blast_radii(report.blast_radii) == [other_br]
     assert not other_br.suppressed
 

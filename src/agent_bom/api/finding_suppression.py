@@ -1,7 +1,9 @@
 """Current approval overlays; persisted scan flags are historical evidence only."""
 
+import hashlib
 from typing import Any
 
+from agent_bom.api.finding_row_inputs import digest_exceptions
 from agent_bom.api.stores import _get_exception_store
 from agent_bom.api.suppression_approval import suppression_active
 
@@ -44,18 +46,31 @@ def project_current_suppressions(rows: list[dict[str, Any]], tenant_id: str) -> 
             or (row.get("risk_score") == 0 and row.get("vex_status") in {"not_affected", "fixed"})
         )
         if historical:
-            # A missing original score is unknown, never a clean zero.
-            row["risk_score"] = row.get("unsuppressed_risk_score") or evidence.get("unsuppressed_risk_score")
+            # A score zeroed under the old contract is restored; a missing original is unknown, never a clean zero.
+            row["risk_score"] = (
+                row.get("unsuppressed_risk_score") or evidence.get("unsuppressed_risk_score") or row.get("risk_score") or None
+            )
         if match is not None or historical:
             row["suppressed"] = match is not None
             row["actionable"] = match is None
             row["suppression_id"] = match.exception_id if match else None
             row["suppression_reason"] = match.reason if match else None
             row["suppression_state"] = "approved" if match else None
-            if match:
-                row["unsuppressed_risk_score"] = row.get("risk_score")
-                row["risk_score"] = 0.0
+            # Suppression keeps the assessed score (agent_bom.core.suppression_score).
+            row["unsuppressed_risk_score"] = row.get("risk_score") if match else None
         if "vex_suppressed" in row:
             row["vex_suppressed"] = False
         projected.append(row)
     return projected
+
+
+def suppression_revision(tenant_id: str) -> str:
+    """Digest of the tenant's exceptions and which of them suppress now.
+
+    The one suppression input every count surface keys its cache on: the same
+    exception records the row fingerprint digests, plus the active set, so an
+    approval taking effect or lapsing changes it without a store write.
+    """
+    exceptions = list(_get_exception_store().list_all(tenant_id=tenant_id))
+    active = "|".join(sorted(str(exc.exception_id) for exc in exceptions if suppression_active(exc)))
+    return hashlib.sha256(f"{digest_exceptions(exceptions)}|{active}".encode()).hexdigest()

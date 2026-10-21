@@ -73,7 +73,8 @@ def test_resources_owned_by_account_and_not_orphaned() -> None:
 def test_exposure_and_datastore_flags() -> None:
     g, _ = _build()
     by_name = {n.attributes.get("resource_name"): n for n in g.nodes.values() if n.attributes.get("resource_type")}
-    assert by_name["pip"].attributes["internet_exposed"] is True
+    assert by_name["pip"].attributes["internet_exposed"] is None
+    assert by_name["pip"].attributes["internet_exposure_evidence"]["public_ip_address"] == "20.1.2.3"
     assert by_name["lb"].attributes["internet_exposed"] is True
     assert by_name["kv"].attributes["is_data_store"] is True
     assert by_name["cos"].attributes["is_data_store"] is True
@@ -91,7 +92,7 @@ def test_side_scan_target_becomes_owned_workload_disk_node() -> None:
 
 def test_public_ip_exposed_to_load_balancer_edge() -> None:
     """A public IP fronting a load balancer becomes an EXPOSED_TO edge."""
-    pip_arm = "/subscriptions/s/.../publicIPAddresses/pip"
+    pip_arm = "/subscriptions/sub-1/.../publicIPAddresses/pip"
     report = {
         "cloud_inventory": [
             {
@@ -110,3 +111,4 @@ def test_public_ip_exposed_to_load_balancer_edge() -> None:
     lb_node = next(n.id for n in g.nodes.values() if n.attributes.get("resource_id") == "/.../lb")
     exposed = [e for e in edges if e.relationship.value == "exposed_to" and e.source == pip_node and e.target == lb_node]
     assert exposed, "no EXPOSED_TO edge from public IP to the load balancer it fronts"
+    assert all(not edge.traversable and edge.evidence["network_reachability"] == "unknown" for edge in exposed)

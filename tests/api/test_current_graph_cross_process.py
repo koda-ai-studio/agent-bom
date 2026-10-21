@@ -12,7 +12,7 @@ from agent_bom.api.current_graph import CurrentGraphStore
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.store import SQLiteJobStore
 from tests.api.test_current_graph_estate import record
-from tests.api.test_current_graph_read_locking import _pause_exclusive_for
+from tests.api.test_current_graph_read_locking import _pause_before_build
 
 TENANT = "history-tenant"
 
@@ -50,7 +50,7 @@ def test_stale_worker_never_retires_a_generation_another_process_promoted(kind, 
     worker = CurrentGraphStore(estate[1], estate[0])
     assert worker._cache_directory is None, "both workers must share the durable projection cache"
 
-    paused, resume = _pause_exclusive_for(worker, "stale-worker")
+    paused, resume = _pause_before_build(worker, "stale-worker")
     stale: list[Any] = []
 
     def resolve() -> None:

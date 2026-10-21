@@ -272,3 +272,21 @@ def test_route_no_framework_filter_is_backward_compatible() -> None:
     assert resp.status_code == 200
     # Four scan findings plus the one bulk-ingested row.
     assert len(resp.json()["findings"]) == 5
+
+
+def test_route_control_without_framework_is_rejected_not_ignored() -> None:
+    _seed()
+    resp = TestClient(app).get("/v1/findings?control=ZZZ-999", headers=_AUTH)
+    assert resp.status_code == 422
+    assert "framework" in resp.text
+
+
+def test_route_scoped_first_page_reports_an_exact_total() -> None:
+    _seed()
+    full = TestClient(app).get("/v1/findings?framework=cis", headers=_AUTH).json()
+    paged = TestClient(app).get("/v1/findings?framework=cis&limit=1", headers=_AUTH).json()
+    assert len(full["findings"]) == 2
+    assert paged["has_more"] is True
+    assert paged["total"] == 2
+    assert paged["count_metadata"]["total_kind"] == "exact"
+    assert "total_approximate" not in paged

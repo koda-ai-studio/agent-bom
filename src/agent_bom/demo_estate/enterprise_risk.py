@@ -38,7 +38,7 @@ import hashlib
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from agent_bom.demo_advisories import DEMO_ADVISORIES, DemoAdvisory
+from agent_bom.demo_advisories import DEMO_ADVISORIES, DEMO_EPSS_SOURCE, DemoAdvisory
 from agent_bom.demo_estate.enterprise import EnterpriseEstate, EstateAsset
 from agent_bom.demo_estate.enterprise_ai import AI_LANE_TAG
 from agent_bom.finding import (
@@ -72,21 +72,11 @@ def vulnerable_version_for(advisory: DemoAdvisory) -> str:
 
 def advisory_catalog() -> tuple[tuple[str, str, str, DemoAdvisory], ...]:
     """``(ecosystem, package, affected_version, advisory)`` for every curated row."""
-    return tuple((advisory.ecosystem, advisory.package, vulnerable_version_for(advisory), advisory) for advisory in DEMO_ADVISORIES)
-
-
-def _epss_for(advisory: DemoAdvisory) -> float:
-    """A deterministic exploit-probability score for the synthetic estate.
-
-    Anchored on the advisory's own severity and KEV status so the ordering is
-    defensible — a KEV entry outranks a medium — while the exact value is
-    synthetic and is labelled as such in the finding's evidence. The estate does
-    not claim to publish real EPSS.
-    """
-    base = {"critical": 0.55, "high": 0.28, "medium": 0.09, "low": 0.02}.get(advisory.severity, 0.03)
-    jitter = (_seed("epss", advisory.vuln_id) % 1000) / 10000.0
-    score = base + jitter + (0.3 if advisory.is_kev else 0.0)
-    return round(min(score, 0.97), 4)
+    return tuple(
+        (advisory.ecosystem, advisory.package, vulnerable_version_for(advisory), advisory)
+        for advisory in DEMO_ADVISORIES
+        if advisory.estate_sample
+    )
 
 
 # One ``Asset.asset_type`` per estate asset, for every lane.
@@ -189,8 +179,7 @@ def build_vulnerability_evidence(estate: EnterpriseEstate) -> tuple[tuple[Any, F
     inventory and the catalog had drifted, and it is skipped rather than given an
     invented vulnerability.
     """
-    from agent_bom.models import BlastRadius, Package, Severity, Vulnerability
-    from agent_bom.scanners.package_scan import apply_framework_tags
+    from agent_bom.demo_estate.estate_cve_inputs import estate_blast_radius
 
     by_key = {(row[0], row[1], row[2]): row[3] for row in advisory_catalog()}
     images = {asset.asset_id: asset for asset in estate.assets if asset.resource_type == "container_image"}
@@ -207,36 +196,7 @@ def build_vulnerability_evidence(estate: EnterpriseEstate) -> tuple[tuple[Any, F
             continue
 
         image = images.get(asset.tags.get("container_image", ""))
-        package = Package(name=name, version=version, ecosystem=ecosystem)
-        vulnerability = Vulnerability(
-            id=advisory.vuln_id,
-            summary=advisory.summary,
-            severity=Severity(advisory.severity),
-            cvss_score=advisory.cvss_score,
-            cwe_ids=[advisory.cwe] if advisory.cwe else [],
-            fixed_version=advisory.fixed,
-            is_kev=advisory.is_kev,
-            epss_score=_epss_for(advisory),
-            # Network exploitability is a property of the advisory, not of the
-            # host: a KEV entry with a network CVSS vector is exploitable
-            # wherever it runs. Derived from the catalog, never from whether the
-            # estate happened to mark the workload internet-facing, so the two
-            # signals stay independent when the graph fuses them.
-            network_exploitable=advisory.cvss_score >= 7.0,
-        )
-        blast_radius = BlastRadius(
-            vulnerability=vulnerability,
-            package=package,
-            affected_servers=[],
-            affected_agents=[],
-            exposed_credentials=[],
-            exposed_tools=[],
-        )
-        # The same stamping a live package scan does before converting. Without
-        # it the blast radius reaches the converter with every framework list
-        # empty, and the estate's vulnerabilities evidence no control at all —
-        # a demo showing a CVE lane that the compliance posture cannot see.
-        apply_framework_tags(blast_radius)
+        blast_radius = estate_blast_radius(asset, advisory)
         finding = blast_radius_to_finding(blast_radius)
         bind_to_inventory(finding, asset, estate, location=asset.native_id)
         # The converter keys a finding on (advisory, package) because a
@@ -260,9 +220,8 @@ def build_vulnerability_evidence(estate: EnterpriseEstate) -> tuple[tuple[Any, F
                 "package_purl": asset.native_id,
                 "package_ecosystem": ecosystem,
                 "advisory_source": advisory.source,
-                # The score is synthetic. Say so here rather than let a consumer
-                # read it as a published EPSS value.
-                "epss_source": "synthetic-demo",
+                # Pinned published FIRST EPSS; name the snapshot it came from.
+                "epss_source": DEMO_EPSS_SOURCE,
                 "container_image": image.asset_id if image is not None else "",
                 "container_image_name": image.display_name if image is not None else "",
                 "image_signed": image.tags.get("signed", "") if image is not None else "",

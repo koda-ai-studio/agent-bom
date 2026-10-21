@@ -136,7 +136,12 @@ const BUDGETS = {
   // measures 4208.4 KiB on Linux CI and macOS versus 4054.5 KiB on main, with
   // no new dependency. Keep 19.6 KiB of bounded headroom at 4228 KiB;
   // shared-runtime and largest-chunk limits stay fixed.
-  totalClientJsBytes: 4_329_472,
+  // The persona re-score surfaces (cross-vendor path scope, GRC control
+  // evidence panel, queue-ranked top risks, in-place fix panel, agent blast
+  // summary, posture-basis trend, change-issue basis) measure 4238.9 KiB
+  // versus 4208.4 KiB before them, with no new dependency. Keep 17.1 KiB of
+  // bounded headroom at 4256 KiB; shared-runtime and largest-chunk limits stay fixed.
+  totalClientJsBytes: 4_358_144,
   largestChunkBytes: 950_000,
   sharedAppBytes: 450_000,
 };

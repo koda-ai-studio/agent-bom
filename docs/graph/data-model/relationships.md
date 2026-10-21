@@ -246,7 +246,7 @@ Class `exposure` · directed · traversable · required evidence `source`, `tier
 - `data_store` → `account`, `cloud_resource`, `data_store`, `resource`
 - `server` → `agent`, `cloud_resource`, `data_store`, `resource`
 
-Emitted by: `graph/builder_network_exposure.py`, `graph/builder_snowflake_data_movement.py`, `graph/cloud_compute_projection.py`, `graph/cnapp_overlay.py`, `graph/normalized_resource_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder_network_exposure.py`, `graph/builder_snowflake_data_movement.py`, `graph/cnapp_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `exposes_cred`
 
@@ -255,7 +255,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `agent` → `credential`
 - `server` → `credential`
 
-Emitted by: `graph/component_paths.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/component_paths.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_credentials.py`
 
 ## `governs`
 
@@ -407,7 +407,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `server` → `cluster`, `environment`, `fleet`, `org`
 - `tool` → `server`
 
-Emitted by: `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/cloud_compute_projection.py`, `hardware_evidence.py`
+Emitted by: `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/cloud_compute_projection.py`, `graph/network_entry_projection.py`, `hardware_evidence.py`
 
 ## `possibly_correlates_with`
 
@@ -429,7 +429,7 @@ Emitted by: `graph/asset_canonicalize.py`, `graph/builder_frameworks.py`, `graph
 
 ## `protects`
 
-Class `exposure` · directed · traversable · required evidence `source`, `tier` · 6 pairs
+Class `governance` · directed · not traversable · required evidence `source`, `tier` · 6 pairs
 
 - `api_gateway` → `cloud_resource`, `data_store`, `resource`
 - `cloud_resource` → `cloud_resource`, `data_store`, `resource`

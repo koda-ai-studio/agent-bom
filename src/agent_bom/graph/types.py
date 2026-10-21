@@ -80,7 +80,7 @@ class RelationshipType(str, Enum):
     EXPOSED_TO = "exposed_to"  # resource/server/agent → network/resource (public/internet reach)
     STORES = "stores"  # cloud_resource/data_store/server → dataset/data_store (data at rest)
     HAS_PERMISSION = "has_permission"  # principal/managed_identity → resource/data_store/tool (effective)
-    PROTECTS = "protects"  # waf/api_gateway → resource it fronts (mitigates internet exposure)
+    PROTECTS = "protects"  # security control → associated resource (effectiveness requires evidence)
 
     # ── Runtime events (dynamic) ──
     ACTED_AS = "acted_as"  # user/service principal → agent (runtime identity)

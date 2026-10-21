@@ -991,7 +991,7 @@ def test_overview_compliance_failing_moves_grade() -> None:
 
     get_compliance_hub_store().clear("default")
 
-    def _put_job(frameworks: list[str]) -> None:
+    def _put_job(tags: dict[str, list[str]]) -> None:
         job = ScanJob(
             job_id="cmp-job",
             tenant_id="default",
@@ -1004,20 +1004,21 @@ def test_overview_compliance_failing_moves_grade() -> None:
             "agents": [],
             "scan_sources": ["cloud"],
             "findings": [
-                {"id": "f-crit", "security_domain": "cspm", "severity": "critical", "applicable_frameworks": frameworks},
+                # Control tags are the evidence a framework fails on; applicability alone is not.
+                {"id": "f-crit", "security_domain": "cspm", "severity": "critical", "applicable_frameworks": ["soc2", "iso_27001"], **tags},
             ],
         }
         _get_store().put(job)
 
     # Baseline: identical critical, no framework mapping — compliance driver == 0.
-    _put_job([])
+    _put_job({})
     base = client_get_overview()
     base_cmp = next(r for r in base["posture"]["breakdown"] if r["driver"] == "compliance")
     assert base_cmp["count"] == 0
 
     # Same critical, now mapped to two failing frameworks — the grade drops further.
     _clear_jobs()
-    _put_job(["soc2", "iso_27001"])
+    _put_job({"soc2_tags": ["CC6.1"], "iso_27001_tags": ["A.8.8"]})
     failing = client_get_overview()
     cmp_row = next(r for r in failing["posture"]["breakdown"] if r["driver"] == "compliance")
     assert cmp_row["count"] >= 1
@@ -1094,6 +1095,7 @@ def test_overview_applicability_overlays_never_count_as_failing_frameworks() -> 
                     "security_domain": "cspm",
                     "severity": "critical",
                     "applicable_frameworks": ["soc2"],
+                    "soc2_tags": ["CC6.1"],
                 },
             ]
         },

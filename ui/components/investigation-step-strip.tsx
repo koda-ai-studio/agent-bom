@@ -15,7 +15,7 @@ const STEPS: {
   { key: "path", label: "Path", icon: Focus, hint: "Select a ranked exposure path" },
   { key: "impact", label: "Impact", icon: Radar, hint: "Review blast radius and affected assets" },
   { key: "owner", label: "Owner", icon: UserRound, hint: "Assign an owner and remediation SLA" },
-  { key: "fix", label: "Fix", icon: Wrench, hint: "Open the recommended remediation" },
+  { key: "fix", label: "Fix", icon: Wrench, hint: "Review the recommended upgrade for this path" },
   { key: "verify", label: "Verify", icon: ShieldCheck, hint: "Rescan and record the evidence-backed result" },
 ];
 
@@ -63,7 +63,7 @@ export function InvestigationStepStrip({
           }`;
           const content = (
             <>
-              <span className="font-mono text-[10px] opacity-70">{index + 1}</span>
+              <span className="font-mono text-xs opacity-70">{index + 1}</span>
               <Icon className="h-3.5 w-3.5" aria-hidden="true" />
               {item.label}
               <span id={descriptionId} className="sr-only">{item.hint}</span>

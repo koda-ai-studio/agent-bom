@@ -680,9 +680,9 @@ async function expectCockpitVisible(page: Page) {
   ).toBeVisible();
   // Progressive disclosure summary — avoid /Evidence/ which also matches "Evidence drawer".
   await expect(page.getByText("Evidence & relationships")).toBeVisible();
-  await expect(page.getByText("Path priority", { exact: true }).first()).toBeHidden();
+  await expect(page.locator(".ep-header-details").first().getByText("Path priority", { exact: true })).toBeHidden();
   await page.locator(".ep-header-summary").click();
-  await expect(page.getByText("Path priority", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(".ep-header-details").first().getByText("Path priority", { exact: true })).toBeVisible();
   await expect(page.getByText("Path span", { exact: true }).first()).toBeVisible();
 }
 
@@ -1338,7 +1338,7 @@ for (const theme of ["light", "dark"] as const) {
     const scopes = page.getByTestId("graph-rollup-decision-surface");
     await expect(scopes).toBeVisible();
     await expect(page.locator(".react-flow__node")).toHaveCount(0);
-    await scopes.getByRole("button", { name: "Connections", exact: true }).first().click();
+    await scopes.getByRole("button", { name: /^Show direct neighbors of / }).first().click();
     await expect(page.locator(".react-flow__node")).toHaveCount(2);
     expect(queries[0]).toMatchObject({ max_nodes: 4, max_depth: 1, scan_id: scanId });
     await page.getByRole("button", { name: "Fit all", exact: true }).click();
@@ -2000,8 +2000,8 @@ for (const theme of ["light", "dark"] as const) {
     } }));
     await page.goto(`/security-graph?scan=${scanId}&lens=attack-path`);
     await page.getByTestId("investigation-step-strip").getByRole("button", { name: /Impact/ }).click();
-    await expect(page.getByRole("region", { name: "Path impact" })).toContainText("3 upstream related nodes");
-    await expect(page.getByRole("link", { name: "Explore upstream relationships" })).toHaveAttribute("href", /direction=reverse/);
+    await expect(page.getByRole("region", { name: "Path impact" })).toContainText("3 assets exposed to this finding");
+    await expect(page.getByRole("link", { name: "Explore exposed assets" })).toHaveAttribute("href", /direction=reverse/);
     await page.screenshot({ path: testInfo.outputPath(`path-impact-${theme}.png`), fullPage: true });
   });
 

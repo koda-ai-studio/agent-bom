@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from agent_bom.api.finding_group_key import _finding_group_identity
 from agent_bom.compliance_coverage import rows_by_control_key, scoring_catalog
 from agent_bom.compliance_nist_catalog import evaluated_control_status as _evaluated_control_status
 from agent_bom.evidence.control_modes import (
@@ -108,10 +109,12 @@ def _build_controls(
         sev_breakdown = {"critical": 0, "high": 0, "medium": 0, "low": 0}
         affected_pkgs: set[str] = set()
         affected_agents: set[str] = set()
+        issue_keys: set[str] = set()
         findings = 0
 
         for br in rows_by_code.get(code, ()):
             findings += 1
+            issue_keys.add(_finding_group_identity(br)[1])
             sev = (br.get("severity") or "").lower()
             if sev in sev_breakdown:
                 sev_breakdown[sev] += 1
@@ -138,7 +141,8 @@ def _build_controls(
                 "control_id": code,
                 "name": name,
                 "tags": [code],
-                "findings": findings,
+                "findings": findings,  # mapped occurrences
+                "issue_count": len(issue_keys),  # the issue groups the findings view lists
                 "status": status,
                 "evaluation_mode": mode,
                 "evidence_reason": reason,

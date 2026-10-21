@@ -47,6 +47,7 @@ import operator
 import re
 from pathlib import Path
 
+from agent_bom.core.risk_display import assessed_risk_score
 from agent_bom.core.severity import SEVERITY_POLICY_ORDER as SEVERITY_ORDER
 
 RISK_LEVEL_ORDER = {"high": 3, "medium": 2, "low": 1}
@@ -130,7 +131,7 @@ _EXPRESSION_FIELD_GETTERS = {
     "scorecard_score": lambda b: b.package.scorecard_score if b.package.scorecard_score is not None else 0.0,
     "is_malicious": lambda b: getattr(b.package, "is_malicious", False),
     # Blast radius and graph fields
-    "risk_score": lambda b: b.risk_score,
+    "risk_score": lambda b: assessed_risk_score(b),
     "agent_count": lambda b: len(b.affected_agents),
     "server_count": lambda b: len(b.affected_servers),
     "tool_count": lambda b: len(b.exposed_tools),
@@ -245,8 +246,7 @@ class _ExprParser:
         if self.peek() and self.peek()[0] == "CMP":  # type: ignore[index]
             _, op_str = self.consume()
             right = self._primary()
-            op_func = _COMPARISON_OPS[op_str]
-            return op_func(left, right)
+            return False if (left is None or right is None) and op_str not in ("==", "!=") else _COMPARISON_OPS[op_str](left, right)
         return left
 
     def _primary(self):

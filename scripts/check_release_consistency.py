@@ -48,6 +48,8 @@ PRODUCT_SCREENSHOT_INPUTS = (
     "src/agent_bom/graph",
     "src/agent_bom/canonical_ids.py",
     "src/agent_bom/core/packages.py",
+    "src/agent_bom/core/cloud_identity.py",
+    "src/agent_bom/core/cloud_scope.py",
 )
 # Defensive: none of the directories above currently contain colocated tests,
 # but a future one must not silently start counting toward the digest.
@@ -680,7 +682,7 @@ def main() -> int:
     tools = len(tool_names)
     resources = len(resource_uris)
     prompts = len(prompt_names)
-    if (tools, resources, prompts) != (94, 7, 8):
+    if (tools, resources, prompts) != (95, 7, 8):
         _fail(f"MCP server card count changed unexpectedly: tools={tools}, resources={resources}, prompts={prompts}")
     default_tool_names = [str(name) for name in _server_card_list("_DEFAULT_PROFILE_TOOL_NAMES")]
     docker_mcp_tool_names = [str(tool["name"]) for tool in json.loads(DOCKER_MCP_TOOLS.read_text())]

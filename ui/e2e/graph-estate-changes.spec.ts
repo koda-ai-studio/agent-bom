@@ -117,6 +117,7 @@ test("a source scanned once compares with the declared baseline and drills into 
       scope_id: "f7f8", label: "local-agents", old: { scan_id: "showcase-baseline", job_id: "", captured_at: "2026-10-08T02:00:00+00:00" },
       new: ref("repo-2", "2026-10-15T02:00:00+00:00"), baseline: "snapshot_continuity",
       counts: { nodes: { added: 1, removed: 1, changed: 0 }, edges: { added: 1, removed: 1, changed: 0 } }, total_changes: 4, nodes_by_entity_type: {}, skipped_snapshots: 0,
+      issue_change: { basis: "issue_groups", old: { critical: 4, high: 9, medium: 0, low: 0, total: 13 }, new: { critical: 5, high: 9, medium: 0, low: 0, total: 14 } },
       highlights: {
         new_critical_findings: { count: 1, top: [{ kind: "node", change: "added", id: "package:new", label: "requests@2.32.0", severity: "critical", entity_type: "package" }] },
         new_attack_paths: { status: "complete", count: 1, top: [{ source: "agent:planner", target: "package:new", hops: ["agent:planner", "server:fs", "package:new"], composite_risk: 71, summary: "" }] },
@@ -135,8 +136,9 @@ test("a source scanned once compares with the declared baseline and drills into 
   await expect(panel.getByTestId("graph-changes-source")).toContainText("Compared with earlier snapshot showcase-baseline");
   await expect(panel.getByTestId("graph-changes-first-observation")).toHaveCount(0);
   const exposure = panel.getByTestId("graph-changes-exposure");
-  await expect(exposure).toContainText("New critical findings · 1");
+  await expect(exposure).toContainText("New critical finding nodes · 1");
   await expect(exposure).toContainText("New attack paths · 1");
+  await expect(panel.getByTestId("graph-changes-issue-basis")).toHaveText("Open issues, the posture trend's unit: critical 4 → 5 (+1) · high 9 → 9 (no change)");
   await exposure.getByRole("button", { name: "Investigate requests@2.32.0" }).click();
   await expect(panel).toBeHidden();
   await expect.poll(() => requests.some(p => p.startsWith("/v1/graph/query"))).toBe(true);

@@ -154,6 +154,7 @@ def test_rank_fields_explain_the_order() -> None:
     path = annotate_attack_path_evidence(_path(88.0), graph)
     factors = path_rank_fields(path, graph.nodes)["ranking_factors"]
     assert factors["order"] == [
+        "path_family",
         "evidence_tier",
         "is_kev",
         "severity",

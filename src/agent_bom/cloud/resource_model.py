@@ -22,6 +22,7 @@ from enum import Enum
 from typing import Any
 
 from agent_bom.canonical_ids import canonical_id
+from agent_bom.core.cloud_scope import cloud_scope_attributes
 
 
 class CloudResourceType(str, Enum):
@@ -88,6 +89,7 @@ class CloudResource:
             "resource_group": self.resource_group,
             "tags": dict(self.tags),
             "owner": self.owner,
+            **cloud_scope_attributes(self.provider, {**self.raw, "resource_id": self.resource_id}, self.account),
         }
 
 

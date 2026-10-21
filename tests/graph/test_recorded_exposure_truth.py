@@ -239,9 +239,10 @@ def test_subnet_text_flags_cannot_create_public_network_path(value, expected):
             }
         }
     )
-    subnet = graph.nodes["cloud_resource:aws:network:subnet:subnet-a"]
+    subnet = next(n for n in graph.nodes.values() if n.attributes.get("resource_id") == "subnet-a")
     assert subnet.attributes["internet_exposed"] is expected
-    assert any(edge.relationship == RelationshipType.EXPOSED_TO and edge.target == subnet.id for edge in graph.edges) is (expected is True)
+    # The payload has no explicit gateway binding.
+    assert not any(edge.relationship == RelationshipType.EXPOSED_TO and edge.target == subnet.id for edge in graph.edges)
 
 
 @pytest.mark.parametrize(

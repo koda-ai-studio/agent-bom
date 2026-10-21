@@ -4188,9 +4188,9 @@ export interface paths {
          *     Nodes are paginated (offset/limit). ``edges`` carries up to 1,000 edges
          *     incident to the ranked page, plus containment context. Omitted relationships
          *     are declared by ``completeness.edges_truncated`` and remain pageable through
-         *     ``/v1/graph/incident-edges`` at the same revision. Edges may reach nodes
-         *     outside the page; this is not the subgraph induced by ``nodes``;
-         *     ``completeness.boundary_edges`` counts the edges that cross the boundary.
+         *     ``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the
+         *     returned edges ride along (``completeness.endpoint_nodes``), so every edge
+         *     lands on a returned node; ``completeness.boundary_edges`` counts any that do not.
          *
          *     ``stats`` describe the graph this response was computed from, NOT the page:
          *     ``stats.total_nodes`` is every node that survived loading, and
@@ -4248,6 +4248,31 @@ export interface paths {
          *     needed to render the selected queue page.
          */
         get: operations["get_graph_attack_paths_v1_graph_attack_paths_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/graph/attack-paths/cross-vendor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Cross Vendor Attack Paths
+         * @description Attack paths whose source and target nodes are recorded in different vendors.
+         *
+         *     Vendors come from each endpoint's recorded ``cloud_provider``; agent-runtime
+         *     surfaces (MCP, local) are not vendors and middle hops never qualify a path. Order is the global queue order.
+         *     ``vendor_facets`` counts every cross-vendor path per pair, whatever pair
+         *     is selected, so the chips beside the queue stay comparable.
+         */
+        get: operations["get_cross_vendor_attack_paths_v1_graph_attack_paths_cross_vendor_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10640,6 +10665,8 @@ export interface components {
             evidence_reason: string;
             /** Findings */
             findings: number;
+            /** Issue Count */
+            issue_count: number;
             /** Name */
             name: string;
             severity_breakdown: components["schemas"]["ControlSeverityBreakdown"];
@@ -12319,6 +12346,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             discovery_provenance: components["schemas"]["DiscoveryProvenance"] | null;
+            /** Display Name */
+            display_name: string;
             /** Last Seen */
             last_seen: string | null;
             /** Mcp Servers */
@@ -12963,6 +12992,11 @@ export interface components {
             scan_id: string | null;
             /** Schema Version */
             schema_version: string;
+            /**
+             * Source Scan Ids
+             * @default []
+             */
+            source_scan_ids: string[];
             /** Tenant Id */
             tenant_id: string;
         } & {
@@ -13851,6 +13885,8 @@ export interface components {
             cvss_vector?: string | null;
             /** Cvss Version */
             cvss_version?: string | null;
+            /** Dependency Depth */
+            dependency_depth?: number | null;
             /** Ecosystem */
             ecosystem?: string | null;
             effective_reach?: components["schemas"]["EffectiveReach"] | null;
@@ -13860,6 +13896,8 @@ export interface components {
             effective_reach_score?: number | null;
             /** Entity Type */
             entity_type?: string | null;
+            /** Epss Cve Id */
+            epss_cve_id?: string | null;
             /** Epss Score */
             epss_score?: number | null;
             /** Evidence */
@@ -13892,6 +13930,10 @@ export interface components {
             graph_reachable_from_count?: number | null;
             /** Id */
             id: string;
+            /** Introduced Via */
+            introduced_via?: string | null;
+            /** Is Direct */
+            is_direct?: boolean | null;
             /** Is Kev */
             is_kev?: boolean | null;
             /** Kev Cve Id */
@@ -14542,6 +14584,10 @@ export interface components {
             }[] | null;
             /** Evaluated Controls */
             evaluated_controls?: number | null;
+            /** Finding Count */
+            finding_count?: number | null;
+            /** Finding Count Basis */
+            finding_count_basis?: string | null;
             /** Framework */
             framework: string;
             /** Framework Key */
@@ -16220,6 +16266,55 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GraphCrossVendorPathsResponse
+         * @description The attack-path queue page restricted to paths whose source and target nodes are in different vendors.
+         */
+        GraphCrossVendorPathsResponse: {
+            /** Attack Paths */
+            attack_paths: {
+                [key: string]: unknown;
+            }[];
+            /** Completeness */
+            completeness?: {
+                [key: string]: unknown;
+            } | null;
+            /** Count Metadata */
+            count_metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Edges */
+            edges: {
+                [key: string]: unknown;
+            }[];
+            /** Interaction Risks */
+            interaction_risks: {
+                [key: string]: unknown;
+            }[];
+            /** Nodes */
+            nodes: {
+                [key: string]: unknown;
+            }[];
+            /** Pagination */
+            pagination: {
+                [key: string]: unknown;
+            };
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            /** Stats */
+            stats: {
+                [key: string]: unknown;
+            };
+            /** Tenant Id */
+            tenant_id: string;
+            vendor_facets: components["schemas"]["GraphVendorFacets"];
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphDeployDecisionRequest */
         GraphDeployDecisionRequest: {
             /**
@@ -16415,7 +16510,12 @@ export interface components {
          *     earlier scan (``baseline: scope_history``) or, for a scope scanned once, the
          *     store's earlier same-kind snapshot that no other scope owns
          *     (``baseline: snapshot_continuity``). Each changed source carries added and
-         *     removed stored attack paths in ``highlights``. ``new_sources`` are first
+         *     removed stored attack paths in ``highlights`` and ``changes_by_source``:
+         *     changed nodes per vendor and account the collector recorded on each node,
+         *     since one scan can collect many vendors. ``issue_change`` gives the open
+         *     issue-group counts the posture trend recorded for the pair's two scans
+         *     (``None`` when either scan has no recorded point): the graph counts are
+         *     nodes and links, the issue counts are the headline's unit. ``new_sources`` are first
          *     observations and are never counted as additions. ``totals`` cover the
          *     returned page of scopes; ``completeness`` says whether more scopes exist.
          */
@@ -16704,9 +16804,16 @@ export interface components {
             completeness: {
                 [key: string]: unknown;
             };
+            /** Depth Basis */
+            depth_basis?: ("requested" | "default" | "longest_materialized_path") | null;
             /** Direction */
             direction?: string | null;
             interpretation: components["schemas"]["GraphImpactInterpretation"];
+            /**
+             * Max Depth
+             * @description Depth the walk was bounded to.
+             */
+            max_depth?: number | null;
             /** Max Depth Reached */
             max_depth_reached: number;
             /** Node Id */
@@ -16889,6 +16996,8 @@ export interface components {
             };
             /** Tenant Id */
             tenant_id: string;
+            /** View */
+            view?: "canvas" | null;
         } & {
             [key: string]: unknown;
         };
@@ -17399,6 +17508,42 @@ export interface components {
         GraphSnapshotsResponse: {
             [key: string]: unknown;
         }[];
+        /**
+         * GraphVendorFacets
+         * @description Cross-vendor path counts per (source vendor, target vendor) over the whole snapshot queue.
+         */
+        GraphVendorFacets: {
+            /** Covers All Paths */
+            covers_all_paths: boolean;
+            /** Cross Vendor Paths */
+            cross_vendor_paths: number;
+            /** Pairs */
+            pairs: components["schemas"]["GraphVendorPair"][];
+            /** Selected */
+            selected?: {
+                [key: string]: string;
+            } | null;
+            /** Snapshot Paths */
+            snapshot_paths: number;
+            /**
+             * Unit
+             * @constant
+             */
+            unit: "paths";
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphVendorPair */
+        GraphVendorPair: {
+            /** Paths */
+            paths: number;
+            /** Source Vendor */
+            source_vendor: string;
+            /** Target Vendor */
+            target_vendor: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -17495,6 +17640,12 @@ export interface components {
         };
         /** HubPostureResponse */
         HubPostureResponse: {
+            /**
+             * Framework Count Basis
+             * @default control_tag_evidence
+             * @constant
+             */
+            framework_count_basis: "control_tag_evidence";
             framework_counts: components["schemas"]["HubFrameworkCounts"];
             /** Hub Severity Breakdown */
             hub_severity_breakdown: {
@@ -17960,6 +18111,8 @@ export interface components {
             };
             /** Compliance Tags */
             compliance_tags: string[];
+            /** Display Name */
+            display_name?: string | null;
             /** Ecosystem */
             ecosystem: string;
             /** Environment */
@@ -19896,6 +20049,12 @@ export interface components {
         };
         /** OverviewHeadline */
         OverviewHeadline: {
+            /**
+             * Basis
+             * @default issue_groups
+             * @enum {string}
+             */
+            basis: "issue_groups" | "occurrences";
             /** Credential Exposed */
             credential_exposed: number;
             /** Critical */
@@ -23883,6 +24042,7 @@ export interface components {
             evidence_sample_count: number;
             /** High */
             high: number;
+            issues?: components["schemas"]["IssueCounts"] | null;
             /** Low */
             low: number;
             /** Measurement Version */
@@ -30554,7 +30714,7 @@ export interface operations {
     get_estate_correlations_v1_estate_correlations_get: {
         parameters: {
             query?: {
-                /** @description Scan job ID; latest completed scan if omitted */
+                /** @description Scan job ID or graph snapshot ID. Omitted (or current-estate): the current estate, the union of every target's current completed scan; source_scan_ids lists them. */
                 scan_id?: string | null;
             };
             header?: {
@@ -33726,6 +33886,8 @@ export interface operations {
                 offset?: number;
                 /** @description Max nodes to return */
                 limit?: number;
+                /** @description ``canvas`` returns the graph page's projection: the same response without node and edge fields the page never reads before a selection (OCSF ids, canonical ids, provenance blocks, bulky attributes) and without the source_id/target_id edge aliases. Omit for the full projection. */
+                view?: "canvas" | null;
             };
             header?: never;
             path?: never;
@@ -33836,7 +33998,7 @@ export interface operations {
                 node_id?: string | null;
                 /** @description Only paths carrying this finding occurrence */
                 finding_id?: string | null;
-                /** @description Advisory of the finding occurrence. When paths record the advisory rather than the occurrence id, the occurrence resolves to paths through its node_id carrying this advisory; ignored without node_id */
+                /** @description Only paths carrying this advisory. With finding_id it qualifies the occurrence instead: when paths record the advisory rather than the occurrence id, the occurrence resolves to paths through its node_id carrying it */
                 advisory_id?: string | null;
                 /** @description Compliance framework of ``control`` */
                 framework?: string | null;
@@ -34218,6 +34380,57 @@ export interface operations {
                     } & {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_cross_vendor_attack_paths_v1_graph_attack_paths_cross_vendor_get: {
+        parameters: {
+            query?: {
+                /** @description Scan ID */
+                scan_id?: string | null;
+                /** @description Generation from the first page; required for continuation */
+                snapshot_generation?: string | null;
+                /** @description Pagination offset */
+                offset?: number;
+                /** @description Max attack paths */
+                limit?: number;
+                /** @description Only paths whose source node is in this vendor */
+                source_vendor?: string | null;
+                /** @description Only paths whose target node is in this vendor */
+                target_vendor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphCrossVendorPathsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -35003,8 +35216,8 @@ export interface operations {
                 /** @description Scan ID */
                 scan_id?: string | null;
                 snapshot_generation?: string | null;
-                /** @description Maximum traversal depth */
-                max_depth?: number;
+                /** @description Maximum traversal depth. Omitted: the longest materialized attack path ending at the node (at least 4, at most 10); the applied depth and its basis are returned as max_depth and depth_basis. */
+                max_depth?: number | null;
                 /** @description reverse: what depends on the node (upstream); forward: what the node can reach (downstream) */
                 direction?: "reverse" | "forward";
             };

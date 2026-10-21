@@ -498,7 +498,7 @@ def _build_revisioned_overview(request: Request, tenant_id: str, store: Any, hub
         try:
             from agent_bom.api.time_window import default_window_days
 
-            aggregate_key = f"{tenant_id}|{before}|{hub.revision}|{default_window_days()}"
+            aggregate_key = f"{tenant_id}|{fingerprint}|{hub.revision}|{default_window_days()}"
             scan_inputs = _scan_aggregate_get(aggregate_key) if hub.revision is not None else None
             jobs = [] if scan_inputs is not None else store.list_all(tenant_id=tenant_id)
             if revision() != before:
@@ -623,9 +623,8 @@ def _compose_overview(
     # canonical keys, so the hub-findings count never silently drops a band the
     # exec total (via ``_combined_severity``) still carries.
     hub_findings = sum(int(v or 0) for v in hub_severity.values())
-    # Headline = the issue counts the grade and tiles use; occurrences stay in finding_counts (#3961).
     exec_counts = _reconciled_exec_counts(exec_estate, hub_severity, hub_kev)
-    headline_critical, headline_high = (int((issue_counts or exec_counts)[key]) for key in ("critical", "high"))
+    headline_critical, headline_high, headline_kev = (int((issue_counts or exec_counts).get(k) or 0) for k in ("critical", "high", "kev"))
     critical_high = headline_critical + headline_high
 
     cloud_scopes = scan_inputs.get("cloud_scopes")
@@ -723,7 +722,8 @@ def _compose_overview(
             "critical": headline_critical,
             "high": headline_high,
             "critical_high": critical_high,
-            "kev": exec_counts["kev"],
+            "kev": headline_kev,
+            "basis": "issue_groups" if issue_counts else "occurrences",  # one unit; occurrences stay in finding_counts
             "credential_exposed": exec_estate["credential_exposed"],
             "scans": estate["scan_count"],
             "latest_scan_at": estate["latest_scan_at"],

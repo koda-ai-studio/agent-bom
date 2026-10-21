@@ -615,6 +615,8 @@ CREATE TABLE IF NOT EXISTS graph_attack_paths (
     severity_rank       INTEGER NOT NULL DEFAULT 0,
     has_credential      INTEGER NOT NULL DEFAULT 0,
     source_type         TEXT NOT NULL DEFAULT '',
+    source_vendor       TEXT NOT NULL DEFAULT '',
+    target_vendor       TEXT NOT NULL DEFAULT '',
     path_json           TEXT NOT NULL,
     computed_at         TEXT NOT NULL,
     PRIMARY KEY (tenant_id, scan_id, path_key)
@@ -624,6 +626,8 @@ CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_rank ON graph_attack_paths(
 CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_source
     ON graph_attack_paths(tenant_id, scan_id, source_node, rank_index);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_queue ON graph_attack_paths(tenant_id, scan_id, queue_rank);
+CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_vendor
+    ON graph_attack_paths(tenant_id, scan_id, source_vendor, target_vendor, queue_rank);
 
 -- Source node ids replaced by asset canonicalization, per tenant and snapshot.
 CREATE TABLE IF NOT EXISTS graph_node_aliases (

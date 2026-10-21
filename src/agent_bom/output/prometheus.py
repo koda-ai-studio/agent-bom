@@ -22,6 +22,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.models import AIBOMReport, BlastRadius, Severity
 from agent_bom.output.finding_views import (
@@ -56,7 +57,7 @@ def _cap_findings(findings: list, limit: int) -> tuple[list, int]:
     """
     if limit < 0 or len(findings) <= limit:
         return findings, 0
-    ranked = sorted(findings, key=lambda f: getattr(f, "risk_score", 0.0) or 0.0, reverse=True)
+    ranked = sorted(findings, key=risk_rank_key)
     return ranked[:limit], len(findings) - limit
 
 
@@ -183,11 +184,11 @@ def to_prometheus(
 
     if per_finding:
         header("blast_radius_score", "Blast radius risk score per vulnerability (0-10 scale)")
-        for finding in per_finding:
+        for finding in (item for item in per_finding if item.risk_score is not None):
             lines.append(
                 _metric(
                     "blast_radius_score",
-                    round(finding.risk_score, 3),
+                    round(finding.risk_score or 0.0, 3),
                     ("vuln_id", finding.cve_id or finding.id),
                     ("package", package_name(finding)),
                     ("version", package_version(finding)),

@@ -47,6 +47,18 @@ export function statusColor(status: string): string {
   }
 }
 
+/** A findings count reads in its control's status family: a failing control's count is never green. */
+export function findingCountColor(status: string): string {
+  switch (status) {
+    case "fail":
+      return "text-red-700 dark:text-red-400";
+    case "warning":
+      return "text-amber-700 dark:text-amber-300";
+    default:
+      return "text-[color:var(--foreground)]";
+  }
+}
+
 export function postureLabel(status: string): string {
   switch (status) {
     case "pass":

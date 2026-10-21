@@ -286,6 +286,7 @@ function buildGraph() {
       credential_exposure: ["DEMO_CRED_REF"],
       tool_exposure: ["create_pull_request"],
       vuln_ids: ["CVE-2025-29927"],
+      severity: advisory("CVE-2025-29927").severity,
     },
     {
       source: "agent:sre-runbook",
@@ -297,6 +298,7 @@ function buildGraph() {
       credential_exposure: ["AWS_ROLE_SESSION"],
       tool_exposure: ["execute_command"],
       vuln_ids: ["CVE-2024-37891"],
+      severity: advisory("CVE-2024-37891").severity,
     },
     {
       source: "agent:finance-rag",
@@ -308,6 +310,7 @@ function buildGraph() {
       credential_exposure: ["SNOWFLAKE_PROD_KEY"],
       tool_exposure: ["run_sql"],
       vuln_ids: ["CVE-2025-4565"],
+      severity: advisory("CVE-2025-4565").severity,
     },
   ];
 
@@ -2076,6 +2079,17 @@ async function installRoutes(page, fixtureGraph = graph) {
     const selectedGraph = url.searchParams.get("scan_id") === REFERENCE_CORRELATION_ID ? referenceGraph : graph;
     return fulfill(route, graphResponseWithPagination(selectedGraph, "attack_paths"));
   });
+  await page.route("**/v1/graph/attack-paths/cross-vendor?**", (route) => {
+    const url = new URL(route.request().url());
+    const selectedGraph = url.searchParams.get("scan_id") === REFERENCE_CORRELATION_ID ? referenceGraph : graph;
+    // These fixture paths do not record distinct vendors at both endpoints.
+    // A vendor on a middle hop alone does not establish a crossing.
+    return fulfill(route, {
+      ...graphResponseWithPagination({ ...selectedGraph, nodes: [], edges: [], attack_paths: [] }, "attack_paths"),
+      vendor_facets: { unit: "paths", snapshot_paths: selectedGraph.attack_paths.length, cross_vendor_paths: 0,
+        pairs: [], selected: null, covers_all_paths: true },
+    });
+  });
   await page.route("**/v1/graph/exposure-paths?**", (route) => fulfill(route, {
     schema_version: "exposure-paths.v1",
     tool: "agent_bom_exposure_paths",
@@ -2654,11 +2668,16 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       if (audit.renderedEdges !== options.repositoryVisualAudit.length || audit.crossings.length) {
         throw new Error(`Repository relationships cross or are missing: ${JSON.stringify(audit)}`);
       }
-      if (!audit.logos.some(logo => logo.source === "github" && logo.loaded && logo.size >= 18 && !logo.overlapsGlyph)) {
+      if (!audit.logos.some(logo => logo.source === "github" && logo.loaded && logo.size >= 24 && !logo.overlapsGlyph)) {
         throw new Error(`Repository host logo is missing or too small: ${JSON.stringify(audit.logos)}`);
       }
     }
     if (options.minGraphNodes) {
+      await expect(page.locator(".react-flow [data-finding-signal]")).toHaveCount(0);
+      const badgeAudit = await page.evaluate(auditRenderedGraph, { edges: [] });
+      if (badgeAudit.logos.some(logo => logo.overlapsCaption)) {
+        throw new Error(`Vendor badge overlaps a node caption on ${filename}: ${JSON.stringify(badgeAudit.logos)}`);
+      }
       const graphNodeCount = await page.locator(".react-flow__node:visible").count();
       const graphEdgeCount = await page.locator(".react-flow__edge").count();
       if (graphNodeCount < options.minGraphNodes || graphEdgeCount < (options.minGraphEdges ?? 1)) {
@@ -3343,14 +3362,15 @@ async function main() {
       await riskTab.click();
       await expect(riskTab).toHaveAttribute("aria-selected", "true");
       const rows = dashboardPage.getByRole("group", { name: "Select a risk", exact: true }).getByRole("button");
-      await expect(rows).toHaveCount(5);
+      await expect(rows).toHaveCount(3);
       if (dashboardPage.viewportSize().width >= 1440) {
         await dashboardPage.getByRole("region", { name: "Selected risk", exact: true }).waitFor({ state: "visible" });
       }
     };
     const executiveRiskAssertions = {
-      expectedText: [/Review these findings first/i, /Top risks/i, /Assets & coverage/i],
-      expectedApiPaths: ["/v1/overview", "/v1/inventory/summary"], assertNoHorizontalOverflow: true,
+      expectedText: ["Same order as Investigation · top 3 advisories from 3 ranked paths", /Top risks/i, /Assets & coverage/i],
+      rejectedText: ["Severity unavailable"],
+      expectedApiPaths: ["/v1/overview", "/v1/inventory/summary", "/v1/graph/attack-paths"], assertNoHorizontalOverflow: true,
     };
     const overviewPage = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 900 });
     await capture(overviewPage, "/?capture=1", "dashboard-live.png", async (dashboardPage) => {

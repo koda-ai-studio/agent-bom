@@ -4,16 +4,22 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from functools import partial
+from types import SimpleNamespace
 from typing import Any
 
 from agent_bom.api import findings_current, time_window
 from agent_bom.api.finding_history_read import current_findings_with_history
 from agent_bom.api.finding_read_context import read_once
+from agent_bom.api.finding_row_inputs import history_ledger_reads_enabled, scan_row_inputs
 from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_matches_scope
+from agent_bom.api.finding_walk_cache import reuse_rows
 from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.models import JobStatus, ScanJob
 from agent_bom.api.scan_finding_projection import _iter_scan_findings as _iter_scan_findings
-from agent_bom.api.stores import _get_store
+from agent_bom.api.scan_finding_projection import scan_row_sources
+from agent_bom.api.stores import _get_exception_store, _get_store
+from agent_bom.api.suppression_approval import suppression_active
 
 
 def _completed_jobs_for_tenant(tenant_id: str) -> list[ScanJob]:
@@ -127,10 +133,22 @@ def _bulk_ingested_findings_for_tenant(tenant_id: str) -> list[dict[str, Any]]:
     return [item for item in get_compliance_hub_store().list(tenant_id) if isinstance(item, dict) and item.get("origin") == "bulk_ingest"]
 
 
+def scan_rows_inputs(tenant_id: str, window_since: str | None, job_store: Any) -> tuple[tuple[str, ...], float | None] | None:
+    """Fingerprint the fold's non-job inputs; the window enters as the jobs it selects, not the moving cutoff.
+
+    ``None`` (never reuse) while ledger-backed reads are enabled: a history
+    backfill writes the ledger without bumping the job revision.
+    """
+    if history_ledger_reads_enabled():
+        return None
+    summaries = job_store.list_summary(tenant_id=tenant_id, status=JobStatus.DONE)
+    in_window = [str(row.get("job_id")) for row in summaries if findings_current.job_in_window(SimpleNamespace(**row), window_since)]
+    return scan_row_inputs(tenant_id, sources=scan_row_sources(tenant_id), window_job_ids=in_window)
+
+
 def _current_scan_rows(tenant_id: str, window_since: str | None, scan_id: str | None) -> list[dict[str, Any]]:
-    return read_once(
-        ("current_rows", json.dumps([tenant_id, window_since, scan_id])),
-        lambda: current_findings_with_history(
+    def fold() -> list[dict[str, Any]]:
+        return current_findings_with_history(
             _get_store(),
             tenant_id,
             window_since,
@@ -144,7 +162,13 @@ def _current_scan_rows(tenant_id: str, window_since: str | None, scan_id: str | 
             ),
             fold=findings_current.current_scan_findings,
             select_jobs=findings_current._finding_snapshot_jobs,
-        ),
+        )
+
+    job_store = _get_store()
+    inputs = partial(scan_rows_inputs, tenant_id, window_since, job_store)
+    return read_once(
+        ("current_rows", json.dumps([tenant_id, window_since, scan_id])),
+        lambda: reuse_rows(("current_rows", scan_id), tenant_id=tenant_id, job_store=job_store, inputs=inputs, load=fold),
     )
 
 
@@ -174,3 +198,17 @@ def current_open_scan_findings(jobs: list[Any]) -> list[dict[str, Any]]:
         ]
 
     return read_once(("current_open_rows", json.dumps([tenant_id, since, job_keys])), load)
+
+
+def suppressed_finding_ids(tenant_id: str) -> frozenset[str]:
+    """Finding occurrences an approved exception suppresses now, read from the rows ``/v1/findings`` serves.
+
+    The graph keeps occurrences by finding id; overlaying this set is how a
+    graph read applies the one suppression source without a second matcher.
+    """
+    if not any(suppression_active(exc) for exc in _get_exception_store().list_all(tenant_id=tenant_id)):
+        return frozenset()
+    rows = iter_tenant_scan_spine_findings(tenant_id, status="all", sanitize=False)
+    return frozenset(
+        str(value) for row in rows if row.get("suppressed") is True for value in (row.get("id"), row.get("finding_id")) if value
+    )

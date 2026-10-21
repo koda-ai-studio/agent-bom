@@ -5,6 +5,8 @@ import { StatStrip } from "@/components/stat-strip";
 import { Agent } from "@/lib/api";
 import { ArrowRight, GitBranch, Key, Link2, Package, Server, Shield, TerminalSquare, Wrench } from "lucide-react";
 import Link from "next/link";
+import { agentRecordDisplayName, entityIdHint } from "@/lib/display-name";
+import { AgentBlastSummary } from "./agent-blast-summary";
 import {
   agentCredentialCount,
   agentPackageCount,
@@ -34,11 +36,11 @@ export function AgentDetailDrawer({
       open={open}
       onClose={onClose}
       eyebrow={agent.agent_type}
-      title={agent.name}
-      subtitle={agent.source ?? agent.config_path}
+      title={agentRecordDisplayName(agent)}
+      subtitle={[entityIdHint(agent.name, agentRecordDisplayName(agent)), agent.source ?? agent.config_path].filter(Boolean).join(" · ")}
       headerAside={<ConfiguredPill />}
       size="2xl"
-      ariaLabel={`Agent ${agent.name}`}
+      ariaLabel={`Agent ${agentRecordDisplayName(agent)}`}
       footer={
         <div className="flex flex-wrap gap-2">
           <Link
@@ -67,6 +69,14 @@ export function AgentDetailDrawer({
             { label: "Credentials", value: credentials, accent: "warn" },
           ]}
         />
+
+        <section aria-label="Blast radius" className="agents-elevated-card">
+          <div className="agents-section-label mb-2">
+            <Key className="h-3.5 w-3.5" />
+            Blast radius
+          </div>
+          <AgentBlastSummary agentName={agent.name} />
+        </section>
 
         {agent.discovery_provenance ? (
           <div className="agents-elevated-card">

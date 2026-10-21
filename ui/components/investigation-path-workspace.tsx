@@ -15,10 +15,10 @@ export function InvestigationFilterDrawer({ children }: { children: React.ReactN
           <SlidersHorizontal className="h-3.5 w-3.5 text-ink-tertiary" aria-hidden="true" />
           Filters &amp; presets
         </span>
-        <span className="text-[10px] uppercase tracking-[0.14em] text-ink-tertiary group-open:hidden">
+        <span className="text-xs uppercase tracking-[0.14em] text-ink-tertiary group-open:hidden">
           Show
         </span>
-        <span className="hidden text-[10px] uppercase tracking-[0.14em] text-ink-tertiary group-open:inline">
+        <span className="hidden text-xs uppercase tracking-[0.14em] text-ink-tertiary group-open:inline">
           Hide
         </span>
       </summary>
@@ -44,6 +44,8 @@ export function InvestigationPathWorkspace({
   detail,
   queueFooter,
   sideRail,
+  scope,
+  queueInitiallyOpen = false,
 }: {
   rows: RankedPathRow[];
   selectedKey: string | null;
@@ -55,11 +57,15 @@ export function InvestigationPathWorkspace({
   detail: React.ReactNode;
   queueFooter?: React.ReactNode | undefined;
   sideRail?: React.ReactNode | undefined;
+  /** Server-side queue scope (e.g. vendor pairs), shown above the client filters. */
+  scope?: React.ReactNode | undefined;
+  /** Open the queue on mount, e.g. while a queue scope is being chosen and the page reloads its paths. */
+  queueInitiallyOpen?: boolean | undefined;
 }) {
   const detailRef = useRef<HTMLDivElement>(null);
-  const [queueOpen, setQueueOpen] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(queueInitiallyOpen);
   const [announcement, setAnnouncement] = useState("");
-  const [mobilePanel, setMobilePanel] = useState<"path" | "queue">("path");
+  const [mobilePanel, setMobilePanel] = useState<"path" | "queue">(queueInitiallyOpen ? "queue" : "path");
   const [scrollRequest, setScrollRequest] = useState(0);
 
   useLayoutEffect(() => {
@@ -113,6 +119,7 @@ export function InvestigationPathWorkspace({
             <p className="mt-1">{subtitle}</p>
           </details>
 
+          {scope ? <div className="mt-3">{scope}</div> : null}
           <div className="mt-3">
             <InvestigationFilterDrawer>{filters}</InvestigationFilterDrawer>
           </div>

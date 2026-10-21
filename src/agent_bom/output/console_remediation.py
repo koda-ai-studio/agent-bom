@@ -313,7 +313,7 @@ def _add_remediation_finding(g: dict, finding: Finding, severity_order: dict[Sev
         g["has_kev"] = True
     if finding.ai_risk_context:
         g["ai_risk"] = True
-    g["max_risk_score"] = max(g["max_risk_score"], finding.risk_score)
+    g["max_risk_score"] = max(g["max_risk_score"], finding.risk_score or 0.0)
     if getattr(finding, "is_malicious", False) or bool((finding.evidence or {}).get("package_is_malicious")):
         g["is_malicious"] = True
 

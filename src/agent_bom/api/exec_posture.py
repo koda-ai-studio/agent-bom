@@ -199,6 +199,20 @@ def tenant_headline_posture(tenant_id: str) -> dict[str, Any] | None:
     return {"grade": posture.get("grade"), "score": posture.get("score")}
 
 
+def tenant_issue_counts(tenant_id: str) -> dict[str, Any] | None:
+    """The open issue-group counts ``/v1/posture/counts`` serves right now; ``None`` when unavailable."""
+    from agent_bom.api.stores import _get_store
+
+    request = Request({"type": "http", "method": "GET", "path": "/v1/posture/counts", "headers": [], "query_string": b"", "state": {}})
+    request.state.tenant_id = tenant_id
+    try:
+        return issue_severity_counts(request, _get_store().list_all(tenant_id=tenant_id))
+    except HTTPException:
+        # issue_severity_counts already absorbs every other failure as None.
+        _logger.warning("Issue counts unavailable for trend recording")
+        return None
+
+
 def canonical_posture_payload(
     request: Request, scorecard: dict[str, Any], *, dimensions_basis: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -233,5 +247,6 @@ __all__ = [
     "precompute_posture_evidence",
     "tenant_exec_posture",
     "tenant_headline_posture",
+    "tenant_issue_counts",
     "tenant_posture_dimensions",
 ]

@@ -35,7 +35,7 @@ function makePath(nodeCount: number): ExposurePath {
  */
 function makeElevenHopPath(): ExposurePath {
   return makePathFromHops([
-    { id: "agent:cursor", label: "Cursor IDE Agent", role: "agent" },
+    { id: "agent:cursor", label: "Cursor", role: "agent" },
     { id: "server:shell-runner", label: "shell-runner-server", role: "server" },
     { id: "pkg:pyyaml", label: "pyyaml@5.3", role: "package" },
     { id: "vuln:CVE-2020-14343", label: "CVE-2020-14343", role: "finding" },

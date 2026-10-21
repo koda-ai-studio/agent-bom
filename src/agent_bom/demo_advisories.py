@@ -18,6 +18,8 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 
+from agent_bom.version_utils import compare_version_order
+
 
 @dataclass(frozen=True)
 class DemoAdvisory:
@@ -33,6 +35,12 @@ class DemoAdvisory:
     is_kev: bool = False
     source: str = "demo-advisory"
     sample_version: str = ""
+    # CISA KEV catalog ``dateAdded`` / ``dueDate`` for a KEV-listed advisory.
+    kev_date_added: str = ""
+    kev_due_date: str = ""
+    # False for a range row that completes an advisory's shape for the matcher
+    # (a second release line) without adding packages to the generated estate.
+    estate_sample: bool = True
 
 
 DEMO_ADVISORIES: tuple[DemoAdvisory, ...] = (
@@ -61,10 +69,13 @@ DEMO_ADVISORIES: tuple[DemoAdvisory, ...] = (
         sample_version="8.5.1",
         cwe="CWE-327",
     ),
+    # GHSA-r683-j2x4-v87g fixes two release lines: ``< 2.6.7`` in 2.6.7 and
+    # ``>= 3.0.0, < 3.1.1`` in 3.1.1. One 0→3.1.1 window told 2.x installs to
+    # jump a major and flagged the fixed 2.6.7 as vulnerable.
     DemoAdvisory(
         "npm",
         "node-fetch",
-        "0",
+        "3.0.0",
         "3.1.1",
         "CVE-2022-0235",
         "high",
@@ -73,6 +84,19 @@ DEMO_ADVISORIES: tuple[DemoAdvisory, ...] = (
         "node-fetch leaks Cookie/Authorization headers on cross-origin redirect",
         sample_version="3.1.0",
         cwe="CWE-200",
+    ),
+    DemoAdvisory(
+        "npm",
+        "node-fetch",
+        "0",
+        "2.6.7",
+        "CVE-2022-0235",
+        "high",
+        8.8,
+        "node-fetch leaks Cookie/Authorization headers on cross-origin redirect",
+        sample_version="2.6.1",
+        cwe="CWE-200",
+        estate_sample=False,
     ),
     DemoAdvisory(
         "npm",
@@ -159,6 +183,9 @@ DEMO_ADVISORIES: tuple[DemoAdvisory, ...] = (
         sample_version="9.0.0",
         cwe="CWE-787",
         is_kev=True,
+        # CISA KEV catalog entry for CVE-2023-4863.
+        kev_date_added="2023-09-13",
+        kev_due_date="2023-10-04",
     ),
     DemoAdvisory(
         "pypi",
@@ -234,6 +261,39 @@ DEMO_ADVISORIES: tuple[DemoAdvisory, ...] = (
     ),
 )
 
+# OS-package advisories the seeded compute lane reports on its VMs. Ranges are
+# the upstream OpenSSH releases NVD lists: CVE-2024-6387 affects 8.5p1 through
+# 9.7p1 (fixed 9.8p1); CVE-2023-38408 affects releases before 9.3p2. Neither is
+# on the CISA KEV catalog. Not seeded into the package advisory DB.
+DEMO_HOST_ADVISORIES: tuple[DemoAdvisory, ...] = (
+    DemoAdvisory(
+        "openssh",
+        "openssh",
+        "8.5p1",
+        "9.8p1",
+        "CVE-2024-6387",
+        "high",
+        8.1,
+        "OpenSSH sshd signal handler race condition allows unauthenticated remote code execution (regreSSHion)",
+        sample_version="9.3p1",
+        cwe="CWE-362",
+        estate_sample=False,
+    ),
+    DemoAdvisory(
+        "openssh",
+        "openssh",
+        "0",
+        "9.3p2",
+        "CVE-2023-38408",
+        "critical",
+        9.8,
+        "OpenSSH ssh-agent PKCS#11 search path allows remote code execution through a forwarded agent",
+        sample_version="9.3p1",
+        cwe="CWE-428",
+        estate_sample=False,
+    ),
+)
+
 # The demo deliberately includes semver@7.5.2 as a clean package. This sentinel
 # gives the deterministic demo DB package-level coverage without making that
 # exact version vulnerable.
@@ -250,6 +310,56 @@ DEMO_CLEAN_COVERAGE_SENTINELS: tuple[DemoAdvisory, ...] = (
         source="demo-clean-sentinel",
     ),
 )
+
+
+# Published FIRST EPSS scores (probability, percentile 0-100) for every demo
+# advisory, pinned from api.first.org on the "as of" date below so the demo
+# stays deterministic offline. One value per CVE: the demo scan, the generated
+# estate and the compute lane read the same score, so every occurrence agrees.
+DEMO_EPSS_AS_OF = "2026-10-20T00:00:00+00:00"
+DEMO_EPSS_SOURCE = "first-epss-snapshot-2026-10-20"
+DEMO_EPSS: dict[str, tuple[float, float]] = {
+    "CVE-2020-14343": (0.05984, 93.240),
+    "CVE-2021-23337": (0.21333, 97.583),
+    "CVE-2022-0235": (0.01653, 76.224),
+    "CVE-2022-23539": (0.00501, 41.674),
+    "CVE-2023-25577": (0.01420, 72.470),
+    "CVE-2023-30861": (0.01261, 69.223),
+    "CVE-2023-32681": (0.02974, 87.074),
+    "CVE-2023-36258": (0.01074, 64.451),
+    "CVE-2023-37920": (0.00568, 46.017),
+    "CVE-2023-38408": (0.79700, 99.606),
+    "CVE-2023-45857": (0.00556, 45.336),
+    "CVE-2023-4863": (0.99979, 99.981),
+    "CVE-2023-50782": (0.01118, 65.655),
+    "CVE-2024-22195": (0.00892, 58.793),
+    "CVE-2024-29041": (0.00786, 55.382),
+    "CVE-2024-37890": (0.01357, 71.276),
+    "CVE-2024-6387": (0.99506, 99.946),
+}
+
+
+def demo_epss(advisory: DemoAdvisory) -> float | None:
+    """The pinned published EPSS probability for one demo advisory (None when FIRST has none)."""
+    pinned = DEMO_EPSS.get(advisory.vuln_id)
+    return pinned[0] if pinned else None
+
+
+def demo_epss_percentile(advisory: DemoAdvisory) -> float | None:
+    pinned = DEMO_EPSS.get(advisory.vuln_id)
+    return pinned[1] if pinned else None
+
+
+def demo_advisory_window(vuln_id: str, package: str, version: str, ecosystem: str) -> DemoAdvisory | None:
+    """The curated row whose ``[introduced, fixed)`` window holds ``version``, if any."""
+    for advisory in DEMO_ADVISORIES:
+        if (advisory.vuln_id, advisory.package) != (vuln_id, package):
+            continue
+        lower = compare_version_order(version, advisory.introduced, ecosystem) if advisory.introduced != "0" else 1
+        upper = compare_version_order(version, advisory.fixed, ecosystem)
+        if lower is not None and lower >= 0 and upper is not None and upper < 0:
+            return advisory
+    return None
 
 
 def seed_demo_advisories(conn: sqlite3.Connection) -> None:
@@ -298,10 +408,15 @@ def seed_demo_advisories(conn: sqlite3.Connection) -> None:
                 """,
                 (
                     advisory.vuln_id,
-                    "2023-09-27",
-                    "2023-10-04",
+                    advisory.kev_date_added or None,
+                    advisory.kev_due_date or None,
                     advisory.package,
                     advisory.ecosystem,
                 ),
+            )
+        if (probability := demo_epss(advisory)) is not None:
+            conn.execute(
+                "INSERT OR REPLACE INTO epss_scores(cve_id, probability, percentile, updated_at) VALUES (?, ?, ?, ?)",
+                (advisory.vuln_id, probability, demo_epss_percentile(advisory), DEMO_EPSS_AS_OF),
             )
     conn.commit()

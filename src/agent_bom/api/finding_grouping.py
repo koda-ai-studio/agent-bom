@@ -8,12 +8,11 @@ from typing import Any
 from fastapi import HTTPException
 
 from agent_bom.api import finding_cursor
+from agent_bom.api.finding_group_key import _finding_group_identity as _finding_group_identity
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_list_helpers import _FINDING_GROUP_MAX_OCCURRENCES, _FINDING_GROUP_OCCURRENCE_SAMPLE, _normalize_facet_severity
-from agent_bom.api.finding_row_shapes import _package_identity, _row_vuln_id
 from agent_bom.api.finding_scope_filters import _finding_identity as _finding_identity
 from agent_bom.api.finding_view_filters import _copy_first_page_metadata as _copy_first_page_metadata
-from agent_bom.canonical_ids import canonical_id
 from agent_bom.core.severity import severity_rank
 from agent_bom.evidence.finding_lanes import finding_lane, lane_counts
 
@@ -171,32 +170,6 @@ def _groups_envelope(
         source="scan_and_current_ingest_finding_groups",
         scope="tenant current-state issue groups over asset-scoped occurrences",
     )
-
-
-def _finding_group_identity(row: dict[str, Any], *, cloud_controls: bool = False) -> tuple[str, str]:
-    """Return the canonical aggregate identity without changing occurrence IDs."""
-    supplied_id = str(row.get("finding_group_id") or "").strip()
-    supplied_key = str(row.get("finding_group_key") or "").strip()
-    vulnerability_id = _row_vuln_id(row).lower()
-    if vulnerability_id:
-        package, _, ecosystem = _package_identity(row)
-        group_key = f"vulnerability:{vulnerability_id}:{ecosystem or 'unknown'}:{package}"
-    else:
-        evidence = row.get("evidence") or {}
-        control = evidence.get("check_id") if isinstance(evidence, dict) else None
-        if cloud_controls and finding_lane(row) == "cloud" and row.get("provider") and control and control != "unknown":
-            group_key = "cloud:" + ":".join(
-                str(value or "unknown")
-                for value in (row.get("provider"), row.get("finding_type"), evidence.get("benchmark_version"), control)
-            )
-        else:
-            group_key = f"occurrence:{_finding_identity(row)}"
-    # Persisted metadata is an optimization, not authority. A row can be
-    # reclassified/enriched after ingest; stale group metadata must not collapse
-    # two distinct advisories. Reuse it only when its semantic key still agrees.
-    if supplied_id and supplied_key == group_key:
-        return supplied_id, group_key
-    return canonical_id("finding-group", group_key), group_key
 
 
 def select_group_lane(all_groups: list[dict[str, Any]], severity: str | None, lane: str | None) -> tuple[list, list, dict]:

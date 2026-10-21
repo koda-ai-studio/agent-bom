@@ -22,7 +22,7 @@ from agent_bom.graph.container import UnifiedGraph
 _DEMO_IDENTITIES: tuple[dict[str, Any], ...] = (
     {
         "slug": "cursor",
-        "agent_label": "Cursor IDE Agent",
+        "agent_label": "Cursor",
         "role": "prod-admin",
         "owner": "platform-team@corp",
         "owner_type": "team",
@@ -42,7 +42,7 @@ _DEMO_IDENTITIES: tuple[dict[str, Any], ...] = (
     },
     {
         "slug": "data-pipeline",
-        "agent_label": "Data Pipeline Agent",
+        "agent_label": "Data Pipeline",
         "role": "data-pipeline",
         "owner": "data-eng@corp",
         "owner_type": "team",
@@ -60,7 +60,7 @@ _DEMO_IDENTITIES: tuple[dict[str, Any], ...] = (
     },
     {
         "slug": "claude-desktop",
-        "agent_label": "Claude Desktop Agent",
+        "agent_label": "Claude Desktop",
         "role": "agent",
         "owner": "",  # orphaned
         "owner_type": "",

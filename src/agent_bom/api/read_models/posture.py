@@ -108,6 +108,8 @@ class DiscoveryProvenance(ReadModel):
 
 class DiscoveredAgent(ReadModel):
     name: str
+    # The one resolved name every surface shows (recorded name, else the formatted id).
+    display_name: str
     agent_type: str
     agent_class: str
     canonical_id: str
@@ -319,6 +321,7 @@ class OverviewFindingCounts(ReadModel):
 
 
 class OverviewHeadline(ReadModel):
+    basis: Literal["issue_groups", "occurrences"] = "issue_groups"
     credential_exposed: int
     critical: int
     critical_high: int
@@ -395,6 +398,8 @@ class TrendPoint(ReadModel):
     measurement_version: int
     collection_coverage: str
     comparison: TrendComparison
+    # Open issue groups on the posture headline's basis when the point was recorded; occurrence counts are below.
+    issues: IssueCounts | None = None
     critical: int
     high: int
     medium: int
@@ -436,7 +441,8 @@ class ComplianceControl(ReadModel):
     control_id: str
     name: str
     status: str
-    findings: int
+    findings: int  # mapped finding occurrences
+    issue_count: int  # distinct issue groups those occurrences collapse to
     evaluation_mode: str
     evidence_reason: str
     affected_agents: list[str]
@@ -544,6 +550,7 @@ class HubTotals(ReadModel):
 
 
 class HubPostureResponse(ReadResponse):
+    framework_count_basis: Literal["control_tag_evidence"] = "control_tag_evidence"
     framework_counts: HubFrameworkCounts
     hub_severity_breakdown: dict[str, int]
     totals: HubTotals

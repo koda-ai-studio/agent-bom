@@ -63,6 +63,9 @@ def demo_estate_client(monkeypatch: pytest.MonkeyPatch, tmp_path):
     original_graph_store = api_stores._graph_store
     original_trend_store = api_stores._trend_store
     original_hub_store = hub_store_mod._HUB_STORE
+    # Triage decisions live in the process-wide exception store; one left by another test changes view filtering.
+    original_exception_store = api_stores._exception_store
+    api_stores._exception_store = None
     api_stores._store = None
     api_stores._graph_store = None
     api_stores._trend_store = None
@@ -88,6 +91,7 @@ def demo_estate_client(monkeypatch: pytest.MonkeyPatch, tmp_path):
         api_stores._trend_store = original_trend_store
         set_compliance_hub_store(original_hub_store)
         reset_findings_count_cache()
+        api_stores._exception_store = original_exception_store
         reset_backpressure_for_tests()
         # The proxy alert/metric ring buffers and the firewall decision store are
         # process-global; the demo bootstrap seeds them, so clear them here to
@@ -151,40 +155,61 @@ def test_demo_estate_bootstrap_seeds_jobs_and_graph(demo_estate_client: TestClie
 def test_demo_estate_bootstrap_seeds_honest_posture_trajectory(
     demo_estate_client: TestClient,
 ) -> None:
-    """The labeled sample estate proves the shipped trend path with two points."""
+    """Recorded stages move through the live trend path and end at the headline."""
     from agent_bom.demo_estate.showcase_graph import (
         SHOWCASE_BASELINE_CREATED_AT,
         SHOWCASE_CURRENT_CREATED_AT,
         SHOWCASE_SCAN_ID,
     )
 
-    response = demo_estate_client.get("/v1/trends", headers=VIEWER, params={"limit": 2})
+    response = demo_estate_client.get("/v1/trends", headers=VIEWER, params={"limit": 30})
 
     assert response.status_code == 200, response.text
     payload = response.json()
-    assert payload["count"] == 2
-    current, previous = payload["data_points"]
+    points = payload["data_points"]
+    assert payload["count"] >= 5
+    current = points[0]
     assert current["scan_id"] == SHOWCASE_SCAN_ID
     assert current["timestamp"] == SHOWCASE_CURRENT_CREATED_AT
-    assert previous["scan_id"] == SHOWCASE_BASELINE_SCAN_ID
-    assert previous["timestamp"] == SHOWCASE_BASELINE_CREATED_AT
-    assert current["posture_score"] == previous["posture_score"]
-    assert current["total_vulns"] == previous["total_vulns"]
-    assert current["comparison"]["status"] == "comparable"
-    assert current["comparison"]["new_findings"] == 0
-    assert current["comparison"]["still_open"] > 0
-    assert current["comparison"]["no_longer_detected"] == 0
+    baseline = next(point for point in points if point["scan_id"] == SHOWCASE_BASELINE_SCAN_ID)
+    assert baseline["timestamp"] == SHOWCASE_BASELINE_CREATED_AT
+    assert all(point["issues"] and point["issues"]["basis"] == "issue_groups" for point in points)
+    # Movement comes from the recorded evidence, not a constant series.
+    assert len({(point["issues"]["critical"], point["issues"]["high"]) for point in points}) >= 4
+    comparable = [point["comparison"] for point in points if point["comparison"]["status"] == "comparable"]
+    assert len(comparable) >= 4
+    assert sum(item["new_findings"] for item in comparable) > 0
+    assert sum(item["no_longer_detected"] for item in comparable) > 0
     assert current["verified_remediations"] is None
-    # The current point is the headline the posture endpoints serve, not the
-    # single scan's scorecard.
+    # The latest point is the headline the posture endpoints serve right now.
+    counts = demo_estate_client.get("/v1/posture/counts", headers=VIEWER).json()["issues"]
+    for key in ("critical", "high", "medium", "low", "total"):
+        assert current["issues"][key] == counts[key], key
     posture = demo_estate_client.get("/v1/posture", headers=VIEWER).json()
     assert (current["posture_grade"], current["posture_score"]) == (posture["grade"], posture["score"])
+    findings = demo_estate_client.get("/v1/findings", headers=VIEWER, params={"status": "suppressed", "limit": 1}).json()
+    assert findings.get("total", 0) == 0, "suppressed history findings were fixed before the current scan"
 
-    from agent_bom.demo_estate.bootstrap import _seed_showcase_posture_trends
+    from agent_bom.demo_estate.bootstrap import maybe_bootstrap_demo_estate
 
-    assert _seed_showcase_posture_trends(_demo_report(demo_estate_client), tenant_id="default") == 2
+    assert maybe_bootstrap_demo_estate().get("reason") == "demo_jobs_present"
     repeated = demo_estate_client.get("/v1/trends", headers=VIEWER, params={"limit": 30}).json()
-    assert repeated["count"] == 2
+    assert repeated["count"] == payload["count"]
+
+
+def test_demo_estate_change_pair_reports_the_trend_issue_basis(demo_estate_client: TestClient) -> None:
+    """The SOC diff names the posture-basis issue counts the trend plots for the same two scans."""
+    trends = demo_estate_client.get("/v1/trends", headers=VIEWER, params={"limit": 30}).json()["data_points"]
+    by_scan = {point["scan_id"]: point["issues"] for point in trends}
+    changes = demo_estate_client.get("/v1/graph/changes", headers=VIEWER).json()
+    source = changes["sources"][0]
+    assert (source["old"]["scan_id"], source["new"]["scan_id"]) == (SHOWCASE_BASELINE_SCAN_ID, "showcase")
+    issues = source["issue_change"]
+    assert issues["basis"] == "issue_groups"
+    for side in ("old", "new"):
+        expected = by_scan[source[side]["scan_id"]]
+        assert {key: issues[side][key] for key in ("critical", "high")} == {key: expected[key] for key in ("critical", "high")}
+    assert issues["new"]["critical"] != issues["old"]["critical"] or issues["new"]["high"] != issues["old"]["high"]
 
 
 def test_demo_estate_bootstrap_validates_versioned_enterprise_contract(
@@ -318,7 +343,7 @@ def test_demo_estate_graph_is_a_rich_multi_agent_estate(demo_estate_client: Test
 
     labels = {n.get("label") for n in nodes}
     # Realistic, distinct agents render.
-    assert {"Cursor IDE Agent", "LangChain Service", "Support Copilot", "Data Pipeline Agent"} <= labels
+    assert {"Cursor", "LangChain Service", "Support Copilot", "Data Pipeline"} <= labels
 
     # Configuration errors must not masquerade as CVEs or invented packages.
     assert "CVE-2024-S3ACL" not in labels
@@ -584,7 +609,7 @@ def test_demo_estate_gateway_feed_shows_the_ai_firewall(demo_estate_client: Test
 
     # Attribution uses the showcase graph's real agent names.
     agents = {e.get("agent") for e in events}
-    assert {"Cursor IDE Agent", "Claude Desktop Agent", "Data Pipeline Agent"} & agents
+    assert {"Cursor", "Claude Desktop", "Data Pipeline"} & agents
 
     # Feed is time-ordered newest-first and redaction-safe (metadata only).
     ts_values = [e.get("ts") for e in events]
@@ -683,7 +708,10 @@ def test_demo_estate_exec_severity_counts_reconcile_across_surfaces(
     assert counts["issues"]["high"] == headline["high"], (counts, headline)
     assert counts["critical"] == overview["finding_counts"]["critical"], (counts, overview["finding_counts"])
     assert overview["posture"]["severity_basis"] == "issue_groups"
-    assert counts["kev"] == headline["kev"], (counts, headline)
+    # The headline is one unit: KEV beside critical/high counts issues too.
+    assert headline["basis"] == "issue_groups"
+    assert counts["issues"]["kev"] == headline["kev"], (counts, headline)
+    assert counts["kev"] == overview["finding_counts"]["kev"] >= headline["kev"]
     # The demo estate carries the non-CVE critical/high that blast_radius missed.
     assert counts["critical"] >= 3 and counts["high"] >= 12, counts
 

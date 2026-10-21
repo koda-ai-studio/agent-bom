@@ -35,8 +35,8 @@ class PathFocusQuery:
             max_length=128,
             pattern=r"^[^\x00]*$",
             description=(
-                "Advisory of the finding occurrence. When paths record the advisory rather than the occurrence id, "
-                "the occurrence resolves to paths through its node_id carrying this advisory; ignored without node_id"
+                "Only paths carrying this advisory. With finding_id it qualifies the occurrence instead: when paths record "
+                "the advisory rather than the occurrence id, the occurrence resolves to paths through its node_id carrying it"
             ),
         ),
         framework: str | None = Query(None, max_length=64, pattern=r"^[A-Za-z0-9_.-]*$", description="Compliance framework of ``control``"),
@@ -90,7 +90,10 @@ async def focused_queue_page(
     page = await whole_queue(graph_store, tenant, scan_id, filters)
     matched = [path for path in page.ranked.paths if query.matches(path, {})]
     matched_by = "occurrence"
-    if not matched and finding_id and advisory_id and read_id:
+    if advisory_id and not finding_id:
+        matched = [path for path in matched if _carries_advisory(path, advisory_id)]
+        matched_by = "advisory"
+    elif not matched and finding_id and advisory_id and read_id:
         # The finding store keys occurrences by id while paths record the advisory: the same
         # advisory on the occurrence's own node is that occurrence, never another asset's.
         node_only = PathQuery(node_id=read_id)

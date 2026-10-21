@@ -9,6 +9,7 @@
           "conflicts": 0,
           "merged_groups": 0,
           "observations": 7,
+          "scope_conflicts": 0,
           "security_assertion_conflicts": 0,
           "self_edges_dropped": 0,
           "strong_key_conflicts": 0
@@ -961,7 +962,7 @@
           "state": "",
           "vpc_id": ""
         },
-        "canonical_id": "120dfc78-f306-5fe3-a3b5-eaed347c626b",
+        "canonical_id": "44462151-7947-5193-8b36-e7b764c15cf9",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -989,7 +990,7 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "cloud_resource:aws:ec2:instance:i-1",
+        "id": "cloud_resource:aws:ec2:instance:scoped/123456789012/us-east-1//native/i-1",
         "label": "ec2: aws-vm",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "risk_assessment": {
@@ -1435,6 +1436,7 @@
             "conflicts": 0,
             "merged_groups": 0,
             "observations": 7,
+            "scope_conflicts": 0,
             "security_assertion_conflicts": 0,
             "self_edges_dropped": 0,
             "strong_key_conflicts": 0
@@ -1521,6 +1523,7 @@
           "conflicts": 0,
           "merged_groups": 0,
           "observations": 5,
+          "scope_conflicts": 0,
           "security_assertion_conflicts": 0,
           "self_edges_dropped": 0,
           "strong_key_conflicts": 0
@@ -2040,7 +2043,7 @@
           "state": "",
           "vpc_id": ""
         },
-        "canonical_id": "31919cbe-b07a-542d-9c8e-6a3fbabf657b",
+        "canonical_id": "012554f7-4cc2-5d51-b3e9-9f1dc10cd8eb",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -2068,7 +2071,7 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "cloud_resource:azure:compute:instance:vm-1",
+        "id": "cloud_resource:azure:compute:instance:scoped/sub-1/eastus//native/vm-1",
         "label": "vm: az-vm",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "risk_assessment": {
@@ -2402,6 +2405,7 @@
             "conflicts": 0,
             "merged_groups": 0,
             "observations": 5,
+            "scope_conflicts": 0,
             "security_assertion_conflicts": 0,
             "self_edges_dropped": 0,
             "strong_key_conflicts": 0
@@ -3677,6 +3681,7 @@
           "conflicts": 0,
           "merged_groups": 0,
           "observations": 4,
+          "scope_conflicts": 0,
           "security_assertion_conflicts": 0,
           "self_edges_dropped": 0,
           "strong_key_conflicts": 0
@@ -4168,7 +4173,7 @@
           "state": "",
           "vpc_id": ""
         },
-        "canonical_id": "2c57c879-2c21-5f6f-b9f4-87ae7c518286",
+        "canonical_id": "3f649266-30bd-5169-9fb5-f6c41eabe810",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -4196,7 +4201,7 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "cloud_resource:gcp:compute:instance:gce-1",
+        "id": "cloud_resource:gcp:compute:instance:scoped/proj-1/us-central1//native/gce-1",
         "label": "gce: gce-vm",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "risk_assessment": {
@@ -4471,6 +4476,7 @@
             "conflicts": 0,
             "merged_groups": 0,
             "observations": 4,
+            "scope_conflicts": 0,
             "security_assertion_conflicts": 0,
             "self_edges_dropped": 0,
             "strong_key_conflicts": 0
@@ -4556,6 +4562,7 @@
           "conflicts": 0,
           "merged_groups": 0,
           "observations": 4,
+          "scope_conflicts": 0,
           "security_assertion_conflicts": 0,
           "self_edges_dropped": 0,
           "strong_key_conflicts": 0
@@ -5206,6 +5213,7 @@
             "conflicts": 0,
             "merged_groups": 0,
             "observations": 4,
+            "scope_conflicts": 0,
             "security_assertion_conflicts": 0,
             "self_edges_dropped": 0,
             "strong_key_conflicts": 0

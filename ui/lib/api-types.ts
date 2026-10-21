@@ -382,6 +382,17 @@ export interface GraphHistoryResponse {
 
 export interface GraphAttackPath extends AttackPath {
   exposure_path?: ExposurePath | undefined;
+  /** Every finding occurrence the path ends on is suppressed by an approved exception: evidence, not an open path. */
+  suppressed?: boolean | undefined;
+}
+
+export interface GraphVendorFacets {
+  unit: "paths";
+  snapshot_paths: number;
+  cross_vendor_paths: number;
+  pairs: Array<{ source_vendor: string; target_vendor: string; paths: number }>;
+  selected: { source_vendor?: string; target_vendor?: string } | null;
+  covers_all_paths: boolean;
 }
 
 export interface UnifiedGraphResponse extends Omit<
@@ -392,6 +403,8 @@ export interface UnifiedGraphResponse extends Omit<
   pagination: GraphPagination;
   completeness?: GraphCompleteness | undefined;
   focus?: GraphPathFocus | undefined;
+  /** Present on the cross-vendor queue: path counts per (source vendor, target vendor) over the whole snapshot. */
+  vendor_facets?: GraphVendorFacets | undefined;
   count_metadata?: {
     source?: "persisted_graph_paths" | "derived_graph_paths" | string;
     returned?: number;
@@ -401,6 +414,12 @@ export interface UnifiedGraphResponse extends Omit<
     derived_paths?: number;
     returned_rows?: number;
     scope?: string;
+    /** Paths in the matching queue whose every occurrence is suppressed; null when not enumerated (focused reads). */
+    suppressed_paths?: number | null;
+    /** total minus suppressed_paths: the open paths. */
+    open_paths?: number | null;
+    suppression_basis?: "approved_exception";
+    suppression_complete?: boolean;
     [key: string]: unknown;
   } | undefined;
 }
@@ -884,6 +903,8 @@ export interface GraphRollupSummary {
   /** Estate-wide distinct open issues; equals the overview's issue total. */
   issue_count?: number;
   finding_occurrence_count?: number;
+  /** Estate-wide open issues by severity, the same basis as `issue_count`. */
+  issue_severity_counts?: Partial<Record<"critical" | "high" | "medium" | "low" | "info" | "none", number>>;
 }
 
 /** Offset page over a drill-down's ranked direct children. */
@@ -961,6 +982,10 @@ export interface GraphRollupAggregateCountMetadata {
   extra_memberships: number;
   /** True only for the returned entries over the loaded source, not the whole estate. */
   additive: boolean;
+  /** Distinct finding occurrences across every evaluated entry; entries sharing a server each count its occurrences. */
+  distinct_finding_occurrences?: number;
+  finding_occurrence_memberships?: number;
+  occurrences_additive?: boolean;
   source_truncated: boolean;
   reason: string;
 }
@@ -1135,6 +1160,13 @@ export interface GraphEstatePathChange {
   summary: string;
 }
 
+export interface GraphChangeAttribution {
+  unit: "nodes";
+  sources: Array<{ vendor: string; account: string } & GraphDiffChangeCounts>;
+  omitted_sources: number;
+  unattributed: GraphDiffChangeCounts;
+}
+
 export interface GraphEstateHighlights {
   new_critical_findings?: { count: number; top: GraphEstateHighlightNode[] };
   new_credential_reach?: { count: number; top: GraphEstateHighlightNode[] };
@@ -1154,8 +1186,20 @@ export interface GraphEstateChangeSource {
   counts: Record<"nodes" | "edges", GraphDiffChangeCounts>;
   total_changes: number;
   nodes_by_entity_type: Record<string, GraphDiffChangeCounts>;
+  /** Changed nodes per vendor and account recorded on each node; absent on older servers. */
+  changes_by_source?: GraphChangeAttribution | undefined;
   highlights: GraphEstateHighlights;
+  /** Open issue groups the posture trend recorded for both scans; null when either scan has no recorded point. */
+  issue_change?: GraphEstateIssueChange | null | undefined;
   skipped_snapshots: number;
+}
+
+type IssueSnapshotCounts = Record<"critical" | "high" | "medium" | "low" | "total", number>;
+
+export interface GraphEstateIssueChange {
+  basis: string;
+  old: IssueSnapshotCounts;
+  new: IssueSnapshotCounts;
 }
 
 /** A scope with no earlier snapshot to compare: never counted as additions. */
@@ -1435,6 +1479,8 @@ export interface Agent {
   canonical_id?: string;
   stable_id?: string;
   name: string;
+  /** The one resolved name the API serves for this agent (recorded name, else the formatted id). */
+  display_name?: string | undefined;
   agent_type: string;
   /** Display class from the API: "client" | "background" | "synthetic" (additive). */
   agent_class?: string | undefined;
@@ -1705,9 +1751,12 @@ export interface UnifiedFinding {
   controls?: Array<Record<string, unknown>> | undefined;
   controls_count?: number | undefined;
   evidence?: Record<string, unknown> | undefined;
-  risk_score?: number | undefined;
+  /** `null` when no scorer assessed the finding — render "Not assessed", never 0. */
+  risk_score?: number | null | undefined;
   impact_category?: string | null | undefined;
   affected_servers?: string[] | undefined;
+  /** `<framework>:<control>` tags stamped on the finding; the basis of every compliance count. */
+  framework_tags?: string[] | undefined;
   affected_agents?: string[] | undefined;
   exposed_credentials?: string[] | undefined;
   exposed_tools?: string[] | undefined;
@@ -1717,6 +1766,11 @@ export interface UnifiedFinding {
   graph_reachable_from_agents?: string[] | undefined;
   graph_reachable_from?: string[] | undefined;
   graph_reachable_from_count?: number | null | undefined;
+  /** Dependency lineage of a package-backed finding (absent otherwise). */
+  is_direct?: boolean | null | undefined;
+  dependency_depth?: number | null | undefined;
+  /** Parent package the vulnerable dependency was pulled in through. */
+  introduced_via?: string | null | undefined;
   scan_id?: string | undefined;
   scan_sources?: string[] | undefined;
   status?: string | undefined;
@@ -1886,8 +1940,8 @@ export interface BlastRadius {
   /** API v2 field — same as reachable_tools */
   exposed_tools?: string[] | undefined;
   reachable_tools: string[];
-  /** API v2 field — same as blast_score (0-100) */
-  risk_score?: number | undefined;
+  /** API v2 field — same as blast_score (0-100); `null` when not assessed. */
+  risk_score?: number | null | undefined;
   blast_score: number;
   cvss_score?: number | null | undefined;
   epss_score?: number | null | undefined;
@@ -2769,7 +2823,10 @@ export type ComplianceNarrativeResponse = ApiSchemas["ComplianceNarrativeRespons
 export interface ComplianceControl {
   code: string;
   name: string;
+  /** Mapped finding occurrences (one advisory on N assets counts N). */
   findings: number;
+  /** Distinct issue groups those occurrences collapse to — what the findings view lists. */
+  issue_count?: number | undefined;
   // Additional unscored states are normalized by compliance-status helpers at
   // render boundaries; the legacy matrix row contract remains scored-only.
   status: "pass" | "warning" | "fail";
@@ -3438,6 +3495,8 @@ export interface TrendPointResponse {
   evidence_age_days?: number | null;
   age_sample_count?: number;
   evidence_sample_count?: number;
+  /** Open issue groups the posture headline counted when this point was recorded; null on older points. */
+  issues?: { critical: number; high: number; medium: number; low: number; total: number; basis: string } | null;
   scan_id?: string | null;
   timestamp: string;
   total_vulns: number;
@@ -3581,6 +3640,8 @@ export interface OverviewResponse {
   tenant_id: string;
   posture: OverviewPosture;
   headline: {
+    /** The one unit every headline count uses; occurrences stay in finding_counts. */
+    basis?: "issue_groups" | "occurrences";
     critical: number;
     high: number;
     critical_high: number;

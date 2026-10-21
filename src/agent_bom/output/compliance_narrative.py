@@ -891,13 +891,9 @@ def generate_compliance_narrative(
 
     headline = build_executive_headline(
         {
+            **{key: b.get(key) for key in ("severity", "risk_score", "affected_agents", "owner", "sla_due_at", "suppressed")},
             "id": b["vulnerability_id"],
             "title": b.get("title") or _headline_title(b),
-            "severity": b.get("severity"),
-            "risk_score": b.get("risk_score"),
-            "affected_agents": b.get("affected_agents"),
-            "owner": b.get("owner"),
-            "sla_due_at": b.get("sla_due_at"),
         }
         for b in blast_dicts
     )

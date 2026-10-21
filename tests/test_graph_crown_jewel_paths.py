@@ -79,7 +79,7 @@ def test_three_factor_resource_is_a_crown_jewel():
     assert paths, "a 3-factor resource must surface a toxic-combination path"
     cj = paths[0]
     assert "Crown jewel" in cj.summary
-    assert "internet-exposed" in cj.summary
+    assert "recorded public exposure" in cj.summary
     assert "exploitable vulnerability" in cj.summary
     assert "PCI-DSS" in cj.summary  # regulation named
     assert cj.composite_risk >= 95

@@ -11,12 +11,14 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any
 
+from agent_bom.graph.completeness import graph_completeness
 from agent_bom.mcp_errors import CODE_NOT_FOUND_AGENTS, CODE_NOT_FOUND_RESOURCE, mcp_error_json
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.rest_parity import api_reads, api_unavailable
 
 PERSISTED = "persisted_snapshot"
 LIVE = "live_discovery"
+ESTATE = "current_estate_graph"
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +27,8 @@ class ContextReport:
     blast_radius: list[dict[str, Any]]
     source: str
     scope: dict[str, Any]
+    estate_agents: int | None = None
+    page: dict[str, Any] | None = None
 
 
 async def persisted_context_report(tenant_id: str, scan_id: str | None) -> ContextReport | str:
@@ -44,7 +48,81 @@ async def persisted_context_report(tenant_id: str, scan_id: str | None) -> Conte
     if not report["agents"]:
         return mcp_error_json(CODE_NOT_FOUND_AGENTS, "The persisted snapshot holds no agents.", details={"tenant_id": tenant_id})
     scope = {"tenant_id": tenant_id, "scan_id": scan_id, "scan_ids": report["scan_ids"]}
-    return ContextReport(report["agents"], report["blast_radius"], PERSISTED, scope)
+    estate_agents = None if scan_id else await asyncio.to_thread(reads.current_estate_agent_total, tenant_id)
+    return ContextReport(report["agents"], report["blast_radius"], PERSISTED, scope, estate_agents)
+
+
+async def estate_context_report(tenant_id: str, *, offset: int, limit: int) -> ContextReport | None:
+    """One agent page of the tenant's current estate graph, the page ``/v1/graph?entity_types=agent`` serves.
+
+    ``None`` when the API is not installed or the estate graph holds no agents;
+    the caller then reads the persisted scan reports.
+    """
+    reads = api_reads()
+    if reads is None:
+        return None
+    tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
+    page = await asyncio.to_thread(reads.estate_context_page, tenant_id, offset=offset, limit=limit)
+    if page is None:
+        return None
+    scope = {"tenant_id": tenant_id, "scan_id": page["scan_id"], "snapshot_created_at": page["created_at"]}
+    return ContextReport(page["agents"], page["blast_radius"], ESTATE, scope, page["total"], page)
+
+
+def _coverage(report: ContextReport, agents_in_view: int) -> dict[str, Any] | None:
+    if report.source not in {PERSISTED, ESTATE} or report.estate_agents is None:
+        return None
+    offset = int((report.page or {}).get("offset") or 0)
+    return {
+        "agents_in_view": agents_in_view,
+        "current_estate_agents": report.estate_agents,
+        "covers_current_estate": offset == 0 and agents_in_view >= report.estate_agents,
+        "basis": (
+            "one agent page of the current estate graph (GET /v1/graph?entity_types=agent)"
+            if report.source == ESTATE
+            else "persisted scan reports vs the current estate graph (the /v1/posture/counts agents total)"
+        ),
+        "estate_tools": ["inventory_summary", "exposure_paths", "blast_radius"],
+    }
+
+
+def apply_scope_metadata(result: dict[str, Any], report: ContextReport) -> None:
+    """Stamp source, scope, estate coverage, agent pagination and an honest completeness verdict."""
+    result.update(source=report.source, scope=report.scope)
+    coverage = _coverage(report, int(result["stats"]["agent_count"]))
+    if coverage is None:
+        return
+    result["estate_coverage"] = coverage
+    page = report.page or {}
+    hop_cut = bool(page.get("hop_truncated") or page.get("depth_limited"))
+    if report.page is not None:
+        offset, returned = int(page["offset"]), coverage["agents_in_view"]
+        has_more = offset + returned < coverage["current_estate_agents"]
+        result["pagination"] = {
+            "offset": offset,
+            "limit": page["limit"],
+            "returned": returned,
+            "total": coverage["current_estate_agents"],
+            "has_more": has_more,
+            "next_offset": offset + returned if has_more else None,
+        }
+    if coverage["covers_current_estate"] and not hop_cut:
+        return
+    result["path_completeness"] = result["completeness"]
+    result["completeness"] = graph_completeness(
+        returned=coverage["agents_in_view"],
+        total=coverage["current_estate_agents"],
+        truncated=True,
+        reason=(
+            "dependency depth limit reached; deeper transitive packages are not in this context"
+            if page.get("depth_limited") and coverage["covers_current_estate"]
+            else "context hop limit reached; narrow the page"
+            if hop_cut and coverage["covers_current_estate"]
+            else "one agent page of the current estate; page with offset/limit"
+            if report.source == ESTATE
+            else "scan reports hold a subset of the current estate's agents; use inventory_summary or exposure_paths for the estate"
+        ),
+    )
 
 
 async def live_context_report(config_path: str | None, run_scan_pipeline: Any) -> ContextReport | str:

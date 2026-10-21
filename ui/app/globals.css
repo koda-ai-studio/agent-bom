@@ -434,6 +434,7 @@ body {
 .ep-header-action { @apply shrink-0 self-center; }
 .ep-badges { @apply flex flex-wrap items-center gap-2; }
 .ep-severity { @apply rounded-md bg-red-500/10 px-2.5 py-1 text-[15px] font-semibold text-red-700 dark:text-red-200; }
+.ep-basis { @apply rounded-md border border-outline bg-surface-elevated px-2.5 py-1 text-[0.8125rem] font-medium text-ink-secondary; }
 .ep-kev { @apply rounded-md bg-amber-500/10 px-2.5 py-1 text-[15px] font-semibold text-amber-700 dark:text-amber-200; }
 .ep-summary { @apply max-w-3xl text-[15px] leading-6 text-[color:var(--text-secondary)]; }
 .ep-metrics { @apply flex w-full flex-wrap gap-x-5 gap-y-2 text-[15px]; }
@@ -461,11 +462,11 @@ body {
 .ep-sequence-title { @apply mt-2 break-words text-base font-semibold leading-6 text-[color:var(--foreground)]; }
 .ep-sequence-subtitle { @apply mt-1 break-words text-[15px] leading-5 text-[color:var(--text-secondary)]; }
 .ep-evidence-row { @apply min-w-0 rounded-xl border border-[color:var(--border-subtle)] px-3 py-2 text-xs; }
-.ep-evidence-label { @apply mb-1 text-[10px] uppercase tracking-[0.16em] text-[color:var(--text-tertiary)]; }
+.ep-evidence-label { @apply mb-1 text-xs uppercase tracking-[0.16em] text-[color:var(--text-tertiary)]; }
 .ep-evidence-chip { @apply max-w-full rounded border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-2 py-0.5 text-[color:var(--text-secondary)] [overflow-wrap:anywhere]; }
 .ep-evidence-more { @apply rounded border border-[color:var(--border-subtle)] px-2 py-0.5 text-[color:var(--text-tertiary)]; }
 .ep-chevron { @apply h-4 w-4 shrink-0 text-[color:var(--text-tertiary)] transition-transform group-open:rotate-180; }
-.ep-kicker { @apply text-[10px] uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]; }
+.ep-kicker { @apply text-xs uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]; }
 .ep-kicker-wide { @apply sm:col-span-2; }
 .ep-view-label { @apply text-[15px] uppercase tracking-[0.12em] text-[color:var(--text-tertiary)]; }
 .ep-proof-source { @apply font-mono text-[color:var(--foreground)] [overflow-wrap:anywhere]; }
@@ -485,7 +486,7 @@ body {
 .gc-header { @apply mb-5 flex flex-wrap items-start justify-between gap-3; }
 .gc-title { @apply flex items-center gap-2 text-sm font-semibold text-[color:var(--foreground)]; }
 .gc-intro { @apply mt-1 text-[15px] text-[color:var(--text-secondary)]; }
-.gc-bound { @apply rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-700 dark:text-sky-300; }
+.gc-bound { @apply rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-700 dark:text-sky-300; }
 .gc-panel { @apply mt-2 border-t border-[color:var(--border-subtle)]; }
 .gc-summary { @apply flex min-h-11 cursor-pointer list-none items-center justify-between py-2 text-[15px] font-medium text-[color:var(--text-secondary)]; }
 .gc-summary-strong { @apply flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 text-[15px] font-medium text-[color:var(--text-secondary)]; }
@@ -522,7 +523,7 @@ body {
 .gc-submit { @apply rounded-lg bg-emerald-600 px-3 py-2 font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50; }
 .gc-chevron { @apply h-4 w-4 text-[color:var(--text-tertiary)] transition group-open:rotate-180; }
 .gc-step-title { @apply text-xs font-semibold leading-4 text-[color:var(--foreground)]; }
-.gc-step-detail { @apply truncate text-[10px] text-[color:var(--text-tertiary)]; }
+.gc-step-detail { @apply truncate text-xs text-[color:var(--text-tertiary)]; }
 .gc-heading { @apply mt-3 max-w-4xl text-2xl font-semibold leading-tight tracking-tight text-[color:var(--foreground)] sm:text-3xl; }
 .gc-copy { @apply mt-2 text-[15px] text-[color:var(--text-secondary)]; }
 .gc-failure { @apply mt-2 font-mono text-[11px] text-red-600 dark:text-red-300; }
@@ -530,7 +531,7 @@ body {
 .gc-receipt-id { @apply truncate font-mono text-[color:var(--foreground)]; }
 .gc-receipt-digest { @apply mt-1 truncate font-mono text-[color:var(--text-tertiary)]; }
 .gc-label { @apply text-xs font-medium text-[color:var(--text-secondary)]; }
-.gc-form-note { @apply mb-3 text-[10px] text-[color:var(--text-tertiary)]; }
+.gc-form-note { @apply mb-3 text-xs text-[color:var(--text-tertiary)]; }
 .gc-form-grid { @apply grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem]; }
 .gc-snapshot-id { @apply block truncate font-mono text-[color:var(--foreground)]; }
 .gc-snapshot-meta { @apply mt-1 block text-[color:var(--text-tertiary)]; }
@@ -616,7 +617,7 @@ body {
 /* Shared graph chrome is loaded by several routes. Keep its presentation in
    CSS so route chunks carry behavior and evidence only, not repeated tokens. */
 .graph-legend-toggle { @apply items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-muted)] px-2.5 py-1.5 text-xs text-[var(--text-secondary)] backdrop-blur-sm transition-colors hover:bg-[var(--surface-elevated)]; }
-.graph-legend-count { @apply rounded-full bg-[var(--surface)] px-1.5 py-0.5 text-[10px] text-[var(--text-tertiary)]; }
+.graph-legend-count { @apply rounded-full bg-[var(--surface)] px-1.5 py-0.5 text-xs text-[var(--text-tertiary)]; }
 .graph-legend-popover { @apply max-h-[60vh] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 text-[var(--foreground)] backdrop-blur-md; }
 .graph-legend-dock { @apply border-t border-[var(--border-subtle)] pt-2 open:pt-3; }
 .graph-legend-dock-separated { @apply my-1 px-3 py-1.5; }
@@ -633,7 +634,7 @@ body {
 .graph-legend-section { flex: 0 1 auto; min-width: min(10rem, 100%); max-width: 100%; }
 .graph-icon-button { @apply flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-muted)] px-2.5 py-1.5 text-xs text-[var(--text-secondary)] backdrop-blur-sm transition-colors hover:bg-[var(--surface-elevated)]; }
 .graph-layout-toolbar { @apply flex max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)]/90 p-1; }
-.graph-layout-button { @apply inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-elevated)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40; }
+.graph-layout-button { @apply inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-elevated)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40; }
 .graph-flow-controls { @apply !rounded-lg !border-[var(--border-subtle)] !bg-[var(--surface)]/90 !backdrop-blur-sm [&>button]:!border-[var(--border-subtle)] [&>button]:!bg-[var(--surface-elevated)] [&>button]:!text-[var(--text-secondary)] [&>button:hover]:!bg-[var(--surface-muted)]; }
 .graph-flow-minimap { @apply !rounded-lg !border-[var(--border-subtle)] !bg-[var(--surface)]/90 !backdrop-blur-sm; }
 .graph-export-select { @apply rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[var(--text-secondary)] focus:border-sky-600 focus:outline-none; }
@@ -677,7 +678,9 @@ body {
 .attack-flow-error { @apply flex h-[80vh] flex-col items-center justify-center gap-3 text-[var(--text-secondary)]; }
 .graph-page-header { @apply px-4 py-2; background: var(--background); }
 .graph-page-select { @apply rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] focus:border-sky-600 focus:outline-none; }
-.graph-page-search { @apply min-w-[260px] flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus:border-sky-600 focus:outline-none; }
+.graph-page-search { @apply min-w-[10rem] flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus:border-sky-600 focus:outline-none; }
+/* In the phone search panel the field shrinks so the submit button stays inside the panel. */
+[data-testid="mobile-graph-search"] form, [data-testid="mobile-graph-search"] .graph-page-search { min-width: 0; }
 .graph-page-action { @apply cursor-pointer rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40; }
 .graph-page-result { @apply rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-2 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface)]; }
 .graph-page-secondary-action { @apply rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-1.5 text-xs text-[var(--text-secondary)] transition hover:border-[var(--border-strong)] hover:text-[var(--foreground)]; }
@@ -951,28 +954,24 @@ main > div {
 /* Provider marks: a canvas cut-out ring, then a ≥3:1 outline that turns dashed when inherited. */
 .graph-provider-mark {
   display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; overflow: hidden;
-  border-radius: 9999px; border: 2px solid var(--graph-canvas); background: var(--surface); color: var(--foreground);
-  outline: 1.5px solid var(--border-strong); outline-offset: -3.5px;
+  border-radius: 9999px; border: 2px solid var(--graph-canvas); background: #ffffff; color: #202123;
+  outline: 1.5px solid #718096; outline-offset: -3.5px;
 }
 .graph-provider-mark[data-provider-basis="inherited"] { outline-style: dashed; }
-/* On a node glyph: ~44% of the disc, centred on the ring at 4:30 so it reads as a badge, not a second glyph.
-   The size keeps the vendor logo at 18px or more on a fitted canvas and clear of the entity icon. */
-.graph-provider-mark-node { right: -13%; bottom: -13%; width: 44%; height: 44%; min-width: 22px; min-height: 22px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.18); }
+/* A larger badge on a contrasting plate stays legible when the canvas is fitted.
+   Its outside corner clears the entity icon and the connection handles. */
+.graph-provider-mark-node { right: -30%; bottom: -10%; width: 60%; height: 60%; min-width: 34px; min-height: 34px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.18); }
 .graph-provider-mark-node .graph-provider-mark-glyph { width: 78%; height: 78%; }
 .graph-provider-mark-node .graph-provider-mark-glyph-aws { width: 88%; height: 88%; }
-/* Linked-findings dot on an asset glyph, at 1:30 opposite the vendor badge; the full ring belongs to findings. */
-.graph-finding-signal { right: 2%; top: 2%; width: 24%; height: 24%; min-width: 12px; min-height: 12px; border: 2px solid var(--graph-canvas); }
 /* Inline marks sit on chips and cards, not the canvas: no cut-out ring. */
 .graph-provider-mark-inline { border-width: 0; outline-width: 1px; outline-offset: -1px; }
 .graph-provider-mark-inline .graph-provider-mark-glyph { width: 74%; height: 74%; }
 .graph-provider-mark-inline .graph-provider-mark-glyph-aws { width: 90%; height: 90%; }
-.graph-provider-mark-dark { background: #202123; }
+.graph-provider-mark-dark { background: #202123; color: #ffffff; }
 .graph-provider-mark-glyph { width: 74%; height: 74%; object-fit: contain; }
 /* AWS has no symbol-only mark; its wide logo gets the disc's full width. */
 .graph-provider-mark-glyph-aws { width: 86%; height: 86%; }
 .graph-provider-mark-glyph-openai { transform: scale(1.6); }
-/* Black-ink artwork: invert lightness, keep hue (the AWS smile stays orange). */
-:root:not([data-theme="light"]) .graph-provider-mark-mono .graph-provider-mark-glyph { filter: invert(1) hue-rotate(180deg); }
 /* Scenario cards share width with the decision panel; keep metadata legible. */
 .scenario-context-canvas .react-flow__node :is(span, p, .text-xs) { font-size: max(16px, var(--graph-node-meta-size, 16px), 1em); }
 

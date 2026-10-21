@@ -63,11 +63,11 @@ SHOWCASE_ORG_ID = "org:corp"
 # seeder and the demo scan both consume these records so a path cannot render in
 # the graph while the corresponding finding reports unknown reachability.
 SHOWCASE_AGENTS: dict[str, str] = {
-    "cursor": "Cursor IDE Agent",
+    "cursor": "Cursor",
     "langchain-service": "LangChain Service",
     "support-copilot": "Support Copilot",
-    "data-pipeline": "Data Pipeline Agent",
-    "claude-desktop": "Claude Desktop Agent",
+    "data-pipeline": "Data Pipeline",
+    "claude-desktop": "Claude Desktop",
 }
 
 

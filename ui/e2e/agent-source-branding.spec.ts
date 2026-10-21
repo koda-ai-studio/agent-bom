@@ -45,7 +45,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await expect(mark).toBeInViewport();
       expect(await mark.locator("img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     }
-    await expect(canvas.locator('[data-id="agent:0"] [data-finding-signal="critical"]')).toBeVisible();
+    await expect(canvas.locator('[data-id="agent:0"] [data-finding-signal]')).toHaveCount(0);
+    await expect(canvas.locator('[data-id="agent:0"] [data-graph-entity]')).toHaveAttribute("title", /Recorded severity: critical/);
     await expect(canvas.locator('[data-id="agent:4"] [data-agent-source]')).toHaveCount(0);
     await expect(canvas.locator('[data-id="agent:4"] .lucide-bot')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);

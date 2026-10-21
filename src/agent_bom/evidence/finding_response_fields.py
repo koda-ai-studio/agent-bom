@@ -121,3 +121,27 @@ def frozen_atlas_mapping_fields(br: object) -> dict:
     receipts = getattr(br, "atlas_mapping_evidence", {})
     supported = {tag: receipts[tag] for tag in getattr(br, "atlas_tags", []) if tag in receipts}
     return {"atlas_mapping_evidence": supported} if supported else {}
+
+
+_PACKAGE_NAME_RE = re.compile(r"[A-Za-z0-9@._/+:-]{1,256}")
+
+
+def safe_lineage_fields(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Dependency lineage (direct?, depth, parent package) of a package-backed finding.
+
+    Read from the row or, for rows that kept it only in evidence, from the same
+    ``package_*`` evidence the graph projects. Absent for non-package findings.
+    """
+    raw_evidence = row.get("evidence")
+    evidence: Mapping[str, Any] = raw_evidence if isinstance(raw_evidence, Mapping) else {}
+    out: dict[str, Any] = {}
+    is_direct = row.get("is_direct", evidence.get("package_is_direct"))
+    if isinstance(is_direct, bool):
+        out["is_direct"] = is_direct
+    depth = row.get("dependency_depth", evidence.get("package_dependency_depth"))
+    if isinstance(depth, int) and not isinstance(depth, bool) and 0 <= depth <= 1_000:
+        out["dependency_depth"] = depth
+    if out:
+        parent = row.get("introduced_via", evidence.get("package_parent"))
+        out["introduced_via"] = parent if isinstance(parent, str) and _PACKAGE_NAME_RE.fullmatch(parent) else None
+    return out

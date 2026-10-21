@@ -18,7 +18,7 @@ import sqlite3
 import threading
 import time
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from functools import lru_cache, wraps
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -28,7 +28,7 @@ from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
 from agent_bom.api.file_lock import exclusive_file_lock
-from agent_bom.api.finding_read_context import read_once
+from agent_bom.api.finding_read_context import forget_read, on_scope_exit, read_once
 from agent_bom.api.findings_current import _finding_snapshot_jobs, scan_collection_incomplete_reasons, scan_evidence_authority_key
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.models import JobStatus
@@ -39,7 +39,10 @@ from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuse
 from agent_bom.storage.state_home import state_dir
 
 CURRENT_PREFIX = "current-estate:"
-_PROJECTION_FORMAT = 2
+_PROJECTION_FORMAT = 3
+# Restarts of an unpinned read whose generation another worker retired between
+# resolve and read. In-process readers are pinned and never need one.
+_UNPINNED_READ_ATTEMPTS = 3
 _READS = frozenset(
     {
         "load_graph",
@@ -57,7 +60,11 @@ _READS = frozenset(
         "impact_of",
         "traverse_subgraph",
         "attack_paths_for_sources",
+        "longest_path_to",
         "attack_paths",
+        "snapshot_attack_paths",
+        "snapshot_queue_page",
+        "snapshot_cross_vendor_page",
         "incident_edges_page",
         "node_context",
         "resolve_node_aliases",
@@ -65,6 +72,14 @@ _READS = frozenset(
         "evidence_manifest",
     }
 )
+
+
+def _build_wait_seconds() -> float:
+    """How long a read waits for another request's rebuild before serving the previous generation."""
+    try:
+        return max(0.0, float(env_raw("AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS") or 2000) / 1000)
+    except ValueError:
+        return 2.0
 
 
 def _digest(value: Any) -> str:
@@ -103,6 +118,10 @@ class _ProjectionLock:
     rebuild. A thread that already reads may read again, but it may not escalate:
     waiting for its own shared hold would deadlock, so that is a 409 instead.
     """
+
+    def reading_here(self) -> bool:
+        with self._cond:
+            return bool(self._reads.get(threading.get_ident()))
 
     def __init__(self) -> None:
         self._cond = threading.Condition()
@@ -200,6 +219,10 @@ class CurrentGraphStore:
         self._coverage: dict[str, dict[str, Any]] = {}
         self._cache: dict[str, tuple[str, tuple[tuple[str, str], ...], str]] = {}
         self._held_promotion_locks = threading.local()
+        self._state_lock = threading.Lock()
+        # Generations a live read scope resolved; retirement skips them.
+        self._pins: dict[str, int] = {}
+        self._build_gates: dict[str, threading.RLock] = {}
 
     def __getattr__(self, name: str) -> Any:
         method = getattr(self._graph_store, name)
@@ -254,10 +277,14 @@ class CurrentGraphStore:
     @contextmanager
     def _reading(self, kwargs: dict[str, Any]) -> Iterator[dict[str, Any]]:
         tenant = str(kwargs.get("tenant_id") or "default")
-        identity = self._resolved_id(tenant)
-        with self._lock.shared():
-            self._require_live(tenant, identity)
-            yield {**kwargs, "scan_id": identity}
+        for _ in range(_UNPINNED_READ_ATTEMPTS):
+            identity = self._resolved_id(tenant)
+            with self._lock.shared():
+                if self._live(tenant, identity):
+                    yield {**kwargs, "scan_id": identity}
+                    return
+            self._forget_resolved(tenant)
+        raise HTTPException(409, "Current estate generation was retired; restart the query.")
 
     def _revisions(self, tenant: str, scan_ids: Any) -> tuple[tuple[str, str], ...]:
         return tuple(self._graph_store.snapshot_identity(tenant_id=tenant, scan_id=scan, for_paging=True) for scan in scan_ids)
@@ -268,17 +295,42 @@ class CurrentGraphStore:
     def _resolved_id(self, tenant: str) -> str:
         return read_once((f"current-graph:{id(self)}", tenant), lambda: self._resolve_current_id(tenant))
 
-    def _require_live(self, tenant: str, identity: str) -> None:
-        # A concurrent request may retire this rebuildable projection. Never
-        # turn that race into an empty graph or silently switch generations.
-        if identity and not self._projection_store.snapshot_identity(tenant_id=tenant, scan_id=identity)[1]:
-            raise HTTPException(409, "Current estate generation was retired; restart the query.")
+    def _forget_resolved(self, tenant: str) -> None:
+        forget_read((f"current-graph:{id(self)}", tenant))
+
+    def _live(self, tenant: str, identity: str) -> bool:
+        # Never turn a retired projection into an empty graph or a silent mix.
+        return not identity or bool(self._projection_store.snapshot_identity(tenant_id=tenant, scan_id=identity)[1])
+
+    def _pin(self, identity: str) -> str:
+        """Keep *identity* live until the active read scope ends.
+
+        Called while holding the projection lock, so no retirement can slip in
+        between resolving a generation and pinning it. Outside a scope each
+        call's shared hold is the only protection, and reads restart instead.
+        """
+
+        def release() -> None:
+            with self._state_lock:
+                left = self._pins.get(identity, 0) - 1
+                if left > 0:
+                    self._pins[identity] = left
+                else:
+                    self._pins.pop(identity, None)
+
+        if identity and on_scope_exit(release):
+            with self._state_lock:
+                self._pins[identity] = self._pins.get(identity, 0) + 1
+        return identity
 
     def _current_id(self, tenant: str) -> str:
-        identity = self._resolved_id(tenant)
-        with self._lock.shared():
-            self._require_live(tenant, identity)
-        return identity
+        for _ in range(_UNPINNED_READ_ATTEMPTS):
+            identity = self._resolved_id(tenant)
+            with self._lock.shared():
+                if self._live(tenant, identity):
+                    return identity
+            self._forget_resolved(tenant)
+        raise HTTPException(409, "Current estate generation was retired; restart the query.")
 
     def _cached_live_id(self, tenant: str, fingerprint: str) -> str:
         cached = self._cache.get(tenant)
@@ -312,7 +364,8 @@ class CurrentGraphStore:
         return f"{stem}.lock", f"{stem}.epoch"
 
     @contextmanager
-    def _promotion_lock(self, tenant: str) -> Iterator[None]:
+    def _promotion_lock(self, tenant: str, *, blocking: bool = True) -> Iterator[None]:
+        """Order resolve -> promote -> retire across workers; non-blocking raises ``BlockingIOError``."""
         # A nested resolve on this thread already holds the lock; a second
         # descriptor on the same file would block on its own flock.
         path = self._promotion_paths(tenant)[0]
@@ -320,12 +373,53 @@ class CurrentGraphStore:
         if path in held:
             yield
             return
-        with exclusive_file_lock(path):
+        with exclusive_file_lock(path, blocking=blocking):
             held.add(path)
             try:
                 yield
             finally:
                 held.discard(path)
+
+    @contextmanager
+    def _building(self, tenant: str, *, wait: bool) -> Iterator[bool]:
+        """Become the tenant's one builder.
+
+        Without *wait*, give an in-flight build (often the post-push warm-up
+        building this reader's own evidence) a bounded head start, then yield
+        False so the caller serves the previous generation instead of queueing.
+        """
+        with self._state_lock:
+            gate = self._build_gates.setdefault(tenant, threading.RLock())
+        deadline = None if wait else time.monotonic() + _build_wait_seconds()
+        if not gate.acquire(timeout=-1 if deadline is None else _build_wait_seconds()):
+            yield False
+            return
+        try:
+            with ExitStack() as stack:
+                acquired = self._enter_promotion_lock(stack, tenant, deadline)
+                yield acquired
+        finally:
+            gate.release()
+
+    def _enter_promotion_lock(self, stack: ExitStack, tenant: str, deadline: float | None) -> bool:
+        while True:
+            try:
+                stack.enter_context(self._promotion_lock(tenant, blocking=deadline is None))
+                return True
+            except BlockingIOError:
+                # flock has no timed acquire; poll another worker's build until the budget is spent.
+                if deadline is None or time.monotonic() >= deadline:
+                    return False
+                threading.Event().wait(0.02)
+
+    @contextmanager
+    def _promoting(self) -> Iterator[bool]:
+        """Exclude readers for retirement; a thread mid-read cannot wait for itself, so it skips retiring."""
+        if self._lock.reading_here():
+            yield False
+            return
+        with self._lock.exclusive():
+            yield True
 
     def _promotion_epoch(self, tenant: str) -> str:
         """The tenant's promotion stamp, shared by every worker using this projection cache."""
@@ -347,45 +441,62 @@ class CurrentGraphStore:
         # point, by this or any other worker, means the evidence below may be
         # older than the live generation.
         epoch = self._promotion_epoch(tenant)
-        summaries, evidence_revision, jobs, fingerprint = self._evidence_state(tenant, request_scoped=True)
-        if not summaries and self._graph_store.snapshot_identity(tenant_id=tenant, for_paging=True)[0]:
+        evidence = self._evidence_state(tenant, request_scoped=True)
+        if not evidence[0] and self._graph_store.snapshot_identity(tenant_id=tenant, for_paging=True)[0]:
             return ""  # Legacy graph-only stores retain their explicit latest view.
-        revision_reader = getattr(self._job_store, "overview_evidence_revision", None)
+        with self._lock.shared():
+            if live := self._cached_live_id(tenant, evidence[3]):
+                return self._pin(live)
+            cached = self._cache.get(tenant)
+            previous = cached[2] if cached and self._live(tenant, cached[2]) else ""
+        # While another request or worker builds, keep serving the previous
+        # whole generation instead of queueing behind the rebuild.
+        with self._building(tenant, wait=not previous) as building:
+            if building:
+                return self._build_and_promote(tenant, epoch, *evidence)
+        with self._lock.shared():
+            if self._live(tenant, previous):
+                return self._pin(previous)
+        with self._building(tenant, wait=True):
+            return self._build_and_promote(tenant, epoch, *evidence)
+
+    def _build_and_promote(
+        self, tenant: str, epoch: str, summaries: list[dict[str, Any]], evidence_revision: Any, jobs: list[Any] | None, fingerprint: str
+    ) -> str:
+        """Build outside the reader lock, then promote and retire under it. Callers hold ``_building``."""
         with self._lock.shared():
             if live := self._cached_live_id(tenant, fingerprint):
-                return live
-        # The thread lock orders this process; the file lock orders every worker
-        # sharing the projection cache across resolve -> promote -> retire.
-        with self._lock.exclusive(), self._promotion_lock(tenant):
-            if live := self._cached_live_id(tenant, fingerprint):
-                return live
-            # Another resolver promoted a generation after this one read its
-            # evidence; building from that older read would retire the newer
-            # generation under its active readers, so re-read under the lock.
-            if self._promotion_epoch(tenant) != epoch:
-                fresh = self._evidence_state(tenant, request_scoped=False)
-                if fresh[3] != fingerprint:
-                    summaries, evidence_revision, jobs, fingerprint = fresh
+                return self._pin(live)
+        # Another resolver promoted a generation after this one read its
+        # evidence; building from that older read would retire the newer
+        # generation under its active readers, so re-read under the lock.
+        if self._promotion_epoch(tenant) != epoch:
+            fresh = self._evidence_state(tenant, request_scoped=False)
+            if fresh[3] != fingerprint:
+                summaries, evidence_revision, jobs, fingerprint = fresh
+                with self._lock.shared():
                     if live := self._cached_live_id(tenant, fingerprint):
-                        return live
-            cached = self._cache.get(tenant)
-            if jobs is None:
-                jobs = [self._job_store.get(row["job_id"], tenant_id=tenant) for row in summaries]
-            jobs = [job for job in jobs if job is not None and job.tenant_id == tenant]
-            selected, revisions, coverage_reasons = self._available_sources(tenant, jobs)
-            identity = CURRENT_PREFIX + _digest([_PROJECTION_FORMAT, __version__, tenant, fingerprint, revisions])[:32]
-            if not self._reusable(tenant, identity):
-                self._materialize(tenant, identity, selected, revisions)
-            if callable(revision_reader) and revision_reader(tenant) != evidence_revision:
-                self._projection_store.delete_snapshot(tenant_id=tenant, scan_id=identity)
-                raise HTTPException(409, "Current estate changed during the read; restart the query.")
-            if not cached or cached[2] != identity:
+                        return self._pin(live)
+        cached = self._cache.get(tenant)
+        if jobs is None:
+            jobs = [self._job_store.get(row["job_id"], tenant_id=tenant) for row in summaries]
+        jobs = [job for job in jobs if job is not None and job.tenant_id == tenant]
+        selected, revisions, coverage_reasons = self._available_sources(tenant, jobs)
+        identity = CURRENT_PREFIX + _digest([_PROJECTION_FORMAT, __version__, tenant, fingerprint, revisions])[:32]
+        if not self._reusable(tenant, identity):
+            self._materialize(tenant, identity, selected, revisions)
+        # Evidence that lands during assembly belongs to the next generation:
+        # this one is a whole view of the evidence read above, and the next
+        # read's fingerprint no longer matches it, so it rebuilds.
+        with self._promoting() as exclusive:
+            if exclusive and (not cached or cached[2] != identity):
                 self._retire_other_generations(tenant, identity)
             if tenant not in self._cache and len(self._cache) >= 128:
                 evicted_tenant = next(iter(self._cache))
                 _, _, evicted_id = self._cache.pop(evicted_tenant)
-                self._projection_store.delete_snapshot(tenant_id=evicted_tenant, scan_id=evicted_id)
-                self._coverage.pop(evicted_id, None)
+                if exclusive and evicted_id not in self._pins:
+                    self._projection_store.delete_snapshot(tenant_id=evicted_tenant, scan_id=evicted_id)
+                    self._coverage.pop(evicted_id, None)
             reasons = sorted(coverage_reasons)
             if len(self._coverage) >= 256:
                 self._coverage.pop(next(iter(self._coverage)))
@@ -398,7 +509,7 @@ class CurrentGraphStore:
             }
             self._cache[tenant] = fingerprint, revisions, identity
             self._stamp_promotion(tenant)
-            return identity
+            return self._pin(identity)
 
     def _reusable(self, tenant: str, identity: str) -> bool:
         """Trust a persisted projection only once its paging revision was stamped."""
@@ -413,7 +524,7 @@ class CurrentGraphStore:
         # Other workers sharing this cache may have left superseded generations.
         for row in self._projection_store.list_snapshots(tenant_id=tenant, limit=1000):
             scan_id = str(row.get("scan_id") or "")
-            if scan_id.startswith(CURRENT_PREFIX) and scan_id != identity:
+            if scan_id.startswith(CURRENT_PREFIX) and scan_id != identity and scan_id not in self._pins:
                 self._projection_store.delete_snapshot(tenant_id=tenant, scan_id=scan_id)
                 self._coverage.pop(scan_id, None)
 
@@ -433,11 +544,15 @@ class CurrentGraphStore:
                 graph.add_edge(edge)
             graph.attack_paths.extend(source.attack_paths)
             graph.interaction_risks.extend(source.interaction_risks)
-            # Stored-path state describes the source snapshot's own rows, not this
-            # projection; omitting it makes reads derive paths for the merged view.
+            # Source index receipts describe their own rows. Build a new index
+            # for the combined projection rather than inheriting those receipts.
             source_statuses.append({name: entry for name, entry in source.analysis_status.items() if name != "paths"})
         if self._revisions(tenant, (scan for scan, _ in revisions)) != revisions:
             raise HTTPException(409, "Current estate evidence changed during assembly; retry the read.")
+        from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
+
+        graph.analysis_status = merge_analysis_statuses(source_statuses)
+        snapshot_paths = prepare_snapshot_paths(graph)
         try:
             self._projection_store.save_graph_streaming(
                 tenant_id=tenant,
@@ -447,7 +562,8 @@ class CurrentGraphStore:
                 attack_paths=graph.attack_paths,
                 interaction_risks=graph.interaction_risks,
                 # A bound hit while analysing any source still bounds the view.
-                analysis_status=merge_analysis_statuses(source_statuses),
+                analysis_status=graph.analysis_status,
+                snapshot_paths=snapshot_paths,
                 created_at=graph.created_at,
                 snapshot_kind="correlation",
                 correlation_id=identity,

@@ -15,6 +15,7 @@ export function TopRisksPanel({
   topPath,
   exposurePaths,
   agentMeshHref = null,
+  ranking,
 }: {
   localReport?: boolean | undefined;
   loading: boolean;
@@ -23,9 +24,11 @@ export function TopRisksPanel({
   topPath: ExposurePathView | null;
   exposurePaths: ExposurePathView[];
   agentMeshHref?: string | null;
+  /** "queue": rows arrive in the Investigation queue's order and must not be re-sorted. */
+  ranking?: { source: "queue"; total: number } | undefined;
 }) {
   const allPaths = exposurePaths.length > 0 ? exposurePaths : topPath ? [topPath] : [];
-  const ranked = [...allPaths].sort((a, b) => b.riskScore - a.riskScore);
+  const ranked = ranking?.source === "queue" ? allPaths : [...allPaths].sort((a, b) => b.riskScore - a.riskScore);
   const shown = ranked.slice(0, 5);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -45,7 +48,11 @@ export function TopRisksPanel({
   const detail = selected ? <RiskChainRow localReport={localReport} path={selected} rank={shown.indexOf(selected) + 1} /> : null;
   return (
     <section ref={container} aria-label="Prioritized findings" className="@container">
-      <p className="mb-3 text-xs text-ink-secondary">Review these findings first · {ranked.length} prioritized risks</p>
+      <p className="mb-3 text-xs text-ink-secondary">
+        {ranking?.source === "queue"
+          ? `Same order as Investigation · top ${shown.length} advisories from ${ranking.total.toLocaleString()} ranked paths`
+          : `${ranked.length} prioritized risks · Ranked by finding risk score, not the Investigation path order`}
+      </p>
       {loading ? <p role="status" className="text-sm text-ink-secondary">Loading prioritized findings…</p>
         : shown.length > 0 ? <div className="grid items-start gap-4 @min-[960px]:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
           <div role="group" aria-label="Select a risk" className="divide-y divide-outline">
@@ -67,7 +74,7 @@ export function TopRisksPanel({
         </div>
         : <p className="text-sm text-ink-secondary">{unavailable ? "Prioritized findings unavailable." : scans === 0 ? "No completed scans. Run a scan to assess findings." : "No prioritized findings in the current overview."}</p>}
       {!localReport && <div className="mt-3 flex flex-wrap gap-3 text-sm">
-        <ReportEvidenceLink localReport={localReport} href="/security-graph" className="text-emerald-700 dark:text-emerald-300">Open investigation →</ReportEvidenceLink>
+        <ReportEvidenceLink localReport={localReport} href={selected?.href.startsWith("/security-graph") ? selected.href : "/security-graph"} className="text-emerald-700 dark:text-emerald-300">Open investigation →</ReportEvidenceLink>
         {agentMeshHref ? <ReportEvidenceLink localReport={localReport} href={agentMeshHref} className="text-ink-secondary">Agent mesh</ReportEvidenceLink> : null}
       </div>}
     </section>

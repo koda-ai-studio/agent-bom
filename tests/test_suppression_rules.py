@@ -52,7 +52,8 @@ def test_tenant_suppression_marks_finding_without_deleting_evidence():
     assert blast_radii[0].suppression_state == "false_positive"
     assert blast_radii[0].suppression_reason == "scanner mismatch"
     assert blast_radii[0].unsuppressed_risk_score == 8.4
-    assert blast_radii[0].risk_score == 0.0
+    # The assessed score stays; suppression is the explicit state beside it.
+    assert blast_radii[0].risk_score == 8.4
     assert blast_radii[0].is_actionable is False
 
 

@@ -53,6 +53,11 @@ export function agentDisplayName(id: string, recorded?: string | null): string {
   return recordedName(recorded) || formatEntityId(id) || "Unknown agent";
 }
 
+/** An agent row's name: the API's resolved ``display_name`` when present, else the same rule locally. */
+export function agentRecordDisplayName(agent: { name: string; display_name?: string | null | undefined; enrollment_name?: string | null | undefined }): string {
+  return recordedName(agent.display_name) || agentDisplayName(agent.name, agent.enrollment_name);
+}
+
 export function serverDisplayName(id: string, recorded?: string | null): string {
   return recordedName(recorded) || formatEntityId(id) || "Unknown server";
 }

@@ -8,6 +8,7 @@ import logging
 from agent_bom import enrichment
 from agent_bom.compliance_utils import apply_effective_blast_radius_tags
 from agent_bom.config import kev_default_join_mode
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.models import BlastRadius
 from agent_bom.scanners.enrichment_apply import join_kev_status
 
@@ -45,5 +46,5 @@ def join_default_kev_catalog(blast_radii: list[BlastRadius], *, offline: bool) -
         for br in blast_radii:
             br.calculate_risk_score()
             apply_effective_blast_radius_tags(br)
-        blast_radii.sort(key=lambda br: br.risk_score, reverse=True)
+        blast_radii.sort(key=risk_rank_key)
     return sum(1 for br in blast_radii if br.vulnerability.is_kev)

@@ -7,9 +7,9 @@ open objects because they follow the canonical ``UnifiedNode.to_dict`` /
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, RootModel, WithJsonSchema
+from pydantic import BaseModel, Field, RootModel, WithJsonSchema
 
 from agent_bom.api.read_models._base import ReadModel, ReadResponse
 
@@ -65,6 +65,7 @@ class GraphPageResponse(ReadResponse):
     completeness: GraphCompleteness
     attack_path_pagination: GraphBoundedPage | None = None
     evidence_scope: str | None = None
+    view: Literal["canvas"] | None = None
 
 
 class GraphAgentsResponse(ReadResponse):
@@ -148,7 +149,12 @@ class GraphEstateChangesResponse(ReadResponse):
     earlier scan (``baseline: scope_history``) or, for a scope scanned once, the
     store's earlier same-kind snapshot that no other scope owns
     (``baseline: snapshot_continuity``). Each changed source carries added and
-    removed stored attack paths in ``highlights``. ``new_sources`` are first
+    removed stored attack paths in ``highlights`` and ``changes_by_source``:
+    changed nodes per vendor and account the collector recorded on each node,
+    since one scan can collect many vendors. ``issue_change`` gives the open
+    issue-group counts the posture trend recorded for the pair's two scans
+    (``None`` when either scan has no recorded point): the graph counts are
+    nodes and links, the issue counts are the headline's unit. ``new_sources`` are first
     observations and are never counted as additions. ``totals`` cover the
     returned page of scopes; ``completeness`` says whether more scopes exist.
     """
@@ -279,6 +285,8 @@ class GraphImpactResponse(ReadResponse):
     direction: str | None = None
     affected_count: int
     max_depth_reached: int
+    max_depth: int | None = Field(default=None, description="Depth the walk was bounded to.")
+    depth_basis: Literal["requested", "default", "longest_materialized_path"] | None = None
     completeness: Row
     scan_id: str
     tenant_id: str

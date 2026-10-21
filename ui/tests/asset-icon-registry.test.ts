@@ -4,6 +4,8 @@ import { CircleDashed } from "lucide-react";
 import {
   ASSET_KINDS,
   assetIcon,
+  assetKind,
+  assetKindIcon,
   assetKindLabel,
   resolveAssetKind,
   type AssetKind,
@@ -52,7 +54,7 @@ const VENDOR_CASES: Array<[string, string, string, AssetKind]> = [
   ["gcp", "data_store", "google_storage_bucket", "bucket"],
   ["cloudflare", "data_store", "cloudflare_r2_bucket", "bucket"],
   ["vercel", "data_store", "vercel_blob", "bucket"],
-  ["snowflake", "data_store", "stage", "bucket"],
+  ["snowflake", "data_store", "stage", "stage"],
   ["databricks", "data_store", "volume", "bucket"],
   ["aws", "api_gateway", "AWS::ApiGateway::RestApi", "api_gateway"],
   ["aws", "cloud_resource", "aws_apigatewayv2_api", "api_gateway"],
@@ -254,5 +256,17 @@ describe("asset icon registry", () => {
       expect(resolveAssetKind({ nodeType }).kind, nodeType).not.toBe("unknown");
       expect(assetIcon({ nodeType })).toBe(ENTITY_ICONS[nodeType]);
     }
+  });
+});
+
+describe("Snowflake stage", () => {
+  it("is its own kind, never drawn or labelled as a bucket", () => {
+    for (const resource_type of ["stage", "external_stage", "internal_stage"]) {
+      const input = { entityType: "data_store", attributes: { resource_type }, provider: "snowflake" };
+      expect(assetKind(input)).toBe("stage");
+      expect(assetKindLabel(input)).toBe("Stage");
+      expect(assetIcon(input)).not.toBe(assetKindIcon("bucket"));
+    }
+    expect(assetKind({ entityType: "data_store", attributes: { resource_type: "s3" }, provider: "aws" })).toBe("bucket");
   });
 });

@@ -55,6 +55,7 @@ from agent_bom.api.routes.compliance_routes.common import (
     _latest_aisvs_benchmark_from_jobs,
     _tenant_id,
     _tenant_jobs,
+    framework_posture_with_count,
 )
 from agent_bom.api.routes.compliance_routes.common import _derive_deployment_context as _derive_deployment_context
 from agent_bom.api.routes.compliance_routes.common import estate_agent_count as estate_agent_count
@@ -76,7 +77,6 @@ from agent_bom.api.routes.compliance_routes.reads import get_posture_scorecard a
 from agent_bom.api.routes.compliance_routes.scoring import (
     _build_framework_controls,
     _compliance_verdict,
-    _framework_posture,
     _framework_status_summary,
     _framework_summary_from,
     _total_control_count,
@@ -352,7 +352,7 @@ async def get_compliance_by_framework(request: Request, framework: str) -> dict:
     # Detect it from the aggregate's scan_count — the same no_data signal the
     # summary endpoint uses — and surface an explicit no_data status instead.
     no_data = int(full.get("scan_count") or 0) == 0
-    return _framework_posture(framework, controls, no_data=no_data)
+    return await framework_posture_with_count(request, framework, canonical, controls, no_data=no_data)
 
 
 @router.get("/compliance/{framework}/report", tags=["compliance"], response_model=ComplianceReportBundle)

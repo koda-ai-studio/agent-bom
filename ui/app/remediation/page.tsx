@@ -210,7 +210,7 @@ function NarrativeRow({
         </td>
 
         {/* Reach */}
-        <td className="px-4 py-3 text-xs text-ink-secondary">
+        <td className="px-4 py-3 text-xs text-ink-secondary" title="Across every occurrence of this package version, not one path">
           <div>{item.affected_agents?.length ?? 0} agent{(item.affected_agents?.length ?? 0) !== 1 ? "s" : ""}</div>
           <div className="text-ink-tertiary">{item.exposed_credentials?.length ?? 0} credential{(item.exposed_credentials?.length ?? 0) !== 1 ? "s" : ""}</div>
         </td>
@@ -723,7 +723,7 @@ function RemediationPage() {
                     />
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-ink-tertiary uppercase tracking-wide">
-                    Reach
+                    Reach · all occurrences
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-ink-tertiary uppercase tracking-wide">
                     Compliance

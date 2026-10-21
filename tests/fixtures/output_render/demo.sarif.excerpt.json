@@ -23,12 +23,13 @@
               },
               "properties": {
                 "security-severity": "9.8",
+                "epss-score": 0.01074,
                 "attack_vector": null,
                 "attack_complexity": null,
                 "privileges_required": null,
                 "user_interaction": null,
                 "network_exploitable": false,
-                "exploit_likelihood": "unassessed",
+                "exploit_likelihood": "theoretical",
                 "tags": [
                   "CWE-94"
                 ]
@@ -67,14 +68,13 @@
               },
               "properties": {
                 "security-severity": "9.8",
+                "epss-score": 0.05984,
                 "attack_vector": null,
                 "attack_complexity": null,
                 "privileges_required": null,
                 "user_interaction": null,
                 "network_exploitable": false,
-                "exploit_likelihood": "unassessed",
+                "exploit_likelihood": "public_exploit",
                 "tags": [
                   "CWE-20"
                 ]
-              },
-              "help": {

@@ -32,7 +32,7 @@ export function InvestigationScanEvidence({
     <>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]">
                 Current scan evidence
               </p>
               <p className="mt-1 font-mono text-sm text-[color:var(--foreground)]">
@@ -59,7 +59,7 @@ export function InvestigationScanEvidence({
             </span>
           ) : snapshots.length > 0 ? (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]">
                 Manage snapshots
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -79,7 +79,7 @@ export function InvestigationScanEvidence({
                       }`}
                     >
                       <span className="block font-mono">{snapshotLabel(snapshot.scan_id)}</span>
-                      <span className="mt-1 block text-[11px] opacity-80">{snapshot.node_count} nodes</span>
+                      <span className="mt-1 block text-xs opacity-80">{snapshot.node_count} nodes</span>
                     </button>
                   );
                 })}
@@ -135,7 +135,7 @@ function QuickStat({ label, value, tone = "zinc" }: { label: string; value: stri
   };
   return (
     <div className={`rounded-2xl border px-4 py-3 ${tones[tone]}`}>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]">{label}</div>
+      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]">{label}</div>
       <div className="mt-1 font-mono text-xl">{value}</div>
     </div>
   );

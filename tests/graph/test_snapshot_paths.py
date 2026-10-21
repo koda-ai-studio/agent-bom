@@ -363,8 +363,12 @@ def test_served_paths_are_unique_and_never_degenerate(estate: str, tmp_path: Pat
     assert paths
     identities = [_identity(path) for path in paths]
     assert len(identities) == len(set(identities)), "served paths repeat a hop/edge chain"
-    hop_sets = [tuple(path.hops) for path in paths]
-    assert len(hop_sets) == len(set(hop_sets)) or estate == "demo"
+    # Different recorded relationships may connect the same nodes. Deduplicate
+    # exact hop/edge chains, never erase a STORES vs EXPOSED_TO distinction.
+    by_hops: dict[tuple[str, ...], list[tuple[str, ...]]] = {}
+    for path in paths:
+        by_hops.setdefault(tuple(path.hops), []).append(tuple(path.edges))
+    assert all(len(chains) == len(set(chains)) for chains in by_hops.values())
     degenerate = [path.hops for path in paths if not path.hops or (len(path.hops) > 1 and path.source == path.target)]
     assert degenerate == []
     # Standing principal findings stay first-class single-hop entries.

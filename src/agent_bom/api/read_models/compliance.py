@@ -52,6 +52,9 @@ class FrameworkComplianceResponse(ReadResponse):
     benchmark: dict[str, Any] | None = None
     framework_key: str | None = None
     framework_label: str | None = None
+    # Distinct findings that are control evidence for the framework: the /v1/findings?framework= total.
+    finding_count: int | None = None
+    finding_count_basis: str | None = None
     measured_at: str | None = None
     representation: str | None = None
     scan_id: str | None = None

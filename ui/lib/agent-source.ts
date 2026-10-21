@@ -82,6 +82,11 @@ function lookup(value: unknown): AgentSource | null {
   return Object.hasOwn(BRANDS, alias) ? BRANDS[alias]! : null;
 }
 
+/** The canonical mark and name for one recorded vendor id (e.g. `aws`, `snowflake`), or null when none is bundled. */
+export function vendorSourceFor(vendor: string): AgentSource | null {
+  return lookup(vendor);
+}
+
 export function agentSource(data: SourceInput): AgentSource | null {
   if (data.nodeType && data.nodeType !== "agent") return null;
   const typed = lookup(data.agentType) ?? lookup(data.attributes?.agent_type);

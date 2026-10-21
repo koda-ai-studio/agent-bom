@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.core.risk_display import risk_label
 from agent_bom.core.severity import (
     severity_policy_rank,
 )
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.finding import FindingType
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.exposure_path import exposure_path_brief_for_finding
@@ -136,12 +138,11 @@ def _blast_table(
     findings = findings if findings is not None else cve_findings(report, blast_radii)
     if not findings:
         return ""
-    sorted_findings = sorted(findings, key=lambda finding: float(finding.risk_score or 0.0), reverse=True)
+    sorted_findings = sorted(findings, key=risk_rank_key)
     rows = []
     for i, finding in enumerate(sorted_findings, 1):
         color = _SEV_COLOR.get(severity_value(finding), "#6b7280")
-        risk_score = float(finding.risk_score or 0.0)
-        bar_w = int(risk_score * 9)
+        bar_w = int((finding.risk_score or 0.0) * 9)
         ai_badge = '<span class="badge-ai">AI</span>' if finding.ai_risk_context else ""
         kev_badge = '<span class="badge-kev">KEV</span>' if finding.is_kev else ""
         fix = (
@@ -159,7 +160,7 @@ def _blast_table(
             f'<div style="display:flex;align-items:center;gap:8px">'
             f'<div style="background:#0f172a;border-radius:3px;height:5px;width:90px">'
             f'<div style="background:{color};border-radius:3px;height:5px;width:{bar_w}px"></div></div>'
-            f'<strong style="color:{color}">{risk_score:.1f}</strong></div>'
+            f'<strong style="color:{color}">{_esc(risk_label(finding.risk_score))}</strong></div>'
             f"</td>"
             f'<td style="text-align:center;color:#e2e8f0">{len(finding.affected_agents)}</td>'
             f'<td style="text-align:center;color:#fbbf24">{len(finding.exposed_credentials)}</td>'
@@ -183,11 +184,7 @@ def _exposure_path_section(
     *,
     findings: list["Finding"] | None = None,
 ) -> str:
-    findings = (
-        sorted(findings, key=lambda finding: float(finding.risk_score or 0.0), reverse=True)[:10]
-        if findings is not None
-        else ranked_cve_findings(report, blast_radii)
-    )
+    findings = sorted(findings, key=risk_rank_key)[:10] if findings is not None else ranked_cve_findings(report, blast_radii)
     if not findings:
         return ""
     cards = []
@@ -218,8 +215,7 @@ def _remediation_list(findings: list["Finding"]) -> str:
         return '<p style="color:#4ade80">&#x2705; Nothing to remediate.</p>'
     with_fix = sorted(
         [finding for finding in findings if finding.fixed_version],
-        key=lambda finding: float(finding.risk_score or 0.0),
-        reverse=True,
+        key=risk_rank_key,
     )
     no_fix = [finding for finding in findings if not finding.fixed_version]
     items = []
@@ -241,7 +237,7 @@ def _remediation_list(findings: list["Finding"]) -> str:
             f" &middot; protects <strong>{len(finding.affected_agents)}</strong> agent(s)"
             f"{creds_note}"
             f"</div></div>"
-            f'<div style="flex-shrink:0;color:#475569;font-size:.78rem;padding-top:3px">score&nbsp;{float(finding.risk_score or 0.0):.1f}</div>'
+            f'<div style="flex-shrink:0;color:#475569;font-size:.78rem;padding-top:3px">score&nbsp;{_esc(risk_label(finding.risk_score))}</div>'
             f"</div>"
         )
     nf_html = ""

@@ -18,7 +18,7 @@ from agent_bom.graph.correlation import GraphCorrelationRun
 
 # Keep the historical logger name so log routing and filters are unchanged.
 logger = logging.getLogger("agent_bom.api.postgres_graph")
-_GRAPH_STORAGE_SCHEMA_VERSION = 10
+_GRAPH_STORAGE_SCHEMA_VERSION = 11
 _DB_NOW_ISO = "to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
 _DB_LEASE_ISO = "to_char(now() AT TIME ZONE 'UTC' + (%s * INTERVAL '1 second'), 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
 

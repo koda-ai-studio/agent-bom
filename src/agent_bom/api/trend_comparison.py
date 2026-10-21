@@ -231,6 +231,7 @@ def public_trend_point(point: TrendPoint, previous: TrendPoint | None) -> dict:
         "collection_coverage": meta.get("collection_coverage", "unknown"),
         "measurement_version": meta.get("measurement_version"),
         "comparison": comparison,
+        "issues": meta.get("issue_counts") if isinstance(meta.get("issue_counts"), dict) else None,
         "open_finding_age_days": median(ages["first_seen"]) if ages["first_seen"] else source_summary.get("first_seen", {}).get("median"),
         "evidence_age_days": median(ages["observed_at"]) if ages["observed_at"] else source_summary.get("observed_at", {}).get("median"),
         "age_sample_count": len(ages["first_seen"]) or source_summary.get("first_seen", {}).get("count", 0),

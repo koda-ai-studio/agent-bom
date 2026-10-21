@@ -24,6 +24,7 @@ from agent_bom.reachability_cve import (
     advisory_affected_symbols_by_path,
     advisory_affected_symbols_list,
 )
+from agent_bom.version_utils import compare_version_order
 
 logger = logging.getLogger(__name__)
 
@@ -107,39 +108,55 @@ def _parse_ghsa_severity(advisory: dict) -> tuple[Severity, float | None]:
     return severity, score
 
 
-def _extract_fixed_version(advisory: dict, package_name: str, ecosystem: str = "") -> str | None:
-    """Extract the first patched version for a specific package.
+def _entry_fixed_version(entry: dict) -> str | None:
+    """The patched version one GHSA vulnerability entry names, if any."""
+    patched = entry.get("patched_versions")
+    if patched:
+        return _parse_patched_range(patched)
+    # patched_versions is null in current GHSA API responses — derive the fix
+    # from the entry's exclusive upper bound (``< X`` means X fixes it).
+    for part in (entry.get("vulnerable_version_range") or "").split(","):
+        part = part.strip()
+        if part.startswith("<") and not part.startswith("<="):
+            bound = part[1:].strip()
+            if bound and re.match(r"\d", bound):
+                return bound
+    return None
 
-    Checks ``patched_versions`` first (older GHSA API format).  When that
-    field is null (current API behaviour), falls back to
-    ``vulnerable_version_range`` and extracts the exclusive upper bound for
-    ``< X`` constraints (the fix version is X in that case).
+
+def _extract_fixed_version(advisory: dict, package_name: str, ecosystem: str = "", current_version: str = "") -> str | None:
+    """The patched version for *package_name* on the release line it is installed on.
+
+    An advisory that fixes several release lines lists one entry per vulnerable
+    window (node-fetch: ``< 2.6.7`` and ``>= 3.0.0, < 3.1.1``). With an installed
+    version only the windows containing it can supply its remediation; taking
+    the first entry told 2.x users to jump a major and, when the 2.x entry came
+    first, dropped a vulnerable 3.x install as already patched. Without an
+    installed version the lowest patch across windows is returned.
 
     Uses PEP 503 normalization for PyPI so that mixed-separator forms like
     ``Requests_OAuthlib`` match a normalized input of ``requests-oauthlib``.
     """
-    import re as _re
-
     norm_input = normalize_package_name(package_name, ecosystem)
-    for vuln in advisory.get("vulnerabilities", []):
-        pkg = vuln.get("package", {})
+    candidates: list[str] = []
+    for entry in advisory.get("vulnerabilities", []):
+        pkg = entry.get("package", {})
         pkg_eco = pkg.get("ecosystem", ecosystem)
-        osv_norm = normalize_package_name(pkg.get("name", ""), pkg_eco)
-        if osv_norm == norm_input:
-            patched = vuln.get("patched_versions")
-            if patched:
-                return _parse_patched_range(patched)
-            # patched_versions is null in current GHSA API responses —
-            # attempt to derive the fix from an exclusive upper-bound range.
-            vuln_range = vuln.get("vulnerable_version_range") or ""
-            for part in vuln_range.split(","):
-                part = part.strip()
-                # "< X" → fix version is X (exclusive upper bound)
-                if part.startswith("<") and not part.startswith("<="):
-                    bound = part[1:].strip()
-                    if bound and _re.match(r"\d", bound):
-                        return bound
-    return None
+        if normalize_package_name(pkg.get("name", ""), pkg_eco) != norm_input:
+            continue
+        if current_version:
+            vuln_range = entry.get("vulnerable_version_range") or ""
+            if vuln_range and not _installed_version_is_affected(current_version, vuln_range, ecosystem):
+                continue
+        fixed = _entry_fixed_version(entry)
+        if fixed:
+            candidates.append(fixed)
+    chosen: str | None = None
+    for candidate in candidates:
+        order = compare_version_order(candidate, chosen, ecosystem) if chosen is not None else None
+        if chosen is None or (order is not None and order < 0):
+            chosen = candidate
+    return chosen
 
 
 def _get_vulnerable_ranges_for_package(advisory: dict, package_name: str, ecosystem: str = "") -> list[str]:
@@ -190,8 +207,6 @@ def _installed_version_is_affected(installed: str, vuln_range: str, ecosystem: s
     Fails CLOSED: a clause that cannot be compared cannot establish a match, and
     the dropped bound is logged so the reason is recorded rather than silent.
     """
-    from agent_bom.version_utils import compare_version_order
-
     clauses = [clause for clause in (vuln_range or "").split(",") if clause.strip()]
     if not clauses:
         logger.warning(
@@ -436,7 +451,7 @@ async def check_github_advisories(
                         if vuln_id in existing_ids or (cve_id and cve_id in existing_ids) or (ghsa_id and ghsa_id in existing_ids):
                             continue
 
-                        fixed = _extract_fixed_version(advisory, target_pkg.name, target_pkg.ecosystem)
+                        fixed = _extract_fixed_version(advisory, target_pkg.name, target_eco, current_version=target_pkg.version or "")
 
                         if target_pkg.version:
                             # Skip if the installed version is already at or beyond

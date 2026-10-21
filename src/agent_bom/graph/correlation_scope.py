@@ -6,11 +6,18 @@ from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
 
-from agent_bom.graph.asset_identity import IdentityKey, family_of, recorded_dimension, strong_key_components, strong_keys
+from agent_bom.graph.asset_identity import (
+    IdentityKey,
+    cloud_identity_scope,
+    family_of,
+    recorded_dimension,
+    strong_key_components,
+    strong_keys,
+)
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 
-CORRELATION_IDENTITY_VERSION = "scoped-identity.v5"
+CORRELATION_IDENTITY_VERSION = "scoped-identity.v6"
 IDENTIFIER_NAMESPACES = {"resource_arn": "arn", "provider_id": "resource_id", "stable_id": "canonical_id"}
 
 
@@ -118,6 +125,9 @@ def exact_attribute_identity(
     keys: Sequence[str],
     basis: str,
 ) -> tuple[str, str, str] | None:
+    scope_status = cloud_identity_scope(node)["status"]
+    if scope_status == "conflict" or (basis == "cloud_resource_id" and scope_status == "unknown"):
+        return None
     key = next((key for key in keys if str(node.attributes.get(key) or "").strip()), "")
     value = str(node.attributes.get(key) or "").strip()
     if not value:

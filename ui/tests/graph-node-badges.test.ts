@@ -92,7 +92,6 @@ describe("badgeLegendItems", () => {
       "High finding",
       "Medium finding",
       "Low finding",
-      "Linked critical findings",
     ]);
     expect(items.every((item) => item.kind === "badge" && item.layer === "badge")).toBe(true);
   });

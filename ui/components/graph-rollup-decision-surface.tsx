@@ -10,7 +10,7 @@ import type {
   GraphRollupEdgeCountMetadata,
 } from "@/lib/api-types";
 import { ScopeProviderSuffix } from "@/components/graph-scope-breadcrumb";
-import { scopeIssueLine } from "@/lib/graph-issue-labels";
+import { scopeContextLine, scopeEstateComparison, scopeIssueLine, scopeIssueShare } from "@/lib/graph-issue-labels";
 import { groupRollupByImage, IMAGE_GROUP_PREFIX, priorityScopes, rankScopesByRisk, scopeRiskScore, SCOPE_RISK_WEIGHTS } from "@/lib/graph-rollup-risk";
 
 export const ROLLUP_DECISION_THRESHOLD = 24;
@@ -67,9 +67,12 @@ export function GraphRollupDecisionSurface({
   onDrill,
   onInvestigate,
   estateIssueCount,
+  estateIssueBasis,
 }: {
   /** Estate-wide issue total, so a scope reads as "N of TOTAL issues". */
   estateIssueCount?: number | undefined;
+  /** Estate-wide issues by severity, so a partial scope's critical/high read against the headline. */
+  estateIssueBasis?: Parameters<typeof scopeEstateComparison>[1];
   items: GraphRollupContainer[];
   edges: GraphRollupEdge[];
   completeness?: GraphCompleteness | undefined;
@@ -242,7 +245,7 @@ export function GraphRollupDecisionSurface({
           return (
             <article
               key={item.id}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-2 py-3 md:grid-cols-[minmax(0,1fr)_auto_auto]"
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-2 py-2 md:grid-cols-[minmax(0,1fr)_auto_auto] md:py-3"
             >
               <div className="col-span-2 flex min-w-0 items-start gap-3 md:col-span-1">
                 <div className="min-w-0 flex-1">
@@ -252,9 +255,9 @@ export function GraphRollupDecisionSurface({
                   <p data-testid="graph-scope-eyebrow" className="flex items-center gap-1 text-xs text-ink-secondary">
                     {item.entity_type.replaceAll("_", " ")}<ScopeProviderSuffix item={item} size="h-4 w-4" />
                   </p>
-                  {item.context && Object.keys(item.context).length > 0 && (
+                  {scopeContextLine(item) && (
                     <p className="mt-1 break-words text-xs text-ink-secondary [overflow-wrap:anywhere]">
-                      {Object.entries(item.context).map(([kind, value]) => `${kind}: ${value}`).join(" · ")}
+                      {scopeContextLine(item)}
                     </p>
                   )}
                 </div>
@@ -263,14 +266,15 @@ export function GraphRollupDecisionSurface({
                 </span>
               </div>
 
-              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs md:w-60">
+              <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs md:col-span-1 md:w-60">
                 {item.has_children && <div>
                   <p className="text-ink-secondary">Contains <span className="font-semibold tabular-nums text-foreground">{item.aggregate.descendant_count.toLocaleString()} nodes</span>{item.direct_child_count > 0 && <> · {item.direct_child_count} direct</>}</p>
                 </div>}
                 {item.has_children && <div>
                   <p className="text-ink-secondary">Contained critical / high <span className="font-semibold tabular-nums text-foreground">{critical.toLocaleString()} / {high.toLocaleString()}</span></p>
                 </div>}
-                {item.has_children && scopeIssueLine(item, estateIssueCount) && <p className="tabular-nums text-ink-secondary" data-testid="graph-scope-issues">{scopeIssueLine(item, estateIssueCount)}</p>}
+                {item.has_children && scopeIssueLine(item) && <p className="tabular-nums text-ink-secondary" data-testid="graph-scope-issues" title={scopeIssueShare(item, estateIssueCount)}>{scopeIssueLine(item)}</p>}
+                {item.has_children && scopeEstateComparison(item, estateIssueBasis) && <p className="basis-full text-ink-secondary [overflow-wrap:anywhere]" data-testid="graph-scope-estate-comparison">{scopeEstateComparison(item, estateIssueBasis)}</p>}
                 <p className="tabular-nums text-ink-secondary" title={PRIORITY_RULE} data-testid="graph-scope-priority-score">
                   {item.aggregate.exposed_count > 0 && <>{item.aggregate.exposed_count} exposed · </>}Priority score <span className="font-semibold text-foreground">{scopeRiskScore(item).toLocaleString()}</span>
                 </p>
@@ -286,9 +290,11 @@ export function GraphRollupDecisionSurface({
 
 
 
-              <div className="flex items-center justify-end gap-3 md:min-w-36">
-                {item.has_children && !item.id.startsWith(IMAGE_GROUP_PREFIX) && <button type="button" onClick={() => onInvestigate(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-600 dark:text-sky-300">
-                  <GitBranch className="h-3.5 w-3.5" /> Connections
+              <div className="col-span-2 flex flex-wrap items-center justify-start gap-3 md:col-span-1 md:min-w-36 md:justify-end">
+                {item.has_children && !item.id.startsWith(IMAGE_GROUP_PREFIX) && <button type="button" onClick={() => onInvestigate(item)} aria-label={`Show direct neighbors of ${item.label} on the canvas`}
+                  title="Opens this scope and its directly related nodes on the canvas; cross-scope links are listed under Details"
+                  className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-600 dark:text-sky-300">
+                  <GitBranch className="h-3.5 w-3.5" /> Neighbors
                 </button>}
                 {item.has_children ? (
                   <button type="button" onClick={() => drill(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-600 dark:text-emerald-300">
@@ -338,10 +344,10 @@ export function GraphRollupDecisionSurface({
           Showing {visible.length} of {filtered.length} matching nodes and scopes
         </p>
         <div className="flex gap-2">
-          <button type="button" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))} className="graph-page-action disabled:cursor-not-allowed disabled:opacity-40" aria-label="Previous scope page">
+          <button type="button" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))} className="graph-page-action inline-flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Previous scope page">
             <ChevronLeft className="h-3.5 w-3.5" /> Previous
           </button>
-          <button type="button" disabled={page + 1 >= pages} onClick={() => setPage((current) => Math.min(pages - 1, current + 1))} className="graph-page-action disabled:cursor-not-allowed disabled:opacity-40" aria-label="Next scope page">
+          <button type="button" disabled={page + 1 >= pages} onClick={() => setPage((current) => Math.min(pages - 1, current + 1))} className="graph-page-action inline-flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Next scope page">
             Next <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>

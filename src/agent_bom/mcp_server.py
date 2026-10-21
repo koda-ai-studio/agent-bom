@@ -6,8 +6,7 @@ Start with:
     agent-bom mcp server --transport streamable-http
 
 Default: 8 focused tools; select a task profile with --profile.
-
-Full profile Tools (94):
+Full profile Tools (95):
     scan                — Full discovery → scan → output pipeline
     check               — Check a specific package for CVEs before installing
     intel_lookup        — Look up a CVE, GHSA, or OSV advisory from local threat intel
@@ -22,6 +21,7 @@ Full profile Tools (94):
     should_i_deploy     — Return allow/warn/block from every matching ExposurePath
     graph_reach         — Page what can reach a node (or what it reaches) over recorded edges
     graph_diff          — What changed between two graph snapshots (summary or paged rows)
+    cross_vendor_paths  — Attack paths whose source and target sit in different vendors
     findings_query      — Query tenant findings exactly as /v1/findings, compact rows
     finding_detail      — One finding with its graph paths, reachers and triage state
     policy_check        — Evaluate a policy against scan results

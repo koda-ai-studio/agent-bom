@@ -98,10 +98,38 @@ def test_factors_are_reported_in_rank_order() -> None:
     factors = path_ranking_factors(_path("z:exposed", "t:1"), nodes)
     assert factors["order"] == list(RANKING_ORDER)
     assert RANKING_ORDER[-4:] == ("max_epss", "internet_exposed", "environment_weight", "hop_count")
-    assert factors["internet_exposed"] is True and factors["environment_weight"] == 1.15 and factors["hop_count"] == 2
+    assert factors["internet_exposed"] is True and factors["environment_weight"] == 1.15 and factors["hop_count"] == 1
     assert any("internet-exposed" in reason for reason in factors["reasons"])
 
 
 def test_ranking_reads_every_hop_node() -> None:
     """Exposure and environment come from hop nodes, so a persisted-queue read must load them."""
     assert ranking_node_ids([_path("a:1", "t:1")]) == {"a:1", "t:1"}
+
+
+def test_hop_count_counts_edges_not_nodes() -> None:
+    nodes = {n.id: n for n in [_node("a:1"), _node("m:1"), _node("t:1")]}
+    factors = path_ranking_factors(_path("a:1", "m:1", "t:1"), nodes)
+    assert factors["hop_count"] == 2
+    assert "2 hops (shorter first)" in factors["reasons"][-1]
+
+
+def test_trace_order_paths_rank_below_access_paths_of_lower_risk() -> None:
+    nodes = {n.id: n for n in [_node("a:1"), _node("t:1"), _node("b:1"), _node("t:2")]}
+    trace = _path("a:1", "t:1", risk=80.0)
+    trace.reachability_basis = ["trace_order_correlation"]
+    access = AttackPath(source="b:1", target="t:2", hops=["b:1", "t:2"], edges=["can_access"], composite_risk=60.0)
+    assert rank_attack_paths([trace, access], nodes) == [access, trace]
+    assert path_ranking_factors(trace, nodes)["path_family"] == "trace_correlation"
+    assert path_ranking_factors(access, nodes)["path_family"] == "access"
+    assert RANKING_ORDER[0] == "path_family"
+    assert trace.composite_risk == 80.0
+
+
+def test_trace_family_follows_hop_receipts_when_annotated() -> None:
+    nodes = {n.id: n for n in [_node("a:1"), _node("m:1"), _node("t:1")]}
+    mixed = _path("a:1", "m:1", "t:1")
+    mixed.hop_evidence = [{"reason_codes": ["trace_order_not_access"]}, {"reason_codes": []}]
+    assert path_ranking_factors(mixed, nodes)["path_family"] == "access"
+    mixed.hop_evidence[1]["reason_codes"] = ["trace_order_not_access", "stale_evidence"]
+    assert path_ranking_factors(mixed, nodes)["path_family"] == "trace_correlation"

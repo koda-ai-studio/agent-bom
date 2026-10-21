@@ -8,6 +8,62 @@ from ..normalization import sanitize_discovery_warning
 from ._base import record_discovery_failure
 
 
+def _discover_elb_targets(
+    client: Any, lb_arn: str, *, warnings: list[str], missing: list[dict[str, str]] | None
+) -> tuple[list[dict[str, Any]], bool]:
+    """Read registered targets, preserving partial results and permission gaps."""
+    targets: list[dict[str, Any]] = []
+    complete = True
+    if not lb_arn:
+        return targets, False
+    try:
+        for page in client.get_paginator("describe_target_groups").paginate(LoadBalancerArn=lb_arn):
+            for group in page.get("TargetGroups", []) or []:
+                group_arn = str(group.get("TargetGroupArn") or "")
+                if not group_arn:
+                    complete = False
+                    continue
+                try:
+                    response = client.describe_target_health(TargetGroupArn=group_arn)
+                    for description in response.get("TargetHealthDescriptions", []) or []:
+                        target = description.get("Target") or {}
+                        if not target.get("Id"):
+                            complete = False
+                            continue
+                        targets.append(
+                            {
+                                "target_id": str(target["Id"]),
+                                "target_type": str(group.get("TargetType") or ""),
+                                "target_group_arn": group_arn,
+                                "port": target.get("Port"),
+                                "protocol": str(group.get("Protocol") or ""),
+                                "vpc_id": str(group.get("VpcId") or ""),
+                                "health_state": str((description.get("TargetHealth") or {}).get("State") or ""),
+                            }
+                        )
+                except Exception as exc:  # broad-except: SDK boundary preserves other groups and records sanitized partial coverage
+                    complete = False
+                    record_discovery_failure(
+                        exc=exc,
+                        resource_type="load balancer targets",
+                        permission="elasticloadbalancing:DescribeTargetHealth",
+                        cloud="aws",
+                        warnings=warnings,
+                        missing=missing,
+                    )
+    except Exception as exc:  # broad-except: SDK boundary retains the load balancer when backend discovery fails
+        complete = False
+        record_discovery_failure(
+            exc=exc,
+            resource_type="load balancer target groups",
+            permission="elasticloadbalancing:DescribeTargetGroups",
+            cloud="aws",
+            warnings=warnings,
+            missing=missing,
+        )
+    return targets, complete
+
+
 def _discover_elb(
     session: Any, region: str, *, account_id: str | None, warnings: list[str], missing: list[dict[str, str]] | None = None
 ) -> list[dict[str, Any]]:
@@ -21,6 +77,9 @@ def _discover_elb(
                 name = str(lb.get("LoadBalancerName", "") or "")
                 if not name:
                     continue
+                targets, targets_complete = _discover_elb_targets(
+                    client, str(lb.get("LoadBalancerArn") or ""), warnings=warnings, missing=missing
+                )
                 out.append(
                     {
                         "name": name,
@@ -32,6 +91,8 @@ def _discover_elb(
                         "vpc_id": str(lb.get("VpcId", "") or ""),
                         "account_id": account_id or "",
                         "location": region,
+                        "backend_targets": targets,
+                        "backend_collection_complete": targets_complete,
                     }
                 )
     except Exception as exc:  # noqa: BLE001 — one failed ELB list must not sink the scan

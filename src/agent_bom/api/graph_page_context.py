@@ -52,16 +52,27 @@ async def containment_ancestors(
 
 
 async def page_context(
-    graph_store: Any, *, scan_id: str, tenant_id: str, page_nodes: list[UnifiedNode], call_store: Any
-) -> tuple[list[UnifiedNode], list[UnifiedEdge], dict[str, Any]]:
-    """Context nodes/edges for a ranked page: the agent stack, then containment above page and stack.
+    graph_store: Any,
+    *,
+    scan_id: str,
+    tenant_id: str,
+    page_nodes: list[UnifiedNode],
+    call_store: Any,
+    page_edges: list[UnifiedEdge] = (),  # type: ignore[assignment]
+) -> tuple[list[UnifiedNode], list[UnifiedEdge], dict[str, Any], list[UnifiedNode]]:
+    """Context for a ranked page: the agent stack, containment above page and stack, then edge endpoints.
 
-    Returns the context nodes and edges plus the stack's completeness summary.
+    Returns the context nodes and edges, the stack's completeness summary, and
+    the off-page endpoints of every returned edge, so no edge in the payload
+    points at a node the client never received.
     """
     stack = await page_agent_stack(graph_store, scan_id=scan_id, tenant_id=tenant_id, page_nodes=page_nodes, call_store=call_store)
     page_ids = {node.id for node in page_nodes} | {node.id for node in stack.nodes}
     nodes, edges = await containment_ancestors(graph_store, scan_id=scan_id, tenant_id=tenant_id, node_ids=page_ids, call_store=call_store)
-    return [*stack.nodes, *nodes], [*stack.edges, *edges], stack.summary()
+    present = page_ids | {node.id for node in nodes}
+    missing = {end for edge in [*page_edges, *stack.edges, *edges] for end in (edge.source, edge.target)} - present
+    endpoints = await call_store(graph_store.nodes_by_ids, scan_id=scan_id, tenant_id=tenant_id, node_ids=missing) if missing else []
+    return [*stack.nodes, *nodes], [*stack.edges, *edges], stack.summary(), sorted(endpoints, key=lambda node: node.id)
 
 
 async def page_attack_context(

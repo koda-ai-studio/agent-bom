@@ -676,3 +676,40 @@ for (const theme of ["light", "dark"] as const) {
     });
   }
 }
+
+test("the severity trend's latest point is the overview headline", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await routeProductFixture(page);
+  const series = [[5, 22], [6, 25], [9, 31], [8, 27], [7, 28]] as const;
+  await page.route("**/v1/trends**", (route) => route.fulfill({
+    json: {
+      count: series.length,
+      days: 30,
+      scope_id: null,
+      available_scopes: ["scope-a"],
+      history_limited: false,
+      age_statistic: "median",
+      freshness_reference: "scan_completion",
+      data_points: series.map(([critical, high], index) => ({
+        scan_id: `scan-${index}`,
+        scope_id: "scope-a",
+        timestamp: `2026-07-${String(10 + index).padStart(2, "0")}T02:00:00Z`,
+        critical: 2, high: 4, medium: 0, low: 0, total_vulns: 6,
+        posture_grade: "D", posture_score: 48,
+        issues: { critical, high, medium: 0, low: 0, total: critical + high, basis: "issue_groups" },
+        comparison: { status: "comparable", reason: null, previous_scan_id: null, new_findings: 1, still_open: 5, no_longer_detected: 1 },
+      })).reverse(),
+    },
+  }));
+
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Posture", exact: true }).click();
+  await expect(page.getByRole("link", { name: /^Critical 7/i }).first()).toBeVisible();
+  await page.getByText("Changes over time").click();
+  const chart = page.getByRole("figure").filter({ hasText: "Critical and high open issues (posture headline basis)" });
+  await expect(chart).toBeVisible();
+  await expect(chart.locator("p").first()).toHaveText(/^\s*7\s*critical now · 2 more than the first snapshot/);
+  await expect(chart).toContainText("5 snapshots");
+  await expect(chart).toContainText("Vulnerability occurrences in this scan scope, a different unit: 2 critical · 4 high");
+  await expect(chart).not.toContainText("Different basis");
+});

@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Mapping
 
+from agent_bom.core.risk_display import assessed_risk_score
 from agent_bom.core.severity import severity_policy_rank
 from agent_bom.evidence.posture_dimensions import DimensionScore, assessed_weighted_total, lane_summary
 from agent_bom.evidence.posture_inputs import posture_inputs_from_report, score_posture_dimensions
@@ -378,7 +379,7 @@ def compute_credential_risk_ranking(report: "AIBOMReport") -> list[dict]:
             elif sev == "HIGH":
                 entry["vuln_high"] += 1
             entry["vuln_total"] += 1
-            entry["max_risk_score"] = max(entry["max_risk_score"], br.risk_score)
+            entry["max_risk_score"] = max(entry["max_risk_score"], assessed_risk_score(br))
 
     # ── Phase 2: discovery-only exposure ──
     # A credential on an MCP server with no CVE-backed blast radius is still a
@@ -496,7 +497,7 @@ def compute_incident_correlation(report: "AIBOMReport") -> list[dict]:
             for cred in br.exposed_credentials:
                 entry["credentials_exposed"].add(cred)
             entry["packages_affected"].add(f"{br.package.name}@{br.package.version}")
-            entry["max_risk_score"] = max(entry["max_risk_score"], br.risk_score)
+            entry["max_risk_score"] = max(entry["max_risk_score"], assessed_risk_score(br))
             if br.ai_risk_context:
                 entry["has_ai_risk"] = True
 

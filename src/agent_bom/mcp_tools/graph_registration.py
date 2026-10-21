@@ -6,6 +6,7 @@ from typing import Annotated, Any, Callable, Literal
 
 from pydantic import Field
 
+from agent_bom.mcp_tools.cross_vendor_paths import cross_vendor_paths_impl
 from agent_bom.mcp_tools.findings import finding_detail_impl, findings_query_impl
 from agent_bom.mcp_tools.graph import deploy_decision_impl, exposure_paths_impl
 from agent_bom.mcp_tools.graph_diff import graph_diff_impl
@@ -71,6 +72,45 @@ def _register_exposure_paths(
             credential_id=credential_id,
             node_id=node_id,
             cursor=cursor,
+            _truncate_response=truncate_response,
+        )
+
+
+def _register_cross_vendor_paths(
+    mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
+) -> None:
+    @mcp.tool(annotations=read_only, title="Cross-Vendor Paths")
+    async def cross_vendor_paths(
+        tenant_id: Annotated[str, _TENANT] = "default",
+        scan_id: Annotated[str | None, _SCAN] = None,
+        source_vendor: Annotated[
+            str | None, Field(max_length=64, description="Recorded vendor of the path's source node, e.g. 'snowflake'.")
+        ] = None,
+        target_vendor: Annotated[
+            str | None, Field(max_length=64, description="Recorded vendor of the path's target node, e.g. 'aws'.")
+        ] = None,
+        offset: Annotated[int, Field(ge=0, description="Queue offset; send snapshot_generation from the first page with it.")] = 0,
+        limit: Annotated[int, Field(ge=1, le=1000, description="Maximum paths to return.")] = 25,
+        snapshot_generation: Annotated[
+            str | None, Field(max_length=128, description="snapshot_generation from the first page; required when offset > 0.")
+        ] = None,
+    ) -> str:
+        """Return attack paths whose source and target nodes are recorded in different vendors.
+
+        Paths come in the global queue order. ``vendor_facets`` counts cross-vendor
+        paths per (source vendor, target vendor) over the whole snapshot, whatever
+        pair is selected; the unit is paths. Matches ``/v1/graph/attack-paths/cross-vendor``.
+        """
+        return await execute_tool_async(
+            "cross_vendor_paths",
+            cross_vendor_paths_impl,
+            tenant_id=tenant_id,
+            scan_id=scan_id,
+            source_vendor=source_vendor,
+            target_vendor=target_vendor,
+            offset=offset,
+            limit=limit,
+            snapshot_generation=snapshot_generation,
             _truncate_response=truncate_response,
         )
 
@@ -288,6 +328,7 @@ def register_graph_agent_tools(
     """Register the graph tools whose answers match the dashboard queue and REST reads."""
     for register in (
         _register_exposure_paths,
+        _register_cross_vendor_paths,
         _register_should_i_deploy,
         _register_graph_reach,
         _register_graph_diff,

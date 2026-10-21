@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from agent_bom.api.finding_collection import collect_scan_findings, merge_finding_representations
@@ -11,6 +12,7 @@ from agent_bom.api.finding_suppression import project_current_suppressions
 from agent_bom.api.models import ScanJob
 from agent_bom.api.scan_graph_view import _effective_reach_lookup as _effective_reach_lookup
 from agent_bom.api.scan_snapshot_read import verified_snapshot_findings
+from agent_bom.api.stores import _get_exception_store
 from agent_bom.core.reachability import review_only_match
 from agent_bom.evidence.finding_reach_sources import SERVER_STAMPED_REACH_FIELDS
 from agent_bom.finding_runtime_evidence import (
@@ -107,6 +109,40 @@ def _finding_from_blast_radius(item: dict[str, Any], job: ScanJob) -> dict[str, 
     return row
 
 
+def _workload_runtime(tenant_id: str) -> tuple[Any | None, Callable[..., Any]]:
+    """The tenant's workload runtime index (``None`` when empty or unreadable) and its row annotator.
+
+    CWPP runtime/EDR workload evidence (#4158 stage 3): additive, read-only.
+    Only workload-scoped rows are annotated, and only when this tenant actually
+    has runtime signals — an empty index leaves every row untouched, so absence
+    of runtime data is never rendered as a clean workload. Reachability is never
+    invented here.
+    """
+    from agent_bom.cloud.runtime_workload_evidence import (
+        RuntimeWorkloadEvidenceIndex,
+        attach_workload_runtime_evidence_to_finding,
+    )
+    from agent_bom.cloud.runtime_workload_evidence_store import get_runtime_workload_evidence_store
+
+    try:
+        index = read_once(
+            ("workload_runtime_events", tenant_id),
+            lambda: RuntimeWorkloadEvidenceIndex.from_store(get_runtime_workload_evidence_store(), tenant_id),
+        )
+    except Exception:  # noqa: BLE001 - runtime evidence is additive; never break the read path
+        return None, attach_workload_runtime_evidence_to_finding
+    return (None if index.is_empty() else index), attach_workload_runtime_evidence_to_finding
+
+
+def scan_row_sources(tenant_id: str) -> dict[str, Any]:
+    """Every tenant-wide store the row projection reads, shared with it through the read scope."""
+    return {
+        "exceptions": read_once(("row_exceptions", tenant_id), lambda: list(_get_exception_store().list_all(tenant_id=tenant_id))),
+        "runtime_events": read_once(("runtime_events", tenant_id), lambda: build_tenant_runtime_evidence_index(tenant_id)),
+        "workload_runtime": _workload_runtime(tenant_id)[0],
+    }
+
+
 def _iter_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
     result = job.result or {}
     reach: dict[str, dict[str, Any]] | None = None
@@ -120,27 +156,7 @@ def _iter_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
     incidents = result.get("runtime_incident_feedback")
     incident_index = build_incident_runtime_evidence_index(incidents if isinstance(incidents, list) else [])
 
-    # CWPP runtime/EDR workload evidence (#4158 stage 3): additive, read-only.
-    # Only workload-scoped rows are annotated, and only when this tenant actually
-    # has runtime signals — an empty index leaves every row untouched, so absence
-    # of runtime data is never rendered as a clean workload. Reachability is never
-    # invented here.
-    from agent_bom.cloud.runtime_workload_evidence import (
-        RuntimeWorkloadEvidenceIndex,
-        attach_workload_runtime_evidence_to_finding,
-    )
-    from agent_bom.cloud.runtime_workload_evidence_store import get_runtime_workload_evidence_store
-
-    workload_runtime_index: RuntimeWorkloadEvidenceIndex | None = None
-    try:
-        _wl_index = read_once(
-            ("workload_runtime_events", tenant_id),
-            lambda: RuntimeWorkloadEvidenceIndex.from_store(get_runtime_workload_evidence_store(), tenant_id),
-        )
-        if not _wl_index.is_empty():
-            workload_runtime_index = _wl_index
-    except Exception:  # noqa: BLE001 - runtime evidence is additive; never break the read path
-        workload_runtime_index = None
+    workload_runtime_index, attach_workload_runtime_evidence_to_finding = _workload_runtime(tenant_id)
 
     def _attach_reach(row: dict[str, Any]) -> dict[str, Any]:
         if "framework_tags" not in row:

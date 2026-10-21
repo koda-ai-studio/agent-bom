@@ -28,6 +28,13 @@ _FINDING_TYPES = frozenset({"vulnerability", "misconfiguration"})
 _CREDENTIAL_TYPES = frozenset({"credential", "credential_ref"})
 _AGENT_TYPES = frozenset({"agent"})
 
+# Trace order records what one correlated trace touched, not an access or
+# exposure route; such paths are investigation context and never outrank one.
+PATH_FAMILY_ACCESS = "access"
+PATH_FAMILY_TRACE = "trace_correlation"
+_TRACE_ORDER_REASON = "trace_order_not_access"
+_TRACE_ORDER_BASIS = "trace_order_correlation"
+
 TIER_EXPLOITABLE_ENTRYPOINT = 3
 TIER_FINDING = 2
 TIER_EXPOSURE_ONLY = 1
@@ -109,6 +116,21 @@ def path_severity(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> str:
     return finding_severity_for_path(path, nodes_by_id)
 
 
+def path_hop_count(path: AttackPath) -> int:
+    """Edges on the path (one fewer than its nodes), as ``analysis.observed.hop_count`` counts them."""
+    return max(len(path.hops) - 1, 0)
+
+
+def path_family(path: AttackPath) -> str:
+    """``trace_correlation`` when every hop is trace order only; hop receipts decide once annotated."""
+    receipts = path.hop_evidence or []
+    if receipts:
+        trace_only = all(_TRACE_ORDER_REASON in (receipt.get("reason_codes") or []) for receipt in receipts)
+    else:
+        trace_only = _TRACE_ORDER_BASIS in (path.reachability_basis or [])
+    return PATH_FAMILY_TRACE if trace_only else PATH_FAMILY_ACCESS
+
+
 def path_graph_reachability(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> str:
     if not path_has_finding(path, nodes_by_id):
         return "no_finding_on_path"
@@ -145,6 +167,7 @@ _CONFIDENCE_REASONS = {
 }
 
 RANKING_ORDER: tuple[str, ...] = (
+    "path_family",
     "evidence_tier",
     "is_kev",
     "severity",
@@ -184,6 +207,7 @@ def path_evidence_confidence(path: AttackPath) -> str:
 def attack_path_rank_key(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> tuple[Any, ...]:
     """Ascending sort key: best path first, fully deterministic."""
     return (
+        path_family(path) == PATH_FAMILY_TRACE,
         -path_evidence_tier(path, nodes_by_id),
         -int(path_is_kev(path, nodes_by_id)),
         -severity_rank(path_severity(path, nodes_by_id)),
@@ -193,7 +217,7 @@ def attack_path_rank_key(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> tu
         -path_max_epss(path, nodes_by_id),
         -int(path_internet_exposed(path, nodes_by_id)),
         -path_environment_weight(path, nodes_by_id),
-        len(path.hops),
+        path_hop_count(path),
         path.source,
         path.target,
         tuple(path.hops),
@@ -252,15 +276,22 @@ def path_ranking_factors(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> di
     epss = path_max_epss(path, nodes_by_id)
     exposed = path_internet_exposed(path, nodes_by_id)
     env_weight = path_environment_weight(path, nodes_by_id)
-    reasons = [f"Evidence tier {tier}: {_TIER_LABELS[tier]}."]
+    family = path_family(path)
+    reasons = [
+        "Every hop is trace order, not access: ranked after all access paths."
+        if family == PATH_FAMILY_TRACE
+        else "Access or exposure path.",
+        f"Evidence tier {tier}: {_TIER_LABELS[tier]}.",
+    ]
     if kev:
         reasons.append("A finding on the path is in the CISA Known Exploited Vulnerabilities catalog.")
     reasons.append(f"Worst finding severity on the path: {severity}." if scored else "No scored finding on the path (unscored).")
     reasons.append(_CONFIDENCE_REASONS[confidence])
     reasons.append(f"Composite risk {risk:g}/100 orders paths that tie on the factors above.")
-    reasons.append(_tie_break_reason(epss, exposed, env_weight, len(path.hops)))
+    reasons.append(_tie_break_reason(epss, exposed, env_weight, path_hop_count(path)))
     return {
         "order": list(RANKING_ORDER),
+        "path_family": family,
         "evidence_tier": tier,
         "is_kev": kev,
         "severity": severity,
@@ -271,7 +302,7 @@ def path_ranking_factors(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> di
         "max_epss": epss,
         "internet_exposed": exposed,
         "environment_weight": env_weight,
-        "hop_count": len(path.hops),
+        "hop_count": path_hop_count(path),
         "reasons": reasons,
     }
 
@@ -313,6 +344,8 @@ __all__ = [
     "path_matches_filters",
     "path_evidence_confidence",
     "path_rank_fields",
+    "path_family",
+    "path_hop_count",
     "path_ranking_factors",
     "RANKING_ORDER",
     "path_severity",

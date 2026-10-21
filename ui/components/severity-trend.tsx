@@ -8,15 +8,31 @@ function change(delta: number): string {
   return `${Math.abs(delta)} ${delta < 0 ? "fewer" : "more"} than the first snapshot`;
 }
 
+const CAPTION = {
+  issues: "Critical and high open issues (posture headline basis)",
+  occurrences: "Critical and high vulnerability occurrences in this scan scope",
+} as const;
+
+function BasisNote({ basis, latest, headline }: { basis: "issues" | "occurrences"; latest: { critical: number; high: number; timestamp: string }; headline: { critical: number; high: number } }) {
+  if (headline.critical === latest.critical && headline.high === latest.high) return null;
+  return (
+    <p className="mt-2 rounded-md border border-outline bg-surface-muted px-2 py-1.5 text-xs text-ink-secondary">
+      {basis === "issues"
+        ? `The headline now counts ${headline.critical.toLocaleString()} critical and ${headline.high.toLocaleString()} high open issues; the latest point was recorded ${new Date(latest.timestamp).toLocaleString()}, and the next scan adds a point at the current count.`
+        : `Different basis: this chart counts vulnerability occurrences recorded by this scan scope (${latest.critical.toLocaleString()} critical). The posture headline counts ${headline.critical.toLocaleString()} critical and ${headline.high.toLocaleString()} high open issues across every surface, so the two are not expected to match.`}
+    </p>
+  );
+}
+
 /** Critical and high findings over the recorded snapshots; honest about a one-snapshot history. */
-export function SeverityTrend({ points }: { points: SeverityPoint[] }) {
+export function SeverityTrend({ points, headline }: { points: SeverityPoint[]; headline?: { critical: number; high: number } | null | undefined }) {
   const trend = severityTrend(points);
   if (trend.status === "none") return <p className="text-sm text-ink-secondary">No dated snapshots in this window.</p>;
   const latest = trend.points.at(-1)!;
   if (trend.status === "single") {
     return (
       <p className="text-sm text-ink-secondary">
-        One snapshot so far ({new Date(latest.time).toLocaleDateString()}): <span className="font-semibold text-foreground">{latest.critical}</span> critical, {latest.high} high. A trend appears after the next scan.
+        One snapshot so far ({new Date(latest.time).toLocaleDateString()}): <span className="font-semibold text-foreground">{latest.critical}</span> critical, {latest.high} high {trend.basis === "issues" ? "open issues" : "vulnerability occurrences"}. A trend appears after the next scan.
       </p>
     );
   }
@@ -27,24 +43,24 @@ export function SeverityTrend({ points }: { points: SeverityPoint[] }) {
   const y = (value: number) => H - (value / max) * (H - 4) - 2;
   const line = (key: "critical" | "high") => trend.points.map((point, index) => `${index ? "L" : "M"}${x(point.time).toFixed(1)} ${y(point[key]).toFixed(1)}`).join(" ");
   return (
-    <figure className="rounded-xl border border-outline p-3">
+    <figure className="min-w-0 rounded-xl border border-outline p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <figcaption className="text-sm font-medium">Critical and high findings</figcaption>
+        <figcaption className="text-sm font-medium">{CAPTION[trend.basis]}</figcaption>
         <p className="text-xs text-ink-secondary">
           <span className="mr-1 text-lg font-semibold text-red-700 dark:text-red-300">{latest.critical}</span>
           critical now · {change(trend.criticalDelta)}
         </p>
       </div>
-      <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-2">
+      <div className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2">
         <div className="flex h-28 flex-col justify-between text-right text-xs tabular-nums text-ink-secondary"><span>{max}</span><span>0</span></div>
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Critical and high findings across ${trend.points.length} snapshots`}
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Critical and high ${trend.basis === "issues" ? "open issues" : "findings"} across ${trend.points.length} snapshots`}
           className="h-28 w-full border-b border-l border-outline">
           <title>{trend.points.map((point) => `${point.timestamp}: ${point.critical} critical, ${point.high} high`).join("; ")}</title>
           <path d={line("high")} fill="none" strokeWidth="2" vectorEffect="non-scaling-stroke" className="stroke-orange-600 dark:stroke-orange-300" />
           <path d={line("critical")} fill="none" strokeWidth="3" vectorEffect="non-scaling-stroke" className="stroke-red-700 dark:stroke-red-300" />
         </svg>
         <span />
-        <div className="flex justify-between pt-1 text-xs text-ink-secondary">
+        <div className="flex min-w-0 flex-wrap justify-between gap-x-2 pt-1 text-xs text-ink-secondary">
           <span>{new Date(start).toLocaleDateString()}</span>
           <span>{trend.points.length} snapshots</span>
           <span>{new Date(latest.time).toLocaleDateString()}</span>
@@ -55,6 +71,12 @@ export function SeverityTrend({ points }: { points: SeverityPoint[] }) {
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-orange-600 align-middle dark:bg-orange-300" />High · {latest.high} now, {change(trend.highDelta)}</span>
         <span>KEV counts are not recorded per snapshot, so KEV has no trend yet.</span>
       </p>
+      {trend.latestOccurrences && (
+        <p className="mt-1 text-xs text-ink-secondary">
+          Vulnerability occurrences in this scan scope, a different unit: {trend.latestOccurrences.critical.toLocaleString()} critical · {trend.latestOccurrences.high.toLocaleString()} high in the latest scan.
+        </p>
+      )}
+      {headline ? <BasisNote basis={trend.basis} latest={latest} headline={headline} /> : null}
     </figure>
   );
 }

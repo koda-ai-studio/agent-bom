@@ -1391,8 +1391,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "data_store",
       "resource"
     ],
-    "traversable": true,
-    "traversal_class": "exposure"
+    "traversable": false,
+    "traversal_class": "governance"
   },
   "provides_tool": {
     "label": "Provides Tool",

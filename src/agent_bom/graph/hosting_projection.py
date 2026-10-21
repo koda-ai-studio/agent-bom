@@ -13,6 +13,7 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from agent_bom.core.cloud_identity import cloud_resource_node_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
@@ -25,13 +26,15 @@ _AZURE_PROVIDER_ID = re.compile(r"^azure://(?P<arm>/subscriptions/.+)$", re.IGNO
 _GCE_PROVIDER_ID = re.compile(r"^gce://(?P<project>[^/]+)/(?P<zone>[^/]+)/(?P<name>[^/]+)$")
 
 
-def provider_id_host(provider_id: str) -> UnifiedNode | None:
+def provider_id_host(provider_id: str, *, account_id: str = "") -> UnifiedNode | None:
     """The VM a Kubernetes node ``spec.providerID`` names, keyed as inventory keys it."""
     aws = _AWS_PROVIDER_ID.match(provider_id)
     if aws:
         instance, zone = aws.group("instance"), aws.group("zone")
         attrs = {"resource_id": instance, "region": zone[:-1], "location": zone[:-1], "cloud_provider": "aws", "cloud_service": "ec2"}
-        return _host(f"cloud_resource:aws:ec2:instance:{instance}", instance, "aws", attrs)
+        attrs["account_id"] = account_id
+        node_id = cloud_resource_node_id("aws", "ec2:instance", {"id": instance}, account_id, zone[:-1])
+        return _host(node_id, instance, "aws", attrs)
     azure = _AZURE_PROVIDER_ID.match(provider_id)
     if azure:
         arm = azure.group("arm").rstrip("/")
@@ -96,7 +99,10 @@ def project_server_hosting(graph: UnifiedGraph, server_id: str, server: Mapping[
         )
     )
     _hosted_on(graph, server_id, pod_id, data_source, pod_uid=pod_uid)
-    host = provider_id_host(str(metadata.get("k8s_node_provider_id") or "").strip())
+    host = provider_id_host(
+        str(metadata.get("k8s_node_provider_id") or "").strip(),
+        account_id=str(metadata.get("k8s_cloud_account_id") or "").strip(),
+    )
     if host is not None:
         graph.add_node(host)
         _hosted_on(graph, pod_id, host.id, data_source, node=str(metadata.get("k8s_node") or ""))

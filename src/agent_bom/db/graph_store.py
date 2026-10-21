@@ -47,7 +47,7 @@ from agent_bom.db.graph_store_schema import _GRAPH_EVIDENCE_INCLUDED_TABLES as _
 from agent_bom.db.graph_store_schema import _GRAPH_PURGEABLE_TABLES as _GRAPH_PURGEABLE_TABLES
 from agent_bom.db.graph_store_schema import _GRAPH_SCHEMA_VERSION as _GRAPH_SCHEMA_VERSION
 from agent_bom.db.graph_store_schema import _GRAPH_TENANT_TABLE_KEYS as _GRAPH_TENANT_TABLE_KEYS
-from agent_bom.db.graph_store_schema import ATTACK_PATH_ORDER, ATTACK_PATH_SELECT, attack_path_from_row, upgrade_attack_path_identity
+from agent_bom.db.graph_store_schema import ATTACK_PATH_ORDER, ATTACK_PATH_SELECT, attack_path_from_row, upgrade_attack_path_tables
 from agent_bom.db.graph_store_schema import DEFAULT_GRAPH_TENANT_ID as DEFAULT_GRAPH_TENANT_ID
 from agent_bom.db.graph_store_schema import GRAPH_SNAPSHOT_KINDS as GRAPH_SNAPSHOT_KINDS
 from agent_bom.db.graph_store_schema import _batched_rows as _batched_rows
@@ -198,7 +198,7 @@ def _init_db(conn: sqlite3.Connection, *, backfill_legacy_tenants: bool = True) 
         conn.execute("ALTER TABLE attack_paths ADD COLUMN hop_evidence TEXT DEFAULT '[]'")
     if "analysis" not in existing_columns:
         conn.execute("ALTER TABLE attack_paths ADD COLUMN analysis TEXT DEFAULT '{}'")
-    upgrade_attack_path_identity(conn)
+    upgrade_attack_path_tables(conn)
     upgrade_node_alias_key(conn)
     edge_columns = {row["name"] for row in conn.execute("PRAGMA table_info(graph_edges)").fetchall()}
     # v3 adds replay metadata. Empty valid_from is interpreted as first_seen for

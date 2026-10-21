@@ -32,13 +32,13 @@ from agent_bom.graph.correlation_scope import snapshot_scoped_identity as _snaps
 from agent_bom.graph.correlation_scope import timestamp_instant as _timestamp_instant
 from agent_bom.graph.credential_identity import credential_occurrence, is_credential_slot
 from agent_bom.graph.edge import UnifiedEdge, merge_union_evidence_keys, renamed_union_evidence
+from agent_bom.graph.identity_scope import guard_cloud_identity_scope
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.security_assertions import resolve_security_assertions
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import _now_iso
 
 _EMPTY_VALUES: tuple[Any, ...] = (None, "", [], {})
-_OCI_DIGEST_RE = re.compile(r"sha256:[0-9a-fA-F]{64}")
 _SHA256_RE = re.compile(r"sha256:[0-9a-f]{64}")
 _FAILURE_CODE_RE = re.compile(r"[a-z0-9][a-z0-9_.:-]{0,127}")
 _CORRELATION_ATTR = "correlation"
@@ -170,17 +170,6 @@ def _non_empty(value: Any) -> bool:
 
 def _relationship_value(edge: UnifiedEdge) -> str:
     return edge.relationship.value if isinstance(edge.relationship, RelationshipType) else str(edge.relationship)
-
-
-def _oci_digest(node: UnifiedNode) -> str:
-    for key in ("image_digest", "digest", "repo_digest", "container_image", "image", "image_ref"):
-        value = node.attributes.get(key)
-        if not isinstance(value, str):
-            continue
-        match = _OCI_DIGEST_RE.search(value)
-        if match:
-            return match.group(0).lower()
-    return ""
 
 
 def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str, UnifiedNode] | None = None) -> tuple[str, str, str]:
@@ -317,6 +306,10 @@ class CorrelationMergeResult:
     graph: UnifiedGraph
     manifest: dict[str, Any]
     manifest_sha256: str
+
+    def __post_init__(self) -> None:
+        # Both in-memory and disk-backed merges recheck legacy scope evidence.
+        guard_cloud_identity_scope(self.graph)
 
 
 class CorrelationRunStatus(str, Enum):

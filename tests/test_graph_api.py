@@ -2220,7 +2220,9 @@ class TestGraphStoreBackendSelection:
         assert response.status_code == 200
         body = response.json()
         assert body["scan_id"] == "store-scan"
-        assert len(body["nodes"]) == 1
+        assert body["completeness"]["ranked"] == 1
+        assert {node["id"] for node in body["nodes"]} == {"agent:a", "server:s"}
+        assert body["completeness"]["endpoint_nodes"] == 1
         assert body["edges"][0]["source_id"] == "agent:a"
         assert body["edges"][0]["target_id"] == "server:s"
         assert ("page_nodes", "default", "store-scan", None, 0, None, 0, 1) in recording_graph_store.calls
@@ -3713,7 +3715,7 @@ def test_neighbor_lookup_in_empty_current_estate_never_hydrates(recording_graph_
     [
         ("agent:cursor", True),
         ("cursor", True),
-        ("Cursor IDE Agent", True),
+        ("Cursor", True),
         ("agent:other", False),
         ("cur", False),
         ("pkg:cursor", False),
@@ -3721,7 +3723,7 @@ def test_neighbor_lookup_in_empty_current_estate_never_hydrates(recording_graph_
 )
 def test_fix_first_agent_focus_accepts_canonical_identity(selector, expected):
     graph = UnifiedGraph(scan_id="focus")
-    graph.add_node(UnifiedNode(id="agent:cursor", entity_type=EntityType.AGENT, label="Cursor IDE Agent"))
+    graph.add_node(UnifiedNode(id="agent:cursor", entity_type=EntityType.AGENT, label="Cursor"))
     graph.add_node(UnifiedNode(id="pkg:cursor", entity_type=EntityType.PACKAGE, label="cursor"))
     path = AttackPath(source="agent:cursor", target="pkg:cursor", hops=["agent:cursor", "pkg:cursor"], edges=["uses"], composite_risk=1)
     assert graph_routes._path_matches_focus(graph, path, cve="", package="", agent=selector) is expected

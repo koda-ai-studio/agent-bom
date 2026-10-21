@@ -10,7 +10,6 @@ import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import { GraphInvestigationContextControls } from "@/components/graph-investigation-context-controls";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
-import { nodeRiskLabel } from "@/lib/node-risk-assessment";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
 import { GraphRollupCountNotice } from "@/components/graph-rollup-count-notice";
@@ -32,7 +31,6 @@ import { GraphViewControls } from "@/components/graph-view-controls";
 import { createExpandedGraphFilters, createInvestigationGraphFilters, graphScopeLabelForFilters } from "@/components/lineage-filter";
 import { lineageNodeTypesAdaptive } from "@/components/lineage-nodes";
 import { readableGraphNodeStyle } from "@/lib/graph-node-dimensions";
-import { attackPathKey } from "@/lib/attack-paths";
 import { BACKGROUND_COLOR, BACKGROUND_GAP, CONTROLS_CLASS, MINIMAP_BG, MINIMAP_CLASS, MINIMAP_MASK, minimapNodeColor } from "@/lib/graph-utils";
 import { BlastRadiusPanel } from "@/components/graph-blast-radius-panel";
 import { LARGE_GRAPH_OVERVIEW_MAX_RENDERED_NODES } from "@/lib/large-graph-overview";
@@ -41,6 +39,7 @@ import { GraphScenarioUnconnected } from "@/components/graph-scenario-unconnecte
 import { roleCanConnect } from "@/lib/roles";
 import { GraphChangesEntry } from "@/components/graph-changes-entry";
 import { GraphChangesPanel } from "@/components/graph-changes-panel";
+import { GraphSearchResults } from "@/components/graph-search-results";
 import { GraphSnapshotDiff } from "@/components/graph-snapshot-diff";
 import { snapshotChangesHeadline } from "@/lib/graph-estate-changes";
 import { snapshotLabel } from "@/lib/snapshot-label";
@@ -230,7 +229,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
         aria-label="Graph snapshot"
         value={selectedScanId}
         onChange={(event) => setSelectedScanId(event.target.value)}
-        className="graph-page-select max-w-full sm:max-w-72"
+        className="graph-page-select max-w-full sm:max-w-56"
       >
         {selectedScanId && selectedScanId !== currentEstateId && !snapshots.some(item => item.scan_id === selectedScanId) && <option value={selectedScanId}>{selectedScanId}</option>}
         {currentEstateId && !snapshots.some(item => item.scan_id === currentEstateId) && <option value={currentEstateId}>Current tenant estate</option>}
@@ -269,7 +268,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
         event.preventDefault();
         void runSearch();
       }}
-      className="flex min-w-[min(100%,22rem)] flex-1 items-center gap-2"
+      className="flex min-w-[min(100%,16rem)] flex-1 items-center gap-2"
     >
       <input
         aria-label="Search nodes, tags, severities, or attributes"
@@ -303,8 +302,8 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
 
       <div className="graph-page-header">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+            <div className="shrink-0">
               <h1 className="text-lg font-semibold text-foreground sm:mt-1">
                 Investigation
               </h1>
@@ -330,39 +329,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
         <div className="mt-1 sm:mt-3">
           {narrowViewport && scopeNavigation}
 
-          {searchResults.length > 0 && (
-            <div className="mt-2 rounded-2xl border border-outline bg-background/90 p-2">
-              <div className="mb-2 px-1 text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">
-                Search respects current entity scope
-                {filters.severity ? ` and ${filters.severity}+ severity` : ""}
-              </div>
-              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                {searchResults.map((result) => (
-                  <button
-                    key={result.id}
-                    type="button"
-                    data-testid={`graph-search-result-${result.id}`}
-                    onClick={() => void focusSearchResult(result)}
-                    className="graph-page-result"
-                  >
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {result.label}
-                    </p>
-                    <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">
-                      {String(result.entity_type)}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-ink-tertiary">
-                      {result.severity && <span>{result.severity}</span>}
-                      <span>
-                        risk{" "}
-                        {nodeRiskLabel(result.risk_score, result.risk_assessment)}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <GraphSearchResults results={searchResults} severity={filters.severity} onSelect={result => void focusSearchResult(result)} />
 
 
           {investigationMode && !reachabilitySummary && !blastRadius && !loadingBlast && (
@@ -648,16 +615,11 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             highlighting={driftLensEngaged} highlightLoading={highlight.loading} highlightError={highlight.error}
             highlightAvailable={!viewingCurrentEstate && Boolean(graphDiff) && driftIndex.hasChanges}
             selectedPair={viewingCurrentEstate ? driftScrubberPair : null}
-            diffDetails={<GraphSnapshotDiff diff={graphDiff} counts={diffCounts} loading={loadingDiff} error={diffError} showCounts={!viewingCurrentEstate} />}
+            diffDetails={<GraphSnapshotDiff diff={graphDiff} counts={diffCounts} loading={loadingDiff} error={diffError} showCounts={!viewingCurrentEstate} pair={diffPair} />}
             onClose={() => setChangesOpen(false)} onHighlight={() => { setMobileGraphView("graph"); void highlight.highlight(); }}
             onOpenDiff={pair => { highlight.openPair(pair); setComparisonRequested(true); }}
             onInvestigateNode={(rootId, rootLabel) => { setChangesOpen(false); void loadRootInvestigation({ rootId, rootLabel }); }}
-            onInvestigatePath={path => {
-              setChangesOpen(false);
-              const key = `${path.source}::${path.target}::${path.hops.join("->")}`;
-              if (attackPaths.some(item => attackPathKey(item) === key)) setSelectedAttackPathKey(key);
-              else void loadRootInvestigation({ rootId: path.target, rootLabel: path.target });
-            }} />
+ />
           {mobileListAvailable && <div role="group" aria-label="Investigation view" className="flex gap-2">
             {(["list", "graph"] as const).map(view => <button key={view} type="button" aria-pressed={mobileGraphView === view} onClick={() => setMobileGraphView(view)}
               className="graph-page-action min-h-11 flex-1 aria-pressed:bg-surface-elevated">{view === "list" ? (investigationMode ? "List" : "Paths") : "Graph"}</button>)}
@@ -716,6 +678,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               onDrill={drillIntoRollup}
               onInvestigate={investigateRollup}
               estateIssueCount={estateIssueSummary?.issue_count}
+              estateIssueBasis={estateIssueSummary}
             />
           ) : displayNodes.length === 0 && scenarioElements.unconnected.length > 0 ? (
             <div className="flex h-full items-center justify-center p-6 text-sm text-ink-secondary">No connected nodes in this proposal view. Select an unconnected item to inspect its details.</div>

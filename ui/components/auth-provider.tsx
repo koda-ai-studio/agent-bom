@@ -31,6 +31,8 @@ interface AuthContextValue {
    * "control plane unreachable" screen on the first aborted request.
    */
   reconnecting: boolean;
+  /** True while the UI proxy reports the API is still booting (503 API_STARTING). */
+  starting: boolean;
   refresh: () => Promise<void>;
   hasCapability: (capability: string) => boolean;
 }
@@ -45,6 +47,7 @@ const defaultContext: AuthContextValue = {
   loading: true,
   error: null,
   reconnecting: false,
+  starting: false,
   refresh: async () => {},
   hasCapability: () => false,
 };
@@ -58,6 +61,18 @@ const AuthContext = createContext<AuthContextValue>(defaultContext);
 // repeated connection refusal still fails all attempts and shows the fatal UI.
 const MAX_PROBE_ATTEMPTS = 3;
 const PROBE_RETRY_BASE_MS = 150;
+
+/** How long a cold load waits for a booting API before showing the unreachable state. */
+export const STARTING_MAX_WAIT_MS = 60_000;
+
+/** Seconds the proxy asked us to wait when the API is still starting; null for any other failure. */
+function apiStartingRetryMs(err: unknown): number | null {
+  if (!(err instanceof ApiServerError) || err.status !== 503) return null;
+  const body = err.body as { error?: { code?: unknown }; retry_after_seconds?: unknown } | undefined;
+  if (body?.error?.code !== "API_STARTING") return null;
+  const seconds = typeof body.retry_after_seconds === "number" ? body.retry_after_seconds : 2;
+  return Math.min(5_000, Math.max(1_000, seconds * 1000));
+}
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -101,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reconnecting, setReconnecting] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   const [signedOut, setSignedOut] = useState(false);
   const [signOutConfirmed, setSignOutConfirmed] = useState(false);
@@ -129,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setReconnecting(false);
     let devSessionAttempted = false;
+    const startedAt = Date.now();
     for (let attempt = 1; attempt <= MAX_PROBE_ATTEMPTS; attempt += 1) {
       try {
         const next = await api.getAuthMe();
@@ -136,10 +153,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(next);
         setError(null);
         setReconnecting(false);
+        setStarting(false);
         setLoading(false);
         return;
       } catch (nextError) {
         if (stale()) return;
+        const startingRetryMs = apiStartingRetryMs(nextError);
+        if (startingRetryMs != null && Date.now() - startedAt < STARTING_MAX_WAIT_MS) {
+          // A booting API is expected on cold start: poll at the proxy's pace without spending probe attempts.
+          setStarting(true);
+          await delay(startingRetryMs);
+          if (stale()) return;
+          attempt -= 1;
+          continue;
+        }
+        setStarting(false);
         if (nextError instanceof ApiAuthError && !devSessionAttempted) {
           devSessionAttempted = true;
           const exchange = await tryLoopbackDevSession(resume);
@@ -160,7 +188,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           continue;
         }
         setSession(null);
-        setError(userFacingApiErrorMessage(nextError, "Failed to load auth session"));
+        setError(startingRetryMs != null
+          ? `The control plane API did not finish starting within ${STARTING_MAX_WAIT_MS / 1000}s (503 Service Unavailable).`
+          : userFacingApiErrorMessage(nextError, "Failed to load auth session"));
         setReconnecting(false);
         setLoading(false);
         return;
@@ -217,10 +247,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       error,
       reconnecting,
+      starting,
       refresh,
       hasCapability: (capability: string) => Boolean(session?.role_summary?.capabilities.includes(capability)),
     }),
-    [error, loading, reconnecting, refresh, session, signedOut, signOutConfirmed, signOutError, signOut, resumeSession]
+    [error, loading, reconnecting, starting, refresh, session, signedOut, signOutConfirmed, signOutError, signOut, resumeSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

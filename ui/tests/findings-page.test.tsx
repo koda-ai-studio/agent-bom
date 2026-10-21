@@ -282,7 +282,7 @@ describe("FindingsPage", () => {
       "href",
       "/findings?q=better-sqlite3",
     );
-    expect(screen.getByRole("link", { name: "developer-copilot" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Developer Copilot" })).toHaveAttribute(
       "href",
       "/findings?q=developer-copilot",
     );

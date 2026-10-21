@@ -175,7 +175,7 @@ def test_the_built_graph_stamps_a_pod_from_the_vm_it_is_scheduled_on() -> None:
     pod = graph.nodes["container:k8s:pod:6f1c2a9e-0d4b-4c55-9a35-3f8e2c1d7b10"]
     assert pod.dimensions.cloud_provider == "aws"
     assert pod.attributes["cloud_provider_basis"] == "inherited:hosted_on"
-    assert pod.attributes["cloud_provider_source"]["node_id"] == f"cloud_resource:aws:ec2:instance:{instance}"
+    assert pod.attributes["cloud_provider_source"]["node_id"] == f"cloud_resource:aws:ec2:instance:scoped//{region}//native/{instance}"
     # Workloads above the pod keep their own identity; they are not cloud assets.
     servers = [node for node in graph.nodes.values() if node.entity_type.value == "server"]
     assert servers and all("cloud_provider_basis" not in node.attributes for node in servers)

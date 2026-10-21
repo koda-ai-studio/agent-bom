@@ -1,12 +1,10 @@
 import type { ReactNode } from "react";
 
 import {
-  FINDING_SIGNAL_CLASSES,
   SEVERITY_RING_CLASSES,
   nodeBadgeClass,
   type NodeBadge,
   type RingSeverity,
-  type SeverityRing,
 } from "@/lib/graph-node-badges";
 
 type ChipBadge = Pick<NodeBadge, "kind" | "value" | "label"> & { description?: string };
@@ -37,25 +35,7 @@ export function NodeBadgeRow({ badges, children }: { badges: NodeBadge[]; childr
   );
 }
 
-/** Small dot at 1:30 on an asset glyph that links to findings; the glyph must be `relative`. The full ring stays reserved for findings. */
-export function FindingSignalDot({ ring }: { ring: SeverityRing }) {
-  return (
-    <span
-      role="img"
-      aria-label={ring.description}
-      title={ring.description}
-      data-finding-signal={ring.severity}
-      className={`graph-finding-signal pointer-events-none absolute rounded-full ${FINDING_SIGNAL_CLASSES[ring.severity]}`}
-    />
-  );
-}
-
 /** Legend swatch for a finding's severity ring. */
 export function SeverityRingSwatch({ severity }: { severity: RingSeverity }) {
   return <span aria-hidden="true" className={`inline-block h-3.5 w-3.5 rounded-full border-[3px] ${SEVERITY_RING_CLASSES[severity]}`} />;
-}
-
-/** Legend swatch for an asset's linked-findings dot, drawn on a neutral disc like the node. */
-export function FindingSignalSwatch({ severity }: { severity: RingSeverity }) {
-  return <span aria-hidden="true" className="relative inline-block h-3.5 w-3.5 rounded-full border border-outline-strong"><span className={`absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full ${FINDING_SIGNAL_CLASSES[severity]}`} /></span>;
 }

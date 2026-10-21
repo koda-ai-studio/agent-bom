@@ -4206,6 +4206,9 @@ components:
         findings:
           title: Findings
           type: integer
+        issue_count:
+          title: Issue Count
+          type: integer
         name:
           title: Name
           type: string
@@ -4225,6 +4228,7 @@ components:
       - name
       - status
       - findings
+      - issue_count
       - evaluation_mode
       - evidence_reason
       - affected_agents
@@ -7342,6 +7346,9 @@ components:
           anyOf:
           - $ref: '#/components/schemas/DiscoveryProvenance'
           - type: 'null'
+        display_name:
+          title: Display Name
+          type: string
         last_seen:
           anyOf:
           - type: string
@@ -7388,6 +7395,7 @@ components:
           title: Version
       required:
       - name
+      - display_name
       - agent_type
       - agent_class
       - canonical_id
@@ -8506,6 +8514,12 @@ components:
         schema_version:
           title: Schema Version
           type: string
+        source_scan_ids:
+          default: []
+          items:
+            type: string
+          title: Source Scan Ids
+          type: array
         tenant_id:
           title: Tenant Id
           type: string
@@ -10070,6 +10084,11 @@ components:
           - type: string
           - type: 'null'
           title: Cvss Version
+        dependency_depth:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Dependency Depth
         ecosystem:
           anyOf:
           - type: string
@@ -10095,6 +10114,11 @@ components:
           - type: string
           - type: 'null'
           title: Entity Type
+        epss_cve_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Epss Cve Id
         epss_score:
           anyOf:
           - type: integer
@@ -10176,6 +10200,16 @@ components:
         id:
           title: Id
           type: string
+        introduced_via:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Introduced Via
+        is_direct:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Direct
         is_kev:
           anyOf:
           - type: boolean
@@ -11427,6 +11461,16 @@ components:
           - type: integer
           - type: 'null'
           title: Evaluated Controls
+        finding_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Finding Count
+        finding_count_basis:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Finding Count Basis
         framework:
           title: Framework
           type: string
@@ -14394,6 +14438,85 @@ components:
       - value
       title: GraphCorrelationRuntimeFactsSignature
       type: object
+    GraphCrossVendorPathsResponse:
+      additionalProperties: true
+      description: The attack-path queue page restricted to paths whose source and
+        target nodes are in different vendors.
+      properties:
+        attack_paths:
+          items:
+            additionalProperties: true
+            type: object
+          title: Attack Paths
+          type: array
+        completeness:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Completeness
+        count_metadata:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Count Metadata
+        created_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Created At
+        edges:
+          items:
+            additionalProperties: true
+            type: object
+          title: Edges
+          type: array
+        interaction_risks:
+          items:
+            additionalProperties: true
+            type: object
+          title: Interaction Risks
+          type: array
+        nodes:
+          items:
+            additionalProperties: true
+            type: object
+          title: Nodes
+          type: array
+        pagination:
+          additionalProperties: true
+          title: Pagination
+          type: object
+        scan_id:
+          title: Scan Id
+          type: string
+        snapshot_generation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Snapshot Generation
+        stats:
+          additionalProperties: true
+          title: Stats
+          type: object
+        tenant_id:
+          title: Tenant Id
+          type: string
+        vendor_facets:
+          $ref: '#/components/schemas/GraphVendorFacets'
+      required:
+      - scan_id
+      - tenant_id
+      - nodes
+      - edges
+      - attack_paths
+      - interaction_risks
+      - stats
+      - pagination
+      - vendor_facets
+      title: GraphCrossVendorPathsResponse
+      type: object
     GraphDeployDecisionRequest:
       additionalProperties: false
       properties:
@@ -14741,7 +14864,18 @@ components:
 
         (``baseline: snapshot_continuity``). Each changed source carries added and
 
-        removed stored attack paths in ``highlights``. ``new_sources`` are first
+        removed stored attack paths in ``highlights`` and ``changes_by_source``:
+
+        changed nodes per vendor and account the collector recorded on each node,
+
+        since one scan can collect many vendors. ``issue_change`` gives the open
+
+        issue-group counts the posture trend recorded for the pair''s two scans
+
+        (``None`` when either scan has no recorded point): the graph counts are
+
+        nodes and links, the issue counts are the headline''s unit. ``new_sources``
+        are first
 
         observations and are never counted as additions. ``totals`` cover the
 
@@ -15281,6 +15415,15 @@ components:
           additionalProperties: true
           title: Completeness
           type: object
+        depth_basis:
+          anyOf:
+          - enum:
+            - requested
+            - default
+            - longest_materialized_path
+            type: string
+          - type: 'null'
+          title: Depth Basis
         direction:
           anyOf:
           - type: string
@@ -15288,6 +15431,12 @@ components:
           title: Direction
         interpretation:
           $ref: '#/components/schemas/GraphImpactInterpretation'
+        max_depth:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Depth the walk was bounded to.
+          title: Max Depth
         max_depth_reached:
           title: Max Depth Reached
           type: integer
@@ -15611,6 +15760,12 @@ components:
         tenant_id:
           title: Tenant Id
           type: string
+        view:
+          anyOf:
+          - const: canvas
+            type: string
+          - type: 'null'
+          title: View
       required:
       - scan_id
       - tenant_id
@@ -16561,6 +16716,62 @@ components:
         type: object
       title: GraphSnapshotsResponse
       type: array
+    GraphVendorFacets:
+      additionalProperties: true
+      description: Cross-vendor path counts per (source vendor, target vendor) over
+        the whole snapshot queue.
+      properties:
+        covers_all_paths:
+          title: Covers All Paths
+          type: boolean
+        cross_vendor_paths:
+          title: Cross Vendor Paths
+          type: integer
+        pairs:
+          items:
+            $ref: '#/components/schemas/GraphVendorPair'
+          title: Pairs
+          type: array
+        selected:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Selected
+        snapshot_paths:
+          title: Snapshot Paths
+          type: integer
+        unit:
+          const: paths
+          title: Unit
+          type: string
+      required:
+      - unit
+      - snapshot_paths
+      - cross_vendor_paths
+      - pairs
+      - covers_all_paths
+      title: GraphVendorFacets
+      type: object
+    GraphVendorPair:
+      additionalProperties: true
+      properties:
+        paths:
+          title: Paths
+          type: integer
+        source_vendor:
+          title: Source Vendor
+          type: string
+        target_vendor:
+          title: Target Vendor
+          type: string
+      required:
+      - source_vendor
+      - target_vendor
+      - paths
+      title: GraphVendorPair
+      type: object
     HTTPValidationError:
       properties:
         detail:
@@ -16712,6 +16923,11 @@ components:
     HubPostureResponse:
       additionalProperties: true
       properties:
+        framework_count_basis:
+          const: control_tag_evidence
+          default: control_tag_evidence
+          title: Framework Count Basis
+          type: string
         framework_counts:
           $ref: '#/components/schemas/HubFrameworkCounts'
         hub_severity_breakdown:
@@ -17610,6 +17826,11 @@ components:
             type: string
           title: Compliance Tags
           type: array
+        display_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Display Name
         ecosystem:
           title: Ecosystem
           type: string
@@ -21400,6 +21621,13 @@ components:
     OverviewHeadline:
       additionalProperties: true
       properties:
+        basis:
+          default: issue_groups
+          enum:
+          - issue_groups
+          - occurrences
+          title: Basis
+          type: string
         credential_exposed:
           title: Credential Exposed
           type: integer
@@ -28868,6 +29096,10 @@ components:
         high:
           title: High
           type: integer
+        issues:
+          anyOf:
+          - $ref: '#/components/schemas/IssueCounts'
+          - type: 'null'
         low:
           title: Low
           type: integer
@@ -37312,7 +37544,9 @@ paths:
         \ scan.\n\nSoft-deprecated: no UI/CLI/MCP product consumer (#3666 Phase 2)."
       operationId: get_estate_correlations_v1_estate_correlations_get
       parameters:
-      - description: Scan job ID; latest completed scan if omitted
+      - description: 'Scan job ID or graph snapshot ID. Omitted (or current-estate):
+          the current estate, the union of every target''s current completed scan;
+          source_scan_ids lists them.'
         in: query
         name: scan_id
         required: false
@@ -37320,7 +37554,9 @@ paths:
           anyOf:
           - type: string
           - type: 'null'
-          description: Scan job ID; latest completed scan if omitted
+          description: 'Scan job ID or graph snapshot ID. Omitted (or current-estate):
+            the current estate, the union of every target''s current completed scan;
+            source_scan_ids lists them.'
           title: Scan Id
       - in: header
         name: X-Agent-Bom-Role
@@ -41661,16 +41897,17 @@ paths:
         \ paginated (offset/limit). ``edges`` carries up to 1,000 edges\nincident\
         \ to the ranked page, plus containment context. Omitted relationships\nare\
         \ declared by ``completeness.edges_truncated`` and remain pageable through\n\
-        ``/v1/graph/incident-edges`` at the same revision. Edges may reach nodes\n\
-        outside the page; this is not the subgraph induced by ``nodes``;\n``completeness.boundary_edges``\
-        \ counts the edges that cross the boundary.\n\n``stats`` describe the graph\
-        \ this response was computed from, NOT the page:\n``stats.total_nodes`` is\
-        \ every node that survived loading, and\n``stats.total_nodes_source`` is the\
-        \ estate total before any load-time node\nbudget applied. The two are equal\
-        \ on an unbounded load. Read\n``completeness`` for whether the load was bounded\
-        \ and why \u2014\n``completeness.total`` always reconciles with ``stats.total_nodes_source``.\n\
-        ``stats.severity_counts`` counts finding-bearing graph nodes\n(``stats.severity_basis:\
-        \ \"graph_nodes\"``), not issues or occurrences."
+        ``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the\n\
+        returned edges ride along (``completeness.endpoint_nodes``), so every edge\n\
+        lands on a returned node; ``completeness.boundary_edges`` counts any that\
+        \ do not.\n\n``stats`` describe the graph this response was computed from,\
+        \ NOT the page:\n``stats.total_nodes`` is every node that survived loading,\
+        \ and\n``stats.total_nodes_source`` is the estate total before any load-time\
+        \ node\nbudget applied. The two are equal on an unbounded load. Read\n``completeness``\
+        \ for whether the load was bounded and why \u2014\n``completeness.total``\
+        \ always reconciles with ``stats.total_nodes_source``.\n``stats.severity_counts``\
+        \ counts finding-bearing graph nodes\n(``stats.severity_basis: \"graph_nodes\"\
+        ``), not issues or occurrences."
       operationId: get_graph_v1_graph_get
       parameters:
       - description: Filter by scan ID
@@ -41795,6 +42032,23 @@ paths:
           minimum: 1
           title: Limit
           type: integer
+      - description: '``canvas`` returns the graph page''s projection: the same response
+          without node and edge fields the page never reads before a selection (OCSF
+          ids, canonical ids, provenance blocks, bulky attributes) and without the
+          source_id/target_id edge aliases. Omit for the full projection.'
+        in: query
+        name: view
+        required: false
+        schema:
+          anyOf:
+          - const: canvas
+            type: string
+          - type: 'null'
+          description: '``canvas`` returns the graph page''s projection: the same
+            response without node and edge fields the page never reads before a selection
+            (OCSF ids, canonical ids, provenance blocks, bulky attributes) and without
+            the source_id/target_id edge aliases. Omit for the full projection.'
+          title: View
       responses:
         '200':
           content:
@@ -42041,9 +42295,9 @@ paths:
           - type: 'null'
           description: Only paths carrying this finding occurrence
           title: Finding Id
-      - description: Advisory of the finding occurrence. When paths record the advisory
-          rather than the occurrence id, the occurrence resolves to paths through
-          its node_id carrying this advisory; ignored without node_id
+      - description: 'Only paths carrying this advisory. With finding_id it qualifies
+          the occurrence instead: when paths record the advisory rather than the occurrence
+          id, the occurrence resolves to paths through its node_id carrying it'
         in: query
         name: advisory_id
         required: false
@@ -42053,9 +42307,10 @@ paths:
             pattern: ^[^\x00]*$
             type: string
           - type: 'null'
-          description: Advisory of the finding occurrence. When paths record the advisory
-            rather than the occurrence id, the occurrence resolves to paths through
-            its node_id carrying this advisory; ignored without node_id
+          description: 'Only paths carrying this advisory. With finding_id it qualifies
+            the occurrence instead: when paths record the advisory rather than the
+            occurrence id, the occurrence resolves to paths through its node_id carrying
+            it'
           title: Advisory Id
       - description: Compliance framework of ``control``
         in: query
@@ -42931,6 +43186,113 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
       summary: Get Graph Attack Paths
+      tags:
+      - graph
+  /v1/graph/attack-paths/cross-vendor:
+    get:
+      description: 'Attack paths whose source and target nodes are recorded in different
+        vendors.
+
+
+        Vendors come from each endpoint''s recorded ``cloud_provider``; agent-runtime
+
+        surfaces (MCP, local) are not vendors and middle hops never qualify a path.
+        Order is the global queue order.
+
+        ``vendor_facets`` counts every cross-vendor path per pair, whatever pair
+
+        is selected, so the chips beside the queue stay comparable.'
+      operationId: get_cross_vendor_attack_paths_v1_graph_attack_paths_cross_vendor_get
+      parameters:
+      - description: Scan ID
+        in: query
+        name: scan_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Scan ID
+          title: Scan Id
+      - description: Generation from the first page; required for continuation
+        in: query
+        name: snapshot_generation
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 128
+            type: string
+          - type: 'null'
+          description: Generation from the first page; required for continuation
+          title: Snapshot Generation
+      - description: Pagination offset
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          description: Pagination offset
+          minimum: 0
+          title: Offset
+          type: integer
+      - description: Max attack paths
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          description: Max attack paths
+          maximum: 1000
+          minimum: 1
+          title: Limit
+          type: integer
+      - description: Only paths whose source node is in this vendor
+        in: query
+        name: source_vendor
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 64
+            pattern: ^[a-z0-9_.-]*$
+            type: string
+          - type: 'null'
+          description: Only paths whose source node is in this vendor
+          title: Source Vendor
+      - description: Only paths whose target node is in this vendor
+        in: query
+        name: target_vendor
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 64
+            pattern: ^[a-z0-9_.-]*$
+            type: string
+          - type: 'null'
+          description: Only paths whose target node is in this vendor
+          title: Target Vendor
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphCrossVendorPathsResponse'
+          description: Successful Response
+        4XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: 'Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED,
+            403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413
+            PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429
+            RATE_LIMITED'
+        5XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
+      summary: Get Cross Vendor Attack Paths
       tags:
       - graph
   /v1/graph/changes:
@@ -43967,17 +44329,22 @@ paths:
             type: string
           - type: 'null'
           title: Snapshot Generation
-      - description: Maximum traversal depth
+      - description: 'Maximum traversal depth. Omitted: the longest materialized attack
+          path ending at the node (at least 4, at most 10); the applied depth and
+          its basis are returned as max_depth and depth_basis.'
         in: query
         name: max_depth
         required: false
         schema:
-          default: 4
-          description: Maximum traversal depth
-          maximum: 10
-          minimum: 1
+          anyOf:
+          - maximum: 10
+            minimum: 1
+            type: integer
+          - type: 'null'
+          description: 'Maximum traversal depth. Omitted: the longest materialized
+            attack path ending at the node (at least 4, at most 10); the applied depth
+            and its basis are returned as max_depth and depth_basis.'
           title: Max Depth
-          type: integer
       - description: 'reverse: what depends on the node (upstream); forward: what
           the node can reach (downstream)'
         in: query

@@ -35,6 +35,8 @@ def register_context_graph(bindings: OperatorToolBindings) -> None:
             bool,
             Field(description="Discover this MCP server host's agent configurations instead of reading the persisted snapshot."),
         ] = False,
+        offset: Annotated[int, Field(ge=0, description="Agent page offset into the current estate graph.")] = 0,
+        limit: Annotated[int, Field(ge=1, le=100, description="Agents per page (1-100, default 25).")] = 25,
     ) -> str:
         """Build an agent context graph with lateral movement analysis.
 
@@ -42,14 +44,17 @@ def register_context_graph(bindings: OperatorToolBindings) -> None:
         and vulnerabilities.  Answers: "If agent X is compromised, what
         else becomes reachable?"
 
-        Reads the tenant's persisted scan snapshot (or ``scan_id``) by
-        default. Live host discovery runs only with ``live=true`` or a
-        ``config_path``; a tenant without a snapshot gets an error, never a
-        silent scan of this host.
+        Reads one agent page of the tenant's current estate graph by default
+        (the agents ``GET /v1/graph?entity_types=agent`` pages, with their
+        servers, packages, tools, credential names and advisories); ``scan_id``
+        reads that persisted scan instead. Live host discovery runs only with
+        ``live=true`` or a ``config_path``; a tenant without a snapshot gets an
+        error, never a silent scan of this host.
 
         Returns:
             JSON with nodes, edges, lateral_paths, interaction_risks, stats,
-            completeness, source (persisted_snapshot | live_discovery) and scope.
+            completeness, pagination, estate_coverage, source
+            (current_estate_graph | persisted_snapshot | live_discovery) and scope.
         """
         return await bindings.execute_tool_async(
             "context_graph",
@@ -60,6 +65,8 @@ def register_context_graph(bindings: OperatorToolBindings) -> None:
             tenant_id=tenant_id,
             scan_id=scan_id,
             live=live,
+            offset=offset,
+            limit=limit,
             _run_scan_pipeline=bindings.run_scan_pipeline,
             _truncate_response=bindings.truncate_response,
         )

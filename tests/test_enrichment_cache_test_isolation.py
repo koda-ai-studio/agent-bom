@@ -70,6 +70,6 @@ def test_offline_demo_kev_join_is_independent_of_the_previous_test(_run: str) ->
         for result in run["results"]
         if result.get("properties", {}).get("kev_date_added")
     }
-    assert kev_dates == {"2023-09-27"}, "demo KEV dates must come from the demo advisory seed, not an ambient catalog"
+    assert kev_dates == {"2023-09-13"}, "demo KEV dates must come from the demo advisory seed, not an ambient catalog"
 
     _leave_kev_catalog_behind()

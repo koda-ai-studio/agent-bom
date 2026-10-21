@@ -11,8 +11,8 @@ from agent_bom.graph.types import RelationshipType
 
 FW_A = "cloud_resource:gcp:compute:firewall:projects/proj-a/global/firewalls/allow-internal"
 FW_B = "cloud_resource:gcp:compute:firewall:projects/proj-b/global/firewalls/allow-internal"
-VM_A = "cloud_resource:gcp:compute:instance:1001"
-VM_B = "cloud_resource:gcp:compute:instance:2002"
+VM_A = "cloud_resource:gcp:compute:instance:scoped/proj-a///native/1001"
+VM_B = "cloud_resource:gcp:compute:instance:scoped/proj-b///native/2002"
 
 
 def _firewall(project: str, *, exposed: bool, target_tags: list[str] | None = None, **extra: Any) -> dict[str, Any]:
@@ -112,7 +112,8 @@ def test_firewall_exposure_matches_only_the_instances_own_project(reverse: bool)
 
     exposed = {(e.source, e.target) for e in graph.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source in {FW_A, FW_B}}
     assert exposed == {(FW_A, VM_A)}
-    assert graph.nodes[VM_A].attributes["internet_exposed"] is True
+    assert not graph.nodes[VM_A].attributes.get("internet_exposed")
+    assert all(not e.traversable for e in graph.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source in {FW_A, FW_B})
     # proj-b's own rule is internal-only; proj-a's permissive rule must not leak across projects.
     assert not graph.nodes[VM_B].attributes.get("internet_exposed")
 
@@ -144,7 +145,7 @@ def test_already_scoped_group_id_is_not_double_scoped() -> None:
     assert set(_firewall_nodes(graph)) == {FW_A}
 
 
-def test_aws_and_azure_security_group_ids_are_unchanged() -> None:
+def test_aws_local_ids_are_scoped_and_azure_ids_are_case_normalized() -> None:
     aws = {
         "provider": "aws",
         "status": "ok",
@@ -166,5 +167,5 @@ def test_aws_and_azure_security_group_ids_are_unchanged() -> None:
         "security_groups": [{"group_id": nsg_id, "name": "web-nsg"}],
     }
     graph = _graph([aws, azure])
-    assert "cloud_resource:aws:ec2:security-group:sg-0abc" in graph.nodes
-    assert f"cloud_resource:azure:network:network-security-group:{nsg_id}" in graph.nodes
+    assert "cloud_resource:aws:ec2:security-group:scoped/111122223333/us-east-1//native/sg-0abc" in graph.nodes
+    assert f"cloud_resource:azure:network:network-security-group:{nsg_id.lower()}" in graph.nodes

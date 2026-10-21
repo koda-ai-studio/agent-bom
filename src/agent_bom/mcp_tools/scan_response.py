@@ -55,9 +55,13 @@ _FINDING_FIELDS = (
     "cvss_score",
     "epss_score",
     "is_kev",
+    "kev_due_date",
     "fixed_version",
     "remediation_guidance",
     "reachability",
+    "is_direct",
+    "dependency_depth",
+    "introduced_via",
 )
 
 _PATH_FIELDS = ("id", "rank", "label", "summary", "severity", "riskScore", "fix")

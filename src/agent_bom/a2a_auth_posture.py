@@ -657,7 +657,7 @@ def annotate_graph_a2a_auth(graph: UnifiedGraph, findings: list[Finding]) -> dic
             InteractionRisk(
                 pattern=f"a2a_auth.{weakness}" if weakness else "a2a_auth",
                 agents=[agent_label],
-                risk_score=min(10.0, max(0.0, finding.risk_score)),
+                risk_score=min(10.0, max(0.0, finding.risk_score or 0.0)),
                 description=finding.title,
                 owasp_agentic_tag=_A2A_OWASP_AGENTIC[0],
             )

@@ -1,9 +1,10 @@
-"""Exact totals for the ``?kev=`` findings filter.
+"""Exact totals for scoped findings filters.
 
-Generic scope filters are matched against payload fields in batches, so their
-totals are approximate. KEV is the exec headline, and the hub already counts
-it with the same tenant/window/lifecycle predicates the overview uses, so a
-KEV-only read can report the exact total instead of ``null``.
+KEV is the exec headline, and the hub already counts it with the same
+tenant/window/lifecycle predicates the overview uses. Other scope filters
+(framework, control, q, provider, ...) are matched against payload fields in
+batches; a first page counts the bulk half's matches once, under a row budget,
+so it reports an exact total instead of ``null`` unless the budget is spent.
 """
 
 from __future__ import annotations
@@ -33,3 +34,35 @@ def exact_kev_total(query: Any, scan_rows: int, bulk_list: Callable[..., Any], s
     if not isinstance(hub_total, int):
         return None
     return scan_rows + max(0, hub_total - hub_kev)
+
+
+SCOPED_COUNT_BUDGET = 20_000
+
+
+def exact_scoped_total(query: Any, scan_rows: int, bulk_list: Callable[..., Any]) -> int | None:
+    """Scan-half matches (already scope-filtered) plus a budgeted count of matching bulk rows.
+
+    Only a first page qualifies; continuations keep their resume totals. ``None``
+    when the bulk walk hits the budget or reports a truncated scope read.
+    """
+    if query.cursor or not query.scope_filters:
+        return None
+    metadata: dict[str, Any] = {}
+    result = bulk_list(
+        query.tenant_id,
+        limit=SCOPED_COUNT_BUDGET,
+        offset=0,
+        sort=query.sort_key,
+        severity=query.severity,
+        scan_id=query.scan_id,
+        origin="bulk_ingest",
+        include_total=False,
+        since=query.window_since,
+        status=query.status_key,
+        scope=dict(query.scope_filters),
+        scope_metadata=metadata,
+    )
+    rows, next_cursor = result[0], (result[2] if len(result) > 2 else None)
+    if next_cursor or metadata.get("truncated") or len(rows) >= SCOPED_COUNT_BUDGET:
+        return None
+    return scan_rows + len(rows)

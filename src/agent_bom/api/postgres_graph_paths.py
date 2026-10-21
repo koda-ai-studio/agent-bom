@@ -13,6 +13,7 @@ from agent_bom.graph.completeness import (
     graph_completeness,
 )
 from agent_bom.graph.snapshot_paths import StoredPathSet, StoredQueuePage, path_from_json, queue_filter_sql, stored_paths_current
+from agent_bom.graph.snapshot_vendor_paths import CROSSING_SQL, StoredCrossVendorPage, ordered_pairs, vendor_filter_sql
 
 from .postgres_common import (
     _tenant_connection,
@@ -115,6 +116,63 @@ class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
             ).fetchall()
         paths = [path_from_json(item[0]) for item in rows]
         return StoredQueuePage(effective_scan_id, str(row[0] or ""), paths, int(total), int(snapshot_total))
+
+    def snapshot_cross_vendor_page(
+        self,
+        *,
+        tenant_id: str = "",
+        scan_id: str = "",
+        offset: int = 0,
+        limit: int = 100,
+        source_vendor: str | None = None,
+        target_vendor: str | None = None,
+    ) -> StoredCrossVendorPage | None:
+        """Cross-vendor rows in stored queue order with whole-snapshot pair facets; ``None`` without a current index."""
+        tenant_id = normalize_graph_tenant_id(tenant_id)
+        effective_scan_id = scan_id or self.latest_snapshot_id(tenant_id=tenant_id)
+        if not effective_scan_id:
+            return None
+        scope = "FROM graph_attack_paths WHERE tenant_id = %s AND scan_id = %s"
+        key = (tenant_id, effective_scan_id)
+        where, params = vendor_filter_sql(placeholder="%s", source_vendor=source_vendor, target_vendor=target_vendor)
+        with _tenant_connection(self._pool) as conn:
+            row = conn.execute(
+                "SELECT created_at, analysis_status FROM graph_snapshots WHERE tenant_id = %s AND scan_id = %s", key
+            ).fetchone()
+            if row is None or not stored_paths_current(_decode_json_object(row[1], field="graph snapshot analysis status")):
+                return None
+            snapshot_total = (conn.execute(f"SELECT COUNT(*) {scope}", key).fetchone() or (0,))[0]  # nosec B608 - static predicates
+            total = (conn.execute(f"SELECT COUNT(*) {scope}{where}", (*key, *params)).fetchone() or (0,))[0]  # nosec B608
+            pairs = conn.execute(
+                f"SELECT source_vendor, target_vendor, COUNT(*) {scope}{CROSSING_SQL} GROUP BY source_vendor, target_vendor",  # nosec B608
+                key,
+            ).fetchall()
+            rows = conn.execute(
+                f"SELECT path_json {scope}{where} ORDER BY queue_rank LIMIT %s OFFSET %s",  # nosec B608 - static predicates
+                (*key, *params, limit, offset),
+            ).fetchall()
+        return StoredCrossVendorPage(
+            effective_scan_id,
+            str(row[0] or ""),
+            [path_from_json(item[0]) for item in rows],
+            int(total),
+            int(snapshot_total),
+            ordered_pairs([tuple(item) for item in pairs]),
+        )
+
+    def longest_path_to(self, *, tenant_id: str = "", scan_id: str = "", node_id: str) -> int:
+        """Edges on the longest materialized attack path ending at *node_id*; 0 when none does."""
+        tenant_id = normalize_graph_tenant_id(tenant_id)
+        effective_scan_id = scan_id or self.latest_snapshot_id(tenant_id=tenant_id)
+        if not effective_scan_id:
+            return 0
+        with _tenant_connection(self._pool) as conn:
+            row = conn.execute(
+                "SELECT MAX(json_array_length(path_nodes::json)) FROM attack_paths "
+                "WHERE tenant_id = %s AND scan_id = %s AND target_node = %s",
+                (tenant_id, effective_scan_id, node_id),
+            ).fetchone()
+        return max(int(row[0] or 0) - 1, 0) if row else 0
 
     def attack_paths_for_sources(
         self,

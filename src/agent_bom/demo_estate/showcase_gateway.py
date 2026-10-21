@@ -81,21 +81,21 @@ _DATA_FILTER = "data_filter_applied"
 
 _FEED_EVENTS: tuple[tuple[int, str, str, str, str, str, str, str], ...] = (
     # ── authorized tool calls (agent -> server.tool) ──
-    (1, "Cursor IDE Agent", "filesystem-server.read_file", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
-    (3, "Claude Desktop Agent", "github-server.create_issue", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
+    (1, "Cursor", "filesystem-server.read_file", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
+    (3, "Claude Desktop", "github-server.create_issue", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
     (5, "Support Copilot", "helpdesk-server.create_ticket", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
     (7, "LangChain Service", "vector-db-server.query_vectors", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
-    (9, "Data Pipeline Agent", "warehouse-server.run_query", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
-    (12, "Claude Desktop Agent", "team-chat-server.send_message", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
+    (9, "Data Pipeline", "warehouse-server.run_query", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
+    (12, "Claude Desktop", "team-chat-server.send_message", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
     (15, "Support Copilot", "email-server.list_inbox", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
-    (19, "Cursor IDE Agent", "filesystem-server.list_directory", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
+    (19, "Cursor", "filesystem-server.list_directory", _AUTHORIZED, "policy", "allow", "policy_allow", "info"),
     # ── credential / PII data-filter redactions ──
     (4, "Support Copilot", "helpdesk-server.search_tickets", _DATA_FILTER, "credential_leak", "allow", "aws_key_masked", "medium"),
-    (10, "Claude Desktop Agent", "team-chat-server.send_message", _DATA_FILTER, "pii", "allow", "email_pii_redacted", "medium"),
-    (16, "Data Pipeline Agent", "warehouse-server.export_csv", _DATA_FILTER, "credential_leak", "allow", "db_password_masked", "medium"),
+    (10, "Claude Desktop", "team-chat-server.send_message", _DATA_FILTER, "pii", "allow", "email_pii_redacted", "medium"),
+    (16, "Data Pipeline", "warehouse-server.export_csv", _DATA_FILTER, "credential_leak", "allow", "db_password_masked", "medium"),
     # ── policy blocks (destructive / disallowed tool calls) ──
-    (6, "Data Pipeline Agent", "warehouse-server.execute_sql", _BLOCKED, "policy", "deny", "destructive_sql_denied", "high"),
-    (11, "Cursor IDE Agent", "shell-runner-server.run_shell", _BLOCKED, "policy", "deny", "destructive_command_blocked", "high"),
+    (6, "Data Pipeline", "warehouse-server.execute_sql", _BLOCKED, "policy", "deny", "destructive_sql_denied", "high"),
+    (11, "Cursor", "shell-runner-server.run_shell", _BLOCKED, "policy", "deny", "destructive_command_blocked", "high"),
     (14, "Support Copilot", "email-server.send_email", _BLOCKED, "policy", "deny", "external_recipient_blocked", "medium"),
     # ── shadow / undeclared-agent blocks (the AI-firewall differentiator) ──
     (
@@ -128,9 +128,9 @@ _FEED_EVENTS: tuple[tuple[int, str, str, str, str, str, str, str], ...] = (
 # decision here (no dry-run downgrade in the demo). matched_rule mirrors the
 # AgentFirewallPolicy rule payload shape (source/target/decision/description).
 _FIREWALL_DECISIONS: tuple[tuple[int, str, str, str, dict[str, Any] | None], ...] = (
-    (2, "Cursor IDE Agent", "github-server", "allow", None),
+    (2, "Cursor", "github-server", "allow", None),
     (5, "LangChain Service", "vector-db-server", "allow", None),
-    (9, "Claude Desktop Agent", "team-chat-server", "allow", None),
+    (9, "Claude Desktop", "team-chat-server", "allow", None),
     (
         13,
         "Support Copilot",
@@ -140,10 +140,10 @@ _FIREWALL_DECISIONS: tuple[tuple[int, str, str, str, dict[str, Any] | None], ...
     ),
     (
         6,
-        "Data Pipeline Agent",
+        "Data Pipeline",
         "warehouse-server",
         "deny",
-        {"source": "Data Pipeline Agent", "target": "warehouse-server", "decision": "deny", "description": "bulk export blocked"},
+        {"source": "Data Pipeline", "target": "warehouse-server", "decision": "deny", "description": "bulk export blocked"},
     ),
     (
         8,

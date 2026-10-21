@@ -837,7 +837,7 @@ function FindingsPage() {
                   aria-label="Search findings"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="min-w-[12rem] flex-1 rounded-lg border border-outline bg-surface px-3 py-1.5 text-sm text-foreground placeholder-[var(--text-tertiary)] focus:border-outline-strong focus:outline-none"
+                  className="min-w-[min(100%,12rem)] flex-1 rounded-lg border border-outline bg-surface px-3 py-1.5 text-sm text-foreground placeholder-[var(--text-tertiary)] focus:border-outline-strong focus:outline-none"
                 />
                 <div className="relative" ref={filtersRef}>
                   <button

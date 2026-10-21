@@ -22,11 +22,12 @@ const cluster: LineageNodeData = {
 };
 
 describe("graph node badges on the canvas and in the legend", () => {
-  it("renders an accessible severity ring and ecosystem chip on a vulnerable package", () => {
+  it("keeps linked risk in the tooltip and the ecosystem chip on a vulnerable package", () => {
     const Renderer = lineageNodeTypes.packageNode;
     render(<ReactFlowProvider><section data-testid="node"><Renderer data={pkg} /></section></ReactFlowProvider>);
     const node = screen.getByTestId("node");
-    expect(within(node).getByRole("img", { name: "Recorded severity: critical · 1 linked finding" })).toBeInTheDocument();
+    expect(node.querySelector("[data-finding-signal]")).toBeNull();
+    expect(node.querySelector("[data-graph-entity]")).toHaveAttribute("title", "next@15.2.2 · Recorded severity: critical · 1 linked finding");
     expect(within(node).getByLabelText("Package ecosystem: npm")).toHaveTextContent("npm");
     expect(within(node).queryByText(/15\.2\.2 · npm/)).not.toBeInTheDocument();
   });
@@ -47,7 +48,7 @@ describe("graph node badges on the canvas and in the legend", () => {
     const nodes = [{ id: "p", data: pkg }, { id: "c", data: cluster }];
     render(<GraphLegend embedded items={legendItemsForVisibleGraph(nodes, [])} />);
     expect(screen.getByText("Node badges")).toBeInTheDocument();
-    for (const label of ["AWS provider", "Production environment", "npm ecosystem", "Linked critical findings"]) {
+    for (const label of ["AWS provider", "Production environment", "npm ecosystem"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     const legendChips = [...document.querySelectorAll("[data-node-badge]")].map((chip) => chip.outerHTML.replace(/ (title|aria-label)="[^"]*"/g, ""));

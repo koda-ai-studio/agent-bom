@@ -207,6 +207,8 @@ _GRAPH_TABLES_MIGRATION_DDL: tuple[str, ...] = (
                     severity_rank INTEGER NOT NULL DEFAULT 0,
                     has_credential INTEGER NOT NULL DEFAULT 0,
                     source_type TEXT NOT NULL DEFAULT '',
+                    source_vendor TEXT NOT NULL DEFAULT '',
+                    target_vendor TEXT NOT NULL DEFAULT '',
                     path_json TEXT NOT NULL,
                     computed_at TEXT NOT NULL,
                     PRIMARY KEY (tenant_id, scan_id, path_key)
@@ -215,6 +217,10 @@ _GRAPH_TABLES_MIGRATION_DDL: tuple[str, ...] = (
     "CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_rank ON graph_attack_paths(tenant_id, scan_id, rank_index)",
     "CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_source ON graph_attack_paths(tenant_id, scan_id, source_node, rank_index)",
     "CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_queue ON graph_attack_paths(tenant_id, scan_id, queue_rank)",
+    "ALTER TABLE graph_attack_paths ADD COLUMN IF NOT EXISTS source_vendor TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE graph_attack_paths ADD COLUMN IF NOT EXISTS target_vendor TEXT NOT NULL DEFAULT ''",
+    "CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_vendor "
+    "ON graph_attack_paths(tenant_id, scan_id, source_vendor, target_vendor, queue_rank)",
     """
                 CREATE TABLE IF NOT EXISTS graph_filter_presets (
                     name TEXT NOT NULL,

@@ -670,7 +670,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -681,7 +683,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     }
    ],
    "vpcs": [
@@ -977,27 +981,33 @@
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     }
    ],
    "nat_gateways": [
@@ -1063,7 +1073,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     },
@@ -1072,6 +1096,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     }
@@ -1218,6 +1253,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "iam:GenerateServiceLastAccessedDetails",
      "iam:GetGroup",
      "iam:GetGroupPolicy",
@@ -1337,6 +1374,7 @@
    "ecr@us-east-1:paginate:describe_images:{\"repositoryName\": \"repo-b\"}",
    "ecr@us-east-1:paginate:describe_images:{\"repositoryName\": \"repo-c\"}",
    "elbv2@us-east-1:paginate:describe_load_balancers:{}",
+   "elbv2@us-east-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "ec2@us-east-1:describe_vpcs:{}",
    "cloudfront@None:paginate:list_distributions:{}",
    "sns@us-east-1:paginate:list_topics:{}",
@@ -1880,7 +1918,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "eu-west-1"
+     "location": "eu-west-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -1891,7 +1931,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "eu-west-1"
+     "location": "eu-west-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     }
    ],
    "vpcs": [
@@ -2178,27 +2220,33 @@
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "eu-west-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "eu-west-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     }
    ],
    "nat_gateways": [
@@ -2264,7 +2312,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "eu-west-1",
      "account_id": "111122223333"
     },
@@ -2273,6 +2335,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "eu-west-1",
      "account_id": "111122223333"
     }
@@ -2420,6 +2493,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "iam:GenerateServiceLastAccessedDetails",
      "iam:GetGroup",
      "iam:GetGroupPolicy",
@@ -2539,6 +2614,7 @@
    "ecr@eu-west-1:paginate:describe_images:{\"repositoryName\": \"repo-b\"}",
    "ecr@eu-west-1:paginate:describe_images:{\"repositoryName\": \"repo-c\"}",
    "elbv2@eu-west-1:paginate:describe_load_balancers:{}",
+   "elbv2@eu-west-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "ec2@eu-west-1:describe_vpcs:{}",
    "cloudfront@None:paginate:list_distributions:{}",
    "sns@eu-west-1:paginate:list_topics:{}",
@@ -2631,6 +2707,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "iam:GenerateServiceLastAccessedDetails",
      "iam:GetGroup",
      "iam:GetGroupPolicy",
@@ -2785,6 +2863,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "kms:DescribeKey",
      "kms:GetKeyRotationStatus",
      "kms:ListKeys",
@@ -3108,6 +3188,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "iam:GenerateServiceLastAccessedDetails",
      "iam:GetGroup",
      "iam:GetGroupPolicy",
@@ -3288,6 +3370,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "iam:GenerateServiceLastAccessedDetails",
      "iam:GetGroup",
      "iam:GetGroupPolicy",
@@ -3478,6 +3562,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "iam:GenerateServiceLastAccessedDetails",
      "iam:GetGroup",
      "iam:GetGroupPolicy",
@@ -3869,6 +3955,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "kms:DescribeKey",
      "kms:GetKeyRotationStatus",
      "kms:ListKeys",
@@ -4170,7 +4258,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "eu-central-1"
+     "location": "eu-central-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -4181,7 +4271,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "eu-central-1"
+     "location": "eu-central-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     }
    ],
    "vpcs": [
@@ -4468,27 +4560,33 @@
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "eu-central-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "eu-central-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     }
    ],
    "nat_gateways": [
@@ -4554,7 +4652,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "eu-central-1",
      "account_id": "111122223333"
     },
@@ -4563,6 +4675,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "eu-central-1",
      "account_id": "111122223333"
     }
@@ -4703,6 +4826,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "kms:DescribeKey",
      "kms:GetKeyRotationStatus",
      "kms:ListKeys",
@@ -4773,6 +4898,7 @@
    "ecr@eu-central-1:paginate:describe_images:{\"repositoryName\": \"repo-b\"}",
    "ecr@eu-central-1:paginate:describe_images:{\"repositoryName\": \"repo-c\"}",
    "elbv2@eu-central-1:paginate:describe_load_balancers:{}",
+   "elbv2@eu-central-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "ec2@eu-central-1:describe_vpcs:{}",
    "cloudfront@None:paginate:list_distributions:{}",
    "sns@eu-central-1:paginate:list_topics:{}",
@@ -5597,7 +5723,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -5608,7 +5736,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     },
     {
      "name": "alb-1",
@@ -5619,7 +5749,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "eu-west-1"
+     "location": "eu-west-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -5630,7 +5762,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "eu-west-1"
+     "location": "eu-west-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     }
    ],
    "vpcs": [
@@ -6172,54 +6306,66 @@
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-a",
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "eu-west-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "eu-west-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     }
    ],
    "nat_gateways": [
@@ -6337,7 +6483,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     },
@@ -6346,6 +6506,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     },
@@ -6353,7 +6524,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "eu-west-1",
      "account_id": "111122223333"
     },
@@ -6362,6 +6547,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "eu-west-1",
      "account_id": "111122223333"
     }
@@ -6599,6 +6795,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "iam:GenerateServiceLastAccessedDetails",
      "iam:GetGroup",
      "iam:GetGroupPolicy",
@@ -6701,7 +6899,9 @@
    "eks@us-east-1:describe_cluster:{\"name\": \"c2\"}",
    "eks@us-east-1:paginate:list_clusters:{}",
    "elbv2@eu-west-1:paginate:describe_load_balancers:{}",
+   "elbv2@eu-west-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "elbv2@us-east-1:paginate:describe_load_balancers:{}",
+   "elbv2@us-east-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-admin\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-ro\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:get_policy:{\"PolicyArn\": \"arn:aws:iam::111122223333:policy/custom-rw\"}",
@@ -7083,7 +7283,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -7094,7 +7296,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     },
     {
      "name": "alb-1",
@@ -7105,7 +7309,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "us-west-2"
+     "location": "us-west-2",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -7116,7 +7322,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "us-west-2"
+     "location": "us-west-2",
+     "backend_targets": [],
+     "backend_collection_complete": false
     }
    ],
    "vpcs": [
@@ -7575,54 +7783,66 @@
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-a",
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "us-west-2",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "us-west-2",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     }
    ],
    "nat_gateways": [
@@ -7740,7 +7960,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     },
@@ -7749,6 +7983,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     },
@@ -7756,7 +8001,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "us-west-2",
      "account_id": "111122223333"
     },
@@ -7765,6 +8024,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "us-west-2",
      "account_id": "111122223333"
     }
@@ -7985,6 +8255,8 @@
      "ec2:DescribeVpcEndpoints",
      "ec2:DescribeVpcs",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "kms:DescribeKey",
      "kms:GetKeyRotationStatus",
      "kms:ListKeys",
@@ -8053,7 +8325,9 @@
    "ec2@us-west-2:paginate:describe_subnets:{}",
    "ec2@us-west-2:paginate:describe_vpc_endpoints:{}",
    "elbv2@us-east-1:paginate:describe_load_balancers:{}",
+   "elbv2@us-east-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "elbv2@us-west-2:paginate:describe_load_balancers:{}",
+   "elbv2@us-west-2:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "kms@us-east-1:describe_key:{\"KeyId\": \"k-aws\"}",
    "kms@us-east-1:describe_key:{\"KeyId\": \"k-cust\"}",
    "kms@us-east-1:describe_key:{\"KeyId\": \"k-desc-err\"}",
@@ -8283,7 +8557,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -8294,7 +8570,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     }
    ],
    "vpcs": [
@@ -8537,27 +8815,33 @@
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     }
    ],
    "nat_gateways": [
@@ -8623,7 +8907,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     },
@@ -8632,6 +8930,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     }
@@ -8768,6 +9077,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "lambda:GetFunction",
      "lambda:ListFunctions",
      "sns:ListTopics",
@@ -8810,6 +9121,7 @@
    "eks@us-east-1:describe_cluster:{\"name\": \"c2\"}",
    "eks@us-east-1:paginate:list_clusters:{}",
    "elbv2@us-east-1:paginate:describe_load_balancers:{}",
+   "elbv2@us-east-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "lambda@us-east-1:paginate:list_functions:{}",
    "sns@us-east-1:paginate:list_topics:{}",
    "sqs@us-east-1:paginate:list_queues:{}",
@@ -8999,7 +9311,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "sa-east-1"
+     "location": "sa-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -9010,7 +9324,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "sa-east-1"
+     "location": "sa-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     },
     {
      "name": "alb-1",
@@ -9021,7 +9337,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "ca-central-1"
+     "location": "ca-central-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -9032,7 +9350,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "ca-central-1"
+     "location": "ca-central-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     }
    ],
    "vpcs": [
@@ -9379,54 +9699,66 @@
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "sa-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "sa-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-a",
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "ca-central-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "ca-central-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     }
    ],
    "nat_gateways": [
@@ -9544,7 +9876,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "sa-east-1",
      "account_id": "111122223333"
     },
@@ -9553,6 +9899,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "sa-east-1",
      "account_id": "111122223333"
     },
@@ -9560,7 +9917,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "ca-central-1",
      "account_id": "111122223333"
     },
@@ -9569,6 +9940,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "ca-central-1",
      "account_id": "111122223333"
     }
@@ -9783,6 +10165,8 @@
      "ec2:DescribeVpcEndpoints",
      "ec2:DescribeVpcs",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "sns:ListTopics",
      "sqs:ListQueues",
      "sts:GetCallerIdentity",
@@ -9833,7 +10217,9 @@
    "ec2@sa-east-1:paginate:describe_subnets:{}",
    "ec2@sa-east-1:paginate:describe_vpc_endpoints:{}",
    "elbv2@ca-central-1:paginate:describe_load_balancers:{}",
+   "elbv2@ca-central-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "elbv2@sa-east-1:paginate:describe_load_balancers:{}",
+   "elbv2@sa-east-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "sns@ca-central-1:paginate:list_topics:{}",
    "sns@sa-east-1:paginate:list_topics:{}",
    "sqs@ca-central-1:paginate:list_queues:{}",
@@ -10663,7 +11049,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -10674,7 +11062,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "us-east-1"
+     "location": "us-east-1",
+     "backend_targets": [],
+     "backend_collection_complete": false
     },
     {
      "name": "alb-1",
@@ -10685,7 +11075,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "us-west-2"
+     "location": "us-west-2",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -10696,7 +11088,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "us-west-2"
+     "location": "us-west-2",
+     "backend_targets": [],
+     "backend_collection_complete": false
     }
    ],
    "vpcs": [
@@ -11238,54 +11632,66 @@
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "us-east-1",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-a",
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "us-west-2",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "us-west-2",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     }
    ],
    "nat_gateways": [
@@ -11403,7 +11809,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     },
@@ -11412,6 +11832,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "us-east-1",
      "account_id": "111122223333"
     },
@@ -11419,7 +11850,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "us-west-2",
      "account_id": "111122223333"
     },
@@ -11428,6 +11873,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "us-west-2",
      "account_id": "111122223333"
     }
@@ -11673,6 +12129,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "iam:GenerateServiceLastAccessedDetails",
      "iam:GetGroup",
      "iam:GetGroupPolicy",
@@ -11775,7 +12233,9 @@
    "eks@us-west-2:describe_cluster:{\"name\": \"c2\"}",
    "eks@us-west-2:paginate:list_clusters:{}",
    "elbv2@us-east-1:paginate:describe_load_balancers:{}",
+   "elbv2@us-east-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "elbv2@us-west-2:paginate:describe_load_balancers:{}",
+   "elbv2@us-west-2:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-admin\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-ro\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:get_policy:{\"PolicyArn\": \"arn:aws:iam::111122223333:policy/custom-rw\"}",
@@ -12417,7 +12877,9 @@
      "dns_name": "alb-1.example.invalid",
      "vpc_id": "vpc-1",
      "account_id": "111122223333",
-     "location": "us-west-2"
+     "location": "us-west-2",
+     "backend_targets": [],
+     "backend_collection_complete": true
     },
     {
      "name": "nlb-1",
@@ -12428,7 +12890,9 @@
      "dns_name": "",
      "vpc_id": "",
      "account_id": "111122223333",
-     "location": "us-west-2"
+     "location": "us-west-2",
+     "backend_targets": [],
+     "backend_collection_complete": false
     }
    ],
    "vpcs": [
@@ -12715,27 +13179,33 @@
      "name": "subnet-a",
      "vpc_id": "vpc-1",
      "cidr": "10.0.1.0/24",
-     "is_public": true,
+     "is_public": null,
      "location": "us-east-1a",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-b",
      "name": "b",
      "vpc_id": "vpc-1",
      "cidr": "",
-     "is_public": true,
+     "is_public": null,
      "location": "us-west-2",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-1",
+     "internet_gateway_ids": []
     },
     {
      "id": "subnet-c",
      "name": "subnet-c",
      "vpc_id": "vpc-2",
      "cidr": "",
-     "is_public": false,
+     "is_public": null,
      "location": "us-west-2",
-     "account_id": "111122223333"
+     "account_id": "111122223333",
+     "route_table_id": "rt-2",
+     "internet_gateway_ids": []
     }
    ],
    "nat_gateways": [
@@ -12801,7 +13271,21 @@
      "id": "rt-1",
      "name": "rt-1",
      "vpc_id": "vpc-1",
-     "has_internet_route": true,
+     "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "GatewayId": "igw-1"
+      }
+     ],
+     "associations": [
+      {
+       "Main": true
+      },
+      {
+       "SubnetId": "subnet-a"
+      }
+     ],
      "location": "us-west-2",
      "account_id": "111122223333"
     },
@@ -12810,6 +13294,17 @@
      "name": "rt-2",
      "vpc_id": "vpc-2",
      "has_internet_route": false,
+     "routes": [
+      {
+       "DestinationCidrBlock": "0.0.0.0/0",
+       "NatGatewayId": "nat-1"
+      }
+     ],
+     "associations": [
+      {
+       "SubnetId": "subnet-c"
+      }
+     ],
      "location": "us-west-2",
      "account_id": "111122223333"
     }
@@ -12957,6 +13452,8 @@
      "eks:DescribeCluster",
      "eks:ListClusters",
      "elasticloadbalancing:DescribeLoadBalancers",
+     "elasticloadbalancing:DescribeTargetGroups",
+     "elasticloadbalancing:DescribeTargetHealth",
      "iam:GenerateServiceLastAccessedDetails",
      "iam:GetGroup",
      "iam:GetGroupPolicy",
@@ -13030,6 +13527,7 @@
    "eks@us-west-2:describe_cluster:{\"name\": \"c2\"}",
    "eks@us-west-2:paginate:list_clusters:{}",
    "elbv2@us-west-2:paginate:describe_load_balancers:{}",
+   "elbv2@us-west-2:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-admin\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-ro\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:get_policy:{\"PolicyArn\": \"arn:aws:iam::111122223333:policy/custom-rw\"}",
@@ -13646,7 +14144,9 @@
       "dns_name": "alb-1.example.invalid",
       "vpc_id": "vpc-1",
       "account_id": "111122223333",
-      "location": "eu-west-1"
+      "location": "eu-west-1",
+      "backend_targets": [],
+      "backend_collection_complete": true
      },
      {
       "name": "nlb-1",
@@ -13657,7 +14157,9 @@
       "dns_name": "",
       "vpc_id": "",
       "account_id": "111122223333",
-      "location": "eu-west-1"
+      "location": "eu-west-1",
+      "backend_targets": [],
+      "backend_collection_complete": false
      }
     ],
     "vpcs": [
@@ -13944,27 +14446,33 @@
       "name": "subnet-a",
       "vpc_id": "vpc-1",
       "cidr": "10.0.1.0/24",
-      "is_public": true,
+      "is_public": null,
       "location": "us-east-1a",
-      "account_id": "111122223333"
+      "account_id": "111122223333",
+      "route_table_id": "rt-1",
+      "internet_gateway_ids": []
      },
      {
       "id": "subnet-b",
       "name": "b",
       "vpc_id": "vpc-1",
       "cidr": "",
-      "is_public": true,
+      "is_public": null,
       "location": "eu-west-1",
-      "account_id": "111122223333"
+      "account_id": "111122223333",
+      "route_table_id": "rt-1",
+      "internet_gateway_ids": []
      },
      {
       "id": "subnet-c",
       "name": "subnet-c",
       "vpc_id": "vpc-2",
       "cidr": "",
-      "is_public": false,
+      "is_public": null,
       "location": "eu-west-1",
-      "account_id": "111122223333"
+      "account_id": "111122223333",
+      "route_table_id": "rt-2",
+      "internet_gateway_ids": []
      }
     ],
     "nat_gateways": [
@@ -14030,7 +14538,21 @@
       "id": "rt-1",
       "name": "rt-1",
       "vpc_id": "vpc-1",
-      "has_internet_route": true,
+      "has_internet_route": false,
+      "routes": [
+       {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": "igw-1"
+       }
+      ],
+      "associations": [
+       {
+        "Main": true
+       },
+       {
+        "SubnetId": "subnet-a"
+       }
+      ],
       "location": "eu-west-1",
       "account_id": "111122223333"
      },
@@ -14039,6 +14561,17 @@
       "name": "rt-2",
       "vpc_id": "vpc-2",
       "has_internet_route": false,
+      "routes": [
+       {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": "nat-1"
+       }
+      ],
+      "associations": [
+       {
+        "SubnetId": "subnet-c"
+       }
+      ],
       "location": "eu-west-1",
       "account_id": "111122223333"
      }
@@ -14185,6 +14718,8 @@
       "eks:DescribeCluster",
       "eks:ListClusters",
       "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth",
       "iam:GenerateServiceLastAccessedDetails",
       "iam:GetGroup",
       "iam:GetGroupPolicy",
@@ -14260,6 +14795,7 @@
    "eks@eu-west-1:describe_cluster:{\"name\": \"c2\"}",
    "eks@eu-west-1:paginate:list_clusters:{}",
    "elbv2@eu-west-1:paginate:describe_load_balancers:{}",
+   "elbv2@eu-west-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-admin\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-ro\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:get_policy:{\"PolicyArn\": \"arn:aws:iam::111122223333:policy/custom-rw\"}",
@@ -14832,7 +15368,9 @@
       "dns_name": "alb-1.example.invalid",
       "vpc_id": "vpc-1",
       "account_id": "111122223333",
-      "location": "us-east-1"
+      "location": "us-east-1",
+      "backend_targets": [],
+      "backend_collection_complete": true
      },
      {
       "name": "nlb-1",
@@ -14843,7 +15381,9 @@
       "dns_name": "",
       "vpc_id": "",
       "account_id": "111122223333",
-      "location": "us-east-1"
+      "location": "us-east-1",
+      "backend_targets": [],
+      "backend_collection_complete": false
      }
     ],
     "vpcs": [
@@ -15139,27 +15679,33 @@
       "name": "subnet-a",
       "vpc_id": "vpc-1",
       "cidr": "10.0.1.0/24",
-      "is_public": true,
+      "is_public": null,
       "location": "us-east-1a",
-      "account_id": "111122223333"
+      "account_id": "111122223333",
+      "route_table_id": "rt-1",
+      "internet_gateway_ids": []
      },
      {
       "id": "subnet-b",
       "name": "b",
       "vpc_id": "vpc-1",
       "cidr": "",
-      "is_public": true,
+      "is_public": null,
       "location": "us-east-1",
-      "account_id": "111122223333"
+      "account_id": "111122223333",
+      "route_table_id": "rt-1",
+      "internet_gateway_ids": []
      },
      {
       "id": "subnet-c",
       "name": "subnet-c",
       "vpc_id": "vpc-2",
       "cidr": "",
-      "is_public": false,
+      "is_public": null,
       "location": "us-east-1",
-      "account_id": "111122223333"
+      "account_id": "111122223333",
+      "route_table_id": "rt-2",
+      "internet_gateway_ids": []
      }
     ],
     "nat_gateways": [
@@ -15225,7 +15771,21 @@
       "id": "rt-1",
       "name": "rt-1",
       "vpc_id": "vpc-1",
-      "has_internet_route": true,
+      "has_internet_route": false,
+      "routes": [
+       {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": "igw-1"
+       }
+      ],
+      "associations": [
+       {
+        "Main": true
+       },
+       {
+        "SubnetId": "subnet-a"
+       }
+      ],
       "location": "us-east-1",
       "account_id": "111122223333"
      },
@@ -15234,6 +15794,17 @@
       "name": "rt-2",
       "vpc_id": "vpc-2",
       "has_internet_route": false,
+      "routes": [
+       {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": "nat-1"
+       }
+      ],
+      "associations": [
+       {
+        "SubnetId": "subnet-c"
+       }
+      ],
       "location": "us-east-1",
       "account_id": "111122223333"
      }
@@ -15380,6 +15951,8 @@
       "eks:DescribeCluster",
       "eks:ListClusters",
       "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth",
       "iam:GenerateServiceLastAccessedDetails",
       "iam:GetGroup",
       "iam:GetGroupPolicy",
@@ -15455,6 +16028,7 @@
    "eks@us-east-1:describe_cluster:{\"name\": \"c2\"}",
    "eks@us-east-1:paginate:list_clusters:{}",
    "elbv2@us-east-1:paginate:describe_load_balancers:{}",
+   "elbv2@us-east-1:paginate:describe_target_groups:{\"LoadBalancerArn\": \"arn:aws:elasticloadbalancing:us-east-1:111122223333:loadbalancer/app/alb-1/1\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-admin\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:generate_service_last_accessed_details:{\"Arn\": \"arn:aws:iam::111122223333:role/role-ro\", \"Granularity\": \"SERVICE_LEVEL\"}",
    "iam@None:get_policy:{\"PolicyArn\": \"arn:aws:iam::111122223333:policy/custom-rw\"}",
@@ -16026,7 +16600,9 @@
       "dns_name": "alb-1.example.invalid",
       "vpc_id": "vpc-1",
       "account_id": "222233334444",
-      "location": "us-east-1"
+      "location": "us-east-1",
+      "backend_targets": [],
+      "backend_collection_complete": true
      },
      {
       "name": "nlb-1",
@@ -16037,7 +16613,9 @@
       "dns_name": "",
       "vpc_id": "",
       "account_id": "222233334444",
-      "location": "us-east-1"
+      "location": "us-east-1",
+      "backend_targets": [],
+      "backend_collection_complete": false
      }
     ],
     "vpcs": [
@@ -16333,27 +16911,33 @@
       "name": "subnet-a",
       "vpc_id": "vpc-1",
       "cidr": "10.0.1.0/24",
-      "is_public": true,
+      "is_public": null,
       "location": "us-east-1a",
-      "account_id": "222233334444"
+      "account_id": "222233334444",
+      "route_table_id": "rt-1",
+      "internet_gateway_ids": []
      },
      {
       "id": "subnet-b",
       "name": "b",
       "vpc_id": "vpc-1",
       "cidr": "",
-      "is_public": true,
+      "is_public": null,
       "location": "us-east-1",
-      "account_id": "222233334444"
+      "account_id": "222233334444",
+      "route_table_id": "rt-1",
+      "internet_gateway_ids": []
      },
      {
       "id": "subnet-c",
       "name": "subnet-c",
       "vpc_id": "vpc-2",
       "cidr": "",
-      "is_public": false,
+      "is_public": null,
       "location": "us-east-1",
-      "account_id": "222233334444"
+      "account_id": "222233334444",
+      "route_table_id": "rt-2",
+      "internet_gateway_ids": []
      }
     ],
     "nat_gateways": [
@@ -16419,7 +17003,21 @@
       "id": "rt-1",
       "name": "rt-1",
       "vpc_id": "vpc-1",
-      "has_internet_route": true,
+      "has_internet_route": false,
+      "routes": [
+       {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": "igw-1"
+       }
+      ],
+      "associations": [
+       {
+        "Main": true
+       },
+       {
+        "SubnetId": "subnet-a"
+       }
+      ],
       "location": "us-east-1",
       "account_id": "222233334444"
      },
@@ -16428,6 +17026,17 @@
       "name": "rt-2",
       "vpc_id": "vpc-2",
       "has_internet_route": false,
+      "routes": [
+       {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": "nat-1"
+       }
+      ],
+      "associations": [
+       {
+        "SubnetId": "subnet-c"
+       }
+      ],
       "location": "us-east-1",
       "account_id": "222233334444"
      }
@@ -16574,6 +17183,8 @@
       "eks:DescribeCluster",
       "eks:ListClusters",
       "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth",
       "iam:GenerateServiceLastAccessedDetails",
       "iam:GetGroup",
       "iam:GetGroupPolicy",
@@ -16721,6 +17332,8 @@
       "eks:DescribeCluster",
       "eks:ListClusters",
       "elasticloadbalancing:DescribeLoadBalancers",
+      "elasticloadbalancing:DescribeTargetGroups",
+      "elasticloadbalancing:DescribeTargetHealth",
       "iam:GenerateServiceLastAccessedDetails",
       "iam:GetGroup",
       "iam:GetGroupPolicy",

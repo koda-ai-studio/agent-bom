@@ -14,7 +14,7 @@ from agent_bom.api.store import InMemoryJobStore
 
 
 def _refuse(code: int):
-    def lock(fd: int) -> None:
+    def lock(fd: int, **_kwargs: object) -> None:
         raise OSError(code, "refused")
 
     return lock
