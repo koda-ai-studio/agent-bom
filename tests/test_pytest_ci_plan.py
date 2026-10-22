@@ -12,6 +12,14 @@ def _write(path: Path, lines: int) -> None:
     path.write_text("x\n" * lines, encoding="utf-8")
 
 
+@pytest.mark.parametrize("source", [".github/workflows/ci.yml", ".github/workflows/release.yml"])
+def test_workflow_edits_select_deployment_contracts(tmp_path: Path, source: str) -> None:
+    contract = tmp_path / "tests/test_deployment.py"
+    _write(contract, 1)
+    _write(tmp_path / "tests/test_unrelated.py", 1)
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [contract]
+
+
 @pytest.mark.parametrize("source", ["ui/lib/graph-schema.ts", "ui/lib/graph-schema.generated.ts", "ui/scripts/codegen-graph-schema.mjs"])
 def test_ui_graph_schema_edits_select_python_parity_contract(tmp_path: Path, source: str) -> None:
     contract = tmp_path / "tests/test_graph_schema_ui_parity.py"
