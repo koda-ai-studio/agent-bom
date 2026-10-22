@@ -10,7 +10,6 @@ import json
 import sys
 import time
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -20,8 +19,6 @@ VALID_SEVERITIES = {"info", "low", "moderate", "high", "critical"}
 MAX_COMPRESSED_RESPONSE_BYTES = 8 * 1024 * 1024
 MAX_DECOMPRESSED_RESPONSE_BYTES = 32 * 1024 * 1024
 MAX_REQUEST_BODY_BYTES = 2 * 1024 * 1024
-PACKAGE_BATCH_SIZE = 50
-MAX_WORKERS = 4
 REQUEST_TIMEOUT_SECONDS = 30
 MAX_REQUEST_ATTEMPTS = 3
 
@@ -127,7 +124,7 @@ def _fetch_once(payload: dict[str, list[str]]) -> dict[str, list[dict[str, Any]]
 
 
 def _fetch_with_retries(payload: dict[str, list[str]]) -> dict[str, list[dict[str, Any]]]:
-    """Fetch one bounded package batch with bounded retries."""
+    """Fetch the complete bounded lockfile payload with bounded retries."""
     for attempt in range(1, MAX_REQUEST_ATTEMPTS + 1):
         try:
             return _fetch_once(payload)
@@ -143,20 +140,15 @@ def _fetch_with_retries(payload: dict[str, list[str]]) -> dict[str, list[dict[st
 
 
 def fetch_report(payload: dict[str, list[str]]) -> dict[str, list[dict[str, Any]]]:
-    """Fetch the exact lockfile projection in bounded parallel batches."""
-    items = list(payload.items())
-    batches = [dict(items[offset : offset + PACKAGE_BATCH_SIZE]) for offset in range(0, len(items), PACKAGE_BATCH_SIZE)]
-    if not batches:
-        return {}
+    """Send every locked version in one size-bounded bulk advisory request.
 
-    combined: dict[str, list[dict[str, Any]]] = {}
-    with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(batches))) as executor:
-        for report in executor.map(_fetch_with_retries, batches):
-            for package, advisories in report.items():
-                if package in combined:
-                    raise ValueError(f"npm advisory response duplicated package: {package}")
-                combined[package] = advisories
-    return combined
+    Splitting small lockfiles into parallel requests can exhaust npm registry
+    timeouts even when the complete payload succeeds. Keep one exact request
+    per attempt; transport and response validation still fail closed.
+    """
+    if not payload:
+        return {}
+    return _fetch_with_retries(payload)
 
 
 def run(path: Path) -> int:
