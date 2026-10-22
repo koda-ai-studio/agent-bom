@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -11,10 +9,10 @@ from typing import Any
 import httpx
 
 from agent_bom.cloud.management_http import read_json
+from agent_bom.cloud.platform_directory_ids import MAX_RECORDS, directory_node_id
 from agent_bom.security import sanitize_text
 
 MAX_PAGES = 20
-MAX_RECORDS = 2000
 MAX_BYTES = 2 * 1024 * 1024
 
 
@@ -29,10 +27,6 @@ def _scope(value: str, provider: str) -> str:
     if not isinstance(value, str) or not re.fullmatch(pattern, value):
         raise ValueError("Invalid directory scope")
     return value
-
-
-def directory_node_id(provider: str, account: str, kind: str, native: str) -> str:
-    return f"{kind}:{provider}:" + hashlib.sha256(json.dumps([account, native]).encode()).hexdigest()
 
 
 def _receipt(provider: str, account: str, capability: str) -> dict[str, Any]:

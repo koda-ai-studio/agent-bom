@@ -212,3 +212,23 @@ def test_local_snapshot_order_uses_observation_time_not_uuid_or_arrival(tmp_path
         current = load_graph(conn, tenant_id="tenant-a")
     assert current.scan_id == "a-newer"
     assert current.nodes_by_type(EntityType.USER)[0].label == "New"
+
+
+def test_graph_import_does_not_require_optional_http_collector():
+    """The graph model must remain importable by the minimal package install."""
+    import subprocess
+    import sys
+
+    script = """
+import builtins
+original = builtins.__import__
+def guarded(name, *args, **kwargs):
+    if name in {"httpx", "agent_bom.cloud.platform_directory"}:
+        raise ModuleNotFoundError("Native HTTP collector is unavailable in the minimal installation")
+    return original(name, *args, **kwargs)
+builtins.__import__ = guarded
+from agent_bom.graph.builder import build_unified_graph_from_report
+assert build_unified_graph_from_report({}, scan_id="minimal", tenant_id="fixture") is not None
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr

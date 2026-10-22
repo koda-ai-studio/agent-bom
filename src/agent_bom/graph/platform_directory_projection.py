@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_bom.cloud.platform_directory import MAX_RECORDS, directory_node_id
+from agent_bom.cloud.platform_directory_ids import MAX_RECORDS, directory_node_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
