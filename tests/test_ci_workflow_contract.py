@@ -344,12 +344,12 @@ def test_alpine_full_suite_shards_without_dropping_coverage() -> None:
     job = _ci()["jobs"]["test-alpine"]
     assert job["strategy"]["fail-fast"] is False
     assert job["strategy"]["matrix"]["shard"] == (
-        "${{ fromJSON((needs.changes.outputs.alpine_full == 'true' || github.event_name == 'schedule') && '[0, 1]' || '[0]') }}"
+        "${{ fromJSON((needs.changes.outputs.alpine_full == 'true' || github.event_name == 'schedule') && '[0, 1, 2, 3]' || '[0]') }}"
     )
     step = next(step for step in job["steps"] if step.get("name") == "Run tests (musl)")
     assert step["shell"] == "bash"
     assert step["env"]["ALPINE_SHARD"] == "${{ matrix.shard }}"
-    assert 'scripts/pytest_ci_plan.py shard --index "$ALPINE_SHARD" --total 2' in step["run"]
+    assert 'scripts/pytest_ci_plan.py shard --index "$ALPINE_SHARD" --total 4' in step["run"]
     assert 'if [ "${#TESTS[@]}" -eq 0 ]; then' in step["run"]
     assert '-m "not network and not slow"' in step["run"]
     assert "not graph_performance" not in step["run"]
