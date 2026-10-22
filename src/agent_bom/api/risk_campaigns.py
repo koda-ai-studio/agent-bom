@@ -8,6 +8,7 @@ from collections import defaultdict
 from typing import Any, Mapping
 
 from agent_bom.api.campaign_store import CampaignWorkflow
+from agent_bom.security import sanitize_text
 
 CAMPAIGN_FINDING_LIMIT = 50_000
 
@@ -169,7 +170,7 @@ def derive_campaigns(
         derived_owner = _common_value(rows, "owner")
         package = str(highest.get("package") or highest.get("component") or "").strip()
         fixed = str(highest.get("fixed_version") or "").strip()
-        title = f"Upgrade {package} to {fixed}" if package and fixed else f"Remediate {_finding_id(highest)}"
+        title = f"Upgrade {package} to {fixed}" if package and fixed else f"Remediate {highest.get('title') or _finding_id(highest)}"
         exploitability: dict[str, Any] = (
             {"value": "known_exploited", "status": "observed", "signals": ["kev"]}
             if kev
@@ -183,7 +184,7 @@ def derive_campaigns(
             {
                 "id": campaign_id,
                 "tenant_id": tenant_id,
-                "title": title,
+                "title": sanitize_text(title, max_len=300),
                 "finding_ids": [_finding_id(row) for row in rows],
                 "finding_count": len(rows),
                 "severity": severity,

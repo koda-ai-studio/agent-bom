@@ -54,6 +54,15 @@ function remediationItem(pkg: string, severity: string) {
 }
 
 describe("RemediationPage", () => {
+  it("opens the selected finding workflow directly and retains historical scan context", async () => {
+    navigationState.query = "finding=finding-7&scan=scan-7&view=verification";
+    apiMock.getRemediation.mockResolvedValue([]);
+    render(<RemediationPage />);
+    expect(await screen.findByRole("heading", { name: "Finding remediation and verification" })).toBeVisible();
+    await waitFor(() => expect(apiMock.listRiskCampaigns).toHaveBeenCalledWith({ findingId: "finding-7" }));
+    expect(screen.getByText("Campaign workflow and verification").closest("details")).toHaveAttribute("open");
+    expect(screen.getByText(/Verification uses current findings/)).toHaveTextContent("scan-7");
+  });
   beforeEach(() => {
     navigationState.query = "";
     vi.resetAllMocks();

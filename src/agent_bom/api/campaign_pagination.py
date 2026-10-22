@@ -10,6 +10,41 @@ from typing import Any
 from fastapi import HTTPException
 
 
+def campaign_list_response(
+    tenant_id: str,
+    campaigns: list[dict[str, Any]],
+    source: dict[str, Any],
+    *,
+    limit: int,
+    cursor: str | None,
+    finding_id: str | None,
+    finding_limit: int,
+    membership_complete: bool,
+) -> dict[str, Any]:
+    if finding_id:
+        campaigns = campaigns_for_finding(campaigns, source["findings"], finding_id)
+    return {
+        "schema_version": "risk-campaigns.v1",
+        "tenant_id": tenant_id,
+        **campaign_page(tenant_id, campaigns, limit=limit, cursor=cursor),
+        "finding_window_days": 90,
+        "finding_limit": finding_limit,
+        "truncated": not membership_complete,
+        "total_findings": source.get("total"),
+        "total_approximate": bool(source.get("total_approximate")),
+        "membership_complete": membership_complete,
+    }
+
+
+def campaigns_for_finding(campaigns: list[dict[str, Any]], findings: list[dict[str, Any]], finding_id: str) -> list[dict[str, Any]]:
+    """Resolve an occurrence to canonical membership before page excerpts truncate IDs."""
+    identities = {finding_id}
+    for row in findings:
+        if isinstance(row, dict) and finding_id in (row.get("id"), row.get("finding_id"), row.get("canonical_id")):
+            identities.add(str(row.get("canonical_id") or row.get("finding_id") or row.get("id") or ""))
+    return [campaign for campaign in campaigns if identities.intersection(campaign["finding_ids"])]
+
+
 def campaign_page(tenant_id: str, campaigns: list[dict[str, Any]], *, limit: int = 25, cursor: str | None = None) -> dict[str, Any]:
     if isinstance(limit, bool) or not 1 <= limit <= 100:
         raise HTTPException(status_code=400, detail="Campaign page limit must be between 1 and 100.")

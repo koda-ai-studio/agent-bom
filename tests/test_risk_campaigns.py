@@ -560,6 +560,41 @@ def test_campaign_api_requires_auth_and_rejects_viewer_writes(monkeypatch) -> No
     assert client.patch("/v1/campaigns/campaign-1", json={"owner": "alice"}, headers=_headers(role="viewer")).status_code == 403
 
 
+def test_finding_campaign_handoff_filters_before_pagination_and_resolves_occurrence_ids(monkeypatch) -> None:
+    from agent_bom.api.server import app
+
+    rows = [
+        {"id": f"occurrence-{i}", "canonical_id": f"canonical-{i}", "severity": "high", "package": "shared", "fixed_version": "2.0"}
+        for i in range(40)
+    ] + [{"id": "other", "severity": "critical"}]
+    monkeypatch.setattr(
+        "agent_bom.api.routes.campaigns._load_findings", lambda request, **_: rows if request.state.tenant_id == "tenant-alpha" else []
+    )
+    client = TestClient(app)
+    assert client.get("/v1/campaigns?finding_id=occurrence-39").status_code == 401
+    for identity in ("occurrence-39", "canonical-39"):
+        response = client.get("/v1/campaigns", params={"finding_id": identity, "limit": 1}, headers=_headers())
+        assert response.status_code == 200
+        result = response.json()
+        assert result["total_campaigns"] == 1
+        assert result["campaigns"][0]["finding_count"] == 40
+        assert result["campaigns"][0]["finding_ids_truncated"] is True
+    assert client.get("/v1/campaigns?finding_id=missing", headers=_headers()).json()["count"] == 0
+    assert client.get("/v1/campaigns?finding_id=occurrence-39", headers=_headers(tenant="tenant-other")).json()["count"] == 0
+    assert client.get("/v1/campaigns", headers=_headers()).json()["total_campaigns"] == 2
+
+
+def test_non_package_campaign_titles_explain_the_finding_and_redact_secrets() -> None:
+    synthetic_token = "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789"
+    rows = [
+        {"id": "one", "title": "Agent can reach a privileged tool", "severity": "high"},
+        {"id": "two", "title": f"Leaked {synthetic_token}", "severity": "high"},
+    ]
+    campaigns = derive_campaigns(rows, tenant_id="tenant-alpha", workflow_by_id={})
+    assert next(row for row in campaigns if row["finding_ids"] == ["one"])["title"] == "Remediate Agent can reach a privileged tool"
+    assert synthetic_token not in str(campaigns)
+
+
 def test_campaign_api_derives_from_bulk_findings_spine() -> None:
     from agent_bom.api.server import app
 

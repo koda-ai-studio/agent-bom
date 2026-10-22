@@ -27843,6 +27843,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 cursor?: string | null;
+                finding_id?: string | null;
             };
             header?: {
                 "X-Agent-Bom-Role"?: string | null;

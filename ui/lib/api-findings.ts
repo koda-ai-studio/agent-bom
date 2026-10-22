@@ -122,9 +122,10 @@ export const findingsApi = {
 
   // ── Risk campaigns ──
   // Priorities and modeled risk reduction are authoritative server outputs.
-  listRiskCampaigns: (options: { cursor?: string; limit?: number } = {}) => {
+  listRiskCampaigns: (options: { cursor?: string; limit?: number; findingId?: string } = {}) => {
     const params = new URLSearchParams({ limit: String(options.limit ?? 25) });
     if (options.cursor) params.set("cursor", options.cursor);
+    if (options.findingId) params.set("finding_id", options.findingId);
     return get<RiskCampaignsResponse>(`/v1/campaigns?${params.toString()}`);
   },
 

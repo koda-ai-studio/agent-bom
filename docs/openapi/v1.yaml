@@ -33690,6 +33690,16 @@ paths:
             type: string
           - type: 'null'
           title: Cursor
+      - in: query
+        name: finding_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Finding Id
       - in: header
         name: X-Agent-Bom-Role
         required: false

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { InvestigationLifecyclePanel } from "@/components/investigation-lifecycle";
+import { InvestigationLifecyclePanel, InvestigationLifecycleStrip } from "@/components/investigation-lifecycle";
 import type { AttackPath, UnifiedNode } from "@/lib/graph-schema";
 
 const node = (id: string, entity_type: string, label: string, attributes: Record<string, unknown> = {}) =>
@@ -16,6 +16,28 @@ const path = { source: "agent:cursor", target: "vuln:CVE-2020-14343", hops: node
 const byId = new Map(nodes.map((n) => [n.id, n]));
 
 describe("fix in context", () => {
+  it("preserves the occurrence and historical scan in the Verify continuation", () => {
+    render(<InvestigationLifecycleStrip step="fix" completed={{}} onStepChange={() => {}} scanId="scan-7" findingId="finding-7" />);
+    expect(screen.getByRole("link", { name: /Verify/ })).toHaveAttribute("href", "/remediation?scan=scan-7&finding=finding-7&view=verification#campaigns");
+  });
+
+  it("does not claim a package fix when a non-package finding has no recorded guidance", () => {
+    const finding = node("misconfig:unknown", "misconfiguration", "Unconfigured control");
+    render(<InvestigationLifecyclePanel step="fix" path={{ ...path, hops: [finding.id], vuln_ids: [] }} nodeById={new Map([[finding.id, finding]])} scanId="current-estate:t" tenantId="t" snapshotGeneration="g" />);
+    expect(screen.getByText(/No remediation guidance is recorded/)).toBeVisible();
+    expect(screen.getByRole("link", { name: /Open finding workflow/ })).toHaveAttribute("href", "/remediation?view=verification#campaigns");
+    expect(screen.queryByText(/No fixed version/)).not.toBeInTheDocument();
+  });
+  it("shows recorded non-package remediation and carries the finding to its workflow", () => {
+    const finding = node("misconfig:reach", "misconfiguration", "Agent credential reach", {
+      finding_id: "finding-7", remediation: "Remove the unused credential from the server environment.",
+    });
+    const nonPackagePath = { ...path, hops: [finding.id], vuln_ids: [], finding_ids: ["finding-7"] };
+    render(<InvestigationLifecyclePanel step="fix" path={nonPackagePath} nodeById={new Map([[finding.id, finding]])} scanId="scan-7" tenantId="t" snapshotGeneration="g" />);
+    expect(screen.getByText("Remove the unused credential from the server environment.")).toBeVisible();
+    expect(screen.queryByText(/No fixed version|Other occurrences of the package/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open finding workflow/ })).toHaveAttribute("href", "/remediation?scan=scan-7&finding=finding-7&view=verification#campaigns");
+  });
   it("answers Fix on the investigation page with the upgrade, scope and a link out", () => {
     render(<InvestigationLifecyclePanel step="fix" path={path} nodeById={byId} scanId="current-estate:abc" tenantId="t" snapshotGeneration="g" />);
     const panel = screen.getByRole("region", { name: "Fix · CVE-2020-14343" });
