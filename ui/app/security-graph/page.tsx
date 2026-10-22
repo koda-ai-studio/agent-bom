@@ -1,6 +1,7 @@
 "use client";
 
 import { InvestigationLifecyclePanel, InvestigationLifecycleStrip } from "@/components/investigation-lifecycle";
+import { pathFindingId } from "@/lib/investigation-step-links";
 import { InvestigationPageHeader } from "@/components/investigation-page-header";
 import { InvestigationExploreMenu } from "@/components/investigation-explore-menu";
 import { InvestigationNotices } from "@/components/investigation-notices";
@@ -763,7 +764,7 @@ function AttackPathInvestigationContent() {
         pinned={pinnedNodeId ? graphNodeById.get(pinnedNodeId)?.label || "Selected asset" : null}
         steps={!captureMode ? (
           <InvestigationLifecycleStrip step={investigationStep} onStepChange={setInvestigationStep} completed={completedSteps}
-            scanId={selectedScanId} />
+            scanId={selectedScanId} findingId={pathFindingId(selectedAttackPath, selectedAttackPath?.hops.flatMap(id => graphNodeById.get(id) ?? []) ?? [], focus.findingId)} />
         ) : null}
         menu={
           <InvestigationExploreMenu
@@ -786,7 +787,7 @@ function AttackPathInvestigationContent() {
       />
       {!captureMode ? (
         <InvestigationLifecyclePanel step={investigationStep} path={selectedAttackPath} nodeById={graphNodeById}
-          scanId={selectedScanId} tenantId={graphData?.tenant_id} snapshotGeneration={graphData?.snapshot_generation} />
+          scanId={selectedScanId} findingId={focus.findingId} tenantId={graphData?.tenant_id} snapshotGeneration={graphData?.snapshot_generation} />
       ) : null}
       {showCorrelationOverview ? (
         <GraphCorrelationWorkflow snapshots={snapshots} initialRun={latestCorrelationRun} outcome={correlationOutcome} onOpenSnapshot={openCorrelationPath} />

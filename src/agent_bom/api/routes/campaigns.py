@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_bom.api.audit_log import log_action
-from agent_bom.api.campaign_pagination import campaign_page
+from agent_bom.api.campaign_pagination import campaign_page, campaigns_for_finding
 from agent_bom.api.campaign_reconciliation import _assert_source_fresh, _campaigns, _reconcile_campaigns, verification_membership
 from agent_bom.api.campaign_store import get_campaign_store
 from agent_bom.api.finding_read_context import finding_read_snapshot
@@ -689,11 +689,17 @@ def update_campaign_workflow(
 
 @router.get("/campaigns", response_model=CampaignListResponse)
 async def list_campaigns(
-    request: Request, limit: int = Query(25, ge=1, le=100), cursor: str | None = Query(None, max_length=512), _role: Any = _READ
+    request: Request,
+    limit: int = Query(25, ge=1, le=100),
+    cursor: str | None = Query(None, max_length=512),
+    finding_id: str | None = Query(None, min_length=1, max_length=512),
+    _role: Any = _READ,
 ) -> dict[str, Any]:
     tenant_id = _tenant(request)
     source = _source_payload(await anyio.to_thread.run_sync(_load_findings, request))
     campaigns = await anyio.to_thread.run_sync(_campaigns, request, source)
+    if finding_id:
+        campaigns = campaigns_for_finding(campaigns, source["findings"], finding_id)
     total = source.get("total")
     truncated = _source_incomplete(source)
     return {

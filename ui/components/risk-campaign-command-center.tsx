@@ -16,6 +16,7 @@ import {
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/states/page-state";
 import { PaginationBar } from "@/components/pagination-bar";
 import { api } from "@/lib/api";
+import { securityGraphHref } from "@/lib/page-links";
 import { ApiConflictError } from "@/lib/api-errors";
 import type {
   RiskCampaign,
@@ -579,7 +580,7 @@ function VerificationQueue() {
   );
 }
 
-export function RiskCampaignCommandCenter() {
+export function RiskCampaignCommandCenter({ findingId, scanId }: { findingId?: string | undefined; scanId?: string | undefined } = {}) {
   const [campaigns, setCampaigns] = useState<RiskCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -598,7 +599,7 @@ export function RiskCampaignCommandCenter() {
     setLoading(true);
     setError("");
     try {
-      const response = await api.listRiskCampaigns();
+      const response = await api.listRiskCampaigns(findingId ? { findingId } : undefined);
       setCampaigns(response.campaigns);
       setNextCursor(response.has_more ? response.next_cursor ?? null : null);
       setTotalCampaigns(response.total_campaigns ?? response.campaigns.length);
@@ -619,14 +620,14 @@ export function RiskCampaignCommandCenter() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [findingId]);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     setPageError("");
     try {
-      const response = await api.listRiskCampaigns({ cursor: nextCursor });
+      const response = await api.listRiskCampaigns({ cursor: nextCursor, ...(findingId ? { findingId } : {}) });
       setCampaigns(current => [...current, ...response.campaigns.filter(row => !current.some(prior => prior.id === row.id))]);
       setNextCursor(response.has_more ? response.next_cursor ?? null : null);
       setTotalCampaigns(response.total_campaigns ?? totalCampaigns);
@@ -635,7 +636,7 @@ export function RiskCampaignCommandCenter() {
     } finally {
       setLoadingMore(false);
     }
-  }, [nextCursor, loadingMore, totalCampaigns]);
+  }, [nextCursor, loadingMore, totalCampaigns, findingId]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -661,7 +662,7 @@ export function RiskCampaignCommandCenter() {
       ) : error ? (
         <PageErrorState title={error} detail="No campaign status has been inferred. Retry the authoritative API." action={{ label: "Retry campaigns", onClick: () => void load() }} />
       ) : campaigns.length === 0 ? (
-        <PageEmptyState title="No prioritized campaigns yet" detail="No campaign was returned for the current 90-day findings window. This is not an all-clear result." icon={Network} actions={[{ label: "Run a scan", href: "/scan" }, { label: "Review findings", href: "/findings", variant: "secondary" }]} />
+        <PageEmptyState title={findingId ? "No current campaign for this finding" : "No prioritized campaigns yet"} detail="No campaign was returned for the current 90-day findings window. This is not an all-clear result." icon={Network} actions={[{ label: "Run a scan", href: "/scan" }, { label: "Review findings", href: "/findings", variant: "secondary" }]} />
       ) : <div className="risk-campaign-header">
         <div>
           <div className="risk-campaign-kicker">Prioritized remediation</div>
@@ -682,7 +683,7 @@ export function RiskCampaignCommandCenter() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
-          <Link href="/security-graph" className="risk-campaign-investigate">Open investigation</Link>
+          <Link href={securityGraphHref({ finding: findingId, scan: scanId })} className="risk-campaign-investigate">Open investigation</Link>
           <span className="risk-campaign-window">Last {windowDays} days</span>
         </div>
       </div>}
@@ -695,7 +696,10 @@ export function RiskCampaignCommandCenter() {
           </span>
         </div>
       ) : null}
-      <VerificationQueue />
+      {findingId && !loading && !error && campaigns.length === 0 ? (
+        <Link href="/remediation?view=verification#verification" className="risk-campaign-investigate">Review completed campaigns awaiting verification</Link>
+      ) : null}
+      {!findingId && <VerificationQueue />}
       {!loading && !error && campaigns.length > 0 ? (
         <>
           <div className="grid gap-1.5">

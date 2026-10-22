@@ -7,6 +7,7 @@ import { InvestigationStepStrip, type InvestigationStep } from "@/components/inv
 import { PathFixPanel } from "@/components/path-fix-panel";
 import { PathOwnerPanel } from "@/components/path-owner-panel";
 import type { AttackPath, UnifiedNode } from "@/lib/graph-schema";
+import { findingRemediationHref } from "@/lib/investigation-step-links";
 
 function pathNodes(path: AttackPath | null, nodeById: Map<string, UnifiedNode>) {
   return path ? path.hops.map((id) => nodeById.get(id)).filter((node): node is UnifiedNode => Boolean(node)) : [];
@@ -16,19 +17,19 @@ function pathNodes(path: AttackPath | null, nodeById: Map<string, UnifiedNode>) 
  * Path → Impact → Owner → Fix → Verify. Impact, Owner and Fix answer in place
  * (Fix links out to the package's remediation queue); Verify continues there.
  */
-export function InvestigationLifecycleStrip({ step, onStepChange, completed, scanId }: {
+export function InvestigationLifecycleStrip({ step, onStepChange, completed, scanId, findingId }: {
   step: InvestigationStep;
   onStepChange: (next: InvestigationStep) => void;
   completed: Partial<Record<InvestigationStep, boolean>>;
   scanId: string;
+  findingId?: string | undefined;
 }) {
-  const historical = scanId && !scanId.startsWith("current-estate:") ? `?scan=${encodeURIComponent(scanId)}` : "";
   return (
     <InvestigationStepStrip
       step={step}
       onStepChange={onStepChange}
       completed={completed}
-      stepHrefs={{ verify: `/remediation${historical}#verification` }}
+      stepHrefs={{ verify: findingRemediationHref(findingId, scanId) }}
     />
   );
 }
@@ -64,6 +65,7 @@ export function InvestigationLifecyclePanel(props: {
   path: AttackPath | null;
   nodeById: Map<string, UnifiedNode>;
   scanId: string;
+  findingId?: string | undefined;
   tenantId: string | undefined;
   snapshotGeneration: string | null | undefined;
 }) {
@@ -76,11 +78,12 @@ export function InvestigationLifecyclePanel(props: {
   return answer ? <StepAnswer step={props.step} reveal={reveal}>{answer}</StepAnswer> : null;
 }
 
-function stepAnswer({ step, path, nodeById, scanId, tenantId, snapshotGeneration }: {
+function stepAnswer({ step, path, nodeById, scanId, tenantId, snapshotGeneration, findingId }: {
   step: InvestigationStep;
   path: AttackPath | null;
   nodeById: Map<string, UnifiedNode>;
   scanId: string;
+  findingId?: string | undefined;
   tenantId: string | undefined;
   snapshotGeneration: string | null | undefined;
 }): ReactNode {
@@ -103,7 +106,7 @@ function stepAnswer({ step, path, nodeById, scanId, tenantId, snapshotGeneration
     return <PathOwnerPanel cve={cve} hops={path.hops} packageLabel={packageNode?.label} scanId={scanId} />;
   }
   if (step === "fix" && path) {
-    return <PathFixPanel path={path} nodes={nodes} scanId={scanId} />;
+    return <PathFixPanel path={path} nodes={nodes} scanId={scanId} findingId={findingId} />;
   }
   if (step === "owner" && path) {
     return <p role="status" className="rounded-xl border border-outline bg-surface p-4 text-sm text-ink-secondary">This path carries no advisory, so no finding owner or SLA applies.</p>;

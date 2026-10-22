@@ -15,7 +15,7 @@ const STEPS: {
   { key: "path", label: "Path", icon: Focus, hint: "Select a ranked exposure path" },
   { key: "impact", label: "Impact", icon: Radar, hint: "Review blast radius and affected assets" },
   { key: "owner", label: "Owner", icon: UserRound, hint: "Assign an owner and remediation SLA" },
-  { key: "fix", label: "Fix", icon: Wrench, hint: "Review the recommended upgrade for this path" },
+  { key: "fix", label: "Fix", icon: Wrench, hint: "Review the recorded remediation for this path" },
   { key: "verify", label: "Verify", icon: ShieldCheck, hint: "Rescan and record the evidence-backed result" },
 ];
 

@@ -362,7 +362,10 @@ function RemediationPage() {
   const queryParam = (searchParams.get("q") ?? "").trim().toLowerCase();
   const scanParam = (searchParams.get("scan") ?? "").trim();
   const [items, setItems] = useState<RemediationItem[]>([]);
-  const [campaignsOpen, setCampaignsOpen] = useState(false);
+  const findingParam = (searchParams.get("finding") ?? "").trim();
+  const workflowIntent = Boolean(findingParam || searchParams.get("view") === "verification");
+  const [campaignsOpen, setCampaignsOpen] = useState(workflowIntent);
+  useEffect(() => { if (workflowIntent) setCampaignsOpen(true); }, [workflowIntent, findingParam]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -550,13 +553,30 @@ function RemediationPage() {
     { key: "atlas", label: "MITRE ATLAS" },
   ];
 
+  const campaignWorkflow = (
+      <details open={campaignsOpen} className="group overflow-hidden rounded-xl border border-outline bg-surface" onToggle={event => setCampaignsOpen(event.currentTarget.open)}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 marker:content-none">
+          <div>
+            <div className="text-sm font-semibold text-foreground">Campaign workflow and verification</div>
+            <div className="mt-0.5 text-xs text-ink-tertiary">
+              Assign owners and SLAs, sync tickets, and re-verify completed fixes.
+            </div>
+          </div>
+          <ChevronDown className="h-4 w-4 shrink-0 text-ink-tertiary transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="border-t border-outline px-4 py-4">
+          {campaignsOpen && <RiskCampaignCommandCenter key={findingParam} findingId={findingParam || undefined} scanId={scanParam || undefined} />}
+        </div>
+      </details>
+  );
+
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">
-            Package remediation plan
+            {workflowIntent ? "Finding remediation and verification" : "Package remediation plan"}
           </h1>
           <p className="text-ink-secondary text-sm mt-1">
             {items.length} packages prioritized by reach, severity, and available fixes{windowLabel ? ` · ${windowLabel}` : ""}
@@ -583,6 +603,15 @@ function RemediationPage() {
           </button>
         )}
       </div>
+
+      {workflowIntent && (
+        <>
+          <p className="text-sm text-ink-secondary break-words">
+            {scanParam ? `Opened from scan ${scanParam}. ` : ""}Verification uses current findings in the tenant window.{scanParam ? " The source scan is historical evidence." : " Rescan after applying a fix."}
+          </p>
+          {campaignWorkflow}
+        </>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -765,20 +794,7 @@ function RemediationPage() {
         </>
       )}
 
-      <details className="group overflow-hidden rounded-xl border border-outline bg-surface" onToggle={event => setCampaignsOpen(event.currentTarget.open)}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 marker:content-none">
-          <div>
-            <div className="text-sm font-semibold text-foreground">Campaign workflow and verification</div>
-            <div className="mt-0.5 text-xs text-ink-tertiary">
-              Assign owners and SLAs, sync tickets, and re-verify completed fixes.
-            </div>
-          </div>
-          <ChevronDown className="h-4 w-4 shrink-0 text-ink-tertiary transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="border-t border-outline px-4 py-4">
-          {campaignsOpen && <RiskCampaignCommandCenter />}
-        </div>
-      </details>
+      {!workflowIntent && campaignWorkflow}
 
       {/* Ticket modal */}
       {ticketItem && (

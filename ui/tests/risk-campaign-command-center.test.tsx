@@ -82,6 +82,15 @@ const response: RiskCampaignsResponse = {
 };
 
 describe("RiskCampaignCommandCenter", () => {
+  it("keeps the selected finding filter on subsequent campaign pages", async () => {
+    vi.mocked(api.listRiskCampaigns).mockResolvedValueOnce({ ...response, has_more: true, next_cursor: "page-two" })
+      .mockResolvedValueOnce({ ...response, has_more: false, campaigns: [] });
+    render(<RiskCampaignCommandCenter findingId="finding-2" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Load next campaigns" }));
+    await waitFor(() => expect(api.listRiskCampaigns).toHaveBeenLastCalledWith({ cursor: "page-two", findingId: "finding-2" }));
+    expect(api.listRiskCampaigns).toHaveBeenNthCalledWith(1, { findingId: "finding-2" });
+    expect(api.listRiskCampaignVerificationQueue).not.toHaveBeenCalled();
+  });
   it("loads later server-ranked pages without discarding the current cards", async () => {
     vi.mocked(api.listRiskCampaigns).mockResolvedValueOnce({ ...response, total_campaigns: 2, has_more: true, next_cursor: "page-two" })
       .mockResolvedValueOnce({ ...response, has_more: false, next_cursor: null, total_campaigns: 2, campaigns: [{ ...response.campaigns[0]!, id: "campaign-2", title: "Upgrade second package" }] });

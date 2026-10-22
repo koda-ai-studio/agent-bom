@@ -10,6 +10,15 @@ from typing import Any
 from fastapi import HTTPException
 
 
+def campaigns_for_finding(campaigns: list[dict[str, Any]], findings: list[dict[str, Any]], finding_id: str) -> list[dict[str, Any]]:
+    """Resolve an occurrence to canonical membership before page excerpts truncate IDs."""
+    identities = {finding_id}
+    for row in findings:
+        if isinstance(row, dict) and finding_id in (row.get("id"), row.get("finding_id"), row.get("canonical_id")):
+            identities.add(str(row.get("canonical_id") or row.get("finding_id") or row.get("id") or ""))
+    return [campaign for campaign in campaigns if identities.intersection(campaign["finding_ids"])]
+
+
 def campaign_page(tenant_id: str, campaigns: list[dict[str, Any]], *, limit: int = 25, cursor: str | None = None) -> dict[str, Any]:
     if isinstance(limit, bool) or not 1 <= limit <= 100:
         raise HTTPException(status_code=400, detail="Campaign page limit must be between 1 and 100.")

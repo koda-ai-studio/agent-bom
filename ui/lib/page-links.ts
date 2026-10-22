@@ -58,8 +58,8 @@ export function complianceHref(input: { q?: string | undefined; scan?: string | 
   return buildHref("/compliance", [["q", input.q], ["scan", input.scan]]);
 }
 
-export function remediationHref(input: { q?: string | undefined; scan?: string | undefined } = {}): string {
-  return buildHref("/remediation", [["q", input.q], ["scan", input.scan]]);
+export function remediationHref(input: { q?: string | undefined; scan?: string | undefined; finding?: string | undefined; view?: "verification" | undefined } = {}): string {
+  return buildHref("/remediation", [["q", input.q], ["scan", input.scan], ["finding", input.finding], ["view", input.view]]);
 }
 
 const GRAPH_LAYERS = new Set([
