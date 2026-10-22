@@ -69,7 +69,7 @@ cannot satisfy the release gate.
 | Full correctness suite, Python 3.11/3.12/3.13/3.14 in 4 shards each (combined 3.11 coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
 | Postgres Integration Contract (live RLS, migrations, schema parity) | relevant inputs (required when selected) | yes | yes |
-| Test (Alpine/musl, shard N) | subset on relevant changes; full in 2 shards on dependencies | subset; full in 2 shards on dependency changes | full in 2 shards nightly, subset manual |
+| Test (Alpine/musl, shard N) | subset on relevant changes; full in 4 shards on dependencies | subset; full in 4 shards on dependency changes | full in 4 shards nightly, subset manual |
 | Docker (multi-arch) + image scans | no | yes | nightly only |
 | UI E2E (Playwright, bundle budget); container smoke | UI inputs; container/build inputs for Docker | every main push | yes |
 | Dogfood GitHub Action | no | when action inputs change | yes |

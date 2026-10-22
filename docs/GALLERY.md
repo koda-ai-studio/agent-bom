@@ -275,6 +275,22 @@ cd ui && npm ci && npm run build
 npm run capture:product-proof   # refreshes the README screenshots in docs/images
 ```
 
+The capture manifest records the source commit, input digest, screenshot hashes,
+and the version visible in each image. Review the regenerated dark, light and
+mobile views before publishing them.
+
+To refresh the terminal recording from this checkout, install VHS, FFmpeg and
+Pillow, then run from the repository root:
+
+```bash
+uv run --with pillow bash scripts/render_demo_gif.sh
+```
+
+The renderer records real output from `agent-bom scan --demo --offline`, requires
+the expected security-gate exit `1`, and preserves the old GIF if recording fails.
+It presents inventory, findings and remediation guidance; it does not execute a
+fix.
+
 To explore a labeled demo estate in the current-source dashboard instead
 (different sample data from the screenshots):
 

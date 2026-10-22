@@ -64,3 +64,23 @@ def test_failed_playback_preserves_previous_gif(tmp_path):
     assert result.returncode != 0
     assert "playback did not complete" in result.stderr
     assert artifact.read_bytes() == b"previous verified recording"
+
+
+def test_current_cli_sections_fit_recording_viewport(tmp_path):
+    """Reject a recording recipe that clips a current findings table mid-row."""
+    result = subprocess.run(
+        ["bash", str(ROOT / "scripts/render_demo.sh")],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        timeout=120,
+        env={
+            **os.environ,
+            "PATH": f"{Path(sys.executable).parent}:{os.environ['PATH']}",
+            "PYTHONPATH": str(ROOT / "src"),
+            "AGENT_BOM_DEMO_CHECK_ONLY": "1",
+            "AGENT_BOM_SKIP_UPDATE_CHECK": "1",
+            "AGENT_BOM_STATE_DIR": str(tmp_path),
+        },
+    )
+    assert result.returncode == 0, result.stdout + result.stderr

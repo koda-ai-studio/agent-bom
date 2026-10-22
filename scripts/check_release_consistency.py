@@ -612,7 +612,7 @@ def main() -> int:
 
     if f"## [{version}]" not in changelog:
         _fail(f"CHANGELOG.md must include a {version} release entry before tagging")
-    if f"[Unreleased]: https://github.com/msaad00/agent-bom/compare/v{version}...HEAD" not in changelog:
+    if f"[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v{version}...HEAD" not in changelog:
         _fail(f"CHANGELOG.md Unreleased compare link must start at v{version}")
 
     leaked_patterns = [

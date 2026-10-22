@@ -19,7 +19,7 @@ signed release evidence.
 
 | Surface | Command | Release bar |
 |---|---|---|
-| Exact main CI | `uv run python scripts/check_release_main_ci.py --repo msaad00/agent-bom --sha "$(git rev-parse HEAD)" --branch main --workflow ci.yml` | Candidate equals current `main` and its exact `CI/CD Pipeline` main-push run is completed successfully; pending, canceled, stale, or PR-only runs fail closed. |
+| Exact main CI | `uv run python scripts/check_release_main_ci.py --repo koda-ai-studio/agent-bom --sha "$(git rev-parse HEAD)" --branch main --workflow ci.yml` | Candidate equals current `main` and its exact `CI/CD Pipeline` main-push run is completed successfully; pending, canceled, stale, or PR-only runs fail closed. |
 | Version alignment | `uv run python scripts/check_release_consistency.py` | Package, docs, OpenAPI, Docker, Helm, and integration versions agree. |
 | Evidence matrix | `uv run python scripts/check_release_evidence_matrix.py` | Every published surface retains a named pre- or post-publish verification path. |
 | Product contract | `uv run python scripts/check_product_surface_contract.py` | README/product-surface claims match generated metrics and exposed surfaces. |
@@ -143,7 +143,7 @@ npx playwright test e2e/route-catalog-smoke.spec.ts e2e/jobs-workflow.spec.ts \
 TAG=v0.109.0
 VERSION="${TAG#v}"
 mkdir -p /tmp/agent-bom-release && cd /tmp/agent-bom-release
-gh release download "$TAG" --repo msaad00/agent-bom
+gh release download "$TAG" --repo koda-ai-studio/agent-bom
 ```
 
 ## Verify Python release signatures
@@ -181,7 +181,7 @@ using the exported bundle:
 
 ```bash
 gh attestation verify "agent_bom-${VERSION}-py3-none-any.whl" \
-  --repo msaad00/agent-bom
+  --repo koda-ai-studio/agent-bom
 ```
 
 ## Inspect the self-SBOM
@@ -491,7 +491,7 @@ npm install -g clawhub@latest
 clawhub login --token "$CLAWHUB_TOKEN" --no-browser
 clawhub publish integrations/openclaw/scan \
   --slug agent-bom-scan --name "agent-bom scan" \
-  --version "0.109.0"
+  --version "0.110.0"
 ```
 
 Release automation uses the same official `clawhub` CLI flow, not a custom
@@ -534,7 +534,7 @@ deploy and pass the build test, then create and publish the Glama release.
 
 ```bash
 python scripts/check_glama_listing.py \
-  --expected 0.109.0
+  --expected 0.110.0
 ```
 
 ---
@@ -577,8 +577,8 @@ Images published:
 Tag push triggers the full pipeline automatically:
 
 ```bash
-git tag v0.109.0
-git push origin v0.109.0
+git tag v0.110.0
+git push origin v0.110.0
 ```
 
 This triggers:

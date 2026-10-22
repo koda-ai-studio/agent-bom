@@ -44,12 +44,20 @@ overall report partial even when its organization directory is complete.
 ## Next step
 
 Review each `coverage` receipt and retry missing permissions or incomplete scopes.
-The directory evidence is retained in the report and connector push payloads;
-directory identity/grant graph projection is not implemented. Directory receipts
-therefore declare `graph_supported: false` and do not claim graph persistence.
-Existing project and deployment graph support is separate. Supabase organization
+Add `--graph-db /private/directory.db --tenant YOUR_TENANT` to save a complete
+collection as a local graph snapshot. The graph retains account-scoped users and
+configured roles, joined by non-traversable membership edges. Directory receipts
+declare `graph_supported: true`; that capability flag alone does not prove a
+snapshot was persisted. Pending Vercel invitations remain identity inventory
+without accepted membership, and conflicting or redacted identities remain
+unresolved. Membership never implies effective resource access.
+
+Incomplete collection exits `2` and preserves the previous local graph. Complete
+organization snapshots can add or remove projects within that organization;
+explicit project-ref scans retain their project boundary. Supabase organization
 and project pushes have separate target scopes so their replacement boundaries
-cannot collide.
+cannot collide. See the [directory evidence verification workflow](../deployment/VENDOR_QUALIFICATION.md#supabase-and-vercel-directory-evidence)
+for local persistence and authenticated control-plane checks.
 
 Do not call the vendor finalized from this export alone. Validate graph identity
 projection, findings, replay/deletion behavior, persistence, account isolation and
