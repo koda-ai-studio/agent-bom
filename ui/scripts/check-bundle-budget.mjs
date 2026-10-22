@@ -143,7 +143,9 @@ const BUDGETS = {
   // bounded headroom at 4256 KiB; shared-runtime and largest-chunk limits stay fixed.
   totalClientJsBytes: 4_358_144,
   largestChunkBytes: 950_000,
-  sharedAppBytes: 450_000,
+  // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
+  // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.
+  sharedAppBytes: 456_704,
 };
 
 function listJsFiles(dir) {
