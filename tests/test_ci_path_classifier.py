@@ -90,3 +90,59 @@ def test_registry_front_doors_and_fuzz_harnesses_route_to_their_lanes() -> None:
     fuzz = classify_paths([".clusterfuzzlite/fuzz/fuzz_policy.py"])
     assert fuzz.docs_only is False
     assert fuzz.python_dependencies is False
+
+
+def test_correctness_routing_keeps_ordinary_docs_and_ui_prs_small() -> None:
+    for path in ("README.md", "ui/app/page.tsx", "docs/images/graph.png", "tests/test_ci_path_classifier.py"):
+        result = classify_paths([path])
+        assert result.full_python is False, path
+        assert result.postgres_required is False, path
+        assert result.ui_container is False, path
+
+
+def test_shared_inputs_and_unknown_code_require_full_correctness() -> None:
+    for path in (
+        "uv.lock",
+        "pyproject.toml",
+        ".github/workflows/ci.yml",
+        "tests/conftest.py",
+        "tests/fixtures/new.json",
+        "src/agent_bom/canonical_ids.py",
+        "src/agent_bom/models.py",
+        "src/agent_bom/api/auth.py",
+        "src/agent_bom/db/graph_store.py",
+        "src/agent_bom/graph/not_yet_mapped.py",
+        "new-surface/unknown.data",
+    ):
+        assert classify_paths([path]).full_python is True, path
+    assert classify_paths([]).full_python is True
+
+
+def test_mapped_source_uses_domain_tests_but_unmapped_sibling_fails_closed() -> None:
+    assert classify_paths(["src/agent_bom/graph/builder.py"]).full_python is False
+    assert classify_paths(["src/agent_bom/graph/builder.py", "src/agent_bom/graph/not_yet_mapped.py"]).full_python is True
+
+
+def test_postgres_routing_covers_shared_identity_storage_and_auth_contracts() -> None:
+    for path in (
+        "src/agent_bom/models.py",
+        "src/agent_bom/canonical_ids.py",
+        "src/agent_bom/api/middleware.py",
+        "src/agent_bom/db/graph_store.py",
+        "tests/test_postgres_graph_store.py",
+        "uv.lock",
+    ):
+        assert classify_paths([path]).postgres_required is True, path
+
+
+def test_container_routing_covers_build_and_runtime_inputs() -> None:
+    for path in (
+        "ui/Dockerfile",
+        "ui/docker-entrypoint.sh",
+        "ui/package-lock.json",
+        "ui/next.config.ts",
+        "ui/.dockerignore",
+        ".github/actions/setup-ui/action.yml",
+        ".github/workflows/ci.yml",
+    ):
+        assert classify_paths([path]).ui_container is True, path

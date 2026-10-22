@@ -4,10 +4,9 @@ permissions:
   contents: read
 
 # Lanes (see docs/operations/CI_RUNBOOK.md "CI lanes"):
-#   pull_request   the merge result: the full suite on Python 3.13 sharded
-#                  across parallel jobs, changed-domain tests and contract
-#                  smoke, drift gates, Postgres contract, and path-gated
-#                  validators.
+#   pull_request   changed-domain tests and contract smoke on the merge
+#                  result; full Python shards for shared/unmapped inputs,
+#                  path-gated Postgres, UI container and other validators.
 #   merge_group    not enabled for this repository; if it fires, it runs the
 #                  PR lanes plus the post-merge lanes.
 #   push to main   everything: full 4-version suite with coverage, performance,
@@ -50,6 +49,8 @@ jobs:
       compose: ${{ steps.classify.outputs.compose }}
       docs: ${{ steps.classify.outputs.docs }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
+      full_python: ${{ steps.classify.outputs.full_python }}
+      ui_container: ${{ steps.classify.outputs.ui_container }}
       endpoint: ${{ steps.classify.outputs.endpoint }}
       graph_performance: ${{ steps.classify.outputs.graph_performance }}
       helm: ${{ steps.classify.outputs.helm }}
@@ -132,17 +133,13 @@ jobs:
           # `src/agent_bom/api/postgres_` alone missed the scheduler and the
           # continuous-ingest drain, so the Postgres contract job was skipped
           # on the very PR that fixed a cloud_connections RLS WITH CHECK
-          # violation. Request-path binders (api/middleware.py, api/pipeline.py)
-          # are deliberately excluded: no integration test drives the ASGI app
-          # against real Postgres, so the job could not observe a regression
-          # there and gating those hot files would cost time for no signal.
+          # violation. The Python classifier also includes shared API/model
+          # inputs; this writer map preserves narrower ownership outside API.
           if printf '%s\n' "$changed" | grep -Eq '^(src/agent_bom/api/(trace_collection/|postgres_|storage_schema\.py|connection_store\.py|connection_scheduler\.py|proxy_replay_store\.py|export_destination_store\.py|export_schedule_store\.py|export_scheduler\.py|storage/export_schedules\.py)|src/agent_bom/api/hub_observations_partition\.py|src/agent_bom/cloud/([a-z_]*event_ingest|runtime_workload_evidence_store|side_scan_lifecycle[a-z_]*)\.py|src/agent_bom/ticketing/postgres_store\.py|tests/cloud/test_side_scan_postgres_contract\.py$|tests/test_postgres_|tests/test_trace_collection_(postgres|recovery)\.py$|tests/test_export_(destination|schedule)_postgres\.py$|tests/test_graph_adjacency_page\.py$|tests/test_graph_cross_vendor_index\.py$|deploy/supabase/postgres/|scripts/check_postgres_schema_parity\.py$)'; then
             postgres=true
           fi
-          # Python test suite: skip only when a PR clearly cannot affect it
-          # (docs/UI/deploy-only changes). Conservative by construction —
-          # anything under src/, tests/, scripts/, data/, packaging, or the
-          # CI definition itself runs the suite.
+          # Python fixture/self-check inputs. Full-suite routing is computed
+          # separately by classify_ci_changes.py.
           python=false
           if printf '%s\n' "$changed" | grep -Eq '^(src/|tests/|scripts/|pyproject\.toml|uv\.lock|action\.yml|contracts/|data/|\.github/workflows/ci\.yml$|\.github/actions/)'; then
             python=true
@@ -158,6 +155,17 @@ jobs:
           fi
           classification="$(printf '%s\n' "$changed" | python3 scripts/classify_ci_changes.py)"
           printf '%s\n' "$classification" >> "$GITHUB_OUTPUT"
+          # Shared models/auth/storage and dependency inputs supplement the
+          # writer/migration map above. Only an explicit false may skip proof.
+          postgres_required="$(printf '%s\n' "$classification" | sed -n 's/^postgres_required=//p')"
+          if [ "$postgres_required" != "false" ]; then
+            postgres=true
+          fi
+          ui_container="$(printf '%s\n' "$classification" | sed -n 's/^ui_container=//p')"
+          if [ "$ui_container" != "false" ]; then
+            ui=true
+          fi
+          full_python="$(printf '%s\n' "$classification" | sed -n 's/^full_python=//p')"
           docs_only="$(printf '%s\n' "$classification" | sed -n 's/^docs_only=//p')"
           {
             echo "action=${action}"
@@ -182,6 +190,8 @@ jobs:
             echo "- Compose contract validation required: \`${compose}\`"
             echo "- Docs strict build required: \`${docs}\`"
             echo "- Documentation-only fast path: \`${docs_only}\`"
+            echo "- Full Python suite required: \`${full_python}\`"
+            echo "- UI container build required: \`${ui_container}\`"
             echo "- Endpoint packaging required: \`${endpoint}\`"
             echo "- Measured graph performance required: \`${graph_performance}\`"
             echo "- Helm profile validation required: \`${helm}\`"
@@ -777,6 +787,7 @@ jobs:
           }
 
       - name: UI container smoke test
+        if: github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.ui_container != 'false'
         run: |
           set -euo pipefail
           cleanup() {
@@ -1086,7 +1097,8 @@ jobs:
           else
             mapfile -t CHANGED < <(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")
           fi
-          mapfile -t TARGETED < <(uv run python scripts/pytest_ci_plan.py targeted --root . "${CHANGED[@]}")
+          TARGETED_SELECTION=$(uv run python scripts/pytest_ci_plan.py targeted --root . "${CHANGED[@]}")
+          mapfile -t TARGETED <<< "$TARGETED_SELECTION"
           SMOKE=(
             tests/test_ci_workflow_contract.py
             tests/test_runtime_child_span_redaction.py
@@ -1114,7 +1126,7 @@ jobs:
 
       - name: Graph accuracy fixture guard (#2259)
         if: >-
-          always() && (
+          always() && matrix.shard == 0 && (
             needs.changes.result != 'success' ||
             needs.changes.outputs.python == 'true'
           )
@@ -1126,8 +1138,8 @@ jobs:
         # Proves the scanner is alive, its rules fire on real SQL, and our own
         # migration files are clean (or surface known findings explicitly).
         if: >-
-          needs.changes.result != 'success' ||
-          needs.changes.outputs.python == 'true'
+          matrix.shard == 0 && (needs.changes.result != 'success' ||
+          needs.changes.outputs.python == 'true')
         run: |
           uv run python - <<'PYEOF'
           from pathlib import Path
@@ -1200,7 +1212,8 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-    if: ${{ !cancelled() && (github.event_name == 'pull_request' || github.event_name == 'merge_group') }}
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name == 'merge_group' || (github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.full_python != 'false'))) }}
     strategy:
       fail-fast: false
       matrix:
@@ -1290,6 +1303,8 @@ jobs:
       - name: Require every applicable correctness lane
         env:
           EVENT_NAME: ${{ github.event_name }}
+          FULL_REQUIRED: ${{ github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.full_python != 'false' }}
+          POSTGRES_REQUIRED: ${{ github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false' }}
           SMOKE_RESULT: ${{ needs.test-smoke.result }}
           MAIN_RESULT: ${{ needs.test-main.result }}
           SHARD_RESULT: ${{ needs.test-shard.result }}
@@ -1303,21 +1318,21 @@ jobs:
             echo "Changed-domain and contract smoke ended with: $SMOKE_RESULT" >&2
             exit 1
           fi
-          if [ "$POSTGRES_RESULT" != "success" ]; then
+          if [ "$POSTGRES_REQUIRED" != "false" ] && [ "$POSTGRES_RESULT" != "success" ]; then
             echo "Postgres integration suite ended with: $POSTGRES_RESULT" >&2
             exit 1
           fi
           # Lanes an event does not run must be skipped, never failed.
-          for result in "$MAIN_RESULT" "$SHARD_RESULT" "$GRAPH_RESULT" "$OUTPUT_SCALE_RESULT" "$SDK_SMOKE_RESULT"; do
+          for result in "$MAIN_RESULT" "$SHARD_RESULT" "$POSTGRES_RESULT" "$GRAPH_RESULT" "$OUTPUT_SCALE_RESULT" "$SDK_SMOKE_RESULT"; do
             case "$result" in
               success|skipped) ;;
               *) echo "Correctness lane ended with: $result" >&2; exit 1 ;;
             esac
           done
-          # PRs prove the merge result with the sharded full suite; main
-          # push, nightly and manual runs prove every interpreter.
+          # Selected PRs and merge groups prove the full sharded suite;
+          # main push, nightly and manual runs prove every interpreter.
           if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
-            if [ "$SHARD_RESULT" != "success" ]; then
+            if [ "$FULL_REQUIRED" != "false" ] && [ "$SHARD_RESULT" != "success" ]; then
               echo "Sharded full correctness suite ended with: $SHARD_RESULT" >&2
               exit 1
             fi
@@ -1374,8 +1389,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: changes
-    # Every merge result proves live Postgres/RLS, migrations and schema parity.
-    if: ${{ !cancelled() }}
+    # Relevant PRs and every main/nightly/manual run prove live Postgres/RLS.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false') }}
     permissions:
       contents: read
     services:
