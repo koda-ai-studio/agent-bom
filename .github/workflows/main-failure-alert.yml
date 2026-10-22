@@ -204,5 +204,4 @@ jobs:
               title,
               body,
               labels,
-              assignees: [owner],
             });

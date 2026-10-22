@@ -74,7 +74,7 @@ cannot satisfy the release gate.
 | UI E2E (Playwright, bundle budget); container smoke | UI inputs; container/build inputs for Docker | every main push | yes |
 | Dogfood GitHub Action | no | when action inputs change | yes |
 | ClusterFuzzLite (`cflite-pr.yml`) | no | short batch on parser changes | weekly long batch |
-| Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | API/Helm/Postgres/UI-gateway changes | manual |
+| Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | every main push | manual |
 
 The UI advisory step reads the committed lockfile without installing packages.
 The SDK installation remains because the supply-chain guard builds its output.
@@ -108,7 +108,10 @@ contract tests tie them and check that the shards still partition the suite.
 
 Why a release is still safe: `release.yml` runs
 `scripts/check_release_main_ci.py`, which accepts a tag only when the exact
-`main` HEAD has a completed, successful `ci.yml` **push** run. On push (and on
+`main` HEAD has completed, successful **push** runs for both `ci.yml` and
+`runtime-acceptance.yml`, including the gateway ingest and replica reconnect
+job. Missing or skipped runtime evidence fails closed even when the main
+pipeline passes. On push (and on
 nightly and manual runs), `Python correctness aggregation` requires the
 four-version suite and treats a skipped post-merge lane as a failure, and
 `Test (Python 3.13)` requires the Docker lane, so a green `main` run means the

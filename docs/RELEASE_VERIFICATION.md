@@ -20,6 +20,7 @@ signed release evidence.
 | Surface | Command | Release bar |
 |---|---|---|
 | Exact main CI | `uv run python scripts/check_release_main_ci.py --repo koda-ai-studio/agent-bom --sha "$(git rev-parse HEAD)" --branch main --workflow ci.yml` | Candidate equals current `main` and its exact `CI/CD Pipeline` main-push run is completed successfully; pending, canceled, stale, or PR-only runs fail closed. |
+| Exact main runtime acceptance | `uv run python scripts/check_release_main_ci.py --repo koda-ai-studio/agent-bom --sha "$(git rev-parse HEAD)" --branch main --workflow runtime-acceptance.yml` | The same main SHA has a successful push run and completed `Gateway ingest and replica reconnect` job. Missing, skipped, stale, failed, or pending runtime evidence blocks tagging. |
 | Version alignment | `uv run python scripts/check_release_consistency.py` | Package, docs, OpenAPI, Docker, Helm, and integration versions agree. |
 | Evidence matrix | `uv run python scripts/check_release_evidence_matrix.py` | Every published surface retains a named pre- or post-publish verification path. |
 | Product contract | `uv run python scripts/check_product_surface_contract.py` | README/product-surface claims match generated metrics and exposed surfaces. |

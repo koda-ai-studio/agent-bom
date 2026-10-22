@@ -159,6 +159,90 @@ def test_release_workflow_requires_exact_main_ci_proof() -> None:
     assert '--sha "${{ github.sha }}"' in step["run"]
 
 
+def test_release_workflow_also_requires_exact_runtime_acceptance() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())
+    steps = workflow["jobs"]["version-guard"]["steps"]
+    step = next(step for step in steps if "--workflow runtime-acceptance.yml" in step.get("run", ""))
+    assert "scripts/check_release_main_ci.py" in step["run"]
+    assert '--sha "${{ github.sha }}"' in step["run"]
+    assert step["env"]["GH_TOKEN"] == "${{ github.token }}"
+
+
+def test_runtime_acceptance_proves_every_main_sha() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/runtime-acceptance.yml").read_text())
+    assert workflow[True]["push"] == {"branches": ["main"]}
+
+
+def _runtime_fetcher(*, runs=None, jobs=None):
+    run = _run(path=".github/workflows/runtime-acceptance.yml", name="Runtime Helm Acceptance")
+    job = {"name": "Gateway ingest and replica reconnect", "head_sha": SHA, "status": "completed", "conclusion": "success"}
+
+    def fetch(endpoint):
+        if "/git/ref/heads/" in endpoint:
+            return {"object": {"sha": SHA}}
+        if "/jobs?" in endpoint:
+            rows = [job] if jobs is None else jobs
+            return {"jobs": rows, "total_count": len(rows)}
+        assert "/actions/workflows/runtime-acceptance.yml/runs?" in endpoint
+        return {"workflow_runs": [run] if runs is None else runs}
+
+    return fetch
+
+
+def test_exact_runtime_acceptance_is_accepted_without_ui_jobs() -> None:
+    checker = _load_script()
+    proof = checker.verify_release_candidate(
+        repo="msaad00/agent-bom", sha=SHA, workflow="runtime-acceptance.yml", fetch_json=_runtime_fetcher()
+    )
+    assert proof["sha"] == SHA
+
+
+@pytest.mark.parametrize("conclusion", ["failure", "cancelled", "skipped", None])
+def test_runtime_job_must_complete_successfully(conclusion) -> None:
+    checker = _load_script()
+    job = {"name": "Gateway ingest and replica reconnect", "head_sha": SHA, "status": "completed", "conclusion": conclusion}
+    with pytest.raises(checker.ReleaseProofError, match="job"):
+        checker.verify_release_candidate(
+            repo="msaad00/agent-bom", sha=SHA, workflow="runtime-acceptance.yml", fetch_json=_runtime_fetcher(jobs=[job])
+        )
+
+
+@pytest.mark.parametrize(
+    "overrides", [{"head_sha": "e" * 40}, {"event": "pull_request"}, {"conclusion": "failure"}, {"status": "in_progress"}]
+)
+def test_runtime_run_rejects_stale_pr_failed_and_pending_proof(overrides) -> None:
+    checker = _load_script()
+    run = _run(path=".github/workflows/runtime-acceptance.yml", **overrides)
+    with pytest.raises(checker.ReleaseProofError, match="completed successful main push"):
+        checker.verify_release_candidate(
+            repo="msaad00/agent-bom", sha=SHA, workflow="runtime-acceptance.yml", fetch_json=_runtime_fetcher(runs=[run])
+        )
+
+
+def test_runtime_acceptance_rejects_missing_job() -> None:
+    checker = _load_script()
+    with pytest.raises(checker.ReleaseProofError, match="Gateway ingest and replica reconnect"):
+        checker.verify_release_candidate(
+            repo="msaad00/agent-bom", sha=SHA, workflow="runtime-acceptance.yml", fetch_json=_runtime_fetcher(jobs=[])
+        )
+
+
+@pytest.mark.parametrize("overrides", [{"head_sha": "e" * 40}, {"status": "queued"}, {"status": "in_progress"}])
+def test_runtime_job_rejects_stale_or_incomplete_evidence(overrides) -> None:
+    checker = _load_script()
+    job = {"name": "Gateway ingest and replica reconnect", "head_sha": SHA, "status": "completed", "conclusion": "success", **overrides}
+    with pytest.raises(checker.ReleaseProofError, match="job did not succeed"):
+        checker.verify_release_candidate(
+            repo="msaad00/agent-bom", sha=SHA, workflow="runtime-acceptance.yml", fetch_json=_runtime_fetcher(jobs=[job])
+        )
+
+
+def test_unknown_workflow_has_no_implicit_release_contract() -> None:
+    checker = _load_script()
+    with pytest.raises(checker.ReleaseProofError, match="unsupported release proof workflow"):
+        checker.verify_release_candidate(repo="msaad00/agent-bom", sha=SHA, workflow="unknown.yml", fetch_json=_fetcher())
+
+
 def _jobs():
     return [
         {"name": name, "status": "completed", "conclusion": "success", "head_sha": SHA}
