@@ -42,7 +42,7 @@ cloud grants: [CLOUD_CONNECT.md](CLOUD_CONNECT.md)
 ```bash
 pip install 'agent-bom[snowflake]'
 # One-time (ACCOUNTADMIN): deploy ABOM_READONLY grant — see scripts/provision/snowflake_readonly.sql
-export SNOWFLAKE_ACCOUNT=xy12345
+export SNOWFLAKE_ACCOUNT="ORG-ACCOUNT"  # replace with your organization-account identifier
 export SNOWFLAKE_USER=AGENT_BOM
 export SNOWFLAKE_WAREHOUSE=COMPUTE_WH
 # Default: browser SSO (externalbrowser). CI: SNOWFLAKE_AUTHENTICATOR=snowflake_jwt + SNOWFLAKE_PRIVATE_KEY_PATH

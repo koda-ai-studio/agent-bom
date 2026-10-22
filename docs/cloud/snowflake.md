@@ -88,7 +88,7 @@ and [GET_AI_OBSERVABILITY_EVENTS](https://docs.snowflake.com/en/sql-reference/fu
 **Authenticate** with the matching private key — no password ever:
 
 ```bash
-export SNOWFLAKE_ACCOUNT="ORG-ACCOUNT"      # or LOCATOR.region.cloud, e.g. xy12345.ca-central-1.aws
+export SNOWFLAKE_ACCOUNT="ORG-ACCOUNT"      # replace with your organization-account identifier
 export SNOWFLAKE_USER="ABOM_SCANNER"
 export SNOWFLAKE_AUTHENTICATOR="snowflake_jwt"
 export SNOWFLAKE_PRIVATE_KEY_PATH="/path/to/abom_key.p8"
