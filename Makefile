@@ -86,6 +86,7 @@ preflight-fix:  ## Regenerate every drift artifact so you never push stale OpenA
 	python scripts/generate_experimental_docs.py
 	python sdks/shared/generate-patterns.py
 	python scripts/product_metrics_snapshot.py --write
+	python scripts/generate_agent_capability_manifest.py --write
 	python scripts/generate_vendor_coverage.py --write
 	python scripts/generate_mcp_profile_catalog.py
 	python scripts/generate_reference_evidence_lab.py

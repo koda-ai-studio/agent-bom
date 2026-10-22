@@ -17,7 +17,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Scoped Supabase project and organization inventory, Vercel project/deployment and team inventory, and Modal/NGC metadata exports. Supabase and Vercel directory graphs retain users and configured roles without inferring effective access; incomplete collection preserves the previous local graph.
-- Findings queues separate evidence lanes, and scoped HTML impact briefs provide expandable supporting evidence. Remediation can verify installed-package updates with scoped receipts; a dependency-file change alone does not verify a deployed workload.
+- Findings queues separate evidence lanes, and scoped HTML impact briefs provide expandable supporting evidence. Installed Python-package metadata can be compared against a retained advisory with scoped remediation receipts; this does not verify a running workload.
 
 - Claude Code plugin (`integrations/claude-code`, marketplace at `.claude-plugin/marketplace.json`): bundles the MCP server, pinned to the published PyPI release through `uvx`, plus `/agent-bom:scan`, `/agent-bom:check` and `/agent-bom:fix` skills. `scripts/check_version_alignment.py` keeps the plugin version and the `uvx` pin on the published release.
 
@@ -4167,7 +4167,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/msaad00/agent-bom/compare/v0.109.0...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.110.0...HEAD
+[0.110.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.109.0...v0.110.0
 [0.109.0]: https://github.com/msaad00/agent-bom/compare/v0.108.4...v0.109.0
 [0.108.4]: https://github.com/msaad00/agent-bom/compare/v0.108.3...v0.108.4
 [0.108.3]: https://github.com/msaad00/agent-bom/compare/v0.108.2...v0.108.3
