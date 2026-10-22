@@ -6,15 +6,17 @@ Revision rows survive job and tenant deletion so empty estates invalidate caches
 
 from typing import TYPE_CHECKING
 
-from agent_bom.api.postgres_common import _tenant_connection
-from agent_bom.api.store import _require_tenant_scope
-
 if TYPE_CHECKING:
     from psycopg_pool import ConnectionPool
 
 
 def read_postgres_job_revision(pool: "ConnectionPool", tenant_id: str) -> str:
     """Read the committed tenant token without decoding scan-job payloads."""
+    # Alembic imports the immutable DDL below without runtime signing secrets.
+    # Initialize tenant/runtime dependencies only when serving a storage read.
+    from agent_bom.api.postgres_common import _tenant_connection
+    from agent_bom.api.store import _require_tenant_scope
+
     _require_tenant_scope(tenant_id, False, "PostgresJobStore.overview_evidence_revision()")
     with _tenant_connection(pool) as conn:
         row = conn.execute("SELECT generation, revision FROM job_overview_revisions WHERE tenant_id=%s", (tenant_id,)).fetchone()

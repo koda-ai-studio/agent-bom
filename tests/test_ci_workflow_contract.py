@@ -673,7 +673,7 @@ def test_runtime_acceptance_is_post_merge_for_broad_api_changes() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/runtime-acceptance.yml").read_text())
     triggers = workflow.get(True, workflow.get("on", {}))
     assert "src/agent_bom/api/**" not in triggers["pull_request"]["paths"]
-    assert "src/agent_bom/api/**" in triggers["push"]["paths"]
+    assert triggers["push"] == {"branches": ["main"]}
     assert ".github/workflows/runtime-acceptance.yml" in triggers["pull_request"]["paths"]
 
     alert = yaml.safe_load((ROOT / ".github/workflows/main-failure-alert.yml").read_text())

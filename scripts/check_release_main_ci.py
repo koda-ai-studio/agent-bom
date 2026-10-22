@@ -40,10 +40,14 @@ def _fetch_safely(fetch_json: FetchJSON, endpoint: str) -> Mapping[str, Any]:
 
 
 REQUIRED_UI_JOBS = frozenset({"UI Validate", "UI export build", "UI E2E and container smoke"})
+REQUIRED_WORKFLOW_JOBS = {
+    "ci.yml": REQUIRED_UI_JOBS,
+    "runtime-acceptance.yml": frozenset({"Gateway ingest and replica reconnect"}),
+}
 
 
-def _verify_ui_jobs(repo: str, run_id: int, sha: str, fetch_json: FetchJSON) -> None:
-    """Require successful UI jobs from the latest attempt, including later pages."""
+def _verify_required_jobs(repo: str, run_id: int, sha: str, fetch_json: FetchJSON, required_jobs: frozenset[str]) -> None:
+    """Require successful workflow jobs from the latest attempt, including later pages."""
     passed: set[str] = set()
     seen = 0
     for page in range(1, 101):
@@ -51,23 +55,23 @@ def _verify_ui_jobs(repo: str, run_id: int, sha: str, fetch_json: FetchJSON) -> 
         jobs = payload.get("jobs")
         total = payload.get("total_count")
         if not isinstance(jobs, list) or not isinstance(total, int) or total < 0:
-            raise ReleaseProofError("release UI proof returned an invalid jobs payload")
+            raise ReleaseProofError("release job proof returned an invalid jobs payload")
         for job in jobs:
-            if not isinstance(job, Mapping) or job.get("name") not in REQUIRED_UI_JOBS:
+            if not isinstance(job, Mapping) or job.get("name") not in required_jobs:
                 continue
             if job.get("head_sha") != sha or job.get("status") != "completed" or job.get("conclusion") != "success":
-                raise ReleaseProofError(f"release UI job did not succeed: {job.get('name')}")
+                raise ReleaseProofError(f"release job did not succeed: {job.get('name')}")
             passed.add(job["name"])
         seen += len(jobs)
         if seen >= total:
             break
         if not jobs:
-            raise ReleaseProofError("release UI proof has incomplete job pagination")
+            raise ReleaseProofError("release job proof has incomplete job pagination")
     else:
-        raise ReleaseProofError("release UI proof exceeded job pagination budget")
-    missing = REQUIRED_UI_JOBS - passed
+        raise ReleaseProofError("release job proof exceeded job pagination budget")
+    missing = required_jobs - passed
     if missing:
-        raise ReleaseProofError(f"release UI proof missing successful jobs: {', '.join(sorted(missing))}")
+        raise ReleaseProofError(f"release job proof missing successful jobs: {', '.join(sorted(missing))}")
 
 
 def verify_release_candidate(
@@ -80,6 +84,8 @@ def verify_release_candidate(
 ) -> dict[str, str | int]:
     """Return the exact successful CI run or fail closed."""
     _validate_inputs(repo, sha, branch, workflow)
+    if workflow not in REQUIRED_WORKFLOW_JOBS:
+        raise ReleaseProofError(f"unsupported release proof workflow: {workflow}")
     expected_sha = sha.lower()
 
     ref_endpoint = f"/repos/{repo}/git/ref/heads/{quote(branch, safe='')}"
@@ -111,7 +117,7 @@ def verify_release_candidate(
             run_id = run.get("id")
             run_url = run.get("html_url")
             if isinstance(run_id, int) and isinstance(run_url, str) and run_url.startswith("https://"):
-                _verify_ui_jobs(repo, run_id, expected_sha, fetch_json)
+                _verify_required_jobs(repo, run_id, expected_sha, fetch_json, REQUIRED_WORKFLOW_JOBS[workflow])
                 return {"sha": expected_sha, "run_id": run_id, "run_url": run_url}
 
     raise ReleaseProofError(f"candidate {expected_sha} has no completed successful main push for {expected_path}")

@@ -39,6 +39,16 @@ jobs:
           --branch main
           --workflow ci.yml
 
+      - name: Verify exact main runtime acceptance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 scripts/check_release_main_ci.py
+          --repo "${{ github.repository }}"
+          --sha "${{ github.sha }}"
+          --branch main
+          --workflow runtime-acceptance.yml
+
       - name: Extract version from tag
         id: meta
         run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"

@@ -3,8 +3,7 @@ name: Runtime Helm Acceptance
 on:
   workflow_dispatch:
   # PRs run this ~7 minute kind/Helm lane only when the gateway runtime itself
-  # changes. Broad API, Helm, Postgres, and UI changes are covered post-merge
-  # by the push trigger below (watched by Main Failure Alert).
+  # changes. Every main commit needs this proof before it can be released.
   pull_request:
     paths:
       - '.github/workflows/runtime-acceptance.yml'
@@ -14,18 +13,6 @@ on:
       - 'src/agent_bom/runtime/**'
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/runtime-acceptance.yml'
-      - 'scripts/demo/*runtime*'
-      - 'tests/api/test_gateway_runtime_acceptance.py'
-      - 'src/agent_bom/gateway*'
-      - 'src/agent_bom/runtime/**'
-      - 'src/agent_bom/api/**'
-      - 'deploy/helm/agent-bom/**'
-      - 'deploy/supabase/postgres/**'
-      - 'ui/app/gateway/**'
-      - 'ui/lib/gateway-activity.ts'
-      - 'ui/server/**'
 
 permissions:
   contents: read

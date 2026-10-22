@@ -1700,6 +1700,7 @@ jobs:
             tests/test_endpoint_connector_postgres.py \
             tests/test_postgres_schema.py \
             tests/test_postgres_migrations.py \
+            tests/test_migration_import_boundary.py \
             tests/test_postgres_scan_snapshot.py \
             tests/test_postgres_finding_history.py \
             tests/test_postgres_governance_audit.py \
