@@ -19,6 +19,7 @@ def fixture_reader(overrides=None):
         "nodes": [{"id": "scoped-resource", "attributes": {"cloud_provider": "gcp"}}],
         "edges": [],
         "pagination": {"has_more": False, "total": 1},
+        "stats": {"total_nodes": 1, "total_edges": 0},
         "completeness": {"truncated": False, "edges_truncated": False},
     }
     calls = []
@@ -36,10 +37,25 @@ def fixture_reader(overrides=None):
             return 200, {"authenticated": True, "tenant_id": tenant}
         if path == "/v1/system/health":
             return 200, {"storage": {k: "postgres" for k in ("control_plane_backend", "graph_store", "job_store", "key_store")}}
-        if path == "/v1/graph?limit=5000":
+        if path.startswith("/v1/graph/incident-edges?"):
+            return 200, dict(
+                graph,
+                found=True,
+                node_id="scoped-resource",
+                direction="both",
+                next_cursor=None,
+                completeness={"truncated": False, "missing_endpoint_count": 0},
+            )
+        if path == "/v1/graph?limit=100&view=canvas":
             result = copy.deepcopy(graph)
             if tenant == "other":
-                result.update(tenant_id="other", nodes=[], edges=[], pagination={"has_more": False, "total": 0})
+                result.update(
+                    tenant_id="other",
+                    nodes=[],
+                    edges=[],
+                    pagination={"has_more": False, "total": 0},
+                    stats={"total_nodes": 0, "total_edges": 0},
+                )
             return 200, result
         return 200, {}
 
@@ -64,8 +80,8 @@ def test_probe_checks_anonymous_invalid_auth_isolation_and_scoped_evidence():
 @pytest.mark.parametrize(
     "path,key,body",
     [
-        ("/v1/graph?limit=5000", None, {}),
-        ("/v1/graph?limit=5000", "invalid-qualification-key", {}),
+        ("/v1/graph?limit=100&view=canvas", None, {}),
+        ("/v1/graph?limit=100&view=canvas", "invalid-qualification-key", {}),
         ("/v1/system/health", None, {}),
         ("/health", None, {"version": "old", "auth_required": True, "auth_configured": True, "unauthenticated_allowed": False}),
         ("/v1/auth/me", "primary-key", {"authenticated": True, "tenant_id": "other"}),
@@ -91,18 +107,18 @@ def test_probe_fails_closed_on_wrong_auth_version_or_storage(path, key, body):
 )
 def test_probe_rejects_missing_wrong_or_bounded_graph(change):
     read, _ = fixture_reader()
-    _, graph = read("/v1/graph?limit=5000", "primary-key")
+    _, graph = read("/v1/graph?limit=100&view=canvas", "primary-key")
     graph.update(change)
-    bad, _ = fixture_reader({("/v1/graph?limit=5000", "primary-key"): (200, graph)})
+    bad, _ = fixture_reader({("/v1/graph?limit=100&view=canvas", "primary-key"): (200, graph)})
     with pytest.raises(smoke.QualificationError):
         run(bad)
 
 
 def test_probe_rejects_cross_tenant_leak():
     read, _ = fixture_reader()
-    _, graph = read("/v1/graph?limit=5000", "primary-key")
+    _, graph = read("/v1/graph?limit=100&view=canvas", "primary-key")
     graph["tenant_id"] = "other"
-    bad, _ = fixture_reader({("/v1/graph?limit=5000", "other-key"): (200, graph)})
+    bad, _ = fixture_reader({("/v1/graph?limit=100&view=canvas", "other-key"): (200, graph)})
     with pytest.raises(smoke.QualificationError):
         run(bad)
 
@@ -235,3 +251,120 @@ def test_http_reader_rejects_redirects_and_unbounded_or_invalid_bodies(mode):
         server.shutdown()
         worker.join()
         server.server_close()
+
+
+def paged_reader(mutation=None):
+    """Two node pages, repeated context, and a hub whose edges require expansion."""
+    from urllib.parse import parse_qs, urlsplit
+
+    nodes = [{"id": name, "attributes": {"provider": "gcp"}} for name in ("a", "b", "c")]
+    edges = [{"id": str(i), "source": "a", "target": target, "relationship": "contains"} for i, target in enumerate(("b", "c"))]
+    calls = []
+
+    def read(path, key=None, headers=None):
+        calls.append((path, headers))
+        query = parse_qs(urlsplit(path).query)
+        cursor = query.get("cursor", [""])[0]
+        common = {"tenant_id": "primary", "scan_id": "live-1", "snapshot_generation": "a" * 32}
+        if "incident-edges" in path:
+            assert query["node_id"] == ["a"]
+            assert query["scan_id"] == ["live-1"] and query["snapshot_generation"] == ["a" * 32]
+            body = dict(
+                common,
+                found=True,
+                node_id="a",
+                direction="both",
+                nodes=nodes,
+                edges=[edges[1 if cursor else 0]],
+                next_cursor=None if cursor else "edge-next",
+                completeness={"truncated": not bool(cursor), "missing_endpoint_count": 0, "reason": "page_limit" if not cursor else ""},
+            )
+        else:
+            if cursor:
+                assert query["scan_id"] == ["live-1"] and query["snapshot_generation"] == ["a" * 32]
+            body = dict(
+                common,
+                nodes=nodes[1:] if cursor else nodes[:2],
+                edges=[] if cursor else edges[:1],
+                stats={"total_nodes": 3, "total_edges": 2},
+                pagination={"total": 3, "has_more": not bool(cursor), "next_cursor": "" if cursor else "node-next"},
+                completeness={
+                    "ranked": 2 if cursor else 1,
+                    "truncated": not bool(cursor),
+                    "edges_truncated": not bool(cursor),
+                    "reason": "incident_edge_limit" if not cursor else "",
+                },
+            )
+        if mutation:
+            mutation(path, cursor, body)
+        return 200, body
+
+    return read, calls
+
+
+def test_complete_paged_graph_expands_edges_and_pins_revision_and_headers():
+    read, calls = paged_reader()
+    graph = smoke.read_graph(read, "primary-key", "primary", headers={"X-Tenant-ID": "other"})
+    assert len(graph["nodes"]) == 3 and len(graph["edges"]) == 2
+    assert len(calls) == 4
+    assert all(headers == {"X-Tenant-ID": "other"} for _, headers in calls)
+
+
+@pytest.mark.parametrize(
+    "failure",
+    ["generation", "cursor_loop", "edge_cursor_loop", "missing_endpoint", "edge_count", "duplicate_conflict", "unknown_truncation"],
+)
+def test_paged_graph_fails_closed(failure):
+    def mutate(path, cursor, body):
+        incident = "incident-edges" in path
+        if failure == "generation" and cursor:
+            body["snapshot_generation"] = "b" * 32
+        if failure == "cursor_loop" and cursor and not incident:
+            body["pagination"].update(has_more=True, next_cursor=cursor)
+            body["completeness"].update(truncated=True, reason="node_page_limit")
+        if failure == "edge_cursor_loop" and incident and cursor:
+            body["next_cursor"] = cursor
+            body["completeness"].update(truncated=True, reason="page_limit")
+        if failure == "missing_endpoint" and incident:
+            body["completeness"]["missing_endpoint_count"] = 1
+        if failure == "edge_count" and not incident:
+            body["stats"]["total_edges"] = 3
+        if failure == "duplicate_conflict" and cursor and not incident:
+            body["nodes"][0] = dict(body["nodes"][0], label="conflicting")
+        if failure == "unknown_truncation" and not incident:
+            body["completeness"]["reason"] = "unavailable_evidence"
+
+    read, _ = paged_reader(mutate)
+    with pytest.raises(smoke.QualificationError):
+        smoke.read_graph(read, "key", "primary")
+
+
+def test_paged_graph_total_budget_is_bounded(monkeypatch):
+    monkeypatch.setattr(smoke, "MAX_NODES", 2, raising=False)
+    read, _ = paged_reader()
+    with pytest.raises(smoke.QualificationError):
+        smoke.read_graph(read, "key", "primary")
+
+
+def test_digest_includes_full_attributes_omitted_by_canvas():
+    def graph_with_configuration(value):
+        read, _ = fixture_reader()
+
+        def full(path, key=None, headers=None):
+            status, body = read(path, key, headers)
+            if "incident-edges" in path:
+                body["nodes"][0]["attributes"]["configuration"] = {"private_setting": value}
+            return status, body
+
+        return smoke.read_graph(full, "primary-key", "primary")
+
+    first, second = graph_with_configuration("before"), graph_with_configuration("after")
+    assert smoke._digest(first) != smoke._digest(second)
+    assert first["nodes"][0]["attributes"]["configuration"] == {"private_setting": "before"}
+
+
+def test_paged_graph_request_budget_fails_closed(monkeypatch):
+    monkeypatch.setattr(smoke, "MAX_PAGES", 2)
+    read, _ = paged_reader()
+    with pytest.raises(smoke.QualificationError, match="graph_page_budget_exceeded"):
+        smoke.read_graph(read, "key", "primary")

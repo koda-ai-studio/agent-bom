@@ -25,6 +25,12 @@ def _persist_report(report: dict, graph_db: Path, tenant_id: str, output: Path) 
         receipt["correlated"] = receipt["capability"] == "security_advisors" and any(
             finding["evidence"]["project_ref"] == receipt["project_ref"] for finding in report["findings"]
         )
+    directories = [inventory for inventory in report["cloud_inventory"] if "directory" in inventory]
+    if directories:
+        # The organization is the collection scope; its projects may legitimately change.
+        expected_accounts = {f"account:supabase:{inventory['account_id']}" for inventory in directories}
+        persist_graph(report, graph_db, tenant_id, output, scope_entity_types={"account"}, scope_node_ids=expected_accounts)
+        return
     expected = {project["node_id"] for inventory in report["cloud_inventory"] for project in inventory["projects"]}
     persist_graph(report, graph_db, tenant_id, output, scope_entity_types={"cloud_resource"}, scope_node_ids=expected)
 

@@ -8,6 +8,7 @@ from agent_bom.cloud.resource_model import normalize_cloud_inventory
 from agent_bom.cloud.resource_model import supabase_project_node_id as project_node_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.platform_directory_projection import project_platform_directory
 from agent_bom.graph.projection_support import _add_rel_edge
 from agent_bom.graph.types import EntityType, RelationshipType
 
@@ -28,6 +29,7 @@ def project_supabase_inventory(graph: UnifiedGraph, inventory: dict[str, Any]) -
             data_sources=sources,
         )
     )
+    project_platform_directory(graph, inventory, provider="supabase")
     for resource in normalize_cloud_inventory(inventory):
         project = resource.raw
         node_id = project_node_id(account, project["ref"])

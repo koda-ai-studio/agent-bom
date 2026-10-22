@@ -213,12 +213,12 @@ def test_vercel_contradictory_pagination_is_incomplete(pagination, total):
     assert not report["coverage"][-1]["complete"]
 
 
-def test_directory_receipts_do_not_claim_graph_projection():
+def test_directory_receipts_declare_supported_projection_without_claiming_persistence():
     report = collect_supabase_directory(organization=ORG, token="private", client=client_for(supabase_handler))
-    assert all(r["graph_supported"] is False for r in report["coverage"])
+    assert all(r["graph_supported"] is True and r["persisted"] is False for r in report["coverage"])
 
 
-def test_cli_persists_project_without_claiming_directory_graph_persistence(tmp_path, monkeypatch):
+def test_cli_persists_project_and_directory_membership(tmp_path, monkeypatch):
     import json
 
     from click.testing import CliRunner
@@ -244,5 +244,73 @@ def test_cli_persists_project_without_claiming_directory_graph_persistence(tmp_p
     assert result.exit_code == 0, result.output
     written = json.loads(output.read_text())
     assert written["persistence"]["graph"] == "persisted"
-    directory = [r for r in written["coverage"] if r.get("graph_supported") is False]
-    assert directory and all(not r["persisted"] for r in directory)
+    directory = [r for r in written["coverage"] if r.get("graph_supported") is True]
+    assert directory and all(r["persisted"] for r in directory)
+    from agent_bom.db.graph_store import load_graph, open_graph_db
+    from agent_bom.graph.types import EntityType
+
+    with open_graph_db(db) as conn:
+        restored = load_graph(conn, tenant_id=written["persistence"]["tenant_id"])
+    assert len(restored.nodes_by_type(EntityType.USER)) == 1
+
+
+def test_org_cli_reconciles_project_changes_without_changing_directory(tmp_path, monkeypatch):
+    import json
+
+    from click.testing import CliRunner
+
+    import agent_bom.cloud.supabase_inventory as module
+    from agent_bom.cli._cloud_group import cloud_group
+    from agent_bom.db.graph_store import load_graph, open_graph_db
+    from agent_bom.graph.types import EntityType
+
+    state = {"refs": [REF], "denied": False}
+
+    def handler(request):
+        if request.url.path.endswith("/projects") and "/organizations/" in request.url.path:
+            refs = state["refs"]
+            return httpx.Response(
+                200, json={"projects": [{"ref": r} for r in refs], "pagination": {"count": len(refs), "offset": 0, "limit": 100}}
+            )
+        if "/organizations/" in request.url.path:
+            if request.url.path.endswith("/members") and state["denied"]:
+                return httpx.Response(403, json={})
+            return supabase_handler(request)
+        if request.url.path.endswith("/advisors/security"):
+            return httpx.Response(200, json={"lints": []})
+        ref = request.url.path.rsplit("/", 1)[-1]
+        return httpx.Response(200, json={"ref": ref, "name": "db", "region": "region", "status": "ACTIVE_HEALTHY", "organization_id": ORG})
+
+    collector = module.collect_report
+    monkeypatch.setattr(module, "collect_report", lambda **kwargs: collector(**kwargs, client=client_for(handler)))
+    token, output, db = (tmp_path / name for name in ("token.json", "report.json", "graph.db"))
+    token.write_text(json.dumps({"token": "private"}))
+    token.chmod(0o600)
+    args = [
+        "supabase",
+        "--organization-slug",
+        ORG,
+        "--token-file",
+        str(token),
+        "--output",
+        str(output),
+        "--graph-db",
+        str(db),
+        "--tenant",
+        "fixture",
+    ]
+    for refs, denied, expected in [
+        ([REF], False, 1),
+        ([], True, 1),
+        ([], False, 0),
+        ([REF], False, 1),
+        ([REF, "c" * 20], False, 2),
+        ([REF, "c" * 20], False, 2),
+    ]:
+        state.update(refs=refs, denied=denied)
+        result = CliRunner().invoke(cloud_group, args)
+        assert result.exit_code == (2 if denied else 0), result.output
+        with open_graph_db(db) as conn:
+            restored = load_graph(conn, tenant_id="fixture")
+        assert len(restored.nodes_by_type(EntityType.CLOUD_RESOURCE)) == expected
+        assert len(restored.nodes_by_type(EntityType.USER)) == 1

@@ -95,10 +95,13 @@ services:
       - AGENT_BOM_POSTGRES_PASSWORD_FILE=/run/secrets/postgres_app_password
       - AGENT_BOM_POSTGRES_MAINTENANCE_URL=postgresql://agent_bom_maintenance@postgres:5432/${POSTGRES_DB:-agent_bom}
       - AGENT_BOM_POSTGRES_MAINTENANCE_PASSWORD_FILE=/run/secrets/postgres_maintenance_password
+      # Migration imports include audit-aware models; preserve signed-audit requirements.
+      - AGENT_BOM_AUDIT_HMAC_KEY_FILE=/run/secrets/audit_hmac_key
     secrets:
       - postgres_password
       - postgres_app_password
       - postgres_maintenance_password
+      - audit_hmac_key
     depends_on:
       postgres:
         condition: service_healthy

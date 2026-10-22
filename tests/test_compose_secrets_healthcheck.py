@@ -561,3 +561,37 @@ def test_runtime_password_rotation_does_not_require_superuser_attributes() -> No
     assert not re.search(r"ALTER ROLE agent_bom_(?:app|maintenance)[^;]*\b(?:NOSUPERUSER|NOBYPASSRLS)\b", source)
     assert "agent_bom_app must be LOGIN NOSUPERUSER NOBYPASSRLS" in source
     assert "agent_bom_maintenance must be LOGIN NOSUPERUSER NOBYPASSRLS" in source
+
+
+def test_platform_migration_imports_work_with_declared_secret_mounts(tmp_path):
+    """Migration discovery loads audit-aware models before connecting to Postgres."""
+    import os
+    import subprocess
+    import sys
+
+    pytest.importorskip("alembic")
+    data = yaml.safe_load((COMPOSE_DIR / "docker-compose.platform.yml").read_text())
+    migrate = data["services"]["migrate"]
+    env = {key: value for key, value in os.environ.items() if not key.startswith(("AGENT_BOM_", "ALEMBIC_"))}
+    env.update(
+        PYTHONPATH=os.pathsep.join([str(ROOT / "src"), os.environ.get("PYTHONPATH", "")]),
+        AGENT_BOM_POSTGRES_URL="postgresql://agent_bom_app@localhost/demo",
+    )
+    for item in migrate["environment"]:
+        key, _, value = item.partition("=")
+        if key.endswith("_FILE"):
+            name = Path(value).name
+            assert name in migrate["secrets"]
+            secret = tmp_path / name
+            secret.write_text("synthetic-migration-contract-key-0123456789")
+            secret.chmod(0o600)
+            env[key] = str(secret)
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "-c", "deploy/supabase/postgres/alembic.ini", "history"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr

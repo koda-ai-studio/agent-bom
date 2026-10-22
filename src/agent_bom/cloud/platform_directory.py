@@ -31,7 +31,7 @@ def _scope(value: str, provider: str) -> str:
     return value
 
 
-def _id(provider: str, account: str, kind: str, native: str) -> str:
+def directory_node_id(provider: str, account: str, kind: str, native: str) -> str:
     return f"{kind}:{provider}:" + hashlib.sha256(json.dumps([account, native]).encode()).hexdigest()
 
 
@@ -45,7 +45,7 @@ def _receipt(provider: str, account: str, capability: str) -> dict[str, Any]:
         "read": False,
         "ingested": False,
         "persisted": False,
-        "graph_supported": False,
+        "graph_supported": True,
         "evaluated": False,
         "correlated": False,
         "observed_at": datetime.now(timezone.utc).isoformat(),
@@ -74,7 +74,7 @@ def _member(row: Any, provider: str, account: str) -> dict[str, Any]:
     native = _text(raw_native)
     role = _text(row.get("role_name" if provider == "supabase" else "role"))
     result = {
-        "id": _id(provider, account, "user", raw_native),
+        "id": directory_node_id(provider, account, "user", raw_native),
         "native_id": native,
         "account_id": account,
         "provider": provider,
@@ -122,7 +122,7 @@ def _grants(report: dict[str, Any]) -> None:
     for member in report["identities"]:
         report["grants"].append(
             {
-                "id": _id(report["provider"], report["account_id"], "grant", member["id"] + ":" + member["role"]),
+                "id": directory_node_id(report["provider"], report["account_id"], "grant", member["id"] + ":" + member["role"]),
                 "principal_id": member["id"],
                 "account_id": report["account_id"],
                 "role": member["role"],

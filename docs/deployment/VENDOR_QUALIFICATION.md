@@ -43,14 +43,18 @@ The gate checks:
 - Each key resolves to the expected, distinct tenant. Forged tenant headers
   cannot switch the primary key's evidence. The control tenant's graph is empty.
 - The control plane, graph, job and key stores report PostgreSQL backends.
-- Every requested provider occurs in the primary graph. Duplicate node IDs,
-  incomplete pages, bounded graphs and the known synthetic showcase are rejected.
+- Every requested provider occurs in the primary graph. Conflicting duplicate rows,
+  incomplete pagination and the known synthetic showcase are rejected. Node and
+  incident-edge pages stay pinned to one snapshot and generation.
 - Authenticated overview and findings endpoints respond successfully.
 
-This is a bounded demo gate: at most 5,000 nodes and 2 MiB per response, with no
-truncated graph edges. A larger estate requires a separate paginated qualification
-run; truncation cannot silently pass this check. Provider labels are not proof of
-live collection, and an empty findings response is not proof of clean posture.
+This is a bounded, paginated demo gate: at most 10,000 nodes, 100,000 edges,
+2,000 requests per graph read and 2 MiB per response. Canvas pages enumerate the
+estate; bounded incident-edge pages recover full node and relationship records
+before computing the digest. The final counts must match the snapshot totals.
+Missing endpoints, changing generations, repeated cursors, unknown truncation
+and exhausted budgets fail closed. Provider labels are not proof of live
+collection, and an empty findings response is not proof of clean posture.
 
 ## Restart comparison and next step
 
@@ -69,3 +73,37 @@ Configured access, explicit trust and observed communication need distinct
 evidence; do not infer links merely because two platforms appear in one graph.
 The receipt explicitly leaves browser, live-provider and finding-accuracy
 qualification unverified.
+
+## Supabase and Vercel directory evidence
+
+For an approved organization or team, collect directory membership alongside
+resource configuration. Credential files stay outside the checkout:
+
+```bash
+agent-bom cloud supabase --organization-slug ORGANIZATION_SLUG \
+  --token-file /private/supabase.json --output /private/supabase-report.json \
+  --graph-db /private/supabase.db --tenant demo
+agent-bom cloud vercel --team-id TEAM_ID --include-members \
+  --token-file /private/vercel.json --output /private/vercel-report.json \
+  --graph-db /private/vercel.db --tenant demo
+```
+
+The JSON report retains read coverage; the graph contains account-scoped users
+and configured roles. Membership edges are non-traversable and do not assert
+effective permissions, cross-account trust or observed traffic. Pending Vercel
+invitations remain identity inventory without accepted membership. Conflicting
+or redacted native identifiers remain unresolved, with an incomplete projection
+receipt on the account. Service identities, trust and communication remain
+explicitly uncollected by these directory reads.
+
+A complete organization snapshot can add or remove projects within that same
+organization. Explicit project-ref scans retain their exact project boundary.
+Incomplete collection exits `2` and preserves the previous local graph; this
+includes paused Supabase advisors. Local snapshots use the report's observation
+time, including subsecond precision, so a late older observation does not become
+the latest snapshot. Snapshot history remains subject to configured retention.
+These are full-snapshot semantics, not native incremental collection.
+
+Next, push the report through the authenticated control-plane path and check
+its scoped identities, findings and coverage in the browser. A successful member
+read alone does not qualify the entire vendor.
