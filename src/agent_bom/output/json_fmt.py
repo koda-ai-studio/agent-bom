@@ -80,6 +80,7 @@ from agent_bom.output.json_inventory import (
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
 from agent_bom.output.json_writer import write_json_file
 from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
+from agent_bom.redaction.report_paths import prepare_iac_path_redaction
 from agent_bom.security import (
     sanitize_sensitive_payload,
 )
@@ -915,8 +916,7 @@ def to_json(report: AIBOMReport) -> dict:
         result["project_inventory"] = report.project_inventory_data
     if report.repo_trust_data:
         result["repo_trust"] = report.repo_trust_data
-        # Convenience: nest under project_inventory when both are present so the
-        # graph overlay and UI can discover trust next to the folder tree.
+        # Expose trust beside the folder tree for the graph overlay and UI.
         inventory = result.get("project_inventory")
         if isinstance(inventory, dict) and "repo_trust" not in inventory:
             inventory = dict(inventory)
@@ -950,7 +950,7 @@ def to_json(report: AIBOMReport) -> dict:
 
 def redact_json_payload(report_json: dict[str, Any]) -> dict[str, Any]:
     """Redact an existing canonical report projection for public output."""
-    data = sanitize_sensitive_payload(report_json)
+    data = sanitize_sensitive_payload(prepare_iac_path_redaction(report_json))
     if isinstance(data, dict):
         return data
     return {"document_type": "AI-BOM", "redaction_error": "report sanitizer returned a non-object payload"}
