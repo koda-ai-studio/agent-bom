@@ -3,7 +3,7 @@
     {
       "name": "cortex-analyst",
       "agent_type": "custom",
-      "config_path": "snowflake://myorg.us-east-1/cortex/analyst",
+      "config_path": "snowflake://EXAMPLE_ORG-EXAMPLE_ACCOUNT/cortex/analyst",
       "version": "1.0",
       "mcp_servers": [
         {
@@ -11,7 +11,7 @@
           "command": "npx",
           "args": ["-y", "@snowflake/mcp-data-server"],
           "env": {
-            "SNOWFLAKE_ACCOUNT": "myorg.us-east-1",
+            "SNOWFLAKE_ACCOUNT": "EXAMPLE_ORG-EXAMPLE_ACCOUNT",
             "SNOWFLAKE_TOKEN": "***"
           },
           "transport": "stdio",
@@ -29,7 +29,7 @@
             "CORTEX_API_KEY": "***"
           },
           "transport": "sse",
-          "url": "https://myorg.snowflakecomputing.com/cortex/search",
+          "url": "https://snowflake.example.invalid/cortex/search",
           "tools": [
             "semantic_search",
             "document_retrieve"
