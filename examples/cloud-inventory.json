@@ -3,7 +3,7 @@
     {
       "name": "bedrock-agent-prod",
       "agent_type": "custom",
-      "config_path": "arn:aws:bedrock:us-east-1:123456789:agent/ABC123",
+      "config_path": "arn:aws:bedrock:us-east-1:123456789012:agent/ABC123",
       "version": "2.0",
       "mcp_servers": [
         {

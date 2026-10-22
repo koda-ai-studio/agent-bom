@@ -347,3 +347,31 @@ def test_public_docs_make_no_unverifiable_adoption_claim() -> None:
             if pattern.search(line):
                 offenders.append(f"{path.relative_to(root)}:{lineno}: {line.strip()}")
     assert not offenders, "unverifiable adoption claim(s) in shipped docs:\n" + "\n".join(offenders)
+
+
+def test_cloud_inventory_examples_use_synthetic_account_boundaries() -> None:
+    """Keep copyable inventories usable without embedding a customer's account."""
+    import json
+    import re
+    from urllib.parse import urlsplit
+
+    for path in (ROOT / "examples").glob("*-inventory.json"):
+        text = path.read_text(encoding="utf-8")
+        inventory = json.loads(text)
+        for account in re.findall(r"arn:aws(?:-[a-z]+)?:[^:]*:[^:]*:([^:]+):", text):
+            assert account == "123456789012", f"{path.name}: use the documented sample AWS account"
+        for agent in inventory["agents"]:
+            for server in agent.get("mcp_servers", []):
+                account = server.get("env", {}).get("SNOWFLAKE_ACCOUNT")
+                if account is not None:
+                    assert account == "EXAMPLE_ORG-EXAMPLE_ACCOUNT", f"{path.name}: use the sample Snowflake account"
+                    assert urlsplit(agent["config_path"]).netloc == account
+                host = urlsplit(server.get("url", "")).hostname or ""
+                assert not host.endswith((".snowflakecomputing.com", ".supabase.co", ".cloud.databricks.com")), (
+                    f"{path.name}: sample cloud endpoints must use a reserved .invalid hostname"
+                )
+
+
+def test_snowflake_environment_example_uses_an_account_placeholder_not_a_hostname() -> None:
+    text = (ROOT / ".env.example").read_text(encoding="utf-8")
+    assert "\nSNOWFLAKE_ACCOUNT=ORG-ACCOUNT\n" in text
