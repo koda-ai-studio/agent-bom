@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -657,14 +658,25 @@ def test_release_package_verifies_dashboard_csp_hash_manifest():
 
 
 def test_security_scan_npm_installs_use_network_retries():
-    """Each audited npm install tolerates resets; the JS guard reuses SDK deps."""
-    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
-    install_count = workflow.count("npm ci --ignore-scripts")
-    assert install_count == 2  # UI + SDK audits; the supply-chain guard reuses SDK's tree.
-    assert workflow.count("npm config set fetch-retries 5") == install_count
-    assert workflow.count("npm config set fetch-retry-mintimeout 20000") == install_count
-    assert workflow.count("npm config set fetch-retry-maxtimeout 120000") == install_count
-    assert "preceding SDK audit step installed this exact lockfile" in workflow
+    """The SDK install tolerates resets and supplies the subsequent build."""
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text())
+    steps = workflow["jobs"]["security"]["steps"]
+    installs = [step for step in steps if "npm ci" in step.get("run", "")]
+    # UI advisories read the lockfile directly; only the SDK build needs deps.
+    # Ignore comments when counting commands (the guard mentions npm ci).
+    installs = [step for step in installs if any(line.strip().startswith("npm ci") for line in step["run"].splitlines())]
+    assert len(installs) == 1
+    install = installs[0]
+    assert install["name"] == "npm bulk advisory gate (TypeScript SDK transitive deps)"
+    run = install["run"]
+    assert "cd sdks/typescript" in run
+    assert "npm ci --ignore-scripts --no-audit" in run
+    for config in ("fetch-retries 5", "fetch-retry-mintimeout 20000", "fetch-retry-maxtimeout 120000"):
+        assert run.index(f"npm config set {config}") < run.index("npm ci")
+    guard = next(step for step in steps if step.get("name") == "JavaScript supply-chain guard")
+    assert steps.index(install) < steps.index(guard)
+    assert "cd sdks/typescript" in guard["run"]
+    assert "npm run build" in guard["run"]
 
 
 def test_postgres_ci_upgrade_checks_preserved_queue_through_scoped_maintenance_role():

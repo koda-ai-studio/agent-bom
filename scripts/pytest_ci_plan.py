@@ -441,6 +441,8 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     "test_findings_push.py",
                 }
             )
+        if normalized.parent == Path(".github/workflows") and normalized.suffix in {".yml", ".yaml"}:
+            selected.update(candidate for candidate in available if candidate.name == "test_deployment.py")
         if (
             normalized.as_posix().startswith("src/agent_bom/")
             or normalized.as_posix().startswith("docs/PRODUCT_METRICS.")
