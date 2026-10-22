@@ -79,3 +79,7 @@ cc3d86f9b6cca9ed3ee186f287ded454fd573207:tests/test_helm_replica_safety.py:gener
 
 # Non-functional fixture value in a normalized-trace test asserting that credential values are rejected.
 615cdc9b75406cdd3a89ef34c2a48c52550c66ac:tests/test_normalized_trace_event.py:generic-api-key:244
+
+# History-only synthetic credential in the IaC path-redaction regression.
+# Replaced by a constructed fixture; no credential was provisioned.
+c64637d9a918d14df8240f8ac5c8f1050878b7ff:tests/test_iac_redacted_graph_roundtrip.py:github-pat:21

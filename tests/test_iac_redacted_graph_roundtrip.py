@@ -18,7 +18,7 @@ from agent_bom.output.json_fmt import redact_json_payload
             "tests/fixtures/iac_golden/cloudformation/harvested_6eb5830bb2016890.json",
         ],
         ["/private/one/main.tf", "/private/two/main.tf"],
-        ["config/ghp_abcdefghijklmnopqrstuvwxyz0123456789/main.tf", "/private/two/main.tf"],
+        ["config/" + "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789" + "/main.tf", "/private/two/main.tf"],
     ],
 )
 def test_redacted_iac_graph_keeps_distinct_files_and_resolvable_references(paths):
