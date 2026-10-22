@@ -207,40 +207,19 @@ def test_fetch_report_bounds_the_exact_request_body(monkeypatch) -> None:
         check_npm_advisories.fetch_report({"package-name": ["1.0.0"]})
 
 
-def test_fetch_report_batches_large_lockfiles_across_four_workers(monkeypatch) -> None:
-    seen_workers: list[int] = []
+def test_fetch_report_sends_all_locked_versions_in_one_bounded_request(monkeypatch) -> None:
     request_payloads: list[dict[str, list[str]]] = []
-
-    class Executor:
-        def __init__(self, max_workers: int):
-            seen_workers.append(max_workers)
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args):
-            return None
-
-        def map(self, function, payloads):
-            return [function(payload) for payload in payloads]
 
     def fetch_once(payload):
         request_payloads.append(payload)
         return {name: [] for name in payload}
 
-    monkeypatch.setattr(
-        check_npm_advisories,
-        "ThreadPoolExecutor",
-        Executor,
-        raising=False,
-    )
     monkeypatch.setattr(check_npm_advisories, "_fetch_once", fetch_once)
-    payload = {f"pkg-{index:03d}": ["1.0.0"] for index in range(205)}
+    payload = {f"pkg-{index:03d}": ["1.0.0", "2.0.0"] for index in range(686)}
 
     report = check_npm_advisories.fetch_report(payload)
 
-    assert seen_workers == [4]
-    assert [len(request_payload) for request_payload in request_payloads] == [50, 50, 50, 50, 5]
+    assert request_payloads == [payload]
     assert report == {name: [] for name in payload}
 
 
@@ -269,21 +248,20 @@ def test_fetch_report_rejects_unrequested_packages(monkeypatch) -> None:
 
 
 def test_fetch_report_retries_the_exact_payload(monkeypatch) -> None:
-    attempts_by_batch: dict[str, int] = {}
+    attempts: list[dict[str, list[str]]] = []
 
     def fetch_once(payload):
-        first_package = next(iter(payload))
-        attempts_by_batch[first_package] = attempts_by_batch.get(first_package, 0) + 1
-        if first_package == "pkg-050" and attempts_by_batch[first_package] == 1:
+        attempts.append(payload.copy())
+        if len(attempts) == 1:
             raise TimeoutError("transient npm timeout")
         return {}
 
-    monkeypatch.setattr(check_npm_advisories, "_fetch_once", fetch_once, raising=False)
+    monkeypatch.setattr(check_npm_advisories, "_fetch_once", fetch_once)
     monkeypatch.setattr(check_npm_advisories.time, "sleep", lambda _seconds: None)
     payload = {f"pkg-{index:03d}": ["1.0.0"] for index in range(101)}
 
     assert check_npm_advisories.fetch_report(payload) == {}
-    assert attempts_by_batch == {"pkg-000": 1, "pkg-050": 2, "pkg-100": 1}
+    assert attempts == [payload, payload]
 
 
 def test_fetch_report_exhausts_bounded_retries(monkeypatch) -> None:
