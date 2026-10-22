@@ -28,6 +28,30 @@ All lanes live in `ci.yml` unless noted. Python correctness jobs have a
 gate until a successful replacement run completes; passing sibling jobs does
 not establish a green main commit.
 
+Main, nightly and manual runs assign every test module to one of four shards
+for each supported interpreter, using the same exhaustive plan as PRs. Each
+runner uses two pytest workers. This divides work across runners; elapsed time
+still depends on queue capacity and the slowest shard.
+
+Python 3.11 shards upload coverage only after their tests pass. The combined
+coverage job requires all four shards and enforces the repository-wide 75%
+floor. Artifact names include the shard and run attempt, so failed-job retries
+retain successful sibling evidence and preserve earlier artifacts. The combiner
+selects the latest successful artifact for each shard from this workflow run;
+missing, empty, corrupt or unmeasured data fails closed.
+
+To reproduce the coverage gate after downloading this run's artifacts into
+`coverage-artifacts/` with their artifact-name directories intact:
+
+```bash
+uv run python scripts/combine_ci_coverage.py coverage-artifacts --shards 4 --attempt 1
+```
+
+Use the actual run attempt. The command retains the shard databases, writes the
+combined `.coverage` file and reports the coverage verdict. Investigate failed
+tests or missing artifacts before rerunning only failed jobs; a partial report
+cannot satisfy the release gate.
+
 | Lane | Pull request | Push to `main` | Nightly / manual |
 |---|---|---|---|
 | Lint and Type Check (ruff, mypy with main-seeded cache) | yes (required) | yes | yes |
@@ -42,7 +66,7 @@ not establish a green main commit.
 | Native App image and persistence | when its inputs change | yes | yes |
 | Changed-domain and cross-surface contract smoke | yes (required through aggregation) | yes | yes |
 | Full correctness suite, Python 3.13 in 4 shards | shared, dependency, security or unmapped inputs (required when selected) | no | no |
-| Full correctness suite, Python 3.11/3.12/3.13/3.14 (3.11 with coverage floor) | no | yes | yes |
+| Full correctness suite, Python 3.11/3.12/3.13/3.14 in 4 shards each (combined 3.11 coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
 | Postgres Integration Contract (live RLS, migrations, schema parity) | relevant inputs (required when selected) | yes | yes |
 | Test (Alpine/musl, shard N) | subset on relevant changes; full in 2 shards on dependencies | subset; full in 2 shards on dependency changes | full in 2 shards nightly, subset manual |
