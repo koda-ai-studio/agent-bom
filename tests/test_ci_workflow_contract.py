@@ -279,13 +279,7 @@ def test_postgres_storage_contract_passes_every_listed_suite_to_one_pytest_comma
 
 
 def test_test_job_timeout_leaves_margin_over_observed_worst_case() -> None:
-    """Keep bounded headroom over the Python 3.11 coverage lane on main.
-
-    The coverage lane exhausted the former 35-minute ceiling twice on exact
-    main while the Python 3.13 and 3.14 lanes completed successfully. A
-    45-minute ceiling preserves a hard bound and ten minutes of measured
-    headroom for the coverage-only lane.
-    """
+    """Split the workload while retaining a finite ceiling for every main shard."""
     assert _ci()["jobs"]["test-main"]["timeout-minutes"] == 45
 
 
@@ -366,7 +360,8 @@ def test_pull_request_pytest_reports_slowest_tests() -> None:
     assert "--durations=" in smoke_run
     assert "--durations=25" in main_run
     coverage_line = next(line.strip() for line in main_run.splitlines() if "--cov=agent_bom" in line)
-    assert "--cov-fail-under=75" in coverage_line
+    assert "--cov-fail-under=0" in coverage_line
+    assert "--cov-report=" in coverage_line
 
 
 PR_EXCLUDED_POST_MERGE_JOBS = (
@@ -424,7 +419,7 @@ def test_shards_run_the_whole_suite_on_the_merge_result() -> None:
     assert '--index "${{ matrix.shard }}"' in run
     assert "--durations=" in run
     main_run = next(step["run"] for step in jobs["test-main"]["steps"] if step.get("name") == "Run full correctness suite")
-    main_filters = {_marker_filter(line) for line in main_run.splitlines() if "uv run pytest tests/" in line}
+    main_filters = {_marker_filter(line) for line in main_run.splitlines() if "uv run pytest " in line}
     assert main_filters == {_marker_filter(run)}
 
 
@@ -558,9 +553,33 @@ _EVENT_PROOF = {
         "OUTPUT_SCALE_RESULT",
         "SDK_SMOKE_RESULT",
     ),
-    "push": ("SMOKE_RESULT", "POSTGRES_RESULT", "MAIN_RESULT", "GRAPH_RESULT", "OUTPUT_SCALE_RESULT", "SDK_SMOKE_RESULT"),
-    "schedule": ("SMOKE_RESULT", "POSTGRES_RESULT", "MAIN_RESULT", "GRAPH_RESULT", "OUTPUT_SCALE_RESULT", "SDK_SMOKE_RESULT"),
-    "workflow_dispatch": ("SMOKE_RESULT", "POSTGRES_RESULT", "MAIN_RESULT", "GRAPH_RESULT", "OUTPUT_SCALE_RESULT", "SDK_SMOKE_RESULT"),
+    "push": (
+        "SMOKE_RESULT",
+        "POSTGRES_RESULT",
+        "MAIN_RESULT",
+        "COVERAGE_RESULT",
+        "GRAPH_RESULT",
+        "OUTPUT_SCALE_RESULT",
+        "SDK_SMOKE_RESULT",
+    ),
+    "schedule": (
+        "SMOKE_RESULT",
+        "POSTGRES_RESULT",
+        "MAIN_RESULT",
+        "COVERAGE_RESULT",
+        "GRAPH_RESULT",
+        "OUTPUT_SCALE_RESULT",
+        "SDK_SMOKE_RESULT",
+    ),
+    "workflow_dispatch": (
+        "SMOKE_RESULT",
+        "POSTGRES_RESULT",
+        "MAIN_RESULT",
+        "COVERAGE_RESULT",
+        "GRAPH_RESULT",
+        "OUTPUT_SCALE_RESULT",
+        "SDK_SMOKE_RESULT",
+    ),
 }
 
 
@@ -1125,3 +1144,33 @@ def test_workflow_classifier_combines_writer_and_shared_input_routing(tmp_path) 
         values = dict(line.split("=", 1) for line in output.read_text().splitlines())
         for key, value in expected.items():
             assert values[key] == value, (paths, key, values)
+
+
+def test_main_matrix_partitions_each_interpreter_and_retains_coverage_artifacts() -> None:
+    job = _ci()["jobs"]["test-main"]
+    assert job["strategy"]["matrix"]["shard"] == [0, 1, 2, 3]
+    run = next(step["run"] for step in job["steps"] if step.get("name") == "Run full correctness suite")
+    assert 'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 4' in run
+    assert '"${TESTS[@]}"' in run
+    assert 'if [ "${#TESTS[@]}" -eq 0 ]; then' in run
+    assert "--cov-report= --cov-fail-under=0" in run
+    upload = next(step for step in job["steps"] if step.get("uses", "").startswith("actions/upload-artifact@"))
+    assert upload["if"] == "matrix.python-version == '3.11'"
+    assert upload["with"]["include-hidden-files"] is True
+    assert upload["with"]["if-no-files-found"] == "error"
+    assert "${{ matrix.shard }}" in upload["with"]["name"]
+    assert "${{ github.run_attempt }}" in upload["with"]["name"]
+    assert not upload["with"].get("overwrite", False)
+
+
+def test_main_coverage_cannot_be_skipped_or_lower_the_combined_floor() -> None:
+    jobs = _ci()["jobs"]
+    coverage = jobs["test-coverage"]
+    assert coverage["needs"] == "test-main"
+    assert "needs.test-main.result == 'success'" in coverage["if"]
+    run = next(step["run"] for step in coverage["steps"] if step.get("name") == "Require complete combined coverage")
+    assert "scripts/combine_ci_coverage.py" in run
+    assert "--shards 4" in run
+    assert '"${{ github.run_attempt }}"' in run
+    assert "test-coverage" in jobs["test-core"]["needs"]
+    assert jobs["test-core"]["steps"][0]["env"]["COVERAGE_RESULT"] == "${{ needs.test-coverage.result }}"

@@ -54,7 +54,11 @@ def test_single_agent_and_legacy_manifest(monkeypatch):
     assert json.loads(legacy.output)["schema_version"] == "agent-bom.manifest/v1"
 
 
-@pytest.mark.parametrize("invalid", [b'{"x":1,"x":2}', b'{"x":NaN}', b"\xff", b"[" * 2000, b" " * (8 * 1024 * 1024 + 1)])
+@pytest.mark.parametrize(
+    "invalid",
+    [b'{"x":1,"x":2}', b'{"x":NaN}', b"\xff", b"[" * 2000, b" " * (8 * 1024 * 1024 + 1)],
+    ids=["duplicate-key", "non-finite-number", "invalid-utf8", "excessive-nesting", "oversized-document"],
+)
 def test_import_rejects_ambiguous_or_unbounded_json(invalid):
     with pytest.raises(ValueError):
         validate_agent_bom_json(invalid)

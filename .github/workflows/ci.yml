@@ -1169,10 +1169,10 @@ jobs:
           print("OK")
           PYEOF
 
-  # Post-merge proof of every supported interpreter (3.11 with coverage). PRs
-  # prove the merge result with test-shard instead.
+  # Every interpreter runs the exhaustive four-shard plan. Combine all 3.11
+  # coverage artifacts before enforcing the unchanged repository-wide floor.
   test-main:
-    name: Full correctness (Python ${{ matrix.python-version }})
+    name: Full correctness (Python ${{ matrix.python-version }}, shard ${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -1182,6 +1182,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -1194,13 +1195,49 @@ jobs:
 
       - name: Run full correctness suite
         run: |
-          if [ "${{ matrix.python-version }}" = "3.11" ]; then
-            PYTEST_XDIST_WORKERS="${PYTEST_XDIST_WORKERS:-4}"
-            uv run pytest tests/ -v --tb=short --durations=25 --cov=agent_bom --cov-report=term-missing --cov-fail-under=75 -m "not network and not slow and not graph_performance" -n "$PYTEST_XDIST_WORKERS" --dist worksteal
-          else
-            PYTEST_XDIST_WORKERS="${PYTEST_XDIST_WORKERS:-2}"
-            uv run pytest tests/ -q --tb=short --durations=25 -m "not network and not slow and not graph_performance" -n "$PYTEST_XDIST_WORKERS" --dist worksteal
+          set -euo pipefail
+          mapfile -t TESTS < <(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 4)
+          if [ "${#TESTS[@]}" -eq 0 ]; then
+            echo "::error::shard ${{ matrix.shard }} selected no test modules" >&2
+            exit 1
           fi
+          if [ "${{ matrix.python-version }}" = "3.11" ]; then
+            uv run pytest "${TESTS[@]}" -q --tb=short --durations=25 --cov=agent_bom --cov-report= --cov-fail-under=0 -m "not network and not slow and not graph_performance" -n 2 --dist worksteal
+          else
+            uv run pytest "${TESTS[@]}" -q --tb=short --durations=25 -m "not network and not slow and not graph_performance" -n 2 --dist worksteal
+          fi
+
+      - name: Preserve successful coverage shard
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: python311-coverage-shard-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          path: .coverage
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  test-coverage:
+    name: Combined Python coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    needs: test-main
+    if: ${{ !cancelled() && needs.test-main.result == 'success' && github.event_name != 'pull_request' && github.event_name != 'merge_group' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: "3.11"
+      - name: Install coverage tooling
+        run: uv sync --frozen --extra dev --extra api --extra mcp-server
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: python311-coverage-shard-*-attempt-*
+          path: coverage-artifacts
+      - name: Require complete combined coverage
+        run: uv run python scripts/combine_ci_coverage.py coverage-artifacts --shards 4 --attempt "${{ github.run_attempt }}"
 
   # The PR's full correctness proof on GitHub's merge result, in parallel.
   # scripts/pytest_ci_plan.py assigns every test module to exactly one shard,
@@ -1297,7 +1334,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-    needs: [changes, test-smoke, test-main, test-shard, graph-performance, output-scale-performance, sdk-import-smoke, postgres-integration]
+    needs: [changes, test-smoke, test-main, test-coverage, test-shard, graph-performance, output-scale-performance, sdk-import-smoke, postgres-integration]
     if: ${{ !cancelled() }}
     steps:
       - name: Require every applicable correctness lane
@@ -1307,6 +1344,7 @@ jobs:
           POSTGRES_REQUIRED: ${{ github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false' }}
           SMOKE_RESULT: ${{ needs.test-smoke.result }}
           MAIN_RESULT: ${{ needs.test-main.result }}
+          COVERAGE_RESULT: ${{ needs.test-coverage.result }}
           SHARD_RESULT: ${{ needs.test-shard.result }}
           GRAPH_RESULT: ${{ needs.graph-performance.result }}
           OUTPUT_SCALE_RESULT: ${{ needs.output-scale-performance.result }}
@@ -1323,7 +1361,7 @@ jobs:
             exit 1
           fi
           # Lanes an event does not run must be skipped, never failed.
-          for result in "$MAIN_RESULT" "$SHARD_RESULT" "$POSTGRES_RESULT" "$GRAPH_RESULT" "$OUTPUT_SCALE_RESULT" "$SDK_SMOKE_RESULT"; do
+          for result in "$MAIN_RESULT" "$COVERAGE_RESULT" "$SHARD_RESULT" "$POSTGRES_RESULT" "$GRAPH_RESULT" "$OUTPUT_SCALE_RESULT" "$SDK_SMOKE_RESULT"; do
             case "$result" in
               success|skipped) ;;
               *) echo "Correctness lane ended with: $result" >&2; exit 1 ;;
@@ -1336,8 +1374,8 @@ jobs:
               echo "Sharded full correctness suite ended with: $SHARD_RESULT" >&2
               exit 1
             fi
-          elif [ "$MAIN_RESULT" != "success" ]; then
-            echo "Full correctness suite ended with: $MAIN_RESULT" >&2
+          elif [ "$MAIN_RESULT" != "success" ] || [ "$COVERAGE_RESULT" != "success" ]; then
+            echo "Full correctness/coverage ended with: $MAIN_RESULT / $COVERAGE_RESULT" >&2
             exit 1
           fi
           # Every non-PR event additionally proves the performance and SDK
