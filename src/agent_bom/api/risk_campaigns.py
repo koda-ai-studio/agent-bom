@@ -170,8 +170,7 @@ def derive_campaigns(
         derived_owner = _common_value(rows, "owner")
         package = str(highest.get("package") or highest.get("component") or "").strip()
         fixed = str(highest.get("fixed_version") or "").strip()
-        subject = str(highest.get("title") or _finding_id(highest)).strip()
-        title = sanitize_text(f"Upgrade {package} to {fixed}" if package and fixed else f"Remediate {subject}", max_len=300)
+        title = f"Upgrade {package} to {fixed}" if package and fixed else f"Remediate {highest.get('title') or _finding_id(highest)}"
         exploitability: dict[str, Any] = (
             {"value": "known_exploited", "status": "observed", "signals": ["kev"]}
             if kev
@@ -185,7 +184,7 @@ def derive_campaigns(
             {
                 "id": campaign_id,
                 "tenant_id": tenant_id,
-                "title": title,
+                "title": sanitize_text(title, max_len=300),
                 "finding_ids": [_finding_id(row) for row in rows],
                 "finding_count": len(rows),
                 "severity": severity,

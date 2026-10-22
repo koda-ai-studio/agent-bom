@@ -996,4 +996,3 @@ export default function SecurityGraphPage() {
     </Suspense>
   );
 }
-

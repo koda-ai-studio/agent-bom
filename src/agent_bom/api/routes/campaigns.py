@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_bom.api.audit_log import log_action
-from agent_bom.api.campaign_pagination import campaign_page, campaigns_for_finding
+from agent_bom.api.campaign_pagination import campaign_list_response
 from agent_bom.api.campaign_reconciliation import _assert_source_fresh, _campaigns, _reconcile_campaigns, verification_membership
 from agent_bom.api.campaign_store import get_campaign_store
 from agent_bom.api.finding_read_context import finding_read_snapshot
@@ -695,24 +695,18 @@ async def list_campaigns(
     finding_id: str | None = Query(None, min_length=1, max_length=512),
     _role: Any = _READ,
 ) -> dict[str, Any]:
-    tenant_id = _tenant(request)
     source = _source_payload(await anyio.to_thread.run_sync(_load_findings, request))
     campaigns = await anyio.to_thread.run_sync(_campaigns, request, source)
-    if finding_id:
-        campaigns = campaigns_for_finding(campaigns, source["findings"], finding_id)
-    total = source.get("total")
-    truncated = _source_incomplete(source)
-    return {
-        "schema_version": "risk-campaigns.v1",
-        "tenant_id": tenant_id,
-        **campaign_page(tenant_id, campaigns, limit=limit, cursor=cursor),
-        "finding_window_days": 90,
-        "finding_limit": CAMPAIGN_FINDING_LIMIT,
-        "truncated": truncated,
-        "total_findings": total,
-        "total_approximate": bool(source.get("total_approximate")),
-        "membership_complete": not truncated,
-    }
+    return campaign_list_response(
+        _tenant(request),
+        campaigns,
+        source,
+        limit=limit,
+        cursor=cursor,
+        finding_id=finding_id,
+        finding_limit=CAMPAIGN_FINDING_LIMIT,
+        membership_complete=not _source_incomplete(source),
+    )
 
 
 @router.get("/campaigns/verification-queue", response_model=CampaignVerificationQueueResponse)

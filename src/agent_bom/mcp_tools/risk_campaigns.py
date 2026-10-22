@@ -54,12 +54,12 @@ async def risk_campaign_workflow_impl(
     # wheel, which the packaging smoke exercises.
     from fastapi import HTTPException, Response
 
+    from agent_bom.api.campaign_pagination import campaign_page
     from agent_bom.api.routes.campaigns import (
         CampaignTicketAction,
         CampaignUpdate,
         _campaigns,
         _source_incomplete,
-        campaign_page,
         campaign_verification_queue,
         create_campaign_tickets,
         sync_campaign_tickets,
