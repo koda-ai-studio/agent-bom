@@ -126,3 +126,13 @@ def test_post_release_pins_refresh_product_proof_before_publication() -> None:
     assert "npm ci" in publish
     assert "playwright install --with-deps chromium" in publish
     assert "git add docs/images" in publish
+
+
+def test_post_release_capture_installs_and_selects_python_dependencies() -> None:
+    """Lifecycle screenshots call the Python graph projector, not just Node."""
+    workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["docker-mcp-pin"]["steps"]
+    capture_index = next(i for i, step in enumerate(steps) if "capture:product-proof" in step.get("run", ""))
+    installs = [step.get("run", "") for step in steps[:capture_index]]
+    assert any("uv sync --frozen" in run and "--extra api" in run for run in installs)
+    assert steps[capture_index]["env"]["PYTHON"] == "${{ github.workspace }}/.venv/bin/python"

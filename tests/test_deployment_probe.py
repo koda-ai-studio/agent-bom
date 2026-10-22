@@ -237,6 +237,48 @@ def test_expired_authenticated_access_cannot_pass_public_card_gate(monkeypatch, 
     assert "secret.example" not in captured.err
 
 
+@pytest.mark.parametrize("becomes_ready", [True, False])
+def test_authenticated_probe_retries_readiness_but_fails_closed(monkeypatch, capsys, becomes_ready):
+    calls = []
+    delays = []
+
+    def initialize(*args, **kwargs):
+        calls.append(kwargs)
+        if not becomes_ready or len(calls) < 2:
+            raise RuntimeError("Authenticated MCP initialize failed; check credential validity and deployed release")
+
+    def public_card(*args, **kwargs):
+        assert becomes_ready, "public metadata must not override failed authentication"
+        return "https://example.com/.well-known/mcp/server-card.json", {"version": "0.110.0"}
+
+    monkeypatch.setattr("agent_bom.deployment_probe.verify_mcp_auth", initialize)
+    monkeypatch.setattr("agent_bom.deployment_probe.fetch_server_card", public_card)
+    monkeypatch.setattr("agent_bom.deployment_probe.time.sleep", delays.append)
+    result = main(
+        [
+            "--server-card",
+            "--require-mcp-auth",
+            "--bearer-token",
+            "fixture-token",
+            "--expected-version",
+            "0.110.0",
+            "--expected-tool-count",
+            "8",
+            "--attempts",
+            "3",
+            "--backoff-seconds",
+            "2",
+        ]
+    )
+    assert result == (0 if becomes_ready else 1)
+    assert len(calls) == (2 if becomes_ready else 3)
+    assert delays == ([2] if becomes_ready else [2, 4])
+    captured = capsys.readouterr()
+    assert "fixture-token" not in captured.out + captured.err
+    if not becomes_ready:
+        assert captured.out == ""
+
+
 def test_authenticated_probe_requires_credential_and_safe_origin(monkeypatch):
     from agent_bom.deployment_probe import verify_mcp_auth
 
