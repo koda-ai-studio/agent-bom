@@ -8,6 +8,7 @@ from agent_bom.cloud.resource_model import normalize_cloud_inventory
 from agent_bom.cloud.vercel_model import node_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.platform_directory_projection import project_platform_directory
 from agent_bom.graph.projection_support import _add_rel_edge
 from agent_bom.graph.types import EntityType, RelationshipType
 
@@ -26,6 +27,7 @@ def project_vercel_inventory(graph: UnifiedGraph, inventory: dict[str, Any]) -> 
             data_sources=["vercel-management"],
         )
     )
+    project_platform_directory(graph, inventory, provider="vercel")
     resources = normalize_cloud_inventory(inventory)
     projects = {r.raw["id"] for r in resources if r.native_type == "vercel.project"}
     for resource in resources:

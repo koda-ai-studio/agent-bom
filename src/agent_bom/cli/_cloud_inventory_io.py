@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 from agent_bom.cloud.connector_push import connector_push_payloads
@@ -68,6 +69,14 @@ def persist_graph(
         for receipt in report["coverage"]:
             receipt["persisted"] = receipt["complete"] and receipt.get("graph_supported", True)
         graph = build_unified_graph_from_report(report, scan_id=report["scan_id"], tenant_id=tenant)
+        observed = report.get("observed_at")
+        if observed:
+            captured = datetime.fromisoformat(observed.replace("Z", "+00:00"))
+            if captured.tzinfo is None:
+                raise ValueError("Observation timestamp must include a timezone")
+            graph.created_at = captured.astimezone(timezone.utc).isoformat(timespec="microseconds")
+        else:
+            graph.created_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
         with open_graph_db(graph_db) as conn:
             conn.execute("BEGIN IMMEDIATE")
             previous = load_graph(conn, tenant_id=tenant, entity_types=scope_entity_types)
