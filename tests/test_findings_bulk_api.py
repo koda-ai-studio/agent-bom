@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from starlette.testclient import TestClient
 
 from agent_bom.api.compliance_hub_store import SQLiteComplianceHubStore, reset_compliance_hub_store
@@ -343,3 +344,27 @@ def test_typed_external_push_preserves_file_evidence_without_fake_package():
     assert "file" not in stored[0]["evidence"]
     assert finding.get("package") in (None, "")
     assert any(tag["framework"] == "nist_csf" and tag["control"] == "PR.PS-06" for tag in finding["controls"])
+
+
+@pytest.mark.parametrize("identifier", ["local-resource", "pkg:pypi/requests@2.0"])
+def test_bulk_fallback_ids_keep_accounts_distinct_and_replay_idempotent(identifier):
+    client = _client(tenant=f"bulk-scoped-{uuid4().hex}")
+    rows = [
+        {
+            "title": "Public resource",
+            "rule_id": "rule-a",
+            "severity": "high",
+            "provider": "aws",
+            "account_ref": f"aws:{account}",
+            "asset": {"asset_type": "cloud_resource", "identifier": identifier, "name": "resource"},
+        }
+        for account in ("111111111111", "222222222222")
+    ]
+    for _ in range(2):
+        response = client.post("/v1/findings/bulk", json={"source": "vendor-a", "findings": rows})
+        assert response.status_code == 201, response.text
+        assert response.json()["distinct_findings"] == 2
+        assert response.json()["tenant_total"] == 2
+    listed = client.get("/v1/findings").json()
+    assert listed["total"] == 2
+    assert len({row["id"] for row in listed["findings"]}) == 2

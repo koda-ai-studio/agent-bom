@@ -5,15 +5,13 @@
  * is generated from the Python source via `npm run codegen:graph-schema`
  * into ./graph-schema.generated.ts. This file re-exports the generated
  * kind enums. Wire fields come from the generated OpenAPI contract; legacy
- * snapshot compatibility, OCSF mappings, severity helpers and legend data
- * remain here.
+ * snapshot compatibility and shared display constants remain here.
  *
  * When adding a new entity / edge type:
  *   1. Add it to agent_bom.graph.types in Python.
  *   2. Run `cd ui && npm run codegen:graph-schema` to refresh
  *      graph-schema.generated.ts.
- *   3. Extend any UI-only maps in this file (ENTITY_OCSF_MAP, color
- *      maps, etc.) to cover the new key.
+ *   3. Extend the display color maps in this file to cover the new key.
  */
 
 import type { components } from "./api-schema.generated";
@@ -199,31 +197,6 @@ export type _GraphSchemaParity = [
   _GeneratedEdgeParity,
 ];
 
-export enum OCSFSeverity {
-  UNKNOWN = 0,
-  INFORMATIONAL = 1,
-  LOW = 2,
-  MEDIUM = 3,
-  HIGH = 4,
-  CRITICAL = 5,
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Severity constants (single source of truth)
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** String severity → OCSF severity_id */
-export const SEVERITY_TO_OCSF: Record<string, number> = {
-  critical: OCSFSeverity.CRITICAL,
-  high: OCSFSeverity.HIGH,
-  medium: OCSFSeverity.MEDIUM,
-  low: OCSFSeverity.LOW,
-  info: OCSFSeverity.INFORMATIONAL,
-  informational: OCSFSeverity.INFORMATIONAL,
-  none: OCSFSeverity.UNKNOWN,
-  unknown: OCSFSeverity.UNKNOWN,
-};
-
 /** String severity → numeric rank for sorting (0-5, higher = worse) */
 export const SEVERITY_RANK: Record<string, number> = {
   critical: 5,
@@ -234,75 +207,6 @@ export const SEVERITY_RANK: Record<string, number> = {
   informational: 1,
   none: 0,
   unknown: 0,
-};
-
-/** Severity → compact badge for display */
-export const SEVERITY_BADGE: Record<string, string> = {
-  critical: "R2",
-  high: "R1",
-  medium: "M",
-  low: "L",
-  info: "I",
-  unknown: "?",
-};
-
-/** Severity → risk score contribution */
-export const SEVERITY_RISK_SCORE: Record<string, number> = {
-  critical: 8.0,
-  high: 6.0,
-  medium: 4.0,
-  low: 2.0,
-  info: 0.5,
-  informational: 0.5,
-  none: 0.0,
-  unknown: 0.0,
-};
-
-// ═══════════════════════════════════════════════════════════════════════════
-// OCSF entity mapping
-// ═══════════════════════════════════════════════════════════════════════════
-
-export const ENTITY_OCSF_MAP: Record<
-  string,
-  { category_uid: number; class_uid: number }
-> = {
-  [EntityType.AGENT]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.SERVER]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.PACKAGE]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.TOOL]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.TOOL_CALL]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.MODEL]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.FRAMEWORK]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.DATASET]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.CONTAINER]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.RESOURCE]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.CLOUD_RESOURCE]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.SOURCE_FILE]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.CODE_MODULE]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.CONFIG_FILE]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.EXTERNAL_IMPORT]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.DIRECTORY]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.CI_JOB]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.VULNERABILITY]: { category_uid: 2, class_uid: 2001 },
-  // Credentials are INVENTORY — presence of env var is not a finding
-  [EntityType.CREDENTIAL]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.CREDENTIAL_REF]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.MISCONFIGURATION]: { category_uid: 2, class_uid: 2003 },
-  // Identity (Category 3)
-  [EntityType.ORG]: { category_uid: 3, class_uid: 3001 },
-  [EntityType.ACCOUNT]: { category_uid: 3, class_uid: 3001 },
-  [EntityType.USER]: { category_uid: 3, class_uid: 3001 },
-  [EntityType.GROUP]: { category_uid: 3, class_uid: 3001 },
-  [EntityType.ROLE]: { category_uid: 3, class_uid: 3001 },
-  [EntityType.POLICY]: { category_uid: 3, class_uid: 3001 },
-  [EntityType.SERVICE_ACCOUNT]: { category_uid: 3, class_uid: 3001 },
-  [EntityType.SERVICE_PRINCIPAL]: { category_uid: 3, class_uid: 3001 },
-  [EntityType.FEDERATED_IDENTITY]: { category_uid: 3, class_uid: 3001 },
-  // Organizational
-  [EntityType.PROVIDER]: { category_uid: 0, class_uid: 0 },
-  [EntityType.ENVIRONMENT]: { category_uid: 0, class_uid: 0 },
-  [EntityType.FLEET]: { category_uid: 5, class_uid: 4001 },
-  [EntityType.CLUSTER]: { category_uid: 5, class_uid: 4001 },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -507,32 +411,6 @@ export interface UnifiedGraphData {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Backward-compat aliases (map old kind→entity_type, old edge kind→relationship)
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** Map legacy NodeKind values → EntityType */
-export const NODE_KIND_TO_ENTITY: Record<string, EntityType> = {
-  agent: EntityType.AGENT,
-  server: EntityType.SERVER,
-  credential: EntityType.CREDENTIAL,
-  credential_ref: EntityType.CREDENTIAL_REF,
-  tool: EntityType.TOOL,
-  tool_call: EntityType.TOOL_CALL,
-  resource: EntityType.RESOURCE,
-  vulnerability: EntityType.VULNERABILITY,
-};
-
-/** Map legacy EdgeKind values → RelationshipType */
-export const EDGE_KIND_TO_RELATIONSHIP: Record<string, RelationshipType> = {
-  uses: RelationshipType.USES,
-  exposes: RelationshipType.EXPOSES_CRED,
-  provides: RelationshipType.PROVIDES_TOOL,
-  vulnerable_to: RelationshipType.VULNERABLE_TO,
-  shares_server: RelationshipType.SHARES_SERVER,
-  shares_credential: RelationshipType.SHARES_CRED,
-};
-
-// ═══════════════════════════════════════════════════════════════════════════
 // Display constants
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -643,95 +521,7 @@ export const RELATIONSHIP_COLOR_MAP: Record<string, string> & Record<Relationshi
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Helpers
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** Get severity rank for sorting. Higher = worse. */
-export function severityRank(sev: string): number {
-  return SEVERITY_RANK[sev?.toLowerCase() ?? ""] ?? 0;
-}
-
-/** Compare two severity strings. Returns positive if a is worse than b. */
-export function compareSeverity(a: string, b: string): number {
-  return severityRank(a) - severityRank(b);
-}
-
-/** Filter nodes by entity type set and minimum severity rank. */
-export function filterNodes(
-  nodes: UnifiedNode[],
-  opts: {
-    entityTypes?: Set<EntityType | string>;
-    minSeverity?: string;
-    status?: NodeStatus | string;
-    dataSource?: string;
-  } = {},
-): UnifiedNode[] {
-  const minRank = opts.minSeverity ? severityRank(opts.minSeverity) : 0;
-  return nodes.filter((n) => {
-    if (opts.entityTypes && !opts.entityTypes.has(n.entity_type)) return false;
-    if (minRank && severityRank(n.severity) < minRank) return false;
-    if (opts.status && n.status !== opts.status) return false;
-    if (opts.dataSource && !n.data_sources.includes(opts.dataSource))
-      return false;
-    return true;
-  });
-}
-
-/** Filter edges by relationship type set and traversability. */
-export function filterEdges(
-  edges: UnifiedEdge[],
-  opts: {
-    relationships?: Set<RelationshipType | string>;
-    traversableOnly?: boolean;
-    minWeight?: number;
-  } = {},
-): UnifiedEdge[] {
-  return edges.filter((e) => {
-    if (opts.relationships && !opts.relationships.has(e.relationship))
-      return false;
-    if (opts.traversableOnly && !e.traversable) return false;
-    if (opts.minWeight != null && e.weight < opts.minWeight) return false;
-    return true;
-  });
-}
-
-/** BFS from a source node, respecting edge direction. */
-export function reachableFrom(
-  sourceId: string,
-  edges: UnifiedEdge[],
-  maxDepth: number = 6,
-): Set<string> {
-  // Build direction-aware adjacency: directed edges are one-way,
-  // bidirectional edges go both ways.
-  const adj = new Map<string, string[]>();
-  for (const e of edges) {
-    if (!adj.has(e.source)) adj.set(e.source, []);
-    adj.get(e.source)!.push(e.target);
-    if (e.direction === "bidirectional") {
-      if (!adj.has(e.target)) adj.set(e.target, []);
-      adj.get(e.target)!.push(e.source);
-    }
-  }
-
-  const visited = new Set<string>([sourceId]);
-  const queue: Array<[string, number]> = [[sourceId, 0]];
-
-  while (queue.length > 0) {
-    const [current, depth] = queue.shift()!;
-    if (depth >= maxDepth) continue;
-    for (const neighbor of adj.get(current) ?? []) {
-      if (!visited.has(neighbor)) {
-        visited.add(neighbor);
-        queue.push([neighbor, depth + 1]);
-      }
-    }
-  }
-
-  return visited;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Filter options & legend (mirrors Python graph/container.py)
+// Layout options
 // ═══════════════════════════════════════════════════════════════════════════
 
 export enum GraphLayout {
@@ -742,190 +532,6 @@ export enum GraphLayout {
   HIERARCHICAL = "hierarchical",
   GRID = "grid",
 }
-
-export interface GraphFilterOptions {
-  maxDepth: number;
-  maxHops: number;
-  minSeverity: string;
-  entityTypes: Set<EntityType | string>;
-  relationshipTypes: Set<RelationshipType | string>;
-  staticOnly: boolean;
-  dynamicOnly: boolean;
-  includeIds: Set<string>;
-  excludeIds: Set<string>;
-  layout: GraphLayout | string;
-}
-
-export function defaultFilters(): GraphFilterOptions {
-  return {
-    maxDepth: 6,
-    maxHops: 0,
-    minSeverity: "",
-    entityTypes: new Set(),
-    relationshipTypes: new Set(),
-    staticOnly: false,
-    dynamicOnly: false,
-    includeIds: new Set(),
-    excludeIds: new Set(),
-    layout: GraphLayout.DAGRE,
-  };
-}
-
-export interface LegendEntry {
-  key: string;
-  label: string;
-  color: string;
-  shape: "circle" | "diamond" | "square" | "triangle";
-}
-
-export const ENTITY_LEGEND: LegendEntry[] = [
-  { key: "agent", label: "AI Agent", color: ENTITY_COLOR_MAP[EntityType.AGENT], shape: "circle" },
-  { key: "server", label: "MCP Server", color: ENTITY_COLOR_MAP[EntityType.SERVER], shape: "circle" },
-  { key: "package", label: "Package", color: ENTITY_COLOR_MAP[EntityType.PACKAGE], shape: "square" },
-  { key: "tool", label: "Tool", color: ENTITY_COLOR_MAP[EntityType.TOOL], shape: "diamond" },
-  { key: "tool_call", label: "Tool Call", color: ENTITY_COLOR_MAP[EntityType.TOOL_CALL], shape: "diamond" },
-  {
-    key: "vulnerability",
-    label: "Vulnerability",
-    color: ENTITY_COLOR_MAP[EntityType.VULNERABILITY],
-    shape: "triangle",
-  },
-  {
-    key: "credential",
-    label: "Credential",
-    color: ENTITY_COLOR_MAP[EntityType.CREDENTIAL],
-    shape: "diamond",
-  },
-  {
-    key: "credential_ref",
-    label: "Credential Ref",
-    color: ENTITY_COLOR_MAP[EntityType.CREDENTIAL_REF],
-    shape: "diamond",
-  },
-  {
-    key: "misconfiguration",
-    label: "Misconfiguration",
-    color: ENTITY_COLOR_MAP[EntityType.MISCONFIGURATION],
-    shape: "triangle",
-  },
-  { key: "resource", label: "Resource", color: ENTITY_COLOR_MAP[EntityType.RESOURCE], shape: "square" },
-  { key: "model", label: "Model", color: ENTITY_COLOR_MAP[EntityType.MODEL], shape: "square" },
-  { key: "container", label: "Container", color: ENTITY_COLOR_MAP[EntityType.CONTAINER], shape: "square" },
-  {
-    key: "cloud_resource",
-    label: "Cloud Resource",
-    color: ENTITY_COLOR_MAP[EntityType.CLOUD_RESOURCE],
-    shape: "square",
-  },
-  { key: "org", label: "Organization", color: ENTITY_COLOR_MAP[EntityType.ORG], shape: "square" },
-  { key: "account", label: "Account", color: ENTITY_COLOR_MAP[EntityType.ACCOUNT], shape: "square" },
-  { key: "user", label: "User", color: ENTITY_COLOR_MAP[EntityType.USER], shape: "circle" },
-  { key: "group", label: "Group", color: ENTITY_COLOR_MAP[EntityType.GROUP], shape: "circle" },
-  { key: "role", label: "Role", color: ENTITY_COLOR_MAP[EntityType.ROLE], shape: "circle" },
-  { key: "policy", label: "Policy", color: ENTITY_COLOR_MAP[EntityType.POLICY], shape: "diamond" },
-  {
-    key: "service_account",
-    label: "Service Account",
-    color: ENTITY_COLOR_MAP[EntityType.SERVICE_ACCOUNT],
-    shape: "circle",
-  },
-  {
-    key: "service_principal",
-    label: "Service Principal",
-    color: ENTITY_COLOR_MAP[EntityType.SERVICE_PRINCIPAL],
-    shape: "circle",
-  },
-  {
-    key: "federated_identity",
-    label: "Federated Identity",
-    color: ENTITY_COLOR_MAP[EntityType.FEDERATED_IDENTITY],
-    shape: "circle",
-  },
-];
-
-export const RELATIONSHIP_LEGEND: LegendEntry[] = [
-  { key: "uses", label: "Uses", color: RELATIONSHIP_COLOR_MAP[RelationshipType.USES], shape: "circle" },
-  { key: "depends_on", label: "Depends On", color: RELATIONSHIP_COLOR_MAP[RelationshipType.DEPENDS_ON], shape: "circle" },
-  {
-    key: "provides_tool",
-    label: "Provides Tool",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.PROVIDES_TOOL],
-    shape: "circle",
-  },
-  {
-    key: "exposes_cred",
-    label: "Exposes Credential",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.EXPOSES_CRED],
-    shape: "circle",
-  },
-  {
-    key: "reaches_tool",
-    label: "Credential Reaches Tool",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.REACHES_TOOL],
-    shape: "circle",
-  },
-  {
-    key: "vulnerable_to",
-    label: "Vulnerable To",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.VULNERABLE_TO],
-    shape: "circle",
-  },
-  {
-    key: "shares_server",
-    label: "Shares Server",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.SHARES_SERVER],
-    shape: "circle",
-  },
-  {
-    key: "shares_cred",
-    label: "Shares Credential",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.SHARES_CRED],
-    shape: "circle",
-  },
-  {
-    key: "lateral_path",
-    label: "Lateral Path",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.LATERAL_PATH],
-    shape: "circle",
-  },
-  { key: "acted_as", label: "Acted As", color: RELATIONSHIP_COLOR_MAP[RelationshipType.ACTED_AS], shape: "circle" },
-  {
-    key: "invoked",
-    label: "Invoked (runtime)",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.INVOKED],
-    shape: "circle",
-  },
-  { key: "called", label: "Called", color: RELATIONSHIP_COLOR_MAP[RelationshipType.CALLED], shape: "circle" },
-  {
-    key: "accessed",
-    label: "Accessed (runtime)",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.ACCESSED],
-    shape: "circle",
-  },
-  {
-    key: "trace_step",
-    label: "Trace Step (recorded)",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.TRACE_STEP],
-    shape: "circle",
-  },
-  {
-    key: "used_credential",
-    label: "Used Credential",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.USED_CREDENTIAL],
-    shape: "circle",
-  },
-  { key: "assumes", label: "Assumes", color: RELATIONSHIP_COLOR_MAP[RelationshipType.ASSUMES], shape: "circle" },
-  { key: "trusts", label: "Trusts", color: RELATIONSHIP_COLOR_MAP[RelationshipType.TRUSTS], shape: "circle" },
-  { key: "attached", label: "Attached", color: RELATIONSHIP_COLOR_MAP[RelationshipType.ATTACHED], shape: "circle" },
-  { key: "inherits", label: "Inherits", color: RELATIONSHIP_COLOR_MAP[RelationshipType.INHERITS], shape: "circle" },
-  { key: "can_access", label: "Can Access", color: RELATIONSHIP_COLOR_MAP[RelationshipType.CAN_ACCESS], shape: "circle" },
-  {
-    key: "cross_account_trust",
-    label: "Cross-Account Trust",
-    color: RELATIONSHIP_COLOR_MAP[RelationshipType.CROSS_ACCOUNT_TRUST],
-    shape: "circle",
-  },
-];
 
 /** Entity types that represent actual security findings (for SIEM export) */
 export const FINDING_ENTITY_TYPES: Set<EntityType> = new Set([

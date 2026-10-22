@@ -15,7 +15,7 @@ from typing import Any
 from agent_bom.api.finding_rank import compute_effective_reach_score
 from agent_bom.api.storage.hub_filters import _cvss_value, _severity_rank
 from agent_bom.canonical_ids import canonical_finding_id
-from agent_bom.domain.asset_identity import canonical_asset_id
+from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
 
 FindingLifecycleMetrics = dict[str, Any]
 
@@ -67,6 +67,13 @@ def resolve_canonical_id(payload: dict[str, Any], *, source: str = "") -> str:
             region=asset.get("region") or payload.get("region"),
         )
 
+    asset_stable = finding_asset_occurrence_id(
+        asset_stable,
+        asset.get("identifier"),
+        provider=asset.get("provider") or payload.get("provider"),
+        account_ref=asset.get("account_ref") or payload.get("account_ref"),
+        region=asset.get("region") or payload.get("region"),
+    )
     rule = payload.get("vulnerability_id") or payload.get("cve_id") or payload.get("rule_id") or payload.get("title") or ""
     location = payload.get("location") or payload.get("file_path") or asset.get("location") or ""
     package = payload.get("package") or payload.get("package_name") or asset.get("name") or asset.get("identifier") or ""

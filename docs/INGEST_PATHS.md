@@ -245,9 +245,18 @@ backup recovery, failover and power-loss durability require separate qualificati
 
 New findings qualify provider-local asset identifiers with recorded provider,
 account and region. Environment labels do not rename an asset. Qualified native
-identifiers and portable package PURLs retain their existing identity scheme;
-unscoped legacy inputs remain distinguishable from newly scoped inputs.
-Provide account scope when importing account-local names or IDs. Source-code
+identifiers and portable package PURLs retain their existing **asset** identity
+scheme. A package finding occurrence additionally includes recorded provider,
+account and region: the same PURL remains one artifact while findings in two
+accounts retain separate workflow IDs. This applies to model construction, bulk
+ingest and lifecycle fallback IDs. Unscoped legacy inputs retain their IDs; no
+missing installation or owner scope is inferred from the package name.
+Provide account scope when importing account-local names or IDs. Bulk imports
+without an explicit finding ID also include the recorded asset identity and
+provider/account/region scope in their generated ID, while preserving the intake
+source as a discriminator. Replays and environment-label changes do not mint a
+new ID. Explicit finding IDs remain caller-owned and must already distinguish
+resource occurrences; the server does not silently rewrite them. Source-code
 occurrences also retain recorded scanner and repository discriminators when
 present, so equal paths and rules from distinct sources stay separate. A code
 revision is observation context: it constrains candidate correlation without

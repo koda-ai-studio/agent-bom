@@ -5,6 +5,7 @@ import json
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlsplit
 
 from agent_bom.graph.asset_identity import (
     IdentityKey,
@@ -17,7 +18,7 @@ from agent_bom.graph.asset_identity import (
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 
-CORRELATION_IDENTITY_VERSION = "scoped-identity.v6"
+CORRELATION_IDENTITY_VERSION = "scoped-identity.v7"
 IDENTIFIER_NAMESPACES = {"resource_arn": "arn", "provider_id": "resource_id", "stable_id": "canonical_id"}
 
 
@@ -117,6 +118,48 @@ def identity_entity_value(node: UnifiedNode) -> str:
 def snapshot_scoped_identity(node: UnifiedNode, *, scan_id: str) -> tuple[str, str, str]:
     entity_type = identity_entity_value(node)
     return entity_type, f"snapshot:{scan_id}:{node.canonical_id}", "snapshot_scoped_missing_exact_identity"
+
+
+def repository_identity(node: UnifiedNode, *, scan_id: str) -> tuple[str, str, str]:
+    """Join located repository occurrences, never shared content across forks."""
+    entity_type = identity_entity_value(node)
+    # A shared commit identifies content, not the repository occurrence.
+    # Forks can retain identical history while carrying different trust,
+    # deployment and authorization relationships. Never borrow a namespace
+    # from another observation or choose between contradictory aliases.
+    repositories = {
+        value.strip()
+        for key in ("repository", "repository_url", "repo_url")
+        if isinstance(value := node.attributes.get(key), str) and value.strip()
+    }
+    if len(repositories) != 1:
+        return snapshot_scoped_identity(node, scan_id=scan_id)
+    repository = next(iter(repositories))
+    try:
+        locator = urlsplit(repository)
+        if locator.scheme not in {"https", "http", "ssh", "git"} or not locator.hostname or not locator.path.strip("/"):
+            return snapshot_scoped_identity(node, scan_id=scan_id)
+    except ValueError:
+        return snapshot_scoped_identity(node, scan_id=scan_id)
+    commit = next(
+        (
+            str(node.attributes[key]).strip().lower()
+            for key in ("repository_commit", "commit_sha", "git_commit")
+            if node.attributes.get(key)
+        ),
+        "",
+    )
+    path = next(
+        (
+            str(node.attributes[key]).strip().replace("\\", "/")
+            for key in ("repository_path", "path", "source_file", "config_path")
+            if node.attributes.get(key)
+        ),
+        "",
+    )
+    if commit and path:
+        return entity_type, identity_digest({"repository": repository, "commit": commit, "path": path}), "repository_commit_path"
+    return snapshot_scoped_identity(node, scan_id=scan_id)
 
 
 def exact_attribute_identity(

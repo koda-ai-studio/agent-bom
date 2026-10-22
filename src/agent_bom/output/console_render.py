@@ -758,12 +758,12 @@ def print_export_hint(report: AIBOMReport) -> None:
 # ─── Diff Output ─────────────────────────────────────────────────────────────
 
 
-def print_diff(diff: dict, *, quiet: bool = False) -> None:
+def print_diff(diff: dict, *, quiet: bool = False, console: Console | None = None) -> None:
     """Print a human-readable diff between two scan reports."""
+    console = console if console is not None else _console()
     summary = diff["summary"]
     baseline_ts = diff["baseline_generated_at"]
     current_ts = diff["current_generated_at"]
-
     parts = []
     if summary["new_findings"]:
         parts.append(f"[red bold]+{summary['new_findings']} new[/red bold]")
@@ -798,17 +798,17 @@ def print_diff(diff: dict, *, quiet: bool = False) -> None:
 
     if quiet:
         if parts:
-            _console().print("  •  ".join(parts))
+            console.print("  •  ".join(parts))
         else:
-            _console().print("No changes since baseline.")
+            console.print("No changes since baseline.")
         return
 
-    _console().print(f"\n[bold blue]📊 Scan Diff[/bold blue]  [dim]{baseline_ts}[/dim] → [dim]{current_ts}[/dim]\n")
+    console.print(f"\n[bold blue]📊 Scan Diff[/bold blue]  [dim]{baseline_ts}[/dim] → [dim]{current_ts}[/dim]\n")
 
     if parts:
-        _console().print("  " + "  •  ".join(parts) + "\n")
+        console.print("  " + "  •  ".join(parts) + "\n")
     else:
-        _console().print("  [green]No changes since baseline.[/green]\n")
+        console.print("  [green]No changes since baseline.[/green]\n")
         return
 
     severity_styles = {
@@ -819,73 +819,73 @@ def print_diff(diff: dict, *, quiet: bool = False) -> None:
     }
 
     if diff["new"]:
-        _console().print(f"  [red bold]New findings ({len(diff['new'])}):[/red bold]")
+        console.print(f"  [red bold]New findings ({len(diff['new'])}):[/red bold]")
         for br in diff["new"][:20]:
             sev = br.get("severity", "UNKNOWN")
             style = severity_styles.get(sev, "white")
             kev = " [red bold][KEV][/red bold]" if br.get("is_kev") else ""
             ai = " [magenta][AI-RISK][/magenta]" if br.get("ai_risk_context") else ""
             fix = f" → fix: {br['fixed_version']}" if br.get("fixed_version") else " (no fix)"
-            _console().print(
+            console.print(
                 f"    [+] [{style}]{br.get('vulnerability_id', '?')}[/{style}]  {br.get('package', '?')}  [{sev}]{kev}{ai}[dim]{fix}[/dim]"
             )
         if len(diff["new"]) > 20:
-            _console().print(f"    [dim]...and {len(diff['new']) - 20} more[/dim]")
-        _console().print()
+            console.print(f"    [dim]...and {len(diff['new']) - 20} more[/dim]")
+        console.print()
 
     if diff["resolved"]:
-        _console().print(f"  [green]Resolved findings ({len(diff['resolved'])}):[/green]")
+        console.print(f"  [green]Resolved findings ({len(diff['resolved'])}):[/green]")
         for br in diff["resolved"][:10]:
-            _console().print(f"    [-] [dim]{br.get('vulnerability_id', '?')}  {br.get('package', '?')}[/dim]")
-        _console().print()
+            console.print(f"    [-] [dim]{br.get('vulnerability_id', '?')}  {br.get('package', '?')}[/dim]")
+        console.print()
 
     if diff["new_packages"]:
-        _console().print(f"  [yellow]New packages added ({len(diff['new_packages'])}):[/yellow]")
+        console.print(f"  [yellow]New packages added ({len(diff['new_packages'])}):[/yellow]")
         for pkg in diff["new_packages"][:10]:
-            _console().print(f"    [+] [dim]{pkg}[/dim]")
-        _console().print()
+            console.print(f"    [+] [dim]{pkg}[/dim]")
+        console.print()
 
     if diff["removed_packages"]:
-        _console().print(f"  [dim]Packages removed ({len(diff['removed_packages'])}):[/dim]")
+        console.print(f"  [dim]Packages removed ({len(diff['removed_packages'])}):[/dim]")
         for pkg in diff["removed_packages"][:10]:
-            _console().print(f"    [-] [dim]{pkg}[/dim]")
-        _console().print()
+            console.print(f"    [-] [dim]{pkg}[/dim]")
+        console.print()
 
     if isinstance(inventory_diff, dict) and inventory_diff.get("changed_servers"):
-        _console().print(f"  [magenta]Server fingerprint changes ({len(inventory_diff['changed_servers'])}):[/magenta]")
+        console.print(f"  [magenta]Server fingerprint changes ({len(inventory_diff['changed_servers'])}):[/magenta]")
         for server in inventory_diff["changed_servers"][:10]:
-            _console().print(f"    [~] [dim]{server.get('name') or server.get('id')}[/dim]")
-        _console().print()
+            console.print(f"    [~] [dim]{server.get('name') or server.get('id')}[/dim]")
+        console.print()
 
     if isinstance(inventory_diff, dict) and inventory_diff.get("changed_tools"):
-        _console().print(f"  [magenta]Changed tools ({len(inventory_diff['changed_tools'])}):[/magenta]")
+        console.print(f"  [magenta]Changed tools ({len(inventory_diff['changed_tools'])}):[/magenta]")
         for tool in inventory_diff["changed_tools"][:10]:
-            _console().print(f"    [~] [dim]{tool.get('name') or tool.get('id')}[/dim]")
-        _console().print()
+            console.print(f"    [~] [dim]{tool.get('name') or tool.get('id')}[/dim]")
+        console.print()
 
     if isinstance(inventory_diff, dict) and inventory_diff.get("changed_resources"):
-        _console().print(f"  [magenta]Changed resources ({len(inventory_diff['changed_resources'])}):[/magenta]")
+        console.print(f"  [magenta]Changed resources ({len(inventory_diff['changed_resources'])}):[/magenta]")
         for resource in inventory_diff["changed_resources"][:10]:
-            _console().print(f"    [~] [dim]{resource.get('uri') or resource.get('id')}[/dim]")
-        _console().print()
+            console.print(f"    [~] [dim]{resource.get('uri') or resource.get('id')}[/dim]")
+        console.print()
 
     if isinstance(inventory_diff, dict) and inventory_diff.get("new_tools"):
-        _console().print(f"  [cyan]New tools ({len(inventory_diff['new_tools'])}):[/cyan]")
+        console.print(f"  [cyan]New tools ({len(inventory_diff['new_tools'])}):[/cyan]")
         for tool in inventory_diff["new_tools"][:10]:
-            _console().print(f"    [+] [dim]{tool.get('name') or tool.get('id')}[/dim]")
-        _console().print()
+            console.print(f"    [+] [dim]{tool.get('name') or tool.get('id')}[/dim]")
+        console.print()
 
     if isinstance(inventory_diff, dict) and inventory_diff.get("new_resources"):
-        _console().print(f"  [cyan]New resources ({len(inventory_diff['new_resources'])}):[/cyan]")
+        console.print(f"  [cyan]New resources ({len(inventory_diff['new_resources'])}):[/cyan]")
         for resource in inventory_diff["new_resources"][:10]:
-            _console().print(f"    [+] [dim]{resource.get('uri') or resource.get('id')}[/dim]")
-        _console().print()
+            console.print(f"    [+] [dim]{resource.get('uri') or resource.get('id')}[/dim]")
+        console.print()
 
     if isinstance(inventory_diff, dict) and inventory_diff.get("new_relationships"):
-        _console().print(f"  [cyan]New relationships ({len(inventory_diff['new_relationships'])}):[/cyan]")
+        console.print(f"  [cyan]New relationships ({len(inventory_diff['new_relationships'])}):[/cyan]")
         for relationship in inventory_diff["new_relationships"][:10]:
-            _console().print(f"    [+] [dim]{relationship.get('from')} -[{relationship.get('type')}]-> {relationship.get('to')}[/dim]")
-        _console().print()
+            console.print(f"    [+] [dim]{relationship.get('from')} -[{relationship.get('type')}]-> {relationship.get('to')}[/dim]")
+        console.print()
 
 
 # ─── Policy Output ──────────────────────────────────────────────────────────
