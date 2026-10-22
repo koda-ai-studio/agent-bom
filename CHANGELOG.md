@@ -9,14 +9,24 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.110.0] - 2026-10-21
+
 ### Changed
 
 - **Outdated local vulnerability data now fails closed.** Applies when nothing is at or above the gate, the local DB is past the age `agent-bom db freshness` warns about (or its freshness can't be trusted), and the run was offline or live OSV did not answer. `check` then exits `2` (incomplete), `scan` exits `1` with a `stale_local_data` issue in `scan_run`, and MCP `check` / `POST /v1/scan/check` return `status: "incomplete"`. Real findings keep their exit codes, and `--exit-zero` does not turn this into a pass. Air-gapped installs that accept old local data pass `--allow-stale-db` or set `AGENT_BOM_ALLOW_STALE_DB=1`. `check` now honours `--require-fresh-db` / `AGENT_BOM_REQUIRE_FRESH_DB` (exit `3`) like `scan`.
 ### Added
 
+- Scoped Supabase project and organization inventory, Vercel project/deployment and team inventory, and Modal/NGC metadata exports. Supabase and Vercel directory graphs retain users and configured roles without inferring effective access; incomplete collection preserves the previous local graph.
+- Findings queues separate evidence lanes, and scoped HTML impact briefs provide expandable supporting evidence. Remediation can verify installed-package updates with scoped receipts; a dependency-file change alone does not verify a deployed workload.
+
+- Claude Code plugin (`integrations/claude-code`, marketplace at `.claude-plugin/marketplace.json`): bundles the MCP server, pinned to the published PyPI release through `uvx`, plus `/agent-bom:scan`, `/agent-bom:check` and `/agent-bom:fix` skills. `scripts/check_version_alignment.py` keeps the plugin version and the `uvx` pin on the published release.
+
 - Exploit story for a CVE occurrence: `GET /v1/graph/exploit-story` and the MCP `finding_detail` `exploit_story` block say what the vulnerable package puts at risk (agents, MCP servers, tools, credential names, data stores, cloud resources and identities, each with its hop-by-hop path and evidence tier) and how it could be exploited (decoded CVSS 3.x/4.0 vector, CWE attacker capability, KEV, EPSS, reachability, fix), with a narrative built only from recorded fields. The finding drawer and the investigation path show it, and the path canvas can draw the at-risk hops past the package.
 
 ### Fixed
+
+- Graph and finding identities retain repository, account, tenant and occurrence boundaries; current-estate reads preserve snapshot scope and relationship selection. Shared image inventory remains distinct from workload instances, and configured identity scope does not imply tool access.
+- The terminal demo recording keeps complete finding rows when the current table exceeds its viewport and waits for the first scene before recording. Refreshed product screenshots and the recording from current source, corrected directory collection guidance, and moved the Claude Code plugin entry out of the already-published v0.109.0 history.
 
 - `agent-bom check` no longer reports results from an outdated local vulnerability DB as complete. Whenever `agent-bom db freshness` would warn (past the configured max age or the 7-day danger age), online checks also query OSV live and merge by advisory ID and alias. Previously a 7-day danger age above a raised `AGENT_BOM_VULN_DB_MAX_AGE_HOURS` skipped OSV and missed newer CVEs. Offline checks and failed live lookups say plainly that results may be incomplete and how old the local data is, and local hits from outdated data no longer print a check mark. CLI JSON, MCP `check` and `POST /v1/scan/check` add `vuln_data_freshness` and `completeness`, and the MCP `scan` summary now includes `vuln_data_freshness`.
 - Vulnerability-data freshness fails closed. A local DB written by a newer agent-bom schema, or one whose sync metadata cannot be read, is no longer treated as fresh: `db freshness` warns, `check` also queries OSV live, and offline results are marked incomplete. `vuln_data_freshness.integrity_issue` names the problem. A freshness probe that errors now counts as outdated instead of failing the check.
@@ -48,8 +58,6 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Trace pull, trace collection and trace findings (Langfuse, LangSmith, OTel) are experimental and **off by default**. Enable them with `AGENT_BOM_EXPERIMENTAL=traces`. While disabled, `GET /v1/traces/connectors`, `POST /v1/traces/connectors/{provider}/pull`, the trace collection routes and `POST /v1/traces/attack-paths` return `404` with the enable hint; `POST /v1/traces` still accepts OTLP for runtime and cost telemetry but records no trace findings; graph snapshots do not overlay trace events or emit `SHADOW_AI` trace findings; the MCP `runtime_correlate` tool returns the hint for `otel_trace`; and the dashboard labels Platform traces *Experimental* and shows the hint instead of the pull form. Cortex agent coverage is unchanged.
 
 ### Added
-
-- Claude Code plugin (`integrations/claude-code`, marketplace at `.claude-plugin/marketplace.json`): bundles the MCP server, pinned to the published PyPI release through `uvx`, plus `/agent-bom:scan`, `/agent-bom:check` and `/agent-bom:fix` skills. `scripts/check_version_alignment.py` keeps the plugin version and the `uvx` pin on the published release.
 
 - One experimental-feature registry (`agent_bom.core.experimental`) lists every experimental feature with its surfaces, how it is enabled and its doc. `docs/EXPERIMENTAL.md` is generated from it (`scripts/generate_experimental_docs.py --check` runs in CI and `make preflight`), storage tiers read their experimental backends from it, `agent-bom doctor` prints an Experimental features section (and `experimental` in agent-mode JSON), and `GET /v1/system/health` reports `experimental_features` with live enablement.
 

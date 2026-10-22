@@ -42,10 +42,19 @@ for title, start, stop in scenes:
     clipped = len(excerpt) > 24
     if clipped:
         # End on a complete paragraph, never midway through an action or table row.
-        boundaries = [i for i, line in enumerate(excerpt[:24]) if not line.strip()]
-        if not boundaries:
-            raise SystemExit(f"CLI section exceeds the recording viewport: {start}")
-        excerpt = excerpt[:boundaries[-1]]
+        clean = [re.sub(r"\x1b\[[0-9;]*m", "", line) for line in excerpt]
+        boundaries = [i for i, line in enumerate(clean[:24]) if not line.strip()]
+        if boundaries:
+            excerpt = excerpt[:boundaries[-1]]
+        else:
+            # Rich wraps findings into several physical lines. Keep complete
+            # severity rows and the real table's closing rule, not a cut row.
+            rows = [i for i, line in enumerate(clean) if re.match(r"^│\s*(?:CRIT|HIGH|MED|LOW)\s*│", line)]
+            endings = [i for i, line in enumerate(clean) if line.startswith("└")]
+            cuts = [i for i in rows[1:] if i < 24]
+            if not cuts or not endings or endings[-1] <= cuts[-1]:
+                raise SystemExit(f"CLI section exceeds the recording viewport: {start}")
+            excerpt = excerpt[:cuts[-1]] + [excerpt[endings[-1]]]
     if len(excerpt) < 2:
         raise SystemExit(f"Empty required CLI section: {start}")
     pages.append((title, excerpt, clipped))

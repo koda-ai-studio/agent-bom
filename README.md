@@ -48,7 +48,7 @@ Exit `1` is expected: the sample trips the security gate. A non-zero exit
 can mean a security gate or incomplete assessment; inspect the report and coverage.
 See the [exit codes](site-docs/reference/exit-codes.md).
 
-<p align="center"><img src="docs/images/demo-latest.gif" alt="Recorded agent-bom v0.108.4 CLI showing sample findings and remediation guidance; no fix executed" width="920" /></p>
+<p align="center"><img src="docs/images/demo-latest.gif" alt="Recorded agent-bom CLI showing sample findings and remediation guidance; no fix executed" width="920" /></p>
 
 The recording uses labeled sample data and bundled advisories. Credential
 references are names, not secret values. Recorded relationships do not prove
@@ -171,4 +171,4 @@ observed execution or effective access.
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
-Source version: **v0.109.0** · Latest release: **v0.109.0** · [Changelog](CHANGELOG.md)
+Source version: **v0.110.0** · Latest release: **v0.109.0** · [Changelog](CHANGELOG.md)
