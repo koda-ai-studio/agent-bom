@@ -146,3 +146,85 @@ def test_container_routing_covers_build_and_runtime_inputs() -> None:
         ".github/workflows/ci.yml",
     ):
         assert classify_paths([path]).ui_container is True, path
+
+
+def test_version_only_metadata_uses_light_dependency_routing(tmp_path) -> None:
+    import os
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    import yaml
+
+    from scripts.classify_ci_changes import version_only_paths
+
+    def git(*args):
+        return subprocess.check_output(["git", "-C", str(tmp_path), *args], text=True).strip()
+
+    git("init", "-q")
+    root = Path(__file__).resolve().parents[1]
+    (tmp_path / "scripts").mkdir()
+    for script_name in ("classify_ci_changes.py", "pytest_ci_plan.py"):
+        shutil.copyfile(root / "scripts" / script_name, tmp_path / "scripts" / script_name)
+    project = '[project]\nname = "agent-bom"\nversion = "0.109.0"\ndependencies = ["click>=8"]\n'
+    lock = (
+        'version = 1\n[[package]]\nname = "agent-bom"\nversion = "0.109.0"\n'
+        'source = { editable = "." }\n[[package]]\nname = "click"\nversion = "8.3.0"\n'
+    )
+    for name, data in [("pyproject.toml", project), ("uv.lock", lock)]:
+        (tmp_path / name).write_text(data)
+    git("add", ".")
+    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "base")
+    base = git("rev-parse", "HEAD")
+    for name, data in [("pyproject.toml", project), ("uv.lock", lock)]:
+        (tmp_path / name).write_text(data.replace("0.109.0", "0.110.0"))
+    git("add", ".")
+    git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "version")
+    head = git("rev-parse", "HEAD")
+    proven = version_only_paths(base, head, root=tmp_path)
+    assert proven == {"pyproject.toml", "uv.lock"}
+    workflow = yaml.safe_load((root / ".github/workflows/ci.yml").read_text())
+    script = next(step["run"] for step in workflow["jobs"]["changes"]["steps"] if step.get("id") == "classify")
+    for token, value in (
+        ("github.event_name", "pull_request"),
+        ("github.event.pull_request.base.sha", base),
+        ("github.event.pull_request.head.sha", head),
+    ):
+        script = script.replace("${{ " + token + " }}", value)
+    output = tmp_path / "outputs"
+    env = {**os.environ, "GITHUB_SHA": head, "GITHUB_OUTPUT": str(output), "GITHUB_STEP_SUMMARY": str(tmp_path / "summary")}
+    run = subprocess.run(["bash", "-c", script], cwd=tmp_path, env=env, capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    values = dict(line.split("=", 1) for line in output.read_text().splitlines())
+    for key in ("full_python", "alpine_full", "native_image", "endpoint", "postgres"):
+        assert values[key] == "false", (key, values)
+    assert values["python"] == "true"
+    assert values["docs_only"] == "false"
+    # Do not accidentally commit workflow output in subsequent fixture edits.
+    output.unlink()
+    (tmp_path / "summary").unlink()
+    result = classify_paths(["pyproject.toml", "uv.lock"], version_only=proven)
+    assert not result.docs_only  # wheel/import/version checks still apply
+    assert not result.python_dependencies
+    assert not result.full_python
+    assert not result.postgres_required
+    assert classify_paths(["pyproject.toml", "uv.lock", "src/agent_bom/models.py"], version_only=proven).full_python
+    assert classify_paths(["pyproject.toml", "unknown.data"], version_only=proven).python_dependencies
+    assert version_only_paths("missing-ref", head, root=tmp_path) == set()
+
+    # A simultaneous dependency edit, resolver setting or malformed document
+    # invalidates the exemption for that file.
+    for name, content in [
+        ("pyproject.toml", project.replace("0.109.0", "0.110.0").replace("click>=8", "click>=9")),
+        ("pyproject.toml", project.replace("0.109.0", "0.110.0") + '\n[build-system]\nrequires = ["new-builder"]\n'),
+        ("uv.lock", lock.replace("0.109.0", "0.110.0").replace("8.3.0", "8.4.0")),
+        ("uv.lock", lock.replace("0.109.0", "0.110.0").replace("version = 1", "version = 2")),
+        ("uv.lock", "invalid toml ["),
+    ]:
+        git("checkout", head, "--", "pyproject.toml", "uv.lock")
+        (tmp_path / name).write_text(content)
+        git("add", ".")
+        git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "mixed")
+        exemptions = version_only_paths(base, git("rev-parse", "HEAD"), root=tmp_path)
+        assert name not in exemptions
+        assert classify_paths([name], version_only=exemptions).python_dependencies

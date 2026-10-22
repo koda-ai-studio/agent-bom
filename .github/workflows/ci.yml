@@ -13,11 +13,11 @@ permissions:
 #                  Postgres, musl, Docker, UI E2E, dogfood. The release gate
 #                  reads this.
 #   schedule       nightly full run, including the full musl suite.
-# Only superseded PR runs are cancelled; main runs never are, because
-# scripts/check_release_main_ci.py needs a completed run on the exact SHA.
+# Supersede obsolete PR and main-push runs. Scheduled/manual evidence uses
+# separate event groups; release still requires a completed current-main push.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -40,6 +40,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      actions: read
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     outputs:
       action: ${{ steps.classify.outputs.action }}
@@ -65,18 +66,33 @@ jobs:
       - name: Classify changed paths
         id: classify
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          comparison_base=""
+          comparison_head="$GITHUB_SHA"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             changed="$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")"
+            comparison_head="${{ github.event.pull_request.head.sha }}"
+            comparison_base="$(git merge-base "${{ github.event.pull_request.base.sha }}" "$comparison_head")"
           else
-            before="${{ github.event.before }}"
-            if [ -n "$before" ] && ! printf '%s' "$before" | grep -qE '^0+$'; then
-              changed="$(git diff --name-only "$before" "$GITHUB_SHA")"
+            # Include changes from superseded main runs, not only the last push.
+            # No usable proof/API response means all tracked paths are relevant.
+            candidates="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=20" --jq '.workflow_runs[] | select(.conclusion == "success" and .event == "push" and .head_branch == "main" and .path == ".github/workflows/ci.yml") | .head_sha' || true)"
+            while IFS= read -r candidate; do
+              if [[ "$candidate" =~ ^[0-9a-f]{40}$ ]] && git merge-base --is-ancestor "$candidate" "$GITHUB_SHA"; then
+                comparison_base="$candidate"
+                break
+              fi
+            done <<< "$candidates"
+            if [ -n "$comparison_base" ]; then
+              changed="$(git diff --name-only "$comparison_base" "$GITHUB_SHA")"
             else
-              changed="$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")"
+              changed="$(git ls-files)"
             fi
           fi
+          dependency_changed="$(printf '%s\n' "$changed" | python3 scripts/classify_ci_changes.py --base-ref "$comparison_base" --head-ref "$comparison_head" --dependency-paths)"
           action=false
           alpine=false
           alpine_full=false
@@ -94,37 +110,37 @@ jobs:
           # docs, or compose used to block on a downstream UI/main
           # regression they had nothing to do with. Opt in via path filter.
           ui=false
-          if printf '%s\n' "$changed" | grep -Eq '^(action\.yml|\.github/actions/|tests/fixtures/test-(sbom(\.cdx)?|policy)\.json$)'; then
+          if printf '%s\n' "$changed" | grep -E '^(action\.yml|\.github/actions/|tests/fixtures/test-(sbom(\.cdx)?|policy)\.json$)' > /dev/null; then
             action=true
           fi
           # Compose contract: every shipped compose file, the bootstrap SQL and
           # secrets they mount, the Dockerfiles they build, and the gate itself.
-          if printf '%s\n' "$changed" | grep -Eq '^(deploy/docker-compose|deploy/[^/]+/[^/]*/?docker-compose|deploy/supabase/|deploy/docker/|deploy/secrets/|examples/docker-compose|Dockerfile$|ui/Dockerfile$|scripts/check_compose_contract\.py$|tests/test_compose_)'; then
+          if printf '%s\n' "$changed" | grep -E '^(deploy/docker-compose|deploy/[^/]+/[^/]*/?docker-compose|deploy/supabase/|deploy/docker/|deploy/secrets/|examples/docker-compose|Dockerfile$|ui/Dockerfile$|scripts/check_compose_contract\.py$|tests/test_compose_)' > /dev/null; then
             compose=true
           fi
           # Changes to this workflow must exercise the Alpine job itself;
           # otherwise checkout/bootstrap fixes can merge without ever running
           # in the container they modify.
-          if printf '%s\n' "$changed" | grep -Eq '^(src/|tests/|pyproject\.toml|uv\.lock|Dockerfile|scripts/|\.github/workflows/ci\.yml$|\.github/actions/setup-python/)'; then
+          if printf '%s\n' "$changed" | grep -E '^(src/|tests/|pyproject\.toml|uv\.lock|Dockerfile|scripts/|\.github/workflows/ci\.yml$|\.github/actions/setup-python/)' > /dev/null; then
             alpine=true
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(pyproject\.toml|uv\.lock|Dockerfile|\.github/actions/setup-python/)'; then
+          if printf '%s\n' "$dependency_changed" | grep -E '^(pyproject\.toml|uv\.lock|Dockerfile|\.github/actions/setup-python/)' > /dev/null; then
             alpine_full=true
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(deploy/docker/Dockerfile.(native-app|snowpark)$|deploy/snowflake/native-app/|tests/test_(native_app_persistence|snowpark_image)\.py$|src/agent_bom/(api/snowflake_store\.py|cloud/snowflake)|pyproject\.toml$|uv\.lock$|\.github/workflows/ci\.yml$)'; then
+          if printf '%s\n' "$dependency_changed" | grep -E '^(deploy/docker/Dockerfile.(native-app|snowpark)$|deploy/snowflake/native-app/|tests/test_(native_app_persistence|snowpark_image)\.py$|src/agent_bom/(api/snowflake_store\.py|cloud/snowflake)|pyproject\.toml$|uv\.lock$|\.github/workflows/ci\.yml$)' > /dev/null; then
             native_image=true
           fi
           # The measured graph heap/scale assertion takes about six minutes by
           # itself. Keep it out of the general correctness suite, but require it
           # for graph implementation/tests and for changes to its CI contract.
-          if printf '%s\n' "$changed" | grep -Eq '^(src/agent_bom/(graph/|context_graph\.py$|graph_schema\.py$|db/graph_store\.py$)|tests/(graph/|test_(context_graph|graph_api|graph_schema|graph_store).*\.py$)|\.github/workflows/(ci|perf-scale-evidence)\.yml$|scripts/pytest_ci_plan\.py$|pyproject\.toml$)'; then
+          if printf '%s\n' "$dependency_changed" | grep -E '^(src/agent_bom/(graph/|context_graph\.py$|graph_schema\.py$|db/graph_store\.py$)|tests/(graph/|test_(context_graph|graph_api|graph_schema|graph_store).*\.py$)|\.github/workflows/(ci|perf-scale-evidence)\.yml$|scripts/pytest_ci_plan\.py$|pyproject\.toml$)' > /dev/null; then
             graph_performance=true
           fi
           # Strict docs build guard: any change to the MkDocs source tree, its
           # config, or the workflows that build/deploy it must prove
           # `mkdocs build --strict` still passes before it can reach main and
           # then break the release docs-deploy lane (issue #3631).
-          if printf '%s\n' "$changed" | grep -Eq '^(site-docs/|mkdocs\.yml$|\.github/workflows/(docs|ci)\.yml$|\.github/actions/setup-python/)'; then
+          if printf '%s\n' "$changed" | grep -E '^(site-docs/|mkdocs\.yml$|\.github/workflows/(docs|ci)\.yml$|\.github/actions/setup-python/)' > /dev/null; then
             docs=true
           fi
           # Scope rule: every module that writes to Postgres through the
@@ -135,25 +151,25 @@ jobs:
           # on the very PR that fixed a cloud_connections RLS WITH CHECK
           # violation. The Python classifier also includes shared API/model
           # inputs; this writer map preserves narrower ownership outside API.
-          if printf '%s\n' "$changed" | grep -Eq '^(src/agent_bom/api/(trace_collection/|postgres_|storage_schema\.py|connection_store\.py|connection_scheduler\.py|proxy_replay_store\.py|export_destination_store\.py|export_schedule_store\.py|export_scheduler\.py|storage/export_schedules\.py)|src/agent_bom/api/hub_observations_partition\.py|src/agent_bom/cloud/([a-z_]*event_ingest|runtime_workload_evidence_store|side_scan_lifecycle[a-z_]*)\.py|src/agent_bom/ticketing/postgres_store\.py|tests/cloud/test_side_scan_postgres_contract\.py$|tests/test_postgres_|tests/test_trace_collection_(postgres|recovery)\.py$|tests/test_export_(destination|schedule)_postgres\.py$|tests/test_graph_adjacency_page\.py$|tests/test_graph_cross_vendor_index\.py$|deploy/supabase/postgres/|scripts/check_postgres_schema_parity\.py$)'; then
+          if printf '%s\n' "$changed" | grep -E '^(src/agent_bom/api/(trace_collection/|postgres_|storage_schema\.py|connection_store\.py|connection_scheduler\.py|proxy_replay_store\.py|export_destination_store\.py|export_schedule_store\.py|export_scheduler\.py|storage/export_schedules\.py)|src/agent_bom/api/hub_observations_partition\.py|src/agent_bom/cloud/([a-z_]*event_ingest|runtime_workload_evidence_store|side_scan_lifecycle[a-z_]*)\.py|src/agent_bom/ticketing/postgres_store\.py|tests/cloud/test_side_scan_postgres_contract\.py$|tests/test_postgres_|tests/test_trace_collection_(postgres|recovery)\.py$|tests/test_export_(destination|schedule)_postgres\.py$|tests/test_graph_adjacency_page\.py$|tests/test_graph_cross_vendor_index\.py$|deploy/supabase/postgres/|scripts/check_postgres_schema_parity\.py$)' > /dev/null; then
             postgres=true
           fi
           # Python fixture/self-check inputs. Full-suite routing is computed
           # separately by classify_ci_changes.py.
           python=false
-          if printf '%s\n' "$changed" | grep -Eq '^(src/|tests/|scripts/|pyproject\.toml|uv\.lock|action\.yml|contracts/|data/|\.github/workflows/ci\.yml$|\.github/actions/)'; then
+          if printf '%s\n' "$changed" | grep -E '^(src/|tests/|scripts/|pyproject\.toml|uv\.lock|action\.yml|contracts/|data/|\.github/workflows/ci\.yml$|\.github/actions/)' > /dev/null; then
             python=true
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(deploy/endpoints/|scripts/(build-[^/]+|qualify_endpoint_collectors\.py|render_homebrew_formula\.py)|src/agent_bom/endpoint/|src/agent_bom/cli/_runtime\.py|tests/test_endpoint[^/]*\.py|tests/test_cli_runtime\.py|pyproject\.toml|uv\.lock|\.github/actions/setup-python/|site-docs/deployment/aws-company-rollout\.md$)'; then
+          if printf '%s\n' "$dependency_changed" | grep -E '^(deploy/endpoints/|scripts/(build-[^/]+|qualify_endpoint_collectors\.py|render_homebrew_formula\.py)|src/agent_bom/endpoint/|src/agent_bom/cli/_runtime\.py|tests/test_endpoint[^/]*\.py|tests/test_cli_runtime\.py|pyproject\.toml|uv\.lock|\.github/actions/setup-python/|site-docs/deployment/aws-company-rollout\.md$)' > /dev/null; then
             endpoint=true
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(deploy/helm/agent-bom/|scripts/validate_helm_profiles\.py$|\.github/workflows/ci\.yml$)'; then
+          if printf '%s\n' "$changed" | grep -E '^(deploy/helm/agent-bom/|scripts/validate_helm_profiles\.py$|\.github/workflows/ci\.yml$)' > /dev/null; then
             helm=true
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(ui/|\.github/workflows/ci\.yml$|\.github/actions/setup-ui/|docs/openapi/|action\.yml|contracts/|src/agent_bom/(api/(routes/|read_models/|error_envelope\.py|versioning\.py|models\.py|server\.py)|graph/|context_graph\.py|graph_schema\.py)|src/agent_bom/models\.py)'; then
+          if printf '%s\n' "$changed" | grep -E '^(ui/|\.github/workflows/ci\.yml$|\.github/actions/setup-ui/|docs/openapi/|action\.yml|contracts/|src/agent_bom/(api/(routes/|read_models/|error_envelope\.py|versioning\.py|models\.py|server\.py)|graph/|context_graph\.py|graph_schema\.py)|src/agent_bom/models\.py)' > /dev/null; then
             ui=true
           fi
-          classification="$(printf '%s\n' "$changed" | python3 scripts/classify_ci_changes.py)"
+          classification="$(printf '%s\n' "$changed" | python3 scripts/classify_ci_changes.py --base-ref "$comparison_base" --head-ref "$comparison_head")"
           printf '%s\n' "$classification" >> "$GITHUB_OUTPUT"
           # Shared models/auth/storage and dependency inputs supplement the
           # writer/migration map above. Only an explicit false may skip proof.
@@ -395,10 +411,6 @@ jobs:
         if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
         run: |
           cd ui
-          npm config set fetch-retries 5
-          npm config set fetch-retry-mintimeout 20000
-          npm config set fetch-retry-maxtimeout 120000
-          npm ci --ignore-scripts --no-audit
           python ../scripts/check_npm_advisories.py package-lock.json
 
       - name: npm bulk advisory gate (TypeScript SDK transitive deps)

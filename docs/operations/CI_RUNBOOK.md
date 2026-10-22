@@ -61,7 +61,7 @@ cannot satisfy the release gate.
 | Version Alignment (drift, counts, OpenAPI, schemas) | yes | yes | yes |
 | CodeQL (Python excluding `tests/`, Actions) | yes (required) | yes | weekly |
 | PR Security Gate (pip-audit, self-scan), Dependency Review, Gitleaks | yes | yes (except Dependency Review) | - |
-| UI Validate (lint, vitest, schema drift) + UI export build | when UI inputs change | when UI inputs change | yes |
+| UI Validate (lint, vitest, schema drift) + UI export build | when UI inputs change | every main push | yes |
 | Docs Strict, Helm, Compose, Endpoint packaging | when their inputs change | when their inputs change | yes |
 | Native App image and persistence | when its inputs change | yes | yes |
 | Changed-domain and cross-surface contract smoke | yes (required through aggregation) | yes | yes |
@@ -75,6 +75,22 @@ cannot satisfy the release gate.
 | Dogfood GitHub Action | no | when action inputs change | yes |
 | ClusterFuzzLite (`cflite-pr.yml`) | no | short batch on parser changes | weekly long batch |
 | Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | API/Helm/Postgres/UI-gateway changes | manual |
+
+The UI advisory step reads the committed lockfile without installing packages.
+The SDK installation remains because the supply-chain guard builds its output.
+Main pushes retain the blocking installed-dependency self-scan in PR Security
+Gate; Post-Merge Self-Scan repeats dependency discovery only nightly/on demand
+for its SARIF category and automated alerts. Its source scan and SBOM still run
+on pushes.
+
+The classifier compares committed TOML for `pyproject.toml` and `uv.lock`.
+Only an edit limited to the project's own version can bypass dependency-driven
+full-suite/platform selection. Dependency versions, build settings, resolver
+metadata, missing revisions and malformed files retain normal routing. Wheel,
+version-alignment, selected-domain tests and every-main release proof remain.
+The extras audit uses the same comparison and frozen installs; nightly/manual
+audits still run every extras group. To roll back routing, revert the workflow
+and classifier changes together and obtain fresh main CI proof before release.
 
 The required `Test (Python 3.13)` context also requires Alpine and UI E2E
 when their path filters select them. Failed classification runs both lanes;
@@ -97,10 +113,13 @@ nightly and manual runs), `Python correctness aggregation` requires the
 four-version suite and treats a skipped post-merge lane as a failure, and
 `Test (Python 3.13)` requires the Docker lane, so a green `main` run means the
 full suite, the performance/Postgres lanes, and the release image all passed.
-Only superseded PR runs are cancelled; main runs never are, and each
-`main` SHA has its own concurrency group so neither running nor pending
-evidence is superseded by another main commit. Verify the
-exact SHA instead of treating an older run as release proof.
+Superseded PR and main-push runs are cancelled within their branch/event
+concurrency group. Nightly and manual runs have separate groups. Cancellation
+is not a passing result: the release gate still requires a completed successful
+push run on the exact current main SHA. Main path routing compares against the
+most recent successful main-push ancestor, including changes from cancelled
+runs; unavailable history selects all tracked paths. Let the current run finish
+before releasing.
 A post-merge regression opens a
 `ci-regression` issue through `main-failure-alert.yml`, which watches
 `CI/CD Pipeline`, `Runtime Helm Acceptance`, and `ClusterFuzzLite`.

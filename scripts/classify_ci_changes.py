@@ -11,6 +11,8 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import re
+import subprocess
+import tomllib
 from pathlib import Path, PurePosixPath
 from typing import Iterable
 
@@ -150,15 +152,53 @@ def _requires_full_python(paths: list[str], *, root: Path) -> bool:
     return False
 
 
-def classify_paths(paths: Iterable[str]) -> ChangeClassification:
+def version_only_paths(base: str, head: str, *, root: Path) -> set[str]:
+    """Prove packaging files differ only in this project's release version.
+
+    Compare committed TOML, never the working tree. Missing revisions, deleted
+    files, malformed input and unexpected package shapes retain the heavy lane.
+    """
+    if not base or not head:
+        return set()
+    proven = set()
+    for path in ("pyproject.toml", "uv.lock"):
+        try:
+            documents = []
+            versions = []
+            for ref in (base, head):
+                result = subprocess.run(["git", "show", f"{ref}:{path}"], cwd=root, capture_output=True, text=True, check=True, timeout=10)
+                document = tomllib.loads(result.stdout)
+                if path == "pyproject.toml":
+                    package = document["project"]
+                    if package["name"] != "agent-bom":
+                        raise ValueError("unexpected project")
+                else:
+                    packages = [item for item in document["package"] if item.get("name") == "agent-bom"]
+                    if len(packages) != 1 or packages[0].get("source") != {"editable": "."}:
+                        raise ValueError("unexpected local package")
+                    package = packages[0]
+                version = package.pop("version")
+                if not isinstance(version, str) or not version:
+                    raise ValueError("missing project version")
+                versions.append(version)
+                documents.append(document)
+            if documents[0] == documents[1] and versions[0] != versions[1]:
+                proven.add(path)
+        except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError, AttributeError):
+            continue
+    return proven
+
+
+def classify_paths(paths: Iterable[str], *, version_only: set[str] | None = None) -> ChangeClassification:
     """Return a narrow docs-only classification, failing closed on ambiguity."""
     raw_paths = list(paths)
     normalized = [_normalize_path(path) for path in raw_paths]
     valid_paths = [path for path in normalized if path is not None]
     docs_only = bool(valid_paths) and len(valid_paths) == len(raw_paths) and all(_is_documentation_path(path) for path in valid_paths)
     ambiguous = not valid_paths or len(valid_paths) != len(raw_paths) or any(not _known_path(path) for path in valid_paths)
-    python_dependencies = ambiguous or any(_python_dependency_path(path) for path in valid_paths)
-    full_python = python_dependencies or _requires_full_python(valid_paths, root=Path(__file__).resolve().parents[1])
+    dependency_paths = [path for path in valid_paths if path not in (version_only or set())]
+    python_dependencies = ambiguous or any(_python_dependency_path(path) for path in dependency_paths)
+    full_python = python_dependencies or _requires_full_python(dependency_paths, root=Path(__file__).resolve().parents[1])
     # Supplement the workflow's writer/migration ownership map with shared
     # model, authorization, storage and integration-test inputs.
     postgres_required = python_dependencies or any(
@@ -200,6 +240,9 @@ def classify_paths(paths: Iterable[str]) -> ChangeClassification:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base-ref", default="", help="Committed comparison base; omit to fail closed.")
+    parser.add_argument("--head-ref", default="HEAD", help="Committed comparison head.")
+    parser.add_argument("--dependency-paths", action="store_true", help="Print paths excluding proven release-version-only metadata.")
     parser.add_argument(
         "--github-output",
         help="Optional GitHub Actions output file to append classification values to.",
@@ -211,7 +254,12 @@ def main() -> int:
     args = _parse_args()
     import sys
 
-    classification = classify_paths(sys.stdin.read().splitlines())
+    paths = sys.stdin.read().splitlines()
+    proven = version_only_paths(args.base_ref, args.head_ref, root=Path(__file__).resolve().parents[1])
+    if args.dependency_paths:
+        sys.stdout.write("".join(f"{path}\n" for path in paths if path not in proven))
+        return 0
+    classification = classify_paths(paths, version_only=proven)
     lines = "".join(
         f"{key}={str(value).lower() if isinstance(value, bool) else value}\n" for key, value in dataclasses.asdict(classification).items()
     )

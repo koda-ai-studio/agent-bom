@@ -6,6 +6,8 @@ on:
       - pyproject.toml
       - uv.lock
       - .github/workflows/extras-audit.yml
+      - scripts/classify_ci_changes.py
+      - tests/test_ci_path_classifier.py
   schedule:
     - cron: "0 8 * * 2"
   workflow_dispatch:
@@ -14,8 +16,35 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Extras dependency classifier
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      python_dependencies: ${{ steps.classify.outputs.python_dependencies }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Compare committed dependency inputs
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$(git merge-base "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")"
+          git diff --name-only "$base" "${{ github.event.pull_request.head.sha }}" |
+            python3 scripts/classify_ci_changes.py --base-ref "$base" --head-ref "${{ github.event.pull_request.head.sha }}" --github-output "$GITHUB_OUTPUT"
+
   audit-extras:
     name: Audit extras (${{ matrix.name }})
+    needs: changes
+    if: >-
+      !cancelled() && (
+        github.event_name != 'pull_request' ||
+        needs.changes.result != 'success' ||
+        needs.changes.outputs.python_dependencies != 'false'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -40,11 +69,11 @@ jobs:
 
       - name: Install selected extras
         run: |
-          args=""
+          args=()
           for extra in ${{ matrix.extras }}; do
-            args="$args --extra $extra"
+            args+=(--extra "$extra")
           done
-          uv sync $args
+          uv sync --frozen "${args[@]}"
 
       - name: Capture resolved dependency tree
         run: |

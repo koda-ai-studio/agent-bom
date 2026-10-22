@@ -130,8 +130,9 @@ def test_path_classifier_covers_main_pushes() -> None:
     assert "github.event_name == 'pull_request' || github.event_name == 'push'" in changes["if"]
     classify = next(step for step in changes["steps"] if step.get("id") == "classify")
     script = classify["run"]
-    assert "github.event.before" in script
-    assert "git diff-tree --no-commit-id" in script
+    assert "status=success" in script
+    assert 'git diff --name-only "$comparison_base" "$GITHUB_SHA"' in script
+    assert "git ls-files" in script
 
 
 def test_required_ci_contexts_use_docs_only_fast_paths_without_disappearing() -> None:
@@ -201,7 +202,7 @@ def test_npm_audits_use_committed_lockfiles() -> None:
     assert release.count("check_npm_advisories.py package-lock.json") == 1
     assert "--npm-install-report" not in ci
     assert "--npm-install-report" not in release
-    assert ci.count("npm ci --ignore-scripts --no-audit") == 2
+    assert ci.count("npm ci --ignore-scripts --no-audit") == 1
     assert release.count("npm ci --ignore-scripts --no-audit") == 1
     assert "npm audit" not in ci
     assert "npm audit" not in release
@@ -529,12 +530,15 @@ def test_pull_request_classifiers_diff_from_the_merge_base() -> None:
     assert CI_WORKFLOW.read_text(encoding="utf-8").count(three_dot) == 2
 
 
-def test_only_pull_request_runs_cancel_superseded_runs() -> None:
+def test_pr_and_main_push_runs_cancel_only_their_own_superseded_runs() -> None:
     concurrency = _ci()["concurrency"]
     assert "github.event.pull_request.number" in concurrency["group"]
     assert "github.event_name" in concurrency["group"]
-    assert "github.ref == 'refs/heads/main' && github.sha" in concurrency["group"]
-    assert concurrency["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}"
+    assert "github.sha" not in concurrency["group"]
+    assert "github.ref" in concurrency["group"]
+    assert concurrency["cancel-in-progress"] == (
+        "${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}"
+    )
     for name in ("codeql.yml", "pr-security-gate.yml"):
         other = yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"))
         assert other["concurrency"]["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}", name
@@ -787,7 +791,7 @@ def test_output_scale_budgets_run_in_a_dedicated_uninstrumented_lane() -> None:
 def test_security_reuses_typescript_install_for_build() -> None:
     text = CI_WORKFLOW.read_text(encoding="utf-8")
     security = text.split("  # 2. Linting + Type Checking", 1)[0]
-    assert security.count("npm ci --ignore-scripts") == 2
+    assert security.count("npm ci --ignore-scripts") == 1
     assert "The preceding SDK audit step installed this exact lockfile" in security
 
 
@@ -966,7 +970,7 @@ def test_action_classifier_includes_the_cyclonedx_dogfood_fixture() -> None:
 
     steps = _ci()["jobs"]["changes"]["steps"]
     script = next(step["run"] for step in steps if step.get("id") == "classify")
-    pattern = re.search(r"grep -Eq '([^']+)'; then\n\s+action=true", script)
+    pattern = re.search(r"grep -E '([^']+)' > /dev/null; then\n\s+action=true", script)
     assert pattern is not None
     for path in ("action.yml", "tests/fixtures/test-sbom.cdx.json", "tests/fixtures/test-policy.json"):
         assert re.search(pattern[1], path), path
@@ -985,7 +989,7 @@ def test_endpoint_qualification_runs_natively_and_retains_failed_receipts():
 
     jobs = _ci()["jobs"]
     script = next(step["run"] for step in jobs["changes"]["steps"] if step.get("id") == "classify")
-    pattern = re.search(r"grep -Eq '([^']+)'; then\n\s+endpoint=true", script)
+    pattern = re.search(r"grep -E '([^']+)' > /dev/null; then\n\s+endpoint=true", script)
     assert pattern is not None
     for path in ("src/agent_bom/endpoint/inventory.py", "scripts/qualify_endpoint_collectors.py", "tests/test_endpoint_inventory.py"):
         assert re.search(pattern[1], path), path
@@ -1023,7 +1027,7 @@ def test_ci_and_ui_setup_changes_exercise_ui_validation() -> None:
     import re
 
     script = next(step["run"] for step in _ci()["jobs"]["changes"]["steps"] if step.get("id") == "classify")
-    pattern = re.search(r"grep -Eq '([^']+)'; then\n\s+ui=true", script)
+    pattern = re.search(r"grep -E '([^']+)' > /dev/null; then\n\s+ui=true", script)
     assert pattern is not None
     for path in (".github/workflows/ci.yml", ".github/actions/setup-ui/action.yml", "ui/e2e/explore.spec.ts"):
         assert re.search(pattern[1], path), path
@@ -1139,7 +1143,13 @@ def test_workflow_classifier_combines_writer_and_shared_input_routing(tmp_path) 
     ):
         output = tmp_path / "outputs"
         output.write_text("")
-        env = {**os.environ, "GITHUB_OUTPUT": str(output), "GITHUB_STEP_SUMMARY": str(tmp_path / "summary"), "TEST_CHANGED_PATHS": paths}
+        env = {
+            **os.environ,
+            "GITHUB_OUTPUT": str(output),
+            "GITHUB_STEP_SUMMARY": str(tmp_path / "summary"),
+            "TEST_CHANGED_PATHS": paths,
+            "GITHUB_SHA": "fixture-sha",
+        }
         subprocess.run(["bash", "-c", script], cwd=ROOT, env=env, check=True, capture_output=True, text=True)
         values = dict(line.split("=", 1) for line in output.read_text().splitlines())
         for key, value in expected.items():
@@ -1174,3 +1184,91 @@ def test_main_coverage_cannot_be_skipped_or_lower_the_combined_floor() -> None:
     assert '"${{ github.run_attempt }}"' in run
     assert "test-coverage" in jobs["test-core"]["needs"]
     assert jobs["test-core"]["steps"][0]["env"]["COVERAGE_RESULT"] == "${{ needs.test-coverage.result }}"
+
+
+def test_lockfile_only_ui_advisory_has_no_dependency_install() -> None:
+    steps = _ci()["jobs"]["security"]["steps"]
+    audit = next(step for step in steps if step.get("name") == "npm bulk advisory gate (ui/ transitive deps)")
+    assert "check_npm_advisories.py" in audit["run"]
+    assert "npm ci" not in audit["run"]
+    assert "npm config" not in audit["run"]
+
+
+def test_main_has_one_blocking_installed_dependency_scan_plus_nightly_alerts() -> None:
+    gate = yaml.safe_load((ROOT / ".github/workflows/pr-security-gate.yml").read_text())
+    post = yaml.safe_load((ROOT / ".github/workflows/post-merge-self-scan.yml").read_text())
+    assert "push" in gate[True]
+    assert "--fail-on-severity high" in next(s["run"] for s in gate["jobs"]["self-scan-pr"]["steps"] if s.get("id") == "self_scan")
+    assert post["jobs"]["self-dep-scan"]["if"] == "github.event_name != 'push'"
+    assert "schedule" in post[True] and "workflow_dispatch" in post[True]
+    # Source analysis and release SBOMs are distinct evidence, retained on push.
+    assert "if" not in post["jobs"]["self-sast-scan"]
+    assert "if" not in post["jobs"]["generate-sbom"]
+
+
+def test_superseding_main_keeps_paths_from_unverified_commits(tmp_path) -> None:
+    import os
+    import re
+    import subprocess
+
+    step = next(step for step in _ci()["jobs"]["changes"]["steps"] if step.get("id") == "classify")
+    script = step["run"].replace("${{ github.event_name }}", "push")
+    script = re.sub(r"\$\{\{.*?\}\}", "fixture-sha", script)
+    # The immediately preceding push touched only docs; the last green ancestor
+    # also includes an endpoint packaging edit whose run was superseded.
+    script = (
+        """
+gh() { if [ "$API_FAIL" = 1 ]; then return 1; else printf '%s\\n' "$GREEN_SHA"; fi; }
+git() {
+  case "$1" in
+    merge-base) test "$ANCESTOR" = 1 ;;
+    diff) test "$3" = "$GREEN_SHA" && printf '%s\\n' README.md deploy/endpoints/linux/install.sh ;;
+    ls-files)
+      printf '%s\\n' README.md pyproject.toml ui/Dockerfile deploy/endpoints/linux/install.sh
+      for ((i=0; i<5000; i++)); do printf 'unknown/long-path-to-force-a-full-pipe-%s.txt\\n' "$i"; done ;;
+    *) return 1 ;;
+  esac
+}
+"""
+        + script
+    )
+    for api_fail, ancestor in [("0", "1"), ("1", "1"), ("0", "0")]:
+        output = tmp_path / "output"
+        output.write_text("")
+        env = {
+            **os.environ,
+            "GITHUB_OUTPUT": str(output),
+            "GITHUB_STEP_SUMMARY": str(tmp_path / "summary"),
+            "GITHUB_SHA": "b" * 40,
+            "GITHUB_REPOSITORY": "fixture/repo",
+            "GREEN_SHA": "a" * 40,
+            "API_FAIL": api_fail,
+            "ANCESTOR": ancestor,
+        }
+        run = subprocess.run(["bash", "-c", script], cwd=ROOT, env=env, text=True, capture_output=True)
+        assert run.returncode == 0, run.stderr
+        values = dict(line.split("=", 1) for line in output.read_text().splitlines())
+        assert values["endpoint"] == "true"
+        assert values["docs_only"] == "false"
+        if api_fail == "1" or ancestor == "0":
+            assert values["alpine_full"] == "true"
+            assert values["full_python"] == "true"
+            assert values["ui"] == "true"
+
+
+def test_extras_audit_skips_only_proven_unchanged_dependency_inputs() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/extras-audit.yml").read_text())
+    job = workflow["jobs"]["audit-extras"]
+    assert job["needs"] == "changes"
+    assert "github.event_name != 'pull_request'" in job["if"]
+    assert "needs.changes.result != 'success'" in job["if"]
+    assert "needs.changes.outputs.python_dependencies != 'false'" in job["if"]
+    changes = workflow["jobs"]["changes"]
+    assert any(s.get("with", {}).get("fetch-depth") == 0 for s in changes["steps"])
+    script = next(s["run"] for s in changes["steps"] if s.get("id") == "classify")
+    assert "git merge-base" in script
+    assert "classify_ci_changes.py --base-ref" in script
+    assert "--head-ref" in script
+    assert "scripts/classify_ci_changes.py" in workflow[True]["pull_request"]["paths"]
+    install = next(s["run"] for s in job["steps"] if s.get("name") == "Install selected extras")
+    assert "uv sync --frozen" in install
