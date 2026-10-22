@@ -386,15 +386,16 @@ def _marker_filter(run: str) -> str:
     return run.split(' -m "', 1)[1].split('"', 1)[0]
 
 
-def test_pull_requests_run_the_full_suite_sharded_instead_of_the_matrix() -> None:
-    """PRs prove the merge result with the sharded 3.13 suite; main runs the matrix."""
+def test_pull_requests_select_full_shards_while_main_keeps_the_matrix() -> None:
+    """PRs select expensive proof by input; main keeps the complete matrix."""
     jobs = _ci()["jobs"]
     assert jobs["test-main"]["if"] == ("${{ !cancelled() && github.event_name != 'pull_request' && github.event_name != 'merge_group' }}")
     assert jobs["test-shard"]["if"] == (
-        "${{ !cancelled() && (github.event_name == 'pull_request' || github.event_name == 'merge_group') }}"
+        "${{ !cancelled() && (github.event_name == 'merge_group' || (github.event_name == 'pull_request' && "
+        "(needs.changes.result != 'success' || needs.changes.outputs.full_python != 'false'))) }}"
     )
     assert "test-queue-shard" not in jobs
-    assert jobs["postgres-integration"]["if"] == "${{ !cancelled() }}"
+    assert "needs.changes.outputs.postgres != 'false'" in jobs["postgres-integration"]["if"]
     assert jobs["test-smoke"]["if"] == "${{ !cancelled() }}"
     assert "test-pr-shard" not in jobs
     for name in PR_EXCLUDED_POST_MERGE_JOBS:
@@ -407,7 +408,7 @@ def test_shards_run_the_whole_suite_on_the_merge_result() -> None:
     jobs = _ci()["jobs"]
     shard = jobs["test-shard"]
     assert shard["name"] == "Full correctness shard (${{ matrix.shard }}, Python 3.13)"
-    assert "needs" not in shard
+    assert shard["needs"] == "changes"
     assert "ref" not in shard["steps"][0].get("with", {})
     setup = next(step for step in shard["steps"] if step.get("uses") == "./.github/actions/setup-python")
     assert setup["with"]["python-version"] == "3.13"
@@ -568,7 +569,14 @@ def _run_correctness_gate(event: str, results: dict[str, str]) -> bool:
     import subprocess
 
     step = _ci()["jobs"]["test-core"]["steps"][0]
-    env = {**os.environ, **dict.fromkeys(step["env"], "skipped"), "EVENT_NAME": event, **results}
+    env = {
+        **os.environ,
+        **dict.fromkeys(step["env"], "skipped"),
+        "EVENT_NAME": event,
+        "FULL_REQUIRED": "true",
+        "POSTGRES_REQUIRED": "true",
+        **results,
+    }
     return subprocess.run(["bash", "-c", step["run"]], env=env, capture_output=True, text=True).returncode == 0
 
 
@@ -1048,3 +1056,72 @@ def test_changed_domain_smoke_shards_keep_every_selected_test_required() -> None
     gate = next(step for step in jobs["test-core"]["steps"] if step.get("name") == "Require every applicable correctness lane")
     assert gate["env"]["SMOKE_RESULT"] == "${{ needs.test-smoke.result }}"
     assert 'if [ "$SMOKE_RESULT" != "success" ]; then' in gate["run"]
+
+
+def test_optional_correctness_lanes_require_success_when_selected() -> None:
+    for lane, flag in (("SHARD_RESULT", "FULL_REQUIRED"), ("POSTGRES_RESULT", "POSTGRES_REQUIRED")):
+        for required in ("true", "false", ""):
+            for result in ("success", "skipped", "failure", "cancelled"):
+                outcomes = {"SMOKE_RESULT": "success", "FULL_REQUIRED": "false", "POSTGRES_REQUIRED": "false", flag: required, lane: result}
+                expected = result == "success" or (result == "skipped" and required == "false")
+                assert _run_correctness_gate("pull_request", outcomes) == expected, (lane, required, result)
+
+
+def test_full_and_postgres_conditions_fail_closed_on_missing_flags() -> None:
+    from types import SimpleNamespace
+
+    for name, flag in (("test-shard", "full_python"), ("postgres-integration", "postgres")):
+        condition = _ci()["jobs"][name]["if"].removeprefix("${{").removesuffix("}}").strip()
+        condition = condition.replace("!cancelled()", "True").replace("&&", "and").replace("||", "or")
+        for result in ("success", "failure", "skipped"):
+            for changed in ("true", "false", ""):
+                context = {
+                    "github": SimpleNamespace(event_name="pull_request"),
+                    "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=SimpleNamespace(**{flag: changed}))),
+                }
+                assert eval(condition, {"__builtins__": {}}, context) == (result != "success" or changed != "false")
+
+
+def test_ui_container_and_duplicate_smoke_guards_are_conditional() -> None:
+    jobs = _ci()["jobs"]
+    container = next(step for step in jobs["ui-e2e"]["steps"] if step.get("name") == "UI container smoke test")
+    assert "needs.changes.outputs.ui_container != 'false'" in container["if"]
+    assert "github.event_name != 'pull_request'" in container["if"]
+    for step in jobs["test-smoke"]["steps"]:
+        if step.get("name", "").startswith(("Graph accuracy", "DCM scanner")):
+            assert "matrix.shard == 0" in step["if"]
+
+
+def test_changed_domain_selector_failure_is_not_hidden_by_process_substitution() -> None:
+    run = next(
+        step["run"] for step in _ci()["jobs"]["test-smoke"]["steps"] if step.get("name") == "Run changed-domain and cross-surface smoke"
+    )
+    assert "TARGETED_SELECTION=$(uv run python scripts/pytest_ci_plan.py targeted" in run
+    assert "mapfile -t TARGETED < <(" not in run
+
+
+def test_workflow_classifier_combines_writer_and_shared_input_routing(tmp_path) -> None:
+    import os
+    import re
+    import subprocess
+
+    script = next(step["run"] for step in _ci()["jobs"]["changes"]["steps"] if step.get("id") == "classify")
+    script = script.replace("${{ github.event_name }}", "pull_request")
+    script = re.sub(r"\$\{\{.*?\}\}", "fixture-sha", script)
+    script = 'git() { printf "%s\\n" "$TEST_CHANGED_PATHS"; }\n' + script
+    for paths, expected in (
+        ("README.md", {"full_python": "false", "postgres": "false", "ui": "false"}),
+        ("ui/app/page.tsx", {"full_python": "false", "postgres": "false", "ui": "true", "ui_container": "false"}),
+        ("ui/Dockerfile", {"ui": "true", "ui_container": "true"}),
+        ("src/agent_bom/cloud/side_scan_lifecycle.py", {"postgres": "true"}),
+        ("src/agent_bom/models.py", {"full_python": "true", "postgres": "true"}),
+        ("scripts/pytest_ci_plan.py", {"full_python": "true"}),
+        ("new-surface/unknown.data", {"full_python": "true", "postgres": "true", "ui": "true"}),
+    ):
+        output = tmp_path / "outputs"
+        output.write_text("")
+        env = {**os.environ, "GITHUB_OUTPUT": str(output), "GITHUB_STEP_SUMMARY": str(tmp_path / "summary"), "TEST_CHANGED_PATHS": paths}
+        subprocess.run(["bash", "-c", script], cwd=ROOT, env=env, check=True, capture_output=True, text=True)
+        values = dict(line.split("=", 1) for line in output.read_text().splitlines())
+        for key, value in expected.items():
+            assert values[key] == value, (paths, key, values)

@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import re
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Iterable
 
 _ROOT_DOCUMENTS = {
@@ -38,6 +38,9 @@ class ChangeClassification:
     docs_only: bool
     changed_count: int
     python_dependencies: bool
+    full_python: bool
+    postgres_required: bool
+    ui_container: bool
 
 
 def _normalize_path(raw: str) -> str | None:
@@ -100,6 +103,53 @@ def _known_path(path: str) -> bool:
     return _is_documentation_path(path) or _python_dependency_path(path) or path.startswith(_KNOWN_PRODUCT_PREFIXES)
 
 
+def _shared_python_input(path: str) -> bool:
+    """Foundations whose consumers span more than one selected domain."""
+    return (
+        path.startswith(("src/agent_bom/core/", "src/agent_bom/db/", "src/agent_bom/runtime/"))
+        or path
+        in {
+            "scripts/pytest_ci_plan.py",
+            "src/agent_bom/models.py",
+            "src/agent_bom/canonical_ids.py",
+            "src/agent_bom/graph_schema.py",
+            "src/agent_bom/security.py",
+            "src/agent_bom/rbac.py",
+            "src/agent_bom/proxy.py",
+            "src/agent_bom/gateway_server.py",
+            "src/agent_bom/api/models.py",
+            "src/agent_bom/api/server.py",
+            "src/agent_bom/graph/correlation.py",
+            "src/agent_bom/graph/rekey.py",
+            "src/agent_bom/graph/edge.py",
+        }
+        or (
+            path.startswith("tests/")
+            and (not PurePosixPath(path).name.startswith("test_") or PurePosixPath(path).suffix != ".py" or "/fixtures/" in path)
+        )
+        or (path.startswith("src/") and PurePosixPath(path).name == "__init__.py")
+    )
+
+
+def _requires_full_python(paths: list[str], *, root: Path) -> bool:
+    # This module is both imported by contracts and executed as a standalone
+    # stdlib-only classifier before dependencies are installed.
+    if __package__:
+        from .pytest_ci_plan import AUTHORIZATION_SOURCES, select_targeted_tests
+    else:
+        from pytest_ci_plan import AUTHORIZATION_SOURCES, select_targeted_tests
+
+    for path in paths:
+        if _shared_python_input(path) or path in AUTHORIZATION_SOURCES:
+            return True
+        if path.startswith(("src/", "scripts/")):
+            # Check each input independently: a mapped sibling must never hide
+            # a new, deleted, or otherwise unmapped implementation surface.
+            if not (root / path).is_file() or not select_targeted_tests(changed_files=[Path(path)], root=root):
+                return True
+    return False
+
+
 def classify_paths(paths: Iterable[str]) -> ChangeClassification:
     """Return a narrow docs-only classification, failing closed on ambiguity."""
     raw_paths = list(paths)
@@ -108,10 +158,43 @@ def classify_paths(paths: Iterable[str]) -> ChangeClassification:
     docs_only = bool(valid_paths) and len(valid_paths) == len(raw_paths) and all(_is_documentation_path(path) for path in valid_paths)
     ambiguous = not valid_paths or len(valid_paths) != len(raw_paths) or any(not _known_path(path) for path in valid_paths)
     python_dependencies = ambiguous or any(_python_dependency_path(path) for path in valid_paths)
+    full_python = python_dependencies or _requires_full_python(valid_paths, root=Path(__file__).resolve().parents[1])
+    # Supplement the workflow's writer/migration ownership map with shared
+    # model, authorization, storage and integration-test inputs.
+    postgres_required = python_dependencies or any(
+        path.startswith(("src/agent_bom/api/", "src/agent_bom/db/", "src/agent_bom/core/"))
+        or path in {"src/agent_bom/models.py", "src/agent_bom/canonical_ids.py", "src/agent_bom/graph_schema.py", "src/agent_bom/rbac.py"}
+        or (path.startswith("tests/") and ("postgres" in path or PurePosixPath(path).name == "conftest.py"))
+        for path in valid_paths
+    )
+    ui_container = ambiguous or any(
+        path.startswith((".github/workflows/", ".github/actions/setup-ui/", "ui/scripts/"))
+        or path
+        in {
+            "ui/Dockerfile",
+            "ui/docker-entrypoint.sh",
+            "ui/.dockerignore",
+            "ui/.npmrc",
+            "ui/package.json",
+            "ui/package-lock.json",
+            "ui/.node-version",
+            "ui/.nvmrc",
+            "ui/tsconfig.json",
+            "ui/postcss.config.mjs",
+            "ui/next-env.d.ts",
+            "ui/public/runtime-config.js",
+            "ui/lib/runtime-config.ts",
+        }
+        or path.startswith("ui/next.config.")
+        for path in valid_paths
+    )
     return ChangeClassification(
         docs_only=docs_only,
         changed_count=len(valid_paths),
         python_dependencies=python_dependencies,
+        full_python=full_python,
+        postgres_required=postgres_required,
+        ui_container=ui_container,
     )
 
 
