@@ -113,7 +113,9 @@ class _HttpClient(Protocol):
 
 
 def list_trace_connectors() -> list[dict[str, Any]]:
-    """Describe the available native trace-pull connectors."""
+    """Describe the available native trace-pull connectors and local history providers."""
+    from agent_bom.runtime.agent_sessions.provider import local_session_connectors
+
     return [
         {
             "name": LANGFUSE,
@@ -127,6 +129,7 @@ def list_trace_connectors() -> list[dict[str, Any]]:
             "auth_fields": ["api_key", "api_url", "project"],
             "supports_content": True,
         },
+        *local_session_connectors(),
     ]
 
 
@@ -343,7 +346,12 @@ def fetch_traces(
     :func:`list_trace_connectors`). Values are used for auth only and never
     logged. Returns flat OTLP ``{"spans": [...]}``.
     """
+    from agent_bom.runtime.agent_sessions import LOCAL_SESSION_PROVIDERS
+
     key = (provider or "").strip().lower()
+    if key in LOCAL_SESSION_PROVIDERS:
+        # Never read the serving host's own files on behalf of a remote caller.
+        raise TraceConnectorValidationError("local session history is read only by the local CLI or stdio MCP server")
     if key == LANGFUSE:
         return fetch_langfuse_traces(
             host=str(credentials.get("host", "")),

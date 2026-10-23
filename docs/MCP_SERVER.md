@@ -1,7 +1,7 @@
 # MCP Server — Connect agent-bom to AI Assistants
 
 agent-bom starts with 8 focused MCP tools. Select a task profile for graph, cloud, runtime or audit work;
-`--profile full` explicitly exposes the complete compatibility catalog of 95 MCP tools. Clients that negotiate the
+`--profile full` explicitly exposes the complete compatibility catalog of 96 MCP tools. Clients that negotiate the
 MCP SDK's legacy `2025-11-25` handshake can connect over stdio or
 Streamable HTTP. The `2026-07-28` protocol also supports stateless requests,
 `server/discover`, per-request capabilities, required HTTP headers, and private
@@ -217,7 +217,7 @@ For prerequisite checks and bounded identity paths, use [`consequence_assessment
 
 For scoped historical permission receipts, use [`compromise_assessment`](MCP_SERVER.md#assess-an-assumed-compromise) in the graph profile.
 
-## Tool Categories (95 tools)
+## Tool Categories (96 tools)
 
 These categories describe `--profile full`, not the default startup catalog.
 The [profile guide](#choose-a-profile-for-other-work) lists the smaller task surfaces.
@@ -230,14 +230,14 @@ The [profile guide](#choose-a-profile-for-other-work) lists the smaller task sur
 | **Registry** | `registry_lookup`, `inventory`, `where`, `fleet_scan` | Query the MCP registry, inspect discovery paths, and summarize fleet inventories |
 | **Compliance** | `compliance`, `cis_benchmark`, `aisvs_benchmark` | Inspect framework applicability and evaluated controls; run CIS and AISVS benchmarks. MITRE technique associations are unscored |
 | **Policy** | `policy_check`, `remediate` | Evaluate policies and generate guided remediation plans |
-| **Inventory** | `inventory` | List agents/servers without CVE scanning |
+| **Inventory** | `inventory`, `agent_activity` | List agents/servers without CVE scanning; review local Claude Code and Codex session activity against that inventory |
 | **Trust** | `marketplace_check`, `runtime_correlate`, `tool_risk_assessment` | Score package trust, correlate runtime usage, and assess live tool capability risk |
 | **Skills** | `skill_scan`, `skill_verify`, `skill_trust` | Instruction-file trust, provenance, and tool-poisoning detection |
 | **Graph / Runtime** | `exposure_paths`, `should_i_deploy`, `context_graph`, `graph_export`, `runtime_correlate`, `runtime_production_index`, `runtime_blueprints`, `runtime_blueprint_drift`, `proxy_status`, `proxy_alerts`, `gateway_status`, `shield_status`, `shield_start`, `shield_unblock`, `shield_break_glass`, `firewall_check`, `audit_query`, `audit_integrity`, `tool_risk_assessment` | Return ranked investigation paths, deploy decisions, graph exports, runtime posture, blueprints, drift checks, cursor-paged gateway activity, operator self-posture, audit-chain evidence, read-only firewall decisions, and audited Shield actions |
 | **AI supply chain** | `dataset_card_scan`, `training_pipeline_scan`, `browser_extension_scan`, `model_provenance_scan`, `prompt_scan`, `model_file_scan`, `ingest_external_scan`, `runtime_evidence_ingest` | Scan AI artifacts, prompts, model files, and browser extensions; import tool-agnostic SARIF/SBOM/scanner evidence without executing its producer; merge CWPP runtime signals |
 
 <details>
-<summary>Complete current catalog (95 tools)</summary>
+<summary>Complete current catalog (96 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
@@ -245,7 +245,7 @@ The [profile guide](#choose-a-profile-for-other-work) lists the smaller task sur
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
-`inventory`, `diff`, `marketplace_check`, `code_scan`, `context_graph`,
+`inventory`, `agent_activity`, `diff`, `marketplace_check`, `code_scan`, `context_graph`,
 `graph_export`, `analytics_query`, `cis_benchmark`, `kspm_cluster_posture`,
 `fleet_scan`, `runtime_correlate`, `runtime_production_index`,
 `runtime_blueprints`, `runtime_blueprint_drift`, `cost_report`, `anomaly_scan`,
@@ -657,7 +657,7 @@ cannot be invoked. Profiles are not permissions: graph writes still require the
 existing authenticated role, tenant scope and audit reason.
 
 Existing clients that require the complete catalog can explicitly use
-`agent-bom mcp server --profile full`. It retains all 95 tools. The previous
+`agent-bom mcp server --profile full`. It retains all 96 tools. The previous
 28-tool `--profile guided` option remains available for compatibility with all
 eight workflow prompts. Neither is the recommended first-run configuration.
 Third-party tool plugins remain separately opt-in and are exposed only by `full`.

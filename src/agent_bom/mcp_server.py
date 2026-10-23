@@ -6,7 +6,7 @@ Start with:
     agent-bom mcp server --transport streamable-http
 
 Default: 8 focused tools; select a task profile with --profile.
-Full profile Tools (95):
+Full profile Tools (96):
     scan                — Full discovery → scan → output pipeline
     check               — Check a specific package for CVEs before installing
     intel_lookup        — Look up a CVE, GHSA, or OSV advisory from local threat intel
@@ -38,6 +38,7 @@ Full profile Tools (95):
     inventory_asset     — Asset attributes and bounded recorded relationships
     where               — Show all MCP discovery paths + existence status
     inventory           — List agents/servers without CVE scanning
+    agent_activity      — Local review of coding-agent sessions: usage, unused servers, risky actions
     tool_risk_assessment — Score live MCP tool capabilities and server risk
     diff                — Compare scan against baseline for new/resolved vulns
     marketplace_check   — Pre-install trust check with registry cross-reference

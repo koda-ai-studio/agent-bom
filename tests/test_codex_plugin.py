@@ -34,7 +34,7 @@ def test_codex_manifest_paths_resolve_inside_the_plugin() -> None:
 
 def test_codex_skills_are_the_shared_plugin_skills() -> None:
     skills = sorted(path.parent.name for path in (PLUGIN / "skills").glob("*/SKILL.md"))
-    assert skills == ["affected", "audit-mcp", "audit-skills", "bom", "check", "checkup", "fix", "inventory", "scan"]
+    assert skills == ["activity", "affected", "audit-mcp", "audit-skills", "bom", "check", "checkup", "fix", "inventory", "scan"]
     for skill in skills:
         text = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
         # Codex has no `/plugin:skill` commands, so cross-references name the skill.

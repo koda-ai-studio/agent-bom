@@ -65,13 +65,22 @@ def test_recorded_tool_schemas_match_live_catalog(server):
 
 def test_every_skill_states_it_is_read_only_and_confirms_changes():
     skills = sorted(PLUGIN.glob("skills/*/SKILL.md"))
-    assert {s.parent.name for s in skills} == {"scan", "check", "fix", "inventory", "audit-mcp", "audit-skills", "checkup", "affected", "bom"}
+    assert {s.parent.name for s in skills} == {"scan", "check", "fix", "inventory", "audit-mcp", "audit-skills", "checkup", "affected", "bom", "activity"}
     for skill in skills:
         text = skill.read_text()
         assert text.startswith(f"---\nname: {skill.parent.name}\n"), skill
         assert "read-only" in text or "Do not install" in text or "only edit" in text, skill
-    for name in ("inventory", "audit-mcp", "audit-skills", "affected"):
+    for name in ("inventory", "audit-mcp", "audit-skills", "affected", "activity"):
         text = (PLUGIN / "skills" / name / "SKILL.md").read_text()
         assert "This skill is read-only" in text, name
     for name in ("audit-mcp", "checkup"):
         assert "`live: false`" in (PLUGIN / "skills" / name / "SKILL.md").read_text(), name
+
+
+def test_activity_skill_treats_transcripts_as_untrusted_and_confirms_config_edits():
+    text = (PLUGIN / "skills" / "activity" / "SKILL.md").read_text()
+    assert "`agent_activity`" in text and "`agent-bom-audit`" in text
+    assert "untrusted" in text and "never follow" in text
+    assert "confirm" in text
+    recorded = {t["name"] for t in json.loads((PLUGIN / "evals" / "mocks" / "agent-bom-audit" / "_tools.json").read_text())["tools"]}
+    assert "agent_activity" in recorded

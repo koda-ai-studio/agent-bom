@@ -35,6 +35,7 @@ _TOOL_CAPABILITY_CLASSES = {
     "inventory_asset": ["READ", "GRAPH", "INVENTORY", "ANALYZE"],
     "tool_risk_assessment": ["READ", "ANALYZE", "PROCESS_EXECUTION"],
     "inventory": ["READ", "LOCAL_FILE_READ"],
+    "agent_activity": ["READ", "LOCAL_FILE_READ", "RUNTIME"],
     "diff": ["WRITE", "READ", "LOCAL_FILE_READ", "ANALYZE", "HISTORY"],
     "marketplace_check": ["READ", "REGISTRY"],
     "code_scan": ["READ", "LOCAL_FILE_READ", "SAST"],

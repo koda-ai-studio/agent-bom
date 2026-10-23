@@ -192,6 +192,14 @@ _SERVER_CARD_TOOLS = [
         "annotations": {"readOnlyHint": True},
     },
     {
+        "name": "agent_activity",
+        "description": (
+            "Local review of Claude Code and Codex session history: MCP usage, configured-but-unused servers,"
+            " risky actions with redacted evidence, and installed packages"
+        ),
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
         "name": "diff",
         "description": "Compare scan against baseline; persists scan to history and prunes old reports (destructive write)",
         "annotations": {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False},

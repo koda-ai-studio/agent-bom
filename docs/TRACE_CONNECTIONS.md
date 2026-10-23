@@ -103,6 +103,14 @@ canonical project/scope fields needed to merge safely into native span history,
 so the first native import can add a separate record for the same provider span.
 Replay deduplication applies within each identity format, not across that upgrade.
 
+## Local session history providers
+
+`claude-code-sessions` and `codex-sessions` appear in the connector list with
+kind `local_session_history`. They map local coding-agent history to the same
+span shape for `agent-bom activity` and the `agent_activity` MCP tool, and the
+pull route rejects them with a 400. See
+[MCP_AUDIT.md](MCP_AUDIT.md#review-what-your-coding-agents-actually-did).
+
 ## Import, resume, and inspect
 
 With the authenticated control-plane session, POST to

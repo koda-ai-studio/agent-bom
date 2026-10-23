@@ -102,6 +102,7 @@ Policy, trust, fleet, FinOps, identity, API, scheduling, and control-plane ops.
 | `profiles` | Deploy profiles group. |
 | `guard` | Pre-install CVE guard for pip/npm. |
 | `audit` / `audit-drain-dlq` | Audit-chain replay and DLQ drain. |
+| `activity` | Local review of Claude Code and Codex session history. |
 
 ## Database
 

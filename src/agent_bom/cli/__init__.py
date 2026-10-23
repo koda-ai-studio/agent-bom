@@ -276,6 +276,10 @@ main.add_command(watch_cmd, "watch")
 main.add_command(audit_replay_cmd, "audit")
 main.add_command(audit_drain_dlq_cmd, "audit-drain-dlq")
 
+from agent_bom.cli._activity import activity_cmd  # noqa: E402
+
+main.add_command(activity_cmd, "activity")
+
 from agent_bom.cli._analysis import (  # noqa: E402
     analytics_cmd,
     graph_cmd,

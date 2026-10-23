@@ -21,7 +21,8 @@ from urllib.parse import urlsplit
 
 from agent_bom.security import sanitize_path_label, sanitize_text
 
-SOURCES = ("langfuse", "langsmith", "otel", "snowflake_cortex")
+SOURCES = ("langfuse", "langsmith", "otel", "snowflake_cortex", "claude_code", "codex")
+LOCAL_SESSION_SOURCES = ("claude_code", "codex")
 KINDS = ("agent", "llm", "tool", "retrieval", "mcp", "other")
 SIGNALS = frozenset({"prompt_injection", "pii", "secret", "vulnerable_tool_call"})
 MATCH_METHODS = ("exact", "candidate", "none")
@@ -359,6 +360,13 @@ def from_langsmith_run(
         "content": (row.get("inputs"), row.get("outputs")),
     }
     return _build(tenant_id, "langsmith", view, signals, principal)
+
+
+def from_local_session(view: Mapping[str, Any], *, tenant_id: str, source: str) -> NormalizedTraceEvent:
+    """A local coding-agent session view; callers supply only exact refs resolved from discovery."""
+    if source not in LOCAL_SESSION_SOURCES:
+        raise ValueError("Unsupported local session source")
+    return _build(tenant_id, source, dict(view), frozenset(), None)
 
 
 _OTEL_OPERATIONS = {
