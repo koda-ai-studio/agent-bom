@@ -11,7 +11,38 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Source-built language runtimes are detected in images (PHP, Python, Node.js, Go, Ruby, Java from image config) and on hosts and VM snapshots (`/usr/local` and `/opt` builds), and matched through NVD CPEs. Offline, a runtime reports a coverage gap, never a clean result.
+- Operator advisories match before feeds publish: `agent-bom db advisory add|list|remove|match`, `/v1/intel/operator-advisories` and MCP `intel_lookup`. Declared advisories match the newest stored scan per target, tenant-scoped; a later feed record with the same id or alias supersedes it.
+- NVIDIA GPU stack detection in `fs` scans, VM side-scans and image layers: driver, CUDA toolkit and NVIDIA Container Toolkit versions with NVD CPE identities, so their CVEs match GPU nodes.
+- Skill audits flag hardcoded secrets (type and line only), environment-variable exfiltration to a network sink, and instructions hidden in Unicode tag characters or variation selectors.
+- The agent-bom plugin installs in Codex as well as Claude Code, with `checkup`, `affected`, `bom` and `activity` skills. `agent-bom-guard` adds a Claude Code `PreToolUse` check that blocks known-malicious and typosquatted package installs. Both plugins publish a privacy policy.
+- `/v1/graph/attack-paths` accepts `kev=true` with the same meaning as MCP `exposure_paths`, and rejects undeclared query parameters with 422 instead of ignoring them.
+- `/health` reports `demo_seed: pending|complete` in demo mode, and the UI waits for seeding before showing counts.
+- Over HTTP or SSE, host-local MCP tools (`agent_activity`, `browser_extension_scan`, and `inventory` / `tool_risk_assessment` without `config_path`) are refused unless `AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS=1`; stdio is unchanged.
 - `agent-bom activity`, the `agent_activity` MCP tool (audit profile, local and read-only) and the plugin `activity` skill review local Claude Code and Codex session history: MCP server and tool usage, configured servers never called in the window, risky actions with redacted evidence (pipe-to-shell, destructive commands, writes outside the project, secret-file reads, package installs) and installed packages. Reads are streamed and capped; prompts and responses are never read into results, and nothing is sent unless `--check-packages` is set. Sessions map to the shared trace span shape as local providers `claude-code-sessions` and `codex-sessions`, and used servers come from the runtime trace projection with exact discovery bindings; the control-plane pull route rejects these providers.
+
+### Changed
+
+- PR CI sizes pytest workers to the runner, skips smoke when the full shards replace it, and splits UI E2E across four runners.
+- Migration `20261023_02` revokes writes on `alembic_version` from the application and RLS-maintenance roles; migrations run as the admin role.
+
+### Fixed
+
+- An unpinned `GET /v1/graph` whose evidence changes during assembly rebuilds a bounded number of times, then returns 503 with `Retry-After` instead of 409. A pinned generation that changed still returns 409.
+- Feed re-match pages on (modified, id), so records sharing a timestamp are no longer skipped, honours an advisory's `limit_version` through the same range check as scan time, and marks a run `incomplete` when tenant or job caps are reached.
+- MCP `intel_lookup` reads advisories declared through the API when a store is configured.
+- Cross-vendor paths never report `has_more` with an empty cursor. Search ranks an exact id, id suffix or label first.
+- Every path-taking MCP tool returns the same validation error for a path outside the allowed roots, naming `AGENT_BOM_MCP_WORKSPACE_ROOTS`, instead of "An internal error occurred". `inventory` now applies the same check. Tool calls that return an error are logged and counted as failures.
+- The standalone `agent-bom mcp server` in demo mode reads the demo database. Image tarball scans no longer include the host's agents.
+- The overview vulnerability card counts with the query its link opens, so the card and the findings list agree. Demo trust scores use the 0–100 scale the scorer and UI use. Mixed-version issue titles read "ws · 2 versions".
+- Credential counts say what they count on every surface: held by the server, or exposed by the advisory's impact.
+- Graph nodes keep their canonical type, layer and evidence when types share a renderer; recorded evidence is no longer shown as runtime; advisory ids are never clipped.
+- Persona journeys: the remediation link no longer 404s, overview counts no longer change after first load, and a queue row no longer mixes two package versions.
+- CIS results come from the graph, and a control passes only with a recorded passing result; missing results are `not_evaluated` and excluded from the score.
+- Graph change exposures page their top rows, and removed paths link to the previous snapshot.
+- NVIDIA CSAF advisories attach only to the release branch they fix, and NVD ranges scoped to another platform are skipped.
+- Documentation and shipped manifests reference only CLI commands that exist (the proxy bootstrap bundles and the Kubernetes DaemonSet called removed commands); the check now verifies every word of a cited command. Version bumps update the OpenClaw, first-run and CloudFormation image pins.
+- zod updated to 4.6.7 for GHSA-mrhx-c7xc-m3w5 (development dependency).
 
 ## [0.110.0] - 2026-10-21
 
