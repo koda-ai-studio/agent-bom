@@ -11,6 +11,7 @@ from typing import Any, cast
 from agent_bom.api.route_offload import call_route as _call_route
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
 from agent_bom.core.experimental import disabled_message, is_enabled
+from agent_bom.mcp_errors import CODE_UNSUPPORTED_BACKEND, mcp_error_json
 from agent_bom.mcp_server_runtime import safe_path
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl as tool_risk_assessment_impl
@@ -484,6 +485,10 @@ async def audit_query_impl(
         return json.dumps({"error": sanitize_error(exc)})
 
 
+# Top-level modules shipped only by the ``agent-bom[api]`` extra.
+_API_EXTRA_MODULES = frozenset({"fastapi", "uvicorn", "sse_starlette", "zstandard"})
+
+
 async def audit_integrity_impl(
     *,
     tenant_id: str = "default",
@@ -498,6 +503,15 @@ async def audit_integrity_impl(
         bounded_limit = max(1, min(int(limit), 10_000))
         payload = await _call_route(audit_integrity, _request_for_tenant(tenant_id), limit=bounded_limit, include_runtime=include_runtime)
         return _truncate_response(json.dumps(payload, indent=2, default=str))
+    except ModuleNotFoundError as exc:
+        if (exc.name or "").split(".")[0] not in _API_EXTRA_MODULES:
+            logger.exception("MCP audit integrity error")
+            return json.dumps({"error": sanitize_error(exc)})
+        return mcp_error_json(
+            CODE_UNSUPPORTED_BACKEND,
+            "audit_integrity verifies the control-plane audit chain and requires the API extra: install agent-bom[api].",
+            details={"missing_module": exc.name, "install": "pip install 'agent-bom[api]'"},
+        )
     except Exception as exc:
         logger.exception("MCP audit integrity error")
         return json.dumps({"error": sanitize_error(exc)})
