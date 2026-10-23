@@ -37,6 +37,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
+import string
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -155,12 +157,40 @@ def _fail_open_verification(packages: list[tuple[str, str]]) -> dict[str, bool]:
     return {name: True for name, _ecosystem in packages}
 
 
+# Real-shaped credentials are generated here, never committed or written to
+# disk, so repository secret scanning never sees a live-looking key.
+_UPPER_DIGITS = string.ascii_uppercase + string.digits
+_BASE64ISH = string.ascii_letters + string.digits + "/+"
+
+
+def _synthetic(prefix: str, length: int, alphabet: str, seed: int) -> str:
+    rng = random.Random(seed)  # nosec B311 - deterministic test data, not a security token
+    return prefix + "".join(rng.choice(alphabet) for _ in range(length))
+
+
+SYNTHETIC_VALUES = {
+    "{{SYNTHETIC_AWS_ACCESS_KEY_ID}}": _synthetic("AKIA", 16, _UPPER_DIGITS, 1),
+    "{{SYNTHETIC_AWS_SECRET_ACCESS_KEY}}": _synthetic("", 40, _BASE64ISH, 2),
+    "{{SYNTHETIC_GITHUB_TOKEN}}": _synthetic("ghp_", 36, string.ascii_letters + string.digits, 3),
+}
+
+
+class _CorpusPath(type(Path())):  # type: ignore[misc]
+    """A corpus file whose placeholders are filled in memory when read."""
+
+    def read_text(self, *args, **kwargs) -> str:  # type: ignore[override]
+        text = super().read_text(*args, **kwargs)
+        for token, value in SYNTHETIC_VALUES.items():
+            text = text.replace(token, value)
+        return text
+
+
 def audit_surface(path: Path) -> tuple[dict[str, str], list[tuple[str, str, str]]]:
     """Return ``{category: highest severity}`` and extracted ``(name, ecosystem, version)``."""
     from agent_bom.parsers import skill_audit
     from agent_bom.parsers.skills import parse_skill_file
 
-    scan = parse_skill_file(path)
+    scan = parse_skill_file(_CorpusPath(path))
     with mock.patch.object(skill_audit, "_batch_verify_packages_sync", _fail_open_verification):
         audit = skill_audit.audit_skill_result(scan)
     fired: dict[str, str] = {}

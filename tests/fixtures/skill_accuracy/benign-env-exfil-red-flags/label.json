@@ -1,0 +1,11 @@
+{
+  "kind": "benign",
+  "file": "AGENTS.md",
+  "description": "Review checklist quoting environment exfiltration as red flags.",
+  "must_not": [
+    {
+      "category": "credential_exfiltration",
+      "max_severity": "low"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "An agent imperative under an examples heading is still a directive.",
+  "expect": [
+    {
+      "category": "credential_exfiltration",
+      "min_severity": "high"
+    },
+    {
+      "category": "credential_file_access",
+      "min_severity": "high"
+    }
+  ]
+}

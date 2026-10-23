@@ -1,0 +1,11 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Placeholder credentials (sk-...xxxx, <TOKEN>, xxxx runs) in setup docs.",
+  "must_not": [
+    {
+      "category": "hardcoded_secret",
+      "max_severity": "low"
+    }
+  ]
+}

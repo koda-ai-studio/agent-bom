@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Posts os.environ to an external endpoint from a Python block.",
+  "expect": [
+    {
+      "category": "credential_exfiltration",
+      "min_severity": "high"
+    }
+  ]
+}

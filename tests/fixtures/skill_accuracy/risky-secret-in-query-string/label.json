@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Interpolates a secret environment variable into a third-party URL.",
+  "expect": [
+    {
+      "category": "credential_exfiltration",
+      "min_severity": "high"
+    }
+  ]
+}

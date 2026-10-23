@@ -30,10 +30,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from agent_bom import config
-from agent_bom.runtime.patterns import CODE_CALL_ASSIGNMENT, CREDENTIAL_PATTERNS, PII_PATTERNS
+from agent_bom.runtime.patterns import PII_PATTERNS
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator
 from agent_bom.scanners.credential_validation import CredentialValidator, ValidationStatus
 from agent_bom.scanners.repo_ignore import RepositoryIgnore
+from agent_bom.scanners.secret_lines import ENTROPY_PLACEHOLDER_RE as _ENTROPY_PLACEHOLDER_RE
+from agent_bom.scanners.secret_lines import is_comment_line, match_credential, match_file_secret
 from agent_bom.scanners.secret_models import SecretFinding as SecretFinding
 from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResult
 from agent_bom.traversal import iter_discovery_files
@@ -178,17 +180,6 @@ _PII_CONTEXT_RE = re.compile(
 _MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 _MAX_FILES = 10_000  # Scan one file at a time; report partial coverage if this budget is exhausted.
 
-# Additional patterns specific to file scanning (not in runtime patterns)
-_FILE_SECRET_PATTERNS: list[tuple[str, re.Pattern]] = [
-    ("Hardcoded password", re.compile(r'(?:password|passwd|pwd)\s*[=:]\s*["\'][^"\']{8,}["\']', re.IGNORECASE)),
-    ("Hardcoded secret", re.compile(r'(?:secret|secret_key)\s*[=:]\s*["\'][^"\']{8,}["\']', re.IGNORECASE)),
-    (
-        ".env password",
-        re.compile(r"^(?:DB_PASSWORD|DATABASE_PASSWORD|REDIS_PASSWORD|MYSQL_PASSWORD)\s*=\s*\S+", re.MULTILINE | re.IGNORECASE),
-    ),
-    (".env token", re.compile(r"^(?:AUTH_TOKEN|ACCESS_TOKEN|REFRESH_TOKEN|SESSION_SECRET)\s*=\s*\S+", re.MULTILINE | re.IGNORECASE)),
-]
-
 # ── AWS live-secret validation (opt-in) ─────────────────────────────────────
 # sts:GetCallerIdentity needs both halves of an AWS credential pair. The
 # access key id is already captured by the "AWS Access Key" credential
@@ -261,22 +252,6 @@ _ENTROPY_ASSIGN_RE = re.compile(
     """
     % _ENTROPY_MIN_LEN
 )
-# Obvious non-secrets to skip even when assigned to a secret-named key.
-_ENTROPY_PLACEHOLDER_RE = re.compile(
-    r"(?i)^(?:your[-_][a-z0-9_.-]+|x{3,}|placeholder(?:[-_][a-z0-9_.-]+)?|"
-    r"example(?:[-_][a-z0-9_.-]+)?|changeme(?:[-_]?\d*)?|none|null|true|false|"
-    r"enabled|disabled|\$\{[^}]*\}|\{\{[^}]*\}\}|<[a-z][^>]*>|/[a-z][^\s]*|"
-    r"https?://[^\s]+)$"
-)
-_ASSIGNED_VALUE_RE = re.compile(r"[=:]\s*['\"]?([^'\"\s,;#]+)")
-
-
-def _matched_assignment_is_placeholder(match: re.Match) -> bool:
-    """Return whether a secret-pattern match is an explicit sample value."""
-    if match.group(0) == "AKIAIOSFODNN7EXAMPLE":
-        return True
-    assigned = _ASSIGNED_VALUE_RE.search(match.group(0))
-    return bool(assigned and _ENTROPY_PLACEHOLDER_RE.fullmatch(assigned.group(1)))
 
 
 def _shannon_entropy(value: str) -> float:
@@ -396,69 +371,51 @@ def _scan_file(
 
     # Check each line against all patterns
     for line_num, line in enumerate(lines, 1):
-        # Skip comments
-        stripped = line.strip()
-        if stripped.startswith(("#", "//", "/*", "*")):
+        if is_comment_line(line):
             continue
 
-        # Credential patterns (CRITICAL)
-        for name, pattern in CREDENTIAL_PATTERNS:
-            match = pattern.search(line)
-            if match:
-                if _matched_assignment_is_placeholder(match):
-                    break
-                # A secret-named variable assigned to a function/method call
-                # (e.g. OAuth token minting:
-                # `access_token = self.signing_key.sign(claims)`) is derived
-                # code, not a hardcoded literal. The generic patterns capture
-                # the value as an identifier/attribute chain; if it is
-                # immediately called, suppress the false positive. A real
-                # literal passed as a call argument (e.g. `k = load("AKIA...")`)
-                # still matches on the literal itself, whose match is not
-                # call-shaped here, so it is preserved.
-                if line[match.end() :].lstrip().startswith("(") and CODE_CALL_ASSIGNMENT.search(line):
-                    break
-                validation_status: ValidationStatus | None = validator.validate(name, match.group(0)) if validator is not None else None
-                if name == "AWS Access Key" and aws_validator is not None:
-                    paired_secret = _nearest_aws_secret(aws_secrets, line_num)
-                    if paired_secret is not None:
-                        validation_status = aws_validator.validate(match.group(0), paired_secret)
-                        _log_aws_validation_attempt(rel_path, line_num, validation_status)
-                    else:
-                        # Enrichment was requested but no secret key value could
-                        # be paired in this file, so no sts:GetCallerIdentity
-                        # call was possible — consistent with the "unsupported
-                        # credential type" verdict the generic validator already
-                        # returns, not a distinct failure state.
-                        validation_status = "unknown"
-                findings.append(
-                    SecretFinding(
-                        file_path=rel_path,
-                        line_number=line_num,
-                        secret_type=name,
-                        severity="critical",
-                        matched_preview="[CREDENTIAL_REDACTED]",
-                        category="credential",
-                        validation_status=validation_status,
-                    )
+        credential = match_credential(line)
+        if credential is not None:
+            secret_type, secret_match = credential
+            validation_status: ValidationStatus | None = (
+                validator.validate(secret_type, secret_match.group(0)) if validator is not None else None
+            )
+            if secret_type == "AWS Access Key" and aws_validator is not None:
+                paired_secret = _nearest_aws_secret(aws_secrets, line_num)
+                if paired_secret is not None:
+                    validation_status = aws_validator.validate(secret_match.group(0), paired_secret)
+                    _log_aws_validation_attempt(rel_path, line_num, validation_status)
+                else:
+                    # Enrichment was requested but no secret key value could
+                    # be paired in this file, so no sts:GetCallerIdentity
+                    # call was possible — consistent with the "unsupported
+                    # credential type" verdict the generic validator already
+                    # returns, not a distinct failure state.
+                    validation_status = "unknown"
+            findings.append(
+                SecretFinding(
+                    file_path=rel_path,
+                    line_number=line_num,
+                    secret_type=secret_type,
+                    severity="critical",
+                    matched_preview="[CREDENTIAL_REDACTED]",
+                    category="credential",
+                    validation_status=validation_status,
                 )
-                break  # One finding per line for credentials
+            )
 
-        # File-specific secret patterns (HIGH)
-        for name, pattern in _FILE_SECRET_PATTERNS:
-            match = pattern.search(line)
-            if match and not _matched_assignment_is_placeholder(match):
-                findings.append(
-                    SecretFinding(
-                        file_path=rel_path,
-                        line_number=line_num,
-                        secret_type=name,
-                        severity="high",
-                        matched_preview="[SECRET_REDACTED]",
-                        category="secret",
-                    )
+        file_secret = match_file_secret(line)
+        if file_secret is not None:
+            findings.append(
+                SecretFinding(
+                    file_path=rel_path,
+                    line_number=line_num,
+                    secret_type=file_secret[0],
+                    severity="high",
+                    matched_preview="[SECRET_REDACTED]",
+                    category="secret",
                 )
-                break
+            )
 
         # PII patterns (MEDIUM) stay limited to structured config/secrets
         # surfaces and config-like code lines. Markdown/plain-text docs are

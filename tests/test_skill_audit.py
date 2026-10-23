@@ -1513,7 +1513,7 @@ def test_prohibition_cue_regex_linear_time_on_pathological_input():
     """
     import time
 
-    from agent_bom.parsers.skill_audit_behavior import _PROHIBITION_CUE_RE
+    from agent_bom.parsers.skill_audit_context import _PROHIBITION_CUE_RE
 
     pathological = "without " + "a " * 50 + "x"
     start = time.perf_counter()
@@ -1524,7 +1524,7 @@ def test_prohibition_cue_regex_linear_time_on_pathological_input():
 
 def test_prohibition_cue_regex_still_matches_real_cues():
     """De-overlapping/bounding the regex must not drop legitimate prohibition cues."""
-    from agent_bom.parsers.skill_audit_behavior import _PROHIBITION_CUE_RE
+    from agent_bom.parsers.skill_audit_context import _PROHIBITION_CUE_RE
 
     for cue in (
         "without an explicit user request",

@@ -1,7 +1,7 @@
 {
   "kind": "risky",
   "file": "CLAUDE.md",
-  "description": "AWS access key pair pasted into an instruction file (AWS documentation example values).",
+  "description": "AWS access key pair pasted into an instruction file (synthetic values with a real key shape).",
   "expect": [
     {
       "category": "hardcoded_secret",

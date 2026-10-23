@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "Instruction encoded byte-wise in invisible variation selectors.",
+  "expect": [
+    {
+      "category": "hidden_instruction",
+      "min_severity": "high"
+    },
+    {
+      "category": "prompt_coercion",
+      "min_severity": "high"
+    }
+  ]
+}
