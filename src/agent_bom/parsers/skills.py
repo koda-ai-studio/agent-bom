@@ -45,10 +45,10 @@ SKILL_FILE_NAMES: list[str] = [
 # ─── Regex patterns ──────────────────────────────────────────────────────────
 
 _NPX_RE = re.compile(
-    r"(?:npx|bunx)\s+(?:-[yYp]\s+)*(?!-)(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)",
+    r"(?:npx|bunx)[ \t]+(?:-[yYp][ \t]+)*(?!-)(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)",
 )
 _UVX_RE = re.compile(
-    r"(?:uvx|uv\s+(?:run|tool\s+run))\s+([\w][\w.-]*(?:==[\w.+-]+)?)",
+    r"(?:uvx|uv[ \t]+(?:run|tool[ \t]+run))[ \t]+([\w][\w.-]*(?:==[\w.+-]+)?)",
 )
 _PIP_INSTALL_RE = re.compile(
     r"pip\s+install\s+(?:-[\w-]+\s+)*(.+?)(?:\s*$|\s*&&|\s*\\)",

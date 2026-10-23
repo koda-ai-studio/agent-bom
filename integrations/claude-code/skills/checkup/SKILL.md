@@ -2,6 +2,16 @@
 name: checkup
 description: One-step security checkup of this machine's AI setup with agent-bom - what agents and MCP servers are configured, what is risky in their configuration, which packages carry CVEs or are malicious, and the three fixes that matter most. Use when the user asks to check, review or secure their AI or agent setup, or asks "is my setup safe?" without naming a specific skill.
 argument-hint: "[config directory]"
+homepage: https://github.com/koda-ai-studio/agent-bom
+source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/checkup
+license: Apache-2.0
+capabilities:
+  read_inventory: true
+  read_findings: true
+  read_audit_log: false
+  write_findings: false
+  outbound_http: true
+  shell_exec: false
 ---
 
 Run a read-only checkup and answer in one screen. This skill reads MCP client configuration and package metadata, never launches or connects to the servers it checks, and changes nothing.

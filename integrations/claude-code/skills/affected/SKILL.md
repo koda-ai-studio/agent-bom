@@ -2,6 +2,16 @@
 name: affected
 description: Answer "am I affected by this CVE?" with agent-bom - look up a CVE, GHSA or OSV advisory and check whether any agent, MCP server or package on this machine carries it, with the fixed version. Use when the user names an advisory id or a vulnerability in the news and asks whether they are exposed.
 argument-hint: "<CVE-…|GHSA-…|PYSEC-…>"
+homepage: https://github.com/koda-ai-studio/agent-bom
+source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/affected
+license: Apache-2.0
+capabilities:
+  read_inventory: true
+  read_findings: true
+  read_audit_log: false
+  write_findings: false
+  outbound_http: true
+  shell_exec: false
 ---
 
 Answer whether the named advisory is present on this machine. This skill is read-only.

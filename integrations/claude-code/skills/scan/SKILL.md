@@ -2,6 +2,18 @@
 name: scan
 description: Scan this machine's AI agents and MCP servers, a container image, an SBOM or a repository with agent-bom for CVEs, supply-chain risk and exposed credentials. Use when the user asks for an agent-bom scan, an MCP or agent security check, or an AI supply-chain audit.
 argument-hint: "[image <ref> | sbom <path> | repo <url>]"
+homepage: https://github.com/koda-ai-studio/agent-bom
+source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/scan
+license: Apache-2.0
+capabilities:
+  read_inventory: true
+  read_findings: true
+  read_audit_log: false
+  write_findings: false
+  outbound_http: true
+  shell_exec: false
+optional_bins:
+  - docker
 ---
 
 Run the agent-bom `scan` MCP tool, then report what matters.

@@ -2,6 +2,16 @@
 name: fix
 description: Build a prioritized remediation plan with agent-bom - which upgrades remove the most risk, in what order, and which findings have no fix yet. Use when the user asks how to fix agent-bom findings, what to upgrade first, or for a remediation plan.
 argument-hint: "[image <ref>]"
+homepage: https://github.com/koda-ai-studio/agent-bom
+source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/fix
+license: Apache-2.0
+capabilities:
+  read_inventory: true
+  read_findings: true
+  read_audit_log: false
+  write_findings: false
+  outbound_http: true
+  shell_exec: false
 ---
 
 Use the agent-bom `remediate` MCP tool to plan fixes.

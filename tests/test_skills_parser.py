@@ -493,3 +493,11 @@ def test_launcher_flags_are_never_read_as_package_names(tmp_path):
     skill.write_text("Flag a launcher such as `npx -y <package>` or `bunx -p <name>`; run `npx -y left-pad@1.3.0`.\n")
     names = {pkg.name for pkg in parse_skill_file(skill).packages}
     assert names == {"left-pad"}
+
+
+def test_a_launcher_name_never_reads_the_next_line_as_its_package(tmp_path):
+    from agent_bom.parsers.skills import parse_skill_file
+
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("---\nname: demo\nrequires:\n  bins:\n    - uvx\n    - npx\noptional_bins:\n  - docker\n---\nRun `uvx ruff==0.6.0`.\n")
+    assert {(pkg.name, pkg.ecosystem) for pkg in parse_skill_file(skill).packages} == {("ruff", "pypi")}

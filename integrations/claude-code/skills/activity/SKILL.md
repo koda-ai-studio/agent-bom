@@ -2,6 +2,16 @@
 name: activity
 description: Review what the user's coding agents actually did with agent-bom - which MCP servers and tools Claude Code and Codex called, configured MCP servers that were never used, risky actions such as pipe-to-shell installs, force pushes, writes outside the project or reads of secret files, and packages the agents installed. Use when the user asks what their agents have been doing, which MCP servers are unused, or what risky commands their agents ran.
 argument-hint: "[days] [project directory]"
+homepage: https://github.com/koda-ai-studio/agent-bom
+source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/activity
+license: Apache-2.0
+capabilities:
+  read_inventory: true
+  read_findings: true
+  read_audit_log: true
+  write_findings: false
+  outbound_http: false
+  shell_exec: false
 ---
 
 Review local coding-agent activity with agent-bom. This skill is read-only: the tool reads Claude Code and Codex session history files on this machine, sends nothing over the network, and changes nothing.

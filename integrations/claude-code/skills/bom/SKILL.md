@@ -2,6 +2,21 @@
 name: bom
 description: Generate an AI-BOM (CycloneDX or SPDX) with agent-bom for this machine's agents and MCP servers, a project, a container image, a repository, or an AWS, Azure or GCP account - agents, MCP servers, tools, models and packages with their relationships and known vulnerabilities. Use when the user asks for an AI-BOM, agent BOM, SBOM, ML-BOM or an inventory file to share or attach.
 argument-hint: "[project <dir> | image <ref> | repo <url> | aws|azure|gcp]"
+homepage: https://github.com/koda-ai-studio/agent-bom
+source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/bom
+license: Apache-2.0
+capabilities:
+  read_inventory: true
+  read_findings: true
+  read_audit_log: false
+  write_findings: false
+  outbound_http: true
+  shell_exec: true
+requires:
+  bins:
+    - uvx
+optional_bins:
+  - docker
 ---
 
 Write an AI-BOM file and summarize it. This skill is read-only toward everything it inventories: it never changes a config, a cloud resource or a package, and the only file it writes is the BOM.
