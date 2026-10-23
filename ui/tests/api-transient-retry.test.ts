@@ -59,4 +59,36 @@ describe("idempotent GET retry", () => {
     await expect(post("/v1/d", {})).rejects.toBeInstanceOf(ApiNetworkError);
     expect(writes).toHaveBeenCalledTimes(1);
   });
+
+  it("waits Retry-After and retries once when the API says a 503 is retryable", async () => {
+    vi.useFakeTimers();
+    const rotating = new Response(JSON.stringify({ detail: { code: "current_estate_generation_rotating", message: "retry" } }),
+      { status: 503, headers: { "Content-Type": "application/json", "Retry-After": "1" } });
+    const fetchMock = vi.fn().mockResolvedValueOnce(rotating).mockResolvedValueOnce(json({ nodes: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const pending = get("/v1/graph?limit=10");
+    await vi.advanceTimersByTimeAsync(900);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(2_000);
+    await expect(pending).resolves.toEqual({ nodes: [] });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("surfaces a retryable 503 whose Retry-After is too long to hold the read", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "maintenance" }),
+      { status: 503, headers: { "Content-Type": "application/json", "Retry-After": "120" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const error = await get("/v1/graph?limit=20").catch(err => err);
+    expect(error).toBeInstanceOf(ApiServerError);
+    expect((error as ApiServerError).retryAfterSeconds).toBe(120);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the booting-API 503 to the session's own start-up poll", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: "API_STARTING", message: "starting" }, retry_after_seconds: 1 }),
+      { status: 503, headers: { "Content-Type": "application/json", "Retry-After": "1" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(get("/v1/auth/me?probe=1")).rejects.toBeInstanceOf(ApiServerError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

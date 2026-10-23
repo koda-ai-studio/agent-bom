@@ -24,9 +24,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
-from starlette.exceptions import HTTPException
+from fastapi import HTTPException
 
 from agent_bom import __version__
+from agent_bom.api.error_models import ErrorEnvelope
 from agent_bom.api.file_lock import exclusive_file_lock
 from agent_bom.api.finding_read_context import forget_read, on_scope_exit, read_once
 from agent_bom.api.findings_current import _finding_snapshot_jobs, scan_collection_incomplete_reasons, scan_evidence_authority_key
@@ -72,6 +73,30 @@ _READS = frozenset(
         "evidence_manifest",
     }
 )
+
+
+ROTATING_CODE = "current_estate_generation_rotating"
+
+
+ROTATING_OPENAPI_RESPONSE: dict[str, Any] = {
+    "model": ErrorEnvelope,
+    "description": (
+        f"Retryable: unpinned current-estate reads kept landing on retired generations (error.details.code "
+        f"``{ROTATING_CODE}``). Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` "
+        "that changed is a 409 instead."
+    ),
+    "headers": {"Retry-After": {"description": "Seconds to wait before retrying", "schema": {"type": "integer"}}},
+}
+
+
+def _generation_rotating() -> HTTPException:
+    """Unpinned reads kept resolving generations that were retired before use.
+
+    Nothing is wrong with the request: new evidence is landing faster than the
+    retry budget, so the client should retry rather than restart a pinned walk.
+    """
+    detail = {"code": ROTATING_CODE, "message": "The current estate is being updated; retry the read shortly."}
+    return HTTPException(503, detail, headers={"Retry-After": "1"})
 
 
 def _build_wait_seconds() -> float:
@@ -284,7 +309,7 @@ class CurrentGraphStore:
                     yield {**kwargs, "scan_id": identity}
                     return
             self._forget_resolved(tenant)
-        raise HTTPException(409, "Current estate generation was retired; restart the query.")
+        raise _generation_rotating()
 
     def _revisions(self, tenant: str, scan_ids: Any) -> tuple[tuple[str, str], ...]:
         return tuple(self._graph_store.snapshot_identity(tenant_id=tenant, scan_id=scan, for_paging=True) for scan in scan_ids)
@@ -330,7 +355,7 @@ class CurrentGraphStore:
                 if self._live(tenant, identity):
                     return identity
             self._forget_resolved(tenant)
-        raise HTTPException(409, "Current estate generation was retired; restart the query.")
+        raise _generation_rotating()
 
     def _cached_live_id(self, tenant: str, fingerprint: str) -> str:
         cached = self._cache.get(tenant)

@@ -193,3 +193,61 @@ def test_a_read_waits_briefly_for_an_in_flight_build_of_its_own_evidence(estate,
         nodes = reader.result(timeout=10)
         warming.result(timeout=10)
     assert nodes == {"package-a", "package-b"}
+
+
+def _retire_every_resolved_generation(store: CurrentGraphStore) -> None:
+    """Another worker retires each generation right after this reader resolves it."""
+    resolve = store._resolved_id
+
+    def rotating(tenant: str) -> str:
+        identity = resolve(tenant)
+        store._projection_store.delete_snapshot(tenant_id=tenant, scan_id=identity)
+        return identity
+
+    store._resolved_id = rotating  # type: ignore[method-assign]
+
+
+@pytest.mark.parametrize("read", ["latest_snapshot_id", "load_graph"])
+def test_unpinned_read_that_never_sees_a_live_generation_is_retryable_not_a_conflict(estate, read):
+    record(estate, 8, "repo-a", "package-a")
+    store = CurrentGraphStore(estate[1], estate[0])
+    _retire_every_resolved_generation(store)
+    with pytest.raises(HTTPException) as exc:
+        getattr(store, read)(tenant_id=TENANT)
+    assert exc.value.status_code == 503
+    assert exc.value.headers == {"Retry-After": "1"}
+    assert exc.value.detail["code"] == "current_estate_generation_rotating"
+    assert exc.value.detail["message"]
+
+
+def test_get_graph_answers_rotation_with_503_and_a_stale_pin_with_409(estate):
+    from starlette.testclient import TestClient
+
+    from agent_bom.api import stores
+    from agent_bom.api.server import app
+
+    record(estate, 8, "repo-a", "package-a", tenant="default")
+    client = TestClient(app)
+    first = client.get("/v1/graph", params={"limit": 10})
+    assert first.status_code == 200, first.text
+    generation = first.json()["snapshot_generation"]
+    record(estate, 9, "repo-a", "package-b", tenant="default")
+    stale = client.get("/v1/graph", params={"limit": 10, "offset": 10, "snapshot_generation": generation})
+    assert stale.status_code == 409
+    assert "Retry-After" not in stale.headers
+
+    _retire_every_resolved_generation(stores._get_graph_store())  # type: ignore[arg-type]
+    rotating = client.get("/v1/graph", params={"limit": 10})
+    assert rotating.status_code == 503
+    assert rotating.headers["Retry-After"] == "1"
+    body = rotating.json()
+    assert body["error"]["code"] == "SERVICE_UNAVAILABLE"
+    assert body["error"]["details"]["code"] == "current_estate_generation_rotating"
+
+
+def test_openapi_documents_the_retryable_rotation_response_on_get_graph():
+    from agent_bom.api.server import app
+
+    response = app.openapi()["paths"]["/v1/graph"]["get"]["responses"]["503"]
+    assert "Retry-After" in response["headers"]
+    assert "current_estate_generation_rotating" in response["description"]

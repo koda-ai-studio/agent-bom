@@ -41,6 +41,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import Response
 
+from agent_bom.api.current_graph import ROTATING_OPENAPI_RESPONSE
 from agent_bom.api.graph_contracts import (
     _ATTACK_PATH_ITEM_OPENAPI_SCHEMA as _ATTACK_PATH_ITEM_OPENAPI_SCHEMA,
 )
@@ -240,7 +241,15 @@ def _apply_graph_query_budget(body: GraphQueryRequest) -> tuple[GraphQueryReques
     return body, budget, applied
 
 
-@router.get("/graph", **documented(GraphPageResponse), tags=["graph"])
+_GRAPH_PAGE_DOC = documented(GraphPageResponse)
+
+
+@router.get(
+    "/graph",
+    response_model=_GRAPH_PAGE_DOC["response_model"],
+    responses={**_GRAPH_PAGE_DOC["responses"], 503: ROTATING_OPENAPI_RESPONSE},
+    tags=["graph"],
+)
 async def get_graph(
     request: Request,
     scan_id: Optional[str] = Query(None, description="Filter by scan ID"),
