@@ -517,13 +517,18 @@ def test_scan_pipeline_builds_inventory_from_npx_package(monkeypatch):
 def test_scan_pipeline_no_discover_excludes_ambient_agents(monkeypatch, tmp_path):
     from agent_bom.mcp_server_scan import run_scan_pipeline
 
-    def _unexpected_discovery(*_args, **_kwargs):
-        raise AssertionError("ambient discovery must be disabled")
+    calls: list[object] = []
+
+    def _project_only_discovery(*_args, project_dir=None, **_kwargs):
+        if project_dir is None:
+            raise AssertionError("ambient discovery must be disabled")
+        calls.append(project_dir)
+        return []
 
     async def _fake_scan_agents(agents, *, options):
         return []
 
-    monkeypatch.setattr("agent_bom.discovery.discover_all", _unexpected_discovery)
+    monkeypatch.setattr("agent_bom.discovery.discover_all", _project_only_discovery)
     monkeypatch.setattr("agent_bom.scanners.scan_agents", _fake_scan_agents)
 
     agents, _blast_radii, _warnings, scan_sources = _run(
@@ -536,7 +541,19 @@ def test_scan_pipeline_no_discover_excludes_ambient_agents(monkeypatch, tmp_path
     )
 
     assert agents == []
+    assert calls == [str(tmp_path)]
     assert "agent_discovery" not in scan_sources
+
+
+def test_scan_pipeline_no_discover_without_target_skips_discovery(monkeypatch):
+    from agent_bom.mcp_server_scan import run_scan_pipeline
+
+    def _unexpected_discovery(*_args, **_kwargs):
+        raise AssertionError("ambient discovery must be disabled")
+
+    monkeypatch.setattr("agent_bom.discovery.discover_all", _unexpected_discovery)
+    agents, _b, _w, _s = _run(run_scan_pipeline(safe_path=lambda value: Path(value), no_discover=True, offline=True))
+    assert agents == []
 
 
 @patch("agent_bom.mcp_server._run_scan_pipeline")

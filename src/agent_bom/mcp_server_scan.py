@@ -217,9 +217,13 @@ async def run_scan_pipeline(
         except Exception as exc:
             raise McpScanValidationError(CODE_VALIDATION_INVALID_IMAGE_REF, exc, argument="image") from exc
 
-    # Match the CLI's deterministic CI mode: explicit repo/config/SBOM/image
-    # inputs can be scanned without merging unrelated host-level MCP clients.
-    agents = [] if no_discover else discover_all(project_dir=config_path)
+    # Match the CLI's deterministic CI mode: no_discover skips only machine-wide
+    # discovery. An explicit config_path is an artifact and is still scanned
+    # with project-scoped discovery, exactly like `--no-discover --config-dir`.
+    if config_path:
+        agents = discover_all(project_dir=config_path)
+    else:
+        agents = [] if no_discover else discover_all()
     if agents:
         scan_sources.append("agent_discovery")
 
