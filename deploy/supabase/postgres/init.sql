@@ -1679,6 +1679,22 @@ GRANT USAGE ON SCHEMA public TO agent_bom_readonly;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO agent_bom_readonly;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO agent_bom_readonly;
 
+-- Only the migration identity moves the Alembic ledger. Broad DML grants and
+-- default privileges reach alembic_version too, so runtime roles keep read
+-- access (schema probes) and lose every write. Alembic creates the table
+-- after this file on a fresh bootstrap; migration 20261023_02 revokes then.
+DO $ledger$
+BEGIN
+    IF to_regclass('public.alembic_version') IS NOT NULL THEN
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agent_bom_app') THEN
+            REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.alembic_version FROM agent_bom_app;
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agent_bom_rls_maintenance') THEN
+            REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.alembic_version FROM agent_bom_rls_maintenance;
+        END IF;
+    END IF;
+END $ledger$;
+
 -- Database-owned authority for short-lived tenant-binding claims. The shared
 -- application role can set arbitrary custom GUCs, but it cannot read or alter
 -- these HMAC keys. This mechanical stage adds verification only; the active
