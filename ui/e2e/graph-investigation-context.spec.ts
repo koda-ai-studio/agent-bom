@@ -82,14 +82,14 @@ for (const theme of ["light", "dark"]) test(`correlation opens a coherent depend
   await page.goto("/graph?scan=snapshot&lens=estate&rollup=0");
   const controls = page.getByLabel("Investigation context", { exact: true });
   await expect(controls.getByRole("button", { name: "Dependency evidence", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".react-flow__node")).toHaveCount(5);
+  await expect(page.locator(".react-flow__node")).toHaveCount(4);
   await expect(controls).toContainText("1 relationship crosses groups");
   await page.screenshot({ path: info.outputPath(`dependency-context-${theme}.png`), animations: "disabled" });
   await page.locator('.react-flow__node[data-id="package"]').click();
   await expect(page.getByTestId("graph-entity-drawer")).toBeVisible();
   await controls.getByRole("button", { name: "Workload and access context", exact: true }).click();
   await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
-  await expect(page.locator(".react-flow__node")).toHaveCount(1);
+  await expect(page.locator(".react-flow__node")).toHaveCount(2);
   await controls.getByRole("button", { name: "All relationships", exact: true }).click();
   await expect(page.locator(".react-flow__node")).toHaveCount(6);
   await page.reload();
@@ -156,6 +156,24 @@ for (const theme of ["light", "dark"]) test(`complete correlation captions remai
   await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges, true);
   await page.goto("/graph?capture=1&scan=snapshot&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
   await expect(page.locator(".react-flow__node")).toHaveCount(10);
+  await expect(page.getByTestId("graph-evidence-lane")).toHaveCount(2);
+  await expect(page.getByTestId("graph-evidence-lane").first()).toContainText("Workload and access context");
+  await expect(page.getByTestId("graph-evidence-lane").last()).toContainText("Dependency evidence");
+  await expect(page.locator('.react-flow__edge-path[marker-end]')).toHaveCount(9);
+  await expect(page.locator('.graph-relationship-label')).toHaveCount(8);
+  // Check the initial frame, before the user has to repair the view with Fit all.
+  await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
+    const bounds = canvas.getBoundingClientRect();
+    return [...canvas.querySelectorAll("[data-graph-entity], [data-testid=graph-evidence-lane] > div, .graph-relationship-label")].filter(element => {
+      const r = element.getBoundingClientRect();
+      return r.left < bounds.left || r.right > bounds.right || r.top < bounds.top || r.bottom > bounds.bottom;
+    }).map(element => ({ label: element.textContent, bounds: element.getBoundingClientRect().toJSON() }));
+  })).toEqual([]);
+  const primaryFonts = await page.locator("[data-graph-entity] > p").evaluateAll(titles => titles.map(title => {
+    const zoom = new DOMMatrixReadOnly(getComputedStyle(title.closest(".react-flow__viewport")!).transform).a;
+    return parseFloat(getComputedStyle(title).fontSize) * zoom;
+  }));
+  expect(Math.min(...primaryFonts)).toBeGreaterThanOrEqual(12);
   await page.locator(".react-flow__controls-fitview").click();
   await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
     const bounds = canvas.getBoundingClientRect();

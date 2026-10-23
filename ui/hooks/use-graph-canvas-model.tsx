@@ -2,7 +2,7 @@
 
 import { boundedGraphElements } from "@/lib/graph-neighbor-expansion";
 import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
-import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
+import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges, layoutInvestigationLanes } from "@/lib/graph-investigation-context";
 import { completeDirectedHopCount, visibleGraphFocus, pathRelationshipIds } from "@/lib/security-graph-focus";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Node } from "@xyflow/react";
@@ -436,7 +436,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
   }, [contextElements, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
   const rankedInvestigationEdges = useMemo(() => investigationContext ? investigationRankEdges(investigationContext, layoutInput.edges) : layoutInput.edges,
     [investigationContext, layoutInput.edges]);
-  const { nodes: layoutNodes, edges: rankedLayoutEdges, pending: layoutPending } = useGraphLayout(
+  const { nodes: rankedLayoutNodes, edges: rankedLayoutEdges, pending: layoutPending } = useGraphLayout(
     graphLayoutKind,
     layoutInput.nodes,
     rankedInvestigationEdges,
@@ -462,8 +462,13 @@ export function useGraphCanvasModel(page: GraphPageData) {
     },
     layoutInput.layoutRequired && !rollupDecisionActive && !rollupCanvasPending && !rollupCanvasFailed,
   );
-  const layoutEdges = useMemo(() => restoreInvestigationEdges(layoutInput.edges, rankedLayoutEdges, graphLayoutKind === "dagre"),
-    [layoutInput.edges, rankedLayoutEdges, graphLayoutKind]);
+  const evidenceLaneLayout = useMemo(() => investigationContext && selectedContextGroup === "all" && !narrowViewport
+    ? layoutInvestigationLanes(investigationContext, rankedLayoutNodes as Node<LineageNodeData>[], rankedLayoutEdges)
+    : null, [investigationContext, selectedContextGroup, narrowViewport, rankedLayoutNodes, rankedLayoutEdges]);
+  const layoutNodes = evidenceLaneLayout?.nodes ?? rankedLayoutNodes;
+  const evidenceLanes = evidenceLaneLayout?.lanes ?? [];
+  const layoutEdges = useMemo(() => restoreInvestigationEdges(layoutInput.edges, evidenceLaneLayout?.edges ?? rankedLayoutEdges, graphLayoutKind === "dagre"),
+    [layoutInput.edges, rankedLayoutEdges, graphLayoutKind, evidenceLaneLayout]);
   const selectedEvidenceHopCount = selectedAttackPath
     ? Math.max(0, selectedAttackPath.hops.length - 1)
     : 0;
@@ -571,7 +576,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
     blastRadius, reachability: reachabilitySummary, captureMode, zoom: graphViewport.zoom,
   }), [layoutEdges, localNeighborhoodIds, attackPathEdgeIds, reachabilitySummary, blastRadius, captureMode, graphViewport.zoom, displayNodes]);
   const accessibleBaseDisplayEdges = useMemo(
-    () => declutterRelationshipLabels(readableGraphEdges(baseDisplayEdges.map(edge => ({ ...edge, selected: selectedRelationship?.scanId === selectedScanId && selectedRelationship.id === edge.id,
+    () => {
+      const readable = readableGraphEdges(baseDisplayEdges.map(edge => ({ ...edge, selected: selectedRelationship?.scanId === selectedScanId && selectedRelationship.id === edge.id,
       // A phone shows a relationship's caption only on selection; the list view names every one.
       ...(narrowViewport && !edge.data?.isClusterEdge && !edge.data?.aggregate ? { label: undefined, data: { ...edge.data, quietLabel: true } } : {}) })), undefined, {
       captureMode,
@@ -579,8 +585,11 @@ export function useGraphCanvasModel(page: GraphPageData) {
       nodeLabels: graphNodeDisplayLabels(displayNodes),
       preserveVisualStyle: true,
       preserveLabelState: true,
-    })),
-    [baseDisplayEdges, captureMode, displayNodes, graphViewport.zoom, selectedRelationship, selectedScanId, narrowViewport],
+    });
+      // Each bridge between evidence groups needs its own relationship verb.
+      return evidenceLanes.length ? readable : declutterRelationshipLabels(readable);
+    },
+    [baseDisplayEdges, captureMode, displayNodes, graphViewport.zoom, selectedRelationship, selectedScanId, narrowViewport, evidenceLanes.length],
   );
   const displayEdges = useMemo(() => driftDisplayEdges(accessibleBaseDisplayEdges, driftLensEngaged, driftIndex), [accessibleBaseDisplayEdges, driftLensEngaged, driftIndex]);
 
@@ -682,7 +691,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
   const fitVisible = useCallback(() => {
     setManualCameraScope(cameraScope);
     const generation = ++fitGeneration.current;
-    const options = { ...viewportOptions, padding: Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding) };
+    const options = { ...viewportOptions, padding: evidenceLanes.length ? 0.1 : Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding) };
     const fit = () => {
       if (fitGeneration.current !== generation) return;
       void reactFlow.fitView({ ...options, duration: 240 }).then(() => {
@@ -697,7 +706,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     // Let React Flow apply manual-camera props before enqueueing the fit;
     // changing its fitView prop otherwise clears the pending imperative fit.
     requestAnimationFrame(() => requestAnimationFrame(fit));
-  }, [reactFlow, viewportOptions, investigationContext, cameraScope]);
+  }, [reactFlow, viewportOptions, investigationContext, cameraScope, evidenceLanes.length]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
       await reactFlow.fitView({ ...viewportOptions, minZoom: 0.16, maxZoom: 1, padding: 0.04 });
@@ -809,7 +818,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     handleResetFilters, flowNodeById, flowNodeDataById, attackPathNodeIds, aggregationThreshold, aggregated,
     aggregatedClusterNodes, graphIdentityKey, compactGroupedTopology, compactMobileTopology, graphLayoutKind,
     rootConnections, scenarioContextIds, scenarioConnectionNotes, scenarioElements, investigationContext,
-    investigationLayout, compactInvestigationTopology, requestedContextGroup, selectedContextGroup, contextElements,
+    evidenceLanes, investigationLayout, compactInvestigationTopology, requestedContextGroup, selectedContextGroup, contextElements,
     selectContextGroup, layoutInput, rankedInvestigationEdges, layoutNodes, rankedLayoutEdges, layoutPending,
     layoutEdges, selectedEvidenceHopCount, selectedVisibleHopCount, selectedPathDecision, lineageLayoutNodes,
     canvasLayoutNodes, requestedFocusId, activeFocusId, localNeighborhoodIds, attackPathEdgeIds, attackPathNodeOrder,

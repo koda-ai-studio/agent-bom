@@ -49,8 +49,8 @@ describe("investigation context presentation", () => {
     const entries = [node("manifest", "sourceFile"), node("image", "container"), node("deployment", "container"), node("pillow", "package"), node("cve", "vulnerability"), node("workload", "agent"), node("service-account", "serviceAccount"), node("records", "dataStore")];
     const links = [edge("manifest", "pillow", "contains"), edge("image", "pillow", "contains"), edge("deployment", "pillow", "contains"), edge("pillow", "cve", "vulnerable_to"), edge("deployment", "workload", "hosts"), edge("workload", "service-account", "acted_as"), edge("service-account", "records", "can_access")];
     const result = graphInvestigationContext(entries, links, { correlation: true });
-    expect(result!.groups.find(group => group.id === "dependency")?.nodeIds.sort()).toEqual(["manifest", "image", "deployment", "pillow", "cve"].sort());
-    expect(result!.groups.find(group => group.id === "workload")?.nodeIds.sort()).toEqual(["workload", "service-account", "records"].sort());
+    expect(result!.groups.find(group => group.id === "dependency")?.nodeIds.sort()).toEqual(["manifest", "image", "pillow", "cve"].sort());
+    expect(result!.groups.find(group => group.id === "workload")?.nodeIds.sort()).toEqual(["deployment", "workload", "service-account", "records"].sort());
     expect(result!.edges).toEqual(links);
     expect(result!.nodes).toHaveLength(entries.length);
   });
@@ -77,4 +77,30 @@ it("keeps bounded investigation metadata readable after fitting all context", ()
   expect(parseFloat(style["--graph-node-meta-size"]!) * 0.47).toBeGreaterThanOrEqual(11);
   const zoomedOut = readableGraphNodeStyle(0.42, true) as Record<string, string>;
   expect(parseFloat(zoomedOut["--graph-node-label-size"]!) * 0.42).toBeGreaterThanOrEqual(12);
+});
+
+describe("correlation evidence lanes", () => {
+  it("separates evidence groups while preserving every recorded entity, edge and direction", async () => {
+    const { layoutInvestigationLanes } = await import("@/lib/graph-investigation-context");
+    const entries = [node("manifest", "sourceFile"), node("image", "container"), node("deployment", "container"), node("package", "package"), node("finding", "vulnerability"), node("service", "server"), node("workload", "agent"), node("identity", "serviceAccount"), node("records", "dataStore"), node("tool", "tool")];
+    entries.forEach((n, i) => { n.position = { x: (i % 3) * 488, y: Math.floor(i / 3) * 400 }; });
+    const links = [edge("manifest", "package", "contains"), edge("image", "package", "contains"), edge("deployment", "package", "contains"), edge("package", "finding", "vulnerable_to"), edge("deployment", "workload", "hosts"), edge("service", "workload", "exposes"), edge("workload", "identity", "authenticates_as"), edge("identity", "records", "can_access"), edge("workload", "tool", "invoked")];
+    const context = graphInvestigationContext(entries, links, { correlation: true })!;
+    const result = layoutInvestigationLanes(context, entries, links)!;
+    expect(result.lanes.map(lane => lane.id)).toEqual(["workload", "dependency"]);
+    expect(result.lanes[0]!.nodeIds).toContain("deployment");
+    expect(result.lanes[1]!.nodeIds).not.toContain("deployment");
+    expect(result.lanes[0]!.y + result.lanes[0]!.height).toBeLessThan(result.lanes[1]!.y);
+    expect(result.nodes.map(n => n.id)).toEqual(entries.map(n => n.id));
+    for (const lane of result.lanes) for (const id of lane.nodeIds) {
+      const n = result.nodes.find(n => n.id === id)!;
+      expect(n.position.y).toBeGreaterThanOrEqual(lane.y + 64);
+      expect(n.position.y + Number(n.style?.minHeight)).toBeLessThanOrEqual(lane.y + lane.height);
+      expect(n.data).toEqual(entries.find(item => item.id === id)!.data);
+    }
+    expect(result.edges.map(e => [e.id, e.source, e.target, e.data?.relationship])).toEqual(links.map(e => [e.id, e.source, e.target, e.data?.relationship]));
+    expect(result.edges.every(e => e.data?.directionEmphasis === true && e.data?.quietLabel === false)).toBe(true);
+    expect(links.every(e => e.data?.directionEmphasis === undefined)).toBe(true);
+    expect(layoutInvestigationLanes(context, entries.filter(n => n.id === "workload"), [])).toBeNull();
+  });
 });

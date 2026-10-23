@@ -6,6 +6,7 @@ import { GraphConnectionsList } from "@/components/graph-connections-list";
 import { GraphPathList } from "@/components/graph-path-list";
 import { ScopeBreadcrumbChip } from "@/components/graph-scope-breadcrumb";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
+import { GraphEvidenceLanes } from "@/components/graph-evidence-lanes";
 import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import { GraphInvestigationContextControls } from "@/components/graph-investigation-context-controls";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
@@ -84,7 +85,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
     rollupCanvasFailed, rollupCanvasOwnsPresentation, rollupItems, rollupDecisionAvailable, rollupDecisionActive,
     rollupChildPageKey, estateIssueSummary, rollupDisplayEdges, flow, snapshotAttackPathCount, firstFramePending,
     validValues, handleResetFilters, flowNodeById, graphLayoutKind, rootConnections, scenarioContextIds,
-    scenarioConnectionNotes, scenarioElements, investigationContext, compactInvestigationTopology,
+    scenarioConnectionNotes, scenarioElements, investigationContext, compactInvestigationTopology, evidenceLanes,
     selectedContextGroup, contextElements, selectContextGroup, layoutInput, layoutPending, selectedEvidenceHopCount,
     selectedVisibleHopCount, selectedPathDecision, lensDiff, driftIndex, diffCounts, driftAttributeSummaryList,
     driftLensEngaged, displayNodes, drift, evidenceCounts, compressedGroupCount, displayEdges, legendItems,
@@ -792,7 +793,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               }}
             >
               <GraphCanvasAutoFit
-                padding={investigationContext ? 0.25 : 0.08}
+                padding={evidenceLanes.length ? 0.1 : investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}
                 navigationIds={selectedAttackPath?.hops}
                 enabled={!layoutPending && !selectedScenarioId && !selectedAttackPath}
@@ -802,6 +803,8 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 preserveViewport={manualCamera || presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
               />
+              {!presentation.editing && !presentation.hasSavedState && !presentation.restoredSavedState
+                && <GraphEvidenceLanes lanes={evidenceLanes} zoom={graphViewport.zoom} />}
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
               <Controls {...(investigationContext ? { onFitView: fitVisible, fitViewOptions: { padding: 0.25, minZoom: 0.05, maxZoom: 1.25 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (

@@ -55,6 +55,13 @@ export function graphInvestigationContext(
     const findingId = artifactIds.has(edge.source) ? edge.target : artifactIds.has(edge.target) ? edge.source : undefined;
     if (findingId && FINDINGS.has(byId.get(findingId)?.data.nodeType as LineageNodeType)) dependencyIds.add(findingId);
   }
+  // Deployment occurrences sit beside their recorded workload. Package links
+  // remain visible bridges to dependency evidence; identities are never merged.
+  for (const edge of edges) {
+    if (["contains", "hosts", "runs"].includes(String(edge.data?.relationship))
+      && byId.get(edge.source)?.data.nodeType === "container"
+      && byId.get(edge.target)?.data.nodeType === "agent") dependencyIds.delete(edge.source);
+  }
   if (!dependencyIds.size || dependencyIds.size === nodes.length) return null;
   return {
     nodes, edges,
@@ -100,4 +107,54 @@ export function restoreInvestigationEdges(original: Edge[], ranked: Edge[], vert
     return { ...edge, source: source.source, target: source.target,
       sourceHandle: vertical ? "context-up" : "context", targetHandle: "context" };
   });
+}
+
+export interface InvestigationLane extends InvestigationContextGroup {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Visual evidence groups, never containment or inferred attack-path edges. */
+export function layoutInvestigationLanes(
+  context: NonNullable<ReturnType<typeof graphInvestigationContext>>,
+  nodes: Node<LineageNodeData>[],
+  edges: Edge[],
+): { nodes: Node<LineageNodeData>[]; edges: Edge[]; lanes: InvestigationLane[] } | null {
+  if (context.anchorId || nodes.length > 16 || edges.length > 24) return null;
+  const visible = new Set(nodes.map(node => node.id));
+  const groups = ["workload", "dependency"].map(id => context.groups.find(group => group.id === id))
+    .filter((group): group is InvestigationContextGroup => Boolean(group))
+    .map(group => ({ ...group, nodeIds: group.nodeIds.filter(id => visible.has(id)) }));
+  if (groups.length !== 2 || groups.some(group => !group.nodeIds.length)) return null;
+  const x = Math.min(...nodes.map(node => node.position.x)) - 40;
+  const width = Math.max(...nodes.map(node => node.position.x + 360)) - x + 40;
+  const placed = new Map<string, Node<LineageNodeData>>();
+  const lanes: InvestigationLane[] = [];
+  let y = 0;
+  for (const group of groups) {
+    const members = new Set(group.nodeIds);
+    const ranks = new Map<number, Node<LineageNodeData>[]>();
+    for (const node of nodes.filter(node => members.has(node.id))) {
+      ranks.set(node.position.x, [...(ranks.get(node.position.x) ?? []), node]);
+    }
+    const rows = Math.max(...[...ranks.values()].map(rank => rank.length));
+    const nodeHeight = 300, rowStep = 320, header = 64;
+    const height = header + (rows - 1) * rowStep + nodeHeight + 48;
+    for (const rank of ranks.values()) {
+      rank.sort((a, b) => a.position.y - b.position.y || a.id.localeCompare(b.id));
+      rank.forEach((node, index) => placed.set(node.id, { ...node,
+        style: { ...node.style, minHeight: nodeHeight },
+        position: { x: node.position.x, y: y + header + ((rows - rank.length) / 2 + index) * rowStep },
+      }));
+    }
+    lanes.push({ ...group, x, y, width, height });
+    y += height + 64;
+  }
+  return {
+    nodes: nodes.map(node => placed.get(node.id) ?? node),
+    edges: edges.map(edge => ({ ...edge, data: { ...edge.data, quietLabel: false, directionEmphasis: true } })),
+    lanes,
+  };
 }
