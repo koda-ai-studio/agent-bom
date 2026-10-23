@@ -22,6 +22,19 @@ from agent_bom.mcp_tools.rest_parity import api_reads, call_route
 SOURCES = ("auto", "persisted", "local_scan")
 
 
+def _supported_frameworks() -> list[str]:
+    from agent_bom.compliance_coverage import framework_output_key_by_slug
+
+    return sorted([*framework_output_key_by_slug(), "aisvs"])
+
+
+def _known_framework(framework: str) -> bool:
+    """Same slugs /v1/compliance/{framework} accepts."""
+    from agent_bom.compliance_coverage import normalize_framework_slug
+
+    return framework.lower() == "aisvs" or normalize_framework_slug(framework) in _supported_frameworks()
+
+
 def _has_persisted_evidence(tenant_id: str) -> bool:
     reads = api_reads()
     return reads is not None and bool(reads.has_completed_scans(tenant_id))
@@ -94,6 +107,12 @@ async def compliance_tool_impl(
         return mcp_error_json(
             CODE_VALIDATION_INVALID_ARGUMENT, f"source must be one of: {', '.join(SOURCES)}", details={"argument": "source"}
         )
+    if framework and not _known_framework(framework):
+        return mcp_error_json(
+            CODE_VALIDATION_INVALID_ARGUMENT,
+            f"Unknown framework {framework!r}. Supported: {', '.join(_supported_frameworks())}",
+            details={"argument": "framework"},
+        )
     if control and not framework:
         return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, "control requires framework", details={"argument": "control"})
     if not 1 <= limit <= 500:
@@ -122,6 +141,10 @@ async def compliance_tool_impl(
         scope={"tenant_id": None, "scan_id": None, "basis": "MCP client configurations visible to this MCP server process"},
         reason="requested" if source == "local_scan" else "no_persisted_tenant_evidence",
     )
+    if framework or control:
+        result.setdefault("warnings", []).append(
+            "framework/control drill-down applies to persisted tenant evidence only; this local scan returns every framework."
+        )
     return _encode(result, _truncate_response)
 
 

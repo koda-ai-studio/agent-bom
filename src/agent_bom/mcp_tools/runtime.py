@@ -11,7 +11,7 @@ from typing import Any, cast
 from agent_bom.api.route_offload import call_route as _call_route
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
 from agent_bom.core.experimental import disabled_message, is_enabled
-from agent_bom.mcp_errors import CODE_UNSUPPORTED_BACKEND, mcp_error_json
+from agent_bom.mcp_errors import CODE_UNSUPPORTED_BACKEND, CODE_VALIDATION_INVALID_PATH, mcp_error_json
 from agent_bom.mcp_server_runtime import safe_path
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl as tool_risk_assessment_impl
@@ -795,6 +795,12 @@ def inventory_impl(
                 payload["status"] = status
             return payload
 
+        if config_path and not Path(config_path).expanduser().exists():
+            return mcp_error_json(
+                CODE_VALIDATION_INVALID_PATH,
+                "config_path does not exist; nothing was inventoried.",
+                details={"argument": "config_path"},
+            )
         agents = discover_all(project_dir=config_path)
         if not agents:
             return _truncate_response(json.dumps(_inventory_payload([], [], status="no_agents_found"), indent=2, default=str))

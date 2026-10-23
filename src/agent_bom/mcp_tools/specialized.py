@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 
+from agent_bom.mcp_errors import CODE_NOT_FOUND_RESOURCE, mcp_error_json
 from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
 from agent_bom.security import sanitize_error
 
@@ -126,6 +127,12 @@ async def prompt_scan_impl(
         from agent_bom.parsers.prompt_scanner import scan_prompt_files
 
         result = scan_prompt_files(root=path)
+        if result.files_scanned == 0:
+            return mcp_error_json(
+                CODE_NOT_FOUND_RESOURCE,
+                "No prompt files found in directory; nothing was scanned, so there is no pass/fail verdict.",
+                details={"files_scanned": 0, "argument": "directory"},
+            )
         return _truncate_response(
             json.dumps(
                 {

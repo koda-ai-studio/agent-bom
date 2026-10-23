@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 import logging
 
+from agent_bom.mcp_errors import CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
+
+SBOM_FORMATS = ("cyclonedx", "spdx")
 
 
 async def generate_sbom_impl(
@@ -18,6 +21,12 @@ async def generate_sbom_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the generate_sbom tool."""
+    if (format or "").lower() not in SBOM_FORMATS:
+        return mcp_error_json(
+            CODE_VALIDATION_INVALID_ARGUMENT,
+            f"Unknown SBOM format {format!r}. Supported: {', '.join(SBOM_FORMATS)}",
+            details={"argument": "format"},
+        )
     try:
         from agent_bom.models import AIBOMReport
         from agent_bom.output import to_cyclonedx, to_spdx
