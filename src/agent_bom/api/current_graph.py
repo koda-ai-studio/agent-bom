@@ -22,7 +22,7 @@ from contextlib import ExitStack, contextmanager
 from functools import lru_cache, wraps
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, cast
 
 from starlette.exceptions import HTTPException
 
@@ -80,7 +80,8 @@ ROTATING_CODE = "current_estate_generation_rotating"
 def _generation_rotating() -> HTTPException:
     """New evidence is landing faster than the retry budget: retryable, not a conflict."""
     detail = {"code": ROTATING_CODE, "message": "The current estate is being updated; retry the read shortly."}
-    return HTTPException(503, detail, headers={"Retry-After": "1"})
+    # Starlette types detail as str, but the API's handler serializes any JSON value.
+    return HTTPException(503, cast(str, detail), headers={"Retry-After": "1"})
 
 
 def _build_wait_seconds() -> float:
