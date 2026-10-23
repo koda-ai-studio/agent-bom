@@ -143,6 +143,10 @@ _KNOWN_LEGITIMATE: dict[str, frozenset[str]] = {
             # Independent React-compatible UI framework, published by the
             # Preact project as a first-class public npm package.
             "preact",
+            # dcodeIO's pure-JS bcrypt, published since 2013.
+            "bcryptjs",
+            # TJ Holowaychuk's original test framework (visionmedia/expresso).
+            "expresso",
         }
     ),
     "pypi": frozenset(
@@ -152,6 +156,18 @@ _KNOWN_LEGITIMATE: dict[str, frozenset[str]] = {
             "httpx2",
             # Official LangChain Hub API client.
             "langchainhub",
+            # boto 2, the predecessor of boto3 from the same project.
+            "boto",
+            # Fabric 2+ published by Fabric's maintainer (fabfile.org).
+            "fabric2",
+            # Long-standing Python 3 fork of Fabric 1 (mathiasertl/fabric).
+            "fabric3",
+            # SQL over DataFrames (yhat/pandasql), published since 2013.
+            "pandasql",
+            # Beautiful Soup 3 by the same author as beautifulsoup4.
+            "beautifulsoup",
+            # Globality's OpenAPI spec library, published since 2016.
+            "openapi",
         }
     ),
 }

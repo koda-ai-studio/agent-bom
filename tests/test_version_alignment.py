@@ -462,3 +462,16 @@ def test_scan_text_flags_stale_claude_plugin_pins() -> None:
     drift += cva.scan_text("integrations/claude-code/.mcp.json", mcp, "0.97.1")
     assert [line.split(": ")[1].split(" ")[0] for line in drift] == ["Claude", "uvx"]
     assert cva.scan_text("integrations/claude-code/.mcp.json", mcp.replace("0.90.0", "0.97.1"), "0.97.1") == []
+
+
+def test_scan_text_flags_a_stale_guard_plugin_version() -> None:
+    cva = _load_script("check_version_alignment.py")
+    manifest = '{\n  "name": "agent-bom-guard",\n  "version": "0.90.0",\n'
+    drift = cva.scan_text("integrations/agent-bom-guard/.claude-plugin/plugin.json", manifest, "0.97.1", published="0.97.1")
+    assert len(drift) == 1 and "Claude plugin version" in drift[0]
+    assert (
+        cva.scan_text(
+            "integrations/agent-bom-guard/.claude-plugin/plugin.json", manifest.replace("0.90.0", "0.97.1"), "0.97.1", published="0.97.1"
+        )
+        == []
+    )

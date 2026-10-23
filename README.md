@@ -145,6 +145,8 @@ proxy and gateway deployments add runtime evidence.
 For coding assistants, run `agent-bom mcp server`.
 In Claude Code, install the plugin with `/plugin marketplace add koda-ai-studio/agent-bom`
 then `/plugin install agent-bom@agent-bom` ([details](integrations/claude-code/README.md)).
+Add `/plugin install agent-bom-guard@agent-bom` to block malicious and typosquatted package
+installs before Claude runs them ([details](integrations/agent-bom-guard/README.md)).
 Start with eight focused tools in the default profile.
 [Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
 [Try three investigations](docs/MCP_SERVER.md): affected agents, exposure receipts and a before/after scan comparison.
