@@ -10,7 +10,12 @@ import re
 from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
-from agent_bom.mcp_tools.check_lookup import incomplete_lookup_reason, scan_checked_package
+from agent_bom.mcp_tools.check_lookup import (
+    incomplete_lookup_reason,
+    malicious_name_advisories,
+    scan_checked_package,
+    unresolvable_name_malicious_reason,
+)
 from agent_bom.mcp_tools.check_lookup import version_published as _version_published
 from agent_bom.mcp_tools.dispatch import resolve_tool_path
 from agent_bom.mcp_tools.result_store import ResultStore
@@ -591,6 +596,10 @@ async def check_impl(
 
             async with create_client(timeout=15.0) as client:
                 resolved = await resolve_package_version(pkg, client)
+                reason = None if resolved else await unresolvable_name_malicious_reason(name, eco, client)
+            if reason:
+                pkg.is_malicious, pkg.malicious_reason = True, reason
+                return service_result("malicious", f"MALICIOUS package {name} — {reason}. Do not install.")
             if resolved:
                 version = pkg.version
             else:
@@ -643,6 +652,11 @@ async def check_impl(
 
             async with create_client(timeout=15.0) as client:
                 published = await _version_published(name, version, eco, client)
+                malware_ids = [] if published else await malicious_name_advisories(name, eco, client)
+            if malware_ids:
+                pkg.is_malicious = True
+                pkg.malicious_reason = f"Known malicious package ({', '.join(malware_ids[:3])}); version {version} is not published"
+                return service_result("malicious", f"MALICIOUS package {name} — {pkg.malicious_reason}. Do not install.")
             if not published:
                 return service_result(
                     "unknown",

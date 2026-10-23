@@ -67,3 +67,52 @@ async def version_published(name: str, version: str, ecosystem: str, client) -> 
         return resp.status_code == 200
     except Exception:  # noqa: BLE001 — best-effort existence check; fail open
         return True
+
+
+async def _query_osv_by_name(name: str, ecosystem: str, client) -> list[dict]:
+    """All OSV advisories for a package name (any version); [] when unavailable."""
+    from agent_bom.scanners.osv_details import OSV_API_URL
+    from agent_bom.scanners.package_matching import ECOSYSTEM_MAP
+
+    osv_ecosystem = ECOSYSTEM_MAP.get(ecosystem)
+    if not osv_ecosystem:
+        return []
+    try:
+        resp = await http_client.request_with_retry(
+            client, "POST", f"{OSV_API_URL}/query", json={"package": {"name": name, "ecosystem": osv_ecosystem}}, max_retries=0
+        )
+        if resp is None or resp.status_code != 200 or len(resp.content) > 4_000_000:
+            return []
+        vulns = resp.json().get("vulns", [])
+        return [v for v in vulns if isinstance(v, dict)] if isinstance(vulns, list) else []
+    except Exception:  # noqa: BLE001 — best-effort; the caller keeps its "unknown" verdict
+        return []
+
+
+async def malicious_name_advisories(name: str, ecosystem: str, client) -> list[str]:
+    """Ids of malicious-package advisories that name this package, for any version.
+
+    Used when a pinned version is not published: a package that exists only as
+    a malware advisory (e.g. ``crossenv``, unpublished by the registry) must read
+    as malicious, not as an unknown typo.
+    """
+    from agent_bom.malicious import is_malicious_osv_record
+
+    return [str(record.get("id")) for record in await _query_osv_by_name(name, ecosystem, client) if is_malicious_osv_record(record)]
+
+
+async def unresolvable_name_malicious_reason(name: str, ecosystem: str, client) -> str | None:
+    """Why a package name with no resolvable version is malicious, or None.
+
+    A name the registry does not serve is still a verdict when it is a known
+    malware package or a typosquat of a popular one.
+    """
+    from agent_bom.malicious import check_typosquat
+
+    malware_ids = await malicious_name_advisories(name, ecosystem, client)
+    if malware_ids:
+        return f"Known malicious package ({', '.join(malware_ids[:3])}); no published version"
+    target = check_typosquat(name, ecosystem)
+    if target:
+        return f"Possible typosquat of '{target}'; no published version"
+    return None

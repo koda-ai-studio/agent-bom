@@ -17,7 +17,24 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agent_bom.models import Package
+    from agent_bom.models import Package, Vulnerability
+
+
+# CWE "malicious code" family: Embedded Malicious Code and its children
+# (trojan, non-replicating/replicating code, trapdoor, logic bomb, spyware).
+# GitHub's reviewed malware advisories carry GHSA ids, not MAL- ids, and are
+# marked by CWE-506 in OSV ``database_specific.cwe_ids``.
+_MALICIOUS_CODE_CWES: frozenset[str] = frozenset({"CWE-506", "CWE-507", "CWE-508", "CWE-509", "CWE-510", "CWE-511", "CWE-512"})
+
+# Advisory titles that describe the package itself as malware ("crossenv is
+# malware", "Malicious Package in flatmap-stream"). Attacker wording such as
+# "a malicious user can ..." must not match.
+_MALWARE_SUMMARY = re.compile(
+    r"\bmalicious\s+(?:package|code|version|release|dependency)s?\b"
+    r"|\b(?:is|are|contains?|includes?|was|were)\s+(?:a\s+piece\s+of\s+)?malware\b"
+    r"|\bembedded\s+malicious\b",
+    re.IGNORECASE,
+)
 
 
 # CWE-506 (Embedded Malicious Code) is how GitHub malware advisories such as
@@ -30,12 +47,35 @@ def is_malicious_vuln(vuln_id: str, cwe_ids: list[str] | None = None) -> bool:
     return vuln_id.upper().startswith("MAL-") or MALWARE_CWE in (cwe_ids or [])
 
 
-def flag_malicious_from_vulns(package: Package) -> None:
-    """Flag a package as malicious if any of its vulnerabilities is a MAL- report or CWE-506 advisory.
+def _is_malicious_advisory(ids: list[str], cwe_ids: list[str], summary: str) -> bool:
+    if any(is_malicious_vuln(i) for i in ids if isinstance(i, str)):
+        return True
+    if any(isinstance(c, str) and c.upper() in _MALICIOUS_CODE_CWES for c in cwe_ids):
+        return True
+    return bool(summary and _MALWARE_SUMMARY.search(summary))
 
-    Mutates package.is_malicious and package.malicious_reason in-place.
+
+def is_malicious_osv_record(record: dict) -> bool:
+    """True when a raw OSV record is a malicious-package advisory (MAL-, CWE-506 or malware title)."""
+    raw_specific = record.get("database_specific")
+    db_specific: dict = raw_specific if isinstance(raw_specific, dict) else {}
+    ids = [str(record.get("id") or ""), *(record.get("aliases") or [])]
+    return _is_malicious_advisory(ids, list(db_specific.get("cwe_ids") or []), str(record.get("summary") or ""))
+
+
+def is_malicious_advisory(vuln: Vulnerability) -> bool:
+    """True when a parsed vulnerability is a malicious-package advisory."""
+    return _is_malicious_advisory([vuln.id, *vuln.aliases], list(vuln.cwe_ids), vuln.summary or "")
+
+
+def flag_malicious_from_vulns(package: Package) -> None:
+    """Flag a package as malicious if any vulnerability is a malicious-package advisory.
+
+    Covers OpenSSF MAL- ids and GHSA malware advisories (CWE-506 family or a
+    "... is malware" title). Mutates package.is_malicious and
+    package.malicious_reason in-place.
     """
-    mal_ids = [v.id for v in package.vulnerabilities if is_malicious_vuln(v.id, v.cwe_ids)]
+    mal_ids = [v.id for v in package.vulnerabilities if is_malicious_advisory(v)]
     if mal_ids:
         package.is_malicious = True
         package.malicious_reason = f"Known malicious package ({', '.join(mal_ids[:3])})"

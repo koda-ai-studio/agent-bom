@@ -51,6 +51,7 @@ async def test_explicit_nonexistent_version_is_unknown_not_clean():
     with (
         patch("agent_bom.scanners.scan_packages", side_effect=_noop_scan),
         patch("agent_bom.mcp_tools.scanning._version_published", new=AsyncMock(return_value=False)),
+        patch("agent_bom.mcp_tools.check_lookup._query_osv_by_name", new=AsyncMock(return_value=[])),
     ):
         result = await scanning.check_impl(
             package="left-pad@0.0.1-doesnotexist",
