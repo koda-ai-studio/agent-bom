@@ -18,9 +18,9 @@ const mono = mark.toString().replace(/  <defs>[\s\S]*?<\/defs>\n/, '')
   .replaceAll('url(#abm)', '#ffffff').replaceAll('#34d399', '#ffffff')
   .replaceAll('#22d3ee', '#ffffff').replaceAll('#0c1210', 'none').replaceAll('#0f1a17', 'none');
 await write('site-docs/assets/brand/mark-mono.svg', mono);
-// Claude and Codex plugin listings, and the guard plugin listing, read this square PNG.
+// The Claude and Codex plugin listings, the public Codex package and the guard plugin read this square PNG.
 const pluginIcon = await sharp(mark, { density: 1200 }).resize(1024, 1024).png().toBuffer();
-for (const plugin of ['claude-code', 'agent-bom-guard']) await write(`integrations/${plugin}/assets/icon.png`, pluginIcon);
+for (const plugin of ['claude-code', 'codex', 'agent-bom-guard']) await write(`integrations/${plugin}/assets/icon.png`, pluginIcon);
 await write('docs/images/social-preview.png', await sharp(await read('docs/images/social-preview.svg')).png().toBuffer());
 // ICO permits PNG payloads. Keep the existing 16px + 32px favicon sizes.
 const sizes = [16, 32];

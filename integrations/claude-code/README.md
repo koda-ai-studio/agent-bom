@@ -9,15 +9,25 @@ is proposed first and only applied after you confirm.
 /plugin install agent-bom@agent-bom
 ```
 
-The same folder is also a Codex plugin (`.codex-plugin/plugin.json`), with the
-same skills and the same pinned local MCP servers. Add this repository as a Codex
-plugin marketplace, then install agent-bom from the Plugins Directory:
+## Two ways to install in Codex
 
-```text
-codex plugin marketplace add koda-ai-studio/agent-bom
-```
+| | Repository marketplace | Public plugin directory |
+|---|---|---|
+| Package | this folder (`.codex-plugin/plugin.json`) | [`integrations/codex`](../codex/README.md), skills-only |
+| How skills run agent-bom | the two pinned local MCP servers in `.mcp.json` | the pinned CLI from the shell (`uvx --from agent-bom==<release> agent-bom … --agent-mode` or `-f json`) |
+| Install | `codex plugin marketplace add koda-ai-studio/agent-bom`, then install agent-bom from the Plugins Directory | install agent-bom from the public directory |
+| Needs | uv; Codex starts the MCP servers | uv; Codex runs shell commands, each shown to you first |
 
-In Codex, skills are named without the `/agent-bom:` prefix (for example `scan`).
+Both carry the same ten skills with the same safety rules, rendered from
+`integrations/shared/skills.toml` by `scripts/render_plugin_skills.py`. The
+public directory lists local plugins as skills-only, which is why that package
+has no MCP server. What that costs: `affected` has no advisory lookup and matches
+only findings on this machine, and on releases up to 0.110.0 the CLI has no
+`activity` command and `mcp audit` reports no coding-agent permission
+findings. Install one package, not both. In Codex, skills are named without the
+`/agent-bom:` prefix (for example `scan`).
+
+## Skills
 
 | Skill | What it does |
 |---|---|

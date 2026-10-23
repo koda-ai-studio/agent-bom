@@ -80,7 +80,9 @@ def test_every_skill_states_it_is_read_only_and_confirms_changes():
     for skill in skills:
         text = skill.read_text()
         assert text.startswith(f"---\nname: {skill.parent.name}\n"), skill
-        assert "read-only" in text or "Do not install" in text or "only edit" in text, skill
+        # The shared Rules section (rendered from integrations/shared/skills.toml) carries these.
+        assert "Change nothing on your own" in text and "apply it only after the user confirms" in text, skill
+        assert "Never install, launch or connect to a package or MCP server" in text, skill
     for name in ("inventory", "audit-mcp", "audit-skills", "affected", "activity"):
         text = (PLUGIN / "skills" / name / "SKILL.md").read_text()
         assert "This skill is read-only" in text, name
