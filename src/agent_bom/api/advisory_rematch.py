@@ -1,7 +1,8 @@
 """Bounded daily re-match of stored inventory against newly updated advisories.
 
 Each tenant keeps two cursors in the operator advisory store: the feed cursor
-(the newest feed ``modified`` timestamp fully processed) and the operator
+(the ``(modified, id)`` keyset of the last feed record processed, so records
+sharing a timestamp across a batch boundary are never skipped) and the operator
 cursor (the run start, compared with operator advisory ``updated_at``). A run
 matches only advisories updated after those cursors against the tenant's
 newest stored scan per target. Hosts are never rescanned.
@@ -20,10 +21,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Protocol
 
 from agent_bom.api import health_models
 from agent_bom.api.findings_current import current_scan_jobs
@@ -66,9 +66,12 @@ _FEED_UNAVAILABLE: tuple[type[BaseException], ...] = (FeedUnavailableError, *_UN
 class FeedBatch:
     advisories: list[OperatorAdvisory]
     newest_modified: str | None
+    # Id of the last record read at ``newest_modified``; the keyset tiebreaker.
+    newest_id: str | None = None
 
 
-FeedSource = Callable[[str | None], FeedBatch]
+class FeedSource(Protocol):
+    def __call__(self, cursor: str | None, after_id: str | None = None) -> FeedBatch: ...
 
 
 def rematch_enabled() -> bool:
@@ -110,8 +113,12 @@ def feed_advisory(
     )
 
 
-def local_feed_advisories_since(cursor: str | None) -> FeedBatch:
-    """Feed advisories from the local vulnerability DB modified after ``cursor`` (bounded)."""
+def local_feed_advisories_since(cursor: str | None, after_id: str | None = None) -> FeedBatch:
+    """Feed advisories after the ``(cursor, after_id)`` keyset in the local vulnerability DB (bounded).
+
+    Without ``after_id`` (a first run or a pre-keyset cursor) records at exactly
+    ``cursor`` are re-read; repeats are deduplicated by the ``seen`` map.
+    """
     db_path = _schema.DB_PATH
     if not db_path.exists():
         raise FeedUnavailableError("local vulnerability DB is not present")
@@ -119,13 +126,14 @@ def local_feed_advisories_since(cursor: str | None) -> FeedBatch:
     try:
         conn = open_existing_db_readonly(db_path)
         try:
-            ids = [
-                row[0]
-                for row in conn.execute(
-                    "SELECT id FROM vulns WHERE modified > ? ORDER BY modified, id LIMIT ?", (since, MAX_FEED_ADVISORIES)
-                ).fetchall()
-            ]
-            return _feed_batch(conn, ids)
+            keys = conn.execute(
+                "SELECT id, modified FROM vulns WHERE modified > ? OR (modified = ? AND id > ?) ORDER BY modified, id LIMIT ?",
+                (since, since, after_id or "", MAX_FEED_ADVISORIES),
+            ).fetchall()
+            batch = _feed_batch(conn, [row[0] for row in keys])
+            if not keys:
+                return batch
+            return FeedBatch(batch.advisories, str(keys[-1][1]), str(keys[-1][0]))
         finally:
             conn.close()
     except sqlite3.Error as exc:
@@ -215,7 +223,7 @@ def run_tenant_rematch(
     except _UNAVAILABLE:
         return {**status, "reason": "store_unavailable"}
     try:
-        batch = feed_source(state.get("feed_cursor"))
+        batch = feed_source(state.get("feed_cursor"), state.get("feed_cursor_id"))
     except _FEED_UNAVAILABLE:
         return _record(store, tenant_id, state, {**status, "reason": "feed_unavailable"})
     try:
@@ -239,7 +247,8 @@ def run_tenant_rematch(
     state["seen"] = dict(sorted(seen.items(), key=lambda item: item[1])[-MAX_SEEN_FINDINGS:])
     state["recent_findings"] = (fresh + list(state.get("recent_findings") or []))[:MAX_RECENT_FINDINGS]
     state["operator_cursor"] = now.isoformat()
-    state["feed_cursor"] = batch.newest_modified or state.get("feed_cursor")
+    if batch.newest_modified:
+        state["feed_cursor"], state["feed_cursor_id"] = batch.newest_modified, batch.newest_id
     complete = {
         **status,
         "status": "complete",
