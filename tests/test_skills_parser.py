@@ -518,3 +518,15 @@ def test_uvx_tool_at_version_keeps_the_pinned_version(tmp_path):
     skill.write_text("```bash\nuvx ruff@0.6.9 check .\nuvx mcp-server-fetch\n```\n")
     found = {(pkg.name, pkg.version) for pkg in parse_skill_file(skill).packages}
     assert found == {("ruff", "0.6.9"), ("mcp-server-fetch", "latest")}
+
+
+def test_inline_install_commands_stop_at_the_closing_backtick(tmp_path):
+    from agent_bom.parsers.skills import parse_skill_file
+
+    skill = tmp_path / "SKILL.md"
+    skill.write_text(
+        "`pip install <name>` installs into the active environment.\n"
+        "Run `pip install requests==2.32.3` before you start, then `npm install left-pad` in the UI folder.\n"
+    )
+    found = {(pkg.name, pkg.ecosystem) for pkg in parse_skill_file(skill).packages}
+    assert found == {("requests", "pypi"), ("left-pad", "npm")}

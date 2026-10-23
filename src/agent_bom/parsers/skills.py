@@ -274,8 +274,8 @@ def parse_skill_file(path: Path) -> SkillScanResult:
     # pip install packages
     for match in _PIP_INSTALL_RE.finditer(code_text):
         specs = match.group(1).strip()
-        # Strip inline comments before splitting into package specs
-        specs = specs.split("#")[0].strip()
+        # An inline-code span or a comment ends the command; the prose after it is not a spec.
+        specs = re.split(r"[#`]", specs, maxsplit=1)[0].strip()
         if not specs:
             continue
         for spec in re.split(r"\s+", specs):
@@ -293,8 +293,8 @@ def parse_skill_file(path: Path) -> SkillScanResult:
     # npm install packages
     for match in _NPM_INSTALL_RE.finditer(code_text):
         specs = match.group(1).strip()
-        # Strip inline comments before splitting into package specs
-        specs = specs.split("#")[0].strip()
+        # An inline-code span or a comment ends the command; the prose after it is not a spec.
+        specs = re.split(r"[#`]", specs, maxsplit=1)[0].strip()
         if not specs:
             continue
         for spec in re.split(r"\s+", specs):
