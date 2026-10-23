@@ -73,6 +73,10 @@ exceptions:
     vulnerability_ids:
       - CVE-2026-112940
       - GHSA-v4x8-3wr5-3wq8
+      - CVE-2026-112913
+      - GHSA-9vhv-jxww-xfm5
+      - CVE-2026-112907
+      - GHSA-567q-5qvw-pf92
     package: filelock
     version: 3.32.7
     images:
@@ -84,8 +88,10 @@ exceptions:
     owner: msaad00
     status: temporary_exception
     reason: >-
-      The advisory affects filelock's SQLite-backed ReadWriteLock only, and no
-      locked dependency uses it; agent-bom does not import filelock. The fix
+      Two advisories affect filelock's ReadWriteLock, which no locked
+      dependency uses. The third is a Windows-only SoftFileLock timeout,
+      reached only through huggingface_hub's fallback on filesystems without
+      flock. agent-bom does not import filelock. The fix
       (filelock 4.2.1) needs snowflake-connector-python 5.x, which ships no
       musllinux wheels and needs a Rust toolchain to build on the Alpine image.
     opened_at: 2026-10-23
