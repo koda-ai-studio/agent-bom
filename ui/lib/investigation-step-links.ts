@@ -10,11 +10,10 @@ export function pathFindingId(path: AttackPath | null, nodes: UnifiedNode[], foc
   return typeof id === "string" && id ? id : undefined;
 }
 
-export function findingRemediationHref(findingId: string | undefined, scanId: string): string {
-  return `${remediationHref({
-    finding: findingId, view: "verification",
-    scan: scanId && !scanId.startsWith("current-estate:") ? scanId : undefined,
-  })}#campaigns`;
+// A graph snapshot id is not a remediation job id (/v1/scan/{job}/remediation),
+// so these links never pass it as `scan`; the page resolves the current plan.
+export function findingRemediationHref(findingId: string | undefined): string {
+  return `${remediationHref({ finding: findingId, view: "verification" })}#campaigns`;
 }
 
 /** Strip the version from a package label: remediation rows are keyed by package name. */
@@ -23,10 +22,7 @@ export function packageNameFromLabel(label: string): string {
   return at > 0 ? label.slice(0, at) : label;
 }
 
-/** Remediation for the path's package, pinned to a historical snapshot when one is selected. */
-export function packageRemediationHref(packageLabel: string | undefined, scanId: string): string {
-  return remediationHref({
-    q: packageLabel ? packageNameFromLabel(packageLabel) : undefined,
-    scan: scanId && !scanId.startsWith("current-estate:") ? scanId : undefined,
-  });
+/** Remediation for the path's package in the current plan. */
+export function packageRemediationHref(packageLabel: string | undefined): string {
+  return remediationHref({ q: packageLabel ? packageNameFromLabel(packageLabel) : undefined });
 }

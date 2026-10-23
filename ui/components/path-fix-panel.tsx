@@ -6,7 +6,7 @@ import type { AttackPath, UnifiedNode } from "@/lib/graph-schema";
 const text = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : undefined);
 
 /** The selected path's fix, answered in place: what to upgrade, where, and a link to the full remediation queue. */
-export function PathFixPanel({ path, nodes, scanId, findingId }: { path: AttackPath; nodes: UnifiedNode[]; scanId: string; findingId?: string | undefined }) {
+export function PathFixPanel({ path, nodes, findingId }: { path: AttackPath; nodes: UnifiedNode[]; findingId?: string | undefined }) {
   const advisory = nodes.find((node) => node.entity_type === "vulnerability" || node.entity_type === "misconfiguration");
   const pkg = nodes.find((node) => node.entity_type === "package");
   const servers = nodes.filter((node) => node.entity_type === "server").map((node) => node.label);
@@ -30,11 +30,11 @@ export function PathFixPanel({ path, nodes, scanId, findingId }: { path: AttackP
       )}
       <p className="mt-1 text-xs text-ink-secondary">{packageFinding ? "This path only. Other occurrences of the package and their owners are listed in Remediation." : "Recorded guidance requires review. Rescan after changes; guidance alone does not verify a fix."}</p>
       {packageFinding && name ? (
-        <Link href={packageRemediationHref(pkg?.label, scanId)} className="mt-2 inline-flex rounded-lg border border-outline bg-surface px-3 py-2 text-xs font-medium hover:bg-surface-muted">
+        <Link href={packageRemediationHref(pkg?.label)} className="mt-2 inline-flex rounded-lg border border-outline bg-surface px-3 py-2 text-xs font-medium hover:bg-surface-muted">
           Open {name} in Remediation →
         </Link>
       ) : null}
-      <Link href={findingRemediationHref(pathFindingId(path, nodes, findingId), scanId)} className="mt-2 inline-flex rounded-lg border border-outline bg-surface px-3 py-2 text-xs font-medium hover:bg-surface-muted">
+      <Link href={findingRemediationHref(pathFindingId(path, nodes, findingId))} className="mt-2 inline-flex rounded-lg border border-outline bg-surface px-3 py-2 text-xs font-medium hover:bg-surface-muted">
         Open finding workflow →
       </Link>
     </section>

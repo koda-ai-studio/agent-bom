@@ -17,11 +17,10 @@ function pathNodes(path: AttackPath | null, nodeById: Map<string, UnifiedNode>) 
  * Path → Impact → Owner → Fix → Verify. Impact, Owner and Fix answer in place
  * (Fix links out to the package's remediation queue); Verify continues there.
  */
-export function InvestigationLifecycleStrip({ step, onStepChange, completed, scanId, findingId }: {
+export function InvestigationLifecycleStrip({ step, onStepChange, completed, findingId }: {
   step: InvestigationStep;
   onStepChange: (next: InvestigationStep) => void;
   completed: Partial<Record<InvestigationStep, boolean>>;
-  scanId: string;
   findingId?: string | undefined;
 }) {
   return (
@@ -29,7 +28,7 @@ export function InvestigationLifecycleStrip({ step, onStepChange, completed, sca
       step={step}
       onStepChange={onStepChange}
       completed={completed}
-      stepHrefs={{ verify: findingRemediationHref(findingId, scanId) }}
+      stepHrefs={{ verify: findingRemediationHref(findingId) }}
     />
   );
 }
@@ -106,7 +105,7 @@ function stepAnswer({ step, path, nodeById, scanId, tenantId, snapshotGeneration
     return <PathOwnerPanel cve={cve} hops={path.hops} packageLabel={packageNode?.label} scanId={scanId} />;
   }
   if (step === "fix" && path) {
-    return <PathFixPanel path={path} nodes={nodes} scanId={scanId} findingId={findingId} />;
+    return <PathFixPanel path={path} nodes={nodes} findingId={findingId} />;
   }
   if (step === "owner" && path) {
     return <p role="status" className="rounded-xl border border-outline bg-surface p-4 text-sm text-ink-secondary">This path carries no advisory, so no finding owner or SLA applies.</p>;
