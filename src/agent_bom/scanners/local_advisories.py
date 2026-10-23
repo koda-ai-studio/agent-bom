@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
+from agent_bom.cpe_match import cpe_identity
 from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.malicious import flag_malicious_from_vulns
 from agent_bom.models import Package, Severity, Vulnerability
@@ -209,10 +210,19 @@ def _attach_cpe_candidates(
     *,
     db_hit: bool,
 ) -> None:
-    """Append opt-in CPE candidate matches for packages not covered by native feeds."""
+    """Append CPE candidate matches for packages not covered by native feeds.
+
+    Components that carry an explicit CPE identity (source-built language
+    runtimes) are matched by exact vendor/product, so the name-guessing noise
+    the opt-in flag guards against does not apply to them.
+    """
     from agent_bom import config
     from agent_bom.db.lookup import cpe_lookup_package
 
+    identity = cpe_identity(pkg)
+    if identity is not None:
+        local_vulns.extend(cpe_lookup_package(conn, identity[1], pkg.version, vendor=identity[0]))
+        return
     if not config.ENABLE_CPE_MATCH or db_hit:
         return
     vendor = _cpe_vendor_hint(pkg)

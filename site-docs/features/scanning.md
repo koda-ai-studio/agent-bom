@@ -152,6 +152,67 @@ agent-bom image registry.access.redhat.com/ubi9/ubi-minimal:9.2 -f json -o image
 Review the package versions and fix recommendations in `image-findings.json`;
 findings without a resolved fix require investigation or mitigation.
 
+### Source-built language runtimes
+
+Official language images build the runtime from source, so no distro package
+database records it. The image config `Env` does: `PHP_VERSION`,
+`PYTHON_VERSION`, `NODE_VERSION`, `GOLANG_VERSION`, `RUBY_VERSION`, and the
+Eclipse Temurin `JAVA_VERSION=jdk-21.0.12.1+1` form. Each becomes a `generic`
+runtime component with a CPE identity (`php:php`, `python:python`,
+`nodejs:node.js`, `golang:go`, `ruby-lang:ruby`, `oracle:openjdk`):
+
+```bash
+agent-bom image php:8.3-cli -f cyclonedx -o php-sbom.json
+```
+
+The component's `discovery_provenance.source` is `binary` when the runtime
+binary (for example `/usr/local/bin/php`) survives in the final layer view, and
+`image-env` when only the environment declares it. Env values must match a
+strict version grammar. An env-only runtime that duplicates an installed distro
+package of the same upstream release is dropped rather than counted twice.
+Runtime components are matched against the local NVD CPE applicability data
+(`agent-bom db update --source nvd`) by exact vendor and product at the
+`nvd_cpe_candidate` tier. Image tarballs passed to `agent-bom fs` get the same
+detection; plain directory and VM-mount scans have no image config, so these
+runtimes are not inventoried from them.
+
+## Operator (emergency) advisories
+
+When a disclosure is public but feeds have not published it yet, declare it
+and match it against saved scans without rescanning:
+
+```bash
+agent-bom db advisory add --file advisory.json
+agent-bom db advisory match --format json
+```
+
+The advisory names products by `ecosystem` + `name` or by `cpe_product`
+(`vendor:product`) with `introduced`/`fixed` ranges per release branch.
+Findings carry `provenance: operator_advisory` and the branch's fixed version.
+`match` reads the most recent saved scan (or `--report PATH`); it exits 2 when
+no saved scan exists or a version cannot be ordered, because that is not a
+clean result. When a feed record with the same ID or alias is already on the
+package, the feed record wins and the operator advisory is listed under
+`superseded`. The control plane exposes the same flow per tenant at
+`POST/GET /v1/intel/operator-advisories` and
+`GET /v1/intel/operator-advisories/{id}/matches` (newest stored scan per
+target), and the MCP `intel_lookup` tool includes the declared record and its
+matches. Advisories persist in the control-plane store (SQLite, or Postgres
+with tenant row-level security).
+
+### Daily re-match
+
+Set `AGENT_BOM_ADVISORY_REMATCH=1` on the API server to re-match stored
+inventory once per `AGENT_BOM_ADVISORY_REMATCH_INTERVAL_SECONDS` (default
+86400, minimum 300) against operator advisories and local-feed advisories
+updated since each tenant's cursor. No host is rescanned. Each finding records
+`first_seen` and `new_since_published` (the matched scan completed before the
+advisory was published). If the feed or store is unreachable, or a version
+cannot be ordered, the run is `incomplete` and the cursor does not move. This
+replica's last run is in `GET /v1/system/health` under `advisory_rematch`; the
+tenant's cursor, last run and recent findings are in
+`GET /v1/intel/operator-advisories` under `rematch`.
+
 ## IaC and cloud posture
 
 When a CloudFormation template contains unreadable or malformed containers,

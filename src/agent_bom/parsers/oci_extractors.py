@@ -15,6 +15,7 @@ from typing import IO
 
 from agent_bom.package_utils import parse_debian_source_name
 from agent_bom.parsers.cpython_runtime import _python_metadata_kind, extract_cpython_runtime
+from agent_bom.parsers.image_runtimes import runtime_binary_paths, runtime_spec
 from agent_bom.parsers.oci_io import (
     _decompression_ratio_exceeded,
     _logger,
@@ -495,6 +496,14 @@ def _extract_swift_resolved(scan: _LayerScan) -> None:
     _parse_members(scan, _present_candidates(scan, bases), _add_swift_resolved, "Failed to parse Package.resolved: %s")
 
 
+def _extract_runtime_binaries(scan: _LayerScan) -> None:
+    """Attach layer occurrences for source-built runtime binaries declared by image Env."""
+    for package in [pkg for pkg in scan.packages if runtime_spec(pkg) is not None]:
+        for path in _present_candidates(scan, runtime_binary_paths(package)):
+            if not scan.is_deleted(path):
+                scan.add(path, package.name, package.version, package.ecosystem, package.purl)
+
+
 _LAYER_PACKAGE_STAGES: tuple[Callable[[_LayerScan], None], ...] = (
     _extract_python_metadata,
     _extract_node_manifests,
@@ -510,4 +519,5 @@ _LAYER_PACKAGE_STAGES: tuple[Callable[[_LayerScan], None], ...] = (
     _extract_composer_locks,
     _extract_cargo_locks,
     _extract_swift_resolved,
+    _extract_runtime_binaries,
 )

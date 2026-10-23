@@ -1210,7 +1210,8 @@
         "maintainer_count",
         "source_repo",
         "occurrences",
-        "discovery_provenance"
+        "discovery_provenance",
+        "cpe"
       ]
     },
     "ScanJob": {

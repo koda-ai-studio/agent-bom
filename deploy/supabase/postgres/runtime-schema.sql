@@ -175,6 +175,9 @@ CREATE INDEX IF NOT EXISTS idx_replay_tenant ON proxy_replay_log(tenant_id);
 CREATE TABLE IF NOT EXISTS tenant_quota_overrides (tenant_id TEXT PRIMARY KEY,updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),data JSONB NOT NULL);
 CREATE TABLE IF NOT EXISTS tenant_graph_retention_overrides (tenant_id TEXT PRIMARY KEY,updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),retention_days INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS tenant_score_config_overrides (tenant_id TEXT PRIMARY KEY,updated_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS operator_advisories (tenant_id TEXT NOT NULL,advisory_id TEXT NOT NULL,updated_at TEXT NOT NULL,data TEXT NOT NULL,PRIMARY KEY (tenant_id,advisory_id));
+CREATE INDEX IF NOT EXISTS idx_operator_advisories_updated ON operator_advisories(tenant_id,updated_at);
+CREATE TABLE IF NOT EXISTS operator_advisory_rematch_state (tenant_id TEXT PRIMARY KEY,updated_at TEXT NOT NULL,data TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS graph_scenarios (id TEXT NOT NULL,tenant_id TEXT NOT NULL,base_scan_id TEXT NOT NULL,revision INTEGER NOT NULL CHECK(revision >= 1),name TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',operations JSONB NOT NULL,assumptions JSONB NOT NULL DEFAULT '[]'::jsonb,created_by TEXT NOT NULL DEFAULT '',provenance JSONB NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(id,tenant_id));
 CREATE INDEX IF NOT EXISTS idx_graph_scenarios_tenant_updated ON graph_scenarios(tenant_id,updated_at DESC,id DESC);
 
@@ -294,7 +297,7 @@ BEGIN
     'access_review_campaigns','access_review_items','agent_identities','agent_identity_jit_grants','agent_conditional_access_policies',
     'ai_system_blueprints','ai_system_blueprint_versions','runtime_observations','runtime_sessions','gateway_activity_events','gateway_activity_sequences',
     'gateway_activity_tombstones','runtime_workload_evidence','scim_users','scim_groups',
-    'export_schedules','export_destinations','idempotency_keys','proxy_replay_log','tenant_quota_overrides','tenant_graph_retention_overrides','tenant_score_config_overrides','graph_scenarios',
+    'export_schedules','export_destinations','idempotency_keys','proxy_replay_log','tenant_quota_overrides','tenant_graph_retention_overrides','tenant_score_config_overrides','operator_advisories','operator_advisory_rematch_state','graph_scenarios',
     'mcp_client_configs','model_provider_keys','model_virtual_keys','risk_campaign_workflows','governance_audit_log','cloud_connections','ticketing_connections','ticket_links',
     'control_plane_sources','credential_refs','audit_chain_checkpoint','managed_trial_invitations','managed_trial_tenants','compliance_hub_findings','hub_overview_revisions','hub_findings_current',
     'hub_findings_current_observations','hub_cve_intel','hub_framework_refs','fleet_endpoints'
@@ -410,7 +413,7 @@ SELECT component,1,now() FROM unnest(ARRAY[
  'scan_jobs','api_keys','exceptions','audit_log','trend_history','gateway_policies','schedules','sources','credential_refs','llm_costs',
  'cloud_connections','compliance_hub','access_review_campaigns','risk_campaign_workflows','fleet','scan_cache','identity_scim',
  'tenant_quotas','tenant_graph_retention','idempotency','proxy_replay_log','rate_limits',
- 'shared_auth_state','managed_trial_invitations','managed_trial_tenants','governance_audit_log','ai_system_blueprints','model_provider_keys','tenant_score_config',
+ 'shared_auth_state','managed_trial_invitations','managed_trial_tenants','governance_audit_log','ai_system_blueprints','model_provider_keys','tenant_score_config','operator_advisories',
  'ticketing_connections','graph_scenarios','export_schedules','export_destinations'
 ]) component
 ON CONFLICT(component) DO UPDATE SET version=excluded.version,updated_at=excluded.updated_at;

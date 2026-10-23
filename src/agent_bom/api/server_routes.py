@@ -41,6 +41,7 @@ from agent_bom.api.routes.mitre import router as _mitre_router
 from agent_bom.api.routes.model_keys import router as _model_keys_router
 from agent_bom.api.routes.observability import infra_router as _observability_infra_router
 from agent_bom.api.routes.observability import router as _observability_router
+from agent_bom.api.routes.operator_advisories import router as _operator_advisories_router
 from agent_bom.api.routes.overview import router as _overview_router
 from agent_bom.api.routes.plugins import router as _plugins_router
 from agent_bom.api.routes.posture_streaming import router as _posture_streaming_router
@@ -93,6 +94,7 @@ def register_domain_routes(application: FastAPI) -> None:
         _graph_scenarios_router,
         _identities_router,
         _intel_router,
+        _operator_advisories_router,
         _inventory_assets_router,
         _kspm_router,
         _mcp_config_router,

@@ -577,6 +577,148 @@
         "title": "AdoptionEventRequest",
         "type": "object"
       },
+      "AdvisoryRematchHealth": {
+        "description": "This replica's last advisory re-match run; tenant-free by construction.",
+        "properties": {
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "incomplete_tenants": {
+            "default": 0,
+            "title": "Incomplete Tenants",
+            "type": "integer"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "last_run_status": {
+            "default": "never",
+            "title": "Last Run Status",
+            "type": "string"
+          },
+          "new_findings": {
+            "default": 0,
+            "title": "New Findings",
+            "type": "integer"
+          },
+          "tenants_examined": {
+            "default": 0,
+            "title": "Tenants Examined",
+            "type": "integer"
+          }
+        },
+        "title": "AdvisoryRematchHealth",
+        "type": "object"
+      },
+      "AffectedProduct": {
+        "additionalProperties": false,
+        "properties": {
+          "cpe_product": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "CPE vendor:product, e.g. php:php",
+            "title": "Cpe Product"
+          },
+          "ecosystem": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ecosystem"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 214,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "ranges": {
+            "items": {
+              "$ref": "#/components/schemas/AffectedRange"
+            },
+            "maxItems": 32,
+            "title": "Ranges",
+            "type": "array"
+          },
+          "versions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 256,
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "title": "AffectedProduct",
+        "type": "object"
+      },
+      "AffectedRange": {
+        "additionalProperties": false,
+        "properties": {
+          "fixed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixed"
+          },
+          "introduced": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Introduced"
+          },
+          "last_affected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Affected"
+          }
+        },
+        "title": "AffectedRange",
+        "type": "object"
+      },
       "AgentBinding": {
         "additionalProperties": false,
         "properties": {
@@ -11204,6 +11346,17 @@
       "DriftViolation": {
         "additionalProperties": true,
         "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
           "detail": {
             "anyOf": [
               {
@@ -11214,6 +11367,39 @@
               }
             ],
             "title": "Detail"
+          },
+          "observed_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Count"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
           },
           "tool_name": {
             "anyOf": [
@@ -32223,6 +32409,77 @@
         "title": "ObservabilityCostsResponse",
         "type": "object"
       },
+      "OperatorAdvisory": {
+        "additionalProperties": false,
+        "description": "An advisory declared by the operator ahead of feed publication.",
+        "properties": {
+          "affected": {
+            "items": {
+              "$ref": "#/components/schemas/AffectedProduct"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "title": "Affected",
+            "type": "array"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "Aliases",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "references": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "title": "References",
+            "type": "array"
+          },
+          "severity": {
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "summary": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "summary",
+          "severity",
+          "affected"
+        ],
+        "title": "OperatorAdvisory",
+        "type": "object"
+      },
       "OverviewCoverage": {
         "additionalProperties": true,
         "properties": {
@@ -42855,6 +43112,9 @@
       },
       "SystemHealthResponse": {
         "properties": {
+          "advisory_rematch": {
+            "$ref": "#/components/schemas/AdvisoryRematchHealth"
+          },
           "analytics": {
             "$ref": "#/components/schemas/AnalyticsHealth"
           },
@@ -73220,6 +73480,247 @@
           }
         },
         "summary": "Post Intel Match",
+        "tags": [
+          "intel"
+        ]
+      }
+    },
+    "/v1/intel/operator-advisories": {
+      "get": {
+        "description": "List the tenant's operator-declared advisories.",
+        "operationId": "list_operator_advisories_v1_intel_operator_advisories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Operator Advisories V1 Intel Operator Advisories Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "List Operator Advisories",
+        "tags": [
+          "intel"
+        ]
+      },
+      "post": {
+        "description": "Declare (or replace) an advisory ahead of feed publication.",
+        "operationId": "declare_operator_advisory_v1_intel_operator_advisories_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorAdvisory"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Declare Operator Advisory V1 Intel Operator Advisories Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Declare Operator Advisory",
+        "tags": [
+          "intel"
+        ]
+      }
+    },
+    "/v1/intel/operator-advisories/matches": {
+      "get": {
+        "description": "Match every operator advisory against the tenant's current stored scans.",
+        "operationId": "match_all_operator_advisories_v1_intel_operator_advisories_matches_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Match All Operator Advisories V1 Intel Operator Advisories Matches Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Match All Operator Advisories",
+        "tags": [
+          "intel"
+        ]
+      }
+    },
+    "/v1/intel/operator-advisories/{advisory_id}": {
+      "delete": {
+        "description": "Retire an operator advisory (for example once the feed record is authoritative).",
+        "operationId": "delete_operator_advisory_v1_intel_operator_advisories__advisory_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "advisory_id",
+            "required": true,
+            "schema": {
+              "title": "Advisory Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Delete Operator Advisory",
+        "tags": [
+          "intel"
+        ]
+      }
+    },
+    "/v1/intel/operator-advisories/{advisory_id}/matches": {
+      "get": {
+        "description": "Match one operator advisory against the tenant's current stored scans.",
+        "operationId": "match_operator_advisory_v1_intel_operator_advisories__advisory_id__matches_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "advisory_id",
+            "required": true,
+            "schema": {
+              "title": "Advisory Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Match Operator Advisory V1 Intel Operator Advisories  Advisory Id  Matches Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Match Operator Advisory",
         "tags": [
           "intel"
         ]

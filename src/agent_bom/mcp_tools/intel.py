@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from agent_bom import __version__
+from agent_bom.db.operator_advisories import local_advisory, match_local
 from agent_bom.http_client import create_client, request_with_retry
 from agent_bom.intel_lookup import build_daily_brief, list_intel_sources, lookup_advisory, match_packages
 from agent_bom.mcp_errors import (
@@ -19,6 +20,7 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_MISSING_REQUIRED,
     mcp_error_json,
 )
+from agent_bom.scanners.operator_advisory import OPERATOR_ADVISORY_PROVENANCE
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -85,6 +87,18 @@ def _youcom_result_summary(result: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def _operator_advisory_view(advisory_id: str) -> dict[str, Any] | None:
+    """Operator-declared record plus its matches against the most recent saved scan."""
+    declared = local_advisory(advisory_id)
+    if declared is None:
+        return None
+    return {
+        "provenance": OPERATOR_ADVISORY_PROVENANCE,
+        "advisory": declared.model_dump(mode="json"),
+        "matches": match_local([declared]).to_dict(),
+    }
+
+
 async def intel_lookup_impl(*, advisory_id: str, _truncate_response=lambda value: value) -> str:
     """Look up one CVE/GHSA/OSV advisory from local intel."""
 
@@ -100,6 +114,9 @@ async def intel_lookup_impl(*, advisory_id: str, _truncate_response=lambda value
         operator_sources = advisory_source_lookup(advisory)
         if operator_sources and isinstance(result, dict):
             result = {**result, "operator_advisory_sources": operator_sources}
+        operator_view = _operator_advisory_view(advisory)
+        if operator_view and isinstance(result, dict):
+            result = {**result, "operator_advisory": operator_view}
         return _truncate_response(json.dumps(result, indent=2, default=str))
     except ValueError as exc:
         return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, sanitize_error(exc), details={"argument": "advisory_id"})

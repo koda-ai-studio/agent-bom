@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from agent_bom.package_utils import canonical_package_key
+from agent_bom.package_utils import canonical_package_key, synthesize_purl
 
 
 def _package_node_attributes(pkg: dict[str, Any]) -> dict[str, Any]:
@@ -32,3 +32,19 @@ def _package_node_attributes(pkg: dict[str, Any]) -> dict[str, Any]:
         "version_provenance": version_provenance,
     }
     return {key: value for key, value in attributes.items() if value not in (None, "", [], {})}
+
+
+def cyclonedx_identifiers(pkg: Any) -> dict[str, str]:
+    """CycloneDX ``purl`` (resolved or synthesized) and ``cpe`` for one package."""
+    identifiers = {"purl": pkg.purl or synthesize_purl(pkg.name, pkg.version, pkg.ecosystem), "cpe": getattr(pkg, "cpe", None)}
+    return {key: value for key, value in identifiers.items() if value}
+
+
+def spdx2_external_refs(pkg: Any) -> list[dict[str, str]]:
+    """SPDX 2.x ``externalRefs`` for the package's purl and CPE identities."""
+    refs = []
+    if pkg.purl:
+        refs.append({"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": pkg.purl})
+    if getattr(pkg, "cpe", None):
+        refs.append({"referenceCategory": "SECURITY", "referenceType": "cpe23Type", "referenceLocator": pkg.cpe})
+    return refs

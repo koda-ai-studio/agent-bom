@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from agent_bom.api.health_models import AdvisoryRematchHealth, advisory_rematch_health
 from agent_bom.api.models import HealthResponse
 from agent_bom.core.experimental import disabled_message, is_enabled
 
@@ -23,6 +24,7 @@ class ExperimentalFeatureHealth(BaseModel):
 
 class SystemHealthResponse(HealthResponse):
     experimental_features: list[ExperimentalFeatureHealth] = Field(default_factory=list)
+    advisory_rematch: AdvisoryRematchHealth = Field(default_factory=advisory_rematch_health)
 
 
 def ensure_experimental(feature_id: str) -> None:

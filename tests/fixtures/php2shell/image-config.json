@@ -1,0 +1,21 @@
+{
+  "architecture": "amd64",
+  "os": "linux",
+  "config": {
+    "Env": [
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "PHPIZE_DEPS=autoconf dpkg-dev file g++ gcc libc-dev make pkg-config re2c",
+      "PHP_INI_DIR=/usr/local/etc/php",
+      "PHP_VERSION=8.3.30",
+      "PHP_URL=https://www.php.net/distributions/php-8.3.30.tar.xz"
+    ],
+    "Entrypoint": ["docker-php-entrypoint"],
+    "Cmd": ["php", "-a"]
+  },
+  "history": [
+    {"created_by": "/bin/sh -c #(nop) ADD file:debian-bookworm-rootfs in / "},
+    {"created_by": "ENV PHP_VERSION=8.3.30", "empty_layer": true},
+    {"created_by": "RUN /bin/sh -c docker-php-source extract && make install # buildkit"}
+  ],
+  "rootfs": {"type": "layers", "diff_ids": []}
+}

@@ -110,6 +110,7 @@ class Package:
     source_repo: Optional[str] = None
     occurrences: list[PackageOccurrence] = field(default_factory=list)  # Layer/file provenance for concrete package observations
     discovery_provenance: Optional[dict[str, Any]] = None  # Sanitized discovery provenance contract for this package asset
+    cpe: Optional[str] = None  # CPE 2.3 identity when the component is a product NVD tracks by CPE (e.g. a language runtime)
 
     def __post_init__(self) -> None:
         normalize_artifact_version(self)

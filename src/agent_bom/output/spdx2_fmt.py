@@ -25,6 +25,7 @@ from agent_bom.checksums import integrity_verdict, integrity_verdict_statements,
 from agent_bom.models import AIBOMReport
 from agent_bom.output.cloud_context import attach_cloud_context
 from agent_bom.output.dependency_hierarchy import add_spdx2_package_relationships
+from agent_bom.output.package_attributes import spdx2_external_refs
 
 _SUPPORTED_VERSIONS = {"2.2", "2.3"}
 _NOASSERTION = "NOASSERTION"
@@ -165,14 +166,9 @@ def to_spdx2(report: AIBOMReport, version: str = "2.3") -> dict:
                     checksums = spdx2_checksums(pkg.checksums)
                     if checksums:
                         pkg_entry["checksums"] = checksums
-                    if pkg.purl:
-                        pkg_entry["externalRefs"] = [
-                            {
-                                "referenceCategory": "PACKAGE-MANAGER",
-                                "referenceType": "purl",
-                                "referenceLocator": pkg.purl,
-                            }
-                        ]
+                    external_refs = spdx2_external_refs(pkg)
+                    if external_refs:
+                        pkg_entry["externalRefs"] = external_refs
                     annotations = _vuln_annotations(pkg, created)
                     if pkg.is_malicious:
                         # SPDX 2.x has no malicious-package object; surface the

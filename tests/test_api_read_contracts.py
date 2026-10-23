@@ -221,3 +221,34 @@ def test_live_error_bodies_validate_against_the_envelope(empty_estate_client: Te
         assert envelope.error.correlation_id == response.headers["X-Request-ID"]
         observed[response.status_code] = envelope.error.code
     assert observed == {404: "NOT_FOUND", 422: "VALIDATION_ERROR", 403: "FORBIDDEN"}
+
+
+def test_blueprint_drift_violations_are_documented() -> None:
+    # The shape runtime_blueprints emits for an out-of-blueprint tool call.
+    violation = {
+        "type": "tool_not_allowed",
+        "tool_name": "shell",
+        "category": "execute",
+        "observed_count": 3,
+        "recommendation": "Remove the grant.",
+        "severity": "high",
+    }
+    incident = {
+        "incident_id": "i1",
+        "tenant_id": "t",
+        "blueprint_id": "b",
+        "status": "open",
+        "resolved": False,
+        "drift_score": 0.5,
+        "violation_count": 1,
+        "warning_count": 0,
+        "top_violations": [violation],
+        "first_detected_at": "2026-10-23T00:00:00Z",
+        "last_detected_at": "2026-10-23T00:00:00Z",
+        "occurrences": 1,
+        "resolved_at": "",
+        "resolved_by": "",
+        "resolution_note": "",
+    }
+    body = {"schema_version": "1", "tenant_id": "t", "count": 1, "open_count": 1, "incidents": [incident]}
+    assert _contract_violations("/v1/runtime/drift/incidents", body) == []

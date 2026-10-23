@@ -5545,6 +5545,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/intel/operator-advisories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Operator Advisories
+         * @description List the tenant's operator-declared advisories.
+         */
+        get: operations["list_operator_advisories_v1_intel_operator_advisories_get"];
+        put?: never;
+        /**
+         * Declare Operator Advisory
+         * @description Declare (or replace) an advisory ahead of feed publication.
+         */
+        post: operations["declare_operator_advisory_v1_intel_operator_advisories_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/intel/operator-advisories/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match All Operator Advisories
+         * @description Match every operator advisory against the tenant's current stored scans.
+         */
+        get: operations["match_all_operator_advisories_v1_intel_operator_advisories_matches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/intel/operator-advisories/{advisory_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Operator Advisory
+         * @description Retire an operator advisory (for example once the feed record is authoritative).
+         */
+        delete: operations["delete_operator_advisory_v1_intel_operator_advisories__advisory_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/intel/operator-advisories/{advisory_id}/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match Operator Advisory
+         * @description Match one operator advisory against the tenant's current stored scans.
+         */
+        get: operations["match_operator_advisory_v1_intel_operator_advisories__advisory_id__matches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/intel/sources": {
         parameters: {
             query?: never;
@@ -8557,6 +8641,64 @@ export interface components {
             event: "scan_completed" | "artifact_created" | "investigation_started" | "verification_completed";
             /** Outcome */
             outcome?: ("complete" | "partial" | "failed" | "verified_fixed" | "still_affected" | "unavailable_evidence") | null;
+        };
+        /**
+         * AdvisoryRematchHealth
+         * @description This replica's last advisory re-match run; tenant-free by construction.
+         */
+        AdvisoryRematchHealth: {
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Incomplete Tenants
+             * @default 0
+             */
+            incomplete_tenants: number;
+            /** Last Run At */
+            last_run_at?: string | null;
+            /**
+             * Last Run Status
+             * @default never
+             */
+            last_run_status: string;
+            /**
+             * New Findings
+             * @default 0
+             */
+            new_findings: number;
+            /**
+             * Tenants Examined
+             * @default 0
+             */
+            tenants_examined: number;
+        };
+        /** AffectedProduct */
+        AffectedProduct: {
+            /**
+             * Cpe Product
+             * @description CPE vendor:product, e.g. php:php
+             */
+            cpe_product?: string | null;
+            /** Ecosystem */
+            ecosystem?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Ranges */
+            ranges?: components["schemas"]["AffectedRange"][];
+            /** Versions */
+            versions?: string[];
+        };
+        /** AffectedRange */
+        AffectedRange: {
+            /** Fixed */
+            fixed?: string | null;
+            /** Introduced */
+            introduced?: string | null;
+            /** Last Affected */
+            last_affected?: string | null;
         };
         /** AgentBinding */
         AgentBinding: {
@@ -12504,8 +12646,16 @@ export interface components {
         };
         /** DriftViolation */
         DriftViolation: {
+            /** Category */
+            category?: string | null;
             /** Detail */
             detail?: string | null;
+            /** Observed Count */
+            observed_count?: number | null;
+            /** Recommendation */
+            recommendation?: string | null;
+            /** Severity */
+            severity?: string | null;
             /** Tool Name */
             tool_name?: string | null;
             /** Type */
@@ -20261,6 +20411,29 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * OperatorAdvisory
+         * @description An advisory declared by the operator ahead of feed publication.
+         */
+        OperatorAdvisory: {
+            /** Affected */
+            affected: components["schemas"]["AffectedProduct"][];
+            /** Aliases */
+            aliases?: string[];
+            /** Id */
+            id: string;
+            /** Published At */
+            published_at?: string | null;
+            /** References */
+            references?: string[];
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "critical" | "high" | "medium" | "low";
+            /** Summary */
+            summary: string;
+        };
         /** OverviewCoverage */
         OverviewCoverage: {
             /** Count */
@@ -23896,6 +24069,7 @@ export interface components {
         };
         /** SystemHealthResponse */
         SystemHealthResponse: {
+            advisory_rematch?: components["schemas"]["AdvisoryRematchHealth"];
             analytics: components["schemas"]["AnalyticsHealth"];
             /**
              * Auth Configured
@@ -38411,6 +38585,210 @@ export interface operations {
                 "application/json": components["schemas"]["IntelPackageMatchRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    list_operator_advisories_v1_intel_operator_advisories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    declare_operator_advisory_v1_intel_operator_advisories_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorAdvisory"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    match_all_operator_advisories_v1_intel_operator_advisories_matches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    delete_operator_advisory_v1_intel_operator_advisories__advisory_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                advisory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    match_operator_advisory_v1_intel_operator_advisories__advisory_id__matches_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                advisory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

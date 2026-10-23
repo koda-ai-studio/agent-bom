@@ -531,3 +531,8 @@ def db_path_cmd(db_path: str | None) -> None:
     from agent_bom.db.schema import DB_PATH
 
     click.echo(str(Path(db_path) if db_path else DB_PATH))
+
+
+from agent_bom.cli._db_advisory import advisory_group  # noqa: E402
+
+db_cmd.add_command(advisory_group)

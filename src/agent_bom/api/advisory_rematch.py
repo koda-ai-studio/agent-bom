@@ -1,0 +1,306 @@
+"""Bounded daily re-match of stored inventory against newly updated advisories.
+
+Each tenant keeps two cursors in the operator advisory store: the feed cursor
+(the newest feed ``modified`` timestamp fully processed) and the operator
+cursor (the run start, compared with operator advisory ``updated_at``). A run
+matches only advisories updated after those cursors against the tenant's
+newest stored scan per target. Hosts are never rescanned.
+
+Fail closed: when the feed or the store is unreachable, or a version cannot
+be ordered, the run is recorded ``incomplete`` and neither cursor moves, so
+the next run retries the same window instead of reporting it clean.
+
+Findings carry ``first_seen`` (first run that produced them; repeats keep it)
+and ``new_since_published`` (the matched scan completed before the advisory
+was published, so a scan-time match could not have reported it).
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import sqlite3
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from agent_bom.api import health_models
+from agent_bom.api.findings_current import current_scan_jobs
+from agent_bom.api.models import JobStatus
+from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
+from agent_bom.api.stores import _get_operator_advisory_store, _get_store
+from agent_bom.api.tenant_worker import run_tenant_bound
+from agent_bom.core.settings import env_bool, env_int
+from agent_bom.db import schema as _schema
+from agent_bom.db.schema import open_existing_db_readonly
+from agent_bom.scanners.operator_advisory import AffectedProduct, AffectedRange, OperatorAdvisory, match_advisories_against_reports
+
+try:
+    from psycopg import Error as _PsycopgError
+except ImportError:  # psycopg ships only with the Postgres extra
+    _PsycopgError = OSError  # type: ignore[assignment,misc]
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_INTERVAL_SECONDS = 86_400
+MIN_INTERVAL_SECONDS = 300
+MAX_TENANTS_PER_RUN = 500
+MAX_FEED_ADVISORIES = 2_000
+MAX_SEEN_FINDINGS = 5_000
+MAX_RECENT_FINDINGS = 200
+FIRST_RUN_LOOKBACK = timedelta(days=7)
+FEED_PROVENANCE = "feed"
+
+
+class FeedUnavailableError(RuntimeError):
+    """The advisory feed could not be read; the run must not be reported clean."""
+
+
+# Store, job-store and feed failures that make a run incomplete rather than clean.
+_UNAVAILABLE: tuple[type[BaseException], ...] = (OSError, sqlite3.Error, RuntimeError, ValueError, KeyError, TypeError, _PsycopgError)
+_FEED_UNAVAILABLE: tuple[type[BaseException], ...] = (FeedUnavailableError, *_UNAVAILABLE)
+
+
+@dataclass(frozen=True)
+class FeedBatch:
+    advisories: list[OperatorAdvisory]
+    newest_modified: str | None
+
+
+FeedSource = Callable[[str | None], FeedBatch]
+
+
+def rematch_enabled() -> bool:
+    return env_bool("AGENT_BOM_ADVISORY_REMATCH", False, on_invalid="default")
+
+
+def rematch_interval_seconds() -> int:
+    return max(MIN_INTERVAL_SECONDS, env_int("AGENT_BOM_ADVISORY_REMATCH_INTERVAL_SECONDS", DEFAULT_INTERVAL_SECONDS, on_invalid="default"))
+
+
+def feed_advisory(
+    *,
+    advisory_id: str,
+    aliases: list[str],
+    summary: str,
+    severity: str,
+    published: str | None,
+    affected: list[tuple[str, str, str | None, str | None, str | None]],
+) -> OperatorAdvisory:
+    """Feed record in the matcher's shape; feed data is trusted as stored, not re-validated."""
+    products = [
+        AffectedProduct.model_construct(
+            ecosystem=ecosystem,
+            name=name,
+            cpe_product=None,
+            versions=[],
+            ranges=[AffectedRange.model_construct(introduced=introduced or None, fixed=fixed or None, last_affected=last or None)],
+        )
+        for ecosystem, name, introduced, fixed, last in affected
+    ]
+    return OperatorAdvisory.model_construct(
+        id=advisory_id,
+        aliases=aliases,
+        summary=summary or "No description available",
+        severity=(severity or "unknown").lower(),
+        published_at=_parse(published),
+        references=[],
+        affected=products,
+    )
+
+
+def local_feed_advisories_since(cursor: str | None) -> FeedBatch:
+    """Feed advisories from the local vulnerability DB modified after ``cursor`` (bounded)."""
+    db_path = _schema.DB_PATH
+    if not db_path.exists():
+        raise FeedUnavailableError("local vulnerability DB is not present")
+    since = cursor or (datetime.now(timezone.utc) - FIRST_RUN_LOOKBACK).isoformat()
+    try:
+        conn = open_existing_db_readonly(db_path)
+        try:
+            ids = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT id FROM vulns WHERE modified > ? ORDER BY modified, id LIMIT ?", (since, MAX_FEED_ADVISORIES)
+                ).fetchall()
+            ]
+            return _feed_batch(conn, ids)
+        finally:
+            conn.close()
+    except sqlite3.Error as exc:
+        raise FeedUnavailableError("local vulnerability DB could not be read") from exc
+
+
+def _feed_batch(conn: sqlite3.Connection, ids: list[str]) -> FeedBatch:
+    if not ids:
+        return FeedBatch([], None)
+    marks = ",".join("?" * len(ids))
+    rows = conn.execute(
+        "SELECT v.id, v.summary, v.severity, v.aliases, v.published, v.modified, a.ecosystem, a.package_name, a.introduced, a.fixed, "
+        f"a.last_affected FROM vulns v JOIN affected a ON a.vuln_id = v.id WHERE v.id IN ({marks})",  # nosec B608 - placeholders only
+        ids,
+    ).fetchall()
+    grouped: dict[str, dict[str, Any]] = {}
+    for vid, summary, severity, aliases, published, modified, eco, name, introduced, fixed, last in rows:
+        entry = grouped.setdefault(vid, {"row": (summary, severity, aliases, published), "modified": modified, "affected": []})
+        entry["affected"].append((eco, name, introduced, fixed, last))
+    advisories = [
+        feed_advisory(
+            advisory_id=vid,
+            aliases=[a for a in str(entry["row"][2] or "").split(",") if a],
+            summary=entry["row"][0],
+            severity=entry["row"][1],
+            published=entry["row"][3],
+            affected=entry["affected"],
+        )
+        for vid, entry in grouped.items()
+    ]
+    newest = max((str(entry["modified"]) for entry in grouped.values() if entry["modified"]), default=None)
+    return FeedBatch(advisories, newest)
+
+
+def _parse(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _stored_reports(tenant_id: str) -> list[dict[str, Any]]:
+    reports = []
+    for job in current_scan_jobs(_completed_jobs_for_tenant(tenant_id), since=None, scan_id=None):
+        result = dict(job.result or {})
+        result.setdefault("scan_id", job.job_id)
+        result["scan_completed_at"] = job.completed_at or job.created_at
+        reports.append(result)
+    return reports
+
+
+def _stamp(findings: list[dict[str, Any]], seen: dict[str, str], now: datetime) -> list[dict[str, Any]]:
+    fresh = []
+    for finding in findings:
+        first_seen = seen.get(finding["id"])
+        if first_seen is None:
+            first_seen = seen[finding["id"]] = now.isoformat()
+            fresh.append(finding)
+        observed, published = _parse(finding.get("scan_observed_at")), _parse(finding.get("published_at"))
+        finding["first_seen"] = first_seen
+        finding["new_since_published"] = bool(observed and published and observed < published)
+    return fresh
+
+
+def _record(store: Any, tenant_id: str, state: dict[str, Any], status: dict[str, Any]) -> dict[str, Any]:
+    state["last_run"] = status
+    try:
+        store.put_rematch_state(tenant_id, state)
+    except _UNAVAILABLE:
+        logger.warning("Advisory re-match could not persist state for one tenant")
+        status = {**status, "status": "incomplete", "reason": "store_unavailable"}
+    return status
+
+
+def run_tenant_rematch(
+    tenant_id: str, *, feed_source: FeedSource = local_feed_advisories_since, now: datetime | None = None
+) -> dict[str, Any]:
+    """Re-match one tenant's stored inventory against advisories updated since its cursors."""
+    now = now or datetime.now(timezone.utc)
+    store = _get_operator_advisory_store()
+    status: dict[str, Any] = {"at": now.isoformat(), "status": "incomplete", "reason": None, "new_findings": 0}
+    try:
+        state = store.get_rematch_state(tenant_id) or {}
+    except _UNAVAILABLE:
+        return {**status, "reason": "store_unavailable"}
+    try:
+        batch = feed_source(state.get("feed_cursor"))
+    except _FEED_UNAVAILABLE:
+        return _record(store, tenant_id, state, {**status, "reason": "feed_unavailable"})
+    try:
+        operator_cursor = _parse(state.get("operator_cursor"))
+        declared = [
+            row for row in store.list(tenant_id) if operator_cursor is None or (_parse(row.get("updated_at")) or now) > operator_cursor
+        ]
+        operator = [OperatorAdvisory.model_validate({k: v for k, v in row.items() if k != "updated_at"}) for row in declared]
+        reports = _stored_reports(tenant_id)
+    except _UNAVAILABLE:
+        return _record(store, tenant_id, state, {**status, "reason": "store_unavailable"})
+    results = [
+        match_advisories_against_reports(operator, reports),
+        match_advisories_against_reports(batch.advisories, reports, provenance=FEED_PROVENANCE),
+    ]
+    if any(not result.complete for result in results) and reports:
+        return _record(store, tenant_id, state, {**status, "reason": "version_incomparable"})
+    seen: dict[str, str] = dict(state.get("seen") or {})
+    findings = [finding for result in results for finding in result.findings]
+    fresh = _stamp(findings, seen, now)
+    state["seen"] = dict(sorted(seen.items(), key=lambda item: item[1])[-MAX_SEEN_FINDINGS:])
+    state["recent_findings"] = (fresh + list(state.get("recent_findings") or []))[:MAX_RECENT_FINDINGS]
+    state["operator_cursor"] = now.isoformat()
+    state["feed_cursor"] = batch.newest_modified or state.get("feed_cursor")
+    complete = {
+        **status,
+        "status": "complete",
+        "new_findings": len(fresh),
+        "findings_total": len(findings),
+        "reports_examined": len(reports),
+    }
+    return _record(store, tenant_id, state, complete)
+
+
+def _rematch_tenants() -> list[str]:
+    rows = _get_store().list_summary(all_tenants=True, status=JobStatus.DONE, limit=MAX_TENANTS_PER_RUN * 20)
+    return sorted({str(row["tenant_id"]) for row in rows if row.get("tenant_id")})[:MAX_TENANTS_PER_RUN]
+
+
+def run_rematch_once(*, feed_source: FeedSource = local_feed_advisories_since, now: datetime | None = None) -> dict[str, Any]:
+    """One bounded pass over tenants with stored scans; updates this replica's status."""
+    now = now or datetime.now(timezone.utc)
+    statuses = [run_tenant_bound(tenant, run_tenant_rematch, tenant, feed_source=feed_source, now=now) for tenant in _rematch_tenants()]
+    incomplete = sum(1 for status in statuses if status["status"] != "complete")
+    summary = {
+        "last_run_at": now.isoformat(),
+        "last_run_status": "incomplete" if incomplete else "complete",
+        "tenants_examined": len(statuses),
+        "incomplete_tenants": incomplete,
+        "new_findings": sum(int(status.get("new_findings") or 0) for status in statuses),
+    }
+    health_models.ADVISORY_REMATCH_LAST_RUN.clear()
+    health_models.ADVISORY_REMATCH_LAST_RUN.update(summary)
+    return {**summary, "status": summary["last_run_status"]}
+
+
+def process_status() -> dict[str, Any]:
+    """Tenant-free summary of this replica's last run, safe for the public health payload."""
+    return health_models.advisory_rematch_health().model_dump()
+
+
+def reset_process_status() -> None:
+    health_models.ADVISORY_REMATCH_LAST_RUN.clear()
+
+
+def start_advisory_rematch_task() -> asyncio.Task[None] | None:
+    """Start the API-lifespan loop when enabled; default off."""
+    if not rematch_enabled():
+        return None
+    logger.info("Advisory re-match scheduler enabled")
+    return asyncio.create_task(advisory_rematch_loop())
+
+
+async def advisory_rematch_loop(*, feed_source: FeedSource = local_feed_advisories_since) -> None:
+    """API-lifespan loop; off unless ``AGENT_BOM_ADVISORY_REMATCH`` is set."""
+    interval = rematch_interval_seconds()
+    while True:
+        try:
+            summary = await asyncio.to_thread(run_rematch_once, feed_source=feed_source)
+            logger.info("Advisory re-match %s across %d tenant(s)", summary["status"], summary["tenants_examined"])
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # broad-except: the loop must survive and report the failed run
+            health_models.ADVISORY_REMATCH_LAST_RUN.update(
+                {"last_run_at": datetime.now(timezone.utc).isoformat(), "last_run_status": "incomplete"}
+            )
+            logger.error("Advisory re-match run failed; cursors unchanged")
+        await asyncio.sleep(interval)

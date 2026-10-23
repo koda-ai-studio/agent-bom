@@ -69,8 +69,19 @@ def candidate_cpe_products(name: str) -> list[str]:
     return out
 
 
+def cpe_identity(pkg: Any) -> tuple[str, str] | None:
+    """``(vendor, product)`` from a component's explicit ``cpe:2.3`` identity."""
+    parts = str(getattr(pkg, "cpe", None) or "").split(":")
+    if len(parts) < 5 or parts[:2] != ["cpe", "2.3"] or not parts[3] or not parts[4] or "*" in parts[3:5]:
+        return None
+    return parts[3], parts[4]
+
+
 def cpe_vendor_hint(pkg: Any) -> str | None:
-    """Infer a conservative NVD vendor hint from a package's purl metadata."""
+    """Infer a conservative NVD vendor hint from a package's CPE or purl metadata."""
+    identity = cpe_identity(pkg)
+    if identity is not None:
+        return identity[0]
     if pkg.purl:
         try:
             from packageurl import PackageURL

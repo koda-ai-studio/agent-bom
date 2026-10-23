@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
+
+from agent_bom.core.settings import env_bool
 
 
 class VersionInfo(BaseModel):
@@ -81,6 +85,27 @@ class PublicHealthResponse(BaseModel):
     auth_configured: bool = False
     configured_auth_modes: list[str] = Field(default_factory=list)
     unauthenticated_allowed: bool = False
+
+
+class AdvisoryRematchHealth(BaseModel):
+    """This replica's last advisory re-match run; tenant-free by construction."""
+
+    enabled: bool = False
+    last_run_status: str = "never"
+    last_run_at: str | None = None
+    tenants_examined: int = 0
+    incomplete_tenants: int = 0
+    new_findings: int = 0
+
+
+# Written only by ``advisory_rematch.run_rematch_once``; counts, never tenant ids.
+ADVISORY_REMATCH_LAST_RUN: dict[str, Any] = {}
+
+
+def advisory_rematch_health() -> AdvisoryRematchHealth:
+    """This replica's re-match status for the authenticated system-health payload."""
+    enabled = env_bool("AGENT_BOM_ADVISORY_REMATCH", False, on_invalid="default")
+    return AdvisoryRematchHealth(enabled=enabled, **ADVISORY_REMATCH_LAST_RUN)
 
 
 class HealthResponse(BaseModel):

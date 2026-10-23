@@ -41,6 +41,7 @@ from typing import Any
 
 from agent_bom.coverage import record_scan_input_warning
 from agent_bom.models import Package
+from agent_bom.parsers.image_runtimes import finalize_image_runtimes, seed_image_runtimes
 from agent_bom.parsers.oci_extractors import _LAYER_PACKAGE_STAGES
 from agent_bom.parsers.oci_io import (
     _decompression_ratio_exceeded,
@@ -52,7 +53,7 @@ from agent_bom.parsers.oci_io import (
     _safe_tar_names,
     _tar_uncompressed_regular_size,
 )
-from agent_bom.parsers.oci_layer import _layer_whiteouts, _LayerScan, _read_os_release_from_layer
+from agent_bom.parsers.oci_layer import _apply_detected_distro, _layer_whiteouts, _LayerScan, _read_os_release_from_layer
 from agent_bom.parsers.oci_metadata import _MAX_LEGACY_RPMDB_BYTES as _MAX_LEGACY_RPMDB_BYTES
 from agent_bom.parsers.oci_metadata import _RPM_HDR_MAGIC as _RPM_HDR_MAGIC
 from agent_bom.parsers.oci_metadata import _RPM_TYPE_INT32 as _RPM_TYPE_INT32
@@ -186,6 +187,7 @@ def _parse_layers_from_tarball(
     outer_tf: tarfile.TarFile,
     layer_paths: list[str],
     layer_metadata: list[LayerMetadata] | None = None,
+    config: dict | None = None,
 ) -> tuple[list[Package], list[str], list[OCIInputWarning]]:
     """Open each layer tarball from the outer tarball and extract packages.
 
@@ -202,6 +204,7 @@ def _parse_layers_from_tarball(
     detected_distro_name: str | None = None
     detected_distro_version: str | None = None
     layer_metadata = layer_metadata or _build_layer_metadata(layer_paths)
+    seed_image_runtimes(config, packages_by_key, packages)
 
     # Whiteouts are applied as a post-filter (see _drop_whiteout_deleted_packages)
     # scoped to strictly-higher layers, so a file re-created in a higher layer is
@@ -299,13 +302,9 @@ def _parse_layers_from_tarball(
             )
             continue
 
-    packages = _drop_whiteout_deleted_packages(packages, whiteouts_by_index)
+    packages = finalize_image_runtimes(_drop_whiteout_deleted_packages(packages, whiteouts_by_index))
 
-    if detected_distro_name or detected_distro_version:
-        for pkg in packages:
-            if pkg.ecosystem in {"deb", "apk", "rpm"}:
-                pkg.distro_name = pkg.distro_name or detected_distro_name
-                pkg.distro_version = pkg.distro_version or detected_distro_version
+    _apply_detected_distro(packages, detected_distro_name, detected_distro_version)
 
     return packages, warnings, coverage_warnings
 
@@ -407,7 +406,7 @@ def parse_oci_tarball(path: Path) -> OCIParseResult:
             manifest = manifests[0]
             config = _read_json_member_from_tar(outer_tf, manifest.config_digest)
             layer_metadata = _build_layer_metadata(manifest.layer_paths, config)
-            packages, warnings, coverage_warnings = _parse_layers_from_tarball(outer_tf, manifest.layer_paths, layer_metadata)
+            packages, warnings, coverage_warnings = _parse_layers_from_tarball(outer_tf, manifest.layer_paths, layer_metadata, config)
             return OCIParseResult(
                 packages=packages,
                 strategy="oci-tarball",
@@ -424,7 +423,7 @@ def parse_oci_tarball(path: Path) -> OCIParseResult:
             except OCIParseError:
                 raise
             layer_metadata = _build_layer_metadata(layer_paths, config)
-            packages, warnings, coverage_warnings = _parse_layers_from_tarball(outer_tf, layer_paths, layer_metadata)
+            packages, warnings, coverage_warnings = _parse_layers_from_tarball(outer_tf, layer_paths, layer_metadata, config)
             return OCIParseResult(
                 packages=packages,
                 strategy="oci-tarball",
@@ -499,6 +498,7 @@ def parse_oci_layout_dir(path: Path) -> OCIParseResult:
     detected_distro_name: str | None = None
     detected_distro_version: str | None = None
     whiteouts_by_index: dict[int, set[str]] = {}
+    seed_image_runtimes(config, packages_by_key, packages)
 
     for layer_hash, layer in zip(layer_digests, layer_metadata, strict=False):
         blob_path = path / "blobs" / "sha256" / layer_hash
@@ -566,13 +566,9 @@ def parse_oci_layout_dir(path: Path) -> OCIParseResult:
                 message=f"Failed to read layer blob {layer_hash[:12]}",
             )
 
-    packages = _drop_whiteout_deleted_packages(packages, whiteouts_by_index)
+    packages = finalize_image_runtimes(_drop_whiteout_deleted_packages(packages, whiteouts_by_index))
 
-    if detected_distro_name or detected_distro_version:
-        for pkg in packages:
-            if pkg.ecosystem in {"deb", "apk", "rpm"}:
-                pkg.distro_name = pkg.distro_name or detected_distro_name
-                pkg.distro_version = pkg.distro_version or detected_distro_version
+    _apply_detected_distro(packages, detected_distro_name, detected_distro_version)
 
     return OCIParseResult(
         packages=packages,

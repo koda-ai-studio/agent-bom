@@ -139,6 +139,10 @@ AGENT_BOM_VAULT_TOKEN
 AGENT_BOM_CONNECTIONS_SCHEDULER
 # opt-in flag (default OFF) enabling the scheduled findings-export loop (#4040); read live in api/export_scheduler.py
 AGENT_BOM_EXPORT_SCHEDULER
+# Read live by api/advisory_rematch.py so the lifespan gate reflects the current env; default off.
+AGENT_BOM_ADVISORY_REMATCH
+# Re-match cadence in seconds (default 86400, floor 300); read when the loop starts.
+AGENT_BOM_ADVISORY_REMATCH_INTERVAL_SECONDS
 # CLI profile config path override; read at command invocation time.
 AGENT_BOM_CONFIG
 # Optional cosign signer-boundary overrides for internal non-release signing;

@@ -1,0 +1,21 @@
+{
+  "id": "CVE-2026-109618",
+  "aliases": ["CVE-2026-109619"],
+  "summary": "php2shell: unauthenticated remote code execution in PHP core",
+  "severity": "critical",
+  "published_at": "2026-10-21T00:00:00Z",
+  "references": ["https://www.php.net/ChangeLog-8.php"],
+  "affected": [
+    {
+      "ecosystem": "generic",
+      "name": "php",
+      "cpe_product": "php:php",
+      "ranges": [
+        {"introduced": "8.5.0", "fixed": "8.5.12"},
+        {"introduced": "8.4.0", "fixed": "8.4.27"},
+        {"introduced": "8.3.0", "fixed": "8.3.36"},
+        {"introduced": "8.2.0", "fixed": "8.2.35"}
+      ]
+    }
+  ]
+}

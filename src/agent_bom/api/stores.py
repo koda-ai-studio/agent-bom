@@ -7,6 +7,7 @@ import threading
 from typing import TYPE_CHECKING, Any, cast
 
 from agent_bom.api.neptune_graph import NeptuneGraphStore
+from agent_bom.api.operator_advisory_store import InMemoryOperatorAdvisoryStore, OperatorAdvisoryStore, SQLiteOperatorAdvisoryStore
 from agent_bom.api.storage.analytics import get_analytics_store
 from agent_bom.api.storage.analytics import set_analytics_store as set_analytics_store
 from agent_bom.api.storage.job_backends import configured_job_store
@@ -25,6 +26,7 @@ from agent_bom.api.storage.job_cache import (
 from agent_bom.api.storage_schema import postgres_deployment_configured
 from agent_bom.api.tenant_graph_retention_store import _get_tenant_graph_retention_store as _get_tenant_graph_retention_store
 from agent_bom.api.tenant_graph_retention_store import set_tenant_graph_retention_store as set_tenant_graph_retention_store
+from agent_bom.api.tenant_score_config_store import InMemoryTenantScoreConfigStore, SQLiteTenantScoreConfigStore
 from agent_bom.config import API_MAX_IN_MEMORY_JOBS as _MAX_IN_MEMORY_JOBS
 
 if TYPE_CHECKING:
@@ -282,15 +284,39 @@ def _get_tenant_score_config_store() -> TenantScoreConfigStore:
                     from agent_bom.api.postgres_tenant_score_config import PostgresTenantScoreConfigStore
 
                     _tenant_score_config_store = PostgresTenantScoreConfigStore()
-                elif os.environ.get("AGENT_BOM_DB"):
-                    from agent_bom.api.tenant_score_config_store import SQLiteTenantScoreConfigStore
-
-                    _tenant_score_config_store = SQLiteTenantScoreConfigStore(os.environ["AGENT_BOM_DB"])
+                elif sqlite_path := os.environ.get("AGENT_BOM_DB"):
+                    _tenant_score_config_store = SQLiteTenantScoreConfigStore(sqlite_path)
                 else:
-                    from agent_bom.api.tenant_score_config_store import InMemoryTenantScoreConfigStore
-
                     _tenant_score_config_store = InMemoryTenantScoreConfigStore()
     return _tenant_score_config_store
+
+
+# ─── Operator advisory store (pluggable) ──────────────────────────────────
+_operator_advisory_store: OperatorAdvisoryStore | None = None
+
+
+def _get_operator_advisory_store() -> OperatorAdvisoryStore:
+    """Get the tenant-scoped operator advisory store (Postgres, SQLite, or in-memory)."""
+    global _operator_advisory_store
+    if _operator_advisory_store is None:
+        with _store_lock:
+            if _operator_advisory_store is None:
+                sqlite_path = os.environ.get("AGENT_BOM_DB")
+                if postgres_deployment_configured():
+                    from agent_bom.api.postgres_operator_advisory import PostgresOperatorAdvisoryStore
+
+                    _operator_advisory_store = PostgresOperatorAdvisoryStore()
+                elif sqlite_path:
+                    _operator_advisory_store = SQLiteOperatorAdvisoryStore(sqlite_path)
+                else:
+                    _operator_advisory_store = InMemoryOperatorAdvisoryStore()
+    return _operator_advisory_store
+
+
+def set_operator_advisory_store(store: OperatorAdvisoryStore | None) -> None:
+    """Switch (or reset with ``None``) the operator advisory store backend."""
+    global _operator_advisory_store
+    _operator_advisory_store = store
 
 
 def set_tenant_score_config_store(store: TenantScoreConfigStore) -> None:

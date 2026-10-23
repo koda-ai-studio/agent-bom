@@ -73,7 +73,7 @@ _DOMAIN_SPECS: tuple[tuple[str, str, str, str], ...] = (
         (
             "findings scan_findings exceptions drift_incidents issue_mappings ticket_links hitl_approvals "
             "hub_cve_intel hub_ledger_ingest_state hub_overview_revisions campaign_evidence_state "
-            "risk_campaign_workflows trend_history vulnerability_scans"
+            "risk_campaign_workflows trend_history vulnerability_scans operator_advisories operator_advisory_rematch_state"
         ),
         "findings_ finding_history_ hub_findings_ compliance_hub_findings",
     ),
