@@ -15,7 +15,7 @@ MAX_SESSION_IDS = 5
 
 
 class LowSignalWrites:
-    """Writes outside the cwd that land in the same repo, temp or agent state: counted, not flagged."""
+    """Writes outside the cwd that land in the same repo, temp or agent scratch state: counted, not flagged."""
 
     def __init__(self) -> None:
         self._paths: dict[str, set[str]] = {}

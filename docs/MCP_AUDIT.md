@@ -112,7 +112,9 @@ A write outside the session directory stays risky when it targets another
 repository, a home dotfile or credential directory, or a system path. Writes to
 another checkout of the same git repository (compared by `git rev-parse
 --git-common-dir`, run locally and cached per directory), the OS temp dir, or
-`~/.claude` / `~/.codex` are counted in `low_signal_writes` instead.
+`~/.claude` / `~/.codex` are counted in `low_signal_writes` instead, except the agent's
+permission settings, `CLAUDE.md`/`AGENTS.md`, `*.config.toml` and its `skills/`, `agents/`,
+`hooks/`, `commands/` and `rules/`, which are high-severity risky writes.
 Each tool call is mapped to the same flat span shape as the hosted trace
 connectors (providers `claude-code-sessions` and `codex-sessions`), and used
 versus unused servers come from the shared runtime trace projection over the

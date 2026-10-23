@@ -17,6 +17,9 @@ _GIT_TIMEOUT_SECONDS = 2.0
 _SYSTEM_PREFIXES = ("/etc/", "/usr/", "/bin/", "/sbin/", "/System/", "/Library/", "/var/root/", "/opt/homebrew/etc/")
 _TEMP_PREFIXES = ("/tmp", "/private/tmp", "/var/folders", "/private/var/folders")
 _AGENT_STATE_DIRS = (".claude", ".codex")
+# Files that change what the agent may do or is told to do in later sessions.
+_AGENT_CONTROL_FILES = {"settings.json", "settings.local.json", "config.toml", "CLAUDE.md", "AGENTS.md"}
+_AGENT_CONTROL_DIRS = {"skills", "agents", "hooks", "commands", "rules"}
 
 
 def _within(path: str, root: str) -> bool:
@@ -34,6 +37,15 @@ class WriteScope:
 
     def expand(self, path: str) -> str:
         return str(self.home) + path[1:] if path == "~" or path.startswith("~/") else path
+
+    def _agent_control(self, path: str) -> bool:
+        for name in _AGENT_STATE_DIRS:
+            state = str(self.home / name)
+            if not _within(path, state) or path == state:
+                continue
+            first = path[len(state) + 1 :].split("/", 1)[0]
+            return first in _AGENT_CONTROL_FILES or first in _AGENT_CONTROL_DIRS or first.endswith(".config.toml")
+        return False
 
     def _sensitive(self, path: str) -> bool:
         if path.startswith(_SYSTEM_PREFIXES):
@@ -73,7 +85,7 @@ class WriteScope:
     def classify(self, path: str, root: str) -> tuple[str, str]:
         """``("risky", severity)`` or ``("low_signal", reason)`` for a write outside ``root``."""
         target, cwd = self.expand(path), self.expand(root)
-        if self._sensitive(target):
+        if self._sensitive(target) or self._agent_control(target):
             return "risky", "high"
         if any(_within(target, str(self.home / name)) for name in _AGENT_STATE_DIRS):
             return "low_signal", "agent_state"

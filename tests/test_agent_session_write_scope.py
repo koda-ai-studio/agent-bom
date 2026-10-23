@@ -80,3 +80,22 @@ def test_git_lookups_are_cached_per_directory(tmp_path, scope, monkeypatch):
     for _ in range(5):
         scope.classify(str(repo / "a" / "b.py"), str(repo / "sub"))
     assert len(calls) <= 2
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        ".claude/settings.json",
+        ".claude/settings.local.json",
+        ".claude/CLAUDE.md",
+        ".claude/skills/deploy/SKILL.md",
+        ".claude/agents/reviewer.md",
+        ".claude/hooks/pre.sh",
+        ".codex/config.toml",
+        ".codex/work.config.toml",
+        ".codex/AGENTS.md",
+        ".codex/skills/x/SKILL.md",
+    ],
+)
+def test_agent_control_files_stay_high(scope, tmp_path, relative):
+    assert scope.classify(str(scope.home / relative), str(tmp_path)) == ("risky", "high")
