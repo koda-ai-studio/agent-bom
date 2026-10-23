@@ -33,3 +33,9 @@ CVE-2025-60876
 # base image ships a fixed pip package or pip can be removed from runtime.
 # Structured exception: docs/security/image-exceptions.yaml#base-python-pip-no-fix-2026-04
 CVE-2026-3219
+
+# filelock ReadWriteLock (CVE-2026-112940 / GHSA-v4x8-3wr5-3wq8), fixed in 4.2.1.
+# Blocked by: snowflake-connector-python 4.x requires filelock<4; 5.x ships no
+# musllinux wheels for the Alpine image. No locked dependency uses ReadWriteLock.
+# Structured exception: docs/security/image-exceptions.yaml#filelock-snowflake-pin-2026-10
+CVE-2026-112940

@@ -309,6 +309,7 @@ def test_load_repo_image_scan_ignore_has_known_cves():
         "CVE-2025-6141",
         "CVE-2025-60876",
         "CVE-2026-3219",
+        "CVE-2026-112940",
     }
 
 
