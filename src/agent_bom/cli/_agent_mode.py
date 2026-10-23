@@ -89,13 +89,22 @@ def _summary(report_json: dict[str, Any]) -> dict[str, Any]:
     freshness_raw = report_json.get("vuln_data_freshness")
     freshness: dict[str, Any] = freshness_raw if isinstance(freshness_raw, dict) else {}
     from agent_bom import __version__
-    from agent_bom.cloud_sdk_freshness import cloud_sdk_freshness_summary
+
+    sources_raw = report_json.get("scan_sources")
+    sources: list[Any] = sources_raw if isinstance(sources_raw, list) else []
+    # agent-bom's own cloud SDK pins matter only when this scan called a cloud
+    # API; `agent-bom doctor` reports them for every install.
+    cloud_sdk: dict[str, Any] = {}
+    if any(str(source).startswith("cloud:") for source in sources):
+        from agent_bom.cloud_sdk_freshness import cloud_sdk_freshness_summary
+
+        cloud_sdk["cloud_sdk_freshness"] = cloud_sdk_freshness_summary()
 
     return {
         "tool_version": __version__,
         "db_last_updated": freshness.get("last_updated"),
         "db_age_days": freshness.get("age_days"),
-        "cloud_sdk_freshness": cloud_sdk_freshness_summary(),
+        **cloud_sdk,
         "agents": summary.get("total_agents", summary.get("agents", len(agents))),
         "servers": summary.get(
             "total_mcp_servers",

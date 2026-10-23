@@ -182,3 +182,28 @@ def test_repo_pii_warning_does_not_claim_credentials(tmp_path):
     assert result.ai_inventory_data["secrets"]["by_category"] == {"pii": 1}
     assert any("1 PII pattern(s)" in warning for warning in warnings)
     assert not any("credential pattern(s)" in warning for warning in warnings)
+
+
+def _skip_semgrep(monkeypatch: pytest.MonkeyPatch) -> None:
+    def skip_scan(*_args, **_kwargs):
+        raise SASTScanError("semgrep unavailable", execution_status=SASTExecutionStatus.SKIPPED, reason_code="semgrep_unavailable")
+
+    monkeypatch.setattr("agent_bom.sast.scan_code", skip_scan)
+
+
+def test_missing_semgrep_is_not_a_warning_when_there_is_no_source_code(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _skip_semgrep(monkeypatch)
+    (tmp_path / "requirements.txt").write_text("requests==2.33.0\n")
+    warnings: list[str] = []
+    result = scan_cloned_repo_tree(str(tmp_path), agents=[], warnings=warnings)
+    assert result.sast_data is not None and result.sast_data["status_reason"] == "semgrep_unavailable"
+    assert not any("SAST" in warning for warning in warnings)
+
+
+def test_missing_semgrep_still_warns_when_source_code_goes_unscanned(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _skip_semgrep(monkeypatch)
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "app.py").write_text("print('hi')\n")
+    warnings: list[str] = []
+    scan_cloned_repo_tree(str(tmp_path), agents=[], warnings=warnings)
+    assert "SAST skipped: semgrep_unavailable" in warnings

@@ -297,11 +297,12 @@ def _detect_missing_mutual_auth(agents: list[Agent], policies: list[A2APolicyVie
     for agent in agents:
         # An agent that delegates onward (has child/transitive edges) but sits
         # behind no policy that requires caller identity has no mutual auth on
-        # its agent-to-agent / agent-to-MCP edges.
+        # its agent-to-agent edges. A lone agent reaching a remote MCP server has
+        # no such edge; mcp_auth_posture reports that server's authentication.
         chains = _agent_delegation_chains(agent)
         network_servers = [s for s in agent.mcp_servers if s.url]
         delegates = bool(chains) or bool(agent.parent_agent)
-        if not delegates and not network_servers:
+        if not delegates:
             continue
         if has_any_policy and identity_required:
             continue
@@ -314,7 +315,7 @@ def _detect_missing_mutual_auth(agents: list[Agent], policies: list[A2APolicyVie
             _finding(
                 title="Missing mutual authentication on inter-agent edges",
                 description=(
-                    f"Agent {agent.name!r} participates in agent-to-agent or agent-to-MCP communication but "
+                    f"Agent {agent.name!r} participates in agent-to-agent communication but "
                     f"{reason}. Without a verified caller identity, a downstream agent or MCP server cannot "
                     "confirm who is calling it (no mutual auth)."
                 ),

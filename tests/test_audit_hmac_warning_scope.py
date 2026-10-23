@@ -107,3 +107,36 @@ def test_cli_scan_output_has_no_audit_hmac_log_line(tmp_path: Path) -> None:
     assert "Offline mode" in combined, combined[-2000:]
     assert "AUDIT_MODULE_LOADED=True" in combined, combined[-2000:]
     assert WARNING_TEXT not in combined
+
+
+def test_in_memory_chain_does_not_warn_but_a_persisted_chain_does(fresh_audit_log, caplog, tmp_path) -> None:
+    # The in-memory chain ends with the process, so a key that does not survive a
+    # restart loses nothing; a SQLite chain outlives it and must warn.
+    caplog.set_level(logging.WARNING, logger="agent_bom.api.audit_log")
+    memory = fresh_audit_log.InMemoryAuditLog()
+    memory.append(fresh_audit_log.AuditEntry(action="skills.scan_completed", actor="skills_service"))
+    assert WARNING_TEXT not in caplog.text
+    assert memory.list_entries()[0].verify(fresh_audit_log._HMAC_KEY)
+    fresh_audit_log.SQLiteAuditLog(str(tmp_path / "audit.db")).append(fresh_audit_log.AuditEntry(action="scan"))
+    assert WARNING_TEXT in caplog.text
+
+
+def test_cli_skills_scan_output_has_no_audit_hmac_log_line(tmp_path: Path) -> None:
+    skill = tmp_path / "demo" / "SKILL.md"
+    skill.parent.mkdir()
+    skill.write_text("---\nname: demo\ndescription: Demo skill.\n---\n\nSay hello.\n", encoding="utf-8")
+    persistent = {"AGENT_BOM_DB", "AGENT_BOM_POSTGRES_URL"}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("AGENT_BOM_AUDIT") and k not in persistent}
+    env.update({"HOME": str(tmp_path), "NO_COLOR": "1"})
+    result = subprocess.run(
+        [sys.executable, "-m", "agent_bom", "skills", "scan", str(tmp_path)],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+    )
+    combined = result.stdout + result.stderr
+    assert "demo/SKILL.md" in combined, combined[-2000:]
+    assert WARNING_TEXT not in combined

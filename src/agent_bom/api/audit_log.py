@@ -430,7 +430,9 @@ class InMemoryAuditLog:
         # predecessor). Hold the lock across the whole sequence.
         with self._lock:
             entry.prev_signature = self._last_sig_by_tenant[tenant_id]
-            entry.sign()
+            # Pass the key so an ephemeral one does not warn: this chain ends with
+            # the process, so a key that does not survive a restart loses nothing.
+            entry.sign(_HMAC_KEY)
             self._last_sig_by_tenant[tenant_id] = entry.hmac_signature
             self._entries.append(entry)
             self._update_checkpoint(tenant_id, entry.hmac_signature)

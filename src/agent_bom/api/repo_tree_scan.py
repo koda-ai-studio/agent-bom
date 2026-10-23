@@ -7,6 +7,7 @@ canonical list shared with CLI ``--project`` / ``--repo`` auto-detect.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -530,6 +531,48 @@ def _sast_scan_error_data(exc: Any, sast_result_cls: Any) -> tuple[dict[str, Any
     return data, reason_code
 
 
+_SAST_SOURCE_SUFFIXES = frozenset(
+    {
+        ".py",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+        ".ts",
+        ".tsx",
+        ".go",
+        ".java",
+        ".kt",
+        ".scala",
+        ".rb",
+        ".php",
+        ".cs",
+        ".rs",
+        ".c",
+        ".cc",
+        ".cpp",
+        ".h",
+        ".swift",
+        ".sh",
+    }
+)
+_SAST_SKIP_DIRS = frozenset({".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".tox"})
+
+
+def _has_source_code(root: Path, limit: int = 20_000) -> bool:
+    """True when ``root`` holds a file Semgrep would scan (bounded walk)."""
+    seen = 0
+    for _dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in _SAST_SKIP_DIRS]
+        for filename in filenames:
+            if Path(filename).suffix.lower() in _SAST_SOURCE_SUFFIXES:
+                return True
+            seen += 1
+            if seen >= limit:
+                return True
+    return False
+
+
 def _scan_sast_stage(
     root: Path,
     result: RepoTreeScanResult,
@@ -550,7 +593,10 @@ def _scan_sast_stage(
                 _append_sast_agent(root, sast_packages, agents)
     except SASTScanError as exc:
         result.sast_data, reason_code = _sast_scan_error_data(exc, SASTResult)
-        warnings.append(f"SAST {exc.execution_status.value}: {reason_code}")
+        # A tree with no source code loses nothing when SAST is skipped; the
+        # status stays in sast_data either way.
+        if exc.execution_status.value != "skipped" or _has_source_code(root):
+            warnings.append(f"SAST {exc.execution_status.value}: {reason_code}")
     except Exception as exc:  # noqa: BLE001 — repo scans preserve a typed, sanitized partial result
         from agent_bom.sast import SASTExecutionStatus, SASTResult
         from agent_bom.security import sanitize_error

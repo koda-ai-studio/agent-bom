@@ -220,3 +220,11 @@ def test_graph_annotation_noop_without_a2a_findings() -> None:
     graph = UnifiedGraph(scan_id="s", tenant_id="t")
     result = annotate_graph_a2a_auth_from_report(graph, {"findings": [{"finding_type": "CVE"}]})
     assert result == {"nodes_flagged": 0, "interaction_risks": 0}
+
+
+def test_single_agent_with_a_remote_mcp_server_but_no_delegation_is_silent() -> None:
+    # A local project whose one agent reaches a remote MCP server has no
+    # inter-agent edge; agent-to-MCP auth is mcp_auth_posture's finding.
+    server = MCPServer(name="docs", url="https://mcp.example.invalid/mcp", transport=TransportType.STREAMABLE_HTTP)
+    agent = _agent("claude-code", servers=[server])
+    assert evaluate_a2a_auth_posture([agent]) == []
