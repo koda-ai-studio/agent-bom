@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { SeverityBadge } from "@/components/severity-badge";
 import { agentBlastPathHref } from "@/lib/agent-links";
 import { api, type BlastRadius } from "@/lib/api";
+import { exposedByImpactLabel, heldOnServerLabel } from "@/lib/credential-basis";
 
 const RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 const SHOWN = 4;
@@ -43,9 +44,10 @@ export function AgentBlastSummary({ agentName }: { agentName: string }) {
 
   const rows = [...state.rows].sort((a, b) => (RANK[a.severity?.toLowerCase() ?? ""] ?? 4) - (RANK[b.severity?.toLowerCase() ?? ""] ?? 4));
   const credentials = new Set(rows.flatMap((row) => row.exposed_credentials ?? []));
+  const heldOnly = new Set(rows.flatMap((row) => row.all_server_credentials ?? []).filter((credential) => !credentials.has(credential)));
   return (
     <div className="space-y-2">
-      <p className="text-xs text-ink-secondary">{plural(rows.length, "finding")} · {plural(credentials.size, "unique credential")} exposed</p>
+      <p className="text-xs text-ink-secondary">{plural(rows.length, "finding")} · {plural(credentials.size, "unique credential")} exposed by impact{heldOnly.size ? ` · ${heldOnly.size} on server` : ""}</p>
       <ul className="divide-y divide-outline rounded-lg border border-outline">
         {rows.slice(0, SHOWN).map((row) => {
           const exposed = row.exposed_credentials?.length ?? 0;
@@ -60,11 +62,11 @@ export function AgentBlastSummary({ agentName }: { agentName: string }) {
                 {row.package ? <span className="min-w-0 truncate font-mono text-ink-secondary" title={row.package}>{row.package}</span> : null}
                 {held.length ? (
                   <span className="ml-auto shrink-0 text-right text-ink-secondary" title={`${held.join(", ")}. The server holds these credentials; this advisory's impact (${row.impact_category || "unknown"}) does not assert their exposure.`}>
-                    {plural(held.length, "credential")} on server · exposure not asserted
+                    {heldOnServerLabel(held.length)} · exposure not asserted
                   </span>
                 ) : (
                   <span className={`ml-auto shrink-0 text-right ${exposed ? "text-[color:var(--status-warn)]" : "text-ink-tertiary"}`} title={(row.exposed_credentials ?? []).join(", ") || undefined}>
-                    {exposed ? `${plural(exposed, "credential")} exposed` : "No credentials exposed"}
+                    {exposedByImpactLabel(exposed)}
                   </span>
                 )}
               </span>

@@ -117,7 +117,7 @@ describe("RemediationPage", () => {
     apiMock.getRemediation.mockResolvedValue([remediationItem("pyyaml", "critical")]);
     apiMock.listTickets.mockResolvedValue({ tickets: [] });
     render(<RemediationPage />);
-    const cell = (await screen.findAllByText("0 credentials exposed"))[0]!;
+    const cell = (await screen.findAllByText("0 credentials exposed by impact"))[0]!;
     expect(cell.closest("[title]")?.getAttribute("title")).toMatch(/advisory's impact.*exploit story counts every credential the hosting servers hold/);
   });
 
