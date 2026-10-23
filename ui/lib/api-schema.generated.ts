@@ -12646,8 +12646,16 @@ export interface components {
         };
         /** DriftViolation */
         DriftViolation: {
+            /** Category */
+            category?: string | null;
             /** Detail */
             detail?: string | null;
+            /** Observed Count */
+            observed_count?: number | null;
+            /** Recommendation */
+            recommendation?: string | null;
+            /** Severity */
+            severity?: string | null;
             /** Tool Name */
             tool_name?: string | null;
             /** Type */

@@ -423,6 +423,10 @@ class DriftViolation(ReadModel):
     type: str | None = None
     tool_name: str | None = None
     detail: str | None = None
+    category: str | None = None
+    observed_count: int | None = None
+    recommendation: str | None = None
+    severity: str | None = None
 
 
 class DriftIncidentRow(ReadModel):
