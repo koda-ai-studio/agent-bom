@@ -72,7 +72,7 @@ def _seed_skills_scan(*, tenant_id: str) -> int:
         ),
     ]
     payload: dict[str, Any] = {
-        "$schema": "https://agent-bom.github.io/schemas/skills-scan/v1",
+        "$schema": "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-scan.schema.json",
         "schema_version": "1",
         "scan_type": "skills",
         "report_type": "skills_scan",

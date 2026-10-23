@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agent-bom.github.io/schemas/skills-rescan/v1",
+  "$id": "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-rescan.schema.json",
   "title": "agent-bom Skills Rescan Schema v1",
   "description": "Structured output format for `agent-bom skills rescan`.",
   "type": "object",
@@ -16,7 +16,7 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "const": "https://agent-bom.github.io/schemas/skills-rescan/v1"
+      "const": "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-rescan.schema.json"
     },
     "schema_version": {
       "type": "string",

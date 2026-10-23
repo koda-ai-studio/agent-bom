@@ -7,7 +7,7 @@ output. Every skill is read-only by default. Anything that would change a file
 is proposed first and applied only after you confirm.
 
 If you would rather have the local MCP servers as well, install the repository
-plugin instead (see [Two ways to install in Codex](../claude-code/README.md#two-ways-to-install-in-codex)).
+plugin instead (see [Two ways to install in Codex](https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md#two-ways-to-install-in-codex)).
 That plugin is named `agent-bom-local`, so its skills (`agent-bom-local:scan`)
 never shadow this package's (`agent-bom:scan`). Both do the same jobs, so
 install one.
@@ -30,7 +30,7 @@ You need [uv](https://docs.astral.sh/uv/) on `PATH`. No account or API key is ne
 ## What it can and cannot do compared with the MCP plugin
 
 The skills cover the same jobs, with the same reporting rules, as the
-[MCP plugin skills](../claude-code/README.md). Both sets render their shared
+[MCP plugin skills](https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md). Both sets render their shared
 rules from one spec, `integrations/shared/skills.toml`. The differences come
 from the CLI of the pinned release:
 

@@ -3,7 +3,7 @@ type: fixed
 ---
 
 {
- "$schema": "https://agent-bom.github.io/schemas/skills-scan/v1",
+ "$schema": "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-scan.schema.json",
  "schema_version": "1",
  "report_type": "skills_scan",
  "generated_at": "2026-10-20T13:48:00Z",

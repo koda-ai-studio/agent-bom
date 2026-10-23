@@ -319,3 +319,20 @@ def test_agent_bom_skill_audit_reports_no_findings_on_the_codex_package(tmp_path
     findings = [(f["path"], x["title"]) for f in report["files"] for x in f["audit"]["findings"]]
     assert findings == []
     assert report["summary"]["findings"] == 0
+
+
+def test_codex_package_links_resolve_outside_the_repository() -> None:
+    # The directory ZIP holds only integrations/codex, so a relative link leaves it.
+    root = ROOT / "integrations" / "codex"
+    for path in [root / "README.md", *sorted((root / "skills").glob("*/SKILL.md"))]:
+        relative = [m for m in re.findall(r"\]\(([^)]+)\)", path.read_text()) if not m.startswith(("https://", "#"))]
+        assert relative == [], (path.name, relative)
+
+
+def test_audit_skills_reads_finding_fields_that_exist() -> None:
+    # possibly_documentation is a value of a finding's `context`, not a field of its own.
+    root = ROOT / "integrations"
+    for skill in (root / "codex" / "skills" / "audit-skills" / "SKILL.md", root / "claude-code" / "skills" / "audit-skills" / "SKILL.md"):
+        text = skill.read_text()
+        assert "`possibly_documentation`)" not in text and "marked `possibly_documentation`" not in text
+        assert "`context` is `possibly_documentation`" in text

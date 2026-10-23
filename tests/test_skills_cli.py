@@ -35,7 +35,7 @@ Environment:
     assert result.exit_code == 0, result.output
 
     data = json.loads(result.stdout)
-    assert data["$schema"] == "https://agent-bom.github.io/schemas/skills-scan/v1"
+    assert data["$schema"] == "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-scan.schema.json"
     assert data["schema_version"] == "1"
     assert data["report_type"] == "skills_scan"
     assert data["generated_at"].endswith("Z")
@@ -151,7 +151,7 @@ def test_skills_rescan_json(tmp_path):
     assert rescan_result.exit_code == 0, rescan_result.output
 
     data = json.loads(rescan_result.output)
-    assert data["$schema"] == "https://agent-bom.github.io/schemas/skills-rescan/v1"
+    assert data["$schema"] == "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-rescan.schema.json"
     assert data["schema_version"] == "1"
     assert data["report_type"] == "skills_rescan"
     assert data["generated_at"].endswith("Z")

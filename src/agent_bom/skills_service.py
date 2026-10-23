@@ -30,9 +30,9 @@ logger = logging.getLogger(__name__)
 
 _SKILLS_SCAN_CONCURRENCY = max(1, int(os.environ.get("AGENT_BOM_SKILLS_SCAN_CONCURRENCY", "8")))
 _SKILLS_SCAN_SCHEMA_VERSION = "1"
-_SKILLS_SCAN_SCHEMA_ID = "https://agent-bom.github.io/schemas/skills-scan/v1"
+_SKILLS_SCAN_SCHEMA_ID = "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-scan.schema.json"
 _SKILLS_RESCAN_SCHEMA_VERSION = "1"
-_SKILLS_RESCAN_SCHEMA_ID = "https://agent-bom.github.io/schemas/skills-rescan/v1"
+_SKILLS_RESCAN_SCHEMA_ID = "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-rescan.schema.json"
 
 
 def _generated_at() -> str:

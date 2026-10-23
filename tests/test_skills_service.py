@@ -170,7 +170,7 @@ def test_scan_skill_targets_records_catalog_and_intel(tmp_path):
     assert catalog["entries"][bundle.stable_id]["threat_intel"]["provider"] == "fixture-feed"
 
     payload = report.to_dict()
-    assert payload["$schema"] == "https://agent-bom.github.io/schemas/skills-scan/v1"
+    assert payload["$schema"] == "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-scan.schema.json"
     assert payload["schema_version"] == "1"
     assert payload["report_type"] == "skills_scan"
     assert payload["generated_at"].endswith("Z")
@@ -248,7 +248,7 @@ def test_rescan_skill_catalog_marks_missing_entries_unavailable(tmp_path):
     assert data["entries"][0]["exists"] is False
     assert data["entries"][0]["status"] == "unavailable"
     assert data["entries"][0]["error"] == "file not found"
-    assert data["$schema"] == "https://agent-bom.github.io/schemas/skills-rescan/v1"
+    assert data["$schema"] == "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-rescan.schema.json"
     assert data["schema_version"] == "1"
     assert data["report_type"] == "skills_rescan"
     assert data["generated_at"].endswith("Z")
@@ -347,8 +347,8 @@ def test_skills_output_schemas_exist():
     scan_doc = json.loads(scan_schema.read_text())
     rescan_doc = json.loads(rescan_schema.read_text())
 
-    assert scan_doc["$id"] == "https://agent-bom.github.io/schemas/skills-scan/v1"
-    assert rescan_doc["$id"] == "https://agent-bom.github.io/schemas/skills-rescan/v1"
+    assert scan_doc["$id"] == "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-scan.schema.json"
+    assert rescan_doc["$id"] == "https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/config/schemas/skills-rescan.schema.json"
 
 
 # ── Default target resolution: no arguments means "here", not "nothing" ──
