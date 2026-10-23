@@ -41,7 +41,7 @@ defined in `agent_bom.mcp_errors.mcp_error_payload`:
 | Code | Category | When emitted |
 |---|---|---|
 | `AGENTBOM_MCP_VALIDATION_INVALID_ARGUMENT` | validation | Generic bad input where no more specific code fits. |
-| `AGENTBOM_MCP_VALIDATION_INVALID_PATH` | validation | A path argument failed `safe_path` (traversal, oversize, missing). |
+| `AGENTBOM_MCP_VALIDATION_INVALID_PATH` | validation | A path argument failed `safe_path` (traversal, oversize, missing, or outside HOME and `AGENT_BOM_MCP_WORKSPACE_ROOTS`). Every path-taking tool returns it as `isError` text `AGENTBOM_MCP_VALIDATION_INVALID_PATH: <reason> (argument: <name>)`. |
 | `AGENTBOM_MCP_VALIDATION_INVALID_ECOSYSTEM` | validation | Ecosystem not in the supported set. |
 | `AGENTBOM_MCP_VALIDATION_INVALID_VULN_ID` | validation | CVE/GHSA identifier failed format validation. |
 | `AGENTBOM_MCP_VALIDATION_INVALID_IMAGE_REF` | validation | Container image reference failed `validate_image_ref`. |

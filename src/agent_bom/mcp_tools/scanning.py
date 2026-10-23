@@ -674,10 +674,9 @@ async def code_scan_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the code_scan tool."""
-    try:
-        scan_path = _safe_path(path)
-    except ValueError as exc:
-        raise ToolError(sanitize_error(exc)) from exc
+    from agent_bom.mcp_server_runtime import resolve_tool_path
+
+    scan_path = resolve_tool_path(_safe_path, path, argument="path")
 
     try:
         from agent_bom.sast import SASTResult, SASTScanError, scan_code

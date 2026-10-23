@@ -215,13 +215,38 @@ def mcp_workspace_roots() -> list[Path]:
     return roots
 
 
+_WORKSPACE_ROOTS_HINT = " - set AGENT_BOM_MCP_WORKSPACE_ROOTS to allow it"
+
+
 def safe_path(path_str: str) -> Path:
     from agent_bom.security import SecurityError, validate_path
 
     try:
         return validate_path(path_str, restrict_to_home=True, allowed_roots=mcp_workspace_roots())
     except SecurityError as exc:
-        raise ValueError(str(exc)) from exc
+        message = str(exc)
+        if "outside home directory" in message:
+            message += _WORKSPACE_ROOTS_HINT
+        raise ValueError(message) from exc
+
+
+def resolve_tool_path(safe_path_fn: Callable[[str], Path], value: str, *, argument: str) -> Path:
+    """Resolve a tool path argument or raise the structured invalid-path tool error.
+
+    The error text matches the ``scan`` tool's rejection
+    (``AGENTBOM_MCP_VALIDATION_INVALID_PATH: ... (argument: <name>)``) so every
+    path-taking tool reports a sandbox rejection the same way, as ``isError``.
+    """
+    try:
+        return safe_path_fn(value)
+    except ValueError as exc:
+        from agent_bom.mcp_errors import CODE_VALIDATION_INVALID_PATH
+        from agent_bom.mcp_server_scan import McpScanValidationError
+
+        error = McpScanValidationError(CODE_VALIDATION_INVALID_PATH, exc, argument=argument)
+        if _TOOL_ERROR_TYPES:
+            raise _TOOL_ERROR_TYPES[0](str(error)) from exc
+        raise error from exc
 
 
 def _log_value(value: object, *, max_len: int = 160) -> str:

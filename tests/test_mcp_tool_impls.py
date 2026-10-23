@@ -1062,15 +1062,17 @@ def test_tool_risk_assessment_validates_requested_config_path_before_discovery()
         patch("agent_bom.discovery.discover_all") as discover,
         patch("agent_bom.mcp_introspect.introspect_servers_sync") as introspect,
     ):
-        result = tool_risk_assessment_impl(
-            config_path="/outside/allowed/root",
-            timeout=5.0,
-            allow_command_execution=False,
-            _safe_path=MagicMock(side_effect=ValueError("path is outside allowed roots")),
-            _truncate_response=_trunc,
-        )
+        from mcp.server.mcpserver.exceptions import ToolError
 
-    assert "error" in json.loads(result)
+        with pytest.raises(ToolError, match="AGENTBOM_MCP_VALIDATION_INVALID_PATH.*argument: config_path"):
+            tool_risk_assessment_impl(
+                config_path="/outside/allowed/root",
+                timeout=5.0,
+                allow_command_execution=False,
+                _safe_path=MagicMock(side_effect=ValueError("path is outside allowed roots")),
+                _truncate_response=_trunc,
+            )
+
     discover.assert_not_called()
     introspect.assert_not_called()
 
@@ -1793,13 +1795,14 @@ def test_skill_trust_impl_safe_path_error():
     def _reject_path(p):
         raise ValueError("path outside home")
 
-    result = skill_trust_impl(
-        skill_path="/etc/passwd",
-        _safe_path=_reject_path,
-        _truncate_response=_trunc,
-    )
-    data = json.loads(result)
-    assert "error" in data
+    from mcp.server.mcpserver.exceptions import ToolError
+
+    with pytest.raises(ToolError, match="AGENTBOM_MCP_VALIDATION_INVALID_PATH.*argument: skill_path"):
+        skill_trust_impl(
+            skill_path="/etc/passwd",
+            _safe_path=_reject_path,
+            _truncate_response=_trunc,
+        )
 
 
 # ---------------------------------------------------------------------------

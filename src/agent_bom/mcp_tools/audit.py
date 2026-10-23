@@ -26,8 +26,10 @@ def tool_risk_assessment_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the tool_risk_assessment tool."""
+    from agent_bom.mcp_server_runtime import resolve_tool_path
+
+    resolved_config_path = str(resolve_tool_path(_safe_path, config_path, argument="config_path")) if config_path else None
     try:
-        resolved_config_path = str(_safe_path(config_path)) if config_path else None
         agents = discovery.discover_all(project_dir=resolved_config_path)
         servers = [s for a in agents for s in a.mcp_servers if s.is_mcp_surface]
         permission_findings = [f.to_dict() for f in evaluate_agent_permission_posture(agents)]
