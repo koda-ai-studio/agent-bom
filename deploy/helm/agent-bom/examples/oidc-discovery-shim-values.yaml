@@ -5,8 +5,8 @@
 #
 #   helm upgrade --install agent-bom deploy/helm/agent-bom \
 #     -f deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml \
-#     -f deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml \
-#     -f deploy/helm/agent-bom/examples/oidc-discovery-shim-values.yaml
+#     -f deploy/helm/agent-bom/examples/oidc-discovery-shim-values.yaml \
+#     --set-file gateway.upstreamsYaml=deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml
 #
 # Prerequisites:
 #   1. Gateway enabled and reachable at the shim issuer hostname (ingress TLS).

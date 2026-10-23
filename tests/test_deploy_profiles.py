@@ -38,6 +38,14 @@ def test_helm_validation_profiles_reference_existing_chart_assets():
         "snowflake-backend",
         "gateway-runtime",
         "airgap-vuln-db",
+        "aks-collector-workload-identity",
+        "eks-collector-irsa",
+        "gke-collector-workload-identity",
+        "multicloud-collector",
+        "collector-mtls",
+        "control-plane-identity",
+        "oidc-secret-file",
+        "oidc-discovery-shim",
     ]
     for profile in profiles:
         for values_file in profile.values_files:
@@ -383,3 +391,57 @@ def test_eks_postgres_url_percent_encodes_the_rds_password():
             "percent-encode it so reserved characters cannot corrupt the connection string"
         )
         assert "urlquery" in line
+
+
+def test_every_shipped_values_example_is_rendered_by_a_profile() -> None:
+    repo_root = Path(__file__).resolve().parent.parent
+    examples = repo_root / "deploy" / "helm" / "agent-bom" / "examples"
+    rendered = {path for profile in helm_validation_profiles(repo_root) for path in profile.values_files}
+    rendered |= {path for profile in helm_validation_profiles(repo_root) for _key, path in profile.set_file_arguments}
+    # Kubernetes Secret manifests an operator applies with kubectl, not chart values.
+    secret_manifests = {examples / "control-plane-auth-secret.example.yaml", examples / "postgres-secret.example.yaml"}
+    shipped = set(examples.glob("*.yaml")) - secret_manifests
+    assert sorted(path.name for path in shipped - rendered) == []
+
+
+def test_overlay_examples_say_so_and_render_on_their_documented_base() -> None:
+    repo_root = Path(__file__).resolve().parent.parent
+    examples = repo_root / "deploy" / "helm" / "agent-bom" / "examples"
+    profiles = {profile.name: profile for profile in helm_validation_profiles(repo_root)}
+    overlays = (("collector-mtls", "collector-mtls-values.yaml"), ("control-plane-identity", "control-plane-identity-values.yaml"))
+    for name, overlay in overlays:
+        header = (examples / overlay).read_text().split("\n\n", 1)[0]
+        assert "overlay" in header.lower(), overlay
+        files = profiles[name].values_files
+        assert files[-1] == examples / overlay and len(files) > 1, name
+        for base in files[:-1]:
+            assert f"-f deploy/helm/agent-bom/examples/{base.name}" in header, (overlay, base.name)
+
+
+def test_overlay_profiles_assert_on_what_the_overlay_renders() -> None:
+    repo_root = Path(__file__).resolve().parent.parent
+    profiles = helm_validation_profiles(repo_root)
+    overlays = [
+        profile
+        for profile in profiles
+        if profile.name
+        in {
+            "aks-collector-workload-identity",
+            "eks-collector-irsa",
+            "gke-collector-workload-identity",
+            "multicloud-collector",
+            "collector-mtls",
+            "control-plane-identity",
+            "oidc-secret-file",
+            "oidc-discovery-shim",
+        }
+    ]
+    assert len(overlays) == 8
+    assert all(profile.expect_rendered for profile in overlays)
+
+
+def test_oidc_discovery_shim_header_passes_upstreams_as_a_file_not_values() -> None:
+    repo_root = Path(__file__).resolve().parent.parent
+    text = (repo_root / "deploy" / "helm" / "agent-bom" / "examples" / "oidc-discovery-shim-values.yaml").read_text()
+    assert "-f deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml" not in text
+    assert "--set-file gateway.upstreamsYaml=deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml" in text

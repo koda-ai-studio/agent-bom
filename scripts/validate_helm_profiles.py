@@ -88,6 +88,13 @@ def main() -> int:
         for key, path in profile.set_file_arguments:
             cmd.extend(["--set-file", f"{key}={path}"])
         rendered = _render(cmd)
+        absent = [text for text in profile.expect_rendered if text not in rendered]
+        if absent:
+            print(
+                f"error: profile '{profile.name}' did not render its overlay: missing {', '.join(absent)}",
+                file=sys.stderr,
+            )
+            return 1
         missing = ingress_hosts_missing_paths(rendered)
         if missing:
             print(
