@@ -408,6 +408,7 @@ advisory matches, or rescan the original target to refresh inventory coverage.
 | Task | Artifact and next step |
 |---|---|
 | Scan a repository or gate CI | Export SARIF or an SBOM, then inspect findings and re-scan the same scope. See [CLI reference](cli.md). |
+| Explain a finding to your team | Save scan JSON, then run `agent-bom report impact scan.json -o impact-brief.html`. Review the [impact brief](operations/IMPACT_BRIEF.md) and its source receipts before sharing. |
 | Share inventory and evidence | Start the [self-hosted control plane](DEPLOY_PLATFORM.md), then connect a scoped source. |
 | Review cloud posture | Create a [provider grant](CLOUD_CONNECT.md), inspect collection coverage, then investigate supported findings. |
 | Use a coding assistant | Configure an [MCP client](MCP_SERVER.md), choose a task profile, then query the returned evidence. |

@@ -7,16 +7,19 @@ prioritized findings and before/after changes.
 
 ## First command → artifact → next step
 
-From a source checkout with `uv` installed:
+From a fresh Python environment, install the published package and produce a
+brief from the bundled sample:
 
 ```bash
-uv sync
-uv run agent-bom scan --demo --offline -f json -o example-scan.json
-uv run agent-bom report impact example-scan.json -o impact-brief.html
+pip install agent-bom
+agent-bom scan --demo --offline -f json -o example-scan.json
+agent-bom report impact example-scan.json --limit 5 -o impact-brief.html
 ```
 
-The demo uses fictional data. Its scan exits with a finding verdict; the saved
-JSON is still usable. The second command does not scan, contact a provider,
+Run the commands separately: the fictional demo deliberately exits `1` with
+blocking findings, after writing its JSON. Inspect the report if a command
+fails; a missing artifact or incomplete scan is not a clean result. The
+`report impact` command does not scan, contact a provider,
 start an MCP tool or modify an installation. Open `impact-brief.html` in a
 browser. It contains no scripts, remote fonts, images, tracking or uploads.
 The light/dark layout follows the browser preference and supports printing.
@@ -27,11 +30,44 @@ Review the scope and missing-identity counts before sharing the file. Expand
 pointer in the original scan. Assign an owner, check applicability, approve
 the change separately, and collect new evidence in the same scope.
 
+## Explain one finding in 90 seconds
+
+Open the brief and use these four steps for a review with an engineering lead
+or security manager. The duration is a suggested presentation length, not a
+measured time-to-value claim.
+
+1. **Set the scope.** Read **Evidence coverage** and expand **Inspect scope,
+   gaps and source digest**. Name the scanned scope and any missing evidence.
+   Affected assets, linked agents, occurrences and paths are separate counts;
+   do not add them into a single total.
+2. **Show the evidence.** Pick one item under **What to review first** and open
+   **Inspect source receipt**. Explain the affected component, recorded finding
+   and source pointer. Follow its graph relationships when available, retaining
+   their evidence type and direction. A recorded path does not prove exploitation.
+3. **Ask for a decision.** Use the recorded remediation to propose a next step.
+   Confirm the service owner and business criticality with the team. These are
+   human inputs: the brief orders rows by severity and does not calculate
+   business loss, exploit likelihood or an automatic business priority.
+4. **Define completion.** Agree who will check applicability, approve the
+   change and collect fresh evidence. With no baseline, say that change has
+   not been assessed; even a later missing finding does not establish a fix.
+
+A useful spoken summary is: “This scan records **[finding]** on **[asset]**.
+The evidence supports **[relationship or exposure]**; **[gap]** remains
+unknown. We propose **[action]**, owned by **[confirmed owner]**, and will
+verify it with **[specific evidence]**.” Leave unconfirmed fields unknown.
+
+For your own repository, run `agent-bom scan . -f json -o project-scan.json`,
+then `agent-bom report impact project-scan.json --limit 5 -o project-impact.html`.
+This scan can contact advisory services; inspect collection coverage and the
+artifact before sharing. See the [first-run guide](../FIRST_RUN.md) for offline
+database preparation and scan boundaries. The command does not send the brief.
+
 ## Compare retained scans
 
 ```bash
-uv run agent-bom report impact after.json --before before.json --limit 10 -o impact-change.html
-uv run agent-bom report impact after.json --before before.json --format json -o impact-change.json
+agent-bom report impact after.json --before before.json --limit 10 -o impact-change.html
+agent-bom report impact after.json --before before.json --format json -o impact-change.json
 ```
 
 Both inputs must be Agent-Bom AI-BOM scan JSON (`schema_version: "1.0"`),
