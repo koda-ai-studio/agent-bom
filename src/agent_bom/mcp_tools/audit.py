@@ -45,6 +45,15 @@ def tool_risk_assessment_impl(
             else mcp_introspect.IntrospectionReport()
         )
         audit = audit_mcp_agents(agents, introspection_report=report if live else None, expected_capabilities=expected_capabilities)
+        auth_findings = evaluate_mcp_auth_posture(agents)
+        audit_payload = audit.to_dict()
+        # Same gate as `agent-bom mcp audit`: any high/critical finding in scope,
+        # including configuration auth posture, is not a pass.
+        audit_payload["passed"] = (
+            audit.passed
+            and not any(str(f.severity).lower() in {"high", "critical"} for f in auth_findings)
+            and not any(str(f.get("severity", "")).lower() in {"high", "critical"} for f in permission_findings)
+        )
         results = [r.to_dict(include_runtime_objects=True) for r in report.results]
         summary = {
             "total_servers": len(servers),
@@ -62,8 +71,8 @@ def tool_risk_assessment_impl(
                         "summary": summary,
                         "servers": results,
                         "warnings": report.warnings,
-                        "audit": audit.to_dict(),
-                        "authentication_findings": [f.to_dict() for f in evaluate_mcp_auth_posture(agents)],
+                        "audit": audit_payload,
+                        "authentication_findings": [f.to_dict() for f in auth_findings],
                         "agent_permission_findings": permission_findings,
                     }
                 ),

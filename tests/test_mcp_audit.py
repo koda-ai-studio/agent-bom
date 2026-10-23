@@ -380,3 +380,20 @@ async def test_mcp_scan_uses_shared_passive_audit(monkeypatch):
         )
     )
     assert data["enforcement"]["coverage"][0]["tools"]["status"] == "configuration_only"
+
+
+def test_tool_risk_audit_fails_when_a_remote_server_has_no_authentication(tmp_path, monkeypatch):
+    """audit.passed must agree with the CLI exit gate: a high auth finding is not a pass."""
+    import json
+
+    import agent_bom.discovery as discovery
+    from agent_bom.mcp_tools.runtime import tool_risk_assessment_impl
+    from agent_bom.models import MCPServer, TransportType
+
+    server = MCPServer(name="remote", url="https://example.invalid/mcp", transport=TransportType.STREAMABLE_HTTP)
+    monkeypatch.setattr(discovery, "discover_all", lambda **kwargs: [agent(server)])
+    data = json.loads(
+        tool_risk_assessment_impl(config_path=str(tmp_path), live=False, _safe_path=lambda x: x, _truncate_response=lambda x: x)
+    )
+    assert data["authentication_findings"][0]["severity"] == "high"
+    assert data["audit"]["passed"] is False
