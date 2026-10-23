@@ -501,3 +501,20 @@ def test_a_launcher_name_never_reads_the_next_line_as_its_package(tmp_path):
     skill = tmp_path / "SKILL.md"
     skill.write_text("---\nname: demo\nrequires:\n  bins:\n    - uvx\n    - npx\noptional_bins:\n  - docker\n---\nRun `uvx ruff==0.6.0`.\n")
     assert {(pkg.name, pkg.ecosystem) for pkg in parse_skill_file(skill).packages} == {("ruff", "pypi")}
+
+
+def test_uv_run_executes_project_commands_not_packages(tmp_path):
+    from agent_bom.parsers.skills import parse_skill_file
+
+    skill = tmp_path / "CLAUDE.md"
+    skill.write_text("```bash\nuv run pytest -q\nuv run python -m build\nuv tool run ruff==0.6.9 format .\n```\n")
+    assert {(pkg.name, pkg.ecosystem, pkg.version) for pkg in parse_skill_file(skill).packages} == {("ruff", "pypi", "0.6.9")}
+
+
+def test_uvx_tool_at_version_keeps_the_pinned_version(tmp_path):
+    from agent_bom.parsers.skills import parse_skill_file
+
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("```bash\nuvx ruff@0.6.9 check .\nuvx mcp-server-fetch\n```\n")
+    found = {(pkg.name, pkg.version) for pkg in parse_skill_file(skill).packages}
+    assert found == {("ruff", "0.6.9"), ("mcp-server-fetch", "latest")}

@@ -48,7 +48,7 @@ _NPX_RE = re.compile(
     r"(?:npx|bunx)[ \t]+(?:-[yYp][ \t]+)*(?!-)(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)",
 )
 _UVX_RE = re.compile(
-    r"(?:uvx|uv[ \t]+(?:run|tool[ \t]+run))[ \t]+([\w][\w.-]*(?:==[\w.+-]+)?)",
+    r"(?:uvx|uv[ \t]+tool[ \t]+run)[ \t]+([\w][\w.-]*(?:(?:==|@)[\w.+-]+)?)",
 )
 _PIP_INSTALL_RE = re.compile(
     r"pip\s+install\s+(?:-[\w-]+\s+)*(.+?)(?:\s*$|\s*&&|\s*\\)",
@@ -265,7 +265,7 @@ def parse_skill_file(path: Path) -> SkillScanResult:
     # UVX packages
     for match in _UVX_RE.finditer(code_text):
         raw = match.group(1)
-        name, version = _parse_pkg_spec(raw, "==")
+        name, version = _parse_pkg_spec(raw, "==" if "==" in raw else "@")
         key = (name.lower(), "pypi")
         if key not in seen_packages:
             seen_packages.add(key)
