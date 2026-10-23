@@ -144,7 +144,8 @@ export function GraphChangesPanel({
                   )}
                   <GraphChangeIssueBasis change={source.issue_change} />
                   <GraphChangeAttribution attribution={source.changes_by_source} />
-                  <GraphChangeExposures highlights={source.highlights ?? {}} scanId={source.new.scan_id} onInvestigateNode={onInvestigateNode} />
+                  <GraphChangeExposures highlights={source.highlights ?? {}} scanId={source.new.scan_id} previousScanId={source.old.scan_id}
+                    onInvestigateNode={onInvestigateNode} onOpenDiff={() => onOpenDiff(pair, source.label)} />
                   {selected && diffDetails}
                 </li>
               );
