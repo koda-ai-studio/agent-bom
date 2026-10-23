@@ -585,3 +585,15 @@ def test_demo_estate_overview_identity_tile_populated(demo_estate_client: TestCl
     assert identity["metric"] >= 5, identity
     assert identity["detail"]["managed_identities"] >= 5, identity
     assert identity["status"] != "idle", identity
+
+
+# Reads the in-memory runtime index, which the autouse reset clears between tests.
+def test_demo_estate_runtime_production_index_has_traffic(demo_estate_client: TestClient) -> None:
+    idx = demo_estate_client.get("/v1/runtime/production-index", headers=VIEWER).json()
+    assert idx.get("status") == "ok", idx
+    traffic = idx.get("traffic") or {}
+    assert traffic.get("total_tool_calls", 0) > 100, traffic
+    assert traffic.get("blocked_tool_calls", 0) > 0, traffic
+    assert traffic.get("uptime_seconds", 0) > 0, traffic
+    trace = (idx.get("authorization_trace") or {}).get("recent") or []
+    assert trace, "expected recent authorization-trace events"

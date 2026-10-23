@@ -369,17 +369,6 @@ def test_demo_estate_cis_posture_spans_aws_gcp_azure(shared_demo_estate_client: 
     assert statuses["pass"] > 0 and statuses["fail"] > 0, statuses
 
 
-def test_demo_estate_runtime_production_index_has_traffic(shared_demo_estate_client: TestClient) -> None:
-    idx = shared_demo_estate_client.get("/v1/runtime/production-index", headers=VIEWER).json()
-    assert idx.get("status") == "ok", idx
-    traffic = idx.get("traffic") or {}
-    assert traffic.get("total_tool_calls", 0) > 100, traffic
-    assert traffic.get("blocked_tool_calls", 0) > 0, traffic
-    assert traffic.get("uptime_seconds", 0) > 0, traffic
-    trace = (idx.get("authorization_trace") or {}).get("recent") or []
-    assert trace, "expected recent authorization-trace events"
-
-
 def test_demo_estate_firewall_stats_require_audit_permission(shared_demo_estate_client: TestClient) -> None:
     response = shared_demo_estate_client.get("/v1/firewall/stats")
     assert response.status_code == 403
