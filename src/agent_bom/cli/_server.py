@@ -10,7 +10,6 @@ from typing import Optional
 import click
 
 from agent_bom.cli._common import LISTEN_PORT_RANGE
-from agent_bom.cli._demo_storage import demo_estate_default_persist as _demo_estate_default_persist
 from agent_bom.cli._server_posture import (
     _DEV_API_KEY_PREFIX as _DEV_API_KEY_PREFIX,
 )
@@ -69,6 +68,7 @@ from agent_bom.cli._server_posture import (
 )
 from agent_bom.core.settings import env_list, env_raw, env_str
 from agent_bom.storage import state_home
+from agent_bom.storage.state_home import demo_estate_default_persist as _demo_estate_default_persist
 
 
 def _configure_analytics_backend(

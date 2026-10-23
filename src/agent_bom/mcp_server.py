@@ -169,7 +169,7 @@ from agent_bom.mcp_tools.request_identity import request_context as _mcp_request
 from agent_bom.mcp_tools.result_store import scan_result_owner as _scan_result_owner
 from agent_bom.mcp_tools.scanning_registration import register_scanning_tools
 from agent_bom.security import sanitize_error
-from agent_bom.storage.state_home import activate_demo_state_dir
+from agent_bom.storage.state_home import activate_demo_state_dir, demo_estate_default_persist
 
 logger = logging.getLogger(__name__)
 _ToolReturn = TypeVar("_ToolReturn")
@@ -565,7 +565,9 @@ def create_mcp_server(
     from agent_bom.mcp_tools.profiles import configure_registration, get_profile
 
     get_profile(profile)  # Reject unknown profiles before constructing the server.
-    activate_demo_state_dir()  # Before any tool opens a store; demo mode must never read product data.
+    # Before any tool opens a store; demo mode must never read product data and
+    # must read the same demo job database ``serve`` seeds.
+    demo_estate_default_persist(activate_demo_state_dir())
     setup_logging(level="INFO")
     _check_mcp_sdk()
 
