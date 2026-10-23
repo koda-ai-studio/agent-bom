@@ -120,6 +120,9 @@ def empty_estate_client(monkeypatch: pytest.MonkeyPatch, tmp_path: Any):
     from agent_bom.api.store import InMemoryJobStore
 
     original_store = api_stores._store
+    # Process-global; a record seeded by an earlier test in the worker would leak into this estate.
+    original_credential_refs = api_stores._credential_ref_store
+    api_stores._credential_ref_store = None
     set_job_store(InMemoryJobStore())
     _reset_overview_cache()
     enable_trusted_proxy_env()
@@ -129,6 +132,7 @@ def empty_estate_client(monkeypatch: pytest.MonkeyPatch, tmp_path: Any):
     finally:
         disable_trusted_proxy_env()
         api_stores._store = original_store
+        api_stores._credential_ref_store = original_credential_refs
         _reset_overview_cache()
 
 
