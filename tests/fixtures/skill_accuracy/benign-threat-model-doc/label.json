@@ -1,0 +1,5 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Threat-model skill that lists attacker techniques in prose."
+}

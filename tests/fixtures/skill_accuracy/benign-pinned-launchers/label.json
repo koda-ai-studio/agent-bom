@@ -1,0 +1,30 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Pinned npx/uvx launchers for registry MCP servers.",
+  "must_not": [
+    {
+      "category": "typosquat"
+    }
+  ],
+  "packages": [
+    {
+      "name": "@modelcontextprotocol/server-filesystem",
+      "ecosystem": "npm",
+      "version": "2025.8.21"
+    },
+    {
+      "name": "mcp-server-fetch",
+      "ecosystem": "pypi",
+      "version": "2025.4.7"
+    },
+    {
+      "name": "mcp-server-git",
+      "ecosystem": "pypi",
+      "version": "2025.9.25"
+    }
+  ],
+  "must_not_packages": [
+    "-y"
+  ]
+}

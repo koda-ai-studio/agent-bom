@@ -1,0 +1,10 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Downloads an install script, verifies its digest, then runs it explicitly.",
+  "must_not": [
+    {
+      "category": "remote_code_execution"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "AGENTS.md",
+  "description": "Injection split with zero-width characters to evade keyword matching.",
+  "expect": [
+    {
+      "category": "prompt_coercion",
+      "min_severity": "high"
+    }
+  ]
+}

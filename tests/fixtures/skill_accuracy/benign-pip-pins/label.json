@@ -1,0 +1,17 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "pip install with one exact pin and one range.",
+  "packages": [
+    {
+      "name": "requests",
+      "ecosystem": "pypi",
+      "version": "2.32.3"
+    },
+    {
+      "name": "httpx",
+      "ecosystem": "pypi",
+      "version": "unknown"
+    }
+  ]
+}

@@ -784,6 +784,8 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     "test_scanners.py",
                 }
             )
+        if normalized.as_posix().startswith(("src/agent_bom/parsers/skill", "tests/fixtures/skill_accuracy/")):
+            selected.update(candidate for candidate in available if candidate.name == "test_skill_audit_accuracy_gate.py")
         if normalized.as_posix() in CURRENT_EVIDENCE_SOURCES:
             selected.update(root / path for path in CURRENT_EVIDENCE_CONTRACTS if root / path in available)
             selected.update(candidate for candidate in available if candidate.stem.startswith(("test_graph_", "test_inventory_")))

@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Config block that auto-approves every tool call.",
+  "expect": [
+    {
+      "category": "confirmation_bypass",
+      "min_severity": "critical"
+    }
+  ]
+}

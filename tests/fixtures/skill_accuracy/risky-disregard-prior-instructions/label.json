@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "Coercion using 'disregard' instead of 'ignore'.",
+  "expect": [
+    {
+      "category": "prompt_coercion",
+      "min_severity": "high"
+    }
+  ]
+}

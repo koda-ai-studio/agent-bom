@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "Exposes the local dev server publicly.",
+  "expect": [
+    {
+      "category": "network_exposure",
+      "min_severity": "medium"
+    }
+  ]
+}

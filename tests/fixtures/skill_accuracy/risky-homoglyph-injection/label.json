@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "Injection written with Cyrillic look-alike letters.",
+  "expect": [
+    {
+      "category": "prompt_coercion",
+      "min_severity": "high"
+    }
+  ]
+}

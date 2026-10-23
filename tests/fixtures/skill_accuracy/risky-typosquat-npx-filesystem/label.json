@@ -1,0 +1,21 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Typosquatted filesystem MCP server.",
+  "expect": [
+    {
+      "category": "typosquat",
+      "min_severity": "high"
+    }
+  ],
+  "packages": [
+    {
+      "name": "@modelcontextprotocol/server-filesytem",
+      "ecosystem": "npm",
+      "version": "latest"
+    }
+  ],
+  "must_not_packages": [
+    "-y"
+  ]
+}

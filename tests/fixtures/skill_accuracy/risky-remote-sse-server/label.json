@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Unknown remote MCP endpoint.",
+  "expect": [
+    {
+      "category": "external_url",
+      "min_severity": "medium"
+    },
+    {
+      "category": "unverified_server",
+      "min_severity": "medium"
+    }
+  ]
+}

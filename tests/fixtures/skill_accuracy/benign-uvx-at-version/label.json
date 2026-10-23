@@ -1,0 +1,12 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "uvx with the documented tool@version pin form.",
+  "packages": [
+    {
+      "name": "ruff",
+      "ecosystem": "pypi",
+      "version": "0.6.9"
+    }
+  ]
+}

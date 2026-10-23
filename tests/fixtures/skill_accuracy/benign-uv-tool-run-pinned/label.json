@@ -1,0 +1,12 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "uv tool run with an exact pin.",
+  "packages": [
+    {
+      "name": "ruff",
+      "ecosystem": "pypi",
+      "version": "0.6.9"
+    }
+  ]
+}

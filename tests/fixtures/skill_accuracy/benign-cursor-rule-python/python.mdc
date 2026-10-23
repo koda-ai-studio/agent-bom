@@ -1,0 +1,8 @@
+---
+description: Python conventions
+globs: ["**/*.py"]
+---
+
+- Use `pathlib` over `os.path`.
+- Raise specific exceptions.
+- Run `ruff format` before proposing a diff.

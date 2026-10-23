@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "AGENTS.md",
+  "description": "Directs the agent to skip hooks and push.",
+  "expect": [
+    {
+      "category": "confirmation_bypass",
+      "min_severity": "critical"
+    },
+    {
+      "category": "repository_modification",
+      "min_severity": "medium"
+    }
+  ]
+}

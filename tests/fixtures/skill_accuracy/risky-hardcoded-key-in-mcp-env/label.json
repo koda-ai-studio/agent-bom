@@ -1,0 +1,23 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Literal AWS key in an MCP server env block (AWS documentation example value).",
+  "expect": [
+    {
+      "category": "hardcoded_secret",
+      "min_severity": "high"
+    }
+  ],
+  "must_not": [
+    {
+      "category": "shell_access"
+    }
+  ],
+  "packages": [
+    {
+      "name": "awslabs.s3-tables-mcp-server",
+      "ecosystem": "pypi",
+      "version": "0.0.8"
+    }
+  ]
+}

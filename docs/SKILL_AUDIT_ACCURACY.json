@@ -1,0 +1,194 @@
+{
+  "cases": 76,
+  "benign_cases": 34,
+  "risky_cases": 42,
+  "risky_detected": 37,
+  "benign_clean": 31,
+  "overall": {
+    "true_positive": 47,
+    "false_positive": 3,
+    "false_negative": 5,
+    "precision": 0.94,
+    "recall": 0.9038
+  },
+  "categories": {
+    "agent_delegation": {
+      "true_positive": 2,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "ast_dynamic_code_execution": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "ast_js_shell_execution": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "ast_shell_execution": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "broad_tool_grant": {
+      "true_positive": 2,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "confirmation_bypass": {
+      "true_positive": 4,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "credential_exfiltration": {
+      "true_positive": 2,
+      "false_positive": 1,
+      "false_negative": 2,
+      "precision": 0.6667,
+      "recall": 0.5
+    },
+    "credential_file_access": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "data_exfiltration": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "destructive_action": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "external_url": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "hardcoded_secret": {
+      "true_positive": 0,
+      "false_positive": 0,
+      "false_negative": 2,
+      "precision": 1.0,
+      "recall": 0.0
+    },
+    "input_injection": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "memory_poisoning": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "messaging_capability": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "network_exposure": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "persistence_mechanism": {
+      "true_positive": 2,
+      "false_positive": 1,
+      "false_negative": 0,
+      "precision": 0.6667,
+      "recall": 1.0
+    },
+    "privilege_escalation": {
+      "true_positive": 2,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "prompt_coercion": {
+      "true_positive": 10,
+      "false_positive": 1,
+      "false_negative": 1,
+      "precision": 0.9091,
+      "recall": 0.9091
+    },
+    "remote_code_execution": {
+      "true_positive": 4,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "repository_modification": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "shell_access": {
+      "true_positive": 1,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "typosquat": {
+      "true_positive": 3,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "unverified_server": {
+      "true_positive": 3,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    }
+  },
+  "packages": {
+    "true_positive": 14,
+    "false_positive": 0,
+    "false_negative": 2,
+    "precision": 1.0,
+    "recall": 0.875
+  },
+  "package_version_mismatches": 0,
+  "must_not_violations": 3,
+  "unscored_low_findings": 10
+}

@@ -1,0 +1,5 @@
+{
+  "kind": "benign",
+  "file": "review.instructions.md",
+  "description": "Path-scoped instructions linking API docs."
+}

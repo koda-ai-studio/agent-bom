@@ -20,6 +20,21 @@ def test_workflow_edits_select_deployment_contracts(tmp_path: Path, source: str)
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [contract]
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "src/agent_bom/parsers/skills.py",
+        "src/agent_bom/parsers/skill_audit_behavior.py",
+        "tests/fixtures/skill_accuracy/benign-pinned-launchers/label.json",
+    ],
+)
+def test_skill_parser_and_corpus_edits_select_the_accuracy_gate(tmp_path: Path, source: str) -> None:
+    contract = tmp_path / "tests/test_skill_audit_accuracy_gate.py"
+    _write(contract, 1)
+    _write(tmp_path / "tests/test_unrelated.py", 1)
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [contract]
+
+
 @pytest.mark.parametrize("source", ["ui/lib/graph-schema.ts", "ui/lib/graph-schema.generated.ts", "ui/scripts/codegen-graph-schema.mjs"])
 def test_ui_graph_schema_edits_select_python_parity_contract(tmp_path: Path, source: str) -> None:
     contract = tmp_path / "tests/test_graph_schema_ui_parity.py"
