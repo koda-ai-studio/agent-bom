@@ -232,7 +232,7 @@ def test_main_ui_smoke_covers_every_ui_classifier_surface() -> None:
 
 def test_path_gated_jobs_fail_closed_when_classifier_fails() -> None:
     jobs = _ci()["jobs"]
-    for name in ("docs-strict", "ui", "ui-e2e", "endpoint-packaging", "test-alpine"):
+    for name in ("docs-strict", "ui", "ui-e2e", "ui-e2e-shard", "ui-container-smoke", "endpoint-packaging", "test-alpine"):
         condition = jobs[name]["if"]
         assert "needs.changes.result != 'success'" in condition
 
@@ -249,6 +249,8 @@ def test_path_gated_jobs_remain_cancellable() -> None:
         "test-alpine",
         "action-dogfood",
         "ui-e2e",
+        "ui-e2e-shard",
+        "ui-container-smoke",
         "graph-performance",
         "output-scale-performance",
     ):
@@ -635,8 +637,9 @@ def test_ui_validation_and_e2e_run_in_separate_jobs() -> None:
     assert export["if"] == jobs["ui"]["if"]
     assert "NEXT_EXPORT=1 npm run build" in CI_WORKFLOW.read_text(encoding="utf-8")
 
-    full = {step.get("name") for step in jobs["ui-e2e"]["steps"]}
-    assert {"UI production build", "UI container smoke test", "UI bundle budget", "UI E2E"} <= full
+    full = {step.get("name") for step in jobs["ui-e2e-shard"]["steps"]}
+    assert {"UI production build", "UI bundle budget", "UI E2E"} <= full
+    assert "UI container smoke test" in {step.get("name") for step in jobs["ui-container-smoke"]["steps"]}
     assert "needs.changes.outputs.ui == 'true'" in jobs["ui-e2e"]["if"]
 
 
@@ -945,12 +948,13 @@ def test_postgres_contract_suites_are_arguments_to_one_pytest_invocation() -> No
 
 
 def test_ui_first_failure_diagnostics_survive_without_retries() -> None:
-    job = _ci()["jobs"]["ui-e2e"]
+    job = _ci()["jobs"]["ui-e2e-shard"]
     steps = job["steps"]
     uploads = [step for step in steps if str(step.get("uses", "")).startswith("actions/upload-artifact@")]
     assert len(uploads) == 1, "Retain first-attempt browser failures before the runner disappears"
     upload = uploads[0]
     assert "failure()" in upload["if"] and "cancelled()" in upload["if"]
+    assert upload["with"]["name"].endswith("-shard-${{ matrix.shard }}"), "each shard keeps its own diagnostics"
     assert steps.index(upload) > next(index for index, step in enumerate(steps) if step.get("name") == "UI E2E")
     assert upload["with"]["retention-days"] <= 3
     assert set(upload["with"]["path"].splitlines()) == {
@@ -980,7 +984,7 @@ def test_action_classifier_includes_the_cyclonedx_dogfood_fixture() -> None:
 
 
 def test_every_main_push_runs_all_release_ui_lanes():
-    for name in ("ui", "ui-export", "ui-e2e"):
+    for name in ("ui", "ui-export", "ui-e2e", "ui-e2e-shard", "ui-container-smoke"):
         condition = _ci()["jobs"][name]["if"]
         assert "github.event_name == 'push'" in condition
         assert "github.ref == 'refs/heads/main'" in condition
@@ -1198,7 +1202,7 @@ def test_full_and_postgres_conditions_fail_closed_on_missing_flags() -> None:
 
 def test_ui_container_and_duplicate_smoke_guards_are_conditional() -> None:
     jobs = _ci()["jobs"]
-    container = next(step for step in jobs["ui-e2e"]["steps"] if step.get("name") == "UI container smoke test")
+    container = jobs["ui-container-smoke"]
     assert "needs.changes.outputs.ui_container != 'false'" in container["if"]
     assert "github.event_name != 'pull_request'" in container["if"]
     for step in jobs["test-smoke"]["steps"]:
@@ -1363,3 +1367,82 @@ def test_extras_audit_skips_only_proven_unchanged_dependency_inputs() -> None:
     assert "scripts/classify_ci_changes.py" in workflow[True]["pull_request"]["paths"]
     install = next(s["run"] for s in job["steps"] if s.get("name") == "Install selected extras")
     assert "uv sync --frozen" in install
+
+
+UI_E2E_SHARDS = 4
+
+
+def test_release_ui_context_aggregates_every_playwright_shard() -> None:
+    """The required job name survives; the browser suite is split by --shard."""
+    from scripts.check_release_main_ci import REQUIRED_UI_JOBS
+
+    jobs = _ci()["jobs"]
+    gate, shard, container = jobs["ui-e2e"], jobs["ui-e2e-shard"], jobs["ui-container-smoke"]
+    assert gate["name"] == "UI E2E and container smoke"
+    assert gate["name"] in REQUIRED_UI_JOBS
+    assert {"changes", "ui-e2e-shard", "ui-container-smoke"} <= set(gate["needs"])
+    assert shard["if"] == gate["if"]
+    assert container["if"].startswith(gate["if"].rstrip())
+    assert shard["strategy"]["fail-fast"] is False
+    assert shard["strategy"]["matrix"]["shard"] == list(range(1, UI_E2E_SHARDS + 1))
+    assert shard["name"] == f"UI E2E shard (${{{{ matrix.shard }}}}/{UI_E2E_SHARDS})"
+    e2e = next(step for step in shard["steps"] if step.get("name") == "UI E2E")
+    assert e2e["run"].strip().endswith(f"npm run test:e2e -- --shard=${{{{ matrix.shard }}}}/{UI_E2E_SHARDS}")
+    names = [step.get("name") for step in shard["steps"]]
+    assert names.index("UI production build") < names.index("UI E2E")
+    assert "UI container smoke test" not in names
+    budget = next(step for step in shard["steps"] if step.get("name") == "UI bundle budget")
+    assert budget["if"] == "matrix.shard == 1"
+    assert [step.get("name") for step in container["steps"]].count("UI container smoke test") == 1
+
+
+def test_ui_e2e_gate_fails_on_any_failed_or_missing_shard_or_container() -> None:
+    import os
+    import subprocess
+
+    step = _ci()["jobs"]["ui-e2e"]["steps"][0]
+    assert step["env"]["SHARD_RESULT"] == "${{ needs.ui-e2e-shard.result }}"
+    assert step["env"]["CONTAINER_RESULT"] == "${{ needs.ui-container-smoke.result }}"
+    outcomes = ("success", "skipped", "failure", "cancelled")
+    for required in ("true", "false", ""):
+        for shard in outcomes:
+            for container in outcomes:
+                env = {**os.environ, "SHARD_RESULT": shard, "CONTAINER_RESULT": container, "CONTAINER_REQUIRED": required}
+                passed = subprocess.run(["bash", "-c", step["run"]], env=env, capture_output=True).returncode == 0
+                expected = shard == "success" and (container == "success" or (container == "skipped" and required == "false"))
+                assert passed == expected, (required, shard, container)
+
+
+def test_container_smoke_condition_matches_the_gate_requirement() -> None:
+    """The container job runs exactly when the gate requires its success."""
+    from types import SimpleNamespace
+
+    jobs = _ci()["jobs"]
+
+    def _python(expression: str) -> str:
+        expression = " ".join(expression.removeprefix("${{").removesuffix("}}").split()).replace("!cancelled()", "True")
+        return expression.replace("&&", "and").replace("||", "or")
+
+    runs = _python(jobs["ui-container-smoke"]["if"])
+    gate_runs = _python(jobs["ui-e2e"]["if"])
+    required = _python(jobs["ui-e2e"]["steps"][0]["env"]["CONTAINER_REQUIRED"])
+    for event in ("pull_request", "push", "schedule", "workflow_dispatch", "merge_group"):
+        for result in ("success", "failure", "skipped"):
+            for ui in ("true", "false"):
+                for container in ("true", "false", ""):
+                    outputs = SimpleNamespace(ui=ui, ui_container=container)
+                    context = {
+                        "github": SimpleNamespace(event_name=event, ref="refs/heads/main"),
+                        "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=outputs)),
+                    }
+                    scope = {"__builtins__": {}}
+                    if eval(gate_runs, scope, context):
+                        assert eval(runs, scope, context) == eval(required, scope, context), (event, result, ui, container)
+                    else:
+                        assert not eval(runs, scope, context)
+
+
+def test_playwright_shards_partition_the_browser_suite_evenly() -> None:
+    """The largest spec runs in parallel mode, so no shard holds one giant group."""
+    spec = (ROOT / "ui" / "e2e" / "security-graph-cockpit.spec.ts").read_text(encoding="utf-8")
+    assert 'test.describe.configure({ mode: "parallel" });' in spec

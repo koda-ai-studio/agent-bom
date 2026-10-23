@@ -76,7 +76,7 @@ cannot satisfy the release gate.
 | Postgres Integration Contract (live RLS, migrations, schema parity) | relevant inputs (required when selected) | yes | yes |
 | Test (Alpine/musl, shard N) | subset on relevant changes; full in 4 shards on dependencies | subset; full in 4 shards on dependency changes | full in 4 shards nightly, subset manual |
 | Docker (multi-arch) + image scans | no | yes | nightly only |
-| UI E2E (Playwright, bundle budget); container smoke | UI inputs; container/build inputs for Docker | every main push | yes |
+| UI E2E (Playwright in 4 shards, bundle budget); container smoke | UI inputs; container/build inputs for Docker | every main push | yes |
 | Dogfood GitHub Action | no | when action inputs change | yes |
 | ClusterFuzzLite (`cflite-pr.yml`) | no | short batch on parser changes | weekly long batch |
 | Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | every main push | manual |
@@ -100,6 +100,15 @@ and classifier changes together and obtain fresh main CI proof before release.
 The required `Test (Python 3.13)` context also requires Alpine and UI E2E
 when their path filters select them. Failed classification runs both lanes;
 a missing, failed, or cancelled selected lane fails that context.
+
+UI E2E runs as four `UI E2E shard (N/4)` jobs (`playwright test --shard=N/4`),
+each building its own standalone server, plus one `UI container smoke` job.
+The `UI E2E and container smoke` job, which the release gate requires by name,
+passes only when every shard passed and the container smoke passed (or was
+not selected). Each shard uploads its own failure traces and screenshots as
+`ui-failure-diagnostics-<run>-<attempt>-shard-N`. Specs run file-serial unless
+they opt into `test.describe.configure({ mode: "parallel" })`; the largest
+spec does, so no shard carries it as one indivisible group.
 
 Full musl runs partition every test file across two runners, with two workers
 and a 45-minute limit per runner. Targeted musl runs use one runner. Both full

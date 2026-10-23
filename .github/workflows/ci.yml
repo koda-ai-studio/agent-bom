@@ -758,14 +758,15 @@ jobs:
             exit 1
           }
 
-  ui-e2e:
-    name: UI E2E and container smoke
+  # Browser E2E split across runners. Playwright --shard partitions the
+  # suite (each shard serves its own standalone build: a 70 s parallel build
+  # is cheaper in wall-clock than a serial build job plus artifact transfer).
+  # ui-e2e below keeps the required "UI E2E and container smoke" name.
+  ui-e2e-shard:
+    name: UI E2E shard (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     needs: changes
-    # Validate affected PR merge results before landing (standalone build,
-    # container boot, bundle budget, Playwright). Also run on every main push
-    # and every scheduled or manual run.
     if: >-
       !cancelled() && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -773,6 +774,10 @@ jobs:
         needs.changes.result != 'success' ||
         needs.changes.outputs.ui == 'true'
       )
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     permissions:
       contents: read
     steps:
@@ -798,8 +803,60 @@ jobs:
             exit 1
           }
 
+      - name: UI bundle budget
+        if: matrix.shard == 1
+        run: |
+          cd ui
+          npm run bundle:check
+
+      - name: Install Playwright browser
+        run: |
+          cd ui
+          npx playwright install chromium
+
+      - name: UI E2E
+        env:
+          # Failure traces contain only the checked-in synthetic graph fixtures.
+          GRAPH_SCAN_ARTIFACT: ""
+        run: |
+          cd ui
+          npm run test:e2e -- --shard=${{ matrix.shard }}/4
+
+      - name: Retain UI failure diagnostics
+        if: ${{ failure() || cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ui-failure-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
+          path: |
+            ui/test-results/**/trace.zip
+            ui/test-results/**/test-failed-*.png
+            ui/test-results/**/error-context.md
+          retention-days: 3
+          if-no-files-found: warn
+
+  # Release-image smoke for the UI container, once per run, beside the shards.
+  ui-container-smoke:
+    name: UI container smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: >-
+      !cancelled() && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name != 'pull_request' && github.event_name != 'push') ||
+        needs.changes.result != 'success' ||
+        needs.changes.outputs.ui == 'true'
+      ) && (
+        github.event_name != 'pull_request' ||
+        needs.changes.result != 'success' ||
+        needs.changes.outputs.ui_container != 'false'
+      )
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: UI container smoke test
-        if: github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.ui_container != 'false'
         run: |
           set -euo pipefail
           cleanup() {
@@ -824,35 +881,44 @@ jobs:
             exit 1
           }
 
-      - name: UI bundle budget
-        run: |
-          cd ui
-          npm run bundle:check
-
-      - name: Install Playwright browser
-        run: |
-          cd ui
-          npx playwright install chromium
-
-      - name: UI E2E
+  # Keeps the context that scripts/check_release_main_ci.py and Test (Python
+  # 3.13) require. Every shard must pass; the container smoke must pass when
+  # selected and may only be skipped when it was not.
+  ui-e2e:
+    name: UI E2E and container smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [changes, ui-e2e-shard, ui-container-smoke]
+    if: >-
+      !cancelled() && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name != 'pull_request' && github.event_name != 'push') ||
+        needs.changes.result != 'success' ||
+        needs.changes.outputs.ui == 'true'
+      )
+    permissions:
+      contents: read
+    steps:
+      - name: Require every E2E shard and the applicable container smoke
         env:
-          # Failure traces contain only the checked-in synthetic graph fixtures.
-          GRAPH_SCAN_ARTIFACT: ""
+          SHARD_RESULT: ${{ needs.ui-e2e-shard.result }}
+          CONTAINER_RESULT: ${{ needs.ui-container-smoke.result }}
+          CONTAINER_REQUIRED: ${{ github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.ui_container != 'false' }}
         run: |
-          cd ui
-          npm run test:e2e
-
-      - name: Retain UI failure diagnostics
-        if: ${{ failure() || cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ui-failure-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ui/test-results/**/trace.zip
-            ui/test-results/**/test-failed-*.png
-            ui/test-results/**/error-context.md
-          retention-days: 3
-          if-no-files-found: warn
+          set -euo pipefail
+          if [ "$SHARD_RESULT" != "success" ]; then
+            echo "UI E2E shards ended with: $SHARD_RESULT" >&2
+            exit 1
+          fi
+          if [ "$CONTAINER_REQUIRED" != "false" ] && [ "$CONTAINER_RESULT" != "success" ]; then
+            echo "Required UI container smoke ended with: $CONTAINER_RESULT" >&2
+            exit 1
+          fi
+          case "$CONTAINER_RESULT" in
+            success|skipped) ;;
+            *) echo "UI container smoke ended with: $CONTAINER_RESULT" >&2; exit 1 ;;
+          esac
+          echo "Every UI E2E shard and the applicable container smoke passed."
 
   compose-contract:
     name: Compose Contract Validate

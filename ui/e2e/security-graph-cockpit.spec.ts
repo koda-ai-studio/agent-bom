@@ -6,6 +6,10 @@ import { expect, test, type Locator, type Page, type TestInfo } from "@playwrigh
 const scanId = "scan-cockpit-fixture";
 const createdAt = "2026-05-27T16:00:00Z";
 
+// Every test builds its own routes and fixtures, so CI can spread this file's
+// 125 tests across workers and shards instead of running them as one group.
+test.describe.configure({ mode: "parallel" });
+
 async function inspectPathAssessment(detail: Locator, expected: string | RegExp) {
   const disclosure = detail.locator(".ep-header-details");
   await disclosure.locator(":scope > summary").click();
