@@ -20,15 +20,13 @@ from typing import Optional
 from agent_bom.domain.skill_findings import skill_audit_data_to_findings
 from agent_bom.models import TransportType
 from agent_bom.parsers.skill_audit_behavior import (
-    _DANGEROUS_ARG_KEYWORDS,
-    _DANGEROUS_SERVER_NAME_KEYWORDS,
-    _SHELL_COMMANDS,
     _scan_behavioral_risks,
     _scan_js_ts_semantic_risks,
     _scan_python_ast_risks,
     _summarize_behavioral_findings,
 )
 from agent_bom.parsers.skill_audit_metadata import _check_metadata_quality
+from agent_bom.parsers.skill_audit_patterns import _DANGEROUS_ARG_KEYWORDS, _DANGEROUS_SERVER_NAME_KEYWORDS, _SHELL_COMMANDS
 from agent_bom.parsers.skill_audit_types import SkillAuditResult, SkillFinding
 from agent_bom.parsers.skills import SkillScanResult
 from agent_bom.security import sanitize_url

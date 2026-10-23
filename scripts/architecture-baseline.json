@@ -4637,8 +4637,7 @@
     },
     "parsers/skill_audit_behavior.py": {
       "broad_except": 2,
-      "deferred_imports": 3,
-      "file_lines": 1252
+      "deferred_imports": 3
     },
     "parsers/skill_audit_behavior.py::_scan_behavioral_risks": {
       "function_lines": 103
