@@ -15,6 +15,7 @@ from agent_bom.api.pipeline import _now
 from agent_bom.api.store import DEMO_ESTATE_TRIGGERED_BY
 from agent_bom.demo_estate import demo_estate_enabled as demo_estate_enabled
 from agent_bom.demo_estate.boot_seed import serialized_seed
+from agent_bom.demo_estate.estate_cis_benchmarks import estate_cis_benchmarks
 from agent_bom.demo_estate.showcase_findings import append_showcase_graph_findings, bind_mcp_auth_findings, estate_scan_evidence
 from agent_bom.demo_estate.showcase_graph import (
     SHOWCASE_AGENTS,
@@ -300,13 +301,9 @@ def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
     if "demo-estate" not in report["scan_sources"]:
         report["scan_sources"].append("demo-estate")
 
-    # Overlay a curated multi-cloud CIS benchmark posture so the CIS/compliance
-    # surfaces render a believable AWS/GCP/Azure pass-fail spread. The keys are
-    # exactly what build_cis_benchmark_check_rows() reads from a scan result.
-    from agent_bom.demo_estate.showcase_cis import demo_cis_benchmarks
-
-    for key, benchmark in demo_cis_benchmarks().items():
-        report.setdefault(key, benchmark)
+    # The CIS benchmark blobs the CIS/compliance surfaces read are derived from
+    # the same estate CIS findings the graph projects, so they cannot disagree.
+    report.update(estate_cis_benchmarks(report.get("findings") or []))
     return report
 
 

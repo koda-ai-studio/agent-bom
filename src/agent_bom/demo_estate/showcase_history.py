@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
+from agent_bom.demo_estate.estate_cis_benchmarks import estate_cis_benchmarks
 from agent_bom.demo_estate.showcase_constants import (
     SHOWCASE_BASELINE_CREATED_AT,
     SHOWCASE_BASELINE_SCAN_ID,
@@ -42,6 +43,7 @@ _RETIRED_SHARE = 0.14
 # Share of retired findings fixed at each later stage; the third is a remediation push.
 _FIX_SHARES = (0.12, 0.14, 0.52, 0.1, 0.12)
 _RETIRED_SEVERITIES = frozenset({"critical", "high", "medium"})
+_CIS_SECTIONS = frozenset({"cis_benchmark", "azure_cis_benchmark", "gcp_cis_benchmark", "snowflake_cis_benchmark"})
 _NAMESPACE = uuid.UUID("7f1d3c56-2f8e-4b0a-9a52-3c3c6b1d8e01")
 
 
@@ -190,7 +192,9 @@ def stage_report(report: dict[str, Any], index: int) -> dict[str, Any]:
         row = {**retired.row, "first_seen": retired.row.get("first_seen") or stages[0].timestamp}
         suppressed = retired.suppressed_from is not None and index >= retired.suppressed_from
         findings.append(_operator_vex(row) if suppressed else row)
-    staged = {**report, "findings": findings, "scan_id": stage.scan_id}
+    staged = {key: value for key, value in report.items() if key not in _CIS_SECTIONS}
+    # Each stage's CIS benchmark states that stage's own CIS findings.
+    staged.update(findings=findings, scan_id=stage.scan_id, **estate_cis_benchmarks(findings))
     if index == len(stages) - 1:
         # The current scan keeps its own evidence time, so it stays the newest job of its scope.
         return staged

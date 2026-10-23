@@ -132,6 +132,323 @@ def test_demo_estate_status_never_presents_a_non_demo_snapshot(
     assert "operator-scan" not in response.text
 
 
+<<<<<<< HEAD
+=======
+def test_demo_estate_graph_is_a_rich_multi_agent_estate(demo_estate_client: TestClient) -> None:
+    # Reads the whole snapshot rather than the default page. Since the
+    # enterprise estate is projected into this snapshot it holds ~2,900 nodes,
+    # and the default page is 500 ordered by severity — which the estate's 439
+    # posture findings now fill. The agents/servers/packages asserted here are
+    # unrated inventory, so a default-page read would be testing the pager, not
+    # the estate. ``test_demo_estate_default_graph_page_declares_its_truncation``
+    # covers the bounded read.
+    payload = _graph_with_all_nodes(demo_estate_client)
+    nodes = payload.get("nodes") or []
+    by_type = Counter(n.get("entity_type") for n in nodes)
+
+    # Several AI agents, many MCP servers, real packages + CVEs, credentials.
+    assert by_type["agent"] >= 5, by_type
+    assert by_type["server"] >= 10, by_type
+    assert by_type["package"] >= 10, by_type
+    assert by_type["vulnerability"] >= 10, by_type
+    assert by_type["credential"] >= 5, by_type
+    assert by_type["tool"] >= 15, by_type
+
+    labels = {n.get("label") for n in nodes}
+    # Realistic, distinct agents render.
+    assert {"Cursor", "LangChain Service", "Support Copilot", "Data Pipeline"} <= labels
+
+    # Configuration errors must not masquerade as CVEs or invented packages.
+    assert "CVE-2024-S3ACL" not in labels
+    assert not any("reqeusts" in (label or "") for label in labels)
+    public_bucket = next(n for n in nodes if n.get("id") == "misconfig:showcase:pii-public")
+    assert public_bucket["entity_type"] == "misconfiguration"
+    assert public_bucket["severity"] == "high"
+
+    # KEV vulnerability lights up.
+    kev = [n for n in nodes if n.get("attributes", {}).get("is_kev")]
+    assert any("CVE-2023-4863" in (n.get("label") or "") for n in kev), "expected a KEV CVE node"
+
+
+def test_demo_estate_headline_blast_radius_chain(demo_estate_client: TestClient) -> None:
+    """agent -> MCP server -> vulnerable package -> critical CVE -> reachable
+    credential + reachable run_shell tool -> potential RCE renders in the graph.
+
+    Whole snapshot, not the default page: the hand-built chain is *extended* by
+    the projected enterprise estate, never replaced, but its unrated inventory
+    nodes no longer land in a 500-row severity-ranked page.
+    """
+    payload = _graph_with_all_nodes(demo_estate_client)
+    node_ids = {n.get("id") for n in payload.get("nodes") or []}
+    # Node pages carry bounded incident evidence. Read the chain's source
+    # relationships explicitly; limit=2 also exercises cursor continuation.
+    edges = _outgoing_graph_edges(
+        demo_estate_client,
+        payload,
+        {"agent:cursor", "server:shell-runner-server", "pkg:pypi:pyyaml@5.3", "vuln:CVE-2020-14343"},
+        limit=2,
+    )
+    edge_pairs = {(e.get("source"), e.get("target")) for e in edges}
+
+    # Chain nodes exist.
+    for nid in (
+        "agent:cursor",
+        "server:shell-runner-server",
+        "pkg:pypi:pyyaml@5.3",
+        "vuln:CVE-2020-14343",
+        "cred:aws-secret",
+        "tool:shell-runner-server:run_shell",
+    ):
+        assert nid in node_ids, f"missing chain node {nid}"
+
+    assert ("agent:cursor", "server:shell-runner-server") in edge_pairs
+    assert ("server:shell-runner-server", "pkg:pypi:pyyaml@5.3") in edge_pairs
+    assert ("pkg:pypi:pyyaml@5.3", "vuln:CVE-2020-14343") in edge_pairs
+    assert ("server:shell-runner-server", "cred:aws-secret") in edge_pairs
+    # The critical CVE reaches both the credential and the run_shell tool (RCE).
+    assert ("vuln:CVE-2020-14343", "cred:aws-secret") in edge_pairs
+    assert ("vuln:CVE-2020-14343", "tool:shell-runner-server:run_shell") in edge_pairs
+
+
+def test_demo_estate_findings_include_critical_and_kev(demo_estate_client: TestClient) -> None:
+    result = _demo_report(demo_estate_client)
+    summary = result.get("summary") or {}
+    assert summary.get("total_agents") == 5
+    assert summary.get("total_mcp_servers") == 10
+    assert (summary.get("critical_findings") or 0) >= 2, summary
+
+    findings = result.get("findings") or []
+    assert len(findings) >= 12, f"expected a dense findings list, got {len(findings)}"
+
+    # KEV differentiator surfaces in the blast radius (Pillow/libwebp).
+    blast = result.get("blast_radius") or []
+    kev = [b for b in blast if b.get("is_kev") or b.get("cisa_kev")]
+    assert any(b.get("vulnerability_id") == "CVE-2023-4863" for b in kev), "expected KEV CVE in blast radius"
+
+
+def test_demo_estate_hero_findings_carry_the_persisted_graph_path(demo_estate_client: TestClient) -> None:
+    """The scan and graph surfaces must tell the same hero-path story."""
+    result = _demo_report(demo_estate_client)
+    blast = result.get("blast_radius") or []
+    hero = [
+        row
+        for row in blast
+        if row.get("vulnerability_id") == "CVE-2020-14343" and row.get("package_name") == "pyyaml" and row.get("package_version") == "5.3"
+    ]
+
+    on_path = [row for row in hero if (row.get("asset") or {}).get("asset_type") == "mcp_server"]
+    assert len(hero) > len(on_path) >= 1, "the bundled inventory did not include both the hero server and estate-scoped pyyaml exposures"
+    # An estate occurrence is another asset, not a hop on the hand-built path.
+    assert all(row.get("graph_reachable") is not True for row in hero if row not in on_path)
+    for row in on_path:
+        assert row.get("graph_reachable") is True
+        assert row.get("graph_min_hop_distance") == 3
+        assert "agent:cursor" in (row.get("graph_reachable_from_agents") or [])
+        assert "cursor" in (row.get("affected_agents") or [])
+        assert "shell-runner-server" in (row.get("affected_servers") or [])
+        assert (row.get("risk_score") or 0) > 0
+
+    listing = demo_estate_client.get(
+        "/v1/findings",
+        headers=VIEWER,
+        params={"limit": 1000},
+    ).json()
+    public_hero = [row for row in listing.get("findings") or [] if (row.get("vulnerability_id") or row.get("cve_id")) == "CVE-2020-14343"]
+    assert public_hero, "the persisted hero path did not reach the public findings route"
+    graph_hero = [row for row in public_hero if row.get("graph_reachable") is True]
+    assert graph_hero, [(row.get("id"), row.get("graph_reachable"), row.get("source"), row.get("asset")) for row in public_hero]
+    assert all(
+        row.get("package") == "pyyaml"
+        or (row.get("asset") or {}).get("name") == "pyyaml"
+        or (row.get("evidence") or {}).get("package_name") == "pyyaml"
+        for row in graph_hero
+    )
+    agent_path_rows = [row for row in graph_hero if "agent:cursor" in (row.get("graph_reachable_from") or [])]
+    assert agent_path_rows, "the original agent path must remain visible"
+    assert all("cursor" in (row.get("affected_agents") or []) for row in agent_path_rows)
+    assert all("shell-runner-server" in (row.get("affected_servers") or []) for row in agent_path_rows)
+    # Workload paths now establish structural reach too. They must carry their
+    # own source evidence without borrowing the hero agent/server context.
+    workload_rows = [row for row in graph_hero if row not in agent_path_rows]
+    assert workload_rows
+    assert all(row.get("graph_reachable_from") for row in workload_rows)
+    assert all(not row.get("affected_agents") and not row.get("affected_servers") for row in workload_rows)
+
+
+def test_demo_estate_graph_evidence_covers_every_hand_built_path(demo_estate_client: TestClient) -> None:
+    """Every hand-built path is evidenced on its finding, and no other row borrows one."""
+    from agent_bom.demo_estate.showcase_graph import SHOWCASE_PACKAGES
+
+    blast = _demo_report(demo_estate_client).get("blast_radius") or []
+    evidenced = [row for row in blast if row.get("graph_reachable") is True]
+    paths = {f"{row.get('package_name')}@{row.get('package_version')}".lower() for row in evidenced}
+
+    assert paths == set(SHOWCASE_PACKAGES), sorted(paths ^ set(SHOWCASE_PACKAGES))
+    assert all((row.get("asset") or {}).get("asset_type") == "mcp_server" for row in evidenced)
+
+
+def test_demo_estate_posture_findings_resolve_to_inventoried_assets(
+    demo_estate_client: TestClient,
+) -> None:
+    """The estate's posture findings reach the public findings list, chain intact.
+
+    Asserted on ``/v1/findings`` rather than the raw scan result on purpose:
+    that route is the canonical list every consumer reads, and it applies
+    ``safe_finding_response_payload`` — default-deny tier-A redaction. A chain
+    that only holds before redaction is a chain no user ever sees, so the join
+    keys the demo relies on must be ones the evidence policy already classifies
+    as safe.
+    """
+    from agent_bom.demo_estate.enterprise_composition import build_demo_estate
+    from agent_bom.demo_estate.showcase_graph import SHOWCASE_TENANT
+
+    inventoried = {asset.asset_id for asset in build_demo_estate(tenant_id=SHOWCASE_TENANT).assets}
+
+    listing = demo_estate_client.get("/v1/findings", headers=VIEWER, params={"limit": 1000, "domain": "cspm"}).json()
+    rows = [row for row in listing["findings"] if (row.get("evidence") or {}).get("resource_id", "") in inventoried]
+    assert len(rows) >= 400, f"only {len(rows)} estate posture findings reached the findings list"
+
+    for row in rows:
+        evidence = row.get("evidence") or {}
+        assert evidence["resource_id"] in inventoried, evidence["resource_id"]
+        assert evidence.get("principal_id") or evidence.get("actor_id"), (
+            f"{row.get('id')} lost its identity edge through redaction: {sorted(evidence)}"
+        )
+        # Every posture finding must say which check saw it — that is the join
+        # key the rest of the product reads. A control id is required *exactly
+        # when* the finding claims a framework: not every posture rule has a
+        # CIS twin ("resource declared without an ownership tag" has none), and
+        # a rule with no control must say so rather than borrow one. Requiring
+        # a control on every row is what forced the IaC lane to assert CIS and
+        # NIST coverage it could not support.
+        assert evidence.get("check_id"), f"{row.get('id')} has no check identity: {sorted(evidence)}"
+        claims_cis = any(str(tag).upper().startswith("CIS") for tag in (row.get("compliance_tags") or row.get("compliance") or []))
+        if claims_cis:
+            assert evidence.get("control_id"), f"{row.get('id')} claims CIS with no control_id behind it"
+        assert evidence.get("resource_name") and evidence.get("resource_type")
+        assert row.get("provider"), sorted(row)
+        assert row.get("severity"), sorted(row)
+    assert any((row.get("evidence") or {}).get("correlation_id") for row in rows), "no posture finding kept its correlated attack path"
+    assert len({(row.get("evidence") or {}).get("resource_id") for row in rows}) > 200, (
+        "the estate's findings all land on a handful of assets"
+    )
+
+
+def test_demo_estate_finding_counts_reconcile_across_tile_list_and_facet(
+    demo_estate_client: TestClient,
+) -> None:
+    """One estate, one total — whatever surface is asked.
+
+    The tile, the list header, and the severity facet histogram are three
+    different code paths over the same evidence. Adding hundreds of posture
+    findings is exactly the change that makes them drift apart, so pin them
+    together on the seeded estate rather than trusting that they agree.
+    """
+    listing = demo_estate_client.get("/v1/findings", headers=VIEWER, params={"limit": 1, "include_facets": "true"}).json()
+    total = listing["total"]
+    assert total > 400, total
+
+    severity_facet = (listing.get("facets") or {}).get("severity") or {}
+    assert severity_facet, f"the findings list returned no severity facet: {list(listing.get('facets') or {})}"
+    severity_total = sum(int(v) for v in severity_facet.values())
+    facet_completeness = (listing.get("facet_metadata") or {}).get("completeness") or {}
+    if facet_completeness.get("status") == "complete":
+        assert severity_total == total, f"severity facet sums to {severity_total} but the list reports {total}"
+    else:
+        assert listing.get("facets_approximate") is True, listing
+        assert severity_total <= total, (severity_total, total)
+        assert any("lower bounds, not totals" in warning for warning in listing.get("warnings") or []), listing
+
+    counts = demo_estate_client.get("/v1/posture/counts", headers=VIEWER).json()
+    assert "unrated" in counts, counts
+    assert sum(counts[band] for band in ("critical", "high", "medium", "low", "unrated")) == counts["total"], counts
+    assert counts["unrated"] > 0, (
+        "no unrated finding survives to the tiles, so an unevaluable control is indistinguishable from one that passed"
+    )
+
+    # The bounded page reports the unbounded total, never its own size.
+    page = demo_estate_client.get("/v1/findings", headers=VIEWER, params={"limit": 25}).json()
+    assert len(page["findings"]) <= 25
+    assert page["total"] == total > len(page["findings"]), (page["total"], len(page["findings"]))
+
+
+def test_demo_estate_cis_posture_spans_every_estate_cloud(demo_estate_client: TestClient) -> None:
+    result = _demo_report(demo_estate_client)
+    # The CIS benchmark blobs are derived from the estate's own CIS findings, so
+    # every cloud the estate evaluates is present, Snowflake included.
+    for key in ("cis_benchmark", "gcp_cis_benchmark", "azure_cis_benchmark", "snowflake_cis_benchmark"):
+        checks = (result.get(key) or {}).get("checks") or []
+        assert checks, f"expected CIS checks for {key}"
+        # Only recorded results: the estate records failures and unevaluable
+        # attempts, never a pass it did not observe.
+        assert {c.get("status") for c in checks} <= {"fail", "error"}, key
+
+    # The rows normalize through the same contract the /v1/cis/checks route uses.
+    from agent_bom.analytics_contract import build_cis_benchmark_check_rows
+
+    rows = build_cis_benchmark_check_rows(result, "showcase")
+    assert set(Counter(r["cloud"] for r in rows)) == {"aws", "gcp", "azure", "snowflake"}
+    assert Counter(r["status"] for r in rows)["fail"] == 28
+
+
+def test_demo_estate_gateway_feed_shows_the_ai_firewall(demo_estate_client: TestClient) -> None:
+    """The gateway live feed renders authorized / blocked / shadow / redacted
+    tool-call events on the demo — the AI-firewall differentiator."""
+    feed = demo_estate_client.get("/v1/gateway/feed")
+    assert feed.status_code == 200, feed.text
+    payload = feed.json()
+    events = payload.get("events") or []
+    assert len(events) >= 12, f"expected a dense gateway feed, got {len(events)}"
+
+    by_action = Counter(e.get("action_type") for e in events)
+    # A believable mix mirroring a real AI-firewall feed.
+    assert by_action["tool_call_authorized"] >= 5, by_action
+    assert by_action["tool_call_blocked"] >= 5, by_action
+    assert by_action["data_filter_applied"] >= 2, by_action
+
+    # Shadow / undeclared-agent blocks are labeled as such.
+    shadow = [e for e in events if e.get("shadow")]
+    assert len(shadow) >= 2, "expected shadow/undeclared-agent blocks in the feed"
+    assert any("shadow" in (e.get("agent") or "").lower() for e in shadow)
+
+    # Attribution uses the showcase graph's real agent names.
+    agents = {e.get("agent") for e in events}
+    assert {"Cursor", "Claude Desktop", "Data Pipeline"} & agents
+
+    # Feed is time-ordered newest-first and redaction-safe (metadata only).
+    ts_values = [e.get("ts") for e in events]
+    assert ts_values == sorted(ts_values, reverse=True)
+    for e in events:
+        assert "arguments" not in e and "response" not in e
+
+
+def test_demo_estate_gateway_feed_kpis_populated(demo_estate_client: TestClient) -> None:
+    kpis = demo_estate_client.get("/v1/gateway/feed/kpis").json()
+    assert kpis.get("calls_today", 0) >= 12, kpis
+    assert kpis.get("blocked_today", 0) >= 5, kpis
+    assert kpis.get("shadow_ai_blocked", 0) >= 2, kpis
+    assert kpis.get("data_filters_applied", 0) >= 2, kpis
+    assert kpis.get("uptime_seconds", 0) > 0, kpis
+
+
+def test_demo_estate_runtime_production_index_has_traffic(demo_estate_client: TestClient) -> None:
+    idx = demo_estate_client.get("/v1/runtime/production-index", headers=VIEWER).json()
+    assert idx.get("status") == "ok", idx
+    traffic = idx.get("traffic") or {}
+    assert traffic.get("total_tool_calls", 0) > 100, traffic
+    assert traffic.get("blocked_tool_calls", 0) > 0, traffic
+    assert traffic.get("uptime_seconds", 0) > 0, traffic
+    trace = (idx.get("authorization_trace") or {}).get("recent") or []
+    assert trace, "expected recent authorization-trace events"
+
+
+def test_demo_estate_firewall_stats_require_audit_permission(demo_estate_client: TestClient) -> None:
+    response = demo_estate_client.get("/v1/firewall/stats")
+    assert response.status_code == 403
+    assert "audit_read" in response.json()["detail"]
+
+
+>>>>>>> f18d23714 (fix(compliance): read CIS failures from the graph and stop implying passes)
 def test_demo_estate_gateway_feed_is_idempotent(demo_estate_client: TestClient) -> None:
     first = len(demo_estate_client.get("/v1/gateway/feed").json().get("events") or [])
     from agent_bom.demo_estate.showcase_gateway import seed_showcase_gateway_events

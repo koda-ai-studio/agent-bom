@@ -120,10 +120,10 @@ async def get_compliance(
 
 @finding_read_snapshot
 def _compliance_for_request(request: Request, scan_id: str | None) -> dict[str, Any]:
-    return _build_compliance(_tenant_jobs(request), scan_id=scan_id)
+    return _build_compliance(jobs := _tenant_jobs(request), scan_id=scan_id, cis_graph=cis.current_cis_graph(request, scan_id, jobs))
 
 
-def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> dict[str, Any]:
+def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None, cis_graph: cis.GraphCisState | None = None) -> dict[str, Any]:
     """Build compliance truth from one caller-owned job-store snapshot."""
     from agent_bom.api.findings_current import current_scan_jobs, scan_evidence_authority_key
     from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
@@ -189,7 +189,7 @@ def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> 
     # failing CIS account can't read as compliant. ERROR is unevaluable — counted
     # toward the evaluated denominator (drags the score down) but never the
     # numerator.
-    cis_foundations_agg = _aggregate_cis_foundations_checks(tenant_jobs)
+    cis_foundations_agg = _aggregate_cis_foundations_checks(tenant_jobs, cis_graph)
     aisvs = _latest_aisvs_benchmark_from_jobs(tenant_jobs)
     aisvs_summary = aisvs["summary"]
     total_controls = _total_control_count(TAG_MAPPED_FRAMEWORKS, cis_foundations_agg, aisvs_summary)

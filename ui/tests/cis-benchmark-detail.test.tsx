@@ -244,4 +244,54 @@ describe("CISBenchmarkDetail", () => {
     expect(within(list).queryByRole("link", { name: /in the graph/ })).toBeNull();
     expect(within(list).getByRole("link", { name: "Findings on stpiiprod" })).toBeInTheDocument();
   });
+
+  it("labels a check with no recorded result as not evaluated, never as a pass", async () => {
+    apiMock.listCisBenchmarkChecks.mockResolvedValue({
+      checks: [makeCheck({ check_id: "4.1", title: "No open SSH", status: "not_evaluated", evidence: "No passing result recorded." })],
+      count: 1, source: "scan_jobs+graph",
+    });
+    render(<CISBenchmarkDetail />);
+    const card = (await screen.findByText("No open SSH")).closest("[data-testid='cis-check']") as HTMLElement;
+    expect(within(card).getAllByTestId("cis-check-status").map((badge) => badge.textContent)).toEqual(["Not evaluated"]);
+    expect(screen.getByRole("button", { name: "Not evaluated" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Pass" }));
+    expect(screen.queryByText("No open SSH")).toBeNull();
+  });
+
+  it("links graph-backed resources by node id and opens their exact finding", async () => {
+    const resources = Array.from({ length: 12 }, (_, index) => `snowflake:table:t${index}`);
+    apiMock.listCisBenchmarkChecks.mockResolvedValue({
+      checks: [
+        makeCheck({
+          cloud: "snowflake",
+          check_id: "3.1",
+          title: "Tri-Secret Secure enabled",
+          status: "fail",
+          resource_ids: resources,
+          evidence_source: "graph",
+          graph_node_id: "misconfig:snowflake_cis_benchmark:3.1",
+          resource_finding_ids: { "snowflake:table:t0": ["finding-0"] },
+        }),
+      ],
+      count: 1, source: "scan_jobs+graph",
+    });
+    render(<CISBenchmarkDetail />);
+    const list = await screen.findByRole("list", { name: "Resources failing 3.1" });
+    expect(within(list).getByRole("link", { name: "Open snowflake:table:t0 in the graph" })).toHaveAttribute(
+      "href",
+      "/security-graph?lens=lineage&investigate=1&root=snowflake%3Atable%3At0&node=snowflake%3Atable%3At0",
+    );
+    expect(within(list).getByRole("link", { name: "Findings on snowflake:table:t0" })).toHaveAttribute("href", "/findings?finding=finding-0");
+    expect(within(list).getByRole("link", { name: "Findings on snowflake:table:t1" })).toHaveAttribute("href", "/findings?q=snowflake%3Atable%3At1");
+    expect(apiMock.searchGraph).not.toHaveBeenCalled();
+    expect(screen.queryByText("Not in the current graph")).toBeNull();
+    expect(screen.getByRole("link", { name: "Open control 3.1 in the graph" })).toHaveAttribute(
+      "href",
+      "/security-graph?lens=lineage&investigate=1&root=misconfig%3Asnowflake_cis_benchmark%3A3.1&node=misconfig%3Asnowflake_cis_benchmark%3A3.1",
+    );
+    // A long resource list is bounded, with the rest one click away.
+    expect(within(list).getAllByRole("listitem")).toHaveLength(10);
+    fireEvent.click(screen.getByRole("button", { name: "Show all 12 resources" }));
+    expect(within(list).getAllByRole("listitem")).toHaveLength(12);
+  });
 });

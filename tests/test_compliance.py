@@ -1214,6 +1214,7 @@ def test_compliance_surfaces_cis_foundations_benchmark_line():
         "fail": 1,
         "error": 1,
         "not_applicable": 1,
+        "not_evaluated": 0,
         "evaluated": 3,
         "score": 33.3,
     }
@@ -1607,6 +1608,7 @@ def test_nist_catalog_line_is_independent_and_does_not_move_overall():
         "fail": 2,
         "error": 1,
         "not_applicable": 1,
+        "not_evaluated": 0,
         "evaluated": 4,
         "score": 25.0,
     }
