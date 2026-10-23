@@ -131,6 +131,7 @@ def parse_fixed_version(
     has_current = bool(current_version and current_version not in ("unknown", "latest"))
     stable: list[str] = []
     prereleases: list[str] = []
+    windows: list[tuple[object, object, object, list]] = []
     for affected in vuln_data.get("affected", []):
         pkg = affected.get("package", {})
         osv_eco = pkg.get("ecosystem", ecosystem)
@@ -141,6 +142,7 @@ def parse_fixed_version(
         for rng in filter(is_release_range, affected.get("ranges", [])):
             events = rng.get("events", [])
             for introduced, fixed, last in range_windows(events, ecosystem):
+                windows.append((introduced, fixed, last, events))
                 if not isinstance(fixed, str) or not is_valid_fix_version(fixed):
                     continue
                 # An explicit version pin can establish membership independently
@@ -153,12 +155,47 @@ def parse_fixed_version(
                     continue
                 (prereleases if is_prerelease_version(fixed, ecosystem) else stable).append(fixed)
     candidates = stable or (prereleases if allow_prerelease else [])
+    if not candidates and has_current:
+        candidates = _next_unaffected_fixes(windows, current_version, ecosystem, allow_prerelease)
     chosen = None
     for candidate in candidates:
         order = compare_version_order(candidate, chosen, ecosystem) if chosen is not None else None
         if chosen is None or (order is not None and order < 0):
             chosen = candidate
     return chosen
+
+
+def _next_unaffected_fixes(windows: list, current_version: str, ecosystem: str, allow_prerelease: bool) -> list[str]:
+    """Fixes named by other windows when the installed version's window has none.
+
+    An advisory can end one release line with ``last_affected`` and fix a later
+    line (``[0, last_affected 0.6.2]`` + ``[2025.1.14, fixed 2025.7.1)``). The
+    earliest named fix above the installed version that no window still marks
+    affected is a real upgrade target, not "no fix".
+    """
+    from agent_bom.version_utils import compare_version_order, is_prerelease_version
+
+    def affected(version: str) -> str:
+        states = {
+            range_match_state(version, introduced, fixed, last, ecosystem, limit)
+            for introduced, fixed, last, events in windows
+            for limit in range_limits(events)
+        }
+        return "affected" if "affected" in states else "unknown" if "unknown" in states else "unaffected"
+
+    if affected(current_version) != "affected":
+        return []
+    out: list[str] = []
+    for _introduced, fixed, _last, _events in windows:
+        if not isinstance(fixed, str) or not is_valid_fix_version(fixed) or fixed in out:
+            continue
+        if is_prerelease_version(fixed, ecosystem) and not allow_prerelease:
+            continue
+        order = compare_version_order(fixed, current_version, ecosystem)
+        if order is None or order <= 0 or affected(fixed) != "unaffected":
+            continue
+        out.append(fixed)
+    return out
 
 
 def _collect_batch_vulns(

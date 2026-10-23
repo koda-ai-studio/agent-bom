@@ -375,7 +375,46 @@ def _resolve_fixed_version_with_aliases(row: sqlite3.Row, rows: list[sqlite3.Row
     fixed = _resolve_fixed_version(row)
     if fixed is not None:
         return fixed
-    return _alias_cluster_fix(row, rows, version)
+    return _alias_cluster_fix(row, rows, version) or _next_window_fix(row, rows, version)
+
+
+def _next_window_fix(row: sqlite3.Row, rows: list[sqlite3.Row], version: Optional[str]) -> Optional[str]:
+    """Earliest fix another window of the same advisory names, when this window has none.
+
+    Mirrors :func:`agent_bom.scanners.osv._next_unaffected_fixes`: a release line
+    ended by ``last_affected`` can be remediated by the fix of a later line, as
+    long as no window of that advisory still marks the fix affected.
+    """
+    if not version or _is_distro_release_ecosystem(row["ecosystem"]):
+        return None
+    from agent_bom.scanners.osv import is_valid_fix_version
+    from agent_bom.version_utils import compare_version_order
+
+    windows = [
+        other
+        for other in rows
+        if other["id"] == row["id"] and other["ecosystem"] == row["ecosystem"] and other["package_name"] == row["package_name"]
+    ]
+
+    def state(candidate: str) -> str:
+        states = {
+            _version_match_state(candidate, w["introduced"], w["fixed"], w["last_affected"], w["ecosystem"], w["limit_version"])
+            for w in windows
+        }
+        return "affected" if "affected" in states else "unknown" if "unknown" in states else "unaffected"
+
+    comparator_eco = _comparator_ecosystem(row["ecosystem"])
+    best: Optional[str] = None
+    for window in windows:
+        fix = _resolve_fixed_version(window)
+        if not fix or not is_valid_fix_version(fix):
+            continue
+        order = compare_version_order(fix, version, comparator_eco)
+        if order is None or order <= 0 or state(fix) != "unaffected":
+            continue
+        if best is None or (compare_version_order(fix, best, comparator_eco) or 0) < 0:
+            best = fix
+    return best
 
 
 def _select_vulnerability_rows(rows: list[sqlite3.Row], version: Optional[str]) -> list[sqlite3.Row]:
