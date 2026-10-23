@@ -12,6 +12,7 @@ type EvidenceMetadata = { evidenceMode?: unknown; evidenceBlocked?: unknown } | 
 export function accessEvidenceQualifier(relationship: string, metadata: EvidenceMetadata): string | undefined {
   if (!CONSEQUENTIAL_RELATIONSHIPS.has(relationship) || !metadata || metadata.evidenceMode === undefined) return undefined;
   if (metadata.evidenceMode === "runtime") return metadata.evidenceBlocked === true ? "blocked" : "observed";
+  if (metadata.evidenceMode === "recorded") return "recorded";
   if (metadata.evidenceMode === "static") return "configured";
   if (metadata.evidenceMode === "inferred") return "modeled";
   return "evidence unspecified";
@@ -37,6 +38,8 @@ export function accessEvidenceLegendItems(edges: Array<{ data?: unknown }>): Leg
       "Links read from configuration or modeled infrastructure. Runtime use and effective permission are not established.")] : []),
     ...(qualifiers.has("observed") ? [item("Observed at runtime",
       "Access or use backed by a recorded runtime receipt. Inspect the receipt for its outcome.", true)] : []),
+    ...(qualifiers.has("recorded") ? [item("Recorded observation",
+      "A collector recorded this relationship. A runtime activity receipt is not established.")] : []),
     ...(qualifiers.has("blocked") ? [item("Blocked at runtime",
       "A runtime receipt records a blocked attempt; successful access is not established.")] : []),
     ...(qualifiers.has("evidence unspecified") ? [item("Evidence unspecified",

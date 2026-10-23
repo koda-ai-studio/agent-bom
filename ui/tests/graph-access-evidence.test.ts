@@ -10,6 +10,7 @@ const at = "2026-06-01T00:00:00Z";
 
 describe("configured versus observed access", () => {
   it.each([
+    ["can_access", { evidenceMode: "recorded" }, "Can Access · recorded"],
     ["can_access", { evidenceMode: "inferred" }, "Can Access · modeled"],
     ["can_access", { evidenceMode: "runtime" }, "Can Access · observed"],
     ["can_access", { evidenceMode: "runtime", evidenceBlocked: true }, "Can Access · blocked"],

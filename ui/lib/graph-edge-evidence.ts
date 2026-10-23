@@ -26,7 +26,8 @@ function enveloped(evidence: Record<string, unknown>) {
   if (!tier || !Object.hasOwn(tierLabels, tier)) return null;
   const blocked = evidence.runtime_observed_state === "blocked" || evidence.blocked === true;
   const label = blocked ? "Runtime blocked" : tierLabels[tier]!;
-  const mode: "runtime" | "static" | "inferred" | "unknown" = blocked || tier === "runtime_observed" || tier === "recorded" ? "runtime"
+  const mode: "runtime" | "recorded" | "static" | "inferred" | "unknown" = blocked || tier === "runtime_observed" ? "runtime"
+    : tier === "recorded" ? "recorded"
     : tier === "static_scan" ? "static"
     : tier === "modeled_infrastructure" || tier === "derived" ? "inferred" : "unknown";
   return { label, mode, blocked, source: text(evidence.source) };

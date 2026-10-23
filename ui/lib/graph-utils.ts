@@ -4,7 +4,7 @@
  */
 
 import { accessEvidenceLegendItems, accessEvidenceQualifier } from "@/lib/graph-access-evidence";
-import { GRAPH_LAYER_ENTITY_TYPES } from "@/lib/graph-entity-mapping";
+import { GRAPH_LAYER_ENTITY_TYPES, graphKindForNode, graphMetadataForNode } from "@/lib/graph-entity-mapping";
 import { badgeLegendItems, type NodeBadgeKind, type RingSeverity } from "@/lib/graph-node-badges";
 import type {
   LineageNodeData,
@@ -482,18 +482,21 @@ export function legendItemsForVisibleNodes(
   nodes: Array<{ data?: unknown }>,
   extras: LegendItem[] = [],
 ): LegendItem[] {
-  const visibleTypes = new Set<LineageNodeType>();
+  const byKind = new Map<string, LegendItem>();
   for (const node of nodes) {
-    const nodeType = (node.data as Partial<LineageNodeData> | undefined)
-      ?.nodeType;
-    if (isLineageNodeType(nodeType)) {
-      visibleTypes.add(nodeType);
-    }
+    const data = node.data as Partial<LineageNodeData> | undefined;
+    if (!data || !isLineageNodeType(data.nodeType)) continue;
+    const meta = graphMetadataForNode(data);
+    const kind = graphKindForNode(data);
+    const item = data.entityType && meta ? {
+      label: meta.label, color: NODE_COLOR_MAP[data.nodeType], layer: meta.layer, kind: "node" as const,
+      shape: legendShapeForGraphShape(meta.shape), nodeType: data.nodeType,
+    } : data.entityType ? { label: "Unknown entity type", color: "#52525b", kind: "node" as const, shape: "pill" as const }
+      : NODE_TYPE_LEGEND_ITEMS[data.nodeType];
+    byKind.set(data.entityType ?? kind ?? data.nodeType, item);
   }
-
-  const items = NODE_TYPE_LEGEND_ORDER.filter((nodeType) =>
-    visibleTypes.has(nodeType),
-  ).map((nodeType) => NODE_TYPE_LEGEND_ITEMS[nodeType]);
+  const items = [...byKind.values()].sort((a, b) =>
+    NODE_TYPE_LEGEND_ORDER.indexOf(a.nodeType!) - NODE_TYPE_LEGEND_ORDER.indexOf(b.nodeType!) || a.label.localeCompare(b.label));
 
   for (const extra of extras) {
     if (!items.some((item) => item.label === extra.label)) {

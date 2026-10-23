@@ -1,4 +1,5 @@
 import type { LineageNodeType } from "@/lib/entity-icons";
+import { GRAPH_NODE_KIND_META, type GraphNodeKindKey } from "@/lib/graph-schema.generated";
 import { EntityType } from "@/lib/graph-schema";
 
 /**
@@ -117,3 +118,15 @@ const FLOW_RENDERER_OVERRIDES: Partial<Record<LineageNodeType, string>> = {
 export const FLOW_NODE_TYPES = Object.fromEntries(
   (Object.keys(GRAPH_LAYER_ENTITY_TYPES) as LineageNodeType[]).map(type => [type, FLOW_RENDERER_OVERRIDES[type] ?? `${type}Node`]),
 ) as Record<LineageNodeType, string>;
+
+
+/** Canonical type wins over its shared visual. Unknown types stay unknown. */
+export function graphKindForNode(data: { entityType?: string | undefined; nodeType?: string | undefined }): GraphNodeKindKey | null {
+  if (data.entityType) return Object.hasOwn(GRAPH_NODE_KIND_META, data.entityType) ? data.entityType as GraphNodeKindKey : null;
+  return GRAPH_LAYER_ENTITY_TYPES[data.nodeType as LineageNodeType]?.[0] ?? null;
+}
+
+export function graphMetadataForNode(data: { entityType?: string | undefined; nodeType?: string | undefined }) {
+  const kind = graphKindForNode(data);
+  return kind ? GRAPH_NODE_KIND_META[kind] : null;
+}

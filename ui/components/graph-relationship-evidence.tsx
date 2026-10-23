@@ -1,7 +1,8 @@
+import { GRAPH_EDGE_KIND_META, type GraphEdgeKindKey } from "@/lib/graph-schema.generated";
 import { graphEdgeEvidenceLabel } from "@/lib/graph-edge-evidence";
 import type { UnifiedEdge } from "@/lib/graph-schema";
 
-type EvidenceEdge = Pick<UnifiedEdge, "evidence" | "last_seen" | "traversable" | "source_scan_id">;
+type EvidenceEdge = Pick<UnifiedEdge, "evidence" | "last_seen" | "traversable" | "source_scan_id"> & Partial<Pick<UnifiedEdge, "relationship" | "direction">>;
 
 function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -9,9 +10,12 @@ function text(value: unknown): string | null {
 
 export function GraphRelationshipEvidence({ edge, compact = false }: { edge: EvidenceEdge; compact?: boolean }) {
   const evidence = edge.evidence ?? {};
+  const relationship = edge.relationship ? GRAPH_EDGE_KIND_META[edge.relationship as GraphEdgeKindKey] : undefined;
   const receiptTimestamp = text(evidence.timestamp);
   return <div className="space-y-2 text-xs text-ink-secondary [overflow-wrap:anywhere]">
     <dl aria-label="Relationship evidence and freshness" className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
+      {relationship && <><dt>Relationship class</dt><dd className="capitalize">{relationship.traversal_class}</dd></>}
+      {edge.direction && <><dt>Direction</dt><dd className="capitalize">{edge.direction}</dd></>}
       <dt>Evidence type</dt><dd>{graphEdgeEvidenceLabel(edge)}</dd>
       <dt>Source observed at</dt><dd>{text(evidence.observed_at) ?? "Not recorded"}</dd>
       {receiptTimestamp && <><dt>Receipt timestamp</dt><dd>{receiptTimestamp}</dd></>}

@@ -318,3 +318,17 @@ describe("diffChangeCounts", () => {
     expect(diffChangeCounts(null).nodesAdded).toBe(0);
   });
 });
+
+
+it("retains canonical legend types and layers across a shared renderer", () => {
+  const entries = legendItemsForVisibleNodes([
+    { data: { nodeType: "container", entityType: "application" } },
+    { data: { nodeType: "container", entityType: "container" } },
+    { data: { nodeType: "package", entityType: "external_import" } },
+  ]);
+  expect(entries).toEqual(expect.arrayContaining([
+    expect.objectContaining({ label: "Application", layer: "app" }),
+    expect.objectContaining({ label: "Container", layer: "infra" }),
+    expect.objectContaining({ label: "External Import", layer: "code" }),
+  ]));
+});

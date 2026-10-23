@@ -1,3 +1,5 @@
+import { GRAPH_NODE_KIND_META, GRAPH_EDGE_KIND_META, type GraphEdgeKindKey, type GraphNodeKindKey } from "@/lib/graph-schema.generated";
+import { semanticLayerForNodeType } from "@/lib/graph-entity-detail";
 import { describe, expect, it } from "vitest";
 
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
@@ -81,6 +83,7 @@ describe("buildUnifiedFlowGraph", () => {
     { evidence: { source: "source-ast" }, mode: "static", count: 0 },
     { evidence: { basis: "configured_delegation" }, mode: "static", count: 0 },
     { evidence: {}, mode: "unknown", count: 0 },
+    { evidence: { tier: "recorded", source: "kubernetes" }, mode: "recorded", count: 0 },
     { evidence: { data_source: "runtime-proxy" }, mode: "runtime", count: 1 },
   ])("does not infer runtime delegation from the verb alone: $mode / $evidence", ({ evidence, mode, count }) => {
     const graph = {
@@ -360,4 +363,31 @@ it("preserves same-named assets across every catalogued vendor and keeps only re
   expect(flow.edges.map(e => e.data?.evidenceLabel)).toEqual(["Static / configured", "Not recorded"]);
   expect(flow.nodes.every(n => n.data.identityContext)).toBe(true);
   expect(graph.edges).toEqual(edges);
+});
+
+
+it("preserves every canonical entity ID, type and layer through shared renderers", () => {
+  const nodes = Object.keys(GRAPH_NODE_KIND_META).map((kind, i) => node(`scoped:${i}:${kind}`, kind as EntityType, "Same display name"));
+  const filters = createExpandedGraphFilters();
+  const flow = buildUnifiedFlowGraph({ nodes, edges: [], attack_paths: [], interaction_risks: [] } as unknown as UnifiedGraphData,
+    { ...filters, layers: Object.fromEntries(Object.keys(filters.layers).map(k => [k, true])) as typeof filters.layers });
+  expect(flow.nodes).toHaveLength(nodes.length);
+  for (const original of nodes) {
+    const displayed = flow.nodes.find(n => n.id === original.id)!;
+    expect(displayed.data.entityType).toBe(original.entity_type);
+    expect(semanticLayerForNodeType(displayed.data.nodeType, displayed.data.entityType).key).toBe(GRAPH_NODE_KIND_META[original.entity_type as GraphNodeKindKey].layer);
+  }
+});
+
+it("preserves every canonical relationship ID, class, direction and traversal flag", () => {
+  const edges = Object.keys(GRAPH_EDGE_KIND_META).map((kind, i) => ({ ...edge("a", "b", kind as RelationshipType), id: `receipt:${i}`, direction: "bidirectional", traversable: false, evidence: { tier: "recorded", source: "external-import" } }));
+  const flow = buildUnifiedFlowGraph({ nodes: [node("a", EntityType.AGENT, "A"), node("b", EntityType.AGENT, "B")], edges, attack_paths: [], interaction_risks: [] } as unknown as UnifiedGraphData, createExpandedGraphFilters());
+  expect(flow.edges).toHaveLength(edges.length);
+  for (const original of edges) {
+    const displayed = flow.edges.find(e => e.id === original.id)!;
+    expect([displayed.source, displayed.target]).toEqual([original.source, original.target]);
+    expect(displayed.data).toMatchObject({ relationship: original.relationship, traversalClass: GRAPH_EDGE_KIND_META[original.relationship as GraphEdgeKindKey].traversal_class, direction: "bidirectional", traversable: false, evidenceMode: "recorded" });
+    expect(displayed.markerStart).toEqual(displayed.markerEnd);
+    expect(displayed.animated).toBe(false);
+  }
 });

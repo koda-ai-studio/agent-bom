@@ -181,6 +181,9 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   expect(await cardOverlaps(page)).toEqual([]);
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await labelCollisions(page)).toEqual([]);
+  const clippedIds = await page.locator("[data-graph-entity] p > span[title]").evaluateAll(ids =>
+    ids.filter(id => id.scrollWidth > id.clientWidth + 1).map(id => id.textContent));
+  expect(clippedIds).toEqual([]);
   await page.screenshot({ path: info.outputPath(`reference-correlation-${theme}.png`), animations: "disabled" });
 });
 

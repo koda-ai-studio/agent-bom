@@ -41,3 +41,8 @@ describe("graphEdgeEvidence", () => {
     ).toBe("Scan inventory · no per-edge receipt");
   });
 });
+
+
+it.each(["external-import", "kubernetes", "authorization-evidence"])("does not promote %s recorded inventory into runtime activity", source => {
+  expect(graphEdgeEvidence({ tier: "recorded", source })).toMatchObject({ mode: "recorded", label: "Recorded observation", blocked: false });
+});

@@ -29,6 +29,13 @@ describe("graph-entity-detail", () => {
     expect(semanticLayerForNodeType("vulnerability").key).toBe("finding");
   });
 
+  it("uses canonical types when renderers are shared", () => {
+    expect(semanticLayerForNodeType("container", "application").key).toBe("app");
+    expect(semanticLayerForNodeType("package", "external_import").key).toBe("code");
+    expect(semanticLayerForNodeType("cloudResource", "resource").key).toBe("asset");
+    expect(semanticLayerForNodeType("container", "unrecognized").key).toBe("unknown");
+  });
+
   it("merges API node detail into lineage drawer fields", () => {
     const detail = {
       node: {

@@ -164,3 +164,30 @@ it("groups converging branches across layers without interleaving the independen
   const y = (id: string) => ordered.find(n => n.id === id)!.position.y;
   expect(y("source") < Math.min(y("workflow"), y("config")) || y("source") > Math.max(y("workflow"), y("config"))).toBe(true);
 });
+
+
+it("does not turn correlation into a parent-child rank", () => {
+  const entries = [node("left", "agent"), node("right", "agent")];
+  const links = [edge("match", "left", "right", "possibly_correlates_with")];
+  const result = graphHierarchyLayout(entries, links);
+  expect(result.nodes[0]!.position.x).toBe(result.nodes[1]!.position.x);
+  expect(result.edges[0]!.source).toBe("left");
+  expect(result.edges[0]!.target).toBe("right");
+});
+
+it.each(["part_of", "hosted_on", "belongs_to"])("places the recorded parent first for %s without reversing the receipt", relationship => {
+  const entries = [node("child", "agent"), node("parent", "container")];
+  const link = edge("membership", "child", "parent", relationship);
+  const result = graphHierarchyLayout(entries, [link]);
+  expect(result.nodes.find(n => n.id === "parent")!.position.x).toBeLessThan(result.nodes.find(n => n.id === "child")!.position.x);
+  expect(result.edges[0]).toMatchObject({ source: "child", target: "parent", data: { relationship }, markerEnd: "arrow" });
+});
+
+
+it("keeps dense graphs quiet without dropping relationships", () => {
+  const nodes = Array.from({ length: 30 }, (_, i) => node(String(i), "agent"));
+  const edges = nodes.slice(1).map(n => edge(n.id, "0", n.id, "uses"));
+  const result = graphHierarchyLayout(nodes, edges);
+  expect(result.edges).toHaveLength(edges.length);
+  expect(result.edges.every(e => e.data?.quietLabel)).toBe(true);
+});

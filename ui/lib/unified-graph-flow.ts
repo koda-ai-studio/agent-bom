@@ -1,5 +1,5 @@
 import { graphEdgeEvidence, graphEdgeEvidenceLabel } from "@/lib/graph-edge-evidence";
-import { NODE_LABELS } from "@/lib/entity-labels";
+import { GRAPH_EDGE_KIND_META, type GraphEdgeKindKey } from "@/lib/graph-schema.generated";
 import { nodeRiskAssessment } from "@/lib/node-risk-assessment";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
@@ -20,8 +20,7 @@ import {
   reachStrokeColor,
 } from "@/lib/effective-reach";
 import {
-  NODE_COLOR_MAP,
-  NODE_TYPE_LEGEND_ORDER,
+  legendItemsForVisibleNodes,
   relationshipEdgeLabelText,
   relationshipLegendItem,
   type LegendItem,
@@ -111,48 +110,6 @@ export function flowRendererTypeForEntity(entityType: EntityType | string): stri
   return nodeType ? FLOW_NODE_TYPES[nodeType] : null;
 }
 
-
-const NODE_LAYERS: Record<LineageNodeType, string> = {
-  provider: "infra",
-  agent: "orchestration",
-  org: "identity",
-  account: "identity",
-  user: "user",
-  group: "identity",
-  role: "identity",
-  policy: "identity",
-  serviceAccount: "identity",
-  servicePrincipal: "identity",
-  federatedIdentity: "identity",
-  environment: "infra",
-  fleet: "infra",
-  cluster: "infra",
-  server: "mcp_server",
-  sharedServer: "mcp_server",
-  package: "package",
-  vulnerability: "finding",
-  credential: "identity",
-  tool: "tool",
-  model: "asset",
-  framework: "orchestration",
-  dataset: "asset",
-  container: "infra",
-  cloudResource: "infra",
-  misconfiguration: "finding",
-  managedIdentity: "identity",
-  accessGrant: "identity",
-  accessPolicy: "identity",
-  driftIncident: "finding",
-  dataStore: "asset",
-  directory: "code",
-  sourceFile: "code",
-  configFile: "code",
-  codeModule: "code",
-  ciJob: "ci",
-  apiGateway: "api_gateway",
-  toolCall: "runtime_evidence",
-  blueprint: "orchestration",
-};
 
 const FINDING_NODE_TYPES = new Set<LineageNodeType>([
   "vulnerability",
@@ -246,14 +203,11 @@ export function buildUnifiedFlowGraph(
       visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target),
   );
 
-  const visibleNodeTypes = new Set(
-    prunedNodes.map((node) => node.data.nodeType),
-  );
   assignOccurrenceRoles(prunedNodes);
   assignCollisionScopes(prunedNodes);
   assignScopeContext(prunedNodes, graph.edges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)));
   const summary = buildSummary(prunedNodes, graph);
-  const legend = legendForNodeTypes(visibleNodeTypes);
+  const legend = legendItemsForVisibleNodes(prunedNodes);
 
   return { nodes: prunedNodes, edges, agentNames, legend, summary };
 }
@@ -638,6 +592,7 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
       relationship,
       relationshipLabel: relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked }),
       relationshipCategory: legend.layer,
+      traversalClass: GRAPH_EDGE_KIND_META[relationship as GraphEdgeKindKey]?.traversal_class ?? "unknown",
       evidenceMode,
       evidenceLabel: graphEdgeEvidenceLabel(edge),
       evidenceBlocked,
@@ -661,7 +616,7 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
 }
 
 /** A runtime-shaped verb can also come from source analysis or configuration. */
-export function graphEdgeEvidenceMode(edge: Pick<UnifiedEdge, "relationship" | "evidence">): "runtime" | "static" | "inferred" | "unknown" {
+export function graphEdgeEvidenceMode(edge: Pick<UnifiedEdge, "relationship" | "evidence">): ReturnType<typeof graphEdgeEvidence>["mode"] {
   return graphEdgeEvidence(edge.evidence ?? {}).mode;
 }
 
@@ -709,21 +664,6 @@ function buildSummary(
     costUsd30d: Math.round(costUsd30d * 1e6) / 1e6,
     expensiveExposed,
   };
-}
-
-/**
- * Reads the canonical, exhaustiveness-guarded legend order rather than a local
- * copy — a second hand-maintained list is how framework, shared-server, and the
- * repository file types ended up rendering on the canvas with no legend row.
- */
-function legendForNodeTypes(nodeTypes: Set<LineageNodeType>): LegendItem[] {
-  return NODE_TYPE_LEGEND_ORDER.filter((nodeType) => nodeTypes.has(nodeType))
-    .map((nodeType) => ({
-      label: NODE_LABELS[nodeType],
-      color: NODE_COLOR_MAP[nodeType],
-      layer: NODE_LAYERS[nodeType],
-      shape: legendShapeForNodeType(nodeType),
-    }));
 }
 
 function buildAdjacency(
@@ -872,39 +812,6 @@ function addNeighbor(
   } else {
     map.set(source, new Set([target]));
   }
-}
-
-function legendShapeForNodeType(
-  nodeType: LineageNodeType,
-): LegendItem["shape"] {
-  if (nodeType === "vulnerability" || nodeType === "misconfiguration")
-    return "diamond";
-  if (nodeType === "role" || nodeType === "policy") return "diamond";
-  if (
-    nodeType === "apiGateway" ||
-    nodeType === "toolCall" ||
-    nodeType === "ciJob"
-  ) {
-    return "diamond";
-  }
-  if (
-    nodeType === "server" ||
-    nodeType === "sharedServer" ||
-    nodeType === "container" ||
-    nodeType === "cloudResource" ||
-    nodeType === "account" ||
-    nodeType === "blueprint"
-  ) {
-    return "square";
-  }
-  if (
-    nodeType === "package" ||
-    nodeType === "tool" ||
-    nodeType === "model" ||
-    nodeType === "dataset"
-  )
-    return "pill";
-  return "dot";
 }
 
 function mapNodeType(node: UnifiedNode): LineageNodeType | null {

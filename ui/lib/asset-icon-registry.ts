@@ -63,7 +63,7 @@ export const ASSET_KINDS = {
   group: { label: "Group", icon: Users },
   role: { label: "Role", icon: IdCard },
   policy: { label: "Policy", icon: ScrollText },
-  service_account: { label: "Service", icon: UserCog },
+  service_account: { label: "Service account", icon: UserCog },
   service_principal: { label: "Principal", icon: Fingerprint },
   federated_identity: { label: "Federated", icon: Handshake },
   managed_identity: { label: "Identity", icon: BadgeCheck },
