@@ -69,3 +69,16 @@ async def test_mcp_no_discover_scans_explicit_config_path(project: Path, monkeyp
     assert out.exists(), result.output
     cli_names = _mcp_servers(json.loads(out.read_text())["agents"])
     assert {"filesystem", "remote-open"} <= cli_names
+
+
+@pytest.mark.asyncio
+async def test_automatic_project_scan_does_not_report_missing_terraform(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """IaC was not requested and no .tf file exists, so its absence is not a warning."""
+    from agent_bom.mcp_server_scan import run_scan_pipeline
+
+    async def _no_vulns(agents, **_kwargs):
+        return []
+
+    monkeypatch.setattr("agent_bom.scanners.scan_agents", _no_vulns)
+    _a, _b, warnings, _s = await run_scan_pipeline(safe_path=lambda v: Path(v), config_path=str(project), no_discover=True, offline=True)
+    assert not [w for w in warnings if ".tf files" in w]

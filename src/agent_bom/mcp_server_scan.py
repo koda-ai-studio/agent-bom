@@ -186,6 +186,35 @@ def consume_repo_tree_inventory() -> Optional[dict]:
     return inventory
 
 
+def _scan_config_path_statically(config_path: str, agents: list, warnings: list[str], scan_sources: list[str], *, offline: bool) -> None:
+    """Repo-tree, Python-agent, Terraform and GitHub Actions passes over an explicit target."""
+    try:
+        from agent_bom.api.repo_tree_scan import scan_cloned_repo_tree
+        from agent_bom.github_actions import scan_github_actions
+        from agent_bom.python_agents import scan_python_agents
+        from agent_bom.terraform import scan_terraform_dir
+
+        tree = scan_cloned_repo_tree(config_path, agents=agents, warnings=warnings, offline=offline)
+        _REPO_TREE_INVENTORY.set(tree.ai_inventory_data or None)
+        scan_sources.append("repo_tree")
+        # IaC is scanned opportunistically here, so a tree without .tf files is not a warning.
+        passes = (
+            ("python_agents", lambda: scan_python_agents(config_path)),
+            ("terraform", lambda: scan_terraform_dir(config_path, report_missing=False)),
+            ("github_actions", lambda: scan_github_actions(config_path)),
+        )
+        for source, run_pass in passes:
+            found, found_warnings = run_pass()
+            agents.extend(found)
+            warnings.extend(found_warnings)
+            if found:
+                scan_sources.append(source)
+    except Exception as exc:
+        msg = f"Repo static scan failed for {config_path}: {sanitize_error(exc)}"
+        logger.warning(msg)
+        warnings.append(msg)
+
+
 async def run_scan_pipeline(
     *,
     safe_path,
@@ -240,37 +269,7 @@ async def run_scan_pipeline(
         scan_sources.append("agent_discovery")
 
     if config_path:
-        try:
-            from agent_bom.api.repo_tree_scan import scan_cloned_repo_tree
-            from agent_bom.github_actions import scan_github_actions
-            from agent_bom.python_agents import scan_python_agents
-            from agent_bom.terraform import scan_terraform_dir
-
-            tree = scan_cloned_repo_tree(config_path, agents=agents, warnings=warnings, offline=offline)
-            _REPO_TREE_INVENTORY.set(tree.ai_inventory_data or None)
-            scan_sources.append("repo_tree")
-
-            py_agents, py_warnings = scan_python_agents(config_path)
-            agents.extend(py_agents)
-            warnings.extend(py_warnings)
-            if py_agents:
-                scan_sources.append("python_agents")
-
-            tf_agents, tf_warnings = scan_terraform_dir(config_path)
-            agents.extend(tf_agents)
-            warnings.extend(tf_warnings)
-            if tf_agents:
-                scan_sources.append("terraform")
-
-            gha_agents, gha_warnings = scan_github_actions(config_path)
-            agents.extend(gha_agents)
-            warnings.extend(gha_warnings)
-            if gha_agents:
-                scan_sources.append("github_actions")
-        except Exception as exc:
-            msg = f"Repo static scan failed for {config_path}: {sanitize_error(exc)}"
-            logger.warning(msg)
-            warnings.append(msg)
+        _scan_config_path_statically(config_path, agents, warnings, scan_sources, offline=offline)
 
     if package:
         try:

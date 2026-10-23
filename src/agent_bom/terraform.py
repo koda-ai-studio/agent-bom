@@ -277,7 +277,7 @@ def _detect_hardcoded_secrets(tf_contents: list[tuple[Path, str]]) -> list[Terra
 # ─── Public API ───────────────────────────────────────────────────────────────
 
 
-def scan_terraform_dir(tf_dir: str) -> tuple[list[Agent], list[str]]:
+def scan_terraform_dir(tf_dir: str, *, report_missing: bool = True) -> tuple[list[Agent], list[str]]:
     """Scan a Terraform directory for AI agent resources, providers, and hardcoded secrets.
 
     Parameters
@@ -301,7 +301,7 @@ def scan_terraform_dir(tf_dir: str) -> tuple[list[Agent], list[str]]:
     tf_contents = _read_tf_files(tf_path)
 
     if not tf_contents:
-        return [], [f"No .tf files found in {tf_dir}"]
+        return [], [f"No .tf files found in {tf_dir}"] if report_missing else []
 
     providers = _extract_providers(tf_contents)
     ai_resources = _extract_ai_resources(tf_contents)
