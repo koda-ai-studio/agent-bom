@@ -563,6 +563,75 @@ def authorize_destructive_tool(
     return None
 
 
+_ERROR_SNIFF_MAX_CHARS = 256 * 1024
+
+
+def _payload_error(text: str) -> str | None:
+    stripped = text.lstrip()
+    if not stripped.startswith("{") or len(stripped) > _ERROR_SNIFF_MAX_CHARS or '"error"' not in stripped:
+        return None
+    try:
+        doc = json.loads(stripped)
+    except ValueError:
+        return None
+    if not isinstance(doc, dict):
+        return None
+    error = doc.get("error")
+    if isinstance(error, dict):
+        message = str(error.get("message") or "")
+        code = str(error.get("code") or "")
+        combined = f"{code}: {message}" if code and message else code or message
+        return combined or "error payload"
+    if isinstance(error, str) and error:
+        return error
+    return None
+
+
+def tool_result_error(result: object) -> str | None:
+    """Return the error a tool reported in its *returned* payload, if any.
+
+    Tools often catch their own exceptions and return ``{"error": "..."}`` or an
+    :func:`agent_bom.mcp_errors.mcp_error_json` envelope instead of raising. The
+    dispatcher uses this to log and count those calls as failures.
+    """
+    if getattr(result, "is_error", False) is True:
+        return "error result"
+    if not isinstance(result, str):
+        return None
+    found = _payload_error(result)
+    if found is None and isinstance(result, ToolErrorPayload):
+        return "error payload"
+    return found
+
+
+def _record_completion(
+    tool_name: str,
+    result: object,
+    elapsed_ms: int,
+    request_meta: dict[str, Any],
+    log_caller: str,
+    record_tool_metric_fn: Callable[..., None],
+    record_tool_request_fn: Callable[..., None],
+    logger,
+) -> None:
+    reported_error = tool_result_error(result)
+    error = _log_value(reported_error, max_len=200) if reported_error is not None else None
+    record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=error is None, error=error)
+    record_tool_request_fn(
+        tool_name,
+        caller=request_meta["caller"],
+        client_id=request_meta["client_id"],
+        request_id=request_meta["request_id"],
+        status="ok" if error is None else "error",
+        elapsed_ms=elapsed_ms,
+        error=error,
+    )
+    if error is None:
+        logger.info("mcp tool ok: %s caller=%s (%dms)", tool_name, log_caller, elapsed_ms)
+    else:
+        logger.warning("mcp tool returned error: %s caller=%s (%dms) (%s)", tool_name, log_caller, elapsed_ms, error)
+
+
 def _authorize_dispatch(
     tool_name: str, request_meta: dict[str, str | None], kwargs: dict[str, Any], required_scope: str | None
 ) -> tuple[str, dict[str, Any] | None]:
@@ -702,16 +771,7 @@ async def execute_tool_async(
             _raise_sanitized_tool_error(exc, sanitized)
         return ToolErrorPayload(truncate_response_fn(_error_payload(tool_name, sanitized)))
     elapsed_ms = int((time.perf_counter() - start) * 1000)
-    record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=True)
-    record_tool_request_fn(
-        tool_name,
-        caller=request_meta["caller"],
-        client_id=request_meta["client_id"],
-        request_id=request_meta["request_id"],
-        status="ok",
-        elapsed_ms=elapsed_ms,
-    )
-    logger.info("mcp tool ok: %s caller=%s (%dms)", tool_name, log_caller, elapsed_ms)
+    _record_completion(tool_name, result, elapsed_ms, request_meta, log_caller, record_tool_metric_fn, record_tool_request_fn, logger)
     return result
 
 
@@ -835,16 +895,7 @@ async def execute_tool_sync_async(
                 _raise_sanitized_tool_error(exc, sanitized)
             return truncate_response_fn(_error_payload(tool_name, sanitized))
         elapsed_ms = int((time.perf_counter() - start) * 1000)
-        record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=True)
-        record_tool_request_fn(
-            tool_name,
-            caller=request_meta["caller"],
-            client_id=request_meta["client_id"],
-            request_id=request_meta["request_id"],
-            status="ok",
-            elapsed_ms=elapsed_ms,
-        )
-        logger.info("mcp tool ok: %s caller=%s (%dms)", tool_name, log_caller, elapsed_ms)
+        _record_completion(tool_name, result, elapsed_ms, request_meta, log_caller, record_tool_metric_fn, record_tool_request_fn, logger)
         return result
 
 
