@@ -179,6 +179,12 @@ async def fleet_stats(request: Request) -> dict[str, Any]:
     """Fleet-wide statistics."""
     tenant_id = require_request_tenant_id(request)
     agents = await _store_call(_get_fleet_store().list_by_tenant, tenant_id)
+    return _fleet_stats_payload(agents)
+
+
+def _fleet_stats_payload(agents: list[Any]) -> dict[str, Any]:
+    from agent_bom.fleet.trust_scoring import LOW_TRUST_THRESHOLD
+
     by_state: dict[str, int] = {}
     by_env: dict[str, int] = {}
     trust_scores: list[float] = []
@@ -193,7 +199,7 @@ async def fleet_stats(request: Request) -> dict[str, Any]:
         "by_state": by_state,
         "by_environment": by_env,
         "avg_trust_score": round(sum(trust_scores) / len(trust_scores), 1) if trust_scores else 0.0,
-        "low_trust_count": sum(1 for s in trust_scores if s < 50),
+        "low_trust_count": sum(1 for s in trust_scores if s < LOW_TRUST_THRESHOLD),
     }
 
 

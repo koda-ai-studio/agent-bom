@@ -11,6 +11,7 @@ from agent_bom.api.exec_posture import tenant_exec_posture
 from agent_bom.api.models import JobStatus
 from agent_bom.api.overview_rollup import _combined_severity, _tenant_id
 from agent_bom.api.stores import _get_fleet_store
+from agent_bom.fleet.trust_scoring import LOW_TRUST_THRESHOLD
 
 _logger = logging.getLogger("agent_bom.api.routes.overview")
 
@@ -104,7 +105,7 @@ def _identity_snapshot(request: Request) -> dict[str, Any]:
     try:
         agents = _get_fleet_store().list_by_tenant(tenant_id)
         fleet_total = len(agents)
-        low_trust = sum(1 for a in agents if float(getattr(a, "trust_score", 0.0) or 0.0) < 50)
+        low_trust = sum(1 for a in agents if float(getattr(a, "trust_score", 0.0) or 0.0) < LOW_TRUST_THRESHOLD)
     except Exception:  # pragma: no cover - fleet store optional
         _logger.debug("fleet snapshot failed", exc_info=False)
 

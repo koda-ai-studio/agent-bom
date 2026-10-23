@@ -130,7 +130,7 @@ def test_old_demo_associations_are_repaired_once(seeded_stores):
 
     store = _get_fleet_store()
     old = next(a for a in store.list_by_tenant(seeded_stores) if a.agent_id.startswith("demo-fleet-"))
-    old.tags = [tag for tag in old.tags if tag != "demo-associations-v3"]
+    old.tags = [tag for tag in old.tags if tag != "demo-associations-v4"]
     old.server_count = 999
     store.put(old)
     unrelated = old.model_copy(update={"agent_id": "customer-agent", "name": "Customer agent"})

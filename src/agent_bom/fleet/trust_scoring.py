@@ -18,6 +18,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agent_bom.models import Agent
 
+# Trust scores are 0-100 everywhere (fleet store, API, UI percentage bars).
+TRUST_SCORE_MAX = 100.0
+# Fleet stats and the overview count agents below this score as low trust.
+LOW_TRUST_THRESHOLD = 50.0
+
 
 def compute_trust_score(
     agent: "Agent",
