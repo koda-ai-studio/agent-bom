@@ -13,7 +13,8 @@ vi.mock("@/components/overview-cockpit", async () => {
   } };
 });
 
-const { apiMock, deploymentCounts } = vi.hoisted(() => ({
+const { apiMock, deploymentCounts, deploymentState } = vi.hoisted(() => ({
+  deploymentState: { pending: false },
   apiMock: {
     getInventorySummary: vi.fn().mockResolvedValue(null),
     getPosture: vi.fn(),
@@ -45,7 +46,7 @@ vi.mock("@/lib/api", async () => {
 });
 
 vi.mock("@/hooks/use-deployment-context", () => ({
-  useDeploymentContext: () => ({ counts: deploymentCounts, loading: false, error: null }),
+  useDeploymentContext: () => ({ counts: deploymentState.pending ? null : deploymentCounts, loading: deploymentState.pending, error: null }),
 }));
 
 vi.mock("@/lib/use-capture-mode", () => ({ useCaptureMode: () => false }));
@@ -114,6 +115,7 @@ function staleScan(jobId: string) {
 describe("Overview canonical finding counts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    deploymentState.pending = false;
     apiMock.getInventorySummary.mockResolvedValue(null);
     Object.assign(deploymentCounts, { critical: 7, high: 11, medium: 13, low: 17, unrated: 19, total: 67, kev: 5 });
     apiMock.getPosture.mockResolvedValue({ grade: "D", score: 49 });
@@ -205,6 +207,21 @@ describe("Overview canonical finding counts", () => {
     expect(apiMock.getScan).not.toHaveBeenCalled();
     expect(apiMock.listAgents).not.toHaveBeenCalled();
     expect(cockpitProps.mock.lastCall?.[0]).toMatchObject({ agents: 93, signals: { packages: 27, tools: null } });
+  });
+
+  it("shows issue-group counts before posture counts arrive instead of flipping from occurrences", async () => {
+    deploymentState.pending = true;
+    apiMock.getOverview.mockResolvedValue({
+      ...overviewFixture(),
+      headline: { ...overviewFixture().headline, basis: "issue_groups", critical: 332, high: 817, critical_high: 1149, kev: 1 },
+      finding_counts: { critical: 433, high: 1257, medium: 900, low: 100, unrated: 47, total: 2737, kev: 59 },
+      issue_counts: { critical: 332, high: 817, medium: 700, low: 100, unrated: 20, total: 1969, kev: 1, basis: "issue_groups", approximate: false },
+    });
+    await act(async () => { render(<Dashboard />); });
+    await waitFor(() => expect(cockpitProps.mock.lastCall?.[0]).toMatchObject({ critical: 332, high: 817 }));
+    const props = cockpitProps.mock.calls.map((call) => call[0] as { critical: number; kev: number | null; severity: { total: number } });
+    expect(props.some((p) => p.critical === 433 || p.severity.total === 2737)).toBe(false);
+    expect(cockpitProps.mock.lastCall?.[0]).toMatchObject({ severity: { total: 1969 }, kev: 1 });
   });
 
   it("keeps unavailable inventory counts unknown instead of substituting local discovery", async () => {

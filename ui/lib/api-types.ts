@@ -3607,6 +3607,8 @@ export interface OverviewResponse {
   demo_estate_seeding?: boolean;
   /** Counts from the same evidence snapshot as posture and top_risks. */
   finding_counts?: Pick<PostureCountsResponse, "critical" | "high" | "medium" | "low" | "unrated" | "total" | "kev">;
+  /** Open issue-group counts shared with /v1/posture/counts; null when unavailable. */
+  issue_counts?: (Omit<IssueSeverityCounts, "kev"> & { kev?: number | null | undefined }) | null;
   schema_version: string;
   tenant_id: string;
   posture: OverviewPosture;

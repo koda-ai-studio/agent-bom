@@ -311,6 +311,9 @@ export default function Dashboard() {
       } : importedSeverity;
     }
     if (counts?.issues) return openIssueSeverity(counts) ?? counts.issues;
+    // Same issue-group unit as /v1/posture/counts, so the first frame never
+    // shows occurrence totals that later change into issue totals.
+    if (overview?.issue_counts) return overview.issue_counts;
     if (overview?.finding_counts) return overview.finding_counts;
     const liveCounts = openIssueSeverity(counts);
     if (liveCounts) return liveCounts;
@@ -377,7 +380,7 @@ export default function Dashboard() {
   const highCount = canonicalSeverity.high;
   const displayedKevCount = importedReport
     ? kevCount
-    : (counts?.issues?.kev ?? overview?.finding_counts?.kev ?? counts?.kev ?? overview?.headline.kev ?? 0);
+    : (counts?.issues?.kev ?? (overview?.issue_counts ? (overview.issue_counts.kev ?? overview.headline.kev) : undefined) ?? overview?.finding_counts?.kev ?? counts?.kev ?? overview?.headline.kev ?? 0);
   const displayedKevOccurrences = importedReport ? null : (overview?.finding_counts?.kev ?? counts?.kev ?? null);
   const displayedCredentialExposure = importedReport
     ? credentialExposureCount
