@@ -112,6 +112,15 @@ describe("RemediationPage", () => {
     expect(screen.queryByText("Loading remediation plan...")).not.toBeInTheDocument();
   });
 
+  it("labels plan credentials as impact-filtered exposure, not the credentials servers hold", async () => {
+    navigationState.query = "scan=scan-credentials";
+    apiMock.getRemediation.mockResolvedValue([remediationItem("pyyaml", "critical")]);
+    apiMock.listTickets.mockResolvedValue({ tickets: [] });
+    render(<RemediationPage />);
+    const cell = (await screen.findAllByText("0 credentials exposed"))[0]!;
+    expect(cell.closest("[title]")?.getAttribute("title")).toMatch(/advisory's impact.*exploit story counts every credential the hosting servers hold/);
+  });
+
   it("shows retained current findings when the newest scan has no remediation", async () => {
     apiMock.getRemediation.mockResolvedValue([]);
     apiMock.getCurrentRemediation.mockResolvedValue({ remediation_plan: [remediationItem("retained-pkg", "critical")], truncated: false, warnings: [] });

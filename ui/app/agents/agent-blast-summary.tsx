@@ -17,7 +17,9 @@ const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ?
 /**
  * The agent's blast radius in its drawer: each vulnerable package that reaches
  * one of its servers, worst first, with the credentials that occurrence exposes.
- * Counts read the same per-occurrence credentials the exploit story walks.
+ * Exposure is impact-filtered: a credential counts only when the advisory's
+ * impact can reach it. Credentials the server holds without that assertion are
+ * named separately; the exploit story counts those held credentials.
  */
 export function AgentBlastSummary({ agentName }: { agentName: string }) {
   const [state, setState] = useState<State>({ status: "loading" });
@@ -47,6 +49,7 @@ export function AgentBlastSummary({ agentName }: { agentName: string }) {
       <ul className="divide-y divide-outline rounded-lg border border-outline">
         {rows.slice(0, SHOWN).map((row) => {
           const exposed = row.exposed_credentials?.length ?? 0;
+          const held = exposed ? [] : row.all_server_credentials ?? [];
           return (
             <li key={`${row.vulnerability_id}-${row.package ?? ""}`} className="flex flex-col gap-1 px-3 py-2 text-xs sm:flex-row sm:items-center sm:gap-3">
               <span className="flex min-w-0 shrink-0 items-center gap-2">
@@ -55,9 +58,15 @@ export function AgentBlastSummary({ agentName }: { agentName: string }) {
               </span>
               <span className="flex min-w-0 flex-1 items-baseline gap-3">
                 {row.package ? <span className="min-w-0 truncate font-mono text-ink-secondary" title={row.package}>{row.package}</span> : null}
-                <span className={`ml-auto shrink-0 text-right ${exposed ? "text-[color:var(--status-warn)]" : "text-ink-tertiary"}`} title={(row.exposed_credentials ?? []).join(", ") || undefined}>
-                  {exposed ? `${plural(exposed, "credential")} exposed` : "No credentials exposed"}
-                </span>
+                {held.length ? (
+                  <span className="ml-auto shrink-0 text-right text-ink-secondary" title={`${held.join(", ")}. The server holds these credentials; this advisory's impact (${row.impact_category || "unknown"}) does not assert their exposure.`}>
+                    {plural(held.length, "credential")} on server · exposure not asserted
+                  </span>
+                ) : (
+                  <span className={`ml-auto shrink-0 text-right ${exposed ? "text-[color:var(--status-warn)]" : "text-ink-tertiary"}`} title={(row.exposed_credentials ?? []).join(", ") || undefined}>
+                    {exposed ? `${plural(exposed, "credential")} exposed` : "No credentials exposed"}
+                  </span>
+                )}
               </span>
             </li>
           );

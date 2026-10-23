@@ -15,7 +15,7 @@ it("stacks every table column into one card per package, nothing clipped behind 
   const onCreateTicket = vi.fn();
   render(<RemediationCardList items={[item]} ticketFor={() => undefined} onCreateTicket={onCreateTicket} />);
   const card = screen.getByTestId("remediation-card");
-  for (const text of ["langchain", "current 0.0.150", "critical", "KEV", "Fix 0.0.325", "Risk 8.4", "2 agents", "1 credential", "CVE-2023-36258", "+1", "LLM05"]) {
+  for (const text of ["langchain", "current 0.0.150", "critical", "KEV", "Fix 0.0.325", "Risk 8.4", "2 agents", "1 credential exposed", "CVE-2023-36258", "+1", "LLM05"]) {
     expect(card).toHaveTextContent(text);
   }
   fireEvent.click(within(card).getByRole("button", { name: /Ticket/ }));

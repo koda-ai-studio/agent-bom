@@ -70,6 +70,8 @@ function taxonomyMappings(items: RemediationItem[], topN = 5) {
 
 // ─── Sort button ──────────────────────────────────────────────────────────────
 
+const CREDENTIAL_EXPOSURE_NOTE = "Credentials this advisory's impact can reach. The exploit story counts every credential the hosting servers hold.";
+
 type SortKey = "impact_score" | "severity" | "agents" | "credentials";
 
 function SortButton({
@@ -212,7 +214,7 @@ function NarrativeRow({
         {/* Reach */}
         <td className="px-4 py-3 text-xs text-ink-secondary" title="Across every occurrence of this package version, not one path">
           <div>{item.affected_agents?.length ?? 0} agent{(item.affected_agents?.length ?? 0) !== 1 ? "s" : ""}</div>
-          <div className="text-ink-tertiary">{item.exposed_credentials?.length ?? 0} credential{(item.exposed_credentials?.length ?? 0) !== 1 ? "s" : ""}</div>
+          <div className="text-ink-tertiary" title={CREDENTIAL_EXPOSURE_NOTE}>{item.exposed_credentials?.length ?? 0} credential{(item.exposed_credentials?.length ?? 0) !== 1 ? "s" : ""} exposed</div>
         </td>
 
         {/* Compliance tags */}
