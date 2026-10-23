@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
-from agent_bom.cpe_match import cpe_identity
+from agent_bom.cpe_match import cpe_applicability, cpe_identity
 from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.malicious import flag_malicious_from_vulns
 from agent_bom.models import Package, Severity, Vulnerability
@@ -221,7 +221,10 @@ def _attach_cpe_candidates(
 
     identity = cpe_identity(pkg)
     if identity is not None:
-        local_vulns.extend(cpe_lookup_package(conn, identity[1], pkg.version, vendor=identity[0]))
+        # A distro package anchoring a vendor identity (NVIDIA driver/toolkit
+        # debs and rpms) pins the upstream release in its CPE; compare that.
+        version, target_sw = cpe_applicability(pkg)
+        local_vulns.extend(cpe_lookup_package(conn, identity[1], version or pkg.version, vendor=identity[0], target_sw=target_sw))
         return
     if not config.ENABLE_CPE_MATCH or db_hit:
         return

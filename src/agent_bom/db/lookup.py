@@ -215,7 +215,7 @@ def lookup_package(
 
 
 def cpe_lookup_package(
-    conn: sqlite3.Connection, name: str, version: str, *, vendor: Optional[str] = None, limit: int = 500
+    conn: sqlite3.Connection, name: str, version: str, *, vendor: Optional[str] = None, limit: int = 500, target_sw: Optional[str] = None
 ) -> list[LocalVuln]:
     """Long-tail CPE-candidate matches for a component, hydrated from ``vulns``.
 
@@ -227,7 +227,7 @@ def cpe_lookup_package(
     """
     from agent_bom.cpe_match import MATCH_CONFIDENCE_NVD_CPE_CANDIDATE, match_component_cpe
 
-    matches = match_component_cpe(conn, name, version, vendor=vendor, limit=limit)
+    matches = match_component_cpe(conn, name, version, vendor=vendor, limit=limit, target_sw=target_sw)
     if not matches:
         return []
     cve_ids = [m["cve_id"] for m in matches]

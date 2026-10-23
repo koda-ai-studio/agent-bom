@@ -1,0 +1,145 @@
+{
+ "document": {
+  "category": "csaf_security_advisory",
+  "title": "Security Bulletin: NVIDIA GPU Display Driver - October 2024",
+  "tracking": {
+   "id": "5586"
+  },
+  "notes": [
+   {
+    "category": "legal_disclaimer",
+    "text": "Synthetic test fixture mirroring the NVIDIA CSAF 2.0 product-id layout of bulletin 5586."
+   }
+  ]
+ },
+ "product_tree": {
+  "branches": [
+   {
+    "category": "vendor",
+    "name": "NVIDIA",
+    "branches": [
+     {
+      "category": "architecture",
+      "name": "Linux(R550)",
+      "branches": [
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "windowsr550_tesla_553_24"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "linuxr565_geforce_565_57_01"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "linuxr550_tesla_550_127_05"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "linuxr550_geforce_550_127_05"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "linuxr535_tesla_535_216_01"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "citrix_hypervisor_vmware_vsphere_red_hat_enterprise_linux_kvm_ubuntur550_vgpu_17_virtual_gpu_manager_550_127_06vgpu_17_4"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "windowsr550_tesla_all_driver_versions_prior_to_553_24"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "linuxr565_geforce_all_driver_versions_prior_to_565_57_01"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "linuxr550_tesla_all_driver_versions_prior_to_550_127_05"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Tesla",
+        "product": {
+         "name": "Tesla",
+         "product_id": "linuxr535_tesla_all_driver_versions_prior_to_535_216_01"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "vulnerabilities": [
+  {
+   "cve": "CVE-2024-0126",
+   "notes": [
+    {
+     "category": "description",
+     "text": "NVIDIA GPU Display Driver for Windows and Linux contains a vulnerability which could allow a privileged attacker to escalate permissions."
+    }
+   ],
+   "scores": [
+    {
+     "cvss_v3": {
+      "baseScore": 8.2
+     }
+    }
+   ],
+   "product_status": {
+    "fixed": [
+     "windowsr550_tesla_553_24",
+     "linuxr565_geforce_565_57_01",
+     "linuxr550_tesla_550_127_05",
+     "linuxr550_geforce_550_127_05",
+     "linuxr535_tesla_535_216_01",
+     "citrix_hypervisor_vmware_vsphere_red_hat_enterprise_linux_kvm_ubuntur550_vgpu_17_virtual_gpu_manager_550_127_06vgpu_17_4"
+    ],
+    "known_affected": [
+     "windowsr550_tesla_all_driver_versions_prior_to_553_24",
+     "linuxr565_geforce_all_driver_versions_prior_to_565_57_01",
+     "linuxr550_tesla_all_driver_versions_prior_to_550_127_05",
+     "linuxr535_tesla_all_driver_versions_prior_to_535_216_01"
+    ]
+   }
+  }
+ ]
+}
