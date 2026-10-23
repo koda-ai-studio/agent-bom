@@ -18,7 +18,8 @@
 
 For AppSec and platform engineers responsible for AI agents and MCP servers:
 scan a repository, correlate its findings with agent and infrastructure context,
-and prioritize fixes using blast radius and reachability evidence.
+and prioritize fixes using blast radius and reachability evidence. Explain what
+is affected, what the evidence supports, and which action needs review.
 **Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.** Local scans need no account.
 
 <p align="center">
@@ -83,6 +84,9 @@ receipt is open.
 *Real parsers, modeled infrastructure; a graph path does not prove exploitation.*
 
 [Explore context, correlation and reachability](docs/GALLERY.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md) · [Reproduce these screenshots](docs/GALLERY.md#reproduce-the-readme-screenshots)
+
+Explain a finding to your team: [create an impact brief](docs/operations/IMPACT_BRIEF.md)
+with affected assets, source receipts, evidence gaps and the next action to review.
 
 <details>
 <summary>Repository and cloud investigations</summary>
