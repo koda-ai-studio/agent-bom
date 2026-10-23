@@ -1115,6 +1115,8 @@ export interface GraphEstateHighlightNode {
   source_label?: string;
   target_label?: string;
   relationship?: string;
+  /** Vendor the changed node (or a relationship's target) recorded; absent when none was recorded. */
+  vendor?: string;
 }
 
 /** A stored attack path present on one side of the comparison only. */
@@ -1127,6 +1129,8 @@ export interface GraphEstatePathChange {
   hops: string[];
   composite_risk: number;
   summary: string;
+  /** Vendor the path's target (else source) recorded; absent when none was recorded. */
+  vendor?: string;
 }
 
 export interface GraphChangeAttribution {
@@ -1148,6 +1152,8 @@ export interface GraphEstateHighlights {
 export interface GraphEstateChangeSource {
   scope_id: string;
   label: string;
+  /** `default_scan_request`: the label is only the unnamed-request fallback, not a vendor source. */
+  label_basis?: "default_scan_request" | "scan_target";
   old: GraphEstateSnapshotRef;
   new: GraphEstateSnapshotRef;
   /** The scope's own earlier scan, or the store's declared earlier snapshot for a scope scanned once. */

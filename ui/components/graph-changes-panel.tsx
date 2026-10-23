@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Drawer } from "@/components/drawer";
-import { GraphChangeAttribution } from "@/components/graph-change-attribution";
+import { GraphChangeAttribution, changeSourceHeading } from "@/components/graph-change-attribution";
 import { GraphChangeExposures } from "@/components/graph-change-exposures";
 import { GraphChangeIssueBasis } from "@/components/graph-change-issue-basis";
 import type { GraphEstateChangesResponse } from "@/lib/api-types";
@@ -123,7 +123,7 @@ export function GraphChangesPanel({
               return (
                 <li key={source.scope_id} data-testid="graph-changes-source" aria-current={selected || undefined} className="space-y-1 px-3 py-2 aria-[current]:bg-surface-elevated">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="min-w-0 break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]">{source.label}</p>
+                    <p className="min-w-0 break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]" title={`Scan request: ${source.label}`}>{changeSourceHeading(source)}</p>
                     {source.total_changes > 0 && (
                       <button type="button" onClick={() => onOpenDiff(pair, source.label)} aria-label={`Open diff for ${source.label}`}
                         className="shrink-0 text-xs text-foreground underline underline-offset-4">
