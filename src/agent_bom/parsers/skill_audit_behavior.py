@@ -145,12 +145,12 @@ _BEHAVIORAL_PATTERNS: list[_BehavioralPattern] = [
             | override \s+ (?:the \s+)? system \s+ prompt
             | reveal \s+ (?:the \s+)? system \s+ prompt
             | bypass \s+ (?:the \s+)? guardrails?
-            | developer \s+ mode
-            | jailbreak
+            | (?:(?:now|are)\s+in|enter|switch\s+to|activate)\s+developer\s+mode|developer\s+mode\s+(?:enabled|activated|on)\b
             | do \s+ not \s+ mention \s+ (?:the \s+)? policy
             """,
             re.VERBOSE | re.IGNORECASE,
         ),
+        weak_pattern=re.compile(r"\bdeveloper\s+mode\b|\bjailbreak", re.IGNORECASE),
         description=(
             "Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions."
         ),
