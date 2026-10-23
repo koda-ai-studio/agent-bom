@@ -41,6 +41,7 @@ from typing import Any
 
 from agent_bom.coverage import record_scan_input_warning
 from agent_bom.models import Package
+from agent_bom.parsers.gpu_stack import finalize_gpu_stack
 from agent_bom.parsers.image_runtimes import finalize_image_runtimes, seed_image_runtimes
 from agent_bom.parsers.oci_extractors import _LAYER_PACKAGE_STAGES
 from agent_bom.parsers.oci_io import (
@@ -302,7 +303,7 @@ def _parse_layers_from_tarball(
             )
             continue
 
-    packages = finalize_image_runtimes(_drop_whiteout_deleted_packages(packages, whiteouts_by_index))
+    packages = finalize_gpu_stack(finalize_image_runtimes(_drop_whiteout_deleted_packages(packages, whiteouts_by_index)), "image_scan")
 
     _apply_detected_distro(packages, detected_distro_name, detected_distro_version)
 
@@ -566,7 +567,7 @@ def parse_oci_layout_dir(path: Path) -> OCIParseResult:
                 message=f"Failed to read layer blob {layer_hash[:12]}",
             )
 
-    packages = finalize_image_runtimes(_drop_whiteout_deleted_packages(packages, whiteouts_by_index))
+    packages = finalize_gpu_stack(finalize_image_runtimes(_drop_whiteout_deleted_packages(packages, whiteouts_by_index)), "image_scan")
 
     _apply_detected_distro(packages, detected_distro_name, detected_distro_version)
 

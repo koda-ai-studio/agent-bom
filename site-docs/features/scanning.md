@@ -173,8 +173,8 @@ package of the same upstream release is dropped rather than counted twice.
 Runtime components are matched against the local NVD CPE applicability data
 (`agent-bom db update --source nvd`) by exact vendor and product at the
 `nvd_cpe_candidate` tier. Image tarballs passed to `agent-bom fs` get the same
-detection; plain directory and VM-mount scans have no image config, so these
-runtimes are not inventoried from them.
+detection. Plain directory and VM-mount scans read the same runtimes from
+installed files instead; see [Hosts, VM snapshots and the GPU stack](#hosts-vm-snapshots-and-the-gpu-stack).
 
 ## Operator (emergency) advisories
 
@@ -212,6 +212,40 @@ cannot be ordered, the run is `incomplete` and the cursor does not move. This
 replica's last run is in `GET /v1/system/health` under `advisory_rematch`; the
 tenant's cursor, last run and recent findings are in
 `GET /v1/intel/operator-advisories` under `rematch`.
+
+## Hosts, VM snapshots and the GPU stack
+
+```bash
+agent-bom fs /mnt/vm-snapshot -f json -o host-findings.json
+```
+
+`agent-bom fs` (and agentless VM side-scans of a mounted snapshot) also
+inventories components that no distro package database records. Versions are
+read from files only; no binary on the scanned root is executed, symlinked
+paths are not followed, and every read stops at a fixed byte limit.
+
+| Component | Read from | CPE identity |
+|---|---|---|
+| NVIDIA GPU driver | `/proc/driver/nvidia/version` (loaded module), else `libcuda.so.<version>` | `nvidia:gpu_display_driver` (`target_sw=linux`) |
+| CUDA toolkit | `/usr/local/cuda*/version.json` or `version.txt` | `nvidia:cuda_toolkit` |
+| NVIDIA Container Toolkit | `nvidia-container-toolkit` / `libnvidia-container` packages, else `libnvidia-container.so.<version>` | `nvidia:nvidia_container_toolkit` |
+| PHP, CPython, Node.js, Go, Ruby, JDK built into `/usr/local` or `/opt` | installed headers, `rbconfig.rb`, `go/VERSION`, JDK `release`; PHP and Node binary version strings | `php:php`, `python:python`, `nodejs:node.js`, `golang:go`, `ruby-lang:ruby`, `oracle:openjdk` |
+
+Image scans apply the same GPU rules to each layer, excluding
+`/proc` and `/usr/local/cuda*/compat` forward-compatibility libraries.
+
+When a distro package already records the same release (for example
+`nvidia-driver-550` or `nvidia-container-toolkit`), that package carries the CPE
+and no second component is added. A loaded kernel module whose version differs
+from the installed package (pending reboot) is reported as its own component.
+The CPE is exported in JSON, CycloneDX (`cpe`), SPDX 2 (`cpe23Type`) and
+SPDX 3 (`cpe23`) and appears on the package's graph node under the scanned host.
+
+Findings come from NVD CPE ranges in the local database and, online, from
+NVIDIA CSAF bulletins. A CSAF finding is reported only when the bulletin lists
+a Linux fix on the component's own driver branch, for example R550 or R535.
+NVD rows that apply only through a separate platform condition, such as some
+Windows-only CUDA advisories, are not yet distinguished from Linux rows.
 
 ## IaC and cloud posture
 

@@ -15,6 +15,7 @@ from typing import IO
 
 from agent_bom.package_utils import parse_debian_source_name
 from agent_bom.parsers.cpython_runtime import _python_metadata_kind, extract_cpython_runtime
+from agent_bom.parsers.gpu_stack import extract_gpu_stack_layer
 from agent_bom.parsers.image_runtimes import runtime_binary_paths, runtime_spec
 from agent_bom.parsers.oci_io import (
     _decompression_ratio_exceeded,
@@ -504,6 +505,10 @@ def _extract_runtime_binaries(scan: _LayerScan) -> None:
                 scan.add(path, package.name, package.version, package.ecosystem, package.purl)
 
 
+def _extract_gpu_stack(scan: _LayerScan) -> None:
+    extract_gpu_stack_layer(scan, _safe_extractfile)
+
+
 _LAYER_PACKAGE_STAGES: tuple[Callable[[_LayerScan], None], ...] = (
     _extract_python_metadata,
     _extract_node_manifests,
@@ -520,4 +525,5 @@ _LAYER_PACKAGE_STAGES: tuple[Callable[[_LayerScan], None], ...] = (
     _extract_cargo_locks,
     _extract_swift_resolved,
     _extract_runtime_binaries,
+    _extract_gpu_stack,
 )
