@@ -100,8 +100,8 @@ export function GraphEntityDrawer({
   }, [data.rollup, enrich, nodeId, scanId, suppliedDetail]);
 
   const layer = useMemo(
-    () => semanticLayerForNodeType(enriched.nodeType),
-    [enriched.nodeType],
+    () => semanticLayerForNodeType(enriched.nodeType, enriched.entityType),
+    [enriched.nodeType, enriched.entityType],
   );
   const nextAction = useMemo(
     () =>

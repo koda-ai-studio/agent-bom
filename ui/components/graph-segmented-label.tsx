@@ -21,16 +21,23 @@ export function labelSegments(text: string): Segment[] {
  * Wrap after `-`, `_` or `/`, or before a non-leading `@` so `@version` stays
  * whole, and balance the lines, so a name never splits mid-word and a short
  * tail ("bucket") is not left alone on line two. An advisory id (CVE, GHSA,
- * PYSEC, …) never wraps: it ellipsizes with the full id as its tooltip.
+ * PYSEC, …) never wraps: it shrinks to the caption width so the whole id
+ * stays readable, and ellipsizes only below that, with the id as its tooltip.
  */
+// Semibold uppercase and digits average under 0.66em per character.
+export function atomicFontSize(part: string): string {
+  return `min(1em, calc(100cqi / ${(part.length * 0.66).toFixed(2)}))`;
+}
+
 export function SegmentedLabel({ text, className = "", style }: { text: string; className?: string; style?: React.CSSProperties }) {
   return (
-    <p className={`break-words [text-wrap:balance] ${className}`} style={style}>
+    <p className={`break-words [container-type:inline-size] [text-wrap:balance] ${className}`} style={style}>
       {labelSegments(text).map(({ part, atomic }, index) => (
         <Fragment key={index}>
           {index > 0 && <wbr />}
           {atomic
-            ? <span title={part} className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap align-bottom">{part}</span>
+            ? <span title={part} data-advisory-id="true" style={{ fontSize: atomicFontSize(part) }}
+                className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap align-bottom">{part}</span>
             : <span>{part}</span>}
         </Fragment>
       ))}

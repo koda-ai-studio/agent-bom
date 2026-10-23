@@ -85,3 +85,58 @@ def test_gcp_probe_requires_non_secret_project_scope() -> None:
 
     assert exc_info.value.code == "invalid_configuration"
     assert "project" not in str(exc_info.value).lower()
+
+
+@pytest.mark.parametrize("denied", [False, True])
+def test_azure_probe_requires_a_bounded_resource_read(monkeypatch: pytest.MonkeyPatch, denied: bool) -> None:
+    calls: list[dict] = []
+    closed: list[bool] = []
+    credential = object()
+
+    class ResourceClient:
+        def __init__(self, supplied_credential, subscription_id):
+            assert supplied_credential is credential
+            assert subscription_id == "test-subscription"
+            self.resource_groups = self
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            closed.append(True)
+
+        def list(self, **kwargs):
+            calls.append(kwargs)
+            if denied:
+                raise type("HttpResponseError", (Exception,), {"status_code": 403})("private-provider-message")
+            yield {"name": "first"}
+            pytest.fail("readiness probe must not enumerate a second item")
+
+    monkeypatch.setattr(
+        "agent_bom.cloud.capability_probe._load_azure_resource_module",
+        lambda: SimpleNamespace(ResourceManagementClient=ResourceClient),
+    )
+    if denied:
+        with pytest.raises(CapabilityProbeError) as caught:
+            probe_read_capability("azure", credential, regions=[], auth_params={"subscription_id": "test-subscription"})
+        assert caught.value.code == "permission_denied"
+        assert "private-provider-message" not in str(caught.value)
+    else:
+        result = probe_read_capability("azure", credential, regions=[], auth_params={"subscription_id": "test-subscription"})
+        assert result.capabilities == ("azure-resource-groups:list",)
+    assert calls == [{"top": 1, "connection_timeout": 10.0, "read_timeout": 10.0}]
+    assert closed == [True]
+
+
+def test_azure_token_alone_does_not_verify_inventory() -> None:
+    # A valid management token without a subscription cannot prove read access.
+    with pytest.raises(CapabilityProbeError) as caught:
+        probe_read_capability("azure", SimpleNamespace(get_token=lambda *_: object()), regions=[], auth_params={})
+    assert caught.value.code == "invalid_configuration"
+
+
+def test_azure_probe_loader_resolves_the_pinned_resource_client() -> None:
+    pytest.importorskip("azure.mgmt.resource.resources")
+    from agent_bom.cloud.capability_probe import _load_azure_resource_module
+
+    assert callable(_load_azure_resource_module().ResourceManagementClient)

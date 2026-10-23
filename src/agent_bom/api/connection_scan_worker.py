@@ -116,12 +116,13 @@ def execute_queued_connection_scan(job: ScanJob) -> dict[str, Any]:
 
     from agent_bom.cloud.capability_probe import scan_verified_capabilities
 
+    verified_capabilities = list(scan_verified_capabilities(record.provider, summary=summary))
     _mark_connection(
         record,
         status=STATUS_ACTIVE,
         status_detail="",
-        capability_probe_status="verified",
-        verified_capabilities=list(scan_verified_capabilities(record.provider)),
+        capability_probe_status="verified" if verified_capabilities else "unavailable",
+        verified_capabilities=verified_capabilities,
         last_scan_at=_now(),
         last_scan_id=job.job_id,
     )

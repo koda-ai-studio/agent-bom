@@ -38,6 +38,62 @@ def _vulnerability_severities(result: Mapping[str, Any]) -> list[str]:
     return severities
 
 
+def _kev_rows(result: Mapping[str, Any]) -> list | None:
+    """Prefer canonical findings, then legacy vulnerability-bearing surfaces."""
+    rows = result.get("findings")
+    if not isinstance(rows, list):
+        packages = result.get("packages")
+        rows = None
+        if isinstance(packages, list):
+            rows = []
+            for package in packages:
+                if not isinstance(package, Mapping):
+                    return None
+                if "vulnerabilities" not in package:
+                    rows = None
+                    break
+                vulnerabilities = package.get("vulnerabilities")
+                if not isinstance(vulnerabilities, list):
+                    return None
+                rows.extend(vulnerabilities)
+        if not rows:
+            fallback = result.get("blast_radius")
+            if not isinstance(fallback, list):
+                fallback = result.get("blast_radii")
+            if isinstance(fallback, list):
+                rows = fallback
+    return rows if isinstance(rows, list) else None
+
+
+def _kev_issue_count(result: Mapping[str, Any]) -> int | None:
+    """Count active issue occurrences, preferring the canonical finding stream.
+
+    Repeated finding IDs count once; the same CVE on distinct assets remains
+    distinct. Legacy rows without a boolean KEV observation are unmeasured,
+    never an inferred zero. Suppressed issues do not enter the active count.
+    """
+    rows = _kev_rows(result)
+    canonical = isinstance(result.get("findings"), list)
+    if not isinstance(rows, list):
+        return None
+    seen: set[str] = set()
+    count = 0
+    for row in rows:
+        if not isinstance(row, Mapping):
+            return None
+        if row.get("suppressed") is True or row.get("vex_suppressed") is True:
+            continue
+        flag = row.get("is_kev", row.get("cisa_kev"))
+        if not isinstance(flag, bool):
+            return None
+        identity = str(row.get("canonical_id") or row.get("id") or "") if canonical else ""
+        if flag and (not identity or identity not in seen):
+            count += 1
+            if identity:
+                seen.add(identity)
+    return count
+
+
 def trend_point_from_scan_result(
     result: Mapping[str, Any],
     *,
@@ -92,6 +148,7 @@ def trend_point_from_scan_result(
     return TrendPoint(
         timestamp=timestamp,
         total_vulns=len(severities),
+        kev_count=_kev_issue_count(result),
         critical=counts["critical"],
         high=counts["high"],
         medium=counts["medium"],

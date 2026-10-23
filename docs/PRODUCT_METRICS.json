@@ -1,5 +1,5 @@
 {
-  "generated_on": "2026-10-22",
+  "generated_on": "2026-10-23",
   "version": "0.110.0",
   "metrics": [
     {
@@ -46,7 +46,7 @@
     },
     {
       "name": "Python modules",
-      "value": 1790,
+      "value": 1792,
       "source": "src/agent_bom",
       "notes": "Counts all Python files recursively."
     },

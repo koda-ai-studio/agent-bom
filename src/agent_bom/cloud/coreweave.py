@@ -22,8 +22,10 @@ from urllib.parse import quote
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, TransportType
+from agent_bom.security import sanitize_error
 
 from .base import CloudDiscoveryError
+from .k8s_errors import kubectl_failure_code
 from .k8s_gpu_common import build_training_agent, container_image_packages, iter_gpu_containers, iter_infiniband_pods
 from .normalization import build_cloud_origin
 
@@ -33,7 +35,7 @@ logger = logging.getLogger(__name__)
 _NIM_IMAGE_PREFIX = "nvcr.io/nim/"
 
 # Kubernetes CRD fully-qualified names
-_CRD_VIRTUALSERVER = "virtualservers.virtualserver.coreweave.com"
+_CRD_VIRTUALSERVER = "virtualservers.virtualservers.coreweave.com"
 _CRD_INFERENCESERVICE = "inferenceservices.serving.kserve.io"
 
 
@@ -56,8 +58,7 @@ def _kubectl(
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
     if result.returncode != 0:
-        stderr = result.stderr.strip()[:200]
-        raise CloudDiscoveryError(f"kubectl failed: {stderr}")
+        raise CloudDiscoveryError(f"kubectl: {kubectl_failure_code(result.stderr)}")
 
     return json.loads(result.stdout)
 
@@ -100,11 +101,11 @@ def discover(
             agents.extend(stage_agents)
             warnings.extend(stage_warns)
         except CloudDiscoveryError as exc:
-            warnings.append(f"CoreWeave {label} discovery: {exc}")
+            warnings.append(f"CoreWeave {label} discovery: {sanitize_error(exc)}")
         except subprocess.TimeoutExpired:
             warnings.append(f"kubectl timed out during {label} discovery")
         except Exception as exc:
-            warnings.append(f"CoreWeave {label} error: {exc}")
+            warnings.append(f"CoreWeave {label} error: {sanitize_error(exc, generic=True)}")
 
     # Per-run discovery envelope (#2083 PR B). CoreWeave reads through kubectl
     # against the user's kubeconfig context; the kube RBAC verbs we exercise
@@ -119,10 +120,9 @@ def discover(
         scan_mode=ScanMode.CLOUD_READ_ONLY,
         discovery_scope=tuple(scope),
         permissions_used=(
-            "kube:virtualservers.virtualization.coreweave.com:list",
+            "kube:virtualservers.virtualservers.coreweave.com:list",
             "kube:inferenceservices.serving.kserve.io:list",
             "kube:pods:list",
-            "kube:jobs.batch:list",
         ),
         redaction_status=RedactionStatus.CENTRAL_SANITIZER_APPLIED,
     )
@@ -158,8 +158,8 @@ def _discover_virtual_servers(
             ["get", _CRD_VIRTUALSERVER, *ns_args],
             context=context,
         )
-    except CloudDiscoveryError:
-        # CRD not installed — not a CoreWeave cluster or no VirtualServers
+    except CloudDiscoveryError as exc:
+        warnings.append(f"CoreWeave VirtualServer coverage unavailable: {sanitize_error(exc)}")
         return agents, warnings
 
     for item in data.get("items", []):
@@ -230,7 +230,8 @@ def _discover_inference_services(
             ["get", _CRD_INFERENCESERVICE, *ns_args],
             context=context,
         )
-    except CloudDiscoveryError:
+    except CloudDiscoveryError as exc:
+        warnings.append(f"CoreWeave InferenceService coverage unavailable: {sanitize_error(exc)}")
         return agents, warnings
 
     for item in data.get("items", []):

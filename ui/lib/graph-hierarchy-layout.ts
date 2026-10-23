@@ -2,6 +2,7 @@ import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { applyDagreLayout, countStraightCrossings, reduceRankCrossings, type LayoutOptions } from "@/lib/dagre-layout";
+import { GRAPH_EDGE_KIND_META, type GraphEdgeKindKey } from "@/lib/graph-schema.generated";
 
 const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
 
@@ -98,12 +99,17 @@ function sourceRanks(nodes: Node[], edges: Edge[]): Map<string, number> | null {
 export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge[], options: LayoutOptions = {}) {
   const byId = new Map(nodes.map(node => [node.id, node]));
   const contextEdges = new Set(edges.filter(edge => {
+    if (["hosted_on", "part_of", "belongs_to"].includes(String(edge.data?.relationship))) return true;
     const source = byId.get(edge.source), target = byId.get(edge.target);
     return source && target && !source.data.rollup && !target.data.rollup
       && source.type !== "clusterPillNode" && target.type !== "clusterPillNode"
       && edge.data?.relationship === "affects" && FINDINGS.has(source.data.nodeType) && !FINDINGS.has(target.data.nodeType);
   }).map(edge => edge.id));
-  const rankedEdges = edges.map(edge => contextEdges.has(edge.id) ? { ...edge, source: edge.target, target: edge.source } : edge)
+  // Correlation records association, never an ancestor or traversal rank.
+  const rankedEdges = edges.filter(edge => {
+    const kind = GRAPH_EDGE_KIND_META[String(edge.data?.relationship) as GraphEdgeKindKey]?.traversal_class;
+    return kind !== "correlation" && kind !== "derived";
+  }).map(edge => contextEdges.has(edge.id) ? { ...edge, source: edge.target, target: edge.source } : edge)
     .sort((a,b) => a.id.localeCompare(b.id));
   // At overview zoom the native glyph and text grow independently of the
   // camera. Reserve their full three-line caption plus finding footer so

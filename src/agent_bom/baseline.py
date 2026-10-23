@@ -141,6 +141,12 @@ class TrendPoint:
     tenant_id: str = "default"
     scan_id: str | None = None
     comparison_metadata: dict = field(default_factory=dict)
+    # Active KEV issue occurrences; None means this snapshot did not measure KEV.
+    kev_count: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.kev_count is not None and (type(self.kev_count) is not int or self.kev_count < 0):
+            raise ValueError("kev_count must be a non-negative integer or None")
 
     @property
     def idempotency_key(self) -> str:
@@ -152,6 +158,7 @@ class TrendPoint:
             "scan_id": self.scan_id,
             "timestamp": self.timestamp,
             "total_vulns": self.total_vulns,
+            "kev_count": self.kev_count,
             "critical": self.critical,
             "high": self.high,
             "medium": self.medium,
@@ -243,6 +250,8 @@ class SQLiteTrendStore:
         cols = {row[1] for row in self._conn.execute("PRAGMA table_info(trend_history)").fetchall()}
         if "tenant_id" not in cols:
             self._conn.execute("ALTER TABLE trend_history ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'")
+        if "kev_count" not in cols:
+            self._conn.execute("ALTER TABLE trend_history ADD COLUMN kev_count INTEGER CHECK (kev_count >= 0)")
         if "comparison_metadata" not in cols:
             self._conn.execute("ALTER TABLE trend_history ADD COLUMN comparison_metadata TEXT NOT NULL DEFAULT '{}'")
         if "scan_id" not in cols:
@@ -257,19 +266,20 @@ class SQLiteTrendStore:
         )
         from agent_bom.api.storage_schema import ensure_sqlite_schema_version
 
-        ensure_sqlite_schema_version(self._conn, "trend_history", version=2)
+        ensure_sqlite_schema_version(self._conn, "trend_history", version=3)
         self._conn.commit()
 
     def record(self, point: TrendPoint) -> None:
         self._conn.execute(
             "INSERT INTO trend_history "
-            "(timestamp, tenant_id, total_vulns, critical, high, medium, low, posture_score, posture_grade, scan_id, comparison_metadata) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "(timestamp, tenant_id, total_vulns, critical, high, medium, low, "
+            "posture_score, posture_grade, scan_id, comparison_metadata, kev_count) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT (tenant_id, scan_id) WHERE scan_id IS NOT NULL DO UPDATE SET "
             "timestamp = excluded.timestamp, total_vulns = excluded.total_vulns, critical = excluded.critical, "
             "high = excluded.high, medium = excluded.medium, low = excluded.low, "
             "posture_score = excluded.posture_score, posture_grade = excluded.posture_grade, "
-            "comparison_metadata = excluded.comparison_metadata",
+            "comparison_metadata = excluded.comparison_metadata, kev_count = excluded.kev_count",
             (
                 point.timestamp,
                 point.tenant_id,
@@ -282,6 +292,7 @@ class SQLiteTrendStore:
                 point.posture_grade,
                 point.scan_id,
                 json.dumps(point.comparison_metadata),
+                point.kev_count,
             ),
         )
         self._conn.commit()
@@ -293,7 +304,7 @@ class SQLiteTrendStore:
                 "posture_score, posture_grade, tenant_id, scan_id, "
                 "CASE WHEN SUM(LENGTH(CAST(comparison_metadata AS BLOB))) OVER "
                 "(ORDER BY timestamp DESC, id DESC ROWS UNBOUNDED PRECEDING) <= 16777216 "
-                "THEN comparison_metadata ELSE '{\"history_processing_limit\":true}' END "
+                "THEN comparison_metadata ELSE '{\"history_processing_limit\":true}' END, kev_count "
                 "FROM trend_history ORDER BY timestamp DESC LIMIT ?",
                 (limit,),
             ).fetchall()
@@ -303,7 +314,7 @@ class SQLiteTrendStore:
                 "posture_score, posture_grade, tenant_id, scan_id, "
                 "CASE WHEN SUM(LENGTH(CAST(comparison_metadata AS BLOB))) OVER "
                 "(ORDER BY timestamp DESC, id DESC ROWS UNBOUNDED PRECEDING) <= 16777216 "
-                "THEN comparison_metadata ELSE '{\"history_processing_limit\":true}' END "
+                "THEN comparison_metadata ELSE '{\"history_processing_limit\":true}' END, kev_count "
                 "FROM trend_history WHERE tenant_id = ? ORDER BY timestamp DESC LIMIT ?",
                 (tenant_id, limit),
             ).fetchall()
@@ -320,6 +331,7 @@ class SQLiteTrendStore:
                 tenant_id=r[8] if len(r) > 8 else "default",
                 scan_id=r[9] if len(r) > 9 else None,
                 comparison_metadata=json.loads(r[10]) if len(r) > 10 else {},
+                kev_count=r[11] if len(r) > 11 else None,
             )
             for r in rows
         ]

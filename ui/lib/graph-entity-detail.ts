@@ -6,30 +6,13 @@
 import { nodeRiskAssessment } from "@/lib/node-risk-assessment";
 import type { LineageNodeData, LineageNodeType } from "@/components/lineage-nodes";
 import type { GraphNodeDetailResponse } from "@/lib/api-types";
-import { GRAPH_NODE_KIND_META } from "@/lib/graph-schema";
-import { LINEAGE_NODE_GRAPH_KIND } from "@/lib/graph-utils";
+import { GRAPH_SEMANTIC_LAYER_META } from "@/lib/graph-schema.generated";
+import { graphMetadataForNode } from "@/lib/graph-entity-mapping";
 
-const SEMANTIC_LAYER_LABELS: Record<string, string> = {
-  user: "User / application",
-  identity: "Identity",
-  orchestration: "Orchestration",
-  mcp_server: "MCP / runtime",
-  tool: "MCP / tool",
-  package: "Package / supply chain",
-  asset: "Model / data asset",
-  infra: "Infrastructure",
-  finding: "Finding / governance",
-  gateway: "Gateway / runtime boundary",
-};
-
-export function semanticLayerForNodeType(nodeType: LineageNodeType): {
-  key: string;
-  label: string;
-} {
-  const kind = LINEAGE_NODE_GRAPH_KIND[nodeType];
-  const meta = kind ? GRAPH_NODE_KIND_META[kind] : null;
-  const key = meta?.layer ?? "asset";
-  return { key, label: SEMANTIC_LAYER_LABELS[key] ?? key.replaceAll("_", " ") };
+export function semanticLayerForNodeType(nodeType: LineageNodeType, entityType?: string): { key: string; label: string } {
+  const meta = graphMetadataForNode({ nodeType, entityType });
+  return meta ? { key: meta.layer, label: GRAPH_SEMANTIC_LAYER_META[meta.layer].label }
+    : { key: "unknown", label: "Unknown" };
 }
 
 export function nodeIdFromLineageData(data: LineageNodeData): string | null {

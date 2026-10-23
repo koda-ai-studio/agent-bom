@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { SegmentedLabel } from "@/components/graph-segmented-label";
+import { SegmentedLabel, atomicFontSize } from "@/components/graph-segmented-label";
 
 function segments(text: string): string[] {
   const { container } = render(<SegmentedLabel text={text} />);
@@ -44,5 +44,14 @@ describe("SegmentedLabel", () => {
   it("leaves ordinary segments without a no-wrap class", () => {
     const { container } = render(<SegmentedLabel text="form-data" />);
     for (const span of Array.from(container.querySelectorAll("p > span"))) expect(span.className).not.toContain("whitespace-nowrap");
+  });
+
+  it("sizes an advisory id to the caption width instead of clipping it", () => {
+    const { container } = render(<SegmentedLabel text="CVE-2023-4863" />);
+    const id = container.querySelector("[data-advisory-id]") as HTMLElement;
+    expect(id.textContent).toBe("CVE-2023-4863");
+    expect(atomicFontSize("CVE-2023-4863")).toBe("min(1em, calc(100cqi / 8.58))");
+    expect(id.style.fontSize).toContain("cqi");
+    expect(container.querySelector("p")!.className).toContain("[container-type:inline-size]");
   });
 });

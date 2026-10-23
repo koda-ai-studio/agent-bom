@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from types import ModuleType
 from typing import Any
 
+from .scan_receipts import scan_verified_capabilities as scan_verified_capabilities
+
 _PROVIDER_CALL_TIMEOUT_SECONDS = 10.0
 
 PROBE_NOT_RUN = "not_run"
@@ -52,12 +54,24 @@ def _load_vertex_module() -> ModuleType:
     return aiplatform_v1
 
 
+def _load_azure_resource_module() -> ModuleType:
+    # azure-mgmt-resource 26.x dropped the top-level client re-export.
+    from azure.mgmt.resource import resources
+
+    return resources
+
+
 def classify_probe_failure(exc: BaseException) -> str:
     """Map SDK/network failures to a stable code without inspecting messages."""
     if isinstance(exc, CapabilityProbeError):
         return exc.code
     if isinstance(exc, TimeoutError):
         return PROBE_TIMEOUT
+    status_code = getattr(exc, "status_code", None)
+    if status_code == 401:
+        return PROBE_INVALID_CREDENTIALS
+    if status_code == 403:
+        return PROBE_PERMISSION_DENIED
 
     name = type(exc).__name__.lower()
     if any(token in name for token in ("timeout", "deadlineexceeded")):
@@ -72,16 +86,6 @@ def classify_probe_failure(exc: BaseException) -> str:
 def probe_failure_detail(code: str) -> str:
     """Return fixed operator guidance for a public probe code."""
     return _FAILURE_DETAILS.get(code, _FAILURE_DETAILS[PROBE_UNAVAILABLE])
-
-
-def scan_verified_capabilities(provider: str) -> tuple[str, ...]:
-    """Capabilities necessarily exercised by a successful full provider scan."""
-    return {
-        "aws": ("bedrock:list-agents", "aws:inventory", "aws:cis-read"),
-        "gcp": ("vertex-ai:list-endpoints", "gcp:inventory", "gcp:cis-read"),
-        "azure": ("azure:inventory", "azure:cis-read"),
-        "snowflake": ("snowflake:inventory",),
-    }.get(provider, ("cloud:inventory",))
 
 
 def _probe_aws(brokered: object) -> CapabilityProbeResult:
@@ -111,9 +115,18 @@ def _probe_gcp(
     return CapabilityProbeResult(("vertex-ai:list-endpoints",))
 
 
-def _probe_azure(brokered: object) -> CapabilityProbeResult:
-    brokered.get_token("https://management.azure.com/.default")  # type: ignore[attr-defined]
-    return CapabilityProbeResult(("azure-management:token",))
+def _probe_azure(brokered: object, *, auth_params: dict[str, Any]) -> CapabilityProbeResult:
+    subscription_id = str(auth_params.get("subscription_id") or "").strip()
+    if not subscription_id:
+        raise CapabilityProbeError(PROBE_INVALID_CONFIGURATION)
+    with _load_azure_resource_module().ResourceManagementClient(brokered, subscription_id) as client:
+        groups = client.resource_groups.list(
+            top=1,
+            connection_timeout=_PROVIDER_CALL_TIMEOUT_SECONDS,
+            read_timeout=_PROVIDER_CALL_TIMEOUT_SECONDS,
+        )
+        next(iter(groups), None)
+    return CapabilityProbeResult(("azure-resource-groups:list",))
 
 
 def _probe_snowflake(brokered: object) -> CapabilityProbeResult:
@@ -143,7 +156,7 @@ def probe_read_capability(
         if provider == "gcp":
             return _probe_gcp(brokered, regions=regions, auth_params=auth_params)
         if provider == "azure":
-            return _probe_azure(brokered)
+            return _probe_azure(brokered, auth_params=auth_params)
         if provider == "snowflake":
             return _probe_snowflake(brokered)
         if provider == "databricks":

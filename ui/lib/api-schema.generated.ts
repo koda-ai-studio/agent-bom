@@ -24403,6 +24403,8 @@ export interface components {
             /** High */
             high: number;
             issues?: components["schemas"]["IssueCounts"] | null;
+            /** Kev Count */
+            kev_count?: number | null;
             /** Low */
             low: number;
             /** Measurement Version */

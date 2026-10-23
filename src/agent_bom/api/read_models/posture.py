@@ -405,6 +405,8 @@ class TrendPoint(ReadModel):
     medium: int
     low: int
     total_vulns: int
+    # Active KEV issue occurrences; null when the snapshot did not measure KEV.
+    kev_count: int | None = None
     posture_grade: str
     posture_score: Num
     age_sample_count: int
