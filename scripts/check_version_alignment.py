@@ -90,6 +90,23 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         re.compile(r"(agentbom/agent-bom(?:-[a-z]+)?:(?:\$\{[A-Z_]+:-)?)(\d+\.\d+\.\d+)"),
         "image",
     ),
+    # OpenClaw skills (republished to ClawHub every release) pull this image.
+    ManagedPattern(
+        "GHCR image pin",
+        re.compile(r"(ghcr\.io/(?:koda-ai-studio|msaad00)/agent-bom(?:-[a-z]+)?:)(\d+\.\d+\.\d+)"),
+        "image",
+    ),
+    # A pip install of a release; uvx `--from` pins have their own patterns.
+    ManagedPattern(
+        "PyPI install pin",
+        re.compile(r"""(?<!--from )(?<!--from ')(?<!"--from", ")(\bagent-bom(?:\[[a-z,]+\])?==)(\d+\.\d+\.\d+)"""),
+        "published",
+    ),
+    ManagedPattern(
+        "first-run expected version",
+        re.compile(r"(--expected-version )(\d+\.\d+\.\d+)"),
+        "published",
+    ),
     ManagedPattern(
         "GitHub Action ref",
         re.compile(r"((?:msaad00|koda-ai-studio)/agent-bom@v)(\d+\.\d+\.\d+)"),

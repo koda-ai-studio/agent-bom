@@ -475,3 +475,43 @@ def test_scan_text_flags_a_stale_guard_plugin_version() -> None:
         )
         == []
     )
+
+
+def test_ghcr_image_pins_in_openclaw_skills_track_published() -> None:
+    cva = _load_script("check_version_alignment.py")
+    text = "    docker: ghcr.io/koda-ai-studio/agent-bom:0.109.0\n"
+    drift = cva.scan_text("integrations/openclaw/scan/SKILL.md", text, "0.111.0", published="0.110.0")
+    assert len(drift) == 1 and "expected 0.110.0" in drift[0], drift
+    assert cva.scan_text("integrations/openclaw/scan/SKILL.md", text.replace("0.109.0", "0.110.0"), "0.111.0", published="0.110.0") == []
+
+
+def test_first_run_install_and_expected_version_track_published() -> None:
+    cva = _load_script("check_version_alignment.py")
+    text = (
+        "python -m pip install 'agent-bom[ui]==0.108.4' 'playwright==1.63.0'\n"
+        "python scripts/verify_first_run.py \\\n  --expected-version 0.108.4 --output /tmp/evidence\n"
+    )
+    drift = cva.scan_text("docs/operations/FIRST_RUN_VERIFICATION.md", text, "0.111.0", published="0.110.0")
+    assert len(drift) == 2, drift
+    assert all("expected 0.110.0" in line for line in drift)
+
+
+def test_uvx_pins_are_not_double_reported_by_the_install_pin() -> None:
+    cva = _load_script("check_version_alignment.py")
+    text = 'uvx --from \'agent-bom==0.109.0\' agent-bom mcp server\n"--from", "agent-bom==0.109.0"\n'
+    assert len(cva.scan_text("docs/example.md", text, "0.111.0", published="0.110.0")) == 2
+
+
+def test_published_bump_rewrites_openclaw_and_first_run_pins(tmp_path, monkeypatch) -> None:
+    cva = _load_script("check_version_alignment.py")
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("docker: ghcr.io/koda-ai-studio/agent-bom:0.109.0\n")
+    guide = tmp_path / "FIRST_RUN.md"
+    guide.write_text("pip install 'agent-bom[ui]==0.108.4'\n--expected-version 0.108.4\n")
+    monkeypatch.setattr(cva, "SCAN_ROOTS", (skill, guide))
+    monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
+    monkeypatch.setattr(cva, "ROOT", tmp_path)
+    count, _changed = cva.rewrite("0.111.0", published="0.110.0")
+    assert count == 3
+    assert skill.read_text() == "docker: ghcr.io/koda-ai-studio/agent-bom:0.110.0\n"
+    assert guide.read_text() == "pip install 'agent-bom[ui]==0.110.0'\n--expected-version 0.110.0\n"
