@@ -439,6 +439,36 @@ components:
       - channel
       title: AdoptionEventRequest
       type: object
+    AdvisoryRematchHealth:
+      description: This replica's last advisory re-match run; tenant-free by construction.
+      properties:
+        enabled:
+          default: false
+          title: Enabled
+          type: boolean
+        incomplete_tenants:
+          default: 0
+          title: Incomplete Tenants
+          type: integer
+        last_run_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Run At
+        last_run_status:
+          default: never
+          title: Last Run Status
+          type: string
+        new_findings:
+          default: 0
+          title: New Findings
+          type: integer
+        tenants_examined:
+          default: 0
+          title: Tenants Examined
+          type: integer
+      title: AdvisoryRematchHealth
+      type: object
     AffectedProduct:
       additionalProperties: false
       properties:
@@ -29096,6 +29126,8 @@ components:
       type: object
     SystemHealthResponse:
       properties:
+        advisory_rematch:
+          $ref: '#/components/schemas/AdvisoryRematchHealth'
         analytics:
           $ref: '#/components/schemas/AnalyticsHealth'
         auth_configured:

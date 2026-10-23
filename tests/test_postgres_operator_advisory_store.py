@@ -25,7 +25,9 @@ def test_postgres_deployment_selects_postgres_store(monkeypatch: pytest.MonkeyPa
     monkeypatch.delenv("AGENT_BOM_POSTGRES_URL", raising=False)
     monkeypatch.setenv(variable, "postgresql://fixture.invalid/advisories")
     monkeypatch.setattr(stores, "_operator_advisory_store", None)
-    monkeypatch.setattr("agent_bom.api.postgres_common._get_pool", lambda: (_ for _ in ()).throw(RuntimeError("selected Postgres")))
+    selected = lambda: (_ for _ in ()).throw(RuntimeError("selected Postgres"))  # noqa: E731
+    monkeypatch.setattr("agent_bom.api.postgres_common._get_pool", selected)
+    monkeypatch.setattr("agent_bom.api.postgres_operator_advisory._get_pool", selected)
     with pytest.raises(RuntimeError, match="selected Postgres"):
         stores._get_operator_advisory_store()
 
