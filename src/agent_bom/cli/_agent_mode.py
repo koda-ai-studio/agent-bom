@@ -61,14 +61,24 @@ def agent_mode_requested(argv: list[str] | None = None) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+# One definition per count. Vulnerabilities are unique advisories; exposures are
+# the (advisory x package x server) rows behind them; findings are every
+# unified finding type (CVE, credential, prompt, config ...), so the three
+# totals differ by design and each histogram sums to its own total.
+COUNT_DEFINITIONS: dict[str, str] = {
+    "vulnerabilities": "Unique vulnerability advisories matched (summary.total_vulnerabilities).",
+    "vulnerability_exposures": "Vulnerability exposure rows: one per advisory x affected package x server (blast_radius).",
+    "vulnerability_exposures_by_severity": "vulnerability_exposures by advisory severity label; sums to vulnerability_exposures.",
+    "severity_counts": "Deprecated alias of vulnerability_exposures_by_severity.",
+    "exposure_by_severity": "Deprecated alias of vulnerability_exposures_by_severity.",
+    "findings": "Unified findings of every type (CVE, credential, prompt, configuration, ...), one per finding x asset.",
+    "findings_by_severity": "findings by effective severity (after context adjustments); sums to findings.",
+}
+
+
 def _severity_counts(report_json: dict[str, Any]) -> dict[str, int]:
-    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "unknown": 0}
-    for item in report_json.get("blast_radius", []) or []:
-        if not isinstance(item, dict):
-            continue
-        severity = str(item.get("severity") or "unknown").lower()
-        counts[severity if severity in counts else "unknown"] += 1
-    return counts
+    blast_radius = report_json.get("blast_radius")
+    return _severity_breakdown(blast_radius if isinstance(blast_radius, list) else [], "severity_label", "severity")
 
 
 def _summary(report_json: dict[str, Any]) -> dict[str, Any]:
@@ -116,7 +126,9 @@ def _summary(report_json: dict[str, Any]) -> dict[str, Any]:
         )
         or (len(inv_packages) if isinstance(inv_packages, list) else inv_packages),
         "vulnerabilities": summary.get("total_vulnerabilities", len(blast_radius)),
+        "vulnerability_exposures": len(blast_radius),
         "findings": len(findings),
+        "vulnerability_exposures_by_severity": _severity_counts(report_json),
         "severity_counts": _severity_counts(report_json),
         "posture_grade": report_json.get("posture_grade") or scorecard.get("grade"),
     }
@@ -257,7 +269,7 @@ def summarize_scan_data(
     counts = dict(_summary(report_json))
     counts["packages_by_ecosystem"] = _packages_by_ecosystem(report_json)
     counts["findings_by_severity"] = _severity_breakdown(findings, "effective_severity", "severity")
-    counts["exposure_by_severity"] = _severity_breakdown(blast_radius, "severity_label", "severity")
+    counts["exposure_by_severity"] = counts["vulnerability_exposures_by_severity"]
 
     return {
         "schema_version": report_json.get("schema_version"),
@@ -267,6 +279,7 @@ def summarize_scan_data(
         "scan_id": report_json.get("scan_id"),
         "posture_grade": report_json.get("posture_grade") or scorecard.get("grade"),
         "counts": counts,
+        "count_definitions": COUNT_DEFINITIONS,
         "top_findings": [_compact_finding(f) for f in top_findings],
         "top_exposure_paths": [_compact_exposure(b) for b in top_exposure],
         "agents": [_compact_agent(a) for a in agents],
