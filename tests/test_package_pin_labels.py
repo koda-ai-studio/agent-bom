@@ -39,6 +39,7 @@ def test_unresolved_latest_is_neither_pinned_nor_observed():
 def test_mcp_inventory_rows_label_floating_versions(tmp_path, monkeypatch):
     from agent_bom.mcp_tools.runtime import inventory_impl
 
+    monkeypatch.setenv("AGENT_BOM_MCP_WORKSPACE_ROOTS", str(tmp_path))
     (tmp_path / ".mcp.json").write_text(
         json.dumps(
             {
