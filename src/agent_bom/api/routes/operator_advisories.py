@@ -19,7 +19,7 @@ from fastapi import APIRouter, HTTPException, Request
 from agent_bom.api.audit_log import log_action
 from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
-from agent_bom.api.stores import OperatorAdvisoryBackendUnavailableError, _get_operator_advisory_store
+from agent_bom.api.stores import _get_operator_advisory_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.scanners.operator_advisory import OPERATOR_ADVISORY_PROVENANCE, OperatorAdvisory, match_advisories_against_reports
 
@@ -28,10 +28,7 @@ _TAGS: list[str | Any] = ["intel"]
 
 
 def _store() -> Any:
-    try:
-        return _get_operator_advisory_store()
-    except OperatorAdvisoryBackendUnavailableError as exc:
-        raise HTTPException(status_code=503, detail="Operator advisories are not available on this storage backend") from exc
+    return _get_operator_advisory_store()
 
 
 def _current_reports(tenant_id: str) -> list[dict[str, Any]]:
@@ -74,7 +71,10 @@ def declare_operator_advisory(request: Request, body: OperatorAdvisory) -> dict:
 def list_operator_advisories(request: Request) -> dict:
     """List the tenant's operator-declared advisories."""
     tenant_id = require_request_tenant_id(request)
-    return {"advisories": _store().list(tenant_id), "provenance": OPERATOR_ADVISORY_PROVENANCE}
+    store = _store()
+    state = store.get_rematch_state(tenant_id) or {}
+    rematch = {key: state.get(key) for key in ("last_run", "feed_cursor", "operator_cursor", "recent_findings")} if state else None
+    return {"advisories": store.list(tenant_id), "provenance": OPERATOR_ADVISORY_PROVENANCE, "rematch": rematch}
 
 
 @router.get("/intel/operator-advisories/matches", tags=_TAGS)

@@ -1,8 +1,7 @@
-"""Tenant-scoped persistence for operator-declared advisories.
+"""Tenant-scoped persistence for operator-declared advisories and re-match state.
 
-In-memory for tests and SQLite for single-node durability. Postgres-backed
-control planes are refused at store selection (see ``stores``) rather than
-silently falling back to process memory.
+In-memory for tests, SQLite for single-node durability, Postgres with tenant
+RLS for multi-replica control planes (see ``postgres_operator_advisory``).
 """
 
 from __future__ import annotations
@@ -34,11 +33,14 @@ class OperatorAdvisoryStore(Protocol):
     def get(self, tenant_id: str, advisory_id: str) -> dict[str, Any] | None: ...
     def list(self, tenant_id: str) -> list[dict[str, Any]]: ...
     def delete(self, tenant_id: str, advisory_id: str) -> bool: ...
+    def get_rematch_state(self, tenant_id: str) -> dict[str, Any] | None: ...
+    def put_rematch_state(self, tenant_id: str, state: Mapping[str, Any]) -> None: ...
 
 
 class InMemoryOperatorAdvisoryStore:
     def __init__(self) -> None:
         self._rows: dict[tuple[str, str], dict[str, Any]] = {}
+        self._state: dict[str, dict[str, Any]] = {}
         self._lock = threading.Lock()
 
     def put(self, tenant_id: str, advisory: Mapping[str, Any]) -> dict[str, Any]:
@@ -59,6 +61,13 @@ class InMemoryOperatorAdvisoryStore:
         with self._lock:
             return self._rows.pop((_tenant(tenant_id), advisory_id), None) is not None
 
+    def get_rematch_state(self, tenant_id: str) -> dict[str, Any] | None:
+        state = self._state.get(_tenant(tenant_id))
+        return json.loads(json.dumps(state)) if state is not None else None
+
+    def put_rematch_state(self, tenant_id: str, state: Mapping[str, Any]) -> None:
+        self._state[_tenant(tenant_id)] = json.loads(json.dumps(dict(state), default=str))
+
 
 class SQLiteOperatorAdvisoryStore:
     def __init__(self, db_path: str = "agent_bom.db") -> None:
@@ -75,6 +84,10 @@ class SQLiteOperatorAdvisoryStore:
                 PRIMARY KEY (tenant_id, advisory_id)
             )
             """
+        )
+        self._conn.execute(
+            "CREATE TABLE IF NOT EXISTS operator_advisory_rematch_state "
+            "(tenant_id TEXT PRIMARY KEY, updated_at TEXT NOT NULL, data TEXT NOT NULL)"
         )
         self._conn.commit()
 
@@ -113,3 +126,14 @@ class SQLiteOperatorAdvisoryStore:
         )
         self._conn.commit()
         return cursor.rowcount > 0
+
+    def get_rematch_state(self, tenant_id: str) -> dict[str, Any] | None:
+        row = self._conn.execute("SELECT data FROM operator_advisory_rematch_state WHERE tenant_id = ?", (_tenant(tenant_id),)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def put_rematch_state(self, tenant_id: str, state: Mapping[str, Any]) -> None:
+        self._conn.execute(
+            "INSERT OR REPLACE INTO operator_advisory_rematch_state (tenant_id, updated_at, data) VALUES (?, ?, ?)",
+            (_tenant(tenant_id), datetime.now(timezone.utc).isoformat(), json.dumps(dict(state), sort_keys=True, default=str)),
+        )
+        self._conn.commit()

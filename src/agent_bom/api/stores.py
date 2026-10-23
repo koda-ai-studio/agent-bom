@@ -26,6 +26,7 @@ from agent_bom.api.storage.job_cache import (
 from agent_bom.api.storage_schema import postgres_deployment_configured
 from agent_bom.api.tenant_graph_retention_store import _get_tenant_graph_retention_store as _get_tenant_graph_retention_store
 from agent_bom.api.tenant_graph_retention_store import set_tenant_graph_retention_store as set_tenant_graph_retention_store
+from agent_bom.api.tenant_score_config_store import InMemoryTenantScoreConfigStore, SQLiteTenantScoreConfigStore
 from agent_bom.config import API_MAX_IN_MEMORY_JOBS as _MAX_IN_MEMORY_JOBS
 
 if TYPE_CHECKING:
@@ -284,12 +285,8 @@ def _get_tenant_score_config_store() -> TenantScoreConfigStore:
 
                     _tenant_score_config_store = PostgresTenantScoreConfigStore()
                 elif sqlite_path := os.environ.get("AGENT_BOM_DB"):
-                    from agent_bom.api.tenant_score_config_store import SQLiteTenantScoreConfigStore
-
                     _tenant_score_config_store = SQLiteTenantScoreConfigStore(sqlite_path)
                 else:
-                    from agent_bom.api.tenant_score_config_store import InMemoryTenantScoreConfigStore
-
                     _tenant_score_config_store = InMemoryTenantScoreConfigStore()
     return _tenant_score_config_store
 
@@ -298,20 +295,21 @@ def _get_tenant_score_config_store() -> TenantScoreConfigStore:
 _operator_advisory_store: OperatorAdvisoryStore | None = None
 
 
-class OperatorAdvisoryBackendUnavailableError(RuntimeError):
-    """Raised when the configured control-plane backend has no operator advisory store."""
-
-
 def _get_operator_advisory_store() -> OperatorAdvisoryStore:
-    """Get the tenant-scoped operator advisory store; Postgres is refused, never faked in memory."""
+    """Get the tenant-scoped operator advisory store (Postgres, SQLite, or in-memory)."""
     global _operator_advisory_store
     if _operator_advisory_store is None:
         with _store_lock:
             if _operator_advisory_store is None:
-                if postgres_deployment_configured():
-                    raise OperatorAdvisoryBackendUnavailableError("operator advisories are not yet persisted on the Postgres backend")
                 sqlite_path = os.environ.get("AGENT_BOM_DB")
-                _operator_advisory_store = SQLiteOperatorAdvisoryStore(sqlite_path) if sqlite_path else InMemoryOperatorAdvisoryStore()
+                if postgres_deployment_configured():
+                    from agent_bom.api.postgres_operator_advisory import PostgresOperatorAdvisoryStore
+
+                    _operator_advisory_store = PostgresOperatorAdvisoryStore()
+                elif sqlite_path:
+                    _operator_advisory_store = SQLiteOperatorAdvisoryStore(sqlite_path)
+                else:
+                    _operator_advisory_store = InMemoryOperatorAdvisoryStore()
     return _operator_advisory_store
 
 
