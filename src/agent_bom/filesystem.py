@@ -546,27 +546,10 @@ def scan_disk_path_native(root: Path) -> list[Package]:
     packages.extend(rpm_pkgs)
 
     # Node.js global packages
-    for node_pattern in (
-        "usr/lib/node_modules/*/package.json",
-        "usr/local/lib/node_modules/*/package.json",
-    ):
-        for pkg_json_path in root.glob(node_pattern):
-            try:
-                pkg_data = json.loads(pkg_json_path.read_text(errors="replace"))
-                name = pkg_data.get("name", "")
-                version = pkg_data.get("version", "")
-                if name and version:
-                    packages.append(
-                        Package(
-                            name=name,
-                            version=version,
-                            ecosystem="npm",
-                            purl=f"pkg:npm/{name}@{version}",
-                            is_direct=True,
-                        )
-                    )
-            except (json.JSONDecodeError, OSError):
-                continue
+    from agent_bom.parsers import scan_project_directory
+    from agent_bom.parsers.host_runtimes import global_node_packages, unpackaged_host_components
+
+    packages.extend(global_node_packages(root))
 
     # Python site-packages / dist-packages
     for pattern in (
@@ -583,10 +566,11 @@ def scan_disk_path_native(root: Path) -> list[Package]:
             packages.extend(sp_pkgs)
 
     # Lock files (requirements.txt, package.json, go.mod, Cargo.toml, etc.)
-    from agent_bom.parsers import scan_project_directory
-
     for dir_pkgs in scan_project_directory(root, max_depth=5).values():
         packages.extend(dir_pkgs)
+
+    # Source-built runtimes and the NVIDIA GPU stack, from passive file reads
+    packages = unpackaged_host_components(root, packages)
 
     # Deduplicate by (name, version, ecosystem)
     seen: set[tuple[str, str, str]] = set()

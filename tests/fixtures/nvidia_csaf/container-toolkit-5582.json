@@ -1,0 +1,102 @@
+{
+ "document": {
+  "category": "csaf_security_advisory",
+  "title": "Security Bulletin: NVIDIA Container Toolkit - September 2024",
+  "tracking": {
+   "id": "5582"
+  },
+  "notes": [
+   {
+    "category": "legal_disclaimer",
+    "text": "Synthetic test fixture mirroring the NVIDIA CSAF 2.0 product-id layout of bulletin 5582."
+   }
+  ]
+ },
+ "product_tree": {
+  "branches": [
+   {
+    "category": "vendor",
+    "name": "NVIDIA",
+    "branches": [
+     {
+      "category": "product_name",
+      "name": "NVIDIA Container Toolkit",
+      "product": {
+       "name": "NVIDIA Container Toolkit",
+       "product_id": "linux_nvidia_container_toolkit"
+      }
+     },
+     {
+      "category": "architecture",
+      "name": "Linux",
+      "branches": [
+       {
+        "category": "product_version",
+        "name": "NVIDIA Container Toolkit",
+        "product": {
+         "name": "NVIDIA Container Toolkit",
+         "product_id": "linux_nvidia_container_toolkit_all_versions_up_to_and_including_v1_16_1"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "NVIDIA Container Toolkit",
+        "product": {
+         "name": "NVIDIA Container Toolkit",
+         "product_id": "linux_nvidia_container_toolkit_v1_16_2"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "NVIDIA GPU Operator",
+        "product": {
+         "name": "NVIDIA GPU Operator",
+         "product_id": "linux_nvidia_gpu_operator_all_versions_up_to_and_including_24_6_1"
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "NVIDIA GPU Operator",
+        "product": {
+         "name": "NVIDIA GPU Operator",
+         "product_id": "linux_nvidia_gpu_operator_v24_6_2"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "vulnerabilities": [
+  {
+   "cve": "CVE-2024-0132",
+   "notes": [
+    {
+     "category": "description",
+     "text": "NVIDIA Container Toolkit contains a TOCTOU vulnerability when used with default configuration."
+    }
+   ],
+   "scores": [
+    {
+     "cvss_v3": {
+      "baseScore": 9.0
+     }
+    }
+   ],
+   "cwe": {
+    "id": "CWE-367"
+   },
+   "product_status": {
+    "fixed": [
+     "linux_nvidia_container_toolkit_v1_16_2",
+     "linux_nvidia_gpu_operator_v24_6_2"
+    ],
+    "known_affected": [
+     "linux_nvidia_container_toolkit_all_versions_up_to_and_including_v1_16_1",
+     "linux_nvidia_gpu_operator_all_versions_up_to_and_including_24_6_1"
+    ]
+   }
+  }
+ ]
+}

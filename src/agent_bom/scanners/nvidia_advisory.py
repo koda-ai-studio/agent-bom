@@ -7,14 +7,18 @@ NVIDIA CVEs that may not yet be indexed by OSV.dev's PyPI advisory database.
 
 from __future__ import annotations
 
+import copy
 import logging
 import re
 from datetime import UTC, datetime
+from functools import cmp_to_key
 
 import httpx
 
+from agent_bom.cpe_match import cpe_applicability, cpe_identity
 from agent_bom.http_client import create_client, request_with_retry
 from agent_bom.models import Package, Severity, Vulnerability
+from agent_bom.version_utils import compare_version_order, compare_versions
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +142,26 @@ for _product, _packages in _NVIDIA_PRODUCT_MAP.items():
         _PYPI_TO_NVIDIA.setdefault(_pkg.lower().replace("-", "_"), []).append(_product)
 
 
+# NVD CPE products (``cpe:2.3:a:nvidia:<product>``) of GPU stack components
+# found on hosts and images, mapped to the CSAF product names above.
+_CPE_PRODUCT_TO_NVIDIA: dict[str, str] = {
+    "gpu_display_driver": "gpu display driver",
+    "cuda_toolkit": "cuda toolkit",
+    "nvidia_container_toolkit": "container toolkit",
+}
+# CSAF ``product_status.fixed`` ids name the platform, product line and the
+# release with underscores (``linuxr550_tesla_550_127_05``,
+# ``linux_nvidia_container_toolkit_v1_16_2``). Only Linux ids of the product
+# itself apply to a Linux host component.
+_FIXED_ID_TOKENS: dict[str, tuple[str, ...]] = {
+    "gpu display driver": ("geforce", "tesla", "quadro", "rtx"),
+    "cuda toolkit": ("cuda_toolkit",),
+    "container toolkit": ("container_toolkit",),
+}
+_EXCLUDED_ID_TOKENS = ("windows", "vgpu", "virtual_gpu", "guest_driver")
+_ID_VERSION_RE = re.compile(r"(?:^|_)v?([0-9]+(?:_[0-9]+)+)$")
+
+
 def _normalise(name: str) -> str:
     """Normalise package name for comparison (lowercase, underscores)."""
     return name.lower().replace("-", "_")
@@ -146,6 +170,43 @@ def _normalise(name: str) -> str:
 def get_nvidia_products_for_package(pkg_name: str) -> list[str]:
     """Return NVIDIA product names that a PyPI package maps to."""
     return _PYPI_TO_NVIDIA.get(_normalise(pkg_name), [])
+
+
+def _identity_product(pkg: Package) -> str | None:
+    """CSAF product for a component that carries an NVIDIA CPE identity."""
+    identity = cpe_identity(pkg)
+    if identity is None or identity[0] != "nvidia":
+        return None
+    return _CPE_PRODUCT_TO_NVIDIA.get(identity[1])
+
+
+def nvidia_products_for(pkg: Package) -> list[str]:
+    """CSAF products a scanned package belongs to, by name mapping or NVIDIA CPE identity."""
+    products = list(get_nvidia_products_for_package(pkg.name))
+    product = _identity_product(pkg)
+    if product and product not in products:
+        products.append(product)
+    return products
+
+
+def _id_version(product_id: str) -> str | None:
+    match = _ID_VERSION_RE.search(str(product_id))
+    return match[1].replace("_", ".") if match else None
+
+
+def _branch_fixed_version(fixed_ids: list[str], product: str, version: str) -> str | None:
+    """The fix on the component's own release branch, or ``None`` when the advisory does not say."""
+    tokens = _FIXED_ID_TOKENS.get(product, ())
+    candidates = {
+        fixed
+        for product_id in fixed_ids
+        if any(token in product_id for token in tokens) and not any(token in product_id for token in _EXCLUDED_ID_TOKENS)
+        if (fixed := _id_version(product_id))
+    }
+    same_branch = [fixed for fixed in candidates if fixed.split(".")[0] == version.split(".")[0]]
+    if same_branch:
+        return min(same_branch, key=cmp_to_key(lambda a, b: compare_version_order(a, b, "generic") or 0))
+    return next(iter(candidates)) if len(candidates) == 1 else None
 
 
 def default_nvidia_advisory_years(now: datetime | None = None) -> list[str]:
@@ -176,6 +237,10 @@ def _extract_fixed_version(vuln: dict) -> str | None:
             m = re.search(r"(\d+\.\d+[\w. ]*)", str(product_id))
             if m:
                 return m.group(1).strip()
+        for product_id in fixed:
+            version = _id_version(product_id)
+            if version:
+                return version
     return None
 
 
@@ -313,14 +378,14 @@ def _index_nvidia_products(packages: list[Package]) -> tuple[set[str], dict[str,
     product_names: set[str] = set()
     pkg_by_product: dict[str, list[Package]] = {}
     for pkg in packages:
-        products = get_nvidia_products_for_package(pkg.name)
+        products = nvidia_products_for(pkg)
         for product in products:
             product_names.add(product)
             pkg_by_product.setdefault(product, []).append(pkg)
     return product_names, pkg_by_product
 
 
-def _add_new_vulns(pkg: Package, csaf_vulns: list[Vulnerability]) -> int:
+def _add_new_vulns(pkg: Package, csaf_vulns: list[Vulnerability], *, compare: bool = True) -> int:
     """Attach advisory vulns not already on ``pkg`` (by ID or alias); return the count added."""
     added = 0
     existing_ids = {v.id for v in pkg.vulnerabilities}
@@ -331,15 +396,32 @@ def _add_new_vulns(pkg: Package, csaf_vulns: list[Vulnerability]) -> int:
             continue
         # Skip if the installed version is already at or beyond
         # the fix — same guard as ghsa_advisory.py.
-        if vuln.fixed_version and pkg.version:
-            from agent_bom.version_utils import compare_versions
-
+        if compare and vuln.fixed_version and pkg.version:
             if not compare_versions(pkg.version, vuln.fixed_version, pkg.ecosystem):
                 continue
         pkg.vulnerabilities.append(vuln)
         existing_ids.add(vuln.id)
         added += 1
     return added
+
+
+def _identified_component_vulns(csaf: dict, csaf_vulns: list[Vulnerability], pkg: Package, product: str) -> list[Vulnerability]:
+    """Per-component copies with the fix from the component's own Linux release branch.
+
+    A component identified by NVIDIA CPE is compared at its upstream release;
+    an advisory without a fix on that branch is not asserted against it.
+    """
+    version = cpe_applicability(pkg)[0] or pkg.version
+    fixed_by_cve = {str(v.get("cve", "")): list(v.get("product_status", {}).get("fixed", [])) for v in csaf.get("vulnerabilities", [])}
+    out: list[Vulnerability] = []
+    for vuln in csaf_vulns:
+        fixed = _branch_fixed_version(fixed_by_cve.get(vuln.id, []), product, version)
+        if fixed is None or not compare_versions(version, fixed, "generic"):
+            continue
+        scoped = copy.deepcopy(vuln)
+        scoped.fixed_version = fixed
+        out.append(scoped)
+    return out
 
 
 def _apply_csaf_to_packages(
@@ -357,7 +439,10 @@ def _apply_csaf_to_packages(
         if not _csaf_affects_product(csaf, {product}):
             continue
         for pkg in pkgs:
-            added += _add_new_vulns(pkg, csaf_vulns)
+            if _identity_product(pkg) == product:
+                added += _add_new_vulns(pkg, _identified_component_vulns(csaf, csaf_vulns, pkg, product), compare=False)
+            else:
+                added += _add_new_vulns(pkg, csaf_vulns)
     return added
 
 

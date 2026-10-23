@@ -188,7 +188,9 @@ async def _scan_supplemental_advisories(scannable: list[Package], offline: bool)
     nvidia_packages = [
         p
         for p in scannable
-        if p.name.lower().replace("-", "_") in _AI_FRAMEWORK_PACKAGES or p.name.lower().replace("-", "") in _AI_FRAMEWORK_PACKAGES
+        if p.name.lower().replace("-", "_") in _AI_FRAMEWORK_PACKAGES
+        or p.name.lower().replace("-", "") in _AI_FRAMEWORK_PACKAGES
+        or (p.cpe or "").startswith("cpe:2.3:a:nvidia:")
     ]
     if nvidia_packages and not offline:
         added += await _run_supplemental_check("NVIDIA", nvidia_packages, _check_nvidia)

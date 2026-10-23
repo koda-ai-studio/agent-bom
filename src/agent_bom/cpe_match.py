@@ -24,6 +24,7 @@ from agent_bom.version_utils import compare_version_order
 # CPE versions are bare dotted strings with no ecosystem; use the generic
 # comparator path.
 _CPE_ECOSYSTEM = "generic"
+_CPE_ANY = frozenset({"*", "-", ""})
 _OPENSSL_RELEASE_RE = re.compile(r"^(?P<release>\d+(?:\.\d+){2})(?P<letter_suffix>[a-z]*)$", re.IGNORECASE)
 
 
@@ -75,6 +76,20 @@ def cpe_identity(pkg: Any) -> tuple[str, str] | None:
     if len(parts) < 5 or parts[:2] != ["cpe", "2.3"] or not parts[3] or not parts[4] or "*" in parts[3:5]:
         return None
     return parts[3], parts[4]
+
+
+def cpe_applicability(pkg: Any) -> tuple[str | None, str | None]:
+    """``(version, target_sw)`` pinned by a component's explicit CPE; ``None`` where it is a wildcard."""
+    parts = str(getattr(pkg, "cpe", None) or "").split(":")
+    if len(parts) != 13 or parts[:2] != ["cpe", "2.3"]:
+        return None, None
+    version, target_sw = parts[5], parts[10]
+    return (None if version in _CPE_ANY else version), (None if target_sw in _CPE_ANY else target_sw)
+
+
+def _target_sw_applies(criteria: str, target_sw: str) -> bool:
+    parts = criteria.split(":")
+    return len(parts) < 11 or parts[10] in _CPE_ANY or parts[10] == target_sw
 
 
 def cpe_vendor_hint(pkg: Any) -> str | None:
@@ -153,8 +168,12 @@ def match_component_cpe(
     *,
     vendor: Optional[str] = None,
     limit: int = 500,
+    target_sw: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     """Return ``nvd_cpe_candidate`` CVE matches for a component (name, version).
+
+    ``target_sw`` (e.g. ``linux`` for a Linux GPU driver) skips criteria scoped
+    to a different platform, such as Windows-only driver release ranges.
 
     When ``vendor`` is supplied (e.g. inferred from a purl namespace or
     Maven groupId) the candidate set is constrained to that CPE vendor, which is
@@ -188,7 +207,7 @@ def match_component_cpe(
     matched: dict[str, str] = {}
     for row in rows:
         cve_id = row["cve_id"]
-        if cve_id in matched:
+        if cve_id in matched or (target_sw and not _target_sw_applies(row["criteria"], target_sw)):
             continue
         try:
             applies = _cpe_range_applies(version, row)
