@@ -377,6 +377,7 @@ def test_bundled_data_is_derived_from_agent_bom_sources():
     data = json.loads((GUARD / "hooks" / "guard_data.json").read_text())
     assert data["popular"] == {k: sorted(v) for k, v in malicious._POPULAR_PACKAGES.items()}
     assert data["known_legitimate"] == {k: sorted(v) for k, v in malicious._KNOWN_LEGITIMATE.items()}
+    assert data["established"] == {k: sorted(v) for k, v in malicious._ESTABLISHED.items()}
     assert data["safe_npm_scopes"] == sorted(malicious._SAFE_NPM_SCOPES)
     blocklist = json.loads((Path(malicious.__file__).parent / "data" / "mcp-blocklist.json").read_text())
     confirmed = sorted(
@@ -405,6 +406,12 @@ def test_bundled_data_is_derived_from_agent_bom_sources():
         ("lodahs", "npm"),
         ("left-pad", "npm"),
         ("serde", "cargo"),
+        ("crossenv", "npm"),
+        ("jeIlyfish", "pypi"),
+        ("python_dateutil", "pypi"),
+        ("psycopg2", "pypi"),
+        ("eslint-plugin-vitest", "npm"),
+        ("opentelemetry-instrumentation-redis", "pypi"),
     ],
 )
 def test_typosquat_matches_agent_bom(name, ecosystem):
@@ -516,3 +523,90 @@ def test_script_writes_nothing_into_the_plugin_folder(tmp_path, python):
     proc = subprocess.run([python, "-I", str(hooks / "install_guard.py")], input=event, capture_output=True, text=True, env=env, timeout=20)
     assert json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
     assert sorted(p.name for p in hooks.iterdir()) == ["command_parser.py", "guard_data.json", "install_guard.py"]
+
+
+# --- malware advisories without a MAL- id (recorded OSV responses) ---
+
+RECORDED = json.loads((ROOT / "tests" / "fixtures" / "osv_guard" / "malware_advisories.json").read_text())
+
+
+class RecordedOSV(FakeOSV):
+    """Replays querybatch ids and advisory documents recorded from api.osv.dev."""
+
+    def __init__(self):
+        super().__init__(details=RECORDED["vulns"])
+
+    def query(self, packages, timeout):
+        self.queries.append(list(packages))
+        return [RECORDED["querybatch"].get(guard._label(p), []) for p in packages]
+
+
+def test_ghsa_malware_on_an_unpinned_install_is_blocked():
+    # crossenv: GHSA-c2m4-w5hm-vqjw, CWE-506, every version affected, no MAL- id.
+    out = _decide("npm install crossenv", RecordedOSV())
+    assert _decision(out) == "deny"
+    assert "GHSA-c2m4-w5hm-vqjw" in _reason(out) and "malicious" in _reason(out)
+
+
+def test_ghsa_malware_on_the_pinned_affected_version_is_blocked():
+    out = _decide("npm install event-stream@3.3.6", RecordedOSV())
+    assert _decision(out) == "deny"
+    assert "GHSA-mh6f-8j2x-4483" in _reason(out)
+    assert "Prefer a fixed version" not in json.dumps(out)
+
+
+def test_ghsa_malware_with_a_fixed_release_warns_on_an_unpinned_install():
+    # The registry serves 4.x today; only 3.3.6 shipped the payload. Warn, don't block.
+    out = _decide("npm install event-stream", RecordedOSV())
+    assert _decision(out) is None
+    assert "GHSA-mh6f-8j2x-4483" in out["systemMessage"] and "malicious" in out["systemMessage"]
+
+
+def test_clean_pinned_version_of_a_once_hijacked_package_passes():
+    assert _decide("npm install event-stream@4.0.1", RecordedOSV()) is None
+
+
+@pytest.mark.parametrize(
+    ("command", "target"),
+    [
+        ("pip install colourama", "colorama"),
+        ("pip install jeIlyfish", "jellyfish"),
+        ("pip install python3-dateutil", "python-dateutil"),
+        ("pip install urlib3", "urllib3"),
+        ("npm install crossenv", "cross-env"),
+    ],
+)
+def test_documented_typosquats_are_blocked_offline(command, target):
+    out = _decide(command, osv_lookup="false")
+    assert _decision(out) == "deny", command
+    assert target in _reason(out)
+
+
+@pytest.mark.parametrize("command", ["pip install psycopg2", "npm install enquirer", "pip install python_dateutil"])
+def test_established_neighbours_of_popular_names_pass(command):
+    assert _decide(command, osv_lookup="false") is None
+
+
+def test_mal_report_naming_only_some_releases_warns_on_an_unpinned_install():
+    # MAL-2026-2307 lists axios 0.30.4 and 1.14.1; the registry's other releases are clean.
+    out = _decide("npm install axios", RecordedOSV())
+    assert _decision(out) is None
+    assert "MAL-2026-2307" in out["systemMessage"]
+
+
+def test_mal_report_on_the_pinned_affected_version_is_blocked():
+    out = _decide("npm install axios@1.14.1", RecordedOSV())
+    assert _decision(out) == "deny"
+    assert "MAL-2026-2307" in _reason(out)
+
+
+def test_mal_report_documents_are_fetched_before_a_long_advisory_history():
+    history = [f"GHSA-old-{n:02d}" for n in range(40)]
+
+    class LongHistory(RecordedOSV):
+        def query(self, packages, timeout):
+            return [history + ["MAL-2026-2307"] for _ in packages]
+
+    out = _decide("npm install axios", LongHistory())
+    assert _decision(out) is None
+    assert "MAL-2026-2307" in out["systemMessage"]

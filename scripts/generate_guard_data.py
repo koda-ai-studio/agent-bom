@@ -39,9 +39,13 @@ def _known_malicious() -> list[list[str]]:
 
 def build() -> dict[str, object]:
     return {
-        "source": "agent_bom.malicious and agent_bom/data/mcp-blocklist.json; regenerate with scripts/generate_guard_data.py",
+        "source": (
+            "agent_bom.malicious (data/popular_packages.json) and agent_bom/data/mcp-blocklist.json; "
+            "regenerate with scripts/generate_guard_data.py"
+        ),
         "popular": {eco: sorted(names) for eco, names in sorted(malicious._POPULAR_PACKAGES.items())},
         "known_legitimate": {eco: sorted(names) for eco, names in sorted(malicious._KNOWN_LEGITIMATE.items())},
+        "established": {eco: sorted(names) for eco, names in sorted(malicious._ESTABLISHED.items())},
         "safe_npm_scopes": sorted(malicious._SAFE_NPM_SCOPES),
         "known_malicious": _known_malicious(),
     }
