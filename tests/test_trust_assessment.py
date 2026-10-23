@@ -13,6 +13,7 @@ from agent_bom.parsers.trust_assessment import (
     TrustCategoryResult,
     TrustLevel,
     Verdict,
+    _assess_persistence_privilege,
     _compute_verdict,
     _generate_recommendations,
     assess_trust,
@@ -265,13 +266,22 @@ def test_instruction_scope_pass():
 
 
 def test_instruction_scope_warn_no_file_reads():
-    """No file_reads → WARN."""
-    fm = _MINIMAL_FRONTMATTER  # has name/description but no file_reads
+    """No file_reads → WARN when the file declares a ClawHub manifest."""
+    fm = _MINIMAL_FRONTMATTER + "metadata:\n  openclaw:\n    requires:\n      bins: []\n"
     scan = _make_scan(frontmatter=fm)
     audit = _make_audit()
     result = assess_trust(scan, audit)
     cat = next(c for c in result.categories if c.key == "instruction_scope")
     assert cat.level == TrustLevel.WARN
+
+
+def test_instruction_scope_not_applicable_without_a_clawhub_manifest():
+    """A Claude or Codex SKILL.md has no file_reads field, so the check does not apply."""
+    scan = _make_scan(frontmatter=_MINIMAL_FRONTMATTER)
+    result = assess_trust(scan, _make_audit())
+    cat = next(c for c in result.categories if c.key == "instruction_scope")
+    assert cat.level == TrustLevel.PASS and cat.summary.startswith("Not applicable")
+    assert not any("file_reads" in advice for advice in result.publisher_guidance)
 
 
 def test_instruction_scope_fail_credential_access():
@@ -388,7 +398,9 @@ def test_persistence_privilege_warn_no_metadata():
     audit = _make_audit()
     result = assess_trust(scan, audit)
     cat = next(c for c in result.categories if c.key == "persistence_privilege")
-    assert cat.level == TrustLevel.WARN
+    # A CLAUDE.md carries no ClawHub manifest; the bare category check still warns.
+    assert cat.level == TrustLevel.PASS and cat.summary.startswith("Not applicable")
+    assert _assess_persistence_privilege(scan.metadata, scan, audit).level == TrustLevel.WARN
 
 
 def test_persistence_privilege_fail_escalation():

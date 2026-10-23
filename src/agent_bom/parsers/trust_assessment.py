@@ -85,6 +85,8 @@ class TrustCategoryResult:
     summary: str
     details: list[str] = field(default_factory=list)
     evidence: list[str] = field(default_factory=list)
+    # True when only a missing ClawHub manifest field set this level.
+    manifest_gap: bool = False
 
 
 @dataclass
@@ -256,6 +258,7 @@ def _assess_purpose_capability(
             key="purpose_capability",
             level=TrustLevel.INFO,
             summary="Name and description present but no required binaries declared",
+            manifest_gap=True,
             details=details,
             evidence=evidence,
         )
@@ -323,6 +326,7 @@ def _assess_instruction_scope(
             key="instruction_scope",
             level=TrustLevel.WARN,
             summary="No metadata — cannot verify instruction scope",
+            manifest_gap=True,
             details=details,
             evidence=evidence,
         )
@@ -333,6 +337,7 @@ def _assess_instruction_scope(
             key="instruction_scope",
             level=TrustLevel.WARN,
             summary="No file_reads declared — scope unclear",
+            manifest_gap=True,
             details=details,
             evidence=evidence,
         )
@@ -343,6 +348,7 @@ def _assess_instruction_scope(
             key="instruction_scope",
             level=TrustLevel.INFO,
             summary="File reads listed but no justification provided",
+            manifest_gap=True,
             details=details,
             evidence=evidence,
         )
@@ -546,6 +552,7 @@ def _assess_persistence_privilege(
             key="persistence_privilege",
             level=TrustLevel.WARN,
             summary="No metadata — cannot verify persistence or privilege claims",
+            manifest_gap=True,
             details=details,
             evidence=evidence,
         )
@@ -565,6 +572,7 @@ def _assess_persistence_privilege(
             key="persistence_privilege",
             level=TrustLevel.INFO,
             summary=f"Missing field(s): {', '.join(missing)} — cannot fully verify",
+            manifest_gap=True,
             details=details,
             evidence=evidence,
         )
@@ -709,7 +717,8 @@ def _generate_recommendations(categories: list[TrustCategoryResult]) -> list[str
     recs: list[str] = []
 
     for cat in categories:
-        if cat.level == TrustLevel.PASS:
+        # INFO is a completeness note, not a finding; advice needs a finding behind it.
+        if cat.level in {TrustLevel.PASS, TrustLevel.INFO}:
             continue
 
         if cat.key == "purpose_capability":
@@ -868,6 +877,27 @@ def _build_reviewer_guidance(audit: SkillAuditResult) -> list[str]:
     return guidance[:5]
 
 
+# ClawHub skill manifests declare these fields. A Claude or Codex SKILL.md,
+# CLAUDE.md or AGENTS.md has none of them, so a check that only asks whether one
+# is present does not apply to that file.
+_CLAWHUB_MANIFEST_FIELDS = ("openclaw", "file_reads", "persistence", "telemetry", "privilege_escalation")
+
+
+def _declares_clawhub_manifest(raw: str) -> bool:
+    return any(_fm_has(raw, name) for name in _CLAWHUB_MANIFEST_FIELDS)
+
+
+def _not_applicable(category: TrustCategoryResult) -> TrustCategoryResult:
+    return TrustCategoryResult(
+        name=category.name,
+        key=category.key,
+        level=TrustLevel.PASS,
+        summary=f"Not applicable without a ClawHub manifest: {category.summary}",
+        details=category.details,
+        evidence=category.evidence,
+    )
+
+
 # ── Main entry point ─────────────────────────────────────────────────────────
 
 
@@ -891,6 +921,8 @@ def assess_trust(
         _assess_credentials(meta, scan, audit),
         _assess_persistence_privilege(meta, scan, audit),
     ]
+    if not _declares_clawhub_manifest(meta.raw_frontmatter if meta else ""):
+        categories = [_not_applicable(c) if c.manifest_gap else c for c in categories]
 
     _legacy_verdict, confidence = _compute_verdict(categories)
     # Per #2197 audit: split verdict into provenance + content so a clean
