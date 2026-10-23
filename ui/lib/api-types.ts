@@ -3469,6 +3469,8 @@ export interface TrendPointResponse {
   scan_id?: string | null;
   timestamp: string;
   total_vulns: number;
+  /** Active KEV issue occurrences; null when the snapshot did not measure KEV. */
+  kev_count?: number | null;
   critical: number;
   high: number;
   medium: number;

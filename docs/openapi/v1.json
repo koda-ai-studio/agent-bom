@@ -43991,6 +43991,17 @@
               }
             ]
           },
+          "kev_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kev Count"
+          },
           "low": {
             "title": "Low",
             "type": "integer"
