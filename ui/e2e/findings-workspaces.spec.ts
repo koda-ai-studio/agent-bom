@@ -257,6 +257,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.screenshot({ path: testInfo.outputPath(`findings-${theme}-${width}.png`), fullPage: true });
       await page.getByRole("button", { name: "Open details for CVE-2026-4242" }).click();
       const drawer = page.getByRole("dialog", { name: "Finding details for CVE-2026-4242" });
+      await expect(drawer.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2026-4242");
       await drawer.getByRole("tab", { name: "Evidence" }).click();
       await expect(drawer.getByRole("tab", { name: "Evidence" })).toHaveAttribute("aria-selected", "true");
       await expect(drawer.getByText("Compliance controls", { exact: true })).toBeVisible();

@@ -153,7 +153,7 @@ function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
         {fixValue || guidance ? <p className="mt-1 text-xs text-ink-secondary">Apply the fix, then rescan the affected asset to verify the result.</p> : null}
         <div className="mt-3 flex flex-wrap gap-3">
           {fixValue || guidance || fixCandidates.length ? (
-            <Link href={remediationHref({ q: vuln.id, scan: vuln.scan_id })} className="rounded-lg bg-accent-mint px-3 py-2 text-sm font-medium text-black">
+            <Link href={remediationHref({ q: vuln.id })} className="rounded-lg bg-accent-mint px-3 py-2 text-sm font-medium text-black">
               Review remediation
             </Link>
           ) : null}
