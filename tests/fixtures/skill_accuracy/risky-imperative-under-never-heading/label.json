@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "AGENTS.md",
+  "description": "Prohibition heading used as cover for an agent-directed imperative.",
+  "expect": [
+    {
+      "category": "prompt_coercion",
+      "min_severity": "high"
+    }
+  ]
+}

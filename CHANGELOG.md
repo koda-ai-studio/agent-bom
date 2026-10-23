@@ -9,6 +9,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `agent-bom activity`, the `agent_activity` MCP tool (audit profile, local and read-only) and the plugin `activity` skill review local Claude Code and Codex session history: MCP server and tool usage, configured servers never called in the window, risky actions with redacted evidence (pipe-to-shell, destructive commands, writes outside the project, secret-file reads, package installs) and installed packages. Reads are streamed and capped; prompts and responses are never read into results, and nothing is sent unless `--check-packages` is set. Sessions map to the shared trace span shape as local providers `claude-code-sessions` and `codex-sessions`, and used servers come from the runtime trace projection with exact discovery bindings; the control-plane pull route rejects these providers.
+
 ## [0.110.0] - 2026-10-21
 
 ### Changed

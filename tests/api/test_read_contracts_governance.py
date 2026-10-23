@@ -21,7 +21,6 @@ from agent_bom.api.read_models import governance_a as ga
 from agent_bom.api.read_models import governance_b as gb
 from tests.auth_helpers import proxy_headers
 from tests.test_api_read_contracts import _contract_violations, empty_estate_client  # noqa: F401
-from tests.test_demo_estate_bootstrap import demo_estate_client  # noqa: F401
 from tests.test_graph_correlation_api import correlation_client  # noqa: F401
 from tests.test_graph_scenario_routes import _create, scenario_client  # noqa: F401
 from tests.test_intel_lookup import VIEWER_HEADERS, intel_client, intel_db  # noqa: F401
@@ -160,7 +159,7 @@ def test_every_typed_governance_read_documents_its_model_in_openapi() -> None:
     assert {model.__name__ for model in TYPED_PATHS.values()} <= set(schemas)
 
 
-def test_seeded_demo_bodies_match_documented_models(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_seeded_demo_bodies_match_documented_models(demo_estate_client: TestClient) -> None:
     from agent_bom.api import stores as api_stores
     from agent_bom.api.models import ScanJob, ScanRequest
 
@@ -194,7 +193,7 @@ def test_seeded_demo_bodies_match_documented_models(demo_estate_client: TestClie
     assert not problems, "\n".join(problems)
 
 
-def test_demo_estate_operator_surfaces_answer_with_documented_errors(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_demo_estate_operator_surfaces_answer_with_documented_errors(demo_estate_client: TestClient) -> None:
     statuses = {
         path: demo_estate_client.get(path).status_code
         for path in (

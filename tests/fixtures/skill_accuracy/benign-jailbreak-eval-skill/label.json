@@ -1,0 +1,11 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Model-evaluation skill that scores jailbreak resistance.",
+  "must_not": [
+    {
+      "category": "prompt_coercion",
+      "max_severity": "low"
+    }
+  ]
+}

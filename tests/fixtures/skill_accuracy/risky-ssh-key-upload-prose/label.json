@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "AGENTS.md",
+  "description": "Prose asking the agent to upload a private key.",
+  "expect": [
+    {
+      "category": "credential_exfiltration",
+      "min_severity": "critical"
+    }
+  ]
+}

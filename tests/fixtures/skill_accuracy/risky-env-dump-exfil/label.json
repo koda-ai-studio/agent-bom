@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "Pipes the whole environment to a remote host.",
+  "expect": [
+    {
+      "category": "credential_exfiltration",
+      "min_severity": "high"
+    }
+  ]
+}

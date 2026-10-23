@@ -1,0 +1,11 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "CI workflow snippet with a schedule trigger, not host persistence.",
+  "must_not": [
+    {
+      "category": "persistence_mechanism",
+      "max_severity": "low"
+    }
+  ]
+}

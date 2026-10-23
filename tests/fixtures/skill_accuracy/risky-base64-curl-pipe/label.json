@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Base64-wrapped curl-pipe-bash payload decoded into a shell.",
+  "expect": [
+    {
+      "category": "remote_code_execution",
+      "min_severity": "high"
+    }
+  ]
+}

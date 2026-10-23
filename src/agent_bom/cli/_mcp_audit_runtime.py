@@ -2,6 +2,7 @@
 
 from agent_bom import discovery as discovery
 from agent_bom import mcp_introspect as mcp_introspect
+from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture as evaluate_agent_permission_posture
 from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture as evaluate_mcp_auth_posture
 from agent_bom.mcp_introspect import IntrospectionError as IntrospectionError
 from agent_bom.models import AIBOMReport as AIBOMReport

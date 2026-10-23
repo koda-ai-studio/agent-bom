@@ -11,7 +11,6 @@ from agent_bom.api.read_models import runtime_estate_a as a
 from agent_bom.api.read_models import runtime_estate_b as b
 from tests.auth_helpers import proxy_headers
 from tests.test_api_read_contracts import _contract_violations, empty_estate_client  # noqa: F401
-from tests.test_demo_estate_bootstrap import demo_estate_client  # noqa: F401
 
 TYPED_READS: dict[str, type[BaseModel]] = {
     "/v1/cloud/{provider}/inventory": a.CloudInventorySummaryResponse,
@@ -131,7 +130,7 @@ def test_runtime_estate_models_have_unique_schema_names() -> None:
     assert not [name for name in schemas if "__" in name]
 
 
-def test_seeded_bodies_match_documented_models(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_seeded_bodies_match_documented_models(demo_estate_client: TestClient) -> None:
     problems: list[str] = []
     for template, url in _STATIC:
         if url in _DEMO_VIEWER_FORBIDDEN:

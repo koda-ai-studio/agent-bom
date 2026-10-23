@@ -106,6 +106,8 @@ def test_shared_inputs_and_unknown_code_require_full_correctness() -> None:
         "pyproject.toml",
         ".github/workflows/ci.yml",
         "tests/conftest.py",
+        "tests/_demo_estate_fixtures.py",
+        "tests/.ci-durations.json",
         "tests/fixtures/new.json",
         "src/agent_bom/canonical_ids.py",
         "src/agent_bom/models.py",

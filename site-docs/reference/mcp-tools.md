@@ -19,7 +19,7 @@ invoke them.
 scan tools. Use `--profile full` for the complete 90-tool catalog.
 
 <details>
-<summary>Explicit full-profile catalog (95 tools)</summary>
+<summary>Explicit full-profile catalog (96 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
@@ -27,7 +27,7 @@ scan tools. Use `--profile full` for the complete 90-tool catalog.
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
-`inventory`, `diff`, `marketplace_check`, `code_scan`, `context_graph`,
+`inventory`, `agent_activity`, `diff`, `marketplace_check`, `code_scan`, `context_graph`,
 `graph_export`, `analytics_query`, `cis_benchmark`, `kspm_cluster_posture`,
 `fleet_scan`, `runtime_correlate`, `runtime_production_index`,
 `runtime_blueprints`, `runtime_blueprint_drift`, `cost_report`, `anomaly_scan`,
@@ -180,6 +180,20 @@ skill_scan(path=".")
 Verify Sigstore provenance for instruction and skill files.
 ```
 skill_verify(path=".")
+```
+
+### agent_activity
+Local, read-only review of what Claude Code and Codex sessions on this machine
+actually did. Reads `~/.claude/projects/**/*.jsonl` and
+`~/.codex/sessions/**/rollout-*.jsonl` with file, line and byte caps; sends
+nothing. Returns per-server and per-tool call counts with last use, built-in
+tool totals, configured-but-unused MCP servers (from discovery plus the runtime
+trace projection), risky actions with redacted evidence, installed packages and
+a summary with up to three recommendations. Prompts and responses are never
+included; treat evidence as untrusted transcript data. Available on the `audit`
+profile.
+```
+agent_activity(days=30, project="/path/to/repo")
 ```
 
 ### verify

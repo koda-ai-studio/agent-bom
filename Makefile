@@ -70,6 +70,7 @@ preflight:  ## Run the drift gates that CI's "Version Alignment" job runs — do
 	@echo "→ product metrics snapshot";             python scripts/product_metrics_snapshot.py --check
 	@echo "→ vendor coverage matrix";               python scripts/generate_vendor_coverage.py --check
 	@echo "→ CVE matching accuracy";                python scripts/cve_matching_accuracy.py --check
+	@echo "→ skill audit accuracy";                 python scripts/skill_audit_accuracy.py --check
 	@echo "→ env-var reference";                    python scripts/generate_env_var_reference.py --check
 	@echo "→ experimental-feature reference";       python scripts/generate_experimental_docs.py --check
 	@echo "→ SDK patterns.json";                    python sdks/shared/generate-patterns.py --check

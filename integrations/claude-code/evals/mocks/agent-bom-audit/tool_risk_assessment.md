@@ -642,5 +642,6 @@ expect:
    "exposed_credentials": [],
    "exposed_tools": []
   }
- ]
+ ],
+ "agent_permission_findings": []
 }

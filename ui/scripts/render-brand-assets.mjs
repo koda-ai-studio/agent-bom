@@ -18,6 +18,8 @@ const mono = mark.toString().replace(/  <defs>[\s\S]*?<\/defs>\n/, '')
   .replaceAll('url(#abm)', '#ffffff').replaceAll('#34d399', '#ffffff')
   .replaceAll('#22d3ee', '#ffffff').replaceAll('#0c1210', 'none').replaceAll('#0f1a17', 'none');
 await write('site-docs/assets/brand/mark-mono.svg', mono);
+// Claude and Codex plugin listings both read this square PNG.
+await write('integrations/claude-code/assets/icon.png', await sharp(mark, { density: 1200 }).resize(1024, 1024).png().toBuffer());
 await write('docs/images/social-preview.png', await sharp(await read('docs/images/social-preview.svg')).png().toBuffer());
 // ICO permits PNG payloads. Keep the existing 16px + 32px favicon sizes.
 const sizes = [16, 32];
@@ -34,4 +36,4 @@ icons.forEach((icon, i) => {
   offset += icon.length;
 });
 await write('ui/app/favicon.ico', Buffer.concat([header, ...icons]));
-console.log('Rendered dashboard, docs, social preview, and favicon brand assets.');
+console.log('Rendered dashboard, docs, social preview, plugin icon, and favicon brand assets.');

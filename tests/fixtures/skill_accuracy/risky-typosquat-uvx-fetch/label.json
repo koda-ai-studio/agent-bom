@@ -1,0 +1,18 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Typosquatted fetch server via uvx.",
+  "expect": [
+    {
+      "category": "typosquat",
+      "min_severity": "high"
+    }
+  ],
+  "packages": [
+    {
+      "name": "mcp-server-fecth",
+      "ecosystem": "pypi",
+      "version": "latest"
+    }
+  ]
+}

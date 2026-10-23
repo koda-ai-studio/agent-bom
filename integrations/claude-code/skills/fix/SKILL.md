@@ -2,6 +2,16 @@
 name: fix
 description: Build a prioritized remediation plan with agent-bom - which upgrades remove the most risk, in what order, and which findings have no fix yet. Use when the user asks how to fix agent-bom findings, what to upgrade first, or for a remediation plan.
 argument-hint: "[image <ref>]"
+homepage: https://github.com/koda-ai-studio/agent-bom
+source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/fix
+license: Apache-2.0
+capabilities:
+  read_inventory: true
+  read_findings: true
+  read_audit_log: false
+  write_findings: false
+  outbound_http: true
+  shell_exec: false
 ---
 
 Use the agent-bom `remediate` MCP tool to plan fixes.
@@ -14,4 +24,4 @@ Use the agent-bom `remediate` MCP tool to plan fixes.
 3. List findings with no available fix separately, with the mitigation agent-bom suggests.
 4. For larger estates, `exposure_paths` ranks attack paths; offer it when the user asks "what is actually exploitable".
 
-Propose the changes; only edit manifests or lockfiles if the user asks you to apply them, and re-run `/agent-bom:scan` afterwards to confirm.
+Propose the changes; only edit manifests or lockfiles if the user asks you to apply them, and re-run the `scan` skill (Claude Code: `/agent-bom:scan`) afterwards to confirm.

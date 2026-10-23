@@ -66,8 +66,8 @@ changed, including when discovery fails.
 
 The existing `tool_risk_assessment` tool returns an `audit` block and
 `authentication_findings` alongside its live inventory and risk scores.
-Use the audit catalog to access it alongside `inventory`, `skill_scan`,
-`skill_trust` and `prompt_scan`:
+Use the audit catalog to access it alongside `inventory`, `agent_activity`,
+`skill_scan`, `skill_trust` and `prompt_scan`:
 
 ```bash
 agent-bom mcp server --profile audit
@@ -86,6 +86,43 @@ API/MCP evaluation errors fail the scan rather than silently returning a clean
 audit. Existing authentication and tenant boundaries remain in force. `--enforce` adds its existing
 CVE, drift and capability-combination checks; it is not required for passive
 injection and permission findings.
+
+## Review what your coding agents actually did
+
+```bash
+agent-bom activity                 # last 30 days, text
+agent-bom activity --since 7d --project . --format json
+```
+
+`activity` reads local Claude Code (`~/.claude/projects/**/*.jsonl`) and Codex
+(`~/.codex/sessions/**/rollout-*.jsonl`) session history on this machine only.
+Reads are streamed and capped (500 files, 50,000 lines per file, 1 MB per line,
+256 MB total); malformed lines and anything a cap skipped are counted in
+`sources`, and the headline says when counts are partial. Prompts, responses and
+file contents are never read into the report; command and path evidence passes
+through the standard redaction. Nothing is sent unless `--check-packages` asks
+the package scanner to look up the packages agents installed.
+
+The report lists MCP server and tool usage, built-in tool totals, configured
+servers that were never called (removal candidates; a client whose history was
+not found is never reported as unused), risky actions most severe first
+(pipe-to-shell, destructive commands, writes outside the session's project,
+reads of secret-like files, package installs) and the installed packages.
+A write outside the session directory stays risky when it targets another
+repository, a home dotfile or credential directory, or a system path. Writes to
+another checkout of the same git repository (compared by `git rev-parse
+--git-common-dir`, run locally and cached per directory), the OS temp dir, or
+`~/.claude` / `~/.codex` are counted in `low_signal_writes` instead, except the agent's
+permission settings, `CLAUDE.md`/`AGENTS.md`, `*.config.toml` and its `skills/`, `agents/`,
+`hooks/`, `commands/` and `rules/`, which are high-severity risky writes.
+Each tool call is mapped to the same flat span shape as the hosted trace
+connectors (providers `claude-code-sessions` and `codex-sessions`), and used
+versus unused servers come from the shared runtime trace projection over the
+discovery graph, so a call binds to a configured server only by an exact
+discovery identity. These providers are local-only: the control-plane pull
+route rejects them rather than read the server host's files. The MCP
+`agent_activity` tool on the `audit` profile returns the same JSON without the
+network option.
 
 ## Inspect and remediate in the dashboard
 

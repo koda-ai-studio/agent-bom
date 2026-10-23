@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401
+from tests._demo_estate_fixtures import VIEWER
 
 _TENANT = "default"
 _PYYAML = ("CVE-2020-14343", "pyyaml@5.3", "shell-runner-server")
@@ -136,7 +136,7 @@ def _paths_targeting(client: TestClient, finding_ids: set[str]) -> list[dict]:
         params = {"limit": 1000, "cursor": page["pagination"]["next_cursor"]}
 
 
-def test_exception_reaches_every_surface_and_revoke_restores(demo_estate_client: TestClient, exception_store) -> None:  # noqa: F811
+def test_exception_reaches_every_surface_and_revoke_restores(demo_estate_client: TestClient, exception_store) -> None:
     client = demo_estate_client
     before = _counts(client)
     _assert_one_number(before)
@@ -171,7 +171,7 @@ def test_exception_reaches_every_surface_and_revoke_restores(demo_estate_client:
     assert restored["open_paths"] == restored["total"]
 
 
-def test_mcp_blast_radius_reports_only_open_occurrences(demo_estate_client: TestClient, exception_store) -> None:  # noqa: F811
+def test_mcp_blast_radius_reports_only_open_occurrences(demo_estate_client: TestClient, exception_store) -> None:
     client = demo_estate_client
     before = _mcp_blast(_REQUESTS_CVE)
     open_before = _open_rest_rows(client, _REQUESTS_CVE)
@@ -192,7 +192,7 @@ def test_mcp_blast_radius_reports_only_open_occurrences(demo_estate_client: Test
     assert _mcp_blast(_REQUESTS_CVE)["count"] == len(open_before)
 
 
-def test_mcp_blast_radius_holders_are_per_occurrence(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_mcp_blast_radius_holders_are_per_occurrence(demo_estate_client: TestClient) -> None:
     client = demo_estate_client
     rest = {row["id"]: row for row in _open_rest_rows(client, _REQUESTS_CVE)}
     mcp = _mcp_blast(_REQUESTS_CVE)
@@ -211,7 +211,7 @@ def test_mcp_blast_radius_holders_are_per_occurrence(demo_estate_client: TestCli
 _IMDS_INSTANCE = "cloud_resource:aws:aws_instance:210987654321/us-east-1/i-0de00000000000000"
 
 
-def test_rollup_entities_count_their_own_occurrences(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_rollup_entities_count_their_own_occurrences(demo_estate_client: TestClient) -> None:
     client = demo_estate_client
     view = _get(client, "/v1/graph/rollup", limit=500)
     summary, entries = view["summary"], {entry["id"]: entry for entry in view["top_level"]}
@@ -250,7 +250,7 @@ def test_rollup_entities_count_their_own_occurrences(demo_estate_client: TestCli
     assert instance["aggregate"]["issue_count"] == len(held) == 2, [node.id for node in held]
 
 
-def test_overview_headline_reads_one_labelled_basis(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_overview_headline_reads_one_labelled_basis(demo_estate_client: TestClient) -> None:
     overview = _get(demo_estate_client, "/v1/overview")
     headline, issues = overview["headline"], overview["issue_counts"]
     assert headline["basis"] == "issue_groups"
@@ -269,7 +269,7 @@ def _context_graph(**kwargs: object) -> dict:
     )
 
 
-def test_mcp_context_graph_pages_the_current_estate_rest_serves(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_mcp_context_graph_pages_the_current_estate_rest_serves(demo_estate_client: TestClient) -> None:
     client = demo_estate_client
     estate_agents = _get(client, "/v1/posture/counts")["agents"]["total"]
     seen: list[str] = []

@@ -18,7 +18,6 @@ from starlette.testclient import TestClient
 from agent_bom.api.read_models import admin as m
 from tests.auth_helpers import proxy_headers
 from tests.test_api_read_contracts import _contract_violations, empty_estate_client  # noqa: F401
-from tests.test_demo_estate_bootstrap import demo_estate_client  # noqa: F401
 
 _TENANT = "contract-empty"
 _ROW_KEYS = ("grants", "policies", "campaigns", "items", "credentials", "provider_keys", "virtual_keys", "subscriptions")
@@ -255,7 +254,7 @@ def test_seeded_rotation_posture_reports_findings(empty_estate_client: TestClien
     assert _contract_violations("/v1/credentials/posture", body, m.CredentialRotationPostureResponse) == []
 
 
-def test_demo_estate_bodies_match_documented_models(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_demo_estate_bodies_match_documented_models(demo_estate_client: TestClient) -> None:
     problems: list[str] = []
     for path in _DEMO_READS:
         response = demo_estate_client.get(path)

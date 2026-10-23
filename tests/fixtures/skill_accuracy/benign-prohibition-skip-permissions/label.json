@@ -1,0 +1,15 @@
+{
+  "kind": "benign",
+  "file": "CLAUDE.md",
+  "description": "Team policy forbidding permission-skipping flags.",
+  "must_not": [
+    {
+      "category": "confirmation_bypass",
+      "max_severity": "low"
+    },
+    {
+      "category": "agent_delegation",
+      "max_severity": "low"
+    }
+  ]
+}

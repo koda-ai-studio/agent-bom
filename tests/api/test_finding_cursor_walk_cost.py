@@ -14,7 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agent_bom.api import finding_walk_cache, scan_finding_read
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401
+from tests._demo_estate_fixtures import VIEWER
 
 _NO_STORES: dict = {"hub": None, "job_store": None}
 
@@ -43,7 +43,7 @@ def _count_folds(monkeypatch: pytest.MonkeyPatch) -> list[int]:
     return calls
 
 
-def test_cursor_walk_folds_once_and_returns_the_same_pages(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+def test_cursor_walk_folds_once_and_returns_the_same_pages(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     folds = _count_folds(monkeypatch)
     monkeypatch.setenv("AGENT_BOM_FINDING_WALK_CACHE", "0")
     uncached = _walk(demo_estate_client)

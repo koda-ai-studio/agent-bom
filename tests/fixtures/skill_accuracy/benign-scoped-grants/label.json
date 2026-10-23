@@ -1,0 +1,10 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Claude Code allowed-tools grants scoped to git read commands and one docs domain.",
+  "must_not": [
+    {
+      "category": "broad_tool_grant"
+    }
+  ]
+}

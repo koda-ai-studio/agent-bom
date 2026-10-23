@@ -1,0 +1,5 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Summarizes a Slack export file without sending anything."
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "wget piped into sudo bash.",
+  "expect": [
+    {
+      "category": "remote_code_execution",
+      "min_severity": "high"
+    },
+    {
+      "category": "privilege_escalation",
+      "min_severity": "high"
+    }
+  ]
+}

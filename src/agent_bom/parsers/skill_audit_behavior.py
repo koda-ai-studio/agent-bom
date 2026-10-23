@@ -141,16 +141,16 @@ _BEHAVIORAL_PATTERNS: list[_BehavioralPattern] = [
         title="Prompt coercion or guardrail override",
         pattern=re.compile(
             r"""
-            ignore \s+ (?:all \s+)? previous \s+ instructions
+            (?:ignore|disregard|forget)\s+(?:all\s+)?(?:(?:the|your|any)\s+)?(?:previous|prior|above|earlier|preceding)\s+instructions
             | override \s+ (?:the \s+)? system \s+ prompt
             | reveal \s+ (?:the \s+)? system \s+ prompt
             | bypass \s+ (?:the \s+)? guardrails?
-            | developer \s+ mode
-            | jailbreak
+            | (?:(?:now|are)\s+in|enter|switch\s+to|activate)\s+developer\s+mode|developer\s+mode\s+(?:enabled|activated|on)\b
             | do \s+ not \s+ mention \s+ (?:the \s+)? policy
             """,
             re.VERBOSE | re.IGNORECASE,
         ),
+        weak_pattern=re.compile(r"\bdeveloper\s+mode\b|\bjailbreak", re.IGNORECASE),
         description=(
             "Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions."
         ),

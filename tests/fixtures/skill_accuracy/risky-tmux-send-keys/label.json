@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "AGENTS.md",
+  "description": "Types commands into another terminal pane.",
+  "expect": [
+    {
+      "category": "input_injection",
+      "min_severity": "high"
+    }
+  ]
+}

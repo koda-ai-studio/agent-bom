@@ -1,0 +1,10 @@
+{
+  "kind": "benign",
+  "file": "CLAUDE.md",
+  "description": "Project CLAUDE.md with test/lint commands; uv run executes project tools, not new packages.",
+  "must_not_packages": [
+    "python",
+    "pytest",
+    "ruff"
+  ]
+}

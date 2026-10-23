@@ -1,0 +1,11 @@
+{
+  "kind": "benign",
+  "file": "AGENTS.md",
+  "description": "AGENTS.md forbidding edits to agent configuration files.",
+  "must_not": [
+    {
+      "category": "memory_poisoning",
+      "max_severity": "low"
+    }
+  ]
+}

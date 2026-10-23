@@ -1,0 +1,17 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Frontmatter lists launcher binaries; the next YAML key must not read as a package.",
+  "packages": [
+    {
+      "name": "agent-bom",
+      "ecosystem": "pypi",
+      "version": "0.109.0"
+    }
+  ],
+  "must_not_packages": [
+    "optional_bins",
+    "npx",
+    "bins"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Scoped npm package launched with a pinned version and flags.",
+  "packages": [
+    {
+      "name": "@playwright/mcp",
+      "ecosystem": "npm",
+      "version": "0.0.41"
+    }
+  ]
+}

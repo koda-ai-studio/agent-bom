@@ -1,0 +1,12 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Launcher syntax documented with placeholders, never concrete packages.",
+  "must_not_packages": [
+    "-y",
+    "-p",
+    "<package>",
+    "<name>",
+    "<tool>"
+  ]
+}

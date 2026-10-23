@@ -1,0 +1,13 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Documents required environment variables by name only.",
+  "must_not": [
+    {
+      "category": "excessive_permissions"
+    },
+    {
+      "category": "hardcoded_secret"
+    }
+  ]
+}

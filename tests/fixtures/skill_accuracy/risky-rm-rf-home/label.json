@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "Cleanup step that deletes the home projects folder.",
+  "expect": [
+    {
+      "category": "destructive_action",
+      "min_severity": "medium"
+    }
+  ]
+}

@@ -29,15 +29,15 @@ from collections import Counter
 
 from fastapi.testclient import TestClient
 
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401
+from tests._demo_estate_fixtures import VIEWER
 
 
 def edge_key(edge: dict) -> tuple[str, str, str]:
     return (str(edge.get("source")), str(edge.get("target")), str(edge.get("relationship")))
 
 
-def test_no_edge_is_listed_twice(demo_estate_client: TestClient) -> None:  # noqa: F811
-    payload = demo_estate_client.get("/v1/graph", headers=VIEWER).json()
+def test_no_edge_is_listed_twice(shared_demo_estate_client: TestClient) -> None:
+    payload = shared_demo_estate_client.get("/v1/graph", headers=VIEWER).json()
     edges = payload.get("edges") or []
     assert edges, "the demo estate returned no edges, so this proves nothing"
 
@@ -47,9 +47,9 @@ def test_no_edge_is_listed_twice(demo_estate_client: TestClient) -> None:  # noq
     )
 
 
-def test_returned_edges_do_not_exceed_the_snapshot(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_returned_edges_do_not_exceed_the_snapshot(shared_demo_estate_client: TestClient) -> None:
     """A page is a subset of the estate. It can never hold *more* than all of it."""
-    payload = demo_estate_client.get("/v1/graph", headers=VIEWER).json()
+    payload = shared_demo_estate_client.get("/v1/graph", headers=VIEWER).json()
     edges = payload.get("edges") or []
     total_edges = (payload.get("stats") or {}).get("total_edges")
     if not isinstance(total_edges, int) or total_edges <= 0:
@@ -57,14 +57,14 @@ def test_returned_edges_do_not_exceed_the_snapshot(demo_estate_client: TestClien
     assert len(edges) <= total_edges, f"page returned {len(edges)} edges of a {total_edges}-edge snapshot"
 
 
-def test_containment_parents_still_reach_the_page(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_containment_parents_still_reach_the_page(shared_demo_estate_client: TestClient) -> None:
     """Deduplicating must not drop the ancestor context it was added to carry.
 
     Every node in the payload that is not on the ranked page is there because a
     containment edge reached it; that edge must still be present, or the
     ancestor renders as an orphan.
     """
-    payload = demo_estate_client.get("/v1/graph", headers=VIEWER).json()
+    payload = shared_demo_estate_client.get("/v1/graph", headers=VIEWER).json()
     completeness = payload.get("completeness") or {}
     context_nodes = completeness.get("context_nodes") or 0
     if not context_nodes:

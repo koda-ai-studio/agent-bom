@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Python block running shell strings and eval.",
+  "expect": [
+    {
+      "category": "ast_shell_execution",
+      "min_severity": "high"
+    },
+    {
+      "category": "ast_dynamic_code_execution",
+      "min_severity": "high"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "agent-bom",
+  "interface": {
+    "displayName": "agent-bom"
+  },
+  "plugins": [
+    {
+      "name": "agent-bom",
+      "source": {
+        "source": "local",
+        "path": "./integrations/claude-code"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

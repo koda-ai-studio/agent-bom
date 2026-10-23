@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "MCP server whose command is a raw shell.",
+  "expect": [
+    {
+      "category": "shell_access",
+      "min_severity": "high"
+    },
+    {
+      "category": "unverified_server",
+      "min_severity": "medium"
+    }
+  ]
+}

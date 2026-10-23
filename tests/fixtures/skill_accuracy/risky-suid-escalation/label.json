@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Sets the SUID bit on an interpreter.",
+  "expect": [
+    {
+      "category": "privilege_escalation",
+      "min_severity": "high"
+    }
+  ]
+}

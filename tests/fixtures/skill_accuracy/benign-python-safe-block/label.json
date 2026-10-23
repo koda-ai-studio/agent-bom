@@ -1,0 +1,16 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Python example that only parses JSON and reads a file.",
+  "must_not": [
+    {
+      "category": "ast_dynamic_code_execution"
+    },
+    {
+      "category": "ast_shell_execution"
+    },
+    {
+      "category": "ast_file_mutation"
+    }
+  ]
+}

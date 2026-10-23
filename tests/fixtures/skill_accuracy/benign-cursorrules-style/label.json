@@ -1,0 +1,5 @@
+{
+  "kind": "benign",
+  "file": ".cursorrules",
+  "description": "Plain TypeScript style rules."
+}

@@ -167,7 +167,9 @@ def attach_passive_mcp_audit(report: AIBOMReport) -> None:
     if report.enforcement_data is None:
         report.enforcement_data = audit_mcp_agents(report.agents).to_dict()
     existing = {finding.id for finding in report.findings}
-    for finding in evaluate_mcp_auth_posture(report.agents):
+    from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
+
+    for finding in [*evaluate_mcp_auth_posture(report.agents), *evaluate_agent_permission_posture(report.agents)]:
         if finding.id not in existing:
             report.findings.append(finding)
             existing.add(finding.id)

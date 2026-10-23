@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from starlette.testclient import TestClient
 
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401 - pytest fixture
+from tests._demo_estate_fixtures import VIEWER
 
 _PAGE = 1000
 
@@ -22,11 +22,11 @@ def _all_findings(client: TestClient) -> list[dict]:
             return rows
 
 
-def test_every_listed_finding_node_id_resolves_in_the_served_graph(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_every_listed_finding_node_id_resolves_in_the_served_graph(shared_demo_estate_client: TestClient) -> None:
     from agent_bom.api import stores as api_stores
     from agent_bom.demo_estate.showcase_graph import SHOWCASE_SCAN_ID, SHOWCASE_TENANT
 
-    findings = _all_findings(demo_estate_client)
+    findings = _all_findings(shared_demo_estate_client)
     assert len(findings) > 2000, len(findings)
     referenced = {str(row.get(key)) for row in findings for key in ("node_id", "finding_node_id") if row.get(key)}
     assert len(referenced) > 1000
@@ -39,7 +39,7 @@ def test_every_listed_finding_node_id_resolves_in_the_served_graph(demo_estate_c
     assert not missing, f"{len(missing)} finding node ids missing from the graph, e.g. {missing[:5]}"
 
 
-def test_retired_demo_ids_resolve_through_the_persisted_alias_table(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_retired_demo_ids_resolve_through_the_persisted_alias_table(shared_demo_estate_client: TestClient) -> None:
     from agent_bom.api import stores as api_stores
     from agent_bom.demo_estate.showcase_graph import SHOWCASE_SCAN_ID, SHOWCASE_TENANT
 
@@ -52,6 +52,8 @@ def test_retired_demo_ids_resolve_through_the_persisted_alias_table(demo_estate_
     resolved = store.resolve_node_aliases(tenant_id=SHOWCASE_TENANT, node_ids=set(retired), scan_id=SHOWCASE_SCAN_ID)
     assert resolved == retired
 
-    impact = demo_estate_client.get("/v1/graph/impact", headers=VIEWER, params={"node": "mc:pii-public", "scan_id": SHOWCASE_SCAN_ID})
+    impact = shared_demo_estate_client.get(
+        "/v1/graph/impact", headers=VIEWER, params={"node": "mc:pii-public", "scan_id": SHOWCASE_SCAN_ID}
+    )
     assert impact.status_code == 200, impact.text
     assert impact.json().get("resolved_from") == "mc:pii-public"
