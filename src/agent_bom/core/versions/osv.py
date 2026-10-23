@@ -7,9 +7,10 @@ https://ossf.github.io/osv-schema/#evaluation
 
 from __future__ import annotations
 
-from functools import cmp_to_key
+from functools import cmp_to_key, lru_cache
 from operator import ge, gt, lt
 
+from agent_bom.core.versions.distro import OS_DISTRO_COMPARATOR_FAMILIES
 from agent_bom.core.versions.ordering import compare_version_order
 from agent_bom.core.versions.ranges import normalize_introduced
 from agent_bom.core.versions.validation import _looks_like_commit_sha
@@ -122,3 +123,65 @@ def range_windows(events: list[dict], ecosystem: str = "") -> list[tuple[str | N
     if not windows:
         windows.append((None, None, None))
     return windows
+
+
+# Map a (possibly release-suffixed) DB ecosystem to a base family the version
+# comparator understands. The RPM/apk distro families (Red Hat, Rocky, AlmaLinux,
+# openSUSE/SUSE, Wolfi, Chainguard) come from ``core.versions.distro`` so the
+# routing and comparator maps never drift apart.
+_ECO_FAMILY_TO_COMPARATOR = {
+    "debian": "deb",
+    "ubuntu": "deb",
+    "deb": "deb",
+    "alpine": "apk",
+    "apk": "apk",
+    "rpm": "rpm",
+    "linux": "rpm",
+    **OS_DISTRO_COMPARATOR_FAMILIES,
+}
+
+
+def comparator_ecosystem(ecosystem: str) -> str:
+    """Normalise a DB ecosystem to a key the version comparator can order.
+
+    DB ``affected`` rows store distro ecosystems with a release suffix
+    (``debian:10``, ``alpine:v3.18``, ``ubuntu:22.04``). The ecosystem-aware
+    version comparator only recognises the base families (``deb``/``apk``/
+    ``rpm``); handed the suffixed form it cannot pick a distro comparator and
+    returns "unknown" for every range. That silently flips already-fixed distro
+    advisories into conservative false positives (e.g. ``bash 5.0-4`` reported
+    against a fix of ``4.3-9.1``). Normalising to the base family restores
+    correct version ordering.
+    """
+    base = (ecosystem or "").split(":", 1)[0].strip().lower()
+    return _ECO_FAMILY_TO_COMPARATOR.get(base, base)
+
+
+@lru_cache(maxsize=131072)
+def _cached_version_match_state(
+    version: str,
+    introduced: str | None,
+    fixed: str | None,
+    last_affected: str | None,
+    ecosystem: str = "",
+    limit_version: str | None = "",
+) -> str:
+    return range_match_state(version, introduced, fixed, last_affected, ecosystem, limit_version)
+
+
+def version_match_state(
+    version: str,
+    introduced: str | None,
+    fixed: str | None,
+    last_affected: str | None,
+    ecosystem: str = "",
+    limit_version: str | None = "",
+) -> str:
+    """Classify one affected-range row for a version; the one verdict scan time and re-match share.
+
+    Returns ``affected`` / ``unaffected`` for a definitive comparison,
+    ``unknown`` for a genuine version-vs-version ambiguity, or ``uncomparable``
+    when a bound is a git SHA / non-version token that can never match a
+    concrete release (never a reason to include).
+    """
+    return _cached_version_match_state(version, introduced, fixed, last_affected, comparator_ecosystem(ecosystem), limit_version)

@@ -44,7 +44,7 @@ def _feed_advisory(published: str = "2026-10-22T00:00:00+00:00") -> OperatorAdvi
         summary="feed-published flaw",
         severity="high",
         published=published,
-        affected=[("npm", "left-pad", "1.0.0", "1.3.1", None)],
+        affected=[("npm", "left-pad", "1.0.0", "1.3.1", None, "")],
     )
 
 
@@ -244,3 +244,38 @@ def test_rematch_run_persists_a_keyset_cursor_and_resumes_inside_a_timestamp_tie
     assert (state["feed_cursor"], state["feed_cursor_id"]) == (tie, f"GHSA-tie-{total - 2:05d}")
     rematch.run_tenant_rematch("tenant-a", now=LATER)
     assert [f["advisory_id"] for f in env.get_rematch_state("tenant-a")["recent_findings"]] == [f"GHSA-tie-{total - 1:05d}"]
+
+
+@pytest.mark.parametrize(("version", "matched"), [("8.5.1", False), ("7.4.0", True)])
+def test_feed_rematch_honours_the_exclusive_range_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str, matched: bool
+) -> None:
+    from agent_bom.scanners.operator_advisory import match_advisories_against_reports
+
+    _feed_db(tmp_path, monkeypatch, [("GHSA-limit-0001", "2026-10-23T00:00:01Z", "jsonwebtoken", "0", "", "8.0.0")])
+    batch = rematch.local_feed_advisories_since("2026-10-22T00:00:00Z")
+    report = {"scan_id": "s1", "agents": [{"name": "a", "mcp_servers": [{"name": "s", "packages": [
+        {"name": "jsonwebtoken", "version": version, "ecosystem": "npm"}]}]}]}  # fmt: skip
+    result = match_advisories_against_reports(batch.advisories, [report], provenance="feed")
+    assert result.complete
+    assert [f["advisory_id"] for f in result.findings] == (["GHSA-limit-0001"] if matched else [])
+
+
+def test_feed_and_scan_time_range_verdicts_agree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The re-match path and the scan-time lookup classify the same rows identically."""
+    from agent_bom.core.versions.osv import version_match_state
+    from agent_bom.scanners.operator_advisory import _in_range
+
+    cases = [
+        ("1.2.0", "0", "1.3.1", "", ""),
+        ("8.5.1", "0", "", "", "8.0.0"),
+        ("2.0.0", "1.0.0", "", "2.0.0", ""),
+        ("0.9", "1.0", "2.0", "", ""),
+    ]
+    for version, introduced, fixed, last, limit in cases:
+        advisory = rematch.feed_advisory(
+            advisory_id="GHSA-x-1", aliases=[], summary="s", severity="high", published=None,
+            affected=[("npm", "p", introduced, fixed, last, limit)],
+        )  # fmt: skip
+        verdict = _in_range(version, advisory.affected[0].ranges[0], "npm")
+        assert verdict is {"affected": True, "unaffected": False}[version_match_state(version, introduced, fixed, last, "npm", limit)]

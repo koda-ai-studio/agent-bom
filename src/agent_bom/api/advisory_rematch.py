@@ -34,7 +34,7 @@ from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.core.settings import env_bool, env_int
 from agent_bom.db import schema as _schema
 from agent_bom.db.schema import open_existing_db_readonly
-from agent_bom.scanners.operator_advisory import AffectedProduct, AffectedRange, OperatorAdvisory, match_advisories_against_reports
+from agent_bom.scanners.operator_advisory import AffectedProduct, FeedAffectedRange, OperatorAdvisory, match_advisories_against_reports
 
 try:
     from psycopg import Error as _PsycopgError
@@ -89,7 +89,7 @@ def feed_advisory(
     summary: str,
     severity: str,
     published: str | None,
-    affected: list[tuple[str, str, str | None, str | None, str | None]],
+    affected: list[tuple[str, str, str | None, str | None, str | None, str | None]],
 ) -> OperatorAdvisory:
     """Feed record in the matcher's shape; feed data is trusted as stored, not re-validated."""
     products = [
@@ -98,9 +98,13 @@ def feed_advisory(
             name=name,
             cpe_product=None,
             versions=[],
-            ranges=[AffectedRange.model_construct(introduced=introduced or None, fixed=fixed or None, last_affected=last or None)],
+            ranges=[
+                FeedAffectedRange.model_construct(
+                    introduced=introduced or None, fixed=fixed or None, last_affected=last or None, limit_version=limit
+                )
+            ],
         )
-        for ecosystem, name, introduced, fixed, last in affected
+        for ecosystem, name, introduced, fixed, last, limit in affected
     ]
     return OperatorAdvisory.model_construct(
         id=advisory_id,
@@ -140,19 +144,26 @@ def local_feed_advisories_since(cursor: str | None, after_id: str | None = None)
         raise FeedUnavailableError("local vulnerability DB could not be read") from exc
 
 
+def _limit_projection(conn: sqlite3.Connection) -> str:
+    """A DB built before range limits were stored has lost them: NULL makes the verdict indeterminate."""
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(affected)").fetchall()}
+    return "a.limit_version" if "limit_version" in columns else "NULL"
+
+
 def _feed_batch(conn: sqlite3.Connection, ids: list[str]) -> FeedBatch:
     if not ids:
         return FeedBatch([], None)
     marks = ",".join("?" * len(ids))
     rows = conn.execute(
         "SELECT v.id, v.summary, v.severity, v.aliases, v.published, v.modified, a.ecosystem, a.package_name, a.introduced, a.fixed, "
-        f"a.last_affected FROM vulns v JOIN affected a ON a.vuln_id = v.id WHERE v.id IN ({marks})",  # nosec B608 - placeholders only
+        f"a.last_affected, {_limit_projection(conn)} FROM vulns v JOIN affected a ON a.vuln_id = v.id "
+        f"WHERE v.id IN ({marks})",  # nosec B608 - fixed projection and placeholders only
         ids,
     ).fetchall()
     grouped: dict[str, dict[str, Any]] = {}
-    for vid, summary, severity, aliases, published, modified, eco, name, introduced, fixed, last in rows:
+    for vid, summary, severity, aliases, published, modified, eco, name, introduced, fixed, last, limit in rows:
         entry = grouped.setdefault(vid, {"row": (summary, severity, aliases, published), "modified": modified, "affected": []})
-        entry["affected"].append((eco, name, introduced, fixed, last))
+        entry["affected"].append((eco, name, introduced, fixed, last, limit))
     advisories = [
         feed_advisory(
             advisory_id=vid,

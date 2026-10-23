@@ -22,8 +22,8 @@ from typing import Optional
 from agent_bom.advisory_ids import MATCH_CONFIDENCE_UNVERIFIED_RANGE
 from agent_bom.api.tracing import get_tracer
 from agent_bom.core.packages import legacy_package_lookup_names, normalize_package_name, package_lookup_names
-from agent_bom.core.versions.osv import range_match_state
-from agent_bom.os_advisory import OS_DISTRO_COMPARATOR_FAMILIES
+from agent_bom.core.versions.osv import comparator_ecosystem as _comparator_ecosystem
+from agent_bom.core.versions.osv import version_match_state as _version_match_state
 
 _logger = logging.getLogger(__name__)
 _LOOKUP_TRACER = get_tracer("agent_bom.db.lookup")
@@ -279,22 +279,6 @@ def _version_affected(
     return version_in_range(version, introduced, fixed, last_affected, _comparator_ecosystem(ecosystem))
 
 
-# Map a (possibly release-suffixed) DB ecosystem to a base family the version
-# comparator understands. The RPM/apk distro families (Red Hat, Rocky, AlmaLinux,
-# openSUSE/SUSE, Wolfi, Chainguard) are contributed by ``os_advisory`` so the
-# routing and comparator maps never drift apart.
-_ECO_FAMILY_TO_COMPARATOR = {
-    "debian": "deb",
-    "ubuntu": "deb",
-    "deb": "deb",
-    "alpine": "apk",
-    "apk": "apk",
-    "rpm": "rpm",
-    "linux": "rpm",
-    **OS_DISTRO_COMPARATOR_FAMILIES,
-}
-
-
 def _is_distro_release_ecosystem(ecosystem: str) -> bool:
     """True for release-scoped OS ecosystems (``debian:10``, ``alpine:v3.18``, …).
 
@@ -392,52 +376,6 @@ def _resolve_fixed_version_with_aliases(row: sqlite3.Row, rows: list[sqlite3.Row
     if fixed is not None:
         return fixed
     return _alias_cluster_fix(row, rows, version)
-
-
-def _comparator_ecosystem(ecosystem: str) -> str:
-    """Normalise a DB ecosystem to a key the version comparator can order.
-
-    DB ``affected`` rows store distro ecosystems with a release suffix
-    (``debian:10``, ``alpine:v3.18``, ``ubuntu:22.04``). The ecosystem-aware
-    version comparator only recognises the base families (``deb``/``apk``/
-    ``rpm``); handed the suffixed form it cannot pick a distro comparator and
-    returns "unknown" for every range. That silently flips already-fixed distro
-    advisories into conservative false positives (e.g. ``bash 5.0-4`` reported
-    against a fix of ``4.3-9.1``). Normalising to the base family restores
-    correct version ordering.
-    """
-    base = (ecosystem or "").split(":", 1)[0].strip().lower()
-    return _ECO_FAMILY_TO_COMPARATOR.get(base, base)
-
-
-@lru_cache(maxsize=131072)
-def _cached_version_match_state(
-    version: str,
-    introduced: Optional[str],
-    fixed: Optional[str],
-    last_affected: Optional[str],
-    ecosystem: str = "",
-    limit_version: Optional[str] = "",
-) -> str:
-    return range_match_state(version, introduced, fixed, last_affected, ecosystem, limit_version)
-
-
-def _version_match_state(
-    version: str,
-    introduced: Optional[str],
-    fixed: Optional[str],
-    last_affected: Optional[str],
-    ecosystem: str = "",
-    limit_version: Optional[str] = "",
-) -> str:
-    """Classify one affected-range row for a version.
-
-    Returns ``affected`` / ``unaffected`` for a definitive semver comparison,
-    ``unknown`` for a genuine version-vs-version ambiguity (conservatively
-    included), or ``uncomparable`` when a bound is a git SHA / non-version token
-    that can never match a concrete semver (never a reason to include).
-    """
-    return _cached_version_match_state(version, introduced, fixed, last_affected, _comparator_ecosystem(ecosystem), limit_version)
 
 
 def _select_vulnerability_rows(rows: list[sqlite3.Row], version: Optional[str]) -> list[sqlite3.Row]:
