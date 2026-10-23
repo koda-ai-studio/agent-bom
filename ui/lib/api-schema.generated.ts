@@ -34559,6 +34559,8 @@ export interface operations {
                 has_credential?: boolean | null;
                 /** @description Only paths whose entrypoint node has this entity type */
                 source_type?: string | null;
+                /** @description Only paths through a known-exploited (CISA KEV) finding (true) or through none (false); the same filter as MCP exposure_paths kev. Not combinable with node, finding or control focus. */
+                kev?: boolean | null;
                 /** @description next_cursor from the previous page (replaces offset) */
                 cursor?: string | null;
                 /** @description Only paths through this node (replaced ids resolve to canonical) */

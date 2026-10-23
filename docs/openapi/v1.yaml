@@ -43161,6 +43161,20 @@ paths:
           - type: 'null'
           description: Only paths whose entrypoint node has this entity type
           title: Source Type
+      - description: Only paths through a known-exploited (CISA KEV) finding (true)
+          or through none (false); the same filter as MCP exposure_paths kev. Not
+          combinable with node, finding or control focus.
+        in: query
+        name: kev
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Only paths through a known-exploited (CISA KEV) finding (true)
+            or through none (false); the same filter as MCP exposure_paths kev. Not
+            combinable with node, finding or control focus.
+          title: Kev
       - description: next_cursor from the previous page (replaces offset)
         in: query
         name: cursor

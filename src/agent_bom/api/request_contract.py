@@ -22,9 +22,9 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Annotated
 
-from fastapi import HTTPException, Query
+from fastapi import HTTPException, Query, Request
 
-__all__ = ["PageLimit1000", "reject_unknown_fields", "require_scalar_str"]
+__all__ = ["PageLimit1000", "reject_unknown_fields", "reject_unknown_query_params", "require_scalar_str"]
 
 # Query-string half of the contract: a list route's page size is bounded so an
 # oversized request is a visible 422 (and an OpenAPI maximum), never a silent
@@ -52,6 +52,33 @@ def reject_unknown_fields(body: object, accepted: Iterable[str]) -> None:
             "Unknown fields are rejected rather than dropped so a misspelled field is never a silent no-op."
         ),
     )
+
+
+def _declared_query_names(dependant: object) -> set[str]:
+    names = {str(getattr(field, "alias", "")) for field in getattr(dependant, "query_params", [])}
+    for child in getattr(dependant, "dependencies", []):
+        names |= _declared_query_names(child)
+    return names
+
+
+def reject_unknown_query_params(request: Request) -> None:
+    """Route dependency: reject query parameters the route does not declare.
+
+    FastAPI drops undeclared query parameters, so ``?kev_only=true`` returned
+    the unfiltered queue as if it were filtered. Undeclared names are a 422,
+    the status FastAPI already uses for an invalid query value.
+    """
+    route = request.scope.get("route")
+    dependant = getattr(route, "dependant", None)
+    if dependant is None:
+        return
+    accepted = _declared_query_names(dependant)
+    unknown = sorted({key for key in request.query_params if key not in accepted})
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown query parameter(s): {unknown}. Accepted: {sorted(accepted)}.",
+        )
 
 
 def require_scalar_str(body: dict, key: str, *, default: str = "", max_length: int = 200) -> str:
