@@ -10,7 +10,9 @@ stuck, a workflow fails unexpectedly, or you need to retrigger checks.
 PR CI tests GitHub's merge result with changed-domain tests and shared contract
 smoke. Full correctness is split into 4 parallel shards when dependency,
 shared test infrastructure, security/identity foundations, or unmapped source
-inputs change. `scripts/classify_ci_changes.py` checks each source independently
+inputs change; those shards then replace the smoke jobs, because they run
+every test module (with the same `otel` extra) plus the graph-fixture and DCM
+guards on shard 0. A smoke job that does run must still pass. `scripts/classify_ci_changes.py` checks each source independently
 against `scripts/pytest_ci_plan.py`; a mapped sibling cannot hide an unmapped
 input. Missing/deleted source, unknown paths and failed classification require
 the full suite. Direct test edits run through the changed-domain selector.
@@ -29,8 +31,11 @@ gate until a successful replacement run completes; passing sibling jobs does
 not establish a green main commit.
 
 Main, nightly and manual runs assign every test module to one of four shards
-for each supported interpreter, using the same exhaustive plan as PRs. Each
-runner uses two pytest workers. This divides work across runners; elapsed time
+for each supported interpreter, using the same exhaustive plan as PRs.
+`scripts/ci_pytest_workers.py` sizes pytest-xdist workers per job: every core
+of the 4-vCPU, 16 GB hosted runner, capped at three when the selection holds
+`tests/test_demo_estate_bootstrap.py` (each demo-estate worker reaches about
+4 GB RSS). This divides work across runners; elapsed time
 still depends on queue capacity and the slowest shard.
 
 The planner balances measured per-module seconds from `tests/.ci-durations.json`
@@ -83,14 +88,14 @@ cannot satisfy the release gate.
 | UI Validate (lint, vitest, schema drift) + UI export build | when UI inputs change | every main push | yes |
 | Docs Strict, Helm, Compose, Endpoint packaging | when their inputs change | when their inputs change | yes |
 | Native App image and persistence | when its inputs change | yes | yes |
-| Changed-domain and cross-surface contract smoke | yes (required through aggregation) | yes | yes |
+| Changed-domain and cross-surface contract smoke | yes, unless the full shards run (required through aggregation) | yes | yes |
 | Full correctness suite, Python 3.13 in 4 shards | shared, dependency, security or unmapped inputs (required when selected) | no | no |
 | Full correctness suite, Python 3.11/3.12/3.13/3.14 in 4 shards each (combined 3.11 coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
 | Postgres Integration Contract (live RLS, migrations, schema parity) | relevant inputs (required when selected) | yes | yes |
 | Test (Alpine/musl, shard N) | subset on relevant changes; full in 4 shards on dependencies | subset; full in 4 shards on dependency changes | full in 4 shards nightly, subset manual |
 | Docker (multi-arch) + image scans | no | yes | nightly only |
-| UI E2E (Playwright, bundle budget); container smoke | UI inputs; container/build inputs for Docker | every main push | yes |
+| UI E2E (Playwright in 4 shards, bundle budget); container smoke | UI inputs; container/build inputs for Docker | every main push | yes |
 | Dogfood GitHub Action | no | when action inputs change | yes |
 | ClusterFuzzLite (`cflite-pr.yml`) | no | short batch on parser changes | weekly long batch |
 | Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | every main push | manual |
@@ -114,6 +119,15 @@ and classifier changes together and obtain fresh main CI proof before release.
 The required `Test (Python 3.13)` context also requires Alpine and UI E2E
 when their path filters select them. Failed classification runs both lanes;
 a missing, failed, or cancelled selected lane fails that context.
+
+UI E2E runs as four `UI E2E shard (N/4)` jobs (`playwright test --shard=N/4`),
+each building its own standalone server, plus one `UI container smoke` job.
+The `UI E2E and container smoke` job, which the release gate requires by name,
+passes only when every shard passed and the container smoke passed (or was
+not selected). Each shard uploads its own failure traces and screenshots as
+`ui-failure-diagnostics-<run>-<attempt>-shard-N`. Specs run file-serial unless
+they opt into `test.describe.configure({ mode: "parallel" })`; the largest
+spec does, so no shard carries it as one indivisible group.
 
 Full musl runs partition every test file across two runners, with two workers
 and a 45-minute limit per runner. Targeted musl runs use one runner. Both full

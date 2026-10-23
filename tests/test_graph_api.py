@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import sqlite3
 import time
@@ -1370,7 +1371,8 @@ class _RecordingGraphStore:
         node_budget: int | None = None,
     ) -> UnifiedGraph:
         self.calls.append(("load_graph", tenant_id, scan_id, entity_types, min_severity_rank))
-        return apply_node_budget(self.graph, node_budget)
+        # Real stores build a fresh graph per load; routes enrich the loaded graph in place.
+        return apply_node_budget(copy.deepcopy(self.graph), node_budget)
 
     def diff_snapshots(self, scan_id_old: str, scan_id_new: str, *, tenant_id: str = "") -> dict:
         self.calls.append(("diff_snapshots", tenant_id, scan_id_old, scan_id_new))

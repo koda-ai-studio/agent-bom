@@ -81,7 +81,11 @@ def _strip(payload: dict) -> dict:
 
 
 @pytest.mark.parametrize("extra", [{"limit": 5}, {"relationships": "uses"}], ids=["node-page", "investigation-load"])
-def test_canvas_view_is_the_default_minus_only_the_unread_fields(recording_graph_store, extra) -> None:
+def test_canvas_view_is_the_default_minus_only_the_unread_fields(recording_graph_store, extra, monkeypatch) -> None:
+    # Investigation loads merge process-global runtime evidence; another test's records must not leak in.
+    from agent_bom.cloud import runtime_workload_evidence_store as runtime_evidence
+
+    monkeypatch.setattr(runtime_evidence, "_default_store", None)
     recording_graph_store.graph = _graph()
     client = TestClient(app)
     params = {"scan": "store-scan", **extra}
