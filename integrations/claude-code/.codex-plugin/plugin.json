@@ -49,6 +49,7 @@
     "composerIcon": "./assets/icon.png",
     "logo": "./assets/icon.png",
     "screenshots": [],
-    "privacyPolicyURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md#privacy"
+    "privacyPolicyURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md#privacy",
+    "termsOfServiceURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/LICENSE"
   }
 }

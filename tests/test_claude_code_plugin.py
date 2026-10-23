@@ -109,3 +109,45 @@ def test_readme_names_the_workspace_roots_variable_the_server_reads():
     assert '"AGENT_BOM_MCP_WORKSPACE_ROOTS"' in source
     assert "AGENT_BOM_MCP_WORKSPACE_ROOTS" in readme
     assert "claude mcp add" in readme and "[mcp_servers." in readme
+
+
+REPO = "https://github.com/koda-ai-studio/agent-bom"
+LISTING_LINKS = ("homepage", "repository", "documentationUrl", "supportUrl", "privacyPolicyUrl", "termsOfServiceUrl")
+
+
+def _repo_target(url: str) -> Path:
+    # A blob/main link must name a file in this tree, and a #fragment a heading in it.
+    root = PLUGIN.parents[1]
+    path, _, fragment = url.removeprefix(f"{REPO}/blob/main/").partition("#")
+    target = root / path
+    assert target.is_file(), url
+    if fragment:
+        headings = {
+            re.sub(r"[^\w\- ]", "", line.lstrip("#").strip().lower()).replace(" ", "-")
+            for line in target.read_text(encoding="utf-8").splitlines()
+            if line.startswith("#")
+        }
+        assert fragment in headings, url
+    return target
+
+
+@pytest.mark.parametrize("plugin", ["claude-code", "agent-bom-guard"])
+def test_claude_manifests_fill_every_directory_listing_link(plugin):
+    manifest = json.loads((PLUGIN.parent / plugin / ".claude-plugin" / "plugin.json").read_text())
+    for key in LISTING_LINKS:
+        assert manifest.get(key, "").startswith(f"{REPO}"), (plugin, key)
+    assert manifest["supportUrl"] == f"{REPO}/issues"
+    assert manifest["termsOfServiceUrl"] == f"{REPO}/blob/main/LICENSE"
+    for key in ("documentationUrl", "privacyPolicyUrl", "termsOfServiceUrl"):
+        _repo_target(manifest[key])
+    assert _repo_target(manifest["documentationUrl"]).parent.name == plugin
+
+
+def test_codex_manifests_set_the_links_the_codex_schema_reads():
+    # Codex's plugin interface reads websiteURL, privacyPolicyURL and
+    # termsOfServiceURL; it has no support link field.
+    for manifest_path in (PLUGIN / ".codex-plugin" / "plugin.json", PLUGIN.parent / "codex" / ".codex-plugin" / "plugin.json"):
+        interface = json.loads(manifest_path.read_text())["interface"]
+        assert interface["websiteURL"] == REPO, manifest_path
+        assert interface["termsOfServiceURL"] == f"{REPO}/blob/main/LICENSE", manifest_path
+        _repo_target(interface["privacyPolicyURL"])
