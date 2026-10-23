@@ -28,6 +28,9 @@ def register_audit_tool(mcp, *, runtime_introspection, execute_tool_sync_async, 
     ) -> str:
         """Audit MCP descriptors, permission scope and authentication configuration.
 
+        Also reports ``agent_permission_findings``: Claude Code settings and
+        Codex config that let a coding agent act with no prompts or no sandbox.
+
         Returns descriptor coverage and heuristic findings; does not test auth
         bypass, general resource bodies or rendered prompts. Set live=false
         for passive discovery; live mode retains its stdio execution gate.

@@ -827,6 +827,10 @@ def discover_all(
             console.print(f"  [dim]  {_display_label(ia.name)}: installed but not configured[/dim]")
         agents.extend(installed_agents)
 
+    from agent_bom.discovery.agent_permission_posture import attach_permission_findings
+
+    agents = attach_permission_findings(agents, project_dir)
+
     # Dynamic content-based discovery layer (opt-in)
     if dynamic:
         from pathlib import Path as _DynPath

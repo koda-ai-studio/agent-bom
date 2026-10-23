@@ -32,7 +32,7 @@ def mcp_audit_cmd(
     output_format: str,
     output_path: str | None,
 ) -> None:
-    """Audit MCP descriptors and auth configuration in PATH; export evidence.
+    """Audit MCP descriptors, auth and agent permission settings in PATH.
 
     No tools are invoked. Live mode uses existing MCP discovery (including
     bounded linked Apps metadata reads). Resource-body injection, rendered
@@ -53,7 +53,8 @@ def mcp_audit_cmd(
             else None
         )
         audit = runtime.audit_mcp_agents(agents, introspection_report=intro, expected_capabilities=list(expected_capability) or None)
-        report = runtime.AIBOMReport(agents=agents, findings=runtime.evaluate_mcp_auth_posture(agents))
+        findings = [*runtime.evaluate_mcp_auth_posture(agents), *runtime.evaluate_agent_permission_posture(agents)]
+        report = runtime.AIBOMReport(agents=agents, findings=findings)
         report.enforcement_data = audit.to_dict()
         if intro:
             report.introspection_data = {"results": [r.to_dict() for r in intro.results], "warnings": intro.warnings}
@@ -74,10 +75,10 @@ def mcp_audit_cmd(
     except (OSError, ValueError, RuntimeError, runtime.IntrospectionError) as exc:
         click.echo("Error: " + runtime.sanitize_error(exc, generic=True), err=True)
         raise click.exceptions.Exit(2) from None
+    if any(f.severity.lower() in {"high", "critical"} for f in findings):
+        raise click.exceptions.Exit(1)
     if not servers:
         click.echo("No MCP servers discovered; no clean verdict is available.", err=True)
         raise click.exceptions.Exit(2)
-    if any(f.severity.lower() in {"high", "critical"} for f in findings):
-        raise click.exceptions.Exit(1)
     if live and any(row[kind]["status"] != "inspected" for row in audit.coverage for kind in ("tools", "resources", "prompts")):
         raise click.exceptions.Exit(2)

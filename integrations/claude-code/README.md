@@ -71,7 +71,14 @@ profile in the release after 0.109.0; on 0.109.0 those two skills fall back to
 - **Reads** MCP client configuration files on this machine (Claude Code, Claude
   Desktop, Cursor and other supported clients) to find agents, servers and the
   packages they launch, skill and instruction files under a path you name, plus
-  any image, SBOM or repository you name. Credential
+  any image, SBOM or repository you name. To flag agents that can act with no
+  prompts or no sandbox, it also reads coding-agent permission settings: Claude
+  Code `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`), the
+  project's `.claude/settings.json` and `.claude/settings.local.json`, and the
+  system `managed-settings.json` and `managed-settings.d/`; Codex
+  `~/.codex/config.toml` (or `$CODEX_HOME`), its `<profile>.config.toml` files and
+  the project's `.codex/config.toml`. Only mode names, flags and unscoped rule
+  strings are reported, never other setting values. Credential
   values found in configs are redacted in results; only their names and locations
   are reported.
 - **Sends** package names and versions, never file contents or credentials, to

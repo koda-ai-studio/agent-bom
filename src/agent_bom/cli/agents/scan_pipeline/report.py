@@ -68,6 +68,7 @@ def _collect_surface_sources(opts: ScanOptions, st: ScanState) -> None:
 
 def _seed_findings_and_scan_id(opts: ScanOptions, st: ScanState) -> None:
     from agent_bom.a2a_auth_posture import evaluate_a2a_auth_posture
+    from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
     from agent_bom.finding import blast_radius_to_finding
     from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
     from agent_bom.mcp_blocklist import blocklist_findings_for_agents
@@ -76,6 +77,7 @@ def _seed_findings_and_scan_id(opts: ScanOptions, st: ScanState) -> None:
     st.findings.extend(blocklist_findings_for_agents(st.agents))
     st.findings.extend(evaluate_a2a_auth_posture(st.agents))
     st.findings.extend(evaluate_mcp_auth_posture(st.agents))
+    st.findings.extend(evaluate_agent_permission_posture(st.agents))
 
     st.endpoint_inventory_data = None
     if opts.preset == "workstation":

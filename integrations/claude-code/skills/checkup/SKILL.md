@@ -11,7 +11,7 @@ Run a read-only checkup and answer in one screen. This skill reads MCP client co
    - `tool_risk_assessment` on the `agent-bom-audit` server with `live: false`. Always pass `live: false`; live mode connects to remote servers and can launch local ones.
    - `scan` on the `agent-bom` server with `detail: "summary"`. Page `section: "findings"` with the returned `result_id` only if you need a finding the summary does not show.
 2. Lead with one verdict line in plain language, for example "2 things to fix now, 3 worth tidying", followed by one line of totals: agents, servers, packages, and findings by severity.
-3. Then the top three fixes, most urgent first. Rank critical or known-exploited (KEV) packages with a fix, malicious or typosquatted packages, and credentials written into config above unpinned launchers and remote servers without authentication or TLS. For each fix give:
+3. Then the top three fixes, most urgent first. Rank critical or known-exploited (KEV) packages with a fix, malicious or typosquatted packages, credentials written into config, and high-severity `agent_permission_findings` from `tool_risk_assessment` (a coding agent that runs with no prompts or no sandbox) above unpinned launchers and remote servers without authentication or TLS. For each fix give:
    - what is wrong, in one sentence, naming the server or package
    - the exact change, such as `pin mcp-server-postgres==0.6.2` or "move `GITHUB_TOKEN` out of `.mcp.json` into an environment reference"
    - why it matters: what an attacker or a bad package could reach
