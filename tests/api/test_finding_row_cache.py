@@ -19,7 +19,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agent_bom.api import finding_row_inputs, finding_walk_cache, scan_finding_read
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401
+from tests._demo_estate_fixtures import VIEWER
 
 _NO_STORES: dict = {"hub": None, "job_store": None}
 _KEY = ("t1", 90, None, None, "open", "effective_reach", "[]")
@@ -203,7 +203,7 @@ def _page(client: TestClient, params: dict) -> dict:
     return body
 
 
-def test_repeated_first_pages_fold_once_and_match_uncached_reads(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+def test_repeated_first_pages_fold_once_and_match_uncached_reads(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     folds = _count_folds(monkeypatch)
     monkeypatch.setenv("AGENT_BOM_FINDING_WALK_CACHE", "0")
     uncached = [_page(demo_estate_client, params) for params in _PAGES]
@@ -223,7 +223,7 @@ def test_repeated_first_pages_fold_once_and_match_uncached_reads(demo_estate_cli
 
 
 def test_a_triage_write_between_cached_reads_is_served_like_an_uncached_read(
-    demo_estate_client: TestClient,  # noqa: F811
+    demo_estate_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     params = {"triage": "under_investigation"}

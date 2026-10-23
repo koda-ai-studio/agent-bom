@@ -33,6 +33,25 @@ for each supported interpreter, using the same exhaustive plan as PRs. Each
 runner uses two pytest workers. This divides work across runners; elapsed time
 still depends on queue capacity and the slowest shard.
 
+The planner balances measured per-module seconds from `tests/.ci-durations.json`
+(longest module first, onto the least-loaded shard); modules without a
+measurement are estimated from their size at the measured seconds per byte.
+Refresh the file when shards drift apart, from the four `Full correctness
+shard` job logs of one run (their `-v` output carries per-line timestamps):
+
+```bash
+for job in JOB_ID_0 JOB_ID_1 JOB_ID_2 JOB_ID_3; do
+  gh api --allow-escape-sequences repos/OWNER/REPO/actions/jobs/$job/logs > "/tmp/shard-$job.log"
+done
+uv run python scripts/refresh_ci_durations.py --log /tmp/shard-*.log
+```
+
+Without CI logs, run the suite locally with `--junitxml=/tmp/junit.xml` and pass
+`--junit /tmp/junit.xml` instead. Tests that only read the seeded demo estate
+use `shared_demo_estate_client` (one seed per module); tests that write,
+reseed or patch keep the per-test `demo_estate_client`. See
+`tests/_demo_estate_fixtures.py`.
+
 Python 3.11 shards upload coverage only after their tests pass. The combined
 coverage job requires all four shards and enforces the repository-wide 75%
 floor. Artifact names include the shard and run attempt, so failed-job retries

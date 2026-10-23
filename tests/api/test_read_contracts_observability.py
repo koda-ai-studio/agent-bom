@@ -10,7 +10,6 @@ from starlette.testclient import TestClient
 from agent_bom.api.read_models import observability as obs
 from tests.auth_helpers import proxy_headers
 from tests.test_api_read_contracts import _contract_violations, empty_estate_client  # noqa: F401
-from tests.test_demo_estate_bootstrap import demo_estate_client  # noqa: F401
 
 TYPED_READS: dict[str, type[obs.ReadResponse]] = {
     "/v1/traces/connectors": obs.TraceConnectorsResponse,
@@ -51,7 +50,7 @@ def test_observability_reads_document_their_models_in_openapi() -> None:
     assert {model.__name__ for model in TYPED_READS.values()} <= set(schema["components"]["schemas"])
 
 
-def test_seeded_observability_bodies_match_documented_models(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_seeded_observability_bodies_match_documented_models(demo_estate_client: TestClient) -> None:
     problems: list[str] = []
     for path in [*_LIST_READS, "/v1/observability/costs?tag=team"]:
         problems.extend(_check(demo_estate_client, path, {}))
@@ -63,7 +62,7 @@ def test_seeded_observability_bodies_match_documented_models(demo_estate_client:
     assert costs["total_calls"] > 0 and costs["by_agent"] and costs["tag_rollup"]["by_tag"]
 
 
-def test_adoption_summary_requires_config_permission_in_the_demo(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_adoption_summary_requires_config_permission_in_the_demo(demo_estate_client: TestClient) -> None:
     assert demo_estate_client.get("/v1/observability/adoption").status_code == 403
 
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401
+from tests._demo_estate_fixtures import VIEWER
 
 _FRAMEWORKS = ("soc2", "nist-800-53", "pci-dss", "iso-27001")
 
@@ -34,12 +34,12 @@ def _drill_total(client: TestClient, slug: str) -> int:
         params = {"framework": slug, "limit": 1000, "cursor": page["next_cursor"]}
 
 
-def test_hub_posture_framework_counts_match_the_drill_through(demo_estate_client: TestClient) -> None:  # noqa: F811
-    posture = _get(demo_estate_client, "/v1/compliance/hub/posture")
+def test_hub_posture_framework_counts_match_the_drill_through(shared_demo_estate_client: TestClient) -> None:
+    posture = _get(shared_demo_estate_client, "/v1/compliance/hub/posture")
     assert posture["framework_count_basis"] == "control_tag_evidence"
-    assert posture["totals"]["native"] == _get(demo_estate_client, "/v1/findings", limit=1)["total"]
+    assert posture["totals"]["native"] == _get(shared_demo_estate_client, "/v1/findings", limit=1)["total"]
     for slug in _FRAMEWORKS:
-        drill = _drill_total(demo_estate_client, slug)
+        drill = _drill_total(shared_demo_estate_client, slug)
         assert drill > 0, slug
         assert posture["framework_counts"]["native"].get(slug, 0) == drill, slug
         assert posture["framework_counts"]["combined"].get(slug, 0) == drill, slug
@@ -69,11 +69,11 @@ def _all_open_rows(client: TestClient) -> list[dict]:
         params = {"limit": 1000, "cursor": page["next_cursor"]}
 
 
-def test_every_framework_surface_reads_the_drill_through_count(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_every_framework_surface_reads_the_drill_through_count(shared_demo_estate_client: TestClient) -> None:
     from agent_bom.compliance_coverage import scored_framework_slugs
     from agent_bom.finding_scope import framework_evidence_slugs
 
-    client = demo_estate_client
+    client = shared_demo_estate_client
     rows = _all_open_rows(client)
     posture = _get(client, "/v1/compliance/hub/posture")
     for slug in _FRAMEWORKS:

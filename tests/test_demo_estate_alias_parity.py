@@ -10,8 +10,6 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
-from tests.test_demo_estate_bootstrap import demo_estate_client  # noqa: F401
-
 
 def _aliases_on_paths(limit: int = 2) -> list[tuple[str, str]]:
     conn = sqlite3.connect(os.environ["AGENT_BOM_GRAPH_DB"])
@@ -39,7 +37,7 @@ def _strip(value: Any) -> Any:
     return value
 
 
-def test_demo_aliases_on_attack_paths_read_like_their_canonical_ids(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_demo_aliases_on_attack_paths_read_like_their_canonical_ids(demo_estate_client: TestClient) -> None:
     from agent_bom.api import stores
     from agent_bom.backpressure import reset_backpressure_for_tests
     from agent_bom.mcp_tools.graph import exposure_paths_impl

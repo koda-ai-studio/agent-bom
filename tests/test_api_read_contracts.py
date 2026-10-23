@@ -17,7 +17,6 @@ from starlette.testclient import TestClient
 
 from agent_bom.api import read_models
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
-from tests.test_demo_estate_bootstrap import demo_estate_client  # noqa: F401
 
 TYPED_READS: dict[str, type[read_models.ReadResponse]] = {
     "/v1/activity": read_models.ActivityTimelineResponse,
@@ -100,7 +99,7 @@ def test_every_typed_read_documents_its_model_in_openapi() -> None:
     assert documented == {path: {"$ref": f"#/components/schemas/{model.__name__}"} for path, model in TYPED_READS.items()}
 
 
-def test_seeded_bodies_match_documented_models(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_seeded_bodies_match_documented_models(demo_estate_client: TestClient) -> None:
     problems: list[str] = []
     for path in sorted(TYPED_READS):
         response = demo_estate_client.get(path, headers=_DEMO_HEADERS)
