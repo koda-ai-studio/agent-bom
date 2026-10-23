@@ -195,5 +195,5 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `risk_campaign_workflows` | Postgres, SQLite | 13 |  | persistent |
 | `scan_findings` | SQLite | 20 |  | persistent |
 | `ticket_links` | Postgres, SQLite | 11 |  | persistent |
-| `trend_history` | Postgres, SQLite | 13 |  | persistent |
+| `trend_history` | Postgres, SQLite | 14 |  | persistent |
 | `vulnerability_scans` | ClickHouse | 16 | yes | persistent |
