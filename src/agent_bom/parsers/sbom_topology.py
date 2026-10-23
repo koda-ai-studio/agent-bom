@@ -47,6 +47,15 @@ def _restore_scoped_hierarchy(document: dict, spdx_document: dict | None, ref: s
         restore_spdx_hierarchy(source, scoped_packages, root_refs={ref})
 
 
+def _declared_tools(component: dict) -> list[MCPTool]:
+    tools = []
+    for prop in component.get("properties", []):
+        if isinstance(prop, dict) and prop.get("name") == "agent-bom:mcp-tool" and isinstance(prop.get("value"), str):
+            tool_name, _, description = prop["value"].partition(": ")
+            tools.append(MCPTool(name=tool_name, description=description, discovery_source="sbom", discovery_confidence="declared"))
+    return tools
+
+
 def restore_context_agents(document: dict, fallback: Agent, name: str | None) -> list[Agent]:
     spdx_document = document if document.get("bomFormat") != "CycloneDX" else None
     if spdx_document is not None:
@@ -72,11 +81,7 @@ def restore_context_agents(document: dict, fallback: Agent, name: str | None) ->
         assigned.update(members)
         scoped_packages = {p: deepcopy(packages[p]) for p in sorted(members)}
         _restore_scoped_hierarchy(document, spdx_document, ref, scoped_packages)
-        tools = []
-        for prop in component.get("properties", []):
-            if isinstance(prop, dict) and prop.get("name") == "agent-bom:mcp-tool" and isinstance(prop.get("value"), str):
-                tool_name, _, description = prop["value"].partition(": ")
-                tools.append(MCPTool(name=tool_name, description=description, discovery_source="sbom", discovery_confidence="declared"))
+        tools = _declared_tools(component)
         servers[ref] = MCPServer(
             name=str(component.get("name") or ref),
             command="sbom",

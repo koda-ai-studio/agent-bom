@@ -17,6 +17,7 @@ from agent_bom.core.errors import (
     UpstreamRateLimitedError,
 )
 from agent_bom.core.versions.osv import is_release_range, range_limits, range_match_state, range_windows
+from agent_bom.core.versions.osv import is_valid_fix_version as is_valid_fix_version
 from agent_bom.enrichment_posture import enrichment_source_available, record_enrichment_source
 from agent_bom.http_client import OfflineModeError, create_client, request_with_retry
 from agent_bom.models import Package
@@ -27,6 +28,7 @@ from agent_bom.scanners.osv_details import enrich_results_if_needed as enrich_re
 from agent_bom.scanners.osv_details import enrich_vuln_details as enrich_vuln_details
 from agent_bom.scanners.osv_details import vuln_needs_enrichment as vuln_needs_enrichment
 from agent_bom.scanners.upstream import upstream_request
+from agent_bom.version_utils import compare_version_order, is_prerelease_version
 
 _logger = logging.getLogger(__name__)
 
@@ -81,18 +83,6 @@ def ecosystem_matches(osv_ecosystem: str, query_ecosystem: str) -> bool:
     if mapped and mapped.split(":", 1)[0].strip().lower() == osv_base:
         return True
     return False
-
-
-def is_valid_fix_version(version: str) -> bool:
-    """Check if a string looks like a usable package version."""
-    if not version or not any(c.isdigit() for c in version):
-        return False
-    stripped = version.lstrip("v")
-    if len(stripped) == 40 and all(c in "0123456789abcdef" for c in stripped):
-        return False
-    if 7 <= len(stripped) <= 12 and all(c in "0123456789abcdef" for c in stripped):
-        return False
-    return True
 
 
 def package_lookup_names(pkg: Package) -> list[str]:
@@ -173,7 +163,6 @@ def _next_unaffected_fixes(windows: list, current_version: str, ecosystem: str, 
     earliest named fix above the installed version that no window still marks
     affected is a real upgrade target, not "no fix".
     """
-    from agent_bom.version_utils import compare_version_order, is_prerelease_version
 
     def affected(version: str) -> str:
         states = {

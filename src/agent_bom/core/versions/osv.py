@@ -185,3 +185,15 @@ def version_match_state(
     concrete release (never a reason to include).
     """
     return _cached_version_match_state(version, introduced, fixed, last_affected, comparator_ecosystem(ecosystem), limit_version)
+
+
+def is_valid_fix_version(version: str) -> bool:
+    """Check if a string looks like a usable package version."""
+    if not version or not any(c.isdigit() for c in version):
+        return False
+    stripped = version.lstrip("v")
+    if len(stripped) == 40 and all(c in "0123456789abcdef" for c in stripped):
+        return False
+    if 7 <= len(stripped) <= 12 and all(c in "0123456789abcdef" for c in stripped):
+        return False
+    return True

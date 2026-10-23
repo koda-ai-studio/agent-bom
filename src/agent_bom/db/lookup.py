@@ -24,6 +24,7 @@ from agent_bom.api.tracing import get_tracer
 from agent_bom.core.packages import legacy_package_lookup_names, normalize_package_name, package_lookup_names
 from agent_bom.core.versions.osv import comparator_ecosystem as _comparator_ecosystem
 from agent_bom.core.versions.osv import version_match_state as _version_match_state
+from agent_bom.db.lookup_fixes import LEGACY_RECEIPT_WARNING, UNVERIFIED_RANGE_WARNING, next_window_fix
 
 _logger = logging.getLogger(__name__)
 _LOOKUP_TRACER = get_tracer("agent_bom.db.lookup")
@@ -375,46 +376,9 @@ def _resolve_fixed_version_with_aliases(row: sqlite3.Row, rows: list[sqlite3.Row
     fixed = _resolve_fixed_version(row)
     if fixed is not None:
         return fixed
-    return _alias_cluster_fix(row, rows, version) or _next_window_fix(row, rows, version)
-
-
-def _next_window_fix(row: sqlite3.Row, rows: list[sqlite3.Row], version: Optional[str]) -> Optional[str]:
-    """Earliest fix another window of the same advisory names, when this window has none.
-
-    Mirrors :func:`agent_bom.scanners.osv._next_unaffected_fixes`: a release line
-    ended by ``last_affected`` can be remediated by the fix of a later line, as
-    long as no window of that advisory still marks the fix affected.
-    """
-    if not version or _is_distro_release_ecosystem(row["ecosystem"]):
-        return None
-    from agent_bom.scanners.osv import is_valid_fix_version
-    from agent_bom.version_utils import compare_version_order
-
-    windows = [
-        other
-        for other in rows
-        if other["id"] == row["id"] and other["ecosystem"] == row["ecosystem"] and other["package_name"] == row["package_name"]
-    ]
-
-    def state(candidate: str) -> str:
-        states = {
-            _version_match_state(candidate, w["introduced"], w["fixed"], w["last_affected"], w["ecosystem"], w["limit_version"])
-            for w in windows
-        }
-        return "affected" if "affected" in states else "unknown" if "unknown" in states else "unaffected"
-
-    comparator_eco = _comparator_ecosystem(row["ecosystem"])
-    best: Optional[str] = None
-    for window in windows:
-        fix = _resolve_fixed_version(window)
-        if not fix or not is_valid_fix_version(fix):
-            continue
-        order = compare_version_order(fix, version, comparator_eco)
-        if order is None or order <= 0 or state(fix) != "unaffected":
-            continue
-        if best is None or (compare_version_order(fix, best, comparator_eco) or 0) < 0:
-            best = fix
-    return best
+    if version and not _is_distro_release_ecosystem(row["ecosystem"]):
+        return _alias_cluster_fix(row, rows, version) or next_window_fix(row, rows, version, _version_match_state, _comparator_ecosystem)
+    return _alias_cluster_fix(row, rows, version)
 
 
 def _select_vulnerability_rows(rows: list[sqlite3.Row], version: Optional[str]) -> list[sqlite3.Row]:
@@ -662,20 +626,7 @@ def _local_vuln_from_row(row, rows, version, epss_map, kev_map) -> LocalVuln:
     if unknown_range:
         from agent_bom.scanners.state import record_scan_warning
 
-        if legacy_receipt:
-            # Rows carried over by the v7->v8 schema upgrade lost their OSV
-            # range limits, so neither membership nor the fix can be confirmed
-            # until the next OSV refresh rewrites them.
-            record_scan_warning(
-                "Local advisory rows predate range-limit receipts (not refreshed since the DB schema upgrade): "
-                "findings from them are marked unverified_range and their fixed versions are withheld. "
-                "Run `agent-bom db update` to restore range bounds and fixed versions."
-            )
-        else:
-            record_scan_warning(
-                "Some local advisory ranges cannot be verified. Findings marked unverified_range are candidates; "
-                "run agent-bom db update to refresh source bounds and review unresolved versions."
-            )
+        record_scan_warning(LEGACY_RECEIPT_WARNING if legacy_receipt else UNVERIFIED_RANGE_WARNING)
     return LocalVuln(
         match_confidence_tier=MATCH_CONFIDENCE_UNVERIFIED_RANGE if unknown_range else None,
         id=row["id"],

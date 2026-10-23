@@ -14,6 +14,7 @@ import json
 from collections.abc import Callable
 from typing import Any
 
+from agent_bom.compliance_coverage import framework_output_key_by_slug, normalize_framework_slug
 from agent_bom.mcp_errors import CODE_NOT_FOUND_RESOURCE, CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.compliance import compliance_impl
@@ -23,15 +24,11 @@ SOURCES = ("auto", "persisted", "local_scan")
 
 
 def _supported_frameworks() -> list[str]:
-    from agent_bom.compliance_coverage import framework_output_key_by_slug
-
     return sorted([*framework_output_key_by_slug(), "aisvs"])
 
 
 def _known_framework(framework: str) -> bool:
     """Same slugs /v1/compliance/{framework} accepts."""
-    from agent_bom.compliance_coverage import normalize_framework_slug
-
     return framework.lower() == "aisvs" or normalize_framework_slug(framework) in _supported_frameworks()
 
 

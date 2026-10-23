@@ -106,3 +106,22 @@ def secret_locations(block: dict[str, Any] | None) -> list[str]:
         if location not in out:
             out.append(location)
     return out
+
+
+def secret_scan_warning(block: dict[str, Any], *, location: str) -> str:
+    """Describe scanner categories without classifying PII as credentials."""
+    categories = block.get("by_category", {})
+    pii = categories.get("pii", 0)
+    secrets = categories.get("credential", 0) + categories.get("secret", 0)
+    parts = []
+    if secrets:
+        parts.append(f"{secrets} secret or credential pattern(s)")
+    if pii:
+        parts.append(f"{pii} PII pattern(s)")
+    message = f"{' and '.join(parts) or str(block['total']) + ' finding(s)'} found in {location} files"
+    locations = secret_locations(block)
+    if locations:
+        shown = ", ".join(locations[:5])
+        more = f" (+{len(locations) - 5} more)" if len(locations) > 5 else ""
+        message += f": {shown}{more}"
+    return message

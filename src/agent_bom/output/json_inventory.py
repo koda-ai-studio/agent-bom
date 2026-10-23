@@ -12,6 +12,7 @@ from agent_bom.asset_provenance import (
 )
 from agent_bom.canonical_ids import agent_identity_export, canonical_id
 from agent_bom.evidence.occurrence_ids import server_occurrence_id
+from agent_bom.evidence.scan_run import effective_scan_run, vulnerability_scan_skipped
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import AIBOMReport, MCPServer
 from agent_bom.output.json_sections import _package_occurrence_to_dict
@@ -33,8 +34,6 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport, *, vulnerabilities_scan
     ``vulnerability_count`` is null with ``vulnerability_status: "not_scanned"``
     when no vulnerability lookup ran, so an unscanned package never reads as clean.
     """
-    from agent_bom.evidence.scan_run import effective_scan_run, vulnerability_scan_skipped
-
     scanned = vulnerabilities_scanned and not vulnerability_scan_skipped(effective_scan_run(report))
     agents: list[dict] = []
     servers: dict[str, dict] = {}

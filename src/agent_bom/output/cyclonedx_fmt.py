@@ -658,8 +658,6 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
                     "name": "agent-bom:inventory-members",
                     "value": json.dumps(sorted(_sanitize_bom_ref(f"pkg-{p.stable_id}") for p in server.packages)),
                 },
-                # Package manifests and other dependency wrappers reuse MCPServer;
-                # only real MCP servers are declared as MCP servers.
                 {"name": "agent-bom:type", "value": "mcp-server" if server.counts_as_mcp_server else "dependency-surface"},
                 {"name": "agent-bom:surface", "value": server.surface.value},
                 {"name": "agent-bom:command", "value": sanitize_launch_command(server.command, server.args)},

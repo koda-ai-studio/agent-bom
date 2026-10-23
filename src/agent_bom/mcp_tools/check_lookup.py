@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from urllib.parse import quote
 
 from agent_bom import http_client
+from agent_bom.malicious import check_typosquat, is_malicious_osv_record
 from agent_bom.scanners.local_data_freshness import CheckDataEvidence, check_data_evidence
+from agent_bom.scanners.osv_details import OSV_API_URL
 from agent_bom.scanners.package_check_result import has_lookup_coverage_gap
+from agent_bom.scanners.package_matching import ECOSYSTEM_MAP
 
 
 def incomplete_lookup_reason(package: str, coverage_warnings: list[dict], evidence: CheckDataEvidence) -> str | None:
@@ -71,9 +75,6 @@ async def version_published(name: str, version: str, ecosystem: str, client) -> 
 
 async def _query_osv_by_name(name: str, ecosystem: str, client) -> list[dict]:
     """All OSV advisories for a package name (any version); [] when unavailable."""
-    from agent_bom.scanners.osv_details import OSV_API_URL
-    from agent_bom.scanners.package_matching import ECOSYSTEM_MAP
-
     osv_ecosystem = ECOSYSTEM_MAP.get(ecosystem)
     if not osv_ecosystem:
         return []
@@ -96,8 +97,6 @@ async def malicious_name_advisories(name: str, ecosystem: str, client) -> list[s
     a malware advisory (e.g. ``crossenv``, unpublished by the registry) must read
     as malicious, not as an unknown typo.
     """
-    from agent_bom.malicious import is_malicious_osv_record
-
     return [str(record.get("id")) for record in await _query_osv_by_name(name, ecosystem, client) if is_malicious_osv_record(record)]
 
 
@@ -107,8 +106,6 @@ async def unresolvable_name_malicious_reason(name: str, ecosystem: str, client) 
     A name the registry does not serve is still a verdict when it is a known
     malware package or a typosquat of a popular one.
     """
-    from agent_bom.malicious import check_typosquat
-
     malware_ids = await malicious_name_advisories(name, ecosystem, client)
     if malware_ids:
         return f"Known malicious package ({', '.join(malware_ids[:3])}); no published version"
@@ -116,3 +113,43 @@ async def unresolvable_name_malicious_reason(name: str, ecosystem: str, client) 
     if target:
         return f"Possible typosquat of '{target}'; no published version"
     return None
+
+
+async def resolution_malware_reason(resolved: bool, name: str, ecosystem: str, client) -> str | None:
+    """Malicious reason for a name whose version could not be resolved; None when it resolved."""
+    return None if resolved else await unresolvable_name_malicious_reason(name, ecosystem, client)
+
+
+async def unpublished_malware_reason(published: bool, name: str, version: str, ecosystem: str, client) -> str | None:
+    """Malicious reason for an unpublished pinned version of a known-malware package name."""
+    if published:
+        return None
+    malware_ids = await malicious_name_advisories(name, ecosystem, client)
+    if not malware_ids:
+        return None
+    return f"Known malicious package ({', '.join(malware_ids[:3])}); version {version} is not published"
+
+
+def malicious_verdict(pkg, name: str, reason: str, service_result) -> str:
+    pkg.is_malicious, pkg.malicious_reason = True, reason
+    return service_result("malicious", f"MALICIOUS package {name} — {reason}. Do not install.")
+
+
+def unresolved_result(pkg, name: str, eco: str, malicious_reason: str | None, service_result) -> str:
+    if malicious_reason:
+        return malicious_verdict(pkg, name, malicious_reason, service_result)
+    message = (
+        f"Could not resolve a version for {name}. Provide an explicit version "
+        f"(e.g. {name}@1.2.3 or {name}==1.2.3) and confirm the ecosystem (got '{eco}')."
+    )
+    return json.dumps({"package": name, "ecosystem": eco, "status": "error", "error": message})
+
+
+def unpublished_result(pkg, name: str, version: str, eco: str, malicious_reason: str | None, service_result) -> str:
+    if malicious_reason:
+        return malicious_verdict(pkg, name, malicious_reason, service_result)
+    return service_result(
+        "unknown",
+        f"Version {version} of {name} was not found in the {eco} registry — cannot confirm it is free of "
+        "vulnerabilities (typo or unpublished version?). agent-bom only verifies published versions.",
+    )

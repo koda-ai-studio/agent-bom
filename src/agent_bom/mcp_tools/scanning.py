@@ -10,11 +10,19 @@ import re
 from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
+from agent_bom.evidence.scan_run import scanner_warning_issues
+from agent_bom.mcp_server_scan import consume_repo_tree_inventory
 from agent_bom.mcp_tools.check_lookup import (
     incomplete_lookup_reason,
-    malicious_name_advisories,
+    resolution_malware_reason,
     scan_checked_package,
-    unresolvable_name_malicious_reason,
+    unpublished_malware_reason,
+)
+from agent_bom.mcp_tools.check_lookup import (
+    unpublished_result as _unpublished_result,
+)
+from agent_bom.mcp_tools.check_lookup import (
+    unresolved_result as _unresolved_result,
 )
 from agent_bom.mcp_tools.check_lookup import version_published as _version_published
 from agent_bom.mcp_tools.dispatch import resolve_tool_path
@@ -31,6 +39,7 @@ from agent_bom.mcp_tools.scan_response import (
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.scanners.local_data_freshness import freshness_snapshot
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
+from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -252,11 +261,8 @@ async def _scan_impl_inner(
     offline = resolve_offline(offline)
     store = _result_store if _result_store is not None else SCAN_RESULTS
     try:
-        from agent_bom.evidence.scan_run import scanner_warning_issues
-        from agent_bom.mcp_server_scan import consume_repo_tree_inventory
         from agent_bom.models import AIBOMReport
         from agent_bom.output import to_json
-        from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings
 
         enrich, scorecard, verify_integrity, pre_warnings = _apply_offline_overrides(offline, enrich, scorecard, verify_integrity)
         package = _normalize_scan_package(package)
@@ -282,18 +288,9 @@ async def _scan_impl_inner(
         from agent_bom.vex import active_blast_radii
 
         active_findings = active_blast_radii(blast_radii)
-        if verify_integrity:
-            await _verify_scanned_packages(agents, scan_warnings)
-        if scorecard:
-            await _enrich_scanned_packages_with_scorecard(agents)
+        await _post_scan_enrichment(agents, scan_warnings, verify_integrity=verify_integrity, scorecard=scorecard)
         report = _scan_report(AIBOMReport, agents, blast_radii, scan_sources, offline=offline)
-        # Same scan_run evidence the CLI grades, so the posture grade is one computation.
-        report.scan_run.issues.extend(scanner_warning_issues(scanner_warnings))
-        if coverage_warnings:
-            report.coverage_warnings = coverage_warnings
-        repo_inventory = consume_repo_tree_inventory()
-        if repo_inventory:
-            report.ai_inventory_data = {**(report.ai_inventory_data or {}), **repo_inventory}
+        _attach_pipeline_evidence(report, scanner_warnings, coverage_warnings)
         await _surface_graph_findings(report)
         if package_spec_unresolved:
             # Fail closed for every format: an empty SARIF/CycloneDX/SPDX document reads as an audited clean result.
@@ -315,6 +312,26 @@ async def _scan_impl_inner(
             return incomplete
         logger.exception("MCP tool error")
         raise ToolError(sanitize_error(exc)) from exc
+
+
+async def _post_scan_enrichment(agents, scan_warnings: list[str], *, verify_integrity: bool, scorecard: bool) -> None:
+    if verify_integrity:
+        await _verify_scanned_packages(agents, scan_warnings)
+    if scorecard:
+        await _enrich_scanned_packages_with_scorecard(agents)
+
+
+def _attach_pipeline_evidence(report, scanner_warnings: list[str], coverage_warnings: list[dict]) -> None:
+    """Fold the pipeline's scanner/coverage warnings and repo-tree inventory into the report.
+
+    Same scan_run evidence the CLI grades, so the posture grade is one computation.
+    """
+    report.scan_run.issues.extend(scanner_warning_issues(scanner_warnings))
+    if coverage_warnings:
+        report.coverage_warnings = coverage_warnings
+    repo_inventory = consume_repo_tree_inventory()
+    if repo_inventory:
+        report.ai_inventory_data = {**(report.ai_inventory_data or {}), **repo_inventory}
 
 
 def _scan_report(report_cls, agents, blast_radii, scan_sources, *, offline: bool):
@@ -609,25 +626,10 @@ async def check_impl(
 
             async with create_client(timeout=15.0) as client:
                 resolved = await resolve_package_version(pkg, client)
-                reason = None if resolved else await unresolvable_name_malicious_reason(name, eco, client)
-            if reason:
-                pkg.is_malicious, pkg.malicious_reason = True, reason
-                return service_result("malicious", f"MALICIOUS package {name} — {reason}. Do not install.")
-            if resolved:
-                version = pkg.version
-            else:
-                return json.dumps(
-                    {
-                        "package": name,
-                        "ecosystem": eco,
-                        "status": "error",
-                        "error": (
-                            f"Could not resolve a version for {name}. Provide an explicit "
-                            f"version (e.g. {name}@1.2.3 or {name}==1.2.3) and confirm the "
-                            f"ecosystem (got '{eco}')."
-                        ),
-                    }
-                )
+                reason = await resolution_malware_reason(resolved, name, eco, client)
+            if not resolved:
+                return _unresolved_result(pkg, name, eco, reason, service_result)
+            version = pkg.version
 
         try:
             coverage_warnings, data_evidence = await scan_checked_package(pkg, offline=offline, warnings=result_warnings)
@@ -665,20 +667,9 @@ async def check_impl(
 
             async with create_client(timeout=15.0) as client:
                 published = await _version_published(name, version, eco, client)
-                malware_ids = [] if published else await malicious_name_advisories(name, eco, client)
-            if malware_ids:
-                pkg.is_malicious = True
-                pkg.malicious_reason = f"Known malicious package ({', '.join(malware_ids[:3])}); version {version} is not published"
-                return service_result("malicious", f"MALICIOUS package {name} — {pkg.malicious_reason}. Do not install.")
+                reason = await unpublished_malware_reason(published, name, version, eco, client)
             if not published:
-                return service_result(
-                    "unknown",
-                    (
-                        f"Version {version} of {name} was not found in the {eco} registry — "
-                        f"cannot confirm it is free of vulnerabilities (typo or unpublished "
-                        f"version?). agent-bom only verifies published versions."
-                    ),
-                )
+                return _unpublished_result(pkg, name, version, eco, reason, service_result)
 
         if not pkg.vulnerabilities:
             return service_result("clean", f"No known vulnerabilities in {name}@{version}")

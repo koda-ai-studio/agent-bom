@@ -14,7 +14,7 @@ from typing import Any, Callable
 
 from agent_bom.evidence.scan_run import ScanIssue
 from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface
-from agent_bom.scanners.secret_models import secret_locations
+from agent_bom.scanners.secret_models import secret_scan_warning as secret_scan_warning
 from agent_bom.traversal import iter_discovery_files
 
 _WEAK_CRYPTO_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
@@ -89,25 +89,6 @@ def scan_path_secrets(roots: list[Path] | list[str], *, offline: bool) -> tuple[
         for warning in merged.warnings
     ]
     return merged.to_dict(), issues
-
-
-def secret_scan_warning(block: dict[str, Any], *, location: str) -> str:
-    """Describe scanner categories without classifying PII as credentials."""
-    categories = block.get("by_category", {})
-    pii = categories.get("pii", 0)
-    secrets = categories.get("credential", 0) + categories.get("secret", 0)
-    parts = []
-    if secrets:
-        parts.append(f"{secrets} secret or credential pattern(s)")
-    if pii:
-        parts.append(f"{pii} PII pattern(s)")
-    message = f"{' and '.join(parts) or str(block['total']) + ' finding(s)'} found in {location} files"
-    locations = secret_locations(block)
-    if locations:
-        shown = ", ".join(locations[:5])
-        more = f" (+{len(locations) - 5} more)" if len(locations) > 5 else ""
-        message += f": {shown}{more}"
-    return message
 
 
 @dataclass
