@@ -41,7 +41,6 @@ from typing import Literal, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import Response
 
-from agent_bom.api.current_graph import ROTATING_OPENAPI_RESPONSE
 from agent_bom.api.graph_contracts import (
     _ATTACK_PATH_ITEM_OPENAPI_SCHEMA as _ATTACK_PATH_ITEM_OPENAPI_SCHEMA,
 )
@@ -130,6 +129,7 @@ from agent_bom.api.graph_presentation import (
     _serialize_attack_path_batch as _serialize_attack_path_batch,
 )
 from agent_bom.api.graph_query import GraphQueryRequest, _filtered_query_graph, query_payload
+from agent_bom.api.graph_read_docs import ROTATING_RESPONSE
 from agent_bom.api.graph_rollup_prewarm import rollup_cache_key
 from agent_bom.api.graph_store import containment_drilldown_graph as containment_drilldown_graph
 from agent_bom.api.neptune_graph import NeptuneGraphStore
@@ -242,14 +242,10 @@ def _apply_graph_query_budget(body: GraphQueryRequest) -> tuple[GraphQueryReques
 
 
 _GRAPH_PAGE_DOC = documented(GraphPageResponse)
+_GRAPH_RESPONSES = {**_GRAPH_PAGE_DOC["responses"], 503: ROTATING_RESPONSE}
 
 
-@router.get(
-    "/graph",
-    response_model=_GRAPH_PAGE_DOC["response_model"],
-    responses={**_GRAPH_PAGE_DOC["responses"], 503: ROTATING_OPENAPI_RESPONSE},
-    tags=["graph"],
-)
+@router.get("/graph", response_model=_GRAPH_PAGE_DOC["response_model"], responses=_GRAPH_RESPONSES, tags=["graph"])
 async def get_graph(
     request: Request,
     scan_id: Optional[str] = Query(None, description="Filter by scan ID"),
