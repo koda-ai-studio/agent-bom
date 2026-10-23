@@ -262,6 +262,11 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
         _side_scan_scheduler_task = asyncio.create_task(side_scan_scheduler_loop())
         _logger.info("Cross-cloud side-scan scheduler enabled")
 
+    global _advisory_rematch_task
+    from agent_bom.api.advisory_rematch import start_advisory_rematch_task
+
+    _advisory_rematch_task = start_advisory_rematch_task()
+
     # ── Exact-batch graph correlation scheduler ──
     # Enabled by default for supported durable stores and strict-freshness only.
     # It correlates the child snapshots from one explicit multi-target scan
@@ -330,18 +335,12 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
             await _scan_worker.stop()
         except Exception:  # noqa: BLE001
             _logger.debug("scan worker stop skipped", exc_info=False)
-    if _scheduler_task:
-        _scheduler_task.cancel()
-    if _connection_scheduler_task:
-        _connection_scheduler_task.cancel()
-    if _export_scheduler_task:
-        _export_scheduler_task.cancel()
-    if _side_scan_scheduler_task:
-        _side_scan_scheduler_task.cancel()
-    if _auto_correlation_task:
-        _auto_correlation_task.cancel()
-    if _cleanup_task:
-        _cleanup_task.cancel()
+    for task in (_scheduler_task, _connection_scheduler_task, _export_scheduler_task, _side_scan_scheduler_task):
+        if task:
+            task.cancel()
+    for task in (_advisory_rematch_task, _auto_correlation_task, _cleanup_task):
+        if task:
+            task.cancel()
     # Drain in-flight scans. Honor the operator-configured drain budget so the
     # pod exits before Kubernetes force-kills at terminationGracePeriodSeconds.
     # Default 25s leaves a 5s margin under the recommended 30s Helm value.
@@ -655,6 +654,7 @@ _scheduler_task: asyncio.Task | None = None
 _connection_scheduler_task: asyncio.Task | None = None
 _export_scheduler_task: asyncio.Task | None = None
 _side_scan_scheduler_task: asyncio.Task | None = None
+_advisory_rematch_task: asyncio.Task | None = None
 _auto_correlation_task: asyncio.Task | None = None
 # Flipped to True during graceful shutdown so the /readyz probe goes red
 # and upstream load balancers stop sending new traffic while in-flight

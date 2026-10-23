@@ -197,8 +197,21 @@ package, the feed record wins and the operator advisory is listed under
 `POST/GET /v1/intel/operator-advisories` and
 `GET /v1/intel/operator-advisories/{id}/matches` (newest stored scan per
 target), and the MCP `intel_lookup` tool includes the declared record and its
-matches. The control-plane store is SQLite-backed; Postgres deployments return
-503 for these routes until the Postgres store lands.
+matches. Advisories persist in the control-plane store (SQLite, or Postgres
+with tenant row-level security).
+
+### Daily re-match
+
+Set `AGENT_BOM_ADVISORY_REMATCH=1` on the API server to re-match stored
+inventory once per `AGENT_BOM_ADVISORY_REMATCH_INTERVAL_SECONDS` (default
+86400, minimum 300) against operator advisories and local-feed advisories
+updated since each tenant's cursor. No host is rescanned. Each finding records
+`first_seen` and `new_since_published` (the matched scan completed before the
+advisory was published). If the feed or store is unreachable, or a version
+cannot be ordered, the run is `incomplete` and the cursor does not move. This
+replica's last run is in `GET /v1/system/health` under `advisory_rematch`; the
+tenant's cursor, last run and recent findings are in
+`GET /v1/intel/operator-advisories` under `rematch`.
 
 ## IaC and cloud posture
 

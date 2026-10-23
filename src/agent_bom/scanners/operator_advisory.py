@@ -231,26 +231,36 @@ def _report_packages(report: dict[str, Any]) -> Iterator[tuple[dict[str, str], d
                     yield {"agent": str(agent.get("name") or ""), "server": str(server.get("name") or "")}, package
 
 
-def _finding(advisory: OperatorAdvisory, package: dict[str, Any], asset: dict[str, str], fixed: str | None, scan_id: str) -> dict[str, Any]:
+@dataclass(frozen=True)
+class _ReportContext:
+    scan_id: str
+    observed_at: str | None
+    provenance: str
+
+
+def _finding(
+    advisory: OperatorAdvisory, package: dict[str, Any], asset: dict[str, str], fixed: str | None, ctx: _ReportContext
+) -> dict[str, Any]:
     package_ref = {key: package.get(key) for key in ("name", "version", "ecosystem", "purl", "cpe", "stable_id") if package.get(key)}
     digest = hashlib.sha256("|".join([advisory.id, str(package.get("stable_id") or package.get("purl") or ""), *asset.values()]).encode())
     return {
-        "id": f"operator-advisory:{digest.hexdigest()[:24]}",
+        "id": f"{ctx.provenance.replace('_', '-')}:{digest.hexdigest()[:24]}",
         "advisory_id": advisory.id,
         "aliases": list(advisory.aliases),
         "summary": advisory.summary,
         "severity": advisory.severity,
-        "provenance": OPERATOR_ADVISORY_PROVENANCE,
+        "provenance": ctx.provenance,
         "published_at": advisory.published_at.isoformat() if advisory.published_at else None,
         "fixed_version": fixed,
         "package": package_ref,
         "asset": asset,
-        "scan_id": scan_id or None,
+        "scan_id": ctx.scan_id or None,
+        "scan_observed_at": ctx.observed_at,
     }
 
 
 def _match_package(
-    advisory: OperatorAdvisory, package: dict[str, Any], asset: dict[str, str], scan_id: str, out: AdvisoryMatchResult
+    advisory: OperatorAdvisory, package: dict[str, Any], asset: dict[str, str], ctx: _ReportContext, out: AdvisoryMatchResult
 ) -> None:
     label = f"{package['name']}@{package['version']}"
     for product in advisory.affected:
@@ -264,19 +274,29 @@ def _match_package(
             if feed_id:
                 out.superseded.append({"advisory_id": advisory.id, "feed_id": feed_id, "package": label})
             else:
-                out.findings.append(_finding(advisory, package, asset, fixed, scan_id))
+                out.findings.append(_finding(advisory, package, asset, fixed, ctx))
         return
 
 
-def match_advisories_against_reports(advisories: Iterable[OperatorAdvisory], reports: Iterable[dict[str, Any]]) -> AdvisoryMatchResult:
-    """Match operator advisories against stored scan reports without rescanning."""
+def match_advisories_against_reports(
+    advisories: Iterable[OperatorAdvisory],
+    reports: Iterable[dict[str, Any]],
+    *,
+    provenance: str = OPERATOR_ADVISORY_PROVENANCE,
+) -> AdvisoryMatchResult:
+    """Match advisories against stored scan reports without rescanning.
+
+    ``provenance`` labels the findings; feed records re-matched by the daily
+    job pass ``"feed"`` so they are never presented as operator-declared.
+    """
     result = AdvisoryMatchResult()
     advisory_list = list(advisories)
     for report in reports:
         result.reports_examined += 1
-        scan_id = str(report.get("scan_id") or "")
+        observed = report.get("scan_completed_at")
+        ctx = _ReportContext(str(report.get("scan_id") or ""), str(observed) if observed else None, provenance)
         for asset, package in _report_packages(report):
             result.packages_examined += 1
             for advisory in advisory_list:
-                _match_package(advisory, package, asset, scan_id, result)
+                _match_package(advisory, package, asset, ctx, result)
     return result
