@@ -3,17 +3,29 @@
   "version": "0.110.0",
   "displayName": "agent-bom guard",
   "description": "Checks package installs before Claude runs them: blocks known-malicious and typosquatted npm, PyPI, crates.io and Go packages, and warns on known advisories for an exact pinned version. Silent otherwise; never runs the command it inspects.",
-  "author": { "name": "koda-ai-studio", "url": "https://github.com/koda-ai-studio" },
+  "author": {
+    "name": "koda-ai-studio",
+    "url": "https://github.com/koda-ai-studio"
+  },
   "homepage": "https://github.com/koda-ai-studio/agent-bom",
   "repository": "https://github.com/koda-ai-studio/agent-bom",
   "license": "Apache-2.0",
-  "keywords": ["security", "supply-chain", "typosquat", "malicious-packages", "hooks"],
+  "keywords": [
+    "security",
+    "supply-chain",
+    "typosquat",
+    "malicious-packages",
+    "hooks"
+  ],
   "userConfig": {
     "on_match": {
       "type": "string",
       "title": "On a malicious or typosquat match",
       "description": "block stops the install and tells Claude why; warn lets it run and shows the finding.",
-      "options": ["block", "warn"],
+      "options": [
+        "block",
+        "warn"
+      ],
       "default": "block"
     },
     "osv_lookup": {
@@ -22,5 +34,6 @@
       "description": "Send the package name, ecosystem and version (nothing else) to api.osv.dev. Off keeps every check offline.",
       "default": true
     }
-  }
+  },
+  "privacyPolicyUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/agent-bom-guard/README.md#privacy"
 }

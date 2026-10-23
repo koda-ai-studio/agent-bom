@@ -66,7 +66,17 @@ profile in the release after 0.109.0; on 0.109.0 those two skills fall back to
 the release after 0.110.0; on earlier releases the `activity` skill says it is
 not available.
 
-## What it runs, reads and sends
+## Privacy
+
+agent-bom runs on your machine and has no account, server or telemetry. It
+keeps no data about you: results stay in your session and in a local cache
+under `~/.agent-bom`, which you can delete at any time. The only data that
+leaves your machine is package names and versions, sent to the public
+vulnerability and package sources listed below, plus the cloud API calls made
+with your own credentials when you ask the `bom` skill for a cloud AI-BOM.
+Prompts, responses, file contents and credential values are never sent.
+
+### What it runs, reads and sends
 
 - **Runs** two local processes, `uvx --from agent-bom==<release> agent-bom mcp server`
   with and without `--profile audit`. uv downloads that exact release and its
