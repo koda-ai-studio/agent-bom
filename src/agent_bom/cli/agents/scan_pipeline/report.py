@@ -15,7 +15,15 @@ from agent_bom.cli.agents.scan_pipeline.helpers import (
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
-from agent_bom.evidence.scan_run import ScanIssue, ScanOutcome, ScanRun, ScanScope, ScanScopeStatus, vulnerability_scan_skipped_issue
+from agent_bom.evidence.scan_run import (
+    ScanIssue,
+    ScanOutcome,
+    ScanRun,
+    ScanScope,
+    ScanScopeStatus,
+    scanner_warning_issues,
+    vulnerability_scan_skipped_issue,
+)
 from agent_bom.finding import blast_radius_to_finding
 from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
 from agent_bom.mcp_blocklist import blocklist_findings_for_agents
@@ -133,16 +141,7 @@ def _seed_findings_and_scan_id(opts: ScanOptions, st: ScanState) -> None:
 
 def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
 
-    st.scan_issues = [
-        ScanIssue(
-            code="scanner_warning",
-            stage="scanning",
-            source="vulnerability-data",
-            message=_warning,
-            affects_coverage=True,
-        )
-        for _warning in st.scan_warnings
-    ]
+    st.scan_issues = scanner_warning_issues(list(st.scan_warnings))
     st.scan_issues.extend(
         ScanIssue(
             code="collector_warning",

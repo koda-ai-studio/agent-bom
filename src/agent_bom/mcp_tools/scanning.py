@@ -252,12 +252,15 @@ async def _scan_impl_inner(
     offline = resolve_offline(offline)
     store = _result_store if _result_store is not None else SCAN_RESULTS
     try:
+        from agent_bom.evidence.scan_run import scanner_warning_issues
         from agent_bom.models import AIBOMReport
         from agent_bom.output import to_json
+        from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings
 
         enrich, scorecard, verify_integrity, pre_warnings = _apply_offline_overrides(offline, enrich, scorecard, verify_integrity)
         package = _normalize_scan_package(package)
         _maybe_refresh_vuln_db(auto_update_db, offline, db_sources, pre_warnings)
+        reset_scan_warnings()
         agents, blast_radii, scan_warnings, scan_sources = await _run_scan_pipeline(
             config_path,
             image,
@@ -269,7 +272,9 @@ async def _scan_impl_inner(
             ecosystem=ecosystem,
             no_discover=no_discover,
         )
-        scan_warnings = [*pre_warnings, *scan_warnings]
+        scanner_warnings = consume_scan_warnings()
+        coverage_warnings = consume_coverage_warnings()
+        scan_warnings = list(dict.fromkeys([*pre_warnings, *scan_warnings, *scanner_warnings]))
         package_spec_unresolved = _flag_unresolved_package_spec(package, agents, scan_warnings)
         if not agents:
             return _truncate_response(json.dumps(_empty_envelope("no_agents_found", warnings=scan_warnings)))
@@ -281,6 +286,10 @@ async def _scan_impl_inner(
         if scorecard:
             await _enrich_scanned_packages_with_scorecard(agents)
         report = _scan_report(AIBOMReport, agents, blast_radii, scan_sources, offline=offline)
+        # Same scan_run evidence the CLI grades, so the posture grade is one computation.
+        report.scan_run.issues.extend(scanner_warning_issues(scanner_warnings))
+        if coverage_warnings:
+            report.coverage_warnings = coverage_warnings
         await _surface_graph_findings(report)
         if package_spec_unresolved:
             # Fail closed for every format: an empty SARIF/CycloneDX/SPDX document reads as an audited clean result.

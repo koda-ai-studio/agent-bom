@@ -318,6 +318,14 @@ VULNERABILITY_SCAN_SKIPPED_CODE = "vulnerability_scan_skipped"
 VULNERABILITY_SCAN_SKIPPED_MESSAGE = "Vulnerability scanning skipped by request"
 
 
+def scanner_warning_issues(warnings: list[str]) -> list[ScanIssue]:
+    """Scanner warnings as coverage-affecting run issues — one shape for CLI and MCP."""
+    return [
+        ScanIssue(code="scanner_warning", stage="scanning", source="vulnerability-data", message=warning, affects_coverage=True)
+        for warning in warnings
+    ]
+
+
 def vulnerability_scan_skipped_issue() -> ScanIssue:
     return ScanIssue(
         code=VULNERABILITY_SCAN_SKIPPED_CODE,
