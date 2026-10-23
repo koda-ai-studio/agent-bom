@@ -22,7 +22,7 @@ from contextlib import ExitStack, contextmanager
 from functools import lru_cache, wraps
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, cast
 
 from starlette.exceptions import HTTPException
 
@@ -72,6 +72,16 @@ _READS = frozenset(
         "evidence_manifest",
     }
 )
+
+
+ROTATING_CODE = "current_estate_generation_rotating"
+
+
+def _generation_rotating() -> HTTPException:
+    """New evidence is landing faster than the retry budget: retryable, not a conflict."""
+    detail = {"code": ROTATING_CODE, "message": "The current estate is being updated; retry the read shortly."}
+    # Starlette types detail as str, but the API's handler serializes any JSON value.
+    return HTTPException(503, cast(str, detail), headers={"Retry-After": "1"})
 
 
 def _build_wait_seconds() -> float:
@@ -284,7 +294,7 @@ class CurrentGraphStore:
                     yield {**kwargs, "scan_id": identity}
                     return
             self._forget_resolved(tenant)
-        raise HTTPException(409, "Current estate generation was retired; restart the query.")
+        raise _generation_rotating()
 
     def _revisions(self, tenant: str, scan_ids: Any) -> tuple[tuple[str, str], ...]:
         return tuple(self._graph_store.snapshot_identity(tenant_id=tenant, scan_id=scan, for_paging=True) for scan in scan_ids)
@@ -330,7 +340,7 @@ class CurrentGraphStore:
                 if self._live(tenant, identity):
                     return identity
             self._forget_resolved(tenant)
-        raise HTTPException(409, "Current estate generation was retired; restart the query.")
+        raise _generation_rotating()
 
     def _cached_live_id(self, tenant: str, fingerprint: str) -> str:
         cached = self._cache.get(tenant)

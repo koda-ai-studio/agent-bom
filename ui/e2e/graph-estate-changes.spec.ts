@@ -121,6 +121,9 @@ test("a source scanned once compares with the declared baseline and drills into 
       highlights: {
         new_critical_findings: { count: 1, top: [{ kind: "node", change: "added", id: "package:new", label: "requests@2.32.0", severity: "critical", entity_type: "package" }] },
         new_attack_paths: { status: "complete", count: 1, top: [{ source: "agent:planner", target: "package:new", hops: ["agent:planner", "server:fs", "package:new"], composite_risk: 71, summary: "" }] },
+        removed_attack_paths: { status: "complete", count: 7, top: Array.from({ length: 7 }, (_, i) => (
+          { source: `agent:old-${i}`, target: "package:old", hops: [`agent:old-${i}`, "package:old"], composite_risk: 60 - i, summary: "" }
+        )) },
       },
     }],
     new_sources: [], completeness_reasons: ["snapshot_baseline"],
@@ -139,6 +142,15 @@ test("a source scanned once compares with the declared baseline and drills into 
   await expect(exposure).toContainText("New critical finding nodes · 1");
   await expect(exposure).toContainText("New attack paths · 1");
   await expect(panel.getByTestId("graph-changes-issue-basis")).toHaveText("Open issues, the posture trend's unit: critical 4 → 5 (+1) · high 9 → 9 (no change)");
+  const removed = exposure.getByRole("group", { name: "Removed attack paths" });
+  await expect(removed).toContainText("1–5 of 7");
+  await removed.getByRole("button", { name: "Next removed attack paths page" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(removed).toContainText("6–7 of 7");
+  const removedLink = removed.getByRole("link", { name: "Open removed path agent:old-6 → package:old in the previous snapshot" });
+  const removedHref = new URL((await removedLink.getAttribute("href"))!, "http://x");
+  expect(removedHref.pathname).toBe("/security-graph");
+  expect(removedHref.searchParams.get("scan")).toBe("showcase-baseline");
   await exposure.getByRole("button", { name: "Investigate requests@2.32.0" }).click();
   await expect(panel).toBeHidden();
   await expect.poll(() => requests.some(p => p.startsWith("/v1/graph/query"))).toBe(true);

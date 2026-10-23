@@ -1,0 +1,18 @@
+{
+  "description": "agent-bom-guard: vet package installs in Bash commands before they run",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3",
+            "args": ["-I", "${CLAUDE_PLUGIN_ROOT}/hooks/install_guard.py"],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

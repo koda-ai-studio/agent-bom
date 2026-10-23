@@ -99,6 +99,23 @@ export function isTransientReadFailure(error: unknown): boolean {
   return [500, 502, 503, 504].includes(error.status) && !apiAnswered;
 }
 
+/** Longest Retry-After an idempotent read waits through before surfacing the 503 instead. */
+export const MAX_RETRY_AFTER_SECONDS = 5;
+
+/** The booting-API 503 the session provider polls for itself, with its own start-up state. */
+const sessionOwnedUnavailable = (error: ApiServerError) =>
+  (error.body as { error?: { code?: unknown } } | undefined)?.error?.code === "API_STARTING";
+
+/** How long to wait before the single retry, or null when the failure is an answer. */
+export function readRetryDelayMs(error: unknown): number | null {
+  const jitter = TRANSIENT_RETRY_DELAY_MS * Math.random();
+  if (error instanceof ApiServerError && error.status === 503 && error.retryAfterSeconds !== undefined) {
+    if (sessionOwnedUnavailable(error)) return null;
+    return error.retryAfterSeconds <= MAX_RETRY_AFTER_SECONDS ? error.retryAfterSeconds * 1000 + jitter : null;
+  }
+  return isTransientReadFailure(error) ? TRANSIENT_RETRY_DELAY_MS + jitter : null;
+}
+
 export async function get<T>(path: string, options: GetOptions = {}): Promise<T> {
   const { timeoutMs, signal, ...cacheOptions } = options;
   const key = getCacheKey(path);
@@ -114,8 +131,9 @@ export async function get<T>(path: string, options: GetOptions = {}): Promise<T>
     try {
       return await attempt();
     } catch (error) {
-      if (signal?.aborted || !isTransientReadFailure(error)) throw error;
-      await new Promise(resolve => setTimeout(resolve, TRANSIENT_RETRY_DELAY_MS * (1 + Math.random())));
+      const delayMs = signal?.aborted ? null : readRetryDelayMs(error);
+      if (delayMs === null) throw error;
+      await new Promise(resolve => setTimeout(resolve, delayMs));
       if (signal?.aborted) throw error;
       return attempt();
     }

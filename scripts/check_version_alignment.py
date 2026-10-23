@@ -117,9 +117,10 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
     ),
     # A Claude Code plugin install resolves the package from PyPI, so both the
     # manifest version and the uvx pin must name a release that exists there.
+    # The guard plugin ships no package but releases in lockstep with it.
     ManagedPattern(
         "Claude plugin version",
-        re.compile(r'("name": "agent-bom",\n\s*"version": ")(\d+\.\d+\.\d+)'),
+        re.compile(r'("name": "agent-bom(?:-guard)?",\n\s*"version": ")(\d+\.\d+\.\d+)'),
         "published",
     ),
     ManagedPattern(

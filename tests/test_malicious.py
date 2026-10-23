@@ -1,5 +1,7 @@
 """Tests for malicious package detection module."""
 
+import pytest
+
 from agent_bom.malicious import (
     check_typosquat,
     flag_malicious_from_vulns,
@@ -124,6 +126,29 @@ def test_typosquat_known_legitimate_preact_not_flagged():
     # Preact is an independently maintained, public npm package. Its name is
     # intentionally React-compatible, not a misspelling of ``react``.
     assert check_typosquat("preact", "npm") is None
+
+
+@pytest.mark.parametrize(
+    ("name", "ecosystem"),
+    [
+        ("bcryptjs", "npm"),
+        ("expresso", "npm"),
+        ("boto", "pypi"),
+        ("fabric2", "pypi"),
+        ("fabric3", "pypi"),
+        ("pandasql", "pypi"),
+        ("beautifulsoup", "pypi"),
+        ("openapi", "pypi"),
+    ],
+)
+def test_typosquat_registry_verified_neighbours_not_flagged(name, ecosystem):
+    # Long-standing upstream projects whose names sit next to a popular package;
+    # the install guard blocks on this verdict, so a false positive stops real work.
+    assert check_typosquat(name, ecosystem) is None
+
+
+def test_typosquat_recent_lookalike_still_flagged():
+    assert check_typosquat("pydantic2", "pypi") == "pydantic"
 
 
 def test_typosquat_numeric_suffix_still_flagged():

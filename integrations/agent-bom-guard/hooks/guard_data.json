@@ -1,0 +1,126 @@
+{
+ "known_legitimate": {
+  "npm": [
+   "bcryptjs",
+   "expresso",
+   "preact"
+  ],
+  "pypi": [
+   "beautifulsoup",
+   "boto",
+   "fabric2",
+   "fabric3",
+   "httpx2",
+   "langchainhub",
+   "openapi",
+   "pandasql"
+  ]
+ },
+ "known_malicious": [
+  [
+   "npm",
+   "@lanyer640/mcp-runcommand-server",
+   "*",
+   "malicious-npm-lanyer640-mcp-runcommand-server"
+  ],
+  [
+   "npm",
+   "ids-enterprise-mcp-server",
+   "0.0.2",
+   "malicious-npm-ids-enterprise-mcp-server-0-0-2"
+  ],
+  [
+   "npm",
+   "mcp-server-todo",
+   "*",
+   "malicious-npm-mcp-server-todo"
+  ],
+  [
+   "npm",
+   "postmark-mcp",
+   ">=1.0.16",
+   "malicious-npm-postmark-mcp"
+  ]
+ ],
+ "popular": {
+  "npm": [
+   "axios",
+   "babel-core",
+   "bcrypt",
+   "chalk",
+   "commander",
+   "cors",
+   "dayjs",
+   "dotenv",
+   "eslint",
+   "express",
+   "helmet",
+   "inquirer",
+   "jsonwebtoken",
+   "lodash",
+   "moment",
+   "mongoose",
+   "next",
+   "nodemailer",
+   "passport",
+   "prettier",
+   "react",
+   "react-dom",
+   "sequelize",
+   "socket.io",
+   "typescript",
+   "uuid",
+   "webpack",
+   "yup",
+   "zod"
+  ],
+  "pypi": [
+   "ansible",
+   "anthropic",
+   "beautifulsoup4",
+   "boto3",
+   "celery",
+   "cryptography",
+   "django",
+   "fabric",
+   "fastapi",
+   "flask",
+   "httpx",
+   "langchain",
+   "litellm",
+   "numpy",
+   "openai",
+   "pandas",
+   "paramiko",
+   "pillow",
+   "pydantic",
+   "redis",
+   "requests",
+   "scikit-learn",
+   "scipy",
+   "sqlalchemy",
+   "tensorflow",
+   "torch",
+   "transformers",
+   "uvicorn"
+  ]
+ },
+ "safe_npm_scopes": [
+  "@anthropic-ai/",
+  "@aws-sdk/",
+  "@azure/",
+  "@babel/",
+  "@eslint-community/",
+  "@eslint/",
+  "@google-cloud/",
+  "@modelcontextprotocol/",
+  "@next/",
+  "@opentelemetry/",
+  "@playwright/",
+  "@testing-library/",
+  "@types/",
+  "@typescript-eslint/",
+  "@vercel/"
+ ],
+ "source": "agent_bom.malicious and agent_bom/data/mcp-blocklist.json; regenerate with scripts/generate_guard_data.py"
+}

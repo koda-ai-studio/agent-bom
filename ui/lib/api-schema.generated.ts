@@ -34267,6 +34267,17 @@ export interface operations {
                     "application/json": components["schemas"]["GraphPageResponse"];
                 };
             };
+            /** @description Retryable: unpinned current-estate reads kept landing on retired generations (error.details.code ``current_estate_generation_rotating``). Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` that changed is a 409 instead. */
+            503: {
+                headers: {
+                    /** @description Seconds to wait before retrying */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
             "4XX": {
                 headers: {

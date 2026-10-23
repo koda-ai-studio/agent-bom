@@ -103,9 +103,13 @@ export class ApiRateLimitError extends ApiError {
 }
 
 export class ApiServerError extends ApiError {
-  constructor(message: string, ctx: ApiErrorContext) {
+  /** Set when the API marked an unavailable answer as retryable (503 + Retry-After). */
+  readonly retryAfterSeconds?: number | undefined;
+
+  constructor(message: string, ctx: ApiErrorContext, retryAfterSeconds?: number) {
     super(message, ctx);
     this.name = "ApiServerError";
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -134,6 +138,13 @@ export function userFacingApiErrorMessage(err: unknown, fallback: string): strin
   }
   if (!message.trim()) return fallback;
   return message;
+}
+
+/** Delay-seconds form of Retry-After; an HTTP-date or garbage value is ignored. */
+function retryAfterSeconds(res: Response): number | undefined {
+  const headerValue = res.headers?.get?.("retry-after") ?? null;
+  const seconds = headerValue ? Number(headerValue) : Number.NaN;
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
 }
 
 export function classifyApiResponse(
@@ -180,15 +191,8 @@ export function classifyApiResponse(
   if (res.status === 403) return new ApiForbiddenError(message, ctx);
   if (res.status === 404) return new ApiNotFoundError(message, ctx);
   if (res.status === 409) return new ApiConflictError(message, ctx);
-  if (res.status === 429) {
-    const headerValue = res.headers?.get?.("retry-after") ?? null;
-    const retryAfter = headerValue ? Number(headerValue) : undefined;
-    return new ApiRateLimitError(
-      message,
-      ctx,
-      Number.isFinite(retryAfter) ? (retryAfter as number) : undefined,
-    );
-  }
+  if (res.status === 429) return new ApiRateLimitError(message, ctx, retryAfterSeconds(res));
+  if (res.status === 503) return new ApiServerError(message, ctx, retryAfterSeconds(res));
   if (res.status >= 500) return new ApiServerError(message, ctx);
   return new ApiError(message, ctx);
 }

@@ -1007,3 +1007,19 @@ def test_committed_timings_cover_most_test_modules() -> None:
     durations = load_durations(DURATIONS_FILE)
     modules = discover_test_files(DURATIONS_FILE.parent)
     assert sum(path.resolve() in durations for path in modules) >= 0.8 * len(modules)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "integrations/agent-bom-guard/hooks/install_guard.py",
+        "integrations/agent-bom-guard/hooks/hooks.json",
+        "integrations/agent-bom-guard/.claude-plugin/plugin.json",
+        "scripts/generate_guard_data.py",
+        "src/agent_bom/malicious.py",
+    ],
+)
+def test_guard_plugin_inputs_select_the_guard_contract(tmp_path, source):
+    expected = tmp_path / "tests/test_agent_bom_guard.py"
+    _write(expected, 1)
+    assert expected in select_targeted_tests(changed_files=[Path(source)], root=tmp_path)
