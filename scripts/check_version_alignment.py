@@ -123,6 +123,11 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         "published",
     ),
     ManagedPattern(
+        "uvx command pin",
+        re.compile(r"(--from '?agent-bom(?:\[[a-z,]+\])?==)(\d+\.\d+\.\d+)"),
+        "published",
+    ),
+    ManagedPattern(
         "uvx PyPI pin",
         re.compile(r'("--from",\s*"agent-bom==)(\d+\.\d+\.\d+)'),
         "published",

@@ -1,0 +1,11 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Supply-chain review skill listing curl-pipe-shell under a red-flags heading.",
+  "must_not": [
+    {
+      "category": "remote_code_execution",
+      "max_severity": "low"
+    }
+  ]
+}

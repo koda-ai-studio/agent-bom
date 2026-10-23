@@ -1,0 +1,11 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Security review skill that quotes injection phrases as examples of what to report.",
+  "must_not": [
+    {
+      "category": "prompt_coercion",
+      "max_severity": "low"
+    }
+  ]
+}

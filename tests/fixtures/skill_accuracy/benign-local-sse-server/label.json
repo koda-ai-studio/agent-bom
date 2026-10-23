@@ -1,0 +1,16 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "MCP config for a team-internal server on localhost.",
+  "expect": [
+    {
+      "category": "unverified_server",
+      "min_severity": "medium"
+    }
+  ],
+  "must_not": [
+    {
+      "category": "external_url"
+    }
+  ]
+}

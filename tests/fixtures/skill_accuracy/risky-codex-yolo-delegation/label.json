@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Spawns another coding agent with approvals disabled.",
+  "expect": [
+    {
+      "category": "agent_delegation",
+      "min_severity": "high"
+    },
+    {
+      "category": "confirmation_bypass",
+      "min_severity": "critical"
+    }
+  ]
+}

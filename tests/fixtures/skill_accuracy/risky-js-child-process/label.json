@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Node block spawning shell commands.",
+  "expect": [
+    {
+      "category": "ast_js_shell_execution",
+      "min_severity": "high"
+    }
+  ]
+}

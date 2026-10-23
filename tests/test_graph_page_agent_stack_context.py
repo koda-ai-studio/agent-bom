@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 
 from agent_bom.api.graph_page_stack import STACK_FANOUT, page_agent_stack
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedNode
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401
+from tests._demo_estate_fixtures import VIEWER
 
 
 class _FakeStore:
@@ -97,7 +97,7 @@ def test_unrelated_uses_edge_is_not_a_parent() -> None:
     assert _stack(store, {"server:s"}).nodes == []
 
 
-def test_default_page_shows_a_cve_with_its_full_stack(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_default_page_shows_a_cve_with_its_full_stack(demo_estate_client: TestClient) -> None:
     payload = demo_estate_client.get("/v1/graph", headers=VIEWER).json()
     types = {str(n["id"]): str(n["entity_type"]) for n in payload["nodes"]}
     parents: dict[str, set[str]] = {}

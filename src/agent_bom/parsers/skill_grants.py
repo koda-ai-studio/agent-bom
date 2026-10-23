@@ -25,8 +25,8 @@ _REQUIRED_CAPABILITY_KEYS = {
 }
 _ALLOWED_TOOLS_KEYS = ("allowed-tools", "allowed_tools")
 _TOOL_GRANT_RE = re.compile(r"[A-Za-z_][\w.-]*(?:\([^)]*\))?")
-_SHELL_TOOLS = {"bash", "powershell"}
-_WRITE_TOOLS = {"write", "edit", "multiedit", "notebookedit"}
+SHELL_TOOLS = frozenset({"bash", "powershell"})
+WRITE_TOOLS = frozenset({"write", "edit", "multiedit", "notebookedit"})
 _UNSCOPED_ARGS = {None, "", "*", ":*"}
 
 
@@ -99,18 +99,26 @@ def _incomplete_capability_map(meta: SkillMetadata, source_file: str, raw_frontm
     ]
 
 
-def _unscoped(grants: list[str], names: set[str]) -> list[str]:
+def split_grant(grant: str) -> tuple[str, str | None]:
+    """Split ``Tool(specifier)`` into the lower-cased tool name and specifier."""
+    name, _, rest = grant.partition("(")
+    arg = rest[:-1].strip() if rest.endswith(")") else None
+    return name.strip().lower(), arg
+
+
+def unscoped_grants(grants: list[str], names: set[str] | frozenset[str], extra_unscoped: frozenset[str] = frozenset()) -> list[str]:
+    """Grants naming one of ``names`` with no specifier or a match-everything one."""
     found = []
     for grant in grants:
-        name, _, rest = grant.partition("(")
-        arg = rest[:-1].strip() if rest.endswith(")") else None
-        if name.strip().lower() in names and arg in _UNSCOPED_ARGS:
+        name, arg = split_grant(grant)
+        if name in names and (arg in _UNSCOPED_ARGS or arg in extra_unscoped):
             found.append(grant)
     return found
 
 
 def _broad_grant_findings(meta: SkillMetadata, source_file: str, grants: list[str]) -> list[SkillFinding]:
-    shell, fetch, write = _unscoped(grants, _SHELL_TOOLS), _unscoped(grants, {"webfetch"}), _unscoped(grants, _WRITE_TOOLS)
+    shell, fetch = unscoped_grants(grants, SHELL_TOOLS), unscoped_grants(grants, {"webfetch"})
+    write = unscoped_grants(grants, WRITE_TOOLS)
     if shell and fetch:
         risk = "run any shell command and fetch arbitrary URLs, a direct execute-and-egress path,"
     elif shell:

@@ -45,10 +45,10 @@ SKILL_FILE_NAMES: list[str] = [
 # ─── Regex patterns ──────────────────────────────────────────────────────────
 
 _NPX_RE = re.compile(
-    r"(?:npx|bunx)\s+(?:-[yYp]\s+)*(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)",
+    r"(?:npx|bunx)[ \t]+(?:-[yYp][ \t]+)*(?!-)(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)",
 )
 _UVX_RE = re.compile(
-    r"(?:uvx|uv\s+(?:run|tool\s+run))\s+([\w][\w.-]*(?:==[\w.+-]+)?)",
+    r"(?:uvx|uv[ \t]+tool[ \t]+run)[ \t]+([\w][\w.-]*(?:(?:==|@)[\w.+-]+)?)",
 )
 _PIP_INSTALL_RE = re.compile(
     r"pip\s+install\s+(?:-[\w-]+\s+)*(.+?)(?:\s*$|\s*&&|\s*\\)",
@@ -265,7 +265,7 @@ def parse_skill_file(path: Path) -> SkillScanResult:
     # UVX packages
     for match in _UVX_RE.finditer(code_text):
         raw = match.group(1)
-        name, version = _parse_pkg_spec(raw, "==")
+        name, version = _parse_pkg_spec(raw, "==" if "==" in raw else "@")
         key = (name.lower(), "pypi")
         if key not in seen_packages:
             seen_packages.add(key)
@@ -274,8 +274,8 @@ def parse_skill_file(path: Path) -> SkillScanResult:
     # pip install packages
     for match in _PIP_INSTALL_RE.finditer(code_text):
         specs = match.group(1).strip()
-        # Strip inline comments before splitting into package specs
-        specs = specs.split("#")[0].strip()
+        # An inline-code span or a comment ends the command; the prose after it is not a spec.
+        specs = re.split(r"[#`]", specs, maxsplit=1)[0].strip()
         if not specs:
             continue
         for spec in re.split(r"\s+", specs):
@@ -293,8 +293,8 @@ def parse_skill_file(path: Path) -> SkillScanResult:
     # npm install packages
     for match in _NPM_INSTALL_RE.finditer(code_text):
         specs = match.group(1).strip()
-        # Strip inline comments before splitting into package specs
-        specs = specs.split("#")[0].strip()
+        # An inline-code span or a comment ends the command; the prose after it is not a spec.
+        specs = re.split(r"[#`]", specs, maxsplit=1)[0].strip()
         if not specs:
             continue
         for spec in re.split(r"\s+", specs):

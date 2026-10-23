@@ -1,393 +1,432 @@
 {
-  "tools": [
-    {
-      "name": "scan",
-      "title": "Security Scan",
-      "description": "Run a full AI supply chain security scan and return an AI-BOM.\n\nPoint it at a target with one of:\n  \u2022 repo_url     \u2014 a public git repo URL (cloned + scanned, no checkout)\n  \u2022 config_path  \u2014 a local project / MCP-config directory\n  \u2022 image        \u2014 a Docker image\n  \u2022 sbom_path    \u2014 an existing CycloneDX/SPDX SBOM\n  \u2022 package      \u2014 a single package or MCP launch command (pair it with\n                   ``ecosystem`` when the spec names no launcher)\nWith none of these, it auto-discovers local MCP clients (Claude Desktop,\nCursor, Windsurf, VS Code Copilot, OpenClaw, etc.).\n\nIt extracts package dependencies, looks up CVEs (online via OSV.dev and\nadvisory sources unless offline mode is requested or configured),\nassesses config security (credential exposure, tool access), computes\nblast radius, and returns structured results. Scanning is fully static\nand read-only \u2014 repository and image contents are parsed, never executed.\n\nReturns:\n    JSON. By default a bounded summary: counts (packages, agents,\n    findings by severity/category), top findings, affected paths, and a\n    result_id. Page any full-fidelity section with\n    scan(result_id=..., section='findings', offset=0, limit=25).\n    An incomplete scan (e.g. vulnerability source unavailable) is\n    returned as an error result whose body is still JSON.\n",
-      "inputSchema": {
-        "properties": {
-          "repo_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Public git repository URL to clone and scan, e.g. 'https://github.com/org/repo'. Maps the repo's dependencies, project structure, secrets, IaC, and AI/MCP usage into an AI-BOM. Static and read-only: the repository is shallow-cloned into a temporary directory, scanned without ever executing its code, then deleted. The fastest way to point this tool at a target \u2014 no local checkout required.",
-            "title": "Repo Url"
-          },
-          "config_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Local directory to scan \u2014 a project root or an MCP client config directory. Auto-discovers installed MCP clients if omitted unless no_discover=true. Mutually exclusive with repo_url.",
-            "title": "Config Path"
-          },
-          "no_discover": {
-            "default": false,
-            "description": "Disable ambient host MCP-client discovery. Explicit repo/config, image, SBOM, and package targets are still scanned; use this for deterministic CI.",
-            "title": "No Discover",
-            "type": "boolean"
-          },
-          "image": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Docker image to scan (e.g. 'nginx:1.25', 'ghcr.io/org/app:v1').",
-            "title": "Image"
-          },
-          "sbom_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Path to existing CycloneDX or SPDX JSON SBOM file to ingest.",
-            "title": "Sbom Path"
-          },
-          "package": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Direct package or MCP launch command to scan, e.g. 'npx @modelcontextprotocol/server-filesystem@2025.1.14' or '@modelcontextprotocol/server-filesystem'. A bare 'name@version' spec is assumed to be npm \u2014 pass ``ecosystem`` for anything else.",
-            "title": "Package"
-          },
-          "ecosystem": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Ecosystem of ``package`` when the spec does not name a launcher: 'npm', 'pypi', 'go', 'cargo', 'maven', 'nuget', 'rubygems', 'composer', 'swift', 'pub', 'hex', 'conda', 'deb', 'apk', or 'rpm'. Omitted, the ecosystem is inferred from the spec (PEP 440 specifiers such as 'flask==0.12.2' are PyPI) and any assumption is reported in the result warnings.",
-            "title": "Ecosystem"
-          },
-          "enrich": {
-            "default": false,
-            "description": "Enable NVD CVSS, EPSS probability, and CISA KEV enrichment.",
-            "title": "Enrich",
-            "type": "boolean"
-          },
-          "offline": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "true: use the local vulnerability DB only and skip registry, OSV, GHSA, and NVIDIA network lookups (requires a populated DB from `agent-bom db update`). false: query those sources online. Omitted: online unless the server operator set AGENT_BOM_OFFLINE or AGENT_BOM_VULN_DB_OFFLINE.",
-            "title": "Offline"
-          },
-          "scorecard": {
-            "default": false,
-            "description": "Enrich packages with OpenSSF Scorecard scores (requires resolvable GitHub repos).",
-            "title": "Scorecard",
-            "type": "boolean"
-          },
-          "transitive": {
-            "default": false,
-            "description": "Resolve transitive dependencies for npx/uvx packages.",
-            "title": "Transitive",
-            "type": "boolean"
-          },
-          "verify_integrity": {
-            "default": false,
-            "description": "Verify package SHA-256/SRI hashes and SLSA provenance against registries.",
-            "title": "Verify Integrity",
-            "type": "boolean"
-          },
-          "fail_severity": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Return failure status if vulns at this severity or higher: critical, high, medium, low.",
-            "title": "Fail Severity"
-          },
-          "warn_severity": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Return warning status (gate_status=warn, exit 0) when vulns at this severity or higher exist. Use with fail_severity for two-tier CI gates, e.g. warn_severity='medium', fail_severity='critical'.",
-            "title": "Warn Severity"
-          },
-          "auto_update_db": {
-            "default": false,
-            "description": "Explicitly refresh the local vuln DB when older than the daily freshness target before scanning.",
-            "title": "Auto Update Db",
-            "type": "boolean"
-          },
-          "db_sources": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Comma-separated DB sources to sync before scanning (e.g. 'nvd,ghsa,osv,epss,kev').",
-            "title": "Db Sources"
-          },
-          "output_format": {
-            "default": "json",
-            "description": "Output format: 'json' (default), 'sarif', 'cyclonedx', 'spdx', 'junit', 'csv', or 'markdown'.",
-            "title": "Output Format",
-            "type": "string"
-          },
-          "policy": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Policy object to evaluate alongside scan results, e.g. {\"rules\": [{\"id\": \"no-critical\", \"severity_gte\": \"critical\", \"action\": \"fail\"}]}.",
-            "title": "Policy"
-          },
-          "detail": {
-            "default": "summary",
-            "description": "JSON output only. 'summary' (default): counts, top findings, affected paths, and a result_id for paged follow-ups. 'full': the whole AI-BOM document, shortened structurally (still valid JSON, with _truncation metadata) if it exceeds the response budget.",
-            "enum": [
-              "summary",
-              "full"
-            ],
-            "title": "Detail",
-            "type": "string"
-          },
-          "result_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "result_id from a previous scan response. With it, no new scan runs: returns that result's summary, or one page of `section`.",
-            "title": "Result Id"
-          },
-          "section": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Section of a stored result to page, e.g. 'findings', 'blast_radius', 'packages', 'exposure_paths'.",
-            "title": "Section"
-          },
-          "offset": {
-            "default": 0,
-            "description": "Zero-based item offset into `section`.",
-            "minimum": 0,
-            "title": "Offset",
-            "type": "integer"
-          },
-          "limit": {
-            "default": 25,
-            "description": "Maximum items per page of `section` (1-200).",
-            "maximum": 200,
-            "minimum": 1,
-            "title": "Limit",
-            "type": "integer"
-          }
-        },
-        "title": "scanArguments",
-        "type": "object",
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "properties": {
-          "result": {
-            "title": "Result",
-            "type": "string"
-          }
-        },
-        "required": [
-          "result"
-        ],
-        "title": "scanOutput",
+ "tools": [
+  {
+   "name": "scan",
+   "title": "Security Scan",
+   "description": "Run a full AI supply chain security scan and return an AI-BOM.\n\nPoint it at a target with one of:\n  \u2022 repo_url     \u2014 a public git repo URL (cloned + scanned, no checkout)\n  \u2022 config_path  \u2014 a local project / MCP-config directory\n  \u2022 image        \u2014 a Docker image\n  \u2022 sbom_path    \u2014 an existing CycloneDX/SPDX SBOM\n  \u2022 package      \u2014 a single package or MCP launch command (pair it with\n                   ``ecosystem`` when the spec names no launcher)\nWith none of these, it auto-discovers local MCP clients (Claude Desktop,\nCursor, Windsurf, VS Code Copilot, OpenClaw, etc.).\n\nIt extracts package dependencies, looks up CVEs (online via OSV.dev and\nadvisory sources unless offline mode is requested or configured),\nassesses config security (credential exposure, tool access), computes\nblast radius, and returns structured results. Scanning is fully static\nand read-only \u2014 repository and image contents are parsed, never executed.\n\nReturns:\n    JSON. By default a bounded summary: counts (packages, agents,\n    findings by severity/category), top findings, affected paths, and a\n    result_id. Page any full-fidelity section with\n    scan(result_id=..., section='findings', offset=0, limit=25).\n    An incomplete scan (e.g. vulnerability source unavailable) is\n    returned as an error result whose body is still JSON.\n",
+   "inputSchema": {
+    "properties": {
+     "repo_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Public git repository URL to clone and scan, e.g. 'https://github.com/org/repo'. Maps the repo's dependencies, project structure, secrets, IaC, and AI/MCP usage into an AI-BOM. Static and read-only: the repository is shallow-cloned into a temporary directory, scanned without ever executing its code, then deleted. The fastest way to point this tool at a target \u2014 no local checkout required.",
+      "title": "Repo Url"
+     },
+     "config_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Local directory to scan \u2014 a project root or an MCP client config directory. Auto-discovers installed MCP clients if omitted unless no_discover=true. Mutually exclusive with repo_url.",
+      "title": "Config Path"
+     },
+     "no_discover": {
+      "default": false,
+      "description": "Disable ambient host MCP-client discovery. Explicit repo/config, image, SBOM, and package targets are still scanned; use this for deterministic CI.",
+      "title": "No Discover",
+      "type": "boolean"
+     },
+     "image": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Docker image to scan (e.g. 'nginx:1.25', 'ghcr.io/org/app:v1').",
+      "title": "Image"
+     },
+     "sbom_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Path to existing CycloneDX or SPDX JSON SBOM file to ingest.",
+      "title": "Sbom Path"
+     },
+     "package": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Direct package or MCP launch command to scan, e.g. 'npx @modelcontextprotocol/server-filesystem@2025.1.14' or '@modelcontextprotocol/server-filesystem'. A bare 'name@version' spec is assumed to be npm \u2014 pass ``ecosystem`` for anything else.",
+      "title": "Package"
+     },
+     "ecosystem": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Ecosystem of ``package`` when the spec does not name a launcher: 'npm', 'pypi', 'go', 'cargo', 'maven', 'nuget', 'rubygems', 'composer', 'swift', 'pub', 'hex', 'conda', 'deb', 'apk', or 'rpm'. Omitted, the ecosystem is inferred from the spec (PEP 440 specifiers such as 'flask==0.12.2' are PyPI) and any assumption is reported in the result warnings.",
+      "title": "Ecosystem"
+     },
+     "enrich": {
+      "default": false,
+      "description": "Enable NVD CVSS, EPSS probability, and CISA KEV enrichment.",
+      "title": "Enrich",
+      "type": "boolean"
+     },
+     "offline": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "true: use the local vulnerability DB only and skip registry, OSV, GHSA, and NVIDIA network lookups (requires a populated DB from `agent-bom db update`). false: query those sources online. Omitted: online unless the server operator set AGENT_BOM_OFFLINE or AGENT_BOM_VULN_DB_OFFLINE.",
+      "title": "Offline"
+     },
+     "scorecard": {
+      "default": false,
+      "description": "Enrich packages with OpenSSF Scorecard scores (requires resolvable GitHub repos).",
+      "title": "Scorecard",
+      "type": "boolean"
+     },
+     "transitive": {
+      "default": false,
+      "description": "Resolve transitive dependencies for npx/uvx packages.",
+      "title": "Transitive",
+      "type": "boolean"
+     },
+     "verify_integrity": {
+      "default": false,
+      "description": "Verify package SHA-256/SRI hashes and SLSA provenance against registries.",
+      "title": "Verify Integrity",
+      "type": "boolean"
+     },
+     "fail_severity": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Return failure status if vulns at this severity or higher: critical, high, medium, low.",
+      "title": "Fail Severity"
+     },
+     "warn_severity": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Return warning status (gate_status=warn, exit 0) when vulns at this severity or higher exist. Use with fail_severity for two-tier CI gates, e.g. warn_severity='medium', fail_severity='critical'.",
+      "title": "Warn Severity"
+     },
+     "auto_update_db": {
+      "default": false,
+      "description": "Explicitly refresh the local vuln DB when older than the daily freshness target before scanning.",
+      "title": "Auto Update Db",
+      "type": "boolean"
+     },
+     "db_sources": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Comma-separated DB sources to sync before scanning (e.g. 'nvd,ghsa,osv,epss,kev').",
+      "title": "Db Sources"
+     },
+     "output_format": {
+      "default": "json",
+      "description": "Output format: 'json' (default), 'sarif', 'cyclonedx', 'spdx', 'junit', 'csv', or 'markdown'.",
+      "title": "Output Format",
+      "type": "string"
+     },
+     "policy": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
         "type": "object"
-      },
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": true
-      }
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Policy object to evaluate alongside scan results, e.g. {\"rules\": [{\"id\": \"no-critical\", \"severity_gte\": \"critical\", \"action\": \"fail\"}]}.",
+      "title": "Policy"
+     },
+     "detail": {
+      "default": "summary",
+      "description": "JSON output only. 'summary' (default): counts, top findings, affected paths, and a result_id for paged follow-ups. 'full': the whole AI-BOM document, shortened structurally (still valid JSON, with _truncation metadata) if it exceeds the response budget.",
+      "enum": [
+       "summary",
+       "full"
+      ],
+      "title": "Detail",
+      "type": "string"
+     },
+     "result_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "result_id from a previous scan response. With it, no new scan runs: returns that result's summary, or one page of `section`.",
+      "title": "Result Id"
+     },
+     "section": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Section of a stored result to page, e.g. 'findings', 'blast_radius', 'packages', 'exposure_paths'.",
+      "title": "Section"
+     },
+     "offset": {
+      "default": 0,
+      "description": "Zero-based item offset into `section`.",
+      "minimum": 0,
+      "title": "Offset",
+      "type": "integer"
+     },
+     "limit": {
+      "default": 25,
+      "description": "Maximum items per page of `section` (1-200).",
+      "maximum": 200,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+     }
     },
-    {
-      "name": "check",
-      "title": "Package CVE Check",
-      "description": "Check a specific package for known CVEs before installing.\n\nQueries OSV.dev for vulnerabilities in the given package. Use this\nbefore installing an MCP server or dependency to verify it is safe.\n\nArgs:\n    package: Package name with optional version, e.g. \"express@4.18.2\",\n             \"@modelcontextprotocol/server-filesystem@2025.1.14\",\n             or just \"requests\" (resolves @latest).\n    ecosystem: Package ecosystem \u2014 \"npm\", \"pypi\", \"go\", \"cargo\",\n               \"maven\", \"nuget\", \"rubygems\", \"composer\", \"swift\",\n               \"pub\", \"hex\", \"conda\", \"deb\", \"apk\", or \"rpm\".\n               Defaults to \"npm\".\n\nReturns:\n    JSON with package, version, ecosystem, vulnerability count,\n    and vulnerability details (id, severity, cvss, fix version, summary).\n",
-      "inputSchema": {
-        "properties": {
-          "package": {
-            "description": "Package name with optional version, e.g. 'express@4.18.2', '@modelcontextprotocol/server-filesystem@2025.1.14', or 'requests' (resolves @latest).",
-            "title": "Package",
-            "type": "string"
-          },
-          "ecosystem": {
-            "default": "npm",
-            "description": "Package ecosystem: 'npm', 'pypi', 'go', 'cargo', 'maven', 'nuget', 'rubygems', 'composer', 'swift', 'pub', 'hex', 'conda', 'deb', 'apk', or 'rpm'.",
-            "title": "Ecosystem",
-            "type": "string"
-          },
-          "version": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Optional package version when omitted from ``package`` (e.g. package='flask', version='0.12.2'). Prefer embedding in ``package`` as 'flask@0.12.2' or 'flask==0.12.2' when possible.",
-            "title": "Version"
-          },
-          "offline": {
-            "default": false,
-            "description": "Use only the local advisory database. An explicit version is required; registry resolution and publication checks are disabled.",
-            "title": "Offline",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "package"
-        ],
-        "title": "checkArguments",
-        "type": "object",
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "properties": {
-          "result": {
-            "title": "Result",
-            "type": "string"
-          }
-        },
-        "required": [
-          "result"
-        ],
-        "title": "checkOutput",
-        "type": "object"
-      },
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": true
-      }
+    "title": "scanArguments",
+    "type": "object",
+    "additionalProperties": false
+   },
+   "outputSchema": {
+    "properties": {
+     "result": {
+      "title": "Result",
+      "type": "string"
+     }
     },
-    {
-      "name": "remediate",
-      "title": "Remediation Plan",
-      "description": "Generate a remediation plan for vulnerabilities in your AI agent setup.\n\nScans for vulnerabilities, then generates actionable fix commands for\neach affected package (npm install, pip install), credential scope\nreduction guidance, and reports on unfixable vulnerabilities.\n\nArgs:\n    config_path: Path to a specific MCP config directory.\n                 If not provided, auto-discovers all local agent configs.\n    image: Docker image reference to scan (e.g. \"nginx:1.25\").\n\nReturns:\n    JSON with package_fixes (upgrade commands by ecosystem),\n    credential_fixes (scope reduction steps), and unfixable items.\n",
-      "inputSchema": {
-        "properties": {
-          "config_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Path to MCP client config directory. Auto-discovers all if omitted.",
-            "title": "Config Path"
-          },
-          "image": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Docker image to scan, e.g. 'nginx:1.25'.",
-            "title": "Image"
-          }
-        },
-        "title": "remediateArguments",
-        "type": "object",
-        "additionalProperties": false
-      },
-      "outputSchema": {
-        "properties": {
-          "result": {
-            "title": "Result",
-            "type": "string"
-          }
-        },
-        "required": [
-          "result"
-        ],
-        "title": "remediateOutput",
-        "type": "object"
-      },
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": true
-      }
-    }
-  ]
+    "required": [
+     "result"
+    ],
+    "title": "scanOutput",
+    "type": "object"
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+   }
+  },
+  {
+   "name": "check",
+   "title": "Package CVE Check",
+   "description": "Check a specific package for known CVEs before installing.\n\nQueries OSV.dev for vulnerabilities in the given package. Use this\nbefore installing an MCP server or dependency to verify it is safe.\n\nArgs:\n    package: Package name with optional version, e.g. \"express@4.18.2\",\n             \"@modelcontextprotocol/server-filesystem@2025.1.14\",\n             or just \"requests\" (resolves @latest).\n    ecosystem: Package ecosystem \u2014 \"npm\", \"pypi\", \"go\", \"cargo\",\n               \"maven\", \"nuget\", \"rubygems\", \"composer\", \"swift\",\n               \"pub\", \"hex\", \"conda\", \"deb\", \"apk\", or \"rpm\".\n               Defaults to \"npm\".\n\nReturns:\n    JSON with package, version, ecosystem, vulnerability count,\n    and vulnerability details (id, severity, cvss, fix version, summary).\n",
+   "inputSchema": {
+    "properties": {
+     "package": {
+      "description": "Package name with optional version, e.g. 'express@4.18.2', '@modelcontextprotocol/server-filesystem@2025.1.14', or 'requests' (resolves @latest).",
+      "title": "Package",
+      "type": "string"
+     },
+     "ecosystem": {
+      "default": "npm",
+      "description": "Package ecosystem: 'npm', 'pypi', 'go', 'cargo', 'maven', 'nuget', 'rubygems', 'composer', 'swift', 'pub', 'hex', 'conda', 'deb', 'apk', or 'rpm'.",
+      "title": "Ecosystem",
+      "type": "string"
+     },
+     "version": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Optional package version when omitted from ``package`` (e.g. package='flask', version='0.12.2'). Prefer embedding in ``package`` as 'flask@0.12.2' or 'flask==0.12.2' when possible.",
+      "title": "Version"
+     },
+     "offline": {
+      "default": false,
+      "description": "Use only the local advisory database. An explicit version is required; registry resolution and publication checks are disabled.",
+      "title": "Offline",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "package"
+    ],
+    "title": "checkArguments",
+    "type": "object",
+    "additionalProperties": false
+   },
+   "outputSchema": {
+    "properties": {
+     "result": {
+      "title": "Result",
+      "type": "string"
+     }
+    },
+    "required": [
+     "result"
+    ],
+    "title": "checkOutput",
+    "type": "object"
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+   }
+  },
+  {
+   "name": "remediate",
+   "title": "Remediation Plan",
+   "description": "Generate a remediation plan for vulnerabilities in your AI agent setup.\n\nScans for vulnerabilities, then generates actionable fix commands for\neach affected package (npm install, pip install), credential scope\nreduction guidance, and reports on unfixable vulnerabilities.\n\nArgs:\n    config_path: Path to a specific MCP config directory.\n                 If not provided, auto-discovers all local agent configs.\n    image: Docker image reference to scan (e.g. \"nginx:1.25\").\n\nReturns:\n    JSON with package_fixes (upgrade commands by ecosystem),\n    credential_fixes (scope reduction steps), and unfixable items.\n",
+   "inputSchema": {
+    "properties": {
+     "config_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Path to MCP client config directory. Auto-discovers all if omitted.",
+      "title": "Config Path"
+     },
+     "image": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Docker image to scan, e.g. 'nginx:1.25'.",
+      "title": "Image"
+     }
+    },
+    "title": "remediateArguments",
+    "type": "object",
+    "additionalProperties": false
+   },
+   "outputSchema": {
+    "properties": {
+     "result": {
+      "title": "Result",
+      "type": "string"
+     }
+    },
+    "required": [
+     "result"
+    ],
+    "title": "remediateOutput",
+    "type": "object"
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+   }
+  },
+  {
+   "name": "intel_lookup",
+   "title": "Threat Intel Advisory Lookup",
+   "description": "Look up one advisory from the local threat-intel database.",
+   "inputSchema": {
+    "properties": {
+     "advisory_id": {
+      "description": "CVE, GHSA, or OSV advisory ID, e.g. CVE-2024-1234 or GHSA-abcd-1234-wxyz.",
+      "title": "Advisory Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "advisory_id"
+    ],
+    "title": "intel_lookupArguments",
+    "type": "object",
+    "additionalProperties": false
+   },
+   "outputSchema": {
+    "properties": {
+     "result": {
+      "title": "Result",
+      "type": "string"
+     }
+    },
+    "required": [
+     "result"
+    ],
+    "title": "intel_lookupOutput",
+    "type": "object"
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+   }
+  }
+ ]
 }

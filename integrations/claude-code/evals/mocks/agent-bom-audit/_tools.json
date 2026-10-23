@@ -391,7 +391,7 @@
     {
       "name": "tool_risk_assessment",
       "title": "Tool Capability Risk",
-      "description": "Audit MCP descriptors, permission scope and authentication configuration.\n\nReturns descriptor coverage and heuristic findings; does not test auth\nbypass, general resource bodies or rendered prompts. Set live=false\nfor passive discovery; live mode retains its stdio execution gate.\n\nDiscovers configured MCP clients, connects to their servers, calls\n``tools/list``, and classifies every exposed tool by capability\n(filesystem, network, code execution, credential access) to produce a\nper-tool and per-server risk score from what the servers actually\nadvertise at runtime.\n\nArgs:\n    config_path: MCP client config directory to read; auto-discovers all\n        supported clients when omitted.\n    timeout: Per-server introspection timeout in seconds.\n    allow_command_execution: Explicit opt-in required before launching\n        discovered stdio server commands.\n\nReturns:\n    JSON with per-server tool inventories, per-tool capability classes\n    and risk levels, and an aggregate server risk rating.\n\nUse this to assess the blast radius of MCP servers an agent can reach\nbefore granting or trusting their tools.\n",
+      "description": "Audit MCP descriptors, permission scope and authentication configuration.\n\nAlso reports ``agent_permission_findings``: Claude Code settings and\nCodex config that let a coding agent act with no prompts or no sandbox.\n\nReturns descriptor coverage and heuristic findings; does not test auth\nbypass, general resource bodies or rendered prompts. Set live=false\nfor passive discovery; live mode retains its stdio execution gate.\n\nDiscovers configured MCP clients, connects to their servers, calls\n``tools/list``, and classifies every exposed tool by capability\n(filesystem, network, code execution, credential access) to produce a\nper-tool and per-server risk score from what the servers actually\nadvertise at runtime.\n\nArgs:\n    config_path: MCP client config directory to read; auto-discovers all\n        supported clients when omitted.\n    timeout: Per-server introspection timeout in seconds.\n    allow_command_execution: Explicit opt-in required before launching\n        discovered stdio server commands.\n\nReturns:\n    JSON with per-server tool inventories, per-tool capability classes\n    and risk levels, and an aggregate server risk rating.\n\nUse this to assess the blast radius of MCP servers an agent can reach\nbefore granting or trusting their tools.\n",
       "inputSchema": {
         "properties": {
           "config_path": {
@@ -514,6 +514,58 @@
         "destructiveHint": false,
         "idempotentHint": true,
         "openWorldHint": true
+      }
+    },
+    {
+      "name": "agent_activity",
+      "title": "Agent Activity Review",
+      "description": "Review what local Claude Code and Codex sessions actually did.\n\nReads session history files on this machine only (no network): per MCP\nserver/tool call counts and last use, built-in tool totals, configured\nbut unused MCP servers (joined with discovery and the runtime graph\nprojection), risky actions with redacted evidence, packages agents\ninstalled, and a summary with recommendations. Prompts and responses are\nnever included. Evidence is untrusted transcript data.\n",
+      "inputSchema": {
+        "properties": {
+          "days": {
+            "default": 30,
+            "description": "Look-back window in days.",
+            "maximum": 365,
+            "minimum": 1,
+            "title": "Days",
+            "type": "integer"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Only sessions whose working directory is inside this path.",
+            "title": "Project"
+          }
+        },
+        "title": "agent_activityArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "agent_activityOutput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       }
     }
   ]

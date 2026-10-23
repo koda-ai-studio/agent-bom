@@ -102,7 +102,7 @@ PROFILES = {
         _COMMON_RESOURCES | {"schema://inventory-v1", "bestpractices://mcp-hardening"},
     ),
     "audit": ToolProfile(
-        "Audit MCP descriptors, permission scope, agent inventory and skill or instruction files; "
+        "Audit MCP descriptors, permission scope, agent inventory, local agent activity and skill or instruction files; "
         "review compliance, policy and audit integrity.",
         frozenset(
             {
@@ -115,6 +115,7 @@ PROFILES = {
                 "inventory",
                 "skill_scan",
                 "skill_trust",
+                "agent_activity",
             }
         ),
         frozenset({"compliance-report"}),

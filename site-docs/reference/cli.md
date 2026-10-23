@@ -174,6 +174,7 @@ metadata or environment defaults.
 | `plugins` | Inspect extension plugin registry status without loading third-party plugin code |
 | `profiles` | Manage named CLI profiles for repeatable scan contexts |
 | `proxy-bootstrap` | Generate managed endpoint onboarding material |
+| `activity` | Review local Claude Code and Codex session history: MCP usage, unused servers, risky actions and installed packages (local only) |
 | `samples` | Create bundled sample inputs for demos and first runs |
 | `demo` | Inspect the bundled fictional enterprise evidence story in a table or as normalized JSON |
 | `sidecar-injector` | Run the TLS admission webhook for sidecar injection |

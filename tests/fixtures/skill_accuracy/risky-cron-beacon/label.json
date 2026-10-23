@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Installs a cron beacon that fetches and runs remote code.",
+  "expect": [
+    {
+      "category": "persistence_mechanism",
+      "min_severity": "medium"
+    },
+    {
+      "category": "remote_code_execution",
+      "min_severity": "high"
+    }
+  ]
+}

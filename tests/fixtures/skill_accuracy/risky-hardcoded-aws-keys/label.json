@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "AWS access key pair pasted into an instruction file (AWS documentation example values).",
+  "expect": [
+    {
+      "category": "hardcoded_secret",
+      "min_severity": "high"
+    }
+  ]
+}

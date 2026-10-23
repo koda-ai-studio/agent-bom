@@ -17,7 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agent_bom import finding_scope
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401
+from tests._demo_estate_fixtures import VIEWER
 
 
 def _all_findings(client: TestClient) -> list[dict]:
@@ -32,7 +32,7 @@ def _all_findings(client: TestClient) -> list[dict]:
             return rows
 
 
-def test_reachability_view_redacts_only_emitted_rows(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+def test_reachability_view_redacts_only_emitted_rows(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     client = demo_estate_client
     expected = [row for row in _all_findings(client) if row.get("graph_reachable") is True]
     assert len(expected) > 5, "the demo estate has too few reachable findings to prove anything"
@@ -52,7 +52,7 @@ def test_reachability_view_redacts_only_emitted_rows(demo_estate_client: TestCli
     assert calls["n"] <= 5, f"redacted {calls['n']} rows to return 5"
 
 
-def test_reachability_view_keeps_triage_fields_unredacted(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_reachability_view_keeps_triage_fields_unredacted(demo_estate_client: TestClient) -> None:
     body = demo_estate_client.get(
         "/v1/findings", headers=VIEWER, params={"reachability": "reachable", "triage": "untriaged", "limit": 3}
     ).json()
@@ -64,7 +64,7 @@ def test_reachability_view_keeps_triage_fields_unredacted(demo_estate_client: Te
 
 @pytest.mark.parametrize("triage", ["untriaged", "affected"])
 def test_triage_view_without_triage_entries_redacts_only_emitted_rows(
-    demo_estate_client: TestClient,  # noqa: F811
+    demo_estate_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
     triage: str,
 ) -> None:
@@ -114,7 +114,7 @@ def leftover_triage_entry():
 
 def test_demo_client_starts_from_an_empty_exception_store(
     leftover_triage_entry,
-    demo_estate_client: TestClient,  # noqa: F811
+    demo_estate_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls = {"n": 0}

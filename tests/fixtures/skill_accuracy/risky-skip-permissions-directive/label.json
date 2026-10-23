@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "Tells the agent to relaunch itself without permission prompts.",
+  "expect": [
+    {
+      "category": "confirmation_bypass",
+      "min_severity": "critical"
+    },
+    {
+      "category": "agent_delegation",
+      "min_severity": "high"
+    }
+  ]
+}

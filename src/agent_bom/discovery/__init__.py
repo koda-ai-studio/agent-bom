@@ -17,6 +17,8 @@ import yaml  # type: ignore[import-untyped]
 from rich.console import Console
 from rich.markup import escape
 
+from agent_bom.discovery.agent_permission_posture import attach_permission_findings
+
 # Re-export parser functions for backward compatibility
 from agent_bom.discovery.config_parsers import (  # noqa: F401
     _DANGEROUS_HOOK_PATTERNS,
@@ -52,8 +54,6 @@ console = Console(stderr=True)
 def _display_label(value: object, max_len: int = 500) -> str:
     return escape(sanitize_log_label(value, max_len=max_len))
 
-
-# Config file locations per platform
 
 # Map agent types to their CLI binary names for installed-but-not-configured detection
 
@@ -859,7 +859,7 @@ def discover_all(
         if installed_agents:
             console.print(f"  [dim]{len(installed_agents)} additional agent(s) installed but not configured.[/dim]")
 
-    return agents
+    return attach_permission_findings(agents, project_dir)
 
 
 if TYPE_CHECKING:

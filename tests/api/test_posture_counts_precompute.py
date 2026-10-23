@@ -20,7 +20,6 @@ from agent_bom.api.server import app, set_job_store
 from agent_bom.api.store import InMemoryJobStore, SQLiteJobStore
 from agent_bom.api.stores import _get_store
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
-from tests.test_demo_estate_bootstrap import demo_estate_client  # noqa: F401
 
 TENANT_A = "precompute-tenant-a"
 TENANT_B = "precompute-tenant-b"
@@ -259,7 +258,7 @@ def test_a_block_that_computes_longer_than_the_ttl_is_still_reused(monkeypatch: 
     assert len(calls) == 1
 
 
-def test_demo_estate_precompute_equals_the_read_path(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+def test_demo_estate_precompute_equals_the_read_path(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     from agent_bom.api.posture_counts_cache import wait_for_posture_precompute
     from agent_bom.demo_estate.bootstrap import SHOWCASE_TENANT
 

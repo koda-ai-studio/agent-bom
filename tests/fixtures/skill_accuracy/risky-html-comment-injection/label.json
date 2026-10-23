@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Instruction hidden in an HTML comment inside an otherwise normal skill.",
+  "expect": [
+    {
+      "category": "prompt_coercion",
+      "min_severity": "high"
+    }
+  ]
+}

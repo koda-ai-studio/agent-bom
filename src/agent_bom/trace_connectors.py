@@ -32,6 +32,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol, cast
 
 from agent_bom.core.http_retry import provider_retry_after
+from agent_bom.runtime.agent_sessions import LOCAL_SESSION_PROVIDERS
+from agent_bom.runtime.agent_sessions.provider import local_session_connectors
 from agent_bom.runtime.native_trace_spans import native_span
 from agent_bom.runtime.normalized_trace import PrincipalDigest
 
@@ -113,7 +115,7 @@ class _HttpClient(Protocol):
 
 
 def list_trace_connectors() -> list[dict[str, Any]]:
-    """Describe the available native trace-pull connectors."""
+    """Describe the available native trace-pull connectors and local history providers."""
     return [
         {
             "name": LANGFUSE,
@@ -127,6 +129,7 @@ def list_trace_connectors() -> list[dict[str, Any]]:
             "auth_fields": ["api_key", "api_url", "project"],
             "supports_content": True,
         },
+        *local_session_connectors(),
     ]
 
 
@@ -344,6 +347,9 @@ def fetch_traces(
     logged. Returns flat OTLP ``{"spans": [...]}``.
     """
     key = (provider or "").strip().lower()
+    if key in LOCAL_SESSION_PROVIDERS:
+        # Never read the serving host's own files on behalf of a remote caller.
+        raise TraceConnectorValidationError("local session history is read only by the local CLI or stdio MCP server")
     if key == LANGFUSE:
         return fetch_langfuse_traces(
             host=str(credentials.get("host", "")),

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import click
 
+from agent_bom.cli._activity import activity_cmd
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.cli._runtime_profiles import runtime_feed, runtime_profiles
 
@@ -26,6 +27,7 @@ def runtime_group(ctx: click.Context) -> None:
       audit       View and analyze proxy audit log
       profiles    Create and preview managed runtime profiles
       feed        Read checkpointed gateway activity
+      activity    Review local Claude Code and Codex session activity
 
     Hidden compatibility commands:
       protect     Runtime protection engine (8 behavioral detectors)
@@ -37,3 +39,4 @@ def runtime_group(ctx: click.Context) -> None:
 
 runtime_group.add_command(runtime_profiles)
 runtime_group.add_command(runtime_feed)
+runtime_group.add_command(activity_cmd, "activity")

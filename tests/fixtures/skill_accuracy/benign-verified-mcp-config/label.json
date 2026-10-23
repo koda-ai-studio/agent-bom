@@ -1,0 +1,23 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "MCP config block for a verified registry server with a token placeholder.",
+  "must_not": [
+    {
+      "category": "unverified_server"
+    },
+    {
+      "category": "shell_access"
+    }
+  ],
+  "packages": [
+    {
+      "name": "@modelcontextprotocol/server-github",
+      "ecosystem": "npm",
+      "version": "2025.4.8"
+    }
+  ],
+  "must_not_packages": [
+    "-y"
+  ]
+}

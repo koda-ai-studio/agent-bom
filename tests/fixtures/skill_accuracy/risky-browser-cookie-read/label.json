@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Reads browser cookie and history databases.",
+  "expect": [
+    {
+      "category": "data_exfiltration",
+      "min_severity": "medium"
+    }
+  ]
+}

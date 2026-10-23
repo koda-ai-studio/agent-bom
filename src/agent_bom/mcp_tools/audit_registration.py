@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
+from agent_bom.mcp_tools.activity import register_agent_activity_tool
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl
 
 
@@ -27,6 +28,9 @@ def register_audit_tool(mcp, *, runtime_introspection, execute_tool_sync_async, 
         ] = False,
     ) -> str:
         """Audit MCP descriptors, permission scope and authentication configuration.
+
+        Also reports ``agent_permission_findings``: Claude Code settings and
+        Codex config that let a coding agent act with no prompts or no sandbox.
 
         Returns descriptor coverage and heuristic findings; does not test auth
         bypass, general resource bodies or rendered prompts. Set live=false
@@ -64,3 +68,5 @@ def register_audit_tool(mcp, *, runtime_introspection, execute_tool_sync_async, 
             _truncate_response=truncate_response,
             destructive=allow_command_execution,
         )
+
+    register_agent_activity_tool(mcp, execute_tool_sync_async=execute_tool_sync_async, truncate_response=truncate_response)

@@ -6,6 +6,7 @@ import json
 import logging
 
 from agent_bom import discovery, mcp_introspect
+from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
 from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
 from agent_bom.scanners.mcp_audit import audit_mcp_agents
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
@@ -29,8 +30,10 @@ def tool_risk_assessment_impl(
         resolved_config_path = str(_safe_path(config_path)) if config_path else None
         agents = discovery.discover_all(project_dir=resolved_config_path)
         servers = [s for a in agents for s in a.mcp_servers if s.is_mcp_surface]
+        permission_findings = [f.to_dict() for f in evaluate_agent_permission_posture(agents)]
         if not servers:
-            return json.dumps({"status": "no_servers_found", "servers": []})
+            payload = {"status": "no_servers_found", "servers": [], "agent_permission_findings": permission_findings}
+            return _truncate_response(json.dumps(sanitize_sensitive_payload(payload), indent=2))
 
         report = (
             mcp_introspect.introspect_servers_sync(servers, timeout=timeout, allow_stdio=allow_command_execution)
@@ -57,6 +60,7 @@ def tool_risk_assessment_impl(
                         "warnings": report.warnings,
                         "audit": audit.to_dict(),
                         "authentication_findings": [f.to_dict() for f in evaluate_mcp_auth_posture(agents)],
+                        "agent_permission_findings": permission_findings,
                     }
                 ),
                 indent=2,

@@ -1,0 +1,10 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Guide explaining how to spot base64-encoded payloads, without a payload.",
+  "must_not": [
+    {
+      "category": "remote_code_execution"
+    }
+  ]
+}

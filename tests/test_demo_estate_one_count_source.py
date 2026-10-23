@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401
+from tests._demo_estate_fixtures import VIEWER
 
 _BANDS = ("critical", "high", "medium", "low")
 _FINDINGS_SORTS = ("effective_reach", "severity", "cvss")
@@ -136,7 +136,7 @@ def _check_unique_credentials_match_the_posture_dimension_on_the_same_inventory(
     assert details.startswith(f"{len(names)} unique credentials"), (sorted(names), details)
 
 
-def test_every_surface_reads_one_count_source(demo_estate_client: TestClient) -> None:  # noqa: F811
+def test_every_surface_reads_one_count_source(demo_estate_client: TestClient) -> None:
     """One bootstrap, every check: the seed is the expensive part."""
     surfaces = _surfaces(demo_estate_client)
     _check_issue_severity_is_one_number_on_every_surface(surfaces)

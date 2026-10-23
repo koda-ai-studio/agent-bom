@@ -1,0 +1,6 @@
+You are working in a TypeScript monorepo.
+
+- Use strict null checks.
+- Prefer `const` over `let`.
+- Co-locate tests next to the module as `*.test.ts`.
+- Keep React components under 200 lines.
