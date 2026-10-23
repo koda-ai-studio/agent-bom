@@ -177,11 +177,9 @@ openssl rsa -in agent_bom_svc_rsa.pem -pubout -out agent_bom_svc_rsa.pub
 # Run the setup script (paste the .pub contents into the script first)
 snow sql -f deploy/snowflake/native-app/scripts/auth_keypair_setup.sql
 
-# Test the connection
-export SNOWFLAKE_USER=agent_bom_svc
-export SNOWFLAKE_PRIVATE_KEY_PATH=/secrets/agent_bom_svc_rsa.pem
-export SNOWFLAKE_ACCOUNT=<your_account>
-agent-bom snowflake test-connection
+# Verify the read-only connection
+agent-bom connect snowflake --account <your_account> --user agent_bom_svc \
+  --private-key-file /secrets/agent_bom_svc_rsa.pem
 ```
 
 ## 8 — Scan dispatch availability

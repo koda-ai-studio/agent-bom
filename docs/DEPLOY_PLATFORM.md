@@ -587,7 +587,7 @@ That bundle includes:
 - a `fleet-sync.env` file for the shipped timer/service assets
 - a rendered launchd plist for managed macOS rollout
 
-The generated bootstrap scripts install or upgrade `agent-bom`, then run `agent-bom proxy-configure --apply` with the control-plane policy/audit settings you chose, so supported JSON MCP clients no longer need manual config edits.
+The generated bootstrap scripts install or upgrade `agent-bom`, then run `agent-bom runtime configure --apply` with the control-plane policy/audit settings you chose, so supported JSON MCP clients no longer need manual config edits.
 
 For packaged rollout beyond shell scripts, the repo now also ships:
 

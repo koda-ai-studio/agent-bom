@@ -96,7 +96,7 @@ agent-bom proxy "npx @modelcontextprotocol/server-filesystem /workspace"
 For JSON-based configs, auto-wrap all eligible stdio servers:
 
 ```bash
-agent-bom proxy-configure --log-dir ~/.agent-bom/logs --detect-credentials --apply
+agent-bom runtime configure --log-dir ~/.agent-bom/logs --detect-credentials --apply
 ```
 
 For enterprise-managed endpoint rollout, generate a packaged bootstrap bundle instead:
@@ -124,7 +124,7 @@ For cross-agent correlation across sessions, use the broader runtime protection 
 
 - Use `agent-bom mcp server` when you want Claude to call the scanner directly.
 - Use `agent-bom proxy` when Claude should keep talking to a third-party MCP server, but you want inline runtime inspection and policy enforcement around that traffic.
-- Use `agent-bom proxy-configure --apply` when you want to auto-wrap JSON-configured stdio servers in supported Claude config files.
+- Use `agent-bom runtime configure --apply` when you want to auto-wrap JSON-configured stdio servers in supported Claude config files.
 
 ## Notes
 

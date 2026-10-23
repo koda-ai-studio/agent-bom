@@ -50,7 +50,7 @@ agent-bom mcp inventory
 
 ## Runtime proxy for Codex-connected MCP servers
 
-Codex uses TOML, so `agent-bom proxy-configure` does not auto-rewrite the config today. Wrap the target server manually:
+Codex uses TOML, so `agent-bom runtime configure` does not auto-rewrite the config today. Wrap the target server manually:
 
 ```toml
 [mcp_servers.filesystem]

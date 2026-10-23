@@ -33,7 +33,8 @@ def build_proxy_configure_command(
     """Build the canonical endpoint proxy bootstrap command."""
     cmd = [
         "agent-bom",
-        "proxy-configure",
+        "runtime",
+        "configure",
         "--log-dir",
         log_dir,
         "--control-plane-url",

@@ -104,7 +104,7 @@ agent-bom proxy "npx @modelcontextprotocol/server-filesystem /workspace"
 Or auto-wrap eligible JSON MCP configs:
 
 ```bash
-agent-bom proxy-configure --log-dir ~/.agent-bom/logs --detect-credentials --apply
+agent-bom runtime configure --log-dir ~/.agent-bom/logs --detect-credentials --apply
 ```
 
 For Cortex, agent-bom also audits:

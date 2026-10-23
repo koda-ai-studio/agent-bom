@@ -45,9 +45,9 @@ tools to them and discover their local MCP configuration during scans.
 | Claude Desktop | macOS: `~/Library/Application Support/Claude/claude_desktop_config.json` Linux: `~/.config/Claude/claude_desktop_config.json` Windows: `~/AppData/Roaming/Claude/claude_desktop_config.json` | `agent-bom mcp server` or `uvx agent-bom mcp server` | Good fit for MCP server mode. Proxy wrapping works for JSON-configured stdio servers. |
 | Claude Code | `~/.claude/settings.json`, `~/.claude.json` | `claude mcp add agent-bom -- uvx agent-bom mcp server` | `agent-bom` also discovers project-level MCP servers from `~/.claude.json`. |
 | Cortex CoCo / Cortex Code | `~/.snowflake/cortex/mcp.json` plus `settings.json`, `permissions.json`, `hooks.json` in the same directory | `uvx agent-bom mcp server` in `mcp.json` | Best fit when you want both MCP discovery and Cortex-specific permission/hook audits. |
-| Cursor | macOS: `~/Library/Application Support/Cursor/User/globalStorage/cursor.mcp/mcp.json`, `~/.cursor/mcp.json` Linux: `~/.config/Cursor/User/globalStorage/cursor.mcp/mcp.json`, `~/.cursor/mcp.json` Windows: `~/AppData/Roaming/Cursor/User/globalStorage/cursor.mcp/mcp.json`, `~/.cursor/mcp.json` | `agent-bom mcp server` | Cursor uses standard JSON MCP config, so `proxy-configure` can wrap eligible stdio servers. |
+| Cursor | macOS: `~/Library/Application Support/Cursor/User/globalStorage/cursor.mcp/mcp.json`, `~/.cursor/mcp.json` Linux: `~/.config/Cursor/User/globalStorage/cursor.mcp/mcp.json`, `~/.cursor/mcp.json` Windows: `~/AppData/Roaming/Cursor/User/globalStorage/cursor.mcp/mcp.json`, `~/.cursor/mcp.json` | `agent-bom mcp server` | Cursor uses standard JSON MCP config, so `runtime configure` can wrap eligible stdio servers. |
 | Windsurf | macOS: `~/.windsurf/mcp.json`, `~/Library/Application Support/Windsurf/User/globalStorage/windsurf.mcp/mcp.json` Linux: `~/.windsurf/mcp.json` Windows: `~/.windsurf/mcp.json` | `agent-bom mcp server` | Same `mcpServers` JSON shape as Claude/Cursor. |
-| Codex CLI | `~/.codex/config.toml` on macOS, Linux, and Windows | `agent-bom mcp server` via `[mcp_servers.agent-bom]` | Codex uses TOML, not JSON. `proxy-configure` does not rewrite TOML configs; wrap manually when needed. |
+| Codex CLI | `~/.codex/config.toml` on macOS, Linux, and Windows | `agent-bom mcp server` via `[mcp_servers.agent-bom]` | Codex uses TOML, not JSON. `runtime configure` does not rewrite TOML configs; wrap manually when needed. |
 | Gemini CLI | `~/.gemini/settings.json` on macOS, Linux, and Windows | `agent-bom mcp server` | Uses standard JSON MCP config. |
 
 For agent-facing investigation, the most useful tools to start with are
@@ -206,7 +206,7 @@ This keeps the real server behind `agent-bom` and enables runtime detectors for 
 For JSON-configured clients like Claude Desktop or Cortex CoCo, use:
 
 ```bash
-agent-bom proxy-configure --log-dir ~/.agent-bom/logs --detect-credentials
+agent-bom runtime configure --log-dir ~/.agent-bom/logs --detect-credentials
 ```
 
 Add `--apply` to write the wrapped config back to compatible JSON MCP config files.
@@ -220,7 +220,7 @@ agent-bom proxy-bootstrap \
   --push-url https://agent-bom.example.com/v1/fleet/sync
 ```
 
-`proxy-configure` is best for JSON MCP clients such as Claude Desktop, Cursor, Windsurf, and Cortex CoCo. TOML-based clients like Codex CLI need manual proxy wrapping.
+`runtime configure` is best for JSON MCP clients such as Claude Desktop, Cursor, Windsurf, and Cortex CoCo. TOML-based clients like Codex CLI need manual proxy wrapping.
 
 For prerequisite checks and bounded identity paths, use [`consequence_assessment`](GRAPH_CONSEQUENCES.md) in the graph profile. It is experimental and read-only; missing session or exploitability evidence stays explicit.
 
@@ -777,13 +777,13 @@ for the matching CLI command and evidence boundaries. Assessments are read-only.
 |------|-----|-----|
 | Ask an assistant to run `agent-bom` tools directly | `agent-bom mcp server` | Makes discovery, scan, blast-radius, compliance, and trust tools available in-chat |
 | Inspect or block live MCP traffic to another server | `agent-bom proxy` | Adds inline JSON-RPC inspection, audit logs, and policy enforcement |
-| Auto-wrap JSON-based stdio MCP configs | `agent-bom proxy-configure` | Rewrites eligible client configs so they point at the proxy wrapper |
+| Auto-wrap JSON-based stdio MCP configs | `agent-bom runtime configure` | Rewrites eligible client configs so they point at the proxy wrapper |
 | Generate managed endpoint rollout artifacts | `agent-bom proxy-bootstrap` | Writes shell/PowerShell bootstrap scripts plus fleet-sync artifacts for IT-owned rollout |
 
 ## Runtime proxy notes
 
 - `agent-bom proxy` is best when the client talks to a third-party stdio server and you want runtime inspection.
-- `agent-bom proxy-configure --apply` targets JSON MCP configs and can now
+- `agent-bom runtime configure --apply` targets JSON MCP configs and can now
   stamp control-plane policy/audit settings into the wrapped proxy command.
   Generated configs include `--no-isolate` unless `--sandbox-image` is supplied,
   so process containment is never implied without an operator-provided
