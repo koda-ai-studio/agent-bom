@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 _NIM_IMAGE_PREFIX = "nvcr.io/nim/"
 
 # Kubernetes CRD fully-qualified names
-_CRD_VIRTUALSERVER = "virtualservers.virtualserver.coreweave.com"
+_CRD_VIRTUALSERVER = "virtualservers.virtualservers.coreweave.com"
 _CRD_INFERENCESERVICE = "inferenceservices.serving.kserve.io"
 
 
@@ -120,7 +120,7 @@ def discover(
         scan_mode=ScanMode.CLOUD_READ_ONLY,
         discovery_scope=tuple(scope),
         permissions_used=(
-            "kube:virtualservers.virtualserver.coreweave.com:list",
+            "kube:virtualservers.virtualservers.coreweave.com:list",
             "kube:inferenceservices.serving.kserve.io:list",
             "kube:pods:list",
         ),

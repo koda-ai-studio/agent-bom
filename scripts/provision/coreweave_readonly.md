@@ -65,9 +65,6 @@ rules:
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets"]
     verbs: ["get", "list", "watch"]
-  - apiGroups: ["batch"]
-    resources: ["jobs"]
-    verbs: ["get", "list", "watch"]
   # CoreWeave VirtualServer CRD
   - apiGroups: ["virtualservers.coreweave.com"]
     resources: ["virtualservers"]
