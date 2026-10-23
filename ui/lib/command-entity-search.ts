@@ -8,8 +8,10 @@ export interface EntitySearchResult {
   href: string;
 }
 
-export const ENTITY_SEARCH_TYPES = ["vulnerability", "agent", "package", "server"] as const;
+export const ENTITY_SEARCH_TYPES = ["vulnerability", "agent", "package", "server", "data_store", "cloud_resource"] as const;
 export const ENTITY_SEARCH_LIMIT = 8;
+
+const ASSET_KINDS: Readonly<Record<string, string>> = { data_store: "Data store", cloud_resource: "Cloud resource" };
 
 const CVE = /\b(?:CVE-\d{4}-\d{4,}|GHSA(?:-[a-z0-9]{4}){3})\b/i;
 
@@ -39,9 +41,18 @@ export function entitySearchResults(nodes: readonly UnifiedNode[]): EntitySearch
       if (!results.has(key)) results.set(key, { key, label: node.label, kind: "Package", href: graphHref(node.id) });
     } else if (type === "server") {
       results.set(node.id, { key: node.id, label: node.label, kind: "MCP server", href: graphHref(node.id) });
+    } else if (ASSET_KINDS[type]) {
+      results.set(node.id, { key: node.id, label: node.label, kind: ASSET_KINDS[type], href: neighbourhoodHref(node.id) });
     }
   }
   return [...results.values()];
+}
+
+/** Exact name matches first, then names starting with the query; otherwise the search order holds. */
+export function rankByName(results: readonly EntitySearchResult[], query: string): EntitySearchResult[] {
+  const needle = query.trim().toLowerCase();
+  const rank = (label: string) => (label.toLowerCase() === needle ? 0 : label.toLowerCase().startsWith(needle) ? 1 : 2);
+  return results.map((result, index) => ({ result, index })).sort((a, b) => rank(a.result.label) - rank(b.result.label) || a.index - b.index).map(({ result }) => result);
 }
 
 /**
@@ -55,5 +66,5 @@ export async function searchEstateEntities(query: string): Promise<EntitySearchR
   );
   const fulfilled = settled.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
   if (!fulfilled.length) throw new Error("Entity search is unavailable");
-  return entitySearchResults(fulfilled.flatMap((response) => response.results)).slice(0, ENTITY_SEARCH_LIMIT);
+  return rankByName(entitySearchResults(fulfilled.flatMap((response) => response.results)), query).slice(0, ENTITY_SEARCH_LIMIT);
 }

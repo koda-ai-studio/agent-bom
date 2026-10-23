@@ -17,11 +17,10 @@ from typing import TYPE_CHECKING, Any, Iterable, Mapping, Sequence
 if TYPE_CHECKING:
     from agent_bom.graph import RelationshipType, UnifiedGraph, UnifiedNode
 
+from agent_bom.api.graph_search_rank import pg_ranked_search_rows
 from agent_bom.api.graph_store import (
     _assert_offset_within_cap,
     _escape_like_query,
-    decode_graph_cursor,
-    encode_graph_cursor,
 )
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.config import POSTGRES_GRAPH_SEARCH_TIMEOUT_MS, POSTGRES_STATEMENT_TIMEOUT_MS
@@ -926,37 +925,5 @@ class PostgresGraphStore(
             total = int((total_row[0] if total_row else 0) or 0)
             if total == 0:
                 return [], 0, None
-            row_params = list(params)
-            cursor_clause = ""
-            if cursor:
-                severity_id, risk_score, label, node_id = decode_graph_cursor(cursor)
-                cursor_clause = """
-                AND (
-                    gn.severity_id < %s
-                    OR (gn.severity_id = %s AND gn.risk_score < %s)
-                    OR (gn.severity_id = %s AND gn.risk_score = %s AND gn.label > %s)
-                    OR (gn.severity_id = %s AND gn.risk_score = %s AND gn.label = %s AND gn.id > %s)
-                )
-                """
-                row_params.extend(
-                    [severity_id, severity_id, risk_score, severity_id, risk_score, label, severity_id, risk_score, label, node_id]
-                )
-            rows = conn.execute(
-                """
-                SELECT
-                    gn.id, gn.entity_type, gn.label, gn.category_uid, gn.class_uid, gn.type_uid,
-                    gn.status, gn.risk_score, gn.severity, gn.severity_id, gn.first_seen, gn.last_seen,
-                    gn.attributes, gn.compliance_tags, gn.data_sources, gn.dimensions
-                """
-                + from_clause
-                + " WHERE "
-                + where_sql
-                + cursor_clause
-                + " ORDER BY gn.severity_id DESC, gn.risk_score DESC, gn.label ASC, gn.id ASC LIMIT %s OFFSET %s",
-                [*row_params, limit + 1 if cursor else limit, 0 if cursor else offset],
-            ).fetchall()
-            has_more = len(rows) > limit if cursor else offset + limit < total
-            rows = rows[:limit]
-            nodes = [self._node_from_row(row) for row in rows]
-            next_cursor = encode_graph_cursor(nodes[-1]) if has_more and nodes else None
-            return nodes, total, next_cursor
+            rows, _has_more, next_cursor = pg_ranked_search_rows(conn, from_clause, where_sql, params, query, cursor, limit, offset, total)
+            return [self._node_from_row(row) for row in rows], total, next_cursor

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 
 import { CommandPalette } from "@/components/command-palette";
-import { entitySearchResults } from "@/lib/command-entity-search";
+import { ENTITY_SEARCH_TYPES, entitySearchResults, rankByName } from "@/lib/command-entity-search";
 import type { UnifiedNode } from "@/lib/graph-schema";
 
 vi.mock("next/link", () => ({
@@ -68,4 +68,19 @@ describe("CommandPalette entity search", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(400); });
     expect(screen.getByRole("status")).toHaveTextContent("Entity search is unavailable");
   });
+});
+
+it("finds data stores and cloud resources and lists exact, then prefix, name matches first", () => {
+  const results = entitySearchResults([
+    node("vuln:CVE-2026-1", "vulnerability", "CVE-2026-1: audit-evidence-staging-2 exporter"),
+    node("aws:bucket:2:audit-evidence-staging-2-archive", "data_store", "audit-evidence-staging-2-archive"),
+    node("aws:bucket:1:audit-evidence-staging-2", "data_store", "audit-evidence-staging-2"),
+    node("aws:ec2:i-1", "cloud_resource", "prod-bastion"),
+  ]);
+  expect(results.find((result) => result.key === "aws:ec2:i-1")).toMatchObject({ kind: "Cloud resource", href: "/security-graph?lens=lineage&investigate=1&root=aws%3Aec2%3Ai-1&node=aws%3Aec2%3Ai-1" });
+  expect(rankByName(results, "Audit-Evidence-Staging-2").map((result) => result.key).slice(0, 2)).toEqual([
+    "aws:bucket:1:audit-evidence-staging-2",
+    "aws:bucket:2:audit-evidence-staging-2-archive",
+  ]);
+  expect(ENTITY_SEARCH_TYPES).toEqual(expect.arrayContaining(["data_store", "cloud_resource"]));
 });
