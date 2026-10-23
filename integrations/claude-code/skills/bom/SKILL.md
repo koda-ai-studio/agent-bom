@@ -4,7 +4,7 @@ description: Generate an AI-BOM (CycloneDX or SPDX) with agent-bom for this mach
 argument-hint: "[project <dir> | image <ref> | repo <url> | aws|azure|gcp]"
 ---
 
-Write an AI-BOM file and summarize it. This skill only reads: it never changes a config, a cloud resource or a package.
+Write an AI-BOM file and summarize it. This skill is read-only toward everything it inventories: it never changes a config, a cloud resource or a package, and the only file it writes is the BOM.
 
 1. Pick the target and format from the request. Default to CycloneDX (`cyclonedx`); use `spdx` if the user asks for SPDX. Name the file after the target, for example `ai-bom.cdx.json` or `aws-ai-bom.cdx.json`.
 2. Write the full file with the pinned agent-bom release, run from the user's shell after telling them the exact command:
