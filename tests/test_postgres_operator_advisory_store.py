@@ -46,6 +46,7 @@ def _executed_sql(monkeypatch: pytest.MonkeyPatch, step: str) -> str:
 
 
 def test_migration_is_chained_tenant_isolated_and_mirrored_in_runtime_schema(monkeypatch: pytest.MonkeyPatch) -> None:
+    pytest.importorskip("alembic")
     source = MIGRATION.read_text()
     assert re.search(r'^revision\s*=\s*"20261023_01"', source, re.M)
     assert re.search(r'^down_revision\s*=\s*"20261022_01"', source, re.M)
