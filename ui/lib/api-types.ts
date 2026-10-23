@@ -1752,6 +1752,9 @@ export interface UnifiedFinding {
   occurrence_count?: number | null | undefined;
   occurrences?: FindingOccurrenceSummary[] | undefined;
   occurrences_truncated?: boolean | undefined;
+  /** Grouped rows: distinct installed versions across occurrences (first 20) and their full count. */
+  package_versions?: string[] | undefined;
+  package_version_count?: number | undefined;
   remediation_versions?: string[] | null | undefined;
   provenance?: Record<string, unknown> | string | null | undefined;
   owner?: string | null | undefined;

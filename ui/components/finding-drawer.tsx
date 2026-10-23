@@ -11,6 +11,7 @@ import { useAuthState } from "@/components/auth-provider";
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
 import { groupFindingControls } from "@/lib/finding-controls";
 import { FindingAffectedAsset } from "@/components/finding-affected-asset";
+import { packageVersionLabel } from "@/lib/package-version-label";
 import { FindingExposureSummary } from "@/components/finding-exposure-summary";
 import { FindingExploitStory, storyHostServers, useFindingExploitStory } from "@/components/finding-exploit-story";
 import { findingAssetKind } from "@/lib/finding-exposure";
@@ -126,8 +127,9 @@ function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
   const story = useFindingExploitStory(vuln, graphScanId);
   const summary = vuln.attack_vector_summary ?? vuln.summary ?? vuln.description ?? "No advisory summary available.";
   const fixCandidates = vuln.remediation_items.filter((item) => item.fixed_version || item.command || item.verify_command);
-  const packageLabel = vuln.packages.join(", ") || "Affected asset";
-  const fixValue = vuln.current_version && vuln.fixed_version
+  const multiVersion = Math.max(vuln.package_version_count ?? 0, vuln.package_versions?.length ?? 0) > 1;
+  const packageLabel = (multiVersion ? packageVersionLabel(vuln) : vuln.packages.join(", ")) || "Affected asset";
+  const fixValue = vuln.current_version && vuln.fixed_version && !multiVersion
     ? `${vuln.current_version} → ${vuln.fixed_version}`
     : vuln.fixed_version ? `Upgrade to ${vuln.fixed_version}` : null;
   const guidance = vuln.remediation_items.map((item) => item.risk_narrative?.trim()).find(Boolean) ?? null;

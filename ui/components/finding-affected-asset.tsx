@@ -1,10 +1,14 @@
+import { packageVersionLabel } from "@/lib/package-version-label";
 import { findingAssetKind } from "@/lib/finding-exposure";
 import type { EnrichedVuln } from "@/lib/findings-view";
 
 /** The affected asset named in words; raw graph and record ids stay under technical details. */
 export function FindingAffectedAsset({ vuln }: { vuln: EnrichedVuln }) {
   const packageName = vuln.packages.find((name) => name && name !== "asset");
-  const label = packageName
+  const multiVersion = Math.max(vuln.package_version_count ?? 0, vuln.package_versions?.length ?? 0) > 1;
+  const label = packageName && multiVersion
+    ? packageVersionLabel(vuln)
+    : packageName
     ? `${packageName}${vuln.current_version && !packageName.includes("@") ? `@${vuln.current_version}` : ""}`
     : vuln.agents[0] || "Affected asset";
   const technicalIds = [

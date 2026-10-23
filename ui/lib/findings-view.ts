@@ -72,6 +72,9 @@ export interface EnrichedVuln extends Vulnerability {
   occurrences?: FindingOccurrenceSummary[] | undefined;
   occurrences_truncated?: boolean | undefined;
   remediation_versions?: string[] | undefined;
+  /** Distinct installed versions across the issue group's occurrences (sampled). */
+  package_versions?: string[] | undefined;
+  package_version_count?: number | undefined;
   provenance?: Record<string, unknown> | string | undefined;
   owner?: string | undefined;
   sla_due_at?: string | undefined;

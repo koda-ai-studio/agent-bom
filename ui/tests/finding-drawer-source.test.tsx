@@ -157,3 +157,10 @@ it("names the estate asset in words and keeps raw graph ids under technical deta
   expect(screen.getByText(vuln.node_id)).toBeVisible();
   expect(screen.getByText(vuln.finding_node_id)).toBeVisible();
 });
+
+it("names an issue spanning several installed versions instead of one occurrence's version", () => {
+  render(<FindingDrawer vuln={{ ...base, packages: ["ws@8.5.0"], current_version: "8.5.0", fixed_version: "8.17.1", package_versions: ["8.17.0", "8.5.0"], agents: ["cursor"], affected_servers: [] }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getByText("ws · 2 versions")).toBeVisible();
+  expect(screen.getByText("Upgrade to 8.17.1")).toBeVisible();
+  expect(screen.queryByText("8.5.0 → 8.17.1")).not.toBeInTheDocument();
+});
