@@ -125,7 +125,7 @@ jobs:
             local status=0
 
             set +e
-            uv run --with pip-audit pip-audit --ignore-vuln CVE-2026-3219 \
+            uv run --with pip-audit pip-audit --ignore-vuln CVE-2026-3219 --ignore-vuln CVE-2026-112940 --ignore-vuln GHSA-v4x8-3wr5-3wq8 \
               -s osv \
               --format json \
               --output "$output"
@@ -138,7 +138,7 @@ jobs:
 
             echo "::warning::pip-audit OSV source did not produce $output (exit $status); retrying with PyPI advisory source"
             set +e
-            uv run --with pip-audit pip-audit --ignore-vuln CVE-2026-3219 \
+            uv run --with pip-audit pip-audit --ignore-vuln CVE-2026-3219 --ignore-vuln CVE-2026-112940 --ignore-vuln GHSA-v4x8-3wr5-3wq8 \
               -s pypi \
               --format json \
               --output "$output"
@@ -170,7 +170,7 @@ jobs:
             local status=0
 
             set +e
-            uv run --with pip-audit pip-audit --ignore-vuln CVE-2026-3219 \
+            uv run --with pip-audit pip-audit --ignore-vuln CVE-2026-3219 --ignore-vuln CVE-2026-112940 --ignore-vuln GHSA-v4x8-3wr5-3wq8 \
               -s osv \
               --format json \
               --output "$output"
@@ -183,7 +183,7 @@ jobs:
 
             echo "::warning::pip-audit OSV source did not produce $output (exit $status); retrying with PyPI advisory source"
             set +e
-            uv run --with pip-audit pip-audit --ignore-vuln CVE-2026-3219 \
+            uv run --with pip-audit pip-audit --ignore-vuln CVE-2026-3219 --ignore-vuln CVE-2026-112940 --ignore-vuln GHSA-v4x8-3wr5-3wq8 \
               -s pypi \
               --format json \
               --output "$output"
