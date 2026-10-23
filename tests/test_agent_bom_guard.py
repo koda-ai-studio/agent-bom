@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -13,6 +14,11 @@ from pathlib import Path
 import pytest
 
 from agent_bom import malicious
+
+# The hook runs as plain ``python3`` from Claude Code. Resolve it from the
+# caller's PATH, because the restricted PATH the tests pass omits /usr/local/bin.
+_SYSTEM_PYTHON = shutil.which("python3")
+_HOOK_PYTHON = _SYSTEM_PYTHON or sys.executable
 
 ROOT = Path(__file__).resolve().parents[1]
 GUARD = ROOT / "integrations" / "agent-bom-guard"
@@ -460,7 +466,7 @@ def _run(command, **env):
     event = json.dumps(_event(command))
     started = time.monotonic()
     proc = subprocess.run(
-        ["python3", "-I", str(SCRIPT)],
+        [_HOOK_PYTHON, "-I", str(SCRIPT)],
         input=event,
         capture_output=True,
         text=True,
@@ -489,11 +495,17 @@ def test_script_runs_on_the_system_python3():
 
 @pytest.mark.parametrize("stdin", ["not json", "", "[]", '{"tool_name": "Bash"}', '{"tool_name": "Bash", "tool_input": "x"}'])
 def test_malformed_input_never_blocks(stdin):
-    proc = subprocess.run(["python3", "-I", str(SCRIPT)], input=stdin, capture_output=True, text=True, timeout=20)
+    proc = subprocess.run([_HOOK_PYTHON, "-I", str(SCRIPT)], input=stdin, capture_output=True, text=True, timeout=20)
     assert proc.returncode == 0 and proc.stdout == ""
 
 
-@pytest.mark.parametrize("python", ["python3", sys.executable])
+@pytest.mark.parametrize(
+    "python",
+    [
+        pytest.param(_SYSTEM_PYTHON, id="python3", marks=pytest.mark.skipif(_SYSTEM_PYTHON is None, reason="no python3 on PATH")),
+        pytest.param(sys.executable, id="current"),
+    ],
+)
 def test_script_writes_nothing_into_the_plugin_folder(tmp_path, python):
     hooks = tmp_path / "hooks"
     hooks.mkdir()
