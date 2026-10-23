@@ -13,7 +13,7 @@ from typing import Any
 
 from starlette.testclient import TestClient
 
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401 - pytest fixture
+from tests._demo_estate_fixtures import VIEWER, demo_estate_client  # noqa: F401 - pytest fixture
 
 _CIS_SECTIONS = {
     "cis_benchmark": "aws",
