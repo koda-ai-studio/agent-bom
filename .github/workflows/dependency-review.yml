@@ -61,6 +61,9 @@ jobs:
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
         with:
           fail-on-severity: high
+          # filelock ReadWriteLock only, unused by any locked dependency; the fix
+          # needs snowflake-connector-python 5.x, which has no musl wheels (#5934).
+          allow-ghsas: GHSA-v4x8-3wr5-3wq8
           retry-on-snapshot-warnings: true
           # regex includes code derived from CPython 2.6/3.1 and accurately
           # declares Apache-2.0 AND CNRI-Python in its wheel metadata.
