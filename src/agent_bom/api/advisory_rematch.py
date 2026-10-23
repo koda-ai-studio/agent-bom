@@ -46,6 +46,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_INTERVAL_SECONDS = 86_400
 MIN_INTERVAL_SECONDS = 300
 MAX_TENANTS_PER_RUN = 500
+# Job summaries read to discover tenants; past it, unseen tenants may exist.
+MAX_JOBS_SCANNED = MAX_TENANTS_PER_RUN * 20
 MAX_FEED_ADVISORIES = 2_000
 MAX_SEEN_FINDINGS = 5_000
 MAX_RECENT_FINDINGS = 200
@@ -270,21 +272,54 @@ def run_tenant_rematch(
     return _record(store, tenant_id, state, complete)
 
 
-def _rematch_tenants() -> list[str]:
-    rows = _get_store().list_summary(all_tenants=True, status=JobStatus.DONE, limit=MAX_TENANTS_PER_RUN * 20)
-    return sorted({str(row["tenant_id"]) for row in rows if row.get("tenant_id")})[:MAX_TENANTS_PER_RUN]
+@dataclass(frozen=True)
+class _TenantSelection:
+    tenants: list[str]
+    skipped: list[str]
+    job_cap_reached: bool
+
+
+def _rematch_tenants() -> _TenantSelection:
+    """Tenants with stored scans, bounded; what the bounds left out is reported, never dropped silently."""
+    rows = _get_store().list_summary(all_tenants=True, status=JobStatus.DONE, limit=MAX_JOBS_SCANNED + 1)
+    job_cap_reached = len(rows) > MAX_JOBS_SCANNED
+    tenants = sorted({str(row["tenant_id"]) for row in rows[:MAX_JOBS_SCANNED] if row.get("tenant_id")})
+    return _TenantSelection(tenants[:MAX_TENANTS_PER_RUN], tenants[MAX_TENANTS_PER_RUN:], job_cap_reached)
+
+
+def _record_skipped(tenant_id: str, now: datetime) -> None:
+    """Leave the skipped tenant's cursors alone; its listing says this run did not reach it."""
+    store = _get_operator_advisory_store()
+    try:
+        state = store.get_rematch_state(tenant_id) or {}
+    except _UNAVAILABLE:
+        return
+    _record(store, tenant_id, state, {"at": now.isoformat(), "status": "incomplete", "reason": "tenant_cap", "new_findings": 0})
 
 
 def run_rematch_once(*, feed_source: FeedSource = local_feed_advisories_since, now: datetime | None = None) -> dict[str, Any]:
     """One bounded pass over tenants with stored scans; updates this replica's status."""
     now = now or datetime.now(timezone.utc)
-    statuses = [run_tenant_bound(tenant, run_tenant_rematch, tenant, feed_source=feed_source, now=now) for tenant in _rematch_tenants()]
+    selection = _rematch_tenants()
+    statuses = [run_tenant_bound(tenant, run_tenant_rematch, tenant, feed_source=feed_source, now=now) for tenant in selection.tenants]
+    for tenant in selection.skipped:
+        run_tenant_bound(tenant, _record_skipped, tenant, now)
     incomplete = sum(1 for status in statuses if status["status"] != "complete")
+    truncated = bool(selection.skipped) or selection.job_cap_reached
+    if truncated:
+        logger.warning(
+            "Advisory re-match reached its bounds: %d tenant(s) skipped, job cap reached: %s",
+            len(selection.skipped),
+            selection.job_cap_reached,
+        )
     summary = {
         "last_run_at": now.isoformat(),
-        "last_run_status": "incomplete" if incomplete else "complete",
+        "last_run_status": "incomplete" if incomplete or truncated else "complete",
         "tenants_examined": len(statuses),
         "incomplete_tenants": incomplete,
+        "tenants_skipped": len(selection.skipped),
+        "job_cap_reached": selection.job_cap_reached,
+        "truncated": truncated,
         "new_findings": sum(int(status.get("new_findings") or 0) for status in statuses),
     }
     health_models.ADVISORY_REMATCH_LAST_RUN.clear()

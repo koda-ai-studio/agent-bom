@@ -8657,6 +8657,11 @@ export interface components {
              * @default 0
              */
             incomplete_tenants: number;
+            /**
+             * Job Cap Reached
+             * @default false
+             */
+            job_cap_reached: boolean;
             /** Last Run At */
             last_run_at?: string | null;
             /**
@@ -8674,6 +8679,16 @@ export interface components {
              * @default 0
              */
             tenants_examined: number;
+            /**
+             * Tenants Skipped
+             * @default 0
+             */
+            tenants_skipped: number;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
         };
         /** AffectedProduct */
         AffectedProduct: {

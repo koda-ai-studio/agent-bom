@@ -590,6 +590,11 @@
             "title": "Incomplete Tenants",
             "type": "integer"
           },
+          "job_cap_reached": {
+            "default": false,
+            "title": "Job Cap Reached",
+            "type": "boolean"
+          },
           "last_run_at": {
             "anyOf": [
               {
@@ -615,6 +620,16 @@
             "default": 0,
             "title": "Tenants Examined",
             "type": "integer"
+          },
+          "tenants_skipped": {
+            "default": 0,
+            "title": "Tenants Skipped",
+            "type": "integer"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
           }
         },
         "title": "AdvisoryRematchHealth",

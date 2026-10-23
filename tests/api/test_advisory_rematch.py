@@ -279,3 +279,28 @@ def test_feed_and_scan_time_range_verdicts_agree(tmp_path: Path, monkeypatch: py
         )  # fmt: skip
         verdict = _in_range(version, advisory.affected[0].ranges[0], "npm")
         assert verdict is {"affected": True, "unaffected": False}[version_match_state(version, introduced, fixed, last, "npm", limit)]
+
+
+def test_tenant_cap_marks_the_run_truncated_and_counts_the_skipped(env: InMemoryOperatorAdvisoryStore, monkeypatch) -> None:
+    from agent_bom.api.server import app
+
+    monkeypatch.setattr(rematch, "MAX_TENANTS_PER_RUN", 1)
+    summary = rematch.run_rematch_once(feed_source=_Feed([]), now=NOW)
+    assert summary == {**summary, "status": "incomplete", "tenants_examined": 1, "tenants_skipped": 1, "truncated": True}
+    health = TestClient(app).get("/v1/system/health").json()["advisory_rematch"]
+    assert health == {**health, "last_run_status": "incomplete", "tenants_skipped": 1, "truncated": True, "job_cap_reached": False}
+    assert "tenant-b" not in json.dumps(health)
+    skipped = env.get_rematch_state("tenant-b")
+    assert skipped["last_run"] == {**skipped["last_run"], "status": "incomplete", "reason": "tenant_cap"}
+    assert skipped.get("feed_cursor") is None
+
+
+def test_job_cap_marks_the_run_truncated(env: InMemoryOperatorAdvisoryStore, monkeypatch) -> None:
+    monkeypatch.setattr(rematch, "MAX_JOBS_SCANNED", 2)
+    summary = rematch.run_rematch_once(feed_source=_Feed([]), now=NOW)
+    assert summary == {**summary, "status": "incomplete", "job_cap_reached": True, "truncated": True}
+
+
+def test_uncapped_run_reports_not_truncated(env: InMemoryOperatorAdvisoryStore) -> None:
+    summary = rematch.run_rematch_once(feed_source=_Feed([]), now=NOW)
+    assert summary == {**summary, "status": "complete", "tenants_skipped": 0, "job_cap_reached": False, "truncated": False}

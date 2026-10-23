@@ -95,6 +95,11 @@ class AdvisoryRematchHealth(BaseModel):
     last_run_at: str | None = None
     tenants_examined: int = 0
     incomplete_tenants: int = 0
+    # Tenants past the per-run cap; a lower bound when ``job_cap_reached``.
+    tenants_skipped: int = 0
+    # Tenant discovery stopped at its job-summary cap; more tenants may exist.
+    job_cap_reached: bool = False
+    truncated: bool = False
     new_findings: int = 0
 
 
