@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { GraphRelationshipExplanation } from "@/components/graph-relationship-explanation";
 import { GraphRelationshipEvidence } from "@/components/graph-relationship-evidence";
 import { Drawer } from "@/components/drawer";
+import { captureFocusReturn } from "@/lib/restore-edge-focus";
 import type { UnifiedEdge } from "@/lib/graph-schema";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { graphEdgeEvidenceMode } from "@/lib/unified-graph-flow";
@@ -30,25 +31,9 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
   }, [mobile]);
   useEffect(() => {
     if (mobile) return;
-    const previous = document.activeElement;
-    const canvas = previous?.closest(".react-flow");
-    const invokingEdgeId = previous?.closest(".react-flow__edge")?.getAttribute("data-id");
-    const restore = () => {
-      // React Flow can replace an SVG edge during inspector/camera updates.
-      // Resolve only inside the invoking canvas, never another investigation.
-      const target = previous?.isConnected ? previous : invokingEdgeId
-        ? Array.from(canvas?.querySelectorAll(".react-flow__edge") ?? []).find(element => element.getAttribute("data-id") === invokingEdgeId)
-        : null;
-      if (target instanceof HTMLElement || target instanceof SVGElement) target.focus({ preventScroll: true });
-    };
+    const returnFocus = captureFocusReturn(document.activeElement, closeButtonRef.current?.closest("aside") ?? null, edge.id);
     closeButtonRef.current?.focus();
-    return () => {
-      restore();
-      // Closing the dock can replace the edge again in the same commit.
-      requestAnimationFrame(() => {
-        if (document.activeElement === document.body) restore();
-      });
-    };
+    return returnFocus;
   }, [mobile, edge.id]);
   const title = relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });
   const plain = plainRelationshipSummary(edge, sourceLabel, targetLabel);

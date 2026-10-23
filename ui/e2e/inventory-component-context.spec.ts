@@ -103,9 +103,17 @@ for (const theme of ["light", "dark"] as const) {
     release();
     await expect(page.getByRole("heading", {name: /^No packages/})).toBeVisible();
     await expect(page.getByText(/does not establish collection coverage/)).toBeVisible();
-    await page.route("**/v1/inventory/assets?**", route => route.abort("failed"));
+    // Sidebar router prefetches share this origin's connection pool with the
+    // API. On a loaded runner they queue the failing request and its single
+    // transient retry past the assertion window, so this step drops them.
+    await page.route(url => url.searchParams.has("_rsc"), route =>
+      route.request().headers()["next-router-prefetch"] ? route.abort("aborted") : route.fallback());
+    let failedAssetRequests = 0;
+    await page.route("**/v1/inventory/assets?**", route => { failedAssetRequests += 1; return route.abort("failed"); });
     await page.reload({waitUntil: "domcontentloaded"});
     await expect(page.getByRole("heading", {name: "Cannot connect to the agent-bom API"})).toBeVisible();
+    // The client retries one transient read failure before reporting it.
+    expect(failedAssetRequests).toBe(2);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 }
