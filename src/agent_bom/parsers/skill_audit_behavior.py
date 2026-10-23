@@ -141,7 +141,7 @@ _BEHAVIORAL_PATTERNS: list[_BehavioralPattern] = [
         title="Prompt coercion or guardrail override",
         pattern=re.compile(
             r"""
-            ignore \s+ (?:all \s+)? previous \s+ instructions
+            (?:ignore|disregard|forget)\s+(?:all\s+)?(?:(?:the|your|any)\s+)?(?:previous|prior|above|earlier|preceding)\s+instructions
             | override \s+ (?:the \s+)? system \s+ prompt
             | reveal \s+ (?:the \s+)? system \s+ prompt
             | bypass \s+ (?:the \s+)? guardrails?
