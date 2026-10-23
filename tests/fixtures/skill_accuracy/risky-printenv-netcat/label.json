@@ -1,0 +1,11 @@
+{
+  "kind": "risky",
+  "file": "CLAUDE.md",
+  "description": "Streams the whole environment to a raw TCP listener.",
+  "expect": [
+    {
+      "category": "credential_exfiltration",
+      "min_severity": "high"
+    }
+  ]
+}

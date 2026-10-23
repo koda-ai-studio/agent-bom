@@ -6,6 +6,10 @@
     {
       "category": "prompt_coercion",
       "min_severity": "high"
+    },
+    {
+      "category": "hidden_instruction",
+      "min_severity": "high"
     }
   ]
 }

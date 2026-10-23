@@ -42,6 +42,17 @@ class _BehavioralPattern(NamedTuple):
     weak_severity: str = "low"  # severity to use when only weak_pattern matches
 
 
+# One character that does not start a markdown heading or a frontmatter
+# delimiter line, so a two-part prose match stays inside one section.
+_SAME_SECTION = r"(?:(?!\n[ \t]{0,3}(?:#|---))[\s\S])"
+_CREDENTIAL_PATHS = (
+    r"(?:~?/?\.aws/credentials|~?/?\.aws/config|~?/\.ssh/id_[a-z0-9_]+|~?/\.ssh/id_rsa|~?/\.ssh/id_ed25519"
+    r"|~?/\.netrc|~?/\.config/gcloud|~?/\.kube/config|~?/\.docker/config\.json|/etc/shadow"
+    r"|(?<![\w.])\.env(?![\w])|Cookies(?:\.sqlite)?|Login\s+Data)"
+)
+_SEND_VERBS_NO_PUSH = r"(?:upload|exfiltrat\w*|post(?:ing|ed)?|send(?:ing)?|curl|wget|fetch(?:ing)?|transmit\w*|leak)"
+_SEND_VERBS = r"(?:upload|exfiltrat\w*|post(?:ing|ed)?|send(?:ing)?|curl|wget|fetch(?:ing)?|transmit\w*|push(?:ing)?|leak)"
+
 _BEHAVIORAL_PATTERNS: list[_BehavioralPattern] = [
     # ── CRITICAL ──────────────────────────────────────────────────────────
     _BehavioralPattern(
@@ -65,25 +76,14 @@ _BEHAVIORAL_PATTERNS: list[_BehavioralPattern] = [
         severity="critical",
         title="Natural-language credential exfiltration",
         # Prose-level exfiltration: a concrete sensitive credential/secret path
-        # COMBINED (in either order, within a short window) with an action that
-        # sends it to an external URL. Requiring BOTH the path and the
+        # COMBINED (in any order, within a short window of one section) with an
+        # action that sends it to an external URL. Requiring BOTH the path and the
         # send-to-URL action keeps benign skills that merely mention
         # "credentials" or cite a docs URL from matching.
         pattern=re.compile(
-            r"(?:"
-            r"(?:~?/?\.aws/credentials|~?/?\.aws/config|~?/\.ssh/id_[a-z0-9_]+|~?/\.ssh/id_rsa|~?/\.ssh/id_ed25519"
-            r"|~?/\.netrc|~?/\.config/gcloud|~?/\.kube/config|~?/\.docker/config\.json|/etc/shadow"
-            r"|(?<![\w.])\.env(?![\w])|Cookies(?:\.sqlite)?|Login\s+Data)"
-            r"[\s\S]{0,240}?"
-            r"(?:upload|exfiltrat\w*|post(?:ing|ed)?|send(?:ing)?|curl|wget|fetch(?:ing)?|transmit\w*|push(?:ing)?|leak)"
-            r"[\s\S]{0,120}?https?://"
-            r"|"
-            r"(?:upload|exfiltrat\w*|post(?:ing|ed)?|send(?:ing)?|curl|wget|fetch(?:ing)?|transmit\w*|leak)"
-            r"[\s\S]{0,120}?https?://[\s\S]{0,240}?"
-            r"(?:~?/?\.aws/credentials|~?/?\.aws/config|~?/\.ssh/id_[a-z0-9_]+|~?/\.ssh/id_rsa|~?/\.ssh/id_ed25519"
-            r"|~?/\.netrc|~?/\.config/gcloud|~?/\.kube/config|~?/\.docker/config\.json|/etc/shadow"
-            r"|(?<![\w.])\.env(?![\w])|Cookies(?:\.sqlite)?|Login\s+Data)"
-            r")",
+            rf"{_CREDENTIAL_PATHS}{_SAME_SECTION}{{0,240}}?{_SEND_VERBS}{_SAME_SECTION}{{0,120}}?https?://"
+            rf"|{_SEND_VERBS_NO_PUSH}(?:{_SAME_SECTION}{{0,120}}?https?://{_SAME_SECTION}{{0,240}}?{_CREDENTIAL_PATHS}"
+            rf"|{_SAME_SECTION}{{0,120}}?{_CREDENTIAL_PATHS}{_SAME_SECTION}{{0,120}}?https?://)",
             re.IGNORECASE,
         ),
         description=(
@@ -311,7 +311,7 @@ _BEHAVIORAL_PATTERNS: list[_BehavioralPattern] = [
         pattern=re.compile(
             r"""
             \b crontab \s+ -[ei] \b                       # Edit crontab
-            | \*/\d+ \s+ \*                               # Cron schedule pattern
+            | (?<!cron:\s")(?<!cron:\s')(?<!cron:\s) \*/\d+ \s+ \*  # Cron schedule, not a CI `cron:` key
             | \b launchctl \s+ load \b                    # macOS launchd
             | \b systemctl \s+ enable \b                  # Linux systemd
             | \b schtasks \s+ /create \b                  # Windows task scheduler

@@ -1,0 +1,11 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Single-quoted GitHub Actions cron key, not host persistence.",
+  "must_not": [
+    {
+      "category": "persistence_mechanism",
+      "max_severity": "low"
+    }
+  ]
+}

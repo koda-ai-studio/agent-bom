@@ -21,7 +21,10 @@ from agent_bom.parsers.skill_audit_code import (
     _open_mode_is_mutating,
 )
 from agent_bom.parsers.skill_audit_context import _is_prohibition_context
+from agent_bom.parsers.skill_audit_exfil import scan_env_exfiltration
+from agent_bom.parsers.skill_audit_hidden import scan_hidden_instructions
 from agent_bom.parsers.skill_audit_patterns import _BEHAVIORAL_PATTERNS
+from agent_bom.parsers.skill_audit_secrets import scan_hardcoded_secrets
 from agent_bom.parsers.skill_audit_types import SkillFinding
 
 
@@ -327,6 +330,18 @@ def _scan_js_ts_semantic_risks(raw_content: dict[str, str]) -> list[SkillFinding
     return findings
 
 
+def _scan_content_risks(raw_content: dict[str, str]) -> list[SkillFinding]:
+    """Every content scanner over the files' text, in a stable order."""
+    return [
+        *_scan_behavioral_risks(raw_content),
+        *_scan_python_ast_risks(raw_content),
+        *_scan_js_ts_semantic_risks(raw_content),
+        *scan_env_exfiltration(raw_content),
+        *scan_hidden_instructions(raw_content),
+        *scan_hardcoded_secrets(raw_content),
+    ]
+
+
 _BEHAVIOR_FAMILIES: dict[str, str] = {
     "shell_access": "code_execution",
     "dangerous_tool": "code_execution",
@@ -354,6 +369,8 @@ _BEHAVIOR_FAMILIES: dict[str, str] = {
     "credential_file_access": "data_access",
     "data_exfiltration": "data_access",
     "credential_exfiltration": "data_access",
+    "hardcoded_secret": "data_access",
+    "hidden_instruction": "prompt_coercion",
     "remote_code_execution": "code_execution",
     "excessive_permissions": "data_access",
     "persistence_mechanism": "persistence",

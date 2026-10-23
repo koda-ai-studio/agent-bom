@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from agent_bom.runtime.text_normalize import HOMOGLYPHS
+from agent_bom.runtime.text_normalize import HOMOGLYPHS, reveal_hidden_text
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
@@ -50,13 +50,13 @@ _B64_RUN = re.compile(r"[A-Za-z0-9+/]{16,}={0,2}")
 def normalize_for_matching(text: str) -> str:
     """Return a normalized projection of ``text`` for obfuscation-resistant matching.
 
-    Folds Unicode (NFKC + homoglyphs), strips zero-width separators, de-leets, and
-    appends any decoded base64 payloads — so injections hidden via homoglyph,
-    zero-width, leetspeak, or base64 still match the keyword patterns. Newline
+    Decodes invisible tag/selector payloads, folds Unicode (NFKC + homoglyphs), strips
+    zero-width separators, de-leets, and appends decoded base64 — so injections hidden via
+    invisible Unicode, homoglyph, zero-width, leetspeak, or base64 still match. Newline
     structure is not preserved (this projection is for presence detection only;
     line numbers come from the raw pass).
     """
-    folded = unicodedata.normalize("NFKC", text).translate(_ZERO_WIDTH).translate(_HOMOGLYPHS)
+    folded = unicodedata.normalize("NFKC", reveal_hidden_text(text)).translate(_ZERO_WIDTH).translate(_HOMOGLYPHS)
     decoded: list[str] = []
     for m in _B64_RUN.finditer(text):
         chunk = m.group(0)

@@ -1,0 +1,10 @@
+{
+  "kind": "benign",
+  "file": "CLAUDE.md",
+  "description": "A network sink with no secret source, and an env read with no sink.",
+  "must_not": [
+    {
+      "category": "credential_exfiltration"
+    }
+  ]
+}

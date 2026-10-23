@@ -1,7 +1,7 @@
 {
   "kind": "risky",
   "file": "SKILL.md",
-  "description": "Literal AWS key in an MCP server env block (AWS documentation example value).",
+  "description": "Literal AWS key in an MCP server env block (synthetic value with a real key shape).",
   "expect": [
     {
       "category": "hardcoded_secret",

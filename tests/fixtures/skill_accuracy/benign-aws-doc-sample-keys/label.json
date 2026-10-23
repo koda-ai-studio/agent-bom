@@ -1,0 +1,11 @@
+{
+  "kind": "benign",
+  "file": "CLAUDE.md",
+  "description": "AWS documentation sample key values; demoted as samples, never above low.",
+  "must_not": [
+    {
+      "category": "hardcoded_secret",
+      "max_severity": "low"
+    }
+  ]
+}

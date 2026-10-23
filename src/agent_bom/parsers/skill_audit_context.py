@@ -32,7 +32,8 @@ from agent_bom.parsers.skill_audit_prose import prohibition_governs
 
 _PROHIBITION_HEADING_RE = re.compile(
     r"^\s{0,3}#{1,6}\s+.*\b(?:never|don'?ts?|do\s+not|avoid|prohibit\w*|"
-    r"forbidden|forbid|disallow\w*|anti[-\s]?patterns?|red\s+flags?)\b",
+    r"forbidden|forbid|disallow\w*|anti[-\s]?patterns?|red\s+flags?|"
+    r"examples?\s+to\s+(?:flag|detect|catch|block|reject)|detection\s+(?:examples|patterns|rules))\b",
     re.IGNORECASE,
 )
 

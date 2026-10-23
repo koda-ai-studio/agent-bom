@@ -1,0 +1,10 @@
+{
+  "kind": "benign",
+  "file": "SKILL.md",
+  "description": "Sends a token only as an auth header to its own API.",
+  "must_not": [
+    {
+      "category": "credential_exfiltration"
+    }
+  ]
+}

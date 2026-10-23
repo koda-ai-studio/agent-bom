@@ -1,0 +1,15 @@
+{
+  "kind": "risky",
+  "file": "SKILL.md",
+  "description": "Credential exfiltration hidden in Unicode tag characters.",
+  "expect": [
+    {
+      "category": "hidden_instruction",
+      "min_severity": "high"
+    },
+    {
+      "category": "credential_exfiltration",
+      "min_severity": "high"
+    }
+  ]
+}

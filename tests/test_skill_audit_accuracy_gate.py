@@ -26,17 +26,11 @@ CORPUS = ROOT / "tests" / "fixtures" / "skill_accuracy"
 
 # Categories a label may name that the auditor does not implement yet. Listing
 # them keeps the miss visible as a recall of 0 instead of an unlabelled gap.
-UNIMPLEMENTED_CATEGORIES = frozenset({"hardcoded_secret"})
+UNIMPLEMENTED_CATEGORIES: frozenset[str] = frozenset()
 
 # Every case that currently breaks a must_not, named so a new violation shows
 # up as an identity, not just as a count moving.
-KNOWN_MUST_NOT_VIOLATIONS = frozenset(
-    {
-        "benign-ci-cron-schedule",
-        "benign-exfil-detection-guide",
-        "benign-security-review-quoted-injection",
-    }
-)
+KNOWN_MUST_NOT_VIOLATIONS = frozenset({"benign-security-review-quoted-injection"})
 
 # The regressions that were found by accident, each pinned to the case that
 # reproduces it. These must stay clean with no tolerance at all.
@@ -171,6 +165,30 @@ def test_the_gate_detects_a_recall_loss(harness, cases) -> None:
     baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
     errors = harness.regressions(mutated.to_dict(), baseline)
     assert any("remote_code_execution recall" in error for error in errors)
+
+
+@pytest.mark.parametrize(
+    ("scanner", "category"),
+    [
+        ("scan_hardcoded_secrets", "hardcoded_secret"),
+        ("scan_env_exfiltration", "credential_exfiltration"),
+        ("scan_hidden_instructions", "hidden_instruction"),
+    ],
+)
+def test_the_gate_detects_losing_a_content_detector(harness, cases, scanner, category) -> None:
+    """Mutation: drop one content detector and require its recall to fall."""
+    from agent_bom.parsers import skill_audit_behavior
+
+    original = getattr(skill_audit_behavior, scanner)
+    try:
+        setattr(skill_audit_behavior, scanner, lambda _raw: [])
+        mutated = harness.score(cases)
+    finally:
+        setattr(skill_audit_behavior, scanner, original)
+
+    assert mutated.tally(category).recall < 1.0
+    baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
+    assert any(f"{category} recall" in error for error in harness.regressions(mutated.to_dict(), baseline))
 
 
 def test_scoring_tolerates_low_evidence_but_not_above_the_ceiling(harness, tmp_path) -> None:

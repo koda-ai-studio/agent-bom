@@ -1,15 +1,15 @@
 {
-  "cases": 76,
-  "benign_cases": 34,
-  "risky_cases": 42,
-  "risky_detected": 37,
-  "benign_clean": 31,
+  "cases": 91,
+  "benign_cases": 42,
+  "risky_cases": 49,
+  "risky_detected": 49,
+  "benign_clean": 41,
   "overall": {
-    "true_positive": 47,
-    "false_positive": 3,
-    "false_negative": 5,
-    "precision": 0.94,
-    "recall": 0.9038
+    "true_positive": 63,
+    "false_positive": 1,
+    "false_negative": 0,
+    "precision": 0.9844,
+    "recall": 1.0
   },
   "categories": {
     "agent_delegation": {
@@ -55,14 +55,14 @@
       "recall": 1.0
     },
     "credential_exfiltration": {
-      "true_positive": 2,
-      "false_positive": 1,
-      "false_negative": 2,
-      "precision": 0.6667,
-      "recall": 0.5
+      "true_positive": 9,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
     },
     "credential_file_access": {
-      "true_positive": 1,
+      "true_positive": 2,
       "false_positive": 0,
       "false_negative": 0,
       "precision": 1.0,
@@ -90,11 +90,18 @@
       "recall": 1.0
     },
     "hardcoded_secret": {
-      "true_positive": 0,
+      "true_positive": 3,
       "false_positive": 0,
-      "false_negative": 2,
+      "false_negative": 0,
       "precision": 1.0,
-      "recall": 0.0
+      "recall": 1.0
+    },
+    "hidden_instruction": {
+      "true_positive": 3,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
     },
     "input_injection": {
       "true_positive": 1,
@@ -126,9 +133,9 @@
     },
     "persistence_mechanism": {
       "true_positive": 2,
-      "false_positive": 1,
+      "false_positive": 0,
       "false_negative": 0,
-      "precision": 0.6667,
+      "precision": 1.0,
       "recall": 1.0
     },
     "privilege_escalation": {
@@ -139,11 +146,11 @@
       "recall": 1.0
     },
     "prompt_coercion": {
-      "true_positive": 10,
+      "true_positive": 12,
       "false_positive": 1,
-      "false_negative": 1,
-      "precision": 0.9091,
-      "recall": 0.9091
+      "false_negative": 0,
+      "precision": 0.9231,
+      "recall": 1.0
     },
     "remote_code_execution": {
       "true_positive": 4,
@@ -189,6 +196,6 @@
     "recall": 0.875
   },
   "package_version_mismatches": 0,
-  "must_not_violations": 3,
-  "unscored_low_findings": 10
+  "must_not_violations": 1,
+  "unscored_low_findings": 14
 }
