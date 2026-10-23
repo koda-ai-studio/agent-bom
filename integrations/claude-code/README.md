@@ -66,6 +66,40 @@ profile in the release after 0.109.0; on 0.109.0 those two skills fall back to
 the release after 0.110.0; on earlier releases the `activity` skill says it is
 not available.
 
+## Projects outside your home directory
+
+The MCP server only reads paths under your home directory. A project somewhere
+else, such as a container mount, `/srv` or `/Volumes/<disk>`, is refused with
+"Path resolves outside home directory". To allow it, set
+`AGENT_BOM_MCP_WORKSPACE_ROOTS` to the extra directories, separated by `:`
+(`;` on Windows). Each entry must be an absolute path. A relative path, a path
+containing `..`, or a filesystem root such as `/` is ignored, so the setting
+cannot open the whole disk.
+
+The plugin's bundled servers don't offer a setting for this variable. Add your
+own server entry that sets it, next to the plugin's servers:
+
+- **Claude Code.** Run this once, then restart Claude Code:
+
+  ```bash
+  claude mcp add --scope user --env AGENT_BOM_MCP_WORKSPACE_ROOTS=/srv/app:/Volumes/work \
+    agent-bom-workspace -- uvx --from agent-bom==0.110.0 agent-bom mcp server
+  ```
+
+- **Codex.** Add this to `~/.codex/config.toml`:
+
+  ```toml
+  [mcp_servers.agent-bom-workspace]
+  command = "uvx"
+  args = ["--from", "agent-bom==0.110.0", "agent-bom", "mcp", "server"]
+
+  [mcp_servers.agent-bom-workspace.env]
+  AGENT_BOM_MCP_WORKSPACE_ROOTS = "/srv/app:/Volumes/work"
+  ```
+
+Instead of the variable, `agent-bom mcp server --workspace-root <dir>` takes one
+directory per flag and can be repeated. Both forms can be used together.
+
 ## Privacy
 
 agent-bom runs on your machine and has no account, server or telemetry. It

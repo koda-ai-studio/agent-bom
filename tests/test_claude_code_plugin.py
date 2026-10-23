@@ -95,3 +95,15 @@ def test_activity_skill_treats_transcripts_as_untrusted_and_confirms_config_edit
     assert "confirm" in text
     recorded = {t["name"] for t in json.loads((PLUGIN / "evals" / "mocks" / "agent-bom-audit" / "_tools.json").read_text())["tools"]}
     assert "agent_activity" in recorded
+
+
+def test_readme_names_the_workspace_roots_variable_the_server_reads():
+    import inspect
+
+    from agent_bom import mcp_server_runtime
+
+    readme = (PLUGIN / "README.md").read_text()
+    source = inspect.getsource(mcp_server_runtime.mcp_workspace_roots)
+    assert '"AGENT_BOM_MCP_WORKSPACE_ROOTS"' in source
+    assert "AGENT_BOM_MCP_WORKSPACE_ROOTS" in readme
+    assert "claude mcp add" in readme and "[mcp_servers." in readme
