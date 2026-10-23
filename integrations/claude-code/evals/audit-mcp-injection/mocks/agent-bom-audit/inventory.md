@@ -226,7 +226,8 @@ type: fixed
     },
     "occurrence_count": 0,
     "occurrences": [],
-    "vulnerability_count": 0
+    "vulnerability_count": null,
+    "vulnerability_status": "not_scanned"
    },
    {
     "id": "c87cc58b-742d-5f6e-b53a-d15201a9b108",
@@ -292,7 +293,8 @@ type: fixed
     },
     "occurrence_count": 0,
     "occurrences": [],
-    "vulnerability_count": 0
+    "vulnerability_count": null,
+    "vulnerability_status": "not_scanned"
    }
   ],
   "relationships": [

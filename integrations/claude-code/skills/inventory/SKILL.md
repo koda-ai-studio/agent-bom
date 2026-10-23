@@ -19,7 +19,7 @@ Use the agent-bom `inventory` tool on the `agent-bom-audit` server to list the A
 1. Call `inventory`. Pass `config_path` only if the user named a project or config directory; with no argument it discovers every supported MCP client on this machine. It does not scan for CVEs and makes no network calls.
 2. Read the result:
    - `agents`: each MCP client or project, with its `servers` (name, command, transport, packages). Each package row has `pinned`, `pinned_version` and `observed_version`.
-   - `ai_bom_entities`: the joined snapshot. `summary` gives counts; `servers`, `tools`, `packages` and `relationships` (`uses`, `depends_on`, `exposes_tool`, `exposes_resource`, `exposes_prompt`) connect agent -> server -> tool and package. Join them by `id`.
+   - `ai_bom_entities`: the joined snapshot. `summary` gives counts; `servers`, `tools`, `packages` and `relationships` (`uses`, `depends_on`, `exposes_tool`, `exposes_resource`, `exposes_prompt`) connect agent -> server -> tool and package. Join them by `id`. Package `vulnerability_count` is `null` with `vulnerability_status: "not_scanned"`: inventory never looks up vulnerabilities, so never describe a package as clean or as having zero vulnerabilities from this result.
 3. Report, in this order:
    - one line of totals: agents, servers, tools, packages
    - a compact table per agent: server, transport, command or URL, packages

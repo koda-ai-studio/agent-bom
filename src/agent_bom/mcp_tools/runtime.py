@@ -782,7 +782,8 @@ def inventory_impl(
             # exact canonical entity snapshot emitted by CLI JSON. MCP clients
             # can join tool -> server -> agent/package without surface-specific
             # identities, including for an empty inventory.
-            entities = _build_ai_bom_entities_snapshot(AIBOMReport(agents=agents))
+            # inventory never looks up vulnerabilities; counts are unknown, not zero.
+            entities = _build_ai_bom_entities_snapshot(AIBOMReport(agents=agents), vulnerabilities_scanned=False)
             payload = {
                 "schema_version": "1.0",
                 "canonical_id_schema_version": CANONICAL_ID_SCHEMA_VERSION,

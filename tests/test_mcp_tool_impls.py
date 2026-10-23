@@ -1929,6 +1929,11 @@ def test_inventory_impl_exposes_cli_canonical_entity_snapshot():
         result = inventory_impl(config_path=None, _truncate_response=_trunc)
 
     data = json.loads(result)
+    # inventory never looks up vulnerabilities: identical identities, honest unknown counts.
+    for pkg in data["ai_bom_entities"]["packages"]:
+        assert (pkg.pop("vulnerability_count"), pkg.pop("vulnerability_status")) == (None, "not_scanned")
+    for pkg in cli_entities["packages"]:
+        pkg.pop("vulnerability_count"), pkg.pop("vulnerability_status")
     assert data["ai_bom_entities"] == cli_entities
     assert data["ai_bom_entities"]["agents"][0]["canonical_id"] == agent.canonical_id
     assert data["ai_bom_entities"]["servers"][0]["canonical_id"] == server.canonical_id
