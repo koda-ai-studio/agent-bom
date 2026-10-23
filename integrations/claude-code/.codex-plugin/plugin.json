@@ -37,6 +37,7 @@
     "brandColor": "#059669",
     "composerIcon": "./assets/icon.png",
     "logo": "./assets/icon.png",
-    "screenshots": []
+    "screenshots": [],
+    "privacyPolicyURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md#privacy"
   }
 }

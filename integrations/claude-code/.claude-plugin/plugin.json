@@ -3,9 +3,20 @@
   "version": "0.110.0",
   "displayName": "agent-bom",
   "description": "Inventory and audit your AI estate: scan MCP servers, agents and packages for CVEs, supply-chain risk and exposed credentials; audit MCP configs and skills for injection and risky grants; check a server before you add it; plan fixes. Read-only by default and local.",
-  "author": { "name": "koda-ai-studio", "url": "https://github.com/koda-ai-studio" },
+  "author": {
+    "name": "koda-ai-studio",
+    "url": "https://github.com/koda-ai-studio"
+  },
   "homepage": "https://github.com/koda-ai-studio/agent-bom",
   "repository": "https://github.com/koda-ai-studio/agent-bom",
   "license": "Apache-2.0",
-  "keywords": ["security", "mcp", "sbom", "supply-chain", "cve", "ai-agents"]
+  "keywords": [
+    "security",
+    "mcp",
+    "sbom",
+    "supply-chain",
+    "cve",
+    "ai-agents"
+  ],
+  "privacyPolicyUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md#privacy"
 }

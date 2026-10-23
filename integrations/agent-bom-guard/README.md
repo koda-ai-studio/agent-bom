@@ -41,7 +41,16 @@ later, which supports option lists).
 | `on_match` | `block` | `block` stops a malicious or typosquat install. `warn` lets it run and shows the finding to you and Claude. |
 | `osv_lookup` | `true` | `false` makes every check offline: only the bundled blocklist and typosquat reference are used, and nothing is sent anywhere. |
 
-## What it runs, reads and sends
+## Privacy
+
+agent-bom guard runs on your machine and has no account, server or telemetry.
+It stores nothing and writes no files. With `osv_lookup` on, the only data that
+leaves your machine is the name, ecosystem and pinned version of a package an
+install command names, sent to `api.osv.dev`; with it off, every check is
+offline. Command text, paths, file contents, environment variables and
+credentials are never sent.
+
+### What it runs, reads and sends
 
 - **Runs** `python3 -I ${CLAUDE_PLUGIN_ROOT}/hooks/install_guard.py` once per Bash
   tool call, with a 10-second limit. It needs Python 3.9 or later on `PATH`, uses only
