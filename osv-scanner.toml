@@ -87,10 +87,22 @@ reason = "requests <2.33.0 .netrc credential leak — fixed in 2.33.0, our locke
 # ── filelock — fix needs snowflake-connector-python 5.x (no musl wheels) ─────
 # snowflake-connector-python 4.7.3 requires filelock<4. 5.x drops filelock but
 # ships no musllinux wheels and needs a Rust toolchain to build on the Alpine
-# image. No locked dependency uses filelock.ReadWriteLock, the affected API.
+# image. No locked dependency uses filelock.ReadWriteLock (GHSA-v4x8, GHSA-9vhv).
+# GHSA-567q is Windows-only and reaches SoftFileLock, which huggingface_hub
+# (huggingface extra) falls back to only on filesystems without flock.
 # Tracked in https://github.com/koda-ai-studio/agent-bom/issues/5934
 
 [[IgnoredVulns]]
 id = "GHSA-v4x8-3wr5-3wq8"
 ignoreUntil = 2027-01-31
 reason = "filelock ReadWriteLock only; no locked dependency uses it; fix needs snowflake-connector-python 5.x, which has no musl wheels (#5934)"
+
+[[IgnoredVulns]]
+id = "GHSA-9vhv-jxww-xfm5"
+ignoreUntil = 2027-01-31
+reason = "filelock ReadWriteLock on Windows; no locked dependency uses ReadWriteLock; fix needs snowflake-connector-python 5.x, which has no musl wheels (#5934)"
+
+[[IgnoredVulns]]
+id = "GHSA-567q-5qvw-pf92"
+ignoreUntil = 2027-01-31
+reason = "filelock SoftFileLock timeout on Windows; reached only through huggingface_hub's no-flock fallback; fix needs snowflake-connector-python 5.x, which has no musl wheels (#5934)"

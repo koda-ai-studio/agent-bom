@@ -34,8 +34,12 @@ CVE-2025-60876
 # Structured exception: docs/security/image-exceptions.yaml#base-python-pip-no-fix-2026-04
 CVE-2026-3219
 
-# filelock ReadWriteLock (CVE-2026-112940 / GHSA-v4x8-3wr5-3wq8), fixed in 4.2.1.
+# filelock CVE-2026-112940, CVE-2026-112913 (ReadWriteLock) and CVE-2026-112907
+# (Windows SoftFileLock timeout), all fixed in 4.2.1.
 # Blocked by: snowflake-connector-python 4.x requires filelock<4; 5.x ships no
-# musllinux wheels for the Alpine image. No locked dependency uses ReadWriteLock.
+# musllinux wheels for the Alpine image. No locked dependency uses ReadWriteLock;
+# huggingface_hub reaches SoftFileLock only on filesystems without flock.
 # Structured exception: docs/security/image-exceptions.yaml#filelock-snowflake-pin-2026-10
 CVE-2026-112940
+CVE-2026-112913
+CVE-2026-112907
