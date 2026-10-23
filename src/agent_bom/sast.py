@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 import subprocess
 import time
@@ -175,6 +176,48 @@ _SARIF_LEVEL_MAP: dict[str, Severity] = {
 
 
 # ── Internal helpers ────────────────────────────────────────────────────────
+
+
+_SAST_SOURCE_SUFFIXES = frozenset(
+    {
+        ".py",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+        ".ts",
+        ".tsx",
+        ".go",
+        ".java",
+        ".kt",
+        ".scala",
+        ".rb",
+        ".php",
+        ".cs",
+        ".rs",
+        ".c",
+        ".cc",
+        ".cpp",
+        ".h",
+        ".swift",
+        ".sh",
+    }
+)
+_SAST_SKIP_DIRS = frozenset({".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".tox"})
+
+
+def has_scannable_source(root: Path, limit: int = 20_000) -> bool:
+    """True when ``root`` holds a file Semgrep would scan (bounded walk)."""
+    seen = 0
+    for _dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in _SAST_SKIP_DIRS]
+        for filename in filenames:
+            if Path(filename).suffix.lower() in _SAST_SOURCE_SUFFIXES:
+                return True
+            seen += 1
+            if seen >= limit:
+                return True
+    return False
 
 
 def _semgrep_available() -> bool:

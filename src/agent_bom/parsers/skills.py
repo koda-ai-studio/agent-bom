@@ -359,7 +359,6 @@ def parse_skill_file(path: Path) -> SkillScanResult:
         source_files=[str(path)],
         raw_content={str(path): content},
         metadata=metadata,
-        metadata_by_file={str(path): metadata} if metadata is not None else {},
     )
 
 
@@ -705,11 +704,9 @@ def scan_skill_files(paths: list[Path]) -> SkillScanResult:
         result = parse_skill_file(path)
         merged.source_files.extend(result.source_files)
         merged.raw_content.update(result.raw_content)
-        merged.metadata_by_file.update(result.metadata_by_file)
-
-        # Keep the first valid metadata (typically from SKILL.md)
-        if result.metadata is not None and merged.metadata is None:
-            merged.metadata = result.metadata
+        if result.metadata is not None:
+            merged.metadata_by_file[str(path)] = result.metadata
+            merged.metadata = merged.metadata or result.metadata  # the first valid one, typically SKILL.md
 
         for pkg in result.packages:
             key = (pkg.name.lower(), pkg.ecosystem)
