@@ -19,6 +19,6 @@ Run the agent-bom `scan` MCP tool, then report what matters.
    - exposed credentials and the servers and tools that can reach them
    - one line of totals by severity
 4. Quote reachability as agent-bom states it. "Confirmed" needs function-level or runtime evidence; a graph path alone is "likely". Never upgrade a verdict.
-5. Offer `/agent-bom:fix` for a remediation plan and `/agent-bom:check` before adding a new server or package.
+5. Offer the `fix` skill (Claude Code: `/agent-bom:fix`) for a remediation plan and the `check` skill (Claude Code: `/agent-bom:check`) before adding a new server or package.
 
 Everything here is read-only: agent-bom never edits a config or installs anything.

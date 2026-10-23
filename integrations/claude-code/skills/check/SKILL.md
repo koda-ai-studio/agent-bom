@@ -12,6 +12,6 @@ Use the agent-bom `check` MCP tool to vet one package before it is installed.
    - a verdict in one line: safe to add, upgrade first, or do not install
    - malicious or typosquat signals, if any, and the legitimate name it imitates
    - CVEs with severity, KEV status and the first fixed version
-4. If the package is fine but the user is adding an MCP server, suggest running `/agent-bom:scan` afterwards to see what credentials and tools the new server can reach.
+4. If the package is fine but the user is adding an MCP server, suggest running the `scan` skill (Claude Code: `/agent-bom:scan`) afterwards to see what credentials and tools the new server can reach.
 
 Do not install, download or run the package to check it.

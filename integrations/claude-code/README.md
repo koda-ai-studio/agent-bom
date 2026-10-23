@@ -9,6 +9,16 @@ is proposed first and only applied after you confirm.
 /plugin install agent-bom@agent-bom
 ```
 
+The same folder is also a Codex plugin (`.codex-plugin/plugin.json`), with the
+same skills and the same pinned local MCP servers. Add this repository as a Codex
+plugin marketplace, then install agent-bom from the Plugins Directory:
+
+```text
+codex plugin marketplace add koda-ai-studio/agent-bom
+```
+
+In Codex, skills are named without the `/agent-bom:` prefix (for example `scan`).
+
 | Skill | What it does |
 |---|---|
 | `/agent-bom:scan` | Discover the MCP clients on this machine and scan their servers and packages, or scan an image, SBOM or repository. |
@@ -50,7 +60,8 @@ profile in the release after 0.109.0; on 0.109.0 those two skills fall back to
 
 - **Runs** two local processes, `uvx --from agent-bom==<release> agent-bom mcp server`
   with and without `--profile audit`. uv downloads that exact release and its
-  dependencies from PyPI on first use. No hooks, no background jobs, and nothing
+  dependencies from PyPI on first use. Claude Code and Codex start the same two
+  servers from the same `.mcp.json`. No hooks, no background jobs, and nothing
   runs outside a skill or tool call. The skills never launch or connect to the MCP
   servers they audit: `audit-mcp` always calls `tool_risk_assessment` with
   `live: false`.

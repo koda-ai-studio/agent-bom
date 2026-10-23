@@ -14,4 +14,4 @@ Use the agent-bom `remediate` MCP tool to plan fixes.
 3. List findings with no available fix separately, with the mitigation agent-bom suggests.
 4. For larger estates, `exposure_paths` ranks attack paths; offer it when the user asks "what is actually exploitable".
 
-Propose the changes; only edit manifests or lockfiles if the user asks you to apply them, and re-run `/agent-bom:scan` afterwards to confirm.
+Propose the changes; only edit manifests or lockfiles if the user asks you to apply them, and re-run the `scan` skill (Claude Code: `/agent-bom:scan`) afterwards to confirm.
