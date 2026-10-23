@@ -8,7 +8,9 @@ is proposed first and applied only after you confirm.
 
 If you would rather have the local MCP servers as well, install the repository
 plugin instead (see [Two ways to install in Codex](../claude-code/README.md#two-ways-to-install-in-codex)).
-Install one or the other, not both: they share the plugin name and skill names.
+That plugin is named `agent-bom-local`, so its skills (`agent-bom-local:scan`)
+never shadow this package's (`agent-bom:scan`). Both do the same jobs, so
+install one.
 
 You need [uv](https://docs.astral.sh/uv/) on `PATH`. No account or API key is needed.
 

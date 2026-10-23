@@ -515,3 +515,12 @@ def test_published_bump_rewrites_openclaw_and_first_run_pins(tmp_path, monkeypat
     assert count == 3
     assert skill.read_text() == "docker: ghcr.io/koda-ai-studio/agent-bom:0.110.0\n"
     assert guide.read_text() == "pip install 'agent-bom[ui]==0.110.0'\n--expected-version 0.110.0\n"
+
+
+def test_scan_text_flags_a_stale_local_codex_plugin_version() -> None:
+    cva = _load_script("check_version_alignment.py")
+    manifest = '{\n  "name": "agent-bom-local",\n  "version": "0.90.0",\n'
+    rel = "integrations/claude-code/.codex-plugin/plugin.json"
+    drift = cva.scan_text(rel, manifest, "0.97.1", published="0.97.1")
+    assert len(drift) == 1 and "plugin version" in drift[0]
+    assert cva.scan_text(rel, manifest.replace("0.90.0", "0.97.1"), "0.97.1", published="0.97.1") == []

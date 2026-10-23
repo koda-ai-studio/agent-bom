@@ -15,7 +15,8 @@ is proposed first and only applied after you confirm.
 |---|---|---|
 | Package | this folder (`.codex-plugin/plugin.json`) | [`integrations/codex`](../codex/README.md), skills-only |
 | How skills run agent-bom | the two pinned local MCP servers in `.mcp.json` | the pinned CLI from the shell (`uvx --from agent-bom==<release> agent-bom … --agent-mode` or `-f json`) |
-| Install | `codex plugin marketplace add koda-ai-studio/agent-bom`, then install agent-bom from the Plugins Directory | install agent-bom from the public directory |
+| Plugin name | `agent-bom-local` | `agent-bom` |
+| Install | `codex plugin marketplace add koda-ai-studio/agent-bom`, then install agent-bom-local from the Plugins Directory | install agent-bom from the public directory |
 | Needs | uv; Codex starts the MCP servers | uv; Codex runs shell commands, each shown to you first |
 
 Both carry the same ten skills with the same safety rules, rendered from
@@ -24,8 +25,10 @@ public directory lists local plugins as skills-only, which is why that package
 has no MCP server. What that costs: `affected` has no advisory lookup and matches
 only findings on this machine, and on releases up to 0.110.0 the CLI has no
 `activity` command and `mcp audit` reports no coding-agent permission
-findings. Install one package, not both. In Codex, skills are named without the
-`/agent-bom:` prefix (for example `scan`).
+findings. The two have different plugin names, so Codex keeps their skills apart
+(`agent-bom-local:scan` and `agent-bom:scan`), but each does the same jobs:
+install one. In Claude Code this plugin is still `agent-bom`, with
+`/agent-bom:` commands.
 
 ## Skills
 
