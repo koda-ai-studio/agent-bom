@@ -69,3 +69,35 @@ def test_serialized_group_exposes_package_versions():
     public = _serialize_finding_group(_group_occurrence_rows(rows)[0])
     assert public["package_versions"] == ["8.17.0", "8.5.0"]
     assert public["package_version_count"] == 2
+
+
+def test_mixed_version_group_title_names_every_version_not_one():
+    """52 occurrences across 8.17.0 and 8.5.0 must not be titled after the one 8.5.0 row."""
+    from agent_bom.api.finding_list_helpers import _serialize_finding_group
+
+    image_rows = [
+        {**_row(f"image-{i}", None, None, f"pkg:npm:ws@8.17.0:image:{i}"), "package": "ws@8.17.0", "cve_id": "CVE-2024-37890"}
+        for i in range(51)
+    ]
+    server = {
+        **_row("agent-1", ["cursor"], ["filesystem-server"], "pkg:npm:ws@8.5.0"),
+        "package": "ws@8.5.0",
+        "package_version": "8.5.0",
+        "cve_id": "CVE-2024-37890",
+        "severity": "critical",
+        "title": "CVE-2024-37890: ws@8.5.0",
+    }
+    public = _serialize_finding_group(_group_occurrence_rows([*image_rows, server])[0])
+
+    assert public["occurrence_count"] == 52
+    assert public["package_version_count"] == 2
+    assert public["title"] == "CVE-2024-37890: ws · 2 versions"
+    assert "8.5.0" not in public["title"]
+
+
+def test_single_version_group_title_keeps_its_version():
+    from agent_bom.api.finding_list_helpers import _serialize_finding_group
+
+    rows = [{**_row(f"a{i}", None, None, f"pkg:a{i}"), "package": "ws@8.17.0", "title": "CVE-2024-37890: ws@8.17.0"} for i in range(3)]
+    public = _serialize_finding_group(_group_occurrence_rows(rows)[0])
+    assert public["title"] == "CVE-2024-37890: ws@8.17.0"
