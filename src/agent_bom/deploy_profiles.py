@@ -79,10 +79,9 @@ def ingress_hosts_missing_paths(rendered: str) -> list[str]:
     return offenders
 
 
-def helm_validation_profiles(repo_root: Path) -> list[HelmValidationProfile]:
-    """Return the canonical shipped Helm profile matrix."""
+def _pilot_helm_profiles(examples: Path) -> list[HelmValidationProfile]:
+    """Scanner-only and focused pilot profiles."""
 
-    examples = helm_example_dir(repo_root)
     return [
         HelmValidationProfile(
             name="scanner-only",
@@ -119,6 +118,13 @@ def helm_validation_profiles(repo_root: Path) -> list[HelmValidationProfile]:
                 examples / "byo-postgres-values.yaml",
             ),
         ),
+    ]
+
+
+def _production_helm_profiles(examples: Path) -> list[HelmValidationProfile]:
+    """Production control-plane profiles and their hardening overlays."""
+
+    return [
         HelmValidationProfile(
             name="production-secret-sync",
             description="ExternalSecrets-only bootstrap stage for the production EKS profile.",
@@ -172,6 +178,13 @@ def helm_validation_profiles(repo_root: Path) -> list[HelmValidationProfile]:
             description="Disconnected control plane with a Secret-mounted vulns.db and no egress.",
             values_files=(examples / "airgap-vuln-db-values.yaml",),
         ),
+    ]
+
+
+def _collector_and_identity_helm_profiles(examples: Path) -> list[HelmValidationProfile]:
+    """Collector identity, mTLS and OIDC overlays rendered on their base profile."""
+
+    return [
         HelmValidationProfile(
             name="aks-collector-workload-identity",
             description="Scanner-only AKS collector using Azure Workload Identity.",
@@ -234,6 +247,17 @@ def helm_validation_profiles(repo_root: Path) -> list[HelmValidationProfile]:
             set_file_arguments=(("gateway.upstreamsYaml", examples / "gateway-upstreams.example.yaml"),),
             expect_rendered=("AGENT_BOM_OIDC_DISCOVERY_SHIM_JSON", "name: jira"),
         ),
+    ]
+
+
+def helm_validation_profiles(repo_root: Path) -> list[HelmValidationProfile]:
+    """Return the canonical shipped Helm profile matrix."""
+
+    examples = helm_example_dir(repo_root)
+    return [
+        *_pilot_helm_profiles(examples),
+        *_production_helm_profiles(examples),
+        *_collector_and_identity_helm_profiles(examples),
     ]
 
 
