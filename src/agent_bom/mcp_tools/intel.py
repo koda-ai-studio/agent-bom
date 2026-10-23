@@ -20,6 +20,8 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_MISSING_REQUIRED,
     mcp_error_json,
 )
+from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
+from agent_bom.mcp_tools.rest_parity import api_reads
 from agent_bom.scanners.operator_advisory import OPERATOR_ADVISORY_PROVENANCE
 from agent_bom.security import sanitize_error
 
@@ -88,12 +90,21 @@ def _youcom_result_summary(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _operator_advisory_view(advisory_id: str) -> dict[str, Any] | None:
-    """Operator-declared record plus its matches against the most recent saved scan."""
+    """Operator-declared record plus its matches.
+
+    With a configured control-plane store this is the tenant's REST-declared
+    advisory and the REST match read; the CLI-local advisory file and the most
+    recent saved scan serve the standalone CLI.
+    """
+    reads = api_reads()
+    if reads is not None and reads.operator_advisory_store_configured():
+        return reads.tenant_operator_advisory(resolve_mcp_tool_tenant_id(), advisory_id)
     declared = local_advisory(advisory_id)
     if declared is None:
         return None
     return {
         "provenance": OPERATOR_ADVISORY_PROVENANCE,
+        "source": "local_file",
         "advisory": declared.model_dump(mode="json"),
         "matches": match_local([declared]).to_dict(),
     }

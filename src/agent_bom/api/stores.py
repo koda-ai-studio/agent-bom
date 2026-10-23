@@ -293,6 +293,7 @@ def _get_tenant_score_config_store() -> TenantScoreConfigStore:
 
 # ─── Operator advisory store (pluggable) ──────────────────────────────────
 _operator_advisory_store: OperatorAdvisoryStore | None = None
+_operator_advisory_store_explicit = False
 
 
 def _get_operator_advisory_store() -> OperatorAdvisoryStore:
@@ -315,8 +316,15 @@ def _get_operator_advisory_store() -> OperatorAdvisoryStore:
 
 def set_operator_advisory_store(store: OperatorAdvisoryStore | None) -> None:
     """Switch (or reset with ``None``) the operator advisory store backend."""
-    global _operator_advisory_store
+    global _operator_advisory_store, _operator_advisory_store_explicit
     _operator_advisory_store = store
+    _operator_advisory_store_explicit = store is not None
+
+
+def operator_advisory_store_configured() -> bool:
+    """A durable (or explicitly installed) tenant store, not this process's empty in-memory default."""
+    store = _get_operator_advisory_store()
+    return _operator_advisory_store_explicit or not isinstance(store, InMemoryOperatorAdvisoryStore)
 
 
 def set_tenant_score_config_store(store: TenantScoreConfigStore) -> None:
