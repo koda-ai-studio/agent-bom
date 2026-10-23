@@ -206,6 +206,10 @@ class CredentialIdentityBinding:
         }
 
 
+# Discovery source stamped on SBOM components declared as ``agent-bom:type=mcp-server``.
+SBOM_DECLARED_MCP_SOURCE = "sbom:mcp-server"
+
+
 @dataclass
 class MCPServer:
     """An MCP server with its tools, resources, and dependencies."""
@@ -329,6 +333,15 @@ class MCPServer:
     def is_mcp_surface(self) -> bool:
         """True only for real MCP servers, not synthetic scan wrappers."""
         return self.surface == ServerSurface.MCP
+
+    @property
+    def counts_as_mcp_server(self) -> bool:
+        """A real MCP server, including one declared as an MCP server in an imported SBOM.
+
+        Imported servers keep the SBOM surface (identity, never executed) but
+        still count in the MCP inventory, so re-scanning a BOM preserves it.
+        """
+        return self.is_mcp_surface or (self.surface == ServerSurface.SBOM and SBOM_DECLARED_MCP_SOURCE in self.discovery_sources)
 
     @property
     def allows_registry_resolution(self) -> bool:

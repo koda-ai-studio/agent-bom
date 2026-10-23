@@ -11,7 +11,7 @@ from agent_bom.checksums import add_checksum
 from agent_bom.models import Package, Vulnerability
 from agent_bom.scanners.enrichment_apply import apply_epss_entry
 
-_CONTEXT_ROLES = {"ai-agent", "mcp-server"}
+_CONTEXT_ROLES = {"ai-agent", "mcp-server", "dependency-surface"}
 
 
 def software_components(document: dict) -> list[dict]:

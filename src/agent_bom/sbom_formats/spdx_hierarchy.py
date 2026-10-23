@@ -26,6 +26,8 @@ def context_role(element: dict) -> str | None:
         return "ai-agent"
     if description.startswith("MCP Server ("):
         return "mcp-server"
+    if description.startswith("Dependency surface ("):
+        return "dependency-surface"
     return None
 
 

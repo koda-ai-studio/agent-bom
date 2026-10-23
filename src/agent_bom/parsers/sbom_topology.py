@@ -7,6 +7,7 @@ import json
 from copy import deepcopy
 from typing import Any, cast
 
+from agent_bom.domain.mcp_model import SBOM_DECLARED_MCP_SOURCE
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface
 from agent_bom.parsers.spdx_context import context_document
 from agent_bom.sbom_formats.cyclonedx import component_properties, dependency_map, restore_dependency_hierarchy, software_components
@@ -82,6 +83,7 @@ def restore_context_agents(document: dict, fallback: Agent, name: str | None) ->
             # Never execute imported commands; hash the case-sensitive reference.
             args=[fallback.config_path, "component:" + hashlib.sha256(ref.encode()).hexdigest()],
             surface=ServerSurface.SBOM,
+            discovery_sources=[SBOM_DECLARED_MCP_SOURCE],
             imported_canonical_id=ref.removeprefix("mcp-server-") if ref.startswith("mcp-server-") else None,
             packages=list(scoped_packages.values()),
             tools=tools,

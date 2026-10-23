@@ -26,6 +26,7 @@ from agent_bom.output.finding_views import (
 )
 from agent_bom.package_utils import synthesize_purl
 from agent_bom.sbom_formats.spdx3 import upstream_enrichment_statements
+from agent_bom.sbom_formats.surface_labels import server_surface_description
 
 # Canonical SPDX 3.0.1 JSON-LD context (media type application/spdx+json-ld,
 # ``.spdx.json`` / ``.jsonld`` extension). Every SPDX 3.0.1 document references
@@ -168,7 +169,7 @@ def to_spdx(report: AIBOMReport) -> dict:
         for server in agent.mcp_servers:
             server_id = _next_id("SPDXRef-MCPServer")
 
-            server_desc = f"MCP Server ({server.transport.value})"
+            server_desc = server_surface_description(server)
             if server.tools:
                 server_desc += f" — {len(server.tools)} tool(s): {', '.join(t.name for t in server.tools[:10])}"
                 if len(server.tools) > 10:

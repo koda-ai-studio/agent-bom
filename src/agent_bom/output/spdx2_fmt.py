@@ -26,6 +26,7 @@ from agent_bom.models import AIBOMReport
 from agent_bom.output.cloud_context import attach_cloud_context
 from agent_bom.output.dependency_hierarchy import add_spdx2_package_relationships
 from agent_bom.output.package_attributes import spdx2_external_refs
+from agent_bom.sbom_formats.surface_labels import server_surface_description
 
 _SUPPORTED_VERSIONS = {"2.2", "2.3"}
 _NOASSERTION = "NOASSERTION"
@@ -134,7 +135,7 @@ def to_spdx2(report: AIBOMReport, version: str = "2.3") -> dict:
                 "licenseDeclared": _NOASSERTION,
                 "copyrightText": _NOASSERTION,
                 "primaryPackagePurpose": "APPLICATION",
-                "comment": f"MCP Server ({server.transport.value})",
+                "comment": server_surface_description(server),
             }
             spdx_packages.append(server_pkg)
             _add_relationship(agent_id, "CONTAINS", server_id)

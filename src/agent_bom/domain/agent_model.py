@@ -90,7 +90,7 @@ class Agent:
 
     @property
     def total_mcp_servers(self) -> int:
-        return sum(1 for server in self.mcp_servers if server.is_mcp_surface)
+        return sum(1 for server in self.mcp_servers if server.counts_as_mcp_server)
 
     @property
     def total_vulnerabilities(self) -> int:
