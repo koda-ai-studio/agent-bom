@@ -7,14 +7,14 @@ Every table agent-bom creates, read from the DDL in the code: the Postgres contr
 
 ## Overview
 
-158 tables in 10 domains. 18 declared foreign keys; 36 logical joins derived from shared key-column names. Arrows count relations that cross domains.
+159 tables in 10 domains. 18 declared foreign keys; 36 logical joins derived from shared key-column names. Arrows count relations that cross domains.
 
 ```mermaid
 flowchart LR
   tenancy["Tenancy, identity and access<br/>24 tables"]
   scans["Scans, jobs and reports<br/>15 tables"]
   inventory["Inventory and assets<br/>16 tables"]
-  findings["Findings, triage and VEX<br/>23 tables"]
+  findings["Findings, triage and VEX<br/>24 tables"]
   graph["Graph nodes, edges, snapshots and attack paths<br/>21 tables"]
   runtime["Runtime, gateway and traces<br/>17 tables"]
   compliance["Compliance, audit and evidence<br/>10 tables"]
@@ -36,7 +36,7 @@ flowchart LR
 | Tenancy, identity and access | 24 | [storage-erd/tenancy.md](storage-erd/tenancy.md) |
 | Scans, jobs and reports | 15 | [storage-erd/scans.md](storage-erd/scans.md) |
 | Inventory and assets | 16 | [storage-erd/inventory.md](storage-erd/inventory.md) |
-| Findings, triage and VEX | 23 | [storage-erd/findings.md](storage-erd/findings.md) |
+| Findings, triage and VEX | 24 | [storage-erd/findings.md](storage-erd/findings.md) |
 | Graph nodes, edges, snapshots and attack paths | 21 | [storage-erd/graph.md](storage-erd/graph.md) |
 | Runtime, gateway and traces | 17 | [storage-erd/runtime.md](storage-erd/runtime.md) |
 | Compliance, audit and evidence | 10 | [storage-erd/compliance.md](storage-erd/compliance.md) |
@@ -185,6 +185,7 @@ Excluded:
 | `model_virtual_keys` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `virtual_key_id` | `virtual_key_id`, `tenant_id`, `provider_key_id` | `tenant_id` | persistent | `deploy/postgres/runtime-schema.sql`, `api/model_key_broker.py`, `api/postgres_model_key_broker.py` |
 | `node_groups` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | SQLite | `entity_type`, `identity` | `entity_type`, `identity` | **none** | scratch | `graph/correlation_workspace.py` |
 | `node_observations` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | SQLite | `entity_type`, `identity`, `scan_id`, `node_id` | `entity_type`, `identity`, `scan_id`, `node_id` | **none** | scratch | `graph/correlation_workspace.py` |
+| `operator_advisories` | [Findings, triage and VEX](storage-erd/findings.md) | SQLite | `tenant_id`, `advisory_id` | `tenant_id`, `advisory_id` | `tenant_id` | persistent | `api/operator_advisory_store.py` |
 | `osv_cache` | [Vulnerability intelligence (local database)](storage-erd/vulndb.md) | Postgres, SQLite | `cache_key` | `cache_key` | **none** | persistent | `deploy/postgres/init.sql`, `api/postgres_scan_cache.py`, `scan_cache.py` |
 | `policy_audit_log` | [Runtime, gateway and traces](storage-erd/runtime.md) | Postgres, SQLite, Snowflake | `id` | `id`, `team_id` | `team_id` | persistent | `deploy/snowflake/native-app/dcm/V001__core_schema.sql`, `deploy/snowflake/setup.sql`, `deploy/postgres/init.sql` (+3) |
 | `policy_results` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres | `result_id` | `result_id`, `scan_run_id`, `team_id`, `policy_id` | `team_id` | persistent | `deploy/postgres/init.sql` |

@@ -5,7 +5,7 @@
 
 Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
-23 tables.
+24 tables.
 
 Tables from other domains drawn for their relations: `scan_jobs`, `scan_runs`, `teams`.
 
@@ -91,6 +91,10 @@ erDiagram
   issue_mappings {
     text tenant_id PK
     text mapping_id PK
+  }
+  operator_advisories {
+    text tenant_id PK
+    text advisory_id PK
   }
   risk_campaign_workflows {
     text tenant_id PK
@@ -192,6 +196,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `hub_ledger_ingest_state` | SQLite | 3 |  | persistent |
 | `hub_overview_revisions` | Postgres, SQLite | 2 |  | persistent |
 | `issue_mappings` | Postgres, SQLite | 11 |  | persistent |
+| `operator_advisories` | SQLite | 4 |  | persistent |
 | `risk_campaign_workflows` | Postgres, SQLite | 13 |  | persistent |
 | `scan_findings` | SQLite | 20 |  | persistent |
 | `ticket_links` | Postgres, SQLite | 11 |  | persistent |

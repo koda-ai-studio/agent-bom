@@ -84,6 +84,8 @@ ROUTE_POLICIES: tuple[RoutePolicy, ...] = (
     RoutePolicy("GET", "/v1/credentials", "viewer", "source:read"),
     RoutePolicy("GET", "/v1/evaluations", "viewer", "eval:read"),
     RoutePolicy("POST", "/v1/intel/match", "viewer", "intel:read", exact=True),
+    RoutePolicy("POST", "/v1/intel/operator-advisories", "admin", "finding:write", exact=True),
+    RoutePolicy("DELETE", "/v1/intel/operator-advisories/", "admin", "finding:write"),
     RoutePolicy("POST", "/v1/intel/daily-brief", "viewer", "intel:read", exact=True),
     RoutePolicy("POST", "/v1/runtime/profiles/evaluate", "viewer", "runtime:read", exact=True),
     RoutePolicy("POST", "/v1/graph/query", "viewer", "graph:read", exact=True),

@@ -7,6 +7,7 @@ import threading
 from typing import TYPE_CHECKING, Any, cast
 
 from agent_bom.api.neptune_graph import NeptuneGraphStore
+from agent_bom.api.operator_advisory_store import InMemoryOperatorAdvisoryStore, OperatorAdvisoryStore, SQLiteOperatorAdvisoryStore
 from agent_bom.api.storage.analytics import get_analytics_store
 from agent_bom.api.storage.analytics import set_analytics_store as set_analytics_store
 from agent_bom.api.storage.job_backends import configured_job_store
@@ -282,15 +283,42 @@ def _get_tenant_score_config_store() -> TenantScoreConfigStore:
                     from agent_bom.api.postgres_tenant_score_config import PostgresTenantScoreConfigStore
 
                     _tenant_score_config_store = PostgresTenantScoreConfigStore()
-                elif os.environ.get("AGENT_BOM_DB"):
+                elif sqlite_path := os.environ.get("AGENT_BOM_DB"):
                     from agent_bom.api.tenant_score_config_store import SQLiteTenantScoreConfigStore
 
-                    _tenant_score_config_store = SQLiteTenantScoreConfigStore(os.environ["AGENT_BOM_DB"])
+                    _tenant_score_config_store = SQLiteTenantScoreConfigStore(sqlite_path)
                 else:
                     from agent_bom.api.tenant_score_config_store import InMemoryTenantScoreConfigStore
 
                     _tenant_score_config_store = InMemoryTenantScoreConfigStore()
     return _tenant_score_config_store
+
+
+# ─── Operator advisory store (pluggable) ──────────────────────────────────
+_operator_advisory_store: OperatorAdvisoryStore | None = None
+
+
+class OperatorAdvisoryBackendUnavailableError(RuntimeError):
+    """Raised when the configured control-plane backend has no operator advisory store."""
+
+
+def _get_operator_advisory_store() -> OperatorAdvisoryStore:
+    """Get the tenant-scoped operator advisory store; Postgres is refused, never faked in memory."""
+    global _operator_advisory_store
+    if _operator_advisory_store is None:
+        with _store_lock:
+            if _operator_advisory_store is None:
+                if postgres_deployment_configured():
+                    raise OperatorAdvisoryBackendUnavailableError("operator advisories are not yet persisted on the Postgres backend")
+                sqlite_path = os.environ.get("AGENT_BOM_DB")
+                _operator_advisory_store = SQLiteOperatorAdvisoryStore(sqlite_path) if sqlite_path else InMemoryOperatorAdvisoryStore()
+    return _operator_advisory_store
+
+
+def set_operator_advisory_store(store: OperatorAdvisoryStore | None) -> None:
+    """Switch (or reset with ``None``) the operator advisory store backend."""
+    global _operator_advisory_store
+    _operator_advisory_store = store
 
 
 def set_tenant_score_config_store(store: TenantScoreConfigStore) -> None:
