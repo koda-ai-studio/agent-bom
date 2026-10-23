@@ -21443,6 +21443,11 @@ export interface components {
             /** Configured Auth Modes */
             configured_auth_modes?: string[];
             /**
+             * Demo Seed
+             * @description Demo estate mode only: 'pending' while the demo seed is still writing, so early reads see partial data; 'complete' once it has landed. Null outside demo mode. Liveness stays 200 either way; /readyz returns 503 while pending.
+             */
+            demo_seed?: ("pending" | "complete") | null;
+            /**
              * Status
              * @default ok
              */

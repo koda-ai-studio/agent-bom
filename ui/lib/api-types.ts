@@ -2128,6 +2128,8 @@ export interface HealthResponse {
   auth_configured?: boolean | undefined;
   configured_auth_modes?: string[] | undefined;
   unauthenticated_allowed?: boolean | undefined;
+  /** Demo estate mode only: "pending" while the seed is still writing. */
+  demo_seed?: "pending" | "complete" | null | undefined;
   experimental_features?: ExperimentalFeatureHealth[] | undefined;
 }
 

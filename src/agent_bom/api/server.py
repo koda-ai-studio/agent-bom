@@ -875,6 +875,7 @@ async def root(request: Request) -> Response:
 
 def _public_health() -> PublicHealthResponse:
     from agent_bom.api.auth_posture import get_auth_runtime_status
+    from agent_bom.demo_estate.boot_seed import demo_seed_state
 
     auth_runtime = get_auth_runtime_status()
     return PublicHealthResponse(
@@ -884,6 +885,7 @@ def _public_health() -> PublicHealthResponse:
         auth_configured=bool(auth_runtime.get("auth_configured", False)),
         configured_auth_modes=list(cast(list[str], auth_runtime["configured_modes"])),
         unauthenticated_allowed=bool(auth_runtime.get("unauthenticated_allowed", False)),
+        demo_seed=demo_seed_state(),
     )
 
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -85,6 +85,14 @@ class PublicHealthResponse(BaseModel):
     auth_configured: bool = False
     configured_auth_modes: list[str] = Field(default_factory=list)
     unauthenticated_allowed: bool = False
+    demo_seed: Literal["pending", "complete"] | None = Field(
+        default=None,
+        description=(
+            "Demo estate mode only: 'pending' while the demo seed is still writing, so early reads see partial data; "
+            "'complete' once it has landed. Null outside demo mode. Liveness stays 200 either way; /readyz returns "
+            "503 while pending."
+        ),
+    )
 
 
 class AdvisoryRematchHealth(BaseModel):

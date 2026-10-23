@@ -18,6 +18,23 @@
       "title": "Configured Auth Modes",
       "type": "array"
     },
+    "demo_seed": {
+      "anyOf": [
+        {
+          "enum": [
+            "pending",
+            "complete"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Demo estate mode only: 'pending' while the demo seed is still writing, so early reads see partial data; 'complete' once it has landed. Null outside demo mode. Liveness stays 200 either way; /readyz returns 503 while pending.",
+      "title": "Demo Seed"
+    },
     "status": {
       "default": "ok",
       "title": "Status",

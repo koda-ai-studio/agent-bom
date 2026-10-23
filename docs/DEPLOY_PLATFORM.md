@@ -64,6 +64,12 @@ a liveness check; it does not qualify storage. Route traffic only after
 graph database access, schema and deployment permissions before retrying.
 Readiness never returns database paths or raw exception details.
 
+In demo estate mode the seed runs after startup: `/readyz` returns 503 with
+`demo_estate_seeding` and `/health` stays 200 with `"demo_seed": "pending"`
+until it lands, then reports `"complete"`. Reads before that see partial
+counts; the dashboard shows a seeding notice and reloads once the seed lands.
+Outside demo mode `demo_seed` is `null`.
+
 SQLite initializes a fresh empty graph through the ordinary per-file bootstrap;
 no scan data is required. Initial schema repair/index work can add cold-start
 cost. Later probes check table access without loading graphs, counting nodes or
