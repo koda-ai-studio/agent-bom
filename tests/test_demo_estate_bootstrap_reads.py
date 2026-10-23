@@ -341,32 +341,24 @@ def test_demo_estate_finding_counts_reconcile_across_tile_list_and_facet(
     assert page["total"] == total > len(page["findings"]), (page["total"], len(page["findings"]))
 
 
-def test_demo_estate_cis_posture_spans_aws_gcp_azure(shared_demo_estate_client: TestClient) -> None:
+def test_demo_estate_cis_posture_spans_every_estate_cloud(shared_demo_estate_client: TestClient) -> None:
     result = _demo_report(shared_demo_estate_client)
-    # Curated multi-cloud CIS posture is attached to the demo scan result, which
-    # is exactly what the CIS/compliance surfaces read (build_cis_benchmark_check_rows).
-    seen_clouds: set[str] = set()
-    for key, cloud in (
-        ("cis_benchmark", "aws"),
-        ("gcp_cis_benchmark", "gcp"),
-        ("azure_cis_benchmark", "azure"),
-    ):
+    # The CIS benchmark blobs are derived from the estate's own CIS findings, so
+    # every cloud the estate evaluates is present, Snowflake included.
+    for key in ("cis_benchmark", "gcp_cis_benchmark", "azure_cis_benchmark", "snowflake_cis_benchmark"):
         checks = (result.get(key) or {}).get("checks") or []
         assert checks, f"expected CIS checks for {key}"
+        # Recorded results only: failures, unevaluable attempts and passes the
+        # estate catalog evaluated; a believable spread, neither empty nor all-passing.
         statuses = {c.get("status") for c in checks}
-        # A believable spread — neither empty nor all-passing.
-        assert "pass" in statuses and "fail" in statuses, f"{key} needs a pass/fail spread: {statuses}"
-        seen_clouds.add(cloud)
-    assert seen_clouds == {"aws", "gcp", "azure"}
+        assert statuses <= {"pass", "fail", "error"} and {"pass", "fail"} <= statuses, key
 
     # The rows normalize through the same contract the /v1/cis/checks route uses.
     from agent_bom.analytics_contract import build_cis_benchmark_check_rows
 
     rows = build_cis_benchmark_check_rows(result, "showcase")
-    clouds = Counter(r["cloud"] for r in rows)
-    assert {"aws", "gcp", "azure"} <= set(clouds), clouds
-    statuses = Counter(r["status"] for r in rows)
-    assert statuses["pass"] > 0 and statuses["fail"] > 0, statuses
+    assert set(Counter(r["cloud"] for r in rows)) == {"aws", "gcp", "azure", "snowflake"}
+    assert Counter(r["status"] for r in rows)["fail"] == 28
 
 
 def test_demo_estate_firewall_stats_require_audit_permission(shared_demo_estate_client: TestClient) -> None:

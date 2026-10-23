@@ -10,6 +10,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.api.cis_graph_checks import GraphCisState, merge_cis_rows_with_graph, normalize_cis_status
 from agent_bom.api.models import JobStatus
 
 if TYPE_CHECKING:
@@ -123,12 +124,13 @@ def _result_evidence_context(result: dict[str, Any]) -> tuple[bool, bool, set[st
     return has_mcp, has_agent, sources
 
 
-def _aggregate_cis_foundations_checks(jobs: list[Any]) -> dict[str, Any]:
+def _aggregate_cis_foundations_checks(jobs: list[Any], cis_graph: GraphCisState | None = None) -> dict[str, Any]:
     """Deduped CIS Foundations Benchmark status rollup across a tenant's scans.
 
-    Reuses ``build_cis_benchmark_check_rows`` + the same latest-per-(cloud,
-    check_id) dedup as ``/v1/cis/checks`` so the scorecard's benchmark line
-    reconciles with that endpoint by construction.
+    Counts the same rows ``/v1/cis/checks`` lists: the latest stored result per
+    (cloud, check_id), with the current graph's CIS results replacing failing
+    rows (:mod:`agent_bom.api.cis_graph_checks`), so the scorecard's benchmark
+    line reconciles with that endpoint by construction.
 
     This is the CIS *Foundations Benchmark* taxonomy (``CIS-2.1.1`` …), a
     different standard from the CVE-driven CIS Controls v8 line (safeguard
@@ -137,42 +139,25 @@ def _aggregate_cis_foundations_checks(jobs: list[Any]) -> dict[str, Any]:
     best-practice providers (Databricks) are listed by ``/v1/cis/checks`` but
     are not CIS benchmarks, so they are left out here.
     """
-    from agent_bom.analytics_contract import VENDOR_BEST_PRACTICE_CLOUDS, build_cis_benchmark_check_rows
+    from agent_bom.analytics_contract import VENDOR_BEST_PRACTICE_CLOUDS
 
-    all_rows: list[dict[str, Any]] = []
-    for job in jobs:
-        if job.status != JobStatus.DONE or not isinstance(getattr(job, "result", None), dict):
-            continue
-        all_rows.extend(
-            build_cis_benchmark_check_rows(
-                job.result,
-                str(job.result.get("scan_id") or job.job_id),
-                measured_at=getattr(job, "completed_at", None) or getattr(job, "created_at", None),
-            )
-        )
-    # Newest measurement per logical (cloud, check_id) wins — identical dedup to
-    # the /v1/cis/checks scan_jobs fallback so the two surfaces agree.
-    all_rows.sort(key=lambda row: (str(row.get("measured_at") or ""), -int(row.get("priority") or 0)), reverse=True)
-    seen: set[tuple[str, str]] = set()
-    counts = {"pass": 0, "fail": 0, "error": 0, "not_applicable": 0, "other": 0}
+    rows = merge_cis_rows_with_graph(_latest_cis_rows_from_jobs(jobs), cis_graph or GraphCisState.empty())
+    buckets = ("pass", "fail", "error", "not_applicable", "not_evaluated")
+    counts = dict.fromkeys(buckets, 0)
     providers: dict[str, dict[str, int]] = {}
     # Deduped latest status per logical (cloud, check_id) — consumed by the NIST
     # 800-53 catalog line to map a CIS Foundations check to the NIST controls it
     # evidences (framework_mapping.nist_controls_for_cis_check).
     statuses: dict[tuple[str, str], str] = {}
-    for row in all_rows:
+    for row in rows:
         key = (str(row.get("cloud") or ""), str(row.get("check_id") or ""))
-        if key in seen or key[0] in VENDOR_BEST_PRACTICE_CLOUDS:
+        if key[0] in VENDOR_BEST_PRACTICE_CLOUDS:
             continue
-        seen.add(key)
-        status = str(row.get("status") or "").lower()
-        bucket = status if status in ("pass", "fail", "error", "not_applicable") else "other"
-        counts[bucket] += 1
+        status = normalize_cis_status(row.get("status"))
+        counts[status] += 1
         statuses[key] = status
-        cloud = str(row.get("cloud") or "unknown")
-        prov = providers.setdefault(cloud, {"pass": 0, "fail": 0, "error": 0, "not_applicable": 0, "other": 0})
-        prov[bucket] += 1
-    return {"counts": counts, "providers": providers, "total_checks": len(seen), "statuses": statuses}
+        providers.setdefault(key[0] or "unknown", dict.fromkeys(buckets, 0))[status] += 1
+    return {"counts": counts, "providers": providers, "total_checks": len(statuses), "statuses": statuses}
 
 
 def _build_cis_foundations_line(agg: dict[str, Any]) -> dict[str, Any]:
@@ -189,6 +174,7 @@ def _build_cis_foundations_line(agg: dict[str, Any]) -> dict[str, Any]:
     failed = int(counts["fail"])
     errored = int(counts["error"])
     not_applicable = int(counts["not_applicable"])
+    not_evaluated = int(counts.get("not_evaluated", 0))
     evaluated = passed + failed + errored
     score = round((passed / evaluated) * 100, 1) if evaluated > 0 else 0.0
 
@@ -203,7 +189,7 @@ def _build_cis_foundations_line(agg: dict[str, Any]) -> dict[str, Any]:
     elif evaluated > 0:
         status = "pass"
     else:
-        status = "no_data"  # only NOT_APPLICABLE checks — nothing was evaluated
+        status = "no_data"  # only NOT_APPLICABLE / not-evaluated checks — nothing was evaluated
 
     return {
         "framework": "cis-foundations",
@@ -218,6 +204,8 @@ def _build_cis_foundations_line(agg: dict[str, Any]) -> dict[str, Any]:
             "fail": failed,
             "error": errored,
             "not_applicable": not_applicable,
+            # No recorded result: never a pass, never in the score's denominator.
+            "not_evaluated": not_evaluated,
             "evaluated": evaluated,
             "score": score,
         },
@@ -244,6 +232,8 @@ def _coerce_cis_row(row: dict[str, Any]) -> dict[str, Any]:
         cis_section=str(coerced.get("cis_section") or ""),
     )
     coerced["remediation"] = remediation
+    coerced["status"] = normalize_cis_status(coerced.get("status"))
+    coerced.setdefault("evidence_source", "scan")
     coerced["fix_cli"] = str(remediation.get("fix_cli") or "")
     coerced["fix_console"] = str(remediation.get("fix_console") or coerced.get("fix_console") or "")
     coerced["effort"] = str(remediation.get("effort") or "manual")
@@ -328,15 +318,13 @@ def _narrative_to_dict(narrative: "ComplianceNarrative", *, evidence: dict[str, 
     return payload
 
 
-def _cis_check_rows_from_jobs(
-    jobs: list[Any],
-    cloud_filter: set[str],
-    status_filter: set[str],
-    priority: int | None,
-    safe_limit: int,
-    safe_offset: int,
-) -> dict[str, Any]:
-    """Latest CIS check per (cloud, check_id) rebuilt from completed scan jobs."""
+def _latest_cis_rows_from_jobs(jobs: list[Any]) -> list[dict[str, Any]]:
+    """Latest stored CIS row per (cloud, check_id) across completed scan jobs.
+
+    Matches the columnar store's DISTINCT ON dedup: N scans of one cloud never
+    stack N copies of a check, and a filter applied afterwards can never surface
+    an older result the newest one superseded.
+    """
     from agent_bom.analytics_contract import build_cis_benchmark_check_rows
 
     all_rows: list[dict[str, Any]] = []
@@ -350,27 +338,37 @@ def _cis_check_rows_from_jobs(
                 measured_at=getattr(job, "completed_at", None) or getattr(job, "created_at", None),
             )
         )
-    filtered = [
+    all_rows.sort(key=lambda row: (str(row.get("measured_at") or ""), -int(row.get("priority") or 0)), reverse=True)
+    latest: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in all_rows:
+        latest.setdefault((str(row.get("cloud") or ""), str(row.get("check_id") or "")), row)
+    return list(latest.values())
+
+
+def filter_cis_rows(
+    rows: list[dict[str, Any]], cloud_filter: set[str], status_filter: set[str], priority: int | None
+) -> list[dict[str, Any]]:
+    return [
         row
-        for row in all_rows
-        if (not cloud_filter or row["cloud"].lower() in cloud_filter)
-        and (not status_filter or row["status"].lower() in status_filter)
-        and (priority is None or int(row["priority"]) == priority)
+        for row in rows
+        if (not cloud_filter or str(row.get("cloud") or "").lower() in cloud_filter)
+        and (not status_filter or str(row.get("status") or "").lower() in status_filter)
+        and (priority is None or int(row.get("priority") or 0) == priority)
     ]
-    filtered.sort(key=lambda row: (str(row.get("measured_at") or ""), -int(row.get("priority") or 0)), reverse=True)
-    # Collapse to the latest measurement per logical (cloud, check_id) so this
-    # in-memory fallback matches the columnar store's DISTINCT ON dedup: without
-    # it, N scans of the same cloud would stack N copies of each check. Rows are
-    # already sorted newest-first, so the first occurrence wins.
-    deduped: list[dict[str, Any]] = []
-    seen: set[tuple[str, str]] = set()
-    for row in filtered:
-        key = (str(row.get("cloud") or ""), str(row.get("check_id") or ""))
-        if key in seen:
-            continue
-        seen.add(key)
-        deduped.append(row)
-    return {"checks": deduped[safe_offset : safe_offset + safe_limit], "count": len(deduped), "source": "scan_jobs"}
+
+
+def _cis_check_rows_from_jobs(
+    jobs: list[Any],
+    cloud_filter: set[str],
+    status_filter: set[str],
+    priority: int | None,
+    safe_limit: int,
+    safe_offset: int,
+) -> dict[str, Any]:
+    """Latest CIS check per (cloud, check_id) rebuilt from completed scan jobs."""
+    rows = merge_cis_rows_with_graph(_latest_cis_rows_from_jobs(jobs), GraphCisState.empty())
+    filtered = filter_cis_rows(rows, cloud_filter, status_filter, priority)
+    return {"checks": filtered[safe_offset : safe_offset + safe_limit], "count": len(filtered), "source": "scan_jobs"}
 
 
 def _cis_trend_buckets_from_jobs(

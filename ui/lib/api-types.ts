@@ -2897,6 +2897,14 @@ export interface CISBenchmarkCheck {
   priority: number;
   guardrails: string[];
   requires_human_review: boolean;
+  /** "graph" when the failing result and its resources come from the current graph. */
+  evidence_source?: "graph" | "scan";
+  /** The graph node of this check's result, when the current graph holds one. */
+  graph_node_id?: string;
+  graph_scan_id?: string;
+  /** Failing resource graph node id -> the finding ids recorded on it. */
+  resource_finding_ids?: Record<string, string[]>;
+  unevaluated_resource_ids?: string[];
 }
 
 export interface CISBenchmarkChecksResponse {

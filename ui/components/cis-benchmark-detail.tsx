@@ -17,7 +17,7 @@ import {
 import { api } from "@/lib/api";
 import type { CISBenchmarkCheck } from "@/lib/api";
 import { userFacingApiErrorMessage } from "@/lib/api-errors";
-import { CisCheckResources } from "@/components/cis-check-resources";
+import { CisCheckResources, CisControlGraphLink } from "@/components/cis-check-resources";
 
 // Clouds the backend `build_cis_benchmark_check_rows` can emit, in the order
 // we want them surfaced. The selector only shows clouds actually present in
@@ -63,6 +63,8 @@ function statusBadge(status: string): { label: string; className: string; Icon: 
       return { label: "Fail", className: "text-red-400 border-red-500/30 bg-red-500/10", Icon: XCircle };
     case "error":
       return { label: "Error", className: "text-orange-400 border-orange-500/30 bg-orange-500/10", Icon: AlertTriangle };
+    case "not_evaluated":
+      return { label: "Not evaluated", className: "text-[color:var(--text-secondary)] border-dashed border-[color:var(--border-strong)] bg-transparent", Icon: ChevronRight };
     case "not_applicable":
       return { label: "N/A", className: "text-[color:var(--text-tertiary)] border-[color:var(--border-strong)] bg-[color:var(--surface-muted)]/40", Icon: ChevronRight };
     default:
@@ -85,10 +87,17 @@ function severityClass(severity: string): string {
   }
 }
 
+const STATUS_ORDER = ["fail", "error", "not_evaluated", "pass", "not_applicable"];
+
+function statusRank(status: string): number {
+  const rank = STATUS_ORDER.indexOf(status);
+  return rank < 0 ? STATUS_ORDER.indexOf("not_evaluated") : rank;
+}
+
 const ALL = "all";
 // Typed as string[] (not a literal tuple) so the generic FilterPills infers
 // T = string and accepts the string state value.
-const STATUS_OPTIONS: string[] = [ALL, "error", "fail", "pass", "not_applicable"];
+const STATUS_OPTIONS: string[] = [ALL, "error", "fail", "pass", "not_evaluated", "not_applicable"];
 
 function CopyableFixCli({ check }: { check: CISBenchmarkCheck }) {
   const [copied, setCopied] = useState(false);
@@ -211,7 +220,15 @@ function CheckCard({ check }: { check: CISBenchmarkCheck }) {
       {open ? (
         <div className="space-y-3 border-t border-[color:var(--border-subtle)] px-4 py-3">
           {check.evidence ? <p className="text-xs text-[color:var(--text-secondary)]">{check.evidence}</p> : null}
-          {failing ? <CisCheckResources checkId={check.check_id} resourceIds={check.resource_ids} /> : null}
+          {check.graph_node_id ? <CisControlGraphLink checkId={check.check_id} nodeId={check.graph_node_id} /> : null}
+          {failing ? (
+            <CisCheckResources
+              checkId={check.check_id}
+              resourceIds={check.resource_ids}
+              graphBacked={check.evidence_source === "graph"}
+              findingIds={check.resource_finding_ids}
+            />
+          ) : null}
           <CopyableFixCli check={check} />
           {failing && check.requires_human_review && !check.fix_cli ? (
             <p className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
@@ -335,13 +352,15 @@ export function CISBenchmarkDetail() {
   }, [checks]);
 
   const visible = useMemo(() => {
-    return (checks ?? []).filter((c) => {
+    const filtered = (checks ?? []).filter((c) => {
       if (cloud !== ALL && c.cloud !== cloud) return false;
       if (status !== ALL && c.status !== status) return false;
       if (priority >= 0 && c.priority !== priority) return false;
       if (guardrail !== ALL && !c.guardrails.includes(guardrail)) return false;
       return true;
     });
+    // Work first: failures, then unevaluable and unknown results, then recorded passes. Stable within a status.
+    return filtered.sort((a, b) => statusRank(a.status) - statusRank(b.status));
   }, [checks, cloud, status, priority, guardrail]);
 
   if (loading) {

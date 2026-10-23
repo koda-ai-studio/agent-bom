@@ -8,6 +8,9 @@ from typing import Annotated
 import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from agent_bom.api.cis_graph_checks import NOT_EVALUATED, GraphCisState, merge_cis_rows_with_graph, read_graph_cis_state
+from agent_bom.api.finding_read_context import read_once
+from agent_bom.api.models import JobStatus
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.compliance import CisChecksResponse, CisTrendsResponse
 from agent_bom.api.routes.compliance_routes.common import _tenant_id, _tenant_jobs
@@ -15,9 +18,11 @@ from agent_bom.api.routes.compliance_routes.evidence import (
     _cis_check_rows_from_jobs,
     _cis_trend_buckets_from_jobs,
     _coerce_cis_row,
+    _latest_cis_rows_from_jobs,
     _normalize_csv_filter,
+    filter_cis_rows,
 )
-from agent_bom.api.stores import _get_analytics_store, _get_store
+from agent_bom.api.stores import _get_analytics_store, _get_graph_store, _get_store
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.security import sanitize_text
 
@@ -68,6 +73,13 @@ def _list_cis_benchmark_checks_impl(
     if priority is not None and priority < 0:
         raise HTTPException(status_code=400, detail="priority must be >= 0")
 
+    cis_graph = read_graph_cis_state(_get_graph_store(), tenant_id)
+    if cis_graph.checks or NOT_EVALUATED in status_filter:
+        stored, source = _stored_cis_rows(request, tenant_id)
+        rows = filter_cis_rows(merge_cis_rows_with_graph(stored, cis_graph), cloud_filter, status_filter, priority)
+        checks = [_coerce_cis_row(row) for row in rows[safe_offset : safe_offset + safe_limit]]
+        return {"checks": checks, "count": len(rows), "source": f"{source}+graph" if cis_graph.checks else source}
+
     job_store = _get_store()
     store_query = getattr(job_store, "query_cis_benchmark_checks", None)
     if callable(store_query) and len(cloud_filter) <= 1 and len(status_filter) <= 1:
@@ -100,6 +112,39 @@ def _list_cis_benchmark_checks_impl(
             pass
 
     return _cis_check_rows_from_jobs(_tenant_jobs(request), cloud_filter, status_filter, priority, safe_limit, safe_offset)
+
+
+def current_cis_graph(request: Request, scan_id: str | None = None, tenant_jobs: list | None = None) -> GraphCisState:
+    """The current graph's CIS results; a read pinned to a historical scan never takes them.
+
+    ``tenant_jobs`` is the caller's job snapshot. The current-estate graph reads
+    the tenant's completed jobs through the request-scoped ``("jobs", tenant)``
+    read, so seeding it keeps the verdict and its CIS evidence on one snapshot.
+    """
+    if scan_id:
+        return GraphCisState.empty()
+    tenant_id = _tenant_id(request)
+    if tenant_jobs is not None:
+        read_once(("jobs", tenant_id), lambda: [job for job in tenant_jobs if job.status == JobStatus.DONE and job.result])
+    return read_graph_cis_state(_get_graph_store(), tenant_id)
+
+
+def _stored_cis_rows(request: Request, tenant_id: str) -> tuple[list[dict], str]:
+    """Every latest stored CIS row, unfiltered, from the first store that holds them."""
+    store_query = getattr(_get_store(), "query_cis_benchmark_checks", None)
+    if callable(store_query):
+        rows = store_query(tenant_id, cloud=None, status=None, priority=None, limit=500, offset=0)
+        if rows:
+            return list(rows), "columnar"
+    query_fn = getattr(_get_analytics_store(), "query_cis_benchmark_checks", None)
+    if callable(query_fn):
+        try:
+            rows = query_fn(cloud=None, status=None, priority=None, limit=500, offset=0, tenant_id=tenant_id)
+            if rows:
+                return list(rows), "analytics"
+        except Exception as exc:  # broad-except: an analytics outage falls back to the scan jobs
+            _logger.warning("Analytics CIS read failed; using scan jobs: %s", sanitize_text(exc))
+    return _latest_cis_rows_from_jobs(_tenant_jobs(request)), "scan_jobs"
 
 
 # ─── CIS Benchmark Trend / Drilldown (#1832) ──────────────────────────────
