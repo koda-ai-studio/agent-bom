@@ -559,7 +559,7 @@ def test_overview_vuln_tile_ok_when_only_low_severity() -> None:
     from agent_bom.api.compliance_hub_store import get_compliance_hub_store
 
     get_compliance_hub_store().clear("default")
-    _ingest_hub_findings([{"finding_id": "L-1", "severity": "low", "title": "cve", "vulnerability_id": "CVE-2025-1234"}])
+    _ingest_hub_findings([{"finding_id": "L-1", "severity": "low", "title": "cve", "finding_type": "CVE", "cve_id": "CVE-2025-1234"}])
     data = client_get_overview()
     vuln = data["domains"]["vuln"]
     assert vuln["metric"] > 0
@@ -577,8 +577,8 @@ def test_overview_vuln_tile_reflects_pushed_findings_without_scan() -> None:
     get_compliance_hub_store().clear("default")
     _ingest_hub_findings(
         [
-            {"finding_id": "V-1", "severity": "high", "title": "cve", "vulnerability_id": "CVE-2025-1"},
-            {"finding_id": "V-2", "severity": "critical", "title": "cve2", "vulnerability_id": "CVE-2025-2"},
+            {"finding_id": "V-1", "severity": "high", "title": "cve", "finding_type": "CVE", "cve_id": "CVE-2025-1"},
+            {"finding_id": "V-2", "severity": "critical", "title": "cve2", "finding_type": "CVE", "cve_id": "CVE-2025-2"},
         ]
     )
     data = client_get_overview()
@@ -1649,9 +1649,11 @@ def test_overview_cve_metric_excludes_non_cve_findings():
     )
     data = client_get_overview()
     vuln = data["domains"]["vuln"]
-    assert vuln["metric"] == 2
+    # The card counts what its drill (/findings?issue=vulnerability&domain=vuln)
+    # lists: CVE and GHSA advisories, not the CIS check or the bandit rule.
+    assert vuln["metric"] == 3
     assert vuln["detail"]["critical"] == 0
-    assert vuln["detail"]["high"] == 1
+    assert vuln["detail"]["high"] == 2
     assert vuln["detail"]["kev"] == 1
     assert data["finding_counts"]["critical"] == 2
     assert data["finding_counts"]["high"] == 2

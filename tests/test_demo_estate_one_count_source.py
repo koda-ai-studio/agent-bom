@@ -90,6 +90,21 @@ def _check_open_cve_findings_agree_between_overview_and_posture(surfaces: dict[s
     assert details.startswith(f"{dimensions['vulnerability_findings']} vulnerability occurrences")
 
 
+def _check_vuln_card_equals_its_drill_down(surfaces: dict[str, dict], client: TestClient) -> None:
+    """The overview Vuln / SCA card and the findings page it links to count one set."""
+    from urllib.parse import parse_qsl, urlsplit
+
+    domain = surfaces["overview"]["domains"]["vuln"]
+    link = urlsplit(domain["href"])
+    assert link.path == "/findings"
+    params = dict(parse_qsl(link.query))
+    api_params = {("finding_class" if key == "issue" else key): value for key, value in params.items()}
+    linked = _get(client, "/v1/findings", limit=1, include_facets="true", **api_params)
+    assert domain["metric"] > 0
+    assert linked["total"] == domain["metric"], (domain["href"], linked["total"], domain["metric"])
+    assert _bands(linked["facets"]["severity"]) == _bands(domain["detail"]["severity"])
+
+
 def _check_remediation_reads_the_findings_window(surfaces: dict[str, dict]) -> None:
     findings_window = surfaces["findings:severity"]["window"]
     remediation_window = surfaces["remediation"]["window"]
@@ -143,6 +158,7 @@ def test_every_surface_reads_one_count_source(demo_estate_client: TestClient) ->
     _check_occurrence_counts_are_labelled_as_a_different_unit(surfaces)
     _check_kev_uses_the_issue_unit_beside_the_issue_tiles(surfaces, demo_estate_client)
     _check_open_cve_findings_agree_between_overview_and_posture(surfaces)
+    _check_vuln_card_equals_its_drill_down(surfaces, demo_estate_client)
     _check_remediation_reads_the_findings_window(surfaces)
     _check_graph_snapshot_severity_names_its_unit(surfaces)
     _check_agent_counts_carry_their_scope(surfaces)

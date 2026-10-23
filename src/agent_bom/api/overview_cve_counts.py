@@ -1,36 +1,36 @@
-"""CVE occurrence counts shared by current scan and pushed-evidence folds."""
+"""Vuln / SCA occurrence counts shared by current scan and pushed-evidence folds."""
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from agent_bom.advisory_ids import all_cve_identifiers, derive_cve_from_advisory_id
 from agent_bom.core.severity import empty_severity_histogram, severity_display_bucket
-from agent_bom.finding_scope import finding_class_for_row
+from agent_bom.finding_scope import row_matches_scope
 
 
 def empty_cve_counts() -> dict[str, int]:
     return {**empty_severity_histogram(), "kev": 0}
 
 
-def add_cve_finding(counts: dict[str, int], row: Mapping[str, Any]) -> None:
-    """Fold an already current, open occurrence only when it carries a CVE.
+# The Vuln / SCA card links to exactly this findings query, and counts rows with
+# the same predicate the findings API applies to it, so the card always equals
+# the page it opens.
+VULN_CARD_FILTERS: dict[str, str] = {"finding_class": "vulnerability", "domain": "vuln"}
+VULN_CARD_HREF = "/findings?issue=vulnerability&domain=vuln"
 
-    An alias identifies the same advisory occurrence, not another finding.
-    Explicit code/configuration findings do not become CVEs merely by naming one.
-    Lifecycle, tenant, time-window and occurrence deduplication belong to the
-    current-evidence readers that feed this fold.
+
+def add_cve_finding(counts: dict[str, int], row: Mapping[str, Any]) -> None:
+    """Fold an already current, open occurrence that the Vuln / SCA drill would list.
+
+    Vulnerability-class rows in the vuln domain: CVE and GHSA advisories,
+    malicious packages, and other vulnerability-class rows that name a CVE.
+    Configuration, secret, runtime-threat and cloud-posture rows stay out.
+    Lifecycle, tenant, time-window and
+    occurrence deduplication belong to the current-evidence readers that feed
+    this fold.
     """
-    if finding_class_for_row(row) != "vulnerability":
-        return
-    finding_type = str(row.get("finding_type") or "").upper()
-    if finding_type and finding_type not in {"CVE", "VULNERABILITY"}:
-        return
-    advisory_id = str(row.get("cve_id") or row.get("vulnerability_id") or "")
-    aliases = row.get("aliases")
-    identifiers = all_cve_identifiers(advisory_id, aliases if isinstance(aliases, list) else [])
-    if not any(derive_cve_from_advisory_id(value) for value in identifiers):
+    if not row_matches_scope(dict(row), VULN_CARD_FILTERS):
         return
     counts[severity_display_bucket(str(row.get("severity") or ""))] += 1
     counts["kev"] += int(bool(row.get("is_kev") or row.get("cisa_kev")))
@@ -55,10 +55,10 @@ def compose_cve_domain(
         status = "idle" if exact else "unknown"
     return {
         "label": "Vuln / SCA",
-        "href": "/findings?issue=vulnerability",
+        "href": VULN_CARD_HREF,
         "graph_href": graph_href(severity),
         "metric": metric,
-        "metric_label": "open CVE findings",
+        "metric_label": "open vulnerability findings",
         "count_exact": exact,
         "evidence_status": evidence_status,
         "status": status,

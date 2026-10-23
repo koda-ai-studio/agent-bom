@@ -1,4 +1,9 @@
-"""CVE metrics require advisory identity and a compatible finding class."""
+"""The overview Vuln / SCA count uses the findings page's own row predicate.
+
+A row counts when it is in the vulnerability issue class *and* the vuln domain,
+the exact pair the card links to (``/findings?issue=vulnerability&domain=vuln``).
+Configuration, secret, runtime-threat and cloud-posture rows stay out.
+"""
 
 import pytest
 
@@ -11,11 +16,16 @@ from agent_bom.api.overview_cve_counts import add_cve_finding, empty_cve_counts
         ({"finding_type": "CVE", "cve_id": "CVE-2026-1234"}, 1),
         ({"finding_type": "CVE", "cve_id": "GHSA-aaaa-bbbb-cccc", "aliases": ["CVE-2026-1234"]}, 1),
         ({"finding_type": "CVE", "vulnerability_id": "DEBIAN-CVE-2026-1234"}, 1),
-        ({"finding_type": "CVE", "cve_id": "GHSA-aaaa-bbbb-cccc"}, 0),
-        ({"finding_type": "CVE", "cve_id": "CVE-invalid"}, 0),
+        ({"finding_type": "CVE", "cve_id": "GHSA-aaaa-bbbb-cccc"}, 1),
+        ({"finding_type": "MALICIOUS_PACKAGE", "source": "SBOM"}, 1),
+        ({"finding_type": "INJECTION", "source": "MCP_SCAN"}, 0),
+        ({"finding_type": "EXFILTRATION", "source": "PROXY"}, 0),
+        ({"finding_type": "CLOUD_BEST_PRACTICE_FAIL", "source": "EXTERNAL"}, 0),
         ({"finding_type": "CIS_FAIL", "cve_id": "CVE-2026-1234"}, 0),
-        ({"finding_type": "SAST", "cve_id": "CVE-2026-1234"}, 0),
-        ({"finding_type": "SECRET", "cve_id": "CVE-2026-1234"}, 0),
+        # The vuln lens lists any vulnerability-class row naming a CVE, so the
+        # card counts it too; a secret naming one is not vulnerability-class.
+        ({"finding_type": "SAST", "cve_id": "CVE-2026-1234"}, 1),
+        ({"finding_type": "CREDENTIAL_EXPOSURE", "cve_id": "CVE-2026-1234"}, 0),
         ({"severity": "critical"}, 0),
     ],
 )

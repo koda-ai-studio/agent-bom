@@ -442,20 +442,28 @@ def _security_lenses(
     return frozenset(lenses)
 
 
+def _is_advisory_identifier(value: str) -> bool:
+    """A CVE/GHSA (or distro-scoped CVE) id, not a scanner rule id such as ``B105``."""
+    from agent_bom.advisory_ids import derive_cve_from_advisory_id
+
+    text = value.strip().upper()
+    return bool(text) and (text.startswith("GHSA-") or derive_cve_from_advisory_id(text) is not None)
+
+
 def lenses_for_row(row: dict) -> frozenset[str]:
     """Return the overlapping coverage-lens set for a serialized finding row.
 
     Mirrors :func:`domain_for_row`: the stored ``security_domain`` (canonical,
     legacy-aliased) is always in the set, and — when the row carries a parseable
-    source/type — the full derived lens set is unioned in. A row bearing a CVE id
-    always counts under ``vuln``. Returns an empty set only when nothing is
+    source/type — the full derived lens set is unioned in. A row bearing a CVE or
+    GHSA id always counts under ``vuln``; a scanner rule id in ``cve_id`` does not. Returns an empty set only when nothing is
     resolvable, so callers can fall back to a default lane.
     """
     lenses: set[str] = set()
     primary = canonical_domain(row.get("security_domain"))
     if primary is not None:
         lenses.add(primary)
-    if str(row.get("cve_id") or "").strip():
+    if _is_advisory_identifier(str(row.get("cve_id") or "")):
         lenses.add("vuln")
 
     source, ftype = _parse_row_source_and_type(row)
