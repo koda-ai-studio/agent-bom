@@ -296,8 +296,8 @@ def test_load_flat_comments_only_is_empty(tmp_path):
     assert load_ignore_file(f) == []
 
 
-def test_load_repo_image_scan_ignore_has_five_cves():
-    """The shipped .image-scan-ignore still suppresses its 5 known CVEs."""
+def test_load_repo_image_scan_ignore_has_known_cves():
+    """The shipped .image-scan-ignore suppresses exactly its reviewed CVEs."""
     from pathlib import Path
 
     repo_ignore = Path(__file__).resolve().parent.parent / ".image-scan-ignore"
@@ -309,6 +309,7 @@ def test_load_repo_image_scan_ignore_has_five_cves():
         "CVE-2025-6141",
         "CVE-2025-60876",
         "CVE-2026-3219",
+        "CVE-2026-112940",
     }
 
 
