@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from tests.test_demo_estate_bootstrap import VIEWER, demo_estate_client  # noqa: F401
+from tests._demo_estate_fixtures import VIEWER, demo_estate_client  # noqa: F401
 
 CVE = "CVE-2020-14343"
 
