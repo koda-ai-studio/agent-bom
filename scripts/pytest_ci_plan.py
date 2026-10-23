@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Build deterministic, exhaustive pytest plans for CI.
 
-The expensive demo rebuild suite gets a dedicated shard; remaining files use
-byte-weight balancing. Every file is assigned to exactly one shard.
+Shards are balanced by measured per-module seconds from tests/.ci-durations.json
+(refresh with scripts/refresh_ci_durations.py); modules without a measurement are
+estimated from their size. Without any measured module the planner falls back to
+byte-weight balancing with the demo rebuild suite on its own shard. Every file is
+assigned to exactly one shard.
 The changed-domain selector is intentionally conservative: it includes tests
 changed directly and tests whose basename matches a changed source/script
 module.  Cross-surface smoke tests are added by the workflow itself.
@@ -11,6 +14,8 @@ module.  Cross-surface smoke tests are added by the workflow itself.
 from __future__ import annotations
 
 import argparse
+import json
+import math
 from pathlib import Path
 from typing import Iterable
 
@@ -174,6 +179,7 @@ CURRENT_EVIDENCE_CONTRACTS = (
     "tests/test_mcp_inventory.py",
     "tests/test_neptune_unsupported_501.py",
     "tests/test_demo_estate_bootstrap.py",
+    "tests/test_demo_estate_bootstrap_reads.py",
     "tests/cloud/test_cloud_connections.py",
     "tests/test_iac_findings_surface.py",
     "tests/api/test_api_agent_population.py",
@@ -233,6 +239,7 @@ SHARED_JUDGMENT_PREFIXES = (
     "test_graph_nhi_governance",
     "test_nhi_governance_aws_gcp_parity",
 )
+DURATIONS_FILE = Path(__file__).resolve().parent.parent / "tests" / ".ci-durations.json"
 
 
 def discover_test_files(root: Path) -> list[Path]:
@@ -240,28 +247,66 @@ def discover_test_files(root: Path) -> list[Path]:
     return sorted(path for path in root.rglob("test_*.py") if path.is_file())
 
 
-def plan_shards(files: Iterable[Path], *, total: int) -> list[list[Path]]:
-    """Isolate measured demo rebuild cost, then balance remaining files largest-first."""
+def load_durations(path: Path) -> dict[Path, float]:
+    """Map resolved module paths to measured seconds; a missing file means none.
+
+    Names in the file are relative to the repository root, the parent of the
+    directory holding the file.
+    """
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as error:
+        raise SystemExit(f"unreadable test timings {path}: {error}") from error
+    files = payload.get("files") if isinstance(payload, dict) else None
+    if not isinstance(files, dict):
+        raise SystemExit(f"test timings {path} must map module paths to seconds under 'files'")
+    base = path.resolve().parent.parent
+    durations: dict[Path, float] = {}
+    for name, seconds in files.items():
+        if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not math.isfinite(seconds) or seconds < 0:
+            raise SystemExit(f"test timings {path} has an invalid duration for {name}")
+        durations[(base / name).resolve()] = float(seconds)
+    return durations
+
+
+def estimate_seconds(files: Iterable[Path], durations: dict[Path, float]) -> dict[Path, float]:
+    """Use measured seconds, scaling unmeasured modules by the measured seconds per byte."""
+    files = list(files)
+    known = [path for path in files if path in durations]
+    known_bytes = sum(path.stat().st_size for path in known)
+    rate = sum(durations[path] for path in known) / known_bytes if known_bytes else 0.0
+    return {path: durations[path] if path in durations else path.stat().st_size * rate for path in files}
+
+
+def _balance(weights: dict[Path, float], *, total: int) -> list[list[Path]]:
+    """Longest-processing-time first: each module goes to the least-loaded shard."""
+    shards: list[list[Path]] = [[] for _ in range(total)]
+    loads = [0.0] * total
+    for path in sorted(weights, key=lambda item: (-weights[item], item.as_posix())):
+        index = min(range(total), key=lambda candidate: (loads[candidate], candidate))
+        shards[index].append(path)
+        loads[index] += weights[path]
+    return [sorted(shard) for shard in shards]
+
+
+def plan_shards(files: Iterable[Path], *, total: int, durations: dict[Path, float] | None = None) -> list[list[Path]]:
+    """Balance measured module seconds; without measurements, isolate the demo suite and balance bytes."""
     if total < 1:
         raise ValueError("total shards must be positive")
 
-    files = list(files)
-    # CI timings show dozens of full estate rebuilds dominating this module,
-    # despite its modest source size. Reserve one existing runner rather than
-    # stacking other suites behind it or raising the job timeout/worker count.
+    files = sorted(set(files))
+    if durations and any(path in durations for path in files):
+        return _balance(estimate_seconds(files, durations), total=total)
+
+    # Byte-size fallback: the demo rebuild module is small on disk but slow, so
+    # reserve one runner rather than stacking other suites behind it.
     isolated = [path for path in files if path.parts[-2:] == ("tests", "test_demo_estate_bootstrap.py")]
     if total > 1 and len(isolated) == 1 and len(files) > 1:
         return [isolated] + plan_shards((path for path in files if path != isolated[0]), total=total - 1)
 
-    shards: list[list[Path]] = [[] for _ in range(total)]
-    loads = [0] * total
-    weighted = sorted(files, key=lambda path: (-path.stat().st_size, path.as_posix()))
-    for path in weighted:
-        index = min(range(total), key=lambda candidate: (loads[candidate], candidate))
-        shards[index].append(path)
-        loads[index] += path.stat().st_size
-
-    return [sorted(shard) for shard in shards]
+    return _balance({path: float(path.stat().st_size) for path in files}, total=total)
 
 
 def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[Path]:
@@ -822,6 +867,7 @@ def _parse_args() -> argparse.Namespace:
     shard.add_argument(
         "--files", nargs="+", type=Path, help="partition only these selected test files instead of discovering the test root"
     )
+    shard.add_argument("--durations", type=Path, default=DURATIONS_FILE, help="measured per-module seconds (JSON)")
 
     targeted = subparsers.add_parser("targeted", help="print tests related to changed files")
     targeted.add_argument("--root", type=Path, default=Path("."), help="repository root")
@@ -838,7 +884,7 @@ def main() -> int:
         files = sorted({path.resolve() for path in args.files}) if args.files is not None else discover_test_files(args.root.resolve())
         if any(not path.is_file() or not path.name.startswith("test_") or path.suffix != ".py" for path in files):
             raise SystemExit("shard selection must contain existing test_*.py files")
-        selected = plan_shards(files, total=args.total)[args.index]
+        selected = plan_shards(files, total=args.total, durations=load_durations(args.durations))[args.index]
     else:
         selected = select_targeted_tests(changed_files=args.changed_files, root=args.root.resolve())
 

@@ -917,3 +917,93 @@ def test_cloud_docs_select_provider_capability_contract(tmp_path: Path, source: 
     contract = tmp_path / "tests/test_side_scan_capability_docs.py"
     _write(contract, 1)
     assert contract in select_targeted_tests(changed_files=[Path(source)], root=tmp_path)
+
+
+def _timed_files(tmp_path: Path, seconds: dict[str, float], sizes: dict[str, int]) -> tuple[list[Path], dict[Path, float]]:
+    files = []
+    for name, lines in sizes.items():
+        path = tmp_path / "tests" / name
+        _write(path, lines)
+        files.append(path)
+    return files, {tmp_path / "tests" / name: value for name, value in seconds.items()}
+
+
+def test_duration_plan_balances_measured_seconds_not_bytes(tmp_path: Path) -> None:
+    # The slow module is tiny on disk; byte balancing stacks it with others.
+    seconds = {"test_slow.py": 600.0, "test_a.py": 300.0, "test_b.py": 300.0, "test_c.py": 200.0, "test_d.py": 200.0}
+    sizes = {"test_slow.py": 1, "test_a.py": 400, "test_b.py": 300, "test_c.py": 200, "test_d.py": 100}
+    files, durations = _timed_files(tmp_path, seconds, sizes)
+
+    shards = plan_shards(files, total=2, durations=durations)
+
+    loads = sorted(sum(durations[path] for path in shard) for shard in shards)
+    assert loads == [800.0, 800.0]
+    assert sorted(path for shard in shards for path in shard) == sorted(files)
+    assert shards == plan_shards(reversed(files), total=2, durations=durations)
+
+
+def test_duration_plan_estimates_unknown_files_from_measured_bytes(tmp_path: Path) -> None:
+    from scripts.pytest_ci_plan import estimate_seconds
+
+    seconds = {"test_known.py": 10.0}
+    sizes = {"test_known.py": 100, "test_new.py": 300}
+    files, durations = _timed_files(tmp_path, seconds, sizes)
+    known, new = files
+
+    estimates = estimate_seconds(files, durations)
+
+    assert estimates[known] == 10.0
+    assert estimates[new] == pytest.approx(10.0 * new.stat().st_size / known.stat().st_size)
+
+
+def test_duration_plan_without_any_measured_selection_keeps_byte_planning(tmp_path: Path) -> None:
+    files, _ = _timed_files(tmp_path, {}, {"test_demo_estate_bootstrap.py": 1, "test_x.py": 50, "test_y.py": 40})
+    unrelated = {tmp_path / "elsewhere/test_z.py": 99.0}
+
+    assert plan_shards(files, total=2, durations=unrelated) == plan_shards(files, total=2)
+
+
+@pytest.mark.parametrize("total", [2, 4])
+def test_duration_plan_assigns_every_file_exactly_once(tmp_path: Path, total: int) -> None:
+    sizes = {f"test_{index}.py": 10 + index for index in range(11)}
+    seconds = {f"test_{index}.py": float(index % 4) for index in range(0, 11, 2)}
+    files, durations = _timed_files(tmp_path, seconds, sizes)
+
+    shards = plan_shards(files, total=total, durations=durations)
+
+    selected = [path for shard in shards for path in shard]
+    assert len(selected) == len(set(selected)) == len(files)
+    assert set(selected) == set(files)
+
+
+def test_load_durations_maps_repo_relative_names(tmp_path: Path) -> None:
+    import json
+
+    from scripts.pytest_ci_plan import load_durations
+
+    timings = tmp_path / "tests/.ci-durations.json"
+    timings.parent.mkdir(parents=True)
+    timings.write_text(json.dumps({"files": {"tests/test_a.py": 1.5}}), encoding="utf-8")
+
+    assert load_durations(timings) == {(tmp_path / "tests/test_a.py").resolve(): 1.5}
+    assert load_durations(tmp_path / "missing.json") == {}
+
+
+@pytest.mark.parametrize("payload", ["not json", '{"files": {"tests/test_a.py": -1}}', '{"files": []}'])
+def test_load_durations_rejects_malformed_timings(tmp_path: Path, payload: str) -> None:
+    from scripts.pytest_ci_plan import load_durations
+
+    timings = tmp_path / "tests/.ci-durations.json"
+    timings.parent.mkdir(parents=True)
+    timings.write_text(payload, encoding="utf-8")
+
+    with pytest.raises(SystemExit):
+        load_durations(timings)
+
+
+def test_committed_timings_cover_most_test_modules() -> None:
+    from scripts.pytest_ci_plan import DURATIONS_FILE, discover_test_files, load_durations
+
+    durations = load_durations(DURATIONS_FILE)
+    modules = discover_test_files(DURATIONS_FILE.parent)
+    assert sum(path.resolve() in durations for path in modules) >= 0.8 * len(modules)
