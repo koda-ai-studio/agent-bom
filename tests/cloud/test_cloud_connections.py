@@ -1888,7 +1888,7 @@ def test_scan_gcp_brokers_runs_persists_and_marks_active(monkeypatch: pytest.Mon
     assert fetched["status"] == "active"
 
 
-def test_scan_snowflake_brokers_runs_persists_and_marks_active(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_scan_snowflake_persists_without_claiming_unobserved_capabilities(monkeypatch: pytest.MonkeyPatch) -> None:
     from agent_bom.cloud import connection_broker, snowflake_cis_benchmark
     from agent_bom.cloud import snowflake as snowflake_discovery
 
@@ -1930,7 +1930,12 @@ def test_scan_snowflake_brokers_runs_persists_and_marks_active(monkeypatch: pyte
     assert job.result.get("scan_sources") == ["cloud_connection", "cloud:snowflake"]
     assert job.result.get("cloud_inventory", {}).get("agent_count") == 0
     fetched = client.get(f"/v1/cloud/connections/{cid}", headers=_proxy_headers(tenant="tenant-alpha")).json()
-    assert fetched["status"] == "active"
+    # An aggregate account count without collection receipts does not establish
+    # permission coverage, even when the job itself completed successfully.
+    assert fetched["status"] == "pending"
+    assert fetched["capability_probe_status"] == "unavailable"
+    assert fetched["verified_capabilities"] == []
+    assert fetched["last_scan_id"] == accepted["job_id"]
 
 
 def test_scan_snowflake_sweeps_estate_into_graph(monkeypatch: pytest.MonkeyPatch) -> None:
