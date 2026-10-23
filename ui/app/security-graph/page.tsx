@@ -764,7 +764,7 @@ function AttackPathInvestigationContent() {
         pinned={pinnedNodeId ? graphNodeById.get(pinnedNodeId)?.label || "Selected asset" : null}
         steps={!captureMode ? (
           <InvestigationLifecycleStrip step={investigationStep} onStepChange={setInvestigationStep} completed={completedSteps}
-            scanId={selectedScanId} findingId={pathFindingId(selectedAttackPath, selectedAttackPath?.hops.flatMap(id => graphNodeById.get(id) ?? []) ?? [], focus.findingId)} />
+            findingId={pathFindingId(selectedAttackPath, selectedAttackPath?.hops.flatMap(id => graphNodeById.get(id) ?? []) ?? [], focus.findingId)} />
         ) : null}
         menu={
           <InvestigationExploreMenu

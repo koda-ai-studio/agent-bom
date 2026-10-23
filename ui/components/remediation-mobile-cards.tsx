@@ -37,7 +37,7 @@ function RemediationCard({ item, ticket, onCreateTicket }: {
         </dd>
         <dd className="font-mono">Risk {item.impact_score.toFixed(1)}</dd>
         <dd>{plural(item.affected_agents?.length ?? 0, "agent")}</dd>
-        <dd>{plural(item.exposed_credentials?.length ?? 0, "credential")}</dd>
+        <dd title="Credentials this advisory's impact can reach. The exploit story counts every credential the hosting servers hold.">{plural(item.exposed_credentials?.length ?? 0, "credential")} exposed</dd>
       </dl>
       <div className="flex flex-wrap gap-1">
         {item.vulnerabilities.slice(0, 2).map(cve => (

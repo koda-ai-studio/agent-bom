@@ -28,7 +28,7 @@ from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.stores import _get_store
 from agent_bom.graph.attack_path_queue import attack_path_rank_window
 from agent_bom.graph.completeness import graph_completeness
-from agent_bom.graph.diff_sources import changes_by_collected_source
+from agent_bom.graph.diff_sources import attribute_highlight_vendors, changes_by_collected_source
 from agent_bom.graph.diff_view import diff_summary, new_attack_paths
 
 _logger = logging.getLogger(__name__)
@@ -196,6 +196,13 @@ def scope_label(job: Any) -> str:
     return " / ".join(dict.fromkeys(part for part in parts if part))[:200] or "unlabelled scope"
 
 
+def scope_label_basis(job: Any, label: str) -> str:
+    """``default_scan_request`` when the label is only the unnamed-request fallback, not a named source or target."""
+    if isinstance(job, ScanJob) and label == "local-agents" and _scan_source_labels(job) == ["local-agents"]:
+        return "default_scan_request"
+    return "scan_target"
+
+
 def _snapshot_ref(job: Any) -> dict[str, str]:
     return {"scan_id": graph_scan_id(job), "job_id": str(job.job_id), "captured_at": scan_evidence_authority_key(job)[0]}
 
@@ -250,7 +257,13 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
     stats = {str(row.get("scan_id")): row for row in store.snapshots_by_ids(tenant_id=tenant, scan_ids=unpaired)} if unpaired else {}
     recorded = _recorded_issue_counts(tenant) if len(unpaired) < len(page) else {}
     for scope in page:
-        base = {"scope_id": _scope_id(scope.key), "label": scope_label(scope.current), "new": _snapshot_ref(scope.current)}
+        label = scope_label(scope.current)
+        base = {
+            "scope_id": _scope_id(scope.key),
+            "label": label,
+            "label_basis": scope_label_basis(scope.current, label),
+            "new": _snapshot_ref(scope.current),
+        }
         if scope.previous is None:
             row = stats.get(graph_scan_id(scope.current), {})
             first.append(
@@ -270,6 +283,7 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
         if summary["total_changes"]:
             summary["highlights"].update(_path_changes(store, tenant, old_id, new_id))
             _label_endpoints(store, tenant, old_id, new_id, summary["highlights"])
+            attribute_highlight_vendors(store, tenant, old_id, new_id, summary["highlights"])
         for kind in ("nodes", "edges"):
             for change, count in summary["totals"][kind].items():
                 totals[kind][change] += count

@@ -31,6 +31,18 @@ describe("agent drawer blast radius", () => {
     expect(screen.getByRole("link", { name: "CVE-2023-36258" })).toHaveAttribute("href", expect.stringContaining("node=agent%3Alangchain-service"));
   });
 
+  it("names credentials the server holds when the advisory's impact does not assert their exposure", async () => {
+    getAgentDetail.mockResolvedValue({
+      blast_radius: [blast("CVE-2020-14343", "critical", [], { package: "pyyaml@5.3", all_server_credentials: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"], impact_category: "unknown" })],
+    });
+    render(<AgentBlastSummary agentName="cursor" />);
+    const row = await screen.findByRole("listitem");
+    expect(row).not.toHaveTextContent("No credentials exposed");
+    const held = screen.getByText("2 credentials on server · exposure not asserted");
+    expect(held.getAttribute("title")).toContain("AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY");
+    expect(held.getAttribute("title")).toContain("impact (unknown)");
+  });
+
   it("says when there is no blast radius instead of showing zeroes", async () => {
     getAgentDetail.mockResolvedValue({ blast_radius: [] });
     render(<AgentBlastSummary agentName="cursor" />);

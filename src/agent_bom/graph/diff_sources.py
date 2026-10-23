@@ -52,4 +52,36 @@ def changes_by_collected_source(store: Any, tenant: str, old_id: str, new_id: st
     }
 
 
-__all__ = ["changes_by_collected_source"]
+_NODE_HIGHLIGHTS = ("new_critical_findings", "new_credential_reach", "removed_controls")
+_PATH_HIGHLIGHTS = ("new_attack_paths", "removed_attack_paths")
+
+
+def _highlight_rows(highlights: dict[str, Any], keys: tuple[str, ...]) -> list[dict[str, Any]]:
+    return [row for key in keys for row in (highlights.get(key) or {}).get("top") or [] if isinstance(row, dict)]
+
+
+def _vendor_anchor(row: dict[str, Any]) -> list[str]:
+    """A node names itself; a relationship or path names its target first, then its source."""
+    if row.get("kind") == "node":
+        return [str(row.get("id") or "")]
+    return [str(row.get("target") or ""), str(row.get("source") or "")]
+
+
+def attribute_highlight_vendors(store: Any, tenant: str, old_id: str, new_id: str, highlights: dict[str, Any]) -> None:
+    """Stamp each highlighted change with the vendor its node's collector recorded; unrecorded stays absent."""
+    rows = _highlight_rows(highlights, _NODE_HIGHLIGHTS) + _highlight_rows(highlights, _PATH_HIGHLIGHTS)
+    by_scan: dict[str, list[dict[str, Any]]] = {old_id: [], new_id: []}
+    for row in rows:
+        by_scan[old_id if row.get("change") == "removed" else new_id].append(row)
+    for scan_id, scan_rows in by_scan.items():
+        ids = {anchor for row in scan_rows for anchor in _vendor_anchor(row)} - {""}
+        if not ids:
+            continue
+        vendors = {node.id: node_vendor(node) for node in store.nodes_by_ids(tenant_id=tenant, scan_id=scan_id, node_ids=ids)}
+        for row in scan_rows:
+            vendor = next((vendors[anchor] for anchor in _vendor_anchor(row) if vendors.get(anchor)), "")
+            if vendor:
+                row["vendor"] = vendor
+
+
+__all__ = ["attribute_highlight_vendors", "changes_by_collected_source"]

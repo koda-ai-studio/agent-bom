@@ -14,9 +14,10 @@ afterEach(() => listFindings.mockReset());
 
 describe("investigation step links", () => {
   it("sends Fix to the remediation for the path's package, not the findings drawer", () => {
-    expect(packageRemediationHref("pillow@9.0.0", "current-estate:abc")).toBe("/remediation?q=pillow");
-    expect(packageRemediationHref("@scope/pkg@1.2.3", "scan-1")).toBe("/remediation?q=%40scope%2Fpkg&scan=scan-1");
-    expect(packageRemediationHref(undefined, "scan-1")).toBe("/remediation?scan=scan-1");
+    expect(packageRemediationHref("pillow@9.0.0")).toBe("/remediation?q=pillow");
+    // A graph snapshot id is not a remediation job id; passing it made /remediation 404.
+    expect(packageRemediationHref("@scope/pkg@1.2.3")).toBe("/remediation?q=%40scope%2Fpkg");
+    expect(packageRemediationHref(undefined)).toBe("/remediation");
   });
 });
 

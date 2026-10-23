@@ -16,6 +16,7 @@ import { FindingLaneTabs } from "@/components/finding-lane-tabs";
 import { FindingLaneTable, type LaneFinding } from "@/components/finding-lane-table";
 import { initialFindingLane, type FindingLane } from "@/lib/finding-lanes";
 import { FindingDrawer } from "@/components/finding-drawer";
+import { useDeepLinkFinding } from "@/hooks/use-deep-link-finding";
 import { ComponentFindings } from "@/components/inventory/component-findings";
 import { FindingsQueueTable } from "@/components/findings-queue";
 import { PaginationBar } from "@/components/pagination-bar";
@@ -206,6 +207,7 @@ function FindingsPage() {
   const [triageBusyKey, setTriageBusyKey] = useState<string | null>(null);
   const [vexExporting, setVexExporting] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(paramFinding ?? paramCve ?? null);
+  const { deepLinkFinding, rememberLoaded } = useDeepLinkFinding(paramFinding);
   const [page, setPage] = useState(() => {
     const parsed = Number(paramPage ?? "1");
     return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
@@ -513,7 +515,7 @@ function FindingsPage() {
       setError("");
       try {
         const currentCursor = pageCursors[page - 1] || undefined;
-        const findingQuery = search.trim() || paramFinding;
+        const findingQuery = search.trim() || deepLinkFinding;
         const response = await api.listFindings({
           ...(paramScan ? { scanId: paramScan } : {}),
           ...(findingQuery ? { query: findingQuery } : {}),
@@ -542,7 +544,7 @@ function FindingsPage() {
         if (cancelled) return;
         setLaneCountsApproximate(Boolean(response.lane_counts_approximate));
         setAppliedWindow(response.window ?? null);
-        setVulns(collectUnifiedFindings(response.findings));
+        setVulns(rememberLoaded(collectUnifiedFindings(response.findings)));
         setFindingsTotal(typeof response.total === "number" ? response.total : null);
         setFindingsTotalApproximate(Boolean(response.total_approximate));
         setFindingFacets(response.facets ?? null);
@@ -567,7 +569,7 @@ function FindingsPage() {
     return () => { cancelled = true; };
   }, [
     paramScan,
-    paramFinding,
+    deepLinkFinding, rememberLoaded,
     search,
     page,
     filter,

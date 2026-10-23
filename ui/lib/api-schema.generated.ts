@@ -16726,7 +16726,11 @@ export interface components {
          *     (``baseline: snapshot_continuity``). Each changed source carries added and
          *     removed stored attack paths in ``highlights`` and ``changes_by_source``:
          *     changed nodes per vendor and account the collector recorded on each node,
-         *     since one scan can collect many vendors. ``issue_change`` gives the open
+         *     since one scan can collect many vendors. Highlighted changes carry the
+         *     ``vendor`` their node recorded, when it recorded one. ``label`` names how
+         *     the scan was requested; ``label_basis: default_scan_request`` marks the
+         *     unnamed-request fallback (``local-agents``), which is not a vendor source.
+         *     ``issue_change`` gives the open
          *     issue-group counts the posture trend recorded for the pair's two scans
          *     (``None`` when either scan has no recorded point): the graph counts are
          *     nodes and links, the issue counts are the headline's unit. ``new_sources`` are first

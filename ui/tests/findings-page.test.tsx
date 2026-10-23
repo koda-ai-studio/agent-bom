@@ -224,7 +224,7 @@ describe("FindingsPage", () => {
     expect(within(drawer).queryByText("Last scanned")).not.toBeInTheDocument();
     expect(within(drawer).queryByText(/Source did not provide/i)).not.toBeInTheDocument();
     expect(within(drawer).getByText("Next action")).toBeInTheDocument();
-    expect(within(drawer).getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2026-1234&scan=scan-1");
+    expect(within(drawer).getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2026-1234");
     expect(within(drawer).queryByText("finding-1")).not.toBeInTheDocument();
 
     const closeButtons = within(drawer).getAllByRole("button", { name: "Close" });
@@ -273,6 +273,23 @@ describe("FindingsPage", () => {
         { scroll: false },
       );
     });
+  });
+
+  it("keeps the grouped row when a selection writes the finding into the URL", async () => {
+    routerReplace.mockImplementation((url: string) => { navigationState.query = url.split("?")[1] ?? ""; });
+    const { rerender } = render(<FindingsPage />);
+    fireEvent.click((await screen.findAllByRole("button", { name: "Open details for CVE-2026-1234" }))[0]!);
+    await waitFor(() => expect(navigationState.query).toContain("finding=finding-1"));
+    rerender(<FindingsPage />);
+    await act(async () => {});
+    expect(apiMock.listFindings).not.toHaveBeenCalledWith(expect.objectContaining({ query: "finding-1" }));
+    expect(within(screen.getByRole("dialog", { name: "Finding details for CVE-2026-1234" })).getByText("developer-copilot")).toBeInTheDocument();
+  });
+
+  it("still narrows to a deep-linked finding that is not on the loaded page", async () => {
+    navigationState.query = "finding=finding-elsewhere";
+    render(<FindingsPage />);
+    await waitFor(() => expect(apiMock.listFindings).toHaveBeenCalledWith(expect.objectContaining({ query: "finding-elsewhere" })));
   });
 
   it("links package and agent identities back into the findings investigation", async () => {

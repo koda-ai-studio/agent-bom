@@ -17,4 +17,10 @@ describe("package version label", () => {
     expect(packageVersionLabel({ packages: ["@scope/pkg@1.2.3"], current_version: "1.2.3" })).toBe("@scope/pkg@1.2.3");
     expect(packageVersionLabel({ packages: [], current_version: "1" })).toBe("");
   });
+
+  it("names the version count when an issue spans more than one installed version", () => {
+    expect(packageVersionLabel({ packages: ["ws@8.5.0"], current_version: "8.5.0", package_versions: ["8.17.0", "8.5.0"] })).toBe("ws · 2 versions");
+    expect(packageVersionLabel({ packages: ["@scope/pkg@1.0.0"], current_version: "1.0.0", package_versions: ["1.0.0", "2.0.0"], package_version_count: 3 })).toBe("@scope/pkg · 3 versions");
+    expect(packageVersionLabel({ packages: ["ws@8.5.0"], current_version: "8.5.0", package_versions: ["8.5.0"] })).toBe("ws@8.5.0");
+  });
 });

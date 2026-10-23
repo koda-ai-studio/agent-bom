@@ -105,9 +105,11 @@ it("keeps the generic next action only when no remediation is recorded", () => {
   expect(screen.getByText("Review the evidence and determine the appropriate fix.")).toBeVisible();
 });
 
-it("keeps the finding snapshot on its remediation link", () => {
-  render(<FindingDrawer vuln={{ ...base, scan_id: "scan-original", fixed_version: "6.0" }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
-  expect(screen.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2020-14343&scan=scan-original");
+it("links remediation to the current plan because a finding scan id is not a job id", () => {
+  render(<FindingDrawer vuln={{ ...base, scan_id: "showcase", fixed_version: "6.0" }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  const href = screen.getByRole("link", { name: "Review remediation" }).getAttribute("href");
+  expect(href).toBe("/remediation?q=CVE-2020-14343");
+  expect(href).not.toContain("scan=");
 });
 
 it("labels the finding-level reach score as priority, not path reachability", async () => {
@@ -154,4 +156,11 @@ it("names the estate asset in words and keeps raw graph ids under technical deta
   await user.click(screen.getByText("Technical details"));
   expect(screen.getByText(vuln.node_id)).toBeVisible();
   expect(screen.getByText(vuln.finding_node_id)).toBeVisible();
+});
+
+it("names an issue spanning several installed versions instead of one occurrence's version", () => {
+  render(<FindingDrawer vuln={{ ...base, packages: ["ws@8.5.0"], current_version: "8.5.0", fixed_version: "8.17.1", package_versions: ["8.17.0", "8.5.0"], agents: ["cursor"], affected_servers: [] }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getByText("ws · 2 versions")).toBeVisible();
+  expect(screen.getByText("Upgrade to 8.17.1")).toBeVisible();
+  expect(screen.queryByText("8.5.0 → 8.17.1")).not.toBeInTheDocument();
 });

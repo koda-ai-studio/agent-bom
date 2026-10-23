@@ -55,6 +55,29 @@ def _collect_group_occurrences(
     return rows, first_page, warnings, source_cursor
 
 
+_PACKAGE_VERSION_SAMPLE = 20
+
+
+def _occurrence_package_version(row: dict[str, Any]) -> str:
+    version = str(row.get("package_version") or "").strip()
+    if version:
+        return version
+    label = str(row.get("package") or "").strip()
+    at = label.rfind("@")
+    return label[at + 1 :].strip() if at > 0 else ""
+
+
+def _record_package_version(group: dict[str, Any], row: dict[str, Any]) -> None:
+    """Distinct versions across every occurrence, so a row never shows one version with another's scope."""
+    version = _occurrence_package_version(row)
+    seen = group["_package_version_set"]
+    if not version or version in seen:
+        return
+    seen.add(version)
+    if len(group["package_versions"]) < _PACKAGE_VERSION_SAMPLE:
+        group["package_versions"].append(version)
+
+
 def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool = False) -> list[dict[str, Any]]:
     """Fold occurrences onto their canonical issue identity with a bounded sample."""
     grouped: dict[str, dict[str, Any]] = {}
@@ -70,6 +93,8 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
                 unreconfirmed_occurrence_count=0,
                 _occurrence_rows=[],
                 occurrences_truncated=False,
+                package_versions=[],
+                _package_version_set=set(),
             )
             grouped[group_id] = group
         if severity_rank(str(row.get("severity") or "unknown")) > severity_rank(str(group.get("severity") or "unknown")):
@@ -84,12 +109,15 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
                     "unreconfirmed_occurrence_count",
                     "_occurrence_rows",
                     "occurrences_truncated",
+                    "package_versions",
+                    "_package_version_set",
                 )
             }
             group.clear()
             group.update(row)
             group.update(aggregate)
         group["occurrence_count"] = int(group["occurrence_count"]) + 1
+        _record_package_version(group, row)
         # The representative may be an image occurrence with no agent; the issue
         # still affects every agent and server its other occurrences name.
         for scope_key in ("affected_agents", "affected_servers"):

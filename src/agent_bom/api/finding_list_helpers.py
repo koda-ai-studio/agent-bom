@@ -125,6 +125,10 @@ def _serialize_finding_group(group: dict[str, Any]) -> dict[str, Any]:
     public["occurrence_count"] = int(group.get("occurrence_count") or 0)
     public["unreconfirmed_occurrence_count"] = int(group.get("unreconfirmed_occurrence_count") or 0)
     public["occurrences_truncated"] = bool(group.get("occurrences_truncated"))
+    versions = group.get("package_versions")
+    public["package_versions"] = [str(v) for v in versions] if isinstance(versions, list) else []
+    version_set = group.get("_package_version_set")
+    public["package_version_count"] = len(version_set) if isinstance(version_set, set) else len(public["package_versions"])
     samples = group.get("_occurrence_rows")
     public["occurrences"] = [
         _finding_occurrence_summary(safe_finding_response_payload(row))

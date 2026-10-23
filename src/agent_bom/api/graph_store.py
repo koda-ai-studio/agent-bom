@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     pass
 
+from agent_bom.api import graph_search_rank as search_rank
 from agent_bom.api.graph_store_pages import SQLiteGraphPagesMixin
 from agent_bom.api.graph_store_support import _API_GRAPH_TENANT_TABLE_KEYS as _API_GRAPH_TENANT_TABLE_KEYS
 from agent_bom.api.graph_store_support import _CREATE_PRESET_TABLE_SQLITE as _CREATE_PRESET_TABLE_SQLITE
@@ -914,21 +915,11 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                         source_filters.append(clause)
                         local_params.extend(clause_params)
                     local_where.append("(" + " OR ".join(source_filters) + ")")
-                row_params = list(local_params)
+                row_params = [*search_rank.match_rank_params(query), *local_params]
                 cursor_clause = ""
                 if cursor:
-                    severity_id, risk_score, label, node_id = decode_graph_cursor(cursor)
-                    cursor_clause = """
-                    AND (
-                        gn.severity_id < ?
-                        OR (gn.severity_id = ? AND gn.risk_score < ?)
-                        OR (gn.severity_id = ? AND gn.risk_score = ? AND gn.label > ?)
-                        OR (gn.severity_id = ? AND gn.risk_score = ? AND gn.label = ? AND gn.id > ?)
-                    )
-                    """
-                    row_params.extend(
-                        [severity_id, severity_id, risk_score, severity_id, risk_score, label, severity_id, risk_score, label, node_id]
-                    )
+                    cursor_clause = search_rank.search_cursor_clause(rank="match_rank", columns=search_rank.SEARCH_COLUMNS, placeholder="?")
+                    row_params.extend(search_rank.search_cursor_params(cursor))
 
                 where_sql = " AND ".join(local_where)
                 # Materialize only ranking keys once. Counting and sorting the
@@ -937,14 +928,16 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                 # the exact total even when an offset/cursor exhausts the page.
                 rows = conn_ro.execute(
                     f"""WITH matches AS MATERIALIZED (
-                        SELECT gn.rowid AS node_rowid, gn.id, gn.severity_id, gn.risk_score, gn.label
+                        SELECT gn.rowid AS node_rowid, gn.id, gn.severity_id, gn.risk_score, gn.label,
+                            {search_rank.SQLITE_RANK} AS match_rank
                         {from_clause} WHERE {where_sql}
                     ), page AS (
-                        SELECT * FROM matches WHERE 1=1 {cursor_clause.replace("gn.", "")}
-                        ORDER BY severity_id DESC, risk_score DESC, label ASC, id ASC LIMIT ? OFFSET ?
-                    ) SELECT gn.*, totals.match_total FROM (SELECT COUNT(*) AS match_total FROM matches) totals
+                        SELECT * FROM matches WHERE 1=1 {cursor_clause}
+                        ORDER BY match_rank ASC, severity_id DESC, risk_score DESC, label ASC, id ASC LIMIT ? OFFSET ?
+                    ) SELECT gn.*, page.match_rank AS search_match_rank, totals.match_total
+                    FROM (SELECT COUNT(*) AS match_total FROM matches) totals
                     LEFT JOIN page ON 1=1 LEFT JOIN graph_nodes gn ON gn.rowid = page.node_rowid
-                    ORDER BY page.severity_id DESC, page.risk_score DESC, page.label ASC, page.id ASC
+                    ORDER BY page.match_rank ASC, page.severity_id DESC, page.risk_score DESC, page.label ASC, page.id ASC
                     """,  # nosec B608 - fixed internal clauses; all search/filter/cursor values are bound
                     [*row_params, limit + 1 if cursor else limit, 0 if cursor else offset],
                 ).fetchall()
@@ -952,8 +945,7 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                 rows = [row for row in rows if row["id"] is not None]
                 has_more = len(rows) > limit if cursor else offset + limit < total
                 rows = rows[:limit]
-                nodes = [self._node_from_row(row) for row in rows]
-                next_cursor = encode_graph_cursor(nodes[-1]) if has_more and nodes else None
+                nodes, next_cursor = [self._node_from_row(row) for row in rows], search_rank.sqlite_next_cursor(rows, has_more)
                 return nodes, total, next_cursor
 
             from_clause = """

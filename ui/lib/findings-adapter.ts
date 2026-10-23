@@ -153,6 +153,8 @@ export function collectUnifiedFindings(findings: UnifiedFinding[]): LaneFinding[
       occurrences: finding.occurrences,
       occurrences_truncated: finding.occurrences_truncated,
       remediation_versions: finding.remediation_versions ?? undefined,
+      package_versions: finding.package_versions,
+      package_version_count: finding.package_version_count,
       provenance: finding.provenance ?? undefined,
       owner: finding.owner ?? undefined,
       sla_due_at: finding.sla_due_at ?? undefined,

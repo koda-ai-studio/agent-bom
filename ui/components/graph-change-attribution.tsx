@@ -1,7 +1,7 @@
 "use client";
 
 import { VendorMark } from "@/components/vendor-mark";
-import type { GraphChangeAttribution as Attribution } from "@/lib/api-types";
+import type { GraphChangeAttribution as Attribution, GraphEstateChangeSource } from "@/lib/api-types";
 import { vendorDisplayName } from "@/lib/path-vendor-scope";
 
 const n = (value: number) => value.toLocaleString();
@@ -9,6 +9,17 @@ const n = (value: number) => value.toLocaleString();
 function delta(counts: { added: number; removed: number; changed: number }): string {
   const parts = [counts.added ? `+${n(counts.added)}` : "", counts.removed ? `−${n(counts.removed)}` : ""].filter(Boolean).join(" ");
   return [parts, counts.changed ? `${n(counts.changed)} changed` : ""].filter(Boolean).join(" · ") + " nodes";
+}
+
+const HEADING_VENDORS = 3;
+
+/** A source's title: its named target, or for an unnamed scan request, the vendors its changes were collected from. */
+export function changeSourceHeading(source: Pick<GraphEstateChangeSource, "label" | "label_basis" | "changes_by_source">): string {
+  const vendors = [...new Set((source.changes_by_source?.sources ?? []).map((row) => vendorDisplayName(row.vendor)))];
+  if (source.label_basis !== "default_scan_request" || vendors.length === 0) return source.label;
+  const more = vendors.length - HEADING_VENDORS;
+  const unlisted = source.changes_by_source?.omitted_sources ? " and unlisted sources" : "";
+  return vendors.slice(0, HEADING_VENDORS).join(", ") + (more > 0 ? ` +${more} more` : "") + unlisted;
 }
 
 /** Which connector produced the changes: changed nodes per recorded vendor and account, not the scan's request label. */
