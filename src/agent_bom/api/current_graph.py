@@ -27,6 +27,7 @@ from typing import Any, cast
 from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
+from agent_bom.api.current_graph_lock import ProjectionLock as _ProjectionLock
 from agent_bom.api.file_lock import exclusive_file_lock
 from agent_bom.api.finding_read_context import forget_read, on_scope_exit, read_once
 from agent_bom.api.findings_current import _finding_snapshot_jobs, scan_collection_incomplete_reasons, scan_evidence_authority_key
@@ -84,6 +85,10 @@ def _generation_rotating() -> HTTPException:
     return HTTPException(503, cast(str, detail), headers={"Retry-After": "1"})
 
 
+class _EvidenceMovedError(Exception):
+    """A source snapshot was replaced while the projection was assembled; rebuild from fresh evidence."""
+
+
 def _build_wait_seconds() -> float:
     """How long a read waits for another request's rebuild before serving the previous generation."""
     try:
@@ -119,69 +124,6 @@ def _durable_cache_path(graph_store: Any) -> Path | None:
     except OSError:
         return None
     return path
-
-
-class _ProjectionLock:
-    """Readers share the projection; resolve and retire are exclusive.
-
-    A waiting writer blocks new readers so a steady read stream cannot starve a
-    rebuild. A thread that already reads may read again, but it may not escalate:
-    waiting for its own shared hold would deadlock, so that is a 409 instead.
-    """
-
-    def reading_here(self) -> bool:
-        with self._cond:
-            return bool(self._reads.get(threading.get_ident()))
-
-    def __init__(self) -> None:
-        self._cond = threading.Condition()
-        self._reads: dict[int, int] = {}
-        self._writer: int | None = None
-        self._writer_depth = 0
-        self._waiting_writers = 0
-
-    @contextmanager
-    def shared(self) -> Iterator[None]:
-        me = threading.get_ident()
-        with self._cond:
-            if self._writer != me and not self._reads.get(me):
-                while self._writer is not None or self._waiting_writers:
-                    self._cond.wait()
-            self._reads[me] = self._reads.get(me, 0) + 1
-        try:
-            yield
-        finally:
-            with self._cond:
-                if self._reads[me] == 1:
-                    del self._reads[me]
-                    self._cond.notify_all()
-                else:
-                    self._reads[me] -= 1
-
-    @contextmanager
-    def exclusive(self) -> Iterator[None]:
-        me = threading.get_ident()
-        with self._cond:
-            if self._writer == me:
-                self._writer_depth += 1
-            else:
-                if self._reads.get(me):
-                    raise HTTPException(409, "Current estate changed during the read; restart the query.")
-                self._waiting_writers += 1
-                try:
-                    while self._writer is not None or self._reads:
-                        self._cond.wait()
-                finally:
-                    self._waiting_writers -= 1
-                self._writer, self._writer_depth = me, 1
-        try:
-            yield
-        finally:
-            with self._cond:
-                self._writer_depth -= 1
-                if not self._writer_depth:
-                    self._writer = None
-                    self._cond.notify_all()
 
 
 def graph_scan_id(job: Any) -> str:
@@ -488,13 +430,22 @@ class CurrentGraphStore:
                     if live := self._cached_live_id(tenant, fingerprint):
                         return self._pin(live)
         cached = self._cache.get(tenant)
-        if jobs is None:
-            jobs = [self._job_store.get(row["job_id"], tenant_id=tenant) for row in summaries]
-        jobs = [job for job in jobs if job is not None and job.tenant_id == tenant]
-        selected, revisions, coverage_reasons = self._available_sources(tenant, jobs)
-        identity = CURRENT_PREFIX + _digest([_PROJECTION_FORMAT, __version__, tenant, fingerprint, revisions])[:32]
-        if not self._reusable(tenant, identity):
-            self._materialize(tenant, identity, selected, revisions)
+        for attempt in range(_UNPINNED_READ_ATTEMPTS):
+            if attempt:
+                summaries, evidence_revision, jobs, fingerprint = self._evidence_state(tenant, request_scoped=False)
+            if jobs is None:
+                jobs = [self._job_store.get(row["job_id"], tenant_id=tenant) for row in summaries]
+            jobs = [job for job in jobs if job is not None and job.tenant_id == tenant]
+            selected, revisions, coverage_reasons = self._available_sources(tenant, jobs)
+            identity = CURRENT_PREFIX + _digest([_PROJECTION_FORMAT, __version__, tenant, fingerprint, revisions])[:32]
+            try:
+                if not self._reusable(tenant, identity):
+                    self._materialize(tenant, identity, selected, revisions)
+                break
+            except _EvidenceMovedError:
+                jobs = None
+        else:
+            raise _generation_rotating()
         # Evidence that lands during assembly belongs to the next generation:
         # this one is a whole view of the evidence read above, and the next
         # read's fingerprint no longer matches it, so it rebuilds.
@@ -558,7 +509,7 @@ class CurrentGraphStore:
             # for the combined projection rather than inheriting those receipts.
             source_statuses.append({name: entry for name, entry in source.analysis_status.items() if name != "paths"})
         if self._revisions(tenant, (scan for scan, _ in revisions)) != revisions:
-            raise HTTPException(409, "Current estate evidence changed during assembly; retry the read.")
+            raise _EvidenceMovedError
         from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
 
         graph.analysis_status = merge_analysis_statuses(source_statuses)

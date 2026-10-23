@@ -251,3 +251,53 @@ def test_openapi_documents_the_retryable_rotation_response_on_get_graph():
     response = app.openapi()["paths"]["/v1/graph"]["get"]["responses"]["503"]
     assert "Retry-After" in response["headers"]
     assert "current_estate_generation_rotating" in response["description"]
+
+
+def _replay_source_during_assembly(estate, *, times: int) -> list[int]:
+    """Re-push the source scan while the projection loads it, so its revision moves mid-assembly."""
+    graph_store = estate[1]
+    load = graph_store.load_graph
+    replays: list[int] = []
+
+    def replaying(*args, **kwargs):
+        graph = load(*args, **kwargs)
+        if kwargs.get("scan_id") and len(replays) < times:
+            replays.append(1)
+            record(estate, 8, "repo-a", f"package-replay-{len(replays)}", tenant=kwargs.get("tenant_id", TENANT))
+        return graph
+
+    graph_store.load_graph = replaying  # type: ignore[method-assign]
+    return replays
+
+
+def test_evidence_replaced_during_assembly_rebuilds_from_fresh_evidence_not_a_conflict(estate):
+    record(estate, 8, "repo-a", "package-a")
+    store = CurrentGraphStore(estate[1], estate[0])
+    replays = _replay_source_during_assembly(estate, times=1)
+    graph = store.load_graph(tenant_id=TENANT)
+    assert replays == [1]
+    assert set(graph.nodes) == {"package-replay-1"}
+
+
+def test_evidence_that_keeps_moving_during_assembly_is_retryable_not_a_conflict(estate):
+    record(estate, 8, "repo-a", "package-a")
+    store = CurrentGraphStore(estate[1], estate[0])
+    _replay_source_during_assembly(estate, times=100)
+    with pytest.raises(HTTPException) as exc:
+        store.load_graph(tenant_id=TENANT)
+    assert exc.value.status_code == 503
+    assert exc.value.headers == {"Retry-After": "1"}
+    assert exc.value.detail["code"] == "current_estate_generation_rotating"
+
+
+def test_get_graph_answers_assembly_churn_with_503_retry_after(estate):
+    from starlette.testclient import TestClient
+
+    from agent_bom.api.server import app
+
+    record(estate, 8, "repo-a", "package-a", tenant="default")
+    _replay_source_during_assembly(estate, times=100)
+    response = TestClient(app).get("/v1/graph", params={"limit": 10})
+    assert response.status_code == 503, response.text
+    assert response.headers["Retry-After"] == "1"
+    assert response.json()["error"]["details"]["code"] == "current_estate_generation_rotating"
