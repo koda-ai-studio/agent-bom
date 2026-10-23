@@ -83,10 +83,6 @@ def register_runtime_catalog_tools(
             _truncate_response=truncate_response,
         )
 
-    from agent_bom.mcp_tools.activity import register_agent_activity_tool
-
-    register_agent_activity_tool(mcp, execute_tool_sync_async=execute_tool_sync_async, truncate_response=truncate_response)
-
     register_audit_tool(
         mcp,
         runtime_introspection=runtime_introspection,

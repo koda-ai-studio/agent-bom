@@ -32,6 +32,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol, cast
 
 from agent_bom.core.http_retry import provider_retry_after
+from agent_bom.runtime.agent_sessions import LOCAL_SESSION_PROVIDERS
+from agent_bom.runtime.agent_sessions.provider import local_session_connectors
 from agent_bom.runtime.native_trace_spans import native_span
 from agent_bom.runtime.normalized_trace import PrincipalDigest
 
@@ -114,8 +116,6 @@ class _HttpClient(Protocol):
 
 def list_trace_connectors() -> list[dict[str, Any]]:
     """Describe the available native trace-pull connectors and local history providers."""
-    from agent_bom.runtime.agent_sessions.provider import local_session_connectors
-
     return [
         {
             "name": LANGFUSE,
@@ -346,8 +346,6 @@ def fetch_traces(
     :func:`list_trace_connectors`). Values are used for auth only and never
     logged. Returns flat OTLP ``{"spans": [...]}``.
     """
-    from agent_bom.runtime.agent_sessions import LOCAL_SESSION_PROVIDERS
-
     key = (provider or "").strip().lower()
     if key in LOCAL_SESSION_PROVIDERS:
         # Never read the serving host's own files on behalf of a remote caller.

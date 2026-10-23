@@ -8,6 +8,9 @@ from datetime import datetime, timedelta, timezone
 
 import click
 
+from agent_bom.cli._agent_mode import agent_mode_requested, emit_command_envelope
+from agent_bom.runtime.agent_sessions.render import render_text
+
 _RELATIVE = re.compile(r"^(\d{1,4})([dh])$")
 
 
@@ -40,9 +43,7 @@ def activity_cmd(since_text: str, project: str | None, output_format: str, check
     machine only. Prompts and responses are never read into the report; command
     and path evidence is redacted. Nothing is sent unless --check-packages is set.
     """
-    from agent_bom.cli._agent_mode import agent_mode_requested, emit_command_envelope
     from agent_bom.runtime.agent_sessions.activity import build_activity_report
-    from agent_bom.runtime.agent_sessions.render import render_text
 
     report = build_activity_report(since=parse_since(since_text), project=project, check_packages=check_packages)
     if agent_mode_requested():

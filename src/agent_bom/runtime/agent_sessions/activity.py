@@ -13,9 +13,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from agent_bom.canonical_ids import agent_graph_id_for
+from agent_bom.models import AgentType, AIBOMReport
 from agent_bom.runtime.agent_sessions import PROVIDER_AGENT_TYPES, SessionBounds
 from agent_bom.runtime.agent_sessions.bindings import SessionBindings
 from agent_bom.runtime.agent_sessions.findings import LowSignalWrites, installed_packages, risky_actions
+from agent_bom.runtime.agent_sessions.package_checks import check_installed_packages
 from agent_bom.runtime.agent_sessions.projection import project_session_spans
 from agent_bom.runtime.agent_sessions.provider import default_since, fetch_local_session_traces
 from agent_bom.runtime.agent_sessions.spans import redact_path
@@ -29,7 +32,6 @@ _AGENT_TYPES = set(PROVIDER_AGENT_TYPES.values())
 def discover_session_agents(project: str | None = None) -> list[Any]:
     """Reuse discovery for the clients whose history is read (Claude Code, Codex)."""
     from agent_bom.discovery import discover_global_configs, discover_project_configs
-    from agent_bom.models import AgentType
 
     agents = discover_global_configs([AgentType.CLAUDE_CODE, AgentType.CODEX_CLI], quiet=True)
     agents.extend(discover_project_configs(project) if project else [])
@@ -99,14 +101,11 @@ def _unused(bindings: SessionBindings, servers: dict, history: dict[str, bool], 
 
 
 def _agent_id(agent: Any) -> str:
-    from agent_bom.canonical_ids import agent_graph_id_for
-
     return agent_graph_id_for(agent)
 
 
 def _graph(agents: list[Any], spans: list[dict[str, Any]], since: datetime, until: datetime) -> tuple[Any, Any]:
     from agent_bom.graph.builder import build_unified_graph_from_report
-    from agent_bom.models import AIBOMReport
     from agent_bom.output.json_fmt import to_json
 
     graph = build_unified_graph_from_report(to_json(AIBOMReport(agents=agents)), tenant_id="local")
@@ -169,6 +168,4 @@ def build_activity_report(
 
 
 def _check(packages: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    from agent_bom.runtime.agent_sessions.package_checks import check_installed_packages
-
     return check_installed_packages(packages)

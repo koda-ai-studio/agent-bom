@@ -38,7 +38,6 @@ Full profile Tools (96):
     inventory_asset     — Asset attributes and bounded recorded relationships
     where               — Show all MCP discovery paths + existence status
     inventory           — List agents/servers without CVE scanning
-    agent_activity      — Local review of coding-agent sessions: usage, unused servers, risky actions
     tool_risk_assessment — Score live MCP tool capabilities and server risk
     diff                — Compare scan against baseline for new/resolved vulns
     marketplace_check   — Pre-install trust check with registry cross-reference

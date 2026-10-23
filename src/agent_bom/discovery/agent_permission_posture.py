@@ -17,6 +17,7 @@ import tomllib
 from pathlib import Path
 from typing import Any, Optional
 
+from agent_bom.core.settings import env_opt
 from agent_bom.discovery.agent_permissions import CLAUDE_CODE, CODEX, audit_claude_code_settings, audit_codex_config
 from agent_bom.discovery.platform_config import _project_search_dir, _read_text_no_symlink
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
@@ -56,11 +57,11 @@ def managed_settings_dirs() -> list[Path]:
 
 
 def _claude_home() -> Path:
-    return Path(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"))
+    return Path(env_opt("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"))
 
 
 def _codex_home() -> Path:
-    return Path(os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex"))
+    return Path(env_opt("CODEX_HOME") or os.path.expanduser("~/.codex"))
 
 
 def _load(path: Path) -> Optional[dict]:

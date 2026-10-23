@@ -15,7 +15,7 @@ from pathlib import Path
 MAX_GIT_LOOKUPS = 256
 _GIT_TIMEOUT_SECONDS = 2.0
 _SYSTEM_PREFIXES = ("/etc/", "/usr/", "/bin/", "/sbin/", "/System/", "/Library/", "/var/root/", "/opt/homebrew/etc/")
-_TEMP_PREFIXES = ("/tmp", "/private/tmp", "/var/folders", "/private/var/folders")
+_TEMP_PREFIXES = ("/tmp", "/private/tmp", "/var/folders", "/private/var/folders")  # nosec B108 - classifies observed paths; never creates files
 _AGENT_STATE_DIRS = (".claude", ".codex")
 # Files that change what the agent may do or is told to do in later sessions.
 _AGENT_CONTROL_FILES = {"settings.json", "settings.local.json", "config.toml", "CLAUDE.md", "AGENTS.md"}

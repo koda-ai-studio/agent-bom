@@ -5,12 +5,13 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from agent_bom.models import Package
+
 MAX_CHECKED = 50
 _ECOSYSTEMS = {"npm", "pypi", "cargo", "go"}
 
 
 async def _check_all(packages: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    from agent_bom.models import Package
     from agent_bom.scanners import ScanOptions, scan_packages
 
     targets = [row for row in packages if row["ecosystem"] in _ECOSYSTEMS][:MAX_CHECKED]

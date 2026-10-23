@@ -5,15 +5,16 @@ from __future__ import annotations
 import json
 from typing import Annotated, Any
 
+from mcp_types import ToolAnnotations
 from pydantic import Field
 
+from agent_bom.runtime.agent_sessions.activity import build_activity_report
+from agent_bom.runtime.agent_sessions.provider import default_since
 from agent_bom.security import sanitize_error
 
 
 def agent_activity_impl(*, days: int = 30, project: str | None = None, _truncate_response) -> str:
     """Build the activity review; never performs network lookups."""
-    from agent_bom.runtime.agent_sessions.activity import build_activity_report
-    from agent_bom.runtime.agent_sessions.provider import default_since
 
     try:
         report: dict[str, Any] = build_activity_report(since=default_since(days), project=project, check_packages=False)
@@ -26,8 +27,6 @@ def agent_activity_impl(*, days: int = 30, project: str | None = None, _truncate
 
 
 def register_agent_activity_tool(mcp, *, execute_tool_sync_async, truncate_response) -> None:
-    from mcp_types import ToolAnnotations
-
     local_read_only = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
 
     @mcp.tool(annotations=local_read_only, title="Agent Activity Review")

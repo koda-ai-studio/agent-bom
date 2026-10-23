@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
+from agent_bom.mcp_tools.activity import register_agent_activity_tool
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl
 
 
@@ -67,3 +68,5 @@ def register_audit_tool(mcp, *, runtime_introspection, execute_tool_sync_async, 
             _truncate_response=truncate_response,
             destructive=allow_command_execution,
         )
+
+    register_agent_activity_tool(mcp, execute_tool_sync_async=execute_tool_sync_async, truncate_response=truncate_response)

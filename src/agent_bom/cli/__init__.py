@@ -268,17 +268,13 @@ runtime_group.commands["configure"].hidden = True
 runtime_group.commands["protect"].hidden = True
 main.add_command(runtime_group)
 
-
 # Top-level shortcuts for primary runtime commands
 main.add_command(proxy_cmd, "proxy")
 main.add_command(proxy_bootstrap_cmd, "proxy-bootstrap")
 main.add_command(watch_cmd, "watch")
 main.add_command(audit_replay_cmd, "audit")
 main.add_command(audit_drain_dlq_cmd, "audit-drain-dlq")
-
-from agent_bom.cli._activity import activity_cmd  # noqa: E402
-
-main.add_command(activity_cmd, "activity")
+main.add_command(runtime_group.commands["activity"], "activity")
 
 from agent_bom.cli._analysis import (  # noqa: E402
     analytics_cmd,
