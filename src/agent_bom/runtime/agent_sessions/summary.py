@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 
-def _count(rows: list[dict[str, Any]], **match: str) -> int:
-    """Occurrences, not grouped rows."""
-    return sum(int(row.get("count", 1)) for row in rows if all(row.get(key) == value for key, value in match.items()))
+def _total(report: dict[str, Any], category: str, key: str = "occurrences") -> int:
+    """Occurrences from the uncapped per-category totals, never the listed rows."""
+    return int(report["risky_action_totals"].get(category, {}).get(key, 0))
 
 
 def _recommendations(report: dict[str, Any]) -> list[str]:
-    risky, unused, packages = report["risky_actions"], report["unused_servers"], report["installed_packages"]
+    unused, packages = report["unused_servers"], report["installed_packages"]
     candidates: list[str] = []
     if unused:
         names = ", ".join(sorted({f"{row['server']} ({row['agent']})" for row in unused})[:3])
@@ -19,22 +19,22 @@ def _recommendations(report: dict[str, Any]) -> list[str]:
             f"Remove {len(unused)} MCP server(s) your agents never called in this window, such as {names}: "
             "configured servers are attack surface even when unused."
         )
-    pipe = _count(risky, category="pipe_to_shell")
+    pipe = _total(report, "pipe_to_shell")
     if pipe:
         candidates.append(
             f"Agents piped downloaded scripts into a shell {pipe} time(s); require review before running remote install scripts."
         )
-    destructive = _count(risky, category="destructive_command", severity="high")
+    destructive = _total(report, "destructive_command", "high")
     if destructive:
         candidates.append(
             f"Review {destructive} high-risk destructive command(s) such as force pushes; deny them in the agent's permission settings."
         )
-    secrets = _count(risky, category="secret_file_read")
+    secrets = _total(report, "secret_file_read")
     if secrets:
         candidates.append(
             f"Agents read secret-like files {secrets} time(s); deny reads of .env, keys and credential files in agent permissions."
         )
-    outside = _count(risky, category="write_outside_project")
+    outside = _total(report, "write_outside_project")
     if outside:
         candidates.append(f"Agents wrote outside their project {outside} time(s); limit write access to the project directory.")
     if packages:
@@ -47,14 +47,14 @@ def _recommendations(report: dict[str, Any]) -> list[str]:
 
 
 def build_summary(report: dict[str, Any]) -> dict[str, Any]:
-    totals, risky = report["totals"], report["risky_actions"]
+    totals = report["totals"]
     counts = {
         "sessions": totals["sessions"],
         "tool_calls": totals["tool_calls"],
         "mcp_calls": totals["mcp_calls"],
         "mcp_servers_used": len(report["mcp_servers"]),
         "unused_servers": len(report["unused_servers"]),
-        "high_risk_actions": _count(risky, severity="high"),
+        "high_risk_actions": sum(total["high"] for total in report["risky_action_totals"].values()),
         "risky_actions": sum(total["occurrences"] for total in report["risky_action_totals"].values()),
         "installed_packages": len(report["installed_packages"]),
     }

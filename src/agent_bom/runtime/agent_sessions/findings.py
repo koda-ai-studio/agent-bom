@@ -6,14 +6,38 @@ from collections.abc import Iterable
 from typing import Any
 
 from agent_bom.runtime.agent_sessions.packages import packages_from_command
-from agent_bom.runtime.agent_sessions.risk import SEVERITY_RANK, Risk, classify_command, is_secret_path, outside_root, write_severity
+from agent_bom.runtime.agent_sessions.risk import SEVERITY_RANK, Risk, classify_command, is_secret_path, outside_root
 from agent_bom.runtime.agent_sessions.views import CallView, later
+from agent_bom.runtime.agent_sessions.write_scope import WriteScope
 
 MAX_ROWS_PER_CATEGORY = 25
 MAX_SESSION_IDS = 5
 
 
-def _risks(view: CallView) -> list[Risk]:
+class LowSignalWrites:
+    """Writes outside the cwd that land in the same repo, temp or agent state: counted, not flagged."""
+
+    def __init__(self) -> None:
+        self._paths: dict[str, set[str]] = {}
+        self._occurrences: dict[str, int] = {}
+
+    def add(self, reason: str, path: str) -> None:
+        self._paths.setdefault(reason, set()).add(path)
+        self._occurrences[reason] = self._occurrences.get(reason, 0) + 1
+
+    def to_dict(self) -> dict[str, dict[str, int]]:
+        return {reason: {"occurrences": self._occurrences[reason], "distinct": len(paths)} for reason, paths in sorted(self._paths.items())}
+
+
+def _write_risk(path: str, view: CallView, scope: WriteScope, low_signal: LowSignalWrites) -> Risk | None:
+    verdict, detail = scope.classify(path, view.project_root)
+    if verdict == "risky":
+        return Risk("write_outside_project", detail, path)
+    low_signal.add(detail, path)
+    return None
+
+
+def _risks(view: CallView, scope: WriteScope, low_signal: LowSignalWrites) -> list[Risk]:
     risks: list[Risk] = []
     if view.action == "exec" and view.command:
         risks.extend(classify_command(view.command))
@@ -23,15 +47,16 @@ def _risks(view: CallView) -> list[Risk]:
         if view.action == "read" and is_secret_path(path):
             risks.append(Risk("secret_file_read", "medium", path))
         if view.action == "write" and outside_root(path, view.project_root):
-            risks.append(Risk("write_outside_project", write_severity(path), path))
+            if (risk := _write_risk(path, view, scope, low_signal)) is not None:
+                risks.append(risk)
     return risks
 
 
-def _group(views: Iterable[CallView]) -> dict[tuple[str, str, str, str], dict[str, Any]]:
+def _group(views: Iterable[CallView], scope: WriteScope, low_signal: LowSignalWrites) -> dict[tuple[str, str, str, str], dict[str, Any]]:
     """One row per (category, severity, agent, evidence); repeats become a count."""
     groups: dict[tuple[str, str, str, str], dict[str, Any]] = {}
     for view in views:
-        for risk in _risks(view):
+        for risk in _risks(view, scope, low_signal):
             row = groups.setdefault(
                 (risk.category, risk.severity, view.agent, risk.evidence),
                 {
@@ -55,15 +80,20 @@ def _group(views: Iterable[CallView]) -> dict[tuple[str, str, str, str], dict[st
     return groups
 
 
-def risky_actions(views: Iterable[CallView]) -> tuple[list[dict[str, Any]], dict[str, dict[str, int]]]:
+def risky_actions(
+    views: Iterable[CallView], *, scope: WriteScope | None = None, low_signal: LowSignalWrites | None = None
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, int]]]:
     """Grouped rows most severe first, at most ``MAX_ROWS_PER_CATEGORY`` per category, plus full totals."""
-    rows = sorted(_group(views).values(), key=lambda row: row["last_seen"], reverse=True)
+    rows = sorted(
+        _group(views, scope or WriteScope(), low_signal or LowSignalWrites()).values(), key=lambda row: row["last_seen"], reverse=True
+    )
     rows.sort(key=lambda row: (SEVERITY_RANK.get(row["severity"], 9), -row["count"]))
     totals: dict[str, dict[str, int]] = {}
     shown: list[dict[str, Any]] = []
     for row in rows:
-        total = totals.setdefault(row["category"], {"occurrences": 0, "distinct": 0, "shown": 0})
+        total = totals.setdefault(row["category"], {"occurrences": 0, "distinct": 0, "shown": 0, "high": 0, "medium": 0, "low": 0})
         total["occurrences"] += row["count"]
+        total[row["severity"]] += row["count"]
         total["distinct"] += 1
         if total["shown"] < MAX_ROWS_PER_CATEGORY:
             total["shown"] += 1

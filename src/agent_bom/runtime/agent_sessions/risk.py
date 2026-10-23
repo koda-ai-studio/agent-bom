@@ -21,7 +21,6 @@ _SECRET_NAMES = {"id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "credentials", ".
 _SECRET_SUFFIXES = (".pem", ".key", ".p12", ".pfx", ".keystore")
 _SECRET_PARTS = ("/.aws/credentials", "/.docker/config.json", "/.kube/config", "/.ssh/", "/.gnupg/")
 _ENV_TEMPLATES = {".env.example", ".env.sample", ".env.template", ".env.dist"}
-_SENSITIVE_WRITE = ("/etc/", "~/.ssh/", "~/.aws/", "~/.zshrc", "~/.bashrc", "~/.profile", "~/.bash_profile", "~/.gitconfig")
 
 
 @dataclass(frozen=True)
@@ -57,10 +56,6 @@ def classify_command(command: str) -> list[Risk]:
             risks.append(Risk("secret_file_read", "medium", match.group(1)))
             break
     return risks
-
-
-def write_severity(path: str) -> str:
-    return "high" if path.startswith(_SENSITIVE_WRITE) else "medium"
 
 
 def outside_root(path: str, root: str) -> bool:

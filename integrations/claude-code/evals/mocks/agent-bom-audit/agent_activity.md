@@ -155,7 +155,7 @@ type: fixed
    "agent": "codex-cli",
    "project": "/home/dev/proj",
    "tool": "apply_patch",
-   "evidence": "/tmp/build-notes.txt",
+   "evidence": "/home/dev/other-repo/Makefile",
    "count": 1,
    "first_seen": "2026-10-19T11:40:00+00:00",
    "last_seen": "2026-10-19T11:40:00+00:00",
@@ -264,5 +264,15 @@ type: fixed
    "shown": 1
   }
  },
- "risky_actions_truncated": false
+ "risky_actions_truncated": false,
+ "low_signal_writes": {
+  "same_repository": {
+   "occurrences": 14,
+   "distinct": 6
+  },
+  "temp_dir": {
+   "occurrences": 3,
+   "distinct": 2
+  }
+ }
 }

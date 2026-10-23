@@ -8,7 +8,6 @@ asks the existing vulnerability check to look installed packages up.
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,7 +15,7 @@ from typing import Any
 
 from agent_bom.runtime.agent_sessions import PROVIDER_AGENT_TYPES, SessionBounds
 from agent_bom.runtime.agent_sessions.bindings import SessionBindings
-from agent_bom.runtime.agent_sessions.findings import installed_packages, risky_actions
+from agent_bom.runtime.agent_sessions.findings import LowSignalWrites, installed_packages, risky_actions
 from agent_bom.runtime.agent_sessions.projection import project_session_spans
 from agent_bom.runtime.agent_sessions.provider import default_since, fetch_local_session_traces
 from agent_bom.runtime.agent_sessions.spans import redact_path
@@ -138,7 +137,8 @@ def build_activity_report(
     servers, builtin = _usage(views)
     history = {PROVIDER_AGENT_TYPES[p]: bool(stats["history_found"] and stats["files_read"]) for p, stats in sources.items()}
     packages = installed_packages(views)
-    risky_rows, risky_totals = risky_actions(views)
+    low_signal = LowSignalWrites()
+    risky_rows, risky_totals = risky_actions(views, low_signal=low_signal)
     report: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "window": _window(since, until, project),
@@ -156,6 +156,7 @@ def build_activity_report(
         "unused_servers": _unused(bindings, servers, history, relevant),
         "risky_actions": risky_rows,
         "risky_action_totals": risky_totals,
+        "low_signal_writes": low_signal.to_dict(),
         "risky_actions_truncated": any(row["shown"] < row["distinct"] for row in risky_totals.values()),
         "installed_packages": packages,
         "package_checks": _check(packages) if check_packages else None,
@@ -163,7 +164,7 @@ def build_activity_report(
         "truncated": any(stats["truncated"] for stats in sources.values()),
     }
     report["summary"] = build_summary(report)
-    report["risk_counts"] = dict(Counter(row["severity"] for row in risky_rows for _ in range(row["count"])))
+    report["risk_counts"] = {level: sum(total[level] for total in risky_totals.values()) for level in ("high", "medium", "low")}
     return report
 
 

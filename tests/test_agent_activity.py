@@ -113,7 +113,8 @@ def test_risky_actions_are_ordered_and_redacted(report):
     assert all(row["count"] >= 1 and row["last_seen"] for row in risky)
     assert ranks == sorted(ranks)
     outside = sorted(row["evidence"] for row in risky if row["category"] == "write_outside_project")
-    assert outside == ["/etc/hosts", "/tmp/outside.txt"]
+    assert outside == ["/etc/hosts"]  # /tmp is the OS temp dir: counted as low signal instead
+    assert report["low_signal_writes"]["temp_dir"] == {"occurrences": 1, "distinct": 1}
     secret = next(row for row in risky if row["category"] == "secret_file_read")
     assert secret["evidence"] == f"{PROJECT}/.env" and secret["session_ids"] == ["s-claude-1"]
     assert FAKE_TOKEN not in json.dumps(report)
@@ -171,12 +172,12 @@ def test_repeats_group_and_caps_never_hide_a_category(monkeypatch):
         return CallView(action=action, **{**base, **kwargs})
 
     monkeypatch.setattr(findings, "MAX_ROWS_PER_CATEGORY", 2)
-    views = [view(i, "write", tool="Write", paths=(f"/tmp/f{i % 5}.txt",)) for i in range(40)]
+    views = [view(i, "write", tool="Write", paths=(f"/opt/data/f{i % 5}.txt",)) for i in range(40)]
     views += [view(i, "exec", command="npm install lodash") for i in range(3)]
     rows, totals = findings.risky_actions(views)
 
-    assert totals["write_outside_project"] == {"occurrences": 40, "distinct": 5, "shown": 2}
-    assert totals["package_install"] == {"occurrences": 3, "distinct": 1, "shown": 1}
+    assert totals["write_outside_project"] == {"occurrences": 40, "distinct": 5, "shown": 2, "high": 0, "medium": 40, "low": 0}
+    assert totals["package_install"] == {"occurrences": 3, "distinct": 1, "shown": 1, "high": 0, "medium": 0, "low": 3}
     install = next(row for row in rows if row["category"] == "package_install")
     assert install["count"] == 3 and install["session_ids"] == ["s0", "s1", "s2"]
     assert install["first_seen"] <= install["last_seen"]
@@ -186,3 +187,5 @@ def test_summary_counts_use_totals_not_the_shown_rows(report):
     totals = report["risky_action_totals"]
     assert report["summary"]["counts"]["risky_actions"] == sum(row["occurrences"] for row in totals.values())
     assert report["risky_actions_truncated"] is False
+    assert sum(report["risk_counts"].values()) == report["summary"]["counts"]["risky_actions"]
+    assert report["summary"]["counts"]["high_risk_actions"] == report["risk_counts"]["high"]

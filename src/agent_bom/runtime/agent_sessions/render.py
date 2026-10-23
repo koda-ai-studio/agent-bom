@@ -33,6 +33,9 @@ def _risks(report: dict[str, Any]) -> list[str]:
     by_category = ", ".join(f"{name} {row['occurrences']}" for name, row in report["risky_action_totals"].items())
     if by_category:
         lines.append("  " + _line(f"by category: {by_category}"))
+    low = ", ".join(f"{reason} {row['occurrences']}" for reason, row in report["low_signal_writes"].items())
+    if low:
+        lines.append("  " + _line(f"not flagged, writes outside the cwd into the same repo, temp or agent state: {low}"))
     for row in report["risky_actions"][:_TOP]:
         lines.append(
             "  "
