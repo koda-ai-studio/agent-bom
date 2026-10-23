@@ -14,6 +14,8 @@ import threading
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal, TypeVar
 
+from agent_bom.demo_estate import demo_estate_enabled
+
 _logger = logging.getLogger(__name__)
 
 _F = TypeVar("_F", bound=Callable[..., Any])
@@ -39,8 +41,6 @@ def demo_estate_seeding() -> bool:
 
 def demo_seed_state() -> Literal["pending", "complete"] | None:
     """``/health`` view of the boot seed: ``None`` outside demo mode."""
-    from agent_bom.demo_estate import demo_estate_enabled
-
     if not demo_estate_enabled():
         return None
     return "pending" if demo_estate_seeding() else "complete"

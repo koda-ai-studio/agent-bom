@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 
+from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -67,8 +68,6 @@ async def browser_extension_scan_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the browser_extension_scan tool."""
-    from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
-
     ensure_host_local_allowed()
     try:
         from agent_bom.parsers.browser_extensions import discover_browser_extensions

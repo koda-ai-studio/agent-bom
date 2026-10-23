@@ -255,7 +255,6 @@ so they cannot regress silently, but they are not part of this reference.
 ## MCP Server Limits
 | Env var | Type | Default | Description |
 |---|---|---|---|
-| `AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS` | `bool` | `False` | Host-local tools (agent_activity, browser_extension_scan, and host auto-discovery in inventory / tool_risk_assessment) read the server host's own workstation data. They are refused over HTTP/SSE unless this is set; stdio is unaffected. Read |
 | `AGENT_BOM_MCP_CALLER_RATE_LIMIT` | `int` | `120` | — |
 | `AGENT_BOM_MCP_CALLER_WINDOW_SECONDS` | `float` | `60.0` | — |
 | `AGENT_BOM_MCP_GLOBAL_RATE_LIMIT` | `int` | `MCP_CALLER_RATE_LIMIT * 20` | Process-wide ceiling across all MCP callers, enforced in addition to the per-caller window. Backstops a flood that spreads across many distinct (or unverified per-connection) caller identities. Defaults to a generous multiple of the per-cal |

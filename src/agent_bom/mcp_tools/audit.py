@@ -8,6 +8,8 @@ import logging
 from agent_bom import discovery, mcp_introspect
 from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
 from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
+from agent_bom.mcp_tools.dispatch import resolve_tool_path
+from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
 from agent_bom.scanners.mcp_audit import audit_mcp_agents
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 
@@ -26,9 +28,6 @@ def tool_risk_assessment_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the tool_risk_assessment tool."""
-    from agent_bom.mcp_server_runtime import resolve_tool_path
-    from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
-
     resolved_config_path = str(resolve_tool_path(_safe_path, config_path, argument="config_path")) if config_path else None
     if resolved_config_path is None:
         ensure_host_local_allowed()

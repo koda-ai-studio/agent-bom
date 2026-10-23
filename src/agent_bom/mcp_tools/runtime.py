@@ -11,9 +11,10 @@ from typing import Any, cast
 from agent_bom.api.route_offload import call_route as _call_route
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
 from agent_bom.core.experimental import disabled_message, is_enabled
-from agent_bom.mcp_server_runtime import resolve_tool_path, safe_path
+from agent_bom.mcp_server_runtime import safe_path
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl as tool_risk_assessment_impl
+from agent_bom.mcp_tools.dispatch import resolve_tool_path
 from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
 from agent_bom.security import sanitize_error
 

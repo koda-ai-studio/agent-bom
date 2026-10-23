@@ -59,12 +59,12 @@ def test_fleet_stats_and_overview_agree_on_low_trust(seeded_fleet) -> None:
     from types import SimpleNamespace
     from unittest.mock import patch
 
+    from agent_bom.api.fleet_stats import fleet_stats_payload
     from agent_bom.api.overview_projection import _identity_snapshot
-    from agent_bom.api.routes.fleet import _fleet_stats_payload
     from agent_bom.fleet.trust_scoring import LOW_TRUST_THRESHOLD
 
     expected = sum(1 for a in seeded_fleet if a.trust_score < LOW_TRUST_THRESHOLD)
-    stats = _fleet_stats_payload(seeded_fleet)
+    stats = fleet_stats_payload(seeded_fleet)
     assert stats["low_trust_count"] == expected
     assert stats["low_trust_count"] < stats["total"]
 

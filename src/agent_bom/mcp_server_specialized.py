@@ -7,7 +7,7 @@ from typing import Annotated, Any, Awaitable, Callable
 from pydantic import Field
 
 from agent_bom.mcp_errors import CODE_INTERNAL_UNEXPECTED, mcp_error_json
-from agent_bom.mcp_server_runtime import resolve_tool_path
+from agent_bom.mcp_tools.dispatch import resolve_tool_path
 from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstream importers
 
 

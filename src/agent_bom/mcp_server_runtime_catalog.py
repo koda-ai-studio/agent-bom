@@ -80,7 +80,6 @@ def register_runtime_catalog_tools(
             "inventory",
             inventory_impl,
             config_path=config_path,
-            _safe_path=safe_path,
             _truncate_response=truncate_response,
         )
 

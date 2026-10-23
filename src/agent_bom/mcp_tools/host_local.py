@@ -15,30 +15,27 @@ request object.
 
 from __future__ import annotations
 
-import os
-
+from agent_bom.core.settings import env_bool, env_str
 from agent_bom.mcp_errors import CODE_AUTH_FORBIDDEN
-from agent_bom.mcp_server_runtime import _TOOL_ERROR_TYPES
+from agent_bom.mcp_tools.dispatch import _TOOL_ERROR_TYPES
+from agent_bom.mcp_tools.request_identity import request_context
 
 HOST_LOCAL_OPT_IN_ENV = "AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS"
-_TRUTHY = {"1", "true", "yes", "on"}
 
 
 def shared_transport() -> bool:
     """True when the current call arrived over a shared (HTTP/SSE) transport."""
-    from agent_bom.mcp_tools.request_identity import request_context
-
     context = request_context.get(None)
     if context is not None and getattr(context, "request", None) is not None:
         return True
-    return os.environ.get("AGENT_BOM_MCP_REMOTE_BIND", "").strip() == "1"
+    return env_str("AGENT_BOM_MCP_REMOTE_BIND").strip() == "1"
 
 
 def ensure_host_local_allowed() -> None:
     """Raise the forbidden tool error for a host-local read on a shared transport."""
     if not shared_transport():
         return
-    if os.environ.get(HOST_LOCAL_OPT_IN_ENV, "").strip().lower() in _TRUTHY:
+    if env_bool(HOST_LOCAL_OPT_IN_ENV, False, on_invalid="default"):
         return
     # The client prefixes the tool name; naming it here would trip the log
     # sanitizer, which redacts identifier-like tokens.

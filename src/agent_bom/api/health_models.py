@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from agent_bom.core.settings import env_bool
+from agent_bom.demo_estate.boot_seed import demo_seed_state
 
 
 class VersionInfo(BaseModel):
@@ -86,7 +87,7 @@ class PublicHealthResponse(BaseModel):
     configured_auth_modes: list[str] = Field(default_factory=list)
     unauthenticated_allowed: bool = False
     demo_seed: Literal["pending", "complete"] | None = Field(
-        default=None,
+        default_factory=demo_seed_state,
         description=(
             "Demo estate mode only: 'pending' while the demo seed is still writing, so early reads see partial data; "
             "'complete' once it has landed. Null outside demo mode. Liveness stays 200 either way; /readyz returns "

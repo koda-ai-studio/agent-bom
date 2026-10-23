@@ -844,11 +844,6 @@ MCP_SCAN_RESULT_TTL_SECONDS = _float("AGENT_BOM_MCP_SCAN_RESULT_TTL_SECONDS", 18
 # arguments may resolve into, in addition to HOME — e.g. /workspaces in a
 # devcontainer. Filesystem roots are ignored; read at call time.
 MCP_WORKSPACE_ROOTS = _str("AGENT_BOM_MCP_WORKSPACE_ROOTS", "")
-# Host-local tools (agent_activity, browser_extension_scan, and host
-# auto-discovery in inventory / tool_risk_assessment) read the server host's own
-# workstation data. They are refused over HTTP/SSE unless this is set; stdio is
-# unaffected. Read at call time by agent_bom.mcp_tools.host_local.
-MCP_ALLOW_HOST_LOCAL_TOOLS = _bool("AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS", False)
 MCP_CALLER_RATE_LIMIT = _int("AGENT_BOM_MCP_CALLER_RATE_LIMIT", 120)
 MCP_CALLER_WINDOW_SECONDS = _float("AGENT_BOM_MCP_CALLER_WINDOW_SECONDS", 60.0)
 MCP_MAX_CALLER_STATES = _int("AGENT_BOM_MCP_MAX_CALLER_STATES", 256)

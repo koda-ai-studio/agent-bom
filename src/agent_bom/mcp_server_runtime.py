@@ -15,25 +15,14 @@ import time
 from pathlib import Path
 from typing import AbstractSet, Any, Awaitable, Callable, TypeVar
 
+from agent_bom.mcp_tools.dispatch import _TOOL_ERROR_TYPES as _TOOL_ERROR_TYPES
+from agent_bom.mcp_tools.dispatch import ToolErrorPayload as ToolErrorPayload
+from agent_bom.mcp_tools.dispatch import record_completion as _record_completion
+from agent_bom.mcp_tools.dispatch import resolve_tool_path as resolve_tool_path
+from agent_bom.mcp_tools.dispatch import tool_result_error as tool_result_error
 from agent_bom.security import sanitize_log_label
 
 _ToolReturn = TypeVar("_ToolReturn")
-
-
-class ToolErrorPayload(str):
-    """A JSON tool payload that reports a failed or incomplete call.
-
-    It is an ordinary JSON string for callers that only read text; tools that
-    return a ``CallToolResult`` map it to ``is_error=True``.
-    """
-
-
-try:
-    from mcp.server.mcpserver.exceptions import ToolError as _FastMCPToolError
-except ModuleNotFoundError:  # pragma: no cover - base CLI installs do not include MCP extras
-    _TOOL_ERROR_TYPES: tuple[type[BaseException], ...] = ()
-else:
-    _TOOL_ERROR_TYPES = (_FastMCPToolError,)
 
 
 def validate_ecosystem(ecosystem: str, valid_ecosystems: AbstractSet[str]) -> str:
@@ -228,25 +217,6 @@ def safe_path(path_str: str) -> Path:
         if "outside home directory" in message:
             message += _WORKSPACE_ROOTS_HINT
         raise ValueError(message) from exc
-
-
-def resolve_tool_path(safe_path_fn: Callable[[str], Path], value: str, *, argument: str) -> Path:
-    """Resolve a tool path argument or raise the structured invalid-path tool error.
-
-    The error text matches the ``scan`` tool's rejection
-    (``AGENTBOM_MCP_VALIDATION_INVALID_PATH: ... (argument: <name>)``) so every
-    path-taking tool reports a sandbox rejection the same way, as ``isError``.
-    """
-    try:
-        return safe_path_fn(value)
-    except ValueError as exc:
-        from agent_bom.mcp_errors import CODE_VALIDATION_INVALID_PATH
-        from agent_bom.mcp_server_scan import McpScanValidationError
-
-        error = McpScanValidationError(CODE_VALIDATION_INVALID_PATH, exc, argument=argument)
-        if _TOOL_ERROR_TYPES:
-            raise _TOOL_ERROR_TYPES[0](str(error)) from exc
-        raise error from exc
 
 
 def _log_value(value: object, *, max_len: int = 160) -> str:
@@ -561,75 +531,6 @@ def authorize_destructive_tool(
                 "required_scope": wanted,
             }
     return None
-
-
-_ERROR_SNIFF_MAX_CHARS = 256 * 1024
-
-
-def _payload_error(text: str) -> str | None:
-    stripped = text.lstrip()
-    if not stripped.startswith("{") or len(stripped) > _ERROR_SNIFF_MAX_CHARS or '"error"' not in stripped:
-        return None
-    try:
-        doc = json.loads(stripped)
-    except ValueError:
-        return None
-    if not isinstance(doc, dict):
-        return None
-    error = doc.get("error")
-    if isinstance(error, dict):
-        message = str(error.get("message") or "")
-        code = str(error.get("code") or "")
-        combined = f"{code}: {message}" if code and message else code or message
-        return combined or "error payload"
-    if isinstance(error, str) and error:
-        return error
-    return None
-
-
-def tool_result_error(result: object) -> str | None:
-    """Return the error a tool reported in its *returned* payload, if any.
-
-    Tools often catch their own exceptions and return ``{"error": "..."}`` or an
-    :func:`agent_bom.mcp_errors.mcp_error_json` envelope instead of raising. The
-    dispatcher uses this to log and count those calls as failures.
-    """
-    if getattr(result, "is_error", False) is True:
-        return "error result"
-    if not isinstance(result, str):
-        return None
-    found = _payload_error(result)
-    if found is None and isinstance(result, ToolErrorPayload):
-        return "error payload"
-    return found
-
-
-def _record_completion(
-    tool_name: str,
-    result: object,
-    elapsed_ms: int,
-    request_meta: dict[str, Any],
-    log_caller: str,
-    record_tool_metric_fn: Callable[..., None],
-    record_tool_request_fn: Callable[..., None],
-    logger,
-) -> None:
-    reported_error = tool_result_error(result)
-    error = _log_value(reported_error, max_len=200) if reported_error is not None else None
-    record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=error is None, error=error)
-    record_tool_request_fn(
-        tool_name,
-        caller=request_meta["caller"],
-        client_id=request_meta["client_id"],
-        request_id=request_meta["request_id"],
-        status="ok" if error is None else "error",
-        elapsed_ms=elapsed_ms,
-        error=error,
-    )
-    if error is None:
-        logger.info("mcp tool ok: %s caller=%s (%dms)", tool_name, log_caller, elapsed_ms)
-    else:
-        logger.warning("mcp tool returned error: %s caller=%s (%dms) (%s)", tool_name, log_caller, elapsed_ms, error)
 
 
 def _authorize_dispatch(

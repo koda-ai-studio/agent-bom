@@ -24,6 +24,7 @@ from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
+from agent_bom.advisory_ids import derive_cve_from_advisory_id
 from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, normalize_framework_slug
 from agent_bom.domain.framework_evidence import _framework_control_codes as _framework_control_codes
 from agent_bom.domain.framework_evidence import framework_evidence_slugs as framework_evidence_slugs
@@ -444,8 +445,6 @@ def _security_lenses(
 
 def _is_advisory_identifier(value: str) -> bool:
     """A CVE/GHSA (or distro-scoped CVE) id, not a scanner rule id such as ``B105``."""
-    from agent_bom.advisory_ids import derive_cve_from_advisory_id
-
     text = value.strip().upper()
     return bool(text) and (text.startswith("GHSA-") or derive_cve_from_advisory_id(text) is not None)
 

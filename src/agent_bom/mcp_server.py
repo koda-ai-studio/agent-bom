@@ -565,9 +565,7 @@ def create_mcp_server(
     from agent_bom.mcp_tools.profiles import configure_registration, get_profile
 
     get_profile(profile)  # Reject unknown profiles before constructing the server.
-    # Before any tool opens a store; demo mode must never read product data and
-    # must read the same demo job database ``serve`` seeds.
-    demo_estate_default_persist(activate_demo_state_dir())
+    demo_estate_default_persist(activate_demo_state_dir())  # Before any store opens: demo state dir + the demo job DB serve uses.
     setup_logging(level="INFO")
     _check_mcp_sdk()
 

@@ -21,6 +21,7 @@ from typing import Annotated, Any, TypeVar, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from agent_bom.api.fleet_stats import fleet_stats_payload
 from agent_bom.api.idempotency_store import IdempotencyConflictError, idempotency_request_fingerprint
 from agent_bom.api.mcp_observation_store import MCPObservation, agent_observation_id, merge_observations
 from agent_bom.api.models import FleetAgentUpdate, PushPayload, StateUpdate
@@ -179,28 +180,7 @@ async def fleet_stats(request: Request) -> dict[str, Any]:
     """Fleet-wide statistics."""
     tenant_id = require_request_tenant_id(request)
     agents = await _store_call(_get_fleet_store().list_by_tenant, tenant_id)
-    return _fleet_stats_payload(agents)
-
-
-def _fleet_stats_payload(agents: list[Any]) -> dict[str, Any]:
-    from agent_bom.fleet.trust_scoring import LOW_TRUST_THRESHOLD
-
-    by_state: dict[str, int] = {}
-    by_env: dict[str, int] = {}
-    trust_scores: list[float] = []
-    for a in agents:
-        state_value = getattr(a.lifecycle_state, "value", str(a.lifecycle_state))
-        by_state[state_value] = by_state.get(state_value, 0) + 1
-        env = a.environment or "unset"
-        by_env[env] = by_env.get(env, 0) + 1
-        trust_scores.append(float(getattr(a, "trust_score", 0.0) or 0.0))
-    return {
-        "total": len(agents),
-        "by_state": by_state,
-        "by_environment": by_env,
-        "avg_trust_score": round(sum(trust_scores) / len(trust_scores), 1) if trust_scores else 0.0,
-        "low_trust_count": sum(1 for s in trust_scores if s < LOW_TRUST_THRESHOLD),
-    }
+    return fleet_stats_payload(agents)
 
 
 @router.get("/fleet/endpoints", **documented(rt.FleetEndpointsResponse), tags=["fleet"])
