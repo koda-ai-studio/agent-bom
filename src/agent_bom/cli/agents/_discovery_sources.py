@@ -82,9 +82,10 @@ def discover_agents(run: DiscoveryRun) -> None:
         for config_dir in run.all_config_dirs:
             con.print(f"\n[bold blue]Scanning config directory: {config_dir}...[/bold blue]\n")
             ctx.agents.extend(_discover_from(run, config_dir))
-    elif run.sbom_file or run.filesystem_paths or run.images:
-        # Skip MCP auto-discovery when scanning a specific target
-        # (SBOM, filesystem, or image) — saves ~3s startup
+    elif run.sbom_file or run.filesystem_paths or run.images or run.image_tars:
+        # Skip MCP auto-discovery when scanning a specific target (SBOM,
+        # filesystem, image reference or image tarball): host agents are not
+        # part of that target and the report's scan_sources would not say so.
         ctx.agents = []
     elif run.extra_projects:
         ctx.agents = []
