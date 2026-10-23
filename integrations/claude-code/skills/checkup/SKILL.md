@@ -1,6 +1,6 @@
 ---
 name: checkup
-description: One-step security checkup of this machine's AI setup with agent-bom - what agents and MCP servers are configured, what is risky in their configuration, which packages carry CVEs or are malicious, and the three fixes that matter most. Use when the user asks to check, review or secure their AI or agent setup, or asks "is my setup safe?" without naming a specific skill.
+description: One-step security checkup of this machine's AI setup with agent-bom - what is risky in the configured agents and MCP servers, which packages carry CVEs or are malicious, and the three fixes that matter most. Use when the user asks to check, review or secure their AI or agent setup, or asks "is my setup safe?" without naming a specific skill. To only list what is configured, use inventory.
 argument-hint: "[config directory]"
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/checkup

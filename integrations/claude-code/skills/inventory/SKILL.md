@@ -1,6 +1,6 @@
 ---
 name: inventory
-description: Inventory this machine's AI estate with agent-bom - which agents and MCP clients are configured, the MCP servers they launch, the tools those servers expose, the packages behind them and how they connect. Use when the user asks what AI agents, MCP servers or tools they have, for an AI-BOM, or for an agent inventory.
+description: List the AI agents, MCP clients and MCP servers configured on this machine or in a named project or directory with agent-bom - the servers each client launches, the tools they expose, the packages behind them and how they connect. Use when the user asks what MCP servers, agents or tools are configured, installed or set up ("What MCP servers and agents are configured in X?"), or for an agent inventory.
 argument-hint: "[config directory]"
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/inventory

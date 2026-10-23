@@ -29,7 +29,7 @@ Every step runs the pinned agent-bom release from the shell. It needs [uv](https
 """
 
 [skills.checkup]
-description = "One-step security checkup of this machine's AI setup with agent-bom - what agents and MCP servers are configured, what is risky in their configuration, which packages carry CVEs or are malicious, and the three fixes that matter most. Use when the user asks to check, review or secure their AI or agent setup, or asks \"is my setup safe?\" without naming a specific skill."
+description = "One-step security checkup of this machine's AI setup with agent-bom - what is risky in the configured agents and MCP servers, which packages carry CVEs or are malicious, and the three fixes that matter most. Use when the user asks to check, review or secure their AI or agent setup, or asks \"is my setup safe?\" without naming a specific skill. To only list what is configured, use inventory."
 capabilities = { read_inventory = true, read_findings = true, read_audit_log = false, write_findings = false, outbound_http = true }
 codex_body = """
 Run a read-only checkup and answer in one screen. This skill reads MCP client configuration and package metadata, never launches or connects to the servers it checks, and changes nothing.
@@ -125,7 +125,7 @@ After a confirmed change to a manifest or lockfile, offer the `scan` skill to co
 """
 
 [skills.inventory]
-description = "Inventory this machine's AI estate with agent-bom - which agents and MCP clients are configured, the MCP servers they launch, the tools those servers expose, the packages behind them and how they connect. Use when the user asks what AI agents, MCP servers or tools they have, for an AI-BOM, or for an agent inventory."
+description = "List the AI agents, MCP clients and MCP servers configured on this machine or in a named project or directory with agent-bom - the servers each client launches, the tools they expose, the packages behind them and how they connect. Use when the user asks what MCP servers, agents or tools are configured, installed or set up (\"What MCP servers and agents are configured in X?\"), or for an agent inventory."
 capabilities = { read_inventory = true, read_findings = false, read_audit_log = false, write_findings = false, outbound_http = false }
 codex_body = """
 List the AI estate with agent-bom. This skill is read-only: it reads MCP client configuration files and changes nothing. It does not look up vulnerabilities.

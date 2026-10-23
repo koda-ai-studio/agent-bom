@@ -151,3 +151,14 @@ def test_codex_manifests_set_the_links_the_codex_schema_reads():
         assert interface["websiteURL"] == REPO, manifest_path
         assert interface["termsOfServiceURL"] == f"{REPO}/blob/main/LICENSE", manifest_path
         _repo_target(interface["privacyPolicyURL"])
+
+
+def test_listing_questions_route_to_inventory_not_checkup():
+    def description(skill):
+        text = (PLUGIN / "skills" / skill / "SKILL.md").read_text()
+        return re.search(r"^description: (.+)$", text, re.MULTILINE).group(1)
+
+    inventory, checkup = description("inventory"), description("checkup")
+    assert "What MCP servers and agents are configured in X?" in inventory
+    assert "what agents and MCP servers are configured" not in checkup
+    assert "use inventory" in checkup
