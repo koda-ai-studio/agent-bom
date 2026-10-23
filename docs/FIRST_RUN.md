@@ -361,7 +361,7 @@ In GitHub Actions the composite action propagates the same code plus parsed
 counts:
 
 ```yaml
-- uses: koda-ai-studio/agent-bom@v0.109.0
+- uses: koda-ai-studio/agent-bom@v0.110.0
   with:
     format: sarif
     severity-threshold: high
@@ -423,7 +423,7 @@ to your repository's `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/msaad00/agent-bom
-    rev: v0.109.0
+    rev: v0.110.0
     hooks:
       - id: agent-bom-secrets
       - id: agent-bom-scan

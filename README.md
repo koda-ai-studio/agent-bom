@@ -102,7 +102,7 @@ Follow a public API gateway into a vulnerable workload, its role and a PII bucke
 ## Open the sample graph
 
 ```bash
-pip install 'agent-bom[ui]==0.109.0'
+pip install 'agent-bom[ui]==0.110.0'
 agent-bom quickstart --run --offline
 ```
 
@@ -116,8 +116,8 @@ demo for advisory-backed findings or [populate the advisory database](docs/FIRST
 pilot from a [published release checkout](https://github.com/koda-ai-studio/agent-bom/releases):
 
 ```bash
-git clone --depth 1 --branch v0.109.0 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
-AGENT_BOM_IMAGE_TAG=0.109.0 docker compose up -d
+git clone --depth 1 --branch v0.110.0 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
+AGENT_BOM_IMAGE_TAG=0.110.0 docker compose up -d
 ```
 
 Open **http://localhost:3000**, then **Connections** or **New Scan**. The pilot
@@ -171,4 +171,4 @@ observed execution or effective access.
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
-Source version: **v0.110.0** · Latest release: **v0.109.0** · [Changelog](CHANGELOG.md)
+Source version: **v0.110.0** · Latest release: **v0.110.0** · [Changelog](CHANGELOG.md)

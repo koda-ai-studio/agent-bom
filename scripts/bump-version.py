@@ -152,6 +152,7 @@ DOC_TEST_LOCATIONS: list[tuple[str, re.Pattern, str]] = [
 # consumer pre-commit revs and README's "Latest release" line are covered
 # structurally by the check_version_alignment sweep instead of listed here.
 PUBLISHED_LOCATIONS: list[tuple[str, re.Pattern, str]] = [
+    ("README.md", re.compile(r"(agent-bom\[ui\]==)\d+\.\d+\.\d+"), r"\g<1>{v}"),
     ("site-docs/deployment/control-plane-helm.md", re.compile(r"(--version\s+)\d+\.\d+\.\d+"), r"\g<1>{v}"),
     ("docs/RELEASE_VERIFICATION.md", re.compile(r"^(TAG=v)\d+\.\d+\.\d+$", re.M), r"\g<1>{v}"),
     (

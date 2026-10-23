@@ -1471,12 +1471,17 @@ jobs:
       - uses: ./.github/actions/setup-ui
         if: steps.pin.outputs.changed == 'true' && steps.signing.outputs.configured == 'true'
 
+      - name: Install Python capture dependencies
+        if: steps.pin.outputs.changed == 'true' && steps.signing.outputs.configured == 'true'
+        run: uv sync --frozen --extra dev --extra api
+
       - name: Open the pin-update PR
         if: steps.pin.outputs.changed == 'true' && steps.signing.outputs.configured == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           TAGGED_SHA: ${{ github.sha }}
+          PYTHON: ${{ github.workspace }}/.venv/bin/python
         run: |
           set -euo pipefail
           BRANCH="chore/post-release-pins-${TAG}"

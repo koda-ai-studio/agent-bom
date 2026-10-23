@@ -183,6 +183,19 @@ def test_released_artifact_commands_are_owned_by_the_published_bump() -> None:
             assert rel not in source_managed, f"{rel} would be rewritten to the unreleased source version"
 
 
+def test_readme_pypi_install_pin_tracks_the_published_bump() -> None:
+    bump = _load_script("bump-version.py")
+    text = "pip install 'agent-bom[ui]==0.109.0'\n"
+    for rel, pattern, template in bump.VERSION_LOCATIONS + bump.DOC_TEST_LOCATIONS:
+        if rel == "README.md":
+            text = pattern.sub(template.format(v="0.111.0"), text)
+    assert text == "pip install 'agent-bom[ui]==0.109.0'\n"
+    for rel, pattern, template in bump.PUBLISHED_LOCATIONS:
+        if rel == "README.md":
+            text = pattern.sub(template.format(v="0.110.0"), text)
+    assert text == "pip install 'agent-bom[ui]==0.110.0'\n"
+
+
 def test_prepping_a_release_leaves_copy_paste_surfaces_on_the_published_version(tmp_path, monkeypatch) -> None:
     """The original defect: bumping main to the next version rewrote Action/image pins to a tag that 404s."""
     bump = _load_script("bump-version.py")

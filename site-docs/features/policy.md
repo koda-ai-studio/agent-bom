@@ -49,7 +49,7 @@ agent-bom proxy --policy policy.json --block-undeclared -- ...
 
 ```yaml
 - name: Security gate
-  uses: koda-ai-studio/agent-bom@v0.109.0
+  uses: koda-ai-studio/agent-bom@v0.110.0
   with:
     policy: policy.json
     fail-on-violation: true

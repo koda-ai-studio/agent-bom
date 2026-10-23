@@ -346,7 +346,23 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.require_mcp_auth:
-            verify_mcp_auth(args.base_url, bearer_token=args.bearer_token, expected_version=args.expected_version, timeout=args.timeout)
+            if args.attempts < 1:
+                raise ValueError("attempts must be >= 1")
+            # A detached deployment can still serve the previous version.
+            # Retry the authenticated contract, retaining fail-closed behavior:
+            # public metadata is never accepted after exhausted auth attempts.
+            for attempt in range(1, args.attempts + 1):
+                try:
+                    verify_mcp_auth(
+                        args.base_url, bearer_token=args.bearer_token, expected_version=args.expected_version, timeout=args.timeout
+                    )
+                    break
+                except RuntimeError:
+                    if attempt == args.attempts:
+                        raise
+                    delay = max(args.backoff_seconds, 0.0) * attempt
+                    if delay:
+                        time.sleep(delay)
 
         if args.server_card:
             if not args.expected_version or args.expected_tool_count is None:
