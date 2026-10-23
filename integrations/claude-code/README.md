@@ -1,7 +1,7 @@
 # agent-bom for Claude Code
 
 A Claude Code plugin that runs the agent-bom MCP server locally (stdio) and adds
-six skills. Every skill is read-only by default: anything that would change a file
+nine skills. Every skill is read-only by default: anything that would change a file
 is proposed first and only applied after you confirm.
 
 ```text
@@ -21,6 +21,9 @@ In Codex, skills are named without the `/agent-bom:` prefix (for example `scan`)
 
 | Skill | What it does |
 |---|---|
+| `/agent-bom:checkup` | Start here: one screen with a verdict, totals, and the three fixes that matter most, from the inventory, a passive config audit and a scan. |
+| `/agent-bom:affected <advisory>` | Am I affected? Looks up a CVE, GHSA or OSV id and says which packages, servers and agents on this machine carry it, with the fixed version. |
+| `/agent-bom:bom [target]` | Write an AI-BOM (CycloneDX or SPDX) for this machine, a project, an image, a repository, or an AWS, Azure or GCP account: agents, MCP servers, tools, models and packages, with how they connect. |
 | `/agent-bom:scan` | Discover the MCP clients on this machine and scan their servers and packages, or scan an image, SBOM or repository. |
 | `/agent-bom:check <package>[@version] [ecosystem]` | Vet a package or MCP server before adding it: CVEs, KEV, typosquats, fixed version. |
 | `/agent-bom:fix` | Ordered remediation plan: which upgrades clear the most risk, and what has no fix yet. |
@@ -73,10 +76,14 @@ profile in the release after 0.109.0; on 0.109.0 those two skills fall back to
   are reported.
 - **Sends** package names and versions, never file contents or credentials, to
   public vulnerability and package sources. `inventory` and `audit-skills` make no
-  network calls; `audit-mcp`, `scan`, `check` and `fix` use:
+  network calls; `audit-mcp`, `checkup`, `affected`, `scan`, `check` and `fix` use:
   - `api.osv.dev`: vulnerability lookups
   - `api.github.com`: GitHub security advisories
   - `pypi.org` and `registry.npmjs.org`: package metadata and typosquat checks
+- **Writes** only when you ask for an AI-BOM: `bom` runs the same pinned release
+  from your shell to write the file you name. For a cloud BOM it uses the
+  credentials already configured for that provider's CLI, makes read-only API
+  calls to that provider, and never asks you to paste keys.
 - **Never** writes to agent configs, installs packages, or sends telemetry. Live
   credential validation and cloud connectors are off unless you enable them
   through the CLI.

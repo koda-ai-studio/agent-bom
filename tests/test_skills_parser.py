@@ -484,3 +484,12 @@ def test_scan_skill_files_merges_metadata(tmp_path):
     result = scan_skill_files([skill, claude])
     assert result.metadata is not None
     assert result.metadata.name == "tool-a"
+
+
+def test_launcher_flags_are_never_read_as_package_names(tmp_path):
+    from agent_bom.parsers.skills import parse_skill_file
+
+    skill = tmp_path / "SKILL.md"
+    skill.write_text("Flag a launcher such as `npx -y <package>` or `bunx -p <name>`; run `npx -y left-pad@1.3.0`.\n")
+    names = {pkg.name for pkg in parse_skill_file(skill).packages}
+    assert names == {"left-pad"}

@@ -45,7 +45,7 @@ SKILL_FILE_NAMES: list[str] = [
 # ─── Regex patterns ──────────────────────────────────────────────────────────
 
 _NPX_RE = re.compile(
-    r"(?:npx|bunx)\s+(?:-[yYp]\s+)*(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)",
+    r"(?:npx|bunx)\s+(?:-[yYp]\s+)*(?!-)(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)",
 )
 _UVX_RE = re.compile(
     r"(?:uvx|uv\s+(?:run|tool\s+run))\s+([\w][\w.-]*(?:==[\w.+-]+)?)",

@@ -34,7 +34,7 @@ def test_codex_manifest_paths_resolve_inside_the_plugin() -> None:
 
 def test_codex_skills_are_the_shared_plugin_skills() -> None:
     skills = sorted(path.parent.name for path in (PLUGIN / "skills").glob("*/SKILL.md"))
-    assert skills == ["audit-mcp", "audit-skills", "check", "fix", "inventory", "scan"]
+    assert skills == ["affected", "audit-mcp", "audit-skills", "bom", "check", "checkup", "fix", "inventory", "scan"]
     for skill in skills:
         text = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
         # Codex has no `/plugin:skill` commands, so cross-references name the skill.
@@ -57,3 +57,14 @@ def test_codex_and_claude_share_one_pinned_mcp_launcher() -> None:
     for server in servers.values():
         assert server["command"] == "uvx"
         assert server["args"][:2] == ["--from", f"agent-bom=={published}"]
+
+
+def test_skill_command_pins_are_version_managed() -> None:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("cva", ROOT / "scripts" / "check_version_alignment.py")
+    cva = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(cva)
+    stale = "uvx --from agent-bom==0.90.0 agent-bom scan\nuvx --from 'agent-bom[aws]==0.90.0' agent-bom cloud aws\n"
+    assert len(cva.scan_text("integrations/claude-code/skills/bom/SKILL.md", stale, "0.110.0")) == 2

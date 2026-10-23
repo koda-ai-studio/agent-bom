@@ -11,7 +11,7 @@ Audit MCP server configuration with agent-bom. This skill is read-only: it reads
 3. Call `scan` on the `agent-bom` server (same `config_path`, `detail: "summary"`) for credential exposure, CVEs and malicious or typosquatted packages. When the summary reports a credential-reach finding, page `section: "findings"` with the returned `result_id` to get the credential names (entities with `entity_type: "credential"`).
 4. Report findings grouped by server, most severe first:
    - **Credentials in config**: environment variables or URLs carrying secrets. Give the variable name and file only; never print a value, even if a tool output contains one.
-   - **Unpinned launchers**: packages with `pinned: false` (for example `npx -y pkg` or `uvx pkg` with no version). Recommend an exact version pin.
+   - **Unpinned launchers**: packages with `pinned: false` (a launcher such as `npx -y <package>` or `uvx <package>` with no version). Recommend an exact version pin.
    - **Exposure**: `authentication_findings` from `tool_risk_assessment` (no auth observed, non-TLS remote transport, no agent identity), plus broad arguments such as a filesystem server rooted at `/` or your home directory, which you can read from the config file named in the result.
    - **Packages**: critical or high CVEs with a fix, KEV and malicious or typosquat signals from `scan`.
 5. State the coverage honestly: with `live: false`, the audit's `coverage` reports `configuration_only`, so tool descriptors were not inspected. Do not call a server safe because no finding was returned.
