@@ -65607,6 +65607,25 @@
               "description": "Only paths whose target node is in this vendor",
               "title": "Target Vendor"
             }
+          },
+          {
+            "description": "next_cursor from the previous page (replaces offset)",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1024,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor from the previous page (replaces offset)",
+              "title": "Cursor"
+            }
           }
         ],
         "responses": {

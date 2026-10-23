@@ -311,7 +311,8 @@ Five more read-only tools answer follow-up questions from the same evidence:
   `GET /v1/graph/attack-paths/cross-vendor`: attack paths whose source and target
   nodes are recorded in different vendors (vendors on middle hops never qualify
   a path), in queue order, with `vendor_facets` counting paths per vendor pair
-  over the whole snapshot. Continue with `offset` plus the first page's
+  over the whole snapshot. Continue with `pagination.next_cursor` as `cursor`
+  (present whenever `has_more` is true), or `offset` plus the first page's
   `snapshot_generation`.
 - `findings_query` is `GET /v1/findings` (filters, sort, cursor, totals) with a
   compact row projection; `risk_score` is 0-10 and `effective_reach_score` 0-100.

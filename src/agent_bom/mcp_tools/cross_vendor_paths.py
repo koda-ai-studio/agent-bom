@@ -33,6 +33,7 @@ async def cross_vendor_paths_impl(
     offset: int = 0,
     limit: int = 25,
     snapshot_generation: str | None = None,
+    cursor: str | None = None,
     _truncate_response: Callable[[str], str] | None = None,
 ) -> str:
     """Paths whose source and target nodes are recorded in different vendors, in queue order, with pair facets."""
@@ -45,6 +46,8 @@ async def cross_vendor_paths_impl(
         return _invalid("offset must be non-negative", "offset")
     if snapshot_generation is not None and len(snapshot_generation) > 128:
         return _invalid("snapshot_generation is at most 128 characters", "snapshot_generation")
+    if cursor is not None and len(cursor) > 1024:
+        return _invalid("cursor is at most 1024 characters", "cursor")
     tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
     body, error = await call_route(
         "get_cross_vendor_attack_paths",
@@ -56,6 +59,7 @@ async def cross_vendor_paths_impl(
         limit=limit,
         source_vendor=source_vendor or None,
         target_vendor=target_vendor or None,
+        cursor=cursor or None,
     )
     if error:
         return error

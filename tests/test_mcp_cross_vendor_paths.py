@@ -60,3 +60,31 @@ def test_tool_is_catalogued_read_only_with_vendor_inputs():
     assert {"source_vendor", "target_vendor", "offset", "limit", "snapshot_generation"} <= set(
         listed["cross_vendor_paths"].input_schema["properties"]
     )
+
+
+def test_has_more_always_carries_a_cursor_that_continues_rest_and_mcp(api, monkeypatch):  # noqa: F811
+    client, store, headers = api
+    store.save_graph(_graph("tenant-a"))
+    monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", "tenant-a")
+    first = _rest(client, headers["tenant-a"], limit=1)
+    assert first["pagination"]["has_more"] is True
+    assert first["pagination"]["next_cursor"]
+    second = _rest(client, headers["tenant-a"], limit=1, cursor=first["pagination"]["next_cursor"])
+    assert second["pagination"]["has_more"] is False and second["pagination"]["next_cursor"] == ""
+    seen = [path["target"] for page in (first, second) for path in page["attack_paths"]]
+    assert sorted(seen) == ["aws:bucket:B", "aws:role:X"]
+
+    mcp_first = json.loads(asyncio.run(cross_vendor_paths_impl(tenant_id="tenant-a", scan_id="vendor-scan", limit=1)))
+    assert mcp_first["pagination"]["has_more"] and mcp_first["pagination"]["next_cursor"]
+    mcp_second = json.loads(
+        asyncio.run(
+            cross_vendor_paths_impl(tenant_id="tenant-a", scan_id="vendor-scan", limit=1, cursor=mcp_first["pagination"]["next_cursor"])
+        )
+    )
+    assert mcp_second["attack_paths"] == second["attack_paths"]
+    other = client.get(
+        "/v1/graph/attack-paths/cross-vendor",
+        params={"scan_id": "vendor-scan", "limit": 1, "source_vendor": "github", "cursor": first["pagination"]["next_cursor"]},
+        headers=headers["tenant-a"],
+    )
+    assert other.status_code == 400

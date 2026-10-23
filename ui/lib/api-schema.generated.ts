@@ -34986,6 +34986,8 @@ export interface operations {
                 source_vendor?: string | null;
                 /** @description Only paths whose target node is in this vendor */
                 target_vendor?: string | null;
+                /** @description next_cursor from the previous page (replaces offset) */
+                cursor?: string | null;
             };
             header?: never;
             path?: never;
