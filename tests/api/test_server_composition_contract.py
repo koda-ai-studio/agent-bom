@@ -25,7 +25,10 @@ def test_route_registration_preserves_order_methods_and_response_models() -> Non
             "response_model": str(route.response_model),
         }
         for route in iter_route_contexts(app.routes)
-        if isinstance(route.original_route, APIRoute) and route.path != "/{path:path}"
+        # The dashboard mount depends on a local UI build; its catch-all and missing-build fallbacks are not API contract.
+        if isinstance(route.original_route, APIRoute)
+        and route.path != "/{path:path}"
+        and route.endpoint.__module__ != "agent_bom.api.dashboard_missing"
     ]
     contract = {
         "route_count": len(routes),
