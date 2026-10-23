@@ -392,7 +392,10 @@ def test_pull_requests_select_full_shards_while_main_keeps_the_matrix() -> None:
     )
     assert "test-queue-shard" not in jobs
     assert "needs.changes.outputs.postgres != 'false'" in jobs["postgres-integration"]["if"]
-    assert jobs["test-smoke"]["if"] == "${{ !cancelled() }}"
+    assert jobs["test-smoke"]["if"] == (
+        "${{ !cancelled() && !(github.event_name == 'merge_group' || (github.event_name == 'pull_request' && "
+        "(needs.changes.result != 'success' || needs.changes.outputs.full_python != 'false'))) }}"
+    )
     assert "test-pr-shard" not in jobs
     for name in PR_EXCLUDED_POST_MERGE_JOBS:
         condition = jobs[name]["if"]
@@ -548,9 +551,8 @@ def test_pr_and_main_push_runs_cancel_only_their_own_superseded_runs() -> None:
 # PRs (and merge groups, if a queue is ever enabled) prove the merge result
 # with the sharded 3.13 suite; main, nightly and manual runs prove the matrix.
 _EVENT_PROOF = {
-    "pull_request": ("SMOKE_RESULT", "POSTGRES_RESULT", "SHARD_RESULT"),
+    "pull_request": ("POSTGRES_RESULT", "SHARD_RESULT"),
     "merge_group": (
-        "SMOKE_RESULT",
         "POSTGRES_RESULT",
         "SHARD_RESULT",
         "GRAPH_RESULT",
@@ -1062,7 +1064,7 @@ def test_required_context_rejects_missing_or_failed_compatibility_proof() -> Non
 def test_changed_domain_smoke_distributes_large_test_modules_between_workers() -> None:
     job = _ci()["jobs"]["test-smoke"]
     command = next(step["run"] for step in job["steps"] if step.get("name") == "Run changed-domain and cross-surface smoke")
-    assert "-n 2 --dist worksteal" in command
+    assert '-n "$WORKERS" --dist worksteal' in command
     assert "-v --tb=short" in command
 
 
@@ -1078,7 +1080,96 @@ def test_changed_domain_smoke_shards_keep_every_selected_test_required() -> None
     assert "test-core" in jobs["test"]["needs"]
     gate = next(step for step in jobs["test-core"]["steps"] if step.get("name") == "Require every applicable correctness lane")
     assert gate["env"]["SMOKE_RESULT"] == "${{ needs.test-smoke.result }}"
-    assert 'if [ "$SMOKE_RESULT" != "success" ]; then' in gate["run"]
+    assert 'elif [ "$SMOKE_RESULT" != "success" ]; then' in gate["run"]
+
+
+def test_smoke_is_required_unless_the_full_shards_replace_it() -> None:
+    """A PR without the full suite must prove smoke; with it, smoke may skip but never fail."""
+    for event in ("pull_request", "merge_group"):
+        base = {"FULL_REQUIRED": "false", "POSTGRES_REQUIRED": "false", "SHARD_RESULT": "skipped"}
+        if event == "pull_request":
+            for smoke in ("success", "skipped", "failure", "cancelled"):
+                assert _run_correctness_gate(event, {**base, "SMOKE_RESULT": smoke}) == (smoke == "success"), smoke
+        full = {
+            "FULL_REQUIRED": "true",
+            "POSTGRES_REQUIRED": "false",
+            "GRAPH_RESULT": "success",
+            "OUTPUT_SCALE_RESULT": "success",
+            "SDK_SMOKE_RESULT": "success",
+        }
+        for smoke in ("success", "skipped", "failure", "cancelled"):
+            for shard in ("success", "skipped", "failure", "cancelled"):
+                expected = smoke in ("success", "skipped") and shard == "success"
+                outcome = _run_correctness_gate(event, {**full, "SMOKE_RESULT": smoke, "SHARD_RESULT": shard})
+                assert outcome == expected, (event, smoke, shard)
+    for event in ("push", "schedule", "workflow_dispatch"):
+        proof = dict.fromkeys(_EVENT_PROOF[event], "success")
+        assert not _run_correctness_gate(event, {**proof, "SMOKE_RESULT": "skipped"}), event
+
+
+def test_smoke_and_full_shards_are_complementary_on_merge_gating_events() -> None:
+    """Exactly one Python lane runs per PR; post-merge events keep smoke."""
+    from types import SimpleNamespace
+
+    jobs = _ci()["jobs"]
+
+    def _condition(name: str) -> str:
+        expression = jobs[name]["if"].removeprefix("${{").removesuffix("}}").strip()
+        expression = expression.replace("!cancelled()", "True").replace("!(", "not (")
+        return expression.replace("&&", "and").replace("||", "or")
+
+    smoke, shard = _condition("test-smoke"), _condition("test-shard")
+    for event in ("pull_request", "merge_group", "push", "schedule", "workflow_dispatch"):
+        for result in ("success", "failure", "skipped"):
+            for full in ("true", "false", ""):
+                context = {
+                    "github": SimpleNamespace(event_name=event),
+                    "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=SimpleNamespace(full_python=full))),
+                }
+                runs_smoke = eval(smoke, {"__builtins__": {}}, context)
+                runs_shard = eval(shard, {"__builtins__": {}}, context)
+                if event in ("pull_request", "merge_group"):
+                    assert runs_smoke != runs_shard, (event, result, full)
+                else:
+                    assert runs_smoke and not runs_shard, (event, result, full)
+
+
+def test_full_shards_cover_everything_the_skipped_smoke_proved() -> None:
+    """Skipping smoke must not drop its extras, guards or contract modules."""
+    jobs = _ci()["jobs"]
+    smoke, shard = jobs["test-smoke"], jobs["test-shard"]
+
+    def _extras(job: dict) -> set[str]:
+        install = next(step["run"] for step in job["steps"] if step.get("name") == "Install dependencies")
+        return {part.split()[0] for part in install.split("--extra ")[1:]}
+
+    assert _extras(smoke) <= _extras(shard)
+    smoke_guards = {step["name"]: step for step in smoke["steps"] if step.get("name", "").startswith(("Graph accuracy", "DCM scanner"))}
+    shard_guards = {step["name"]: step for step in shard["steps"] if step.get("name", "").startswith(("Graph accuracy", "DCM scanner"))}
+    assert set(smoke_guards) == set(shard_guards) and len(smoke_guards) == 2
+    for name, step in shard_guards.items():
+        assert step["run"] == smoke_guards[name]["run"], name
+        assert "matrix.shard == 0" in step["if"], name
+        assert "needs.changes.outputs.python == 'true'" in step["if"], name
+        assert "needs.changes.result != 'success'" in step["if"], name
+
+
+def test_correctness_pytest_lanes_use_every_runner_core() -> None:
+    """Workers come from the CPU/memory-aware helper, never a fixed two."""
+    jobs = _ci()["jobs"]
+    runs = [
+        next(step["run"] for step in jobs["test-smoke"]["steps"] if step.get("name") == "Run changed-domain and cross-surface smoke"),
+        next(step["run"] for step in jobs["test-shard"]["steps"] if step.get("name") == SHARD_STEP),
+        next(step["run"] for step in jobs["test-main"]["steps"] if step.get("name") == "Run full correctness suite"),
+    ]
+    for run in runs:
+        assert 'WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")' in run
+        assert run.index("WORKERS=$(") < run.index("uv run pytest ")
+        lines = [line for line in run.splitlines() if "uv run pytest " in line]
+        assert lines
+        for line in lines:
+            assert '-n "$WORKERS" --dist worksteal' in line, line
+            assert "-n 2" not in line, line
 
 
 def test_optional_correctness_lanes_require_success_when_selected() -> None:

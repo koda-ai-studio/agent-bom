@@ -10,7 +10,9 @@ stuck, a workflow fails unexpectedly, or you need to retrigger checks.
 PR CI tests GitHub's merge result with changed-domain tests and shared contract
 smoke. Full correctness is split into 4 parallel shards when dependency,
 shared test infrastructure, security/identity foundations, or unmapped source
-inputs change. `scripts/classify_ci_changes.py` checks each source independently
+inputs change; those shards then replace the smoke jobs, because they run
+every test module (with the same `otel` extra) plus the graph-fixture and DCM
+guards on shard 0. A smoke job that does run must still pass. `scripts/classify_ci_changes.py` checks each source independently
 against `scripts/pytest_ci_plan.py`; a mapped sibling cannot hide an unmapped
 input. Missing/deleted source, unknown paths and failed classification require
 the full suite. Direct test edits run through the changed-domain selector.
@@ -29,8 +31,11 @@ gate until a successful replacement run completes; passing sibling jobs does
 not establish a green main commit.
 
 Main, nightly and manual runs assign every test module to one of four shards
-for each supported interpreter, using the same exhaustive plan as PRs. Each
-runner uses two pytest workers. This divides work across runners; elapsed time
+for each supported interpreter, using the same exhaustive plan as PRs.
+`scripts/ci_pytest_workers.py` sizes pytest-xdist workers per job: every core
+of the 4-vCPU, 16 GB hosted runner, capped at three when the selection holds
+`tests/test_demo_estate_bootstrap.py` (each demo-estate worker reaches about
+4 GB RSS). This divides work across runners; elapsed time
 still depends on queue capacity and the slowest shard.
 
 Python 3.11 shards upload coverage only after their tests pass. The combined
@@ -64,7 +69,7 @@ cannot satisfy the release gate.
 | UI Validate (lint, vitest, schema drift) + UI export build | when UI inputs change | every main push | yes |
 | Docs Strict, Helm, Compose, Endpoint packaging | when their inputs change | when their inputs change | yes |
 | Native App image and persistence | when its inputs change | yes | yes |
-| Changed-domain and cross-surface contract smoke | yes (required through aggregation) | yes | yes |
+| Changed-domain and cross-surface contract smoke | yes, unless the full shards run (required through aggregation) | yes | yes |
 | Full correctness suite, Python 3.13 in 4 shards | shared, dependency, security or unmapped inputs (required when selected) | no | no |
 | Full correctness suite, Python 3.11/3.12/3.13/3.14 in 4 shards each (combined 3.11 coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
