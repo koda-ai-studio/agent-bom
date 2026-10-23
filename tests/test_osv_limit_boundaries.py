@@ -250,3 +250,23 @@ def test_unknown_range_is_not_suppressed_as_a_known_unfixed_distro_advisory():
 def test_fix_requires_membership_in_the_same_complete_window(events):
     data = advisory(events, versions=["1.5"])
     assert parse_fixed_version(data, "boundary-example", "pypi", "1.5") is None
+
+
+def test_legacy_receipt_warning_says_fixes_are_withheld_and_check_marks_the_finding(tmp_path):
+    from agent_bom.scanners.local_advisories import _local_vuln_to_vulnerability
+    from agent_bom.scanners.package_check_result import serialize_vulnerability
+    from agent_bom.scanners.state import consume_scan_warnings, reset_scan_warnings
+
+    conn = init_db(tmp_path / "legacy.db")
+    try:
+        _ingest_osv_file(conn, json.dumps(advisory([{"introduced": "0"}, {"fixed": "2.0"}])).encode(), "fixture.json")
+        conn.execute("UPDATE affected SET limit_version = NULL")
+        reset_scan_warnings()
+        (local,) = lookup_package(conn, "pypi", "boundary-example", "1.0")
+        warnings = consume_scan_warnings()
+        assert any("fixed versions are withheld" in w and "agent-bom db update" in w for w in warnings), warnings
+        payload = serialize_vulnerability(_local_vuln_to_vulnerability(local))
+        assert payload["fixed_version"] is None
+        assert payload["match_confidence_tier"] == "unverified_range"
+    finally:
+        conn.close()

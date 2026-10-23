@@ -614,7 +614,8 @@ def _local_vuln_from_row(row, rows, version, epss_map, kev_map) -> LocalVuln:
     alias_list = [a for a in raw_aliases.split(",") if a] if raw_aliases else []
     epss_prob, epss_pct, kev_date, kev_due, epss_id, kev_id = _resolve_row_enrichment(row, epss_map, kev_map)
     severity, cvss_score = _current_severity(row["severity"], row["cvss_score"], row["cvss_vector"])
-    unknown_range = row["limit_version"] is None or bool(
+    legacy_receipt = row["limit_version"] is None
+    unknown_range = legacy_receipt or bool(
         version
         and _version_match_state(version, row["introduced"], row["fixed"], row["last_affected"], row["ecosystem"], row["limit_version"])
         == "unknown"
@@ -622,10 +623,20 @@ def _local_vuln_from_row(row, rows, version, epss_map, kev_map) -> LocalVuln:
     if unknown_range:
         from agent_bom.scanners.state import record_scan_warning
 
-        record_scan_warning(
-            "Some local advisory ranges cannot be verified. Findings marked unverified_range are candidates; "
-            "run agent-bom db update to refresh source bounds and review unresolved versions."
-        )
+        if legacy_receipt:
+            # Rows carried over by the v7->v8 schema upgrade lost their OSV
+            # range limits, so neither membership nor the fix can be confirmed
+            # until the next OSV refresh rewrites them.
+            record_scan_warning(
+                "Local advisory rows predate range-limit receipts (not refreshed since the DB schema upgrade): "
+                "findings from them are marked unverified_range and their fixed versions are withheld. "
+                "Run `agent-bom db update` to restore range bounds and fixed versions."
+            )
+        else:
+            record_scan_warning(
+                "Some local advisory ranges cannot be verified. Findings marked unverified_range are candidates; "
+                "run agent-bom db update to refresh source bounds and review unresolved versions."
+            )
     return LocalVuln(
         match_confidence_tier=MATCH_CONFIDENCE_UNVERIFIED_RANGE if unknown_range else None,
         id=row["id"],
