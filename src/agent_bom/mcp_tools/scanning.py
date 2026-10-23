@@ -253,6 +253,7 @@ async def _scan_impl_inner(
     store = _result_store if _result_store is not None else SCAN_RESULTS
     try:
         from agent_bom.evidence.scan_run import scanner_warning_issues
+        from agent_bom.mcp_server_scan import consume_repo_tree_inventory
         from agent_bom.models import AIBOMReport
         from agent_bom.output import to_json
         from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings
@@ -290,6 +291,9 @@ async def _scan_impl_inner(
         report.scan_run.issues.extend(scanner_warning_issues(scanner_warnings))
         if coverage_warnings:
             report.coverage_warnings = coverage_warnings
+        repo_inventory = consume_repo_tree_inventory()
+        if repo_inventory:
+            report.ai_inventory_data = {**(report.ai_inventory_data or {}), **repo_inventory}
         await _surface_graph_findings(report)
         if package_spec_unresolved:
             # Fail closed for every format: an empty SARIF/CycloneDX/SPDX document reads as an audited clean result.

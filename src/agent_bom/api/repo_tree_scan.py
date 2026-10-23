@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 from agent_bom.evidence.scan_run import ScanIssue
 from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface
+from agent_bom.scanners.secret_models import secret_locations
 from agent_bom.traversal import iter_discovery_files
 
 _WEAK_CRYPTO_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
@@ -100,7 +101,13 @@ def secret_scan_warning(block: dict[str, Any], *, location: str) -> str:
         parts.append(f"{secrets} secret or credential pattern(s)")
     if pii:
         parts.append(f"{pii} PII pattern(s)")
-    return f"{' and '.join(parts) or str(block['total']) + ' finding(s)'} found in {location} files"
+    message = f"{' and '.join(parts) or str(block['total']) + ' finding(s)'} found in {location} files"
+    locations = secret_locations(block)
+    if locations:
+        shown = ", ".join(locations[:5])
+        more = f" (+{len(locations) - 5} more)" if len(locations) > 5 else ""
+        message += f": {shown}{more}"
+    return message
 
 
 @dataclass

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import shlex
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Optional
 
@@ -175,6 +176,16 @@ def unresolved_package_spec_warning(package_spec: str) -> str:
     )
 
 
+_REPO_TREE_INVENTORY: ContextVar[Optional[dict]] = ContextVar("mcp_repo_tree_inventory", default=None)
+
+
+def consume_repo_tree_inventory() -> Optional[dict]:
+    """Return and clear the repo-tree side inventory (secrets, AST, ...) of the last pipeline run."""
+    inventory = _REPO_TREE_INVENTORY.get()
+    _REPO_TREE_INVENTORY.set(None)
+    return inventory
+
+
 async def run_scan_pipeline(
     *,
     safe_path,
@@ -196,6 +207,7 @@ async def run_scan_pipeline(
 
     warnings: list[str] = []
     scan_sources: list[str] = []
+    _REPO_TREE_INVENTORY.set(None)
 
     if config_path:
         try:
@@ -234,7 +246,8 @@ async def run_scan_pipeline(
             from agent_bom.python_agents import scan_python_agents
             from agent_bom.terraform import scan_terraform_dir
 
-            scan_cloned_repo_tree(config_path, agents=agents, warnings=warnings)
+            tree = scan_cloned_repo_tree(config_path, agents=agents, warnings=warnings, offline=offline)
+            _REPO_TREE_INVENTORY.set(tree.ai_inventory_data or None)
             scan_sources.append("repo_tree")
 
             py_agents, py_warnings = scan_python_agents(config_path)

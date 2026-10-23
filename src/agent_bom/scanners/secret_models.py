@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from agent_bom.scanners.credential_validation import ValidationStatus
 
@@ -91,3 +92,17 @@ def _group_by(findings: list[SecretFinding], attr: str) -> dict[str, int]:
         key = getattr(f, attr)
         counts[key] = counts.get(key, 0) + 1
     return counts
+
+
+def secret_locations(block: dict[str, Any] | None) -> list[str]:
+    """``file:line`` of each secret/credential finding — locations only, never values."""
+    if not isinstance(block, dict):
+        return []
+    out: list[str] = []
+    for finding in block.get("findings", []) or []:
+        if not isinstance(finding, dict) or finding.get("category") not in {"secret", "credential"}:
+            continue
+        location = f"{finding.get('file')}:{finding.get('line')}" if finding.get("line") else str(finding.get("file"))
+        if location not in out:
+            out.append(location)
+    return out
