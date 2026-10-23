@@ -151,7 +151,19 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         re.compile(r'("--from",\s*"agent-bom==)(\d+\.\d+\.\d+)'),
         "published",
     ),
+    ManagedPattern(
+        "plugin launcher pin",
+        re.compile(r'(dependencies = \["agent-bom==)(\d+\.\d+\.\d+)'),
+        "published",
+    ),
 )
+
+# The Claude Code plugin's MCP servers run `uv run --frozen` against this
+# project, so its uv.lock must lock the pinned release. The lock carries hashes
+# a regex cannot rewrite: bump-version.py --published regenerates it with uv.
+LAUNCHERS: tuple[str, ...] = ("integrations/claude-code",)
+# The plugin directory holds any non-image file at or over 256 KiB for review.
+LAUNCHER_LOCK_MAX_BYTES = 256 * 1024
 
 # Compose files whose every pinned service builds its image from this tree, so
 # the tag labels the local build and tracks the SOURCE version. Everything else
@@ -278,6 +290,9 @@ def find_drift(version: str, *, published: str | None = None) -> list[str]:
         drift.extend(scan_text(_rel(path), text, version, published=published))
 
     scanned = {_rel(path) for path in _iter_files()}
+    for launcher in LAUNCHERS:
+        if f"{launcher}/pyproject.toml" in scanned:
+            drift.extend(launcher_lock_drift(ROOT / launcher, published))
     drift.extend(find_override_drift(only=scanned))
     for rel, needle in LATEST_REQUIRED:
         path = ROOT / rel
@@ -311,6 +326,37 @@ def find_override_drift(only: set[str] | None = None) -> list[str]:
                     f"{rel}:{lineno}: image {match.group(1)} must be agentbom/...:${{{variable}:-<published>}} "
                     "so a release checkout can run its own tag"
                 )
+    return drift
+
+
+def launcher_lock_drift(plugin_dir: Path, published: str) -> list[str]:
+    """Return why *plugin_dir*'s launcher pyproject/uv.lock do not run *published*.
+
+    Offline and structural: the pin, the lock's requirement and the locked
+    ``agent-bom`` version must all name *published*, and the lock must fit the
+    plugin directory's per-file limit.
+    """
+    import tomllib
+
+    rel = _rel(plugin_dir)
+    pyproject, lock_path = plugin_dir / "pyproject.toml", plugin_dir / "uv.lock"
+    if not pyproject.is_file() or not lock_path.is_file():
+        return [f"{rel}: launcher pyproject.toml or uv.lock missing"]
+    drift: list[str] = []
+    want = f"agent-bom=={published}"
+    deps = tomllib.loads(pyproject.read_text(encoding="utf-8")).get("project", {}).get("dependencies", [])
+    if deps != [want]:
+        drift.append(f"{rel}/pyproject.toml: launcher dependencies {deps} (expected ['{want}'])")
+    raw = lock_path.read_bytes()
+    if len(raw) >= LAUNCHER_LOCK_MAX_BYTES:
+        drift.append(f"{rel}/uv.lock: {len(raw)} bytes, over the plugin directory's 256 KiB per-file limit")
+    packages = tomllib.loads(raw.decode("utf-8")).get("package", [])
+    locked = [pkg.get("version") for pkg in packages if pkg.get("name") == "agent-bom"]
+    if locked != [published]:
+        drift.append(f"{rel}/uv.lock: uv.lock locks agent-bom {', '.join(map(str, locked)) or 'nothing'} (expected {published})")
+    requires = [pkg.get("metadata", {}).get("requires-dist") for pkg in packages if pkg.get("source") == {"virtual": "."}]
+    if requires != [[{"name": "agent-bom", "specifier": f"=={published}"}]]:
+        drift.append(f"{rel}/uv.lock: uv.lock was not locked from the current pin (run uv lock --project {rel})")
     return drift
 
 

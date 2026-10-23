@@ -18,7 +18,18 @@
     "ai-agents"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": {
+    "agent-bom": {
+      "command": "uv",
+      "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server"],
+      "cwd": "."
+    },
+    "agent-bom-audit": {
+      "command": "uv",
+      "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server", "--profile", "audit"],
+      "cwd": "."
+    }
+  },
   "interface": {
     "displayName": "agent-bom (local MCP)",
     "shortDescription": "AI agent and MCP security",

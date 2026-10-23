@@ -26,7 +26,7 @@ def test_codex_manifest_matches_the_claude_manifest_and_published_release() -> N
 def test_codex_manifest_paths_resolve_inside_the_plugin() -> None:
     codex = _json(PLUGIN / ".codex-plugin" / "plugin.json")
     interface = codex["interface"]
-    for relative in (codex["skills"], codex["mcpServers"], interface["composerIcon"], interface["logo"]):
+    for relative in (codex["skills"], interface["composerIcon"], interface["logo"]):
         assert relative.startswith("./")
         target = (PLUGIN / relative).resolve()
         assert target.is_relative_to(PLUGIN.resolve())
@@ -71,13 +71,62 @@ def test_codex_packages_have_distinct_plugin_and_skill_names() -> None:
     assert local_skills and public_skills and not local_skills & public_skills
 
 
-def test_codex_and_claude_share_one_pinned_mcp_launcher() -> None:
+LAUNCH = ["run", "--frozen", "--isolated", "--project", "${CLAUDE_PLUGIN_ROOT}", "agent-bom", "mcp", "server"]
+
+
+def test_claude_servers_run_the_locked_launcher_from_the_plugin_root() -> None:
     servers = _json(PLUGIN / ".mcp.json")["mcpServers"]
-    published = (ROOT / "PUBLISHED_VERSION").read_text(encoding="utf-8").strip()
     assert set(servers) == {"agent-bom", "agent-bom-audit"}
-    for server in servers.values():
-        assert server["command"] == "uvx"
-        assert server["args"][:2] == ["--from", f"agent-bom=={published}"]
+    assert servers["agent-bom"] == {"command": "uv", "args": LAUNCH}
+    assert servers["agent-bom-audit"] == {"command": "uv", "args": [*LAUNCH, "--profile", "audit"]}
+
+
+def test_codex_servers_are_the_claude_servers_rooted_by_cwd() -> None:
+    # Codex expands no ${...} in a .codex-plugin MCP config; it resolves a
+    # relative cwd against the plugin root instead.
+    claude = _json(PLUGIN / ".mcp.json")["mcpServers"]
+    codex = _json(PLUGIN / ".codex-plugin" / "plugin.json")["mcpServers"]
+    expected = {
+        name: {
+            "command": spec["command"],
+            "args": ["." if arg == "${CLAUDE_PLUGIN_ROOT}" else arg for arg in spec["args"]],
+            "cwd": ".",
+        }
+        for name, spec in claude.items()
+    }
+    assert codex == expected
+
+
+def test_launcher_project_pins_the_published_release_and_nothing_else() -> None:
+    import tomllib
+
+    published = (ROOT / "PUBLISHED_VERSION").read_text(encoding="utf-8").strip()
+    project = tomllib.loads((PLUGIN / "pyproject.toml").read_text(encoding="utf-8"))
+    assert project["project"]["dependencies"] == [f"agent-bom=={published}"]
+    assert project["tool"]["uv"]["package"] is False
+    assert not project["tool"]["uv"].keys() - {"package", "environments"}
+    for config in ("uv.toml", ".npmrc", "pip.conf", ".python-version"):
+        assert not (PLUGIN / config).exists(), config
+
+
+def test_launcher_lock_is_hashed_from_pypi_and_fits_the_directory_limit() -> None:
+    import tomllib
+
+    published = (ROOT / "PUBLISHED_VERSION").read_text(encoding="utf-8").strip()
+    raw = (PLUGIN / "uv.lock").read_bytes()
+    assert len(raw) < 256 * 1024
+    lock = tomllib.loads(raw.decode("utf-8"))
+    packages = {pkg["name"]: pkg for pkg in lock["package"]}
+    assert packages["agent-bom"]["version"] == published
+    [root] = [pkg for pkg in lock["package"] if pkg["source"] == {"virtual": "."}]
+    assert root["metadata"]["requires-dist"] == [{"name": "agent-bom", "specifier": f"=={published}"}]
+    for name, pkg in packages.items():
+        if pkg is root:
+            continue
+        assert pkg["source"] == {"registry": "https://pypi.org/simple"}, name
+        artifacts = [*pkg.get("wheels", []), *([pkg["sdist"]] if "sdist" in pkg else [])]
+        assert artifacts, name
+        assert all(a["url"].startswith("https://files.pythonhosted.org/") and a["hash"].startswith("sha256:") for a in artifacts), name
 
 
 def test_skill_command_pins_are_version_managed() -> None:

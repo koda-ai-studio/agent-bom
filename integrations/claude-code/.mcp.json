@@ -1,12 +1,12 @@
 {
   "mcpServers": {
     "agent-bom": {
-      "command": "uvx",
-      "args": ["--from", "agent-bom==0.110.0", "agent-bom", "mcp", "server"]
+      "command": "uv",
+      "args": ["run", "--frozen", "--isolated", "--project", "${CLAUDE_PLUGIN_ROOT}", "agent-bom", "mcp", "server"]
     },
     "agent-bom-audit": {
-      "command": "uvx",
-      "args": ["--from", "agent-bom==0.110.0", "agent-bom", "mcp", "server", "--profile", "audit"]
+      "command": "uv",
+      "args": ["run", "--frozen", "--isolated", "--project", "${CLAUDE_PLUGIN_ROOT}", "agent-bom", "mcp", "server", "--profile", "audit"]
     }
   }
 }
