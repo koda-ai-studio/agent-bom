@@ -175,3 +175,11 @@ def _layer_whiteouts(names: set[str]) -> set[str]:
             path = f"{parent}/{real_name}" if parent else real_name
             whiteouts.add(path)
     return whiteouts
+
+
+def _apply_detected_distro(packages: list[Package], name: str | None, version: str | None) -> None:
+    """Stamp the image's detected distro onto OS packages that lack their own."""
+    for pkg in packages:
+        if pkg.ecosystem in {"deb", "apk", "rpm"}:
+            pkg.distro_name = pkg.distro_name or name
+            pkg.distro_version = pkg.distro_version or version

@@ -41,8 +41,8 @@ from agent_bom.output.finding_views import (
     package_version,
     workflow_status,
 )
+from agent_bom.output.package_attributes import cyclonedx_identifiers
 from agent_bom.output.technique_evidence import scoped_vulnerability_properties
-from agent_bom.package_utils import synthesize_purl
 from agent_bom.sbom_formats.cyclonedx import merge_properties as _merge_properties
 from agent_bom.sbom_formats.cyclonedx import merge_vulnerability_observation as _merge_vulnerability_observation
 from agent_bom.sbom_formats.cyclonedx import vulnerability_enrichment_properties, vulnerability_source
@@ -773,11 +773,9 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
                 # purl is the join key for downstream SBOM consumers: pass the
                 # resolved purl through, else synthesize one from the known
                 # ecosystem+name+version.
-                purl = pkg.purl or synthesize_purl(pkg.name, pkg.version, pkg.ecosystem)
-                if purl:
-                    pkg_component["purl"] = purl
+                pkg_component.update(cyclonedx_identifiers(pkg))
                 if verdict is not None:
-                    identities = _integrity_identity_evidence(pkg, verdict, purl)
+                    identities = _integrity_identity_evidence(pkg, verdict, pkg_component.get("purl"))
                     if identities:
                         pkg_component["evidence"] = {"identity": identities}
                 if pkg.license_expression or pkg.license:

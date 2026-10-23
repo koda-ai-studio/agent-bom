@@ -94,6 +94,7 @@ def _package_json(pkg: Any, agent: Any) -> dict[str, Any]:
         "version": pkg.version,
         "ecosystem": pkg.ecosystem,
         "purl": pkg.purl,
+        **({"cpe": pkg.cpe} if getattr(pkg, "cpe", None) else {}),
         "source_package": pkg.source_package,
         "distro_name": pkg.distro_name,
         "distro_version": pkg.distro_version,

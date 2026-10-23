@@ -350,6 +350,7 @@ def _project_package_nodes(graph: UnifiedGraph, agent: AgentScope, srv_dict: Map
                     "version": pkg_version,
                     "ecosystem": ecosystem,
                     "purl": pkg_dict.get("purl", ""),
+                    **({"cpe": str(pkg_dict["cpe"])} if pkg_dict.get("cpe") else {}),
                     "canonical_id": pkg_dict.get("canonical_id")
                     or pkg_dict.get("stable_id")
                     or canonical_graph_node_id(EntityType.PACKAGE.value, pkg_id),

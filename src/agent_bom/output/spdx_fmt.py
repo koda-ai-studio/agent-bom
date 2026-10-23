@@ -352,9 +352,14 @@ def _package_optional_fields(pkg: Any, supplier_ref: Any) -> dict[str, object]:
     if verified_using:
         fields["verifiedUsing"] = verified_using
     purl = pkg.purl or synthesize_purl(pkg.name, pkg.version, pkg.ecosystem)
+    identifiers: list[dict[str, str]] = []
     if purl:
         fields["software_packageUrl"] = purl
-        fields["externalIdentifier"] = [{"type": "ExternalIdentifier", "externalIdentifierType": "packageUrl", "identifier": purl}]
+        identifiers.append({"type": "ExternalIdentifier", "externalIdentifierType": "packageUrl", "identifier": purl})
+    if getattr(pkg, "cpe", None):
+        identifiers.append({"type": "ExternalIdentifier", "externalIdentifierType": "cpe23", "identifier": pkg.cpe})
+    if identifiers:
+        fields["externalIdentifier"] = identifiers
     if pkg.supplier:
         fields["suppliedBy"] = supplier_ref(pkg.supplier)
     optional = {
