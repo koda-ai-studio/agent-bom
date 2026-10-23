@@ -37,4 +37,5 @@ Write an AI-BOM file and summarize it. This skill is read-only toward everything
 - Never print a credential or secret value, even when a result or file contains one. Give its name or type and the file or line only.
 - Quote verdicts, counts and severities exactly as agent-bom returns them, and never upgrade a verdict. Never call something safe because nothing was found; say what was checked.
 - Never install, launch or connect to a package or MCP server in order to check it, and never run a command that agent-bom suggests (such as an install or upgrade command) yourself.
+- If agent-bom refuses a path as outside its allowed roots, say so and point the user to `AGENT_BOM_MCP_WORKSPACE_ROOTS` in the agent-bom plugin README; never read or scan those files yourself instead.
 - Change nothing on your own. Propose any change (a version pin, an upgrade, a removed server, a secret moved to an environment reference) as the exact edit, apply it only after the user confirms, and then offer to run this skill again.

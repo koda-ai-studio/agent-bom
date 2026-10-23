@@ -171,6 +171,26 @@ Prompts, responses, file contents and credential values are never sent.
   through the CLI.
 - **Stores** a local cache under `~/.agent-bom`.
 
+### Which paths the tools accept
+
+The MCP tools take paths under your home directory and under the directories
+named in `AGENT_BOM_MCP_WORKSPACE_ROOTS`. In Claude Code, `.mcp.json` sets that
+variable to `${CLAUDE_PROJECT_DIR}`, so a project in `/tmp`, `/workspaces`
+(devcontainers), `/srv` or `/Volumes` scans without setup. Codex expands no
+variables in a plugin's MCP config, so the `agent-bom-local` Codex plugin
+accepts paths under your home directory only. To scan a project elsewhere from
+Codex, declare the server in `~/.codex/config.toml` with the root set:
+
+```toml
+[mcp_servers.agent-bom]
+command = "uvx"
+args = ["--from", "agent-bom==<release>", "agent-bom", "mcp", "server"]
+env = { AGENT_BOM_MCP_WORKSPACE_ROOTS = "/workspaces/my-project" }
+```
+
+Separate several roots with `:` (`;` on Windows). Relative paths and `/` are
+ignored.
+
 To try a local checkout: `claude --plugin-dir integrations/claude-code`, and
 `claude plugin validate integrations/claude-code --strict` before publishing changes.
 `claude plugin eval integrations/claude-code` runs the eval suite in `evals/` against

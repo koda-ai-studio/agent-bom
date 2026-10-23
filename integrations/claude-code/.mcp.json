@@ -2,11 +2,13 @@
   "mcpServers": {
     "agent-bom": {
       "command": "uv",
-      "args": ["run", "--frozen", "--isolated", "--project", "${CLAUDE_PLUGIN_ROOT}", "agent-bom", "mcp", "server"]
+      "args": ["run", "--frozen", "--isolated", "--project", "${CLAUDE_PLUGIN_ROOT}", "agent-bom", "mcp", "server"],
+      "env": { "AGENT_BOM_MCP_WORKSPACE_ROOTS": "${CLAUDE_PROJECT_DIR}" }
     },
     "agent-bom-audit": {
       "command": "uv",
-      "args": ["run", "--frozen", "--isolated", "--project", "${CLAUDE_PLUGIN_ROOT}", "agent-bom", "mcp", "server", "--profile", "audit"]
+      "args": ["run", "--frozen", "--isolated", "--project", "${CLAUDE_PLUGIN_ROOT}", "agent-bom", "mcp", "server", "--profile", "audit"],
+      "env": { "AGENT_BOM_MCP_WORKSPACE_ROOTS": "${CLAUDE_PROJECT_DIR}" }
     }
   }
 }

@@ -77,8 +77,11 @@ LAUNCH = ["run", "--frozen", "--isolated", "--project", "${CLAUDE_PLUGIN_ROOT}",
 def test_claude_servers_run_the_locked_launcher_from_the_plugin_root() -> None:
     servers = _json(PLUGIN / ".mcp.json")["mcpServers"]
     assert set(servers) == {"agent-bom", "agent-bom-audit"}
-    assert servers["agent-bom"] == {"command": "uv", "args": LAUNCH}
-    assert servers["agent-bom-audit"] == {"command": "uv", "args": [*LAUNCH, "--profile", "audit"]}
+    # MCP path arguments may resolve under HOME or AGENT_BOM_MCP_WORKSPACE_ROOTS;
+    # the project dir is often elsewhere (/tmp, /workspaces, /srv, /Volumes).
+    env = {"AGENT_BOM_MCP_WORKSPACE_ROOTS": "${CLAUDE_PROJECT_DIR}"}
+    assert servers["agent-bom"] == {"command": "uv", "args": LAUNCH, "env": env}
+    assert servers["agent-bom-audit"] == {"command": "uv", "args": [*LAUNCH, "--profile", "audit"], "env": env}
 
 
 def test_codex_servers_are_the_claude_servers_rooted_by_cwd() -> None:
