@@ -16,6 +16,7 @@ from agent_bom.api.store import DEMO_ESTATE_TRIGGERED_BY
 from agent_bom.demo_estate import demo_estate_enabled as demo_estate_enabled
 from agent_bom.demo_estate.boot_seed import serialized_seed
 from agent_bom.demo_estate.estate_cis_benchmarks import estate_cis_benchmarks
+from agent_bom.demo_estate.estate_cis_catalog import estate_cis_passes
 from agent_bom.demo_estate.showcase_findings import append_showcase_graph_findings, bind_mcp_auth_findings, estate_scan_evidence
 from agent_bom.demo_estate.showcase_graph import (
     SHOWCASE_AGENTS,
@@ -245,6 +246,7 @@ def _stamp_showcase_graph_reachability(blast_radii: list[Any], agents: list[Any]
 
 def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
     from agent_bom.demo import DEMO_INVENTORY
+    from agent_bom.demo_estate.enterprise_composition import build_demo_estate
     from agent_bom.demo_estate.showcase_owners import assign_showcase_owners
     from agent_bom.finding import blast_radius_to_finding
     from agent_bom.inventory import build_agents_from_inventory
@@ -303,7 +305,7 @@ def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
 
     # The CIS benchmark blobs the CIS/compliance surfaces read are derived from
     # the same estate CIS findings the graph projects, so they cannot disagree.
-    report.update(estate_cis_benchmarks(report.get("findings") or []))
+    report.update(estate_cis_benchmarks(report.get("findings") or [], estate_cis_passes(build_demo_estate(tenant_id=tenant_id))))
     return report
 
 

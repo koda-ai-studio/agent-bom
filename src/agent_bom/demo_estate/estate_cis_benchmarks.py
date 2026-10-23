@@ -6,8 +6,10 @@ scorecard and exports read are built here from the same serialized rows, so the
 two cannot disagree about a control's numbering, status or resources.
 
 Only what the estate records is reported: a check fails when a resource failed
-it, and is ``error`` when it could only be attempted. The estate records no
-passing results, so no check is reported as passing.
+it, is ``error`` when it could only be attempted, and passes only when the
+catalog recorded a passing evaluation over the estate's inventory
+(:func:`estate_cis_catalog.estate_cis_passes`). Every count and pass rate is
+derived from those check results.
 """
 
 from __future__ import annotations
@@ -112,27 +114,53 @@ def _check_payload(check: _Check) -> dict[str, Any]:
     }
 
 
-def _benchmark(cloud: str, checks: dict[str, _Check]) -> dict[str, Any]:
+def _benchmark(cloud: str, checks: list[dict[str, Any]]) -> dict[str, Any]:
     name, version = _BENCHMARKS[cloud]
-    payloads = [_check_payload(check) for _, check in sorted(checks.items())]
-    failed = sum(1 for check in payloads if check["status"] == "fail")
-    errored = sum(1 for check in payloads if check["status"] == "error")
+    passed = sum(1 for check in checks if check["status"] == "pass")
+    failed = sum(1 for check in checks if check["status"] == "fail")
+    errored = sum(1 for check in checks if check["status"] == "error")
+    evaluated = passed + failed + errored
     return {
         "benchmark": name,
         "benchmark_version": version,
         "provider": cloud,
-        "passed": 0,
+        "passed": passed,
         "failed": failed,
         "errored": errored,
-        "total": len(payloads),
-        "pass_rate": 0.0,
-        "checks": payloads,
+        "total": len(checks),
+        "pass_rate": round(passed / evaluated * 100, 1) if evaluated else 0.0,
+        "checks": checks,
     }
 
 
-def estate_cis_benchmarks(rows: Iterable[Any]) -> dict[str, dict[str, Any]]:
-    """Benchmark blobs keyed by report section, from serialized CIS finding rows."""
-    return {_BENCHMARK_SECTIONS[cloud]: _benchmark(cloud, checks) for cloud, checks in sorted(_collect(rows).items())}
+def recorded_cis_passes(report: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+    """The passing results a report's CIS blobs already record, as ``(provider, check)``."""
+    passes: list[tuple[str, dict[str, Any]]] = []
+    for cloud, section in _BENCHMARK_SECTIONS.items():
+        blob = report.get(section)
+        for check in (blob.get("checks") or []) if isinstance(blob, dict) else []:
+            if isinstance(check, dict) and check.get("status") == "pass":
+                passes.append((cloud, check))
+    return passes
 
 
-__all__ = ["estate_cis_benchmarks"]
+def estate_cis_benchmarks(rows: Iterable[Any], passes: Iterable[tuple[str, dict[str, Any]]] = ()) -> dict[str, dict[str, Any]]:
+    """Benchmark blobs keyed by report section: failures from CIS finding rows, plus recorded passes."""
+    by_cloud: dict[str, dict[str, dict[str, Any]]] = {
+        cloud: {check_id: _check_payload(check) for check_id, check in checks.items()} for cloud, checks in _collect(rows).items()
+    }
+    for cloud, check in passes:
+        if cloud in _BENCHMARKS:
+            # A control that failed anywhere is a failure, whatever else passed.
+            by_cloud.setdefault(cloud, {}).setdefault(str(check["check_id"]), dict(check))
+    return {
+        _BENCHMARK_SECTIONS[cloud]: _benchmark(cloud, [checks[key] for key in sorted(checks, key=_check_order)])
+        for cloud, checks in sorted(by_cloud.items())
+    }
+
+
+def _check_order(check_id: str) -> tuple[int, ...]:
+    return tuple(int(part) if part.isdigit() else 0 for part in check_id.split("."))
+
+
+__all__ = ["estate_cis_benchmarks", "recorded_cis_passes"]

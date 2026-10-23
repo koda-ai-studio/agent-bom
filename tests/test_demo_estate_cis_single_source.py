@@ -73,8 +73,65 @@ def test_benchmark_blobs_are_derived_from_the_estate_cis_findings() -> None:
     snowflake = blobs["snowflake_cis_benchmark"]
     assert snowflake["benchmark_version"] == "1.0"
     assert [(c["check_id"], c["status"], c["resource_ids"]) for c in snowflake["checks"]] == [("3.1", "error", [])]
-    # No recorded passing result anywhere, so nothing is reported as passing.
+    # No recorded passing result was supplied, so nothing is reported as passing.
     assert all(c["status"] != "pass" for blob in blobs.values() for c in blob["checks"])
+
+
+def test_recorded_passes_join_the_blob_and_never_mask_a_failure() -> None:
+    from agent_bom.demo_estate.estate_cis_benchmarks import estate_cis_benchmarks, recorded_cis_passes
+
+    passing = {"check_id": "1.4", "title": "No root account access keys", "status": "pass", "resource_ids": []}
+    masked = {**passing, "check_id": "2.1.1"}
+    blobs = estate_cis_benchmarks([_row("aws", "2.1.1", "FAIL", "aws:bucket:a")], [("aws", passing), ("aws", masked)])
+
+    aws = blobs["cis_benchmark"]
+    assert [(c["check_id"], c["status"]) for c in aws["checks"]] == [("1.4", "pass"), ("2.1.1", "fail")]
+    assert (aws["passed"], aws["failed"], aws["total"], aws["pass_rate"]) == (1, 1, 2, 50.0)
+    assert recorded_cis_passes(blobs) == [("aws", passing)]
+
+
+def _scanner_definition(provider: str, check_id: str) -> tuple[str, str, str] | None:
+    """``(title, severity, section literal or constant)`` from the shipped scanner source."""
+    import re
+    from pathlib import Path
+
+    import agent_bom.cloud as cloud_pkg
+
+    root = Path(cloud_pkg.__file__).parent
+    paths = [root / f"{provider}_cis_benchmark.py", *sorted((root / f"{provider}_cis").glob("*.py"))]
+    source = "\n".join(path.read_text(encoding="utf-8") for path in paths if path.exists())
+    constants = dict(re.findall(r'^(_[A-Z_]+)\s*=\s*"([^"]+)"', source, re.M))
+    for match in re.finditer(rf'check_id="{re.escape(check_id)}",', source):
+        window = source[match.end() : match.end() + 700]
+        title, severity = re.search(r'title="([^"]+)"', window), re.search(r'severity="([a-z]+)"', window)
+        section = re.search(r'cis_section=([A-Za-z_"][^,\n)]*)', window)
+        if title and severity and section:
+            raw = section.group(1).strip()
+            return title.group(1), severity.group(1), constants.get(raw, raw.strip('"'))
+    return None
+
+
+def test_every_recorded_pass_is_a_shipped_scanner_control_that_never_fails_in_the_estate() -> None:
+    from agent_bom.demo_estate.estate_cis_catalog import _CATALOG, _PASSING
+
+    drifted = [
+        f"{check.provider} {check.check_id}"
+        for check in _PASSING
+        if _scanner_definition(check.provider, check.check_id) != (check.title, check.severity, check.cis_section)
+    ]
+    assert drifted == [], f"recorded passes must copy the scanner's id, title, severity and section: {drifted}"
+    failing = {(check.provider, check.check_id) for check in _CATALOG}
+    assert [(c.provider, c.check_id) for c in _PASSING if (c.provider, c.check_id) in failing] == []
+
+
+def test_every_cloud_records_a_believable_derived_pass_rate() -> None:
+    from agent_bom.demo_estate.enterprise_composition import build_demo_estate
+    from agent_bom.demo_estate.estate_cis_catalog import _PASSING, estate_cis_passes
+
+    passes = estate_cis_passes(build_demo_estate(tenant_id="default"))
+    # Every recorded pass rests on estate evidence, and none was dropped for lack of it.
+    assert len(passes) == len(_PASSING)
+    assert all(check["evaluated_count"] > 0 and check["resource_ids"] == [] for _, check in passes)
 
 
 def test_the_curated_cis_table_is_gone() -> None:
@@ -120,8 +177,15 @@ def _assert_panel_matches_graph(checks: list[dict[str, Any]], graph: dict[tuple[
     public_access_block = by_id[("aws", "2.1.1")]
     assert "public access block" in public_access_block["title"].lower()
     assert public_access_block["graph_node_id"] == "misconfig:cis_benchmark:2.1.1"
-    # Nothing in the estate records a passing CIS result, so no check is shown as passing.
-    assert {row["status"] for row in checks} <= {"fail", "error", "not_evaluated"}
+    assert {row["status"] for row in checks} <= {"pass", "fail", "error", "not_evaluated"}
+    passes = [row for row in checks if row["status"] == "pass"]
+    # Recorded passes never claim a failing resource and are never in the graph's failures.
+    assert passes and all(row["resource_ids"] == [] and (row["cloud"], row["check_id"]) not in graph for row in passes)
+    for cloud in ("aws", "azure", "gcp", "snowflake"):
+        rows = [row for row in checks if row["cloud"] == cloud]
+        evaluated = [row for row in rows if row["status"] in {"pass", "fail", "error"}]
+        rate = sum(1 for row in evaluated if row["status"] == "pass") / len(evaluated)
+        assert 0.6 <= rate <= 0.8, (cloud, rate)
 
 
 def _assert_resources_open_in_graph_and_findings(client: TestClient, checks: list[dict[str, Any]]) -> None:
@@ -145,11 +209,12 @@ def _assert_scorecard_counts_the_panel(client: TestClient, checks: list[dict[str
         return sum(1 for row in benchmark if row["status"] == status)
 
     assert summary["fail"] == count("fail") == 28
-    assert summary["pass"] == count("pass") == 0
+    assert summary["pass"] == count("pass") > 0
     assert summary["error"] == count("error")
     assert summary["not_evaluated"] == count("not_evaluated")
     assert summary["evaluated"] == summary["pass"] + summary["fail"] + summary["error"]
     assert line["status"] == "fail"
+    assert summary["score"] == round(summary["pass"] / summary["evaluated"] * 100, 1)
     assert line["providers"]["snowflake"]["fail"] == 4
 
 

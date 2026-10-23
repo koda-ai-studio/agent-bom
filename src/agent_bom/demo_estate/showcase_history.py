@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from agent_bom.demo_estate.estate_cis_benchmarks import estate_cis_benchmarks
+from agent_bom.demo_estate.estate_cis_benchmarks import estate_cis_benchmarks, recorded_cis_passes
 from agent_bom.demo_estate.showcase_constants import (
     SHOWCASE_BASELINE_CREATED_AT,
     SHOWCASE_BASELINE_SCAN_ID,
@@ -194,7 +194,7 @@ def stage_report(report: dict[str, Any], index: int) -> dict[str, Any]:
         findings.append(_operator_vex(row) if suppressed else row)
     staged = {key: value for key, value in report.items() if key not in _CIS_SECTIONS}
     # Each stage's CIS benchmark states that stage's own CIS findings.
-    staged.update(findings=findings, scan_id=stage.scan_id, **estate_cis_benchmarks(findings))
+    staged.update(findings=findings, scan_id=stage.scan_id, **estate_cis_benchmarks(findings, recorded_cis_passes(report)))
     if index == len(stages) - 1:
         # The current scan keeps its own evidence time, so it stays the newest job of its scope.
         return staged

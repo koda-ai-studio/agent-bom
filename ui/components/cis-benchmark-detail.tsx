@@ -87,6 +87,13 @@ function severityClass(severity: string): string {
   }
 }
 
+const STATUS_ORDER = ["fail", "error", "not_evaluated", "pass", "not_applicable"];
+
+function statusRank(status: string): number {
+  const rank = STATUS_ORDER.indexOf(status);
+  return rank < 0 ? STATUS_ORDER.indexOf("not_evaluated") : rank;
+}
+
 const ALL = "all";
 // Typed as string[] (not a literal tuple) so the generic FilterPills infers
 // T = string and accepts the string state value.
@@ -345,13 +352,15 @@ export function CISBenchmarkDetail() {
   }, [checks]);
 
   const visible = useMemo(() => {
-    return (checks ?? []).filter((c) => {
+    const filtered = (checks ?? []).filter((c) => {
       if (cloud !== ALL && c.cloud !== cloud) return false;
       if (status !== ALL && c.status !== status) return false;
       if (priority >= 0 && c.priority !== priority) return false;
       if (guardrail !== ALL && !c.guardrails.includes(guardrail)) return false;
       return true;
     });
+    // Work first: failures, then unevaluable and unknown results, then recorded passes. Stable within a status.
+    return filtered.sort((a, b) => statusRank(a.status) - statusRank(b.status));
   }, [checks, cloud, status, priority, guardrail]);
 
   if (loading) {

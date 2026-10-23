@@ -294,4 +294,21 @@ describe("CISBenchmarkDetail", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show all 12 resources" }));
     expect(within(list).getAllByRole("listitem")).toHaveLength(12);
   });
+
+  it("lists the checks that need work before recorded passes", async () => {
+    apiMock.listCisBenchmarkChecks.mockResolvedValue({
+      checks: [
+        makeCheck({ check_id: "1.4", title: "Root keys absent", status: "pass" }),
+        makeCheck({ check_id: "4.1", title: "No result", status: "not_evaluated" }),
+        makeCheck({ check_id: "2.1.1", title: "Public access block", status: "fail" }),
+        makeCheck({ check_id: "3.1", title: "Unreadable", status: "error" }),
+      ],
+      count: 4, source: "scan_jobs+graph",
+    });
+    render(<CISBenchmarkDetail />);
+    await screen.findByText("Root keys absent");
+    const titles = screen.getAllByTestId("cis-check").map((card) => within(card).getAllByText(/./)[1]?.textContent);
+    expect(titles).toEqual(["Public access block", "Unreadable", "No result", "Root keys absent"]);
+  });
 });
+
