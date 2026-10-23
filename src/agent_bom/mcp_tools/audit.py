@@ -27,8 +27,11 @@ def tool_risk_assessment_impl(
 ) -> str:
     """Implementation of the tool_risk_assessment tool."""
     from agent_bom.mcp_server_runtime import resolve_tool_path
+    from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
 
     resolved_config_path = str(resolve_tool_path(_safe_path, config_path, argument="config_path")) if config_path else None
+    if resolved_config_path is None:
+        ensure_host_local_allowed()
     try:
         agents = discovery.discover_all(project_dir=resolved_config_path)
         servers = [s for a in agents for s in a.mcp_servers if s.is_mcp_surface]

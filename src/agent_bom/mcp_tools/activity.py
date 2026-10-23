@@ -8,6 +8,7 @@ from typing import Annotated, Any
 from mcp_types import ToolAnnotations
 from pydantic import Field
 
+from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
 from agent_bom.runtime.agent_sessions.activity import build_activity_report
 from agent_bom.runtime.agent_sessions.provider import default_since
 from agent_bom.security import sanitize_error
@@ -15,7 +16,7 @@ from agent_bom.security import sanitize_error
 
 def agent_activity_impl(*, days: int = 30, project: str | None = None, _truncate_response) -> str:
     """Build the activity review; never performs network lookups."""
-
+    ensure_host_local_allowed()
     try:
         report: dict[str, Any] = build_activity_report(since=default_since(days), project=project, check_packages=False)
     except Exception as exc:  # broad-except: return a structured, sanitized error to the MCP client

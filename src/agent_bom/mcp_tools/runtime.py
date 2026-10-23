@@ -11,9 +11,10 @@ from typing import Any, cast
 from agent_bom.api.route_offload import call_route as _call_route
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
 from agent_bom.core.experimental import disabled_message, is_enabled
-from agent_bom.mcp_server_runtime import resolve_tool_path
+from agent_bom.mcp_server_runtime import resolve_tool_path, safe_path
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl as tool_risk_assessment_impl
+from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -746,9 +747,14 @@ def where_impl(
 def inventory_impl(
     *,
     config_path: str | None = None,
+    _safe_path=None,
     _truncate_response,
 ) -> str:
     """Implementation of the inventory tool."""
+    if config_path:
+        config_path = str(resolve_tool_path(_safe_path or safe_path, config_path, argument="config_path"))
+    else:
+        ensure_host_local_allowed()
     try:
         from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
         from agent_bom.discovery import discover_all
