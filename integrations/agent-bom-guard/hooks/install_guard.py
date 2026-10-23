@@ -340,10 +340,15 @@ def decide(event: Any, env: Mapping[str, str], osv: Any) -> dict[str, Any] | Non
     if command is None:
         return None
     plan = parse_command(command)
-    if not plan.packages and not plan.requirement_files:
+    if not plan.packages and not plan.requirement_files and not plan.pipe_to_shell:
         return None
     options = read_options(env)
     blocks, warnings = _offline_findings(plan.packages)
+    for pipe in dict.fromkeys(plan.pipe_to_shell):
+        warnings.append(
+            f"{pipe}: this pipes a downloaded script into a shell, so it runs unread and unpinned; "
+            "download it to a file, read it, then run it"
+        )
     notes: list[str] = []
     if options["osv_lookup"] and plan.packages:
         osv_blocks, osv_warnings, notes = _osv_findings(plan.packages, osv)
