@@ -9,12 +9,19 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import json
 import logging
+import os
+import socket
 import threading
+import time
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import Any, Literal, TypeVar
 
 from agent_bom.demo_estate import demo_estate_enabled
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_TENANT
+from agent_bom.storage.state_home import state_dir
 
 _logger = logging.getLogger(__name__)
 
@@ -35,8 +42,75 @@ def serialized_seed(fn: _F) -> _F:
     return wrapper  # type: ignore[return-value]
 
 
-def demo_estate_seeding() -> bool:
-    return not _boot_seed_done.is_set()
+# Other processes reading the same demo state (an out-of-process MCP server)
+# see the seed through this marker in the shared state directory, which also
+# holds the demo graph. A seeder that crashed leaves a marker naming a dead
+# process on this host; one from another host expires after the TTL.
+SEED_MARKER_NAME = "demo-seed-in-progress.json"
+SEED_MARKER_TTL_SECONDS = 1800.0
+SEED_TENANTS = (SHOWCASE_TENANT,)
+
+
+def _marker_path() -> Path:
+    return state_dir() / SEED_MARKER_NAME
+
+
+def mark_seed_started(tenants: tuple[str, ...] = SEED_TENANTS) -> None:
+    """Record, for every process sharing this state, that the seed is landing for *tenants*."""
+    path = _marker_path()
+    payload = {"tenants": list(tenants), "started_at": time.time(), "pid": os.getpid(), "host": socket.gethostname()}
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        staging = path.with_name(f".{path.name}.{os.getpid()}")
+        staging.write_text(json.dumps(payload), encoding="utf-8")
+        os.replace(staging, path)
+    except OSError:
+        _logger.warning("demo seed marker could not be written; other processes will not see the seed", exc_info=False)
+
+
+def clear_seed_marker() -> None:
+    try:
+        _marker_path().unlink(missing_ok=True)
+    except OSError:
+        _logger.warning("demo seed marker could not be removed", exc_info=False)
+
+
+def _marker_payload() -> dict[str, Any] | None:
+    try:
+        payload = json.loads(_marker_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _process_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return True
+    return True
+
+
+def _persisted_seed_active(tenant_id: str | None) -> bool:
+    payload = _marker_payload()
+    if payload is None:
+        return False
+    try:
+        started_at, pid = float(payload["started_at"]), int(payload["pid"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    if time.time() - started_at > SEED_MARKER_TTL_SECONDS:
+        return False
+    if payload.get("host") == socket.gethostname() and not _process_alive(pid):
+        return False
+    return tenant_id is None or tenant_id in (payload.get("tenants") or [])
+
+
+def demo_estate_seeding(tenant_id: str | None = None) -> bool:
+    """Whether a demo seed is landing here, or in another process sharing this state (for *tenant_id*)."""
+    return not _boot_seed_done.is_set() or _persisted_seed_active(tenant_id)
 
 
 def demo_seed_state() -> Literal["pending", "complete"] | None:
@@ -57,6 +131,7 @@ def _run_boot_seed() -> None:
     from agent_bom.api.posture_counts_cache import wait_for_posture_precompute
     from agent_bom.demo_estate import bootstrap
 
+    mark_seed_started()
     try:
         bootstrap.maybe_bootstrap_demo_estate()
         # The seed's scan writes schedule the posture-count precompute; stay
@@ -65,6 +140,7 @@ def _run_boot_seed() -> None:
             _logger.warning("demo estate posture precompute still running at readiness")
     finally:
         _boot_seed_done.set()
+        clear_seed_marker()
 
 
 async def _seed_then(after: Callable[[], Awaitable[None]] | None) -> None:
@@ -82,6 +158,7 @@ async def _seed_then(after: Callable[[], Awaitable[None]] | None) -> None:
 def start_demo_estate_boot_seed(after: Callable[[], Awaitable[None]] | None = None) -> asyncio.Task[None]:
     """Schedule the startup seed; readiness reports seeding from this call on."""
     _boot_seed_done.clear()
+    mark_seed_started()
     return asyncio.create_task(_seed_then(after))
 
 
@@ -93,6 +170,9 @@ async def drain_demo_estate_boot_seed(task: asyncio.Task[None] | None, timeout: 
 
 __all__ = [
     "DEMO_SEEDING_SUMMARY",
+    "SEED_MARKER_TTL_SECONDS",
+    "clear_seed_marker",
+    "mark_seed_started",
     "demo_estate_seeding",
     "demo_seed_state",
     "drain_demo_estate_boot_seed",
