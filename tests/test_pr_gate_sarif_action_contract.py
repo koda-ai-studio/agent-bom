@@ -67,7 +67,7 @@ def test_action_legacy_agents_input_dispatches_canonical_scan() -> None:
         text=True,
         check=True,
     )
-    assert result.stdout.strip() == "scan"
+    assert result.stdout.split() == ["scan", "."]
     assert "code, agents" not in action["inputs"]["scan-type"]["description"]
 
 
@@ -147,8 +147,8 @@ def test_action_defaults_to_repo_scan_with_high_severity_gate_and_failure_commen
 
     assert action["inputs"]["scan-type"]["default"] == "scan"
     assert action["inputs"]["severity-threshold"]["default"] == "high"
-    assert 'scan|"")' in run_script
-    assert "ARGS=(scan)" in run_script
+    assert 'scan|agents|"")' in run_script
+    assert "ARGS=(scan .)" in run_script
     assert 'ARGS+=(--fail-on-severity "$INPUT_SEVERITY")' in run_script
     assert "always() && inputs.pr-comment == 'true'" in comment_step["if"]
 

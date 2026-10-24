@@ -367,15 +367,23 @@ runs:
           code)
             ARGS=(code "${INPUT_SCAN_REF:-.}")
             ;;
-          agents)
-            # Accept the legacy input while invoking the canonical command.
-            ARGS=(scan)
-            ;;
           skills)
             ARGS=(skills scan "${INPUT_SCAN_REF:-.}")
             ;;
-          scan|"")
-            ARGS=(scan)
+          scan|agents|"")
+            # `agents` is the legacy name for the canonical scan command.
+            # Scope the scan to the checkout so the recursive project detector
+            # (Terraform, Kubernetes, Helm, CloudFormation, workflows, skills)
+            # runs and the runner's home-directory MCP configs stay out of CI.
+            # An explicit artifact (sbom/image) without a scope scans only that
+            # artifact.
+            if [ -n "$INPUT_SCAN_REF" ]; then
+              ARGS=(scan "$INPUT_SCAN_REF")
+            elif [ -n "$INPUT_SBOM" ] || [ -n "$INPUT_IMAGE" ]; then
+              ARGS=(scan --no-discover)
+            else
+              ARGS=(scan .)
+            fi
             ;;
           *)
             echo "::error::Unknown scan-type: $INPUT_SCAN_TYPE. Use: scan, image, fs, sbom, iac, secrets, code, skills"
