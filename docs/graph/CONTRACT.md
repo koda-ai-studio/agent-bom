@@ -886,8 +886,11 @@ receipts before taking an enforcement action.
 
 `GET /v1/graph`, `/graph/search`, `/graph/agents`, `/graph/attack-paths` and
 `/graph/rollup` return `snapshot_generation` on revision-capable stores. Send
-that token and the resolved scan ID with every later `offset` or keyset `cursor`
-request. Rollup continuation applies to a container’s child pages. Missing tokens on a
+that token and the resolved scan ID with every later `offset` request. Rollup
+continuation applies to a container’s child pages. A `cursor` from `GET /v1/graph`
+or `/graph/attack-paths` carries its generation, so `snapshot_generation` is
+optional with it; a supplied token that differs from the cursor's returns 409,
+and a cursor never combines with `offset` (400). Missing tokens on an `offset`
 continuation return 422; a replaced snapshot returns 409 and requires restarting
 at the first page. A replacement during hydration discards the entire response.
 The UI retains already loaded evidence and exposes the failure without appending
