@@ -203,4 +203,6 @@ def test_collector_refresh_applies_certifi_overlay_after_released_lock() -> None
     assert manifest in overlay["run"], "refresh must load current manifest after checking out the old release"
     requirements = (ROOT / manifest).read_text(encoding="utf-8")
     entries = [line for line in requirements.replace("\\\n", "").splitlines() if line and not line.startswith("#")]
-    assert len(entries) == 1 and entries[0].startswith("certifi=="), "collector overlay is limited to the universal certifi wheel"
+    names = sorted(entry.split("==", 1)[0] for entry in entries)
+    assert names == ["certifi", "filelock"], "collector overlay is limited to universal pure-Python wheels"
+    assert all("--hash=sha256:" in entry for entry in entries)
