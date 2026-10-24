@@ -22,6 +22,7 @@ from agent_bom.demo_estate.enterprise_findings import build_estate_findings
 from agent_bom.demo_estate.enterprise_risk import build_vulnerability_evidence
 from agent_bom.demo_estate.id_schemes import showcase_misconfig_id
 from agent_bom.demo_estate.showcase_history import refresh_report_finding_summary
+from agent_bom.demo_estate.showcase_ids import showcase_server_id
 from agent_bom.domain.finding_rehydrate import finding_from_dict
 from agent_bom.evidence.finding_node_ids import finding_row_node_id, mcp_audit_node_id, stamp_finding_node_ids
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
@@ -154,7 +155,7 @@ def bind_mcp_auth_findings(findings: list[Finding], servers: Iterable[str]) -> l
     known = set(servers)
     for finding in findings:
         if finding.source is FindingSource.MCP_SCAN and finding.asset.name in known:
-            finding.node_id = f"server:{finding.asset.name}"
+            finding.node_id = showcase_server_id(finding.asset.name)
             finding.finding_node_id = mcp_audit_node_id(finding.id)
     return findings
 

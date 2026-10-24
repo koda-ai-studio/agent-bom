@@ -54,13 +54,11 @@ def apply_demo_mode(
     if not demo:
         return project, inventory, enrich, compliance, iac_paths
 
-    from agent_bom.demo import DEMO_INVENTORY
+    from agent_bom.demo import demo_inventory_document
 
-    for agent_data in DEMO_INVENTORY.get("agents", []):
-        agent_data.setdefault("config_path", f"~/.config/{agent_data.get('agent_type', 'agent')}/config.json")
     fd, path = tempfile.mkstemp(suffix=".json", prefix="agent-bom-demo-")
     with os.fdopen(fd, "w") as out:
-        json.dump(DEMO_INVENTORY, out)
+        json.dump(demo_inventory_document(), out)
 
     inventory = path
     enrich = True
