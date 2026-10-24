@@ -41,11 +41,6 @@ def _pick(seed: str, candidates: Sequence[EstateAsset]) -> EstateAsset | None:
     return ordered[int.from_bytes(hashlib.sha256(seed.encode()).digest()[:4], "big") % len(ordered)]
 
 
-def _s3_bucket_name(bucket: EstateAsset) -> str:
-    """S3 names are global, so the recorded name carries the account; the estate repeats display names."""
-    return f"{bucket.display_name}-{bucket.account_scope}"
-
-
 def _with_tags(asset: EstateAsset, **tags: str) -> EstateAsset:
     return asset.model_copy(update={"tags": {**asset.tags, **tags}})
 
@@ -77,7 +72,7 @@ def _integration(stage: EstateAsset, bucket: EstateAsset, role: EstateAsset) -> 
             "storage_aws_role_arn": role.native_id,
             "storage_aws_iam_user_arn": _snowflake_trust(stage)[0],
             "storage_aws_external_id": _snowflake_trust(stage)[1],
-            "storage_allowed_locations": f"s3://{_s3_bucket_name(bucket)}/",
+            "storage_allowed_locations": f"s3://{bucket.display_name}/",
             "integration_source": INTEGRATION_SOURCE,
         },
     )
@@ -128,7 +123,7 @@ def record_external_stages(assets: Sequence[EstateAsset]) -> tuple[EstateAsset, 
         integration = _integration(stage, bucket, role)
         added.extend((integration, role))
         # The bucket's ARN, as an S3 collection records it.
-        updates[bucket.asset_id] = _with_tags(updates.get(bucket.asset_id, bucket), arn=f"arn:aws:s3:::{_s3_bucket_name(bucket)}")
+        updates[bucket.asset_id] = _with_tags(updates.get(bucket.asset_id, bucket), arn=f"arn:aws:s3:::{bucket.display_name}")
         updates[stage.asset_id] = _with_tags(
             stage,
             storage_integration=integration.asset_id,
