@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import patch
 
-import psycopg
 import pytest
 import uvicorn
 from click.testing import CliRunner
@@ -17,6 +16,14 @@ from uvicorn.lifespan.on import LifespanOn
 from agent_bom.api.middleware_limits import RateLimitMiddleware, _build_rate_limit_store
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.cli import main
+
+
+class _PgError(Exception):
+    """A driver error carrying a SQLSTATE, as psycopg errors do."""
+
+    def __init__(self, sqlstate: str, message: str) -> None:
+        super().__init__(message)
+        self.sqlstate = sqlstate
 
 
 class _FailingConn:
@@ -77,7 +84,7 @@ def test_limiter_init_failure_names_the_cause(monkeypatch):
 
 def test_missing_schema_ledger_says_to_run_migrations(monkeypatch):
     monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgresql://example/test")
-    conn = _FailingConn(psycopg.errors.UndefinedTable('relation "control_plane_schema_versions" does not exist'))
+    conn = _FailingConn(_PgError("42P01", 'relation "control_plane_schema_versions" does not exist'))
 
     with pytest.raises(RuntimeError) as excinfo:
         ensure_postgres_schema_version(conn, "rate_limits")
@@ -90,7 +97,7 @@ def test_missing_schema_ledger_says_to_run_migrations(monkeypatch):
 
 def test_unreadable_schema_ledger_names_the_runtime_role_grant(monkeypatch):
     monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgresql://example/test")
-    conn = _FailingConn(psycopg.errors.InsufficientPrivilege("permission denied for table control_plane_schema_versions"))
+    conn = _FailingConn(_PgError("42501", "permission denied for table control_plane_schema_versions"))
 
     with pytest.raises(RuntimeError) as excinfo:
         ensure_postgres_schema_version(conn, "api_keys")

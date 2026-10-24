@@ -204,25 +204,32 @@ _MIGRATION_HINT = (
 )
 
 
-def _read_schema_version_row(conn: Any, component: str) -> Any:
-    import psycopg
+# SQLSTATE codes, matched without importing psycopg: the check also runs with
+# test doubles and in installs without the postgres extra.
+_UNDEFINED_TABLE = "42P01"
+_INSUFFICIENT_PRIVILEGE = "42501"
 
+
+def _read_schema_version_row(conn: Any, component: str) -> Any:
     try:
         return conn.execute(
             "SELECT version FROM control_plane_schema_versions WHERE component = %s",
             (component,),
         ).fetchone()
-    except psycopg.errors.UndefinedTable as exc:
-        raise RuntimeError(
-            f"The Postgres database at AGENT_BOM_POSTGRES_URL has not been migrated "
-            f"(control_plane_schema_versions is missing; needed by {component!r}). {_MIGRATION_HINT}"
-        ) from exc
-    except psycopg.errors.InsufficientPrivilege as exc:
-        raise RuntimeError(
-            "The runtime role in AGENT_BOM_POSTGRES_URL cannot read control_plane_schema_versions. "
-            "Connect as the provisioned runtime role (agent_bom_app), whose grants the migrations "
-            f"create, not a hand-made role. {_MIGRATION_HINT}"
-        ) from exc
+    except Exception as exc:
+        sqlstate = getattr(exc, "sqlstate", None)
+        if sqlstate == _UNDEFINED_TABLE:
+            raise RuntimeError(
+                f"The Postgres database at AGENT_BOM_POSTGRES_URL has not been migrated "
+                f"(control_plane_schema_versions is missing; needed by {component!r}). {_MIGRATION_HINT}"
+            ) from exc
+        if sqlstate == _INSUFFICIENT_PRIVILEGE:
+            raise RuntimeError(
+                "The runtime role in AGENT_BOM_POSTGRES_URL cannot read control_plane_schema_versions. "
+                "Connect as the provisioned runtime role (agent_bom_app), whose grants the migrations "
+                f"create, not a hand-made role. {_MIGRATION_HINT}"
+            ) from exc
+        raise
 
 
 def ensure_postgres_schema_version(conn: Any, component: str, version: int = CONTROL_PLANE_SCHEMA_VERSION) -> bool:
