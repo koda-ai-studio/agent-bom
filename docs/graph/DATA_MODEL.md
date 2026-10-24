@@ -42,7 +42,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `credential_ref` | Credential Reference | Identity and access | `identity` | 5 / 4001 |  | 0 |
 | `data_store` | Data Store | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 8 (+1 demo) |
 | `dataset` | Dataset | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 1 (+1 demo) |
-| `directory` | Directory | Code and supply chain | `code` | 5 / 4001 |  | 2 |
+| `directory` | Directory | Code and supply chain | `code` | 5 / 4001 |  | 3 |
 | `drift_incident` | Drift Incident | Findings | `finding` | 2 / 2004 | yes | 1 |
 | `environment` | Environment | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 0 (+2 demo) |
 | `external_import` | External Import | Code and supply chain | `code` | 5 / 4001 |  | 0 |
@@ -62,7 +62,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 4 (+2 demo) |
 | `service_account` | Service Account | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
 | `service_principal` | Service Principal | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
-| `source_file` | Source File | Code and supply chain | `code` | 5 / 4001 |  | 3 |
+| `source_file` | Source File | Code and supply chain | `code` | 5 / 4001 |  | 4 |
 | `tool` | Tool | AI and agents | `tool` | 5 / 4001 |  | 6 (+2 demo) |
 | `tool_call` | Tool Call | AI and agents | `runtime_evidence` | 5 / 4001 |  | 0 (+1 demo) |
 | `user` | User | Identity and access | `user` | 3 / 3001 |  | 8 (+1 demo) |

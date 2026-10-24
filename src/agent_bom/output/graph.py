@@ -12,7 +12,6 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.asset_provenance import package_version_provenance
-from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.core.risk_display import risk_label
 from agent_bom.graph import SEVERITY_RANK as _SEVERITY_RANK
 from agent_bom.graph.compat import stamp_export_entity_types
@@ -28,6 +27,7 @@ from agent_bom.output.graph_html import _json_for_script as _json_for_script
 from agent_bom.output.graph_html import _sanitize_graph_reference_payload as _sanitize_graph_reference_payload
 from agent_bom.output.graph_html import _to_offline_graph_html as _to_offline_graph_html
 from agent_bom.output.graph_html import _vendor_script_tags as _vendor_script_tags
+from agent_bom.output.graph_inventory import append_agent_elements, append_server_elements, package_edge_type, server_node_id
 from agent_bom.output.graph_policy import _SEVERITY_BADGE as _SEVERITY_BADGE
 from agent_bom.output.graph_policy import _graph_policy_finding_elements as _graph_policy_finding_elements
 from agent_bom.output.graph_policy import _graph_policy_findings as _graph_policy_findings
@@ -35,7 +35,7 @@ from agent_bom.output.graph_policy import _norm_repo_dir as _norm_repo_dir
 from agent_bom.output.graph_policy import _PackageVulnSummary as _PackageVulnSummary
 from agent_bom.output.graph_policy import _provider_label as _provider_label
 from agent_bom.output.graph_policy import _summarize_package_vulns as _summarize_package_vulns
-from agent_bom.security import sanitize_launch_command, sanitize_path_label, sanitize_text
+from agent_bom.security import sanitize_launch_command, sanitize_text
 
 if TYPE_CHECKING:
     from agent_bom.models import AIBOMReport, BlastRadius
@@ -92,55 +92,12 @@ def build_graph_elements(
         pkg_to_vulns[key].append(topology_vuln_dict(finding))
 
     for agent in report.agents:
-        # ── Provider node ─────────────────────────────────────────────
-        source = agent.source or "local"
-        if source not in providers_seen:
-            providers_seen.add(source)
-            elements.append(
-                {
-                    "data": {
-                        "id": f"provider:{source}",
-                        "label": _provider_label(source),
-                        "type": "provider",
-                        "tip": f"Source: {source}",
-                    }
-                }
-            )
-
-        # ── Agent node ────────────────────────────────────────────────
-        aid = agent_graph_id_for(agent)
-        elements.append(
-            {
-                "data": {
-                    "id": aid,
-                    "label": agent.name,
-                    "type": "agent",
-                    "tip": (f"Agent: {agent.name}\nType: {agent.agent_type.value}\nSource: {source}\nServers: {len(agent.mcp_servers)}"),
-                    "agentType": agent.agent_type.value,
-                    "configPath": sanitize_path_label(agent.config_path) if agent.config_path else "",
-                    # "source"/"target" are reserved Cytoscape edge fields; a node-level
-                    # "source" key makes standards-following consumers misclassify nodes as edges.
-                    "discovery_source": source,
-                    "serverCount": len(agent.mcp_servers),
-                    "packageCount": agent.total_packages,
-                    "vulnCount": agent.total_vulnerabilities,
-                }
-            }
-        )
-        # Edge: provider → agent
-        elements.append(
-            {
-                "data": {
-                    "source": f"provider:{source}",
-                    "target": aid,
-                    "type": "hosts",
-                }
-            }
-        )
+        aid, static = append_agent_elements(elements, agent, providers_seen)
+        pkg_edge_type = package_edge_type(static)
 
         # ── Server nodes ──────────────────────────────────────────────
         for srv in agent.mcp_servers:
-            sid = mcp_server_graph_id_for(srv, agent)
+            sid = server_node_id(agent, static, srv)
             vuln_count = sum(1 for p in srv.packages if (p.name, p.ecosystem) in vuln_pkg_keys)
             has_vuln = vuln_count > 0
             has_cred = srv.has_credentials
@@ -193,41 +150,25 @@ def build_graph_elements(
             intel_note = f"\nMCP intelligence: {', '.join(intelligence_titles)}" if intelligence_titles else ""
             security_warnings = list(getattr(srv, "security_warnings", []) or [])
 
-            elements.append(
-                {
-                    "data": {
-                        "id": sid,
-                        "label": server_label,
-                        "type": stype,
-                        "tip": f"MCP Server: {srv.name}{pkg_note}{cinfo}{intel_note}",
-                        "command": sanitize_launch_command(srv.command or "", srv.args or [], max_args=3)[:80],
-                        "packageCount": len(srv.packages),
-                        "vulnPackageCount": vulnerable_pkg_count,
-                        "vulnCount": total_pkg_vulns,
-                        "criticalCount": critical_pkg_vulns,
-                        "securityBlocked": has_blocking_intel,
-                        "securityIntelligenceCount": len(intelligence),
-                        "securityIntelligence": json.dumps(intelligence_titles),
-                        "securityWarnings": json.dumps(security_warnings[:5]),
-                        "hasCredentials": has_cred,
-                        "credentials": json.dumps(srv.credential_names) if srv.credential_names else "[]",
-                        "toolNames": json.dumps([t.name for t in srv.tools[:10]]) if srv.tools else "[]",
-                    }
-                }
-            )
-            # Edge: agent → server
-            elements.append(
-                {
-                    "data": {
-                        "source": aid,
-                        "target": sid,
-                        "type": "uses",
-                        "credentialEdge": 1 if has_cred else 0,
-                        "securityBlocked": 1 if has_blocking_intel else 0,
-                        "securityIntelligence": 1 if has_security_intel else 0,
-                    }
-                }
-            )
+            server_data = {
+                "id": sid,
+                "label": server_label,
+                "type": stype,
+                "tip": f"MCP Server: {srv.name}{pkg_note}{cinfo}{intel_note}",
+                "command": sanitize_launch_command(srv.command or "", srv.args or [], max_args=3)[:80],
+                "packageCount": len(srv.packages),
+                "vulnPackageCount": vulnerable_pkg_count,
+                "vulnCount": total_pkg_vulns,
+                "criticalCount": critical_pkg_vulns,
+                "securityBlocked": has_blocking_intel,
+                "securityIntelligenceCount": len(intelligence),
+                "securityIntelligence": json.dumps(intelligence_titles),
+                "securityWarnings": json.dumps(security_warnings[:5]),
+                "hasCredentials": has_cred,
+                "credentials": json.dumps(srv.credential_names) if srv.credential_names else "[]",
+                "toolNames": json.dumps([t.name for t in srv.tools[:10]]) if srv.tools else "[]",
+            }
+            append_server_elements(elements, aid, static, server_data)
 
             tool_ids: list[tuple[str, str]] = []
             for tool in srv.tools:
@@ -310,7 +251,7 @@ def build_graph_elements(
                             "data": {
                                 "source": sid,
                                 "target": pid,
-                                "type": "depends_on",
+                                "type": pkg_edge_type,
                             }
                         }
                     )
@@ -364,7 +305,7 @@ def build_graph_elements(
                         "data": {
                             "source": sid,
                             "target": pid,
-                            "type": "depends_on",
+                            "type": pkg_edge_type,
                             "versionProvenance": json.dumps(version_provenance),
                             "maxSeverity": max_severity,
                             "vulnCount": vc,
@@ -643,7 +584,7 @@ def _append_repo_structure_elements(
         return "source_file" if ext in code_ext else "config_file"
 
     def dir_id(path: str) -> str:
-        return "dir:." if path == "" else f"dir:{path}"
+        return "directory:." if path == "" else f"directory:{path}"
 
     def dir_label(path: str) -> str:
         return "." if path == "" else path.rsplit("/", 1)[-1]
@@ -709,7 +650,7 @@ def _append_repo_structure_elements(
         all_files = sorted(set(manifest_files) | set(lockfiles) | set(declarations))
         for file_name in all_files:
             file_path = f"{path}/{file_name}" if path else file_name
-            node_id = f"file:{file_path}"
+            node_id = f"{file_type(file_name)}:{file_path}"
             if node_id not in seen_nodes:
                 seen_nodes.add(node_id)
                 elements.append(
@@ -732,7 +673,7 @@ def _append_repo_structure_elements(
         representative = sorted(declarations or manifest_files or lockfiles)
         if representative and pkgs_by_dir.get(path):
             rep_path = f"{path}/{representative[0]}" if path else representative[0]
-            rep_id = f"file:{rep_path}"
+            rep_id = f"{file_type(representative[0])}:{rep_path}"
             for pid in sorted(set(pkgs_by_dir[path])):
                 key = (rep_id, pid)
                 if key not in seen_edges:
