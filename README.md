@@ -197,6 +197,12 @@ observed execution or effective access.
 
 ## Contributing and support
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/koda-ai-studio/agent-bom)
+
+New here? The [first PR in 30 minutes](CONTRIBUTING.md#your-first-pr-in-30-minutes) guide and a ready Codespace get you from zero to a passing test without local setup. Start with a [`good first issue`](https://github.com/koda-ai-studio/agent-bom/issues?q=is%3Aopen+label%3A%22good+first+issue%22) or the [contributor roadmap](docs/ROADMAP.md), and ask in `#contributors` on [Discord](https://discord.gg/3YmYPqKZh5).
+
+agent-bom wants more maintainers: [GOVERNANCE.md](GOVERNANCE.md) lays out the path from contributor to triager, reviewer and maintainer, and [MAINTAINERS.md](MAINTAINERS.md) lists who reviews what. If agent-bom gave you useful evidence, a star or a short note in [feedback](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml) helps other security teams find and trust it.
+
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
 Source version: **v0.110.0** · Latest release: **v0.110.0** · [Changelog](CHANGELOG.md)

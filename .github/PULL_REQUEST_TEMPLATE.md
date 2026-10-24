@@ -8,6 +8,9 @@
 <!-- How was this tested? -->
 
 - [ ] `pytest tests/ -x -q` passes
+- [ ] A test that failed before this change passes after it (paste the red and green runs above), or a maintainer applied `no-tests-needed`
+- [ ] No new network destination, credential access, dependency or weakened check — or it is explained above (see `.agents/skills/secure-change`)
+- [ ] If a coding agent helped, I reviewed every line it wrote
 - [ ] `ruff check src/ && ruff format --check src/` passes
 - [ ] TypeScript: `cd ui && npx tsc --noEmit` (if UI changes)
 - [ ] Manual verification (describe below)

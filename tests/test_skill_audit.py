@@ -3,6 +3,8 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from agent_bom.models import AIBOMReport, MCPServer, Package, TransportType
 from agent_bom.output import to_json
 from agent_bom.parsers.skill_audit import SkillAuditResult, audit_skill_result
@@ -1445,24 +1447,37 @@ def test_hard_wrapped_bypass_directive_is_still_flagged():
     assert _bypass_contexts(items) == {"behavioral"}
 
 
-def test_real_agents_md_policy_doc_not_malicious():
-    """The repository's own AGENTS.md governance doc must never scan as malicious."""
+def _repo_instruction_files() -> list[str]:
+    from pathlib import Path
+
+    from tests._tracked_files import tracked_files
+
+    root = Path(__file__).resolve().parent.parent
+    names = {"AGENTS.md", "CLAUDE.md", "SKILL.md"}
+    return sorted(f for f in tracked_files(root, ".") if Path(f).name in names and not f.startswith("tests/"))
+
+
+def test_repo_instruction_files_are_discovered():
+    files = _repo_instruction_files()
+    assert ".agents/AGENTS.md" in files
+    assert ".agents/skills/develop/SKILL.md" in files
+    assert ".agents/skills/secure-change/SKILL.md" in files
+
+
+@pytest.mark.parametrize("relative_path", _repo_instruction_files())
+def test_repo_agent_instruction_files_scan_benign(relative_path: str):
+    """Every agent instruction file the repository ships must scan benign with our own auditor."""
     from pathlib import Path
 
     from agent_bom.parsers.skills import parse_skill_file
     from agent_bom.parsers.trust_assessment import assess_trust
 
-    repo_root = Path(__file__).resolve().parent.parent
-    agents_md = repo_root / "AGENTS.md"
-    if not agents_md.is_file():
-        import pytest
-
-        pytest.skip("AGENTS.md not present")
-    scan = parse_skill_file(agents_md)
+    path = Path(__file__).resolve().parent.parent / relative_path
+    scan = parse_skill_file(path)
     audit = audit_skill_result(scan)
     trust = assess_trust(scan, audit)
     assert trust.content_verdict.value == "benign", (
-        f"AGENTS.md flagged {trust.content_verdict.value}: "
+        f"{relative_path} flagged {trust.content_verdict.value}: "
         f"{[(f.severity, f.category) for f in audit.findings if f.context == 'behavioral']}"
     )
     assert trust.review_verdict.value != "blocked"

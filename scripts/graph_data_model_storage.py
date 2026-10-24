@@ -825,7 +825,7 @@ def render_index(tables: dict[str, Table], rels: list[Relation], generator: str)
         "|---|---|---|---|---|---|---|---|",
     ]
     for table in tables.values():
-        modules = [m.replace("src/agent_bom/", "").replace("deploy/supabase/", "deploy/") for m in table.modules]
+        modules = [m.replace("src/agent_bom/", "") for m in table.modules]
         shown = ", ".join(_code(m) for m in modules[:3]) + (f" (+{len(modules) - 3})" if len(modules) > 3 else "")
         out.append(
             f"| {_code(table.name)} | [{titles[table.domain]}](storage-erd/{table.domain}.md) | "
