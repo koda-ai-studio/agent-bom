@@ -31,7 +31,7 @@ def _finalize_report(opts: ScanOptions, st: ScanState) -> None:
     # Step 4h: Delta mode must run before rendering so JSON/SARIF artifacts
     # and CI exit gates both reflect the same new-only finding set.
     if opts.delta_mode:
-        from agent_bom.scan_delta import compute_delta, load_baseline
+        from agent_bom.scan_delta import compute_delta, compute_finding_delta, load_baseline, prune_pre_existing_findings
 
         _baseline_path = opts.baseline
         if not _baseline_path:
@@ -48,8 +48,6 @@ def _finalize_report(opts: ScanOptions, st: ScanState) -> None:
 
         if _baseline_path:
             try:
-                from agent_bom.scan_delta import compute_finding_delta, prune_pre_existing_findings
-
                 _baseline_data = load_baseline(_baseline_path)
                 _delta_result = compute_delta(st.current_report_json, _baseline_data)
                 _delta_result.baseline_path = _baseline_path
