@@ -203,9 +203,9 @@ Connect with:
 
 ## Client and skill guides
 
-- [MCP client matrix](https://github.com/msaad00/agent-bom/blob/main/docs/MCP_SERVER.md)
-- [Claude Desktop / Claude Code](https://github.com/msaad00/agent-bom/blob/main/docs/CLAUDE_INTEGRATION.md)
-- [Codex CLI](https://github.com/msaad00/agent-bom/blob/main/docs/CODEX_CLI.md)
-- [Cortex CoCo / Cortex Code](https://github.com/msaad00/agent-bom/blob/main/docs/CORTEX_CODE.md)
-- [Snowflake Native App](https://github.com/msaad00/agent-bom/blob/main/docs/snowflake-native-app/INSTALL.md)
-- [Contributing agent-bom skills](https://github.com/msaad00/agent-bom/blob/main/docs/CONTRIBUTING_SKILLS.md)
+- [MCP client matrix](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/MCP_SERVER.md)
+- [Claude Desktop / Claude Code](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/CLAUDE_INTEGRATION.md)
+- [Codex CLI](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/CODEX_CLI.md)
+- [Cortex CoCo / Cortex Code](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/CORTEX_CODE.md)
+- [Snowflake Native App](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/snowflake-native-app/INSTALL.md)
+- [Contributing agent-bom skills](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/CONTRIBUTING_SKILLS.md)

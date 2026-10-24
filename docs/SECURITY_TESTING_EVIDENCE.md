@@ -38,8 +38,8 @@ merging PR touched.
 Recommended release-review commands:
 
 ```bash
-gh pr checks <pr-number> --repo msaad00/agent-bom
-gh run view <run-id> --repo msaad00/agent-bom --log-failed
+gh pr checks <pr-number> --repo koda-ai-studio/agent-bom
+gh run view <run-id> --repo koda-ai-studio/agent-bom --log-failed
 uv run pytest tests/api/test_api_hardening.py tests/api/test_api_privacy.py tests/api/test_api_cross_tenant_matrix.py -q
 uv run pytest tests/test_proxy_sandbox.py tests/test_proxy_scanner.py tests/test_runtime_detectors.py -q
 ```

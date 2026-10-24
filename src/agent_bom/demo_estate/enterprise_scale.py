@@ -591,7 +591,7 @@ def _build_collection_runs(observations: tuple[RawObservation, ...], tenant_id: 
                 read_only=True,
                 watermark=(started + timedelta(minutes=6)).isoformat(),
                 source_schema="generated-demo-collection",
-                schema_url="https://github.com/msaad00/agent-bom/blob/main/docs/HOSTED_POC.md",
+                schema_url="https://github.com/koda-ai-studio/agent-bom/blob/main/docs/HOSTED_POC.md",
                 next_cursor="cursor-gcp-audit-page-2" if partial else "",
                 failure_code=_PARTIAL_FAILURE_CODE if partial else "",
             )

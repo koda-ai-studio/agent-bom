@@ -80,7 +80,7 @@ object-store encryption for exports/backups, and tenant RLS — not to an
 in-control-plane payload cipher. API tokens are hashed, audit chains are
 HMAC-signed, and cloud-connection secrets use envelope encryption; finding
 bodies rely on your storage encryption. See
-[`docs/DEPLOY_PLATFORM.md`](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md#finding-and-scan-payload-encryption-at-rest-deployment-prerequisite)
+[`docs/DEPLOY_PLATFORM.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md#finding-and-scan-payload-encryption-at-rest-deployment-prerequisite)
 for the full buyer checklist.
 
 ## Scale properties
@@ -110,7 +110,7 @@ applies migrations automatically: the `pre-install,pre-upgrade` hook
 before the new API pods roll. A `helm upgrade` needs no manual migration step.
 
 If a database was already initialized from
-[deploy/supabase/postgres/init.sql](https://github.com/msaad00/agent-bom/blob/main/deploy/supabase/postgres/init.sql),
+[deploy/supabase/postgres/init.sql](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/supabase/postgres/init.sql),
 stamp it once so the auto-hook has a revision to upgrade from:
 
 ```bash

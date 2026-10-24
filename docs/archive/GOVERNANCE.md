@@ -13,7 +13,7 @@ evolve toward a multi-maintainer consensus approach.
 |------|--------|-------|
 | **Project Lead** | Wagdy Saad ([@msaad00](https://github.com/msaad00)) | Architecture, releases, security advisories, roadmap |
 | **Release Manager** | Wagdy Saad | PyPI, Docker Hub, GHCR, GitHub Releases, Sigstore signing |
-| **Security Contact** | Wagdy Saad | Triage via [GitHub Security Advisories](https://github.com/msaad00/agent-bom/security/advisories/new) |
+| **Security Contact** | Wagdy Saad | Triage via [GitHub Security Advisories](https://github.com/koda-ai-studio/agent-bom/security/advisories/new) |
 
 ## Becoming a committer
 

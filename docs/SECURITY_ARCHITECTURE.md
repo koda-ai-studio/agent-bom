@@ -238,7 +238,7 @@ Every finding includes which compliance controls it violates — enabling teams 
 
 ## Vulnerability Disclosure
 
-Security vulnerabilities should be reported via [GitHub Security Advisories](https://github.com/msaad00/agent-bom/security/advisories/new) (private). See [SECURITY.md](../SECURITY.md) for the full policy.
+Security vulnerabilities should be reported via [GitHub Security Advisories](https://github.com/koda-ai-studio/agent-bom/security/advisories/new) (private). See [SECURITY.md](../SECURITY.md) for the full policy.
 
 For the planned independent runtime and control-plane assessment before `v1.0`,
 see [docs/PENTEST_READINESS.md](PENTEST_READINESS.md).

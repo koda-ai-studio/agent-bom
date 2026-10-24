@@ -130,7 +130,7 @@ Relevant docs:
 
 - [Scanning & Discovery](../features/scanning.md)
 - [Cloud Normalization](../features/cloud-normalization.md)
-- [Permissions](https://github.com/msaad00/agent-bom/blob/main/docs/PERMISSIONS.md)
+- [Permissions](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERMISSIONS.md)
 
 ## Read-only integration
 
@@ -160,7 +160,7 @@ Security boundaries:
 Relevant docs:
 
 - [Backend Parity](../deployment/backend-parity.md)
-- [Enterprise Deployment](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md)
+- [Enterprise Deployment](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md)
 
 ## Pushed ingest
 
@@ -191,7 +191,7 @@ Security boundaries:
 Relevant docs:
 
 - [Runtime Monitoring](../deployment/runtime-monitoring.md)
-- [Security Architecture](https://github.com/msaad00/agent-bom/blob/main/docs/SECURITY_ARCHITECTURE.md)
+- [Security Architecture](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/SECURITY_ARCHITECTURE.md)
 
 ## Imported artifact
 
@@ -273,8 +273,8 @@ The short version:
 
 For the detailed trust model:
 
-- [Security Architecture](https://github.com/msaad00/agent-bom/blob/main/docs/SECURITY_ARCHITECTURE.md)
-- [Permissions](https://github.com/msaad00/agent-bom/blob/main/docs/PERMISSIONS.md)
+- [Security Architecture](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/SECURITY_ARCHITECTURE.md)
+- [Permissions](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERMISSIONS.md)
 - [SIEM Integration](../deployment/siem-integration.md)
 
 ## Current product stance

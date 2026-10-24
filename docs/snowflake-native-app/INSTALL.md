@@ -247,4 +247,4 @@ This removes the app's compute pool, services, schemas, and all data agent-bom c
 - [Policy precedence](../POLICY_PRECEDENCE.md) — firewall / gateway / proxy / CLI layering
 - [Runtime reference](../RUNTIME_REFERENCE.md) — five runtime surfaces map
 - [Marketplace release lane](MARKETPLACE.md) — dry-run packaging and listing proof
-- Native App epic: [#2214](https://github.com/msaad00/agent-bom/issues/2214)
+- Native App epic: [#2214](https://github.com/koda-ai-studio/agent-bom/issues/2214)

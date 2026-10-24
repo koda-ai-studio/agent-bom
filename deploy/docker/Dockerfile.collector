@@ -81,7 +81,7 @@ ARG PIP_CERT
 LABEL org.opencontainers.image.title="agent-bom cloud-SDK collector"
 LABEL org.opencontainers.image.description="Read-only cloud collector — ships boto3/azure/google/snowflake SDKs independently of the control-plane release. Runs agent-bom cloud discovery/scan; no external MCP in the scan path."
 LABEL org.opencontainers.image.version="${VERSION}"
-LABEL org.opencontainers.image.source="https://github.com/msaad00/agent-bom"
+LABEL org.opencontainers.image.source="https://github.com/koda-ai-studio/agent-bom"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Copy the frozen environment from the identical Python base image.  Keeping

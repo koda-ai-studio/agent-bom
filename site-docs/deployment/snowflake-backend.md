@@ -95,7 +95,7 @@ governance.
 ## Auth — zero-credential model
 
 **Key-pair auth is recommended** for the Snowflake backend in production
-([`build_connection_params`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/api/snowflake_store.py)).
+([`build_connection_params`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/snowflake_store.py)).
 Passwords are deprecated and emit a runtime warning; password auth is
 intentionally not recommended because it breaks rotation and short-lived
 credential hygiene.
@@ -166,12 +166,12 @@ The schema lives in the database + schema you set via
 
 Per-tenant isolation is row-level: every row carries a `TENANT_ID`
 column and every query filters on it. See
-[ClickHouse row-level tenant isolation (#1501)](https://github.com/msaad00/agent-bom/pull/1501)
+[ClickHouse row-level tenant isolation (#1501)](https://github.com/koda-ai-studio/agent-bom/pull/1501)
 for the equivalent enforcement on ClickHouse.
 
 ## What to monitor
 
-The metrics catalog ([docs/OBSERVABILITY_METRICS.md](https://github.com/msaad00/agent-bom/blob/main/docs/OBSERVABILITY_METRICS.md))
+The metrics catalog ([docs/OBSERVABILITY_METRICS.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/OBSERVABILITY_METRICS.md))
 applies here. Snowflake-specific signals worth alerting on:
 
 - Query latency spikes on `SnowflakeJobStore.put` / `.list_all` —
@@ -188,7 +188,7 @@ applies here. Snowflake-specific signals worth alerting on:
   restart deploy/agent-bom-api`. Old compliance bundles remain
   verifiable against the old **Ed25519** public key (that's a separate
   key from the Snowflake auth key — see
-  [docs/COMPLIANCE_SIGNING.md](https://github.com/msaad00/agent-bom/blob/main/docs/COMPLIANCE_SIGNING.md)).
+  [docs/COMPLIANCE_SIGNING.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/COMPLIANCE_SIGNING.md)).
 - **Access revoked** — bring up a Postgres backend from the nightly
   Postgres backup if you kept one; otherwise restore from Snowflake
   Time Travel.

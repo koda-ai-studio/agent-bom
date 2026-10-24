@@ -471,7 +471,7 @@ def test_server_card_metadata():
     assert card["pypi"] == "agent-bom"
     assert "stdio" in card["transport"]
     assert "sse" in card["transport"]
-    assert "github.com/msaad00/agent-bom" in card["repository"]
+    assert "github.com/koda-ai-studio/agent-bom" in card["repository"]
     assert card["serverInfo"] == {"name": "agent-bom", "version": card["version"]}
     assert card["authentication"] == {"required": False, "schemes": []}
 

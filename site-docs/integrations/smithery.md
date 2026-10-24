@@ -88,7 +88,7 @@ When a new env var becomes operator-tunable through Smithery:
 
 ## Related references
 
-- [Smithery integration manifest](https://github.com/msaad00/agent-bom/blob/main/integrations/smithery.yaml)
+- [Smithery integration manifest](https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/smithery.yaml)
 - [agent-bom configuration reference](../reference/configuration.md)
 - [MCP tools reference](../reference/mcp-tools.md)
 - [Hosted MCP overview](../deployment/overview.md)

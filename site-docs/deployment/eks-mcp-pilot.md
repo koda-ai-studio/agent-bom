@@ -36,7 +36,7 @@ Leave out unless you need them:
 
 Use the packaged control-plane chart with the focused pilot values file:
 
-- [eks-mcp-pilot-values.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)
+- [eks-mcp-pilot-values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)
 
 Install:
 
@@ -66,7 +66,7 @@ specific MCP workloads you want to guard.
 
 Use:
 
-- [proxy-sidecar-pilot.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/k8s/proxy-sidecar-pilot.yaml)
+- [proxy-sidecar-pilot.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/k8s/proxy-sidecar-pilot.yaml)
 
 This manifest shows:
 
@@ -121,7 +121,7 @@ default) runs `alembic upgrade head` before the new API pods roll, so no manual
 migration step is required for `helm upgrade`.
 
 If the database was already bootstrapped from
-[deploy/supabase/postgres/init.sql](https://github.com/msaad00/agent-bom/blob/main/deploy/supabase/postgres/init.sql),
+[deploy/supabase/postgres/init.sql](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/supabase/postgres/init.sql),
 stamp the baseline once so the auto-hook has a revision to upgrade from:
 
 ```bash
@@ -138,7 +138,7 @@ allow ingress from:
 - the `ingress-nginx` namespace
 
 If your ingress controller runs elsewhere, change
-[eks-mcp-pilot-values.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)
+[eks-mcp-pilot-values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)
 before install.
 
 ## Recommended secrets and auth
@@ -296,7 +296,7 @@ Point laptops at it:
 
 The gateway injects per-upstream credentials (Snowflake / GitHub tokens)
 from Secrets — the laptop never holds them. See the full design in
-[docs/design/MULTI_MCP_GATEWAY.md](https://github.com/msaad00/agent-bom/blob/main/docs/design/MULTI_MCP_GATEWAY.md).
+[docs/design/MULTI_MCP_GATEWAY.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/design/MULTI_MCP_GATEWAY.md).
 
 ### Stage 3b — MCP proxy sidecar on one workload (10 min)
 
@@ -347,7 +347,7 @@ print("signature verified against pinned Ed25519 key", body["signature_key_id"])
 PY
 ```
 
-See [docs/COMPLIANCE_SIGNING.md](https://github.com/msaad00/agent-bom/blob/main/docs/COMPLIANCE_SIGNING.md) for the full verification cookbook.
+See [docs/COMPLIANCE_SIGNING.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/COMPLIANCE_SIGNING.md) for the full verification cookbook.
 
 ## Break-glass runbook
 

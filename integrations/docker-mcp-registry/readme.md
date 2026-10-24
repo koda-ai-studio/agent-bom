@@ -37,6 +37,6 @@ docker run --rm -v "$(pwd):/workspace" agentbom/agent-bom scan -p /workspace -f 
 
 ## Source
 
-- GitHub: https://github.com/msaad00/agent-bom
+- GitHub: https://github.com/koda-ai-studio/agent-bom
 - PyPI: https://pypi.org/project/agent-bom/
 - License: Apache 2.0

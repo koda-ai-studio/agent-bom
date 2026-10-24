@@ -37,7 +37,7 @@ agent-bom agents --quiet --no-scan
 - Use `agent-bom agents -f sarif -o -` when you need SARIF JSON on stdout.
 
 If a finding looks inaccurate, open an
-[Inaccurate Finding](https://github.com/msaad00/agent-bom/issues/new?template=inaccurate_finding.yml)
+[Inaccurate Finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml)
 report with the exact command, agent-bom version, sanitized finding JSON/SARIF
 snippet, and public advisory or package evidence. Do not include secrets,
 private source code, private package names, or customer data in public issues.

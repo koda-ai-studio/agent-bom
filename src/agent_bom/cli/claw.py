@@ -40,7 +40,9 @@ CLAW_CATEGORIES: OrderedDict[str, list[str]] = OrderedDict(
 @click.version_option(
     version=__version__,
     prog_name="agent-claw",
-    message=(f"agent-claw {__version__}\nPython {sys.version.split()[0]} · {sys.platform}\nPart of: https://github.com/msaad00/agent-bom"),
+    message=(
+        f"agent-claw {__version__}\nPython {sys.version.split()[0]} · {sys.platform}\nPart of: https://github.com/koda-ai-studio/agent-bom"
+    ),
 )
 def claw():
     """agent-claw — Fleet governance and control plane for AI agents.

@@ -158,4 +158,4 @@ class TestResolveCargoVersion:
         assert len(captured_calls) == 1
         ua = captured_calls[0]["headers"].get("User-Agent", "")
         assert "agent-bom" in ua
-        assert "github.com/msaad00/agent-bom" in ua
+        assert "github.com/koda-ai-studio/agent-bom" in ua

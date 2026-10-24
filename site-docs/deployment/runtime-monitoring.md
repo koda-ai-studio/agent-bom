@@ -5,7 +5,7 @@
 > For the choice between proxy / gateway / fleet, start with
 > [Proxy vs Gateway vs Fleet](proxy-vs-gateway-vs-fleet.md).
 
-For the full runtime monitoring deployment guide, see the [dedicated doc](https://github.com/msaad00/agent-bom/blob/main/docs/RUNTIME_REFERENCE.md).
+For the full runtime monitoring deployment guide, see the [dedicated doc](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/RUNTIME_REFERENCE.md).
 
 ## Overview
 

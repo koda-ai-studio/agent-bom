@@ -4,7 +4,7 @@
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Report privately via [GitHub Security Advisories](https://github.com/msaad00/agent-bom/security/advisories/new).
+Report privately via [GitHub Security Advisories](https://github.com/koda-ai-studio/agent-bom/security/advisories/new).
 
 For procurement-facing support boundaries, patch cadence, escalation paths, and
 release-note security language, see

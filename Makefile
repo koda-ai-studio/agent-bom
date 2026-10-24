@@ -208,12 +208,12 @@ analytics:  ## Show adoption metrics (PyPI downloads, GitHub traffic, stars)
 		|| echo "  (pypistats rate-limited)"
 	@echo ""
 	@echo "=== GitHub traffic (last 14 days) ==="
-	@gh api /repos/msaad00/agent-bom/traffic/views 2>/dev/null \
+	@gh api /repos/koda-ai-studio/agent-bom/traffic/views 2>/dev/null \
 		| python3 -c "import json,sys; d=json.load(sys.stdin); print(f\"  Views:  {d['count']:>8,}  unique: {d['uniques']:,}\")" \
 		|| echo "  (requires repo write access)"
-	@gh api /repos/msaad00/agent-bom/traffic/clones 2>/dev/null \
+	@gh api /repos/koda-ai-studio/agent-bom/traffic/clones 2>/dev/null \
 		| python3 -c "import json,sys; d=json.load(sys.stdin); print(f\"  Clones: {d['count']:>8,}  unique: {d['uniques']:,}\")" \
 		|| true
 	@echo ""
 	@echo "=== GitHub stars & forks ==="
-	@gh api /repos/msaad00/agent-bom --jq '"  Stars: " + (.stargazers_count|tostring) + "   Forks: " + (.forks_count|tostring)' 2>/dev/null || true
+	@gh api /repos/koda-ai-studio/agent-bom --jq '"  Stars: " + (.stargazers_count|tostring) + "   Forks: " + (.forks_count|tostring)' 2>/dev/null || true

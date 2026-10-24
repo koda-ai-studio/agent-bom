@@ -43,7 +43,7 @@ docker run --rm \
 ## From source
 
 ```bash
-git clone https://github.com/msaad00/agent-bom.git
+git clone https://github.com/koda-ai-studio/agent-bom.git
 cd agent-bom
 pip install -e ".[dev]"
 ```

@@ -69,7 +69,7 @@ supply-chain risk can raise priority regardless of the initial severity.
 
 Report suspected vulnerabilities privately through GitHub Security Advisories:
 
-<https://github.com/msaad00/agent-bom/security/advisories/new>
+<https://github.com/koda-ai-studio/agent-bom/security/advisories/new>
 
 The disclosure flow is:
 

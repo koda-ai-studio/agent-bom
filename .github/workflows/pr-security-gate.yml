@@ -77,7 +77,7 @@ jobs:
                   "driver": {
                     "name": "agent-bom",
                     "version": "0.0.0",
-                    "informationUri": "https://github.com/msaad00/agent-bom"
+                    "informationUri": "https://github.com/koda-ai-studio/agent-bom"
                   }
                 },
                 "results": []

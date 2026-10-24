@@ -18,7 +18,7 @@ REQUIRED_FILES = (
     "agent_bom/ui_dist/csp-hashes.json",
 )
 CSP_MANIFEST = "agent_bom/ui_dist/csp-hashes.json"
-INSTALL_PIN = re.compile(r"(?:agentbom/agent-bom(?:-api)?:v?|msaad00/agent-bom@v)([0-9]+\.[0-9]+\.[0-9]+)")
+INSTALL_PIN = re.compile(r"(?:agentbom/agent-bom(?:-api)?:v?|(?:koda-ai-studio|msaad00)/agent-bom@v)([0-9]+\.[0-9]+\.[0-9]+)")
 
 
 def verify_dashboard_install_pins(archive: ZipFile) -> None:

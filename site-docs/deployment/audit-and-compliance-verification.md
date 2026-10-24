@@ -103,7 +103,7 @@ For a stronger audit trail, use both:
 
 Follow the signing cookbook in:
 
-- [docs/COMPLIANCE_SIGNING.md](https://github.com/msaad00/agent-bom/blob/main/docs/COMPLIANCE_SIGNING.md)
+- [docs/COMPLIANCE_SIGNING.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/COMPLIANCE_SIGNING.md)
 
 ### 2. Verify the export action
 

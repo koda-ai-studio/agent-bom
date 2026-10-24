@@ -220,7 +220,7 @@ def to_markdown(report: AIBOMReport, blast_radii: list[BlastRadius] | None = Non
 
     # Footer
     lines.append("---")
-    lines.append(f"*Scanned by [agent-bom](https://github.com/msaad00/agent-bom) v{report.tool_version}*")
+    lines.append(f"*Scanned by [agent-bom](https://github.com/koda-ai-studio/agent-bom) v{report.tool_version}*")
 
     return "\n".join(lines) + "\n"
 

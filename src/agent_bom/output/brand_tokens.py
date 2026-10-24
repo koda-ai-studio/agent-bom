@@ -14,7 +14,7 @@ POSITIONING_SHORT = "Open security scanner for AI infrastructure"
 # Longer meta line for OpenAPI / HTML <title> chrome (matches VISUAL_LANGUAGE).
 POSITIONING_META = "Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure"
 TAGLINE_CHAIN = "agent → MCP server → packages → CVEs → blast radius"
-DOCS_URL = "https://github.com/msaad00/agent-bom"
+DOCS_URL = "https://github.com/koda-ai-studio/agent-bom"
 REPORT_TITLE = f"{PRODUCT_NAME} scan report"
 
 # Minimal dark mark for API /docs favicon when package data is unavailable.

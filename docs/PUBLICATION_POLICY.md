@@ -53,7 +53,7 @@ Before pushing deploy or ops changes:
 3. No minted keys, kubeconfigs, or connection strings with real hostnames/ARNs
 4. Doc timestamps are clearly examples, not copied from a live environment
 5. Security issues reported via
-   [GitHub Security Advisories](https://github.com/msaad00/agent-bom/security/advisories/new),
+   [GitHub Security Advisories](https://github.com/koda-ai-studio/agent-bom/security/advisories/new),
    not public issues
 
 ## Related docs

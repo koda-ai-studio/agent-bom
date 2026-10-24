@@ -34,7 +34,7 @@ not separate products.
 Pilot on one workstation:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/msaad00/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
+curl -fsSL https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
 docker compose -f docker-compose.pilot.yml up -d
 # Dashboard -> http://localhost:3000
 ```
@@ -49,9 +49,9 @@ helm upgrade --install agent-bom deploy/helm/agent-bom \
 
 References:
 
-- GitHub README: https://github.com/msaad00/agent-bom/blob/main/README.md
-- Product brief: https://github.com/msaad00/agent-bom/blob/main/docs/ARCHITECTURE.md
-- Verified metrics: https://github.com/msaad00/agent-bom/blob/main/docs/PRODUCT_METRICS.md
+- GitHub README: https://github.com/koda-ai-studio/agent-bom/blob/main/README.md
+- Product brief: https://github.com/koda-ai-studio/agent-bom/blob/main/docs/ARCHITECTURE.md
+- Verified metrics: https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PRODUCT_METRICS.md
 
 ## Follow one component
 
@@ -61,7 +61,7 @@ by default, or an explicit historical scan. They expose recorded relationships a
 source evidence, and export loaded evidence with completeness receipts. Control
 mappings do not establish evaluated passes or certification.
 
-From a source checkout, [run the connected-BOM example](https://github.com/msaad00/agent-bom/tree/main/examples/connected-bom).
+From a source checkout, [run the connected-BOM example](https://github.com/koda-ai-studio/agent-bom/tree/main/examples/connected-bom).
 It retains before/after SQLite snapshots: a changed dependency input removes one
 pinned advisory finding while an unrelated synthetic cloud check remains failed.
 This bounded example does not change a deployment or qualify a cloud account.
@@ -228,15 +228,15 @@ refresh, enrichment, SIEM, OTLP, and webhooks is operator-controlled.
 
 Dashboard overview:
 
-![agent-bom dashboard overview](https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/dashboard-live.png)
+![agent-bom dashboard overview](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/dashboard-live.png)
 
 Attack paths and exposure:
 
-![agent-bom dashboard attack paths and exposure](https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/dashboard-paths-live.png)
+![agent-bom dashboard attack paths and exposure](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/dashboard-paths-live.png)
 
 Focused agent mesh graph:
 
-![agent-bom agent mesh graph](https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/mesh-live.png)
+![agent-bom agent mesh graph](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/mesh-live.png)
 
 ## Tags
 
@@ -258,8 +258,8 @@ names for local builds from this repo, not a second published product line.
 
 ## Links
 
-- GitHub: https://github.com/msaad00/agent-bom
+- GitHub: https://github.com/koda-ai-studio/agent-bom
 - PyPI: https://pypi.org/project/agent-bom/
 - Docs: https://koda-ai-studio.github.io/agent-bom/
 - GitHub Action: https://github.com/marketplace/actions/agent-bom
-- Pre-commit hooks: https://github.com/msaad00/agent-bom/blob/main/.pre-commit-hooks.yaml
+- Pre-commit hooks: https://github.com/koda-ai-studio/agent-bom/blob/main/.pre-commit-hooks.yaml

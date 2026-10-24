@@ -251,7 +251,7 @@ This is an open-source tool — you can verify every claim above:
 | Verify SCIM tenant boundary | `docs/SCIM_SECURITY_MODEL.md` and `/v1/auth/policy` — tenant comes from `AGENT_BOM_SCIM_TENANT_ID`, not IdP payload fields |
 | Run in isolation | `--no-scan` skips all network calls; `--dry-run` reads nothing |
 | Verify signed releases | `cosign verify-blob dist/agent_bom-*.whl --bundle dist/agent_bom-*.whl.sigstore.json --certificate-oidc-issuer https://token.actions.githubusercontent.com` |
-| OpenSSF Scorecard | [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/msaad00/agent-bom/badge)](https://securityscorecards.dev/viewer/?uri=github.com/msaad00/agent-bom) |
+| OpenSSF Scorecard | [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/koda-ai-studio/agent-bom/badge)](https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom) |
 
 ---
 

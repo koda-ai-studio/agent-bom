@@ -626,7 +626,7 @@ release flow does not do that. Instead:
   pins that track `PUBLISHED_VERSION`.
 
 The GitHub Action follows the same rule without an override: with
-`agent-bom-version` empty, `msaad00/agent-bom@vX` installs `agent-bom==X` (the
+`agent-bom-version` empty, `koda-ai-studio/agent-bom@vX` installs `agent-bom==X` (the
 version in the action ref's `pyproject.toml`). Installation fails if that version
 cannot be installed; network, index or dependency-resolution errors never select
 a different release. For an unpublished ref, use `install-from-source: 'true'` or

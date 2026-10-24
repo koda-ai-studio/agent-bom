@@ -9,7 +9,7 @@ Two versions are in play:
   images, chart and PyPI package actually exist.
 
 Copy-paste surfaces a user runs against a registry — GitHub Action refs
-(``msaad00/agent-bom@vX``), pull-only image pins (``agentbom/agent-bom*:X``),
+(``koda-ai-studio/agent-bom@vX``), pull-only image pins (``agentbom/agent-bom*:X``),
 consumer pre-commit ``rev: vX`` and "Latest release" lines — must name the
 PUBLISHED version, or a user following ``main``'s docs gets a 404. Image pins in
 compose files that build that image from this tree (``SOURCE_BUILT``) name the

@@ -74,7 +74,7 @@ VERSION_LOCATIONS: list[tuple[str, re.Pattern, str]] = [
 
 OPENCLAW_SKILL_PATTERNS: list[tuple[str, re.Pattern, str]] = [
     ("integrations/openclaw/**/SKILL.md", re.compile(r"^(version:\s*)\S+", re.M), r"\g<1>{v}"),
-    ("integrations/openclaw/**/SKILL.md", re.compile(r"(ghcr\.io/msaad00/agent-bom:)\S+"), r"\g<1>{v}"),
+    ("integrations/openclaw/**/SKILL.md", re.compile(r"(ghcr\.io/(?:koda-ai-studio|msaad00)/agent-bom:)\S+"), r"\g<1>{v}"),
     ("integrations/openclaw/**/SKILL.md", re.compile(r"(agent-bom verify agent-bom@)[^`\s]+(`)"), r"\g<1>{v}\g<2>"),
 ]
 

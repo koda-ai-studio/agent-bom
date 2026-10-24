@@ -33,7 +33,7 @@ For the detailed browser-to-API trust contract, see
 
 ## Deployment truth
 
-Today the proxy, gateway, and workers run as Python processes under the control-plane contract. A future **optional Go sidecar** may host high-concurrency relay or collector workloads under that same contract ([ADR-009](https://github.com/msaad00/agent-bom/blob/main/docs/decisions/009-python-primary-go-sidecar-later.md)); it is not a separate product edition.
+Today the proxy, gateway, and workers run as Python processes under the control-plane contract. A future **optional Go sidecar** may host high-concurrency relay or collector workloads under that same contract ([ADR-009](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/decisions/009-python-primary-go-sidecar-later.md)); it is not a separate product edition.
 
 In a normal self-hosted rollout:
 

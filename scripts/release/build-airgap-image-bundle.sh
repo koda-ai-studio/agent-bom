@@ -101,7 +101,7 @@ images=(
   "agentbom/agent-bom-ui:${version}"
 )
 
-identity_regexp='https://github.com/msaad00/agent-bom/.github/workflows/release.yml@.*'
+identity_regexp='^https://github\.com/(msaad00|koda-ai-studio)/agent-bom/\.github/workflows/release\.yml@.*$'
 
 for image in "${images[@]}"; do
   echo "Pulling ${image} for ${platform}"
