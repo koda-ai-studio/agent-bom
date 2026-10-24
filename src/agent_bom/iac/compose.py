@@ -88,6 +88,42 @@ def _is_hardcoded_secret(name: str, value: str) -> bool:
     return not value.isdigit()
 
 
+def _capability_and_secret_findings(name: str, service: dict[str, Any], rel_path: str) -> list[IaCFinding]:
+    findings: list[IaCFinding] = []
+    caps = service.get("cap_add")
+    if isinstance(caps, list):
+        for index, cap in enumerate(caps):
+            if str(cap).strip().upper() in _DANGEROUS_CAPS:
+                findings.append(
+                    _finding(
+                        "COMPOSE-005",
+                        "high",
+                        f"Compose service adds {str(cap).strip().upper()} capability",
+                        f"Service '{name}' adds {str(cap).strip().upper()}, which is close to running privileged. "
+                        "Add only the specific capabilities required.",
+                        rel_path,
+                        item_line(caps, index, key_line(service, "cap_add")),
+                        ["CIS-Docker-5.3", "NIST-AC-6"],
+                    )
+                )
+    environment = service.get("environment")
+    for env_name, env_value, line in _environment_entries(environment):
+        if _is_hardcoded_secret(env_name, env_value):
+            findings.append(
+                _finding(
+                    "COMPOSE-006",
+                    "critical",
+                    "Hardcoded secret in compose environment",
+                    f"Service '{name}' sets environment variable '{env_name}' to a literal value. "
+                    "Use Compose secrets or interpolate it from the runtime environment.",
+                    rel_path,
+                    line or key_line(service, "environment"),
+                    ["CIS-Docker-4.10", "NIST-IA-5"],
+                )
+            )
+    return findings
+
+
 def _scan_service(name: str, service: dict[str, Any], rel_path: str) -> list[IaCFinding]:
     findings: list[IaCFinding] = []
     if service.get("privileged") is True:
@@ -143,37 +179,7 @@ def _scan_service(name: str, service: dict[str, Any], rel_path: str) -> list[IaC
                 ["CIS-Docker-5.15", "NIST-SC-39"],
             )
         )
-    caps = service.get("cap_add")
-    if isinstance(caps, list):
-        for index, cap in enumerate(caps):
-            if str(cap).strip().upper() in _DANGEROUS_CAPS:
-                findings.append(
-                    _finding(
-                        "COMPOSE-005",
-                        "high",
-                        f"Compose service adds {str(cap).strip().upper()} capability",
-                        f"Service '{name}' adds {str(cap).strip().upper()}, which is close to running privileged. "
-                        "Add only the specific capabilities required.",
-                        rel_path,
-                        item_line(caps, index, key_line(service, "cap_add")),
-                        ["CIS-Docker-5.3", "NIST-AC-6"],
-                    )
-                )
-    environment = service.get("environment")
-    for env_name, env_value, line in _environment_entries(environment):
-        if _is_hardcoded_secret(env_name, env_value):
-            findings.append(
-                _finding(
-                    "COMPOSE-006",
-                    "critical",
-                    "Hardcoded secret in compose environment",
-                    f"Service '{name}' sets environment variable '{env_name}' to a literal value. "
-                    "Use Compose secrets or interpolate it from the runtime environment.",
-                    rel_path,
-                    line or key_line(service, "environment"),
-                    ["CIS-Docker-4.10", "NIST-IA-5"],
-                )
-            )
+    findings.extend(_capability_and_secret_findings(name, service, rel_path))
     return findings
 
 

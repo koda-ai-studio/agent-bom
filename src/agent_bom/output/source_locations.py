@@ -99,3 +99,14 @@ def finding_image_reference(finding: Finding, report: AIBOMReport) -> str | None
             name = Path(agent.config_path.removeprefix("oci-tar://")).name
             return f"oci-tar://{quote(name)}" if name else None
     return None
+
+
+def evidence_relative_path(evidence: dict) -> str | None:
+    """A repository-relative source file named in a finding's evidence, if any."""
+    for key in ("source_path", "file_path", "file"):
+        value = evidence.get(key)
+        if isinstance(value, str) and value and not value.startswith(("/", "\\", "~", "<")) and ":" not in value:
+            parts = Path(value).parts
+            if parts and ".." not in parts:
+                return Path(value).as_posix()
+    return None

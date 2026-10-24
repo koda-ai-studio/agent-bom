@@ -265,7 +265,7 @@ def test_retention_failure_is_logged_at_error_naming_the_runway_end(monkeypatch,
     assert "2026-09-30" in message, f"runway end not named in operator alert: {message!r}"
     assert "hub_findings_current_observations" in message
     # The expected DDL denial is one clear line naming the cause, not a traceback.
-    assert "permission denied, SQLSTATE 42501" in message
+    assert "denied the DDL that extends it" in message
     assert not any(r.exc_info for r in caplog.records)
     # Nothing may be reported at DEBUG-only any more.
     assert not any(r.levelno == logging.DEBUG and "retention skipped" in r.getMessage() for r in caplog.records)
@@ -356,4 +356,4 @@ def test_unexpected_top_up_failure_keeps_its_traceback(monkeypatch, caplog) -> N
 
     errors = [r for r in caplog.records if r.levelno >= logging.ERROR]
     assert any(r.exc_info and r.exc_info[0] is RuntimeError for r in errors)
-    assert "failed unexpectedly" in " ".join(r.getMessage() for r in errors)
+    assert "top-up failed unexpectedly" in " ".join(r.getMessage() for r in errors)

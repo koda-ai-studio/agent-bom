@@ -226,6 +226,24 @@ def iac_partial_coverage_notes(iac_path: str, result: Any) -> list[str]:
     ]
 
 
+def _print_iac_path_result(con: Any, iac_path: str, result: Any) -> None:
+    if result.findings:
+        from collections import Counter
+
+        severity_counts = Counter(f.severity for f in result.findings)
+        severity_parts = [
+            f"[red]{severity_counts.get('critical', 0)} critical[/red]",
+            f"[yellow]{severity_counts.get('high', 0)} high[/yellow]",
+        ]
+        con.print(f"  [red]⚠[/red]  {iac_path}: {len(result.findings)} finding(s) ({', '.join(severity_parts)})")
+    elif note := iac_unevaluated_note(iac_path, result):
+        con.print(note)
+    else:
+        con.print(f"  [green]✓[/green] {iac_path}: no misconfigurations")
+    for coverage_note in iac_partial_coverage_notes(iac_path, result):
+        con.print(coverage_note)
+
+
 def run_iac_only_scan(
     *,
     con: Any,
@@ -268,21 +286,7 @@ def run_iac_only_scan(
             result = scan_iac_with_context(iac_path, iac_scan_ctx)
             all_iac_findings.extend(result.findings)
             all_iac_verdicts.extend(result.verdicts)
-            if result.findings:
-                from collections import Counter
-
-                severity_counts = Counter(f.severity for f in result.findings)
-                severity_parts = [
-                    f"[red]{severity_counts.get('critical', 0)} critical[/red]",
-                    f"[yellow]{severity_counts.get('high', 0)} high[/yellow]",
-                ]
-                con.print(f"  [red]⚠[/red]  {iac_path}: {len(result.findings)} finding(s) ({', '.join(severity_parts)})")
-            elif note := iac_unevaluated_note(iac_path, result):
-                con.print(note)
-            else:
-                con.print(f"  [green]✓[/green] {iac_path}: no misconfigurations")
-            for coverage_note in iac_partial_coverage_notes(iac_path, result):
-                con.print(coverage_note)
+            _print_iac_path_result(con, iac_path, result)
         if verbose and all_iac_verdicts:
             _print_scanner_verdicts(con, all_iac_verdicts)
 

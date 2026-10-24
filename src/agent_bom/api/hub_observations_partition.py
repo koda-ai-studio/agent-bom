@@ -490,14 +490,6 @@ def _describe_runway(runway_end: date | None, *, now: datetime | None = None) ->
     return last_covered.isoformat(), _month_index(last_covered) - _month_index(anchor)
 
 
-_PERMISSION_DENIED_SQLSTATE = "42501"
-
-
-def _is_permission_denied(error: BaseException | None) -> bool:
-    """SQLSTATE 42501 (insufficient_privilege): the DML-only role's expected DDL denial."""
-    return getattr(error, "sqlstate", None) == _PERMISSION_DENIED_SQLSTATE
-
-
 def _alert_observation_partition_runway(
     runway_end: date | None,
     *,
@@ -511,8 +503,7 @@ def _alert_observation_partition_runway(
     the *expected* steady state — provisioning is migration-owned and both
     runtime roles are DML-only — so reporting it at ERROR on every healthy
     deployment would train operators to filter the one message that matters near
-    the cliff. It stays visible at WARNING and escalates to ERROR once the runway
-    falls below the alert threshold or has already lapsed. It is never silent.
+    the cliff. It stays visible at WARNING, escalating to ERROR once the runway is low or lapsed.
     """
     last_covered, months_left = _describe_runway(runway_end, now=now)
     urgent = months_left is None or months_left < OBSERVATION_PARTITION_RUNWAY_ALERT_MONTHS
@@ -521,13 +512,10 @@ def _alert_observation_partition_runway(
     key = f"{'denied' if provisioning_failed else 'low'}:{last_covered}"
     if not _should_emit_runway_alert(key):
         return
-    expected_denial = _is_permission_denied(error)
-    if provisioning_failed and expected_denial:
-        reason = "the runtime database role was denied the DDL that extends it (permission denied, SQLSTATE 42501)"
-    elif provisioning_failed:
-        reason = "the partition top-up failed unexpectedly"
-    else:
-        reason = "it is not being topped up by deploys"
+    denied = getattr(error, "sqlstate", None) == "42501"  # the DML-only role's expected DDL denial
+    reason = "it is not being topped up by deploys"
+    if provisioning_failed:
+        reason = "the runtime database role was denied the DDL that extends it" if denied else "the top-up failed unexpectedly"
     logger.log(
         logging.ERROR if urgent else logging.WARNING,
         "%s partition runway ends %s (%s month(s) left) and %s. Partition provisioning is "
@@ -538,8 +526,7 @@ def _alert_observation_partition_runway(
         last_covered,
         "unknown" if months_left is None else months_left,
         reason,
-        # The expected denial is one clear line; anything else keeps its traceback.
-        exc_info=error if provisioning_failed and not expected_denial and error is not None else False,
+        exc_info=error if provisioning_failed and not denied and error is not None else False,
     )
 
 

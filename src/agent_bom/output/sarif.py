@@ -9,10 +9,7 @@ import re
 from pathlib import Path
 from typing import Any, Optional
 
-from agent_bom.asset_provenance import (
-    agent_discovery_provenance,
-    sanitize_discovery_provenance,
-)
+from agent_bom.asset_provenance import agent_discovery_provenance, sanitize_discovery_provenance
 from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
@@ -43,7 +40,13 @@ from agent_bom.output.sarif_taxonomy import (
     _framework_taxa_references,
     _taxonomies_as_tool_extensions,
 )
-from agent_bom.output.source_locations import SourceIndex, finding_image_reference, finding_package_location, package_source_index
+from agent_bom.output.source_locations import (
+    SourceIndex,
+    evidence_relative_path,
+    finding_image_reference,
+    finding_package_location,
+    package_source_index,
+)
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text, sanitize_url
 
 _SARIF_SEVERITY_MAP = {
@@ -830,31 +833,11 @@ def _unified_finding_properties(finding: Finding, rule_id: str, evidence: dict[s
     }
 
 
-def _evidence_relative_path(evidence: dict[str, Any]) -> str | None:
-    """A repository-relative source file named in a finding's evidence, if any."""
-    for key in ("source_path", "file_path", "file"):
-        value = evidence.get(key)
-        if isinstance(value, str) and value and not value.startswith(("/", "\\", "~", "<")) and ":" not in value:
-            parts = Path(value).parts
-            if parts and ".." not in parts:
-                return Path(value).as_posix()
-    return None
-
-
 def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence: dict[str, Any]) -> dict[str, Any]:
-    file_path = (
-        _to_relative_path(
-            finding.asset.location,
-            _ecosystem_from_purl(finding.asset.identifier),
-        )
-        if finding.asset.location
-        else None
-    )
-    if file_path is not None and file_path.startswith("<"):
-        # A redacted ``<path:...>`` label is not a URI; keep the result logical.
-        file_path = None
-    if file_path is None:
-        file_path = _evidence_relative_path(finding.evidence)
+    location = finding.asset.location
+    file_path = _to_relative_path(location, _ecosystem_from_purl(finding.asset.identifier)) if location else None
+    if file_path is None or file_path.startswith("<"):  # a redacted <path:...> label is not a URI
+        file_path = evidence_relative_path(finding.evidence)
     raw_start_line = finding.evidence.get("line_number") or finding.evidence.get("line") or finding.evidence.get("source_line")
     start_line = raw_start_line if isinstance(raw_start_line, int) and raw_start_line > 0 else 1
     fingerprint_uri = file_path or f"{finding.asset.asset_type}:{finding.asset.stable_id}"
