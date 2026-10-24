@@ -30,7 +30,7 @@ def seed_showcase_fleet_and_runtime(tenant_id: str = SHOWCASE_TENANT) -> dict[st
 
     fleet_store = _get_fleet_store()
     observation_store = _get_mcp_observation_store()
-    association_revision = "demo-associations-v3"
+    association_revision = "demo-associations-v4"
     existing = [a for a in fleet_store.list_by_tenant(tenant_id) if a.agent_id.startswith("demo-fleet-")]
     if existing and all(association_revision in a.tags for a in existing):
         return {"seeded": False, "reason": "fleet_present"}
@@ -64,6 +64,22 @@ def seed_showcase_fleet_and_runtime(tenant_id: str = SHOWCASE_TENANT) -> dict[st
     }
 
 
+# 0-100, the scale compute_trust_score produces and every consumer reads. The
+# spread follows lifecycle so quarantined agents read as low trust (< 50) and
+# approved agents do not.
+_DEMO_TRUST_BANDS = {
+    "quarantined": (30.0, 3),
+    "pending_review": (45.0, 4),
+    "discovered": (50.0, 3),
+    "approved": (70.0, 6),
+}
+
+
+def _demo_trust_score(state: Any, index: int) -> float:
+    base, steps = _DEMO_TRUST_BANDS.get(getattr(state, "value", str(state)), (60.0, 1))
+    return base + (index % steps) * 5.0
+
+
 def _seed_fleet_agents(
     fleet_store: Any, agents: list[Any], server_ids: set[str], association_revision: str, tenant_id: str, now: str
 ) -> None:
@@ -92,7 +108,7 @@ def _seed_fleet_agents(
                 owner=str(asset.tags.get("owner") or "platform-engineering"),
                 environment=asset.environment or "production",
                 tags=[t for t in (asset.environment, asset.provider, association_revision) if t],
-                trust_score=round(0.55 + ((index % 9) / 20.0), 2),
+                trust_score=_demo_trust_score(state, index),
                 server_count=int(asset.tags.get("uses_server", "") in server_ids),
                 tenant_id=tenant_id,
                 last_discovery=now,

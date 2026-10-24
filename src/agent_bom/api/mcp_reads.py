@@ -23,9 +23,12 @@ from agent_bom.api.routes.compliance import get_compliance_by_framework, get_com
 from agent_bom.api.routes.compliance_routes.common import estate_agent_count
 from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
 from agent_bom.api.routes.graph_routes.vendor_paths import get_cross_vendor_attack_paths as get_cross_vendor_attack_paths
+from agent_bom.api.routes.operator_advisories import operator_advisory_matches
 from agent_bom.api.routes.scan import list_findings
 from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant, _completed_jobs_for_tenant, iter_tenant_scan_spine_findings
+from agent_bom.api.stores import _get_operator_advisory_store, operator_advisory_store_configured
 from agent_bom.finding_scope import safe_finding_response_payload
+from agent_bom.scanners.operator_advisory import OPERATOR_ADVISORY_PROVENANCE, OperatorAdvisory
 
 
 def has_completed_scans(tenant_id: str) -> bool:
@@ -70,6 +73,21 @@ def triage_state(tenant_id: str, row: dict[str, Any]) -> dict[str, Any] | None:
     return _finding_triage_state(row, build_tenant_triage_state_index(tenant_id))
 
 
+def tenant_operator_advisory(tenant_id: str, advisory_id: str) -> dict[str, Any] | None:
+    """The tenant's declared advisory (by id or alias) and the matches ``/v1/intel/operator-advisories/{id}/matches`` returns."""
+    wanted = advisory_id.strip().upper()
+    for row in _get_operator_advisory_store().list(tenant_id):
+        declared = OperatorAdvisory.model_validate({k: v for k, v in row.items() if k != "updated_at"})
+        if wanted in {identifier.upper() for identifier in declared.identifiers}:
+            return {
+                "provenance": OPERATOR_ADVISORY_PROVENANCE,
+                "source": "tenant_store",
+                "advisory": declared.model_dump(mode="json"),
+                "matches": operator_advisory_matches(tenant_id, declared.id),
+            }
+    return None
+
+
 __all__ = [
     "HTTPException",
     "current_estate_agent_total",
@@ -79,7 +97,9 @@ __all__ = [
     "graph_estate_changes_read",
     "has_completed_scans",
     "list_findings",
+    "operator_advisory_store_configured",
     "persisted_finding",
     "persisted_scan_report",
+    "tenant_operator_advisory",
     "triage_state",
 ]

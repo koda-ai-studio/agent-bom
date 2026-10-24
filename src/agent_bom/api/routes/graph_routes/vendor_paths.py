@@ -12,6 +12,7 @@ from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph_vendor_paths import GraphCrossVendorPathsResponse
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
+from agent_bom.api.routes.graph_routes.path_cursor import path_continuation, path_cursor_scope, path_page_cursors
 from agent_bom.api.routes.graph_routes.payloads import _serialize_attack_path_queue
 from agent_bom.graph.attack_path_queue import AttackPathFilters, RankedPathPage
 from agent_bom.graph.path_vendors import path_vendor_pair, vendor_pair_facets
@@ -92,6 +93,7 @@ async def get_cross_vendor_attack_paths(
     target_vendor: Optional[str] = Query(
         None, description="Only paths whose target node is in this vendor", max_length=64, pattern=_VENDOR_PATTERN
     ),
+    cursor: Optional[str] = Query(None, max_length=1024, description="next_cursor from the previous page (replaces offset)"),
 ) -> dict:
     """Attack paths whose source and target nodes are recorded in different vendors.
 
@@ -102,10 +104,13 @@ async def get_cross_vendor_attack_paths(
     """
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
+    vendors = {"source_vendor": source_vendor, "target_vendor": target_vendor}
+    scope = path_cursor_scope("attack-paths-cross-vendor", tenant, scan_id, {key: value for key, value in vendors.items() if value})
+    if cursor:
+        offset, snapshot_generation = path_continuation(cursor, scope, offset=offset, generation=snapshot_generation)
     identity = await _runtime._graph_store_call(
         pin_generation, graph_store, tenant=tenant, scan_id=scan_id or "", generation=snapshot_generation, offset=offset
     )
-    vendors = {"source_vendor": source_vendor, "target_vendor": target_vendor}
     queue = await _indexed_slice(graph_store, tenant, identity[0], offset, limit, vendors)
     if queue is None:
         queue = await _whole_queue_slice(graph_store, tenant, identity[0], offset, limit, vendors)
@@ -138,7 +143,7 @@ async def get_cross_vendor_attack_paths(
         verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(window or ranked.snapshot_total)
     )
     payload["snapshot_generation"] = identity[1]
-    payload["pagination"]["has_more"] = offset + len(window) < total
+    payload["pagination"].update(path_page_cursors(scope, identity[1], offset, len(window), total, cursor))
     payload["vendor_facets"] = {
         "unit": "paths",
         "snapshot_paths": ranked.snapshot_total,

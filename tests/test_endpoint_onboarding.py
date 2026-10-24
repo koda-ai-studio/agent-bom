@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+import itertools
 import json
 from pathlib import Path
 
+import yaml
+from click.testing import CliRunner
+
+from agent_bom.cli import main
 from agent_bom.endpoint_onboarding import build_proxy_configure_command, write_endpoint_onboarding_bundle
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _resolves(args: list[str]) -> bool:
+    return CliRunner().invoke(main, [*args, "--help"]).exit_code == 0
 
 
 def test_build_proxy_configure_command_includes_control_plane_flags():
@@ -19,7 +30,8 @@ def test_build_proxy_configure_command_includes_control_plane_flags():
         block_undeclared=False,
         apply=True,
     )
-    assert cmd[:4] == ["agent-bom", "proxy-configure", "--log-dir", "~/.agent-bom/logs"]
+    assert cmd[:5] == ["agent-bom", "runtime", "configure", "--log-dir", "~/.agent-bom/logs"]
+    assert _resolves(cmd[1:3])
     assert "--control-plane-url" in cmd
     assert "--control-plane-token" in cmd
     assert "--policy" in cmd
@@ -60,7 +72,8 @@ def test_write_endpoint_onboarding_bundle_writes_artifacts(tmp_path):
         "summary",
     }
     shell_script = Path(artifacts["shell_bootstrap"]).read_text()
-    assert "proxy-configure" in shell_script
+    assert "agent-bom runtime configure" in shell_script
+    assert "proxy-configure" not in shell_script
     assert "--control-plane-url" in shell_script
     env_file = Path(artifacts["fleet_sync_env"]).read_text()
     assert "AGENT_BOM_PUSH_URL" in env_file
@@ -90,3 +103,11 @@ def test_write_endpoint_onboarding_bundle_writes_artifacts(tmp_path):
     assert summary["source_id"] == "device-acme-001"
     assert summary["mdm_provider"] == "jamf"
     assert summary["artifacts"]["shell_bootstrap"] == artifacts["shell_bootstrap"]
+
+
+def test_raw_kubernetes_daemonset_runs_a_registered_command():
+    manifest = yaml.safe_load((REPO_ROOT / "deploy" / "k8s" / "daemonset.yaml").read_text())
+    container = manifest["spec"]["template"]["spec"]["containers"][0]
+    assert container["command"] == ["agent-bom"]
+    words = list(itertools.takewhile(lambda arg: not arg.startswith("-"), container["args"]))
+    assert _resolves(words), words

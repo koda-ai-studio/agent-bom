@@ -132,3 +132,29 @@ def test_readiness_is_unaffected_outside_demo_mode(monkeypatch: pytest.MonkeyPat
     assert boot_seed.demo_estate_seeding() is False
     assert boot_seed.wait_for_demo_estate_boot_seed(0) is True
     assert evaluate_control_plane_readiness().reason != "demo_estate_seeding"
+
+
+def test_health_reports_demo_seed_state_without_failing_liveness(gated_demo_boot) -> None:
+    """Liveness stays 200 while seeding; the payload says the demo is not settled yet."""
+    api_server, boot_seed, release, started, _calls = gated_demo_boot
+
+    with TestClient(api_server.app) as client:
+        assert started.wait(10)
+        for path in ("/health", "/healthz", "/livez"):
+            seeding = client.get(path)
+            assert seeding.status_code == 200, path
+            assert seeding.json()["status"] == "ok"
+            assert seeding.json()["demo_seed"] == "pending", path
+
+        release.set()
+        assert boot_seed.wait_for_demo_estate_boot_seed(10) is True
+        assert client.get("/health").json()["demo_seed"] == "complete"
+
+
+def test_health_omits_demo_seed_outside_demo_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AGENT_BOM_DEMO_ESTATE", raising=False)
+    from agent_bom.api import server as api_server
+
+    body = TestClient(api_server.app).get("/health").json()
+    assert body["status"] == "ok"
+    assert body.get("demo_seed") is None

@@ -147,6 +147,7 @@ SURFACES = [
     "docs/ARCHITECTURE.md",
     "docs/CLAUDE_INTEGRATION.md",
     "docs/MCP_SERVER.md",
+    "docs/PROJECT_STRUCTURE.md",
     "pyproject.toml",
     "action.yml",
 ]

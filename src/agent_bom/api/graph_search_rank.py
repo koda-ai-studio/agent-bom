@@ -1,8 +1,11 @@
-"""Name-first ranking for graph search.
+"""Name-first ranking for graph search, the same for every entity type.
 
-A node whose label or id equals the query ranks first, then a label that starts
-with it, then every other match (attribute and evidence text) by severity and
-risk. Search keyset cursors carry that rank so pages stay gap-free.
+The entity the query names ranks first: its id equals the query, or the id
+past its type prefix does (``agent:langchain-service`` for
+``langchain-service``). Then a node whose label equals the query (a grant or
+finding named after that entity), then a label that starts with it, then every
+other match (attribute and evidence text). Severity and risk order only within
+a rank. Search keyset cursors carry that rank so pages stay gap-free.
 """
 
 from __future__ import annotations
@@ -13,19 +16,22 @@ from typing import Any
 
 from agent_bom.api.graph_store_support import _escape_like_query, decode_graph_cursor
 
-OTHER_MATCH = 2
+OTHER_MATCH = 3
 
 
-def match_rank_sql(*, label: str, node_id: str, placeholder: str) -> str:
+def match_rank_sql(*, label: str, node_id: str, placeholder: str, position: str) -> str:
+    """``position`` is the dialect's substring-position function (``instr`` / ``strpos``)."""
     p = placeholder
+    suffix = f"substr({node_id}, {position}({node_id}, ':') + 1)"
     return (
-        f"CASE WHEN lower({label}) = lower({p}) OR lower({node_id}) = lower({p}) THEN 0 "
-        f"WHEN lower({label}) LIKE lower({p}) ESCAPE '\\' THEN 1 ELSE {OTHER_MATCH} END"
+        f"CASE WHEN lower({node_id}) = lower({p}) OR ({position}({node_id}, ':') > 0 AND lower({suffix}) = lower({p})) THEN 0 "
+        f"WHEN lower({label}) = lower({p}) THEN 1 "
+        f"WHEN lower({label}) LIKE lower({p}) ESCAPE '\\' THEN 2 ELSE {OTHER_MATCH} END"
     )
 
 
 def match_rank_params(query: str) -> list[Any]:
-    return [query, query, f"{_escape_like_query(query)}%"]
+    return [query, query, query, f"{_escape_like_query(query)}%"]
 
 
 def encode_search_cursor(rank: int, severity_id: int, risk_score: float, label: str, node_id: str) -> str:
@@ -68,8 +74,8 @@ def search_cursor_params(cursor: str) -> list[Any]:
 
 
 SEARCH_COLUMNS = ("severity_id", "risk_score", "label", "id")
-SQLITE_RANK = match_rank_sql(label="gn.label", node_id="gn.id", placeholder="?")
-PG_RANK = match_rank_sql(label="gn.label", node_id="gn.id", placeholder="%s")
+SQLITE_RANK = match_rank_sql(label="gn.label", node_id="gn.id", placeholder="?", position="instr")
+PG_RANK = match_rank_sql(label="gn.label", node_id="gn.id", placeholder="%s", position="strpos")
 
 
 def sqlite_next_cursor(rows: list[Any], has_more: bool) -> str | None:

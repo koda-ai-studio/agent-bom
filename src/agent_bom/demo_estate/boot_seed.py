@@ -12,7 +12,9 @@ import functools
 import logging
 import threading
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
+
+from agent_bom.demo_estate import demo_estate_enabled
 
 _logger = logging.getLogger(__name__)
 
@@ -35,6 +37,13 @@ def serialized_seed(fn: _F) -> _F:
 
 def demo_estate_seeding() -> bool:
     return not _boot_seed_done.is_set()
+
+
+def demo_seed_state() -> Literal["pending", "complete"] | None:
+    """``/health`` view of the boot seed: ``None`` outside demo mode."""
+    if not demo_estate_enabled():
+        return None
+    return "pending" if demo_estate_seeding() else "complete"
 
 
 def wait_for_demo_estate_boot_seed(timeout: float | None = None) -> bool:
@@ -85,6 +94,7 @@ async def drain_demo_estate_boot_seed(task: asyncio.Task[None] | None, timeout: 
 __all__ = [
     "DEMO_SEEDING_SUMMARY",
     "demo_estate_seeding",
+    "demo_seed_state",
     "drain_demo_estate_boot_seed",
     "serialized_seed",
     "start_demo_estate_boot_seed",

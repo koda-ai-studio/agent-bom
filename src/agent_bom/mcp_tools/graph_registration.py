@@ -94,6 +94,9 @@ def _register_cross_vendor_paths(
         snapshot_generation: Annotated[
             str | None, Field(max_length=128, description="snapshot_generation from the first page; required when offset > 0.")
         ] = None,
+        cursor: Annotated[
+            str | None, Field(max_length=1024, description="pagination.next_cursor from the previous page; replaces offset.")
+        ] = None,
     ) -> str:
         """Return attack paths whose source and target nodes are recorded in different vendors.
 
@@ -111,6 +114,7 @@ def _register_cross_vendor_paths(
             offset=offset,
             limit=limit,
             snapshot_generation=snapshot_generation,
+            cursor=cursor,
             _truncate_response=truncate_response,
         )
 

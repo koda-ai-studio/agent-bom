@@ -1,3 +1,10 @@
+# Control-plane identity overlay — layer on a control-plane profile; it does
+# not render on its own (the base supplies the database and auth wiring).
+#
+#   helm upgrade --install agent-bom deploy/helm/agent-bom \
+#     -f deploy/helm/agent-bom/examples/eks-production-values.yaml \
+#     -f deploy/helm/agent-bom/examples/control-plane-identity-values.yaml
+#
 # ─────────────────────────────────────────────────────────────────────────────
 # Control-plane identity — KEYLESS, out-of-box cloud connect (zero static keys)
 # ─────────────────────────────────────────────────────────────────────────────

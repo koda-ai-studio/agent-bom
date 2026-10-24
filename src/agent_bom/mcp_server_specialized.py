@@ -7,6 +7,7 @@ from typing import Annotated, Any, Awaitable, Callable
 from pydantic import Field
 
 from agent_bom.mcp_errors import CODE_INTERNAL_UNEXPECTED, mcp_error_json
+from agent_bom.mcp_tools.dispatch import resolve_tool_path
 from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstream importers
 
 
@@ -132,7 +133,7 @@ def register_specialized_ai_tools(
         return await execute_tool_async(
             "dataset_card_scan",
             dataset_card_scan_impl,
-            directory=str(safe_path(directory)),
+            directory=str(resolve_tool_path(safe_path, directory, argument="directory")),
             scan_pii=scan_pii,
             _truncate_response=truncate_response,
         )
@@ -148,7 +149,7 @@ def register_specialized_ai_tools(
         return await execute_tool_async(
             "training_pipeline_scan",
             training_pipeline_scan_impl,
-            directory=str(safe_path(directory)),
+            directory=str(resolve_tool_path(safe_path, directory, argument="directory")),
             _truncate_response=truncate_response,
         )
 
@@ -215,7 +216,7 @@ def register_specialized_ai_tools(
         return await execute_tool_async(
             "prompt_scan",
             prompt_scan_impl,
-            directory=str(safe_path(directory)),
+            directory=str(resolve_tool_path(safe_path, directory, argument="directory")),
             _truncate_response=truncate_response,
         )
 
@@ -230,7 +231,7 @@ def register_specialized_ai_tools(
         return await execute_tool_async(
             "model_file_scan",
             model_file_scan_impl,
-            directory=str(safe_path(directory)),
+            directory=str(resolve_tool_path(safe_path, directory, argument="directory")),
             _truncate_response=truncate_response,
         )
 
@@ -245,7 +246,7 @@ def register_specialized_ai_tools(
         return await execute_tool_async(
             "ai_inventory_scan",
             ai_inventory_scan_impl,
-            directory=str(safe_path(directory)),
+            directory=str(resolve_tool_path(safe_path, directory, argument="directory")),
             _truncate_response=truncate_response,
         )
 

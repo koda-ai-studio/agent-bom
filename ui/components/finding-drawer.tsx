@@ -1,6 +1,7 @@
 "use client";
 
 import { advisoryMatchNeedsReview } from "@/lib/findings-view";
+import { EXPOSED_BY_IMPACT, exposedByImpactLabel } from "@/lib/credential-basis";
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
@@ -136,7 +137,7 @@ function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
   const impact = [
     scope.agents.length ? `${scope.agents.length} agent${scope.agents.length === 1 ? "" : "s"}` : null,
     scope.servers.length ? `${scope.servers.length} MCP server${scope.servers.length === 1 ? "" : "s"}` : null,
-    vuln.exposed_credentials.length ? `${vuln.exposed_credentials.length} credential reference${vuln.exposed_credentials.length === 1 ? "" : "s"}` : null,
+    vuln.exposed_credentials.length ? exposedByImpactLabel(vuln.exposed_credentials.length) : null,
     vuln.reachable_tools.length ? `${vuln.reachable_tools.length} linked tool${vuln.reachable_tools.length === 1 ? "" : "s"}` : null,
   ].filter(Boolean);
 
@@ -258,7 +259,7 @@ function EvidenceTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
         <TagList label="Agents" values={scope.agents} />
         <TagList label="MCP servers" values={scope.servers} />
         <TagList label="SBOM sources" values={scope.sbomSources} />
-        <TagList label="Credential references" values={vuln.exposed_credentials} />
+        <TagList label={EXPOSED_BY_IMPACT} values={vuln.exposed_credentials} />
         <TagList label="Linked tools" values={vuln.reachable_tools} />
         {whyItMatters ? <div className="mt-3 space-y-2 text-xs leading-5 text-ink-secondary">
           {whyItMatters.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}

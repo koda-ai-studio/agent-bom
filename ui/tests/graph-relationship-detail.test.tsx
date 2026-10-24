@@ -171,3 +171,69 @@ it("restores the invoking edge after React Flow replaces its element", async () 
   expect(replacement).toHaveFocus();
   canvas.remove(); vi.useRealTimers(); vi.unstubAllGlobals();
 });
+
+function mountedEdgeCanvas() {
+  const host = document.createElement("div");
+  const canvas = document.createElement("div");
+  canvas.className = "react-flow";
+  const trigger = document.createElement("button");
+  trigger.className = "react-flow__edge";
+  trigger.setAttribute("data-id", edge.id);
+  canvas.append(trigger); host.append(canvas); document.body.append(host); trigger.focus();
+  const remount = () => {
+    const next = canvas.cloneNode(true) as HTMLDivElement;
+    host.replaceChildren(next);
+    return next.querySelector<HTMLButtonElement>(".react-flow__edge")!;
+  };
+  return { host, trigger, remount };
+}
+
+it("restores the invoking edge when React Flow remounts its canvas after close", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 16));
+  const { host, remount } = mountedEdgeCanvas();
+  const view = render(<GraphRelationshipDetail edge={edge} scanId="s" sourceLabel="Planner" targetLabel="Worker" onClose={vi.fn()} />);
+  view.unmount();
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  const replacement = remount();
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  expect(replacement).toHaveFocus();
+  host.remove(); vi.useRealTimers(); vi.unstubAllGlobals();
+});
+
+it("does not pull focus back once the operator has moved on", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 16));
+  const { host, remount } = mountedEdgeCanvas();
+  const elsewhere = document.createElement("input");
+  document.body.append(elsewhere);
+  const view = render(<GraphRelationshipDetail edge={edge} scanId="s" sourceLabel="Planner" targetLabel="Worker" onClose={vi.fn()} />);
+  view.unmount();
+  elsewhere.focus();
+  const replacement = remount();
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  expect(elsewhere).toHaveFocus();
+  expect(replacement).not.toHaveFocus();
+  host.remove(); elsewhere.remove(); vi.useRealTimers(); vi.unstubAllGlobals();
+});
+
+it("returns focus to the inspected edge when the inspector remounts without its invoker", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 16));
+  const view = document.createElement("div");
+  const other = document.createElement("div");
+  const otherEdge = document.createElement("button");
+  otherEdge.className = "react-flow__edge"; otherEdge.setAttribute("data-id", edge.id);
+  other.append(otherEdge); document.body.append(other);
+  const { host, trigger } = mountedEdgeCanvas();
+  view.append(host); document.body.append(view);
+  const dock = document.createElement("div");
+  view.append(dock);
+  (document.activeElement as HTMLElement | null)?.blur();
+  const remounted = render(<GraphRelationshipDetail edge={edge} scanId="s" sourceLabel="Planner" targetLabel="Worker" onClose={vi.fn()} />, { container: dock });
+  remounted.unmount();
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  expect(trigger).toHaveFocus();
+  expect(otherEdge).not.toHaveFocus();
+  view.remove(); other.remove(); vi.useRealTimers(); vi.unstubAllGlobals();
+});

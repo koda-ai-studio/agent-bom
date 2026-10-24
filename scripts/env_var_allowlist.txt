@@ -318,6 +318,7 @@ AGENT_BOM_MCP_OPERATOR_TOKEN
 # Time-bound MCP operator token expiry; deploy/runtime secret lifecycle, read at server startup.
 AGENT_BOM_MCP_OPERATOR_TOKEN_EXPIRES_AT
 # Opt-in remote clone bind escape hatch for MCP repo scans; default stays loopback/SSRF-safe.
+AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS  # read per MCP call in mcp_tools/host_local.py; documented in docs/MCP_SERVER.md
 AGENT_BOM_MCP_REMOTE_BIND
 AGENT_BOM_MCP_SANDBOX
 AGENT_BOM_MCP_SANDBOX_CPUS

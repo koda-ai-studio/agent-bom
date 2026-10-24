@@ -15,25 +15,14 @@ import time
 from pathlib import Path
 from typing import AbstractSet, Any, Awaitable, Callable, TypeVar
 
+from agent_bom.mcp_tools.dispatch import _TOOL_ERROR_TYPES as _TOOL_ERROR_TYPES
+from agent_bom.mcp_tools.dispatch import ToolErrorPayload as ToolErrorPayload
+from agent_bom.mcp_tools.dispatch import record_completion as _record_completion
+from agent_bom.mcp_tools.dispatch import resolve_tool_path as resolve_tool_path
+from agent_bom.mcp_tools.dispatch import tool_result_error as tool_result_error
 from agent_bom.security import sanitize_log_label
 
 _ToolReturn = TypeVar("_ToolReturn")
-
-
-class ToolErrorPayload(str):
-    """A JSON tool payload that reports a failed or incomplete call.
-
-    It is an ordinary JSON string for callers that only read text; tools that
-    return a ``CallToolResult`` map it to ``is_error=True``.
-    """
-
-
-try:
-    from mcp.server.mcpserver.exceptions import ToolError as _FastMCPToolError
-except ModuleNotFoundError:  # pragma: no cover - base CLI installs do not include MCP extras
-    _TOOL_ERROR_TYPES: tuple[type[BaseException], ...] = ()
-else:
-    _TOOL_ERROR_TYPES = (_FastMCPToolError,)
 
 
 def validate_ecosystem(ecosystem: str, valid_ecosystems: AbstractSet[str]) -> str:
@@ -215,13 +204,19 @@ def mcp_workspace_roots() -> list[Path]:
     return roots
 
 
+_WORKSPACE_ROOTS_HINT = " - set AGENT_BOM_MCP_WORKSPACE_ROOTS to allow it"
+
+
 def safe_path(path_str: str) -> Path:
     from agent_bom.security import SecurityError, validate_path
 
     try:
         return validate_path(path_str, restrict_to_home=True, allowed_roots=mcp_workspace_roots())
     except SecurityError as exc:
-        raise ValueError(str(exc)) from exc
+        message = str(exc)
+        if "outside home directory" in message:
+            message += _WORKSPACE_ROOTS_HINT
+        raise ValueError(message) from exc
 
 
 def _log_value(value: object, *, max_len: int = 160) -> str:
@@ -677,16 +672,7 @@ async def execute_tool_async(
             _raise_sanitized_tool_error(exc, sanitized)
         return ToolErrorPayload(truncate_response_fn(_error_payload(tool_name, sanitized)))
     elapsed_ms = int((time.perf_counter() - start) * 1000)
-    record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=True)
-    record_tool_request_fn(
-        tool_name,
-        caller=request_meta["caller"],
-        client_id=request_meta["client_id"],
-        request_id=request_meta["request_id"],
-        status="ok",
-        elapsed_ms=elapsed_ms,
-    )
-    logger.info("mcp tool ok: %s caller=%s (%dms)", tool_name, log_caller, elapsed_ms)
+    _record_completion(tool_name, result, elapsed_ms, request_meta, log_caller, record_tool_metric_fn, record_tool_request_fn, logger)
     return result
 
 
@@ -810,16 +796,7 @@ async def execute_tool_sync_async(
                 _raise_sanitized_tool_error(exc, sanitized)
             return truncate_response_fn(_error_payload(tool_name, sanitized))
         elapsed_ms = int((time.perf_counter() - start) * 1000)
-        record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=True)
-        record_tool_request_fn(
-            tool_name,
-            caller=request_meta["caller"],
-            client_id=request_meta["client_id"],
-            request_id=request_meta["request_id"],
-            status="ok",
-            elapsed_ms=elapsed_ms,
-        )
-        logger.info("mcp tool ok: %s caller=%s (%dms)", tool_name, log_caller, elapsed_ms)
+        _record_completion(tool_name, result, elapsed_ms, request_meta, log_caller, record_tool_metric_fn, record_tool_request_fn, logger)
         return result
 
 

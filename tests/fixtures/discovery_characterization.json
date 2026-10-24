@@ -993,60 +993,7 @@
   ]
  },
  "image_tars": {
-  "agents": [
-   {
-    "config_path": "/cfg/shared.json",
-    "name": "shared",
-    "servers": [
-     {
-      "args": [
-       "-y",
-       "@modelcontextprotocol/server-everything"
-      ],
-      "command": "npx",
-      "credentials": [],
-      "name": "ambient-server",
-      "packages": [
-       [
-        "@modelcontextprotocol/server-everything",
-        "1.0.0",
-        "npm"
-       ]
-      ],
-      "surface": "mcp-server",
-      "tools": []
-     }
-    ],
-    "source": null,
-    "type": "claude-desktop"
-   },
-   {
-    "config_path": "/cfg/ambient.json",
-    "name": "ambient-agent",
-    "servers": [
-     {
-      "args": [
-       "-y",
-       "@modelcontextprotocol/server-everything"
-      ],
-      "command": "npx",
-      "credentials": [],
-      "name": "ambient-server",
-      "packages": [
-       [
-        "@modelcontextprotocol/server-everything",
-        "1.0.0",
-        "npm"
-       ]
-      ],
-      "surface": "mcp-server",
-      "tools": []
-     }
-    ],
-    "source": null,
-    "type": "cursor"
-   }
-  ],
+  "agents": [],
   "console": [
    "────────────────────────────────────────────────────────────────────────── Discovery ───────────────────────────────────────────────────────────────────────────",
    "",

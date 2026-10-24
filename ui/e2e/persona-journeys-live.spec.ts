@@ -113,7 +113,7 @@ test("AI owner: the agent drawer's per-finding credentials equal the exploit sto
   await page.getByText("LangChain Service").first().click();
   const drawer = page.getByRole("dialog");
   const row = drawer.getByRole("listitem").filter({ hasText: worst.vulnerability_id });
-  await expect(row).toContainText(`${worst.exposed_credentials.length} credentials exposed`, { timeout: 60_000 });
+  await expect(row).toContainText(`${worst.exposed_credentials.length} credentials exposed by impact`, { timeout: 60_000 });
   await expect(drawer).toContainText(name!);
 });
 

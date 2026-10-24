@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
 from typing import Any, Literal, Optional, cast
 
@@ -30,17 +29,20 @@ from agent_bom.api.read_models.graph import (
     GraphNhiGovernanceResponse,
     documented_list,
 )
+from agent_bom.api.request_contract import reject_unknown_query_params
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.consequences import router as consequence_router
 from agent_bom.api.routes.graph_routes.control_focus import control_occurrences
 from agent_bom.api.routes.graph_routes.focus import PathFocusQuery, focused_queue_page
+from agent_bom.api.routes.graph_routes.kev_queue import kev_queue_page
 from agent_bom.api.routes.graph_routes.params import (
     _GOVERNANCE_ATTACK_PATH_LIMIT,
     _GOVERNANCE_EDGE_LIMIT,
     _candidate_to_string,
     _raise_mcp_error_as_http,
 )
+from agent_bom.api.routes.graph_routes.path_cursor import path_continuation, path_cursor_scope, path_page_cursors
 from agent_bom.api.routes.graph_routes.payloads import (
     _fix_first_graph_view_payload,
     _governance_graph_payload,
@@ -51,7 +53,6 @@ from agent_bom.api.scan_finding_read import suppressed_finding_ids
 from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence
 from agent_bom.config import GRAPH_INVESTIGATION_NODE_BUDGET
 from agent_bom.graph.completeness import graph_completeness
-from agent_bom.graph.diff_view import decode_cursor, encode_cursor
 from agent_bom.graph.scope import GraphScopeKind
 from agent_bom.mcp_tools.exposure_queue import whole_queue
 
@@ -261,9 +262,21 @@ async def _ranked_queue_page(graph_store: Any, tenant: str, scan_id: str, page_a
 
 
 async def _queue_page(
-    request: Request, graph_store: Any, tenant: str, scan_id: str, page_args: dict[str, Any], path_focus: PathFocusQuery
-) -> tuple[Any, int, int, str, dict[str, Any] | None]:
-    """The ranked queue page, or its slice through one node, finding occurrence or control."""
+    request: Request,
+    graph_store: Any,
+    tenant: str,
+    scan_id: str,
+    page_args: dict[str, Any],
+    path_focus: PathFocusQuery,
+    kev: bool | None,
+) -> tuple[Any, int, int, str, dict[str, Any] | None, list[Any] | None]:
+    """``(ranked, materialized, derived, source, focus, every match)``: the ranked queue page, its KEV slice,
+    or its slice through one node, finding occurrence or control. Only the KEV slice returns every match."""
+    if kev is not None:
+        if path_focus.active():
+            raise HTTPException(422, "kev cannot be combined with node_id, finding_id, advisory_id or control focus.")
+        ranked, materialized, derived, source, matching = await kev_queue_page(graph_store, tenant, scan_id, kev=kev, **page_args)
+        return ranked, materialized, derived, source, None, matching
     if path_focus.active():
         control = None
         if path_focus.framework and path_focus.control:
@@ -271,7 +284,7 @@ async def _queue_page(
                 control_occurrences, request, framework=path_focus.framework, control=path_focus.control, scan_id=scan_id
             )
             control = (path_focus.framework, path_focus.control, occurrences)
-        return await focused_queue_page(
+        focused = await focused_queue_page(
             graph_store,
             tenant,
             scan_id,
@@ -281,38 +294,28 @@ async def _queue_page(
             control=control,
             **page_args,
         )
-    return (*await _ranked_queue_page(graph_store, tenant, scan_id, page_args), None)
-
-
-def _attack_path_cursor_scope(tenant: str, scan_id: str | None, filters: dict[str, Any]) -> str:
-    return hashlib.sha256(json.dumps(["attack-paths", tenant, scan_id or "", sorted(filters.items())]).encode()).hexdigest()
-
-
-def _attack_path_continuation(cursor: str, scope: str, *, offset: int, generation: str | None) -> tuple[int, str]:
-    """Offset and pinned generation a ``next_cursor`` carries for this tenant and query."""
-    if offset or generation:
-        raise HTTPException(400, "cursor replaces offset and snapshot_generation; send only the cursor.")
-    try:
-        continuation = decode_cursor(cursor, scope)
-    except ValueError as exc:
-        raise HTTPException(400, "Invalid cursor for this query; restart from the first page.") from exc
-    return continuation["offset"], continuation["revision"]
-
-
-def _attack_path_page_cursors(scope: str, generation: str, offset: int, ranked: Any, cursor: str | None) -> dict[str, Any]:
-    next_offset = offset + len(ranked.paths)
-    has_more = bool(ranked.paths) and next_offset < ranked.total
-    return {"cursor": cursor or "", "next_cursor": encode_cursor(scope, generation, next_offset) if has_more else "", "has_more": has_more}
+        return (*focused, None)
+    return (*await _ranked_queue_page(graph_store, tenant, scan_id, page_args), None, None)
 
 
 async def _apply_path_suppression(
-    payload: dict[str, Any], graph_store: Any, tenant: str, identity: tuple[str, str], filters: Any, ranked: Any, *, focused: bool
+    payload: dict[str, Any],
+    graph_store: Any,
+    tenant: str,
+    identity: tuple[str, str],
+    filters: Any,
+    ranked: Any,
+    *,
+    focused: bool,
+    matching: list[Any] | None = None,
 ) -> None:
     """Mark paths whose every occurrence is suppressed and count open vs suppressed over the matching queue."""
     suppressed = await _runtime._graph_store_call(suppressed_finding_ids, tenant)
     suppression.mark_suppressed_paths(payload["attack_paths"], suppressed)
     count, complete = None, False
-    if suppressed and not focused:
+    if suppressed and matching is not None:
+        count, complete = suppression.count_suppressed(matching, suppressed), bool((ranked.ranking or {}).get("complete", True))
+    elif suppressed and not focused:
         key = suppression.count_cache_key(tenant, ranked.scan_id, identity[1], filters.active(), suppressed)
         cached = suppression.cached_count(key)
         if cached is None:
@@ -324,7 +327,12 @@ async def _apply_path_suppression(
     payload["count_metadata"].update(suppression.suppression_count_metadata(count, suppressed, total=ranked.total, complete=complete))
 
 
-@investigation_router.get("/graph/attack-paths", tags=["graph"], responses={200: _ATTACK_PATHS_OPENAPI_RESPONSE})
+@investigation_router.get(
+    "/graph/attack-paths",
+    tags=["graph"],
+    responses={200: _ATTACK_PATHS_OPENAPI_RESPONSE},
+    dependencies=[Depends(reject_unknown_query_params)],
+)
 async def get_graph_attack_paths(
     request: Request,
     scan_id: Optional[str] = Query(None, description="Scan ID"),
@@ -338,6 +346,13 @@ async def get_graph_attack_paths(
     ),
     has_credential: Optional[bool] = Query(None, description="Only paths that do (true) or do not (false) expose a credential"),
     source_type: Optional[str] = Query(None, max_length=64, description="Only paths whose entrypoint node has this entity type"),
+    kev: Optional[bool] = Query(
+        None,
+        description=(
+            "Only paths through a known-exploited (CISA KEV) finding (true) or through none (false); "
+            "the same filter as MCP exposure_paths kev. Not combinable with node, finding or control focus."
+        ),
+    ),
     cursor: Optional[str] = Query(None, max_length=1024, description="next_cursor from the previous page (replaces offset)"),
     path_focus: PathFocusQuery = Depends(),
 ) -> dict:
@@ -354,16 +369,16 @@ async def get_graph_attack_paths(
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
     filters = AttackPathFilters(min_severity=min_severity, has_credential=has_credential, source_type=source_type)
-    active_filters = {**filters.active(), **path_focus.active()}
-    scope = _attack_path_cursor_scope(tenant, scan_id, active_filters)
+    active_filters = {**filters.active(), **path_focus.active(), **({"kev": kev} if kev is not None else {})}
+    scope = path_cursor_scope("attack-paths", tenant, scan_id, active_filters)
     if cursor:
-        offset, snapshot_generation = _attack_path_continuation(cursor, scope, offset=offset, generation=snapshot_generation)
+        offset, snapshot_generation = path_continuation(cursor, scope, offset=offset, generation=snapshot_generation)
     identity = await _runtime._graph_store_call(
         pin_generation, graph_store, tenant=tenant, scan_id=scan_id or "", generation=snapshot_generation, offset=offset
     )
     page_args = {"offset": offset, "limit": limit, "filters": filters}
-    ranked, materialized_paths, derived_paths, path_source, focus = await _queue_page(
-        request, graph_store, tenant, identity[0], page_args, path_focus
+    ranked, materialized_paths, derived_paths, path_source, focus, matching = await _queue_page(
+        request, graph_store, tenant, identity[0], page_args, path_focus, kev
     )
     effective_scan_id = ranked.scan_id
     hop_ids = {hop for path in ranked.paths for hop in path.hops}
@@ -390,10 +405,10 @@ async def get_graph_attack_paths(
         filters=active_filters,
     )
 
-    await _apply_path_suppression(payload, graph_store, tenant, identity, filters, ranked, focused=focus is not None)
+    await _apply_path_suppression(payload, graph_store, tenant, identity, filters, ranked, focused=focus is not None, matching=matching)
     await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(nodes or ranked.paths))
     payload["snapshot_generation"] = identity[1]
-    payload["pagination"].update(_attack_path_page_cursors(scope, identity[1], offset, ranked, cursor))
+    payload["pagination"].update(path_page_cursors(scope, identity[1], offset, len(ranked.paths), ranked.total, cursor))
     if focus is not None:
         payload["focus"] = focus
     return payload

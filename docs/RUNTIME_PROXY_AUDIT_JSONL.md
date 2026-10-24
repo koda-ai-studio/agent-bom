@@ -72,6 +72,6 @@ jq -r 'select(.type == "tools/call") | [.ts, .tenant_id, .tool, .policy] | @tsv'
 jq 'select(.type == "proxy_summary") | {total_tool_calls,total_blocked,blocked_by_reason,audit_dlq_bytes}' audit.jsonl
 ```
 
-Use the same `audit.jsonl` path with `agent-bom runtime correlate` or the MCP
-runtime correlation tool when connecting live tool behavior back to scan
+Use the same `audit.jsonl` path with `agent-bom scan --correlate audit.jsonl` or
+the MCP `runtime_correlate` tool when connecting live tool behavior back to scan
 findings.

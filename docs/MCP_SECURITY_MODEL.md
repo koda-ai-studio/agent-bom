@@ -93,7 +93,7 @@ The agent sees this as part of the tool's interface and may follow the injected 
 **What agent-bom does:**
 - `agent-bom scan --enforce` — static analysis of tool descriptions for injection patterns
 - `agent-bom proxy` `ArgumentAnalyzer` detector — inspects live tool arguments for prompt injection
-- `agent-bom introspect` — captures tool descriptions and diffs them against baseline
+- `agent-bom mcp introspect` — captures tool descriptions and diffs them against baseline
 
 ### 3.3 Tool drift — rug pull attack
 
@@ -261,7 +261,7 @@ should_i_deploy     — allow/warn/block guidance from ExposurePath risk
   may launch or wrap a configured stdio process, but agent-bom does not discover,
   restart, or operate arbitrary upstream servers on its own.
 - **Does not store credentials.** Only env var *names* (not values) appear in reports.
-- **Does not modify MCP configs** unless you explicitly run `agent-bom proxy-configure --apply`.
+- **Does not modify MCP configs** unless you explicitly run `agent-bom runtime configure --apply`.
 - **Does not send telemetry.** Only package name + version leaves your machine for CVE lookups (OSV, NVD, EPSS). See [PERMISSIONS.md](PERMISSIONS.md).
 - **Does not replace IAM or network controls.** It is a detection and enforcement layer, not a perimeter.
 - **Does not prove malicious intent from blocklist patterns.** Pattern matches are suspicious-name heuristics and can produce false positives.
@@ -308,7 +308,7 @@ echo "ignores:\n  - id: CVE-2024-1234\n    reason: 'Not reachable'\n    expires:
 
 ```bash
 # Wrap every MCP server in your Claude Desktop config
-agent-bom proxy-configure --apply
+agent-bom runtime configure --apply
 
 # Or wrap a single server manually
 agent-bom proxy "uvx mcp-server-filesystem /" \

@@ -40,6 +40,12 @@ describe("buildWhyItMatters", () => {
     expect(narrative?.paragraphs.join(" ")).toMatch(/does not prove exploitation/);
   });
 
+  it("says the credential count is impact-filtered exposure", () => {
+    const narrative = buildWhyItMatters(baseVuln());
+    expect(narrative?.paragraphs.join(" ")).toContain("1 credential exposed by impact");
+    expect(narrative?.paragraphs.join(" ")).not.toContain("credential reference");
+  });
+
   it("does not treat a blocked invocation as completed remediation", () => {
     const narrative = buildWhyItMatters(baseVuln({ runtime_evidence: { state: "blocked", blocked_count: 3 } }));
     expect(narrative?.paragraphs.join(" ")).toMatch(/remediation still needs verification/);

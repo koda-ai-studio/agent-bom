@@ -22,11 +22,12 @@ describe("agent drawer blast radius", () => {
       ],
     });
     render(<AgentBlastSummary agentName="langchain-service" />);
-    await waitFor(() => expect(screen.getByText("3 findings · 4 unique credentials exposed")).toBeVisible());
+    await waitFor(() => expect(screen.getByText("3 findings · 4 unique credentials exposed by impact")).toBeVisible());
     const rows = screen.getAllByRole("listitem");
     expect(rows[0]).toHaveTextContent("CVE-2023-36258");
-    expect(rows[0]).toHaveTextContent("2 credentials exposed");
-    expect(rows[1]).toHaveTextContent("No credentials exposed");
+    expect(rows[0]).toHaveTextContent("2 credentials exposed by impact");
+    expect(rows[1]).toHaveTextContent("0 credentials exposed by impact");
+    expect(screen.queryByText("No credentials exposed")).toBeNull();
     expect(rows[2]).toHaveTextContent("CVE-2023-32681");
     expect(screen.getByRole("link", { name: "CVE-2023-36258" })).toHaveAttribute("href", expect.stringContaining("node=agent%3Alangchain-service"));
   });
@@ -37,7 +38,8 @@ describe("agent drawer blast radius", () => {
     });
     render(<AgentBlastSummary agentName="cursor" />);
     const row = await screen.findByRole("listitem");
-    expect(row).not.toHaveTextContent("No credentials exposed");
+    expect(row).not.toHaveTextContent("exposed by impact");
+    expect(screen.getByText("1 finding · 0 unique credentials exposed by impact · 2 on server")).toBeVisible();
     const held = screen.getByText("2 credentials on server · exposure not asserted");
     expect(held.getAttribute("title")).toContain("AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY");
     expect(held.getAttribute("title")).toContain("impact (unknown)");

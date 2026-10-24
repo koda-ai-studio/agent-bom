@@ -87,7 +87,7 @@ agent-bom proxy "npx @modelcontextprotocol/server-filesystem /workspace"
 Or auto-wrap eligible JSON MCP configs:
 
 ```bash
-agent-bom proxy-configure --log-dir ~/.agent-bom/logs --detect-credentials --apply
+agent-bom runtime configure --log-dir ~/.agent-bom/logs --detect-credentials --apply
 ```
 
 That adds runtime monitoring for:
@@ -106,7 +106,7 @@ For cross-agent correlation across sessions, use the broader runtime protection 
 
 - Use `agent-bom mcp server` when you want CoCo to call `agent-bom` tools directly.
 - Use `agent-bom proxy` when CoCo should keep talking to a third-party MCP server, but you want live runtime inspection around that server.
-- Use `agent-bom proxy-configure --apply` when you want to auto-wrap eligible JSON-configured stdio servers in Cortex MCP configs.
+- Use `agent-bom runtime configure --apply` when you want to auto-wrap eligible JSON-configured stdio servers in Cortex MCP configs.
 
 ## Notes
 

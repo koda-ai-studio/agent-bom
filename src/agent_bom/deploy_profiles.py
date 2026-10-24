@@ -15,6 +15,9 @@ class HelmValidationProfile:
     values_files: tuple[Path, ...] = field(default_factory=tuple)
     set_arguments: tuple[str, ...] = field(default_factory=tuple)
     set_file_arguments: tuple[tuple[str, Path], ...] = field(default_factory=tuple)
+    # Literal text the render must contain, so an overlay that silently stops
+    # applying fails validation instead of rendering its base unchanged.
+    expect_rendered: tuple[str, ...] = field(default_factory=tuple)
 
 
 def helm_chart_dir(repo_root: Path) -> Path:
@@ -76,10 +79,9 @@ def ingress_hosts_missing_paths(rendered: str) -> list[str]:
     return offenders
 
 
-def helm_validation_profiles(repo_root: Path) -> list[HelmValidationProfile]:
-    """Return the canonical shipped Helm profile matrix."""
+def _pilot_helm_profiles(examples: Path) -> list[HelmValidationProfile]:
+    """Scanner-only and focused pilot profiles."""
 
-    examples = helm_example_dir(repo_root)
     return [
         HelmValidationProfile(
             name="scanner-only",
@@ -116,6 +118,13 @@ def helm_validation_profiles(repo_root: Path) -> list[HelmValidationProfile]:
                 examples / "byo-postgres-values.yaml",
             ),
         ),
+    ]
+
+
+def _production_helm_profiles(examples: Path) -> list[HelmValidationProfile]:
+    """Production control-plane profiles and their hardening overlays."""
+
+    return [
         HelmValidationProfile(
             name="production-secret-sync",
             description="ExternalSecrets-only bootstrap stage for the production EKS profile.",
@@ -169,6 +178,86 @@ def helm_validation_profiles(repo_root: Path) -> list[HelmValidationProfile]:
             description="Disconnected control plane with a Secret-mounted vulns.db and no egress.",
             values_files=(examples / "airgap-vuln-db-values.yaml",),
         ),
+    ]
+
+
+def _collector_and_identity_helm_profiles(examples: Path) -> list[HelmValidationProfile]:
+    """Collector identity, mTLS and OIDC overlays rendered on their base profile."""
+
+    return [
+        HelmValidationProfile(
+            name="aks-collector-workload-identity",
+            description="Scanner-only AKS collector using Azure Workload Identity.",
+            values_files=(examples / "aks-collector-workload-identity-values.yaml",),
+            expect_rendered=("azure.workload.identity/client-id",),
+        ),
+        HelmValidationProfile(
+            name="eks-collector-irsa",
+            description="Scanner-only EKS collector using IRSA.",
+            values_files=(examples / "eks-collector-irsa-values.yaml",),
+            expect_rendered=("eks.amazonaws.com/role-arn",),
+        ),
+        HelmValidationProfile(
+            name="gke-collector-workload-identity",
+            description="Scanner-only GKE collector using Workload Identity.",
+            values_files=(examples / "gke-collector-workload-identity-values.yaml",),
+            expect_rendered=("iam.gke.io/gcp-service-account",),
+        ),
+        HelmValidationProfile(
+            name="multicloud-collector",
+            description="Scanner-only collector reaching AWS, GCP, Azure and Snowflake.",
+            values_files=(examples / "multicloud-collector-values.yaml",),
+            expect_rendered=("AGENT_BOM_GCP_IMPERSONATE_SA",),
+        ),
+        HelmValidationProfile(
+            name="collector-mtls",
+            description="Production mesh-hardened control plane plus the collector mTLS overlay.",
+            values_files=(
+                examples / "eks-production-values.yaml",
+                examples / "eks-istio-kyverno-values.yaml",
+                examples / "collector-mtls-values.yaml",
+            ),
+            expect_rendered=("agent-bom-collector-client-tls",),
+        ),
+        HelmValidationProfile(
+            name="control-plane-identity",
+            description="Production control plane plus the keyless control-plane identity overlay.",
+            values_files=(
+                examples / "eks-production-values.yaml",
+                examples / "control-plane-identity-values.yaml",
+            ),
+            expect_rendered=("arn:aws:iam::123456789012:role/agent-bom-scanner",),
+        ),
+        HelmValidationProfile(
+            name="oidc-secret-file",
+            description="Focused pilot plus a confidential OIDC client secret mounted from a file.",
+            values_files=(
+                examples / "eks-mcp-pilot-values.yaml",
+                examples / "oidc-secret-file-values.yaml",
+            ),
+            expect_rendered=("AGENT_BOM_OIDC_CLIENT_SECRET_FILE",),
+        ),
+        HelmValidationProfile(
+            name="oidc-discovery-shim",
+            description="Focused pilot gateway plus the OIDC discovery shim overlay.",
+            values_files=(
+                examples / "eks-mcp-pilot-values.yaml",
+                examples / "oidc-discovery-shim-values.yaml",
+            ),
+            set_file_arguments=(("gateway.upstreamsYaml", examples / "gateway-upstreams.example.yaml"),),
+            expect_rendered=("AGENT_BOM_OIDC_DISCOVERY_SHIM_JSON", "name: jira"),
+        ),
+    ]
+
+
+def helm_validation_profiles(repo_root: Path) -> list[HelmValidationProfile]:
+    """Return the canonical shipped Helm profile matrix."""
+
+    examples = helm_example_dir(repo_root)
+    return [
+        *_pilot_helm_profiles(examples),
+        *_production_helm_profiles(examples),
+        *_collector_and_identity_helm_profiles(examples),
     ]
 
 

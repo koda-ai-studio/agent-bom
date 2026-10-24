@@ -440,11 +440,11 @@ def proxy_configure_cmd(
 
     \b
     Example:
-      agent-bom proxy-configure --log-dir ~/.agent-bom/logs
-      agent-bom proxy-configure --policy policy.json --log-dir ~/.agent-bom/logs --apply
-      agent-bom proxy-configure --sandbox-image ghcr.io/acme/mcp-runtime@sha256:<digest> --sandbox-image-pin-policy enforce --apply
-      agent-bom proxy-configure --control-plane-url https://agent-bom.example.com --control-plane-token "$TOKEN" --apply
-      agent-bom proxy-configure --no-secure-defaults --apply
+      agent-bom runtime configure --log-dir ~/.agent-bom/logs
+      agent-bom runtime configure --policy policy.json --log-dir ~/.agent-bom/logs --apply
+      agent-bom runtime configure --sandbox-image ghcr.io/acme/mcp-runtime@sha256:<digest> --sandbox-image-pin-policy enforce --apply
+      agent-bom runtime configure --control-plane-url https://agent-bom.example.com --control-plane-token "$TOKEN" --apply
+      agent-bom runtime configure --no-secure-defaults --apply
     """
     from agent_bom.discovery import discover_all
     from agent_bom.proxy_configure import apply_proxy_configs, auto_configure_proxies

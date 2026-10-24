@@ -8,10 +8,10 @@ From a source checkout, create a clean environment outside the repository:
 
 ```bash
 python3 -m venv /tmp/agent-bom-first-run-venv
-/tmp/agent-bom-first-run-venv/bin/python -m pip install 'agent-bom[ui]==0.108.4' 'playwright==1.63.0'
+/tmp/agent-bom-first-run-venv/bin/python -m pip install 'agent-bom[ui]==0.110.0' 'playwright==1.63.0'
 /tmp/agent-bom-first-run-venv/bin/python -m playwright install chromium
 /tmp/agent-bom-first-run-venv/bin/python scripts/verify_first_run.py \
-  --expected-version 0.108.4 --output /tmp/agent-bom-first-run-evidence
+  --expected-version 0.110.0 --output /tmp/agent-bom-first-run-evidence
 ```
 
 Choose new directories for each qualification. The runner refuses to overwrite

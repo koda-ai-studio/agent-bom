@@ -164,3 +164,12 @@ it("names an issue spanning several installed versions instead of one occurrence
   expect(screen.getByText("Upgrade to 8.17.1")).toBeVisible();
   expect(screen.queryByText("8.5.0 → 8.17.1")).not.toBeInTheDocument();
 });
+
+it("labels drawer credentials as impact-filtered exposure in the overview and evidence", async () => {
+  const user = userEvent.setup();
+  render(<FindingDrawer vuln={{ ...base, agents: ["cursor"], affected_servers: ["api-mcp"], exposed_credentials: ["OPENAI_API_KEY", "DATABASE_URL"] }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getByText(/2 credentials exposed by impact/)).toBeVisible();
+  expect(screen.queryByText(/credential reference/)).not.toBeInTheDocument();
+  await user.click(screen.getByRole("tab", { name: "Evidence" }));
+  expect(screen.getByText("Credentials exposed by impact")).toBeVisible();
+});

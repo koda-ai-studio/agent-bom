@@ -590,6 +590,11 @@
             "title": "Incomplete Tenants",
             "type": "integer"
           },
+          "job_cap_reached": {
+            "default": false,
+            "title": "Job Cap Reached",
+            "type": "boolean"
+          },
           "last_run_at": {
             "anyOf": [
               {
@@ -615,6 +620,16 @@
             "default": 0,
             "title": "Tenants Examined",
             "type": "integer"
+          },
+          "tenants_skipped": {
+            "default": 0,
+            "title": "Tenants Skipped",
+            "type": "integer"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
           }
         },
         "title": "AdvisoryRematchHealth",
@@ -35478,6 +35493,22 @@
             "title": "Configured Auth Modes",
             "type": "array"
           },
+          "demo_seed": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pending",
+                  "complete"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Demo estate mode only: 'pending' while the demo seed is still writing, so early reads see partial data; 'complete' once it has landed. Null outside demo mode. Liveness stays 200 either way; /readyz returns 503 while pending.",
+            "title": "Demo Seed"
+          },
           "status": {
             "default": "ok",
             "title": "Status",
@@ -64177,6 +64208,24 @@
             }
           },
           {
+            "description": "Only paths through a known-exploited (CISA KEV) finding (true) or through none (false); the same filter as MCP exposure_paths kev. Not combinable with node, finding or control focus.",
+            "in": "query",
+            "name": "kev",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only paths through a known-exploited (CISA KEV) finding (true) or through none (false); the same filter as MCP exposure_paths kev. Not combinable with node, finding or control focus.",
+              "title": "Kev"
+            }
+          },
+          {
             "description": "next_cursor from the previous page (replaces offset)",
             "in": "query",
             "name": "cursor",
@@ -65573,6 +65622,25 @@
               ],
               "description": "Only paths whose target node is in this vendor",
               "title": "Target Vendor"
+            }
+          },
+          {
+            "description": "next_cursor from the previous page (replaces offset)",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1024,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor from the previous page (replaces offset)",
+              "title": "Cursor"
             }
           }
         ],

@@ -551,7 +551,7 @@ jobs:
         # in ~1 min instead of burning 6-8 min on the Test matrix.
         run: uv run python scripts/check_cli_reference_alignment.py
 
-      - name: Skill CLI citation alignment
+      - name: Docs and skill CLI citation alignment
         if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
         run: uv run python scripts/check_skill_cli_citations.py
 
@@ -1756,6 +1756,8 @@ jobs:
           uv run pytest -q --tb=short \
             tests/test_postgres_integration.py \
             tests/test_graph_snapshot_ownership.py \
+            tests/test_current_graph_assembly_postgres.py \
+            tests/test_postgres_alembic_ledger.py \
             tests/test_postgres_graph_snapshot_paths.py \
             tests/test_report_jobs_postgres.py \
             tests/test_export_destination_postgres.py \

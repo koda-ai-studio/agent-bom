@@ -8657,6 +8657,11 @@ export interface components {
              * @default 0
              */
             incomplete_tenants: number;
+            /**
+             * Job Cap Reached
+             * @default false
+             */
+            job_cap_reached: boolean;
             /** Last Run At */
             last_run_at?: string | null;
             /**
@@ -8674,6 +8679,16 @@ export interface components {
              * @default 0
              */
             tenants_examined: number;
+            /**
+             * Tenants Skipped
+             * @default 0
+             */
+            tenants_skipped: number;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
         };
         /** AffectedProduct */
         AffectedProduct: {
@@ -21427,6 +21442,11 @@ export interface components {
             auth_required: boolean;
             /** Configured Auth Modes */
             configured_auth_modes?: string[];
+            /**
+             * Demo Seed
+             * @description Demo estate mode only: 'pending' while the demo seed is still writing, so early reads see partial data; 'complete' once it has landed. Null outside demo mode. Liveness stays 200 either way; /readyz returns 503 while pending.
+             */
+            demo_seed?: ("pending" | "complete") | null;
             /**
              * Status
              * @default ok
@@ -34544,6 +34564,8 @@ export interface operations {
                 has_credential?: boolean | null;
                 /** @description Only paths whose entrypoint node has this entity type */
                 source_type?: string | null;
+                /** @description Only paths through a known-exploited (CISA KEV) finding (true) or through none (false); the same filter as MCP exposure_paths kev. Not combinable with node, finding or control focus. */
+                kev?: boolean | null;
                 /** @description next_cursor from the previous page (replaces offset) */
                 cursor?: string | null;
                 /** @description Only paths through this node (replaced ids resolve to canonical) */
@@ -34969,6 +34991,8 @@ export interface operations {
                 source_vendor?: string | null;
                 /** @description Only paths whose target node is in this vendor */
                 target_vendor?: string | null;
+                /** @description next_cursor from the previous page (replaces offset) */
+                cursor?: string | null;
             };
             header?: never;
             path?: never;

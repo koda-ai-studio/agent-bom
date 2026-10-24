@@ -11,8 +11,11 @@ from typing import Any, cast
 from agent_bom.api.route_offload import call_route as _call_route
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
 from agent_bom.core.experimental import disabled_message, is_enabled
+from agent_bom.mcp_server_runtime import safe_path
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl as tool_risk_assessment_impl
+from agent_bom.mcp_tools.dispatch import resolve_tool_path
+from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -560,6 +563,8 @@ async def runtime_correlate_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the runtime_correlate tool."""
+    safe_audit = resolve_tool_path(_safe_path, audit_log, argument="audit_log") if audit_log else None
+    safe_trace = resolve_tool_path(_safe_path, otel_trace, argument="otel_trace") if otel_trace else None
     try:
         # Normalize "auto" -> None so _run_scan_pipeline uses default discovery
         effective_config = None if config_path == "auto" else config_path
@@ -572,9 +577,7 @@ async def runtime_correlate_impl(
             },
         }
 
-        if audit_log:
-            # Validate audit_log path to prevent directory traversal
-            safe_audit = _safe_path(audit_log)
+        if safe_audit is not None:
             from agent_bom.runtime_correlation import correlate as _correlate
 
             corr = _correlate(blast_radii, audit_log_path=str(safe_audit))
@@ -586,12 +589,11 @@ async def runtime_correlate_impl(
             }
 
         # ML API provenance via OTel trace
-        if _otel_trace_allowed(otel_trace, result):
+        if _otel_trace_allowed(otel_trace, result) and safe_trace is not None:
             import json as _json
 
             from agent_bom.otel_ingest import flag_deprecated_models, parse_ml_api_spans
 
-            safe_trace = _safe_path(otel_trace)
             try:
                 from agent_bom.otel_ingest import _MAX_TRACE_FILE_BYTES
 
@@ -746,9 +748,14 @@ def where_impl(
 def inventory_impl(
     *,
     config_path: str | None = None,
+    _safe_path=None,
     _truncate_response,
 ) -> str:
     """Implementation of the inventory tool."""
+    if config_path:
+        config_path = str(resolve_tool_path(_safe_path or safe_path, config_path, argument="config_path"))
+    else:
+        ensure_host_local_allowed()
     try:
         from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
         from agent_bom.discovery import discover_all
@@ -815,14 +822,10 @@ def skill_trust_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the skill_trust tool."""
+    p = resolve_tool_path(_safe_path, skill_path, argument="skill_path")
     try:
         from agent_bom.skills_service import scan_skill_targets
 
-        try:
-            p = _safe_path(skill_path)
-        except ValueError as exc:
-            logger.exception("MCP tool error")
-            return json.dumps({"error": sanitize_error(exc)})
         if not p.is_file():
             return json.dumps({"error": f"File not found: {skill_path}"})
         if p.stat().st_size > _MAX_FILE_SIZE:
@@ -849,14 +852,9 @@ def skill_scan_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the skill_scan tool."""
+    target = resolve_tool_path(_safe_path, path, argument="path")
     try:
         from agent_bom.skills_service import scan_skill_targets
-
-        try:
-            target = _safe_path(path)
-        except ValueError as exc:
-            logger.exception("MCP tool error")
-            return json.dumps({"error": sanitize_error(exc)})
 
         report = scan_skill_targets([target]).to_dict()
         if report["summary"]["files_scanned"] == 0:
@@ -874,14 +872,9 @@ def skill_verify_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the skill_verify tool."""
+    target = resolve_tool_path(_safe_path, path, argument="path")
     try:
         from agent_bom.skills_service import verify_skill_targets
-
-        try:
-            target = _safe_path(path)
-        except ValueError as exc:
-            logger.exception("MCP tool error")
-            return json.dumps({"error": sanitize_error(exc)})
 
         results = verify_skill_targets([target])
         if not results:

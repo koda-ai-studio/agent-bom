@@ -1,4 +1,5 @@
 import { complianceEvidenceHref } from "@/lib/finding-controls";
+import { exposedByImpactLabel } from "@/lib/credential-basis";
 import { exposurePriorityLabel } from "@/lib/plain-labels";
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
 import { advisoryMatchNeedsReview, findingWorkloadScope, type EnrichedVuln } from "@/lib/findings-view";
@@ -56,7 +57,7 @@ function exposureSentence(vuln: EnrichedVuln): string | null {
     parts.push(`${scope.sbomSources.length} SBOM source${scope.sbomSources.length === 1 ? "" : "s"}`);
   }
   if (vuln.exposed_credentials.length > 0) {
-    parts.push(`${vuln.exposed_credentials.length} credential reference${vuln.exposed_credentials.length === 1 ? "" : "s"}`);
+    parts.push(exposedByImpactLabel(vuln.exposed_credentials.length));
   }
   if (vuln.reachable_tools.length > 0) {
     parts.push(`${vuln.reachable_tools.length} linked tool${vuln.reachable_tools.length === 1 ? "" : "s"}`);

@@ -12,6 +12,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
 from agent_bom.mcp_tools.check_lookup import incomplete_lookup_reason, scan_checked_package
 from agent_bom.mcp_tools.check_lookup import version_published as _version_published
+from agent_bom.mcp_tools.dispatch import resolve_tool_path
 from agent_bom.mcp_tools.result_store import ResultStore
 from agent_bom.mcp_tools.scan_response import (
     MAX_PAGE_LIMIT,
@@ -674,10 +675,7 @@ async def code_scan_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the code_scan tool."""
-    try:
-        scan_path = _safe_path(path)
-    except ValueError as exc:
-        raise ToolError(sanitize_error(exc)) from exc
+    scan_path = resolve_tool_path(_safe_path, path, argument="path")
 
     try:
         from agent_bom.sast import SASTResult, SASTScanError, scan_code

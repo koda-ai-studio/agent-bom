@@ -110,6 +110,18 @@ def _finding_occurrence_summary(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _multi_version_title(title: str, package: str, version_count: int) -> str:
+    """Name the package once with its version count, as the UI label does.
+
+    The representative row's ``name@version`` is whichever occurrence was most
+    severe, which can be one occurrence out of fifty; it must not title the issue.
+    """
+    at = package.rfind("@")
+    if at <= 0 or package not in title:
+        return title
+    return title.replace(package, f"{package[:at]} · {version_count} versions")
+
+
 def _serialize_finding_group(group: dict[str, Any]) -> dict[str, Any]:
     """Sanitize one selected group and its bounded occurrence sample.
 
@@ -129,6 +141,8 @@ def _serialize_finding_group(group: dict[str, Any]) -> dict[str, Any]:
     public["package_versions"] = [str(v) for v in versions] if isinstance(versions, list) else []
     version_set = group.get("_package_version_set")
     public["package_version_count"] = len(version_set) if isinstance(version_set, set) else len(public["package_versions"])
+    if public["package_version_count"] > 1 and isinstance(public.get("title"), str):
+        public["title"] = _multi_version_title(public["title"], str(public.get("package") or ""), public["package_version_count"])
     samples = group.get("_occurrence_rows")
     public["occurrences"] = [
         _finding_occurrence_summary(safe_finding_response_payload(row))

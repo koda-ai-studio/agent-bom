@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { EXPOSED_BY_IMPACT_NOTE, exposedByImpactLabel } from "@/lib/credential-basis";
 import { ChevronDown, ChevronUp, Ticket } from "lucide-react";
 
 import { severityColor, severityDot, type RemediationItem, type TicketLink } from "@/lib/api";
@@ -37,7 +38,7 @@ function RemediationCard({ item, ticket, onCreateTicket }: {
         </dd>
         <dd className="font-mono">Risk {item.impact_score.toFixed(1)}</dd>
         <dd>{plural(item.affected_agents?.length ?? 0, "agent")}</dd>
-        <dd title="Credentials this advisory's impact can reach. The exploit story counts every credential the hosting servers hold.">{plural(item.exposed_credentials?.length ?? 0, "credential")} exposed</dd>
+        <dd title={EXPOSED_BY_IMPACT_NOTE}>{exposedByImpactLabel(item.exposed_credentials?.length ?? 0)}</dd>
       </dl>
       <div className="flex flex-wrap gap-1">
         {item.vulnerabilities.slice(0, 2).map(cve => (

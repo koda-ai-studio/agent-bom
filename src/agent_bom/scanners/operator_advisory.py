@@ -28,6 +28,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from agent_bom.core.versions import compare_version_order
+from agent_bom.core.versions.osv import version_match_state
 
 OPERATOR_ADVISORY_PROVENANCE = "operator_advisory"
 _ADVISORY_ID = re.compile(r"[A-Z][A-Z0-9]{1,15}-[A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
@@ -59,6 +60,12 @@ class AffectedRange(BaseModel):
         if self.fixed and self.last_affected:
             raise ValueError("use fixed or last_affected, not both")
         return self
+
+
+class FeedAffectedRange(AffectedRange):
+    """A feed range with its OSV exclusive ``limit``; never part of the operator API schema."""
+
+    limit_version: str | None = ""
 
 
 class AffectedProduct(BaseModel):
@@ -180,20 +187,14 @@ def _identity_matches(product: AffectedProduct, package: dict[str, Any]) -> bool
 
 
 def _in_range(version: str, item: AffectedRange, ecosystem: str) -> bool | None:
-    checks = []
-    if item.introduced and item.introduced != "0":
-        checks.append((item.introduced, lambda order: order >= 0))
-    if item.fixed:
-        checks.append((item.fixed, lambda order: order < 0))
-    if item.last_affected:
-        checks.append((item.last_affected, lambda order: order <= 0))
-    for bound, accept in checks:
-        order = compare_version_order(version, bound, ecosystem)
-        if order is None:
-            return None
-        if not accept(order):
-            return False
-    return True
+    """Scan-time range verdict: ``None`` when the version cannot be ordered.
+
+    A bound that is a commit SHA can never place a release, so it excludes,
+    exactly as the scan-time lookup treats it.
+    """
+    limit = item.limit_version if isinstance(item, FeedAffectedRange) else ""
+    state = version_match_state(version, item.introduced, item.fixed, item.last_affected, ecosystem, limit)
+    return {"affected": True, "unknown": None}.get(state, False)
 
 
 def _affected(product: AffectedProduct, version: str, ecosystem: str) -> tuple[bool | None, str | None]:

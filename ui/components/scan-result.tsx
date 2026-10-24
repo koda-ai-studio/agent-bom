@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { EXPOSED_BY_IMPACT } from "@/lib/credential-basis";
 import Link from "next/link";
 import { api, type ScanJob, type ScanJobStatus, type ScanResult, type BlastRadius, type RemediationItem, type GraphExportFormat, formatDate, OWASP_LLM_TOP10, MITRE_ATLAS, severityColor } from "@/lib/api";
 import { useScanStream } from "@/lib/use-scan-stream";
@@ -715,7 +716,7 @@ function BlastRadiusCard({ blast }: { blast: BlastRadius }) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <ImpactPill icon={Zap} label="Agents affected" items={blast.affected_agents ?? []} />
-        <ImpactPill icon={Key} label="Credentials exposed" items={blast.exposed_credentials ?? []} accent="orange" />
+        <ImpactPill icon={Key} label={EXPOSED_BY_IMPACT} items={blast.exposed_credentials ?? []} accent="orange" />
         <ImpactPill icon={Wrench} label="Tools reachable" items={blast.reachable_tools ?? blast.exposed_tools ?? []} />
       </div>
       {((blast.owasp_tags && blast.owasp_tags.length > 0) || (blast.atlas_tags && blast.atlas_tags.length > 0)) && (
@@ -778,7 +779,7 @@ function RemediationPlan({ items }: { items: RemediationItem[] }) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
             <ImpactBox label="Agents protected" items={item.affected_agents} pct={item.agents_pct} color="emerald" />
-            <ImpactBox label="Credentials freed" items={item.exposed_credentials} pct={item.credentials_pct} color="yellow" />
+            <ImpactBox label={EXPOSED_BY_IMPACT} items={item.exposed_credentials} pct={item.credentials_pct} color="yellow" />
             <ImpactBox label="Tools secured" items={item.reachable_tools} pct={item.tools_pct} color="blue" />
           </div>
           {(item.owasp_tags.length > 0 || item.atlas_tags.length > 0) && (

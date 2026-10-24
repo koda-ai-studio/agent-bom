@@ -458,7 +458,7 @@ agent-bom proxy --no-isolate --log audit.jsonl -- python3 -m agent_bom.runtime_s
 For Claude Desktop, Claude Code, and Cortex JSON configs, you can auto-wrap eligible stdio servers:
 
 ```bash
-agent-bom proxy-configure --log-dir ~/.agent-bom/logs --detect-credentials
+agent-bom runtime configure --log-dir ~/.agent-bom/logs --detect-credentials
 ```
 
 Add `--apply` to persist the wrapped config entries. Generated configs include
@@ -574,7 +574,7 @@ Pre-built K8s manifests are available in `deploy/k8s/`:
 | `namespace.yaml` | Creates the `agent-bom` namespace |
 | `rbac.yaml` | ServiceAccount + ClusterRole (pod/namespace read) + ClusterRoleBinding |
 | `cronjob.yaml` | Scheduled vulnerability scan every 6 hours across all namespaces |
-| `daemonset.yaml` | Runtime protection monitor on every node via `agent-bom protect --mode http` |
+| `daemonset.yaml` | Runtime protection monitor on every node via `agent-bom runtime protect --mode http` |
 | `sidecar-example.yaml` | MCP server + agent-bom proxy sidecar deployment example |
 
 ### Quick start
@@ -609,7 +609,7 @@ changed, missing, and stale records. The identity key intentionally uses
 tenant, cluster, namespace, workload, agent, server, and surface metadata
 instead of pod UID/name so normal rollout churn does not create duplicate
 assets. CronJobs, selected-node DaemonSets, and future operators can publish
-that JSON alongside `agent-bom inventory --json` to prove whether the inventory
+that JSON alongside `agent-bom mcp inventory --json` to prove whether the inventory
 is current and what changed since the last observation.
 
 ---

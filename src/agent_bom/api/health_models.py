@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from agent_bom.core.settings import env_bool
+from agent_bom.demo_estate.boot_seed import demo_seed_state
 
 
 class VersionInfo(BaseModel):
@@ -85,6 +86,14 @@ class PublicHealthResponse(BaseModel):
     auth_configured: bool = False
     configured_auth_modes: list[str] = Field(default_factory=list)
     unauthenticated_allowed: bool = False
+    demo_seed: Literal["pending", "complete"] | None = Field(
+        default_factory=demo_seed_state,
+        description=(
+            "Demo estate mode only: 'pending' while the demo seed is still writing, so early reads see partial data; "
+            "'complete' once it has landed. Null outside demo mode. Liveness stays 200 either way; /readyz returns "
+            "503 while pending."
+        ),
+    )
 
 
 class AdvisoryRematchHealth(BaseModel):
@@ -95,6 +104,11 @@ class AdvisoryRematchHealth(BaseModel):
     last_run_at: str | None = None
     tenants_examined: int = 0
     incomplete_tenants: int = 0
+    # Tenants past the per-run cap; a lower bound when ``job_cap_reached``.
+    tenants_skipped: int = 0
+    # Tenant discovery stopped at its job-summary cap; more tenants may exist.
+    job_cap_reached: bool = False
+    truncated: bool = False
     new_findings: int = 0
 
 

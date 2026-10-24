@@ -325,6 +325,22 @@ BEGIN
  END IF;
 END $grant$;
 
+-- Only the migration identity moves the Alembic ledger. Broad DML grants and
+-- default privileges reach alembic_version too, so runtime roles keep read
+-- access (schema probes) and lose every write. Migration 20261023_02
+-- revokes them for databases bootstrapped before this rule.
+DO $ledger$
+BEGIN
+    IF to_regclass('public.alembic_version') IS NOT NULL THEN
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agent_bom_app') THEN
+            REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.alembic_version FROM agent_bom_app;
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agent_bom_rls_maintenance') THEN
+            REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.alembic_version FROM agent_bom_rls_maintenance;
+        END IF;
+    END IF;
+END $ledger$;
+
 -- Database-owned authority for short-lived tenant-binding claims. Runtime
 -- roles receive no table privileges; the app may call only the locked-down
 -- verifier. Active RLS continues using app.tenant_id until the later surface

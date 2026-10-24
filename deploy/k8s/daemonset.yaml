@@ -24,6 +24,7 @@ spec:
           image: agentbom/agent-bom:0.110.0
           command: ["agent-bom"]
           args:
+            - "runtime"
             - "protect"
             - "--mode"
             - "http"

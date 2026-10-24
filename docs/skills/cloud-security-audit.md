@@ -344,10 +344,10 @@ agent-bom scan --aws --aws-region us-east-1 --aws-cis-benchmark
 agent-bom scan --aws --aws-region us-east-1 \
   --aws-include-lambda \
   --enrich -f json -o post-offboarding.json
-
-# Check blast radius if any orphaned IAM was missed
-agent-bom blast-radius --cve CVE-XXXX-YYYY
 ```
+
+Check the blast radius of a specific CVE with the `blast_radius` MCP tool
+below; the CLI has no per-CVE blast-radius command.
 
 Via MCP tools (Claude Desktop, Cursor, etc.):
 

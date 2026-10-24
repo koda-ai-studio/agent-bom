@@ -686,3 +686,24 @@ def test_finding_detail_exploit_story_is_the_rest_story(demo: _Estate) -> None:
     assert rest["scope"] == "occurrence"
     assert rest["narrative"]["text"].startswith("CVE-2023-4863")
     assert rest["at_risk"]["total"] >= 1
+
+
+def test_rest_kev_filter_matches_mcp_and_rejects_unknown_filters(estate: _Estate) -> None:
+    from agent_bom.mcp_tools.graph import exposure_paths_impl
+
+    every = _rest_queue(estate)
+    kev = _rest_queue(estate, limit=50, kev="true")
+    mcp = estate.mcp(exposure_paths_impl, limit=50, kev=True)
+    assert kev["pagination"]["total"] == mcp["total"] == sum(row["is_kev"] for row in every["attack_paths"])
+    assert all(row["is_kev"] for row in kev["attack_paths"])
+    assert _rest_ids(kev) == [path["id"] for path in mcp["paths"]]
+    not_kev = _rest_queue(estate, limit=1000, kev="false")
+    assert not any(row["is_kev"] for row in not_kev["attack_paths"])
+    assert not_kev["pagination"]["total"] + kev["pagination"]["total"] == every["pagination"]["total"]
+    assert kev["count_metadata"]["filters"]["kev"] is True
+    if kev["pagination"]["has_more"]:
+        following = _rest_queue(estate, limit=50, kev="true", cursor=kev["pagination"]["next_cursor"])
+        assert all(row["is_kev"] for row in following["attack_paths"])
+    rejected = estate.client.get("/v1/graph/attack-paths", params={"kev_only": "true"})
+    assert rejected.status_code == 422, rejected.text[:300]
+    assert "kev_only" in rejected.text

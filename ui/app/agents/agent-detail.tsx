@@ -1,6 +1,7 @@
 "use client";
 
 import { FrameworkTagChips } from "@/components/framework-tag-chips";
+import { EXPOSED_BY_IMPACT_NOTE, exposedByImpactLabel } from "@/lib/credential-basis";
 import { SeverityBadge } from "@/components/severity-badge";
 import { type AgentDetailResponse, api, MITRE_ATLAS, OWASP_LLM_TOP10 } from "@/lib/api";
 import {
@@ -483,7 +484,7 @@ export function AgentDetail({ agentName }: { agentName: string }) {
                   <div className="flex flex-wrap gap-3 text-xs text-[color:var(--text-secondary)]">
                     {br.package && <span>Package: <span className="text-[color:var(--text-secondary)]">{br.package}</span></span>}
                     {br.exposed_credentials.length > 0 && (
-                      <span className="text-yellow-400">{br.exposed_credentials.length} credentials exposed</span>
+                      <span className="text-yellow-400" title={EXPOSED_BY_IMPACT_NOTE}>{exposedByImpactLabel(br.exposed_credentials.length)}</span>
                     )}
                     {(br.exposed_tools ?? br.reachable_tools).length > 0 && (
                       <span className="text-purple-400">{(br.exposed_tools ?? br.reachable_tools).length} tools reachable</span>

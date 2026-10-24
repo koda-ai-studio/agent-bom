@@ -1,7 +1,8 @@
 """Bounded daily re-match of stored inventory against newly updated advisories.
 
 Each tenant keeps two cursors in the operator advisory store: the feed cursor
-(the newest feed ``modified`` timestamp fully processed) and the operator
+(the ``(modified, id)`` keyset of the last feed record processed, so records
+sharing a timestamp across a batch boundary are never skipped) and the operator
 cursor (the run start, compared with operator advisory ``updated_at``). A run
 matches only advisories updated after those cursors against the tenant's
 newest stored scan per target. Hosts are never rescanned.
@@ -20,10 +21,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Protocol
 
 from agent_bom.api import health_models
 from agent_bom.api.findings_current import current_scan_jobs
@@ -34,7 +34,7 @@ from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.core.settings import env_bool, env_int
 from agent_bom.db import schema as _schema
 from agent_bom.db.schema import open_existing_db_readonly
-from agent_bom.scanners.operator_advisory import AffectedProduct, AffectedRange, OperatorAdvisory, match_advisories_against_reports
+from agent_bom.scanners.operator_advisory import AffectedProduct, FeedAffectedRange, OperatorAdvisory, match_advisories_against_reports
 
 try:
     from psycopg import Error as _PsycopgError
@@ -46,6 +46,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_INTERVAL_SECONDS = 86_400
 MIN_INTERVAL_SECONDS = 300
 MAX_TENANTS_PER_RUN = 500
+# Job summaries read to discover tenants; past it, unseen tenants may exist.
+MAX_JOBS_SCANNED = MAX_TENANTS_PER_RUN * 20
 MAX_FEED_ADVISORIES = 2_000
 MAX_SEEN_FINDINGS = 5_000
 MAX_RECENT_FINDINGS = 200
@@ -66,9 +68,12 @@ _FEED_UNAVAILABLE: tuple[type[BaseException], ...] = (FeedUnavailableError, *_UN
 class FeedBatch:
     advisories: list[OperatorAdvisory]
     newest_modified: str | None
+    # Id of the last record read at ``newest_modified``; the keyset tiebreaker.
+    newest_id: str | None = None
 
 
-FeedSource = Callable[[str | None], FeedBatch]
+class FeedSource(Protocol):
+    def __call__(self, cursor: str | None, after_id: str | None = None) -> FeedBatch: ...
 
 
 def rematch_enabled() -> bool:
@@ -86,7 +91,7 @@ def feed_advisory(
     summary: str,
     severity: str,
     published: str | None,
-    affected: list[tuple[str, str, str | None, str | None, str | None]],
+    affected: list[tuple[str, str, str | None, str | None, str | None, str | None]],
 ) -> OperatorAdvisory:
     """Feed record in the matcher's shape; feed data is trusted as stored, not re-validated."""
     products = [
@@ -95,9 +100,13 @@ def feed_advisory(
             name=name,
             cpe_product=None,
             versions=[],
-            ranges=[AffectedRange.model_construct(introduced=introduced or None, fixed=fixed or None, last_affected=last or None)],
+            ranges=[
+                FeedAffectedRange.model_construct(
+                    introduced=introduced or None, fixed=fixed or None, last_affected=last or None, limit_version=limit
+                )
+            ],
         )
-        for ecosystem, name, introduced, fixed, last in affected
+        for ecosystem, name, introduced, fixed, last, limit in affected
     ]
     return OperatorAdvisory.model_construct(
         id=advisory_id,
@@ -110,8 +119,12 @@ def feed_advisory(
     )
 
 
-def local_feed_advisories_since(cursor: str | None) -> FeedBatch:
-    """Feed advisories from the local vulnerability DB modified after ``cursor`` (bounded)."""
+def local_feed_advisories_since(cursor: str | None, after_id: str | None = None) -> FeedBatch:
+    """Feed advisories after the ``(cursor, after_id)`` keyset in the local vulnerability DB (bounded).
+
+    Without ``after_id`` (a first run or a pre-keyset cursor) records at exactly
+    ``cursor`` are re-read; repeats are deduplicated by the ``seen`` map.
+    """
     db_path = _schema.DB_PATH
     if not db_path.exists():
         raise FeedUnavailableError("local vulnerability DB is not present")
@@ -119,17 +132,24 @@ def local_feed_advisories_since(cursor: str | None) -> FeedBatch:
     try:
         conn = open_existing_db_readonly(db_path)
         try:
-            ids = [
-                row[0]
-                for row in conn.execute(
-                    "SELECT id FROM vulns WHERE modified > ? ORDER BY modified, id LIMIT ?", (since, MAX_FEED_ADVISORIES)
-                ).fetchall()
-            ]
-            return _feed_batch(conn, ids)
+            keys = conn.execute(
+                "SELECT id, modified FROM vulns WHERE modified > ? OR (modified = ? AND id > ?) ORDER BY modified, id LIMIT ?",
+                (since, since, after_id or "", MAX_FEED_ADVISORIES),
+            ).fetchall()
+            batch = _feed_batch(conn, [row[0] for row in keys])
+            if not keys:
+                return batch
+            return FeedBatch(batch.advisories, str(keys[-1][1]), str(keys[-1][0]))
         finally:
             conn.close()
     except sqlite3.Error as exc:
         raise FeedUnavailableError("local vulnerability DB could not be read") from exc
+
+
+def _limit_projection(conn: sqlite3.Connection) -> str:
+    """A DB built before range limits were stored has lost them: NULL makes the verdict indeterminate."""
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(affected)").fetchall()}
+    return "a.limit_version" if "limit_version" in columns else "NULL"
 
 
 def _feed_batch(conn: sqlite3.Connection, ids: list[str]) -> FeedBatch:
@@ -138,13 +158,14 @@ def _feed_batch(conn: sqlite3.Connection, ids: list[str]) -> FeedBatch:
     marks = ",".join("?" * len(ids))
     rows = conn.execute(
         "SELECT v.id, v.summary, v.severity, v.aliases, v.published, v.modified, a.ecosystem, a.package_name, a.introduced, a.fixed, "
-        f"a.last_affected FROM vulns v JOIN affected a ON a.vuln_id = v.id WHERE v.id IN ({marks})",  # nosec B608 - placeholders only
+        f"a.last_affected, {_limit_projection(conn)} FROM vulns v JOIN affected a ON a.vuln_id = v.id "
+        f"WHERE v.id IN ({marks})",  # nosec B608 - fixed projection and placeholders only
         ids,
     ).fetchall()
     grouped: dict[str, dict[str, Any]] = {}
-    for vid, summary, severity, aliases, published, modified, eco, name, introduced, fixed, last in rows:
+    for vid, summary, severity, aliases, published, modified, eco, name, introduced, fixed, last, limit in rows:
         entry = grouped.setdefault(vid, {"row": (summary, severity, aliases, published), "modified": modified, "affected": []})
-        entry["affected"].append((eco, name, introduced, fixed, last))
+        entry["affected"].append((eco, name, introduced, fixed, last, limit))
     advisories = [
         feed_advisory(
             advisory_id=vid,
@@ -215,7 +236,7 @@ def run_tenant_rematch(
     except _UNAVAILABLE:
         return {**status, "reason": "store_unavailable"}
     try:
-        batch = feed_source(state.get("feed_cursor"))
+        batch = feed_source(state.get("feed_cursor"), state.get("feed_cursor_id"))
     except _FEED_UNAVAILABLE:
         return _record(store, tenant_id, state, {**status, "reason": "feed_unavailable"})
     try:
@@ -239,7 +260,8 @@ def run_tenant_rematch(
     state["seen"] = dict(sorted(seen.items(), key=lambda item: item[1])[-MAX_SEEN_FINDINGS:])
     state["recent_findings"] = (fresh + list(state.get("recent_findings") or []))[:MAX_RECENT_FINDINGS]
     state["operator_cursor"] = now.isoformat()
-    state["feed_cursor"] = batch.newest_modified or state.get("feed_cursor")
+    if batch.newest_modified:
+        state["feed_cursor"], state["feed_cursor_id"] = batch.newest_modified, batch.newest_id
     complete = {
         **status,
         "status": "complete",
@@ -250,21 +272,54 @@ def run_tenant_rematch(
     return _record(store, tenant_id, state, complete)
 
 
-def _rematch_tenants() -> list[str]:
-    rows = _get_store().list_summary(all_tenants=True, status=JobStatus.DONE, limit=MAX_TENANTS_PER_RUN * 20)
-    return sorted({str(row["tenant_id"]) for row in rows if row.get("tenant_id")})[:MAX_TENANTS_PER_RUN]
+@dataclass(frozen=True)
+class _TenantSelection:
+    tenants: list[str]
+    skipped: list[str]
+    job_cap_reached: bool
+
+
+def _rematch_tenants() -> _TenantSelection:
+    """Tenants with stored scans, bounded; what the bounds left out is reported, never dropped silently."""
+    rows = _get_store().list_summary(all_tenants=True, status=JobStatus.DONE, limit=MAX_JOBS_SCANNED + 1)
+    job_cap_reached = len(rows) > MAX_JOBS_SCANNED
+    tenants = sorted({str(row["tenant_id"]) for row in rows[:MAX_JOBS_SCANNED] if row.get("tenant_id")})
+    return _TenantSelection(tenants[:MAX_TENANTS_PER_RUN], tenants[MAX_TENANTS_PER_RUN:], job_cap_reached)
+
+
+def _record_skipped(tenant_id: str, now: datetime) -> None:
+    """Leave the skipped tenant's cursors alone; its listing says this run did not reach it."""
+    store = _get_operator_advisory_store()
+    try:
+        state = store.get_rematch_state(tenant_id) or {}
+    except _UNAVAILABLE:
+        return
+    _record(store, tenant_id, state, {"at": now.isoformat(), "status": "incomplete", "reason": "tenant_cap", "new_findings": 0})
 
 
 def run_rematch_once(*, feed_source: FeedSource = local_feed_advisories_since, now: datetime | None = None) -> dict[str, Any]:
     """One bounded pass over tenants with stored scans; updates this replica's status."""
     now = now or datetime.now(timezone.utc)
-    statuses = [run_tenant_bound(tenant, run_tenant_rematch, tenant, feed_source=feed_source, now=now) for tenant in _rematch_tenants()]
+    selection = _rematch_tenants()
+    statuses = [run_tenant_bound(tenant, run_tenant_rematch, tenant, feed_source=feed_source, now=now) for tenant in selection.tenants]
+    for tenant in selection.skipped:
+        run_tenant_bound(tenant, _record_skipped, tenant, now)
     incomplete = sum(1 for status in statuses if status["status"] != "complete")
+    truncated = bool(selection.skipped) or selection.job_cap_reached
+    if truncated:
+        logger.warning(
+            "Advisory re-match reached its bounds: %d tenant(s) skipped, job cap reached: %s",
+            len(selection.skipped),
+            selection.job_cap_reached,
+        )
     summary = {
         "last_run_at": now.isoformat(),
-        "last_run_status": "incomplete" if incomplete else "complete",
+        "last_run_status": "incomplete" if incomplete or truncated else "complete",
         "tenants_examined": len(statuses),
         "incomplete_tenants": incomplete,
+        "tenants_skipped": len(selection.skipped),
+        "job_cap_reached": selection.job_cap_reached,
+        "truncated": truncated,
         "new_findings": sum(int(status.get("new_findings") or 0) for status in statuses),
     }
     health_models.ADVISORY_REMATCH_LAST_RUN.clear()
