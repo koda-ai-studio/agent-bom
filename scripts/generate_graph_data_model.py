@@ -40,7 +40,9 @@ if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import graph_data_model_correlation  # noqa: E402
+import graph_data_model_domains  # noqa: E402
 import graph_data_model_storage  # noqa: E402
+import graph_data_model_svg  # noqa: E402
 
 from agent_bom import canonical_ids  # noqa: E402
 from agent_bom.core.asset_types import _ASSET_TYPE_ALIASES  # noqa: E402
@@ -181,26 +183,7 @@ def _emitters(scan: ScanResult, rel_or_entity: str, *, rel: bool) -> tuple[list[
 
 
 def _mermaid() -> list[str]:
-    domain_of = _domain_of()
-    edges: dict[tuple[str, str], set[str]] = defaultdict(set)
-    for spec in _specs():
-        for source, target in spec.allowed_pairs:
-            edges[(domain_of[source.value], domain_of[target.value])].add(spec.rel.value)
-    lines = ["```mermaid", "flowchart LR"]
-    for key, label, _layers in DOMAINS:
-        members = sorted(e.value for e in EntityType if domain_of[e.value] == key)
-        lines.append(f'  subgraph {key}["{label}"]')
-        lines.extend(f"    {key}_{i}[{' · '.join(members[i : i + 4])}]" for i in range(0, len(members), 4))
-        lines.append("  end")
-    for (src, dst), rels in sorted(edges.items()):
-        label = "<br/>".join(", ".join(chunk) for chunk in _chunks(sorted(rels), 4))
-        lines.append(f'  {src} -- "{label}" --> {dst}')
-    lines.append("```")
-    return lines
-
-
-def _chunks(values: list[str], size: int) -> list[list[str]]:
-    return [values[i : i + size] for i in range(0, len(values), size)]
+    return graph_data_model_domains.overview(DOMAINS, _specs(), _domain_of(), "data-model/domains/")
 
 
 def _find_trace_event_type() -> type | None:
@@ -266,8 +249,9 @@ def _render_main(scan: ScanResult) -> list[str]:
     out += [
         "## Overview",
         "",
-        "Entity types grouped by domain (from each type's semantic layer in `graph/container.py` `ENTITY_LEGEND`). "
-        "An arrow carries every relationship whose allowed pairs connect the two domains.",
+        "Entity types grouped into domains by each type's semantic layer (`graph/container.py` `ENTITY_LEGEND`), "
+        "laid out along an attack path. A line counts the relationships allowed between two domains; "
+        "each domain page has the ERD and every relationship by name.",
         "",
         *_mermaid(),
         "",
@@ -480,6 +464,13 @@ def render() -> dict[str, str]:
         ENTITY_DOC: _render_entities(scan),
         **graph_data_model_storage.render(SOURCE_ROOT, GENERATOR),
         graph_data_model_correlation.DOC: graph_data_model_correlation.render(scan.node_id_formats, GENERATOR),
+        **graph_data_model_domains.render(DOMAINS, _specs(), _domain_of(), _header),
+        **graph_data_model_svg.render(
+            graph_data_model_domains.ordered(DOMAINS),
+            graph_data_model_domains.members_by_domain(_domain_of()),
+            _domain_of(),
+            _specs(),
+        ),
     }
     rendered: dict[str, str] = {}
     for path, lines in docs.items():

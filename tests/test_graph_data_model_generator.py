@@ -80,13 +80,22 @@ def test_relationship_rows_carry_their_spec_traversal_class() -> None:
         assert f"`{spec.traversal_class.value}`" in row, row
 
 
-def test_mermaid_diagram_present_and_names_every_relationship() -> None:
+def test_overview_shows_the_diagram_and_domain_pages_name_every_relationship() -> None:
     gen = _load_generator()
-    main_doc = gen.render()[gen.MAIN_DOC]
-    assert "```mermaid" in main_doc
-    block = main_doc.split("```mermaid", 1)[1].split("```", 1)[0]
+    docs = gen.render()
+    main_doc = docs[gen.MAIN_DOC]
+    assert "graph-data-model-dark.svg" in main_doc and "graph-data-model-light.svg" in main_doc
+    domain_pages = "".join(text for path, text in docs.items() if "/data-model/domains/" in path)
     for rel in RelationshipType:
-        assert rel.value in block, rel
+        assert f"`{rel.value}`" in domain_pages, rel
+
+
+def test_diagram_refuses_a_backbone_step_the_specs_do_not_allow(monkeypatch: pytest.MonkeyPatch) -> None:
+    gen = _load_generator()
+    svg = gen.graph_data_model_svg
+    monkeypatch.setattr(svg, "BACKBONE", ((("agent", "uses_credential", "credential"),),))
+    with pytest.raises(SystemExit, match="does not allow|do not allow"):
+        svg.render([], {}, {}, gen._specs())
 
 
 def test_every_generated_file_respects_the_line_ceiling() -> None:
