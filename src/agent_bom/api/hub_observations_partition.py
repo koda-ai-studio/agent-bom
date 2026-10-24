@@ -490,11 +490,20 @@ def _describe_runway(runway_end: date | None, *, now: datetime | None = None) ->
     return last_covered.isoformat(), _month_index(last_covered) - _month_index(anchor)
 
 
+_PERMISSION_DENIED_SQLSTATE = "42501"
+
+
+def _is_permission_denied(error: BaseException | None) -> bool:
+    """SQLSTATE 42501 (insufficient_privilege): the DML-only role's expected DDL denial."""
+    return getattr(error, "sqlstate", None) == _PERMISSION_DENIED_SQLSTATE
+
+
 def _alert_observation_partition_runway(
     runway_end: date | None,
     *,
     provisioning_failed: bool,
     now: datetime | None = None,
+    error: BaseException | None = None,
 ) -> None:
     """Report the runway, naming the date current-dated ingest starts failing.
 
@@ -512,8 +521,11 @@ def _alert_observation_partition_runway(
     key = f"{'denied' if provisioning_failed else 'low'}:{last_covered}"
     if not _should_emit_runway_alert(key):
         return
-    if provisioning_failed:
-        reason = "the runtime database role was denied the DDL that extends it"
+    expected_denial = _is_permission_denied(error)
+    if provisioning_failed and expected_denial:
+        reason = "the runtime database role was denied the DDL that extends it (permission denied, SQLSTATE 42501)"
+    elif provisioning_failed:
+        reason = "the partition top-up failed unexpectedly"
     else:
         reason = "it is not being topped up by deploys"
     logger.log(
@@ -526,7 +538,8 @@ def _alert_observation_partition_runway(
         last_covered,
         "unknown" if months_left is None else months_left,
         reason,
-        exc_info=provisioning_failed,
+        # The expected denial is one clear line; anything else keeps its traceback.
+        exc_info=error if provisioning_failed and not expected_denial and error is not None else False,
     )
 
 
@@ -559,10 +572,10 @@ def run_hub_observations_retention(*, retention_days: int | None = None) -> int:
                 ensure_observation_partition_children_rls(conn)
                 dropped = rollover_observation_partitions(conn, retention_days=days)
                 conn.commit()
-            except Exception:  # noqa: BLE001 — cleanup loop must stay fail-open
+            except Exception as exc:  # noqa: BLE001 — cleanup loop must stay fail-open
                 conn.rollback()
                 if partitioned:
-                    _alert_observation_partition_runway(runway_end, provisioning_failed=True)
+                    _alert_observation_partition_runway(runway_end, provisioning_failed=True, error=exc)
                 else:
                     logger.error("hub observations retention failed on a legacy unpartitioned table", exc_info=False)
                 return 0
