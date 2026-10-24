@@ -45118,8 +45118,12 @@ paths:
       - graph
   /v1/graph/exposure-paths:
     get:
-      description: Return the MCP-compatible ExposurePath queue over REST for SDK
+      description: 'Return the MCP-compatible ExposurePath queue over REST for SDK
         consumers.
+
+
+        A supplied ``snapshot_generation`` that is not the generation the page was
+        read from is a 409.'
       operationId: get_graph_exposure_paths_v1_graph_exposure_paths_get
       parameters:
       - description: Scan ID
@@ -45165,6 +45169,17 @@ paths:
           - type: 'null'
           description: Continuation cursor pinned to the snapshot and risk filter
           title: Cursor
+      - description: Generation from the first page; mismatch is 409
+        in: query
+        name: snapshot_generation
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 128
+            type: string
+          - type: 'null'
+          description: Generation from the first page; mismatch is 409
+          title: Snapshot Generation
       responses:
         '200':
           content:
@@ -46669,7 +46684,7 @@ paths:
           - type: 'null'
           description: Comma-separated data sources
           title: Data Sources
-      - description: Read revision from the first page
+      - description: Optional with cursor; mismatch is 409
         in: query
         name: snapshot_generation
         required: false
@@ -46678,9 +46693,9 @@ paths:
           - maxLength: 128
             type: string
           - type: 'null'
-          description: Read revision from the first page
+          description: Optional with cursor; mismatch is 409
           title: Snapshot Generation
-      - description: Opaque cursor for keyset search pagination
+      - description: Opaque keyset cursor; carries the snapshot generation
         in: query
         name: cursor
         required: false
@@ -46688,7 +46703,7 @@ paths:
           anyOf:
           - type: string
           - type: 'null'
-          description: Opaque cursor for keyset search pagination
+          description: Opaque keyset cursor; carries the snapshot generation
           title: Cursor
       - description: Pagination offset
         in: query
@@ -50004,7 +50019,9 @@ paths:
 
         graph store. Facet buckets are self-excluding and computed across the whole
 
-        filtered snapshot, never only the displayed page.'
+        filtered snapshot, never only the displayed page. A supplied
+
+        ``snapshot_generation`` that is no longer the snapshot''s is a 409.'
       operationId: list_inventory_assets_v1_inventory_assets_get
       parameters:
       - description: Comma-separated asset entity types (e.g. agent,cloud_resource)
@@ -50118,6 +50135,17 @@ paths:
           minimum: 1
           title: Limit
           type: integer
+      - description: Generation from the first page; mismatch is 409
+        in: query
+        name: snapshot_generation
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 128
+            type: string
+          - type: 'null'
+          description: Generation from the first page; mismatch is 409
+          title: Snapshot Generation
       responses:
         '200':
           content:

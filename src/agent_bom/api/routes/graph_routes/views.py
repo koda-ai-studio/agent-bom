@@ -491,8 +491,12 @@ async def get_graph_exposure_paths(
     limit: int = Query(5, ge=1, le=100, description="Maximum ExposurePaths"),
     min_risk: float = Query(0.0, ge=0, le=100, description="Minimum ExposurePath risk score"),
     cursor: Optional[str] = Query(None, max_length=4096, description="Continuation cursor pinned to the snapshot and risk filter"),
+    snapshot_generation: Optional[str] = Query(None, max_length=128, description="Generation from the first page; mismatch is 409"),
 ) -> dict:
-    """Return the MCP-compatible ExposurePath queue over REST for SDK consumers."""
+    """Return the MCP-compatible ExposurePath queue over REST for SDK consumers.
+
+    A supplied ``snapshot_generation`` that is not the generation the page was read from is a 409.
+    """
     del tenant_id  # SDK compatibility only; request tenant scope is authoritative.
     from agent_bom.mcp_tools.graph import exposure_paths_for_tenant
 
@@ -510,6 +514,8 @@ async def get_graph_exposure_paths(
     )
     payload = json.loads(raw)
     _raise_mcp_error_as_http(payload)
+    if snapshot_generation is not None and snapshot_generation != payload.get("snapshot_generation"):
+        raise HTTPException(409, "Graph snapshot changed; restart the query from its first page.")
     return cast("dict[str, Any]", payload)
 
 

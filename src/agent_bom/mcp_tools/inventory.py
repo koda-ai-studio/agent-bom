@@ -80,10 +80,16 @@ async def inventory_summary_impl(
         # requested scope is never confirmed as empty-and-clean.
         if exc.status_code == 404 and scan_id is None:
             return _encode(inventory_service.empty_summary(tenant_id=tenant_id), _truncate_response)
-        return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, exc.detail)
+        return _inventory_error(exc)
     except Exception:
         logger.exception("MCP inventory_summary error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, "An internal error has occurred.")
+
+
+def _inventory_error(exc: Any) -> str:
+    """The shared service's HTTP status, as the MCP error code the route's status maps to."""
+    code = CODE_NOT_FOUND_RESOURCE if exc.status_code == 404 else CODE_VALIDATION_INVALID_ARGUMENT
+    return mcp_error_json(code, exc.detail)
 
 
 async def inventory_list_impl(
@@ -126,7 +132,7 @@ async def inventory_list_impl(
         )
         return _encode(payload, _truncate_response)
     except inventory_service.InventoryError as exc:
-        return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, exc.detail)
+        return _inventory_error(exc)
     except Exception:
         logger.exception("MCP inventory_list error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, "An internal error has occurred.")
@@ -173,7 +179,7 @@ async def inventory_asset_impl(
             )
         return _encode(payload, _truncate_response)
     except inventory_service.InventoryError as exc:
-        return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, exc.detail)
+        return _inventory_error(exc)
     except Exception:
         logger.exception("MCP inventory_asset error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, "An internal error has occurred.")

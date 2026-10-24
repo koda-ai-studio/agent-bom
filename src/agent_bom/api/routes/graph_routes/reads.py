@@ -10,6 +10,7 @@ from agent_bom.api.graph_contracts import GraphIdentifier, IncidentEdgePageRespo
 from agent_bom.api.graph_generation import optional_generation, verify_generation
 from agent_bom.api.graph_impact_read import read_node_impact
 from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
+from agent_bom.api.graph_node_cursor import continue_node_cursor, wrap_node_cursor
 from agent_bom.api.graph_paging import _enforce_node_offset_cap, _page_meta, page_truncated
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
@@ -93,8 +94,8 @@ async def search_graph(
     min_severity: Optional[str] = Query(None, description="Minimum severity (critical/high/medium/low)"),
     compliance_prefixes: Optional[str] = Query(None, description="Comma-separated compliance prefixes"),
     data_sources: Optional[str] = Query(None, description="Comma-separated data sources"),
-    snapshot_generation: Optional[str] = Query(None, max_length=128, description="Read revision from the first page"),
-    cursor: Optional[str] = Query(None, description="Opaque cursor for keyset search pagination"),
+    snapshot_generation: Optional[str] = Query(None, max_length=128, description="Optional with cursor; mismatch is 409"),
+    cursor: Optional[str] = Query(None, description="Opaque keyset cursor; carries the snapshot generation"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(50, ge=1, le=500, description="Max results"),
 ) -> dict:
@@ -104,6 +105,7 @@ async def search_graph(
     tenant_id = _runtime._tenant(request)
     if scan_id:
         (scan_id,) = await _runtime.require_graph_snapshot_ids(graph_store, tenant_id, scan_id)
+    store_cursor, snapshot_generation = continue_node_cursor(cursor, snapshot_generation)
     identity = await _runtime._graph_store_call(
         optional_generation,
         graph_store,
@@ -112,8 +114,7 @@ async def search_graph(
         generation=snapshot_generation,
         offset=offset or int(bool(cursor)),
     )
-    if identity is not None:
-        scan_id = identity[0]
+    scan_id = identity[0] if identity is not None else scan_id
     entity_type_filters = _parse_entity_type_filter(entity_types)
     min_rank = SEVERITY_RANK.get(min_severity.lower(), 0) if min_severity else 0
     prefix_filters = {value.strip().upper() for value in compliance_prefixes.split(",") if value.strip()} if compliance_prefixes else None
@@ -128,7 +129,7 @@ async def search_graph(
             min_severity_rank=min_rank,
             compliance_prefixes=prefix_filters,
             data_sources=data_source_filters,
-            cursor=cursor,
+            cursor=store_cursor,
             offset=offset,
             limit=limit,
         )
@@ -136,6 +137,7 @@ async def search_graph(
         raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
     if identity is not None:
         await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant_id, identity=identity, has_rows=bool(results))
+        next_cursor = wrap_node_cursor(next_cursor, identity[1])
     return {
         "snapshot_generation": identity[1] if identity else None,
         "query": q,
