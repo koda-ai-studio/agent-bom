@@ -33,6 +33,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Proxy tool-drift detection reads a paginated `tools/list` (`nextCursor`) as one catalog instead of comparing each page with the first, so a multi-page server no longer raises false "new tools" and "tools removed" alerts. A listing that stops early (20-page cap, repeated or invalid cursor) is marked incomplete: it never becomes the baseline and never reports removals.
 - The `ai-enrich` extra requires `litellm>=1.96.2`, the first release clear of every LiteLLM advisory on OSV, including CVE-2026-84377. The lockfile already used 1.100.1; the floor stops a pip resolve from landing an affected version.
 - Graph UI: a selected path title wraps before an advisory id (CVE, GHSA, OSV) instead of splitting it across lines; relationship labels stay inside the canvas after the node stepper or a pan moves the view, never cut at its edge; and the snapshot selector shows its full label when there is room, otherwise an ellipsis with the full label on hover.
 - IaC findings can be accepted one at a time with an inline `agent-bom: ignore[RULE-ID] <reason>` marker on the offending line or the line above; a marker without a reason suppresses nothing, and accepted findings stay in the scan result's `suppressed` list. The reusable workflow uses one for its deliberate `@v0` action reference, so the repository's own scan passes.
