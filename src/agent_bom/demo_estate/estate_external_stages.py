@@ -28,7 +28,7 @@ from agent_bom.graph.types import RelationshipType
 
 INTEGRATION_SOURCE = "synthetic-demo-integration"
 # Snowflake's own AWS account, as DESC INTEGRATION reports it; fictional.
-_SNOWFLAKE_AWS_ACCOUNT = "999900000001"
+_SNOWFLAKE_AWS_ACCOUNT = "444455556666"
 _SCALAR_IDENTIFIERS = ("arn", "storage_aws_role_arn", "storage_aws_iam_user_arn", "storage_aws_external_id")
 _LIST_IDENTIFIERS = ("storage_allowed_locations", "trust_principals", "trust_external_ids")
 STORAGE_INTEGRATION_TYPE = "storage_integration"

@@ -208,7 +208,7 @@ def test_mcp_blast_radius_holders_are_per_occurrence(demo_estate_client: TestCli
             assert scale["effective_reach_score"] == "0-100"
 
 
-_IMDS_INSTANCE = "cloud_resource:aws:aws_instance:210987654321/us-east-1/i-0de00000000000000"
+_IMDS_INSTANCE = "cloud_resource:aws:aws_instance:111122223333/us-east-1/i-0de00000000000000"
 
 
 def test_rollup_entities_count_their_own_occurrences(demo_estate_client: TestClient) -> None:

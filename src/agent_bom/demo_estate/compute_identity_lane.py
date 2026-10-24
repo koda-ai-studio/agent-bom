@@ -28,7 +28,7 @@ from agent_bom.graph.edge_evidence import fixture_edge_evidence
 from agent_bom.graph.types import RelationshipType
 from agent_bom.models import BlastRadius, Package, Severity, Vulnerability
 
-DEMO_COMPUTE_ACCOUNT = "210987654321"
+DEMO_COMPUTE_ACCOUNT = "111122223333"
 DEMO_COMPUTE_REGION = "us-east-1"
 DEMO_COMPUTE_VMS = 12
 DEMO_HOSTNAME_DECOYS = 3
