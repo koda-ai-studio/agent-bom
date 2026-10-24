@@ -20,6 +20,7 @@ import click
 from rich.console import Console
 
 from agent_bom import vuln_freshness
+from agent_bom.cli import _check_published
 from agent_bom.cli._check_support import (
     _check_result_payload,
     _format_vulnerability_count,
@@ -423,6 +424,33 @@ def _gate_os_context(run: CheckRun) -> None:
         sys.exit(2)
 
 
+def _gate_unpublished(run: CheckRun) -> None:
+    # A pin with no advisories may not exist. Confirm it is published before
+    # calling it clean, as MCP ``check`` does; a removed malware package
+    # (crossenv) is malicious, any other missing version is unknown (rc=2).
+    if run.offline or run.vulns or run.version in ("latest", ""):
+        return
+    missing = _check_published.unpublished_pin(run.name, run.version, run.ecosystems)
+    if missing is None:
+        return
+    ecosystem, malware_reason = missing
+    if malware_reason:
+        for pkg in run.pkgs:
+            pkg.is_malicious, pkg.malicious_reason = True, malware_reason
+        _gate_malicious(run)
+    message = (
+        f"Version {run.version} of {run.name} was not found in the {ecosystem} registry, so it cannot be confirmed "
+        "free of vulnerabilities (typo or unpublished version?). agent-bom only verifies published versions."
+    )
+    if run.structured_output:
+        _emit(run, ecosystems=run.ecosystems, verdict="unknown", message=message, exit_code=2, warnings=run.scan_warnings)
+    elif run.quiet:
+        click.echo(f"{run.name}@{run.version}: UNKNOWN — not published in {ecosystem}")
+    else:
+        run.console.print(f"  [yellow]⚠ {message}[/yellow]\n")
+    sys.exit(2)
+
+
 def _report_clean(run: CheckRun) -> None:
     if not run.vulns:
         if run.structured_output:
@@ -552,6 +580,7 @@ CHECK_STAGES: tuple[Callable[[CheckRun], None], ...] = (
     _gate_coverage_gap,
     _gate_os_context,
     _gate_incomplete_data,
+    _gate_unpublished,
     _report_clean,
     _render_vulnerability_table,
     _verdict_exit_zero,
