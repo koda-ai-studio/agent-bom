@@ -59,7 +59,7 @@ def assert_bounded_marked_page(body: dict, limit: int) -> list[str]:
     return [node["id"] for node in body["nodes"][:ranked]]
 
 
-def test_context_is_capped_nearest_parent_first_and_discloses_the_cut(client):
+def test_context_cap_keeps_the_spine_top_and_discloses_the_cut(client):
     body = client.get("/v1/graph", params={"scan_id": "estate", "limit": _CHAINS}).json()
     ranked = assert_bounded_marked_page(body, _CHAINS)
     assert len(ranked) == _CHAINS and all(node_id.startswith("res:") for node_id in ranked)
@@ -67,9 +67,14 @@ def test_context_is_capped_nearest_parent_first_and_discloses_the_cut(client):
     assert scope["context_nodes"] == _CHAINS
     assert scope["context_omitted"] == _CHAINS
     assert scope["context_truncated"] is True
-    context_ids = {node["id"] for node in body["nodes"][_CHAINS:]}
-    # The direct parents survive the cut; the farther accounts are the ones omitted.
-    assert context_ids == {f"grp:{index:04}" for index in range(_CHAINS)}
+    context = body["nodes"][_CHAINS : _CHAINS + scope["context_nodes"]]
+    # The accounts at the top of the spine fill the cap; the cut direct parents
+    # return as endpoints of the page's incident containment edges.
+    assert {node["id"] for node in context} == {f"acct:{index:04}" for index in range(_CHAINS)}
+    endpoints = {node["id"] for node in body["nodes"][_CHAINS + scope["context_nodes"] :]}
+    assert endpoints == {f"grp:{index:04}" for index in range(_CHAINS)}
+    links = {(edge["source"], edge["target"]) for edge in body["edges"]}
+    assert all((f"acct:{i:04}", f"grp:{i:04}") in links and (f"grp:{i:04}", f"res:{i:04}") in links for i in range(_CHAINS))
 
 
 def test_small_page_keeps_its_whole_containment_spine(client):
