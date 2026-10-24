@@ -3451,9 +3451,11 @@ async function main() {
       await jobsPage.reload({ waitUntil: "load" });
       const pipeline = jobsPage.getByTestId(`job-pipeline-${SCAN_ID}`);
       await pipeline.waitFor({ state: "visible", timeout: 20_000 });
-      // The container appears before React Flow finishes measuring its DAG.
-      await expect(pipeline.locator(".react-flow__node:visible")).toHaveCount(10);
-      await expect(pipeline.locator(".react-flow__edge")).toHaveCount(13);
+      // The DAG renders only after the persisted pipeline events load, then
+      // React Flow measures it; the default expect timeout races both.
+      await pipeline.getByRole("navigation", { name: "Scan stages" }).waitFor({ state: "visible", timeout: 20_000 });
+      await expect(pipeline.locator(".react-flow__node:visible")).toHaveCount(10, { timeout: 20_000 });
+      await expect(pipeline.locator(".react-flow__edge")).toHaveCount(13, { timeout: 20_000 });
         // Count is insufficient: off-canvas nodes are still DOM-visible.
         const fit = pipeline.getByRole("button", {
           name: "Fit overview",

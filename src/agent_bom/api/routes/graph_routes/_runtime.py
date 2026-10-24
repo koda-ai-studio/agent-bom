@@ -14,6 +14,7 @@ from fastapi import HTTPException, Request
 from agent_bom.api.current_graph import CURRENT_PREFIX
 from agent_bom.api.graph_node_alias import resolve_snapshot_node_id, resolve_snapshot_node_ids
 from agent_bom.api.graph_scan_ids import resolve_graph_scan_id
+from agent_bom.api.graph_store_support import InvalidGraphCursorError
 from agent_bom.api.neptune_graph import NeptuneGraphStoreUnsupportedOperationError
 from agent_bom.api.routes.graph_routes._admission import _graph_request_admitted
 from agent_bom.api.stores import _get_graph_store
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 
 
 _GraphCallResult = TypeVar("_GraphCallResult")
+INVALID_CURSOR_DETAIL = "Invalid cursor for this query; restart from the first page."
 
 
 def _get_graph_store_or_503() -> GraphStoreProtocol:
@@ -57,6 +59,8 @@ async def _graph_store_call(fn: Callable[..., _GraphCallResult], /, *args: Any, 
         raise HTTPException(status_code=429, detail=exc.to_dict(), headers={"Retry-After": str(exc.retry_after_seconds)}) from exc
     except NeptuneGraphStoreUnsupportedOperationError as exc:
         raise HTTPException(status_code=501, detail=sanitize_error(exc)) from exc
+    except InvalidGraphCursorError as exc:
+        raise HTTPException(status_code=422, detail=INVALID_CURSOR_DETAIL) from exc
 
 
 async def _load_graph_for_investigation(

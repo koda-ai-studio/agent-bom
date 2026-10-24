@@ -26,7 +26,7 @@ def path_continuation(cursor: str, scope: str, *, offset: int, generation: str |
     try:
         continuation = decode_cursor(cursor, scope)
     except ValueError as exc:
-        raise HTTPException(400, "Invalid cursor for this query; restart from the first page.") from exc
+        raise HTTPException(422, "Invalid cursor for this query; restart from the first page.") from exc
     if generation is not None and generation != continuation["revision"]:
         raise HTTPException(409, "snapshot_generation does not match the cursor's; restart the query from its first page.")
     return continuation["offset"], continuation["revision"]

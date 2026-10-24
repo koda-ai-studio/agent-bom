@@ -2767,8 +2767,8 @@ class TestGraphStoreBackendSelection:
     def test_graph_cursor_rejects_invalid_values(self, recording_graph_store):
         client = TestClient(app)
         response = client.get("/v1/graph", params={"cursor": "not-a-real-cursor", "snapshot_generation": "test-generation"})
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Invalid graph cursor"
+        assert response.status_code == 422
+        assert response.json()["detail"] == "Invalid cursor for this query; restart from the first page."
 
     def test_graph_paths_reachable_nodes_follow_traversable_edges_only(self, recording_graph_store):
         recording_graph_store.graph = UnifiedGraph(scan_id="store-scan", tenant_id="default")

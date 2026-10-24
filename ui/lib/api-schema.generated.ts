@@ -4648,7 +4648,7 @@ export interface paths {
          * @description Page recorded incident relationships without loading the full neighborhood.
          *
          *     Reuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.
-         *     Snapshot replacement invalidates cursors (400: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
+         *     Snapshot replacement invalidates cursors (422: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
          *     Completeness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.
          */
         get: operations["get_graph_incident_edges_v1_graph_incident_edges_get"];
@@ -34515,7 +34515,7 @@ export interface operations {
                     "application/json": components["schemas"]["GraphPageResponse"];
                 };
             };
-            /** @description Retryable: unpinned current-estate reads kept landing on retired generations (error.details.code ``current_estate_generation_rotating``). Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` that changed is a 409 instead. */
+            /** @description Retryable: the demo estate is still being seeded (error.details.code ``current_estate_seeding``), or unpinned current-estate reads kept landing on retired generations (``current_estate_generation_rotating``). Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` that changed is a 409 instead. */
             503: {
                 headers: {
                     /** @description Seconds to wait before retrying */

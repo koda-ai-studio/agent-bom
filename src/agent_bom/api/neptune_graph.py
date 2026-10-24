@@ -15,6 +15,15 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterable, Mapping, NoReturn, Protocol, cast
 
 from agent_bom.api.storage.neptune_results import normalize_neptune_result as _normalize_result
+from agent_bom.core.graph_backend_errors import (
+    NeptuneGraphStoreConfigError as NeptuneGraphStoreConfigError,
+)
+from agent_bom.core.graph_backend_errors import (
+    NeptuneGraphStoreError as NeptuneGraphStoreError,
+)
+from agent_bom.core.graph_backend_errors import (
+    NeptuneGraphStoreUnsupportedOperationError as NeptuneGraphStoreUnsupportedOperationError,
+)
 from agent_bom.db.graph_store import normalize_snapshot_kind
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import GraphAnalysisStatus, analysis_status_map_from_dict, analysis_status_map_to_dict
@@ -24,18 +33,6 @@ from agent_bom.graph.severity_floor import node_passes_severity_floor
 if TYPE_CHECKING:
     from agent_bom.graph.correlation import CorrelationRunStatus, GraphCorrelationRun
     from agent_bom.graph.delta_digest import PriorSnapshotDigest
-
-
-class NeptuneGraphStoreError(RuntimeError):
-    """Base error for Neptune graph backend failures."""
-
-
-class NeptuneGraphStoreConfigError(NeptuneGraphStoreError):
-    """Raised when the Neptune backend is selected without required config."""
-
-
-class NeptuneGraphStoreUnsupportedOperationError(NeptuneGraphStoreError):
-    """Raised for GraphStoreProtocol operations not yet implemented by Neptune."""
 
 
 class GremlinClientProtocol(Protocol):

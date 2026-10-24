@@ -87,4 +87,4 @@ def test_has_more_always_carries_a_cursor_that_continues_rest_and_mcp(api, monke
         params={"scan_id": "vendor-scan", "limit": 1, "source_vendor": "github", "cursor": first["pagination"]["next_cursor"]},
         headers=headers["tenant-a"],
     )
-    assert other.status_code == 400
+    assert other.status_code == 422

@@ -85,6 +85,21 @@ def _inventory_node_id(agent: AgentScope, agent_id: str) -> str:
     return agent_id
 
 
+def inventory_label(agent: AgentScope) -> str:
+    if not agent.static_inventory:
+        return agent.agent_name
+    return agent.agent_name.removeprefix("sbom:").removeprefix("project:").removeprefix("repo-deps:")
+
+
+def repository_manifest_node_id(agent: AgentScope, server_name: str) -> str:
+    return f"directory:manifest:{agent.agent_node_key}:{server_name}"
+
+
+def inventory_scope(agent_dict: dict[str, Any]) -> AgentScope:
+    """The ids and kind the graph gives an agent entry, including SBOM and repository inventory wrappers."""
+    return _scope(agent_dict, "")
+
+
 def _scope(agent_dict: dict[str, Any], report_data_source: str) -> AgentScope:
     agent = AgentScope(agent_dict=agent_dict, agent_metadata={}, agent_discovery_provenance={})
     agent.agent_name = agent.agent_dict.get("name", "unknown")
@@ -130,9 +145,7 @@ def _add_agent_node(graph: UnifiedGraph, agent: AgentScope) -> None:
         UnifiedNode(
             id=agent.agent_id,
             entity_type=agent.inventory_type if agent.static_inventory else EntityType.AGENT,
-            label=agent.agent_name.removeprefix("sbom:").removeprefix("project:").removeprefix("repo-deps:")
-            if agent.static_inventory
-            else agent.agent_name,
+            label=inventory_label(agent),
             first_seen=str(agent.agent_dict.get("discovered_at") or ""),
             last_seen=str(agent.agent_dict.get("last_seen") or agent.agent_dict.get("discovered_at") or ""),
             attributes={
@@ -205,7 +218,7 @@ def _project_agent(graph: UnifiedGraph, agent: AgentScope, indexes: BuildIndexes
 
 def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str, Any], srv_id: str, srv_name: str, surface: str) -> str:
     if agent.repository_inventory:
-        srv_id = f"directory:manifest:{agent.agent_node_key}:{srv_name}"
+        srv_id = repository_manifest_node_id(agent, srv_name)
         graph.add_node(
             UnifiedNode(
                 id=srv_id,
