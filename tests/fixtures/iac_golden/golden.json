@@ -6511,7 +6511,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/harvested_632c6afbb82d01f7.tf",
-   "line_number": 1,
+   "line_number": 9,
    "message": "IAM policy 'broad' grants Resource: \"*\". Scope resources to specific ARNs.",
    "remediation": "",
    "repository_relative_path": null,
@@ -6519,24 +6519,6 @@
    "rule_id": "TF-SEC-004",
    "severity": "high",
    "title": "IAM policy with Resource: \"*\""
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-1.16",
-    "NIST-AC-6"
-   ],
-   "file_path": "terraform/harvested_632c6afbb82d01f7.tf",
-   "line_number": 1,
-   "message": "IAM policy 'broad' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-010",
-   "severity": "high",
-   "title": "IAM policy with wildcards"
   }
  ],
  "terraform/harvested_6472e5e59d4a47fc.tf": [],
@@ -7291,7 +7273,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/harvested_c6cabacddd3de8e2.tf",
-   "line_number": 1,
+   "line_number": 8,
    "message": "IAM policy 'admin' grants Action: \"*\". Follow least-privilege: scope actions to specific services and operations.",
    "remediation": "",
    "repository_relative_path": null,
@@ -7299,24 +7281,6 @@
    "rule_id": "TF-SEC-004",
    "severity": "high",
    "title": "IAM policy with Action: \"*\""
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-1.16",
-    "NIST-AC-6"
-   ],
-   "file_path": "terraform/harvested_c6cabacddd3de8e2.tf",
-   "line_number": 1,
-   "message": "IAM policy 'admin' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-010",
-   "severity": "high",
-   "title": "IAM policy with wildcards"
   }
  ],
  "terraform/harvested_d17ab1e50d56ab4d.tf": [],
@@ -7980,7 +7944,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 44,
+   "line_number": 46,
    "message": "IAM policy 'star_json' grants Action: \"*\". Follow least-privilege: scope actions to specific services and operations.",
    "remediation": "",
    "repository_relative_path": null,
@@ -7998,7 +7962,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 44,
+   "line_number": 46,
    "message": "IAM policy 'star_json' grants Resource: \"*\". Scope resources to specific ARNs.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8016,25 +7980,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 44,
-   "message": "IAM policy 'star_json' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-010",
-   "severity": "high",
-   "title": "IAM policy with wildcards"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-1.16",
-    "NIST-AC-6"
-   ],
-   "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 50,
+   "line_number": 52,
    "message": "IAM policy 'star_action_only' grants Action: \"*\". Follow least-privilege: scope actions to specific services and operations.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8052,32 +7998,14 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 50,
-   "message": "IAM policy 'star_action_only' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
+   "line_number": 57,
+   "message": "IAM policy 'hcl_star' grants Action: \"*\". Follow least-privilege: scope actions to specific services and operations.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
-   "rule_id": "TF-SEC-010",
+   "rule_id": "TF-SEC-004",
    "severity": "high",
-   "title": "IAM policy with wildcards"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-1.16",
-    "NIST-AC-6"
-   ],
-   "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 56,
-   "message": "IAM policy 'hcl_star' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-010",
-   "severity": "high",
-   "title": "IAM policy with wildcards"
+   "title": "IAM policy with Action: \"*\""
   },
   {
    "atlas_techniques": [],
@@ -9241,6 +9169,24 @@
    "rule_id": "TF-SEC-007",
    "severity": "high",
    "title": "Hardcoded SSH key"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-AWS-1.16",
+    "NIST-AC-6"
+   ],
+   "file_path": "terraform/synthetic_all_rules_bad.tf",
+   "line_number": 283,
+   "message": "IAM policy 'service_star' grants every action of a service (for example \"s3:*\"). Scope actions to the specific operations the principal needs.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-010",
+   "severity": "medium",
+   "title": "IAM policy with service-wide wildcard action"
   }
  ],
  "terraform/synthetic_all_rules_good.tf": []

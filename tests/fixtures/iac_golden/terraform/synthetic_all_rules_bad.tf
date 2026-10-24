@@ -277,3 +277,9 @@ resource "aws_guardduty_detector" "gd" {
 resource "aws_unrecognized_thing" "other" {
   ssh_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 user@example"
 }
+
+resource "aws_iam_user_policy" "service_star" {
+  policy = jsonencode({
+    Statement = [{ Effect = "Allow", Action = ["s3:*"], Resource = "arn:aws:s3:::x" }]
+  })
+}

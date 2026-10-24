@@ -35,7 +35,7 @@ IAC_ATTACK_MAP: dict[str, list[str]] = {
     "TF-SEC-048": ["T1190"],  # Redshift publicly accessible
     # IAM / Privilege Escalation
     "TF-SEC-004": ["T1078", "T1098"],  # IAM wildcard → Valid Accounts + Account Manipulation
-    "TF-SEC-010": ["T1078", "T1098"],  # IAM wildcards
+    "TF-SEC-010": ["T1078", "T1098"],  # IAM service-wide wildcard actions
     "TF-SEC-012": ["T1552.005"],  # EC2 no IMDSv2 → Cloud Instance Metadata API
     # Credential Exposure
     "TF-SEC-007": ["T1552.004"],  # SSH key hardcoded → Private Keys
