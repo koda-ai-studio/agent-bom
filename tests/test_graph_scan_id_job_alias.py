@@ -116,10 +116,10 @@ def test_graph_reads_accept_the_push_job_id(stores) -> None:
 
 
 def test_another_tenants_job_id_never_resolves(stores) -> None:
-    body = TestClient(app).get("/v1/graph/exposure-paths", params={"scan_id": "other-tenant-job"}).json()
+    response = TestClient(app).get("/v1/graph/exposure-paths", params={"scan_id": "other-tenant-job"})
 
-    assert body["total"] == 0
-    assert body["scan_id"] != GRAPH_SCAN_ID
+    assert response.status_code == 404
+    assert GRAPH_SCAN_ID not in response.text
 
 
 @pytest.mark.asyncio
