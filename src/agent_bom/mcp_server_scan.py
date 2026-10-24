@@ -215,6 +215,13 @@ def _scan_config_path_statically(config_path: str, agents: list, warnings: list[
         warnings.append(msg)
 
 
+def _host_discovery_refused(config_path: str | None, explicit_target: bool, warnings: list[str]) -> bool:
+    """A path-less scan over HTTP or SSE must not read the server host's agent configs."""
+    from agent_bom.mcp_tools.host_local import host_discovery_allowed  # dispatch imports this module
+
+    return not config_path and not host_discovery_allowed(explicit_target=explicit_target, warnings=warnings)
+
+
 async def run_scan_pipeline(
     *,
     safe_path,
@@ -258,18 +265,15 @@ async def run_scan_pipeline(
         except Exception as exc:
             raise McpScanValidationError(CODE_VALIDATION_INVALID_IMAGE_REF, exc, argument="image") from exc
 
-    # Match the CLI's deterministic CI mode: no_discover skips only machine-wide
-    # discovery. An explicit config_path is an artifact and is still scanned
-    # with project-scoped discovery, exactly like `--no-discover --config-dir`.
+    # no_discover skips only machine-wide discovery: an explicit config_path is
+    # still scanned with project-scoped discovery, like `--no-discover --config-dir`.
     # Machine-wide discovery reads host data, so shared transports refuse it.
     if config_path:
         agents = discover_all(project_dir=config_path)
+    elif no_discover or _host_discovery_refused(config_path, any((image, sbom_path, package)), warnings):
+        agents = []
     else:
-        if not no_discover:
-            from agent_bom.mcp_tools.host_local import host_discovery_allowed
-
-            no_discover = not host_discovery_allowed(explicit_target=bool(image or sbom_path or package), warnings=warnings)
-        agents = [] if no_discover else discover_all()
+        agents = discover_all()
     if agents:
         scan_sources.append("agent_discovery")
 

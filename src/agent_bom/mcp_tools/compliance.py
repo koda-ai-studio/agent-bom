@@ -121,12 +121,7 @@ async def compliance_impl(
         atlas = _build_controls(ATLAS_TECHNIQUES, "atlas_tags", "code", scored=False)
         nist = _build_controls(NIST_AI_RMF, "nist_ai_rmf_tags", "code", scored=True)
         owasp_mcp = _build_controls(OWASP_MCP_TOP10, "owasp_mcp_tags", "code", scored=False)
-        owasp_agentic = _build_controls(
-            OWASP_AGENTIC_TOP10,
-            "owasp_agentic_tags",
-            "code",
-            scored=False,
-        )
+        owasp_agentic = _build_controls(OWASP_AGENTIC_TOP10, "owasp_agentic_tags", "code", scored=False)
 
         all_catalog_entries = owasp + atlas + nist + owasp_mcp + owasp_agentic
         scored_controls = [control for control in all_catalog_entries if control["scored"]]
