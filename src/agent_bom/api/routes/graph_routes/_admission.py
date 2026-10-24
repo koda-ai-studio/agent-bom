@@ -9,10 +9,24 @@ from fastapi import HTTPException, Request
 from fastapi.routing import APIRoute
 from starlette.responses import Response
 
+from agent_bom.api.estate_read_boundary import estate_read_boundary
 from agent_bom.api.finding_read_context import finding_read_scope
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 
 _graph_request_admitted: ContextVar[bool] = ContextVar("graph_request_admitted", default=False)
+
+
+class EstateReadRoute(APIRoute):
+    """A route whose unpinned reads of the current estate refuse while the demo seed lands."""
+
+    def get_route_handler(self) -> Callable[[Request], Any]:
+        handler = super().get_route_handler()
+
+        async def bounded_handler(request: Request) -> Response:
+            with estate_read_boundary():
+                return await handler(request)
+
+        return bounded_handler
 
 
 class _GraphAdmissionRoute(APIRoute):
@@ -33,7 +47,7 @@ class _GraphAdmissionRoute(APIRoute):
                 async with adaptive_backpressure("graph"):
                     token = _graph_request_admitted.set(True)
                     try:
-                        with finding_read_scope():
+                        with finding_read_scope(), estate_read_boundary():
                             return await handler(request)
                     finally:
                         _graph_request_admitted.reset(token)

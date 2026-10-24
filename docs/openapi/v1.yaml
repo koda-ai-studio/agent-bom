@@ -43057,10 +43057,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-          description: 'Retryable: unpinned current-estate reads kept landing on retired
-            generations (error.details.code ``current_estate_generation_rotating``).
-            Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation``
-            that changed is a 409 instead.'
+          description: 'Retryable: the demo estate is still being seeded (error.details.code
+            ``current_estate_seeding``), or unpinned current-estate reads kept landing
+            on retired generations (``current_estate_generation_rotating``). Wait
+            ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` that
+            changed is a 409 instead.'
           headers:
             Retry-After:
               description: Seconds to wait before retrying

@@ -28,6 +28,7 @@ from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
 from agent_bom.api.current_graph_lock import ProjectionLock as _ProjectionLock
+from agent_bom.api.estate_read_boundary import inside_estate_read_boundary
 from agent_bom.api.file_lock import exclusive_file_lock
 from agent_bom.api.finding_read_context import forget_read, on_scope_exit, read_once
 from agent_bom.api.findings_current import _finding_snapshot_jobs, scan_collection_incomplete_reasons, scan_evidence_authority_key
@@ -87,17 +88,24 @@ def _generation_rotating() -> HTTPException:
 
 
 SEEDING_CODE = "current_estate_seeding"
+SEEDING_RETRY_AFTER_SECONDS = 2
+
+
+def seeding_refusal() -> HTTPException:
+    detail = {"code": SEEDING_CODE, "message": "The demo estate is still being seeded; retry the read shortly."}
+    return HTTPException(503, cast(str, detail), headers={"Retry-After": str(SEEDING_RETRY_AFTER_SECONDS)})
 
 
 def refuse_unpinned_read_while_seeding(requested_scan_id: str) -> None:
-    """An unpinned estate read during the demo boot seed would serve a partial or empty estate as complete.
-
-    Applied at the request boundary only: the seed's own writers and posture
-    precompute read the same store while it runs.
-    """
+    """An unpinned estate read during the demo boot seed would serve a partial or empty estate as complete."""
     if not requested_scan_id and demo_estate_seeding():
-        detail = {"code": SEEDING_CODE, "message": "The demo estate is still being seeded; retry the read shortly."}
-        raise HTTPException(503, cast(str, detail), headers={"Retry-After": "2"})
+        raise seeding_refusal()
+
+
+def _refuse_current_read_while_seeding() -> None:
+    """Refuse a caller's read of the current estate; the seed's own reads run outside any boundary."""
+    if inside_estate_read_boundary() and demo_estate_seeding():
+        raise seeding_refusal()
 
 
 class _EvidenceMovedError(Exception):
@@ -201,6 +209,7 @@ class CurrentGraphStore:
             def latest(*args: Any, **kwargs: Any) -> str:
                 if "snapshot_kind" in kwargs:
                     return str(method(*args, **kwargs))
+                _refuse_current_read_while_seeding()
                 return self._current_id(str(kwargs.get("tenant_id") or "default")) or str(method(*args, **kwargs, snapshot_kind="scan"))
 
             return latest
@@ -227,6 +236,7 @@ class CurrentGraphStore:
             requested = str(kwargs.get("scan_id") or "")
             if requested and not requested.startswith(CURRENT_PREFIX):
                 return method(*args, **kwargs)
+            _refuse_current_read_while_seeding()
             # Retire rebuildable generations only after active readers finish.
             # Iterators hold a shared read while consuming their SQLite cursor.
             if name in {"iter_nodes", "iter_edges"}:

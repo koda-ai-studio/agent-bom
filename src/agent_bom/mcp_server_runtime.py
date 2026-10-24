@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 from typing import AbstractSet, Any, Awaitable, Callable, TypeVar
 
+from agent_bom.api.estate_read_boundary import estate_read_boundary
 from agent_bom.mcp_tools.dispatch import _TOOL_ERROR_TYPES as _TOOL_ERROR_TYPES
 from agent_bom.mcp_tools.dispatch import ToolErrorPayload as ToolErrorPayload
 from agent_bom.mcp_tools.dispatch import record_completion as _record_completion
@@ -623,7 +624,8 @@ async def execute_tool_async(
     logger.info("mcp tool start: %s caller=%s request_id=%s", tool_name, log_caller, log_request_id)
     try:
         async with get_tool_semaphore_fn():
-            result = await asyncio.wait_for(handler(*args, **kwargs), timeout=timeout_seconds)
+            with estate_read_boundary():
+                result = await asyncio.wait_for(handler(*args, **kwargs), timeout=timeout_seconds)
     except TimeoutError:
         elapsed_ms = int((time.perf_counter() - start) * 1000)
         record_tool_metric_fn(
@@ -746,10 +748,11 @@ async def execute_tool_sync_async(
         start = time.perf_counter()
         logger.info("mcp tool start: %s caller=%s request_id=%s", tool_name, log_caller, log_request_id)
         try:
-            result = await asyncio.wait_for(
-                asyncio.to_thread(handler, *args, **kwargs),
-                timeout=timeout_seconds,
-            )
+            with estate_read_boundary():
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(handler, *args, **kwargs),
+                    timeout=timeout_seconds,
+                )
         except asyncio.TimeoutError:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
             record_tool_metric_fn(

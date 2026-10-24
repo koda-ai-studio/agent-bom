@@ -34515,7 +34515,7 @@ export interface operations {
                     "application/json": components["schemas"]["GraphPageResponse"];
                 };
             };
-            /** @description Retryable: unpinned current-estate reads kept landing on retired generations (error.details.code ``current_estate_generation_rotating``). Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` that changed is a 409 instead. */
+            /** @description Retryable: the demo estate is still being seeded (error.details.code ``current_estate_seeding``), or unpinned current-estate reads kept landing on retired generations (``current_estate_generation_rotating``). Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` that changed is a 409 instead. */
             503: {
                 headers: {
                     /** @description Seconds to wait before retrying */

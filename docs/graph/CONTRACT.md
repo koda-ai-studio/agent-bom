@@ -25,9 +25,14 @@ A `current-estate:` identifier describes a derived set of source revisions, not
 one scan. Keep the returned cursor and generation together while paging; restart
 a page after a generation conflict. Select a recorded scan ID to investigate
 historical evidence. REST, MCP inventory tools and the dashboard share this scope.
-While the demo estate is seeding (`/health` reports `demo_seed: pending`), an
-unpinned `GET /v1/graph` returns 503 `current_estate_seeding` with `Retry-After`;
-it never answers with a partial or empty estate marked complete.
+While the demo estate is seeding (`/health` reports `demo_seed: pending`), every
+unpinned current-estate read returns 503 `current_estate_seeding` with
+`Retry-After`: `/v1/graph` and its sibling graph reads (attack and exposure
+paths, search, agents, rollup, node reads, query, deploy gate), and
+`/v1/inventory/assets` and `/v1/inventory/summary`. MCP graph tools served by the same process return
+`AGENTBOM_MCP_UPSTREAM_UNAVAILABLE` with `details.reason: current_estate_seeding`
+and `details.retry_after_seconds`. None answers with a partial or empty estate
+marked complete. Reads pinned to a recorded `scan_id` are served.
 
 Current projections use a private rebuildable query cache. They do not add scans
 to history or modify source observations. Collection gaps remain visible and
