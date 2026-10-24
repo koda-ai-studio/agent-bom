@@ -17,6 +17,16 @@ from agent_bom.graph.path_derivation import _node_type_value
 from agent_bom.graph.types import EntityType
 
 
+def exposure_path_id(path: AttackPath) -> str:
+    """One stored path's presentation id on REST, MCP and the dashboard.
+
+    Hops alone do not identify a path: the same chain can run over different
+    relationships. Legacy rows without recorded relationships keep the hop id.
+    """
+    base = f"{path.source}::{path.target}::{'->'.join(path.hops)}"
+    return f"{base}::{','.join(path.edges)}" if path.edges else base
+
+
 def _finding_ids_for_nodes(nodes: dict[str, Any], path_hops: list[str], vuln_ids: list[str]) -> list[str]:
     """Resolve stable finding identifiers for a path.
 
@@ -162,7 +172,7 @@ def _exposure_path_for_attack_path(
     finding_node = nodes_by_id.get(path.target)
     exposure: dict[str, Any] = {
         "schemaVersion": EVIDENCE_VERSION,
-        "id": f"{path.source}::{path.target}::{'->'.join(path.hops)}",
+        "id": exposure_path_id(path),
         "label": " via ".join(part for part in label_parts if part) or path.summary or "Exposure path",
         "summary": path.summary,
         "riskScore": path.composite_risk,
