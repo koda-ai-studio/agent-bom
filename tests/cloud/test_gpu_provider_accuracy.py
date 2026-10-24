@@ -60,6 +60,7 @@ def test_virtual_server_query_uses_the_published_crd_group() -> None:
 def test_declared_permissions_match_the_queried_resources() -> None:
     captured: dict = {}
     with (
+        patch.object(coreweave.shutil, "which", return_value="/usr/bin/kubectl"),
         patch.object(coreweave, "_kubectl", return_value={"items": []}),
         patch.object(coreweave, "attach_envelope_to_agents", side_effect=lambda agents, **kw: captured.update(kw)),
     ):
