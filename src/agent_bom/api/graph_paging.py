@@ -47,6 +47,8 @@ def _enforce_node_offset_cap(offset: int, cursor: str | None) -> None:
     discards every skipped row. Keyset ``cursor=`` pagination stays flat, so
     point callers there instead of silently serving a multi-second response.
     """
+    if cursor and offset:
+        raise HTTPException(status_code=400, detail="cursor replaces offset; send only the cursor.")
     if not cursor and offset > MAX_NODE_PAGE_OFFSET:
         raise HTTPException(
             status_code=422,

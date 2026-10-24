@@ -398,6 +398,8 @@ async def build_asset_list(
         raise InventoryError(f"limit must be between 1 and {MAX_PAGE_LIMIT}", status_code=422)
     if offset < 0:
         raise InventoryError("offset must be >= 0", status_code=422)
+    if cursor and offset:
+        raise InventoryError("cursor replaces offset; send only the cursor.", status_code=400)
     if not cursor and offset > MAX_NODE_PAGE_OFFSET:
         raise InventoryError(
             f"offset={offset} exceeds the maximum supported offset ({MAX_NODE_PAGE_OFFSET}). "
