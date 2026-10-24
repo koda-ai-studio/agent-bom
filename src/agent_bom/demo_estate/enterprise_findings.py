@@ -62,6 +62,8 @@ from agent_bom.demo_estate.enterprise_correlation import (
 from agent_bom.demo_estate.enterprise_risk import build_risk_findings
 from agent_bom.demo_estate.estate_cis_catalog import _CATALOG as _CATALOG
 from agent_bom.demo_estate.estate_cis_catalog import _CATALOG_BY_TARGET, EstateCheck
+from agent_bom.demo_estate.estate_finding_nodes import estate_finding_node_id
+from agent_bom.demo_estate.estate_graph import entity_type_for_resource_type
 from agent_bom.finding import Finding, cloud_cis_check_to_finding
 
 ESTATE_FINDINGS_VERSION = "enterprise_findings.v1"
@@ -312,8 +314,6 @@ def _stamp_estate_asset_types(findings, estate) -> None:
     A graph rebuilt from the report then draws the same node the estate
     snapshot holds, instead of minting a stub from the asset identifier.
     """
-    from agent_bom.demo_estate.estate_graph import entity_type_for_resource_type
-
     resource_types = {asset.asset_id: asset.resource_type for asset in estate.assets}
     for finding in findings:
         resource_type = resource_types.get(finding.asset.identifier or "")
@@ -454,7 +454,6 @@ def build_estate_findings(
     findings.extend(kept_risk_findings)
     current_snapshot = next(snapshot for snapshot in estate.snapshots if snapshot.stage.value == "current")
     first_seen = current_snapshot.observed_at.isoformat()
-    from agent_bom.demo_estate.estate_finding_nodes import estate_finding_node_id
     _stamp_estate_asset_types(findings, estate)
     for finding in findings:
         finding.node_id = finding.asset.identifier

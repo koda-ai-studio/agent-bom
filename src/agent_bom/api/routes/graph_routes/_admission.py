@@ -9,9 +9,10 @@ from fastapi import HTTPException, Request
 from fastapi.routing import APIRoute
 from starlette.responses import Response
 
-from agent_bom.api.estate_read_boundary import estate_read_boundary
+from agent_bom.api.current_graph import CURRENT_PREFIX
 from agent_bom.api.finding_read_context import finding_read_scope
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
+from agent_bom.core.estate_read_boundary import estate_read_boundary
 
 _graph_request_admitted: ContextVar[bool] = ContextVar("graph_request_admitted", default=False)
 
@@ -34,7 +35,6 @@ async def _require_addressed_snapshot(request: Request) -> None:
 
     Current-estate ids are left to the route: a retired generation is a 409.
     """
-    from agent_bom.api.current_graph import CURRENT_PREFIX
     from agent_bom.api.routes.graph_routes import _runtime
 
     scan_id = request.query_params.get("scan_id") or request.query_params.get("scan") or ""

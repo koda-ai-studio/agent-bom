@@ -17,6 +17,7 @@ from typing import Any, Literal
 
 from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence
 from agent_bom.config import GRAPH_INVESTIGATION_NODE_BUDGET, MCP_MAX_RESPONSE_CHARS
+from agent_bom.core.graph_backend_errors import NeptuneGraphStoreUnsupportedOperationError
 from agent_bom.graph.attack_path_queue import AttackPathFilters, QueuePage, attack_path_rank_window, ranked_queue_page
 from agent_bom.graph.attack_path_queue_rank import MIN_SEVERITY_CHOICES, path_is_kev, path_rank_fields
 from agent_bom.graph.completeness import graph_completeness
@@ -237,8 +238,6 @@ async def unknown_snapshot_error(store: Any, tenant_id: str, scan_id: str | None
     """An explicit scan id that names no snapshot of this tenant is not found, never an empty complete answer."""
     if not scan_id or scan_id.startswith("current-estate:"):
         return None
-    from agent_bom.api.neptune_graph import NeptuneGraphStoreUnsupportedOperationError
-
     snapshots_by_ids = getattr(store, "snapshots_by_ids", None)
     if snapshots_by_ids is None:
         return None

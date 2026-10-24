@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import AbstractSet, Any, Awaitable, Callable, TypeVar
 
-from agent_bom.api.estate_read_boundary import estate_read_boundary
+from agent_bom.core.estate_read_boundary import estate_read_boundary
 from agent_bom.mcp_tools.dispatch import _TOOL_ERROR_TYPES as _TOOL_ERROR_TYPES
 from agent_bom.mcp_tools.dispatch import ToolErrorPayload as ToolErrorPayload
 from agent_bom.mcp_tools.dispatch import record_completion as _record_completion

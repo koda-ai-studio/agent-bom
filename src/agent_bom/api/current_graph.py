@@ -28,13 +28,13 @@ from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
 from agent_bom.api.current_graph_lock import ProjectionLock as _ProjectionLock
-from agent_bom.api.estate_read_boundary import inside_estate_read_boundary
 from agent_bom.api.file_lock import exclusive_file_lock
 from agent_bom.api.finding_read_context import forget_read, on_scope_exit, read_once
 from agent_bom.api.findings_current import _finding_snapshot_jobs, scan_collection_incomplete_reasons, scan_evidence_authority_key
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.models import JobStatus
 from agent_bom.api.neptune_graph import NeptuneGraphStore
+from agent_bom.core.estate_read_boundary import inside_estate_read_boundary
 from agent_bom.core.settings import env_raw
 from agent_bom.demo_estate.boot_seed import demo_estate_seeding
 from agent_bom.graph import UnifiedGraph
