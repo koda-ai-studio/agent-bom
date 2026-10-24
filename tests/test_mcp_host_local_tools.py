@@ -162,7 +162,11 @@ _HOST_DISCOVERY_CALLS = [
 
 
 @pytest.mark.parametrize(("tool", "args"), _HOST_DISCOVERY_CALLS, ids=[c[0] for c in _HOST_DISCOVERY_CALLS])
-def test_host_discovery_refused_over_http_without_a_path(tool: str, args: dict[str, Any]) -> None:
+def test_host_discovery_refused_over_http_without_a_path(tool: str, args: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    # With persisted findings, blast_radius answers from them and never reads
+    # the host. This test is about the no-store path, so a store left by an
+    # earlier test on the same worker must not answer first.
+    monkeypatch.setattr("agent_bom.mcp_server._persisted_finding_evidence", lambda **_kwargs: {"available": False})
     is_error, text = _http_call(tool, args)
     assert is_error, text
     assert CODE_AUTH_FORBIDDEN in text
