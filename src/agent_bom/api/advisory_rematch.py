@@ -7,6 +7,11 @@ cursor (the run start, compared with operator advisory ``updated_at``). A run
 matches only advisories updated after those cursors against the tenant's
 newest stored scan per target. Hosts are never rescanned.
 
+Past ``MAX_TENANTS_PER_RUN`` tenants are served oldest attempt first
+(``last_attempt_at`` in each tenant's state; never-attempted tenants lead), so
+every tenant is reached within ``ceil(N / cap)`` runs instead of the same
+alphabetical tail being skipped forever.
+
 Fail closed: when the feed or the store is unreachable, or a version cannot
 be ordered, the run is recorded ``incomplete`` and neither cursor moves, so
 the next run retries the same window instead of reporting it clean.
@@ -235,6 +240,7 @@ def run_tenant_rematch(
         state = store.get_rematch_state(tenant_id) or {}
     except _UNAVAILABLE:
         return {**status, "reason": "store_unavailable"}
+    state["last_attempt_at"] = now.isoformat()
     try:
         batch = feed_source(state.get("feed_cursor"), state.get("feed_cursor_id"))
     except _FEED_UNAVAILABLE:
@@ -284,7 +290,22 @@ def _rematch_tenants() -> _TenantSelection:
     rows = _get_store().list_summary(all_tenants=True, status=JobStatus.DONE, limit=MAX_JOBS_SCANNED + 1)
     job_cap_reached = len(rows) > MAX_JOBS_SCANNED
     tenants = sorted({str(row["tenant_id"]) for row in rows[:MAX_JOBS_SCANNED] if row.get("tenant_id")})
+    if len(tenants) > MAX_TENANTS_PER_RUN:
+        attempts = {tenant: run_tenant_bound(tenant, _last_attempt, tenant) for tenant in tenants}
+        tenants.sort(key=lambda tenant: (attempts[tenant], tenant))
     return _TenantSelection(tenants[:MAX_TENANTS_PER_RUN], tenants[MAX_TENANTS_PER_RUN:], job_cap_reached)
+
+
+_NEVER = datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _last_attempt(tenant_id: str) -> datetime:
+    """When this tenant was last re-matched (any outcome); never or unreadable sorts first."""
+    try:
+        state = _get_operator_advisory_store().get_rematch_state(tenant_id) or {}
+    except _UNAVAILABLE:
+        return _NEVER
+    return _parse(state.get("last_attempt_at")) or _NEVER
 
 
 def _record_skipped(tenant_id: str, now: datetime) -> None:

@@ -43,6 +43,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - NVIDIA CSAF advisories attach only to the release branch they fix, and NVD ranges scoped to another platform are skipped.
 - Documentation and shipped manifests reference only CLI commands that exist (the proxy bootstrap bundles and the Kubernetes DaemonSet called removed commands); the check now verifies every word of a cited command. Version bumps update the OpenClaw, first-run and CloudFormation image pins.
 - zod updated to 4.6.7 for GHSA-mrhx-c7xc-m3w5 (development dependency).
+- Advisory re-match past its tenant cap serves the tenants with the oldest attempt first, so every tenant is reached within ceil(tenants / cap) runs instead of the same alphabetical tail being skipped every run.
 
 ## [0.110.0] - 2026-10-21
 
