@@ -252,3 +252,26 @@ class TestDuplicatesAndHygiene:
             '  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm = "aws:kms"\n    }\n  }\n}\n'
         )
         assert [f for f in scan_iac_with_context(tf).findings if f.rule_id == "TF-SEC-001"] == []
+
+
+@pytest.mark.parametrize("trigger", ["on: pull_request_target", "on: [push, pull_request_target]", "on:\n  pull_request_target:\n"])
+def test_pull_request_target_head_checkout_in_every_trigger_form(tmp_path: Path, trigger: str) -> None:
+    workflow = tmp_path / ".github" / "workflows" / "prt.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text(
+        f"{trigger}\npermissions:\n  contents: read\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n"
+        "      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332\n"
+        "        with:\n          ref: ${{ github.event.pull_request.head.ref }}\n"
+    )
+    findings = scan_iac_with_context(tmp_path).findings
+    assert [f.rule_id for f in findings] == ["GHA-001"]
+
+
+def test_pull_request_target_default_checkout_is_not_flagged(tmp_path: Path) -> None:
+    workflow = tmp_path / ".github" / "workflows" / "prt.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text(
+        "on: pull_request_target\npermissions:\n  contents: read\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n"
+        "      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332\n"
+    )
+    assert scan_iac_with_context(tmp_path).findings == []
