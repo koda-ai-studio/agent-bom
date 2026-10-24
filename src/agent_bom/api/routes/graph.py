@@ -85,7 +85,7 @@ from agent_bom.api.graph_contracts import (
 )
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint, verify_generation
 from agent_bom.api.graph_node_cursor import node_page_continuation, wrap_node_cursor
-from agent_bom.api.graph_page_context import page_attack_context, page_context
+from agent_bom.api.graph_page_context import node_page_context_limit, page_attack_context, page_context
 from agent_bom.api.graph_paging import _coalesce_alias, _enforce_node_offset_cap, _paginate, path_order
 from agent_bom.api.graph_presentation import (
     _finding_ids_for_path as _finding_ids_for_path,
@@ -271,6 +271,9 @@ async def get_graph(
     ``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the
     returned edges ride along (``completeness.endpoint_nodes``), so every edge
     lands on a returned node; ``completeness.boundary_edges`` counts any that do not.
+    Context nodes carry ``context: true``; stack and containment context is capped
+    at ``completeness.context_limit`` and may repeat across a cursor walk, while
+    each node is ranked on exactly one page.
 
     ``stats`` describe the graph this response was computed from, NOT the page:
     ``stats.total_nodes`` is every node that survived loading, and
@@ -367,15 +370,16 @@ async def get_graph(
     source_attack_paths, attack_path_nodes = await page_attack_context(
         graph_store, scan_id=effective_scan_id, tenant_id=tenant, node_ids=paged_ids, call_store=_runtime._graph_store_call
     )
-    ancestor_nodes, ancestor_edges, stack_context, endpoint_nodes = await page_context(
+    context = await page_context(
         graph_store,
         scan_id=effective_scan_id,
         tenant_id=tenant,
         page_nodes=paged_nodes,
         call_store=_runtime._graph_store_call,
         page_edges=paged_edges,
+        context_limit=node_page_context_limit(limit),
     )
-    nodes_by_id = {node.id: node for node in [*paged_nodes, *attack_path_nodes, *ancestor_nodes]}
+    nodes_by_id = {node.id: node for node in [*paged_nodes, *attack_path_nodes, *context.nodes]}
     snapshot_stats = await _runtime._graph_store_call(
         graph_store.snapshot_stats,
         scan_id=effective_scan_id,
@@ -391,9 +395,8 @@ async def get_graph(
         snapshot_stats=snapshot_stats,
         total=total,
         paged_nodes=paged_nodes,
-        ancestor_nodes=ancestor_nodes,
+        context=context,
         paged_edges=paged_edges,
-        ancestor_edges=ancestor_edges,
         edges_truncated=edges_truncated,
         next_cursor=wrap_node_cursor(next_cursor, identity[1]) if identity is not None else next_cursor,
         offset=offset,
@@ -405,9 +408,7 @@ async def get_graph(
         source_attack_paths=source_attack_paths,
         nodes_by_id=nodes_by_id,
         cursor=cursor,
-        stack_context=stack_context,
         view=view,
-        endpoint_nodes=endpoint_nodes,
     )
 
 

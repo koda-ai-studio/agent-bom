@@ -994,13 +994,30 @@ tenant/snapshot revision. On 409, discard the attempted read and restart; the
 consumer never joins changed revisions. Unknown kinds or versions fail closed.
 
 For unfiltered `GET /v1/graph` node pages, `limit` bounds the ranked slice:
-the first `completeness.ranked` nodes. Additional containment ancestors follow
-that slice and are counted by `completeness.context_nodes`; their sum equals
-`completeness.returned` and the length of `nodes`. An ancestor can recur as
-context or appear on its own ranked page. The consumer counts identical copies
-once while retaining each original page in the receipt. Changed node evidence,
-duplicate nodes within a page, repeated ranked nodes, inconsistent counts and
-oversized ranked slices fail closed.
+the first `completeness.ranked` nodes. Context follows that slice, and every
+context node carries `context: true`; ranked nodes have no `context` field.
+Context is the agent stack and the containment ancestors
+(`completeness.context_nodes`), then the off-page endpoints of returned edges
+(`completeness.endpoint_nodes`). The three counts sum to `completeness.returned`
+and the length of `nodes`.
+
+Stack and containment context is capped at `completeness.context_limit`
+(`max(limit, 500)`). The stack comes first, then the nearest ancestors.
+`completeness.context_omitted` and `context_truncated` report the cut. A
+context relationship to a cut node is dropped. If a cut ancestor is the
+endpoint of an incident relationship, it returns as an endpoint instead.
+Endpoints are bounded by the returned relationships, so a page carries at
+most `limit + context_limit` nodes plus one endpoint per returned relationship.
+The floor of 500 keeps the containment spine of small canvas pages whole.
+
+Across a cursor walk, every node is ranked on exactly one page, but a context
+node can repeat on several pages. This is deliberate: each page stays drawable
+on its own. Count ranked nodes for coverage and dedupe context by `id`. The
+consumer counts identical copies once, ignoring the `context` marker, and keeps
+each original page in the receipt. These conditions fail closed: changed node
+evidence, duplicate nodes within a page, repeated ranked nodes, unmarked or
+misplaced context, context over its declared bound, inconsistent counts and
+oversized ranked slices.
 
 A ranked node page includes at most 1,000 incident relationships, plus its
 containment context. `completeness.edge_returned` counts the incident slice;
