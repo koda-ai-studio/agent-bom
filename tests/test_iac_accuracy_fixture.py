@@ -64,3 +64,31 @@ class TestTerraformIamWildcards:
         findings = scan_iac_with_context(tf).findings
         assert _lines(findings, "TF-SEC-010") == [3]
         assert _lines(findings, "TF-SEC-004") == []
+
+
+class TestTerraformPublicS3:
+    def test_bucket_acl_resource_and_disabled_public_access_flags_are_detected(self) -> None:
+        findings = _scan("terraform/s3.tf")
+        assert _lines(findings, "TF-SEC-002") == [7]
+        assert _lines(findings, "TF-SEC-022") == [12]
+
+    def test_private_bucket_with_full_block_is_not_flagged_public(self) -> None:
+        findings = _scan("terraform/s3.tf")
+        public = [f for f in findings if f.rule_id in {"TF-SEC-002", "TF-SEC-022"} and f.line_number >= 18]
+        assert public == []
+
+    def test_block_for_another_bucket_does_not_cover_this_one(self, tmp_path: Path) -> None:
+        tf = tmp_path / "other.tf"
+        tf.write_text(
+            'resource "aws_s3_bucket" "a" {\n  bucket = "a"\n}\n'
+            'resource "aws_s3_bucket" "b" {\n  bucket = "b"\n}\n'
+            'resource "aws_s3_bucket_public_access_block" "a" {\n'
+            "  bucket                  = aws_s3_bucket.a.id\n"
+            "  block_public_acls       = true\n"
+            "  block_public_policy     = true\n"
+            "  ignore_public_acls      = true\n"
+            "  restrict_public_buckets = true\n"
+            "}\n"
+        )
+        findings = scan_iac_with_context(tf).findings
+        assert _lines(findings, "TF-SEC-022") == [4]

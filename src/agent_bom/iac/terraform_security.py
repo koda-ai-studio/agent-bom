@@ -15,7 +15,7 @@ files — same approach as ``terraform.py``, no HCL parser needed.
 Rules
 -----
 TF-SEC-001  S3 bucket without encryption (AWS SEC08, CIS 2.1.1)
-TF-SEC-002  S3 bucket with public ACL (AWS SEC01, CIS 2.1.2)
+TF-SEC-002  S3 bucket (or aws_s3_bucket_acl) with public ACL (AWS SEC01, CIS 2.1.2)
 TF-SEC-003  Security group with 0.0.0.0/0 ingress on non-443/80 port (CIS 5.2)
 TF-SEC-004  IAM policy/policy document with Action * (or *:*) or Resource * (AWS SEC03, CIS 1.16)
 TF-SEC-005  RDS without encryption (AWS SEC08, CIS 2.3.1)
@@ -35,7 +35,7 @@ TF-SEC-018  DynamoDB without point-in-time recovery (AWS SEC08, CIS 2.4)
 TF-SEC-019  API Gateway without access logging (AWS SEC04)
 TF-SEC-020  KMS key without rotation (AWS SEC08, CIS 3.8)
 TF-SEC-021  S3 bucket versioning not enabled (AWS SEC08, CIS 2.1.3)
-TF-SEC-022  S3 bucket public access block missing (AWS SEC01, CIS 2.1.5)
+TF-SEC-022  S3 public access block missing or with a flag set to false (AWS SEC01, CIS 2.1.5)
 TF-SEC-023  S3 bucket logging not enabled (AWS SEC04, CIS 3.6)
 TF-SEC-024  RDS public accessibility enabled (AWS SEC01, CIS 2.3.2)
 TF-SEC-025  RDS backup retention period < 7 days (AWS SEC08, CIS 2.3.3)
@@ -108,6 +108,8 @@ _RULES: tuple[tuple[frozenset[str] | None, TfCheck], ...] = (
     (frozenset({"aws_kms_key"}), _identity.tf_sec_020),
     (frozenset({"aws_s3_bucket"}), _storage.tf_sec_021),
     (frozenset({"aws_s3_bucket"}), _storage.tf_sec_022),
+    (frozenset({"aws_s3_bucket_public_access_block"}), _storage.tf_sec_022_flags),
+    (frozenset({"aws_s3_bucket_acl"}), _storage.tf_sec_002_acl_resource),
     (frozenset({"aws_s3_bucket"}), _storage.tf_sec_023),
     (frozenset({"aws_db_instance", "aws_rds_cluster"}), _database.tf_sec_024),
     (frozenset({"aws_db_instance", "aws_rds_cluster"}), _database.tf_sec_025),
