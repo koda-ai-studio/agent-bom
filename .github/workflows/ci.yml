@@ -1209,7 +1209,8 @@ jobs:
             tests/api/test_api_scan_findings_wiring.py
             tests/api/test_live_export_contracts.py
           )
-          mapfile -t TESTS < <(printf '%s\n' "${SMOKE[@]}" "${TARGETED[@]}" | sort -u)
+          # An empty targeted selection becomes one empty element; drop blank lines.
+          mapfile -t TESTS < <(printf '%s\n' "${SMOKE[@]}" "${TARGETED[@]}" | grep -v '^$' | sort -u)
           # Keep the full selected set, assigning each module to exactly one job.
           SELECTION=$(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 2 --files "${TESTS[@]}")
           mapfile -t TESTS < <(printf '%s\n' "$SELECTION")
