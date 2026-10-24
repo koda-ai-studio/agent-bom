@@ -73,6 +73,7 @@ def remediation_finding_projection(row: dict[str, Any]) -> dict[str, Any]:
                 "ecosystem",
                 "references",
                 "fixed_version",
+                "server_credentials",
             )
             if key in evidence
         }
@@ -95,13 +96,18 @@ def remediation_finding_projection(row: dict[str, Any]) -> dict[str, Any]:
     # names (env-var and tool names, as the agent detail and per-scan plan
     # already return), so restore only entries shaped like a name, never a value.
     for key in ("exposed_credentials", "exposed_tools"):
-        names = [value for value in _strings(row.get(key))[:200] if _REFERENCE_NAME.fullmatch(value)]
-        if names:
-            payload[key] = list(dict.fromkeys(names))
+        if names := _reference_names(row.get(key)):
+            payload[key] = names
+    if isinstance(evidence, dict) and isinstance(evidence.get("server_credentials"), list):
+        payload.setdefault("evidence", {})["server_credentials"] = _reference_names(evidence["server_credentials"])
     return payload
 
 
 _REFERENCE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.\-]{0,127}")
+
+
+def _reference_names(value: Any) -> list[str]:
+    return list(dict.fromkeys(name for name in _strings(value)[:200] if _REFERENCE_NAME.fullmatch(name)))
 
 
 def _strings(value: Any) -> list[str]:

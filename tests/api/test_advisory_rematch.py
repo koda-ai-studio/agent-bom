@@ -304,3 +304,39 @@ def test_job_cap_marks_the_run_truncated(env: InMemoryOperatorAdvisoryStore, mon
 def test_uncapped_run_reports_not_truncated(env: InMemoryOperatorAdvisoryStore) -> None:
     summary = rematch.run_rematch_once(feed_source=_Feed([]), now=NOW)
     assert summary == {**summary, "status": "complete", "tenants_skipped": 0, "job_cap_reached": False, "truncated": False}
+
+
+def _reached_per_run(runs: int, cap: int, monkeypatch, first_day: int = 23) -> list[set[str]]:
+    monkeypatch.setattr(rematch, "MAX_TENANTS_PER_RUN", cap)
+    reached = []
+    for day in range(runs):
+        now = datetime(2026, 10, first_day + day, 6, 0, tzinfo=timezone.utc)
+        rematch.run_rematch_once(feed_source=_Feed([]), now=now)
+        reached.append(
+            {
+                tenant
+                for tenant in ("tenant-a", "tenant-b", "tenant-c")
+                if (rematch._get_operator_advisory_store().get_rematch_state(tenant) or {}).get("last_run", {}).get("status") == "complete"
+                and rematch._get_operator_advisory_store().get_rematch_state(tenant)["last_run"]["at"] == now.isoformat()
+            }
+        )
+    return reached
+
+
+@pytest.mark.parametrize("backend", ["memory", "sqlite"])
+def test_tenant_cap_rotates_so_every_tenant_is_reached_within_ceil_n_over_cap_runs(
+    env: InMemoryOperatorAdvisoryStore, monkeypatch, tmp_path: Path, backend: str
+) -> None:
+    from agent_bom.api.operator_advisory_store import SQLiteOperatorAdvisoryStore
+    from agent_bom.api.stores import _get_store
+
+    if backend == "sqlite":
+        set_operator_advisory_store(SQLiteOperatorAdvisoryStore(str(tmp_path / "advisories.db")))
+    _get_store().put(_job("tenant-c", "php", "8.3.30"))
+    reached = _reached_per_run(3, 1, monkeypatch)
+    assert all(len(run) == 1 for run in reached)
+    assert set().union(*reached) == {"tenant-a", "tenant-b", "tenant-c"}
+    two_per_run = _reached_per_run(2, 2, monkeypatch, first_day=26)
+    assert set().union(*two_per_run) == {"tenant-a", "tenant-b", "tenant-c"}
+    skipped = rematch._get_operator_advisory_store().get_rematch_state(sorted({"tenant-a", "tenant-b", "tenant-c"} - two_per_run[-1])[0])
+    assert skipped["last_run"]["reason"] == "tenant_cap"

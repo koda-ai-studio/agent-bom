@@ -216,3 +216,19 @@ def test_remediation_reads_the_findings_default_window_and_says_so(scan_store): 
     expected = time_window.window_metadata(time_window.normalize_window_days(None))
     assert body["window"]["days"] == expected["days"]
     assert body["window"]["applied"] is True
+
+
+def test_current_remediation_api_carries_held_on_server_credential_names(scan_store):  # noqa: F811
+    row = pushed(8, scope="v1:" + "a" * 64)
+    row.result["findings"][0].update(package="demo-lib", package_version="1.0.0", ecosystem="pypi", fixed_version="2.0.0")
+    evidence = row.result["findings"][0].setdefault("evidence", {})
+    evidence["server_credentials"] = ["DATABASE_URL", "STRIPE_KEY", "postgres://user:hunter2@db/prod"]
+    scan_store.put(row)
+    with TestClient(app) as client:
+        client.headers.update(proxy_headers(role="analyst", tenant="history-tenant"))
+        body = client.get("/v1/findings/remediation").json()
+    [item] = body["remediation_plan"]
+    assert item["server_credentials"] == ["DATABASE_URL", "STRIPE_KEY"]
+    assert item["server_credential_count"] == 2
+    assert "hunter2" not in repr(body)
+    assert _plan("another-tenant")["remediation_plan"] == []

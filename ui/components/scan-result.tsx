@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EXPOSED_BY_IMPACT } from "@/lib/credential-basis";
+import { EXPOSED_BY_IMPACT, HELD_ON_SERVER_NOTE, heldOnServerLabel } from "@/lib/credential-basis";
 import Link from "next/link";
 import { api, type ScanJob, type ScanJobStatus, type ScanResult, type BlastRadius, type RemediationItem, type GraphExportFormat, formatDate, OWASP_LLM_TOP10, MITRE_ATLAS, severityColor } from "@/lib/api";
 import { useScanStream } from "@/lib/use-scan-stream";
@@ -782,6 +782,9 @@ function RemediationPlan({ items }: { items: RemediationItem[] }) {
             <ImpactBox label={EXPOSED_BY_IMPACT} items={item.exposed_credentials} pct={item.credentials_pct} color="yellow" />
             <ImpactBox label="Tools secured" items={item.reachable_tools} pct={item.tools_pct} color="blue" />
           </div>
+          {typeof item.server_credential_count === "number" && (
+            <p className="text-xs text-ink-tertiary mb-3" title={HELD_ON_SERVER_NOTE}>{heldOnServerLabel(item.server_credential_count)}</p>
+          )}
           {(item.owasp_tags.length > 0 || item.atlas_tags.length > 0) && (
             <div className="flex flex-wrap items-center gap-1.5 mb-3">
               <span className="text-xs text-ink-tertiary mr-1">mitigates:</span>

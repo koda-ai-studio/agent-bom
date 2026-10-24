@@ -5,8 +5,8 @@
   "print_posture_summary:True:True": "88ba06566a5f3bb62f612e27bc79241865a9f5f18527560c2092c717c5b21d99",
   "print_remediation_plan:False:False": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "print_remediation_plan:False:True": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "print_remediation_plan:True:False": "e2f9a94932d8bc0770fccd7c4c1a439a613239ba98e6db1d01ec1cdb8bc3a3ca",
-  "print_remediation_plan:True:True": "5d3ba4a52d7c72cc73f3ea5bc2874bf5c36dcccba7daf18ca7355926ac7ffead",
+  "print_remediation_plan:True:False": "91592ea223d29634dee0826f9b495495c1893dfb34ec72ec7e377cb377ae2bec",
+  "print_remediation_plan:True:True": "c536a167d966bc59fdd9238aec7b1a4187e2de7c4b06dc77c93768aeeacb61c0",
   "print_scan_performance_summary:False:False": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "print_scan_performance_summary:False:True": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "print_scan_performance_summary:True:False": "b7ca7b440446ab71106142dbcee0373fff10b5bcb04e349be5a086f113add8f3",
@@ -19,5 +19,5 @@
   "print_threat_frameworks:False:True": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "print_threat_frameworks:True:False": "da4425a3f0a04bb2be6418176028aac3e402a440b2cc82315aa15804c15f6f1a",
   "print_threat_frameworks:True:True": "1bee89ddb7fadfca8218d8a9305c91b9b69b6fc9116791c768b2b96cbfdb10fd",
-  "remediation-plan": "3c976430850e7bc93e3813ce02a86c0dddeacb25bbe205d2e351842323d08e78"
+  "remediation-plan": "c17993ff544c378a9d15e5e11e07ffad9d968cd223c883bdf102566ac650102b"
 }

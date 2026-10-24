@@ -142,3 +142,54 @@ def test_tenant_b_cannot_match_tenant_a_advisories_on_postgres(monkeypatch: pyte
     finally:
         stores.set_operator_advisory_store(None)
         pool.close()
+
+
+def test_rematch_tenant_cap_rotates_on_postgres_without_crossing_tenants(monkeypatch: pytest.MonkeyPatch) -> None:
+    _require_postgres()
+    from datetime import datetime, timezone
+
+    from agent_bom.api import advisory_rematch as rematch
+    from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
+    from agent_bom.api.postgres_common import _new_application_pool
+    from agent_bom.api.postgres_operator_advisory import PostgresOperatorAdvisoryStore
+    from agent_bom.api.store import InMemoryJobStore
+    from tests.test_postgres_job_evidence_revision import tenant_scope
+
+    run = uuid.uuid4().hex
+    tenants = [f"adv-{run}-{index}" for index in range(3)]
+    jobs = InMemoryJobStore()
+    for tenant in tenants:
+        jobs.put(
+            ScanJob(
+                job_id=f"job-{tenant}",
+                tenant_id=tenant,
+                status=JobStatus.DONE,
+                created_at="2026-10-22T00:00:00Z",
+                completed_at="2026-10-22T00:01:00Z",
+                request=ScanRequest(images=["php:8.3"]),
+                result={"agents": []},
+            )
+        )
+    monkeypatch.setattr(stores, "_store", jobs)
+    monkeypatch.setattr(rematch, "MAX_TENANTS_PER_RUN", 1)
+    pool = _new_application_pool(min_size=1, max_size=2)
+    store = PostgresOperatorAdvisoryStore(pool=pool)
+    stores.set_operator_advisory_store(store)
+    feed = lambda cursor, after_id=None: rematch.FeedBatch([], None)  # noqa: E731
+    try:
+        reached = set()
+        for day in range(3):
+            now = datetime(2026, 10, 23 + day, 6, 0, tzinfo=timezone.utc)
+            assert rematch.run_rematch_once(feed_source=feed, now=now)["tenants_skipped"] == 2
+            for tenant in tenants:
+                with tenant_scope(tenant):
+                    state = store.get_rematch_state(tenant) or {}
+                if state.get("last_attempt_at") == now.isoformat():
+                    reached.add(tenant)
+        assert reached == set(tenants)
+        with tenant_scope(tenants[0]):
+            assert store.get_rematch_state(tenants[1]) is None
+    finally:
+        stores.set_operator_advisory_store(None)
+        rematch.reset_process_status()
+        pool.close()

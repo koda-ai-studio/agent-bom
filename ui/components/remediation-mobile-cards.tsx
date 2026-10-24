@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { EXPOSED_BY_IMPACT_NOTE, exposedByImpactLabel } from "@/lib/credential-basis";
+import { EXPOSED_BY_IMPACT_NOTE, HELD_ON_SERVER_NOTE, exposedByImpactLabel, heldOnServerLabel } from "@/lib/credential-basis";
 import { ChevronDown, ChevronUp, Ticket } from "lucide-react";
 
 import { severityColor, severityDot, type RemediationItem, type TicketLink } from "@/lib/api";
@@ -39,6 +39,9 @@ function RemediationCard({ item, ticket, onCreateTicket }: {
         <dd className="font-mono">Risk {item.impact_score.toFixed(1)}</dd>
         <dd>{plural(item.affected_agents?.length ?? 0, "agent")}</dd>
         <dd title={EXPOSED_BY_IMPACT_NOTE}>{exposedByImpactLabel(item.exposed_credentials?.length ?? 0)}</dd>
+        {typeof item.server_credential_count === "number" && (
+          <dd title={HELD_ON_SERVER_NOTE}>{heldOnServerLabel(item.server_credential_count)}</dd>
+        )}
       </dl>
       <div className="flex flex-wrap gap-1">
         {item.vulnerabilities.slice(0, 2).map(cve => (

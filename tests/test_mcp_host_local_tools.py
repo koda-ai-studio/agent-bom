@@ -147,3 +147,60 @@ def test_inventory_config_path_outside_sandbox_is_rejected(tmp_path: Path) -> No
     assert is_error, text
     assert "AGENTBOM_MCP_VALIDATION_INVALID_PATH" in text
     assert "(argument: config_path)" in text
+
+
+# Tools whose no-path default discovers this host's agent configs.
+_HOST_DISCOVERY_CALLS = [
+    ("scan", {}),
+    ("where", {}),
+    ("blast_radius", {"cve_id": "CVE-2024-3094"}),
+    ("policy_check", {"policy_json": json.dumps({"name": "p", "rules": []})}),
+    ("compliance", {"source": "local_scan"}),
+    ("runtime_correlate", {}),
+    ("context_graph", {"live": True}),
+]
+
+
+@pytest.mark.parametrize(("tool", "args"), _HOST_DISCOVERY_CALLS, ids=[c[0] for c in _HOST_DISCOVERY_CALLS])
+def test_host_discovery_refused_over_http_without_a_path(tool: str, args: dict[str, Any]) -> None:
+    is_error, text = _http_call(tool, args)
+    assert is_error, text
+    assert CODE_AUTH_FORBIDDEN in text
+    assert "reads the server host's local data" in text
+    assert f"{HOST_LOCAL_OPT_IN_ENV}=1" in text
+
+
+@pytest.mark.parametrize(("tool", "args"), _HOST_DISCOVERY_CALLS, ids=[c[0] for c in _HOST_DISCOVERY_CALLS])
+def test_host_discovery_allowed_over_stdio(tool: str, args: dict[str, Any]) -> None:
+    _is_error, text = _stdio_call(tool, args)
+    assert CODE_AUTH_FORBIDDEN not in text
+
+
+def test_opt_in_allows_where_over_http(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(HOST_LOCAL_OPT_IN_ENV, "1")
+    is_error, text = _http_call("where", {})
+    assert not is_error, text
+    assert "clients" in json.loads(text)
+
+
+def test_scan_with_workspace_config_path_is_allowed_over_http(_isolated: Path) -> None:
+    project = _isolated / "proj"
+    project.mkdir()
+    _is_error, text = _http_call("scan", {"config_path": str(project)})
+    assert CODE_AUTH_FORBIDDEN not in text
+
+
+def test_explicit_target_over_http_skips_host_discovery_and_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_bom.mcp_tools import host_local
+
+    monkeypatch.setattr(host_local, "shared_transport", lambda: True)
+    warnings: list[str] = []
+    assert host_local.host_discovery_allowed(explicit_target=True, warnings=warnings) is False
+    assert warnings == [host_local.HOST_DISCOVERY_SKIPPED_WARNING]
+    with pytest.raises(Exception, match=CODE_AUTH_FORBIDDEN):
+        host_local.host_discovery_allowed(explicit_target=False, warnings=[])
+    monkeypatch.setenv(HOST_LOCAL_OPT_IN_ENV, "1")
+    assert host_local.host_discovery_allowed(explicit_target=False, warnings=warnings) is True
+    monkeypatch.setattr(host_local, "shared_transport", lambda: False)
+    monkeypatch.delenv(HOST_LOCAL_OPT_IN_ENV)
+    assert host_local.host_discovery_allowed(explicit_target=False, warnings=warnings) is True

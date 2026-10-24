@@ -102,6 +102,9 @@ _MISCONFIGURATION_TYPES = {
     "BROWSER_EXT",
     "SHADOW_AI",
 }
+# Cloud best-practice results are cloud posture whichever source carried them
+# (an imported scanner report arrives as EXTERNAL).
+_CLOUD_POSTURE_TYPES = {"CLOUD_BEST_PRACTICE_FAIL", "CLOUD_BEST_PRACTICE_ERROR"}
 _SECRET_TYPES = {"CREDENTIAL_EXPOSURE"}
 # Personal / sensitive data is a privacy concern, not a credential. It shares
 # the secret scanner as a *source*, so it must be decided by type first.
@@ -254,6 +257,9 @@ def _security_domain(
             return "dspm"
         return "cspm"
 
+    if finding_type.value in _CLOUD_POSTURE_TYPES:
+        return "cspm"
+
     if finding_type in (
         FindingType.CVE,
         FindingType.MALICIOUS_PACKAGE,
@@ -299,13 +305,18 @@ def domain_for_row(row: dict) -> Optional[str]:
     a recognizable source/type is present, so callers decide the default.
     """
     dom = canonical_domain(row.get("security_domain"))
-    if dom is not None:
+    if dom is not None and not _stale_vuln_lane(row, dom):
         return dom
     source, ftype = _parse_row_source_and_type(row)
     if ftype is None:
         return None
     evidence = row.get("evidence") if isinstance(row.get("evidence"), dict) else None
     return _security_domain(source, ftype, evidence)
+
+
+def _stale_vuln_lane(row: Mapping[str, object], stored: str) -> bool:
+    """A cloud best-practice row stored under ``vuln`` by the earlier source-routed rule."""
+    return stored == "vuln" and str(row.get("finding_type") or "").strip().upper() in _CLOUD_POSTURE_TYPES
 
 
 def _parse_row_source_and_type(row: dict) -> tuple[Optional["FindingSource"], Optional["FindingType"]]:
@@ -422,11 +433,16 @@ def _security_lenses(
     # Vulnerability-management lens.
     if finding_type in (FindingType.CVE, FindingType.MALICIOUS_PACKAGE, FindingType.MALICIOUS_MODEL, FindingType.LICENSE):
         lenses.add("vuln")
-    if not is_code_or_secret and source in (
-        FindingSource.CONTAINER,
-        FindingSource.SBOM,
-        FindingSource.EXTERNAL,
-        FindingSource.FILESYSTEM,
+    if (
+        not is_code_or_secret
+        and finding_type.value not in _CLOUD_POSTURE_TYPES
+        and source
+        in (
+            FindingSource.CONTAINER,
+            FindingSource.SBOM,
+            FindingSource.EXTERNAL,
+            FindingSource.FILESYSTEM,
+        )
     ):
         lenses.add("vuln")
 
@@ -460,7 +476,7 @@ def lenses_for_row(row: dict) -> frozenset[str]:
     """
     lenses: set[str] = set()
     primary = canonical_domain(row.get("security_domain"))
-    if primary is not None:
+    if primary is not None and not _stale_vuln_lane(row, primary):
         lenses.add(primary)
     if _is_advisory_identifier(str(row.get("cve_id") or "")):
         lenses.add("vuln")

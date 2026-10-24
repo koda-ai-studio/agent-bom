@@ -29,3 +29,13 @@ it("says when a package has no fixed version", () => {
   render(<RemediationCardList items={[{ ...item, fixed_version: null } as unknown as RemediationItem]} ticketFor={() => undefined} onCreateTicket={vi.fn()} />);
   expect(screen.getByTestId("remediation-card")).toHaveTextContent("No fixed version");
 });
+
+it("shows the credentials the servers hold beside exposure by impact, and nothing when not recorded", () => {
+  const held = { ...item, server_credentials: ["AWS_ROLE", "OPENAI_API_KEY", "STRIPE_KEY"], server_credential_count: 3 } as unknown as RemediationItem;
+  const { unmount } = render(<RemediationCardList items={[held]} ticketFor={() => undefined} onCreateTicket={vi.fn()} />);
+  const cell = within(screen.getByTestId("remediation-card")).getByText("3 credentials on server");
+  expect(cell.getAttribute("title")).toMatch(/hosting servers hold.*not filtered by this advisory's impact/);
+  unmount();
+  render(<RemediationCardList items={[{ ...item, server_credential_count: null } as unknown as RemediationItem]} ticketFor={() => undefined} onCreateTicket={vi.fn()} />);
+  expect(screen.getByTestId("remediation-card")).not.toHaveTextContent("on server");
+});

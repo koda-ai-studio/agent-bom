@@ -6,6 +6,7 @@ import json
 import logging
 from typing import Any
 
+from agent_bom.mcp_tools.host_local import HostLocalForbiddenError
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ async def policy_check_impl(
         return _truncate_response(json.dumps(result, indent=2, default=str))
     except json.JSONDecodeError as exc:
         return json.dumps({"error": f"Invalid JSON: {exc}"})
+    except HostLocalForbiddenError:
+        raise
     except ValueError as exc:
         logger.exception("MCP tool error")
         return json.dumps({"error": sanitize_error(exc)})
@@ -118,12 +121,7 @@ async def compliance_impl(
         atlas = _build_controls(ATLAS_TECHNIQUES, "atlas_tags", "code", scored=False)
         nist = _build_controls(NIST_AI_RMF, "nist_ai_rmf_tags", "code", scored=True)
         owasp_mcp = _build_controls(OWASP_MCP_TOP10, "owasp_mcp_tags", "code", scored=False)
-        owasp_agentic = _build_controls(
-            OWASP_AGENTIC_TOP10,
-            "owasp_agentic_tags",
-            "code",
-            scored=False,
-        )
+        owasp_agentic = _build_controls(OWASP_AGENTIC_TOP10, "owasp_agentic_tags", "code", scored=False)
 
         all_catalog_entries = owasp + atlas + nist + owasp_mcp + owasp_agentic
         scored_controls = [control for control in all_catalog_entries if control["scored"]]
@@ -178,6 +176,8 @@ async def compliance_impl(
                 default=str,
             )
         )
+    except HostLocalForbiddenError:
+        raise
     except Exception as exc:
         logger.exception("MCP tool error")
         return json.dumps({"error": sanitize_error(exc)})

@@ -146,10 +146,14 @@ Local stdio does not use these HTTP credentials or require a token expiry.
 Tools that read the server host's own workstation data are refused over SSE and
 Streamable HTTP with `AGENTBOM_MCP_AUTH_FORBIDDEN`, because any authenticated
 caller would otherwise receive the operator's local history: `agent_activity`
-(Claude Code and Codex session history), `browser_extension_scan`, and
-`inventory` / `tool_risk_assessment` when called without `config_path` (host
-auto-discovery). With `config_path` inside HOME or `AGENT_BOM_MCP_WORKSPACE_ROOTS`
-they still work. Set `AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS=1` only for a
+(Claude Code and Codex session history), `browser_extension_scan`, `where`
+(this host's MCP client config paths), and host auto-discovery: `inventory`,
+`tool_risk_assessment`, `scan`, `compliance` (local scan), `policy_check`,
+`runtime_correlate`, `context_graph` with `live`, and `blast_radius` when no
+persisted evidence answers it, each called without `config_path`. With
+`config_path` inside HOME or `AGENT_BOM_MCP_WORKSPACE_ROOTS` they still work. A
+`scan` that names its own `image`, `sbom_path` or `package` runs over HTTP
+without host discovery and says so in its warnings. Set `AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS=1` only for a
 single-user server whose callers may read that host. Stdio is unaffected.
 
 By default, MCP HTTP authentication uses operator-provisioned bearer credentials.
@@ -420,7 +424,7 @@ uses dashed lines where traversal is not established.
   authenticated MCP operator token plus admin role, their specific write
   scope (`cloud:write`, `findings:write`, `identity:write`, `scan:write`, `shield:write`,
   `connectors:write`, or `ticketing:write`), and an audit reason; stdio cannot invoke them.
-- Host-local reads (`agent_activity`, `browser_extension_scan`, host auto-discovery in `inventory` / `tool_risk_assessment`) are stdio-only unless `AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS=1`; see [SSE Transport](#sse-transport-remote--multi-client).
+- Host-local reads (`agent_activity`, `browser_extension_scan`, `where`, and host auto-discovery in any tool called without `config_path`, such as `scan` or `inventory`) are stdio-only unless `AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS=1`; see [SSE Transport](#sse-transport-remote--multi-client).
 - Credentials belong in the operator secret environment. Remote calls authenticate through the configured transport; do not put secrets in prompts or tool arguments.
 - Scans and explicit integrations use their documented egress and storage boundaries; see [permissions](PERMISSIONS.md). MCP server mode does not itself deploy endpoint agents.
 

@@ -43,6 +43,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - NVIDIA CSAF advisories attach only to the release branch they fix, and NVD ranges scoped to another platform are skipped.
 - Documentation and shipped manifests reference only CLI commands that exist (the proxy bootstrap bundles and the Kubernetes DaemonSet called removed commands); the check now verifies every word of a cited command. Version bumps update the OpenClaw, first-run and CloudFormation image pins.
 - zod updated to 4.6.7 for GHSA-mrhx-c7xc-m3w5 (development dependency).
+- MCP `scan`, `where`, `compliance`, `policy_check`, `runtime_correlate`, live `context_graph` and the local `blast_radius` fallback no longer read the server host's agent configs over HTTP or SSE without `config_path`; they return `AGENTBOM_MCP_AUTH_FORBIDDEN` unless `AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS=1`. A `scan` of an explicit image, SBOM or package skips host discovery with a warning.
+- Cloud best-practice results imported from an external scanner are cloud posture, not vulnerabilities, so `domain=vuln` equals the overview Vuln / SCA card (the demo listed 788 against the card's 785). Rows stored under the old lane read as cloud posture too.
+- Advisory re-match past its tenant cap serves the tenants with the oldest attempt first, so every tenant is reached within ceil(tenants / cap) runs instead of the same alphabetical tail being skipped every run.
+- The remediation plan counts the credentials the affected servers hold (names only) beside the credentials exposed by the advisory's impact, in the API (`server_credentials`, `server_credential_count`; `null` when a finding did not record them), the remediation page, the scan result, console and JSON output.
 
 ## [0.110.0] - 2026-10-21
 

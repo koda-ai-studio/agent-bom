@@ -229,3 +229,24 @@ it("opens recorded stage details from the full scan and rolls up without another
   expect(screen.queryByRole("complementary", { name: "Stage details" })).not.toBeInTheDocument();
   expect(apiMock.getScan).toHaveBeenCalledTimes(1);
 });
+
+it("labels the credentials the hosting servers hold apart from exposure by impact in the scan's plan", async () => {
+  const planItem = {
+    package: "requests", ecosystem: "pypi", current_version: "2.28.0", fixed_version: "2.31.0", severity: "medium",
+    is_kev: false, impact_score: 4, vulnerabilities: ["CVE-2023-32681"], affected_agents: ["a"], agents_pct: 100,
+    exposed_credentials: ["DATABASE_URL"], credentials_pct: 100, reachable_tools: [], tools_pct: 0,
+    owasp_tags: [], atlas_tags: [], risk_narrative: "narrative",
+  };
+  apiMock.getScanStatus.mockResolvedValue({ job_id: "scan-plan", status: "done", created_at: "2026-06-27T00:00:00Z", request: {} });
+  apiMock.getScan.mockResolvedValue({
+    job_id: "scan-plan", status: "done", created_at: "2026-06-27T00:00:00Z", request: {},
+    result: { agents: [], blast_radius: [], remediation_plan: [
+      { ...planItem, server_credentials: ["DATABASE_URL", "STRIPE_KEY"], server_credential_count: 2 },
+      { ...planItem, package: "unrecorded", server_credential_count: null },
+    ] },
+  });
+  render(<ScanResultView id="scan-plan" />);
+  const held = await screen.findByText("2 credentials on server");
+  expect(held.getAttribute("title")).toMatch(/hosting servers hold.*not filtered by this advisory's impact/);
+  expect(screen.getAllByText(/credentials? on server/)).toHaveLength(1);
+});
