@@ -251,7 +251,13 @@ def test_every_showcase_export_id_joins_the_snapshot_apart_from_documented_excep
     companions = {nid for nid in exported if nid.startswith("data_store:") and nid.removeprefix("data_store:") in snapshot}
     drift = _drift_rows_as_report_findings(report)
     assert len(drift) == 2 and drift <= set(exported)
-    unmatched = {nid: kind for nid, kind in exported.items() if snapshot.get(nid) != kind and nid not in companions | drift}
+    # The export carries every node the report's own graph builds; the showcase
+    # projection leaves out some of the report graph's overlays, which join that graph instead.
+    report_only = {nid: kind for nid, kind in _canonical(report).items() if nid not in snapshot}
+    assert set(report_only.values()) <= {"application", "directory", "code_module", "data_store", "package", "misconfiguration"}
+    unmatched = {
+        nid: kind for nid, kind in exported.items() if snapshot.get(nid) != kind and nid not in companions | drift | set(report_only)
+    }
     assert unmatched == {}
 
 

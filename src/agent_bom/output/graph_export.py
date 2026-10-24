@@ -30,7 +30,6 @@ from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_band_ran
 from agent_bom.graph.agent_projection import AgentScope, inventory_label, inventory_scope, repository_manifest_node_id
 from agent_bom.graph.compat import export_entity_type
 from agent_bom.output.finding_views import sanitize_output_text, with_output_sanitizer_cache
-from agent_bom.output.graph_export_grafts import CLOUD_ENTITY_TYPES as _CLOUD_ENTITY_TYPES
 from agent_bom.output.package_attributes import _package_node_attributes
 from agent_bom.output.technique_evidence import copy_atlas_graph_receipts
 from agent_bom.security import sanitize_sensitive_payload
@@ -57,12 +56,17 @@ class _Node:
 
 
 class _Edge:
-    __slots__ = ("source", "target", "kind", "evidence")
+    """``relationship`` is the canonical edge ``kind`` exports; only package → CVE ``affects`` differs (``vulnerable_to``)."""
 
-    def __init__(self, source: str, target: str, kind: str, evidence: dict[str, Any] | None = None) -> None:
+    __slots__ = ("source", "target", "kind", "relationship", "evidence")
+
+    def __init__(
+        self, source: str, target: str, kind: str, evidence: dict[str, Any] | None = None, relationship: str | None = None
+    ) -> None:
         self.source = source
         self.target = target
         self.kind = kind
+        self.relationship = relationship or kind
         self.evidence = _compact_attributes(evidence)
 
 
@@ -73,6 +77,7 @@ class DepGraph:
         self._nodes: dict[str, _Node] = {}
         self._edges: list[_Edge] = []
         self._edge_set: dict[tuple[str, str, str], _Edge] = {}
+        self._relationships: set[tuple[str, str, str]] = set()
 
     def add_node(self, node_id: str, label: str, kind: str, severity: str = "", attributes: dict[str, Any] | None = None) -> None:
         if node_id not in self._nodes:
@@ -80,13 +85,16 @@ class DepGraph:
         elif attributes:
             self._nodes[node_id].attributes.update(_compact_attributes(attributes))
 
-    def add_edge(self, source: str, target: str, kind: str, evidence: dict[str, Any] | None = None) -> None:
+    def add_edge(
+        self, source: str, target: str, kind: str, evidence: dict[str, Any] | None = None, relationship: str | None = None
+    ) -> None:
         key = (source, target, kind)
         stored = self._edge_set.get(key)
         configured_by = (evidence or {}).get("configured_by")
         if stored is None:
-            self._edge_set[key] = _Edge(source, target, kind, evidence)
+            self._edge_set[key] = _Edge(source, target, kind, evidence, relationship)
             self._edges.append(self._edge_set[key])
+            self._relationships.add((source, target, self._edge_set[key].relationship))
         elif isinstance(configured_by, list):
             stored.evidence["configured_by"] = sorted({*stored.evidence.get("configured_by", []), *configured_by})
 
@@ -97,6 +105,9 @@ class DepGraph:
     @property
     def edges(self) -> list[_Edge]:
         return list(self._edges)
+
+    def has_relationship(self, source: str, target: str, relationship: str) -> bool:
+        return (source, target, relationship) in self._relationships
 
     def node_count(self) -> int:
         return len(self._nodes)
@@ -150,6 +161,7 @@ def _sanitized_graph(graph: DepGraph) -> DepGraph:
             target,
             sanitize_output_text(edge.kind),
             evidence=evidence if isinstance(evidence, dict) else {},
+            relationship=sanitize_output_text(edge.relationship),
         )
     return safe
 
@@ -294,12 +306,15 @@ def _add_server_packages(graph: DepGraph, server: dict[str, Any], srv_id: str, r
             severity = vuln.get("severity", "unknown").lower()
             cve_id = f"vuln:{vid}"
             graph.add_node(cve_id, vid, "cve", severity, attributes={"canonical_node_id": cve_id, "legacy_id": f"cve:{vid}"})
-            graph.add_edge(pkg_id, cve_id, "affects")
+            graph.add_edge(pkg_id, cve_id, "affects", relationship="vulnerable_to")
 
 
 def _merge_unified_graph_evidence(graph: DepGraph, data: dict[str, Any]) -> None:
-    """Copy canonical relationships and receipts whose endpoints survive export.
-    Enrichment failure retains the base agent/server/package/CVE projection.
+    """Complete the legacy projection with every canonical node and relationship it lacks.
+
+    The export then carries the same node and edge sets the persisted scan
+    graph serves for this report. Enrichment failure retains the base
+    agent/server/package/CVE projection.
     """
     try:
         from agent_bom.graph.builder import build_unified_graph_from_report
@@ -310,23 +325,10 @@ def _merge_unified_graph_evidence(graph: DepGraph, data: dict[str, Any]) -> None
 
     copy_atlas_graph_receipts(graph, unified)
 
-    # Retain secret/PII AFFECTS endpoints, including files without AST evidence.
-    secret_finding_ids = {node.id for node in unified.nodes.values() if node.attributes.get("finding_source") == "SECRET_SCAN"}
-    finding_files = {edge.target for edge in unified.edges if edge.source in secret_finding_ids and edge.relationship.value == "affects"}
-    added: set[str] = set()
     for node in unified.nodes.values():
-        etype = node.entity_type.value if hasattr(node.entity_type, "value") else str(node.entity_type)
-        is_ast_tool = etype == "tool" and node.attributes.get("discovery_source") == "ast_analysis"
-        is_ast_source = etype == "source_file" and "ast_analysis" in node.data_sources
-        is_ast_entrypoint = etype == "code_module" and node.attributes.get("node_kind") == "application_entrypoint"
-        if (
-            etype not in _CLOUD_ENTITY_TYPES
-            and not is_ast_tool
-            and not is_ast_source
-            and not is_ast_entrypoint
-            and node.id not in finding_files
-        ) or node.id in graph._nodes:
+        if node.id in graph._nodes:
             continue
+        etype = node.entity_type.value if hasattr(node.entity_type, "value") else str(node.entity_type)
         graph.add_node(
             node.id,
             node.label or node.id,
@@ -334,13 +336,11 @@ def _merge_unified_graph_evidence(graph: DepGraph, data: dict[str, Any]) -> None
             severity=str(getattr(node, "severity", "") or ""),
             attributes=dict(node.attributes or {}),
         )
-        added.add(node.id)
 
     edges = unified.edges.values() if isinstance(unified.edges, dict) else unified.edges
     for edge in edges:
-        # Graft only edges touching a freshly-added node with both endpoints present.
-        if (edge.source in added or edge.target in added) and edge.source in graph._nodes and edge.target in graph._nodes:
-            rel = edge.relationship.value if hasattr(edge.relationship, "value") else str(edge.relationship)
+        rel = edge.relationship.value if hasattr(edge.relationship, "value") else str(edge.relationship)
+        if edge.source in graph._nodes and edge.target in graph._nodes and not graph.has_relationship(edge.source, edge.target, rel):
             graph.add_edge(edge.source, edge.target, rel, evidence=dict(getattr(edge, "evidence", {}) or {}))
 
 
@@ -610,7 +610,11 @@ def to_mermaid(
 
 @with_output_sanitizer_cache
 def to_json(graph: DepGraph, *, scan_id: str | None = None, tenant_id: str | None = None) -> dict:
-    """Serialize sanitized dependency evidence, preserving legacy aliases and receipt objects."""
+    """Serialize sanitized dependency evidence, preserving legacy aliases and receipt objects.
+
+    Nodes and edges are the persisted scan graph's for the same report; the
+    package → vulnerability edge keeps its legacy ``affects`` label.
+    """
     graph = _sanitized_graph(graph)
     return {
         "nodes": [
