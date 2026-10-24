@@ -386,13 +386,14 @@ def package_graph_node_id(
     agent_name: str | None = None,
     server_name: str | None = None,
     scoped: bool = False,
+    purl: str | None = None,
 ) -> str:
-    """Return a graph node id for a package.
+    """Return a graph node id for a package; unscoped ids are the canonical graph's.
 
     The collapsed HTML graph uses server-scoped package nodes to avoid the
     shared-package edge spaghetti that makes larger blast-radius graphs unreadable.
     """
-    identity = canonical_package_key(package_name, version, ecosystem)
+    identity = canonical_package_key(package_name, version, ecosystem, purl)
     if scoped and agent_name and server_name:
         return f"pkg:{agent_name}:{server_name}:{identity}"
     return f"pkg:{identity}"

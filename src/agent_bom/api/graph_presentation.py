@@ -10,7 +10,7 @@ from urllib.parse import quote
 
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.exposure import _exposure_path_for_attack_path, _finding_ids_for_nodes
+from agent_bom.graph.exposure import _exposure_path_for_attack_path, _finding_ids_for_nodes, exposure_path_id
 from agent_bom.graph.path_derivation import _build_edge_lookup, _edge_relationships_for_hops, _EdgeLookup, _fusion_signals_for_path
 from agent_bom.graph.types import EntityType
 
@@ -87,7 +87,7 @@ def _node_ids_for_types(graph: UnifiedGraph, path_hops: list[str], entity_types:
 
 
 def _path_identity(path: AttackPath) -> str:
-    return f"{path.source}::{path.target}::{'->'.join(path.hops)}"
+    return exposure_path_id(path)
 
 
 def _path_semantic_key(graph: UnifiedGraph, path: AttackPath) -> str:

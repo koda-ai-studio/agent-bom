@@ -21,6 +21,8 @@ from agent_bom.demo_estate.enterprise_composition import build_demo_estate
 from agent_bom.demo_estate.enterprise_findings import build_estate_findings
 from agent_bom.demo_estate.enterprise_risk import build_vulnerability_evidence
 from agent_bom.demo_estate.id_schemes import showcase_misconfig_id
+from agent_bom.demo_estate.showcase_history import refresh_report_finding_summary
+from agent_bom.demo_estate.showcase_ids import showcase_server_id
 from agent_bom.domain.finding_rehydrate import finding_from_dict
 from agent_bom.evidence.finding_node_ids import finding_row_node_id, mcp_audit_node_id, stamp_finding_node_ids
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
@@ -33,7 +35,6 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.inventory import build_agents_from_inventory
 from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
-from agent_bom.output.json_fmt import _build_finding_summary
 
 SHOWCASE_FINDING_SOURCE = "demo-showcase"
 
@@ -146,15 +147,7 @@ def append_showcase_graph_findings(report: dict[str, Any], *, tenant_id: str, ag
     for finding in findings:
         finding.first_seen = finding.first_seen or observed_at or None
     report["findings"] = [*(report.get("findings") or []), *stamp_finding_node_ids([finding.to_dict() for finding in findings])]
-    summary = _build_finding_summary(report["findings"])
-    report["finding_summary"] = summary
-    report.setdefault("summary", {}).update(
-        {
-            "total_findings": summary["total"],
-            "critical_unified_findings": summary["by_severity"]["critical"],
-            "high_unified_findings": summary["by_severity"]["high"],
-        }
-    )
+    refresh_report_finding_summary(report)
 
 
 def bind_mcp_auth_findings(findings: list[Finding], servers: Iterable[str]) -> list[Finding]:
@@ -162,7 +155,7 @@ def bind_mcp_auth_findings(findings: list[Finding], servers: Iterable[str]) -> l
     known = set(servers)
     for finding in findings:
         if finding.source is FindingSource.MCP_SCAN and finding.asset.name in known:
-            finding.node_id = f"server:{finding.asset.name}"
+            finding.node_id = showcase_server_id(finding.asset.name)
             finding.finding_node_id = mcp_audit_node_id(finding.id)
     return findings
 

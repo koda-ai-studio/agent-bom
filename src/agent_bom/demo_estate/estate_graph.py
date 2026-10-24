@@ -299,8 +299,31 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
             surface=asset.resource_type,
         ),
     )
+    if asset.resource_type == "package":
+        _as_package_node(node, asset)
     record_node_aliases(node, retired_estate_asset_ids(asset.asset_id, asset.resource_type, asset.native_id, asset.tags))
     return node
+
+
+_CLOUD_RESOURCE_FLAGS = ("internet_exposed", "publicly_accessible", "over_permissive")
+
+
+def _as_package_node(node: UnifiedNode, asset: EstateAsset) -> None:
+    """Give an image package the identity fields a scanned package carries.
+
+    Exposure belongs to the workload that runs the image, not to a library
+    inside it, so the cloud-resource flags are dropped rather than set false.
+    """
+    ecosystem = asset.tags.get("ecosystem", "")
+    for flag in _CLOUD_RESOURCE_FLAGS:
+        node.attributes.pop(flag, None)
+    node.attributes.update(
+        name=asset.tags.get("package_name", ""),
+        version=asset.tags.get("package_version", ""),
+        ecosystem=ecosystem,
+        purl=asset.native_id,
+    )
+    node.dimensions.ecosystem = ecosystem
 
 
 def project_estate_into_graph(

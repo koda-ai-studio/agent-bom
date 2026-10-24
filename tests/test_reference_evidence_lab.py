@@ -79,7 +79,8 @@ def test_reference_lab_preserves_source_receipts_and_evidence_boundaries() -> No
     # function-level or runtime evidence. An occurrence whose applicability was never
     # assessed does not block its path. Cards rank by risk, so the KEV-listed critical
     # CVE occurrences come before the modeled identity path to customer records.
-    identity_cards = [card for card in cards if card["id"].endswith("->data-store:reference-customer-records")]
+    # Path ids are source::target::hops::relationships; match the target segment.
+    identity_cards = [card for card in cards if card["id"].split("::")[1] == "data-store:reference-customer-records"]
     cve_cards = [card for card in cards if card["title"] == "CVE-2023-4863"]
     assert len(identity_cards) == 1 and len(cve_cards) == len(cards) - 1
     assert sorted(card["id"].split("::")[0] for card in cve_cards) == [

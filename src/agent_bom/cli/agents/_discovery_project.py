@@ -49,10 +49,11 @@ def scan_project(run: DiscoveryRun) -> None:
     An explicitly-passed --project/-p (or --repo, which resolves into `project`)
     is an explicit input artifact, so it is scanned even under --no-discover —
     only ambient/cwd discovery is suppressed, never the target the user named.
-    Images and code paths given alongside it are merged into the same report
-    (``-p`` with Semgrep installed sets ``code_paths`` to the project itself).
+    Images, code paths and an SBOM given alongside it are merged into the same
+    report; none of them replaces the project (``-p`` with Semgrep installed sets
+    ``code_paths`` to the project itself).
     """
-    if run.skill_only or not run.project or run.sbom_file:
+    if run.skill_only or not run.project:
         return
     for index, project in enumerate(run.all_projects):
         _scan_one_project(run, project, primary=index == 0)

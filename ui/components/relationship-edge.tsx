@@ -1,7 +1,7 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
-import { BaseEdge, EdgeLabelRenderer, SmoothStepEdge, useStore, type EdgeProps } from "@xyflow/react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { BaseEdge, EdgeLabelRenderer, SmoothStepEdge, useStore, useStoreApi, type EdgeProps } from "@xyflow/react";
 import {
   ArrowRightLeft, Box, Bug, CirclePlay, Database, Eye, Fingerprint,
   GitBranch, KeyRound, Link2, LogIn, Plug, ShieldCheck, UserRoundCheck, Wrench,
@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
-import { scheduleRelationshipLabelLayout } from "@/lib/relationship-label-layout";
+import { scheduleRelationshipLabelLayout, scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { relationshipPath } from "@/lib/relationship-routing";
 import { columnEdgePath } from "@/lib/path-card-column";
@@ -118,6 +118,16 @@ export function RelationshipEdge(props: EdgeProps) {
       width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
     })) : []);
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y]);
+  // Subscribing outside render keeps a pan from re-rendering every edge.
+  const store = useStoreApi();
+  useEffect(() => {
+    let [panX, panY] = store.getState().transform;
+    return store.subscribe(({ transform: [nextX, nextY] }) => {
+      if (nextX === panX && nextY === panY) return;
+      panX = nextX; panY = nextY;
+      scheduleRelationshipLabelLayoutAfterMove(labelRef.current);
+    });
+  }, [store]);
   if (props.data?.isClusterEdge) return <SmoothStepEdge {...props} />;
 
   return <g ref={edgeRef} data-label-disclosure={packageFinding ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>

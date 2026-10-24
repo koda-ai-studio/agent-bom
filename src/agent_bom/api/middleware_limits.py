@@ -83,7 +83,8 @@ def _build_rate_limit_store(window_seconds: int) -> InMemoryRateLimitStore | Pos
             return PostgresRateLimitStore(window_seconds=window_seconds)
         except Exception as exc:
             raise RuntimeError(
-                "Configured Postgres rate limiter could not initialize; refusing to fall back to process-local state"
+                f"Configured Postgres rate limiter could not initialize: {str(exc).rstrip('.')}. "
+                "Refusing to fall back to process-local state."
             ) from exc
     if _shared_rate_limit_required():
         raise RuntimeError(

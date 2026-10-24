@@ -16,6 +16,8 @@ includes:
 
 from __future__ import annotations
 
+import copy
+
 DEMO_INVENTORY: dict = {
     "agents": [
         {
@@ -229,3 +231,20 @@ DEMO_INVENTORY: dict = {
         },
     ],
 }
+
+
+DEMO_INVENTORY_SOURCE = "agent-bom --demo"
+
+
+def demo_inventory_document() -> dict:
+    """A copy of the demo inventory whose agents name the bundled source as their config.
+
+    Every demo producer (``scan --demo``, ``mcp inventory --demo`` and the
+    demo-estate showcase) then derives the same agent and server ids on every
+    machine. A home-relative config path would make those ids depend on
+    ``$HOME``, and editing the shared dict in place would leak into later scans.
+    """
+    document = copy.deepcopy(DEMO_INVENTORY)
+    for agent in document.get("agents", []):
+        agent.setdefault("config_path", DEMO_INVENTORY_SOURCE)
+    return document

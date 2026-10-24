@@ -196,6 +196,42 @@ def ensure_sqlite_schema_version(conn: Any, component: str, version: int = CONTR
     )
 
 
+_MIGRATION_HINT = (
+    "Run the Alembic migrations as the migration-owner role first "
+    "(Docker Compose: the one-shot `migrate` service, deploy/supabase/postgres/compose_migrate.py; "
+    "Helm: controlPlane.migrations.enabled), then start agent-bom with AGENT_BOM_POSTGRES_URL "
+    "pointing at the DML-only runtime role."
+)
+
+
+# SQLSTATE codes, matched without importing psycopg: the check also runs with
+# test doubles and in installs without the postgres extra.
+_UNDEFINED_TABLE = "42P01"
+_INSUFFICIENT_PRIVILEGE = "42501"
+
+
+def _read_schema_version_row(conn: Any, component: str) -> Any:
+    try:
+        return conn.execute(
+            "SELECT version FROM control_plane_schema_versions WHERE component = %s",
+            (component,),
+        ).fetchone()
+    except Exception as exc:
+        sqlstate = getattr(exc, "sqlstate", None)
+        if sqlstate == _UNDEFINED_TABLE:
+            raise RuntimeError(
+                f"The Postgres database at AGENT_BOM_POSTGRES_URL has not been migrated "
+                f"(control_plane_schema_versions is missing; needed by {component!r}). {_MIGRATION_HINT}"
+            ) from exc
+        if sqlstate == _INSUFFICIENT_PRIVILEGE:
+            raise RuntimeError(
+                "The runtime role in AGENT_BOM_POSTGRES_URL cannot read control_plane_schema_versions. "
+                "Connect as the provisioned runtime role (agent_bom_app), whose grants the migrations "
+                f"create, not a hand-made role. {_MIGRATION_HINT}"
+            ) from exc
+        raise
+
+
 def ensure_postgres_schema_version(conn: Any, component: str, version: int = CONTROL_PLANE_SCHEMA_VERSION) -> bool:
     """Bootstrap an isolated store or validate a migrated Postgres deployment.
 
@@ -208,10 +244,7 @@ def ensure_postgres_schema_version(conn: Any, component: str, version: int = CON
     """
 
     if postgres_deployment_configured():
-        row = conn.execute(
-            "SELECT version FROM control_plane_schema_versions WHERE component = %s",
-            (component,),
-        ).fetchone()
+        row = _read_schema_version_row(conn, component)
         if row is None:
             raise RuntimeError(f"Postgres schema component {component!r} is not migrated; run Alembic before starting agent-bom.")
         current = int(row[0])

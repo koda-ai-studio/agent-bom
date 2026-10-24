@@ -4191,6 +4191,9 @@ export interface paths {
          *     ``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the
          *     returned edges ride along (``completeness.endpoint_nodes``), so every edge
          *     lands on a returned node; ``completeness.boundary_edges`` counts any that do not.
+         *     Context nodes carry ``context: true``; stack and containment context is capped
+         *     at ``completeness.context_limit`` and may repeat across a cursor walk, while
+         *     each node is ranked on exactly one page.
          *
          *     ``stats`` describe the graph this response was computed from, NOT the page:
          *     ``stats.total_nodes`` is every node that survived loading, and
@@ -16175,6 +16178,11 @@ export interface components {
             };
             /** Compliance Tags */
             compliance_tags: string[];
+            /**
+             * Context
+             * @description ``GET /v1/graph`` only: true on stack, containment and edge-endpoint context; absent on ranked nodes.
+             */
+            context?: true | null;
             /** Data Sources */
             data_sources: string[];
             dimensions: components["schemas"]["GraphNodeDimensions"];
@@ -17327,6 +17335,43 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GraphNodePageCompleteness
+         * @description Node-page accounting; the investigation branch omits the page-only fields.
+         */
+        GraphNodePageCompleteness: {
+            /** Complete */
+            complete: boolean;
+            /**
+             * Context Limit
+             * @description Most stack and containment context nodes this page may carry.
+             */
+            context_limit?: number | null;
+            /** Context Nodes */
+            context_nodes?: number | null;
+            /** Context Omitted */
+            context_omitted?: number | null;
+            /** Context Truncated */
+            context_truncated?: boolean | null;
+            /** Endpoint Nodes */
+            endpoint_nodes?: number | null;
+            /** Ranked */
+            ranked?: number | null;
+            /** Reason */
+            reason?: string | null;
+            /** Returned */
+            returned: number;
+            /** Sampled */
+            sampled: boolean;
+            /** Status */
+            status: string;
+            /** Total */
+            total?: number | null;
+            /** Truncated */
+            truncated: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphNodeProvenance */
         GraphNodeProvenance: {
             /** Execution */
@@ -17365,6 +17410,11 @@ export interface components {
             class_uid: number;
             /** Compliance Tags */
             compliance_tags: string[];
+            /**
+             * Context
+             * @description ``GET /v1/graph`` only: true on stack, containment and edge-endpoint context; absent on ranked nodes.
+             */
+            context?: true | null;
             /** Data Sources */
             data_sources: string[];
             dimensions: components["schemas"]["GraphNodeDimensions"];
@@ -17423,7 +17473,7 @@ export interface components {
             collection_coverage?: {
                 [key: string]: unknown;
             } | null;
-            completeness: components["schemas"]["GraphCompleteness"];
+            completeness: components["schemas"]["GraphNodePageCompleteness"];
             /** Created At */
             created_at: string;
             /** Edges */
@@ -34439,9 +34489,9 @@ export interface operations {
                 dynamic_only?: boolean;
                 /** @description Max traversal depth */
                 max_depth?: number | null;
-                /** @description Read revision from the first page */
+                /** @description Optional with cursor; mismatch is 409 */
                 snapshot_generation?: string | null;
-                /** @description Opaque cursor for keyset node pagination */
+                /** @description Opaque keyset cursor; carries the snapshot generation */
                 cursor?: string | null;
                 /** @description Pagination offset for nodes */
                 offset?: number;
@@ -34552,7 +34602,7 @@ export interface operations {
             query?: {
                 /** @description Scan ID */
                 scan_id?: string | null;
-                /** @description Generation from the first page; required for continuation */
+                /** @description Optional with cursor; mismatch is 409 */
                 snapshot_generation?: string | null;
                 /** @description Pagination offset */
                 offset?: number;
@@ -34566,7 +34616,7 @@ export interface operations {
                 source_type?: string | null;
                 /** @description Only paths through a known-exploited (CISA KEV) finding (true) or through none (false); the same filter as MCP exposure_paths kev. Not combinable with node, finding or control focus. */
                 kev?: boolean | null;
-                /** @description next_cursor from the previous page (replaces offset) */
+                /** @description next_cursor from the previous page; carries the generation (replaces offset) */
                 cursor?: string | null;
                 /** @description Only paths through this node (replaced ids resolve to canonical) */
                 node_id?: string | null;

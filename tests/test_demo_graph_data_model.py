@@ -56,12 +56,36 @@ def test_one_id_scheme_per_kind(demo_graph: UnifiedGraph, entity_type: EntityTyp
 
 @pytest.mark.parametrize(
     "legacy_id",
-    ["organization:northstar-health-ai", "mc:pii-public", "mc:sg-open"],
+    [
+        "organization:northstar-health-ai",
+        "mc:pii-public",
+        "mc:sg-open",
+        "agent:cursor",
+        "server:shell-runner-server",
+        "tool:shell-runner-server:run_shell",
+        "cred:aws-secret",
+        "cred:warehouse-server:database-url",
+    ],
 )
 def test_retired_ids_stay_resolvable_as_aliases(demo_graph: UnifiedGraph, legacy_id: str) -> None:
     aliases = _aliases(demo_graph)
     assert legacy_id in aliases, legacy_id
     assert aliases[legacy_id] in demo_graph.nodes
+
+
+def test_retired_showcase_inventory_ids_resolve_from_the_store(tmp_path) -> None:
+    from agent_bom.api.graph_store import SQLiteGraphStore
+    from agent_bom.demo_estate.showcase_graph import SHOWCASE_SCAN_ID, SHOWCASE_TENANT, build_showcase_graph
+    from agent_bom.demo_estate.showcase_ids import showcase_agent_id, showcase_credential_id
+
+    graph, _, _ = build_showcase_graph(scan_id=SHOWCASE_SCAN_ID)
+    store = SQLiteGraphStore(tmp_path / "aliases.db")
+    store.save_graph(graph)
+    resolved = store.resolve_node_aliases(tenant_id=SHOWCASE_TENANT, node_ids=["agent:cursor", "cred:aws-secret"], scan_id=SHOWCASE_SCAN_ID)
+    assert resolved == {
+        "agent:cursor": showcase_agent_id("cursor"),
+        "cred:aws-secret": showcase_credential_id("shell-runner-server", "AWS_SECRET_ACCESS_KEY"),
+    }
 
 
 def test_retired_package_occurrence_ids_alias_to_canonical_packages(demo_graph: UnifiedGraph) -> None:

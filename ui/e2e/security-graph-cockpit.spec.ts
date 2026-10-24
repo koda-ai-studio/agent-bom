@@ -196,6 +196,7 @@ async function routeCockpit(
     longNodeLabel?: boolean;
     referenceGraph?: boolean;
     scenarioTool?: boolean;
+    actorSource?: boolean;
   } = {},
 ) {
   await page.route("**/v1/**", route => route.fulfill({ status: 404, json: { detail: "Outside graph fixture" } }));
@@ -222,6 +223,10 @@ async function routeCockpit(
     graph.attack_paths = [{ ...graph.attack_paths[0]!, hops: graph.nodes.map(item => item.id), edges: graph.edges.map(item => item.id) }];
     graph.stats.total_nodes = graph.nodes.length;
     graph.stats.total_edges = graph.edges.length;
+  }
+  if (options.actorSource) {
+    graph.nodes[0]!.label = "contractor-reviewer";
+    graph.edges[0]!.relationship = "acted_as";
   }
   const baseRollupItems = [
     {
@@ -906,6 +911,66 @@ test(`mobile ranked path selection moves the ordered path into view ${theme}`, a
   expect(selectionNavigations).toEqual([]);
   await expect.poll(async () => (await detail.boundingBox())?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(120);
   await page.screenshot({ path: testInfo.outputPath(`selected-path-${theme}.png`) });
+});
+}
+
+for (const theme of ["light", "dark"] as const) {
+test(`mobile selected path keeps its advisory id whole and edge labels inside the canvas ${theme}`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript((value) => window.localStorage.setItem("agent-bom-theme", value), theme);
+  await routeCockpit(page, undefined, { actorSource: true, longPathNodeCount: 7 });
+
+  await page.goto("/security-graph?lens=attack-path");
+  await page.waitForLoadState("networkidle");
+  const detail = page.getByTestId("selected-exposure-path");
+  const title = detail.getByRole("heading", { level: 2 });
+  await expect(title).toHaveText("Contractor Reviewer → CVE-2025-7783");
+  // Count the line boxes the id's own glyphs occupy: a mid-token wrap gives two.
+  const idLines = await title.evaluate((heading, id) => {
+    const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+    for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+      const start = text.textContent!.indexOf(id);
+      if (start < 0) continue;
+      const range = document.createRange();
+      range.setStart(text, start);
+      range.setEnd(text, start + id.length);
+      return new Set([...range.getClientRects()].filter(rect => rect.width > 0).map(rect => Math.round(rect.top))).size;
+    }
+    return 0;
+  }, "CVE-2025-7783");
+  expect(idLines).toBe(1);
+
+  const canvas = detail.locator(".react-flow");
+  await expect(canvas.locator(".graph-relationship-label").first()).toBeVisible();
+  const labelsOutsideCanvas = () => canvas.evaluate(flow => {
+    const frame = flow.getBoundingClientRect();
+    return [...flow.querySelectorAll<HTMLElement>(".graph-relationship-label")].flatMap(label => {
+      // Measure the drawn chip, not only its positioned wrapper.
+      const chip = label.querySelector<HTMLElement>(".relationship-badge") ?? label;
+      const outer = label.getBoundingClientRect(), drawn = chip.getBoundingClientRect();
+      const box = { left: Math.min(outer.left, drawn.left), right: Math.max(outer.right, drawn.right),
+        top: Math.min(outer.top, drawn.top), bottom: Math.max(outer.bottom, drawn.bottom), width: Math.max(outer.width, drawn.width) };
+      // A caption wholly outside the focused viewport belongs to a panned-away
+      // hop; one that straddles the canvas edge is drawn cut off.
+      const visible = box.width > 0 && box.right > frame.left && box.left < frame.right && box.bottom > frame.top && box.top < frame.bottom;
+      if (!visible) return [];
+      const inside = box.left >= frame.left - 0.5 && box.right <= frame.right + 0.5 && box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5;
+      const text = label.querySelector<HTMLElement>(".relationship-badge > span:last-child");
+      const cut = text ? text.scrollWidth > text.clientWidth + 1 && getComputedStyle(text).textOverflow !== "ellipsis" : false;
+      return inside && !cut ? [] : [`${label.textContent} ${Math.round(box.left)}-${Math.round(box.right)} in ${Math.round(frame.left)}-${Math.round(frame.right)}${cut ? " cut" : ""}`];
+    });
+  });
+  await expect(canvas.locator(".graph-relationship-label", { hasText: "Acted As" })).toBeVisible();
+  await expect.poll(labelsOutsideCanvas).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath(`mobile-selected-path-fit-${theme}.png`) });
+  // Every focused node keeps its visible captions inside the canvas too.
+  const next = detail.getByRole("button", { name: "Next graph node" });
+  for (let step = 0; step < 3 && await next.isEnabled(); step += 1) {
+    await next.click();
+    await expect.poll(labelsOutsideCanvas).toEqual([]);
+  }
+  await page.screenshot({ path: testInfo.outputPath(`mobile-selected-path-stepped-${theme}.png`) });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 }
 

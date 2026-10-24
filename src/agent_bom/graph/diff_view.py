@@ -16,6 +16,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
+from agent_bom.graph.exposure import exposure_path_id
+
 DIFF_VIEWS = ("summary", "detail", "full")
 CHANGE_KINDS = ("added", "removed", "changed")
 ROW_KINDS = ("node", "edge")
@@ -111,7 +113,14 @@ def _node_id(entry: Any) -> str:
     return str(entry)
 
 
-def _node_row(change: str, entry: Any, *, types: dict[str, dict[str, Any]], deltas: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+def _node_row(
+    change: str,
+    entry: Any,
+    *,
+    types: dict[str, dict[str, Any]],
+    deltas: dict[str, list[dict[str, Any]]],
+    renamed: dict[str, str] | None = None,
+) -> dict[str, Any]:
     nid = _node_id(entry)
     meta = entry if isinstance(entry, dict) else types.get(nid, {})
     row: dict[str, Any] = {
@@ -123,6 +132,8 @@ def _node_row(change: str, entry: Any, *, types: dict[str, dict[str, Any]], delt
         "severity": meta.get("severity") or None,
         "risk_score": float(meta.get("risk_score") or 0.0),
     }
+    if change == "changed" and renamed and nid in renamed:
+        row["previous_id"] = renamed[nid]
     if change == "changed":
         row["deltas"] = [{"field": delta.get("field"), "summary": delta.get("summary")} for delta in deltas.get(nid, [])]
     return row
@@ -147,10 +158,13 @@ def diff_rows(diff: dict[str, Any], *, changed_node_meta: dict[str, dict[str, An
     """Every change as one row, ordered nodes before edges, then change kind, then id."""
     types = changed_node_meta or {}
     deltas = diff.get("attribute_deltas") or {}
+    renamed = diff.get("nodes_renamed") or {}
     rows: list[dict[str, Any]] = []
     for (kind, change), key in _LEGACY_KEYS.items():
         for entry in diff.get(key) or []:
-            rows.append(_node_row(change, entry, types=types, deltas=deltas) if kind == "node" else _edge_row(change, entry))
+            rows.append(
+                _node_row(change, entry, types=types, deltas=deltas, renamed=renamed) if kind == "node" else _edge_row(change, entry)
+            )
     order = {value: index for index, value in enumerate(CHANGE_KINDS)}
     rows.sort(key=lambda row: (row["kind"] != "node", order[row["change"]], row["id"]))
     return rows
@@ -210,8 +224,10 @@ def diff_summary(rows: list[dict[str, Any]], *, top_n: int = SUMMARY_TOP_N) -> d
     }
 
 
-def _path_key(path: Any) -> tuple[str, ...]:
-    return tuple(str(hop) for hop in (getattr(path, "hops", None) or [getattr(path, "source", ""), getattr(path, "target", "")]))
+def _path_key(path: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Hops plus per-hop relationships: the same chain over another relationship is another path."""
+    hops = tuple(str(hop) for hop in (getattr(path, "hops", None) or [getattr(path, "source", ""), getattr(path, "target", "")]))
+    return hops, tuple(str(edge) for edge in (getattr(path, "edges", None) or []))
 
 
 def new_attack_paths(
@@ -233,6 +249,7 @@ def new_attack_paths(
                 "source": path.source,
                 "target": path.target,
                 "hops": list(path.hops),
+                "exposure_path_id": exposure_path_id(path),
                 "composite_risk": float(path.composite_risk or 0.0),
                 "summary": getattr(path, "summary", "") or "",
             }

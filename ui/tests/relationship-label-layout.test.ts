@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { scheduleRelationshipLabelLayout } from "@/lib/relationship-label-layout";
+import { scheduleRelationshipLabelLayout, scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
 
 function fixture() {
   document.body.innerHTML = '<div class="react-flow"><div class="react-flow__node"></div></div>';
@@ -124,4 +124,57 @@ it("keeps a caption on its link when only the empty circular-card margin overlap
   node.querySelector("span")!.getBoundingClientRect = () => new DOMRect(565, 184, 40, 16);
   scheduleRelationshipLabelLayout(labels[0]!);
   expect(labels[0]!.style.transform).toContain("translate(500px, 100px)");
+});
+
+const labelX = (label: HTMLElement) => Number(label.style.transform.match(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/)![1]);
+
+it("keeps a caption inset from the canvas border instead of flush against it", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  labels[1]!.remove();
+  document.querySelector<HTMLElement>(".react-flow")!.getBoundingClientRect = () => new DOMRect(0, 0, 551, 400);
+  document.querySelector<HTMLElement>(".react-flow__node")!.getBoundingClientRect = () => new DOMRect(-5000, -5000, 10, 10);
+  scheduleRelationshipLabelLayout(labels[0]!);
+  expect(labelX(labels[0]!) + 50).toBeLessThanOrEqual(551 - 4);
+});
+
+it("moves a caption that would straddle the canvas edge fully inside it when no on-line spot fits", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  labels[1]!.remove();
+  document.querySelector<HTMLElement>(".react-flow")!.getBoundingClientRect = () => new DOMRect(0, 0, 520, 400);
+  document.querySelector<HTMLElement>(".react-flow__node")!.getBoundingClientRect = () => new DOMRect(-1000, -1000, 4000, 4000);
+  scheduleRelationshipLabelLayout(labels[0]!);
+  const x = labelX(labels[0]!);
+  expect(x + 50).toBeLessThanOrEqual(520 - 4);
+  expect(x - 50).toBeGreaterThanOrEqual(4);
+});
+
+it("leaves a caption whose link is panned wholly out of view where it is", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  labels[1]!.remove();
+  document.querySelector<HTMLElement>(".react-flow")!.getBoundingClientRect = () => new DOMRect(0, 0, 300, 400);
+  document.querySelector<HTMLElement>(".react-flow__node")!.getBoundingClientRect = () => new DOMRect(-1000, -1000, 4000, 4000);
+  scheduleRelationshipLabelLayout(labels[0]!);
+  expect(labels[0]!.style.transform).toContain("translate(500px, 100px)");
+});
+
+it("re-places captions once after the canvas stops panning", () => {
+  vi.useFakeTimers();
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => frames.push(callback));
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  for (let step = 0; step < 5; step += 1) {
+    labels.forEach(scheduleRelationshipLabelLayoutAfterMove);
+    vi.advanceTimersByTime(30);
+  }
+  expect(frames).toHaveLength(0);
+  vi.advanceTimersByTime(200);
+  expect(frames).toHaveLength(1);
+  vi.useRealTimers();
 });

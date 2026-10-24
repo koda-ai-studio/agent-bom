@@ -34,6 +34,7 @@ from agent_bom.demo_estate.showcase_constants import (
     SHOWCASE_CURRENT_CREATED_AT,
     SHOWCASE_SCAN_ID,
 )
+from agent_bom.output.json_fmt import _build_finding_summary
 
 HISTORY_SCOPE_ID = "demo-estate:showcase-findings:v1"
 _EARLY_OFFSETS_DAYS = (27, 22, 17, 12)
@@ -171,6 +172,18 @@ def _operator_vex(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def refresh_report_finding_summary(report: dict[str, Any]) -> None:
+    """Recount a serialized report's finding totals after its ``findings`` changed."""
+    summary = _build_finding_summary([row for row in report.get("findings") or [] if isinstance(row, dict)])
+    report["finding_summary"] = summary
+    report["summary"] = {
+        **(report.get("summary") or {}),
+        "total_findings": summary["total"],
+        "critical_unified_findings": summary["by_severity"]["critical"],
+        "high_unified_findings": summary["by_severity"]["high"],
+    }
+
+
 def stage_report(report: dict[str, Any], index: int) -> dict[str, Any]:
     """The scan result of history stage ``index``; the last stage is the current report re-dated."""
     stages = history_stages()
@@ -195,6 +208,7 @@ def stage_report(report: dict[str, Any], index: int) -> dict[str, Any]:
     staged = {key: value for key, value in report.items() if key not in _CIS_SECTIONS}
     # Each stage's CIS benchmark states that stage's own CIS findings.
     staged.update(findings=findings, scan_id=stage.scan_id, **estate_cis_benchmarks(findings, recorded_cis_passes(report)))
+    refresh_report_finding_summary(staged)
     if index == len(stages) - 1:
         # The current scan keeps its own evidence time, so it stays the newest job of its scope.
         return staged
@@ -205,4 +219,4 @@ def stage_report(report: dict[str, Any], index: int) -> dict[str, Any]:
     return staged
 
 
-__all__ = ["HISTORY_SCOPE_ID", "HistoryStage", "history_stages", "stage_report"]
+__all__ = ["HISTORY_SCOPE_ID", "HistoryStage", "history_stages", "refresh_report_finding_summary", "stage_report"]

@@ -20580,6 +20580,19 @@
             "title": "Compliance Tags",
             "type": "array"
           },
+          "context": {
+            "anyOf": [
+              {
+                "const": true,
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "``GET /v1/graph`` only: true on stack, containment and edge-endpoint context; absent on ranked nodes.",
+            "title": "Context"
+          },
           "data_sources": {
             "items": {
               "type": "string"
@@ -23651,6 +23664,130 @@
         "title": "GraphNodeNeighborsResponse",
         "type": "object"
       },
+      "GraphNodePageCompleteness": {
+        "additionalProperties": true,
+        "description": "Node-page accounting; the investigation branch omits the page-only fields.",
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "context_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Most stack and containment context nodes this page may carry.",
+            "title": "Context Limit"
+          },
+          "context_nodes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Nodes"
+          },
+          "context_omitted": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Omitted"
+          },
+          "context_truncated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Truncated"
+          },
+          "endpoint_nodes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpoint Nodes"
+          },
+          "ranked": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranked"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "returned": {
+            "title": "Returned",
+            "type": "integer"
+          },
+          "sampled": {
+            "title": "Sampled",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "complete",
+          "sampled",
+          "truncated",
+          "returned"
+        ],
+        "title": "GraphNodePageCompleteness",
+        "type": "object"
+      },
       "GraphNodeProvenance": {
         "additionalProperties": true,
         "properties": {
@@ -23747,6 +23884,19 @@
             },
             "title": "Compliance Tags",
             "type": "array"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "const": true,
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "``GET /v1/graph`` only: true on stack, containment and edge-endpoint context; absent on ranked nodes.",
+            "title": "Context"
           },
           "data_sources": {
             "items": {
@@ -23920,7 +24070,7 @@
             "title": "Collection Coverage"
           },
           "completeness": {
-            "$ref": "#/components/schemas/GraphCompleteness"
+            "$ref": "#/components/schemas/GraphNodePageCompleteness"
           },
           "created_at": {
             "title": "Created At",
@@ -63662,7 +63812,7 @@
     },
     "/v1/graph": {
       "get": {
-        "description": "Load the unified graph with filters and pagination.\n\nNodes are paginated (offset/limit). ``edges`` carries up to 1,000 edges\nincident to the ranked page, plus containment context. Omitted relationships\nare declared by ``completeness.edges_truncated`` and remain pageable through\n``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the\nreturned edges ride along (``completeness.endpoint_nodes``), so every edge\nlands on a returned node; ``completeness.boundary_edges`` counts any that do not.\n\n``stats`` describe the graph this response was computed from, NOT the page:\n``stats.total_nodes`` is every node that survived loading, and\n``stats.total_nodes_source`` is the estate total before any load-time node\nbudget applied. The two are equal on an unbounded load. Read\n``completeness`` for whether the load was bounded and why \u2014\n``completeness.total`` always reconciles with ``stats.total_nodes_source``.\n``stats.severity_counts`` counts finding-bearing graph nodes\n(``stats.severity_basis: \"graph_nodes\"``), not issues or occurrences.",
+        "description": "Load the unified graph with filters and pagination.\n\nNodes are paginated (offset/limit). ``edges`` carries up to 1,000 edges\nincident to the ranked page, plus containment context. Omitted relationships\nare declared by ``completeness.edges_truncated`` and remain pageable through\n``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the\nreturned edges ride along (``completeness.endpoint_nodes``), so every edge\nlands on a returned node; ``completeness.boundary_edges`` counts any that do not.\nContext nodes carry ``context: true``; stack and containment context is capped\nat ``completeness.context_limit`` and may repeat across a cursor walk, while\neach node is ranked on exactly one page.\n\n``stats`` describe the graph this response was computed from, NOT the page:\n``stats.total_nodes`` is every node that survived loading, and\n``stats.total_nodes_source`` is the estate total before any load-time node\nbudget applied. The two are equal on an unbounded load. Read\n``completeness`` for whether the load was bounded and why \u2014\n``completeness.total`` always reconciles with ``stats.total_nodes_source``.\n``stats.severity_counts`` counts finding-bearing graph nodes\n(``stats.severity_basis: \"graph_nodes\"``), not issues or occurrences.",
         "operationId": "get_graph_v1_graph_get",
         "parameters": [
           {
@@ -63800,7 +63950,7 @@
             }
           },
           {
-            "description": "Read revision from the first page",
+            "description": "Optional with cursor; mismatch is 409",
             "in": "query",
             "name": "snapshot_generation",
             "required": false,
@@ -63814,12 +63964,12 @@
                   "type": "null"
                 }
               ],
-              "description": "Read revision from the first page",
+              "description": "Optional with cursor; mismatch is 409",
               "title": "Snapshot Generation"
             }
           },
           {
-            "description": "Opaque cursor for keyset node pagination",
+            "description": "Opaque keyset cursor; carries the snapshot generation",
             "in": "query",
             "name": "cursor",
             "required": false,
@@ -63832,7 +63982,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Opaque cursor for keyset node pagination",
+              "description": "Opaque keyset cursor; carries the snapshot generation",
               "title": "Cursor"
             }
           },
@@ -64101,7 +64251,7 @@
             }
           },
           {
-            "description": "Generation from the first page; required for continuation",
+            "description": "Optional with cursor; mismatch is 409",
             "in": "query",
             "name": "snapshot_generation",
             "required": false,
@@ -64115,7 +64265,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Generation from the first page; required for continuation",
+              "description": "Optional with cursor; mismatch is 409",
               "title": "Snapshot Generation"
             }
           },
@@ -64226,7 +64376,7 @@
             }
           },
           {
-            "description": "next_cursor from the previous page (replaces offset)",
+            "description": "next_cursor from the previous page; carries the generation (replaces offset)",
             "in": "query",
             "name": "cursor",
             "required": false,
@@ -64240,7 +64390,7 @@
                   "type": "null"
                 }
               ],
-              "description": "next_cursor from the previous page (replaces offset)",
+              "description": "next_cursor from the previous page; carries the generation (replaces offset)",
               "title": "Cursor"
             }
           },

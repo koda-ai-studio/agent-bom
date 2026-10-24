@@ -39,6 +39,7 @@ import {
 import { ExposurePathNeighborExplorer } from "@/components/exposure-path-neighbor-explorer";
 import { AgentInvestigationQuestions } from "@/components/agent-investigation-questions";
 import { GraphHopEvidenceInspector } from "@/components/graph-hop-evidence-inspector";
+import { AdvisoryIdText } from "@/components/graph-segmented-label";
 import {
   PathToolbarLeadProvider,
   PathViewToggle,
@@ -163,7 +164,7 @@ export function ExposurePathCommandCenter({
             <summary className="ep-header-summary">
               <span className="ep-header-copy">
                 <span className="ep-badges">
-                  <h2 className="ep-outcome-title">{headline}</h2>
+                  <h2 className="ep-outcome-title"><AdvisoryIdText text={headline} /></h2>
                   {pathHasFinding(path) ? <span className="ep-severity" data-severity={String(path.severity).toLowerCase()}>
                     {String(path.severity)} severity
                   </span> : <span className="ep-basis" data-testid="path-risk-basis" title="No finding is on this path; its rank rests on this recorded basis.">
