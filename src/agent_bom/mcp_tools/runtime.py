@@ -17,7 +17,7 @@ from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl as tool_risk_assessment_impl
 from agent_bom.mcp_tools.audit_integrity import audit_integrity_impl as audit_integrity_impl
 from agent_bom.mcp_tools.dispatch import resolve_tool_path
-from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
+from agent_bom.mcp_tools.host_local import HostLocalForbiddenError, ensure_host_local_allowed
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -630,6 +630,8 @@ async def runtime_correlate_impl(
             result["ml_api_note"] = "Pass otel_trace path to extract ML API provenance from OTel spans."
 
         return _truncate_response(json.dumps(result, indent=2, default=str))
+    except HostLocalForbiddenError:
+        raise
     except Exception as exc:
         logger.exception("Runtime correlation failed")
         return json.dumps({"error": f"Correlation failed: {sanitize_error(exc)}"})
@@ -693,6 +695,7 @@ def where_impl(
     _truncate_response,
 ) -> str:
     """Implementation of the where tool."""
+    ensure_host_local_allowed()
     try:
         import platform
 

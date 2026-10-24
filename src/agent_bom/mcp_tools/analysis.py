@@ -24,6 +24,7 @@ from agent_bom.mcp_tools.context_graph_source import (
 )
 from agent_bom.mcp_tools.finding_graph import exposure_lists, load_snapshot_paths, project_finding, public_graph_block
 from agent_bom.mcp_tools.findings import RISK_SCALE
+from agent_bom.mcp_tools.host_local import HostLocalForbiddenError
 from agent_bom.mcp_tools.rest_parity import api_reads
 from agent_bom.mcp_tools.storage import default_graph_store
 
@@ -104,6 +105,8 @@ async def blast_radius_impl(
                 default=str,
             )
         )
+    except HostLocalForbiddenError:
+        raise
     except Exception as exc:
         logger.exception("MCP tool error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc)
@@ -248,6 +251,8 @@ async def context_graph_impl(
         from agent_bom.output.interop_security import sanitize_linked_document
 
         return _truncate_response(json.dumps(sanitize_linked_document(result), indent=2, default=str))
+    except HostLocalForbiddenError:
+        raise
     except Exception as exc:
         logger.exception("MCP tool error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc)
@@ -337,6 +342,8 @@ async def analytics_query_impl(
             data = store.query_event_summary(hours=hours)
 
         return _truncate_response(json.dumps({"query_type": query_type, "results": data, "count": len(data)}, indent=2, default=str))
+    except HostLocalForbiddenError:
+        raise
     except Exception as exc:
         logger.exception("MCP tool error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc)

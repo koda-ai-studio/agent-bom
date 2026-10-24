@@ -261,9 +261,14 @@ async def run_scan_pipeline(
     # Match the CLI's deterministic CI mode: no_discover skips only machine-wide
     # discovery. An explicit config_path is an artifact and is still scanned
     # with project-scoped discovery, exactly like `--no-discover --config-dir`.
+    # Machine-wide discovery reads host data, so shared transports refuse it.
     if config_path:
         agents = discover_all(project_dir=config_path)
     else:
+        if not no_discover:
+            from agent_bom.mcp_tools.host_local import host_discovery_allowed
+
+            no_discover = not host_discovery_allowed(explicit_target=bool(image or sbom_path or package), warnings=warnings)
         agents = [] if no_discover else discover_all()
     if agents:
         scan_sources.append("agent_discovery")

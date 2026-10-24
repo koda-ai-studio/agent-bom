@@ -22,6 +22,12 @@ from agent_bom.mcp_tools.request_identity import request_context
 
 HOST_LOCAL_OPT_IN_ENV = "AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS"
 
+_ToolErrorBase: type[Exception] = _TOOL_ERROR_TYPES[0] if _TOOL_ERROR_TYPES else PermissionError  # type: ignore[assignment]
+
+
+class HostLocalForbiddenError(_ToolErrorBase):  # type: ignore[misc,valid-type]
+    """Raised as the tool's error; tools with broad handlers re-raise it unchanged."""
+
 
 def shared_transport() -> bool:
     """True when the current call arrived over a shared (HTTP/SSE) transport."""
@@ -31,11 +37,34 @@ def shared_transport() -> bool:
     return env_str("AGENT_BOM_MCP_REMOTE_BIND").strip() == "1"
 
 
+def host_local_allowed() -> bool:
+    """True over stdio, or over a shared transport the operator opted in."""
+    return not shared_transport() or env_bool(HOST_LOCAL_OPT_IN_ENV, False, on_invalid="default")
+
+
+HOST_DISCOVERY_SKIPPED_WARNING = (
+    "host agent discovery was skipped: this call arrived over HTTP or SSE, where the server host's agent configs are "
+    f"not shared; pass config_path, or set {HOST_LOCAL_OPT_IN_ENV}=1 on a single-user server"
+)
+
+
+def host_discovery_allowed(*, explicit_target: bool, warnings: list[str]) -> bool:
+    """Whether a no-path scan may discover this host's agents.
+
+    Refused over a shared transport; when the call names its own target (image,
+    SBOM or package) discovery is skipped with a warning instead of refusing.
+    """
+    if host_local_allowed():
+        return True
+    if not explicit_target:
+        ensure_host_local_allowed()
+    warnings.append(HOST_DISCOVERY_SKIPPED_WARNING)
+    return False
+
+
 def ensure_host_local_allowed() -> None:
     """Raise the forbidden tool error for a host-local read on a shared transport."""
-    if not shared_transport():
-        return
-    if env_bool(HOST_LOCAL_OPT_IN_ENV, False, on_invalid="default"):
+    if host_local_allowed():
         return
     # The client prefixes the tool name; naming it here would trip the log
     # sanitizer, which redacts identifier-like tokens.
@@ -43,6 +72,4 @@ def ensure_host_local_allowed() -> None:
         f"{CODE_AUTH_FORBIDDEN}: this tool reads the server host's local data and is off over HTTP and SSE; "
         f"set {HOST_LOCAL_OPT_IN_ENV}=1 to allow it"
     )
-    if _TOOL_ERROR_TYPES:
-        raise _TOOL_ERROR_TYPES[0](message)
-    raise PermissionError(message)
+    raise HostLocalForbiddenError(message)
