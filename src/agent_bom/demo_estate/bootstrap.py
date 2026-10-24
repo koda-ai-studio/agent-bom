@@ -30,6 +30,7 @@ from agent_bom.demo_estate.showcase_graph import (
     seed_showcase_identities,
 )
 from agent_bom.demo_estate.showcase_history import HISTORY_SCOPE_ID, HistoryStage, history_stages, stage_report
+from agent_bom.demo_estate.showcase_ids import showcase_agent_id
 from agent_bom.demo_estate.showcase_packages import showcase_package_holders
 from agent_bom.security import sanitize_error
 
@@ -240,7 +241,7 @@ def _stamp_showcase_graph_reachability(blast_radii: list[Any], agents: list[Any]
 
         blast_radius.graph_reachable = True
         blast_radius.graph_min_hop_distance = 3
-        blast_radius.graph_reachable_from_agents = sorted({f"agent:{agent.name}" for agent, _server in drawn})
+        blast_radius.graph_reachable_from_agents = sorted({showcase_agent_id(agent.name) for agent, _server in drawn})
         blast_radius.calculate_risk_score()
 
 
@@ -294,7 +295,7 @@ def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
     append_showcase_graph_findings(
         report,
         tenant_id=tenant_id,
-        agent_ids_by_label={label: f"agent:{agent_id}" for agent_id, label in SHOWCASE_AGENTS.items()},
+        agent_ids_by_label={label: showcase_agent_id(agent_id) for agent_id, label in SHOWCASE_AGENTS.items()},
     )
 
     report.setdefault("scan_sources", [])

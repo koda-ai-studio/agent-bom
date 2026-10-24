@@ -25,6 +25,9 @@ A `current-estate:` identifier describes a derived set of source revisions, not
 one scan. Keep the returned cursor and generation together while paging; restart
 a page after a generation conflict. Select a recorded scan ID to investigate
 historical evidence. REST, MCP inventory tools and the dashboard share this scope.
+While the demo estate is seeding (`/health` reports `demo_seed: pending`), an
+unpinned `GET /v1/graph` returns 503 `current_estate_seeding` with `Retry-After`;
+it never answers with a partial or empty estate marked complete.
 
 Current projections use a private rebuildable query cache. They do not add scans
 to history or modify source observations. Collection gaps remain visible and
@@ -464,6 +467,9 @@ These gaps are tracked as roadmap work. None of them block the guarantees in §2
   `org:<provider>:<id>`, configuration findings `misconfig:<source>:<id>` and
   advisories `vuln:<id>`. A retired spelling is kept in the node's
   `identity.aliases` and persisted to `graph_node_aliases`, so it still resolves.
+  Snapshot diffs compare an old id that the new snapshot records as a one-to-one
+  alias under the new id: unchanged, or changed with `previous_id`, never removed
+  plus added. Removed rows keep the old snapshot's ids.
 - **Images and workloads.** Both are `container` nodes; `attributes.container_kind`
   is `image` (registry image, SBOM subject) or `workload` (pod, deployment,
   task), set only from a recorded resource type or Kubernetes kind. A workload
@@ -865,6 +871,12 @@ a collector name never upgrades a node to successful execution. Timestamps are
 recorded observation times, not a fresh authorization check. Modeled, static and
 runtime evidence remain distinct, and a possible path is not proof of compromise.
 
+Scan graph exports (`GET /v1/scan/{job_id}/graph-export`, `agent-bom graph`,
+`agent-bom scan -f graph`) name nodes with the same `id` and `entity_type` the
+graph API serves for that scan. Their `kind` / `type` field is a display kind
+(`pkg_vuln`, `server_cred`, `cve`, ...) for styling only; join on `id`. Package
+and advisory nodes keep their pre-0.111 spelling in `attributes.legacy_id`.
+
 First retrieve the schema, then fetch a pinned graph or exposure path and save its
 scope and completeness alongside the evidence. Use snapshot diffs to investigate
 changes; confirm effective permission and successful access against their own
@@ -874,8 +886,11 @@ receipts before taking an enforcement action.
 
 `GET /v1/graph`, `/graph/search`, `/graph/agents`, `/graph/attack-paths` and
 `/graph/rollup` return `snapshot_generation` on revision-capable stores. Send
-that token and the resolved scan ID with every later `offset` or keyset `cursor`
-request. Rollup continuation applies to a container’s child pages. Missing tokens on a
+that token and the resolved scan ID with every later `offset` request. Rollup
+continuation applies to a container’s child pages. A `cursor` from `GET /v1/graph`
+or `/graph/attack-paths` carries its generation, so `snapshot_generation` is
+optional with it; a supplied token that differs from the cursor's returns 409,
+and a cursor never combines with `offset` (400). Missing tokens on an `offset`
 continuation return 422; a replaced snapshot returns 409 and requires restarting
 at the first page. A replacement during hydration discards the entire response.
 The UI retains already loaded evidence and exposes the failure without appending
@@ -979,13 +994,32 @@ tenant/snapshot revision. On 409, discard the attempted read and restart; the
 consumer never joins changed revisions. Unknown kinds or versions fail closed.
 
 For unfiltered `GET /v1/graph` node pages, `limit` bounds the ranked slice:
-the first `completeness.ranked` nodes. Additional containment ancestors follow
-that slice and are counted by `completeness.context_nodes`; their sum equals
-`completeness.returned` and the length of `nodes`. An ancestor can recur as
-context or appear on its own ranked page. The consumer counts identical copies
-once while retaining each original page in the receipt. Changed node evidence,
-duplicate nodes within a page, repeated ranked nodes, inconsistent counts and
-oversized ranked slices fail closed.
+the first `completeness.ranked` nodes. Context follows that slice, and every
+context node carries `context: true`; ranked nodes have no `context` field.
+Context is the agent stack and the containment ancestors
+(`completeness.context_nodes`), then the off-page endpoints of returned edges
+(`completeness.endpoint_nodes`). The three counts sum to `completeness.returned`
+and the length of `nodes`.
+
+Stack and containment context is capped at `completeness.context_limit`
+(`max(limit, 500)`). The stack comes first, then ancestors from the top of
+the spine down, so the few orgs and accounts outrank the many direct parents.
+`completeness.context_omitted` and `context_truncated` report the cut. A cut
+node that is the endpoint of a returned relationship returns as an endpoint,
+together with its containment relationships. Otherwise its context
+relationships are dropped.
+Endpoints are bounded by the returned relationships, so a page carries at
+most `limit + context_limit` nodes plus one endpoint per returned relationship.
+The floor of 500 keeps the containment spine of small canvas pages whole.
+
+Across a cursor walk, every node is ranked on exactly one page, but a context
+node can repeat on several pages. This is deliberate: each page stays drawable
+on its own. Count ranked nodes for coverage and dedupe context by `id`. The
+consumer counts identical copies once, ignoring the `context` marker, and keeps
+each original page in the receipt. These conditions fail closed: changed node
+evidence, duplicate nodes within a page, repeated ranked nodes, unmarked or
+misplaced context, context over its declared bound, inconsistent counts and
+oversized ranked slices.
 
 A ranked node page includes at most 1,000 incident relationships, plus its
 containment context. `completeness.edge_returned` counts the incident slice;

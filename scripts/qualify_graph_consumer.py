@@ -39,7 +39,7 @@ def validate_base_url(value):
 
 
 def ranked_node_count(page, page_size):
-    """Node pages append declared containment context, then off-page edge endpoints, after the ranked slice."""
+    """Node pages append marked, bounded containment context, then off-page edge endpoints, after the ranked slice."""
     completeness = page["completeness"]
     counts = [completeness.get(key) for key in ("ranked", "context_nodes", "returned")] + [completeness.get("endpoint_nodes", 0)]
     require(all(type(value) is int and value >= 0 for value in counts), "Invalid node-page accounting")
@@ -47,7 +47,16 @@ def ranked_node_count(page, page_size):
     require(ranked + context + endpoints == returned == len(page["nodes"]), "Inconsistent node-page accounting")
     require(ranked <= page_size, "Server exceeded the requested node-page bound")
     require(ranked > 0 or context + endpoints == 0, "Context without a ranked node violates node-page accounting")
+    marked = [node.get("context") is True for node in page["nodes"]]
+    require(not any(marked[:ranked]) and all(marked[ranked:]), "Context nodes must be marked and follow the ranked slice")
+    context_limit = completeness.get("context_limit")
+    require(type(context_limit) is int and context <= context_limit, "Server exceeded its declared context bound")
     return ranked
+
+
+def node_evidence(node):
+    """A node's evidence, independent of whether this page ranked it or carried it as context."""
+    return {key: value for key, value in node.items() if key != "context"}
 
 
 def qualify(client, *, scan_id="", page_size=100, max_pages=2):
@@ -89,11 +98,11 @@ def qualify(client, *, scan_id="", page_size=100, max_pages=2):
             require(node.get("evidence_provenance", {}).get("schema_version") == EVIDENCE, "Missing versioned node provenance")
             require(node["id"] not in page_ids, "Node repeated within a page")
             page_ids.add(node["id"])
-            require(node["id"] not in nodes or nodes[node["id"]] == node, "Node evidence changed between pages")
+            require(node["id"] not in nodes or nodes[node["id"]] == node_evidence(node), "Node evidence changed between pages")
             if index < ranked:
                 require(node["id"] not in ranked_ids, "Ranked node repeated across pages")
                 ranked_ids.add(node["id"])
-            nodes[node["id"]] = node
+            nodes[node["id"]] = node_evidence(node)
         for edge in page["edges"]:
             require(bool(edge.get("id")) and bool(edge.get("canonical_id")), "Missing stable relationship identity")
             require(edge["relationship"] in edge_kinds, "Unknown relationship kind")

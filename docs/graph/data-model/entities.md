@@ -216,7 +216,7 @@ Id formats:
 
 ## `provider`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 Id formats:
 

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
+from agent_bom.canonical_ids import agent_graph_id_for
+from agent_bom.evidence.finding_node_ids import finding_row_node_id
 from agent_bom.graph import SEVERITY_BADGE as _SEVERITY_BADGE
 from agent_bom.graph import SEVERITY_RANK as _SEVERITY_RANK
 
@@ -32,12 +34,15 @@ def _graph_policy_finding_elements(report: "AIBOMReport") -> list[dict]:
     if not findings:
         return []
 
-    agent_ids = {f"a:{agent.name}" for agent in report.agents}
+    agent_ids_by_name: dict[str, set[str]] = {}
+    for agent in report.agents:
+        agent_ids_by_name.setdefault(agent.name, set()).add(agent_graph_id_for(agent))
     elements: list[dict] = []
     for finding in findings:
         severity = str(finding.effective_severity() or "unknown").lower()
         category = finding.finding_type.value
-        node_id = f"finding:{finding.id}"
+        row = finding.to_dict()
+        node_id = str(row.get("finding_node_id") or finding_row_node_id(row) or f"finding:{finding.id}")
         description = " ".join((finding.description or "").split())
         elements.append(
             {
@@ -55,9 +60,10 @@ def _graph_policy_finding_elements(report: "AIBOMReport") -> list[dict]:
         )
         asset = getattr(finding, "asset", None)
         if getattr(asset, "asset_type", "") == "agent":
-            asset_node = f"a:{getattr(asset, 'name', '')}"
-            if asset_node in agent_ids:
-                elements.append({"data": {"source": asset_node, "target": node_id, "type": "has_finding"}})
+            # A name shared by several agents does not identify one of them.
+            owners = agent_ids_by_name.get(str(getattr(asset, "name", "")), set())
+            if len(owners) == 1:
+                elements.append({"data": {"source": next(iter(owners)), "target": node_id, "type": "has_finding"}})
     return elements
 
 

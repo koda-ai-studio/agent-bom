@@ -35,7 +35,7 @@ def test_spdx_package_ids_survive_inventory_reordering(export):
     assert ids(export(report([a, b]))) == ids(export(report([b, a])))
 
 
-def test_standalone_graph_exposes_canonical_join_key_and_retains_legacy_id():
+def test_standalone_graph_uses_the_canonical_id_and_retains_legacy_id():
     package = Package(
         name="github.com/Azure/azure-sdk-for-go", version="1.0.0", ecosystem="go", purl="pkg:golang/github.com/Azure/azure-sdk-for-go@1.0.0"
     )
@@ -45,10 +45,12 @@ def test_standalone_graph_exposes_canonical_join_key_and_retains_legacy_id():
     graph = build_graph_from_scan_data(to_json(original_report))
     node = next(n for n in graph.nodes if n.kind == "pkg")
     assert node.attributes["canonical_node_id"] in build_unified_graph_from_report(to_json(original_report)).nodes
-    assert node.id == "pkg:go/github.com/Azure/azure-sdk-for-go@1.0.0"
-    assert node.attributes["canonical_node_id"] == "pkg:" + canonical_package_key(
-        package.name, package.version, package.ecosystem, package.purl
+    assert (
+        node.id
+        == node.attributes["canonical_node_id"]
+        == "pkg:" + canonical_package_key(package.name, package.version, package.ecosystem, package.purl)
     )
+    assert node.attributes["legacy_id"] == "pkg:go/github.com/Azure/azure-sdk-for-go@1.0.0"
 
 
 def test_package_finding_uses_the_supplied_canonical_purl():

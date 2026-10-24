@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from fastapi.testclient import TestClient
 
+from agent_bom.demo_estate.showcase_ids import showcase_agent_id
 from tests._demo_estate_fixtures import VIEWER
 
 _TENANT = "default"
@@ -208,7 +209,7 @@ def test_mcp_blast_radius_holders_are_per_occurrence(demo_estate_client: TestCli
             assert scale["effective_reach_score"] == "0-100"
 
 
-_IMDS_INSTANCE = "cloud_resource:aws:aws_instance:210987654321/us-east-1/i-0de00000000000000"
+_IMDS_INSTANCE = "cloud_resource:aws:aws_instance:111122223333/us-east-1/i-0de00000000000000"
 
 
 def test_rollup_entities_count_their_own_occurrences(demo_estate_client: TestClient) -> None:
@@ -219,7 +220,7 @@ def test_rollup_entities_count_their_own_occurrences(demo_estate_client: TestCli
     assert summary["finding_occurrence_count"] == occurrences
 
     production = _get(client, "/v1/graph/rollup", node="env:production", limit=500)
-    cursor = next(child for child in production["children"] if child["id"] == "agent:cursor")["aggregate"]
+    cursor = next(child for child in production["children"] if child["id"] == showcase_agent_id("cursor"))["aggregate"]
     # Its own five package occurrences plus the drift incident it exhibits, never the estate's 257.
     assert cursor["finding_occurrence_count"] == cursor["issue_count"] == 6, cursor
     # Every occurrence lands in some top-level entry; shared servers are reported, not hidden.

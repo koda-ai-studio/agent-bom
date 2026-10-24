@@ -1127,6 +1127,8 @@ export interface GraphEstatePathChange {
   source_label?: string;
   target_label?: string;
   hops: string[];
+  /** The path's unique exposure_path_id; absent on older servers. */
+  exposure_path_id?: string;
   composite_risk: number;
   summary: string;
   /** Vendor the path's target (else source) recorded; absent when none was recorded. */

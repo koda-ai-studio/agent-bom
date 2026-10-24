@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { SegmentedLabel, atomicFontSize } from "@/components/graph-segmented-label";
+import { AdvisoryIdText, SegmentedLabel, atomicFontSize } from "@/components/graph-segmented-label";
 
 function segments(text: string): string[] {
   const { container } = render(<SegmentedLabel text={text} />);
@@ -53,5 +53,30 @@ describe("SegmentedLabel", () => {
     expect(atomicFontSize("CVE-2023-4863")).toBe("min(1em, calc(100cqi / 8.58))");
     expect(id.style.fontSize).toContain("cqi");
     expect(container.querySelector("p")!.className).toContain("[container-type:inline-size]");
+  });
+});
+
+describe("AdvisoryIdText", () => {
+  it("renders an advisory id in a title as one no-wrap token after a break point", () => {
+    const { container } = render(<h2><AdvisoryIdText text="Contractor Reviewer → CVE-2025-29927" /></h2>);
+    const ids = container.querySelectorAll("[data-advisory-id]");
+    expect(ids).toHaveLength(1);
+    expect(ids[0]!.textContent).toBe("CVE-2025-29927");
+    expect(ids[0]!.className).toContain("whitespace-nowrap");
+    expect(ids[0]!.getAttribute("title")).toBe("CVE-2025-29927");
+    expect(container.textContent).toBe("Contractor Reviewer → CVE-2025-29927");
+  });
+
+  it("keeps every GHSA and OSV id whole and leaves other text untouched", () => {
+    const { container } = render(<p><AdvisoryIdText text="GHSA-j7hp-h8jx-5ppr and PYSEC-2023-12 via form-data" /></p>);
+    expect(Array.from(container.querySelectorAll("[data-advisory-id]")).map(el => el.textContent))
+      .toEqual(["GHSA-j7hp-h8jx-5ppr", "PYSEC-2023-12"]);
+    expect(container.textContent).toBe("GHSA-j7hp-h8jx-5ppr and PYSEC-2023-12 via form-data");
+  });
+
+  it("renders text with no advisory id as plain text", () => {
+    const { container } = render(<p><AdvisoryIdText text="analyst-agent → database" /></p>);
+    expect(container.querySelector("[data-advisory-id]")).toBeNull();
+    expect(container.querySelector("p")!.innerHTML).toBe("analyst-agent → database");
   });
 });

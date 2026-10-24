@@ -764,7 +764,7 @@ def test_graph_cve_nodes():
 
     report, blast_radii = _make_sample_report()
     elements = build_graph_elements(report, blast_radii, include_cve_nodes=True)
-    cve_nodes = [e for e in elements if "cve:" in e.get("data", {}).get("id", "")]
+    cve_nodes = [e for e in elements if e.get("data", {}).get("type") == "cve"]
     assert len(cve_nodes) >= 1
     assert cve_nodes[0]["data"]["label"] == "CVE-2024-1234\nHIGH"
     assert cve_nodes[0]["data"]["type"] == "cve"
@@ -780,12 +780,13 @@ def test_graph_no_cve_nodes_when_disabled():
 
     report, blast_radii = _make_sample_report()
     elements = build_graph_elements(report, blast_radii, include_cve_nodes=False)
-    cve_nodes = [e for e in elements if "cve:" in e.get("data", {}).get("id", "")]
+    cve_nodes = [e for e in elements if e.get("data", {}).get("type") == "cve"]
     assert len(cve_nodes) == 0
 
 
 def test_graph_blocklisted_server_is_not_rendered_clean():
     """MCP intelligence should affect server risk state even without package CVEs."""
+    from agent_bom.canonical_ids import mcp_server_graph_id_for
     from agent_bom.output.graph import build_graph_elements
 
     server = MCPServer(
@@ -805,8 +806,9 @@ def test_graph_blocklisted_server_is_not_rendered_clean():
     report = AIBOMReport(agents=[agent])
 
     elements = build_graph_elements(report, [])
-    server_node = next(e["data"] for e in elements if e.get("data", {}).get("id") == "s:claude:credential-stealer")
-    uses_edge = next(e["data"] for e in elements if e.get("data", {}).get("target") == "s:claude:credential-stealer")
+    server_id = mcp_server_graph_id_for(server, agent)
+    server_node = next(e["data"] for e in elements if e.get("data", {}).get("id") == server_id)
+    uses_edge = next(e["data"] for e in elements if e.get("data", {}).get("target") == server_id)
 
     assert server_node["type"] == "server_blocked"
     assert server_node["securityBlocked"] is True
@@ -818,6 +820,7 @@ def test_graph_blocklisted_server_is_not_rendered_clean():
 
 def test_graph_non_blocking_mcp_intelligence_is_warned():
     """Non-blocking MCP intelligence gets a warning state, not a clean state."""
+    from agent_bom.canonical_ids import mcp_server_graph_id_for
     from agent_bom.output.graph import build_graph_elements
 
     server = MCPServer(
@@ -829,7 +832,7 @@ def test_graph_non_blocking_mcp_intelligence_is_warned():
     report = AIBOMReport(agents=[agent])
 
     elements = build_graph_elements(report, [])
-    server_node = next(e["data"] for e in elements if e.get("data", {}).get("id") == "s:cursor:unknown-risk-server")
+    server_node = next(e["data"] for e in elements if e.get("data", {}).get("id") == mcp_server_graph_id_for(server, agent))
 
     assert server_node["type"] == "server_intel"
     assert server_node["securityBlocked"] is False
@@ -843,7 +846,7 @@ def test_graph_collapse_cves_into_package_summary():
 
     report, blast_radii = _make_sample_report()
     elements = build_graph_elements(report, blast_radii, include_cve_nodes=False, collapse_cves=True)
-    cve_nodes = [e for e in elements if "cve:" in e.get("data", {}).get("id", "")]
+    cve_nodes = [e for e in elements if e.get("data", {}).get("type") == "cve"]
     assert cve_nodes == []
 
     package_nodes = [e for e in elements if e.get("data", {}).get("type") == "pkg_vuln"]

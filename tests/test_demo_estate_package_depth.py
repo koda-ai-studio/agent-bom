@@ -111,3 +111,28 @@ def test_impact_walks_up_through_every_level(estate, findings, graph) -> None:
     parents = {p for p in holders if graph.nodes[p].entity_type is EntityType.PACKAGE}
     assert holders == parents | {image} and len(parents) == 1
     assert parents <= ancestors and image in ancestors
+
+
+_CLOUD_RESOURCE_FLAGS = ("internet_exposed", "publicly_accessible", "over_permissive")
+
+
+def test_every_estate_package_node_reads_like_a_scanned_package(estate, graph):
+    package_assets = {asset.asset_id: asset for asset in estate.assets if asset.resource_type == "package"}
+    package_nodes = [node for node in graph.nodes.values() if node.entity_type == EntityType.PACKAGE]
+
+    assert package_nodes
+    assert {node.id for node in package_nodes} == set(package_assets)
+    for node in package_nodes:
+        asset = package_assets[node.id]
+        assert node.attributes["name"] == asset.tags["package_name"]
+        assert node.attributes["version"] == asset.tags["package_version"]
+        assert node.attributes["ecosystem"] == asset.tags["ecosystem"]
+        assert node.attributes["purl"] == asset.native_id
+        assert node.dimensions.ecosystem == asset.tags["ecosystem"]
+        assert not [flag for flag in _CLOUD_RESOURCE_FLAGS if flag in node.attributes], node.id
+
+
+def test_estate_cloud_resources_keep_their_exposure_flags(graph):
+    resources = [node for node in graph.nodes.values() if node.entity_type == EntityType.CLOUD_RESOURCE]
+    assert resources
+    assert all("internet_exposed" in node.attributes for node in resources)

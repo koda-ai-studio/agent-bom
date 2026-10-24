@@ -64,13 +64,11 @@ def run_default_scan(cfg: ScanConfig, con: "Console") -> ScanResult:
     iac_paths: tuple = ()
 
     if cfg.demo:
-        from agent_bom.demo import DEMO_INVENTORY
+        from agent_bom.demo import demo_inventory_document
 
-        for agent_data in DEMO_INVENTORY.get("agents", []):
-            agent_data.setdefault("config_path", f"~/.config/{agent_data.get('agent_type', 'agent')}/config.json")
         _demo_fd, _demo_path = tempfile.mkstemp(suffix=".json", prefix="agent-bom-demo-")
         with os.fdopen(_demo_fd, "w") as _df:
-            json.dump(DEMO_INVENTORY, _df)
+            json.dump(demo_inventory_document(), _df)
         inventory = _demo_path
         enrich = True
         compliance = True

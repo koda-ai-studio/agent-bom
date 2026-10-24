@@ -41,6 +41,17 @@ class GraphCompleteness(ReadModel):
     reason: str | None = None
 
 
+class GraphNodePageCompleteness(GraphCompleteness):
+    """Node-page accounting; the investigation branch omits the page-only fields."""
+
+    ranked: int | None = None
+    context_nodes: int | None = None
+    context_limit: int | None = Field(default=None, description="Most stack and containment context nodes this page may carry.")
+    context_omitted: int | None = None
+    context_truncated: bool | None = None
+    endpoint_nodes: int | None = None
+
+
 class GraphPagination(ReadModel):
     total: int
     offset: int
@@ -72,7 +83,7 @@ class GraphPageResponse(ReadResponse):
     interaction_risks: list[Row]
     stats: Row
     pagination: GraphPagination
-    completeness: GraphCompleteness
+    completeness: GraphNodePageCompleteness
     attack_path_pagination: GraphBoundedPage | None = None
     evidence_scope: str | None = None
 

@@ -163,3 +163,22 @@ def test_trend_point_ignores_counts_on_another_basis() -> None:
     )
     assert point is not None
     assert public_trend_point(point, None)["issues"] is None
+
+
+def test_every_stage_summary_counts_its_own_active_findings() -> None:
+    report = _report()
+    report["summary"] = {"total_findings": 9999, "critical_unified_findings": 9999, "high_unified_findings": 9999, "total_agents": 6}
+    report["finding_summary"] = {"total": 9999}
+
+    for index in range(len(history_stages())):
+        staged = stage_report(report, index)
+        active = [row for row in staged["findings"] if row.get("suppressed") is not True]
+        critical = sum(1 for row in active if row.get("severity") == "critical")
+        high = sum(1 for row in active if row.get("severity") == "high")
+        assert staged["summary"]["total_findings"] == len(active), index
+        assert staged["summary"]["critical_unified_findings"] == critical, index
+        assert staged["summary"]["high_unified_findings"] == high, index
+        assert staged["finding_summary"]["total"] == len(active), index
+        assert staged["finding_summary"]["suppressed"] == len(staged["findings"]) - len(active), index
+        assert staged["summary"]["total_agents"] == 6
+    assert report["summary"]["total_findings"] == 9999, "the source report must not be mutated"

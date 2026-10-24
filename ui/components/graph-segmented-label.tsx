@@ -44,3 +44,14 @@ export function SegmentedLabel({ text, className = "", style }: { text: string; 
     </p>
   );
 }
+
+/**
+ * Inline prose (a path title, a caption) breaks only between words: an
+ * advisory id stays one token so "CVE-2025-" never ends a line, and wraps
+ * before the id instead.
+ */
+export function AdvisoryIdText({ text }: { text: string }) {
+  return <>{text.split(ADVISORY_ID).map((chunk, index) => index % 2 === 1
+    ? <span key={index} title={chunk} data-advisory-id="true" className="whitespace-nowrap">{chunk}</span>
+    : chunk)}</>;
+}

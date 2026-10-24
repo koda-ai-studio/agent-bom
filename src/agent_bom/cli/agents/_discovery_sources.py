@@ -74,6 +74,11 @@ def discover_agents(run: DiscoveryRun) -> None:
             extra_agents = build_agents_from_inventory(data, path)
             ctx.agents.extend(extra_agents)
             con.print(f"  [green]✓[/green] {len(extra_agents)} agent(s) from {_inventory_label(path)}")
+    elif run.project and not run.config_dir and (run.no_discover or run.sbom_file):
+        # A named project is an explicit artifact, like MCP ``scan config_path``:
+        # its own MCP configs are discovered project-scoped under --no-discover
+        # and beside an SBOM, never replaced by them.
+        ctx.agents = [agent for project in run.all_projects for agent in _discover_from(run, project)]
     elif run.no_discover and not run.config_dir:
         # --config-dir is an explicit artifact; it survives --no-discover.
         ctx.agents = []

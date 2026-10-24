@@ -76,8 +76,18 @@ export type InteractionRiskAction = {
   href: string;
 };
 
-export function attackPathKey(path: AttackPath): string {
-  return `${path.source}::${path.target}::${path.hops.join("->")}`;
+/**
+ * The backend `exposure_path_id` when the row carries it; otherwise the same
+ * spelling from hops plus per-hop relationships, so paths over the same hops
+ * through different relationships never share a key.
+ */
+export function attackPathKey(path: AttackPath & { exposure_path?: { id?: string | undefined } | null | undefined }): string {
+  const issued = path.exposure_path?.id;
+  if (typeof issued === "string" && issued) return issued;
+  const base = `${path.source}::${path.target}::${path.hops.join("->")}`;
+  // Rows stored before relationships were recorded carry no edges.
+  const relationships: readonly string[] = path.edges ?? [];
+  return relationships.length > 0 ? `${base}::${relationships.join(",")}` : base;
 }
 
 function pathNodeIdsForTypes(

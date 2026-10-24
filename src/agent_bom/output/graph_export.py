@@ -27,7 +27,7 @@ from typing import Any, Union
 from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.constants import is_credential_key
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_band_rank
-from agent_bom.graph.compat import NODE_KIND_TO_ENTITY
+from agent_bom.graph.compat import export_entity_type
 from agent_bom.output.finding_views import sanitize_output_text, with_output_sanitizer_cache
 from agent_bom.output.package_attributes import _package_node_attributes
 from agent_bom.output.technique_evidence import copy_atlas_graph_receipts
@@ -255,11 +255,11 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
                 vulns = pkg.get("vulnerabilities", [])
 
                 pkg_kind = "pkg_vuln" if vulns else ("pkg_transitive" if is_direct is False else "pkg")
-                pkg_id = f"pkg:{pkg_eco}/{pkg_name}@{pkg_ver}"
+                pkg_attributes = {**_package_node_attributes(pkg), "legacy_id": f"pkg:{pkg_eco}/{pkg_name}@{pkg_ver}"}
+                pkg_id = str(pkg_attributes["canonical_node_id"])
                 pkg_label = f"{pkg_name}@{pkg_ver}" if pkg_ver else pkg_name
                 if dep_depth and dep_depth > 0:
                     pkg_label += f" (depth {dep_depth})"
-                pkg_attributes = _package_node_attributes(pkg)
                 graph.add_node(pkg_id, pkg_label, pkg_kind, attributes=pkg_attributes)
                 graph.add_edge(
                     srv_id,
@@ -269,10 +269,10 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
                 )
 
                 for vuln in vulns:
-                    vuln_id_str = vuln.get("id", "UNKNOWN")
+                    vid = vuln.get("id", "UNKNOWN")
                     severity = vuln.get("severity", "unknown").lower()
-                    cve_id = f"cve:{vuln_id_str}"
-                    graph.add_node(cve_id, vuln_id_str, "cve", severity, attributes={"canonical_node_id": f"vuln:{vuln_id_str}"})
+                    cve_id = f"vuln:{vid}"
+                    graph.add_node(cve_id, vid, "cve", severity, attributes={"canonical_node_id": cve_id, "legacy_id": f"cve:{vid}"})
                     graph.add_edge(pkg_id, cve_id, "affects")
 
     _merge_unified_graph_evidence(graph, data)
@@ -627,7 +627,7 @@ def to_json(graph: DepGraph, *, scan_id: str | None = None, tenant_id: str | Non
                 "id": n.id,
                 "label": n.label,
                 "kind": n.kind,
-                "entity_type": NODE_KIND_TO_ENTITY[n.kind].value if n.kind in NODE_KIND_TO_ENTITY else n.kind,
+                "entity_type": export_entity_type(n.kind, n.id),
                 "severity": n.severity,
                 "attributes": n.attributes,
             }

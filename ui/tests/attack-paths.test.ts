@@ -131,6 +131,29 @@ describe("attack path helpers", () => {
     expect(attackPathKey(path)).toBe("pkg::agent::cve->pkg->server->agent");
   });
 
+  it("keeps paths over the same hops through different relationships apart", () => {
+    const base: AttackPath = {
+      source: "bucket",
+      target: "store",
+      hops: ["bucket", "store"],
+      edges: ["exposed_to"],
+      composite_risk: 7,
+      summary: "",
+      credential_exposure: [],
+      tool_exposure: [],
+      vuln_ids: [],
+    };
+    const viaStores: AttackPath = { ...base, edges: ["stores"] };
+
+    // Fallback mirrors the backend exposure_path_id: hops plus per-hop relationships.
+    expect(attackPathKey(base)).toBe("bucket::store::bucket->store::exposed_to");
+    expect(attackPathKey(viaStores)).toBe("bucket::store::bucket->store::stores");
+    expect(attackPathKey(base)).not.toBe(attackPathKey(viaStores));
+    // The backend id wins whenever the row carries one.
+    expect(attackPathKey({ ...base, exposure_path: { id: "server-issued-id" } })).toBe("server-issued-id");
+    expect(attackPathKey({ ...base, exposure_path: { id: "" } })).toBe("bucket::store::bucket->store::exposed_to");
+  });
+
   it("moves attack-path selection left and right with wraparound", () => {
     const paths: AttackPath[] = [
       {
