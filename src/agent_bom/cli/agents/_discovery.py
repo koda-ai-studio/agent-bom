@@ -203,9 +203,12 @@ def autodetect_lockfiles(run: DiscoveryRun) -> None:
 
 def _top_level_iac_files(cwd: Path) -> list[str]:
     _auto_iac: list[str] = []
-    for name in ["Dockerfile", "docker-compose.yml", "docker-compose.yaml"]:
+    for name in ["Dockerfile", "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"]:
         if (cwd / name).exists():
             _auto_iac.append(str(cwd / name))
+    workflows = cwd / ".github" / "workflows"
+    if workflows.is_dir():
+        _auto_iac.extend(str(f) for f in sorted((*workflows.glob("*.yml"), *workflows.glob("*.yaml"))))
     for f in cwd.glob("*.tf"):
         _auto_iac.append(str(f))
     for f in cwd.glob("*.yaml"):

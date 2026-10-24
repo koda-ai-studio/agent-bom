@@ -132,3 +132,32 @@ class TestCompose:
         assert result.findings == []
         assert result.not_evaluated == ["settings.yaml"]
         assert all(v.status != "ran" for v in result.verdicts)
+
+
+class TestGitHubActionsFindings:
+    def test_planted_workflow_issues_are_findings_with_lines(self) -> None:
+        findings = [f for f in _scan(".github") if f.file_path.endswith("ci.yml")]
+        assert {(f.rule_id, f.line_number, f.severity) for f in findings} == {
+            ("GHA-001", 11, "high"),
+            ("GHA-002", 9, "medium"),
+            ("GHA-003", 15, "high"),
+            ("GHA-003", 18, "high"),
+            ("GHA-004", 1, "low"),
+        }
+        assert all(f.category == "github_actions" for f in findings)
+
+    def test_write_all_permissions_is_flagged_at_its_line(self) -> None:
+        findings = [f for f in _scan(".github") if f.file_path.endswith("wide.yml")]
+        assert [(f.rule_id, f.line_number, f.severity) for f in findings] == [("GHA-004", 3, "medium")]
+
+    def test_hardened_workflow_is_clean(self) -> None:
+        assert [f for f in _scan(".github") if f.file_path.endswith("safe.yml")] == []
+
+    def test_findings_paths_are_repository_relative(self) -> None:
+        paths = {f.file_path for f in _scan(".github")}
+        assert paths == {"workflows/ci.yml", "workflows/wide.yml"}
+
+    def test_explicit_workflow_file_is_evaluated(self) -> None:
+        result = scan_iac_with_context(FIXTURE / ".github" / "workflows" / "ci.yml")
+        assert result.not_evaluated == []
+        assert {f.rule_id for f in result.findings} == {"GHA-001", "GHA-002", "GHA-003", "GHA-004"}

@@ -196,20 +196,21 @@
    "────────────────────────────────────────────────────────────────────────── Discovery ───────────────────────────────────────────────────────────────────────────",
    "",
    "Auto-detected lockfiles in <ROOT>/project",
-   "Auto-detected 3 IaC file(s)",
+   "Auto-detected 4 IaC file(s)",
    "",
    "Scanning 1 filesystem path(s)...",
    "",
    "  ✓ <ROOT>/project: 3 package(s) (via native-dir)",
    "",
-   "Scanning 3 path(s) for IaC misconfigurations...",
+   "Scanning 4 path(s) for IaC misconfigurations...",
    "",
    "  ✓ <ROOT>/project/Dockerfile: 4 finding(s) (1 high, 1 medium, 2 low)",
+   "  ✓ <ROOT>/project/.github/workflows/ci.yml: 2 finding(s) (1 medium, 1 low)",
    "  ✓ <ROOT>/project/main.tf: 6 finding(s) (1 critical, 3 high, 2 medium)",
    "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 7 medium)",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                            IaC Misconfigurations — 19 finding(s)                                                             │",
+   "│                                                            IaC Misconfigurations — 21 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -224,6 +225,13 @@
    "│ │            │              │ health monitoring and automatic restart on failure.                       │                                                  │ │",
    "│ │   ⚪ LOW   │ DOCKER-017   │ pip install without --no-cache-dir                                        │ Dockerfile:3                                     │ │",
    "│ │            │              │ pip caches downloaded packages. Add --no-cache-dir to reduce image size.  │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ GHA-002      │ Action not pinned to a commit SHA                                         │ ci.yml:7                                         │ │",
+   "│ │            │              │ 'actions/checkout@v3' resolves a mutable tag or branch. Pin remote        │                                                  │ │",
+   "│ │            │              │ actions and reusable workflows to a full commit SHA.                      │                                                  │ │",
+   "│ │   ⚪ LOW   │ GHA-004      │ Workflow has no top-level permissions                                     │ ci.yml:1                                         │ │",
+   "│ │            │              │ Without a top-level permissions: block the GITHUB_TOKEN gets the          │                                                  │ │",
+   "│ │            │              │ repository default, which may be write. Declare least-privilege           │                                                  │ │",
+   "│ │            │              │ permissions.                                                              │                                                  │ │",
    "│ │ 🔴 CRITIC… │ TF-SEC-002   │ S3 bucket with public ACL                                                 │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' has acl = \"public-read\". Public S3 buckets are a top cloud  │                                                  │ │",
    "│ │            │              │ breach vector. Use private ACL and bucket policies instead.               │                                                  │ │",
@@ -271,9 +279,7 @@
    "│ │            │              │ Resource 'p' does not set automountServiceAccountToken: false. The        │                                                  │ │",
    "│ │            │              │ default service account token is mounted into every pod, enabling lateral │                                                  │ │",
    "│ │            │              │ movement if compromised.                                                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-013      │ No securityContext at pod level                                           │ deploy.yaml:5                                    │ │",
-   "│ │            │              │ Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and  │                                                  │ │",
-   "│ │            │              │ seccompProfile.                                                           │                                                  │ │",
+   "│ │    ...     │              │ +1 more                                                                   │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
    "╰──────────────────────────────────────────────────────────── 2 critical · 5 high · scan complete ─────────────────────────────────────────────────────────────╯"
   ],
@@ -346,6 +352,36 @@
       "rule_id": "DOCKER-017",
       "severity": "low",
       "title": "pip install without --no-cache-dir"
+     },
+     {
+      "attack_techniques": [],
+      "category": "github_actions",
+      "compliance": [
+       "NIST-SA-12",
+       "NIST-CM-7"
+      ],
+      "file_path": ".github/workflows/ci.yml",
+      "line_number": 7,
+      "message": "'actions/checkout@v3' resolves a mutable tag or branch. Pin remote actions and reusable workflows to a full commit SHA.",
+      "remediation": "",
+      "rule_id": "GHA-002",
+      "severity": "medium",
+      "title": "Action not pinned to a commit SHA"
+     },
+     {
+      "attack_techniques": [],
+      "category": "github_actions",
+      "compliance": [
+       "NIST-SA-12",
+       "NIST-CM-7"
+      ],
+      "file_path": ".github/workflows/ci.yml",
+      "line_number": 1,
+      "message": "Without a top-level permissions: block the GITHUB_TOKEN gets the repository default, which may be write. Declare least-privilege permissions.",
+      "remediation": "",
+      "rule_id": "GHA-004",
+      "severity": "low",
+      "title": "Workflow has no top-level permissions"
      },
      {
       "attack_techniques": [
@@ -598,7 +634,7 @@
       "title": "No securityContext at pod level"
      }
     ],
-    "total": 19
+    "total": 21
    },
    "project_inventory_data": null,
    "prompt_scan_data": null,
@@ -1533,7 +1569,7 @@
   ],
   "console": [
    "────────────────────────────────────────────────────────────────────────── Discovery ───────────────────────────────────────────────────────────────────────────",
-   "Auto-detected 3 IaC file(s)",
+   "Auto-detected 4 IaC file(s)",
    "",
    "Scanning 1 path(s) for AI components...",
    "",
@@ -1638,14 +1674,17 @@
    "",
    "  ✓ 1 notebook(s) with AI libraries found, 2 package(s) to scan",
    "",
-   "Scanning 3 path(s) for IaC misconfigurations...",
+   "Scanning 4 path(s) for IaC misconfigurations...",
    "",
    "  ✓ <ROOT>/project/Dockerfile: 4 finding(s) (1 high, 1 medium, 2 low)",
+   "  ✓ <ROOT>/project/.github/workflows/ci.yml: 2 finding(s) (1 medium, 1 low)",
    "  ✓ <ROOT>/project/main.tf: 6 finding(s) (1 critical, 3 high, 2 medium)",
    "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 7 medium)",
    "",
    "  Scanner capability",
    "  —  helm               no targets",
+   "  —  github-actions     no targets",
+   "  —  compose            no targets",
    "  ✓  dockerfile         1 file(s)",
    "  —  terraform          no targets",
    "  —  dcm                no targets",
@@ -1654,6 +1693,18 @@
    "  —  cloudformation     no targets",
    "  —  iam-policy         no targets",
    "  —  helm               no targets",
+   "  ✓  github-actions     1 file(s)",
+   "  —  compose            no targets",
+   "  —  dockerfile         no targets",
+   "  —  terraform          no targets",
+   "  —  dcm                no targets",
+   "  —  dbt                no targets",
+   "  —  kubernetes         no targets",
+   "  —  cloudformation     no targets",
+   "  —  iam-policy         no targets",
+   "  —  helm               no targets",
+   "  —  github-actions     no targets",
+   "  —  compose            no targets",
    "  —  dockerfile         no targets",
    "  ✓  terraform          1 file(s)",
    "  —  dcm                no targets",
@@ -1662,6 +1713,8 @@
    "  —  cloudformation     no targets",
    "  —  iam-policy         no targets",
    "  —  helm               no targets",
+   "  —  github-actions     no targets",
+   "  —  compose            no targets",
    "  —  dockerfile         no targets",
    "  —  terraform          no targets",
    "  —  dcm                no targets",
@@ -1671,7 +1724,7 @@
    "  —  iam-policy         no targets",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                            IaC Misconfigurations — 19 finding(s)                                                             │",
+   "│                                                            IaC Misconfigurations — 21 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -1686,6 +1739,13 @@
    "│ │            │              │ health monitoring and automatic restart on failure.                       │                                                  │ │",
    "│ │   ⚪ LOW   │ DOCKER-017   │ pip install without --no-cache-dir                                        │ Dockerfile:3                                     │ │",
    "│ │            │              │ pip caches downloaded packages. Add --no-cache-dir to reduce image size.  │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ GHA-002      │ Action not pinned to a commit SHA                                         │ ci.yml:7                                         │ │",
+   "│ │            │              │ 'actions/checkout@v3' resolves a mutable tag or branch. Pin remote        │                                                  │ │",
+   "│ │            │              │ actions and reusable workflows to a full commit SHA.                      │                                                  │ │",
+   "│ │   ⚪ LOW   │ GHA-004      │ Workflow has no top-level permissions                                     │ ci.yml:1                                         │ │",
+   "│ │            │              │ Without a top-level permissions: block the GITHUB_TOKEN gets the          │                                                  │ │",
+   "│ │            │              │ repository default, which may be write. Declare least-privilege           │                                                  │ │",
+   "│ │            │              │ permissions.                                                              │                                                  │ │",
    "│ │ 🔴 CRITIC… │ TF-SEC-002   │ S3 bucket with public ACL                                                 │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' has acl = \"public-read\". Public S3 buckets are a top cloud  │                                                  │ │",
    "│ │            │              │ breach vector. Use private ACL and bucket policies instead.               │                                                  │ │",
@@ -1733,9 +1793,7 @@
    "│ │            │              │ Resource 'p' does not set automountServiceAccountToken: false. The        │                                                  │ │",
    "│ │            │              │ default service account token is mounted into every pod, enabling lateral │                                                  │ │",
    "│ │            │              │ movement if compromised.                                                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-013      │ No securityContext at pod level                                           │ deploy.yaml:5                                    │ │",
-   "│ │            │              │ Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and  │                                                  │ │",
-   "│ │            │              │ seccompProfile.                                                           │                                                  │ │",
+   "│ │    ...     │              │ +1 more                                                                   │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
    "╰──────────────────────────────────────────────────────────── 2 critical · 5 high · scan complete ─────────────────────────────────────────────────────────────╯"
   ],
@@ -1876,6 +1934,36 @@
       "rule_id": "DOCKER-017",
       "severity": "low",
       "title": "pip install without --no-cache-dir"
+     },
+     {
+      "attack_techniques": [],
+      "category": "github_actions",
+      "compliance": [
+       "NIST-SA-12",
+       "NIST-CM-7"
+      ],
+      "file_path": ".github/workflows/ci.yml",
+      "line_number": 7,
+      "message": "'actions/checkout@v3' resolves a mutable tag or branch. Pin remote actions and reusable workflows to a full commit SHA.",
+      "remediation": "",
+      "rule_id": "GHA-002",
+      "severity": "medium",
+      "title": "Action not pinned to a commit SHA"
+     },
+     {
+      "attack_techniques": [],
+      "category": "github_actions",
+      "compliance": [
+       "NIST-SA-12",
+       "NIST-CM-7"
+      ],
+      "file_path": ".github/workflows/ci.yml",
+      "line_number": 1,
+      "message": "Without a top-level permissions: block the GITHUB_TOKEN gets the repository default, which may be write. Declare least-privilege permissions.",
+      "remediation": "",
+      "rule_id": "GHA-004",
+      "severity": "low",
+      "title": "Workflow has no top-level permissions"
      },
      {
       "attack_techniques": [
@@ -2128,7 +2216,7 @@
       "title": "No securityContext at pod level"
      }
     ],
-    "total": 19
+    "total": 21
    },
    "project_inventory_data": {
     "advisory_depth_pct": 0,

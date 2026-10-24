@@ -34,6 +34,7 @@ from agent_bom.iac.compose import is_compose_file, scan_compose
 from agent_bom.iac.dbt_security import is_dbt_file, scan_dbt_file
 from agent_bom.iac.dcm import is_dcm_migration, scan_dcm_migration
 from agent_bom.iac.dockerfile import scan_dockerfile
+from agent_bom.iac.github_actions_rules import is_workflow_file, scan_github_workflow
 from agent_bom.iac.helm import scan_chart_yaml, scan_values_yaml
 from agent_bom.iac.iam_policy import is_iam_policy_document, scan_iam_policy
 from agent_bom.iac.kubernetes import scan_k8s_manifest
@@ -61,6 +62,7 @@ __all__ = [
 # Add new scanners here; the verdict table always has one entry per ID.
 _SCANNER_IDS: tuple[str, ...] = (
     "helm",
+    "github-actions",
     "compose",
     "dockerfile",
     "terraform",
@@ -137,7 +139,7 @@ def is_iac_file(path: Path, root: Path | None = None) -> bool:
     """
     if _is_chart_yaml(path) or _is_values_yaml(path):
         return True
-    if _is_dockerfile(path) or is_compose_file(path):
+    if _is_dockerfile(path) or is_compose_file(path) or is_workflow_file(path):
         return True
     if path.suffix == ".tf":
         return True
@@ -241,6 +243,14 @@ def scan_iac_with_context(
                     findings.extend(scan_values_yaml(path))
             else:
                 files_matched.setdefault("helm", 0)
+        elif is_workflow_file(path):
+            if "github-actions" not in disabled:
+                files_matched["github-actions"] += 1
+                findings.extend(scan_github_workflow(path))
+            # A dbt project's CI workflow is also a dbt input.
+            if "dbt" not in disabled and is_dbt_file(path, root_path):
+                files_matched["dbt"] += 1
+                findings.extend(scan_dbt_file(path, root_path))
         elif is_compose_file(path):
             if "compose" not in disabled:
                 files_matched["compose"] += 1

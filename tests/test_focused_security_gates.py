@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -344,3 +345,23 @@ def test_image_missing_tar_errors_nonzero(tmp_path: Path):
     missing = tmp_path / "nope.tar"
     result = CliRunner().invoke(main, ["image", "--tar", str(missing)])
     assert result.exit_code == 2
+
+
+def test_iac_command_gates_and_emits_sarif_for_workflow_findings(tmp_path: Path):
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "ci.yml").write_text(
+        "on: issues\npermissions:\n  contents: read\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n"
+        '      - run: echo "${{ github.event.issue.title }}"\n',
+        encoding="utf-8",
+    )
+    out = tmp_path / "out.sarif"
+    result = CliRunner().invoke(main, ["iac", str(tmp_path), "-f", "sarif", "-o", str(out), "--fail-on-severity", "high"])
+
+    assert result.exit_code == 1, result.output
+    sarif = json.loads(out.read_text(encoding="utf-8"))
+    hits = [r for r in sarif["runs"][0]["results"] if r["ruleId"].endswith("GHA-003")]
+    assert len(hits) == 1
+    location = hits[0]["locations"][0]["physicalLocation"]
+    assert location["artifactLocation"]["uri"] == ".github/workflows/ci.yml"
+    assert location["region"]["startLine"] == 8

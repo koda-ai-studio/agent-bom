@@ -1,0 +1,19 @@
+name: ci
+on:
+  pull_request_target:
+    types: [opened]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b
+      - name: greet
+        run: |
+          echo "Title: ${{ github.event.pull_request.title }}"
+          echo "Safe: ${{ github.sha }}"
+      - name: branch
+        run: echo ${{ github.head_ref }}
+      - uses: ./local-action
