@@ -169,7 +169,9 @@ wandb = ["wandb>=0.16"]
 # MLflow discovery still works if users install `mlflow` separately.
 openai = ["openai>=1.12"]
 ai-enrich = [
-    "litellm>=1.83.14",
+    # 1.96.2 is clear of every litellm advisory on OSV as of 2026-10-24, including
+    # CVE-2026-84377 (SSRF and provider-credential exfiltration).
+    "litellm>=1.96.2",
     # Security floors mirrored from [tool.uv].override-dependencies so pip installs
     # cannot land vulnerable litellm transitives (Closes #3684).
     "python-dotenv>=1.2.2",
