@@ -189,12 +189,11 @@ async def test_exposure_paths_derives_persisted_topology_with_limits(topology_st
 @pytest.mark.asyncio
 async def test_exposure_paths_fallback_preserves_tenant_scope(topology_store, monkeypatch):
     monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", "other")
-    payload = json.loads(
-        await exposure_paths_impl(tenant_id="default", scan_id="topology", view="full", _get_graph_store=lambda: topology_store)
-    )
-    assert payload["count"] == 0
-    assert payload["nodes"] == []
-    assert payload["edges"] == []
+    raw = await exposure_paths_impl(tenant_id="default", scan_id="topology", view="full", _get_graph_store=lambda: topology_store)
+    payload = json.loads(raw)
+    # Another tenant's snapshot is not found for this tenant; nothing of it is returned.
+    assert payload["error"]["code"] == "AGENTBOM_MCP_NOT_FOUND_RESOURCE"
+    assert "nodes" not in payload and "paths" not in payload
 
 
 @pytest.mark.asyncio

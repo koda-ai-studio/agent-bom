@@ -371,6 +371,21 @@ def empty_summary(*, tenant_id: str) -> dict[str, Any]:
 # ═══════════════════════════════════════════════════════════════════════════
 
 
+def _check_asset_page(*, cursor: Optional[str], offset: int, limit: int) -> None:
+    if limit < 1 or limit > MAX_PAGE_LIMIT:
+        raise InventoryError(f"limit must be between 1 and {MAX_PAGE_LIMIT}", status_code=422)
+    if offset < 0:
+        raise InventoryError("offset must be >= 0", status_code=422)
+    if cursor and offset:
+        raise InventoryError("cursor replaces offset; send only the cursor.", status_code=400)
+    if not cursor and offset > MAX_NODE_PAGE_OFFSET:
+        raise InventoryError(
+            f"offset={offset} exceeds the maximum supported offset ({MAX_NODE_PAGE_OFFSET}). "
+            "Use the cursor= keyset parameter (next_cursor from the previous page) for deep pagination.",
+            status_code=422,
+        )
+
+
 async def build_asset_list(
     *,
     store: Any,
@@ -394,16 +409,7 @@ async def build_asset_list(
     selected graph store against one resolved snapshot. Severity means the
     highest directly linked finding severity, never the asset node's own rating.
     """
-    if limit < 1 or limit > MAX_PAGE_LIMIT:
-        raise InventoryError(f"limit must be between 1 and {MAX_PAGE_LIMIT}", status_code=422)
-    if offset < 0:
-        raise InventoryError("offset must be >= 0", status_code=422)
-    if not cursor and offset > MAX_NODE_PAGE_OFFSET:
-        raise InventoryError(
-            f"offset={offset} exceeds the maximum supported offset ({MAX_NODE_PAGE_OFFSET}). "
-            "Use the cursor= keyset parameter (next_cursor from the previous page) for deep pagination.",
-            status_code=422,
-        )
+    _check_asset_page(cursor=cursor, offset=offset, limit=limit)
 
     check_filter_lengths(
         type=type,
@@ -442,7 +448,7 @@ async def build_asset_list(
             limit=limit,
         )
     except ValueError as exc:
-        raise InventoryError(str(sanitize_error(exc)), status_code=400) from exc
+        raise InventoryError(str(sanitize_error(exc)), status_code=422) from exc
 
     if not result.get("scan_id"):
         raise InventoryError("No graph snapshot is available for the selected scope", status_code=404)
@@ -537,7 +543,7 @@ async def build_asset_detail(
             snapshot_generation=snapshot_generation,
         )
     except ValueError as exc:
-        raise InventoryError("Invalid relationship page or changed snapshot; restart asset inspection.", status_code=400) from exc
+        raise InventoryError("Invalid relationship page or changed snapshot; restart asset inspection.", status_code=422) from exc
     if context is None:
         return None
 

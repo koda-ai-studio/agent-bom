@@ -13,7 +13,9 @@ The generated [data model reference](DATA_MODEL.md) lists every entity, relation
 An omitted `scan_id` on inventory and graph reads selects the current tenant
 estate. A complete rescan replaces only its own target. Incomplete observations
 retain prior evidence for that target; other targets and observed clean assets
-remain visible. Explicit historical scan IDs keep their original scope.
+remain visible. Explicit historical scan IDs keep their original scope. A graph read whose
+`scan_id` names no snapshot of the caller's tenant returns 404, never an empty
+page marked complete; MCP graph tools return `AGENTBOM_MCP_NOT_FOUND_RESOURCE`.
 
 ```bash
 curl -H "X-API-Key: $AGENT_BOM_API_KEY" \
@@ -25,9 +27,14 @@ A `current-estate:` identifier describes a derived set of source revisions, not
 one scan. Keep the returned cursor and generation together while paging; restart
 a page after a generation conflict. Select a recorded scan ID to investigate
 historical evidence. REST, MCP inventory tools and the dashboard share this scope.
-While the demo estate is seeding (`/health` reports `demo_seed: pending`), an
-unpinned `GET /v1/graph` returns 503 `current_estate_seeding` with `Retry-After`;
-it never answers with a partial or empty estate marked complete.
+While the demo estate is seeding (`/health` reports `demo_seed: pending`), every
+unpinned current-estate read returns 503 `current_estate_seeding` with
+`Retry-After`: `/v1/graph` and its sibling graph reads (attack and exposure
+paths, search, agents, rollup, node reads, query, deploy gate), and
+`/v1/inventory/assets` and `/v1/inventory/summary`. MCP graph tools served by the same process return
+`AGENTBOM_MCP_UPSTREAM_UNAVAILABLE` with `details.reason: current_estate_seeding`
+and `details.retry_after_seconds`. None answers with a partial or empty estate
+marked complete. Reads pinned to a recorded `scan_id` are served.
 
 Current projections use a private rebuildable query cache. They do not add scans
 to history or modify source observations. Collection gaps remain visible and
@@ -890,7 +897,9 @@ that token and the resolved scan ID with every later `offset` request. Rollup
 continuation applies to a container’s child pages. A `cursor` from `GET /v1/graph`
 or `/graph/attack-paths` carries its generation, so `snapshot_generation` is
 optional with it; a supplied token that differs from the cursor's returns 409,
-and a cursor never combines with `offset` (400). Missing tokens on an `offset`
+and a cursor never combines with `offset` (400) on `/v1/graph`, `/graph/search`,
+`/graph/agents`, the attack-path queues or `/v1/inventory/assets`. A cursor that
+does not decode returns 422 on every route. Missing tokens on an `offset`
 continuation return 422; a replaced snapshot returns 409 and requires restarting
 at the first page. A replacement during hydration discards the entire response.
 The UI retains already loaded evidence and exposes the failure without appending

@@ -212,6 +212,7 @@ from agent_bom.graph.cloud_service_projection import project_aws_services, proje
 from agent_bom.graph.cloud_storage_projection import project_buckets, project_databases, project_side_scan_targets
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_bindings import project_credential_bindings
+from agent_bom.graph.declared_assets import declared_assets_by_identifier
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence as edge_evidence
 from agent_bom.graph.finding_projection import _resolve_skill_audit_target_ids as _resolve_skill_audit_target_ids
@@ -424,7 +425,7 @@ def _project_inventory_findings(
             native_projector(graph, inventory)
         else:
             _add_cloud_inventory(graph, inventory, inputs.data_source)
-    project_benchmarks(graph, benchmark_inputs(report))
+    project_benchmarks(graph, benchmark_inputs(report), declared_assets_by_identifier(report.get("findings")))
     project_sast(graph, report.get("sast") or report.get("sast_data"))
     project_iac(graph, report.get("iac_findings") or report.get("iac_findings_data"))
     project_skill_audit(graph, report.get("skill_audit"), indexes, report.get("findings"))

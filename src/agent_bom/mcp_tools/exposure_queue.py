@@ -17,6 +17,7 @@ from typing import Any, Literal
 
 from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence
 from agent_bom.config import GRAPH_INVESTIGATION_NODE_BUDGET, MCP_MAX_RESPONSE_CHARS
+from agent_bom.core.graph_backend_errors import NeptuneGraphStoreUnsupportedOperationError
 from agent_bom.graph.attack_path_queue import AttackPathFilters, QueuePage, attack_path_rank_window, ranked_queue_page
 from agent_bom.graph.attack_path_queue_rank import MIN_SEVERITY_CHOICES, path_is_kev, path_rank_fields
 from agent_bom.graph.completeness import graph_completeness
@@ -25,7 +26,7 @@ from agent_bom.graph.edge_lookup import _build_edge_lookup
 from agent_bom.graph.exposure import _exposure_path_for_attack_path
 from agent_bom.graph.exposure_cursor import decode_exposure_cursor
 from agent_bom.graph.node_alias_resolution import resolve_snapshot_node_ids
-from agent_bom.mcp_errors import CODE_UNSUPPORTED_BACKEND, CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
+from agent_bom.mcp_errors import CODE_NOT_FOUND_RESOURCE, CODE_UNSUPPORTED_BACKEND, CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
 
 VIEWS = ("summary", "full")
 RISK_SCALE = {
@@ -231,6 +232,22 @@ async def pinned_identity(store: Any, tenant_id: str, scan_id: str | None) -> tu
             CODE_UNSUPPORTED_BACKEND,
             "Exposure paths require generation-pinned graph reads, which this graph backend does not support.",
         )
+
+
+async def unknown_snapshot_error(store: Any, tenant_id: str, scan_id: str | None) -> str | None:
+    """An explicit scan id that names no snapshot of this tenant is not found, never an empty complete answer."""
+    if not scan_id or scan_id.startswith("current-estate:"):
+        return None
+    snapshots_by_ids = getattr(store, "snapshots_by_ids", None)
+    if snapshots_by_ids is None:
+        return None
+    try:
+        found = await asyncio.to_thread(snapshots_by_ids, tenant_id=tenant_id, scan_ids={scan_id})
+    except (NotImplementedError, NeptuneGraphStoreUnsupportedOperationError):
+        return None  # A backend that cannot list snapshots answers the read itself.
+    if any(str(row.get("scan_id") or "") == scan_id for row in found or []):
+        return None
+    return mcp_error_json(CODE_NOT_FOUND_RESOURCE, "Graph snapshot not found for this tenant.", details={"scan_id": scan_id})
 
 
 async def queue_page(store: Any, tenant_id: str, scan_id: str, *, offset: int, limit: int, filters: AttackPathFilters) -> QueuePage:
@@ -523,6 +540,9 @@ async def exposure_paths_for_tenant(
     if isinstance(resumed, str):
         return resumed
     continuation, scan_id, offset = resumed
+    missing = await unknown_snapshot_error(_get_graph_store(), tenant_id, scan_id)
+    if missing:
+        return missing
     read = await _read_exposure(_get_graph_store(), tenant_id, scan_id, query, offset, limit, continuation)
     if isinstance(read, str):
         return read
@@ -547,5 +567,6 @@ __all__ = [
     "SNAPSHOT_CHANGED_MESSAGE",
     "project_paths",
     "summary_path",
+    "unknown_snapshot_error",
     "whole_queue",
 ]

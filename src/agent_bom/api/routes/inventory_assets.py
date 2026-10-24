@@ -38,13 +38,14 @@ from agent_bom.api.inventory_service import MAX_PAGE_LIMIT, InventoryError
 from agent_bom.api.neptune_graph import NeptuneGraphStoreUnsupportedOperationError
 from agent_bom.api.read_models import documented
 from agent_bom.api.read_models.governance_b import InventoryAssetDetailResponse, InventoryAssetsResponse, InventorySummaryResponse
+from agent_bom.api.routes.graph_routes._admission import EstateReadRoute
 from agent_bom.api.stores import _get_graph_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(route_class=EstateReadRoute)
 
 
 async def _store_call(fn: Callable[..., Any], /, *args: Any, **kwargs: Any) -> Any:

@@ -112,7 +112,7 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | `credential_ref` | 9 | — | — |
 | `data_store` | 7 | — | `data_store:snowflake:db:{name}`, `data_store:snowflake:schema:{fqn}`, `data_store:snowflake:share:{share_name}` (+4) |
 | `dataset` | 7 | — | `dataset:card:{…}` |
-| `directory` | 6 | — | `directory:manifest:{agent_node_key}:{srv_name}` |
+| `directory` | 6 | — | — |
 | `drift_incident` | 9 | — | — |
 | `environment` | 9 | — | `env:{provider}:{account_scope}:{environment}` |
 | `external_import` | 6 | — | — |
@@ -129,7 +129,7 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | `provider` | 7 | — | `provider:{provider}` |
 | `resource` | 7 | `canonical_mcp_resource_id` | `stable_node_id(…) — UUIDv5` |
 | `role` | 8 | — | — |
-| `server` | 2 | `canonical_mcp_server_id` | `directory:manifest:{agent_node_key}:{srv_name}` |
+| `server` | 2 | `canonical_mcp_server_id` | — |
 | `service_account` | 8 | — | — |
 | `service_principal` | 8 | — | — |
 | `source_file` | 6 | — | `{value}:{source_file}` |

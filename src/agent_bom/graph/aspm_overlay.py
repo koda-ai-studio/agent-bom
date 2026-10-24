@@ -45,6 +45,7 @@ from agent_bom.graph.asset_identity import is_compute_instance
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.relationship_specs import relationship_spec
 from agent_bom.graph.types import EntityType, GraphSemanticLayer, RelationshipType
 
 _OVERLAY_SOURCE = "aspm-overlay"
@@ -291,8 +292,11 @@ def _finding_node_id(graph: UnifiedGraph, finding: Any) -> str | None:
         val = asset.get(field_name)
         if isinstance(val, str) and val.strip():
             candidates.append(val.strip())
+    belongs_to = relationship_spec(RelationshipType.BELONGS_TO)
     for candidate in candidates:
-        if graph.has_node(candidate):
+        node = graph.get_node(candidate)
+        # A component the contract does not let belong to an application is never attached.
+        if node is not None and (belongs_to is None or belongs_to.allows(node.entity_type, EntityType.APPLICATION)):
             return candidate
     return None
 

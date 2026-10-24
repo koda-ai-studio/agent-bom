@@ -482,7 +482,7 @@ def test_detail_cursor_rejects_replaced_snapshot(inventory_store):
     first = client.get("/v1/inventory/assets/server:mcp", params={"limit": 1}).json()
     _seed_graph(inventory_store)
     response = client.get("/v1/inventory/assets/server:mcp", params={"cursor": first["next_cursor"], "limit": 1})
-    assert response.status_code == 400
+    assert response.status_code == 422
 
 
 # ── Tenant isolation ──

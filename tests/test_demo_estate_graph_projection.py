@@ -158,6 +158,8 @@ def test_findings_attach_to_the_inventoried_asset(projected, estate, estate_find
             EntityType.VULNERABILITY,
         ):
             continue
+        if graph.nodes[edge.target].entity_type in (EntityType.SOURCE_FILE, EntityType.CONFIG_FILE):
+            continue  # A code finding also affects the file it names; its asset edge is checked here.
         assert edge.target in asset_ids, f"finding attached to a non-inventoried node: {edge.target}"
         affected.add(edge.target)
     # Derived, not pinned: what must hold is that every finding lands on an

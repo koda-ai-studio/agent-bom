@@ -120,10 +120,6 @@ Id formats:
 
 Emitted by: `graph/agent_projection.py`, `graph/repo_structure_overlay.py`
 
-Id formats:
-
-- `directory:manifest:{agent_node_key}:{srv_name}`
-
 ## `drift_incident`
 
 Emitted by: `graph/governance_overlay.py`
@@ -237,10 +233,6 @@ Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_cortex.
 ## `server`
 
 Emitted by: `api/graph_page_stack.py`, `context_graph.py`, `graph/agent_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
-
-Id formats:
-
-- `directory:manifest:{agent_node_key}:{srv_name}`
 
 ## `service_account`
 

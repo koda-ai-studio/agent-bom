@@ -250,7 +250,7 @@ generation check prevents mixing graph data across a replaced snapshot.
 `limit` counts relationships (1–100), so parallel edges can share a neighbor.
 `in` and `out` filter recorded endpoints; they do not establish permission or
 execution. Completeness covers the current recorded page, and totals stay unknown.
-On a stale-cursor or generation-mismatch 400, discard the accumulated view and
+On a stale or malformed cursor (422), discard the accumulated view and
 restart from the first page; unsupported backends return 501.
 The shared graph inspector uses these pages for recorded-relationship exploration.
 
