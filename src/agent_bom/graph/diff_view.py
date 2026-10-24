@@ -16,6 +16,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
+from agent_bom.graph.exposure import exposure_path_id
+
 DIFF_VIEWS = ("summary", "detail", "full")
 CHANGE_KINDS = ("added", "removed", "changed")
 ROW_KINDS = ("node", "edge")
@@ -222,8 +224,10 @@ def diff_summary(rows: list[dict[str, Any]], *, top_n: int = SUMMARY_TOP_N) -> d
     }
 
 
-def _path_key(path: Any) -> tuple[str, ...]:
-    return tuple(str(hop) for hop in (getattr(path, "hops", None) or [getattr(path, "source", ""), getattr(path, "target", "")]))
+def _path_key(path: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Hops plus per-hop relationships: the same chain over another relationship is another path."""
+    hops = tuple(str(hop) for hop in (getattr(path, "hops", None) or [getattr(path, "source", ""), getattr(path, "target", "")]))
+    return hops, tuple(str(edge) for edge in (getattr(path, "edges", None) or []))
 
 
 def new_attack_paths(
@@ -245,6 +249,7 @@ def new_attack_paths(
                 "source": path.source,
                 "target": path.target,
                 "hops": list(path.hops),
+                "exposure_path_id": exposure_path_id(path),
                 "composite_risk": float(path.composite_risk or 0.0),
                 "summary": getattr(path, "summary", "") or "",
             }

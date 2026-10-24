@@ -37,3 +37,13 @@ def test_a_legacy_path_without_relationships_keeps_its_hop_id():
 
     path = AttackPath(source="a", target="c", hops=["a", "b", "c"])
     assert exposure_path_id(path) == "a::c::a->b->c"
+
+
+def test_diff_highlights_key_paths_by_relationship_and_carry_the_shared_id():
+    from agent_bom.graph.diff_view import new_attack_paths
+    from agent_bom.graph.exposure import exposure_path_id
+
+    first, second = _pair()
+    added = new_attack_paths([first], [first, second], old_total=1, new_total=2, window=10)
+    assert added["count"] == 1
+    assert [row["exposure_path_id"] for row in added["top"]] == [exposure_path_id(second)]
