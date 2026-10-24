@@ -32,6 +32,7 @@ class K8sWorkload:
     content: str
     rel_path: str
     metadata_line: int = 1
+    spec_line: int = 0
 
 
 @dataclass(frozen=True)
@@ -92,4 +93,4 @@ def pod_spec_line(workload: K8sWorkload, key: str | None = None) -> int:
     spec = workload.pod_spec
     if key is not None and key in spec:
         return key_line(spec, key)
-    return node_line(spec) or 1
+    return workload.spec_line or node_line(spec) or 1

@@ -114,6 +114,17 @@ _VOLUME_AND_POD_CONTEXT_CHECKS: tuple[_WorkloadCheck, ...] = (
 )
 
 
+def _pod_spec_key_line(doc: dict[str, Any]) -> int:
+    """Line of the ``spec:`` key that opens the pod spec (so absence findings point at it)."""
+    kind = doc.get("kind", "")
+    parent: Any = doc
+    if kind == "CronJob":
+        parent = doc.get("spec", {}).get("jobTemplate", {}).get("spec", {}).get("template", {})
+    elif kind != "Pod":
+        parent = doc.get("spec", {}).get("template", {})
+    return key_line(parent, "spec")
+
+
 def _get_pod_spec(doc: dict[str, Any]) -> dict[str, Any] | None:
     """Extract the pod spec from a workload resource."""
     kind = doc.get("kind", "")
@@ -175,6 +186,7 @@ def _scan_document(doc: dict[str, Any], content: str, rel_path: str) -> list[IaC
         content=content,
         rel_path=rel_path,
         metadata_line=key_line(metadata, "namespace", key_line(doc, "metadata", 1)),
+        spec_line=_pod_spec_key_line(doc),
     )
     findings.extend(_scan_workload(workload))
     return findings

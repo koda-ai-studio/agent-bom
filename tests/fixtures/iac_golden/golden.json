@@ -173,7 +173,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_041a6158d83a0b84.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'amd-gpu-workload' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -263,7 +263,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_0985f65784fbc1c3.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -305,7 +305,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_15d1a4d37e5abc76.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Resource 'test' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -375,7 +375,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_15d1a4d37e5abc76.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -465,7 +465,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_17f72fd8e5a15d2b.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'app' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -594,7 +594,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_1df7be270dabdc4e.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'gpu-workload' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -747,7 +747,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_2b5f3ae658513755.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'gpu-direct' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -873,7 +873,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_32ff974429ee746b.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1074,7 +1074,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_3b316f0086c77ba4.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'gpu-workload' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1112,7 +1112,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 10,
+   "line_number": 9,
    "message": "Resource 'test-deploy' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1129,7 +1129,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 10,
+   "line_number": 9,
    "message": "Deployment 'test-deploy' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1253,7 +1253,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 10,
+   "line_number": 9,
    "message": "Pod 'test-deploy' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1414,7 +1414,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_45db2a00f775138a.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1504,7 +1504,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_463c5287b782385d.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1523,7 +1523,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_4f831f36837a0b4a.yaml",
-   "line_number": 10,
+   "line_number": 9,
    "message": "Deployment 'web-app' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1718,7 +1718,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_5f124328e90236be.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'priv-app' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1827,7 +1827,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_653069293c638dfa.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1917,7 +1917,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_7196d1f1f2688cf9.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2136,7 +2136,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_8daa47490f45e1b4.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2208,7 +2208,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_9b99a0d35b46b91d.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2334,7 +2334,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_aa46e86a8a20e940.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2479,7 +2479,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_b5ef62870c46dc8a.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2498,7 +2498,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_b6fff9a5eb8ade02.yaml",
-   "line_number": 10,
+   "line_number": 9,
    "message": "Deployment 'web-app' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2660,7 +2660,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_b77697c5c116347b.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'gpu-direct' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2750,7 +2750,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'pod1' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2838,7 +2838,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 24,
+   "line_number": 23,
    "message": "Pod 'pod2' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2877,7 +2877,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_d57eaf78742d03d4.yaml",
-   "line_number": 10,
+   "line_number": 9,
    "message": "Deployment 'test-deploy' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3018,7 +3018,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_d6617d0bac8fcee5.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3110,7 +3110,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 9,
+   "line_number": 8,
    "message": "Resource 'mychart' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3127,7 +3127,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 9,
+   "line_number": 8,
    "message": "Deployment 'mychart' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3251,7 +3251,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 9,
+   "line_number": 8,
    "message": "Pod 'mychart' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3324,7 +3324,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_df20c2817362e129.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Resource 'test' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3448,7 +3448,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_df20c2817362e129.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3520,7 +3520,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_df3a45734f719dae.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'gpu-workload' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3630,7 +3630,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_e85dd4d96336332e.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3702,7 +3702,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_f0a5147740b3869e.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'compliant' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3792,7 +3792,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_f1cd166215caa3c9.yaml",
-   "line_number": 7,
+   "line_number": 6,
    "message": "Pod 'test' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3977,7 +3977,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 39,
+   "line_number": 38,
    "message": "Resource 'bad-deploy' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4012,7 +4012,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 39,
+   "line_number": 38,
    "message": "Deployment 'bad-deploy' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4631,7 +4631,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 39,
+   "line_number": 38,
    "message": "Pod 'bad-deploy' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4667,7 +4667,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 152,
+   "line_number": 151,
    "message": "Resource 'cron' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4791,7 +4791,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 152,
+   "line_number": 151,
    "message": "Pod 'cron' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4809,7 +4809,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 161,
+   "line_number": 160,
    "message": "Resource 'bare-pod' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4915,7 +4915,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 161,
+   "line_number": 160,
    "message": "Pod 'bare-pod' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,

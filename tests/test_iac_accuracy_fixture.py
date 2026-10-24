@@ -275,3 +275,9 @@ def test_pull_request_target_default_checkout_is_not_flagged(tmp_path: Path) -> 
         "      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332\n"
     )
     assert scan_iac_with_context(tmp_path).findings == []
+
+
+def test_pod_level_absence_findings_point_at_the_pod_spec_key() -> None:
+    findings = _scan("k8s")
+    assert _lines(findings, "K8S-013") == [14]
+    assert not [f for f in findings if f.line_number == 15]
