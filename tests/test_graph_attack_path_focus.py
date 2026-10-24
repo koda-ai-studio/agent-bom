@@ -72,7 +72,7 @@ def test_focused_cursor_is_bound_to_its_focus(api):  # noqa: F811
     assert second.status_code == 200, second.text
     assert second.json()["attack_paths"][0]["target"] != first["attack_paths"][0]["target"]
     other_focus = {"scan_id": "focus-scan", "limit": 1, "node_id": "data:store-1", "cursor": cursor}
-    assert client.get("/v1/graph/attack-paths", params=other_focus, headers=headers["tenant-a"]).status_code == 400
+    assert client.get("/v1/graph/attack-paths", params=other_focus, headers=headers["tenant-a"]).status_code == 422
 
 
 def test_focus_never_reads_another_tenant(api):  # noqa: F811
