@@ -27,6 +27,7 @@ The best ways to help:
 - [Dependency updates](#dependency-updates)
 - [Submitting a PR](#submitting-a-pr)
 - [What to expect from maintainers](#what-to-expect-from-maintainers)
+- [Becoming a reviewer or maintainer](#becoming-a-reviewer-or-maintainer)
 - [Architecture overview](#architecture-overview)
 - [Security reports](#security-reports)
 
@@ -37,14 +38,17 @@ The best ways to help:
 You do not need to understand the whole codebase to land a useful change. This
 path keeps the loop small.
 
-**1. Set up (about 5 minutes).** You need Python 3.11+ and
-[uv](https://docs.astral.sh/uv/).
+**1. Set up (about 5 minutes).** Fastest: open a
+[Codespace](https://codespaces.new/koda-ai-studio/agent-bom). The
+[dev container](.devcontainer/devcontainer.json) installs uv, the dev extras and
+the pre-commit hooks, so you can skip to step 2. Locally you need Python 3.11+
+and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 git clone https://github.com/koda-ai-studio/agent-bom.git
 cd agent-bom
 uv sync --extra dev                  # core workflow; use --extra dev-all for the full suite
-uv run pre-commit install            # ruff + ruff-format on every commit
+uv tool install pre-commit && pre-commit install   # ruff + ruff-format on every commit
 uv run agent-bom scan --demo --offline
 ```
 
@@ -332,6 +336,12 @@ SLA (see [SUPPORT.md](SUPPORT.md)):
 - **Scope we usually decline:** new top-level modules, new deployment targets
   without an owner, and large refactors without a prior issue. Opening an issue
   first saves you time.
+
+## Becoming a reviewer or maintainer
+
+We want more people with review and merge rights. [GOVERNANCE.md](GOVERNANCE.md)
+lists the roles (triager, reviewer, maintainer), what each one takes and how to
+ask; [MAINTAINERS.md](MAINTAINERS.md) lists the current ones and their areas.
 
 ---
 
