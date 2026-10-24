@@ -36,3 +36,19 @@ def test_showcase_diff_never_reports_a_renamed_node_as_removed(shared_demo_estat
         body = lookup.json() if lookup.status_code == 200 else {}
         assert body.get("resolved_from") != row["id"], f"{row['id']} is an alias of a showcase node yet reported removed"
     assert not {row["id"] for row in removed} & added
+
+
+def test_showcase_attack_path_rows_have_unique_exposure_ids(shared_demo_estate_client: TestClient) -> None:
+    ids: list[str] = []
+    params: dict = {"scan_id": "showcase", "limit": 1000}
+    for _page in range(20):
+        response = shared_demo_estate_client.get("/v1/graph/attack-paths", headers=VIEWER, params=params)
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        ids.extend(row["exposure_path"]["id"] for row in payload["attack_paths"])
+        cursor = payload["pagination"]["next_cursor"]
+        if not cursor:
+            break
+        params = {"scan_id": "showcase", "limit": 1000, "cursor": cursor}
+    assert len(ids) > 1000
+    assert len(ids) == len(set(ids))
