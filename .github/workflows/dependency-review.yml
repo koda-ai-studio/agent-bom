@@ -61,9 +61,6 @@ jobs:
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
         with:
           fail-on-severity: high
-          # filelock advisories whose fix needs snowflake-connector-python 5.x,
-          # which has no musl wheels for the Alpine image (#5934).
-          allow-ghsas: GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92
           retry-on-snapshot-warnings: true
           # regex includes code derived from CPython 2.6/3.1 and accurately
           # declares Apache-2.0 AND CNRI-Python in its wheel metadata.

@@ -313,6 +313,11 @@ override-dependencies = [
     "aiohttp>=3.13.4",
     "openai>=2.30.0",
     "gitpython>=3.1.54",
+    # snowflake-connector-python 4.x caps filelock<4, and 5.x ships no musl
+    # wheels for the Alpine image. Its FileLock, BaseFileLock and Timeout use is
+    # unchanged in filelock 4, whose breaking changes are in SoftReadWriteLock.
+    # GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92.
+    "filelock>=4.2.1",
 ]
 
 [tool.setuptools.packages.find]
