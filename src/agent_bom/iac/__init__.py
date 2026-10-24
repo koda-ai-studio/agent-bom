@@ -41,6 +41,7 @@ from agent_bom.iac.helm_templates import chart_root_for_template, scan_chart_tem
 from agent_bom.iac.iam_policy import is_iam_policy_document, scan_iam_policy
 from agent_bom.iac.kubernetes import scan_k8s_manifest
 from agent_bom.iac.models import IaCFinding, ScanContext, ScannerVerdict, ScanResult, set_repository_context
+from agent_bom.iac.suppressions import apply_inline_suppressions
 from agent_bom.iac.terraform_security import scan_terraform_security
 from agent_bom.traversal import iter_discovery_files
 
@@ -357,10 +358,11 @@ def scan_iac_with_context(
         if not finding.atlas_techniques:
             finding.atlas_techniques = get_atlas_techniques(finding.rule_id, message=finding.message)
 
+    findings, suppressed = apply_inline_suppressions(findings, walk_root)
     findings.sort(key=lambda f: (severity_worst_first_rank(f.severity), f.file_path, f.line_number))
 
     verdicts = _build_verdicts(disabled, files_matched, verdict_reasons, ctx)
-    return ScanResult(findings=findings, verdicts=verdicts, not_evaluated=not_evaluated)
+    return ScanResult(findings=findings, verdicts=verdicts, not_evaluated=not_evaluated, suppressed=suppressed)
 
 
 def scan_iac_directory(root: str | Path) -> list[IaCFinding]:

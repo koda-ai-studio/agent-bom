@@ -31,6 +31,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- IaC findings can be accepted one at a time with an inline `agent-bom: ignore[RULE-ID] <reason>` marker on the offending line or the line above; a marker without a reason suppresses nothing, and accepted findings stay in the scan result's `suppressed` list. The reusable workflow uses one for its deliberate `@v0` action reference, so the repository's own scan passes.
 - GitHub Action: the default scan covers the checkout, so Terraform, Kubernetes, Helm, CloudFormation and workflow files are scanned and the runner's home-directory MCP configs no longer leak into CI reports.
 - GitHub Action: `scan-type` `image`, `fs`, `sbom`, `iac`, `secrets` and `code` no longer exit 2 with default inputs; only flags the selected command accepts are passed, and gates it cannot enforce fail with an error.
 - GitHub Action: `baseline` passes `--delta` instead of the nonexistent `--delta-mode`, and `--baseline --delta` now suppresses pre-existing IaC, secret, skill and other non-CVE findings, matched without line numbers.
