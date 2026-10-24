@@ -24,6 +24,7 @@ from agent_bom.api.tracing import get_tracer
 from agent_bom.core.packages import legacy_package_lookup_names, normalize_package_name, package_lookup_names
 from agent_bom.core.versions.osv import comparator_ecosystem as _comparator_ecosystem
 from agent_bom.core.versions.osv import version_match_state as _version_match_state
+from agent_bom.db.lookup_fixes import LEGACY_RECEIPT_WARNING, UNVERIFIED_RANGE_WARNING, next_window_fix
 
 _logger = logging.getLogger(__name__)
 _LOOKUP_TRACER = get_tracer("agent_bom.db.lookup")
@@ -375,6 +376,8 @@ def _resolve_fixed_version_with_aliases(row: sqlite3.Row, rows: list[sqlite3.Row
     fixed = _resolve_fixed_version(row)
     if fixed is not None:
         return fixed
+    if version and not _is_distro_release_ecosystem(row["ecosystem"]):
+        return _alias_cluster_fix(row, rows, version) or next_window_fix(row, rows, version, _version_match_state, _comparator_ecosystem)
     return _alias_cluster_fix(row, rows, version)
 
 
@@ -614,7 +617,8 @@ def _local_vuln_from_row(row, rows, version, epss_map, kev_map) -> LocalVuln:
     alias_list = [a for a in raw_aliases.split(",") if a] if raw_aliases else []
     epss_prob, epss_pct, kev_date, kev_due, epss_id, kev_id = _resolve_row_enrichment(row, epss_map, kev_map)
     severity, cvss_score = _current_severity(row["severity"], row["cvss_score"], row["cvss_vector"])
-    unknown_range = row["limit_version"] is None or bool(
+    legacy_receipt = row["limit_version"] is None
+    unknown_range = legacy_receipt or bool(
         version
         and _version_match_state(version, row["introduced"], row["fixed"], row["last_affected"], row["ecosystem"], row["limit_version"])
         == "unknown"
@@ -622,10 +626,7 @@ def _local_vuln_from_row(row, rows, version, epss_map, kev_map) -> LocalVuln:
     if unknown_range:
         from agent_bom.scanners.state import record_scan_warning
 
-        record_scan_warning(
-            "Some local advisory ranges cannot be verified. Findings marked unverified_range are candidates; "
-            "run agent-bom db update to refresh source bounds and review unresolved versions."
-        )
+        record_scan_warning(LEGACY_RECEIPT_WARNING if legacy_receipt else UNVERIFIED_RANGE_WARNING)
     return LocalVuln(
         match_confidence_tier=MATCH_CONFIDENCE_UNVERIFIED_RANGE if unknown_range else None,
         id=row["id"],

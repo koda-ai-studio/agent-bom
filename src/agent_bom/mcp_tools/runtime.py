@@ -11,9 +11,11 @@ from typing import Any, cast
 from agent_bom.api.route_offload import call_route as _call_route
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
 from agent_bom.core.experimental import disabled_message, is_enabled
+from agent_bom.mcp_errors import CODE_VALIDATION_INVALID_PATH, mcp_error_json
 from agent_bom.mcp_server_runtime import safe_path
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl as tool_risk_assessment_impl
+from agent_bom.mcp_tools.audit_integrity import audit_integrity_impl as audit_integrity_impl
 from agent_bom.mcp_tools.dispatch import resolve_tool_path
 from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
 from agent_bom.security import sanitize_error
@@ -484,25 +486,6 @@ async def audit_query_impl(
         return json.dumps({"error": sanitize_error(exc)})
 
 
-async def audit_integrity_impl(
-    *,
-    tenant_id: str = "default",
-    limit: int = 1000,
-    include_runtime: bool = True,
-    _truncate_response,
-) -> str:
-    """Implementation of the audit_integrity tool."""
-    try:
-        from agent_bom.api.routes.enterprise import audit_integrity
-
-        bounded_limit = max(1, min(int(limit), 10_000))
-        payload = await _call_route(audit_integrity, _request_for_tenant(tenant_id), limit=bounded_limit, include_runtime=include_runtime)
-        return _truncate_response(json.dumps(payload, indent=2, default=str))
-    except Exception as exc:
-        logger.exception("MCP audit integrity error")
-        return json.dumps({"error": sanitize_error(exc)})
-
-
 def firewall_check_impl(
     *,
     source_agent: str,
@@ -768,7 +751,8 @@ def inventory_impl(
             # exact canonical entity snapshot emitted by CLI JSON. MCP clients
             # can join tool -> server -> agent/package without surface-specific
             # identities, including for an empty inventory.
-            entities = _build_ai_bom_entities_snapshot(AIBOMReport(agents=agents))
+            # inventory never looks up vulnerabilities; counts are unknown, not zero.
+            entities = _build_ai_bom_entities_snapshot(AIBOMReport(agents=agents), vulnerabilities_scanned=False)
             payload = {
                 "schema_version": "1.0",
                 "canonical_id_schema_version": CANONICAL_ID_SCHEMA_VERSION,
@@ -780,6 +764,12 @@ def inventory_impl(
                 payload["status"] = status
             return payload
 
+        if config_path and not Path(config_path).expanduser().exists():
+            return mcp_error_json(
+                CODE_VALIDATION_INVALID_PATH,
+                "config_path does not exist; nothing was inventoried.",
+                details={"argument": "config_path"},
+            )
         agents = discover_all(project_dir=config_path)
         if not agents:
             return _truncate_response(json.dumps(_inventory_payload([], [], status="no_agents_found"), indent=2, default=str))

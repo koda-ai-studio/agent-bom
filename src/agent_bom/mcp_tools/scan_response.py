@@ -22,6 +22,11 @@ SCAN_DETAIL_LEVELS = ("summary", "full")
 DEFAULT_TOP_N = 10
 DEFAULT_PAGE_LIMIT = 25
 MAX_PAGE_LIMIT = 200
+# A multi-item page stays within ~10k tokens however large each item is; a
+# single item (limit=1) may use the full transport budget.
+PAGE_MAX_CHARS = 50_000
+_MIN_ITEM_CHARS = 2_000
+_KEEP_FIELD_CHARS = 512
 
 _TRUTHY = {"1", "true", "yes", "on"}
 
@@ -287,11 +292,20 @@ def section_page(
     start = max(0, offset)
     limit = max(1, min(int(limit), MAX_PAGE_LIMIT))
     envelope = {**base, "total": total, "offset": start, "limit": limit, "items": [], "next_offset": total}
-    budget = max_chars - len(json.dumps(envelope, separators=(",", ":"))) - 64
+    page_chars = max_chars if limit == 1 else min(max_chars, PAGE_MAX_CHARS)
+    budget = page_chars - len(json.dumps(envelope, separators=(",", ":"))) - 256
+    window = value[start : start + limit]
+    # Full-fidelity items when the whole page fits; otherwise compact the oversized ones.
+    fits = sum(_json_size(item) for item in window) <= budget
+    item_budget = budget if limit == 1 or fits else max(_MIN_ITEM_CHARS, budget // limit)
     items: list[Any] = []
     used = 0
-    for item in value[start : start + limit]:
-        size = len(json.dumps(item, separators=(",", ":"), default=str)) + 1
+    compacted = 0
+    for item in window:
+        size = _json_size(item)
+        if size > item_budget and isinstance(item, dict):
+            item, compacted = _compact_item(item), compacted + 1
+            size = _json_size(item)
         if items and used + size > budget:
             break
         items.append(item)
@@ -299,4 +313,27 @@ def section_page(
     end = start + len(items)
     envelope["items"] = items
     envelope["next_offset"] = end if end < total else None
+    if compacted:
+        envelope["compacted_items"] = compacted
+        envelope["hint"] = (
+            "Large fields were omitted to keep this page bounded (see each item's _omitted_fields). "
+            "Request the same section with offset=<index> and limit=1 for one full item."
+        )
     return envelope
+
+
+def _json_size(item: Any) -> int:
+    return len(json.dumps(item, separators=(",", ":"), default=str)) + 1
+
+
+def _compact_item(item: dict[str, Any]) -> dict[str, Any]:
+    """Keep an item's small fields; name the large ones instead of returning them."""
+    kept: dict[str, Any] = {}
+    omitted: list[str] = []
+    for key, field_value in item.items():
+        if _json_size(field_value) <= _KEEP_FIELD_CHARS:
+            kept[key] = field_value
+        else:
+            omitted.append(key)
+    kept["_omitted_fields"] = omitted
+    return kept

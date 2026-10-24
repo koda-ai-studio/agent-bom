@@ -2,6 +2,15 @@
 
 This guide covers `agent-bom` with OpenAI Codex CLI and other Codex-oriented local setups that use `~/.codex/config.toml`.
 
+## Install the agent-bom plugin
+
+There are two Codex packages with the same skills: the repository marketplace
+plugin, `agent-bom-local`, which runs pinned local MCP servers, and `agent-bom`,
+a skills-only package for the public plugin directory, which runs the pinned CLI
+from the shell. See
+[Two ways to install in Codex](../integrations/claude-code/README.md#two-ways-to-install-in-codex)
+for what each can do.
+
 ## Use agent-bom as an MCP server
 
 Add this to `~/.codex/config.toml`:

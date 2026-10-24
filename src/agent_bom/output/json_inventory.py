@@ -12,6 +12,7 @@ from agent_bom.asset_provenance import (
 )
 from agent_bom.canonical_ids import agent_identity_export, canonical_id
 from agent_bom.evidence.occurrence_ids import server_occurrence_id
+from agent_bom.evidence.scan_run import effective_scan_run, vulnerability_scan_skipped
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import AIBOMReport, MCPServer
 from agent_bom.output.json_sections import _package_occurrence_to_dict
@@ -27,8 +28,13 @@ from agent_bom.security import (
 INVENTORY_SNAPSHOT_SCHEMA_VERSION = "1"
 
 
-def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
-    """Build a deterministic inventory snapshot for diffing and BOM operations."""
+def _build_ai_bom_entities_snapshot(report: AIBOMReport, *, vulnerabilities_scanned: bool = True) -> dict:
+    """Build a deterministic inventory snapshot for diffing and BOM operations.
+
+    ``vulnerability_count`` is null with ``vulnerability_status: "not_scanned"``
+    when no vulnerability lookup ran, so an unscanned package never reads as clean.
+    """
+    scanned = vulnerabilities_scanned and not vulnerability_scan_skipped(effective_scan_run(report))
     agents: list[dict] = []
     servers: dict[str, dict] = {}
     tools: dict[str, dict] = {}
@@ -82,7 +88,7 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
 
             _append_mcp_entities(server, server_id, servers, tools, resources, prompts, relationships)
 
-            _append_package_entities(server, server_id, servers, packages, relationships, agent_provenance)
+            _append_package_entities(server, server_id, servers, packages, relationships, agent_provenance, scanned=scanned)
 
     return _snapshot_payload(agents, relationships, servers=servers, tools=tools, resources=resources, prompts=prompts, packages=packages)
 
@@ -94,6 +100,8 @@ def _append_package_entities(
     packages: dict[str, dict],
     relationships: list[dict],
     agent_provenance: dict | None,
+    *,
+    scanned: bool = True,
 ) -> None:
     """Keep package identity and per-server dependency edges in insertion order."""
     for pkg in server.packages:
@@ -116,7 +124,8 @@ def _append_package_entities(
                 "discovery_provenance": package_discovery_provenance(pkg, inherited=agent_provenance),
                 "occurrence_count": len(pkg.occurrences),
                 "occurrences": [_package_occurrence_to_dict(occ) for occ in pkg.occurrences],
-                "vulnerability_count": len(pkg.vulnerabilities),
+                "vulnerability_count": len(pkg.vulnerabilities) if scanned else None,
+                "vulnerability_status": "scanned" if scanned else "not_scanned",
             }
         if pkg.stable_id not in servers[server_id]["package_ids"]:
             servers[server_id]["package_ids"].append(pkg.stable_id)

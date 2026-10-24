@@ -161,9 +161,17 @@ def test_summary_ok_when_fresh():
 def test_agent_mode_summary_includes_cloud_sdk_freshness():
     from agent_bom.cli._agent_mode import _summary
 
-    out = _summary({})
+    out = _summary({"scan_sources": ["filesystem", "cloud:aws"]})
     assert "cloud_sdk_freshness" in out
     assert out["cloud_sdk_freshness"]["status"] in {"ok", "degraded"}
+
+
+def test_agent_mode_summary_omits_cloud_sdk_freshness_when_no_cloud_was_scanned():
+    # agent-bom's own SDK pins say nothing about a local project scan.
+    from agent_bom.cli._agent_mode import _summary
+
+    assert "cloud_sdk_freshness" not in _summary({"scan_sources": ["filesystem", "secret_scan"]})
+    assert "cloud_sdk_freshness" not in _summary({})
 
 
 def test_doctor_renders_cloud_sdk_freshness_section():
@@ -364,5 +372,5 @@ def test_doctor_renders_cloud_api_deprecations_section():
 def test_agent_mode_summary_includes_deprecations():
     from agent_bom.cli._agent_mode import _summary
 
-    out = _summary({})
+    out = _summary({"scan_sources": ["cloud:azure"]})
     assert "deprecations" in out["cloud_sdk_freshness"]

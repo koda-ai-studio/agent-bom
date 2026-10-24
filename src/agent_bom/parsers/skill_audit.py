@@ -207,9 +207,12 @@ def audit_skill_result(result: SkillScanResult) -> SkillAuditResult:
         audit.findings.extend(_scan_content_risks(result.raw_content))
 
     # ── Metadata quality checks (SKILL.md frontmatter) ───────────────
-    if result.metadata is not None:
-        metadata_findings = _check_metadata_quality(result.metadata, result.raw_content, source_file)
-        audit.findings.extend(metadata_findings)
+    if result.metadata_by_file:
+        for meta_file, meta in result.metadata_by_file.items():
+            own_content = {meta_file: result.raw_content.get(meta_file, "")}
+            audit.findings.extend(_check_metadata_quality(meta, own_content, meta_file))
+    elif result.metadata is not None:
+        audit.findings.extend(_check_metadata_quality(result.metadata, result.raw_content, source_file))
 
     # ── Final pass/fail ──────────────────────────────────────────────────
     audit.behavioral_summary = _summarize_behavioral_findings(audit.findings)

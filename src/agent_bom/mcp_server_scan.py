@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import shlex
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Optional
 
@@ -175,6 +176,45 @@ def unresolved_package_spec_warning(package_spec: str) -> str:
     )
 
 
+_REPO_TREE_INVENTORY: ContextVar[Optional[dict]] = ContextVar("mcp_repo_tree_inventory", default=None)
+
+
+def consume_repo_tree_inventory() -> Optional[dict]:
+    """Return and clear the repo-tree side inventory (secrets, AST, ...) of the last pipeline run."""
+    inventory = _REPO_TREE_INVENTORY.get()
+    _REPO_TREE_INVENTORY.set(None)
+    return inventory
+
+
+def _scan_config_path_statically(config_path: str, agents: list, warnings: list[str], scan_sources: list[str], *, offline: bool) -> None:
+    """Repo-tree, Python-agent, Terraform and GitHub Actions passes over an explicit target."""
+    try:
+        from agent_bom.api.repo_tree_scan import scan_cloned_repo_tree
+        from agent_bom.github_actions import scan_github_actions
+        from agent_bom.python_agents import scan_python_agents
+        from agent_bom.terraform import scan_terraform_dir
+
+        tree = scan_cloned_repo_tree(config_path, agents=agents, warnings=warnings, offline=offline)
+        _REPO_TREE_INVENTORY.set(tree.ai_inventory_data or None)
+        scan_sources.append("repo_tree")
+        # IaC is scanned opportunistically here, so a tree without .tf files is not a warning.
+        passes = (
+            ("python_agents", lambda: scan_python_agents(config_path)),
+            ("terraform", lambda: scan_terraform_dir(config_path, report_missing=False)),
+            ("github_actions", lambda: scan_github_actions(config_path)),
+        )
+        for source, run_pass in passes:
+            found, found_warnings = run_pass()
+            agents.extend(found)
+            warnings.extend(found_warnings)
+            if found:
+                scan_sources.append(source)
+    except Exception as exc:
+        msg = f"Repo static scan failed for {config_path}: {sanitize_error(exc)}"
+        logger.warning(msg)
+        warnings.append(msg)
+
+
 async def run_scan_pipeline(
     *,
     safe_path,
@@ -196,6 +236,7 @@ async def run_scan_pipeline(
 
     warnings: list[str] = []
     scan_sources: list[str] = []
+    _REPO_TREE_INVENTORY.set(None)
 
     if config_path:
         try:
@@ -217,43 +258,18 @@ async def run_scan_pipeline(
         except Exception as exc:
             raise McpScanValidationError(CODE_VALIDATION_INVALID_IMAGE_REF, exc, argument="image") from exc
 
-    # Match the CLI's deterministic CI mode: explicit repo/config/SBOM/image
-    # inputs can be scanned without merging unrelated host-level MCP clients.
-    agents = [] if no_discover else discover_all(project_dir=config_path)
+    # Match the CLI's deterministic CI mode: no_discover skips only machine-wide
+    # discovery. An explicit config_path is an artifact and is still scanned
+    # with project-scoped discovery, exactly like `--no-discover --config-dir`.
+    if config_path:
+        agents = discover_all(project_dir=config_path)
+    else:
+        agents = [] if no_discover else discover_all()
     if agents:
         scan_sources.append("agent_discovery")
 
     if config_path:
-        try:
-            from agent_bom.api.repo_tree_scan import scan_cloned_repo_tree
-            from agent_bom.github_actions import scan_github_actions
-            from agent_bom.python_agents import scan_python_agents
-            from agent_bom.terraform import scan_terraform_dir
-
-            scan_cloned_repo_tree(config_path, agents=agents, warnings=warnings)
-            scan_sources.append("repo_tree")
-
-            py_agents, py_warnings = scan_python_agents(config_path)
-            agents.extend(py_agents)
-            warnings.extend(py_warnings)
-            if py_agents:
-                scan_sources.append("python_agents")
-
-            tf_agents, tf_warnings = scan_terraform_dir(config_path)
-            agents.extend(tf_agents)
-            warnings.extend(tf_warnings)
-            if tf_agents:
-                scan_sources.append("terraform")
-
-            gha_agents, gha_warnings = scan_github_actions(config_path)
-            agents.extend(gha_agents)
-            warnings.extend(gha_warnings)
-            if gha_agents:
-                scan_sources.append("github_actions")
-        except Exception as exc:
-            msg = f"Repo static scan failed for {config_path}: {sanitize_error(exc)}"
-            logger.warning(msg)
-            warnings.append(msg)
+        _scan_config_path_statically(config_path, agents, warnings, scan_sources, offline=offline)
 
     if package:
         try:

@@ -53,6 +53,50 @@
    },
    {
     "bom-ref": "mcp-server-<UUID>",
+    "description": "Dependency surface (other)",
+    "name": "proj",
+    "properties": [
+     {
+      "name": "agent-bom:command",
+      "value": "project <TMP>/proj"
+     },
+     {
+      "name": "agent-bom:discovery-provenance:confidence",
+      "value": "medium"
+     },
+     {
+      "name": "agent-bom:discovery-provenance:observed-via",
+      "value": "[\"local_discovery\"]"
+     },
+     {
+      "name": "agent-bom:discovery-provenance:source",
+      "value": "project"
+     },
+     {
+      "name": "agent-bom:discovery-provenance:source-type",
+      "value": "local_discovery"
+     },
+     {
+      "name": "agent-bom:inventory-members",
+      "value": "[\"pkg-<UUID>\", \"pkg-<UUID>\", \"pkg-<UUID>\", \"pkg-<UUID>\"]"
+     },
+     {
+      "name": "agent-bom:surface",
+      "value": "other"
+     },
+     {
+      "name": "agent-bom:transport",
+      "value": "stdio"
+     },
+     {
+      "name": "agent-bom:type",
+      "value": "dependency-surface"
+     }
+    ],
+    "type": "application"
+   },
+   {
+    "bom-ref": "mcp-server-<UUID>",
     "description": "MCP Server (stdio)",
     "name": "filesystem",
     "properties": [
@@ -85,44 +129,8 @@
       "value": "[\"pkg-<UUID>\"]"
      },
      {
-      "name": "agent-bom:transport",
-      "value": "stdio"
-     },
-     {
-      "name": "agent-bom:type",
+      "name": "agent-bom:surface",
       "value": "mcp-server"
-     }
-    ],
-    "type": "application"
-   },
-   {
-    "bom-ref": "mcp-server-<UUID>",
-    "description": "MCP Server (stdio)",
-    "name": "proj",
-    "properties": [
-     {
-      "name": "agent-bom:command",
-      "value": "project <TMP>/proj"
-     },
-     {
-      "name": "agent-bom:discovery-provenance:confidence",
-      "value": "medium"
-     },
-     {
-      "name": "agent-bom:discovery-provenance:observed-via",
-      "value": "[\"local_discovery\"]"
-     },
-     {
-      "name": "agent-bom:discovery-provenance:source",
-      "value": "project"
-     },
-     {
-      "name": "agent-bom:discovery-provenance:source-type",
-      "value": "local_discovery"
-     },
-     {
-      "name": "agent-bom:inventory-members",
-      "value": "[\"pkg-<UUID>\", \"pkg-<UUID>\", \"pkg-<UUID>\", \"pkg-<UUID>\"]"
      },
      {
       "name": "agent-bom:transport",

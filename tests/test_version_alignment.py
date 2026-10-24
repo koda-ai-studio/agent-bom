@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -515,3 +516,74 @@ def test_published_bump_rewrites_openclaw_and_first_run_pins(tmp_path, monkeypat
     assert count == 3
     assert skill.read_text() == "docker: ghcr.io/koda-ai-studio/agent-bom:0.110.0\n"
     assert guide.read_text() == "pip install 'agent-bom[ui]==0.110.0'\n--expected-version 0.110.0\n"
+
+
+def test_scan_text_flags_a_stale_local_codex_plugin_version() -> None:
+    cva = _load_script("check_version_alignment.py")
+    manifest = '{\n  "name": "agent-bom-local",\n  "version": "0.90.0",\n'
+    rel = "integrations/claude-code/.codex-plugin/plugin.json"
+    drift = cva.scan_text(rel, manifest, "0.97.1", published="0.97.1")
+    assert len(drift) == 1 and "plugin version" in drift[0]
+    assert cva.scan_text(rel, manifest.replace("0.90.0", "0.97.1"), "0.97.1", published="0.97.1") == []
+
+
+def _launcher(tmp_path: Path, pin: str, locked: str) -> Path:
+    plugin = tmp_path / "plugin"
+    plugin.mkdir(parents=True)
+    (plugin / "pyproject.toml").write_text(f'[project]\nname = "x"\nversion = "0.0.0"\ndependencies = ["agent-bom=={pin}"]\n')
+    (plugin / "uv.lock").write_text(
+        'version = 1\n\n[[package]]\nname = "agent-bom"\n'
+        f'version = "{locked}"\nsource = {{ registry = "https://pypi.org/simple" }}\n\n'
+        '[[package]]\nname = "x"\nversion = "0.0.0"\nsource = { virtual = "." }\n\n'
+        f'[package.metadata]\nrequires-dist = [{{ name = "agent-bom", specifier = "=={pin}" }}]\n'
+    )
+    return plugin
+
+
+def test_launcher_lock_drift_is_reported_offline(tmp_path: Path) -> None:
+    cva = _load_script("check_version_alignment.py")
+    assert cva.launcher_lock_drift(_launcher(tmp_path, "0.97.1", "0.97.1"), "0.97.1") == []
+    stale = cva.launcher_lock_drift(_launcher(tmp_path / "a", "0.97.1", "0.97.0"), "0.97.1")
+    assert len(stale) == 1 and "uv.lock locks agent-bom 0.97.0" in stale[0]
+    unpinned = cva.launcher_lock_drift(_launcher(tmp_path / "b", "0.97.0", "0.97.0"), "0.97.1")
+    assert any("pyproject.toml" in line for line in unpinned) and any("uv.lock" in line for line in unpinned)
+    (tmp_path / "c").mkdir()
+    assert "missing" in cva.launcher_lock_drift(tmp_path / "c", "0.97.1")[0]
+
+
+def test_the_real_launcher_is_inside_the_scanned_tree() -> None:
+    cva = _load_script("check_version_alignment.py")
+    scanned = {cva._rel(path) for path in cva._iter_files()}
+    for launcher in cva.LAUNCHERS:
+        assert f"{launcher}/pyproject.toml" in scanned
+
+
+def test_launcher_lock_over_the_directory_file_limit_is_drift(tmp_path: Path) -> None:
+    cva = _load_script("check_version_alignment.py")
+    plugin = _launcher(tmp_path, "0.97.1", "0.97.1")
+    with (plugin / "uv.lock").open("a") as handle:
+        handle.write("#" * (256 * 1024))
+    assert any("256 KiB" in line for line in cva.launcher_lock_drift(plugin, "0.97.1"))
+
+
+def test_launcher_pin_is_a_managed_reference() -> None:
+    cva = _load_script("check_version_alignment.py")
+    text = 'dependencies = ["agent-bom==0.90.0"]\n'
+    drift = cva.scan_text("integrations/claude-code/pyproject.toml", text, "0.97.1", published="0.97.1")
+    assert len(drift) == 1 and "launcher pin" in drift[0]
+
+
+def test_published_bump_relocks_the_launcher_when_it_drifts(tmp_path: Path) -> None:
+    bump = _load_script("bump-version.py")
+    plugin = _launcher(tmp_path, "0.97.1", "0.97.0")
+    calls: list[list[str]] = []
+
+    def fake_run(cmd: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    assert bump.relock_launcher(plugin, "0.97.1", run=fake_run) is True
+    assert calls == [["uv", "lock", "--upgrade", "--refresh-package", "agent-bom", "--project", str(plugin)]]
+    calls.clear()
+    assert bump.relock_launcher(_launcher(tmp_path / "ok", "0.97.1", "0.97.1"), "0.97.1", run=fake_run) is False
+    assert calls == []

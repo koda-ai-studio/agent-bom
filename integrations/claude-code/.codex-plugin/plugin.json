@@ -1,5 +1,5 @@
 {
-  "name": "agent-bom",
+  "name": "agent-bom-local",
   "version": "0.110.0",
   "description": "Inventory and audit your AI estate: scan MCP servers, agents and packages for CVEs, supply-chain risk and exposed credentials; audit MCP configs and skills for injection and risky grants; check a server before you add it; plan fixes. Read-only by default and local.",
   "author": {
@@ -18,9 +18,20 @@
     "ai-agents"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": {
+    "agent-bom": {
+      "command": "uv",
+      "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server"],
+      "cwd": "."
+    },
+    "agent-bom-audit": {
+      "command": "uv",
+      "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server", "--profile", "audit"],
+      "cwd": "."
+    }
+  },
   "interface": {
-    "displayName": "agent-bom",
+    "displayName": "agent-bom (local MCP)",
     "shortDescription": "AI agent and MCP security",
     "longDescription": "Check your AI setup in one step: the MCP servers, agents and packages on this machine, scanned for CVEs, known-exploited and malicious packages, and exposed credentials, with the three fixes that matter most. Ask whether you are affected by a CVE, audit MCP configs and skill files for prompt injection and risky grants, vet a package before you add it, and write an AI-BOM (CycloneDX or SPDX) for this machine, a project, an image or a cloud account. Runs locally from a pinned PyPI release; read-only by default; no account or API key.",
     "developerName": "koda-ai-studio",
@@ -38,6 +49,7 @@
     "composerIcon": "./assets/icon.png",
     "logo": "./assets/icon.png",
     "screenshots": [],
-    "privacyPolicyURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md#privacy"
+    "privacyPolicyURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md#privacy",
+    "termsOfServiceURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/LICENSE"
   }
 }

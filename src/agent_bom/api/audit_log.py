@@ -405,7 +405,7 @@ def _verify_audit_chain_with_checkpoint(
 
 
 class InMemoryAuditLog:
-    """In-memory audit log for development."""
+    """In-memory audit log; it ends with the process, so an ephemeral key loses nothing."""
 
     _MAX_ENTRIES = 50_000
 
@@ -430,7 +430,7 @@ class InMemoryAuditLog:
         # predecessor). Hold the lock across the whole sequence.
         with self._lock:
             entry.prev_signature = self._last_sig_by_tenant[tenant_id]
-            entry.sign()
+            entry.sign(_HMAC_KEY)  # explicit key: no ephemeral-key warning (see class docstring)
             self._last_sig_by_tenant[tenant_id] = entry.hmac_signature
             self._entries.append(entry)
             self._update_checkpoint(tenant_id, entry.hmac_signature)

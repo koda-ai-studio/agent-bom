@@ -225,6 +225,7 @@ class SkillScanResult:
     source_files: list[str] = field(default_factory=list)
     raw_content: dict[str, str] = field(default_factory=dict)  # source_file -> raw text for audit analysis
     metadata: SkillMetadata | None = None  # Parsed frontmatter (SKILL.md format)
+    metadata_by_file: dict[str, SkillMetadata] = field(default_factory=dict)
 
 
 # ─── Parsing ─────────────────────────────────────────────────────────────────
@@ -703,10 +704,9 @@ def scan_skill_files(paths: list[Path]) -> SkillScanResult:
         result = parse_skill_file(path)
         merged.source_files.extend(result.source_files)
         merged.raw_content.update(result.raw_content)
-
-        # Keep the first valid metadata (typically from SKILL.md)
-        if result.metadata is not None and merged.metadata is None:
-            merged.metadata = result.metadata
+        if result.metadata is not None:
+            merged.metadata_by_file[str(path)] = result.metadata
+            merged.metadata = merged.metadata or result.metadata  # the first valid one, typically SKILL.md
 
         for pkg in result.packages:
             key = (pkg.name.lower(), pkg.ecosystem)

@@ -15,6 +15,7 @@ class InstallPlan:
     def __init__(self) -> None:
         self.packages: list[Package] = []
         self.requirement_files: list[str] = []
+        self.pipe_to_shell: list[str] = []
         self.incomplete = False
 
 
@@ -214,12 +215,30 @@ def _parse(command: str, plan: InstallPlan, depth: int) -> None:
         plan.incomplete = True
         return
     segment: list[str] = []
+    previous: list[str] = []
+    operator = ""
     for token in [*tokens, ";"]:
         if token and all(c in ";&|\n" for c in token):
             _install(segment, plan, depth)
-            segment = []
+            if operator == "|" and _is_pipe_to_shell(previous, segment):
+                plan.pipe_to_shell.append(f"{_executable(previous)} ... | {_executable(segment)}")
+            previous, operator, segment = segment, token, []
         else:
             segment.append(token)
+
+
+_DOWNLOADERS = {"curl", "wget"}
+_INTERPRETERS = {"sh", "bash", "zsh", "dash", "ksh", "fish", "python", "python3", "node", "perl", "ruby", "pwsh"}
+
+
+def _executable(tokens: list[str]) -> str:
+    stripped = _strip_prefixes(tokens)
+    return stripped[0].rsplit("/", 1)[-1] if stripped else ""
+
+
+def _is_pipe_to_shell(left: list[str], right: list[str]) -> bool:
+    """``curl URL | sh``: a download fed straight into an interpreter, unread."""
+    return _executable(left) in _DOWNLOADERS and _executable(right) in _INTERPRETERS
 
 
 def parse_command(command: str) -> InstallPlan:

@@ -7,6 +7,7 @@ import json
 from copy import deepcopy
 from typing import Any, cast
 
+from agent_bom.domain.mcp_model import SBOM_DECLARED_MCP_SOURCE
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface
 from agent_bom.parsers.spdx_context import context_document
 from agent_bom.sbom_formats.cyclonedx import component_properties, dependency_map, restore_dependency_hierarchy, software_components
@@ -46,6 +47,15 @@ def _restore_scoped_hierarchy(document: dict, spdx_document: dict | None, ref: s
         restore_spdx_hierarchy(source, scoped_packages, root_refs={ref})
 
 
+def _declared_tools(component: dict) -> list[MCPTool]:
+    tools = []
+    for prop in component.get("properties", []):
+        if isinstance(prop, dict) and prop.get("name") == "agent-bom:mcp-tool" and isinstance(prop.get("value"), str):
+            tool_name, _, description = prop["value"].partition(": ")
+            tools.append(MCPTool(name=tool_name, description=description, discovery_source="sbom", discovery_confidence="declared"))
+    return tools
+
+
 def restore_context_agents(document: dict, fallback: Agent, name: str | None) -> list[Agent]:
     spdx_document = document if document.get("bomFormat") != "CycloneDX" else None
     if spdx_document is not None:
@@ -71,17 +81,14 @@ def restore_context_agents(document: dict, fallback: Agent, name: str | None) ->
         assigned.update(members)
         scoped_packages = {p: deepcopy(packages[p]) for p in sorted(members)}
         _restore_scoped_hierarchy(document, spdx_document, ref, scoped_packages)
-        tools = []
-        for prop in component.get("properties", []):
-            if isinstance(prop, dict) and prop.get("name") == "agent-bom:mcp-tool" and isinstance(prop.get("value"), str):
-                tool_name, _, description = prop["value"].partition(": ")
-                tools.append(MCPTool(name=tool_name, description=description, discovery_source="sbom", discovery_confidence="declared"))
+        tools = _declared_tools(component)
         servers[ref] = MCPServer(
             name=str(component.get("name") or ref),
             command="sbom",
             # Never execute imported commands; hash the case-sensitive reference.
             args=[fallback.config_path, "component:" + hashlib.sha256(ref.encode()).hexdigest()],
             surface=ServerSurface.SBOM,
+            discovery_sources=[SBOM_DECLARED_MCP_SOURCE],
             imported_canonical_id=ref.removeprefix("mcp-server-") if ref.startswith("mcp-server-") else None,
             packages=list(scoped_packages.values()),
             tools=tools,

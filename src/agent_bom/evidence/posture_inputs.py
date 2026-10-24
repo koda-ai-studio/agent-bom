@@ -15,6 +15,7 @@ from agent_bom import config
 from agent_bom.compliance_utils import effective_blast_radius_tags
 from agent_bom.evidence.posture_dimensions import DimensionScore, mark_vulnerability_lane_not_assessed
 from agent_bom.evidence.scan_run import effective_scan_run, vulnerability_scan_skipped
+from agent_bom.scanners.secret_models import secret_locations
 from agent_bom.scorecard import summarize_scorecard_coverage
 from agent_bom.vex import active_blast_radii
 
@@ -46,6 +47,7 @@ class PostureInputs:
     servers_with_tools: int = 0
     has_mcp_context: bool = False
     vulnerability_lane_skipped: bool = False
+    repository_secret_locations: list[str] = field(default_factory=list)
 
 
 def posture_inputs_from_report(report: "AIBOMReport") -> PostureInputs:
@@ -68,6 +70,9 @@ def posture_inputs_from_report(report: "AIBOMReport") -> PostureInputs:
         has_mcp_context=bool(report.has_mcp_context),
         vulnerability_lane_skipped=vulnerability_scan_skipped(effective_scan_run(report)),
     )
+    raw_inventory = getattr(report, "ai_inventory_data", None)
+    inventory = raw_inventory if isinstance(raw_inventory, dict) else {}
+    inputs.repository_secret_locations = secret_locations(inventory.get("secrets"))
     for agent in report.agents:
         for server in agent.mcp_servers:
             inputs.total_servers += 1
@@ -126,13 +131,20 @@ def _vulnerability_dimension(inputs: PostureInputs, weight: float) -> DimensionS
 
 
 def _credential_dimension(inputs: PostureInputs, weight: float) -> DimensionScore:
-    if inputs.credential_servers == 0:
+    repo_secrets = inputs.repository_secret_locations
+    if inputs.credential_servers == 0 and not repo_secrets:
         cred_score = 100.0
         cred_detail = "No credential exposure detected"
     else:
-        cred_penalty = min(len(inputs.credentials) * 8 + inputs.credential_servers * 3, 100)
+        cred_penalty = min(len(inputs.credentials) * 8 + inputs.credential_servers * 3 + len(repo_secrets) * 8, 100)
         cred_score = max(0.0, 100.0 - cred_penalty)
-        cred_detail = f"{len(inputs.credentials)} unique credentials across {inputs.credential_servers} servers"
+        parts = []
+        if inputs.credential_servers:
+            parts.append(f"{len(inputs.credentials)} unique credentials across {inputs.credential_servers} servers")
+        if repo_secrets:
+            shown = ", ".join(repo_secrets[:3]) + (f" (+{len(repo_secrets) - 3} more)" if len(repo_secrets) > 3 else "")
+            parts.append(f"{len(repo_secrets)} hardcoded secret(s) in repository files ({shown})")
+        cred_detail = "; ".join(parts)
     return DimensionScore(name="Credential Hygiene", score=round(cred_score, 1), weight=weight, details=cred_detail)
 
 

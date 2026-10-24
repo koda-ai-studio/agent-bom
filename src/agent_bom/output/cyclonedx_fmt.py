@@ -46,6 +46,7 @@ from agent_bom.output.technique_evidence import scoped_vulnerability_properties
 from agent_bom.sbom_formats.cyclonedx import merge_properties as _merge_properties
 from agent_bom.sbom_formats.cyclonedx import merge_vulnerability_observation as _merge_vulnerability_observation
 from agent_bom.sbom_formats.cyclonedx import vulnerability_enrichment_properties, vulnerability_source
+from agent_bom.sbom_formats.surface_labels import server_surface_description
 from agent_bom.security import sanitize_launch_command, sanitize_path_label
 from agent_bom.vex import vex_justification_to_cdx
 
@@ -657,7 +658,8 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
                     "name": "agent-bom:inventory-members",
                     "value": json.dumps(sorted(_sanitize_bom_ref(f"pkg-{p.stable_id}") for p in server.packages)),
                 },
-                {"name": "agent-bom:type", "value": "mcp-server"},
+                {"name": "agent-bom:type", "value": "mcp-server" if server.counts_as_mcp_server else "dependency-surface"},
+                {"name": "agent-bom:surface", "value": server.surface.value},
                 {"name": "agent-bom:command", "value": sanitize_launch_command(server.command, server.args)},
                 {"name": "agent-bom:transport", "value": server.transport.value},
             ]
@@ -677,7 +679,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
                 "type": "application",
                 "bom-ref": server_ref,
                 "name": server.name,
-                "description": f"MCP Server ({server.transport.value})",
+                "description": server_surface_description(server),
                 "properties": server_props,
             }
             components.append(server_component)

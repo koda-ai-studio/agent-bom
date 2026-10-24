@@ -2060,7 +2060,8 @@
        "source_precedence": 0,
        "version_source": "unknown"
       },
-      "vulnerability_count": 1
+      "vulnerability_count": 1,
+      "vulnerability_status": "scanned"
      }
     ],
     "prompts": [],
@@ -2988,7 +2989,8 @@
       "source_precedence": 0,
       "version_source": "unknown"
      },
-     "vulnerability_count": 1
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
     }
    ],
    "posture_grade": "D",
@@ -4825,7 +4827,8 @@
        "source_precedence": 0,
        "version_source": "unknown"
       },
-      "vulnerability_count": 1
+      "vulnerability_count": 1,
+      "vulnerability_status": "scanned"
      }
     ],
     "prompts": [],
@@ -5757,7 +5760,8 @@
       "source_precedence": 0,
       "version_source": "unknown"
      },
-     "vulnerability_count": 1
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
     }
    ],
    "posture_grade": "D",
@@ -7536,7 +7540,8 @@
        "source_precedence": 0,
        "version_source": "unknown"
       },
-      "vulnerability_count": 0
+      "vulnerability_count": null,
+      "vulnerability_status": "not_scanned"
      }
     ],
     "prompts": [],
@@ -7848,7 +7853,8 @@
       "source_precedence": 0,
       "version_source": "unknown"
      },
-     "vulnerability_count": 0
+     "vulnerability_count": null,
+     "vulnerability_status": "not_scanned"
     }
    ],
    "posture_grade": "C",
@@ -9467,7 +9473,8 @@
        "source_precedence": 0,
        "version_source": "unknown"
       },
-      "vulnerability_count": 0
+      "vulnerability_count": 0,
+      "vulnerability_status": "scanned"
      }
     ],
     "prompts": [],
@@ -9779,7 +9786,8 @@
       "source_precedence": 0,
       "version_source": "unknown"
      },
-     "vulnerability_count": 0
+     "vulnerability_count": 0,
+     "vulnerability_status": "scanned"
     }
    ],
    "posture_grade": "B",
@@ -11575,7 +11583,8 @@
        "source_precedence": 0,
        "version_source": "unknown"
       },
-      "vulnerability_count": 1
+      "vulnerability_count": 1,
+      "vulnerability_status": "scanned"
      }
     ],
     "prompts": [],
@@ -12503,7 +12512,8 @@
       "source_precedence": 0,
       "version_source": "unknown"
      },
-     "vulnerability_count": 1
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
     }
    ],
    "posture_grade": "D",
@@ -14206,7 +14216,8 @@
        "source_precedence": 0,
        "version_source": "unknown"
       },
-      "vulnerability_count": 1
+      "vulnerability_count": 1,
+      "vulnerability_status": "scanned"
      }
     ],
     "prompts": [],
@@ -15134,7 +15145,8 @@
       "source_precedence": 0,
       "version_source": "unknown"
      },
-     "vulnerability_count": 1
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
     }
    ],
    "posture_grade": "D",
@@ -16828,7 +16840,8 @@
        "source_precedence": 0,
        "version_source": "unknown"
       },
-      "vulnerability_count": 1
+      "vulnerability_count": 1,
+      "vulnerability_status": "scanned"
      }
     ],
     "prompts": [],
@@ -17140,7 +17153,8 @@
       "source_precedence": 0,
       "version_source": "unknown"
      },
-     "vulnerability_count": 1
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
     }
    ],
    "posture_grade": "N/A",
@@ -18779,7 +18793,8 @@
        "source_precedence": 0,
        "version_source": "unknown"
       },
-      "vulnerability_count": 1
+      "vulnerability_count": 1,
+      "vulnerability_status": "scanned"
      }
     ],
     "prompts": [],
@@ -19707,7 +19722,8 @@
       "source_precedence": 0,
       "version_source": "unknown"
      },
-     "vulnerability_count": 1
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
     }
    ],
    "posture_grade": "D",

@@ -9,15 +9,28 @@ is proposed first and only applied after you confirm.
 /plugin install agent-bom@agent-bom
 ```
 
-The same folder is also a Codex plugin (`.codex-plugin/plugin.json`), with the
-same skills and the same pinned local MCP servers. Add this repository as a Codex
-plugin marketplace, then install agent-bom from the Plugins Directory:
+## Two ways to install in Codex
 
-```text
-codex plugin marketplace add koda-ai-studio/agent-bom
-```
+| | Repository marketplace | Public plugin directory |
+|---|---|---|
+| Package | this folder (`.codex-plugin/plugin.json`) | [`integrations/codex`](../codex/README.md), skills-only |
+| How skills run agent-bom | the two locked local MCP servers (`uv run --frozen`, `uv.lock`) | the pinned CLI from the shell (`uvx --from agent-bom==<release> agent-bom … --agent-mode` or `-f json`) |
+| Plugin name | `agent-bom-local` | `agent-bom` |
+| Install | `codex plugin marketplace add koda-ai-studio/agent-bom`, then install agent-bom-local from the Plugins Directory | install agent-bom from the public directory |
+| Needs | uv; Codex starts the MCP servers | uv; Codex runs shell commands, each shown to you first |
 
-In Codex, skills are named without the `/agent-bom:` prefix (for example `scan`).
+Both carry the same ten skills with the same safety rules, rendered from
+`integrations/shared/skills.toml` by `scripts/render_plugin_skills.py`. The
+public directory lists local plugins as skills-only, which is why that package
+has no MCP server. What that costs: `affected` has no advisory lookup and matches
+only findings on this machine, and on releases up to 0.110.0 the CLI has no
+`activity` command and `mcp audit` reports no coding-agent permission
+findings. The two have different plugin names, so Codex keeps their skills apart
+(`agent-bom-local:scan` and `agent-bom:scan`), but each does the same jobs:
+install one. In Claude Code this plugin is still `agent-bom`, with
+`/agent-bom:` commands.
+
+## Skills
 
 | Skill | What it does |
 |---|---|
@@ -58,9 +71,14 @@ bounded tool profile: `agent-bom` (the default `scan` profile: scan, check,
 remediate and five more) and `agent-bom-audit` (`--profile audit`: inventory,
 agent activity, skill and descriptor audits, prompt checks, compliance, policy). See
 [MCP profiles](../../docs/MCP_SERVER.md). Both start with
-`uvx --from agent-bom==<release> agent-bom mcp server`, so they need
-[uv](https://docs.astral.sh/uv/) and fetch the published release from PyPI. No API
-key or account is needed. `inventory` and the skill audit tools join the audit
+`uv run --frozen --isolated --project <plugin folder> agent-bom mcp server`, so
+they need [uv](https://docs.astral.sh/uv/). `pyproject.toml` in this folder pins the
+published release and `uv.lock` records every dependency's exact version, PyPI URL
+and sha256 hash; uv installs exactly that, never resolves at launch, and writes
+nothing into the plugin folder (the environment lives in uv's cache). The lock
+covers Python 3.11 to 3.14 (uv downloads one if none is installed) on macOS,
+Linux x86_64 and aarch64, and Windows x64 and ARM64. No API key or account is
+needed. `inventory` and the skill audit tools join the audit
 profile in the release after 0.109.0; on 0.109.0 those two skills fall back to
 `scan` and `prompt_scan` and say so. `agent_activity` joins the audit profile in
 the release after 0.110.0; on earlier releases the `activity` skill says it is
@@ -112,10 +130,12 @@ Prompts, responses, file contents and credential values are never sent.
 
 ### What it runs, reads and sends
 
-- **Runs** two local processes, `uvx --from agent-bom==<release> agent-bom mcp server`
-  with and without `--profile audit`. uv downloads that exact release and its
-  dependencies from PyPI on first use. Claude Code and Codex start the same two
-  servers from the same `.mcp.json`. No hooks, no background jobs, and nothing
+- **Runs** two local processes, `uv run --frozen --isolated --project <plugin folder>
+  agent-bom mcp server` with and without `--profile audit`. uv downloads the
+  release and the dependencies locked in `uv.lock` from PyPI on first use and
+  checks each file's hash. Claude Code starts them from `.mcp.json`; Codex starts
+  the same two servers from the `mcpServers` block of `.codex-plugin/plugin.json`,
+  which runs from the plugin folder because Codex expands no `${CLAUDE_PLUGIN_ROOT}`. No hooks, no background jobs, and nothing
   runs outside a skill or tool call. The skills never launch or connect to the MCP
   servers they audit: `audit-mcp` always calls `tool_risk_assessment` with
   `live: false`.
@@ -150,6 +170,26 @@ Prompts, responses, file contents and credential values are never sent.
   credential validation and cloud connectors are off unless you enable them
   through the CLI.
 - **Stores** a local cache under `~/.agent-bom`.
+
+### Which paths the tools accept
+
+The MCP tools take paths under your home directory and under the directories
+named in `AGENT_BOM_MCP_WORKSPACE_ROOTS`. In Claude Code, `.mcp.json` sets that
+variable to `${CLAUDE_PROJECT_DIR}`, so a project in `/tmp`, `/workspaces`
+(devcontainers), `/srv` or `/Volumes` scans without setup. Codex expands no
+variables in a plugin's MCP config, so the `agent-bom-local` Codex plugin
+accepts paths under your home directory only. To scan a project elsewhere from
+Codex, declare the server in `~/.codex/config.toml` with the root set:
+
+```toml
+[mcp_servers.agent-bom]
+command = "uvx"
+args = ["--from", "agent-bom==<release>", "agent-bom", "mcp", "server"]
+env = { AGENT_BOM_MCP_WORKSPACE_ROOTS = "/workspaces/my-project" }
+```
+
+Separate several roots with `:` (`;` on Windows). Relative paths and `/` are
+ignored.
 
 To try a local checkout: `claude --plugin-dir integrations/claude-code`, and
 `claude plugin validate integrations/claude-code --strict` before publishing changes.

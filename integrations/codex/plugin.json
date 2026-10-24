@@ -1,0 +1,48 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "agent-bom",
+  "version": "0.110.0",
+  "description": "Inventory and audit your AI estate from the shell: scan MCP servers, agents and packages for CVEs, supply-chain risk and exposed credentials; audit MCP configs and skills for injection and risky grants; check a package before you add it; plan fixes. Runs a pinned local CLI; read-only by default.",
+  "author": {
+    "name": "koda-ai-studio",
+    "url": "https://github.com/koda-ai-studio"
+  },
+  "homepage": "https://github.com/koda-ai-studio/agent-bom",
+  "repository": "https://github.com/koda-ai-studio/agent-bom",
+  "license": "Apache-2.0",
+  "keywords": [
+    "security",
+    "mcp",
+    "sbom",
+    "supply-chain",
+    "cve",
+    "ai-agents"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "agent-bom",
+        "shortDescription": "AI agent and MCP security",
+        "longDescription": "Check your AI setup from Codex: the MCP servers, agents and packages on this machine, scanned for CVEs, known-exploited and malicious packages, and credentials written into config, with the three fixes that matter most. Ask whether you are affected by a CVE, audit MCP configs and skill or instruction files for prompt injection and risky grants, vet a package before you add it, plan upgrades, and write an AI-BOM (CycloneDX or SPDX) for this machine, a project, an image or a cloud account. Built for developers and security engineers who run coding agents and MCP servers.\n\nHow it works: each skill runs a pinned agent-bom release from PyPI in your shell with uv and reads its JSON output. There is no hosted service, account or API key, and nothing runs outside a skill. Read-only by default: any change is proposed as an exact edit and applied only after you confirm.\n\nLimits: this listing bundles no MCP server, so the skills never connect to or launch the MCP servers they audit and judge them from configuration and package metadata only. Vulnerability checks send package names and versions, never file contents or credentials, to public advisory and package registries. Reviewing agent activity needs an agent-bom release that ships the activity command; on older releases that skill says so and stops. Requires uv on PATH.",
+        "developerName": "koda-ai-studio",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Interactive"
+        ],
+        "websiteURL": "https://github.com/koda-ai-studio/agent-bom",
+        "supportURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/SUPPORT.md",
+        "privacyPolicyURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/codex/README.md#privacy",
+        "termsOfServiceURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/LICENSE",
+        "defaultPrompt": [
+          "Check my AI setup: is it safe, and what should I fix first?",
+          "Am I affected by CVE-2024-3651?",
+          "Is this package safe to add before I install it?"
+        ],
+        "brandColor": "#059669",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png",
+        "screenshots": []
+      }
+    }
+  }
+}

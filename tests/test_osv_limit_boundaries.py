@@ -1,6 +1,7 @@
 """OSV limits restrict a range without claiming that the limit is a fix."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -243,10 +244,65 @@ def test_unknown_range_is_not_suppressed_as_a_known_unfixed_distro_advisory():
 @pytest.mark.parametrize(
     "events",
     [
-        [{"introduced": "0"}, {"last_affected": "1.9"}, {"introduced": "2.0"}, {"fixed": "2.2"}],
         [{"introduced": "0"}, {"fixed": "4.0"}, {"limit": "1.0"}],
     ],
 )
 def test_fix_requires_membership_in_the_same_complete_window(events):
     data = advisory(events, versions=["1.5"])
     assert parse_fixed_version(data, "boundary-example", "pypi", "1.5") is None
+
+
+def test_legacy_receipt_warning_says_fixes_are_withheld_and_check_marks_the_finding(tmp_path):
+    from agent_bom.scanners.local_advisories import _local_vuln_to_vulnerability
+    from agent_bom.scanners.package_check_result import serialize_vulnerability
+    from agent_bom.scanners.state import consume_scan_warnings, reset_scan_warnings
+
+    conn = init_db(tmp_path / "legacy.db")
+    try:
+        _ingest_osv_file(conn, json.dumps(advisory([{"introduced": "0"}, {"fixed": "2.0"}])).encode(), "fixture.json")
+        conn.execute("UPDATE affected SET limit_version = NULL")
+        reset_scan_warnings()
+        (local,) = lookup_package(conn, "pypi", "boundary-example", "1.0")
+        warnings = consume_scan_warnings()
+        assert any("fixed versions are withheld" in w and "agent-bom db update" in w for w in warnings), warnings
+        payload = serialize_vulnerability(_local_vuln_to_vulnerability(local))
+        assert payload["fixed_version"] is None
+        assert payload["match_confidence_tier"] == "unverified_range"
+    finally:
+        conn.close()
+
+
+def test_window_without_fix_upgrades_to_the_next_unaffected_fixed_release():
+    """1.5 sits in [0, last_affected 1.9]; 2.2 is the advisory's fix and no window covers it."""
+    data = advisory([{"introduced": "0"}, {"last_affected": "1.9"}, {"introduced": "2.0"}, {"fixed": "2.2"}], versions=["1.5"])
+    assert parse_fixed_version(data, "boundary-example", "pypi", "1.5") == "2.2"
+
+
+def test_next_fix_is_never_a_release_another_window_still_affects():
+    data = advisory([{"introduced": "0"}, {"last_affected": "1.9"}, {"introduced": "2.0"}, {"fixed": "2.2"}], versions=["1.5"])
+    data["affected"][0]["ranges"].append({"type": "ECOSYSTEM", "events": [{"introduced": "2.2"}, {"fixed": "2.5"}]})
+    assert parse_fixed_version(data, "boundary-example", "pypi", "1.5") == "2.5"
+
+
+FIX_WINDOWS = Path(__file__).parent / "fixtures" / "osv_fix_windows"
+
+
+@pytest.mark.parametrize("engine", ["online", "single", "batch"])
+def test_server_filesystem_0_x_gets_the_calver_fix(tmp_path, engine):
+    """Recorded OSV record (2026-10-23): [0, last_affected 0.6.2] and [2025.1.14, fixed 2025.7.1)."""
+    raw = (FIX_WINDOWS / "GHSA-q66q-fx2p-7w4m.json").read_text()
+    name = "@modelcontextprotocol/server-filesystem"
+    if engine == "online":
+        assert parse_fixed_version(json.loads(raw), name, "npm", "0.5.1") == "2025.7.1"
+        return
+    conn = init_db(tmp_path / "fs.db")
+    try:
+        _ingest_osv_file(conn, raw.encode(), "fixture.json")
+        matches = (
+            lookup_package(conn, "npm", name, "0.5.1")
+            if engine == "single"
+            else lookup_packages_batch(conn, [("npm", name, "0.5.1")])[("npm", name, "0.5.1")]
+        )
+        assert [m.fixed_version for m in matches] == ["2025.7.1"]
+    finally:
+        conn.close()

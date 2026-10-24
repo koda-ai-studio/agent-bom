@@ -28,7 +28,11 @@ The canonical command reference lives in
   (`data_mode: "summary"`) — counts plus the top-ranked findings and exposure
   paths — so it fits an LLM context window; the full per-package payload is
   omitted. Add `--agent-mode-full` (`data_mode: "full"`) or write to disk with
-  `-o report.json --format json` for complete detail.
+  `-o report.json --format json` for complete detail. `data.count_definitions`
+  states what each count measures: `vulnerabilities` are unique advisories,
+  `vulnerability_exposures` are advisory x package x server rows, and
+  `findings` are every unified finding type, so the totals differ by design;
+  each `*_by_severity` histogram sums to its own total.
 - `agent-bom profiles ...` manages named contexts in
   `~/.agent-bom/config.toml`; unknown profiles fail with the available profile
   list.

@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from agent_bom.parsers.trust_applicability import apply_manifest_applicability
+
 if TYPE_CHECKING:
     from agent_bom.parsers.skill_audit import SkillAuditResult
     from agent_bom.parsers.skills import SkillMetadata, SkillScanResult
@@ -707,9 +709,8 @@ def _combine_verdict(provenance_verdict: ProvenanceVerdict, content_verdict: Ver
 def _generate_recommendations(categories: list[TrustCategoryResult]) -> list[str]:
     """Generate actionable recommendations based on category results."""
     recs: list[str] = []
-
     for cat in categories:
-        if cat.level == TrustLevel.PASS:
+        if cat.level in {TrustLevel.PASS, TrustLevel.INFO}:  # INFO notes are not findings
             continue
 
         if cat.key == "purpose_capability":
@@ -891,10 +892,9 @@ def assess_trust(
         _assess_credentials(meta, scan, audit),
         _assess_persistence_privilege(meta, scan, audit),
     ]
+    categories = apply_manifest_applicability(categories, meta.raw_frontmatter if meta else "", TrustLevel.PASS)
 
     _legacy_verdict, confidence = _compute_verdict(categories)
-    # Per #2197 audit: split verdict into provenance + content so a clean
-    # skill that's just unsigned no longer reads as `malicious`.
     provenance_categories, _content_categories = _split_categories(categories)
     provenance_verdict = _compute_provenance_verdict(provenance_categories)
     content_verdict = _compute_content_verdict_from_audit(audit)

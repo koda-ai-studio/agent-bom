@@ -568,3 +568,22 @@ def test_directory_tools_share_the_workspace_root_sandbox(workspace: Path, monke
     monkeypatch.setenv("AGENT_BOM_MCP_WORKSPACE_ROOTS", str(workspace))
     allowed = json.loads(asyncio.run(impl(**kwargs)))
     assert "outside home" not in str(allowed.get("error", "")).lower(), allowed
+
+
+def test_section_page_of_ten_large_findings_is_bounded(huge_scan) -> None:
+    from agent_bom.mcp_server import create_mcp_server
+    from agent_bom.mcp_tools.scan_response import PAGE_MAX_CHARS
+
+    server = create_mcp_server(profile="full")
+
+    async def _run() -> CallToolResult:
+        async with Client(server) as client:
+            first = await client.call_tool("scan", {"no_discover": True, "offline": True})
+            rid = json.loads(first.content[0].text)["result_id"]  # type: ignore[union-attr]
+            return await client.call_tool("scan", {"result_id": rid, "section": "findings", "offset": 0, "limit": 10})
+
+    text = asyncio.run(_run()).content[0].text  # type: ignore[union-attr]
+    assert len(text) <= PAGE_MAX_CHARS
+    body = json.loads(text)
+    assert [item["id"] for item in body["items"]] == [f"finding-{i:05d}" for i in range(10)]
+    assert body["next_offset"] == 10

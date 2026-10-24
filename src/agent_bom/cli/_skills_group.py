@@ -49,7 +49,39 @@ def _display_path(path: str) -> str:
     try:
         return str(p.relative_to(Path.cwd()))
     except ValueError:
-        return p.name or str(p)
+        # Keep the parent: a plugin's skills are all named SKILL.md.
+        return str(Path(*p.parts[-2:])) if len(p.parts) >= 2 else str(p)
+
+
+def _print_recommendations(console: Console, report: Any, quiet: bool) -> None:
+    recommendations: list[str] = []
+    for file_report in report.files:
+        for recommendation in [*file_report.trust.reviewer_guidance, *file_report.trust.publisher_guidance]:
+            if recommendation not in recommendations:
+                recommendations.append(recommendation)
+    if recommendations and not quiet:
+        console.print("\n[bold]Recommended next steps[/bold]")
+        for recommendation in recommendations[:5]:
+            console.print(f"  • {recommendation}")
+
+
+def _print_status_notes(console: Console, report: Any, quiet: bool) -> None:
+    """Say plainly when nothing was found, and what a ``pending`` status is waiting on."""
+    if quiet:
+        return
+    findings = sum(len(file_report.audit.findings) for file_report in report.files)
+    clean = sum(1 for file_report in report.files if file_report.status == "clean")
+    if findings == 0 and clean == len(report.files):
+        console.print(f"  [green]No findings in {clean} file(s).[/green] Provenance shows whether each file is signed.")
+        return
+    reasons: list[str] = []
+    for file_report in report.files:
+        if file_report.status == "pending":
+            for reason in file_report.trust.review_reasons or ["provenance is not verified"]:
+                if reason not in reasons:
+                    reasons.append(reason)
+    if reasons:
+        console.print("  [cyan]pending:[/cyan] no findings in the content, but a reviewer should confirm: " + "; ".join(reasons[:3]))
 
 
 @click.group("skills", cls=SuggestingGroup, invoke_without_command=True)
@@ -199,7 +231,7 @@ def skills_scan_cmd(
                 console.print(f"  [dim]Catalog updated:[/dim] {report.catalog_path}\n")
 
         files_table = Table(title="Instruction Surface", expand=True)
-        files_table.add_column("File")
+        files_table.add_column("File", overflow="fold")
         files_table.add_column("Status", no_wrap=True)
         files_table.add_column("Verdict", no_wrap=True)
         files_table.add_column("Review", no_wrap=True)
@@ -227,6 +259,7 @@ def skills_scan_cmd(
                 str(len(file_report.scan.packages) + len(file_report.scan.servers)),
             )
         console.print(files_table)
+        _print_status_notes(console, report, quiet)
 
         all_findings = [finding for file_report in report.files for finding in file_report.audit.findings]
         if all_findings:
@@ -268,18 +301,7 @@ def skills_scan_cmd(
             console.print()
             console.print(behavior_table)
 
-        recommendations = []
-        seen_recommendations: set[str] = set()
-        for file_report in report.files:
-            for recommendation in [*file_report.trust.reviewer_guidance, *file_report.trust.publisher_guidance]:
-                if recommendation not in seen_recommendations:
-                    seen_recommendations.add(recommendation)
-                    recommendations.append(recommendation)
-
-        if recommendations and not quiet:
-            console.print("\n[bold]Recommended next steps[/bold]")
-            for recommendation in recommendations[:5]:
-                console.print(f"  • {recommendation}")
+        _print_recommendations(console, report, quiet)
         if policy_result.status != "pass" and not quiet:
             console.print("\n[bold]Skills policy[/bold]")
             for decision in policy_result.violations[:5]:

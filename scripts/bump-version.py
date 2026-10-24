@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
+from typing import Callable
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -212,6 +214,27 @@ def _apply(locations: list[tuple[str, re.Pattern, str]], version: str, *, dry_ru
     return changed
 
 
+def relock_launcher(plugin_dir: Path, published: str, *, run: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run) -> bool:
+    """Regenerate *plugin_dir*'s uv.lock when it does not lock *published*. Returns whether uv ran.
+
+    The lock records hashes and file URLs, so it cannot be rewritten like a pin.
+    ``--upgrade`` re-resolves every dependency, as a fresh ``uvx`` install of the
+    release would; ``--refresh-package`` skips a cached index page that predates
+    the release.
+    """
+    cva = _load_alignment()
+    if not cva.launcher_lock_drift(plugin_dir, published):
+        return False
+    run(
+        ["uv", "lock", "--upgrade", "--refresh-package", "agent-bom", "--project", str(plugin_dir)],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    return True
+
+
 def bump(
     new_version: str | None = None,
     *,
@@ -271,6 +294,22 @@ def bump(
         for path in sweep_files:
             print(f"  UPDATED (align sweep): {path.relative_to(ROOT)}")
         changed += sweep_count
+        for launcher in cva.LAUNCHERS:
+            plugin_dir = ROOT / launcher
+            if not (plugin_dir / "pyproject.toml").exists():
+                continue
+            try:
+                if relock_launcher(plugin_dir, target_published):
+                    changed += 1
+                    print(f"  UPDATED (uv lock): {launcher}/uv.lock")
+            except (OSError, subprocess.SubprocessError) as exc:
+                detail = getattr(exc, "stderr", "") or exc
+                print(f"ERROR: could not regenerate {launcher}/uv.lock: {detail}", file=sys.stderr)
+                return 1
+            remaining = cva.launcher_lock_drift(plugin_dir, target_published)
+            if remaining:
+                print("ERROR: " + "; ".join(remaining), file=sys.stderr)
+                return 1
 
     # ``--check`` writes nothing, so reporting "Updated N" for it described work
     # that did not happen — during a release that reads as "the bump is done."

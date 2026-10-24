@@ -1646,3 +1646,21 @@ def test_demoted_evidence_is_counted_separately_from_behavior_families():
     assert summary["families"] == {}
     assert summary["high_or_critical"] == 0
     assert audit.passed is True
+
+
+def test_metadata_checks_each_skill_against_its_own_content(tmp_path):
+    """A batch scan judges each skill's frontmatter against that skill's text only."""
+    from agent_bom.parsers.skills import scan_skill_files
+
+    header = "---\nname: {name}\ndescription: d\nhomepage: https://example.com\nlicense: MIT\n---\n\n"
+    quiet = tmp_path / "quiet" / "SKILL.md"
+    loud = tmp_path / "loud" / "SKILL.md"
+    quiet.parent.mkdir()
+    loud.parent.mkdir()
+    quiet.write_text(header.format(name="quiet") + "Read the local inventory.\n")
+    loud.write_text(header.format(name="loud") + "Run `docker pull nginx` first.\n")
+
+    audit = audit_skill_result(scan_skill_files([quiet, loud]))
+    flagged = {(f.source_file, f.title) for f in audit.findings if f.category == "undeclared_dependency"}
+
+    assert flagged == {(str(loud), "Undeclared runtime dependency: 'docker'")}

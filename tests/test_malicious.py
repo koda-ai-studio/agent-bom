@@ -55,6 +55,17 @@ def test_flag_malicious_from_vulns_without_mal():
     assert pkg.malicious_reason is None
 
 
+def test_flag_malicious_from_ghsa_malware_advisory_without_mal_id():
+    # event-stream 3.3.6 reaches OSV only as GHSA-mh6f-8j2x-4483 tagged CWE-506.
+    pkg = Package(name="event-stream", version="3.3.6", ecosystem="npm")
+    pkg.vulnerabilities = [
+        Vulnerability(id="GHSA-mh6f-8j2x-4483", summary="flatmap-stream", severity=Severity.CRITICAL, cwe_ids=["CWE-506"]),
+    ]
+    flag_malicious_from_vulns(pkg)
+    assert pkg.is_malicious is True
+    assert "GHSA-mh6f-8j2x-4483" in pkg.malicious_reason
+
+
 def test_flag_malicious_from_vulns_mixed():
     pkg = Package(name="sneaky-pkg", version="1.0.0", ecosystem="pypi")
     pkg.vulnerabilities = [
@@ -264,3 +275,62 @@ def test_package_malicious_fields_settable():
     )
     assert pkg.is_malicious is True
     assert "MAL-2024-1234" in pkg.malicious_reason
+
+
+# ─── Ranked typosquat reference (src/agent_bom/data/popular_packages.json) ──
+
+
+@pytest.mark.parametrize(
+    ("name", "ecosystem", "target"),
+    [
+        # Squats from public incident reports that the 28-name list missed.
+        ("crossenv", "npm", "cross-env"),
+        ("colourama", "pypi", "colorama"),
+        ("jeIlyfish", "pypi", "jellyfish"),
+        ("python3-dateutil", "pypi", "python-dateutil"),
+        ("urlib3", "pypi", "urllib3"),
+    ],
+)
+def test_typosquat_catches_documented_campaigns(name, ecosystem, target):
+    assert check_typosquat(name, ecosystem) == target
+
+
+@pytest.mark.parametrize(
+    ("name", "ecosystem"),
+    [
+        # Established projects one edit from a target: recorded as established.
+        ("psycopg2", "pypi"),
+        ("enquirer", "npm"),
+        ("through", "npm"),
+        # Whole-token extensions of a target are plugins, not typos.
+        ("opentelemetry-instrumentation-redis", "pypi"),
+        ("eslint-plugin-react-hooks-extra", "npm"),
+        # PyPI treats -, _ and . as the same name.
+        ("python_dateutil", "pypi"),
+        ("Typing_Extensions", "pypi"),
+    ],
+)
+def test_typosquat_spares_established_neighbours(name, ecosystem):
+    assert check_typosquat(name, ecosystem) is None
+
+
+def test_typosquat_reference_is_sourced_and_small():
+    import json
+    from pathlib import Path
+
+    from agent_bom import malicious
+
+    data = json.loads((Path(malicious.__file__).parent / "data" / "popular_packages.json").read_text())
+    assert set(data["sources"]) >= {"pypi", "npm", "curated", "established"}
+    for eco in ("npm", "pypi"):
+        assert 250 <= len(data["popular"][eco]) <= 500
+        assert set(data["popular"][eco]) == set(malicious._POPULAR_PACKAGES[eco])
+        assert not set(data["established"][eco]) & set(data["popular"][eco])
+    assert {"urllib3", "colorama", "python-dateutil", "jellyfish"} <= set(data["popular"]["pypi"])
+    assert "cross-env" in data["popular"]["npm"]
+
+
+def test_typosquat_far_edits_on_long_names_are_not_squats():
+    # A long shared prefix pushes the ratio past 0.85 even when three or more
+    # characters differ; real squats are one or two edits away.
+    assert check_typosquat("eslint-plugin-vitest", "npm") is None

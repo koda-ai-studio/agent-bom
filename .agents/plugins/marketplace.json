@@ -5,7 +5,7 @@
   },
   "plugins": [
     {
-      "name": "agent-bom",
+      "name": "agent-bom-local",
       "source": {
         "source": "local",
         "path": "./integrations/claude-code"

@@ -527,7 +527,8 @@ the freshness of the SDK layer is surfaced, never left silent.
     SDK with its installed version, the recommended floor, and an upgrade hint.
   - `--agent-mode` scan metadata carries a `cloud_sdk_freshness` block
     (`status`, `stale_count`, and the flat list of warning messages) under
-    `summary`, alongside the vuln-DB freshness fields.
+    `summary`, alongside the vuln-DB freshness fields, when the scan read a
+    cloud provider. Scans that call no cloud API omit it.
 - **How to refresh.** Upgrade the matching extra, e.g.
   `pip install -U 'agent-bom[aws]'` (or `[azure]` / `[gcp]` / `[snowflake]`).
 - **Staying current automatically.** Dependabot keeps the provider SDKs on a

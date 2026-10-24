@@ -35,5 +35,8 @@
       "default": true
     }
   },
-  "privacyPolicyUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/agent-bom-guard/README.md#privacy"
+  "documentationUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/agent-bom-guard/README.md",
+  "supportUrl": "https://github.com/koda-ai-studio/agent-bom/issues",
+  "privacyPolicyUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/agent-bom-guard/README.md#privacy",
+  "termsOfServiceUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/LICENSE"
 }

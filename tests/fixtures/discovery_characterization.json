@@ -1607,14 +1607,12 @@
    "│ │  ✗  │ Instruction Scope        │ Prompt coercion, credential access, or data exfiltration pattern detected                                               │ │",
    "│ │  ✗  │ Install Mechanism        │ No install methods and no source URL — cannot verify provenance                                                         │ │",
    "│ │  ℹ  │ Credentials              │ 1 credential(s) referenced but not documented in metadata                                                               │ │",
-   "│ │  ⚠  │ Persistence & Privilege  │ No metadata — cannot verify persistence or privilege claims                                                             │ │",
+   "│ │  ✓  │ Persistence & Privilege  │ Not applicable without a ClawHub manifest: No metadata — cannot verify persistence or privilege claims                  │ │",
    "│ └─────┴──────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │",
    "╰──────────────────────────────────────────────────────────────── MALICIOUS (high confidence) ─────────────────────────────────────────────────────────────────╯",
    "  → Add name and description to YAML frontmatter",
    "  → Remove credential file access patterns or isolate the tool",
    "  → Provide at least one install method and a source URL",
-   "  → Document credentials in optional_env with sent_only_to scope",
-   "  → Add persistence, telemetry, and privilege_escalation fields to metadata",
    "",
    "Scanned 1 prompt template file(s)...",
    "",
@@ -2300,9 +2298,9 @@
       "details": [],
       "evidence": [],
       "key": "persistence_privilege",
-      "level": "warn",
+      "level": "pass",
       "name": "Persistence & Privilege",
-      "summary": "No metadata — cannot verify persistence or privilege claims"
+      "summary": "Not applicable without a ClawHub manifest: No metadata — cannot verify persistence or privilege claims"
      }
     ],
     "confidence": "high",
@@ -2312,22 +2310,17 @@
     "publisher_guidance": [
      "Add name and description to YAML frontmatter",
      "Remove credential file access patterns or isolate the tool",
-     "Provide at least one install method and a source URL",
-     "Document credentials in optional_env with sent_only_to scope",
-     "Add persistence, telemetry, and privilege_escalation fields to metadata"
+     "Provide at least one install method and a source URL"
     ],
     "recommendations": [
      "Add name and description to YAML frontmatter",
      "Remove credential file access patterns or isolate the tool",
-     "Provide at least one install method and a source URL",
-     "Document credentials in optional_env with sent_only_to scope",
-     "Add persistence, telemetry, and privilege_escalation fields to metadata"
+     "Provide at least one install method and a source URL"
     ],
     "review_reasons": [
      "Purpose & Capability: Missing name or description in metadata",
      "Instruction Scope: Prompt coercion, credential access, or data exfiltration pattern detected",
      "Install Mechanism: No install methods and no source URL — cannot verify provenance",
-     "Persistence & Privilege: No metadata — cannot verify persistence or privilege claims",
      "Natural-language credential exfiltration (credential_exfiltration)",
      "Prompt coercion or guardrail override (prompt_coercion)"
     ],
@@ -2513,7 +2506,7 @@
    "│ │            │                      │ hide policy checks. Remove or rewrite these instructions.             │                                              │ │",
    "│ └────────────┴──────────────────────┴───────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────┘ │",
    "╰────────────────────────────────────────────────── Checked: 2 pkg(s) · 0 server(s) · 1 credential(s) · FAIL ──────────────────────────────────────────────────╯",
-   "  Trust: SKILL.md → MALICIOUS (2 fail, 2 warn)",
+   "  Trust: SKILL.md → MALICIOUS (2 fail, 1 warn)",
    "",
    "Scanning 1 path(s) for IaC misconfigurations...",
    "",
@@ -2799,9 +2792,9 @@
       "details": [],
       "evidence": [],
       "key": "persistence_privilege",
-      "level": "warn",
+      "level": "pass",
       "name": "Persistence & Privilege",
-      "summary": "No metadata — cannot verify persistence or privilege claims"
+      "summary": "Not applicable without a ClawHub manifest: No metadata — cannot verify persistence or privilege claims"
      }
     ],
     "confidence": "high",
@@ -2811,22 +2804,17 @@
     "publisher_guidance": [
      "Add name and description to YAML frontmatter",
      "Remove credential file access patterns or isolate the tool",
-     "Provide at least one install method and a source URL",
-     "Document credentials in optional_env with sent_only_to scope",
-     "Add persistence, telemetry, and privilege_escalation fields to metadata"
+     "Provide at least one install method and a source URL"
     ],
     "recommendations": [
      "Add name and description to YAML frontmatter",
      "Remove credential file access patterns or isolate the tool",
-     "Provide at least one install method and a source URL",
-     "Document credentials in optional_env with sent_only_to scope",
-     "Add persistence, telemetry, and privilege_escalation fields to metadata"
+     "Provide at least one install method and a source URL"
     ],
     "review_reasons": [
      "Purpose & Capability: Missing name or description in metadata",
      "Instruction Scope: Prompt coercion, credential access, or data exfiltration pattern detected",
      "Install Mechanism: No install methods and no source URL — cannot verify provenance",
-     "Persistence & Privilege: No metadata — cannot verify persistence or privilege claims",
      "Natural-language credential exfiltration (credential_exfiltration)",
      "Prompt coercion or guardrail override (prompt_coercion)"
     ],
@@ -2976,7 +2964,7 @@
    "│ │            │                      │ hide policy checks. Remove or rewrite these instructions.             │                                              │ │",
    "│ └────────────┴──────────────────────┴───────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────┘ │",
    "╰────────────────────────────────────────────────── Checked: 2 pkg(s) · 0 server(s) · 1 credential(s) · FAIL ──────────────────────────────────────────────────╯",
-   "  Trust: SKILL.md → MALICIOUS (2 fail, 2 warn)"
+   "  Trust: SKILL.md → MALICIOUS (2 fail, 1 warn)"
   ],
   "context": {
    "_browser_ext_results": null,
@@ -3064,9 +3052,9 @@
       "details": [],
       "evidence": [],
       "key": "persistence_privilege",
-      "level": "warn",
+      "level": "pass",
       "name": "Persistence & Privilege",
-      "summary": "No metadata — cannot verify persistence or privilege claims"
+      "summary": "Not applicable without a ClawHub manifest: No metadata — cannot verify persistence or privilege claims"
      }
     ],
     "confidence": "high",
@@ -3076,22 +3064,17 @@
     "publisher_guidance": [
      "Add name and description to YAML frontmatter",
      "Remove credential file access patterns or isolate the tool",
-     "Provide at least one install method and a source URL",
-     "Document credentials in optional_env with sent_only_to scope",
-     "Add persistence, telemetry, and privilege_escalation fields to metadata"
+     "Provide at least one install method and a source URL"
     ],
     "recommendations": [
      "Add name and description to YAML frontmatter",
      "Remove credential file access patterns or isolate the tool",
-     "Provide at least one install method and a source URL",
-     "Document credentials in optional_env with sent_only_to scope",
-     "Add persistence, telemetry, and privilege_escalation fields to metadata"
+     "Provide at least one install method and a source URL"
     ],
     "review_reasons": [
      "Purpose & Capability: Missing name or description in metadata",
      "Instruction Scope: Prompt coercion, credential access, or data exfiltration pattern detected",
      "Install Mechanism: No install methods and no source URL — cannot verify provenance",
-     "Persistence & Privilege: No metadata — cannot verify persistence or privilege claims",
      "Natural-language credential exfiltration (credential_exfiltration)",
      "Prompt coercion or guardrail override (prompt_coercion)"
     ],

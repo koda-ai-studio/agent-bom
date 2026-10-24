@@ -10,7 +10,20 @@ import re
 from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
-from agent_bom.mcp_tools.check_lookup import incomplete_lookup_reason, scan_checked_package
+from agent_bom.evidence.scan_run import scanner_warning_issues
+from agent_bom.mcp_server_scan import consume_repo_tree_inventory
+from agent_bom.mcp_tools.check_lookup import (
+    incomplete_lookup_reason,
+    resolution_malware_reason,
+    scan_checked_package,
+    unpublished_malware_reason,
+)
+from agent_bom.mcp_tools.check_lookup import (
+    unpublished_result as _unpublished_result,
+)
+from agent_bom.mcp_tools.check_lookup import (
+    unresolved_result as _unresolved_result,
+)
 from agent_bom.mcp_tools.check_lookup import version_published as _version_published
 from agent_bom.mcp_tools.dispatch import resolve_tool_path
 from agent_bom.mcp_tools.result_store import ResultStore
@@ -26,6 +39,7 @@ from agent_bom.mcp_tools.scan_response import (
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.scanners.local_data_freshness import freshness_snapshot
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
+from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -253,6 +267,7 @@ async def _scan_impl_inner(
         enrich, scorecard, verify_integrity, pre_warnings = _apply_offline_overrides(offline, enrich, scorecard, verify_integrity)
         package = _normalize_scan_package(package)
         _maybe_refresh_vuln_db(auto_update_db, offline, db_sources, pre_warnings)
+        reset_scan_warnings()
         agents, blast_radii, scan_warnings, scan_sources = await _run_scan_pipeline(
             config_path,
             image,
@@ -264,18 +279,18 @@ async def _scan_impl_inner(
             ecosystem=ecosystem,
             no_discover=no_discover,
         )
-        scan_warnings = [*pre_warnings, *scan_warnings]
+        scanner_warnings = consume_scan_warnings()
+        coverage_warnings = consume_coverage_warnings()
+        scan_warnings = list(dict.fromkeys([*pre_warnings, *scan_warnings, *scanner_warnings]))
         package_spec_unresolved = _flag_unresolved_package_spec(package, agents, scan_warnings)
         if not agents:
             return _truncate_response(json.dumps(_empty_envelope("no_agents_found", warnings=scan_warnings)))
         from agent_bom.vex import active_blast_radii
 
         active_findings = active_blast_radii(blast_radii)
-        if verify_integrity:
-            await _verify_scanned_packages(agents, scan_warnings)
-        if scorecard:
-            await _enrich_scanned_packages_with_scorecard(agents)
+        await _post_scan_enrichment(agents, scan_warnings, verify_integrity=verify_integrity, scorecard=scorecard)
         report = _scan_report(AIBOMReport, agents, blast_radii, scan_sources, offline=offline)
+        _attach_pipeline_evidence(report, scanner_warnings, coverage_warnings)
         await _surface_graph_findings(report)
         if package_spec_unresolved:
             # Fail closed for every format: an empty SARIF/CycloneDX/SPDX document reads as an audited clean result.
@@ -297,6 +312,26 @@ async def _scan_impl_inner(
             return incomplete
         logger.exception("MCP tool error")
         raise ToolError(sanitize_error(exc)) from exc
+
+
+async def _post_scan_enrichment(agents, scan_warnings: list[str], *, verify_integrity: bool, scorecard: bool) -> None:
+    if verify_integrity:
+        await _verify_scanned_packages(agents, scan_warnings)
+    if scorecard:
+        await _enrich_scanned_packages_with_scorecard(agents)
+
+
+def _attach_pipeline_evidence(report, scanner_warnings: list[str], coverage_warnings: list[dict]) -> None:
+    """Fold the pipeline's scanner/coverage warnings and repo-tree inventory into the report.
+
+    Same scan_run evidence the CLI grades, so the posture grade is one computation.
+    """
+    report.scan_run.issues.extend(scanner_warning_issues(scanner_warnings))
+    if coverage_warnings:
+        report.coverage_warnings = coverage_warnings
+    repo_inventory = consume_repo_tree_inventory()
+    if repo_inventory:
+        report.ai_inventory_data = {**(report.ai_inventory_data or {}), **repo_inventory}
 
 
 def _scan_report(report_cls, agents, blast_radii, scan_sources, *, offline: bool):
@@ -591,21 +626,10 @@ async def check_impl(
 
             async with create_client(timeout=15.0) as client:
                 resolved = await resolve_package_version(pkg, client)
-            if resolved:
-                version = pkg.version
-            else:
-                return json.dumps(
-                    {
-                        "package": name,
-                        "ecosystem": eco,
-                        "status": "error",
-                        "error": (
-                            f"Could not resolve a version for {name}. Provide an explicit "
-                            f"version (e.g. {name}@1.2.3 or {name}==1.2.3) and confirm the "
-                            f"ecosystem (got '{eco}')."
-                        ),
-                    }
-                )
+                reason = await resolution_malware_reason(resolved, name, eco, client)
+            if not resolved:
+                return _unresolved_result(pkg, name, eco, reason, service_result)
+            version = pkg.version
 
         try:
             coverage_warnings, data_evidence = await scan_checked_package(pkg, offline=offline, warnings=result_warnings)
@@ -643,15 +667,9 @@ async def check_impl(
 
             async with create_client(timeout=15.0) as client:
                 published = await _version_published(name, version, eco, client)
+                reason = await unpublished_malware_reason(published, name, version, eco, client)
             if not published:
-                return service_result(
-                    "unknown",
-                    (
-                        f"Version {version} of {name} was not found in the {eco} registry — "
-                        f"cannot confirm it is free of vulnerabilities (typo or unpublished "
-                        f"version?). agent-bom only verifies published versions."
-                    ),
-                )
+                return _unpublished_result(pkg, name, version, eco, reason, service_result)
 
         if not pkg.vulnerabilities:
             return service_result("clean", f"No known vulnerabilities in {name}@{version}")

@@ -10,24 +10,72 @@ Reference: https://github.com/ossf/malicious-packages
 
 from __future__ import annotations
 
+import json
+import re
 from difflib import SequenceMatcher
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agent_bom.models import Package
+    from agent_bom.models import Package, Vulnerability
 
 
-def is_malicious_vuln(vuln_id: str) -> bool:
-    """Check if a vulnerability ID indicates a known malicious package."""
-    return vuln_id.upper().startswith("MAL-")
+# CWE "malicious code" family: Embedded Malicious Code and its children
+# (trojan, non-replicating/replicating code, trapdoor, logic bomb, spyware).
+# GitHub's reviewed malware advisories carry GHSA ids, not MAL- ids, and are
+# marked by CWE-506 in OSV ``database_specific.cwe_ids``.
+_MALICIOUS_CODE_CWES: frozenset[str] = frozenset({"CWE-506", "CWE-507", "CWE-508", "CWE-509", "CWE-510", "CWE-511", "CWE-512"})
+
+# Advisory titles that describe the package itself as malware ("crossenv is
+# malware", "Malicious Package in flatmap-stream"). Attacker wording such as
+# "a malicious user can ..." must not match.
+_MALWARE_SUMMARY = re.compile(
+    r"\bmalicious\s+(?:package|code|version|release|dependency)s?\b"
+    r"|\b(?:is|are|contains?|includes?|was|were)\s+(?:a\s+piece\s+of\s+)?malware\b"
+    r"|\bembedded\s+malicious\b",
+    re.IGNORECASE,
+)
+
+
+# CWE-506 (Embedded Malicious Code) is how GitHub malware advisories such as
+# crossenv and event-stream 3.3.6 reach OSV: as GHSA ids with no MAL- alias.
+MALWARE_CWE = "CWE-506"
+
+
+def is_malicious_vuln(vuln_id: str, cwe_ids: list[str] | None = None) -> bool:
+    """Check if a vulnerability ID (or its CWE tags) indicates a known malicious package."""
+    return vuln_id.upper().startswith("MAL-") or MALWARE_CWE in (cwe_ids or [])
+
+
+def _is_malicious_advisory(ids: list[str], cwe_ids: list[str], summary: str) -> bool:
+    if any(is_malicious_vuln(i) for i in ids if isinstance(i, str)):
+        return True
+    if any(isinstance(c, str) and c.upper() in _MALICIOUS_CODE_CWES for c in cwe_ids):
+        return True
+    return bool(summary and _MALWARE_SUMMARY.search(summary))
+
+
+def is_malicious_osv_record(record: dict) -> bool:
+    """True when a raw OSV record is a malicious-package advisory (MAL-, CWE-506 or malware title)."""
+    raw_specific = record.get("database_specific")
+    db_specific: dict = raw_specific if isinstance(raw_specific, dict) else {}
+    ids = [str(record.get("id") or ""), *(record.get("aliases") or [])]
+    return _is_malicious_advisory(ids, list(db_specific.get("cwe_ids") or []), str(record.get("summary") or ""))
+
+
+def is_malicious_advisory(vuln: Vulnerability) -> bool:
+    """True when a parsed vulnerability is a malicious-package advisory."""
+    return _is_malicious_advisory([vuln.id, *vuln.aliases], list(vuln.cwe_ids), vuln.summary or "")
 
 
 def flag_malicious_from_vulns(package: Package) -> None:
-    """Flag a package as malicious if any of its vulnerabilities have MAL- IDs.
+    """Flag a package as malicious if any vulnerability is a malicious-package advisory.
 
-    Mutates package.is_malicious and package.malicious_reason in-place.
+    Covers OpenSSF MAL- ids and GHSA malware advisories (CWE-506 family or a
+    "... is malware" title). Mutates package.is_malicious and
+    package.malicious_reason in-place.
     """
-    mal_ids = [v.id for v in package.vulnerabilities if is_malicious_vuln(v.id)]
+    mal_ids = [v.id for v in package.vulnerabilities if is_malicious_advisory(v)]
     if mal_ids:
         package.is_malicious = True
         package.malicious_reason = f"Known malicious package ({', '.join(mal_ids[:3])})"
@@ -57,75 +105,14 @@ _SAFE_NPM_SCOPES: frozenset[str] = frozenset(
 
 # ─── Typosquat detection ─────────────────────────────────────────────────────
 
-# Popular packages commonly targeted by typosquat attacks.
-# Sourced from npm/PyPI download counts + known typosquat campaigns.
-_POPULAR_PACKAGES: dict[str, frozenset[str]] = {
-    "npm": frozenset(
-        {
-            "express",
-            "lodash",
-            "axios",
-            "react",
-            "react-dom",
-            "next",
-            "typescript",
-            "webpack",
-            "babel-core",
-            "eslint",
-            "prettier",
-            "commander",
-            "chalk",
-            "inquirer",
-            "dotenv",
-            "cors",
-            "jsonwebtoken",
-            "bcrypt",
-            "mongoose",
-            "sequelize",
-            "socket.io",
-            "nodemailer",
-            "passport",
-            "helmet",
-            "uuid",
-            "moment",
-            "dayjs",
-            "zod",
-            "yup",
-        }
-    ),
-    "pypi": frozenset(
-        {
-            "requests",
-            "flask",
-            "django",
-            "numpy",
-            "pandas",
-            "scipy",
-            "tensorflow",
-            "torch",
-            "transformers",
-            "scikit-learn",
-            "boto3",
-            "httpx",
-            "fastapi",
-            "uvicorn",
-            "pydantic",
-            "sqlalchemy",
-            "celery",
-            "redis",
-            "pillow",
-            "beautifulsoup4",
-            "cryptography",
-            "paramiko",
-            "fabric",
-            "ansible",
-            "openai",
-            "anthropic",
-            "langchain",
-            "litellm",
-        }
-    ),
-}
+# Names attackers imitate, per ecosystem, from public download and dependent
+# rankings plus documented campaign targets. ``established`` holds the ranked
+# projects that sit within squat distance of a target (``psycopg2``/``psycopg``)
+# and so are never reported. Built and documented by
+# scripts/generate_popular_packages.py.
+_REFERENCE = json.loads((Path(__file__).parent / "data" / "popular_packages.json").read_text(encoding="utf-8"))
+_POPULAR_PACKAGES: dict[str, frozenset[str]] = {eco: frozenset(names) for eco, names in _REFERENCE["popular"].items()}
+_ESTABLISHED: dict[str, frozenset[str]] = {eco: frozenset(names) for eco, names in _REFERENCE["established"].items()}
 
 
 # Genuine packages whose names resemble a popular neighbour closely enough to
@@ -196,39 +183,64 @@ def _single_substitution(a: str, b: str) -> bool:
     return diff == 1
 
 
-def check_typosquat(name: str, ecosystem: str, threshold: float = 0.85) -> str | None:
-    """Check if a package name looks like a typosquat of a popular package.
+# Real squats are one or two edits from their target (``urlib3``, ``reqeusts``,
+# ``python3-dateutil``). On long names a shared prefix alone pushes the ratio
+# past the threshold (``eslint-plugin-vitest`` vs ``eslint-plugin-jest``), so a
+# match must also be within this many edits.
+_MAX_EDITS = 2
 
-    Returns the suspected target package name, or None if no match.
-    Uses SequenceMatcher ratio — same approach as parsers/skill_audit.py.
-    """
-    popular = _POPULAR_PACKAGES.get(ecosystem.lower(), frozenset())
-    if not popular:
+
+def canonical_name(name: str, ecosystem: str) -> str:
+    """Lowercase ``name``; on PyPI also fold ``-``, ``_`` and ``.`` together as pip does."""
+    lowered = name.lower()
+    return re.sub(r"[-_.]+", "-", lowered) if ecosystem.lower() == "pypi" else lowered
+
+
+def _edit_distance(a: str, b: str, limit: int) -> int:
+    """Optimal-string-alignment distance (adjacent transposition = 1), capped at ``limit + 1``."""
+    if abs(len(a) - len(b)) > limit:
+        return limit + 1
+    prev2: list[int] = []
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        row = [i] + [0] * len(b)
+        for j, cb in enumerate(b, 1):
+            row[j] = min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (ca != cb))
+            if i > 1 and j > 1 and ca == b[j - 2] and a[i - 2] == cb:
+                row[j] = min(row[j], prev2[j - 2] + 1)
+        if min(row) > limit:
+            return limit + 1
+        prev2, prev = prev, row
+    return prev[-1]
+
+
+def _extends(name: str, target: str) -> bool:
+    """True when ``name`` is ``target`` plus whole ``-`` tokens, the shape of a plugin or binding."""
+    return name.startswith(target + "-") or name.endswith("-" + target)
+
+
+def typosquat_target(
+    name: str, ecosystem: str, popular: frozenset[str] | set[str], legitimate: frozenset[str], threshold: float = 0.85
+) -> str | None:
+    """Return the entry of ``popular`` that canonical ``name`` imitates, or None."""
+    if name in popular or name in legitimate:
         return None
-
-    normalized = name.lower()
-
-    # Official scoped npm packages such as @babel/core are allowed to look
-    # similar to older unscoped package names like babel-core.
-    if ecosystem.lower() == "npm" and any(normalized.startswith(scope) for scope in _SAFE_NPM_SCOPES):
-        return None
-
-    # Exact match = not a typosquat
-    if normalized in {p.lower() for p in popular}:
-        return None
-
-    if normalized in _KNOWN_LEGITIMATE.get(ecosystem.lower(), frozenset()):
-        return None
-
     best_ratio = 0.0
     best_match = ""
-    for pkg_name in popular:
-        ratio = SequenceMatcher(None, normalized, pkg_name.lower()).ratio()
-        if ratio > best_ratio:
+    # difflib caches its analysis of the second sequence, so hold ``name`` there.
+    matcher = SequenceMatcher(None, "", name, autojunk=False)
+    for candidate in popular:
+        # 2*min/(sum) bounds the ratio from above: skip without building anything.
+        if 2 * min(len(name), len(candidate)) < threshold * (len(name) + len(candidate)) or _extends(name, candidate):
+            continue
+        matcher.set_seq1(candidate)
+        if matcher.quick_ratio() < threshold:
+            continue
+        ratio = matcher.ratio()
+        if ratio > best_ratio and ratio >= threshold and _edit_distance(name, candidate, _MAX_EDITS) <= _MAX_EDITS:
             best_ratio = ratio
-            best_match = pkg_name
-
-    if best_ratio >= threshold:
+            best_match = candidate
+    if best_match:
         return best_match
 
     # A single-character substitution on a short-ish name (``djanga`` vs
@@ -236,11 +248,32 @@ def check_typosquat(name: str, ecosystem: str, threshold: float = 0.85) -> str |
     # equal-length one-edit case explicitly for names long enough that one edited
     # character is a strong signal, without lowering the ratio threshold (which
     # would pull in genuine near-neighbours).
-    if len(normalized) >= _EDIT1_MIN_LEN:
-        for pkg_name in popular:
-            if _single_substitution(normalized, pkg_name.lower()):
-                return pkg_name
+    if len(name) >= _EDIT1_MIN_LEN:
+        return next((c for c in sorted(popular) if _single_substitution(name, c)), None)
     return None
+
+
+def check_typosquat(name: str, ecosystem: str, threshold: float = 0.85) -> str | None:
+    """Check if a package name looks like a typosquat of a popular package.
+
+    Returns the suspected target package name, or None if no match.
+    Uses SequenceMatcher ratio — same approach as parsers/skill_audit.py — capped
+    at ``_MAX_EDITS`` edits.
+    """
+    eco = ecosystem.lower()
+    popular = _POPULAR_PACKAGES.get(eco, frozenset())
+    if not popular:
+        return None
+
+    normalized = canonical_name(name, eco)
+
+    # Official scoped npm packages such as @babel/core are allowed to look
+    # similar to older unscoped package names like babel-core.
+    if eco == "npm" and any(normalized.startswith(scope) for scope in _SAFE_NPM_SCOPES):
+        return None
+
+    legitimate = _KNOWN_LEGITIMATE.get(eco, frozenset()) | _ESTABLISHED.get(eco, frozenset())
+    return typosquat_target(normalized, eco, popular, legitimate, threshold)
 
 
 # ── Dependency confusion detection ─────────────────────────────────────────

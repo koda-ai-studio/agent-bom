@@ -3,8 +3,9 @@
 A Claude Code plugin with one `PreToolUse` hook on the Bash tool. Before Claude
 runs a command, the hook reads the command text, finds the named registry
 packages it would install, and checks them. It blocks known-malicious and
-typosquatted packages, warns about known advisories for an exact pinned version,
-and prints nothing for clean installs or for commands that install nothing.
+typosquatted packages, warns about known advisories for an exact pinned version
+and about pipe-to-shell installs, and prints nothing for clean installs or for
+commands that install nothing.
 
 ```text
 /plugin marketplace add koda-ai-studio/agent-bom
@@ -18,12 +19,13 @@ already installed; the guard covers the moment a new package arrives.
 
 | Result | When |
 |---|---|
-| Block (`deny`, Claude is told why) | The package is a confirmed-malicious entry in agent-bom's bundled blocklist and the version is in the affected range (or unpinned); OSV reports a `MAL-` advisory for it; or the name looks like a typosquat of a popular package, for example `reqeusts` imitating `requests`. The reason names the package it imitates. |
-| Warn (the command runs) | An exact pinned version, such as `lodash@4.17.20` or `requests==2.19.0`, has known advisories on OSV; the message lists the IDs by severity. Also used for requirement files (`pip install -r`), which this hook does not open, for a malicious-listed name pinned outside the affected range, and when api.osv.dev cannot be reached. |
+| Block (`deny`, Claude is told why) | The package is a confirmed-malicious entry in agent-bom's bundled blocklist and the version is in the affected range (or unpinned); OSV reports it as malware (an OpenSSF `MAL-` report, or a GitHub advisory tagged CWE-506 such as `crossenv` or `event-stream@3.3.6`) and the install is pinned to an affected version or no clean release exists; or the name looks like a typosquat of a popular package, for example `reqeusts` imitating `requests`. The reason names the package it imitates. |
+| Warn (the command runs) | An exact pinned version, such as `lodash@4.17.20` or `requests==2.19.0`, has known advisories on OSV; the message lists the IDs by severity. Also used for requirement files (`pip install -r`), which this hook does not open, for a malicious-listed name pinned outside the affected range, for an unpinned install of a package that once shipped a malicious release but has clean ones (`npm install event-stream`), when api.osv.dev cannot be reached, and when a download is piped straight into a shell or interpreter (`curl … \| sh`, `wget -qO- … \| sudo bash`), which runs a script nobody read and no version pins. |
 | Silent | Clean installs, and every command that does not install a named registry package: `npm test`, `npm install` with no names, `pip install -e .`, `echo "pip install x"`, local paths, URLs and git sources. |
 
-Advisories never block on their own, and an unpinned install ignores advisories,
-because it resolves to the newest release, which is usually fixed. The hook never
+Ordinary advisories never block on their own, and an unpinned install ignores them,
+because it resolves to the newest release, which is usually fixed. Malware reports are
+checked whether or not the install is pinned. The hook never
 returns `allow`, so it never skips your own permission prompt.
 
 Recognised installers: npm, pnpm, yarn, bun, npx, pip, pip3, `python -m pip`, uv
@@ -63,7 +65,7 @@ credentials are never sent.
 - **Sends**, only when `osv_lookup` is on and the command installs a named package,
   each package's name, ecosystem and version (when pinned) to `api.osv.dev`: one
   `POST /v1/querybatch`, then up to six `GET /v1/vulns/<id>` requests for advisory
-  severity. Each request times out after 2 to 3 seconds. Nothing else leaves the
+  severity and malware tags (malware reports are fetched first). Each request times out after 2 to 3 seconds. Nothing else leaves the
   machine: no command text, paths, file contents, environment or telemetry.
 - **Stores** nothing and writes no files.
 
@@ -80,9 +82,13 @@ unreachable, the offline checks still run and a short note says so.
 - Only package names written in the command are checked. Requirement files,
   lockfiles, manifests and transitive dependencies are not; run `/agent-bom:scan`
   for those.
-- Typosquat detection compares names against a curated list of popular packages in
-  npm and PyPI. It is a heuristic: a genuine package with a lookalike name can be
-  blocked. Use `on_match: warn`, or run that install yourself, and report the name so
+- Typosquat detection compares names against about 300 popular npm and PyPI packages
+  each, taken from public download and dependent rankings plus documented campaign
+  targets (`src/agent_bom/data/popular_packages.json`; how it is built is in
+  `scripts/generate_popular_packages.py`). Ranked projects that sit next to a popular
+  name, such as `psycopg2`, are never flagged. It is still a heuristic: on held-out
+  less-popular packages about 0.3% (npm) and 0.4% (PyPI) of names were flagged, so a
+  genuine package with a lookalike name can be blocked. Use `on_match: warn`, or run that install yourself, and report the name so
   it can join the verified list.
 - Commands built at run time (`pip install $(cat list)`) cannot be read and are not
   checked.
