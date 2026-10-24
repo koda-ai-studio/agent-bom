@@ -300,7 +300,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `fleet` → `account`, `agent`, `cloud_resource`, `org`, `server`
 - `provider` → `account`, `agent`, `cloud_resource`, `org`, `server`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_lineage.py`, `graph/endpoint_overlay.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_lineage.py`, `graph/endpoint_overlay.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `imports`
 
