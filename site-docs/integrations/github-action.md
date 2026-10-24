@@ -136,7 +136,7 @@ separate `sbom` input still takes an existing SBOM to ingest.
 | `fs` | `agent-bom fs <path>` | Mounted filesystem or directory. |
 | `sbom` | `agent-bom sbom <file>` | Existing CycloneDX or SPDX file. |
 | `iac` | `agent-bom iac <paths>` | Comma-separated paths. |
-| `secrets`, `code` | `agent-bom secrets|code <path>` | JSON output only; `upload-sarif` is rejected. |
+| `secrets`, `code` | `agent-bom secrets <path>` or `agent-bom code <path>` | JSON output only; `upload-sarif` is rejected. |
 | `skills` | `agent-bom skills scan <path>` | Uses the `*-verdict` and `skills-ci` gates. |
 
 The Action only passes flags the selected command accepts. A blocking gate or
