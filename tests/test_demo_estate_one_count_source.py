@@ -103,6 +103,11 @@ def _check_vuln_card_equals_its_drill_down(surfaces: dict[str, dict], client: Te
     assert domain["metric"] > 0
     assert linked["total"] == domain["metric"], (domain["href"], linked["total"], domain["metric"])
     assert _bands(linked["facets"]["severity"]) == _bands(domain["detail"]["severity"])
+    by_domain = _get(client, "/v1/findings", limit=1, include_facets="true", domain="vuln")
+    assert by_domain["total"] == domain["metric"], ("domain=vuln", by_domain["total"], domain["metric"])
+    domain_facet = linked["facets"].get("domain") or linked["facets"].get("security_domain") or {}
+    if domain_facet:
+        assert domain_facet.get("vuln") == domain["metric"], domain_facet
 
 
 def _check_remediation_reads_the_findings_window(surfaces: dict[str, dict]) -> None:

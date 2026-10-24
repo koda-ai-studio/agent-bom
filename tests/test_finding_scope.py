@@ -431,3 +431,17 @@ def test_reconfirmation_projection_keeps_only_structural_reason_codes():
     }
     assert "private-value" not in str(row)
     assert "observation_status" not in safe_finding_response_payload({"observation_status": {"unsafe": True}})
+
+
+def test_cloud_best_practice_from_any_source_is_cloud_posture_not_vuln() -> None:
+    for finding_type in (FindingType.CLOUD_BEST_PRACTICE_FAIL, FindingType.CLOUD_BEST_PRACTICE_ERROR):
+        for source in (FindingSource.EXTERNAL, FindingSource.CONTAINER, FindingSource.SBOM, FindingSource.FILESYSTEM):
+            assert security_domain_for(source, finding_type) == "cspm", (source, finding_type)
+            assert "vuln" not in security_lenses_for(source, finding_type), (source, finding_type)
+        row = {"source": "EXTERNAL", "finding_type": finding_type.value}
+        assert domain_for_row(row) == "cspm"
+        assert "vuln" not in lenses_for_row(row)
+        # A row persisted before this rule carries the old lane; the type still decides.
+        stale = {**row, "security_domain": "vuln"}
+        assert domain_for_row(stale) == "cspm"
+        assert "vuln" not in lenses_for_row(stale)
