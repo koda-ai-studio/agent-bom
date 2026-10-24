@@ -69,7 +69,8 @@ def skill_audit_data_to_findings(skill_audit: dict) -> list:
                         name=asset_name,
                         asset_type=asset_type,
                         identifier=str(identifier) if identifier else None,
-                        location=sanitize_path_label(source_file) if source_file else None,
+                        location=_safe_relative_path(item.get("source_path"))
+                        or (sanitize_path_label(source_file) if source_file else None),
                     ),
                     severity=severity,
                     title=title,
@@ -95,6 +96,14 @@ def skill_audit_data_to_findings(skill_audit: dict) -> list:
             )
         )
     return unified
+
+
+def _safe_relative_path(value: object) -> str | None:
+    """A repository-relative path that is safe to publish as a SARIF/finding location."""
+    if not isinstance(value, str) or not value or value.startswith(("/", "\\", "~", "<")) or ":" in value:
+        return None
+    parts = Path(value).parts
+    return value if parts and ".." not in parts else None
 
 
 def _without_host_path(text: str, source_file: str) -> str:

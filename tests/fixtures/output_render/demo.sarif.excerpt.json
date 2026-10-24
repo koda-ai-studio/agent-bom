@@ -7,7 +7,7 @@
         "driver": {
           "name": "agent-bom",
           "version": "0.0.0-golden",
-          "informationUri": "https://github.com/msaad00/agent-bom",
+          "informationUri": "https://github.com/koda-ai-studio/agent-bom",
           "rules": [
             {
               "id": "CVE-2023-36258",

@@ -7,7 +7,7 @@
         "driver": {
           "name": "agent-bom",
           "version": "0.0.0-golden",
-          "informationUri": "https://github.com/msaad00/agent-bom",
+          "informationUri": "https://github.com/koda-ai-studio/agent-bom",
           "rules": [
             {
               "id": "CVE-2026-1001",
@@ -135,7 +135,7 @@
               "fullDescription": {
                 "text": "Hardcoded AWS secret key"
               },
-              "helpUri": "https://github.com/msaad00/agent-bom",
+              "helpUri": "https://github.com/koda-ai-studio/agent-bom",
               "defaultConfiguration": {
                 "level": "error"
               },
@@ -157,7 +157,7 @@
               "fullDescription": {
                 "text": "SQL string construction"
               },
-              "helpUri": "https://github.com/msaad00/agent-bom",
+              "helpUri": "https://github.com/koda-ai-studio/agent-bom",
               "defaultConfiguration": {
                 "level": "warning"
               },
@@ -194,7 +194,7 @@
               "fullDescription": {
                 "text": "Agent exposes a production credential"
               },
-              "helpUri": "https://github.com/msaad00/agent-bom",
+              "helpUri": "https://github.com/koda-ai-studio/agent-bom",
               "defaultConfiguration": {
                 "level": "error"
               },
@@ -216,7 +216,7 @@
               "fullDescription": {
                 "text": "Imported advisory without a package"
               },
-              "helpUri": "https://github.com/msaad00/agent-bom",
+              "helpUri": "https://github.com/koda-ai-studio/agent-bom",
               "defaultConfiguration": {
                 "level": "error"
               },
@@ -238,7 +238,7 @@
               "fullDescription": {
                 "text": "Databricks CIS check"
               },
-              "helpUri": "https://github.com/msaad00/agent-bom",
+              "helpUri": "https://github.com/koda-ai-studio/agent-bom",
               "defaultConfiguration": {
                 "level": "note"
               },

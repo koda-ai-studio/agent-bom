@@ -30,7 +30,7 @@
     "results": [],
     "tool": {
      "driver": {
-      "informationUri": "https://github.com/msaad00/agent-bom",
+      "informationUri": "https://github.com/koda-ai-studio/agent-bom",
       "name": "agent-bom",
       "rules": [],
       "version": "<VERSION>"
