@@ -310,7 +310,7 @@ runs:
           esac
         }
         fail_unsupported_focused_mode() {
-          echo "::error::scan-type=$INPUT_SCAN_TYPE does not support SARIF upload or vulnerability gates. Use format=json or format=console with upload-sarif=false and no severity/policy gates, or use scan-type=scan/image/fs/iac/sbom."
+          echo "::error::scan-type=$INPUT_SCAN_TYPE does not produce SARIF, so upload-sarif cannot be honoured. Set upload-sarif=false, or use scan-type=scan/image/fs/iac/sbom/skills."
           exit 1
         }
         # Map scan-type to focused command
@@ -396,22 +396,50 @@ runs:
           exit 1
         fi
 
+        # Flags each subcommand accepts, verified against `agent-bom <cmd> --help`.
+        # An input the selected subcommand cannot honour is never forwarded:
+        # a blocking gate or scan target fails closed, anything else warns.
+        case "${INPUT_SCAN_TYPE:-scan}" in
+          scan|agents|"") CAPS="severity warn-on policy enrich auto-update-db kev image config-dir sbom remediate ai-enrich ignore-file iac ai-inventory os-packages baseline skill-only gpu-scan exclude-unfixable" ;;
+          image|fs) CAPS="severity enrich exclude-unfixable" ;;
+          sbom) CAPS="severity enrich" ;;
+          iac) CAPS="severity" ;;
+          skills) CAPS="policy" ;;
+          *) CAPS="" ;;
+        esac
+        supports() {
+          case " $CAPS " in
+            *" $1 "*) return 0 ;;
+            *) return 1 ;;
+          esac
+        }
+        ignore_input() {
+          echo "::warning::$1 is not supported by scan-type=${INPUT_SCAN_TYPE} and was ignored"
+        }
+        reject_input() {
+          echo "::error::$1 cannot be enforced by scan-type=${INPUT_SCAN_TYPE}. Remove it or use scan-type=scan."
+          exit 1
+        }
+
         if [ "$INPUT_SCAN_TYPE" = "secrets" ] || [ "$INPUT_SCAN_TYPE" = "code" ]; then
-          if [ -z "$INPUT_FORMAT" ] || [ "$INPUT_FORMAT" = "sarif" ]; then
-            fail_unsupported_focused_mode
-          fi
+          # These commands emit console or JSON only. The default SARIF format
+          # falls back to JSON; an explicit SARIF upload cannot be honoured.
           [ "$INPUT_UPLOAD_SARIF" = "true" ] && fail_unsupported_focused_mode
-          [ -n "$INPUT_SEVERITY" ] && fail_unsupported_focused_mode
-          [ -n "$INPUT_WARN_ON" ] && fail_unsupported_focused_mode
-          [ -n "$INPUT_POLICY" ] && fail_unsupported_focused_mode
-          [ "$INPUT_FAIL_ON_KEV" = "true" ] && fail_unsupported_focused_mode
-          [ "$INPUT_EXCLUDE_UNFIXABLE" = "true" ] && fail_unsupported_focused_mode
-          [ "$INPUT_GPU_SCAN" = "true" ] && fail_unsupported_focused_mode
-          [ "$INPUT_SKILL_ONLY" = "true" ] && fail_unsupported_focused_mode
+          if [ -z "$INPUT_FORMAT" ] || [ "$INPUT_FORMAT" = "sarif" ]; then
+            echo "::notice::scan-type=$INPUT_SCAN_TYPE writes JSON (SARIF is not available for this command)"
+            INPUT_FORMAT="json"
+            if [ -z "$INPUT_OUTPUT" ]; then
+              RESULT_FILE="agent-bom-results.json"
+            fi
+            ARGS+=(-f json -o "$RESULT_FILE")
+            FORMAT_SET=true
+          fi
         fi
 
         # Output format
-        if [ "$INPUT_FORMAT" = "sarif" ]; then
+        if [ "${FORMAT_SET:-false}" = "true" ]; then
+          :
+        elif [ "$INPUT_FORMAT" = "sarif" ]; then
           ARGS+=(-f sarif -o "$RESULT_FILE")
         elif [ -n "$INPUT_FORMAT" ]; then
           ARGS+=(-f "$INPUT_FORMAT")
@@ -420,113 +448,119 @@ runs:
           fi
         fi
 
-        # Skills scans have their own narrower CLI surface and should not
-        # inherit vulnerability-scan flags like --auto-update-db. The shared
-        # policy input is passed below as a skills policy file.
-        if [ "$INPUT_SCAN_TYPE" != "skills" ]; then
-          if [ "$INPUT_SCAN_TYPE" != "secrets" ] && [ "$INPUT_SCAN_TYPE" != "code" ]; then
-            # Severity gate
-            if [ -n "$INPUT_SEVERITY" ]; then
-              validate_severity_choice "$INPUT_SEVERITY" "severity-threshold"
-              ARGS+=(--fail-on-severity "$INPUT_SEVERITY")
-            fi
-
-            # Warn-on severity (non-blocking)
-            if [ -n "$INPUT_WARN_ON" ]; then
-              validate_severity_choice "$INPUT_WARN_ON" "warn-on-severity"
-              ARGS+=(--warn-on "$INPUT_WARN_ON")
-            fi
-
-            # Policy file
-            if [ -n "$INPUT_POLICY" ]; then
-              ARGS+=(--policy "$INPUT_POLICY")
-            fi
-
-            # Enrichment
-            if [ "$INPUT_ENRICH" = "true" ]; then
-              ARGS+=(--enrich)
-            fi
-
-            # Auto-update vulnerability database
-            if [ "$INPUT_AUTO_UPDATE_DB" = "true" ]; then
-              ARGS+=(--auto-update-db)
-            fi
-
-            # KEV gate
-            if [ "$INPUT_FAIL_ON_KEV" = "true" ]; then
-              ARGS+=(--fail-on-kev)
-            fi
-
-            # Docker image (skip if scan-type=image — already in command)
-            if [ -n "$INPUT_IMAGE" ] && [ "$INPUT_SCAN_TYPE" != "image" ]; then
-              ARGS+=(--image "$INPUT_IMAGE")
-            fi
-
-            # Config directory
-            if [ -n "$INPUT_CONFIG_DIR" ]; then
-              ARGS+=(--config-dir "$INPUT_CONFIG_DIR")
-            fi
-
-            # Existing SBOM (skip if scan-type=sbom — already in command)
-            if [ -n "$INPUT_SBOM" ] && [ "$INPUT_SCAN_TYPE" != "sbom" ]; then
-              ARGS+=(--sbom "$INPUT_SBOM")
-            fi
-
-            # Remediation plan
-            if [ -n "$INPUT_REMEDIATE" ]; then
-              ARGS+=(--remediate "$INPUT_REMEDIATE")
-            fi
-
-            # AI enrichment
-            if [ "$INPUT_AI_ENRICH" = "true" ]; then
-              ARGS+=(--ai-enrich)
-              if [ -n "$INPUT_AI_MODEL" ]; then
-                ARGS+=(--ai-model "$INPUT_AI_MODEL")
-              fi
-            fi
-
-            # Ignore file
-            if [ -n "$INPUT_IGNORE_FILE" ]; then
-              ARGS+=(--ignore-file "$INPUT_IGNORE_FILE")
-            fi
-
-            # IaC scanning paths (skip if scan-type=iac — already in command)
-            if [ -n "$INPUT_IAC" ] && [ "$INPUT_SCAN_TYPE" != "iac" ]; then
-              IFS=',' read -ra IAC_PATHS <<< "$INPUT_IAC"
-              for p in "${IAC_PATHS[@]}"; do
-                p="$(trim_arg "$p")"
-                if [ -n "$p" ]; then
-                  ARGS+=(--iac "$p")
-                fi
-              done
-            fi
-
-            # AI inventory scanning paths
-            if [ -n "$INPUT_AI_INVENTORY" ]; then
-              IFS=',' read -ra AI_PATHS <<< "$INPUT_AI_INVENTORY"
-              for p in "${AI_PATHS[@]}"; do
-                p="$(trim_arg "$p")"
-                if [ -n "$p" ]; then
-                  ARGS+=(--ai-inventory "$p")
-                fi
-              done
-            fi
-
-            # OS package scanning
-            if [ "$INPUT_OS_PACKAGES" = "true" ]; then
-              ARGS+=(--os-packages)
-            fi
-
-            # Delta scanning baseline
-            if [ -n "$INPUT_BASELINE" ]; then
-              ARGS+=(--baseline "$INPUT_BASELINE" --delta-mode new-only)
-            fi
+        # Severity gates
+        if [ -n "$INPUT_SEVERITY" ]; then
+          validate_severity_choice "$INPUT_SEVERITY" "severity-threshold"
+          if supports severity; then
+            ARGS+=(--fail-on-severity "$INPUT_SEVERITY")
+          else
+            echo "::notice::severity-threshold does not apply to scan-type=${INPUT_SCAN_TYPE}; it gates with its own verdict and exit code"
+          fi
+        fi
+        if [ -n "$INPUT_WARN_ON" ]; then
+          validate_severity_choice "$INPUT_WARN_ON" "warn-on-severity"
+          if supports warn-on; then
+            ARGS+=(--warn-on "$INPUT_WARN_ON")
+          else
+            ignore_input "warn-on-severity"
           fi
         fi
 
-        # Skill-only mode
-        if [ "$INPUT_SKILL_ONLY" = "true" ] && [ "$INPUT_SCAN_TYPE" != "skills" ]; then
-          ARGS+=(--skill-only)
+        # Policy file (scan policy, or the skills policy for scan-type=skills)
+        if [ -n "$INPUT_POLICY" ]; then
+          supports policy || reject_input "policy"
+          ARGS+=(--policy "$INPUT_POLICY")
+        fi
+
+        if [ "$INPUT_FAIL_ON_KEV" = "true" ]; then
+          supports kev || reject_input "fail-on-kev"
+          ARGS+=(--fail-on-kev)
+        fi
+
+        # Delta scanning: report and gate on new findings only
+        if [ -n "$INPUT_BASELINE" ]; then
+          supports baseline || reject_input "baseline"
+          ARGS+=(--baseline "$INPUT_BASELINE" --delta-mode new-only)
+        fi
+
+        # Extra scan targets (skip the one already in the focused command)
+        if [ -n "$INPUT_IMAGE" ] && [ "$INPUT_SCAN_TYPE" != "image" ]; then
+          supports image || reject_input "image"
+          ARGS+=(--image "$INPUT_IMAGE")
+        fi
+        if [ -n "$INPUT_SBOM" ] && [ "$INPUT_SCAN_TYPE" != "sbom" ]; then
+          supports sbom || reject_input "sbom"
+          ARGS+=(--sbom "$INPUT_SBOM")
+        fi
+        if [ -n "$INPUT_CONFIG_DIR" ]; then
+          supports config-dir || reject_input "config-dir"
+          ARGS+=(--config-dir "$INPUT_CONFIG_DIR")
+        fi
+        if [ -n "$INPUT_IAC" ] && [ "$INPUT_SCAN_TYPE" != "iac" ]; then
+          supports iac || reject_input "iac"
+          IFS=',' read -ra IAC_PATHS <<< "$INPUT_IAC"
+          for p in "${IAC_PATHS[@]}"; do
+            p="$(trim_arg "$p")"
+            if [ -n "$p" ]; then
+              ARGS+=(--iac "$p")
+            fi
+          done
+        fi
+
+        if [ "$INPUT_ENRICH" = "true" ]; then
+          if supports enrich; then ARGS+=(--enrich); else ignore_input "enrich"; fi
+        fi
+
+        # Auto-update is a scan-only flag; focused commands manage their own
+        # advisory lookups, so the default is dropped silently for them.
+        if [ "$INPUT_AUTO_UPDATE_DB" = "true" ] && supports auto-update-db; then
+          ARGS+=(--auto-update-db)
+        fi
+
+        if [ -n "$INPUT_REMEDIATE" ]; then
+          if supports remediate; then ARGS+=(--remediate "$INPUT_REMEDIATE"); else ignore_input "remediate"; fi
+        fi
+
+        if [ "$INPUT_AI_ENRICH" = "true" ]; then
+          if supports ai-enrich; then
+            ARGS+=(--ai-enrich)
+            if [ -n "$INPUT_AI_MODEL" ]; then
+              ARGS+=(--ai-model "$INPUT_AI_MODEL")
+            fi
+          else
+            ignore_input "ai-enrich"
+          fi
+        fi
+
+        if [ -n "$INPUT_IGNORE_FILE" ]; then
+          if supports ignore-file; then ARGS+=(--ignore-file "$INPUT_IGNORE_FILE"); else ignore_input "ignore-file"; fi
+        fi
+
+        if [ -n "$INPUT_AI_INVENTORY" ]; then
+          if supports ai-inventory; then
+            IFS=',' read -ra AI_PATHS <<< "$INPUT_AI_INVENTORY"
+            for p in "${AI_PATHS[@]}"; do
+              p="$(trim_arg "$p")"
+              if [ -n "$p" ]; then
+                ARGS+=(--ai-inventory "$p")
+              fi
+            done
+          else
+            ignore_input "ai-inventory"
+          fi
+        fi
+
+        if [ "$INPUT_OS_PACKAGES" = "true" ]; then
+          if supports os-packages; then ARGS+=(--os-packages); else ignore_input "os-packages"; fi
+        fi
+        if [ "$INPUT_SKILL_ONLY" = "true" ]; then
+          if supports skill-only; then ARGS+=(--skill-only); else ignore_input "skill-only"; fi
+        fi
+        if [ "$INPUT_GPU_SCAN" = "true" ]; then
+          if supports gpu-scan; then ARGS+=(--gpu-scan); else ignore_input "gpu-scan"; fi
+        fi
+        if [ "$INPUT_EXCLUDE_UNFIXABLE" = "true" ]; then
+          if supports exclude-unfixable; then ARGS+=(--exclude-unfixable); else ignore_input "exclude-unfixable"; fi
         fi
 
         validate_skill_verdict_choice() {
@@ -557,13 +591,7 @@ runs:
           fi
         }
 
-        # Skills verdict and policy gates
-        if [ "$INPUT_SCAN_TYPE" = "skills" ] && [ -n "$INPUT_POLICY" ]; then
-          ARGS+=(--policy "$INPUT_POLICY")
-        elif [ "$INPUT_SCAN_TYPE" != "skills" ] && [ -n "$INPUT_POLICY" ]; then
-          :
-        fi
-
+        # Skills verdict gates
         if [ -n "$INPUT_FAIL_ON_VERDICT" ]; then
           validate_skill_verdict_choice "$INPUT_FAIL_ON_VERDICT" "fail-on-verdict"
           add_skill_arg_or_warn "--fail-on-verdict" "$INPUT_FAIL_ON_VERDICT"
@@ -592,16 +620,6 @@ runs:
           else
             echo "::warning::skills-ci only applies to scan-type=skills and will be ignored"
           fi
-        fi
-
-        # GPU infrastructure scanning
-        if [ "$INPUT_GPU_SCAN" = "true" ]; then
-          ARGS+=(--gpu-scan)
-        fi
-
-        # Exclude unfixable findings from SARIF output
-        if [ "$INPUT_EXCLUDE_UNFIXABLE" = "true" ]; then
-          ARGS+=(--exclude-unfixable)
         fi
 
         # Run scan, capture exit code

@@ -102,9 +102,8 @@ def test_action_rejects_secrets_and_code_sarif_or_gate_contracts() -> None:
 
     assert "INPUT_UPLOAD_SARIF" in scan_step["env"]
     assert "fail_unsupported_focused_mode" in run_script
-    assert "scan-type=$INPUT_SCAN_TYPE does not support SARIF upload or vulnerability gates" in run_script
+    assert "does not produce SARIF, so upload-sarif cannot be honoured" in run_script
     assert '[ "$INPUT_SCAN_TYPE" = "secrets" ] || [ "$INPUT_SCAN_TYPE" = "code" ]' in run_script
-    assert '[ "$INPUT_SCAN_TYPE" != "secrets" ] && [ "$INPUT_SCAN_TYPE" != "code" ]' in run_script
 
 
 def test_action_exposes_policy_aware_skills_gates() -> None:
@@ -132,8 +131,6 @@ def test_action_allows_skills_sarif_upload_contract() -> None:
     run_script = scan_step["run"]
 
     assert "scan-type=skills only supports format=json, format=console, or format=sarif" in run_script
-    assert 'INPUT_FORMAT="json"' not in run_script
-    assert "agent-bom-results.json" not in run_script
     assert 'if [ "$INPUT_FORMAT" = "sarif" ]; then' in run_script
     assert "github/codeql-action/upload-sarif" in action_text
 

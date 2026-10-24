@@ -50,7 +50,11 @@ def run_arg_script(inputs: dict[str, str]) -> subprocess.CompletedProcess[str]:
 def action_args(**inputs: str) -> list[str]:
     result = run_arg_script({key.replace("_", "-"): value for key, value in inputs.items()})
     assert result.returncode == 0, result.stdout + result.stderr
-    return result.stdout.splitlines()
+    return _args_only(result.stdout)
+
+
+def _args_only(stdout: str) -> list[str]:
+    return [line for line in stdout.splitlines() if not line.startswith("::")]
 
 
 # ── P0: default scope covers the checkout ───────────────────────────────────
@@ -125,3 +129,101 @@ def test_default_action_scope_scans_iac_and_ignores_runner_home(tmp_path: Path) 
     bare = _run_cli(["scan", "-f", "json", "-o", "out.json"], cwd=repo, home=home)
     assert not bare.get("iac_findings", {}).get("findings")
     assert any(server["name"] == "runner-home-server" for agent in bare["agents"] for server in agent.get("mcp_servers", []))
+
+
+# ── P0: every scan-type runs with default inputs ────────────────────────────
+
+SCAN_TYPE_REFS = {
+    "scan": "",
+    "image": "nginx:1.25",
+    "fs": ".",
+    "sbom": "tests/fixtures/test-sbom.cdx.json",
+    "iac": "infra,k8s",
+    "secrets": ".",
+    "code": ".",
+    "skills": ".",
+}
+
+
+def _cli_command(args: list[str]) -> click.Command:
+    ctx = click.Context(main)
+    command = main.get_command(ctx, args[0])
+    assert command is not None, args[0]
+    if isinstance(command, click.Group):
+        command = command.get_command(ctx, args[1])
+    assert command is not None
+    return command
+
+
+def _accepted_options(command: click.Command) -> set[str]:
+    accepted: set[str] = set()
+    for param in command.params:
+        accepted.update(getattr(param, "opts", []))
+        accepted.update(getattr(param, "secondary_opts", []))
+    return accepted
+
+
+def _options(args: list[str]) -> set[str]:
+    return {arg for arg in args if arg.startswith("-") and arg != "-"}
+
+
+@pytest.mark.parametrize("scan_type", sorted(SCAN_TYPE_REFS))
+def test_every_scan_type_with_default_inputs_only_passes_accepted_flags(scan_type: str) -> None:
+    args = action_args(scan_type=scan_type, scan_ref=SCAN_TYPE_REFS[scan_type])
+    rejected = _options(args) - _accepted_options(_cli_command(args))
+    assert not rejected, f"{scan_type}: {args}"
+
+
+GATE_INPUTS = {
+    "severity-threshold": "critical",
+    "warn-on-severity": "medium",
+    "enrich": "true",
+    "exclude-unfixable": "true",
+    "gpu-scan": "true",
+    "skill-only": "true",
+    "os-packages": "true",
+    "ai-inventory": "src",
+    "remediate": "remediation.md",
+    "ignore-file": ".agent-bom-ignore.yaml",
+}
+
+
+@pytest.mark.parametrize("scan_type", sorted(SCAN_TYPE_REFS))
+def test_optional_inputs_never_reach_a_subcommand_that_rejects_them(scan_type: str) -> None:
+    inputs = {"scan-type": scan_type, "scan-ref": SCAN_TYPE_REFS[scan_type], "format": "json", **GATE_INPUTS}
+    result = run_arg_script(inputs)
+    assert result.returncode == 0, result.stdout + result.stderr
+    args = _args_only(result.stdout)
+    rejected = _options(args) - _accepted_options(_cli_command(args))
+    assert not rejected, f"{scan_type}: {args}"
+    if scan_type != "scan":
+        assert "::warning::" in result.stdout
+
+
+def test_focused_scan_types_keep_the_gates_they_support() -> None:
+    for scan_type in ("image", "fs", "sbom", "iac"):
+        args = action_args(scan_type=scan_type, scan_ref=SCAN_TYPE_REFS[scan_type])
+        assert args[args.index("--fail-on-severity") + 1] == "high", scan_type
+    assert "--enrich" in action_args(scan_type="fs", enrich="true")
+    assert "--exclude-unfixable" in action_args(scan_type="image", scan_ref="nginx:1.25", exclude_unfixable="true")
+
+
+@pytest.mark.parametrize("scan_type", ["image", "fs", "sbom", "iac", "secrets", "code"])
+def test_unenforceable_blocking_gates_fail_closed(scan_type: str) -> None:
+    for name, value in (("fail-on-kev", "true"), ("baseline", "baseline.json")):
+        result = run_arg_script({"scan-type": scan_type, "scan-ref": SCAN_TYPE_REFS[scan_type], "format": "json", name: value})
+        assert result.returncode != 0, (scan_type, name)
+        assert "::error::" in result.stdout
+
+
+@pytest.mark.parametrize("scan_type", ["secrets", "code"])
+def test_secrets_and_code_default_inputs_fall_back_to_json(scan_type: str) -> None:
+    args = action_args(scan_type=scan_type, scan_ref=".")
+    assert args[args.index("-f") + 1] == "json"
+    assert args[args.index("-o") + 1] == "agent-bom-results.json"
+
+
+def test_skills_keeps_its_default_sarif_output() -> None:
+    args = action_args(scan_type="skills", scan_ref=".")
+    assert args[args.index("-f") + 1] == "sarif"
+    assert args[args.index("-o") + 1] == "agent-bom-results.sarif"

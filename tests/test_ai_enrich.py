@@ -888,11 +888,10 @@ def test_action_yml_skills_mode_skips_vulnerability_scan_flags():
     from pathlib import Path
 
     action_text = (Path(__file__).parent.parent / "action.yml").read_text()
-    guard = 'if [ "$INPUT_SCAN_TYPE" != "skills" ]; then'
-    assert guard in action_text
-    guarded_block = action_text.split(guard, 1)[1].split("# Skill-only mode", 1)[0]
-    assert 'ARGS+=(--policy "$INPUT_POLICY")' in guarded_block
-    assert "auto-update-db" in guarded_block
+    # Per-subcommand capability table; executable coverage lives in
+    # tests/test_github_action_args.py (every scan-type x accepted CLI flags).
+    assert 'skills) CAPS="policy" ;;' in action_text
+    assert 'if [ "$INPUT_AUTO_UPDATE_DB" = "true" ] && supports auto-update-db; then' in action_text
 
 
 def test_action_yml_uses_safe_argv_execution_and_step_summary():
