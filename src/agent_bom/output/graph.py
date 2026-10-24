@@ -12,8 +12,10 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.asset_provenance import package_version_provenance
+from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.core.risk_display import risk_label
 from agent_bom.graph import SEVERITY_RANK as _SEVERITY_RANK
+from agent_bom.graph.compat import stamp_export_entity_types
 from agent_bom.graph.node import stable_node_id
 from agent_bom.output.finding_views import package_graph_node_id as _package_node_id
 from agent_bom.output.graph_html import _CDN_FALLBACK_TAGS as _CDN_FALLBACK_TAGS
@@ -106,7 +108,7 @@ def build_graph_elements(
             )
 
         # ── Agent node ────────────────────────────────────────────────
-        aid = f"a:{agent.name}"
+        aid = agent_graph_id_for(agent)
         elements.append(
             {
                 "data": {
@@ -138,7 +140,7 @@ def build_graph_elements(
 
         # ── Server nodes ──────────────────────────────────────────────
         for srv in agent.mcp_servers:
-            sid = f"s:{agent.name}:{srv.name}"
+            sid = mcp_server_graph_id_for(srv, agent)
             vuln_count = sum(1 for p in srv.packages if (p.name, p.ecosystem) in vuln_pkg_keys)
             has_vuln = vuln_count > 0
             has_cred = srv.has_credentials
@@ -229,7 +231,7 @@ def build_graph_elements(
 
             tool_ids: list[tuple[str, str]] = []
             for tool in srv.tools:
-                tool_id = f"tool:{agent.name}:{srv.name}:{tool.name}"
+                tool_id = f"tool:{sid}:{tool.name}"
                 tool_ids.append((tool.name, tool_id))
                 elements.append(
                     {
@@ -254,7 +256,7 @@ def build_graph_elements(
                 )
 
             for cred in srv.credential_names:
-                cred_id = f"cred:{agent.name}:{srv.name}:{cred}"
+                cred_id = f"cred:{sid}:{cred}"
                 elements.append(
                     {
                         "data": {
@@ -300,12 +302,7 @@ def build_graph_elements(
                 if pkg_key not in vuln_pkg_keys:
                     continue
 
-                pid = _package_node_id(
-                    *pkg_key,
-                    agent_name=agent.name,
-                    server_name=srv.name,
-                    scoped=collapse_cves,
-                )
+                pid = _package_node_id(*pkg_key, agent_name=agent.name, server_name=srv.name, scoped=collapse_cves, purl=pkg.purl)
                 if pid in seen_pkg_ids:
                     # Just add another edge for shared package
                     elements.append(
@@ -378,7 +375,7 @@ def build_graph_elements(
                 # ── CVE nodes ─────────────────────────────────────────
                 if include_cve_nodes and not collapse_cves and pkg_key in pkg_to_vulns:
                     for vuln_info in package_vulns:
-                        cve_id = f"cve:{vuln_info['id']}"
+                        cve_id = f"vuln:{vuln_info['id']}"
                         if cve_id not in cve_nodes_seen:
                             cve_nodes_seen.add(cve_id)
                             sev = vuln_info["severity"]
@@ -420,7 +417,7 @@ def build_graph_elements(
     _append_source_tool_elements(elements, report)
     _append_repo_structure_elements(elements, report, collapse_cves=collapse_cves, vuln_pkg_keys=vuln_pkg_keys)
     elements.extend(_graph_policy_finding_elements(report))
-    return elements
+    return stamp_export_entity_types(elements)
 
 
 def _append_source_tool_elements(elements: list[dict], report: "AIBOMReport") -> None:
@@ -660,7 +657,7 @@ def _append_repo_structure_elements(
                 pkg_key = (pkg.name, pkg.ecosystem, pkg.version)
                 if pkg_key not in vuln_pkg_keys:
                     continue
-                pid = _package_node_id(*pkg_key, agent_name=agent.name, server_name=srv.name, scoped=collapse_cves)
+                pid = _package_node_id(*pkg_key, agent_name=agent.name, server_name=srv.name, scoped=collapse_cves, purl=pkg.purl)
                 pkgs_by_dir.setdefault(dir_path, []).append(pid)
 
     records: dict[str, dict] = {}

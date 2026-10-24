@@ -117,7 +117,7 @@ def test_graph_keeps_package_versions_and_advisories_separate(attack):
             assert sources == ({"cve:CVE-OLD"} if node["version"] == "2.6.8" else {"cve:CVE-NEW"})
             continue
         targets = {e["data"]["target"] for e in elements if e["data"].get("source") == node["id"] and e["data"].get("type") == "affects"}
-        assert targets == ({"cve:CVE-OLD"} if node["version"] == "2.6.8" else {"cve:CVE-NEW"})
+        assert targets == ({"vuln:CVE-OLD"} if node["version"] == "2.6.8" else {"vuln:CVE-NEW"})
 
 
 def test_bun_workspace_reads_only_its_resolved_closure(tmp_path):
