@@ -69,7 +69,8 @@ jobs:
           fi
 
           echo "has_changes=true" >> "$GITHUB_OUTPUT"
-          echo "## MCP Config Changes Detected" > scan-report.md
+          echo "<!-- agent-bom-mcp-change-scan -->" > scan-report.md
+          echo "## MCP Config Changes Detected" >> scan-report.md
           echo "" >> scan-report.md
           echo "The following MCP configuration files were modified in this PR:" >> scan-report.md
           echo "" >> scan-report.md
@@ -107,5 +108,13 @@ jobs:
         env:
           GH_TOKEN: "${{ github.token }}"
           PR_NUMBER: "${{ github.event.pull_request.number }}"
+        # One comment per PR, updated on each push instead of a new one per run.
         run: |
-          gh pr comment "${PR_NUMBER}" --body-file scan-report.md
+          set -euo pipefail
+          COMMENT_ID=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- agent-bom-mcp-change-scan -->"))) | .id' | tail -n 1)
+          if [ -n "${COMMENT_ID}" ]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}" -F body=@scan-report.md > /dev/null
+          else
+            gh pr comment "${PR_NUMBER}" --body-file scan-report.md
+          fi
