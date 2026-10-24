@@ -56,7 +56,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `org` | Organization | Identity and access | `identity` | 3 / 3001 |  | 6 (+2 demo) |
 | `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 6 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 5 (+1 demo) |
-| `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 |
+| `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 (+1 demo) |
 | `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 |
 | `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 8 (+2 demo) |
 | `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 4 (+2 demo) |
@@ -99,7 +99,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `governs` | `governance` | governance | directed | no | `access_policy`, `blueprint`, `policy` | `account`, `agent`, `drift_incident`, `managed_identity`, `org`, `tool` | 10 | — | 3 |
 | `has_permission` | `authority` | identity | directed | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool` | 36 | FU, LT | 5 |
 | `hosted_on` | `dependency` | inventory | directed | yes | `agent`, `container`, `server` | `cloud_resource`, `cluster`, `container`, `fleet` | 12 | — | 2 |
-| `hosts` | `structural` | inventory | directed | yes | `account`, `cloud_resource`, `environment`, `fleet`, `provider` | `account`, `agent`, `cloud_resource`, `org`, `server` | 25 | — | 3 |
+| `hosts` | `structural` | inventory | directed | yes | `account`, `cloud_resource`, `environment`, `fleet`, `provider` | `account`, `agent`, `cloud_resource`, `org`, `server` | 25 | — | 3 (+1 demo) |
 | `imports` | `dependency` | code_topology | directed | yes | `code_module`, `source_file` | `code_module`, `external_import`, `package` | 6 | — | 0 |
 | `inherits` | `authority` | identity | directed | yes | `group`, `role`, `service_account`, `service_principal`, `user` | `policy`, `role` | 10 | FU | 0 |
 | `invoked` | `runtime` | runtime | directed | yes | `agent`, `federated_identity`, `role`, `service_account`, `service_principal`, `user` | `cloud_resource`, `tool`, `tool_call` | 9 | CR, MT, RT | 3 (+1 demo) |

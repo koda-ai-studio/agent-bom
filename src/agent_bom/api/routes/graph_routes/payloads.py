@@ -9,6 +9,7 @@ from typing import Any
 from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse, Response
 
+from agent_bom.api.graph_page_context import PageContext
 from agent_bom.api.graph_paging import _page_meta, _paginate
 from agent_bom.api.graph_paging import page_truncated as _page_truncated
 from agent_bom.api.graph_presentation import _fix_first_card_for_path, _path_matches_focus, _path_semantic_key, _serialize_attack_path_batch
@@ -473,9 +474,8 @@ def _encode_node_page(
     snapshot_stats: dict,
     total: int,
     paged_nodes: list[UnifiedNode],
-    ancestor_nodes: list[UnifiedNode],
+    context: PageContext,
     paged_edges: list[UnifiedEdge],
-    ancestor_edges: list[UnifiedEdge],
     edges_truncated: bool,
     next_cursor: str | None,
     offset: int,
@@ -487,9 +487,7 @@ def _encode_node_page(
     source_attack_paths: list[AttackPath],
     nodes_by_id: dict[str, UnifiedNode],
     cursor: str | None,
-    stack_context: dict[str, Any] | None = None,
     view: GraphView | None = None,
-    endpoint_nodes: list[UnifiedNode] = (),  # type: ignore[assignment]
 ) -> Response:
     # This branch pages a fully-counted snapshot, so the estate total IS the stats
     # total. Emitting the field anyway keeps one stats shape across both branches.
@@ -497,9 +495,9 @@ def _encode_node_page(
         **snapshot_stats,
         "total_nodes_source": max(int(snapshot_stats.get("total_nodes", 0)), total),
     }
-    response_nodes = [*paged_nodes, *ancestor_nodes, *endpoint_nodes]
+    response_nodes = [*paged_nodes, *context.nodes, *context.endpoints]
     response_node_ids = {node.id for node in response_nodes}
-    response_edges = _joined_edges(paged_edges, ancestor_edges)
+    response_edges = _joined_edges(paged_edges, context.edges)
     page_truncated = _page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(paged_nodes), total=total)
     payload = {
         "snapshot_generation": identity[1] if identity else None,
@@ -507,7 +505,7 @@ def _encode_node_page(
         "tenant_id": tenant,
         "created_at": created_at,
         "collection_coverage": snapshot_stats.get("collection_coverage", {"status": "unknown"}),
-        "nodes": [n.to_dict() for n in response_nodes],
+        "nodes": [*(n.to_dict() for n in paged_nodes), *({**n.to_dict(), "context": True} for n in response_nodes[len(paged_nodes) :])],
         "edges": [e.to_dict() for e in response_edges],
         "attack_paths": _serialize_attack_path_batch(
             source_attack_paths,
@@ -530,11 +528,15 @@ def _encode_node_page(
             # page, so without naming them the two numbers cannot be reconciled
             # and the extra nodes read as a paging bug.
             "ranked": len(paged_nodes),
-            "context_nodes": len(ancestor_nodes),
-            "endpoint_nodes": len(endpoint_nodes),  # off-page ends of returned edges
+            # Marked ``context: true``; may repeat across a walk, unlike ranked nodes.
+            "context_nodes": len(context.nodes),
+            "context_limit": context.limit,
+            "context_omitted": context.omitted,
+            "context_truncated": context.omitted > 0,
+            "endpoint_nodes": len(context.endpoints),  # off-page ends of returned edges
             # The agent stack above the page's findings (package → workload →
             # agent), capped per node; ``omitted_parent_links`` is the cut.
-            "stack_context": stack_context or {},
+            "stack_context": context.stack,
             "edges_truncated": edges_truncated,
             "edge_limit": _NODE_PAGE_EDGE_LIMIT,
             "edge_returned": len(paged_edges),

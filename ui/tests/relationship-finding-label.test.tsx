@@ -15,8 +15,9 @@ vi.mock("@xyflow/react", async (importOriginal) => ({
   }),
   BaseEdge: ({ markerEnd }: { markerEnd?: string }) => <path data-testid="edge" markerEnd={markerEnd} />,
   EdgeLabelRenderer: ({ children }: { children: React.ReactNode }) => <foreignObject>{children}</foreignObject>,
+  useStoreApi: () => ({ getState: () => ({ transform: [0, 0, 1] }), subscribe: () => () => undefined }),
 }));
-vi.mock("@/lib/relationship-label-layout", () => ({ scheduleRelationshipLabelLayout: vi.fn() }));
+vi.mock("@/lib/relationship-label-layout", () => ({ scheduleRelationshipLabelLayout: vi.fn(), scheduleRelationshipLabelLayoutAfterMove: vi.fn() }));
 import { RelationshipEdge } from "@/components/relationship-edge";
 
 const props = {

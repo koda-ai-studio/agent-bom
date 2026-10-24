@@ -141,7 +141,7 @@ def test_consumer_rejects_duplicate_node_within_page(api):  # noqa: F811
     def duplicate(path, response, pages):
         body = response.json()
         if path == "graph":
-            body["nodes"].append(body["nodes"][0].copy())
+            body["nodes"].append({**body["nodes"][0], "context": True})
             body["completeness"].update(context_nodes=len(body["nodes"]) - 1, endpoint_nodes=0, returned=len(body["nodes"]))
         return httpx.Response(response.status_code, json=body)
 
@@ -266,3 +266,23 @@ def test_consumer_fixture_owns_backpressure_history(request):
         assert _controller_for("graph").completed > 0
     finally:
         reset_backpressure_for_tests()
+
+
+@pytest.mark.parametrize("defect", ["unmarked", "over_bound"])
+def test_consumer_rejects_unmarked_or_unbounded_context(api, defect):  # noqa: F811
+    def edit(path, response, pages):
+        body = response.json()
+        if path == "graph":
+            context = body["nodes"][body["completeness"]["ranked"] :]
+            assert context, "fixture page must carry a context node"
+            if defect == "unmarked":
+                context[0].pop("context")
+            else:
+                body["completeness"]["context_limit"] = body["completeness"]["context_nodes"] - 1
+                body["completeness"]["context_nodes"] = len(context)
+                body["completeness"]["endpoint_nodes"] = 0
+        return httpx.Response(response.status_code, json=body)
+
+    match = "must be marked" if defect == "unmarked" else "declared context bound"
+    with pytest.raises(ContractError, match=match):
+        qualify(Consumer(api, edit), page_size=1, max_pages=1)

@@ -59,6 +59,10 @@ class GraphCanvasNodeRecord(GraphAgentRecord):
     attributes: dict[str, Any]
     compliance_tags: list[str]
     dimensions: GraphNodeDimensions
+    context: Literal[True] | None = Field(
+        default=None,
+        description="``GET /v1/graph`` only: true on stack, containment and edge-endpoint context; absent on ranked nodes.",
+    )
 
 
 class GraphNodeRecord(GraphCanvasNodeRecord):

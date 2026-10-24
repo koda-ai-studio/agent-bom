@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 
 import type { GraphDiffResponse, GraphEstateChangesResponse } from "@/lib/api-types";
-import { estateChangesHeadline, highlightPairs, mergeDriftDiffs, snapshotChangesHeadline } from "@/lib/graph-estate-changes";
+import { changedPathInvestigationHref, estateChangesHeadline, highlightPairs, mergeDriftDiffs, snapshotChangesHeadline } from "@/lib/graph-estate-changes";
 import { GraphChangesEntry } from "@/components/graph-changes-entry";
 import { GraphChangesPanel } from "@/components/graph-changes-panel";
 import { GraphSnapshotDiff } from "@/components/graph-snapshot-diff";
@@ -38,6 +38,16 @@ function response(overrides: Partial<GraphEstateChangesResponse> = {}): GraphEst
     ...overrides,
   } as GraphEstateChangesResponse;
 }
+
+describe("changedPathInvestigationHref", () => {
+  it("selects the backend exposure_path_id so relationship-distinct paths open the right row", () => {
+    const path = { source: "a", target: "c", hops: ["a", "b", "c"], exposure_path_id: "a::c::a->b->c::uses,stores" };
+    const selected = new URL(changedPathInvestigationHref(path, "scan-2"), "http://x").searchParams.get("selected_path");
+    expect(selected).toBe("a::c::a->b->c::uses,stores");
+    const legacy = new URL(changedPathInvestigationHref({ source: "a", target: "c", hops: ["a", "b", "c"] }), "http://x");
+    expect(legacy.searchParams.get("selected_path")).toBe("a::c::a->b->c");
+  });
+});
 
 describe("estateChangesHeadline", () => {
   it("summarises per-source totals and first observations", () => {

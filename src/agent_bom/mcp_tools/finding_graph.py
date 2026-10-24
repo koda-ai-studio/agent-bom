@@ -16,6 +16,7 @@ from urllib.parse import unquote
 
 from agent_bom.graph.attack_path_queue import AttackPathFilters
 from agent_bom.graph.container import AttackPath
+from agent_bom.graph.exposure import exposure_path_id
 from agent_bom.mcp_tools.exposure_queue import whole_queue
 
 _PATH_ID_SAMPLE = 5
@@ -65,7 +66,7 @@ def _occurrence_paths(row: dict[str, Any], paths: list[AttackPath]) -> list[Atta
 
 
 def _path_id(path: AttackPath) -> str:
-    return f"{path.source}::{path.target}::{'->'.join(path.hops)}"
+    return exposure_path_id(path)
 
 
 def unavailable(reason: str) -> dict[str, Any]:

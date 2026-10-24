@@ -1165,6 +1165,7 @@ def _combination_finding(agent_name: str = "claude") -> Finding:
 
 def test_cytoscape_graph_includes_graph_derived_finding_categories():
     """COMBINATION / policy findings must appear in the graph element list, not just JSON/API."""
+    from agent_bom.canonical_ids import agent_graph_id_for
     from agent_bom.output.graph import build_graph_elements
 
     agent = _make_agent(servers=[_make_server()])
@@ -1181,7 +1182,8 @@ def test_cytoscape_graph_includes_graph_derived_finding_categories():
     assert "AI agent can reach a credential or privileged tool" in node["title"]
     # Edge links the finding to its agent asset node.
     edges = [el["data"] for el in elements if el.get("data", {}).get("type") == "has_finding" and el["data"].get("target") == node["id"]]
-    assert edges and edges[0]["source"] == "a:claude"
+    assert edges and edges[0]["source"] == agent_graph_id_for(agent)
+    assert node["entity_type"] == "misconfiguration"
 
 
 def test_cytoscape_agent_nodes_use_discovery_source_not_reserved_source():

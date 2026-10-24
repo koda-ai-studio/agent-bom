@@ -1892,7 +1892,10 @@ class TestGraphStoreBackendSelection:
         }
         assert body["cards"][0]["affected"]["agents"] == ["agent-a"]
         assert body["cards"][0]["affected"]["packages"] == ["express"]
-        assert body["cards"][0]["exposure_path"]["id"] == "agent:a::vuln:cve::agent:a->server:a:fs->pkg:npm:express->vuln:cve"
+        assert (
+            body["cards"][0]["exposure_path"]["id"]
+            == "agent:a::vuln:cve::agent:a->server:a:fs->pkg:npm:express->vuln:cve::uses,depends_on,vulnerable_to"
+        )
         assert body["cards"][0]["exposure_path"]["rank"] == 1
         assert body["cards"][0]["exposure_path"]["source"]["role"] == "agent"
         assert body["cards"][0]["exposure_path"]["target"]["role"] == "finding"

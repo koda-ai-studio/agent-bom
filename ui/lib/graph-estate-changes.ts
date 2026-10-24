@@ -84,11 +84,15 @@ export function mergeDriftDiffs(diffs: GraphDiffResponse[]): GraphDiffResponse {
 }
 
 /** The path queue with this exact new path selected, in the snapshot that recorded it. */
-export function changedPathInvestigationHref(path: { source: string; target: string; hops: string[] }, scanId?: string): string {
+export function changedPathInvestigationHref(
+  path: { source: string; target: string; hops: string[]; exposure_path_id?: string | undefined },
+  scanId?: string,
+): string {
   const params = new URLSearchParams();
   if (scanId) params.set("scan", scanId);
   params.set("node", path.source);
-  params.set("selected_path", `${path.source}::${path.target}::${path.hops.join("->")}`);
+  // Older servers send no id; their hop-only key still selects relationship-free rows.
+  params.set("selected_path", path.exposure_path_id || `${path.source}::${path.target}::${path.hops.join("->")}`);
   params.set("path_view", "path");
   return `/security-graph?${params.toString()}`;
 }

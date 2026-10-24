@@ -344,6 +344,8 @@ class ScaleProfile:
     def __post_init__(self) -> None:
         if self.accounts_per_cloud < 2:
             raise ValueError("a cloud needs at least two accounts for drill-down to mean anything")
+        if self.accounts_per_cloud > 9:
+            raise ValueError("at most 9 accounts per cloud have documented example AWS ids")
         if self.resources_per_account < len(ENVIRONMENTS):
             raise ValueError("each account needs at least one resource per environment")
         if self.events_per_asset < 1:
@@ -386,7 +388,7 @@ def _workload_name(provider: str, scope: str, resource_type: str, environment: s
 
 def _account_scope(provider: str, index: int) -> str:
     if provider == "aws":
-        return f"{100000000000 + index:012d}"
+        return str(index + 1) * 12  # AWS Organizations guide example ids
     if provider == "azure":
         return f"sub-{index:04d}-northstar"
     if provider == "gcp":

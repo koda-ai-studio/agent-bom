@@ -73,7 +73,7 @@ runtime response validation. The generated UI types consume the same OpenAPI.
 | `config/schemas/inventory.schema.json` | `Package.ecosystem` enum values | 9 |
 | `config/schemas/inventory.schema.json` | `MCPServer.transport` enum values | 3 |
 | `docs/openapi/v1.json` | paths | 373 |
-| `docs/openapi/v1.json` | component schemas | 684 |
+| `docs/openapi/v1.json` | component schemas | 685 |
 
 <!-- DATA_MODEL_ATLAS:END -->
 
@@ -824,9 +824,15 @@ time. Source IDs remain as provenance in `source_ids`.
 | Graph node | node `stable_id`/`canonical_id` when supplied, otherwise entity type + graph node ID |
 | Graph edge | relationship + source graph ID + target graph ID |
 
-Graph node IDs such as `agent:claude-desktop` and `pkg:npm:express@4.18.0` stay
-readable and stable for API/UI consumers; `canonical_id` is an additional join
-key for scan history, deduplication, and saved investigations.
+Graph node IDs such as `agent:cfg-<hash>:claude-desktop` and
+`pkg:npm:express@4.18.0` stay readable and stable for API/UI consumers; an agent
+id carries its endpoint or config scope so same-named agents never merge, and a
+configured MCP server id carries its declaring agent. `canonical_id` is an
+additional join key for scan history, deduplication, and saved investigations.
+The demo-estate showcase derives its agent, server, tool, credential and provider
+ids with the same functions, so its snapshot, its graph export and
+`agent-bom scan --demo` name each node identically; the short ids it used before
+(`agent:cursor`, `cred:aws-secret`) resolve as node aliases.
 
 ---
 

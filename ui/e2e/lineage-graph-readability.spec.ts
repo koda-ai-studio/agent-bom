@@ -83,6 +83,43 @@ for (const theme of ["light", "dark"] as const) for (const width of [390, 1440])
   });
 }
 
+for (const theme of ["light", "dark"] as const) for (const width of [1440, 390]) {
+  test(`snapshot selector shows its whole label or an ellipsis with the full label ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await routeGraphPage(page);
+    await page.goto(`/graph?scan=${scanId}`);
+    const header = page.locator(".graph-page-header");
+    const select = header.getByLabel("Graph snapshot", { exact: true });
+    if (width < 640) await header.getByText("Snapshot & view", { exact: true }).click();
+    await expect(select).toHaveValue(scanId);
+    const fit = await select.evaluate(element => {
+      const control = element as HTMLSelectElement;
+      // A select's intrinsic width fits its widest option; measure it unconstrained.
+      const probe = control.cloneNode(true) as HTMLSelectElement;
+      probe.style.cssText = "position:absolute;visibility:hidden;width:auto;max-width:none;min-width:0;flex:none";
+      control.parentElement!.appendChild(probe);
+      const natural = probe.getBoundingClientRect().width;
+      probe.remove();
+      const box = control.getBoundingClientRect();
+      const container = control.closest(".graph-page-header")!.getBoundingClientRect();
+      return {
+        natural, actual: box.width, inside: box.left >= container.left - 0.5 && box.right <= container.right + 0.5,
+        ellipsis: getComputedStyle(control).textOverflow, title: control.title,
+        selected: control.selectedOptions[0]?.textContent ?? "",
+      };
+    });
+    expect(fit.inside).toBe(true);
+    expect(fit.title).toBe(fit.selected);
+    expect(fit.selected).toContain(scanId);
+    if (width >= 1440) expect(fit.actual).toBeGreaterThanOrEqual(fit.natural - 1);
+    else if (fit.actual < fit.natural - 1) expect(fit.ellipsis).toBe("ellipsis");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await select.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath(`snapshot-selector-${theme}-${width}.png`) });
+  });
+}
+
 test("viewport settling rejects a slow sample while the transform is changing", async ({ page }) => {
   await page.setContent('<div class="react-flow__viewport"></div>');
   await page.evaluate(() => {

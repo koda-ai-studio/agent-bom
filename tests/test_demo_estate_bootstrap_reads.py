@@ -14,7 +14,13 @@ from fastapi import HTTPException
 from starlette.testclient import TestClient
 
 from agent_bom.demo_estate.showcase_graph import SHOWCASE_BASELINE_SCAN_ID
+from agent_bom.demo_estate.showcase_ids import showcase_agent_id, showcase_credential_id, showcase_server_id, showcase_tool_id
 from tests._demo_estate_fixtures import VIEWER, demo_graph_get
+
+CURSOR = showcase_agent_id("cursor")
+SHELL_RUNNER = showcase_server_id("shell-runner-server")
+AWS_SECRET = showcase_credential_id("shell-runner-server", "AWS_SECRET_ACCESS_KEY")
+RUN_SHELL = showcase_tool_id("shell-runner-server", "run_shell")
 
 
 def _demo_report(client: TestClient) -> dict:
@@ -154,29 +160,29 @@ def test_demo_estate_headline_blast_radius_chain(shared_demo_estate_client: Test
     edges = _outgoing_graph_edges(
         shared_demo_estate_client,
         payload,
-        {"agent:cursor", "server:shell-runner-server", "pkg:pypi:pyyaml@5.3", "vuln:CVE-2020-14343"},
+        {CURSOR, SHELL_RUNNER, "pkg:pypi:pyyaml@5.3", "vuln:CVE-2020-14343"},
         limit=2,
     )
     edge_pairs = {(e.get("source"), e.get("target")) for e in edges}
 
     # Chain nodes exist.
     for nid in (
-        "agent:cursor",
-        "server:shell-runner-server",
+        CURSOR,
+        SHELL_RUNNER,
         "pkg:pypi:pyyaml@5.3",
         "vuln:CVE-2020-14343",
-        "cred:aws-secret",
-        "tool:shell-runner-server:run_shell",
+        AWS_SECRET,
+        RUN_SHELL,
     ):
         assert nid in node_ids, f"missing chain node {nid}"
 
-    assert ("agent:cursor", "server:shell-runner-server") in edge_pairs
-    assert ("server:shell-runner-server", "pkg:pypi:pyyaml@5.3") in edge_pairs
+    assert (CURSOR, SHELL_RUNNER) in edge_pairs
+    assert (SHELL_RUNNER, "pkg:pypi:pyyaml@5.3") in edge_pairs
     assert ("pkg:pypi:pyyaml@5.3", "vuln:CVE-2020-14343") in edge_pairs
-    assert ("server:shell-runner-server", "cred:aws-secret") in edge_pairs
+    assert (SHELL_RUNNER, AWS_SECRET) in edge_pairs
     # The critical CVE reaches both the credential and the run_shell tool (RCE).
-    assert ("vuln:CVE-2020-14343", "cred:aws-secret") in edge_pairs
-    assert ("vuln:CVE-2020-14343", "tool:shell-runner-server:run_shell") in edge_pairs
+    assert ("vuln:CVE-2020-14343", AWS_SECRET) in edge_pairs
+    assert ("vuln:CVE-2020-14343", RUN_SHELL) in edge_pairs
 
 
 def test_demo_estate_findings_include_critical_and_kev(shared_demo_estate_client: TestClient) -> None:
@@ -212,7 +218,7 @@ def test_demo_estate_hero_findings_carry_the_persisted_graph_path(shared_demo_es
     for row in on_path:
         assert row.get("graph_reachable") is True
         assert row.get("graph_min_hop_distance") == 3
-        assert "agent:cursor" in (row.get("graph_reachable_from_agents") or [])
+        assert CURSOR in (row.get("graph_reachable_from_agents") or [])
         assert "cursor" in (row.get("affected_agents") or [])
         assert "shell-runner-server" in (row.get("affected_servers") or [])
         assert (row.get("risk_score") or 0) > 0
@@ -232,7 +238,7 @@ def test_demo_estate_hero_findings_carry_the_persisted_graph_path(shared_demo_es
         or (row.get("evidence") or {}).get("package_name") == "pyyaml"
         for row in graph_hero
     )
-    agent_path_rows = [row for row in graph_hero if "agent:cursor" in (row.get("graph_reachable_from") or [])]
+    agent_path_rows = [row for row in graph_hero if CURSOR in (row.get("graph_reachable_from") or [])]
     assert agent_path_rows, "the original agent path must remain visible"
     assert all("cursor" in (row.get("affected_agents") or []) for row in agent_path_rows)
     assert all("shell-runner-server" in (row.get("affected_servers") or []) for row in agent_path_rows)
@@ -481,7 +487,7 @@ def test_demo_estate_graph_tags_runtime_evidence_tiers(shared_demo_estate_client
     payload = _graph_with_all_nodes(shared_demo_estate_client)
     attrs_by_id = {node.get("id"): (node.get("attributes") or {}) for node in payload.get("nodes") or []}
     assert attrs_by_id.get("call:0", {}).get("evidence_tier") == "runtime_observed"
-    assert attrs_by_id.get("tool:shell-runner-server:run_shell", {}).get("evidence_tier") == "runtime_blocked"
+    assert attrs_by_id.get(RUN_SHELL, {}).get("evidence_tier") == "runtime_blocked"
 
 
 def test_demo_estate_catalog_seeds_connections_sources_and_spend(shared_demo_estate_client: TestClient) -> None:

@@ -14,6 +14,7 @@ from typing import Any
 
 from agent_bom.demo import DEMO_INVENTORY
 from agent_bom.demo_advisories import DEMO_ADVISORIES, demo_advisory_window
+from agent_bom.demo_estate.showcase_ids import showcase_server_id
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.package_utils import canonical_package_key
 
@@ -42,7 +43,7 @@ def seed_showcase_packages(node: NodeFn, edge: EdgeFn, packages: dict[str, tuple
         package_id = f"pkg:{canonical_package_key(name, version, ecosystem)}"
         node(package_id, EntityType.PACKAGE, f"{name}@{version}", ecosystem=ecosystem, version=version)
         for server in servers:
-            edge(f"server:{server}", package_id, RelationshipType.DEPENDS_ON)
+            edge(showcase_server_id(server), package_id, RelationshipType.DEPENDS_ON)
         recorded = packages.get(f"{name}@{version}")
         if recorded is not None:
             _seed_vulnerability(node, edge, package_id, recorded, advisory_by_id, (name, version, ecosystem))

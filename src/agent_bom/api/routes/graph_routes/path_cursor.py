@@ -16,13 +16,19 @@ def path_cursor_scope(kind: str, tenant: str, scan_id: str | None, filters: dict
 
 
 def path_continuation(cursor: str, scope: str, *, offset: int, generation: str | None) -> tuple[int, str]:
-    """Offset and pinned generation a ``next_cursor`` carries for this tenant and query."""
-    if offset or generation:
-        raise HTTPException(400, "cursor replaces offset and snapshot_generation; send only the cursor.")
+    """Offset and pinned generation a ``next_cursor`` carries for this tenant and query.
+
+    The cursor carries its generation, so ``snapshot_generation`` is optional;
+    a supplied one that disagrees is a 409, as on ``/v1/graph``.
+    """
+    if offset:
+        raise HTTPException(400, "cursor replaces offset; send only the cursor.")
     try:
         continuation = decode_cursor(cursor, scope)
     except ValueError as exc:
         raise HTTPException(400, "Invalid cursor for this query; restart from the first page.") from exc
+    if generation is not None and generation != continuation["revision"]:
+        raise HTTPException(409, "snapshot_generation does not match the cursor's; restart the query from its first page.")
     return continuation["offset"], continuation["revision"]
 
 
