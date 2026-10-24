@@ -48,6 +48,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - SARIF results for skill and instruction files use the real relative path and line instead of `<path:CLAUDE.md>`, a redaction label is never emitted as an artifact URI, and SARIF tool links point at the current repository. The skill-audit report detail no longer includes the absolute host path.
 - `scan -p` still scans the project when `--image` or code paths are also given, including the default run with Semgrep installed.
 - The hub partition runway job logs the expected DDL permission denial as one line instead of a traceback.
+- Snapshot diffs (`/v1/graph/diff`, `/v1/graph/changes`, MCP `graph_diff`) compare a node whose id scheme changed under its new id when the new snapshot records the old id as an alias. It is unchanged, or changed with a `previous_id`, instead of removed plus added; edges follow their endpoints. The demo showcase diff reports 3 removed nodes instead of 15.
 - An unpinned `GET /v1/graph` whose evidence changes during assembly rebuilds a bounded number of times, then returns 503 with `Retry-After` instead of 409. A pinned generation that changed still returns 409.
 - Feed re-match pages on (modified, id), so records sharing a timestamp are no longer skipped, honours an advisory's `limit_version` through the same range check as scan time, and marks a run `incomplete` when tenant or job caps are reached.
 - MCP `intel_lookup` reads advisories declared through the API when a store is configured.

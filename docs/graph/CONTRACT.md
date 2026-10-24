@@ -464,6 +464,9 @@ These gaps are tracked as roadmap work. None of them block the guarantees in §2
   `org:<provider>:<id>`, configuration findings `misconfig:<source>:<id>` and
   advisories `vuln:<id>`. A retired spelling is kept in the node's
   `identity.aliases` and persisted to `graph_node_aliases`, so it still resolves.
+  Snapshot diffs compare an old id that the new snapshot records as a one-to-one
+  alias under the new id: unchanged, or changed with `previous_id`, never removed
+  plus added. Removed rows keep the old snapshot's ids.
 - **Images and workloads.** Both are `container` nodes; `attributes.container_kind`
   is `image` (registry image, SBOM subject) or `workload` (pod, deployment,
   task), set only from a recorded resource type or Kubernetes kind. A workload

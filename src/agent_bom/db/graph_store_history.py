@@ -10,11 +10,13 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     pass
 
+from agent_bom.db.graph_node_aliases import resolve_node_aliases
 from agent_bom.db.graph_store_schema import normalize_graph_tenant_id
 from agent_bom.graph.analysis import (
     analysis_status_map_from_dict,
     analysis_status_map_to_dict,
 )
+from agent_bom.graph.diff_identity import edge_lifecycle_diff, edge_set_diff, node_set_diff, snapshot_rename_map
 from agent_bom.graph.observation_scope import observation_scope
 
 logger = logging.getLogger("agent_bom.db.graph_store")
@@ -28,7 +30,7 @@ def diff_snapshots(
     tenant_id: str = "",
 ) -> dict[str, Any]:
     """Compute the diff between two scan snapshots."""
-    from agent_bom.graph.drift_attributes import attribute_deltas, node_diff_metadata, node_snapshot_changed
+    from agent_bom.graph.drift_attributes import node_diff_metadata
 
     tenant_id = normalize_graph_tenant_id(tenant_id)
 
@@ -58,42 +60,57 @@ def diff_snapshots(
 
     old_nodes = _load_nodes(scan_id_old)
     new_nodes = _load_nodes(scan_id_new)
+    rename = _rename_map(conn, tenant_id, scan_id_new, set(old_nodes) - set(new_nodes), old_ids=set(old_nodes), new_ids=set(new_nodes))
 
-    old_ids, new_ids = set(old_nodes), set(new_nodes)
-
-    old_edges: set[tuple[str, str, str]] = set()
-    for row in conn.execute(
-        "SELECT source_id, target_id, relationship FROM graph_edges WHERE scan_id = ? AND tenant_id = ?",
-        (scan_id_old, tenant_id),
-    ):
-        old_edges.add((row["source_id"], row["target_id"], row["relationship"]))
-
-    new_edges: set[tuple[str, str, str]] = set()
-    for row in conn.execute(
-        "SELECT source_id, target_id, relationship FROM graph_edges WHERE scan_id = ? AND tenant_id = ?",
-        (scan_id_new, tenant_id),
-    ):
-        new_edges.add((row["source_id"], row["target_id"], row["relationship"]))
-
-    attribute_delta_index: dict[str, list[dict[str, Any]]] = {}
-    nodes_changed: list[str] = []
-    for nid in sorted(old_ids & new_ids):
-        if not node_snapshot_changed(old_nodes[nid], new_nodes[nid]):
-            continue
-        nodes_changed.append(nid)
-        deltas = attribute_deltas(old_nodes[nid], new_nodes[nid])
-        if deltas:
-            attribute_delta_index[nid] = deltas
+    def _edge_keys(scan_id: str) -> set[tuple[str, str, str]]:
+        return {
+            (row["source_id"], row["target_id"], row["relationship"])
+            for row in conn.execute(
+                "SELECT source_id, target_id, relationship FROM graph_edges WHERE scan_id = ? AND tenant_id = ?",
+                (scan_id, tenant_id),
+            )
+        }
 
     return {
-        "nodes_added": [new_nodes[nid] for nid in sorted(new_ids - old_ids)],
-        "nodes_removed": [old_nodes[nid] for nid in sorted(old_ids - new_ids)],
-        "nodes_changed": nodes_changed,
-        "attribute_deltas": attribute_delta_index,
-        "edges_added": sorted(new_edges - old_edges),
-        "edges_removed": sorted(old_edges - new_edges),
-        "edges_changed": changed_edges_between_scans(conn, scan_id_old, scan_id_new, tenant_id=tenant_id)["edges_changed"],
+        **node_set_diff(old_nodes, new_nodes, rename),
+        **edge_set_diff(_edge_keys(scan_id_old), _edge_keys(scan_id_new), rename),
+        "edges_changed": changed_edges_between_scans(conn, scan_id_old, scan_id_new, tenant_id=tenant_id, rename=rename)["edges_changed"],
     }
+
+
+def _node_ids_in(conn: sqlite3.Connection, tenant_id: str, scan_id: str, ids: list[str]) -> set[str]:
+    placeholders = ",".join("?" for _ in ids)
+    rows = conn.execute(
+        f"SELECT id FROM graph_nodes WHERE tenant_id = ? AND scan_id = ? AND id IN ({placeholders})",  # nosec B608 - placeholders only
+        [tenant_id, scan_id, *ids],
+    ).fetchall()
+    return {str(row[0]) for row in rows}
+
+
+def _rename_map(
+    conn: sqlite3.Connection,
+    tenant_id: str,
+    scan_id_new: str,
+    candidates: set[str],
+    *,
+    old_ids: set[str] | None = None,
+    new_ids: set[str] | None = None,
+    scan_id_old: str = "",
+) -> dict[str, str]:
+    """Old-snapshot ids the new snapshot recorded as aliases of one of its nodes."""
+
+    def old_live(ids: list[str]) -> set[str]:
+        return set(ids) & old_ids if old_ids is not None else _node_ids_in(conn, tenant_id, scan_id_old, ids)
+
+    def new_live(ids: list[str]) -> set[str]:
+        return set(ids) & new_ids if new_ids is not None else _node_ids_in(conn, tenant_id, scan_id_new, ids)
+
+    return snapshot_rename_map(
+        candidates,
+        resolve=lambda ids: resolve_node_aliases(conn, tenant_id=tenant_id, node_ids=ids, scan_id=scan_id_new),
+        old_live=old_live,
+        new_live=new_live,
+    )
 
 
 def _edge_history_row(row: sqlite3.Row) -> dict[str, Any]:
@@ -172,8 +189,12 @@ def changed_edges_between_scans(
     scan_id_new: str,
     *,
     tenant_id: str = "",
+    rename: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Return rich edge lifecycle changes between two scan snapshots."""
+    """Return rich edge lifecycle changes between two scan snapshots.
+
+    Endpoints the new snapshot renamed compare under their new id.
+    """
     tenant_id = normalize_graph_tenant_id(tenant_id)
 
     def rows_for(scan_id: str) -> dict[tuple[str, str, str], dict[str, Any]]:
@@ -185,29 +206,13 @@ def changed_edges_between_scans(
 
     old_edges = rows_for(scan_id_old)
     new_edges = rows_for(scan_id_new)
-    old_keys, new_keys = set(old_edges), set(new_edges)
-    shared = old_keys & new_keys
-    changed = [
-        {"before": old_edges[key], "after": new_edges[key]}
-        for key in sorted(shared)
-        if _edge_change_fingerprint(old_edges[key]) != _edge_change_fingerprint(new_edges[key])
-    ]
-    unchanged = [
-        new_edges[key] for key in sorted(shared) if _edge_change_fingerprint(old_edges[key]) == _edge_change_fingerprint(new_edges[key])
-    ]
+    if rename is None:
+        gone = set(old_edges) - set(new_edges)
+        rename = _rename_map(conn, tenant_id, scan_id_new, {node for key in gone for node in key[:2]}, scan_id_old=scan_id_old)
     return {
         "scan_id_old": scan_id_old,
         "scan_id_new": scan_id_new,
-        "edges_added": [new_edges[key] for key in sorted(new_keys - old_keys)],
-        "edges_removed": [old_edges[key] for key in sorted(old_keys - new_keys)],
-        "edges_changed": changed,
-        "edges_unchanged": unchanged,
-        "summary": {
-            "added": len(new_keys - old_keys),
-            "removed": len(old_keys - new_keys),
-            "changed": len(changed),
-            "unchanged": len(unchanged),
-        },
+        **edge_lifecycle_diff(old_edges, new_edges, rename, _edge_change_fingerprint),
     }
 
 
