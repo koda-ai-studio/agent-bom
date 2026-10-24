@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import click
 
@@ -242,6 +242,11 @@ def _analytics_summary_rows(
         ),
         ("Analytics URL", resolved_url or "(unset)"),
     ]
+
+
+# "auto" lifespan logs a failed startup as "unsupported" and serves 500s; "on"
+# exits. Idle keep-alive and an in-flight cap bound a slow-connection flood.
+_UVICORN_SERVER_KWARGS: dict[str, Any] = {"lifespan": "on", "timeout_keep_alive": 5, "limit_concurrency": 500}
 
 
 @click.command("serve")
@@ -514,8 +519,7 @@ def serve_cmd(
         host=host,
         port=port,
         reload=reload,
-        timeout_keep_alive=5,
-        limit_concurrency=500,
+        **_UVICORN_SERVER_KWARGS,
         **tls_kwargs,
     )
 
@@ -786,11 +790,7 @@ def api_cmd(
         reload=reload,
         workers=1 if reload else workers,
         log_level=log_level.lower(),
-        # Bound idle connections and concurrent requests.
-        timeout_keep_alive=5,
-        # Hard cap on concurrent in-flight requests; prevents thread/FD exhaustion
-        # under a slow-connection flood. 500 ≫ any realistic single-server load.
-        limit_concurrency=500,
+        **_UVICORN_SERVER_KWARGS,
         **tls_kwargs,
     )
 
