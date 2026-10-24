@@ -58,6 +58,7 @@ from agent_bom.runtime.proxy_setup import (
 )
 from agent_bom.runtime.proxy_tracing import _PROXY_TRACER as _PROXY_TRACER
 from agent_bom.runtime.proxy_tracing import proxy_span
+from agent_bom.runtime.tool_catalog_pages import fetch_http_tool_catalog
 from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta as _inject_jsonrpc_trace_meta
 from agent_bom.security import sanitize_text
 
@@ -392,20 +393,14 @@ async def _proxy_sse_server(
                 with span_cm as span:
                     if span is not None:
                         span.set_attribute("agent_bom.proxy.upstream_url", url.rstrip("/"))
-                    tools_resp = await client.post(
-                        url.rstrip("/") + "/tools/list",
-                        json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
-                        headers=_proxy_request_headers(),
-                    )
-                tools_resp.raise_for_status()
-                tools_data = tools_resp.json()
-                if isinstance(tools_data, dict) and "result" in tools_data:
-                    result = tools_data["result"]
-                    if isinstance(result, dict) and "tools" in result:
-                        declared_tools = {t["name"] for t in result["tools"] if isinstance(t, dict) and "name" in t}
-                        if span is not None:
-                            span.set_attribute("agent_bom.proxy.declared_tool_count", len(declared_tools))
-                        logger.info("SSE proxy: discovered %d declared tools", len(declared_tools))
+
+                    catalog = await fetch_http_tool_catalog(client, url.rstrip("/") + "/tools/list", _proxy_request_headers())
+                    declared_tools = set(catalog.names)
+                    if span is not None:
+                        span.set_attribute("agent_bom.proxy.declared_tool_count", len(declared_tools))
+                if not catalog.complete:
+                    logger.warning("SSE proxy: tools/list pagination incomplete; %d tools declared so far", len(declared_tools))
+                logger.info("SSE proxy: discovered %d declared tools", len(declared_tools))
             except Exception as exc:  # noqa: BLE001
                 logger.warning("SSE proxy: could not fetch tools/list from %s: %s", url, sanitize_text(exc))
 

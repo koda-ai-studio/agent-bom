@@ -9,7 +9,9 @@ A listing that breaks those rules is reported as incomplete.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 from agent_bom.runtime.mcp_protocol import MAX_TOOL_CATALOG_PAGES
 
@@ -84,3 +86,42 @@ class ToolCatalogPages:
             return self._finish(complete=False)
         self.seen_cursors.add(cursor)
         return None
+
+
+async def fetch_tool_catalog(fetch_page: Callable[[str | None], Awaitable[Any]]) -> ToolCatalog:
+    """Fetch a whole ``tools/list`` catalog by following ``nextCursor``.
+
+    ``fetch_page(cursor)`` returns one JSON-RPC response. A page without a tool
+    list, a non-string or repeated cursor, or the page cap ends the listing as
+    incomplete with the names gathered so far.
+    """
+    names: list[str] = []
+    seen: set[str] = set()
+    cursor: str | None = None
+    for _ in range(MAX_TOOL_CATALOG_PAGES):
+        response = await fetch_page(cursor)
+        result = response.get("result") if isinstance(response, dict) else None
+        if not isinstance(result, dict) or not isinstance(result.get("tools"), list):
+            return ToolCatalog(names, complete=False)
+        names.extend(t["name"] for t in result["tools"] if isinstance(t, dict) and isinstance(t.get("name"), str))
+        next_cursor = result.get("nextCursor")
+        if next_cursor is None:
+            return ToolCatalog(names, complete=True)
+        if not isinstance(next_cursor, str) or next_cursor in seen:
+            return ToolCatalog(names, complete=False)
+        seen.add(next_cursor)
+        cursor = next_cursor
+    return ToolCatalog(names, complete=False)
+
+
+async def fetch_http_tool_catalog(client: Any, list_url: str, headers: dict[str, str]) -> ToolCatalog:
+    """Page a remote server's ``tools/list`` over HTTP POST; HTTP errors propagate."""
+
+    async def fetch_page(cursor: str | None) -> Any:
+        params = {"cursor": cursor} if cursor is not None else {}
+        message = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": params}
+        response = await client.post(list_url, json=message, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
+    return await fetch_tool_catalog(fetch_page)

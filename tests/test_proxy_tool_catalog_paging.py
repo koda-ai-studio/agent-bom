@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 from agent_bom import proxy
 from agent_bom.runtime.detectors import ToolDriftDetector
 from agent_bom.runtime.mcp_protocol import MAX_TOOL_CATALOG_PAGES
@@ -139,3 +141,113 @@ def test_single_page_catalog_behaviour_is_unchanged():
     _feed(session, _page(["a", "b"]))
     _feed(session, _page(["a", "b", "c"]))
     assert [a.message for a in alerts] == ["New tools detected after startup: c"]
+
+
+# ── SSE proxy: the declared catalog spans every tools/list page ──
+
+
+def _pages(*pages: tuple[list[str], object]) -> list[dict]:
+    return [{"jsonrpc": "2.0", "id": 1, "result": {"tools": [{"name": n} for n in names], "nextCursor": cursor}} for names, cursor in pages]
+
+
+@pytest.mark.asyncio
+async def test_fetch_tool_catalog_follows_every_page():
+    from agent_bom.runtime.tool_catalog_pages import fetch_tool_catalog
+
+    responses = iter(_pages((["a", "b"], "p2"), (["c"], "p3"), (["d"], None)))
+    seen_cursors: list[object] = []
+
+    async def fetch(cursor):
+        seen_cursors.append(cursor)
+        return next(responses)
+
+    catalog = await fetch_tool_catalog(fetch)
+    assert catalog.names == ["a", "b", "c", "d"]
+    assert catalog.complete is True
+    assert seen_cursors == [None, "p2", "p3"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "pages",
+    [
+        _pages((["a"], "same"), (["b"], "same"), (["c"], None)),
+        _pages((["a"], 7)),
+        [
+            {"jsonrpc": "2.0", "id": 1, "result": {"tools": [{"name": "a"}], "nextCursor": "p2"}},
+            {"jsonrpc": "2.0", "id": 1, "error": {"code": -1}},
+        ],
+    ],
+    ids=["repeated-cursor", "non-string-cursor", "error-page"],
+)
+async def test_fetch_tool_catalog_reports_incomplete_listing(pages):
+    from agent_bom.runtime.tool_catalog_pages import fetch_tool_catalog
+
+    responses = iter(pages)
+
+    async def fetch(cursor):
+        return next(responses)
+
+    catalog = await fetch_tool_catalog(fetch)
+    assert catalog.complete is False
+    assert "a" in catalog.names
+
+
+@pytest.mark.asyncio
+async def test_fetch_tool_catalog_stops_at_the_page_cap():
+    from agent_bom.runtime.mcp_protocol import MAX_TOOL_CATALOG_PAGES
+    from agent_bom.runtime.tool_catalog_pages import fetch_tool_catalog
+
+    calls = 0
+
+    async def fetch(cursor):
+        nonlocal calls
+        calls += 1
+        return _pages(([f"t{calls}"], f"p{calls}"))[0]
+
+    catalog = await fetch_tool_catalog(fetch)
+    assert calls == MAX_TOOL_CATALOG_PAGES
+    assert catalog.complete is False
+
+
+@pytest.mark.asyncio
+async def test_sse_proxy_does_not_block_a_tool_declared_on_a_later_page(monkeypatch):
+    import io
+    import json
+    from unittest.mock import AsyncMock, MagicMock
+
+    from agent_bom import proxy
+
+    listing = iter(_pages((["first"], "p2"), (["second"], None)))
+    posted: list[tuple[str, dict]] = []
+
+    async def post(url, **kwargs):
+        sent = kwargs.get("json")
+        if sent is None:
+            sent = json.loads(kwargs.get("content") or b"{}")
+        posted.append((url, sent))
+        reply = {"jsonrpc": "2.0", "id": sent.get("id"), "result": {"content": []}}
+        body = next(listing) if sent.get("method") == "tools/list" else reply
+        response = MagicMock()
+        response.json.return_value = body
+        response.raise_for_status.return_value = None
+        response.status_code = 200
+        response.headers = {"content-type": "application/json"}
+        return response
+
+    client = AsyncMock()
+    client.__aenter__.return_value = client
+    client.post.side_effect = post
+    monkeypatch.setattr("httpx.AsyncClient", lambda **kwargs: client)
+    monkeypatch.setattr(proxy, "create_async_stdin_reader", AsyncMock(return_value=object()))
+    call = {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "second", "arguments": {}}}
+    monkeypatch.setattr(proxy, "read_async_stdin_line", AsyncMock(side_effect=[json.dumps(call).encode() + b"\n", b""]))
+    stdout = io.BytesIO()
+    monkeypatch.setattr(proxy.sys, "stdout", type("Stdout", (), {"buffer": stdout})())
+
+    assert await proxy._proxy_sse_server(url="https://fixture.example", block_undeclared=True) == 0
+
+    listing_cursors = [body.get("params", {}).get("cursor") for _url, body in posted if body.get("method") == "tools/list"]
+    assert listing_cursors == [None, "p2"]
+    assert any(body.get("method") == "tools/call" for _url, body in posted), "a tool declared on page 2 must be forwarded"
+    assert b"undeclared" not in stdout.getvalue().lower()

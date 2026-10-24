@@ -32,6 +32,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Migration `20261023_02` revokes writes on `alembic_version` from the application and RLS-maintenance roles; migrations run as the admin role.
 
 ### Fixed
+- The SSE/HTTP proxy (`agent-bom proxy --url`) now reads every page of the upstream `tools/list` before applying `--block-undeclared`; tools declared after the first page were blocked as undeclared.
 
 - Proxy tool-drift detection reads a paginated `tools/list` (`nextCursor`) as one catalog instead of comparing each page with the first, so a multi-page server no longer raises false "new tools" and "tools removed" alerts. A listing that stops early (20-page cap, repeated or invalid cursor) is marked incomplete: it never becomes the baseline and never reports removals.
 - Gateway drift enforcement looks up open incidents for the caller's own blueprint in the store (SQLite and Postgres, with a new index and Alembic revision `20261024_01`). Previously a tenant with 200 or more open incidents on any blueprints got `unavailable` for every lookup, which denied every call in secured enforce mode and dropped to audit-only otherwise.
