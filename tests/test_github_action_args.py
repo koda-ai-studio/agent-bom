@@ -227,3 +227,35 @@ def test_skills_keeps_its_default_sarif_output() -> None:
     args = action_args(scan_type="skills", scan_ref=".")
     assert args[args.index("-f") + 1] == "sarif"
     assert args[args.index("-o") + 1] == "agent-bom-results.sarif"
+
+
+# ── P0: baseline input drives the real delta flag ───────────────────────────
+
+
+def test_baseline_input_passes_the_real_delta_flag() -> None:
+    args = action_args(baseline="baseline.json")
+    assert args[args.index("--baseline") + 1] == "baseline.json"
+    assert "--delta" in args
+    rejected = _options(args) - _accepted_options(_cli_command(args))
+    assert not rejected, args
+
+
+def test_baseline_input_runs_against_the_cli(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    home = tmp_path / "home"
+    _write_iac_fixture(repo)
+    home.mkdir()
+    env = {**os.environ, "HOME": str(home)}
+    base = subprocess.run(
+        [sys.executable, "-m", "agent_bom", "scan", ".", "-f", "json", "-o", "baseline.json", "--offline", "-q"],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert (repo / "baseline.json").is_file(), base.stderr
+
+    args = action_args(auto_update_db="false", baseline="baseline.json", format="json", output="out.json")
+    result = subprocess.run([sys.executable, "-m", "agent_bom", *args, "--offline", "-q"], cwd=repo, env=env, capture_output=True, text=True)
+    assert result.returncode != 2, result.stderr
+    assert json.loads((repo / "out.json").read_text(encoding="utf-8"))["delta"]["enabled"] is True

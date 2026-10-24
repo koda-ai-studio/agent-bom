@@ -116,7 +116,7 @@ inputs:
     required: false
     default: 'false'
   baseline:
-    description: 'Path to a baseline report JSON for delta scanning (only report new findings).'
+    description: 'Path to a baseline agent-bom JSON report (format: json) from the base branch. Runs scan --baseline <file> --delta, so the report and every gate cover only findings that are new versus the baseline. scan-type=scan only.'
     required: false
     default: ''
   skill-only:
@@ -480,7 +480,7 @@ runs:
         # Delta scanning: report and gate on new findings only
         if [ -n "$INPUT_BASELINE" ]; then
           supports baseline || reject_input "baseline"
-          ARGS+=(--baseline "$INPUT_BASELINE" --delta-mode new-only)
+          ARGS+=(--baseline "$INPUT_BASELINE" --delta)
         fi
 
         # Extra scan targets (skip the one already in the focused command)
