@@ -5,7 +5,7 @@ export function buildIssueUrl(template: string, title: string) {
     template,
     title,
   });
-  return `https://github.com/msaad00/agent-bom/issues/new?${params.toString()}`;
+  return `https://github.com/koda-ai-studio/agent-bom/issues/new?${params.toString()}`;
 }
 
 export function buildSupportBundle(input: {

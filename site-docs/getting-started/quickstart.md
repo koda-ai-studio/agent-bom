@@ -71,7 +71,7 @@ agent-bom scan --external-scan findings.sarif -f json -o report.json  # tool-agn
 
 For bulk push into a running control plane instead, use
 `agent-bom findings push <file>`. See
-[docs/INGEST_PATHS.md](https://github.com/msaad00/agent-bom/blob/main/docs/INGEST_PATHS.md)
+[docs/INGEST_PATHS.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/INGEST_PATHS.md)
 for the VM/registry matrix and push vs `--external-scan` tradeoff.
 
 ## LLM FinOps (cost forecast)
@@ -82,7 +82,7 @@ Project LLM burn rate from OpenTelemetry GenAI spans (read-only, no secret value
 agent-bom cost forecast
 ```
 
-Price model and OTel ingest path: [docs/COST_MODEL.md](https://github.com/msaad00/agent-bom/blob/main/docs/COST_MODEL.md).
+Price model and OTel ingest path: [docs/COST_MODEL.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/COST_MODEL.md).
 
 ## Run compliance mapping
 
@@ -135,5 +135,5 @@ agent-bom report history -f json                  # saved scan metadata for CI
 ```
 
 If a GitHub Action produces SARIF but no Code Scanning alert appears, check the
-[SARIF upload troubleshooting guide](https://github.com/msaad00/agent-bom/blob/main/docs/GITHUB_ACTION_SARIF_TROUBLESHOOTING.md)
+[SARIF upload troubleshooting guide](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/GITHUB_ACTION_SARIF_TROUBLESHOOTING.md)
 for token permissions, fork PR behavior, report paths, and category settings.

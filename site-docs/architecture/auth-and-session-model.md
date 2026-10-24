@@ -53,11 +53,11 @@ The API/control plane is the trust anchor for:
 
 In code, that boundary lives primarily in:
 
-- [`src/agent_bom/api/middleware.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/api/middleware.py)
-- [`src/agent_bom/api/routes/enterprise.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/api/routes/enterprise.py)
-- [`src/agent_bom/api/oidc.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/api/oidc.py)
-- [`src/agent_bom/api/saml.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/api/saml.py)
-- [`src/agent_bom/rbac.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/rbac.py)
+- [`src/agent_bom/api/middleware.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/middleware.py)
+- [`src/agent_bom/api/routes/enterprise.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/routes/enterprise.py)
+- [`src/agent_bom/api/oidc.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/oidc.py)
+- [`src/agent_bom/api/saml.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/saml.py)
+- [`src/agent_bom/rbac.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/rbac.py)
 
 ## Supported browser-facing auth modes today
 
@@ -72,7 +72,7 @@ These are the code-backed control-plane access modes today.
 
 The current UI auth helper lives in:
 
-- [`ui/lib/auth.ts`](https://github.com/msaad00/agent-bom/blob/main/ui/lib/auth.ts)
+- [`ui/lib/auth.ts`](https://github.com/koda-ai-studio/agent-bom/blob/main/ui/lib/auth.ts)
 
 That fallback is intentionally narrow:
 

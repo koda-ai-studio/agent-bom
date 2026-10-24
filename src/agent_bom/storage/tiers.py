@@ -35,7 +35,7 @@ from agent_bom.storage.factory import validate_configured_sqlite_path
 
 logger = logging.getLogger(__name__)
 
-STORAGE_TIERS_DOC: Final = "https://github.com/msaad00/agent-bom/blob/main/docs/STORAGE_BACKENDS.md"
+STORAGE_TIERS_DOC: Final = "https://github.com/koda-ai-studio/agent-bom/blob/main/docs/STORAGE_BACKENDS.md"
 REQUIRE_SUPPORTED_STORAGE_ENV: Final = "AGENT_BOM_REQUIRE_SUPPORTED_STORAGE"
 
 

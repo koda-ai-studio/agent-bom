@@ -128,7 +128,7 @@ def test_vendor_diagram_assets_have_first_party_pinned_provenance() -> None:
         page = urlparse(asset["source_page"])
         assert page.scheme == "https"
         assert page.hostname == "cloud.google.com"
-        assert asset["source_repo"] == "https://github.com/msaad00/agent-bom"
+        assert asset["source_repo"] == "https://github.com/koda-ai-studio/agent-bom"
         assert "source_archive" not in asset
 
     for asset in icon_set + repository_pinned + brand_reference:

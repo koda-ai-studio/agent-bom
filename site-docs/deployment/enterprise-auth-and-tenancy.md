@@ -91,9 +91,9 @@ the configured proxy or gateway policy.
 - `viewer`
 
 The permission matrix lives in
-[`src/agent_bom/rbac.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/rbac.py)
+[`src/agent_bom/rbac.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/rbac.py)
 and the route minimum-role map lives in
-[`src/agent_bom/api/middleware.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/api/middleware.py).
+[`src/agent_bom/api/middleware.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/middleware.py).
 
 Operationally:
 
@@ -388,14 +388,14 @@ For auth, tenancy, and control-plane actions, the most accurate short claim is:
 ## Evidence and tests
 
 - OIDC implementation:
-  [`src/agent_bom/api/oidc.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/api/oidc.py)
+  [`src/agent_bom/api/oidc.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/oidc.py)
 - SAML implementation:
-  [`src/agent_bom/api/saml.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/api/saml.py)
+  [`src/agent_bom/api/saml.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/saml.py)
 - auth middleware:
-  [`src/agent_bom/api/middleware.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/api/middleware.py)
+  [`src/agent_bom/api/middleware.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/middleware.py)
 - RBAC:
-  [`src/agent_bom/rbac.py`](https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/rbac.py)
+  [`src/agent_bom/rbac.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/rbac.py)
 - auth/tenant tests:
-  [`tests/api/test_api_oidc.py`](https://github.com/msaad00/agent-bom/blob/main/tests/api/test_api_oidc.py),
-  [`tests/api/test_api_hardening.py`](https://github.com/msaad00/agent-bom/blob/main/tests/api/test_api_hardening.py),
-  [`tests/api/test_api_cross_tenant_matrix.py`](https://github.com/msaad00/agent-bom/blob/main/tests/api/test_api_cross_tenant_matrix.py)
+  [`tests/api/test_api_oidc.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/tests/api/test_api_oidc.py),
+  [`tests/api/test_api_hardening.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/tests/api/test_api_hardening.py),
+  [`tests/api/test_api_cross_tenant_matrix.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/tests/api/test_api_cross_tenant_matrix.py)

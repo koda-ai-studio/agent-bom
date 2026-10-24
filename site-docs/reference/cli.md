@@ -210,7 +210,7 @@ metadata or environment defaults.
 Use these when CI, a laptop, or an MCP client needs to push evidence into a
 running control plane without opening the dashboard.
 
-See also [docs/INGEST_PATHS.md](https://github.com/msaad00/agent-bom/blob/main/docs/INGEST_PATHS.md)
+See also [docs/INGEST_PATHS.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/INGEST_PATHS.md)
 for the full SARIF / Trivy / Grype matrix and the `findings push` vs
 `--external-scan` tradeoff.
 
@@ -348,13 +348,13 @@ The `--repo <URL>` flag scans a public git repository by link without a local ch
 See [CLI Debug Guide](cli-debug.md) for quiet/logging behavior, stdout vs file output, discovery triage, and package verification workflows.
 
 Use the
-[Inaccurate Finding](https://github.com/msaad00/agent-bom/issues/new?template=inaccurate_finding.yml)
+[Inaccurate Finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml)
 template for false positives, false negatives, wrong severity/advisory mapping,
 or misleading remediation. Include sanitized JSON/SARIF output and public
 evidence; do not post secrets, private source code, private package names, or
 customer data.
 The repository includes a
-[sanitized inaccurate-finding report example](https://github.com/msaad00/agent-bom/blob/main/docs/INACCURATE_FINDING_REPORT.md)
+[sanitized inaccurate-finding report example](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/INACCURATE_FINDING_REPORT.md)
 with a copy-paste-safe issue body.
 
 For the JSON contract behind `agent-bom remediate`, see [`remediate` Output

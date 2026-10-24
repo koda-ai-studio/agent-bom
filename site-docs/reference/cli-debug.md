@@ -24,7 +24,7 @@ agent-bom agents -f sarif -o -
 - `--log-level debug` with `--log-file` is the quickest way to capture a reproducible issue.
 - `-o -` is the stdout form for machine-readable exports.
 - If a finding looks inaccurate, open an
-  [Inaccurate Finding](https://github.com/msaad00/agent-bom/issues/new?template=inaccurate_finding.yml)
+  [Inaccurate Finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml)
   report with the exact command, agent-bom version, sanitized finding JSON/SARIF snippet,
   and public advisory or package evidence.
 

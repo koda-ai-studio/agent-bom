@@ -432,4 +432,4 @@ with tab_policies:
 # ─── Footer ──────────────────────────────────────────────────────────────────
 
 st.divider()
-st.caption("agent-bom | github.com/msaad00/agent-bom")
+st.caption("agent-bom | github.com/koda-ai-studio/agent-bom")

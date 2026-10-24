@@ -703,7 +703,7 @@ jobs:
             echo ""
             echo "::error::ui/lib/graph-schema.generated.ts is out of date relative to /v1/graph/schema."
             echo "Run \`cd ui && npm run codegen:graph-schema\` locally and commit the result."
-            echo "Issue: https://github.com/msaad00/agent-bom/issues/2255"
+            echo "Issue: https://github.com/koda-ai-studio/agent-bom/issues/2255"
             exit 1
           fi
 
@@ -2438,8 +2438,8 @@ jobs:
           version: 1.0.0
           metadata:
             openclaw:
-              source: https://github.com/msaad00/agent-bom
-              homepage: https://github.com/msaad00/agent-bom
+              source: https://github.com/koda-ai-studio/agent-bom
+              homepage: https://github.com/koda-ai-studio/agent-bom
               install:
                 - kind: pip
                   package: agent-bom

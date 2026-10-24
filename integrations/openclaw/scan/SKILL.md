@@ -13,10 +13,10 @@ compatibility: >-
   operation.
 metadata:
   author: msaad00
-  homepage: https://github.com/msaad00/agent-bom
-  source: https://github.com/msaad00/agent-bom
+  homepage: https://github.com/koda-ai-studio/agent-bom
+  source: https://github.com/koda-ai-studio/agent-bom
   pypi: https://pypi.org/project/agent-bom/
-  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/msaad00/agent-bom
+  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom
   install:
     pipx: agent-bom
     pip: agent-bom
@@ -32,14 +32,14 @@ metadata:
       - semgrep
       - kubectl
     emoji: "\U0001F6E1"
-    homepage: https://github.com/msaad00/agent-bom
-    source: https://github.com/msaad00/agent-bom
+    homepage: https://github.com/koda-ai-studio/agent-bom
+    source: https://github.com/koda-ai-studio/agent-bom
     license: Apache-2.0
     os:
       - darwin
       - linux
       - windows
-    credential_handling: "sanitize_env_vars() redacts credential-like and sensitive environment values before reporting; benign configuration values may remain in the in-memory model. Source: https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/security.py"
+    credential_handling: "sanitize_env_vars() redacts credential-like and sensitive environment values before reporting; benign configuration values may remain in the in-memory model. Source: https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/security.py"
     data_flow: "Online vulnerability lookups send package identifiers, versions and advisory IDs to providers. Confirm permission before querying private package identifiers. Image/repository inputs also contact the requested registry/host. Use offline mode when network queries are not authorized; report resulting coverage gaps. Do not upload configuration contents or scan reports through this skill."
     file_reads:
       # Possible discovery inputs, not permission to read every listed source.
@@ -248,7 +248,7 @@ pip install agent-bom
 # Step 2: Review redaction logic BEFORE scanning
 # sanitize_env_vars() redacts credential-like and sensitive env values before
 # reporting; benign configuration values may remain in the in-memory model:
-# https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/security.py
+# https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/security.py
 
 # Step 3: Verify package provenance (Sigstore)
 agent-bom verify agent-bom
@@ -259,7 +259,7 @@ agent-bom scan --project . --no-discover
 
 ## Verification
 
-- **Source**: [github.com/msaad00/agent-bom](https://github.com/msaad00/agent-bom) (Apache-2.0)
+- **Source**: [github.com/koda-ai-studio/agent-bom](https://github.com/koda-ai-studio/agent-bom) (Apache-2.0)
 - **Sigstore signed**: `agent-bom verify agent-bom@0.110.0`
 - **Contracts**: `tests/test_bundled_skill_contract.py` checks skill metadata and the default MCP tool list.
 - **Network boundary**: Online scans use vulnerability providers and the explicitly requested repository or image host; use offline mode when those requests are not authorized.

@@ -5,6 +5,7 @@ import { buildIssueUrl, buildSupportBundle } from "@/lib/feedback";
 describe("feedback helpers", () => {
   it("builds GitHub issue template links", () => {
     const url = buildIssueUrl("bug_report.yml", "bug(ui): issue from /proxy");
+    expect(url.startsWith("https://github.com/koda-ai-studio/agent-bom/issues/new?")).toBe(true);
     expect(url).toContain("template=bug_report.yml");
     expect(url).toContain("title=bug%28ui%29%3A+issue+from+%2Fproxy");
   });

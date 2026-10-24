@@ -12,10 +12,10 @@ compatibility: >-
   (AWS/Azure/GCP/Snowflake) when explicitly invoked.
 metadata:
   author: msaad00
-  homepage: https://github.com/msaad00/agent-bom
-  source: https://github.com/msaad00/agent-bom
+  homepage: https://github.com/koda-ai-studio/agent-bom
+  source: https://github.com/koda-ai-studio/agent-bom
   pypi: https://pypi.org/project/agent-bom/
-  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/msaad00/agent-bom
+  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom
   tests: 7239
   install:
     pipx: agent-bom
@@ -59,8 +59,8 @@ metadata:
     optional_bins:
       - kubectl
     emoji: "\U0001F3D7"
-    homepage: https://github.com/msaad00/agent-bom
-    source: https://github.com/msaad00/agent-bom
+    homepage: https://github.com/koda-ai-studio/agent-bom
+    source: https://github.com/koda-ai-studio/agent-bom
     license: Apache-2.0
     os:
       - darwin

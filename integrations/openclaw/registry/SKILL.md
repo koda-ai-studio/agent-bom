@@ -13,10 +13,10 @@ compatibility: >-
   code scanning. No API keys or network access required (registry is bundled).
 metadata:
   author: msaad00
-  homepage: https://github.com/msaad00/agent-bom
-  source: https://github.com/msaad00/agent-bom
+  homepage: https://github.com/koda-ai-studio/agent-bom
+  source: https://github.com/koda-ai-studio/agent-bom
   pypi: https://pypi.org/project/agent-bom/
-  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/msaad00/agent-bom
+  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom
   tests: 7239
   install:
     pipx: agent-bom
@@ -35,8 +35,8 @@ metadata:
     optional_bins:
       - semgrep
     emoji: "\U0001F50D"
-    homepage: https://github.com/msaad00/agent-bom
-    source: https://github.com/msaad00/agent-bom
+    homepage: https://github.com/koda-ai-studio/agent-bom
+    source: https://github.com/koda-ai-studio/agent-bom
     license: Apache-2.0
     os:
       - darwin
@@ -113,6 +113,6 @@ as a string argument (no file system access needed).
 
 ## Verification
 
-- **Source**: [github.com/msaad00/agent-bom](https://github.com/msaad00/agent-bom) (Apache-2.0)
+- **Source**: [github.com/koda-ai-studio/agent-bom](https://github.com/koda-ai-studio/agent-bom) (Apache-2.0)
 - **7,100+ tests** with CodeQL + OpenSSF Scorecard
 - **No telemetry**: Zero tracking, zero analytics

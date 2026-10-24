@@ -4137,7 +4137,7 @@ def test_openclaw_skills_have_source_links():
 
     p = Path(__file__).parent.parent / "integrations" / "openclaw" / "SKILL.md"
     content = p.read_text()
-    assert "github.com/msaad00/agent-bom" in content, "Missing source link"
+    assert "github.com/koda-ai-studio/agent-bom" in content, "Missing source link"
     assert "Apache-2.0" in content, "Missing license"
 
 

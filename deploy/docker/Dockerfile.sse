@@ -57,9 +57,9 @@ ARG PIP_CERT
 LABEL org.opencontainers.image.title="agent-bom MCP Server"
 LABEL org.opencontainers.image.description="Security scanner for AI infrastructure — MCP server with streamable HTTP transport"
 LABEL org.opencontainers.image.version="${VERSION}"
-LABEL org.opencontainers.image.source="https://github.com/msaad00/agent-bom"
+LABEL org.opencontainers.image.source="https://github.com/koda-ai-studio/agent-bom"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
-LABEL io.modelcontextprotocol.server.name="io.github.msaad00/agent-bom"
+LABEL io.modelcontextprotocol.server.name="io.github.koda-ai-studio/agent-bom"
 LABEL io.modelcontextprotocol.server.transport="streamable-http"
 
 # Copy the frozen environment from the identical Python base image. Keeping the

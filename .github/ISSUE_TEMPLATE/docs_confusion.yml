@@ -7,7 +7,7 @@ body:
     attributes:
       label: Page or section
       description: Link to the README, docs page, or heading that caused confusion.
-      placeholder: "https://github.com/msaad00/agent-bom/blob/main/README.md#..."
+      placeholder: "https://github.com/koda-ai-studio/agent-bom/blob/main/README.md#..."
     validations:
       required: true
 

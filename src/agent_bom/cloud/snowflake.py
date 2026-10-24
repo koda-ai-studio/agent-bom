@@ -407,7 +407,7 @@ def _resolve_snowflake_auth(
         warnings.warn(
             "SNOWFLAKE_PASSWORD is deprecated and will be removed in a future release. "
             "Migrate to SSO (SNOWFLAKE_AUTHENTICATOR=externalbrowser) or key-pair "
-            "(SNOWFLAKE_PRIVATE_KEY_PATH). See https://github.com/msaad00/agent-bom#auth",
+            "(SNOWFLAKE_PRIVATE_KEY_PATH). See https://github.com/koda-ai-studio/agent-bom#auth",
             DeprecationWarning,
             stacklevel=3,
         )

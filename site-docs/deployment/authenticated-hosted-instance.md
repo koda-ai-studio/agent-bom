@@ -222,7 +222,7 @@ AGENT_BOM_GCP_INVENTORY=1 agent-bom cloud gcp --project <PROJECT_ID> --cis
 
 For org/tenant fan-out use `AGENT_BOM_AWS_ORG_INVENTORY=1`,
 `AGENT_BOM_AZURE_ALL_SUBSCRIPTIONS=1`, or `AGENT_BOM_GCP_ALL_PROJECTS=1`. See
-[`docs/CLOUD_CONNECT.md`](https://github.com/msaad00/agent-bom/blob/main/docs/CLOUD_CONNECT.md)
+[`docs/CLOUD_CONNECT.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/CLOUD_CONNECT.md)
 for the full per-provider matrix and scale caps.
 
 ## 4. Log in and see real posture
@@ -256,6 +256,6 @@ URL is not using `agent_bom_app`, stop and fix before connecting any cloud.
 
 ## Related
 
-- Public anonymous demo runbook: [`docs/HOSTED_POC.md`](https://github.com/msaad00/agent-bom/blob/main/docs/HOSTED_POC.md)
-- Cloud connect reference: [`docs/CLOUD_CONNECT.md`](https://github.com/msaad00/agent-bom/blob/main/docs/CLOUD_CONNECT.md)
+- Public anonymous demo runbook: [`docs/HOSTED_POC.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/HOSTED_POC.md)
+- Cloud connect reference: [`docs/CLOUD_CONNECT.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/CLOUD_CONNECT.md)
 - Auth model and tenancy: [Enterprise Auth and Tenancy](enterprise-auth-and-tenancy.md)

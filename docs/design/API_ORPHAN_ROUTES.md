@@ -4,7 +4,7 @@
 callable (non-breaking). Deletion is deferred to a later Phase after a
 deprecation window.
 
-This audit covers the ten routes flagged in [#3666](https://github.com/msaad00/agent-bom/issues/3666)
+This audit covers the ten routes flagged in [#3666](https://github.com/koda-ai-studio/agent-bom/issues/3666)
 item 4 (no UI / CLI / MCP / hand-doc product consumer). Evidence was gathered
 by searching `ui/`, `src/agent_bom/cli/`, `src/agent_bom/mcp_tools/`,
 `src/agent_bom/mcp_server.py`, `sdks/`, and `site-docs/` for path string

@@ -200,9 +200,9 @@ These are a dated settings snapshot, not configuration enforced by this file.
 Recheck before diagnosing a blocked merge:
 
 ```sh
-gh api repos/msaad00/agent-bom/branches/main/protection/required_status_checks \
+gh api repos/koda-ai-studio/agent-bom/branches/main/protection/required_status_checks \
   --jq '{strict, contexts}'
-gh api repos/msaad00/agent-bom/rules/branches/main --jq '[.[] | .type] | unique'
+gh api repos/koda-ai-studio/agent-bom/rules/branches/main --jq '[.[] | .type] | unique'
 gh pr view <PR_NUMBER> --json headRefOid,reviewDecision,mergeStateStatus,statusCheckRollup
 ```
 

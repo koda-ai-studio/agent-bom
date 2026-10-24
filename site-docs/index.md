@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/brand/logo-dark.svg">
-    <img src="https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/brand/logo-light.svg" alt="agent-bom" width="380">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/brand/logo-dark.svg">
+    <img src="https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/brand/logo-light.svg" alt="agent-bom" width="380">
   </picture>
 </p>
 
@@ -45,7 +45,7 @@ output for `pillow@9.0.0` / `CVE-2023-4863` with exact image, Kubernetes, MCP,
 identity, and runtime receipts. It is local modeled proof, not customer or
 live-cloud evidence.
 
-![Reference evidence lab confirmed path for CVE-2023-4863 with exact canonical joins, per-hop provenance and freshness, runtime proof, and remediation handoff](https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/correlation-path-live.png)
+![Reference evidence lab confirmed path for CVE-2023-4863 with exact canonical joins, per-hop provenance and freshness, runtime proof, and remediation handoff](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/correlation-path-live.png)
 
 Start with the highest-ranked path, confirm why it is reachable, assign an
 owner and SLA, remediate, then verify against the next scan.
@@ -60,7 +60,7 @@ agent-bom check flask@2.0.0 --ecosystem pypi   # check a specific package
 ```
 
 [Get started](getting-started/install.md){ .md-button .md-button--primary }
-[View on GitHub](https://github.com/msaad00/agent-bom){ .md-button }
+[View on GitHub](https://github.com/koda-ai-studio/agent-bom){ .md-button }
 
 ## Start with one lane
 
@@ -132,7 +132,7 @@ SLO or openCypher endpoint.
 !!! info "Canonical docs tree"
     This MkDocs site is the source of truth for **getting-started and narrative
     documentation**. The **engineering/operator reference** lives in the
-    repository's [`docs/`](https://github.com/msaad00/agent-bom/tree/main/docs)
+    repository's [`docs/`](https://github.com/koda-ai-studio/agent-bom/tree/main/docs)
     tree (architecture, threat model, deployment, graph contract, repo map).
     When a topic appears in both, this site is canonical for onboarding and
     `docs/` is canonical for the reference detail.

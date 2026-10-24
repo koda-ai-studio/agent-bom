@@ -8,7 +8,7 @@ This companion image is not a separate product.
 ## Start on one workstation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/msaad00/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
+curl -fsSL https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
 docker compose -f docker-compose.pilot.yml up -d
 docker compose -f docker-compose.pilot.yml ps
 ```
@@ -36,14 +36,14 @@ volume remains available for the next run.
 Set `AGENT_BOM_API_URL` on the UI server to the API's HTTP(S) origin, for
 example `http://api:8422` inside a Compose network. Browser requests remain
 same-origin through the UI proxy. `NEXT_PUBLIC_API_URL` is accepted as a legacy
-fallback. See the [deployment guide](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md)
+fallback. See the [deployment guide](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md)
 for authentication, proxy, and production settings.
 
 For Kubernetes, check out the repository and configure the
-[Helm chart](https://github.com/msaad00/agent-bom/tree/main/deploy/helm/agent-bom)
+[Helm chart](https://github.com/koda-ai-studio/agent-bom/tree/main/deploy/helm/agent-bom)
 and the identity, database, and ingress settings for your environment.
 
-[Product scenarios](https://github.com/msaad00/agent-bom/blob/main/docs/GALLERY.md) ·
+[Product scenarios](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/GALLERY.md) ·
 [Documentation](https://koda-ai-studio.github.io/agent-bom/) ·
 [API and scanner image](https://hub.docker.com/r/agentbom/agent-bom)
 

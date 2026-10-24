@@ -3,7 +3,7 @@
 # Downstream repos reference these from their own .pre-commit-config.yaml:
 #
 #   repos:
-#     - repo: https://github.com/msaad00/agent-bom
+#     - repo: https://github.com/koda-ai-studio/agent-bom
 #       rev: v0.110.0
 #       hooks:
 #         - id: agent-bom-secrets

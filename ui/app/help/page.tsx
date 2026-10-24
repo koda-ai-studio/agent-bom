@@ -205,7 +205,7 @@ export default function HelpPage() {
         </ul>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link
-            href="https://github.com/msaad00/agent-bom/blob/main/SECURITY.md"
+            href="https://github.com/koda-ai-studio/agent-bom/blob/main/SECURITY.md"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 text-sm font-medium text-emerald-800 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300"
@@ -214,12 +214,12 @@ export default function HelpPage() {
             <ArrowUpRight className="h-4 w-4" />
           </Link>
           <Link
-            href="https://github.com/msaad00/agent-bom/discussions"
+            href="https://github.com/koda-ai-studio/agent-bom/blob/main/SUPPORT.md#where-to-ask"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 text-sm font-medium text-emerald-800 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300"
           >
-            Discussions
+            Where to ask
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>

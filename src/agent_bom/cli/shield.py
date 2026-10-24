@@ -38,7 +38,7 @@ SHIELD_CATEGORIES: OrderedDict[str, list[str]] = OrderedDict(
     version=__version__,
     prog_name="agent-shield",
     message=(
-        f"agent-shield {__version__}\nPython {sys.version.split()[0]} · {sys.platform}\nPart of: https://github.com/msaad00/agent-bom"
+        f"agent-shield {__version__}\nPython {sys.version.split()[0]} · {sys.platform}\nPart of: https://github.com/koda-ai-studio/agent-bom"
     ),
 )
 def shield():

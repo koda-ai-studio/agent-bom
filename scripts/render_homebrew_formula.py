@@ -9,7 +9,7 @@ from pathlib import Path
 def render_formula(*, version: str, url: str, sha256: str) -> str:
     return f"""class AgentBom < Formula
   desc "Security scanner for AI infrastructure"
-  homepage "https://github.com/msaad00/agent-bom"
+  homepage "https://github.com/koda-ai-studio/agent-bom"
   url "{url}"
   sha256 "{sha256}"
   license "Apache-2.0"

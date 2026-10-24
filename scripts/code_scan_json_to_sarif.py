@@ -175,7 +175,7 @@ def convert(data: dict[str, Any]) -> dict[str, Any]:
                     "driver": {
                         "name": "agent-bom code",
                         "version": _agent_bom_version(),
-                        "informationUri": "https://github.com/msaad00/agent-bom",
+                        "informationUri": "https://github.com/koda-ai-studio/agent-bom",
                         "rules": list(rules.values()),
                     }
                 },

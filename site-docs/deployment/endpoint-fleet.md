@@ -132,10 +132,10 @@ agent-bom proxy-bootstrap \
 
 Shipped templates:
 
-- [agent-bom-fleet-sync.sh](https://github.com/msaad00/agent-bom/blob/main/deploy/endpoints/agent-bom-fleet-sync.sh)
-- [agent-bom-fleet-sync.service](https://github.com/msaad00/agent-bom/blob/main/deploy/endpoints/agent-bom-fleet-sync.service)
-- [agent-bom-fleet-sync.timer](https://github.com/msaad00/agent-bom/blob/main/deploy/endpoints/agent-bom-fleet-sync.timer)
-- [com.agentbom.fleet-sync.plist](https://github.com/msaad00/agent-bom/blob/main/deploy/endpoints/com.agentbom.fleet-sync.plist)
+- [agent-bom-fleet-sync.sh](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/endpoints/agent-bom-fleet-sync.sh)
+- [agent-bom-fleet-sync.service](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/endpoints/agent-bom-fleet-sync.service)
+- [agent-bom-fleet-sync.timer](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/endpoints/agent-bom-fleet-sync.timer)
+- [com.agentbom.fleet-sync.plist](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/endpoints/com.agentbom.fleet-sync.plist)
 
 The wrapper script expects:
 

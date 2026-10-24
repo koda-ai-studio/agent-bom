@@ -54,7 +54,7 @@ ARG PIP_CERT
 LABEL org.opencontainers.image.title="agent-bom runtime proxy"
 LABEL org.opencontainers.image.description="MCP runtime security proxy — intercepts JSON-RPC for audit logging and policy enforcement"
 LABEL org.opencontainers.image.version="${VERSION}"
-LABEL org.opencontainers.image.source="https://github.com/msaad00/agent-bom"
+LABEL org.opencontainers.image.source="https://github.com/koda-ai-studio/agent-bom"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Copy the frozen environment from the identical Python base image. Keeping the

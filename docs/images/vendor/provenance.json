@@ -35,7 +35,7 @@
       "vendor": "Google Cloud",
       "source_kind": "brand_reference",
       "source_page": "https://cloud.google.com/icons",
-      "source_repo": "https://github.com/msaad00/agent-bom",
+      "source_repo": "https://github.com/koda-ai-studio/agent-bom",
       "source_commit": "6eaa9215169d759a851e8de38ef2f5aa08f2f532",
       "source_path": "ui/public/logos/gcp.svg",
       "sha256": "4b01381301db013f41a5daac9bae641116d31de9d4fae43ac9d235169b5aeffe",
@@ -139,7 +139,7 @@
     {
       "path": "docs/images/vendor/simple-icons/cursor.svg",
       "vendor": "Cursor",
-      "source_repo": "https://github.com/msaad00/agent-bom",
+      "source_repo": "https://github.com/koda-ai-studio/agent-bom",
       "source_commit": "a06bedd517cb205822c26be32e4365c98b37a4a0",
       "source_path": "ui/public/logos/cursor.svg",
       "sha256": "ffcd3f8510eba0305541fdbaac25d0721308508c2e3d37977177aac6c1486b2f",

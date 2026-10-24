@@ -80,7 +80,7 @@ The product intent is:
 
 Start from the packaged production example:
 
-- [eks-production-values.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-production-values.yaml)
+- [eks-production-values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-production-values.yaml)
 
 That example already enables:
 
@@ -92,7 +92,7 @@ That example already enables:
 
 ### API
 
-Current chart defaults in [values.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/values.yaml):
+Current chart defaults in [values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/values.yaml):
 
 - replicas: `2`
 - requests: `100m` CPU / `256Mi` memory
@@ -241,7 +241,7 @@ These are enforced on:
 The packaged production example already shows how to inject these through
  `controlPlane.api.env` in:
 
-- [eks-production-values.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-production-values.yaml)
+- [eks-production-values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-production-values.yaml)
 
 Recommended starting posture:
 
@@ -261,10 +261,10 @@ fixed product ceiling.
 
 The repo now ships a small benchmark harness under:
 
-- [deploy/loadtest/README.md](https://github.com/msaad00/agent-bom/blob/main/deploy/loadtest/README.md)
-- [k6-control-plane-api.js](https://github.com/msaad00/agent-bom/blob/main/deploy/loadtest/k6-control-plane-api.js)
-- [k6-graph-api.js](https://github.com/msaad00/agent-bom/blob/main/deploy/loadtest/k6-graph-api.js)
-- [k6-proxy-audit.js](https://github.com/msaad00/agent-bom/blob/main/deploy/loadtest/k6-proxy-audit.js)
+- [deploy/loadtest/README.md](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/loadtest/README.md)
+- [k6-control-plane-api.js](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/loadtest/k6-control-plane-api.js)
+- [k6-graph-api.js](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/loadtest/k6-graph-api.js)
+- [k6-proxy-audit.js](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/loadtest/k6-proxy-audit.js)
 
 Use that harness to validate:
 

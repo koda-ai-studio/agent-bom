@@ -80,7 +80,7 @@ ARG PIP_CERT
 LABEL maintainer="W S <34316639+msaad00@users.noreply.github.com>"
 LABEL description="Security scanner for AI infrastructure — CVEs, blast radius, credential exposure, runtime enforcement"
 LABEL org.opencontainers.image.version="${VERSION}"
-LABEL org.opencontainers.image.source="https://github.com/msaad00/agent-bom"
+LABEL org.opencontainers.image.source="https://github.com/koda-ai-studio/agent-bom"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Copy the frozen environment from the identical Python base image.  Keeping

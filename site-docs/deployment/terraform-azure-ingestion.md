@@ -27,7 +27,7 @@ terraform init
 terraform apply \
   -var tenant_id="$AZURE_TENANT_ID" \
   -var subscription_id="$AZURE_SUBSCRIPTION_ID" \
-  -var github_owner="msaad00" \
+  -var github_owner="koda-ai-studio" \
   -var github_repo="agent-bom"
 ```
 
