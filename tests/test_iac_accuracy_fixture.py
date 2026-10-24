@@ -161,3 +161,26 @@ class TestGitHubActionsFindings:
         result = scan_iac_with_context(FIXTURE / ".github" / "workflows" / "ci.yml")
         assert result.not_evaluated == []
         assert {f.rule_id for f in result.findings} == {"GHA-001", "GHA-002", "GHA-003", "GHA-004"}
+
+
+class TestKubernetesLines:
+    def test_findings_point_at_the_offending_key_in_the_second_document(self) -> None:
+        findings = _scan("k8s")
+        assert _lines(findings, "K8S-001") == [20]
+        assert _lines(findings, "K8S-011") == [18]
+        assert _lines(findings, "K8S-014") == [26]
+        assert _lines(findings, "K8S-004") == [17]
+
+    def test_no_deployment_finding_falls_back_to_line_one(self) -> None:
+        assert [f.rule_id for f in _scan("k8s") if f.line_number < 8] == []
+
+    def test_env_secret_and_capability_lines(self, tmp_path: Path) -> None:
+        manifest = tmp_path / "pod.yaml"
+        manifest.write_text(
+            "apiVersion: v1\nkind: Pod\nmetadata:\n  name: p\nspec:\n  containers:\n    - name: c\n      image: x:1\n"
+            "      env:\n        - name: DB_PASSWORD\n          value: literal-value\n"
+            "      securityContext:\n        capabilities:\n          add: [NET_RAW]\n"
+        )
+        findings = scan_iac_with_context(manifest).findings
+        assert _lines(findings, "K8S-007") == [10]
+        assert _lines(findings, "K8S-018") == [14]

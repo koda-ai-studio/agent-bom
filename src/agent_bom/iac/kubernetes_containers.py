@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import re
 
-from agent_bom.iac.kubernetes_common import K8sContainer, find_key_line, find_line
+from agent_bom.iac.kubernetes_common import K8sContainer, container_key_line, container_line, security_context_line
 from agent_bom.iac.models import IaCFinding
+from agent_bom.iac.yaml_lines import item_line
 
 # Secret-like env variable name patterns
 _SECRET_NAME_RE = re.compile(
@@ -44,7 +45,7 @@ def _is_trusted_registry(image: str) -> bool:
 
 def k8s_001(c: K8sContainer) -> list[IaCFinding]:
     """K8S-001: privileged."""
-    cname, sec_ctx, name, content, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.content, c.workload.rel_path
+    cname, sec_ctx, name, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     if sec_ctx.get("privileged") is True:
         findings.append(
@@ -58,7 +59,7 @@ def k8s_001(c: K8sContainer) -> list[IaCFinding]:
                     "Remove privileged: true unless absolutely required."
                 ),
                 file_path=rel_path,
-                line_number=find_line(content, "privileged", True),
+                line_number=security_context_line(c, "privileged"),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.2.1", "NIST-AC-6"],
             )
@@ -68,7 +69,7 @@ def k8s_001(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_005(c: K8sContainer) -> list[IaCFinding]:
     """K8S-005: runAsUser: 0 or runAsNonRoot: false."""
-    cname, sec_ctx, name, content, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.content, c.workload.rel_path
+    cname, sec_ctx, name, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     if sec_ctx.get("runAsUser") == 0:
         findings.append(
@@ -78,7 +79,7 @@ def k8s_005(c: K8sContainer) -> list[IaCFinding]:
                 title="Container runs as root (UID 0)",
                 message=(f"Container '{cname}' in '{name}' runs as root (runAsUser: 0). Use a non-root user to limit exploit impact."),
                 file_path=rel_path,
-                line_number=find_line(content, "runAsUser", 0),
+                line_number=security_context_line(c, "runAsUser"),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.2.6", "NIST-AC-6"],
             )
@@ -93,7 +94,7 @@ def k8s_005(c: K8sContainer) -> list[IaCFinding]:
                     f"Container '{cname}' in '{name}' sets runAsNonRoot: false. Enable runAsNonRoot: true and specify a non-root runAsUser."
                 ),
                 file_path=rel_path,
-                line_number=find_line(content, "runAsNonRoot", False),
+                line_number=security_context_line(c, "runAsNonRoot"),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.2.6", "NIST-AC-6"],
             )
@@ -103,7 +104,7 @@ def k8s_005(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_006(c: K8sContainer) -> list[IaCFinding]:
     """K8S-006: readOnlyRootFilesystem."""
-    cname, sec_ctx, name, content, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.content, c.workload.rel_path
+    cname, sec_ctx, name, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     if not sec_ctx.get("readOnlyRootFilesystem"):
         findings.append(
@@ -117,7 +118,7 @@ def k8s_006(c: K8sContainer) -> list[IaCFinding]:
                     "prevents attackers from writing malicious binaries."
                 ),
                 file_path=rel_path,
-                line_number=find_key_line(content, cname),
+                line_number=container_line(c),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.2.4", "NIST-CM-6"],
             )
@@ -127,7 +128,7 @@ def k8s_006(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_009(c: K8sContainer) -> list[IaCFinding]:
     """K8S-009: allowPrivilegeEscalation."""
-    cname, sec_ctx, name, content, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.content, c.workload.rel_path
+    cname, sec_ctx, name, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     if sec_ctx.get("allowPrivilegeEscalation") is True:
         findings.append(
@@ -141,7 +142,7 @@ def k8s_009(c: K8sContainer) -> list[IaCFinding]:
                     "child processes from gaining more privileges."
                 ),
                 file_path=rel_path,
-                line_number=find_line(content, "allowPrivilegeEscalation", True),
+                line_number=security_context_line(c, "allowPrivilegeEscalation"),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.2.5", "NIST-AC-6"],
             )
@@ -151,7 +152,7 @@ def k8s_009(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_004(c: K8sContainer) -> list[IaCFinding]:
     """K8S-004: resource limits."""
-    container, cname, name, content, rel_path = c.container, c.cname, c.workload.name, c.workload.content, c.workload.rel_path
+    container, cname, name, rel_path = c.container, c.cname, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     resources = container.get("resources", {}) or {}
     if not resources.get("limits"):
@@ -166,7 +167,7 @@ def k8s_004(c: K8sContainer) -> list[IaCFinding]:
                     "and noisy-neighbor issues."
                 ),
                 file_path=rel_path,
-                line_number=find_key_line(content, cname),
+                line_number=container_line(c),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.4.1", "NIST-SC-6"],
             )
@@ -176,10 +177,10 @@ def k8s_004(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_007(c: K8sContainer) -> list[IaCFinding]:
     """K8S-007: Secrets in env values (not using secretKeyRef)."""
-    container, cname, name, content, rel_path = c.container, c.cname, c.workload.name, c.workload.content, c.workload.rel_path
+    container, cname, name, rel_path = c.container, c.cname, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     env_list = container.get("env", []) or []
-    for env_var in env_list:
+    for env_index, env_var in enumerate(env_list):
         if not isinstance(env_var, dict):
             continue
         env_name = env_var.get("name", "")
@@ -197,7 +198,7 @@ def k8s_007(c: K8sContainer) -> list[IaCFinding]:
                         "Use Kubernetes Secrets with valueFrom.secretKeyRef."
                     ),
                     file_path=rel_path,
-                    line_number=find_key_line(content, env_name),
+                    line_number=item_line(env_list, env_index, container_key_line(c, "env")),
                     category="kubernetes",
                     compliance=["CIS-K8s-5.4.1", "NIST-IA-5"],
                 )
@@ -207,7 +208,7 @@ def k8s_007(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_011(c: K8sContainer) -> list[IaCFinding]:
     """K8S-011: Container image uses :latest."""
-    container, cname, content, rel_path = c.container, c.cname, c.workload.content, c.workload.rel_path
+    container, cname, rel_path = c.container, c.cname, c.workload.rel_path
     findings: list[IaCFinding] = []
     image = container.get("image", "")
     if image and (":" not in image or image.endswith(":latest")):
@@ -218,7 +219,7 @@ def k8s_011(c: K8sContainer) -> list[IaCFinding]:
                 title="Container image uses :latest tag",
                 message=f"Container '{cname}' uses image '{image}' without a pinned tag. Pin to a specific version.",
                 file_path=rel_path,
-                line_number=find_key_line(content, image),
+                line_number=container_key_line(c, "image"),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.5.1", "NIST-CM-6"],
             )
@@ -228,7 +229,7 @@ def k8s_011(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_016(c: K8sContainer) -> list[IaCFinding]:
     """K8S-016: Container port 22 exposed."""
-    container, cname, content, rel_path = c.container, c.cname, c.workload.content, c.workload.rel_path
+    container, cname, rel_path = c.container, c.cname, c.workload.rel_path
     findings: list[IaCFinding] = []
     for port in container.get("ports", []) or []:
         if isinstance(port, dict) and port.get("containerPort") == 22:
@@ -239,7 +240,7 @@ def k8s_016(c: K8sContainer) -> list[IaCFinding]:
                     title="Container port 22 exposed (SSH)",
                     message=f"Container '{cname}' exposes port 22 (SSH). Use kubectl exec instead of SSH access.",
                     file_path=rel_path,
-                    line_number=find_key_line(content, "22"),
+                    line_number=container_key_line(c, "ports"),
                     category="kubernetes",
                     compliance=["CIS-K8s-5.1.3", "NIST-CM-7"],
                 )
@@ -249,13 +250,13 @@ def k8s_016(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_018(c: K8sContainer) -> list[IaCFinding]:
     """K8S-018: Dangerous capabilities added."""
-    container, cname, content, rel_path = c.container, c.cname, c.workload.content, c.workload.rel_path
+    container, cname, rel_path = c.container, c.cname, c.workload.rel_path
     findings: list[IaCFinding] = []
     sec_ctx = container.get("securityContext", {}) or {}
     caps = sec_ctx.get("capabilities", {}) or {}
     add_caps = caps.get("add", []) or []
     dangerous = {"NET_RAW", "SYS_ADMIN", "SYS_PTRACE", "ALL"}
-    for cap in add_caps:
+    for cap_index, cap in enumerate(add_caps):
         if cap.upper() in dangerous:
             findings.append(
                 IaCFinding(
@@ -264,7 +265,7 @@ def k8s_018(c: K8sContainer) -> list[IaCFinding]:
                     title=f"Dangerous capability {cap} added",
                     message=f"Container '{cname}' adds capability {cap}. Drop all capabilities and add only required ones.",
                     file_path=rel_path,
-                    line_number=find_key_line(content, cap),
+                    line_number=item_line(add_caps, cap_index, security_context_line(c, "capabilities")),
                     category="kubernetes",
                     compliance=["CIS-K8s-5.2.8", "NIST-AC-6"],
                 )
@@ -274,7 +275,7 @@ def k8s_018(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_022(c: K8sContainer) -> list[IaCFinding]:
     """K8S-022: Container without liveness probe."""
-    container, cname, name, content, rel_path = c.container, c.cname, c.workload.name, c.workload.content, c.workload.rel_path
+    container, cname, name, rel_path = c.container, c.cname, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     if not container.get("livenessProbe"):
         findings.append(
@@ -288,7 +289,7 @@ def k8s_022(c: K8sContainer) -> list[IaCFinding]:
                     "deadlocked or unresponsive containers."
                 ),
                 file_path=rel_path,
-                line_number=find_key_line(content, cname),
+                line_number=container_line(c),
                 category="kubernetes",
                 compliance=["NIST-SI-13"],
             )
@@ -298,7 +299,7 @@ def k8s_022(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_023(c: K8sContainer) -> list[IaCFinding]:
     """K8S-023: Container without readiness probe."""
-    container, cname, name, content, rel_path = c.container, c.cname, c.workload.name, c.workload.content, c.workload.rel_path
+    container, cname, name, rel_path = c.container, c.cname, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     if not container.get("readinessProbe"):
         findings.append(
@@ -312,7 +313,7 @@ def k8s_023(c: K8sContainer) -> list[IaCFinding]:
                     "they are ready to serve requests."
                 ),
                 file_path=rel_path,
-                line_number=find_key_line(content, cname),
+                line_number=container_line(c),
                 category="kubernetes",
                 compliance=["NIST-SI-13"],
             )
@@ -322,7 +323,7 @@ def k8s_023(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_026(c: K8sContainer) -> list[IaCFinding]:
     """K8S-026: Pod with hostPort specified."""
-    container, cname, name, content, rel_path = c.container, c.cname, c.workload.name, c.workload.content, c.workload.rel_path
+    container, cname, name, rel_path = c.container, c.cname, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     for port in container.get("ports", []) or []:
         if isinstance(port, dict) and port.get("hostPort"):
@@ -337,7 +338,7 @@ def k8s_026(c: K8sContainer) -> list[IaCFinding]:
                         "Use a Service or Ingress instead."
                     ),
                     file_path=rel_path,
-                    line_number=find_key_line(content, "hostPort"),
+                    line_number=container_key_line(c, "ports"),
                     category="kubernetes",
                     compliance=["CIS-K8s-5.2.13", "NIST-CM-7"],
                 )
@@ -347,7 +348,7 @@ def k8s_026(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_027(c: K8sContainer) -> list[IaCFinding]:
     """K8S-027: Container with writable /var/run/docker.sock mount."""
-    container, cname, name, content, rel_path = c.container, c.cname, c.workload.name, c.workload.content, c.workload.rel_path
+    container, cname, name, rel_path = c.container, c.cname, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     vol_mounts = container.get("volumeMounts", []) or []
     for vm in vol_mounts:
@@ -365,7 +366,7 @@ def k8s_027(c: K8sContainer) -> list[IaCFinding]:
                             "and container escape. Remove the mount or set readOnly: true."
                         ),
                         file_path=rel_path,
-                        line_number=find_key_line(content, "docker.sock"),
+                        line_number=container_key_line(c, "volumeMounts"),
                         category="kubernetes",
                         compliance=["CIS-K8s-5.2.12", "NIST-AC-6"],
                     )
@@ -375,7 +376,7 @@ def k8s_027(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_029(c: K8sContainer) -> list[IaCFinding]:
     """K8S-029: Container image from untrusted registry."""
-    container, cname, name, content, rel_path = c.container, c.cname, c.workload.name, c.workload.content, c.workload.rel_path
+    container, cname, name, rel_path = c.container, c.cname, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     image = container.get("image", "")
     if image and not _is_trusted_registry(image):
@@ -390,7 +391,7 @@ def k8s_029(c: K8sContainer) -> list[IaCFinding]:
                     "(Docker Hub, GCR, GHCR, Quay, ECR, MCR, NVCR, registry.k8s.io)."
                 ),
                 file_path=rel_path,
-                line_number=find_key_line(content, image),
+                line_number=container_key_line(c, "image"),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.5.1", "NIST-CM-11"],
             )
@@ -400,12 +401,11 @@ def k8s_029(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_031(c: K8sContainer) -> list[IaCFinding]:
     """K8S-031: Missing seccompProfile."""
-    cname, sec_ctx, name, pod_spec, content, rel_path = (
+    cname, sec_ctx, name, pod_spec, rel_path = (
         c.cname,
         c.sec_ctx,
         c.workload.name,
         c.workload.pod_spec,
-        c.workload.content,
         c.workload.rel_path,
     )
     findings: list[IaCFinding] = []
@@ -424,7 +424,7 @@ def k8s_031(c: K8sContainer) -> list[IaCFinding]:
                     "RuntimeDefault or Localhost to restrict syscalls."
                 ),
                 file_path=rel_path,
-                line_number=find_key_line(content, cname),
+                line_number=container_line(c),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.7.2", "NIST-CM-6"],
             )
@@ -434,11 +434,11 @@ def k8s_031(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_032(c: K8sContainer) -> list[IaCFinding]:
     """K8S-032: Container with NET_ADMIN capability."""
-    cname, sec_ctx, name, content, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.content, c.workload.rel_path
+    cname, sec_ctx, name, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.rel_path
     findings: list[IaCFinding] = []
     caps = sec_ctx.get("capabilities", {}) or {}
     add_caps = caps.get("add", []) or []
-    for cap in add_caps:
+    for cap_index, cap in enumerate(add_caps):
         if cap.upper() == "NET_ADMIN":
             findings.append(
                 IaCFinding(
@@ -451,7 +451,7 @@ def k8s_032(c: K8sContainer) -> list[IaCFinding]:
                         "manipulation. Remove unless explicitly required."
                     ),
                     file_path=rel_path,
-                    line_number=find_key_line(content, "NET_ADMIN"),
+                    line_number=item_line(add_caps, cap_index, security_context_line(c, "capabilities")),
                     category="kubernetes",
                     compliance=["CIS-K8s-5.2.8", "NIST-AC-6"],
                 )
@@ -461,12 +461,11 @@ def k8s_032(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_034(c: K8sContainer) -> list[IaCFinding]:
     """K8S-034: GPU container with privileged mode or allowPrivilegeEscalation."""
-    container, cname, sec_ctx, name, content, rel_path = (
+    container, cname, sec_ctx, name, rel_path = (
         c.container,
         c.cname,
         c.sec_ctx,
         c.workload.name,
-        c.workload.content,
         c.workload.rel_path,
     )
     findings: list[IaCFinding] = []
@@ -495,9 +494,7 @@ def k8s_034(c: K8sContainer) -> list[IaCFinding]:
                         "Remove privilege escalation from GPU workloads."
                     ),
                     file_path=rel_path,
-                    line_number=find_line(content, "privileged", True)
-                    if is_privileged
-                    else find_line(content, "allowPrivilegeEscalation", True),
+                    line_number=security_context_line(c, "privileged" if is_privileged else "allowPrivilegeEscalation"),
                     category="kubernetes",
                     compliance=["CIS-K8s-5.2.1", "NIST-AC-6", "NIST-SI-3"],
                     attack_techniques=["T1611"],

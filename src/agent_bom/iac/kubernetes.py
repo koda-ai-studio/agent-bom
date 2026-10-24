@@ -56,6 +56,7 @@ from agent_bom.iac import kubernetes_containers as _containers
 from agent_bom.iac import kubernetes_resources as _resources
 from agent_bom.iac.kubernetes_common import K8sContainer, K8sDocument, K8sWorkload
 from agent_bom.iac.models import IaCFinding
+from agent_bom.iac.yaml_lines import key_line, safe_load_all_with_lines
 
 # Workload kinds that have a pod spec
 _WORKLOAD_KINDS = frozenset(
@@ -173,6 +174,7 @@ def _scan_document(doc: dict[str, Any], content: str, rel_path: str) -> list[IaC
         pod_spec=pod_spec,
         content=content,
         rel_path=rel_path,
+        metadata_line=key_line(metadata, "namespace", key_line(doc, "metadata", 1)),
     )
     findings.extend(_scan_workload(workload))
     return findings
@@ -200,7 +202,7 @@ def scan_k8s_manifest(file_path: str | Path) -> list[IaCFinding]:
     findings: list[IaCFinding] = []
 
     try:
-        docs = list(yaml.safe_load_all(content))
+        docs = safe_load_all_with_lines(content)
     except yaml.YAMLError:
         return []
 

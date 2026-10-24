@@ -254,31 +254,31 @@
    "│ │ 🔴 CRITIC… │ K8S-001      │ Privileged container                                                      │ deploy.yaml:10                                   │ │",
    "│ │            │              │ Container 'c' in 'p' runs in privileged mode. This gives the container    │                                                  │ │",
    "│ │            │              │ full host access. Remove privileged: true unless absolutely required.     │                                                  │ │",
-   "│ │  🟠 HIGH   │ K8S-006      │ Writable root filesystem                                                  │ deploy.yaml:1                                    │ │",
+   "│ │  🟠 HIGH   │ K8S-006      │ Writable root filesystem                                                  │ deploy.yaml:7                                    │ │",
    "│ │            │              │ Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A         │                                                  │ │",
    "│ │            │              │ read-only root filesystem prevents attackers from writing malicious       │                                                  │ │",
    "│ │            │              │ binaries.                                                                 │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
-   "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-011      │ Container image uses :latest tag                                          │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific  │                                                  │ │",
-   "│ │            │              │ version.                                                                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
-   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
-   "│ │            │              │ containers.                                                               │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
-   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
-   "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
-   "│ │            │              │ syscalls.                                                                 │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-010      │ Service account token auto-mounted                                        │ deploy.yaml:5                                    │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-010      │ Service account token auto-mounted                                        │ deploy.yaml:6                                    │ │",
    "│ │            │              │ Resource 'p' does not set automountServiceAccountToken: false. The        │                                                  │ │",
    "│ │            │              │ default service account token is mounted into every pod, enabling lateral │                                                  │ │",
    "│ │            │              │ movement if compromised.                                                  │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-013      │ No securityContext at pod level                                           │ deploy.yaml:6                                    │ │",
+   "│ │            │              │ Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and  │                                                  │ │",
+   "│ │            │              │ seccompProfile.                                                           │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
+   "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
+   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
+   "│ │            │              │ containers.                                                               │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
+   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
+   "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
+   "│ │            │              │ syscalls.                                                                 │                                                  │ │",
    "│ │    ...     │              │ +1 more                                                                   │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
    "╰──────────────────────────────────────────────────────────── 2 critical · 5 high · scan complete ─────────────────────────────────────────────────────────────╯"
@@ -515,89 +515,12 @@
        "NIST-CM-6"
       ],
       "file_path": "deploy.yaml",
-      "line_number": 1,
+      "line_number": 7,
       "message": "Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
       "remediation": "",
       "rule_id": "K8S-006",
       "severity": "high",
       "title": "Writable root filesystem"
-     },
-     {
-      "attack_techniques": [
-       "T1611"
-      ],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.4.1",
-       "NIST-SC-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
-      "remediation": "",
-      "rule_id": "K8S-004",
-      "severity": "medium",
-      "title": "No resource limits"
-     },
-     {
-      "attack_techniques": [
-       "T1078"
-      ],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.5.1",
-       "NIST-CM-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
-      "remediation": "",
-      "rule_id": "K8S-011",
-      "severity": "medium",
-      "title": "Container image uses :latest tag"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
-      "remediation": "",
-      "rule_id": "K8S-022",
-      "severity": "medium",
-      "title": "Container without liveness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
-      "remediation": "",
-      "rule_id": "K8S-023",
-      "severity": "medium",
-      "title": "Container without readiness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.7.2",
-       "NIST-CM-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
-      "remediation": "",
-      "rule_id": "K8S-031",
-      "severity": "medium",
-      "title": "Missing seccompProfile"
      },
      {
       "attack_techniques": [
@@ -609,7 +532,7 @@
        "NIST-AC-6"
       ],
       "file_path": "deploy.yaml",
-      "line_number": 5,
+      "line_number": 6,
       "message": "Resource 'p' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
       "remediation": "",
       "rule_id": "K8S-010",
@@ -626,12 +549,89 @@
        "NIST-AC-6"
       ],
       "file_path": "deploy.yaml",
-      "line_number": 5,
+      "line_number": 6,
       "message": "Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
       "remediation": "",
       "rule_id": "K8S-013",
       "severity": "medium",
       "title": "No securityContext at pod level"
+     },
+     {
+      "attack_techniques": [
+       "T1611"
+      ],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.4.1",
+       "NIST-SC-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
+      "remediation": "",
+      "rule_id": "K8S-004",
+      "severity": "medium",
+      "title": "No resource limits"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
+      "remediation": "",
+      "rule_id": "K8S-022",
+      "severity": "medium",
+      "title": "Container without liveness probe"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
+      "remediation": "",
+      "rule_id": "K8S-023",
+      "severity": "medium",
+      "title": "Container without readiness probe"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.7.2",
+       "NIST-CM-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
+      "remediation": "",
+      "rule_id": "K8S-031",
+      "severity": "medium",
+      "title": "Missing seccompProfile"
+     },
+     {
+      "attack_techniques": [
+       "T1078"
+      ],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.5.1",
+       "NIST-CM-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 8,
+      "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
+      "remediation": "",
+      "rule_id": "K8S-011",
+      "severity": "medium",
+      "title": "Container image uses :latest tag"
      }
     ],
     "total": 21
@@ -1768,31 +1768,31 @@
    "│ │ 🔴 CRITIC… │ K8S-001      │ Privileged container                                                      │ deploy.yaml:10                                   │ │",
    "│ │            │              │ Container 'c' in 'p' runs in privileged mode. This gives the container    │                                                  │ │",
    "│ │            │              │ full host access. Remove privileged: true unless absolutely required.     │                                                  │ │",
-   "│ │  🟠 HIGH   │ K8S-006      │ Writable root filesystem                                                  │ deploy.yaml:1                                    │ │",
+   "│ │  🟠 HIGH   │ K8S-006      │ Writable root filesystem                                                  │ deploy.yaml:7                                    │ │",
    "│ │            │              │ Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A         │                                                  │ │",
    "│ │            │              │ read-only root filesystem prevents attackers from writing malicious       │                                                  │ │",
    "│ │            │              │ binaries.                                                                 │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
-   "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-011      │ Container image uses :latest tag                                          │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific  │                                                  │ │",
-   "│ │            │              │ version.                                                                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
-   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
-   "│ │            │              │ containers.                                                               │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
-   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
-   "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
-   "│ │            │              │ syscalls.                                                                 │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-010      │ Service account token auto-mounted                                        │ deploy.yaml:5                                    │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-010      │ Service account token auto-mounted                                        │ deploy.yaml:6                                    │ │",
    "│ │            │              │ Resource 'p' does not set automountServiceAccountToken: false. The        │                                                  │ │",
    "│ │            │              │ default service account token is mounted into every pod, enabling lateral │                                                  │ │",
    "│ │            │              │ movement if compromised.                                                  │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-013      │ No securityContext at pod level                                           │ deploy.yaml:6                                    │ │",
+   "│ │            │              │ Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and  │                                                  │ │",
+   "│ │            │              │ seccompProfile.                                                           │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
+   "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
+   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
+   "│ │            │              │ containers.                                                               │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
+   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
+   "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
+   "│ │            │              │ syscalls.                                                                 │                                                  │ │",
    "│ │    ...     │              │ +1 more                                                                   │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
    "╰──────────────────────────────────────────────────────────── 2 critical · 5 high · scan complete ─────────────────────────────────────────────────────────────╯"
@@ -2097,89 +2097,12 @@
        "NIST-CM-6"
       ],
       "file_path": "deploy.yaml",
-      "line_number": 1,
+      "line_number": 7,
       "message": "Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
       "remediation": "",
       "rule_id": "K8S-006",
       "severity": "high",
       "title": "Writable root filesystem"
-     },
-     {
-      "attack_techniques": [
-       "T1611"
-      ],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.4.1",
-       "NIST-SC-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
-      "remediation": "",
-      "rule_id": "K8S-004",
-      "severity": "medium",
-      "title": "No resource limits"
-     },
-     {
-      "attack_techniques": [
-       "T1078"
-      ],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.5.1",
-       "NIST-CM-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
-      "remediation": "",
-      "rule_id": "K8S-011",
-      "severity": "medium",
-      "title": "Container image uses :latest tag"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
-      "remediation": "",
-      "rule_id": "K8S-022",
-      "severity": "medium",
-      "title": "Container without liveness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
-      "remediation": "",
-      "rule_id": "K8S-023",
-      "severity": "medium",
-      "title": "Container without readiness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.7.2",
-       "NIST-CM-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
-      "remediation": "",
-      "rule_id": "K8S-031",
-      "severity": "medium",
-      "title": "Missing seccompProfile"
      },
      {
       "attack_techniques": [
@@ -2191,7 +2114,7 @@
        "NIST-AC-6"
       ],
       "file_path": "deploy.yaml",
-      "line_number": 5,
+      "line_number": 6,
       "message": "Resource 'p' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
       "remediation": "",
       "rule_id": "K8S-010",
@@ -2208,12 +2131,89 @@
        "NIST-AC-6"
       ],
       "file_path": "deploy.yaml",
-      "line_number": 5,
+      "line_number": 6,
       "message": "Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
       "remediation": "",
       "rule_id": "K8S-013",
       "severity": "medium",
       "title": "No securityContext at pod level"
+     },
+     {
+      "attack_techniques": [
+       "T1611"
+      ],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.4.1",
+       "NIST-SC-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
+      "remediation": "",
+      "rule_id": "K8S-004",
+      "severity": "medium",
+      "title": "No resource limits"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
+      "remediation": "",
+      "rule_id": "K8S-022",
+      "severity": "medium",
+      "title": "Container without liveness probe"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
+      "remediation": "",
+      "rule_id": "K8S-023",
+      "severity": "medium",
+      "title": "Container without readiness probe"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.7.2",
+       "NIST-CM-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
+      "remediation": "",
+      "rule_id": "K8S-031",
+      "severity": "medium",
+      "title": "Missing seccompProfile"
+     },
+     {
+      "attack_techniques": [
+       "T1078"
+      ],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.5.1",
+       "NIST-CM-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 8,
+      "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
+      "remediation": "",
+      "rule_id": "K8S-011",
+      "severity": "medium",
+      "title": "Container image uses :latest tag"
      }
     ],
     "total": 21
