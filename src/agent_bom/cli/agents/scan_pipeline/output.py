@@ -48,14 +48,20 @@ def _finalize_report(opts: ScanOptions, st: ScanState) -> None:
 
         if _baseline_path:
             try:
+                from agent_bom.scan_delta import compute_finding_delta, prune_pre_existing_findings
+
                 _baseline_data = load_baseline(_baseline_path)
                 _delta_result = compute_delta(st.current_report_json, _baseline_data)
                 _delta_result.baseline_path = _baseline_path
                 st.ctx.delta_result = _delta_result
+                _finding_delta = compute_finding_delta(list(st.current_report_json.get("findings") or []), _baseline_data)
+                _unpruned = prune_pre_existing_findings(st.report, _finding_delta.pre_existing_ids)
                 st.report.delta_data = {
                     "enabled": True,
                     "new_count": _delta_result.new_count,
                     "pre_existing_count": _delta_result.pre_existing_count,
+                    "new_finding_count": len(_finding_delta.new_ids),
+                    "pre_existing_finding_count": len(_finding_delta.pre_existing_ids) - _unpruned,
                     "baseline_path": _baseline_path,
                 }
 
