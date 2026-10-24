@@ -311,7 +311,7 @@ Minimum verification matrix:
   review the diff; never hand-edit them.
 - **Product screenshots:** a change to their inputs (`ui/`, `src/agent_bom/graph`,
   the reference evidence lab) needs `npm run capture:product-proof` from a clean,
-  committed tree, after `rm -rf .next && npm run build`; otherwise
+  committed tree, after a clean `npm run build` (delete `ui/.next` first); otherwise
   `check_release_consistency.py` fails on the recorded digest.
 - **UI:** run `npm run typecheck` and the full `npx vitest run`; contract tests
   pin exact lines of scripts such as the capture script.
