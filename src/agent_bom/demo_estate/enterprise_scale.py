@@ -24,6 +24,7 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
+from agent_bom.demo_estate.cloud_names import globally_unique_name
 from agent_bom.demo_estate.enterprise import (
     ENTERPRISE_SCHEMA_VERSION,
     CollectionRun,
@@ -425,8 +426,7 @@ def _build_assets(profile: ScaleProfile, tenant_id: str) -> tuple[EstateAsset, .
                 environment = ENVIRONMENTS[slot % len(ENVIRONMENTS)]
                 name = _workload_name(provider, scope, resource_type, environment, slot)
                 region = regions[_stable_index(provider, scope, name) % len(regions)]
-                # S3/GCS bucket names are global across accounts: ``<name>-<account>``.
-                name = f"{name}-{scope}" if resource_type == "bucket" else name
+                name = globally_unique_name(resource_type, name, scope)
                 assets.append(
                     EstateAsset(
                         asset_id=f"{provider}:{resource_type}:{scope}:{name}",

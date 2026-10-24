@@ -40,3 +40,19 @@ def test_external_stage_locations_name_the_bucket_as_inventoried() -> None:
 
     assert locations
     assert set(locations) <= bucket_names
+
+
+def test_azure_storage_account_names_are_unique_and_valid() -> None:
+    import re
+
+    estate = build_demo_estate(tenant_id="default")
+    accounts_by_name: dict[str, set[str]] = defaultdict(set)
+    for asset in estate.assets:
+        if asset.provider == "azure" and asset.resource_type == "storage_account":
+            accounts_by_name[asset.display_name].add(asset.account_scope)
+
+    assert len(accounts_by_name) > 1
+    shared = {name: sorted(scopes) for name, scopes in accounts_by_name.items() if len(scopes) > 1}
+    assert shared == {}, f"{len(shared)} of {len(accounts_by_name)} storage account names span subscriptions"
+    invalid = [name for name in accounts_by_name if not re.fullmatch(r"[a-z0-9]{3,24}", name)]
+    assert invalid == [], f"names break Azure's 3-24 lowercase letters-and-digits rule: {invalid[:5]}"
