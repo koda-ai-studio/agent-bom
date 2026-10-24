@@ -92,13 +92,17 @@ inputs:
     required: false
     default: ''
   pr-comment:
-    description: 'Post a findings summary comment on the pull request (requires GITHUB_TOKEN with pull-requests: write).'
+    description: 'Pull request comment with the top findings: auto (default) posts on pull_request events when the token has pull-requests: write and skips with a notice otherwise; true fails the step if the comment cannot be posted; false never posts.'
     required: false
-    default: 'false'
+    default: 'auto'
   annotations:
-    description: 'Emit GitHub Actions line-level annotations for SARIF and skills findings.'
+    description: 'Emit GitHub Actions line-level annotations for SARIF and skills findings, highest severity first (critical/high = error, medium = warning, low = notice).'
     required: false
     default: 'true'
+  max-annotations:
+    description: 'Maximum annotations to emit; the remainder is reported as "N more finding(s)" in one notice. -1 emits all.'
+    required: false
+    default: '50'
   ignore-file:
     description: 'Path to ignore/allowlist file (default: .agent-bom-ignore.yaml). Suppress known false positives by CVE ID, package, or finding type.'
     required: false
@@ -672,64 +676,7 @@ runs:
               blast_radius_critical_count) BLAST_RADIUS_CRITICAL_COUNT="$value" ;;
               posture_grade) POSTURE_GRADE="$value" ;;
             esac
-          done < <(RESULT_FILE="$RESULT_FILE" VULN_COUNT="$VULN_COUNT" python3 - <<'PY'
-        import json
-        import os
-
-        path = os.environ.get("RESULT_FILE", "")
-        vuln_count = int(os.environ.get("VULN_COUNT") or "0")
-        exposure_paths = 0
-        critical = 0
-        high = 0
-
-        def _walk(value):
-            if isinstance(value, dict):
-                yield value
-                for child in value.values():
-                    yield from _walk(child)
-            elif isinstance(value, list):
-                for child in value:
-                    yield from _walk(child)
-
-        try:
-            data = json.load(open(path, encoding="utf-8"))
-            if isinstance(data, dict) and "runs" in data:
-                run = data.get("runs", [{}])[0]
-                rules = {rule.get("id"): rule for rule in run.get("tool", {}).get("driver", {}).get("rules", [])}
-                for result in run.get("results", []):
-                    rule = rules.get(result.get("ruleId"), {})
-                    score = float(rule.get("properties", {}).get("security-severity", "0") or "0")
-                    if score > 9.0:
-                        critical += 1
-                    elif score >= 7.0:
-                        high += 1
-            else:
-                for item in _walk(data):
-                    for key in ("exposure_paths", "lateral_paths", "attack_paths"):
-                        paths = item.get(key)
-                        if isinstance(paths, list):
-                            exposure_paths += len(paths)
-                    severity = str(item.get("severity") or item.get("level") or "").lower()
-                    if severity == "critical":
-                        critical += 1
-                    elif severity == "high":
-                        high += 1
-            if critical > 0:
-                grade = "F"
-            elif high > 0:
-                grade = "D"
-            elif vuln_count > 0:
-                grade = "C"
-            else:
-                grade = "A"
-        except Exception:
-            grade = "unknown"
-
-        print(f"exposure_paths_count={exposure_paths}")
-        print(f"blast_radius_critical_count={critical}")
-        print(f"posture_grade={grade}")
-        PY
-          )
+          done < <(RESULT_FILE="$RESULT_FILE" VULN_COUNT="$VULN_COUNT" python3 "$GITHUB_ACTION_PATH/scripts/action_result_metrics.py")
         fi
 
         case "$EXIT_CODE" in
@@ -784,6 +731,7 @@ runs:
         fi
 
         echo "sarif_file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
+        echo "result_file=$RESULT_FILE" >> "$GITHUB_OUTPUT"
         echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
         echo "scan_status=$SCAN_STATUS" >> "$GITHUB_OUTPUT"
         echo "vuln_count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
@@ -794,12 +742,17 @@ runs:
         echo "posture_grade=$POSTURE_GRADE" >> "$GITHUB_OUTPUT"
 
         if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+          SUMMARY_SOURCE="$RESULT_FILE"
+          if [ -n "$SARIF_FILE" ]; then
+            SUMMARY_SOURCE="$SARIF_FILE"
+          fi
+          python3 "$GITHUB_ACTION_PATH/scripts/action_report.py" summary "$SUMMARY_SOURCE" --exit-code "$EXIT_CODE" --scan-type "${INPUT_SCAN_TYPE:-scan}" >> "$GITHUB_STEP_SUMMARY" || echo "::warning::agent-bom job summary rendering failed"
           {
-            echo "## agent-bom scan summary"
+            echo ""
+            echo "<details><summary>Scan details</summary>"
             echo ""
             echo "| Field | Value |"
             echo "|---|---|"
-            echo "| Scan type | \`${INPUT_SCAN_TYPE:-scan}\` |"
             echo "| Format | \`${INPUT_FORMAT:-sarif}\` |"
             echo "| Status | \`${SCAN_STATUS}\` |"
             echo "| Exit code | \`${EXIT_CODE}\` |"
@@ -820,6 +773,8 @@ runs:
             if [ -n "$BADGE_FILE" ]; then
               echo "| Badge file | \`${BADGE_FILE}\` |"
             fi
+            echo ""
+            echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
         fi
 
@@ -829,97 +784,46 @@ runs:
       if: inputs.annotations == 'true' && always()
       shell: bash
       env:
-        INPUT_OUTPUT: ${{ inputs.output }}
+        RESULT_FILE: ${{ steps.scan.outputs.result_file }}
+        INPUT_MAX_ANNOTATIONS: ${{ inputs.max-annotations }}
       run: |
-        RESULT_FILE="$INPUT_OUTPUT"
-        if [ -z "$RESULT_FILE" ]; then
-          RESULT_FILE="agent-bom-results.sarif"
-        fi
-        if [ -f "$RESULT_FILE" ]; then
-          python3 "$GITHUB_ACTION_PATH/scripts/emit_github_annotations.py" "$RESULT_FILE"
+        if [ -n "$RESULT_FILE" ] && [ -f "$RESULT_FILE" ]; then
+          python3 "$GITHUB_ACTION_PATH/scripts/emit_github_annotations.py" "$RESULT_FILE" --max "$INPUT_MAX_ANNOTATIONS"
         fi
 
     - name: Post PR comment with findings summary
-      if: always() && inputs.pr-comment == 'true' && github.event_name == 'pull_request'
-      shell: python
+      if: always() && inputs.pr-comment != 'false' && github.event_name == 'pull_request'
+      shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
+        INPUT_PR_COMMENT: ${{ inputs.pr-comment }}
         SARIF_FILE: ${{ steps.scan.outputs.sarif_file }}
-        VULN_COUNT: ${{ steps.scan.outputs.vuln_count }}
+        RESULT_FILE: ${{ steps.scan.outputs.result_file }}
         EXIT_CODE: ${{ steps.scan.outputs.exit_code }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
         REPO: ${{ github.repository }}
       run: |
-        import html, json, os, subprocess
-
-        marker = "<!-- agent-bom-scan-comment -->"
-        sarif_file = os.environ.get("SARIF_FILE", "")
-        exit_code = os.environ.get("EXIT_CODE", "0")
-        vuln_count = os.environ.get("VULN_COUNT", "0")
-        pr_number = os.environ.get("PR_NUMBER", "")
-        repo = os.environ.get("REPO", "")
-
-        if exit_code == "0":
-            status = "✅ Clean — no violations found"
-        elif exit_code == "1" and int(vuln_count or "0") > 0:
-            status = f"⚠️ {vuln_count} vulnerability finding(s)"
-        elif exit_code == "2":
-            status = "❌ Invalid or empty scan input"
-        elif exit_code == "3":
-            status = "❌ Vulnerability database freshness gate failed"
-        else:
-            status = f"❌ Scan failed (exit code {exit_code})"
-
-        def _sanitize_md(value: str) -> str:
-            text = html.escape(value or "", quote=False)
-            return text.replace("`", "'").replace("\r", " ").replace("\n", " ")
-
-        # Map SARIF security-severity scores to agent-bom severity labels
-        def _score_to_severity(score: float) -> str:
-            if score > 9.0:
-                return "CRITICAL"
-            if score >= 7.0:
-                return "HIGH"
-            if score >= 4.0:
-                return "MEDIUM"
-            if score >= 0.1:
-                return "LOW"
-            return "NONE"
-
-        findings_lines = []
-        if sarif_file and os.path.isfile(sarif_file):
-            try:
-                sarif = json.load(open(sarif_file))
-                run = sarif.get("runs", [{}])[0]
-                results = run.get("results", [])
-                rules = {r["id"]: r for r in run.get("tool", {}).get("driver", {}).get("rules", [])}
-                for r in results[:10]:
-                    rule_id = r.get("ruleId", "")
-                    rule = rules.get(rule_id, {})
-                    score = float(rule.get("properties", {}).get("security-severity", "0"))
-                    severity = _score_to_severity(score)
-                    msg = r.get("message", {}).get("text", "")
-                    findings_lines.append(
-                        f"- **{_sanitize_md(severity)}** `{_sanitize_md(rule_id)}` — {_sanitize_md(msg)}"
-                    )
-                if len(results) > 10:
-                    findings_lines.append(f"- ... and {len(results) - 10} more")
-            except Exception:
-                pass
-
-        findings_text = "\n".join(findings_lines) if findings_lines else "No findings."
-        body = f"{marker}\n## agent-bom Security Scan\n\n**Status:** {status}\n\n### Findings\n{findings_text}\n\n<sub>Generated by [agent-bom](https://github.com/msaad00/agent-bom)</sub>"
-
-        result = subprocess.run(
-            ["gh", "api", f"repos/{repo}/issues/{pr_number}/comments", "--jq", f'.[] | select(.body | contains("{marker}")) | .id'],
-            capture_output=True, text=True
-        )
-        existing_id = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
-
-        if existing_id:
-            subprocess.run(["gh", "api", f"repos/{repo}/issues/comments/{existing_id}", "-X", "PATCH", "-f", f"body={body}"], check=True)
-        else:
-            subprocess.run(["gh", "api", f"repos/{repo}/issues/{pr_number}/comments", "-f", f"body={body}"], check=True)
+        SOURCE="${SARIF_FILE:-$RESULT_FILE}"
+        BODY_FILE="$(mktemp)"
+        python3 "$GITHUB_ACTION_PATH/scripts/action_report.py" comment "$SOURCE" --exit-code "$EXIT_CODE" > "$BODY_FILE"
+        skip_or_fail() {
+          if [ "$INPUT_PR_COMMENT" = "true" ]; then
+            echo "::error::Could not post the agent-bom PR comment: $1"
+            exit 1
+          fi
+          echo "::notice::agent-bom PR comment skipped ($1). Grant the job pull-requests: write to enable it, or set pr-comment: false."
+          exit 0
+        }
+        EXISTING_ID="$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+          --jq '.[] | select(.body | contains("<!-- agent-bom-scan-comment -->")) | .id' 2>/dev/null | head -n 1)" \
+          || skip_or_fail "cannot read pull request comments"
+        if [ -n "$EXISTING_ID" ]; then
+          gh api "repos/$REPO/issues/comments/$EXISTING_ID" -X PATCH -F "body=@$BODY_FILE" > /dev/null \
+            || skip_or_fail "token lacks pull-requests: write"
+        else
+          gh api "repos/$REPO/issues/$PR_NUMBER/comments" -F "body=@$BODY_FILE" > /dev/null \
+            || skip_or_fail "token lacks pull-requests: write"
+        fi
 
     - name: Detect SARIF output
       id: sarif

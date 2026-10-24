@@ -147,7 +147,7 @@ def test_action_defaults_to_repo_scan_with_high_severity_gate_and_failure_commen
     assert 'scan|agents|"")' in run_script
     assert "ARGS=(scan .)" in run_script
     assert 'ARGS+=(--fail-on-severity "$INPUT_SEVERITY")' in run_script
-    assert "always() && inputs.pr-comment == 'true'" in comment_step["if"]
+    assert "always() && inputs.pr-comment != 'false'" in comment_step["if"]
 
 
 def test_focused_secrets_and_code_reject_sarif_format(tmp_path: Path) -> None:
