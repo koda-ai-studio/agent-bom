@@ -73,7 +73,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -213,7 +213,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -269,7 +269,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -307,7 +307,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -351,25 +351,6 @@
    "rule_id": "CFN-003",
    "severity": "high",
    "title": "Security group open to 0.0.0.0/0"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "cloudformation",
-   "compliance": [
-    "CIS-AWS-5.2",
-    "NIST-AC-4",
-    "NIST-SC-7"
-   ],
-   "file_path": "cloudformation/harvested_a3ec3e11df054199.json",
-   "line_number": 4,
-   "message": "Resource 'AllowSSH' allows ingress from 0.0.0.0/0 on ports 22-22. Restrict to HTTP/HTTPS ports only.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "CFN-013",
-   "severity": "high",
-   "title": "Security group with 0.0.0.0/0 ingress on non-HTTP port"
   }
  ],
  "cloudformation/harvested_a69781f9d920d0b5.json": [
@@ -487,7 +468,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -525,7 +506,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   },
   {
@@ -543,7 +524,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -640,7 +621,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -701,25 +682,6 @@
    "rule_id": "CFN-003",
    "severity": "high",
    "title": "Security group open to 0.0.0.0/0"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "cloudformation",
-   "compliance": [
-    "CIS-AWS-5.2",
-    "NIST-AC-4",
-    "NIST-SC-7"
-   ],
-   "file_path": "cloudformation/harvested_f87c5a12ed6b63a2.json",
-   "line_number": 4,
-   "message": "Resource 'AllowSSHv6' allows ingress from 0.0.0.0/0 on ports 22-22. Restrict to HTTP/HTTPS ports only.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "CFN-013",
-   "severity": "high",
-   "title": "Security group with 0.0.0.0/0 ingress on non-HTTP port"
   }
  ],
  "cloudformation/harvested_fb61f11a7d8dee37.json": [
@@ -756,7 +718,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -812,7 +774,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   },
   {
@@ -866,7 +828,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   },
   {
@@ -902,7 +864,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-011",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket without versioning enabled"
   },
   {
@@ -942,44 +904,6 @@
    "rule_id": "CFN-003",
    "severity": "high",
    "title": "Security group open to 0.0.0.0/0"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "cloudformation",
-   "compliance": [
-    "CIS-AWS-5.2",
-    "NIST-AC-4",
-    "NIST-SC-7"
-   ],
-   "file_path": "cloudformation/synthetic_all_rules_bad.yaml",
-   "line_number": 31,
-   "message": "Resource 'WideOpenSg' allows ingress from 0.0.0.0/0 on ports 22-22. Restrict to HTTP/HTTPS ports only.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "CFN-013",
-   "severity": "high",
-   "title": "Security group with 0.0.0.0/0 ingress on non-HTTP port"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "cloudformation",
-   "compliance": [
-    "CIS-AWS-5.2",
-    "NIST-AC-4",
-    "NIST-SC-7"
-   ],
-   "file_path": "cloudformation/synthetic_all_rules_bad.yaml",
-   "line_number": 31,
-   "message": "Resource 'WideOpenSg' allows ingress from 0.0.0.0/0 on ports 0-65535. Restrict to HTTP/HTTPS ports only.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "CFN-013",
-   "severity": "high",
-   "title": "Security group with 0.0.0.0/0 ingress on non-HTTP port"
   },
   {
    "atlas_techniques": [],
@@ -1266,7 +1190,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-016",
-   "severity": "medium",
+   "severity": "low",
    "title": "ELB without access logging"
   },
   {
@@ -1284,7 +1208,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "CFN-016",
-   "severity": "medium",
+   "severity": "low",
    "title": "ELB without access logging"
   },
   {
@@ -1414,24 +1338,6 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
-    "CIS-Docker-4.7",
-    "NIST-SI-7"
-   ],
-   "file_path": "dockerfile/harvested_10d27fc7b23a2f0d.Dockerfile",
-   "line_number": 1,
-   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-010",
-   "severity": "medium",
-   "title": "FROM without digest pin"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
     "CIS-Docker-4.1",
     "NIST-AC-6"
    ],
@@ -1444,24 +1350,6 @@
    "rule_id": "DOCKER-002",
    "severity": "high",
    "title": "Container runs as root"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.9",
-    "NIST-CM-7"
-   ],
-   "file_path": "dockerfile/harvested_10d27fc7b23a2f0d.Dockerfile",
-   "line_number": 3,
-   "message": "ADD can fetch remote URLs and auto-extract archives, introducing supply chain risk. Use COPY unless you specifically need ADD features.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-004",
-   "severity": "medium",
-   "title": "ADD used instead of COPY"
   },
   {
    "atlas_techniques": [],
@@ -1576,24 +1464,6 @@
    "rule_id": "DOCKER-001",
    "severity": "high",
    "title": "FROM uses :latest tag"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.7",
-    "NIST-SI-7"
-   ],
-   "file_path": "dockerfile/harvested_3ed379df068359cf.Dockerfile",
-   "line_number": 1,
-   "message": "Image 'ubuntu:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-010",
-   "severity": "medium",
-   "title": "FROM without digest pin"
   },
   {
    "atlas_techniques": [],
@@ -1754,24 +1624,6 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
-    "CIS-Docker-4.7",
-    "NIST-SI-7"
-   ],
-   "file_path": "dockerfile/harvested_5d2ad98194f39534.Dockerfile",
-   "line_number": 1,
-   "message": "Image 'python:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-010",
-   "severity": "medium",
-   "title": "FROM without digest pin"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
     "CIS-Docker-4.1",
     "NIST-AC-6"
    ],
@@ -1828,24 +1680,6 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
-    "CIS-Docker-4.7",
-    "NIST-SI-7"
-   ],
-   "file_path": "dockerfile/harvested_5d3b6802f9acaee8.Dockerfile",
-   "line_number": 1,
-   "message": "Image 'ubuntu:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-010",
-   "severity": "medium",
-   "title": "FROM without digest pin"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
     "CIS-Docker-4.1",
     "NIST-AC-6"
    ],
@@ -1896,24 +1730,6 @@
    "rule_id": "DOCKER-001",
    "severity": "high",
    "title": "FROM uses no tag (defaults to :latest)"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.7",
-    "NIST-SI-7"
-   ],
-   "file_path": "dockerfile/harvested_6fa512445136b920.Dockerfile",
-   "line_number": 1,
-   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-010",
-   "severity": "medium",
-   "title": "FROM without digest pin"
   },
   {
    "atlas_techniques": [],
@@ -2088,24 +1904,6 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
-    "CIS-Docker-4.7",
-    "NIST-SI-7"
-   ],
-   "file_path": "dockerfile/harvested_9d361887fa68fac1.Dockerfile",
-   "line_number": 1,
-   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-010",
-   "severity": "medium",
-   "title": "FROM without digest pin"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
     "CIS-Docker-4.10",
     "NIST-IA-5"
    ],
@@ -2118,24 +1916,6 @@
    "rule_id": "DOCKER-003",
    "severity": "critical",
    "title": "Hardcoded secret in ENV"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.9",
-    "NIST-CM-7"
-   ],
-   "file_path": "dockerfile/harvested_9d361887fa68fac1.Dockerfile",
-   "line_number": 3,
-   "message": "ADD can fetch remote URLs and auto-extract archives, introducing supply chain risk. Use COPY unless you specifically need ADD features.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-004",
-   "severity": "medium",
-   "title": "ADD used instead of COPY"
   },
   {
    "atlas_techniques": [],
@@ -2369,24 +2149,6 @@
    "category": "dockerfile",
    "compliance": [
     "CIS-Docker-4.9",
-    "NIST-CM-7"
-   ],
-   "file_path": "dockerfile/harvested_b976aa2a6035b7c2.Dockerfile",
-   "line_number": 2,
-   "message": "ADD can fetch remote URLs and auto-extract archives, introducing supply chain risk. Use COPY unless you specifically need ADD features.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-004",
-   "severity": "medium",
-   "title": "ADD used instead of COPY"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.9",
     "NIST-SI-7",
     "NIST-CM-7"
    ],
@@ -2457,24 +2219,6 @@
    "rule_id": "DOCKER-001",
    "severity": "high",
    "title": "FROM uses no tag (defaults to :latest)"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.7",
-    "NIST-SI-7"
-   ],
-   "file_path": "dockerfile/harvested_c14f90dad8bc7eb1.Dockerfile",
-   "line_number": 1,
-   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-010",
-   "severity": "medium",
-   "title": "FROM without digest pin"
   },
   {
    "atlas_techniques": [],
@@ -2825,24 +2569,6 @@
    "category": "dockerfile",
    "compliance": [
     "CIS-Docker-4.7",
-    "NIST-SI-7"
-   ],
-   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
-   "line_number": 3,
-   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-010",
-   "severity": "medium",
-   "title": "FROM without digest pin"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.7",
     "NIST-CM-6"
    ],
    "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
@@ -2854,24 +2580,6 @@
    "rule_id": "DOCKER-001",
    "severity": "high",
    "title": "FROM uses :latest tag"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.7",
-    "NIST-SI-7"
-   ],
-   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
-   "line_number": 4,
-   "message": "Image 'python:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-010",
-   "severity": "medium",
-   "title": "FROM without digest pin"
   },
   {
    "atlas_techniques": [],
@@ -2991,24 +2699,6 @@
    ],
    "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
    "line_number": 17,
-   "message": "ADD can fetch remote URLs and auto-extract archives, introducing supply chain risk. Use COPY unless you specifically need ADD features.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-004",
-   "severity": "medium",
-   "title": "ADD used instead of COPY"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.9",
-    "NIST-CM-7"
-   ],
-   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
-   "line_number": 18,
    "message": "ADD can fetch remote URLs and auto-extract archives, introducing supply chain risk. Use COPY unless you specifically need ADD features.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3546,7 +3236,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3601,7 +3291,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3674,7 +3364,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3747,7 +3437,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3784,7 +3474,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3838,7 +3528,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3893,7 +3583,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3930,7 +3620,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3985,7 +3675,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4022,7 +3712,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4079,7 +3769,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4116,7 +3806,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   },
   {
@@ -4171,7 +3861,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4225,7 +3915,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4262,7 +3952,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   },
   {
@@ -4334,7 +4024,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4389,7 +4079,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4426,7 +4116,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4481,7 +4171,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4518,7 +4208,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4573,7 +4263,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4610,7 +4300,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4629,7 +4319,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4666,7 +4356,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4721,7 +4411,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4758,7 +4448,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4813,7 +4503,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4850,7 +4540,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4887,7 +4577,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4960,7 +4650,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4997,7 +4687,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5034,7 +4724,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5071,7 +4761,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5108,7 +4798,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5163,7 +4853,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5218,7 +4908,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5255,7 +4945,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5578,7 +5268,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   },
   {
@@ -5654,7 +5344,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "HELM-014",
-   "severity": "medium",
+   "severity": "low",
    "title": "Missing livenessProbe in values.yaml"
   }
  ]

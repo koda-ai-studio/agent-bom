@@ -246,7 +246,7 @@ def cfn_011(res: CfnResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="CFN-011",
-                severity="medium",
+                severity="low",
                 title="S3 bucket without versioning enabled",
                 message=(
                     f"Resource '{res.logical_id}' does not have "
@@ -278,42 +278,6 @@ def cfn_012(res: CfnResource) -> list[IaCFinding]:
                 compliance=["CIS-AWS-2.3.1", "NIST-SC-28"],
             )
         )
-    return findings
-
-
-def cfn_013(res: CfnResource) -> list[IaCFinding]:
-    """CFN-013: Security group with 0.0.0.0/0 on non-HTTP port."""
-    findings: list[IaCFinding] = []
-    for rule in mapping_sequence(res.props.get("SecurityGroupIngress", []), res.file_str):
-        if not isinstance(rule, dict):
-            continue
-        cidr = rule.get("CidrIp", "")
-        cidr6 = rule.get("CidrIpv6", "")
-        from_port = rule.get("FromPort", 0)
-        to_port = rule.get("ToPort", 0)
-        if cidr == "0.0.0.0/0" or cidr6 == "::/0":
-            try:
-                fp, tp = int(from_port), int(to_port)
-            except (ValueError, TypeError):
-                fp, tp = 0, 65535
-            http_ports = {80, 443}
-            if not (fp in http_ports and tp in http_ports):
-                findings.append(
-                    IaCFinding(
-                        rule_id="CFN-013",
-                        severity="high",
-                        title="Security group with 0.0.0.0/0 ingress on non-HTTP port",
-                        message=(
-                            f"Resource '{res.logical_id}' allows ingress "
-                            f"from 0.0.0.0/0 on ports {fp}-{tp}. "
-                            "Restrict to HTTP/HTTPS ports only."
-                        ),
-                        file_path=res.file_str,
-                        line_number=res.line,
-                        category="cloudformation",
-                        compliance=["CIS-AWS-5.2", "NIST-AC-4", "NIST-SC-7"],
-                    )
-                )
     return findings
 
 
@@ -383,7 +347,7 @@ def cfn_016(res: CfnResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="CFN-016",
-                severity="medium",
+                severity="low",
                 title="ELB without access logging",
                 message=(
                     f"Resource '{res.logical_id}' does not have access "

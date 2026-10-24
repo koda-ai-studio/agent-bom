@@ -263,3 +263,18 @@ after deployment.
 
 See [Cloud Posture and IaC Gates](cloud-posture.md) for the recommended lane
 split and CI example.
+
+### Accepting one IaC finding
+
+To accept a single finding on purpose, put a marker with a reason on the
+offending line or the line directly above it:
+
+```yaml
+# agent-bom: ignore[GHA-002] published template: callers pin this workflow
+uses: example-org/example-action@v1
+```
+
+The marker names one or more rule ids (`ignore[GHA-002,GHA-004]`), and the
+reason is required: a marker without one suppresses nothing. Accepted findings
+leave the active results and the severity gate, and the scan result keeps them
+in `suppressed` so they stay reviewable.

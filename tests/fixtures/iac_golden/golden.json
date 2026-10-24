@@ -8,13 +8,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_02239f225995902b.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -25,13 +25,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_02239f225995902b.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   }
  ],
@@ -64,7 +64,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_041a6158d83a0b84.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'rocm-trainer' in 'amd-gpu-workload' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -82,7 +82,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_041a6158d83a0b84.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'rocm-trainer' uses image 'rocm/pytorch:latest' without a pinned tag. Pin to a specific version.",
    "remediation": "",
    "repository_relative_path": null,
@@ -99,13 +99,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_041a6158d83a0b84.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'rocm-trainer' in 'amd-gpu-workload' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -116,13 +116,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_041a6158d83a0b84.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'rocm-trainer' in 'amd-gpu-workload' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -134,7 +134,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_041a6158d83a0b84.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'rocm-trainer' in 'amd-gpu-workload' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -210,13 +210,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_0985f65784fbc1c3.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -227,13 +227,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_0985f65784fbc1c3.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -245,7 +245,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_0985f65784fbc1c3.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -285,7 +285,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_1463da6a26f71e16.yaml",
-   "line_number": 8,
+   "line_number": 5,
    "message": "ClusterRole 'nvidia-device-plugin' includes mutation verbs ['patch', 'update']. The nvidia-device-plugin requires only get/list/watch permissions. Remove mutation verbs to enforce least-privilege for the GPU device plugin.",
    "remediation": "",
    "repository_relative_path": null,
@@ -322,13 +322,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_15d1a4d37e5abc76.yaml",
-   "line_number": 1,
+   "line_number": 8,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -339,13 +339,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_15d1a4d37e5abc76.yaml",
-   "line_number": 1,
+   "line_number": 8,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -357,7 +357,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_15d1a4d37e5abc76.yaml",
-   "line_number": 1,
+   "line_number": 8,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -394,13 +394,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_17f72fd8e5a15d2b.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'app' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -411,13 +411,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_17f72fd8e5a15d2b.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'app' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -429,7 +429,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_17f72fd8e5a15d2b.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'app' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -447,7 +447,7 @@
     "NIST-SC-7"
    ],
    "file_path": "kubernetes/harvested_17f72fd8e5a15d2b.yaml",
-   "line_number": 1,
+   "line_number": 19,
    "message": "Volume 'data' mounts a host path. This breaks container isolation. Use PVCs instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -503,7 +503,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_1df7be270dabdc4e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -520,13 +520,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_1df7be270dabdc4e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -537,13 +537,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_1df7be270dabdc4e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -555,7 +555,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_1df7be270dabdc4e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -636,7 +636,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_2b5efc33e4d24599.yaml",
-   "line_number": 8,
+   "line_number": 5,
    "message": "ClusterRole 'nvidia-device-plugin-manager' includes mutation verbs ['delete']. The nvidia-device-plugin requires only get/list/watch permissions. Remove mutation verbs to enforce least-privilege for the GPU device plugin.",
    "remediation": "",
    "repository_relative_path": null,
@@ -655,13 +655,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_2b5f3ae658513755.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'gpu-direct' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -672,13 +672,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_2b5f3ae658513755.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'gpu-direct' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -690,7 +690,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_2b5f3ae658513755.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'gpu-direct' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -708,7 +708,7 @@
     "NIST-SC-7"
    ],
    "file_path": "kubernetes/harvested_2b5f3ae658513755.yaml",
-   "line_number": 1,
+   "line_number": 19,
    "message": "Volume 'nv-proc' mounts a host path. This breaks container isolation. Use PVCs instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -729,7 +729,7 @@
     "NIST-SI-3"
    ],
    "file_path": "kubernetes/harvested_2b5f3ae658513755.yaml",
-   "line_number": 1,
+   "line_number": 19,
    "message": "Volume 'nv-proc' in 'gpu-direct' mounts '/proc/driver/nvidia' directly from the host. Exposing NVIDIA device files bypasses container isolation and grants raw GPU hardware access. Use the NVIDIA device plugin instead of hostPath mounts.",
    "remediation": "",
    "repository_relative_path": null,
@@ -766,13 +766,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_2fcc532a626bc237.yaml",
-   "line_number": 1,
+   "line_number": 12,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -783,13 +783,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_2fcc532a626bc237.yaml",
-   "line_number": 1,
+   "line_number": 12,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   }
  ],
@@ -820,13 +820,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_32ff974429ee746b.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -837,13 +837,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_32ff974429ee746b.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -855,7 +855,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_32ff974429ee746b.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -892,13 +892,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_3a0a120f3a7957fb.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -909,13 +909,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_3a0a120f3a7957fb.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -927,7 +927,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_3a0a120f3a7957fb.yaml",
-   "line_number": 1,
+   "line_number": 15,
    "message": "Container 'app' in 'test' mounts /var/run/docker.sock without readOnly: true. This allows full Docker daemon access and container escape. Remove the mount or set readOnly: true.",
    "remediation": "",
    "repository_relative_path": null,
@@ -945,7 +945,7 @@
     "NIST-SC-7"
    ],
    "file_path": "kubernetes/harvested_3a0a120f3a7957fb.yaml",
-   "line_number": 1,
+   "line_number": 26,
    "message": "Volume 'docker-sock' mounts a host path. This breaks container isolation. Use PVCs instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -965,7 +965,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_3b316f0086c77ba4.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1000,13 +1000,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_3b316f0086c77ba4.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1017,13 +1017,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_3b316f0086c77ba4.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -1035,7 +1035,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_3b316f0086c77ba4.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1112,7 +1112,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 6,
+   "line_number": 9,
    "message": "Resource 'test-deploy' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1129,7 +1129,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 6,
+   "line_number": 9,
    "message": "Deployment 'test-deploy' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1165,7 +1165,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 1,
+   "line_number": 11,
    "message": "Container 'app' in 'test-deploy' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1183,7 +1183,7 @@
     "NIST-SC-6"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 1,
+   "line_number": 11,
    "message": "Container 'app' in 'test-deploy' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1200,13 +1200,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 1,
+   "line_number": 11,
    "message": "Container 'app' in 'test-deploy' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1217,13 +1217,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 1,
+   "line_number": 11,
    "message": "Container 'app' in 'test-deploy' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -1235,7 +1235,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 1,
+   "line_number": 11,
    "message": "Container 'app' in 'test-deploy' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1253,7 +1253,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 6,
+   "line_number": 9,
    "message": "Pod 'test-deploy' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1270,7 +1270,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_3f85179cc2441181.yaml",
-   "line_number": 1,
+   "line_number": 4,
    "message": "Deployment 'test-deploy' has no matching PodDisruptionBudget in the same manifest. A PDB ensures minimum availability during voluntary disruptions like node drains.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1307,13 +1307,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_45a1193f479d41d8.yaml",
-   "line_number": 1,
+   "line_number": 14,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1324,13 +1324,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_45a1193f479d41d8.yaml",
-   "line_number": 1,
+   "line_number": 14,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   }
  ],
@@ -1361,13 +1361,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_45db2a00f775138a.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1378,13 +1378,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_45db2a00f775138a.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -1396,7 +1396,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_45db2a00f775138a.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1451,13 +1451,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_463c5287b782385d.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1468,13 +1468,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_463c5287b782385d.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -1486,7 +1486,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_463c5287b782385d.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1523,7 +1523,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_4f831f36837a0b4a.yaml",
-   "line_number": 6,
+   "line_number": 9,
    "message": "Deployment 'web-app' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1540,13 +1540,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_4f831f36837a0b4a.yaml",
-   "line_number": 34,
+   "line_number": 16,
    "message": "Container 'app' in 'web-app' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1557,13 +1557,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_4f831f36837a0b4a.yaml",
-   "line_number": 34,
+   "line_number": 16,
    "message": "Container 'app' in 'web-app' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   }
  ],
@@ -1576,13 +1576,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_56d5a49160046141.yaml",
-   "line_number": 1,
+   "line_number": 22,
    "message": "Container 'app' in 'test-deploy' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1593,13 +1593,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_56d5a49160046141.yaml",
-   "line_number": 1,
+   "line_number": 22,
    "message": "Container 'app' in 'test-deploy' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -1610,7 +1610,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_56d5a49160046141.yaml",
-   "line_number": 1,
+   "line_number": 4,
    "message": "Deployment 'test-deploy' has no matching PodDisruptionBudget in the same manifest. A PDB ensures minimum availability during voluntary disruptions like node drains.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1648,7 +1648,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_5f124328e90236be.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'priv-app' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1665,13 +1665,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_5f124328e90236be.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'priv-app' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1682,13 +1682,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_5f124328e90236be.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'priv-app' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -1700,7 +1700,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_5f124328e90236be.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'priv-app' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1738,13 +1738,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_6372a2a5dae49a09.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1755,13 +1755,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_6372a2a5dae49a09.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   }
  ],
@@ -1774,13 +1774,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_653069293c638dfa.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1791,13 +1791,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_653069293c638dfa.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -1809,7 +1809,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_653069293c638dfa.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1847,7 +1847,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_7196d1f1f2688cf9.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1864,13 +1864,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_7196d1f1f2688cf9.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1881,13 +1881,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_7196d1f1f2688cf9.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -1899,7 +1899,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_7196d1f1f2688cf9.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1936,13 +1936,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_774fc4414d273b37.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -1953,13 +1953,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_774fc4414d273b37.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -1971,7 +1971,7 @@
     "NIST-SC-7"
    ],
    "file_path": "kubernetes/harvested_774fc4414d273b37.yaml",
-   "line_number": 1,
+   "line_number": 27,
    "message": "Volume 'docker-sock' mounts a host path. This breaks container isolation. Use PVCs instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -1991,13 +1991,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_850d5c695aa93087.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2008,13 +2008,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_850d5c695aa93087.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2026,7 +2026,7 @@
     "NIST-CM-11"
    ],
    "file_path": "kubernetes/harvested_850d5c695aa93087.yaml",
-   "line_number": 1,
+   "line_number": 14,
    "message": "Container 'app' in 'test' uses image 'evil-registry.io/malicious:1.0' from an untrusted registry. Use images from trusted registries (Docker Hub, GCR, GHCR, Quay, ECR, MCR, NVCR, registry.k8s.io).",
    "remediation": "",
    "repository_relative_path": null,
@@ -2046,7 +2046,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_8d78655d47c2abe6.yaml",
-   "line_number": 1,
+   "line_number": 5,
    "message": "ClusterRoleBinding 'admin-binding' binds to the cluster-admin role. This grants full cluster access. Use least-privilege roles instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2083,13 +2083,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_8daa47490f45e1b4.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2100,13 +2100,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_8daa47490f45e1b4.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2118,7 +2118,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_8daa47490f45e1b4.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2155,13 +2155,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_9b99a0d35b46b91d.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2172,13 +2172,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_9b99a0d35b46b91d.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2190,7 +2190,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_9b99a0d35b46b91d.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2227,13 +2227,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_a741a81789256430.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2244,13 +2244,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_a741a81789256430.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   }
  ],
@@ -2281,13 +2281,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_aa46e86a8a20e940.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2298,13 +2298,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_aa46e86a8a20e940.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2316,7 +2316,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_aa46e86a8a20e940.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2353,13 +2353,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_b0bf48ed6824e3a5.yaml",
-   "line_number": 1,
+   "line_number": 12,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2370,13 +2370,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_b0bf48ed6824e3a5.yaml",
-   "line_number": 1,
+   "line_number": 12,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2388,7 +2388,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_b0bf48ed6824e3a5.yaml",
-   "line_number": 1,
+   "line_number": 18,
    "message": "Container 'app' in 'test' adds NET_ADMIN capability. This allows network configuration changes including iptables manipulation. Remove unless explicitly required.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2409,7 +2409,7 @@
     "NIST-IA-5"
    ],
    "file_path": "kubernetes/harvested_b5ef62870c46dc8a.yaml",
-   "line_number": 1,
+   "line_number": 12,
    "message": "Container 'app' in 'test' has env var 'DB_PASSWORD' with a hardcoded value instead of secretKeyRef. Use Kubernetes Secrets with valueFrom.secretKeyRef.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2426,13 +2426,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_b5ef62870c46dc8a.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2443,13 +2443,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_b5ef62870c46dc8a.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2461,7 +2461,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_b5ef62870c46dc8a.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2498,7 +2498,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_b6fff9a5eb8ade02.yaml",
-   "line_number": 6,
+   "line_number": 9,
    "message": "Deployment 'web-app' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2515,13 +2515,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_b6fff9a5eb8ade02.yaml",
-   "line_number": 1,
+   "line_number": 16,
    "message": "Container 'app' in 'web-app' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2532,13 +2532,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_b6fff9a5eb8ade02.yaml",
-   "line_number": 1,
+   "line_number": 16,
    "message": "Container 'app' in 'web-app' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2549,7 +2549,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_b6fff9a5eb8ade02.yaml",
-   "line_number": 1,
+   "line_number": 4,
    "message": "Deployment 'web-app' has no matching PodDisruptionBudget in the same manifest. A PDB ensures minimum availability during voluntary disruptions like node drains.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2568,13 +2568,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_b77697c5c116347b.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'gpu-direct' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2585,13 +2585,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_b77697c5c116347b.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'gpu-direct' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2603,7 +2603,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_b77697c5c116347b.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'gpu-direct' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2621,7 +2621,7 @@
     "NIST-SC-7"
    ],
    "file_path": "kubernetes/harvested_b77697c5c116347b.yaml",
-   "line_number": 1,
+   "line_number": 22,
    "message": "Volume 'nvidia-dev' mounts a host path. This breaks container isolation. Use PVCs instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2642,7 +2642,7 @@
     "NIST-SI-3"
    ],
    "file_path": "kubernetes/harvested_b77697c5c116347b.yaml",
-   "line_number": 1,
+   "line_number": 22,
    "message": "Volume 'nvidia-dev' in 'gpu-direct' mounts '/dev/nvidia0' directly from the host. Exposing NVIDIA device files bypasses container isolation and grants raw GPU hardware access. Use the NVIDIA device plugin instead of hostPath mounts.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2697,13 +2697,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'pod1' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2714,13 +2714,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'pod1' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2732,7 +2732,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'pod1' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2768,7 +2768,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 12,
+   "line_number": 29,
    "message": "Container 'app' in 'pod2' runs in privileged mode. This gives the container full host access. Remove privileged: true unless absolutely required.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2785,13 +2785,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 1,
+   "line_number": 26,
    "message": "Container 'app' in 'pod2' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2802,13 +2802,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 1,
+   "line_number": 26,
    "message": "Container 'app' in 'pod2' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2820,7 +2820,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 1,
+   "line_number": 26,
    "message": "Container 'app' in 'pod2' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2838,7 +2838,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_bf6b74b366562fe3.yaml",
-   "line_number": 6,
+   "line_number": 23,
    "message": "Pod 'pod2' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2858,13 +2858,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_d423e408056be11f.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   }
  ],
@@ -2877,7 +2877,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_d57eaf78742d03d4.yaml",
-   "line_number": 6,
+   "line_number": 9,
    "message": "Deployment 'test-deploy' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2894,13 +2894,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_d57eaf78742d03d4.yaml",
-   "line_number": 1,
+   "line_number": 16,
    "message": "Container 'app' in 'test-deploy' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2911,13 +2911,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_d57eaf78742d03d4.yaml",
-   "line_number": 1,
+   "line_number": 16,
    "message": "Container 'app' in 'test-deploy' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -2928,7 +2928,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_d57eaf78742d03d4.yaml",
-   "line_number": 1,
+   "line_number": 4,
    "message": "Deployment 'test-deploy' has no matching PodDisruptionBudget in the same manifest. A PDB ensures minimum availability during voluntary disruptions like node drains.",
    "remediation": "",
    "repository_relative_path": null,
@@ -2965,13 +2965,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_d6617d0bac8fcee5.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -2982,13 +2982,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_d6617d0bac8fcee5.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -3000,7 +3000,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_d6617d0bac8fcee5.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3037,13 +3037,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_d778ec934815292d.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -3054,13 +3054,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_d778ec934815292d.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -3072,7 +3072,7 @@
     "NIST-CM-7"
    ],
    "file_path": "kubernetes/harvested_d778ec934815292d.yaml",
-   "line_number": 17,
+   "line_number": 15,
    "message": "Container 'app' in 'test' specifies hostPort 8080. hostPort ties the pod to a specific node and limits scheduling. Use a Service or Ingress instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3092,7 +3092,7 @@
     "NIST-AC-4"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 1,
+   "line_number": 4,
    "message": "Resource 'mychart' uses the default namespace. Use dedicated namespaces for workload isolation and RBAC.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3110,7 +3110,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 5,
+   "line_number": 8,
    "message": "Resource 'mychart' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3127,7 +3127,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 5,
+   "line_number": 8,
    "message": "Deployment 'mychart' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3145,7 +3145,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'mychart' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3163,7 +3163,7 @@
     "NIST-SC-6"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'mychart' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3181,7 +3181,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 1,
+   "line_number": 11,
    "message": "Container 'app' uses image 'myapp:latest' without a pinned tag. Pin to a specific version.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3198,13 +3198,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'mychart' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -3215,13 +3215,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'mychart' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -3233,7 +3233,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 1,
+   "line_number": 10,
    "message": "Container 'app' in 'mychart' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3251,7 +3251,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 5,
+   "line_number": 8,
    "message": "Pod 'mychart' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3268,7 +3268,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/harvested_d88669843df05f07.yaml",
-   "line_number": 1,
+   "line_number": 4,
    "message": "Deployment 'mychart' has no matching PodDisruptionBudget in the same manifest. A PDB ensures minimum availability during voluntary disruptions like node drains.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3360,7 +3360,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_df20c2817362e129.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3378,7 +3378,7 @@
     "NIST-SC-6"
    ],
    "file_path": "kubernetes/harvested_df20c2817362e129.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3395,13 +3395,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_df20c2817362e129.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -3412,13 +3412,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_df20c2817362e129.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -3430,7 +3430,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_df20c2817362e129.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3467,13 +3467,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_df3a45734f719dae.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -3484,13 +3484,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_df3a45734f719dae.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -3502,7 +3502,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_df3a45734f719dae.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'trainer' in 'gpu-workload' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3577,13 +3577,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_e85dd4d96336332e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -3594,13 +3594,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_e85dd4d96336332e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -3612,7 +3612,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_e85dd4d96336332e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3649,13 +3649,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_f0a5147740b3869e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'compliant' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -3666,13 +3666,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_f0a5147740b3869e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'compliant' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -3684,7 +3684,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_f0a5147740b3869e.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'compliant' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3722,7 +3722,7 @@
     "NIST-SC-6"
    ],
    "file_path": "kubernetes/harvested_f1cd166215caa3c9.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3739,13 +3739,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_f1cd166215caa3c9.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -3756,13 +3756,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_f1cd166215caa3c9.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -3774,7 +3774,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/harvested_f1cd166215caa3c9.yaml",
-   "line_number": 1,
+   "line_number": 9,
    "message": "Container 'app' in 'test' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3811,13 +3811,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/harvested_f36fcd7a95010fa2.yaml",
-   "line_number": 1,
+   "line_number": 13,
    "message": "Container 'app' in 'test' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   }
  ],
@@ -3849,7 +3849,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 11,
    "message": "ClusterRoleBinding 'admin-binding' binds to the cluster-admin role. This grants full cluster access. Use least-privilege roles instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3869,7 +3869,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 20,
+   "line_number": 19,
    "message": "ClusterRole 'nvidia-device-plugin' includes mutation verbs ['create', 'patch']. The nvidia-device-plugin requires only get/list/watch permissions. Remove mutation verbs to enforce least-privilege for the GPU device plugin.",
    "remediation": "",
    "repository_relative_path": null,
@@ -3977,7 +3977,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 28,
+   "line_number": 38,
    "message": "Resource 'bad-deploy' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4012,7 +4012,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 28,
+   "line_number": 38,
    "message": "Deployment 'bad-deploy' does not define podAntiAffinity. Without anti-affinity, all replicas may be scheduled on the same node, creating a single point of failure.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4084,7 +4084,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 107,
+   "line_number": 44,
    "message": "Container 'app' in 'bad-deploy' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4120,7 +4120,7 @@
     "NIST-IA-5"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 54,
    "message": "Container 'app' in 'bad-deploy' has env var 'API_KEY' with a hardcoded value instead of secretKeyRef. Use Kubernetes Secrets with valueFrom.secretKeyRef.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4138,7 +4138,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 45,
    "message": "Container 'app' uses image 'evil.example.com/app' without a pinned tag. Pin to a specific version.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4156,7 +4156,7 @@
     "NIST-CM-7"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 62,
    "message": "Container 'app' exposes port 22 (SSH). Use kubectl exec instead of SSH access.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4174,7 +4174,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 52,
    "message": "Container 'app' adds capability NET_RAW. Drop all capabilities and add only required ones.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4192,7 +4192,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 52,
    "message": "Container 'app' adds capability sys_admin. Drop all capabilities and add only required ones.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4210,7 +4210,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 52,
    "message": "Container 'app' adds capability ALL. Drop all capabilities and add only required ones.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4227,13 +4227,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 107,
+   "line_number": 44,
    "message": "Container 'app' in 'bad-deploy' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -4244,13 +4244,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 107,
+   "line_number": 44,
    "message": "Container 'app' in 'bad-deploy' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -4262,7 +4262,7 @@
     "NIST-CM-7"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 64,
+   "line_number": 62,
    "message": "Container 'app' in 'bad-deploy' specifies hostPort 2222. hostPort ties the pod to a specific node and limits scheduling. Use a Service or Ingress instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4280,7 +4280,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 66,
    "message": "Container 'app' in 'bad-deploy' mounts /var/run/docker.sock without readOnly: true. This allows full Docker daemon access and container escape. Remove the mount or set readOnly: true.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4298,7 +4298,7 @@
     "NIST-CM-11"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 45,
    "message": "Container 'app' in 'bad-deploy' uses image 'evil.example.com/app' from an untrusted registry. Use images from trusted registries (Docker Hub, GCR, GHCR, Quay, ECR, MCR, NVCR, registry.k8s.io).",
    "remediation": "",
    "repository_relative_path": null,
@@ -4316,7 +4316,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 107,
+   "line_number": 44,
    "message": "Container 'app' in 'bad-deploy' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4334,7 +4334,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 52,
    "message": "Container 'app' in 'bad-deploy' adds NET_ADMIN capability. This allows network configuration changes including iptables manipulation. Remove unless explicitly required.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4373,7 +4373,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 77,
    "message": "Container 'init' in 'bad-deploy' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4391,7 +4391,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 50,
+   "line_number": 80,
    "message": "Container 'init' in 'bad-deploy' allows privilege escalation. Set allowPrivilegeEscalation: false to prevent child processes from gaining more privileges.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4409,7 +4409,7 @@
     "NIST-SC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 77,
    "message": "Container 'init' in 'bad-deploy' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4427,7 +4427,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 78,
    "message": "Container 'init' uses image 'busybox:latest' without a pinned tag. Pin to a specific version.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4444,13 +4444,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 77,
    "message": "Container 'init' in 'bad-deploy' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -4461,13 +4461,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 77,
    "message": "Container 'init' in 'bad-deploy' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -4479,7 +4479,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 77,
    "message": "Container 'init' in 'bad-deploy' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4500,7 +4500,7 @@
     "NIST-SI-3"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 50,
+   "line_number": 80,
    "message": "Container 'init' in 'bad-deploy' requests GPU resources and sets allowPrivilegeEscalation: true. A privileged GPU container can access all GPU device files on the host, enabling full host escape. Remove privilege escalation from GPU workloads.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4517,7 +4517,7 @@
     "NIST-SC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 86,
    "message": "Volume 'scratch' uses emptyDir without sizeLimit. Set sizeLimit to prevent disk exhaustion.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4535,7 +4535,7 @@
     "NIST-SC-7"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 91,
    "message": "Volume 'host' mounts a host path. This breaks container isolation. Use PVCs instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4553,7 +4553,7 @@
     "NIST-SC-7"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 94,
    "message": "Volume 'nvidia' mounts a host path. This breaks container isolation. Use PVCs instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4574,7 +4574,7 @@
     "NIST-SI-3"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 94,
    "message": "Volume 'nvidia' in 'bad-deploy' mounts '/dev/nvidia0' directly from the host. Exposing NVIDIA device files bypasses container isolation and grants raw GPU hardware access. Use the NVIDIA device plugin instead of hostPath mounts.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4592,7 +4592,7 @@
     "NIST-SC-7"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 97,
    "message": "Volume 'driver' mounts a host path. This breaks container isolation. Use PVCs instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4613,7 +4613,7 @@
     "NIST-SI-3"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 97,
    "message": "Volume 'driver' in 'bad-deploy' mounts '/proc/driver/nvidia/gpus' directly from the host. Exposing NVIDIA device files bypasses container isolation and grants raw GPU hardware access. Use the NVIDIA device plugin instead of hostPath mounts.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4631,7 +4631,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 28,
+   "line_number": 38,
    "message": "Pod 'bad-deploy' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4649,7 +4649,7 @@
     "NIST-AC-4"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 35,
+   "line_number": 146,
    "message": "Resource 'cron' uses the default namespace. Use dedicated namespaces for workload isolation and RBAC.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4667,7 +4667,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 28,
+   "line_number": 151,
    "message": "Resource 'cron' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4685,7 +4685,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 153,
    "message": "Container 'c' in 'cron' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4703,7 +4703,7 @@
     "NIST-SC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 153,
    "message": "Container 'c' in 'cron' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4721,7 +4721,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 154,
    "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4738,13 +4738,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 153,
    "message": "Container 'c' in 'cron' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -4755,13 +4755,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 153,
    "message": "Container 'c' in 'cron' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -4773,7 +4773,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 153,
    "message": "Container 'c' in 'cron' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4791,7 +4791,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 28,
+   "line_number": 151,
    "message": "Pod 'cron' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4809,7 +4809,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 28,
+   "line_number": 160,
    "message": "Resource 'bare-pod' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4827,7 +4827,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 162,
    "message": "Container 'p' in 'bare-pod' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4845,7 +4845,7 @@
     "NIST-SC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 162,
    "message": "Container 'p' in 'bare-pod' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4862,13 +4862,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 162,
    "message": "Container 'p' in 'bare-pod' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-022",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without liveness probe"
   },
   {
@@ -4879,13 +4879,13 @@
     "NIST-SI-13"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 162,
    "message": "Container 'p' in 'bare-pod' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "K8S-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "Container without readiness probe"
   },
   {
@@ -4897,7 +4897,7 @@
     "NIST-CM-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 162,
    "message": "Container 'p' in 'bare-pod' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4915,7 +4915,7 @@
     "NIST-AC-6"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 28,
+   "line_number": 160,
    "message": "Pod 'bare-pod' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
    "remediation": "",
    "repository_relative_path": null,
@@ -4932,7 +4932,7 @@
     "NIST-CP-10"
    ],
    "file_path": "kubernetes/synthetic_all_rules.yaml",
-   "line_number": 1,
+   "line_number": 34,
    "message": "Deployment 'bad-deploy' has no matching PodDisruptionBudget in the same manifest. A PDB ensures minimum availability during voluntary disruptions like node drains.",
    "remediation": "",
    "repository_relative_path": null,
@@ -5091,7 +5091,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-006",
-   "severity": "medium",
+   "severity": "low",
    "title": "CloudWatch logging not enabled"
   },
   {
@@ -5174,24 +5174,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_10c86a04f25963f4.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'data' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -5202,7 +5184,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -5238,7 +5220,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -5487,7 +5469,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-006",
-   "severity": "medium",
+   "severity": "low",
    "title": "CloudWatch logging not enabled"
   },
   {
@@ -5616,7 +5598,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-006",
-   "severity": "medium",
+   "severity": "low",
    "title": "CloudWatch logging not enabled"
   },
   {
@@ -5716,24 +5698,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_375d40b6093cb4fd.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -5744,7 +5708,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -5780,7 +5744,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -5847,24 +5811,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_395db0657df31f7f.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -5875,7 +5821,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -5911,7 +5857,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -6015,24 +5961,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_3e6399ef4a2d3498.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'data' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -6043,7 +5971,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -6079,7 +6007,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -6165,24 +6093,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_4645a1e335e1baef.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -6193,7 +6103,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -6229,7 +6139,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -6330,7 +6240,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -6366,7 +6276,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -6433,24 +6343,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_628032f0f3527d3e.tf",
-   "line_number": 2,
-   "message": "S3 bucket 'logs' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -6461,7 +6353,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -6497,7 +6389,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -6511,7 +6403,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/harvested_632c6afbb82d01f7.tf",
-   "line_number": 1,
+   "line_number": 9,
    "message": "IAM policy 'broad' grants Resource: \"*\". Scope resources to specific ARNs.",
    "remediation": "",
    "repository_relative_path": null,
@@ -6519,24 +6411,6 @@
    "rule_id": "TF-SEC-004",
    "severity": "high",
    "title": "IAM policy with Resource: \"*\""
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-1.16",
-    "NIST-AC-6"
-   ],
-   "file_path": "terraform/harvested_632c6afbb82d01f7.tf",
-   "line_number": 1,
-   "message": "IAM policy 'broad' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-010",
-   "severity": "high",
-   "title": "IAM policy with wildcards"
   }
  ],
  "terraform/harvested_6472e5e59d4a47fc.tf": [],
@@ -6566,24 +6440,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_68becc9071ad3a6e.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'data' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -6594,7 +6450,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -6612,7 +6468,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -6690,7 +6546,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -6726,7 +6582,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -6842,7 +6698,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -6878,7 +6734,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -6898,7 +6754,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-029",
-   "severity": "medium",
+   "severity": "low",
    "title": "Load balancer access logging not enabled"
   },
   {
@@ -7027,7 +6883,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-006",
-   "severity": "medium",
+   "severity": "low",
    "title": "CloudWatch logging not enabled"
   },
   {
@@ -7162,7 +7018,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -7200,7 +7056,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-029",
-   "severity": "medium",
+   "severity": "low",
    "title": "Load balancer access logging not enabled"
   },
   {
@@ -7291,7 +7147,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/harvested_c6cabacddd3de8e2.tf",
-   "line_number": 1,
+   "line_number": 8,
    "message": "IAM policy 'admin' grants Action: \"*\". Follow least-privilege: scope actions to specific services and operations.",
    "remediation": "",
    "repository_relative_path": null,
@@ -7299,24 +7155,6 @@
    "rule_id": "TF-SEC-004",
    "severity": "high",
    "title": "IAM policy with Action: \"*\""
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-1.16",
-    "NIST-AC-6"
-   ],
-   "file_path": "terraform/harvested_c6cabacddd3de8e2.tf",
-   "line_number": 1,
-   "message": "IAM policy 'admin' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-010",
-   "severity": "high",
-   "title": "IAM policy with wildcards"
   }
  ],
  "terraform/harvested_d17ab1e50d56ab4d.tf": [],
@@ -7412,7 +7250,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -7436,7 +7274,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-029",
-   "severity": "medium",
+   "severity": "low",
    "title": "Load balancer access logging not enabled"
   },
   {
@@ -7491,7 +7329,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -7527,7 +7365,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -7611,24 +7449,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_f89e154540a7e084.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'data' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -7639,7 +7459,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -7675,7 +7495,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   }
  ],
@@ -7724,24 +7544,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'bad_bucket' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -7752,7 +7554,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -7788,7 +7590,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   },
   {
@@ -7832,24 +7634,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 9,
-   "message": "S3 bucket 'no_versioning' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-008",
-   "severity": "high",
-   "title": "S3 bucket without server-side encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -7860,7 +7644,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-021",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket versioning not enabled"
   },
   {
@@ -7896,7 +7680,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-023",
-   "severity": "medium",
+   "severity": "low",
    "title": "S3 bucket logging not enabled"
   },
   {
@@ -7980,7 +7764,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 44,
+   "line_number": 46,
    "message": "IAM policy 'star_json' grants Action: \"*\". Follow least-privilege: scope actions to specific services and operations.",
    "remediation": "",
    "repository_relative_path": null,
@@ -7998,7 +7782,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 44,
+   "line_number": 46,
    "message": "IAM policy 'star_json' grants Resource: \"*\". Scope resources to specific ARNs.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8016,25 +7800,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 44,
-   "message": "IAM policy 'star_json' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-010",
-   "severity": "high",
-   "title": "IAM policy with wildcards"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-1.16",
-    "NIST-AC-6"
-   ],
-   "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 50,
+   "line_number": 52,
    "message": "IAM policy 'star_action_only' grants Action: \"*\". Follow least-privilege: scope actions to specific services and operations.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8052,32 +7818,14 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 50,
-   "message": "IAM policy 'star_action_only' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
+   "line_number": 57,
+   "message": "IAM policy 'hcl_star' grants Action: \"*\". Follow least-privilege: scope actions to specific services and operations.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
-   "rule_id": "TF-SEC-010",
+   "rule_id": "TF-SEC-004",
    "severity": "high",
-   "title": "IAM policy with wildcards"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-1.16",
-    "NIST-AC-6"
-   ],
-   "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 56,
-   "message": "IAM policy 'hcl_star' contains wildcard permissions. Follow least-privilege: scope actions and resources to specific services and ARNs.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-010",
-   "severity": "high",
-   "title": "IAM policy with wildcards"
+   "title": "IAM policy with Action: \"*\""
   },
   {
    "atlas_techniques": [],
@@ -8112,7 +7860,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-006",
-   "severity": "medium",
+   "severity": "low",
    "title": "CloudWatch logging not enabled"
   },
   {
@@ -8238,7 +7986,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-006",
-   "severity": "medium",
+   "severity": "low",
    "title": "CloudWatch logging not enabled"
   },
   {
@@ -8328,7 +8076,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-006",
-   "severity": "medium",
+   "severity": "low",
    "title": "CloudWatch logging not enabled"
   },
   {
@@ -8436,7 +8184,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-013",
-   "severity": "medium",
+   "severity": "low",
    "title": "CloudWatch log group without retention"
   },
   {
@@ -8616,7 +8364,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-019",
-   "severity": "medium",
+   "severity": "low",
    "title": "API Gateway without access logging"
   },
   {
@@ -8634,7 +8382,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-019",
-   "severity": "medium",
+   "severity": "low",
    "title": "API Gateway without access logging"
   },
   {
@@ -8705,7 +8453,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-029",
-   "severity": "medium",
+   "severity": "low",
    "title": "Load balancer access logging not enabled"
   },
   {
@@ -8758,7 +8506,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-029",
-   "severity": "medium",
+   "severity": "low",
    "title": "Load balancer access logging not enabled"
   },
   {
@@ -8811,7 +8559,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-029",
-   "severity": "medium",
+   "severity": "low",
    "title": "Load balancer access logging not enabled"
   },
   {
@@ -9081,7 +8829,7 @@
    "repository_relative_path": null,
    "resource_type": null,
    "rule_id": "TF-SEC-006",
-   "severity": "medium",
+   "severity": "low",
    "title": "CloudWatch logging not enabled"
   },
   {
@@ -9241,6 +8989,24 @@
    "rule_id": "TF-SEC-007",
    "severity": "high",
    "title": "Hardcoded SSH key"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-AWS-1.16",
+    "NIST-AC-6"
+   ],
+   "file_path": "terraform/synthetic_all_rules_bad.tf",
+   "line_number": 283,
+   "message": "IAM policy 'service_star' grants every action of a service (for example \"s3:*\"). Scope actions to the specific operations the principal needs.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-010",
+   "severity": "medium",
+   "title": "IAM policy with service-wide wildcard action"
   }
  ],
  "terraform/synthetic_all_rules_good.tf": []

@@ -21,11 +21,12 @@ _PIP_NO_CACHE_RE = re.compile(r"pip3?\s+install(?!.*--no-cache-dir)", re.IGNOREC
 _NET_HOST_RE = re.compile(r"--network\s*=\s*host", re.IGNORECASE)
 
 # Regex patterns for secret-like ENV variable names
-_SECRET_ENV_RE = re.compile(
+SECRET_ENV_NAME_RE = re.compile(
     r"(?:API[_\-]?KEY|PASSWORD|SECRET|TOKEN|CREDENTIAL|PRIVATE[_\-]?KEY|"
     r"ACCESS[_\-]?KEY|AUTH[_\-]?TOKEN|BEARER|DB_PASS)",
     re.IGNORECASE,
 )
+_SECRET_ENV_RE = SECRET_ENV_NAME_RE
 
 # Pipe install patterns: curl ... | sh, wget ... | bash, etc.
 _PIPE_INSTALL_RE = re.compile(
@@ -88,8 +89,9 @@ def docker_001_010(ln: DockerLine) -> list[IaCFinding]:
                 )
             )
 
-    # DOCKER-010: FROM with unpinned base image (no hash pin)
-    if image.lower() != "scratch" and "@sha256:" not in image:
+    # DOCKER-010: a pinned tag without a digest. An untagged/:latest image is
+    # already DOCKER-001 on this line, so it is not reported twice.
+    if image.lower() != "scratch" and "@sha256:" not in image and not findings:
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-010",
@@ -139,7 +141,7 @@ def docker_003(ln: DockerLine) -> list[IaCFinding]:
         key = parts[0] if parts else ""
         value = parts[1].strip().strip('"').strip("'") if len(parts) > 1 else ""
 
-    if _SECRET_ENV_RE.search(key) and value and len(value) >= 8:
+    if SECRET_ENV_NAME_RE.search(key) and value and len(value) >= 8:
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-003",
@@ -162,23 +164,24 @@ def docker_003(ln: DockerLine) -> list[IaCFinding]:
 def docker_004_022(ln: DockerLine) -> list[IaCFinding]:
     """DOCKER-004 (ADD instead of COPY) and DOCKER-022 (ADD fetches a remote URL)."""
     findings: list[IaCFinding] = []
-    # ADD with URLs is the concern — but even local ADD is discouraged
-    findings.append(
-        IaCFinding(
-            rule_id="DOCKER-004",
-            severity="medium",
-            title="ADD used instead of COPY",
-            message=(
-                "ADD can fetch remote URLs and auto-extract archives, introducing "
-                "supply chain risk. Use COPY unless you specifically need ADD features."
-            ),
-            file_path=ln.rel_path,
-            line_number=ln.number,
-            category="dockerfile",
-            compliance=["CIS-Docker-4.9", "NIST-CM-7"],
+    # A remote ADD is DOCKER-022 (high); DOCKER-004 covers only local ADD.
+    if not _REMOTE_ADD_RE.search(ln.stripped):
+        findings.append(
+            IaCFinding(
+                rule_id="DOCKER-004",
+                severity="medium",
+                title="ADD used instead of COPY",
+                message=(
+                    "ADD can fetch remote URLs and auto-extract archives, introducing "
+                    "supply chain risk. Use COPY unless you specifically need ADD features."
+                ),
+                file_path=ln.rel_path,
+                line_number=ln.number,
+                category="dockerfile",
+                compliance=["CIS-Docker-4.9", "NIST-CM-7"],
+            )
         )
-    )
-    if _REMOTE_ADD_RE.search(ln.stripped):
+    else:
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-022",
@@ -382,7 +385,7 @@ def docker_014(ln: DockerLine) -> list[IaCFinding]:
 def docker_015(ln: DockerLine) -> list[IaCFinding]:
     """DOCKER-015: ARG used for secrets."""
     findings: list[IaCFinding] = []
-    if _SECRET_ENV_RE.search(ln.stripped):
+    if SECRET_ENV_NAME_RE.search(ln.stripped):
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-015",

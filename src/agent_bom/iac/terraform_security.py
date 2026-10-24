@@ -15,15 +15,15 @@ files — same approach as ``terraform.py``, no HCL parser needed.
 Rules
 -----
 TF-SEC-001  S3 bucket without encryption (AWS SEC08, CIS 2.1.1)
-TF-SEC-002  S3 bucket with public ACL (AWS SEC01, CIS 2.1.2)
+TF-SEC-002  S3 bucket (or aws_s3_bucket_acl) with public ACL (AWS SEC01, CIS 2.1.2)
 TF-SEC-003  Security group with 0.0.0.0/0 ingress on non-443/80 port (CIS 5.2)
-TF-SEC-004  IAM policy with Action: * or Resource: * (AWS SEC03, CIS 1.16)
+TF-SEC-004  IAM policy/policy document with Action * (or *:*) or Resource * (AWS SEC03, CIS 1.16)
 TF-SEC-005  RDS without encryption (AWS SEC08, CIS 2.3.1)
 TF-SEC-006  CloudWatch logging not enabled (AWS SEC04, CIS 3.1)
 TF-SEC-007  SSH key hardcoded in resource (AWS SEC02, CIS 1.14)
-TF-SEC-008  S3 bucket without server-side encryption (AWS SEC08, CIS 2.1.1)
+TF-SEC-008  Retired: duplicated TF-SEC-001 on the same bucket line
 TF-SEC-009  Security group rule with 0.0.0.0/0 (CIS 5.2)
-TF-SEC-010  IAM policy with wildcards (AWS SEC03, CIS 1.16)
+TF-SEC-010  IAM policy with service-wide wildcard action, e.g. s3:* (AWS SEC03, CIS 1.16)
 TF-SEC-011  RDS without storage encryption (AWS SEC08, CIS 2.3.1)
 TF-SEC-012  EC2 instance without IMDSv2 (AWS SEC01, CIS 5.6)
 TF-SEC-013  CloudWatch log group without retention (AWS SEC04, CIS 3.1)
@@ -35,7 +35,7 @@ TF-SEC-018  DynamoDB without point-in-time recovery (AWS SEC08, CIS 2.4)
 TF-SEC-019  API Gateway without access logging (AWS SEC04)
 TF-SEC-020  KMS key without rotation (AWS SEC08, CIS 3.8)
 TF-SEC-021  S3 bucket versioning not enabled (AWS SEC08, CIS 2.1.3)
-TF-SEC-022  S3 bucket public access block missing (AWS SEC01, CIS 2.1.5)
+TF-SEC-022  S3 public access block missing or with a flag set to false (AWS SEC01, CIS 2.1.5)
 TF-SEC-023  S3 bucket logging not enabled (AWS SEC04, CIS 3.6)
 TF-SEC-024  RDS public accessibility enabled (AWS SEC01, CIS 2.3.2)
 TF-SEC-025  RDS backup retention period < 7 days (AWS SEC08, CIS 2.3.3)
@@ -78,19 +78,23 @@ from agent_bom.iac import terraform_security_storage as _storage
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.terraform_security_common import TfCheck, TfResource, extract_block, line_number
 
-_RESOURCE_RE = re.compile(r'^resource\s+"([a-zA-Z][a-zA-Z0-9_]+)"\s+"([^"]+)"', re.MULTILINE)
+_RESOURCE_RE = re.compile(r'^(resource|data)\s+"([a-zA-Z][a-zA-Z0-9_]+)"\s+"([^"]+)"', re.MULTILINE)
+_IAM_POLICY_TYPES = frozenset({"aws_iam_policy", "aws_iam_role_policy", "aws_iam_group_policy", "aws_iam_user_policy"})
+# Data sources are not deployed resources; only these are evaluated.
+_DATA_CHECKS: dict[str, tuple[TfCheck, ...]] = {
+    "aws_iam_policy_document": (_identity.tf_sec_004, _identity.tf_sec_010),
+}
 
 # Emission order is rule order; ``None`` scopes a rule to every resource type.
 _RULES: tuple[tuple[frozenset[str] | None, TfCheck], ...] = (
     (frozenset({"aws_s3_bucket"}), _storage.tf_sec_001_002),
     (frozenset({"aws_security_group"}), _network.tf_sec_003),
-    (frozenset({"aws_iam_policy", "aws_iam_role_policy"}), _identity.tf_sec_004),
+    (_IAM_POLICY_TYPES, _identity.tf_sec_004),
     (frozenset({"aws_db_instance", "aws_rds_cluster"}), _database.tf_sec_005),
     (frozenset({"aws_db_instance", "aws_rds_cluster", "aws_elasticsearch_domain"}), _identity.tf_sec_006),
     (None, _identity.tf_sec_007),
-    (frozenset({"aws_s3_bucket"}), _storage.tf_sec_008),
     (frozenset({"aws_security_group_rule"}), _network.tf_sec_009),
-    (frozenset({"aws_iam_policy", "aws_iam_role_policy", "aws_iam_group_policy", "aws_iam_user_policy"}), _identity.tf_sec_010),
+    (_IAM_POLICY_TYPES, _identity.tf_sec_010),
     (frozenset({"aws_db_instance", "aws_rds_cluster"}), _database.tf_sec_011),
     (frozenset({"aws_instance"}), _network.tf_sec_012),
     (frozenset({"aws_cloudwatch_log_group"}), _identity.tf_sec_013),
@@ -103,6 +107,8 @@ _RULES: tuple[tuple[frozenset[str] | None, TfCheck], ...] = (
     (frozenset({"aws_kms_key"}), _identity.tf_sec_020),
     (frozenset({"aws_s3_bucket"}), _storage.tf_sec_021),
     (frozenset({"aws_s3_bucket"}), _storage.tf_sec_022),
+    (frozenset({"aws_s3_bucket_public_access_block"}), _storage.tf_sec_022_flags),
+    (frozenset({"aws_s3_bucket_acl"}), _storage.tf_sec_002_acl_resource),
     (frozenset({"aws_s3_bucket"}), _storage.tf_sec_023),
     (frozenset({"aws_db_instance", "aws_rds_cluster"}), _database.tf_sec_024),
     (frozenset({"aws_db_instance", "aws_rds_cluster"}), _database.tf_sec_025),
@@ -183,15 +189,19 @@ def scan_terraform_security(file_path: str | Path) -> list[IaCFinding]:
         brace_pos = content.find("{", m.end())
         if brace_pos == -1:
             continue
+        block_kind, rtype = m.group(1), m.group(2)
+        if block_kind == "data" and rtype not in _DATA_CHECKS:
+            continue
         resource = TfResource(
-            rtype=m.group(1),
-            rname=m.group(2),
+            rtype=rtype,
+            rname=m.group(3),
             block=extract_block(content, brace_pos + 1),
             block_start_line=line_number(content, m.start()),
             rel_path=rel_path,
             content=content,
         )
-        for check in _CHECKS_BY_TYPE.get(resource.rtype, _GENERIC_CHECKS):
+        checks = _DATA_CHECKS[rtype] if block_kind == "data" else _CHECKS_BY_TYPE.get(rtype, _GENERIC_CHECKS)
+        for check in checks:
             findings.extend(check(resource))
 
     return findings

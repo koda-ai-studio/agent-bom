@@ -25,7 +25,7 @@ CFN-009  EBS volume not encrypted (CIS 2.2.1)
 CFN-010  Lambda function without VPC config (AWS SEC05)
 CFN-011  S3 bucket without versioning enabled (AWS SEC08, CIS 2.1.3)
 CFN-012  RDS instance without encryption (AWS SEC08, CIS 2.3.1)
-CFN-013  Security group with 0.0.0.0/0 ingress on non-HTTP port (CIS 5.2)
+CFN-013  Retired: duplicated CFN-003 on the same security group
 CFN-014  IAM policy with Action: "*" (AWS SEC03, CIS 1.16)
 CFN-015  Lambda function without VPC configuration (AWS SEC05)
 CFN-016  ELB without access logging (AWS SEC04, CIS 2.6)
@@ -60,7 +60,6 @@ from agent_bom.iac.cloudformation_rules import (
     cfn_010,
     cfn_011,
     cfn_012,
-    cfn_013,
     cfn_014,
     cfn_015,
     cfn_016,
@@ -90,7 +89,6 @@ CFN_RULES: tuple[tuple[tuple[str, ...], CfnCheck], ...] = (
     (("AWS::Lambda::Function",), cfn_010),
     (("AWS::S3::Bucket",), cfn_011),
     (("AWS::RDS::DBInstance",), cfn_012),
-    (("AWS::EC2::SecurityGroup",), cfn_013),
     (("AWS::IAM::Policy", "AWS::IAM::ManagedPolicy", "AWS::IAM::Role"), cfn_014),
     (("AWS::Lambda::Function",), cfn_015),
     (("AWS::ElasticLoadBalancing::LoadBalancer", "AWS::ElasticLoadBalancingV2::LoadBalancer"), cfn_016),

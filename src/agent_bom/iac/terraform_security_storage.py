@@ -7,11 +7,11 @@ import re
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.terraform_security_common import PITR_ENABLED_RE, TfResource, extract_block
 
-_PUBLIC_ACL_RE = re.compile(r'acl\s*=\s*"(public-read|public-read-write)"', re.IGNORECASE)
+_PUBLIC_ACL_RE = re.compile(r'\bacl\s*=\s*"(public-read|public-read-write)"', re.IGNORECASE)
 _ENCRYPTION_CONFIG_RE = re.compile(r"server_side_encryption_configuration\s*\{", re.IGNORECASE)
 
-# TF-SEC-008: S3 bucket encryption (separate resource in TF AWS provider v4+)
-_S3_SSE_BLOCK_RE = re.compile(r"server_side_encryption_configuration\s*\{", re.IGNORECASE)
+# TF-SEC-001: encryption configured on the separate resource (AWS provider v4+)
+_SSE_RESOURCE_RE = re.compile(r'resource\s+"aws_s3_bucket_server_side_encryption_configuration"\s+"[^"]+"\s*\{', re.IGNORECASE)
 
 # TF-SEC-018: DynamoDB PITR
 _PITR_RE = re.compile(r"point_in_time_recovery\s*\{", re.IGNORECASE)
@@ -21,7 +21,10 @@ _VERSIONING_RE = re.compile(r"versioning\s*\{", re.IGNORECASE)
 _VERSIONING_ENABLED_RE = re.compile(r"enabled\s*=\s*true", re.IGNORECASE)
 
 # TF-SEC-022: S3 public access block
-_PUBLIC_ACCESS_BLOCK_RE = re.compile(r"aws_s3_bucket_public_access_block", re.IGNORECASE)
+_PUBLIC_ACCESS_BLOCK_RE = re.compile(r'resource\s+"aws_s3_bucket_public_access_block"\s+"[^"]+"\s*\{', re.IGNORECASE)
+_PAB_BUCKET_REF_RE = re.compile(r"\bbucket\s*=\s*aws_s3_bucket\.([A-Za-z0-9_-]+)\.", re.IGNORECASE)
+_PAB_FLAGS = ("block_public_acls", "block_public_policy", "ignore_public_acls", "restrict_public_buckets")
+_PAB_FLAG_FALSE_RE = re.compile(r"^[ \t]*(" + "|".join(_PAB_FLAGS) + r")\s*=\s*false\b", re.IGNORECASE | re.MULTILINE)
 
 # TF-SEC-023: S3 bucket logging
 _S3_LOGGING_RE = re.compile(r"logging\s*\{", re.IGNORECASE)
@@ -34,7 +37,9 @@ def tf_sec_001_002(res: TfResource) -> list[IaCFinding]:
     """TF-SEC-001 + TF-SEC-002: S3 bucket checks."""
     rname, block, block_start_line, rel_path = res.rname, res.block, res.block_start_line, res.rel_path
     findings: list[IaCFinding] = []
-    if not _ENCRYPTION_CONFIG_RE.search(block):
+    sse_targets, sse_unresolved = _bucket_targets(_SSE_RESOURCE_RE, res.content)
+    encrypted_separately = rname in sse_targets or sse_unresolved
+    if not _ENCRYPTION_CONFIG_RE.search(block) and not encrypted_separately:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-001",
@@ -68,30 +73,6 @@ def tf_sec_001_002(res: TfResource) -> list[IaCFinding]:
                 line_number=block_start_line,
                 category="terraform",
                 compliance=["CIS-AWS-2.1.2", "NIST-AC-3"],
-            )
-        )
-    return findings
-
-
-def tf_sec_008(res: TfResource) -> list[IaCFinding]:
-    """TF-SEC-008: S3 bucket without server-side encryption."""
-    rname, block, block_start_line, rel_path = res.rname, res.block, res.block_start_line, res.rel_path
-    findings: list[IaCFinding] = []
-    if not _S3_SSE_BLOCK_RE.search(block):
-        findings.append(
-            IaCFinding(
-                rule_id="TF-SEC-008",
-                severity="high",
-                title="S3 bucket without server-side encryption",
-                message=(
-                    f"S3 bucket '{rname}' does not have "
-                    "server_side_encryption_configuration. Enable SSE-S3 "
-                    "or SSE-KMS to encrypt data at rest."
-                ),
-                file_path=rel_path,
-                line_number=block_start_line,
-                category="terraform",
-                compliance=["CIS-AWS-2.1.1", "NIST-SC-28"],
             )
         )
     return findings
@@ -152,7 +133,7 @@ def tf_sec_021(res: TfResource) -> list[IaCFinding]:
             findings.append(
                 IaCFinding(
                     rule_id="TF-SEC-021",
-                    severity="medium",
+                    severity="low",
                     title="S3 bucket versioning not enabled",
                     message=(
                         f"S3 bucket '{rname}' has a versioning block but "
@@ -169,7 +150,7 @@ def tf_sec_021(res: TfResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-021",
-                severity="medium",
+                severity="low",
                 title="S3 bucket versioning not enabled",
                 message=(
                     f"S3 bucket '{rname}' does not have a versioning block. "
@@ -185,29 +166,86 @@ def tf_sec_021(res: TfResource) -> list[IaCFinding]:
     return findings
 
 
+def _bucket_targets(resource_re: re.Pattern[str], content: str) -> tuple[set[str], bool]:
+    """Buckets that companion resources (``resource_re``) reference, and whether any is unresolved."""
+    targets: set[str] = set()
+    unresolved = False
+    for match in resource_re.finditer(content):
+        ref = _PAB_BUCKET_REF_RE.search(extract_block(content, match.end()))
+        if ref:
+            targets.add(ref.group(1))
+        else:
+            unresolved = True
+    return targets, unresolved
+
+
 def tf_sec_022(res: TfResource) -> list[IaCFinding]:
-    """TF-SEC-022: S3 bucket public access block missing."""
-    rname, block_start_line, rel_path, content = res.rname, res.block_start_line, res.rel_path, res.content
-    findings: list[IaCFinding] = []
-    if not _PUBLIC_ACCESS_BLOCK_RE.search(content):
-        findings.append(
-            IaCFinding(
-                rule_id="TF-SEC-022",
-                severity="high",
-                title="S3 bucket public access block missing",
-                message=(
-                    f"S3 bucket '{rname}' does not have an associated "
-                    "aws_s3_bucket_public_access_block resource in this "
-                    "file. Add a public access block to prevent public "
-                    "bucket exposure."
-                ),
-                file_path=rel_path,
-                line_number=block_start_line,
-                category="terraform",
-                compliance=["CIS-AWS-2.1.5", "NIST-AC-3"],
-            )
+    """TF-SEC-022: S3 bucket without a public access block in this file."""
+    targets, unresolved = _bucket_targets(_PUBLIC_ACCESS_BLOCK_RE, res.content)
+    # A block whose bucket is a literal or variable cannot be tied to a bucket;
+    # treat it as covering every bucket rather than guess (precision first).
+    if res.rname in targets or unresolved:
+        return []
+    return [
+        IaCFinding(
+            rule_id="TF-SEC-022",
+            severity="high",
+            title="S3 bucket public access block missing",
+            message=(
+                f"S3 bucket '{res.rname}' does not have an associated "
+                "aws_s3_bucket_public_access_block resource in this "
+                "file. Add a public access block to prevent public "
+                "bucket exposure."
+            ),
+            file_path=res.rel_path,
+            line_number=res.block_start_line,
+            category="terraform",
+            compliance=["CIS-AWS-2.1.5", "NIST-AC-3"],
         )
-    return findings
+    ]
+
+
+def tf_sec_022_flags(res: TfResource) -> list[IaCFinding]:
+    """TF-SEC-022: a public access block that turns one of its protections off."""
+    return [
+        IaCFinding(
+            rule_id="TF-SEC-022",
+            severity="high",
+            title="S3 public access block disables a protection",
+            message=(
+                f"Public access block '{res.rname}' sets {match.group(1)} = false, "
+                "which allows public ACLs or policies on the bucket. Set all four flags to true."
+            ),
+            file_path=res.rel_path,
+            line_number=res.block_start_line + res.block[: match.start()].count("\n"),
+            category="terraform",
+            compliance=["CIS-AWS-2.1.5", "NIST-AC-3"],
+        )
+        for match in _PAB_FLAG_FALSE_RE.finditer(res.block)
+    ]
+
+
+def tf_sec_002_acl_resource(res: TfResource) -> list[IaCFinding]:
+    """TF-SEC-002: public canned ACL set through the separate aws_s3_bucket_acl resource."""
+    acl_m = _PUBLIC_ACL_RE.search(res.block)
+    if not acl_m:
+        return []
+    return [
+        IaCFinding(
+            rule_id="TF-SEC-002",
+            severity="critical",
+            title="S3 bucket with public ACL",
+            message=(
+                f"S3 bucket ACL '{res.rname}' sets acl = \"{acl_m.group(1)}\". "
+                "Public S3 buckets are a top cloud breach vector. "
+                "Use private ACL and bucket policies instead."
+            ),
+            file_path=res.rel_path,
+            line_number=res.block_start_line + res.block[: acl_m.start()].count("\n"),
+            category="terraform",
+            compliance=["CIS-AWS-2.1.2", "NIST-AC-3"],
+        )
+    ]
 
 
 def tf_sec_023(res: TfResource) -> list[IaCFinding]:
@@ -218,7 +256,7 @@ def tf_sec_023(res: TfResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-023",
-                severity="medium",
+                severity="low",
                 title="S3 bucket logging not enabled",
                 message=(
                     f"S3 bucket '{rname}' does not have a logging block. "

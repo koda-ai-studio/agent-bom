@@ -2868,7 +2868,7 @@
       "items": [
         {
           "family": "CFN",
-          "rule_count": 20
+          "rule_count": 19
         },
         {
           "family": "DBT-SEC",
@@ -2896,7 +2896,7 @@
         },
         {
           "family": "TF-SEC",
-          "rule_count": 50
+          "rule_count": 49
         }
       ],
       "note": "Distinct rule-id literals per prefix.",

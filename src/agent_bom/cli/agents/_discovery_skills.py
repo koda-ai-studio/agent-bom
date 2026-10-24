@@ -81,15 +81,41 @@ def _attach_skill_packages(run: DiscoveryRun, skill_result: Any, skill_file_list
     run.con.print(f"  [green]✓[/green] Found {len(skill_result.packages)} package(s) referenced in skill files")
 
 
-def _skill_audit_data(skill_audit: Any) -> dict[str, Any]:
+def _repository_relative(source_file: str, roots: list[Path]) -> str | None:
+    """``source_file`` relative to the first scan root that contains it, else ``None``."""
+    if not source_file:
+        return None
+    path = Path(source_file)
+    if not path.is_absolute():
+        return path.as_posix() if ".." not in path.parts else None
+    for root in roots:
+        try:
+            return path.resolve().relative_to(root.resolve()).as_posix()
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def _detail_without_host_path(detail: str, source_file: str, roots: list[Path]) -> str:
+    if not source_file or not detail or source_file not in detail:
+        return detail
+    return detail.replace(source_file, _repository_relative(source_file, roots) or Path(source_file).name)
+
+
+def _skill_audit_data(skill_audit: Any, roots: list[Path] | None = None) -> dict[str, Any]:
+    scan_roots = roots if roots is not None else [Path.cwd()]
     return {
         "findings": [
             {
                 "severity": f.severity,
                 "category": f.category,
                 "title": f.title,
-                "detail": f.detail,
+                "detail": _detail_without_host_path(f.detail, f.source_file, scan_roots),
                 "source_file": f.source_file,
+                "source_path": _repository_relative(f.source_file, scan_roots),
+                "source_line": getattr(f, "source_line", None),
+                "evidence_source": getattr(f, "evidence_source", None),
+                "confidence": getattr(f, "confidence", None),
                 "package": f.package,
                 "server": f.server,
                 "recommendation": f.recommendation,
@@ -156,7 +182,8 @@ def _audit_skills(run: DiscoveryRun, skill_result: Any) -> None:
     skill_audit = audit_skill_result(skill_result)
     run.skill_result = skill_result
     run.skill_audit = skill_audit
-    run.ctx.skill_audit_data = _skill_audit_data(skill_audit)
+    roots = [Path(run.project)] if run.project else []
+    run.ctx.skill_audit_data = _skill_audit_data(skill_audit, roots + [Path.cwd()])
     if skill_audit.findings:
         _print_skill_audit(run, skill_audit)
 

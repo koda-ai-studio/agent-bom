@@ -7,8 +7,6 @@ import re
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.terraform_security_common import TfResource
 
-_IAM_STAR_ACTION_RE = re.compile(r'"Action"\s*:\s*"\*"')
-_IAM_STAR_RESOURCE_RE = re.compile(r'"Resource"\s*:\s*"\*"')
 _CLOUDWATCH_LOG_RE = re.compile(
     r"(?:enabled_cloudwatch_logs_exports|logging\s*\{|aws_cloudwatch_log_group)",
     re.IGNORECASE,
@@ -18,9 +16,6 @@ _SSH_KEY_INLINE_RE = re.compile(
     r'"(ssh-rsa\s|ssh-ed25519\s|-----BEGIN)',
     re.IGNORECASE,
 )
-
-# TF-SEC-010: IAM wildcard patterns (HCL-style)
-_IAM_HCL_STAR_RE = re.compile(r'(?:actions|resources)\s*=\s*\[.*?"\*".*?\]', re.DOTALL | re.IGNORECASE)
 
 # TF-SEC-013: CloudWatch log group retention
 _RETENTION_RE = re.compile(r"retention_in_days\s*=\s*(\d+)", re.IGNORECASE)
@@ -48,36 +43,99 @@ _SSM_VALUE_RE = re.compile(r'type\s*=\s*"SecureString"', re.IGNORECASE)
 _SSM_KEY_ID_RE = re.compile(r"key_id\s*=", re.IGNORECASE)
 
 
+def _wildcard_list(value: str) -> str:
+    quoted = '"(?:' + value + ')"'
+    return "(?:" + quoted + r"|\[[^\]]*" + quoted + r"[^\]]*\])"
+
+
+# JSON heredoc/file policies ("Action": "*"), jsonencode HCL (Action = "*") and
+# aws_iam_policy_document statements (actions = ["*"]). ``*:*`` is the same
+# grant as ``*``. The quote/word boundary keeps NotAction/NotResource out.
+_ACTION_KEY = r'(?:"Action"\s*:|\bAction\s*=|\bactions\s*=)\s*'
+_RESOURCE_KEY = r'(?:"Resource"\s*:|\bResource\s*=|\bresources\s*=)\s*'
+_IAM_STAR_ACTION_RE = re.compile(_ACTION_KEY + _wildcard_list(r"\*(?::\*)?"))
+_IAM_STAR_RESOURCE_RE = re.compile(_RESOURCE_KEY + _wildcard_list(r"\*"))
+# TF-SEC-010: every action of one service (``s3:*``, ``iam:*``).
+_IAM_SERVICE_STAR_ACTION_RE = re.compile(_ACTION_KEY + _wildcard_list(r"[A-Za-z0-9-]+:\*"))
+_DENY_EFFECT_RE = re.compile(r'(?:"Effect"\s*:|\b[Ee]ffect\s*=)\s*"Deny"')
+
+
+def _enclosing_statement(block: str, pos: int) -> str:
+    """Return the innermost ``{...}`` object around ``pos`` (one IAM statement)."""
+    depth = 0
+    start = 0
+    for index in range(pos - 1, -1, -1):
+        char = block[index]
+        if char == "}":
+            depth += 1
+        elif char == "{":
+            if depth == 0:
+                start = index
+                break
+            depth -= 1
+    depth = 0
+    end = len(block)
+    for index in range(pos, len(block)):
+        char = block[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            if depth == 0:
+                end = index
+                break
+            depth -= 1
+    return block[start:end]
+
+
+def _granting_matches(pattern: re.Pattern[str], res: TfResource) -> list[int]:
+    """Lines of ``pattern`` matches that sit in an Allow (not Deny) statement."""
+    lines: list[int] = []
+    for match in pattern.finditer(res.block):
+        if _DENY_EFFECT_RE.search(_enclosing_statement(res.block, match.start())):
+            continue
+        lines.append(res.block_start_line + res.block[: match.start()].count("\n"))
+    return lines
+
+
+def _iam_finding(res: TfResource, *, rule_id: str, severity: str, title: str, message: str, line: int) -> IaCFinding:
+    return IaCFinding(
+        rule_id=rule_id,
+        severity=severity,
+        title=title,
+        message=message,
+        file_path=res.rel_path,
+        line_number=line,
+        category="terraform",
+        compliance=["CIS-AWS-1.16", "NIST-AC-6"],
+    )
+
+
 def tf_sec_004(res: TfResource) -> list[IaCFinding]:
-    """TF-SEC-004: IAM policy with wildcard."""
-    rname, block, block_start_line, rel_path = res.rname, res.block, res.block_start_line, res.rel_path
+    """TF-SEC-004: IAM policy granting every action (``*``/``*:*``) or every resource."""
     findings: list[IaCFinding] = []
-    if _IAM_STAR_ACTION_RE.search(block):
+    for line in _granting_matches(_IAM_STAR_ACTION_RE, res):
         findings.append(
-            IaCFinding(
+            _iam_finding(
+                res,
                 rule_id="TF-SEC-004",
                 severity="high",
                 title='IAM policy with Action: "*"',
                 message=(
-                    f"IAM policy '{rname}' grants Action: \"*\". Follow least-privilege: scope actions to specific services and operations."
+                    f"IAM policy '{res.rname}' grants Action: \"*\". "
+                    "Follow least-privilege: scope actions to specific services and operations."
                 ),
-                file_path=rel_path,
-                line_number=block_start_line,
-                category="terraform",
-                compliance=["CIS-AWS-1.16", "NIST-AC-6"],
+                line=line,
             )
         )
-    if _IAM_STAR_RESOURCE_RE.search(block):
+    for line in _granting_matches(_IAM_STAR_RESOURCE_RE, res):
         findings.append(
-            IaCFinding(
+            _iam_finding(
+                res,
                 rule_id="TF-SEC-004",
                 severity="high",
                 title='IAM policy with Resource: "*"',
-                message=(f"IAM policy '{rname}' grants Resource: \"*\". Scope resources to specific ARNs."),
-                file_path=rel_path,
-                line_number=block_start_line,
-                category="terraform",
-                compliance=["CIS-AWS-1.16", "NIST-AC-6"],
+                message=f"IAM policy '{res.rname}' grants Resource: \"*\". Scope resources to specific ARNs.",
+                line=line,
             )
         )
     return findings
@@ -91,7 +149,7 @@ def tf_sec_006(res: TfResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-006",
-                severity="medium",
+                severity="low",
                 title="CloudWatch logging not enabled",
                 message=(
                     f"Resource '{rname}' ({rtype}) does not configure "
@@ -133,27 +191,19 @@ def tf_sec_007(res: TfResource) -> list[IaCFinding]:
 
 
 def tf_sec_010(res: TfResource) -> list[IaCFinding]:
-    """TF-SEC-010: IAM policy with wildcards."""
-    rname, block, block_start_line, rel_path = res.rname, res.block, res.block_start_line, res.rel_path
-    findings: list[IaCFinding] = []
-    if _IAM_STAR_ACTION_RE.search(block) or _IAM_STAR_RESOURCE_RE.search(block) or _IAM_HCL_STAR_RE.search(block):
-        findings.append(
-            IaCFinding(
-                rule_id="TF-SEC-010",
-                severity="high",
-                title="IAM policy with wildcards",
-                message=(
-                    f"IAM policy '{rname}' contains wildcard permissions. "
-                    "Follow least-privilege: scope actions and resources "
-                    "to specific services and ARNs."
-                ),
-                file_path=rel_path,
-                line_number=block_start_line,
-                category="terraform",
-                compliance=["CIS-AWS-1.16", "NIST-AC-6"],
-            )
+    """TF-SEC-010: IAM policy granting every action of a service (``s3:*``)."""
+    return [
+        _iam_finding(
+            res,
+            rule_id="TF-SEC-010",
+            severity="medium",
+            title="IAM policy with service-wide wildcard action",
+            message=f"IAM policy '{res.rname}' grants every action of a service (for example \"s3:*\"). "
+            "Scope actions to the specific operations the principal needs.",
+            line=line,
         )
-    return findings
+        for line in _granting_matches(_IAM_SERVICE_STAR_ACTION_RE, res)
+    ]
 
 
 def tf_sec_013(res: TfResource) -> list[IaCFinding]:
@@ -165,7 +215,7 @@ def tf_sec_013(res: TfResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-013",
-                severity="medium",
+                severity="low",
                 title="CloudWatch log group without retention",
                 message=(
                     f"CloudWatch log group '{rname}' does not set "
@@ -189,7 +239,7 @@ def tf_sec_019(res: TfResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-019",
-                severity="medium",
+                severity="low",
                 title="API Gateway without access logging",
                 message=(
                     f"API Gateway stage '{rname}' ({rtype}) does not have "

@@ -1,4 +1,4 @@
-"""IaC misconfiguration scanning — Dockerfile, Kubernetes, Terraform, CloudFormation, IAM, Helm, DCM, dbt.
+"""IaC misconfiguration scanning — Dockerfile, Compose, Kubernetes, Terraform, CloudFormation, IAM, Helm, DCM, dbt.
 
 Coordinator module that discovers and scans IaC files across all supported
 formats.  Each scanner is regex/YAML-based with zero external dependencies.
@@ -27,16 +27,21 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
 
 from agent_bom.iac.cloudformation import _is_cloudformation, scan_cloudformation
+from agent_bom.iac.compose import is_compose_file, scan_compose
 from agent_bom.iac.dbt_security import is_dbt_file, scan_dbt_file
 from agent_bom.iac.dcm import is_dcm_migration, scan_dcm_migration
 from agent_bom.iac.dockerfile import scan_dockerfile
+from agent_bom.iac.github_actions_rules import is_workflow_file, scan_github_workflow
 from agent_bom.iac.helm import scan_chart_yaml, scan_values_yaml
+from agent_bom.iac.helm_templates import chart_root_for_template, scan_chart_templates
 from agent_bom.iac.iam_policy import is_iam_policy_document, scan_iam_policy
 from agent_bom.iac.kubernetes import scan_k8s_manifest
 from agent_bom.iac.models import IaCFinding, ScanContext, ScannerVerdict, ScanResult, set_repository_context
+from agent_bom.iac.suppressions import apply_inline_suppressions
 from agent_bom.iac.terraform_security import scan_terraform_security
 from agent_bom.traversal import iter_discovery_files
 
@@ -60,6 +65,8 @@ __all__ = [
 # Add new scanners here; the verdict table always has one entry per ID.
 _SCANNER_IDS: tuple[str, ...] = (
     "helm",
+    "github-actions",
+    "compose",
     "dockerfile",
     "terraform",
     "dcm",
@@ -135,7 +142,7 @@ def is_iac_file(path: Path, root: Path | None = None) -> bool:
     """
     if _is_chart_yaml(path) or _is_values_yaml(path):
         return True
-    if _is_dockerfile(path):
+    if _is_dockerfile(path) or is_compose_file(path) or is_workflow_file(path):
         return True
     if path.suffix == ".tf":
         return True
@@ -148,6 +155,94 @@ def is_iac_file(path: Path, root: Path | None = None) -> bool:
     if is_iam_policy_document(path):
         return True
     return bool(_is_cloudformation(path))
+
+
+def _scan_terraform(path: Path) -> list[IaCFinding]:
+    from agent_bom.iac.terraform_ai import scan_terraform_ai
+
+    return scan_terraform_security(path) + scan_terraform_ai(path)
+
+
+def _scan_workflow(path: Path, root: Path, disabled: frozenset[str], files_matched: dict[str, int]) -> list[IaCFinding]:
+    findings = [] if "github-actions" in disabled else scan_github_workflow(path)
+    if "github-actions" not in disabled:
+        files_matched["github-actions"] += 1
+    # A dbt project's CI workflow is also a dbt input.
+    if "dbt" not in disabled and is_dbt_file(path, root):
+        files_matched["dbt"] += 1
+        findings.extend(scan_dbt_file(path, root))
+    return findings
+
+
+# First match claims the file, in this order: DCM before dbt/K8s so a
+# V<seq>__name.sql migration is never misclassified, and K8s before
+# CloudFormation because apiVersion + kind is more specific than Resources:.
+_DISPATCH: tuple[tuple[str, Callable[[Path, Path], bool], Callable[[Path, Path], list[IaCFinding]]], ...] = (
+    (
+        "helm",
+        lambda p, _r: _is_chart_yaml(p) or _is_values_yaml(p),
+        lambda p, _r: scan_chart_yaml(p) if _is_chart_yaml(p) else scan_values_yaml(p),
+    ),
+    ("compose", lambda p, _r: is_compose_file(p), lambda p, _r: scan_compose(p)),
+    ("dockerfile", lambda p, _r: _is_dockerfile(p), lambda p, _r: scan_dockerfile(p)),
+    ("terraform", lambda p, _r: p.suffix == ".tf", lambda p, _r: _scan_terraform(p)),
+    ("dcm", lambda p, _r: is_dcm_migration(p), lambda p, _r: scan_dcm_migration(p)),
+    ("dbt", is_dbt_file, scan_dbt_file),
+    ("kubernetes", lambda p, _r: _is_k8s_manifest(p), lambda p, _r: scan_k8s_manifest(p)),
+    ("cloudformation", lambda p, _r: bool(_is_cloudformation(p)), lambda p, _r: scan_cloudformation(p)),
+    ("iam-policy", lambda p, _r: is_iam_policy_document(p), lambda p, _r: scan_iam_policy(p)),
+)
+
+
+def _dispatch_file(path: Path, root: Path, disabled: frozenset[str], files_matched: dict[str, int]) -> list[IaCFinding] | None:
+    """Findings from the scanner that claims ``path``; ``None`` when no rule module does."""
+    if is_workflow_file(path):
+        return _scan_workflow(path, root, disabled, files_matched)
+    for scanner_id, claims, scan in _DISPATCH:
+        if not claims(path, root):
+            continue
+        if scanner_id in disabled:
+            return []
+        files_matched[scanner_id] += 1
+        return scan(path, root)
+    return None
+
+
+def _build_verdicts(
+    disabled: frozenset[str], files_matched: dict[str, int], verdict_reasons: dict[str, list[str]], ctx: ScanContext
+) -> list[ScannerVerdict]:
+    """One verdict per canonical scanner ID."""
+    verdicts: list[ScannerVerdict] = []
+    for sid in _SCANNER_IDS:
+        if sid in disabled:
+            verdicts.append(
+                ScannerVerdict(
+                    scanner_id=sid,
+                    status="disabled",
+                    files_scanned=0,
+                    reason=f"locked out by deployment context ({ctx.deployment_mode})",
+                )
+            )
+        elif files_matched.get(sid, 0) > 0:
+            verdicts.append(
+                ScannerVerdict(
+                    scanner_id=sid,
+                    status="ran",
+                    files_scanned=files_matched[sid],
+                    reason="; ".join(verdict_reasons.get(sid, [])),
+                )
+            )
+        else:
+            verdicts.append(
+                ScannerVerdict(
+                    scanner_id=sid,
+                    status="not-applicable",
+                    files_scanned=0,
+                    reason="no matching files found in scan root",
+                )
+            )
+
+    return verdicts
 
 
 def scan_iac_with_context(
@@ -211,6 +306,9 @@ def scan_iac_with_context(
         disabled = frozenset()
 
     findings: list[IaCFinding] = []
+    not_evaluated: list[str] = []
+    chart_roots: set[Path] = set()
+    verdict_reasons: dict[str, list[str]] = defaultdict(list)
     files_matched: dict[str, int] = defaultdict(int)
     from agent_bom.core.severity import severity_worst_first_rank
 
@@ -229,53 +327,26 @@ def scan_iac_with_context(
                 continue
 
         first_finding = len(findings)
-        if _is_chart_yaml(path) or _is_values_yaml(path):
+        chart_root = chart_root_for_template(path)
+        if chart_root is not None:
+            # Templates are evaluated per chart after the walk (rendered or textual).
             if "helm" not in disabled:
-                files_matched["helm"] += 1
-                if _is_chart_yaml(path):
-                    findings.extend(scan_chart_yaml(path))
-                else:
-                    findings.extend(scan_values_yaml(path))
-            else:
-                files_matched.setdefault("helm", 0)
-        elif _is_dockerfile(path):
-            if "dockerfile" not in disabled:
-                files_matched["dockerfile"] += 1
-                findings.extend(scan_dockerfile(path))
-        elif path.suffix == ".tf":
-            if "terraform" not in disabled:
-                files_matched["terraform"] += 1
-                findings.extend(scan_terraform_security(path))
-                from agent_bom.iac.terraform_ai import scan_terraform_ai
-
-                findings.extend(scan_terraform_ai(path))
-        elif is_dcm_migration(path):
-            # DCM before generic .sql / K8s so V<seq>__name.sql is never
-            # misclassified. Snowflake Native App's own DCM project
-            # (deploy/snowflake/native-app/dcm/) self-tests via this path.
-            if "dcm" not in disabled:
-                files_matched["dcm"] += 1
-                findings.extend(scan_dcm_migration(path))
-        elif is_dbt_file(path, root_path):
-            if "dbt" not in disabled:
-                files_matched["dbt"] += 1
-                findings.extend(scan_dbt_file(path, root_path))
-        elif _is_k8s_manifest(path):
-            # K8s before CloudFormation — both match .yaml/.yml but K8s
-            # markers (apiVersion + kind) are more specific than "Resources:".
-            if "kubernetes" not in disabled:
-                files_matched["kubernetes"] += 1
-                findings.extend(scan_k8s_manifest(path))
-        elif _is_cloudformation(path):
-            if "cloudformation" not in disabled:
-                files_matched["cloudformation"] += 1
-                findings.extend(scan_cloudformation(path))
-        elif is_iam_policy_document(path):
-            if "iam-policy" not in disabled:
-                files_matched["iam-policy"] += 1
-                findings.extend(scan_iam_policy(path))
+                chart_roots.add(chart_root)
+            continue
+        dispatched = _dispatch_file(path, root_path, disabled, files_matched)
+        if dispatched is None and explicit_file:
+            not_evaluated.append(path.name)
+        findings.extend(dispatched or [])
 
         set_repository_context(findings[first_finding:], path.relative_to(walk_root).as_posix())
+
+    # A subchart under charts/ is rendered as part of its parent chart.
+    for chart_root in sorted(r for r in chart_roots if not any(other in r.parents for other in chart_roots)):
+        chart = scan_chart_templates(chart_root, walk_root)
+        files_matched["helm"] += chart.files
+        findings.extend(chart.findings)
+        if chart.reason:
+            verdict_reasons["helm"].append(chart.reason)
 
     # Enrich with MITRE ATT&CK and MITRE ATLAS technique IDs
     from agent_bom.iac.atlas_mapping import get_atlas_techniques
@@ -287,39 +358,11 @@ def scan_iac_with_context(
         if not finding.atlas_techniques:
             finding.atlas_techniques = get_atlas_techniques(finding.rule_id, message=finding.message)
 
+    findings, suppressed = apply_inline_suppressions(findings, walk_root)
     findings.sort(key=lambda f: (severity_worst_first_rank(f.severity), f.file_path, f.line_number))
 
-    # Build verdict table — one entry per canonical scanner ID.
-    verdicts: list[ScannerVerdict] = []
-    for sid in _SCANNER_IDS:
-        if sid in disabled:
-            verdicts.append(
-                ScannerVerdict(
-                    scanner_id=sid,
-                    status="disabled",
-                    files_scanned=0,
-                    reason=f"locked out by deployment context ({ctx.deployment_mode})",
-                )
-            )
-        elif files_matched.get(sid, 0) > 0:
-            verdicts.append(
-                ScannerVerdict(
-                    scanner_id=sid,
-                    status="ran",
-                    files_scanned=files_matched[sid],
-                )
-            )
-        else:
-            verdicts.append(
-                ScannerVerdict(
-                    scanner_id=sid,
-                    status="not-applicable",
-                    files_scanned=0,
-                    reason="no matching files found in scan root",
-                )
-            )
-
-    return ScanResult(findings=findings, verdicts=verdicts)
+    verdicts = _build_verdicts(disabled, files_matched, verdict_reasons, ctx)
+    return ScanResult(findings=findings, verdicts=verdicts, not_evaluated=not_evaluated, suppressed=suppressed)
 
 
 def scan_iac_directory(root: str | Path) -> list[IaCFinding]:

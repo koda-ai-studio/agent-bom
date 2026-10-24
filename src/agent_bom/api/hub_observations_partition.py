@@ -495,6 +495,7 @@ def _alert_observation_partition_runway(
     *,
     provisioning_failed: bool,
     now: datetime | None = None,
+    error: BaseException | None = None,
 ) -> None:
     """Report the runway, naming the date current-dated ingest starts failing.
 
@@ -502,8 +503,7 @@ def _alert_observation_partition_runway(
     the *expected* steady state — provisioning is migration-owned and both
     runtime roles are DML-only — so reporting it at ERROR on every healthy
     deployment would train operators to filter the one message that matters near
-    the cliff. It stays visible at WARNING and escalates to ERROR once the runway
-    falls below the alert threshold or has already lapsed. It is never silent.
+    the cliff. It stays visible at WARNING, escalating to ERROR once the runway is low or lapsed.
     """
     last_covered, months_left = _describe_runway(runway_end, now=now)
     urgent = months_left is None or months_left < OBSERVATION_PARTITION_RUNWAY_ALERT_MONTHS
@@ -512,10 +512,10 @@ def _alert_observation_partition_runway(
     key = f"{'denied' if provisioning_failed else 'low'}:{last_covered}"
     if not _should_emit_runway_alert(key):
         return
+    denied = getattr(error, "sqlstate", None) == "42501"  # the DML-only role's expected DDL denial
+    reason = "it is not being topped up by deploys"
     if provisioning_failed:
-        reason = "the runtime database role was denied the DDL that extends it"
-    else:
-        reason = "it is not being topped up by deploys"
+        reason = "the runtime database role was denied the DDL that extends it" if denied else "the top-up failed unexpectedly"
     logger.log(
         logging.ERROR if urgent else logging.WARNING,
         "%s partition runway ends %s (%s month(s) left) and %s. Partition provisioning is "
@@ -526,7 +526,7 @@ def _alert_observation_partition_runway(
         last_covered,
         "unknown" if months_left is None else months_left,
         reason,
-        exc_info=provisioning_failed,
+        exc_info=error if provisioning_failed and not denied and error is not None else False,
     )
 
 
@@ -559,10 +559,10 @@ def run_hub_observations_retention(*, retention_days: int | None = None) -> int:
                 ensure_observation_partition_children_rls(conn)
                 dropped = rollover_observation_partitions(conn, retention_days=days)
                 conn.commit()
-            except Exception:  # noqa: BLE001 — cleanup loop must stay fail-open
+            except Exception as exc:  # noqa: BLE001 — cleanup loop must stay fail-open
                 conn.rollback()
                 if partitioned:
-                    _alert_observation_partition_runway(runway_end, provisioning_failed=True)
+                    _alert_observation_partition_runway(runway_end, provisioning_failed=True, error=exc)
                 else:
                     logger.error("hub observations retention failed on a legacy unpartitioned table", exc_info=False)
                 return 0

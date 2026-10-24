@@ -517,7 +517,8 @@ def _is_title_prose(match: re.Match[str]) -> bool:
 
 
 def _is_credential_material(value: str) -> bool:
-    """Whether a value under a credential-named key could be the credential."""
+    """Whether a value under a credential-named key could be the credential (prose punctuation aside)."""
+    value = value.rstrip(".,;:!?)")
     if len(value) < _MIN_SECRET_VALUE_LEN or _NON_SECRET_VALUE_RE.match(value):
         return False
     return not (_CREDENTIAL_IDENTIFIER_VALUE_RE.match(value) and env_key_is_credential(value))

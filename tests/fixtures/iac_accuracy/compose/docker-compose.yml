@@ -1,0 +1,29 @@
+services:
+  web:
+    image: nginx:1.27
+    privileged: true
+    network_mode: host
+    pid: host
+    cap_add:
+      - SYS_ADMIN
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      DATABASE_PASSWORD: REPLACE_ME
+      LOG_LEVEL: info
+  worker:
+    image: busybox:1.36
+    cap_add: ["ALL"]
+    environment:
+      - API_TOKEN=REPLACE_ME
+      - MODE=batch
+  safe:
+    image: busybox:1.36
+    cap_add:
+      - NET_BIND_SERVICE
+    volumes:
+      - ./data:/data
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      REQUIRE_TOKEN: "true"
+      TOKEN_TTL_SECONDS: 3600

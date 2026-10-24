@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_bom.iac.kubernetes_common import K8sDocument, K8sWorkload, find_key_line, find_line
+from agent_bom.iac.kubernetes_common import K8sDocument, K8sWorkload, pod_spec_line
 from agent_bom.iac.models import IaCFinding
+from agent_bom.iac.yaml_lines import item_line, key_line, node_line
 
 
 def k8s_024(d: K8sDocument) -> list[IaCFinding]:
     """K8S-024: ServiceAccount with automountServiceAccountToken: true."""
-    doc, name, content, rel_path = d.doc, d.name, d.content, d.rel_path
+    doc, name, rel_path = d.doc, d.name, d.rel_path
     findings: list[IaCFinding] = []
     if doc.get("automountServiceAccountToken") is True:
         findings.append(
@@ -23,7 +24,7 @@ def k8s_024(d: K8sDocument) -> list[IaCFinding]:
                     "Set to false and only mount tokens in pods that need API access."
                 ),
                 file_path=rel_path,
-                line_number=find_line(content, "automountServiceAccountToken", True),
+                line_number=key_line(doc, "automountServiceAccountToken", 1),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.1.6", "NIST-AC-6"],
             )
@@ -33,7 +34,7 @@ def k8s_024(d: K8sDocument) -> list[IaCFinding]:
 
 def k8s_025(d: K8sDocument) -> list[IaCFinding]:
     """K8S-025: ClusterRoleBinding with cluster-admin role."""
-    doc, name, content, rel_path = d.doc, d.name, d.content, d.rel_path
+    doc, name, rel_path = d.doc, d.name, d.rel_path
     findings: list[IaCFinding] = []
     role_ref = doc.get("roleRef", {}) or {}
     if role_ref.get("name") == "cluster-admin":
@@ -47,7 +48,7 @@ def k8s_025(d: K8sDocument) -> list[IaCFinding]:
                     "This grants full cluster access. Use least-privilege roles instead."
                 ),
                 file_path=rel_path,
-                line_number=find_key_line(content, "cluster-admin"),
+                line_number=key_line(doc, "roleRef", 1),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.1.1", "NIST-AC-6"],
             )
@@ -57,7 +58,7 @@ def k8s_025(d: K8sDocument) -> list[IaCFinding]:
 
 def k8s_036(d: K8sDocument) -> list[IaCFinding]:
     """K8S-036: nvidia-device-plugin ClusterRole with mutation verbs."""
-    doc, name, content, rel_path, _name_lower, kind = d.doc, d.name, d.content, d.rel_path, d.name_lower, d.kind
+    doc, name, rel_path, _name_lower, kind = d.doc, d.name, d.rel_path, d.name_lower, d.kind
     findings: list[IaCFinding] = []
     if kind == "ClusterRole" and "nvidia" in _name_lower and "device-plugin" in _name_lower:
         rules = doc.get("rules", []) or []
@@ -76,7 +77,7 @@ def k8s_036(d: K8sDocument) -> list[IaCFinding]:
                             "Remove mutation verbs to enforce least-privilege for the GPU device plugin."
                         ),
                         file_path=rel_path,
-                        line_number=find_key_line(content, "verbs"),
+                        line_number=key_line(doc, "rules", 1),
                         category="kubernetes",
                         compliance=["CIS-K8s-5.1.3", "NIST-AC-6"],
                         attack_techniques=["T1548"],
@@ -88,7 +89,7 @@ def k8s_036(d: K8sDocument) -> list[IaCFinding]:
 
 def k8s_028(d: K8sDocument) -> list[IaCFinding]:
     """K8S-028: NetworkPolicy missing egress rules."""
-    doc, name, content, rel_path = d.doc, d.name, d.content, d.rel_path
+    doc, name, rel_path = d.doc, d.name, d.rel_path
     findings: list[IaCFinding] = []
     spec = doc.get("spec", {}) or {}
     policy_types = spec.get("policyTypes", []) or []
@@ -104,7 +105,7 @@ def k8s_028(d: K8sDocument) -> list[IaCFinding]:
                     "Add egress rules to restrict outbound traffic."
                 ),
                 file_path=rel_path,
-                line_number=find_key_line(content, "spec"),
+                line_number=key_line(doc, "spec", 1),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.3.2", "NIST-SC-7"],
             )
@@ -114,7 +115,7 @@ def k8s_028(d: K8sDocument) -> list[IaCFinding]:
 
 def k8s_002(w: K8sWorkload) -> list[IaCFinding]:
     """K8S-002: hostNetwork."""
-    name, pod_spec, content, rel_path = w.name, w.pod_spec, w.content, w.rel_path
+    name, pod_spec, rel_path = w.name, w.pod_spec, w.rel_path
     findings: list[IaCFinding] = []
     if pod_spec.get("hostNetwork") is True:
         findings.append(
@@ -128,7 +129,7 @@ def k8s_002(w: K8sWorkload) -> list[IaCFinding]:
                     "traffic sniffing and bypass of network policies."
                 ),
                 file_path=rel_path,
-                line_number=find_line(content, "hostNetwork", True),
+                line_number=pod_spec_line(w, "hostNetwork"),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.2.4", "NIST-CM-7"],
             )
@@ -138,7 +139,7 @@ def k8s_002(w: K8sWorkload) -> list[IaCFinding]:
 
 def k8s_003(w: K8sWorkload) -> list[IaCFinding]:
     """K8S-003: hostPID / hostIPC."""
-    name, pod_spec, content, rel_path = w.name, w.pod_spec, w.content, w.rel_path
+    name, pod_spec, rel_path = w.name, w.pod_spec, w.rel_path
     findings: list[IaCFinding] = []
     for host_key in ("hostPID", "hostIPC"):
         if pod_spec.get(host_key) is True:
@@ -153,7 +154,7 @@ def k8s_003(w: K8sWorkload) -> list[IaCFinding]:
                         "escape and cross-process attacks."
                     ),
                     file_path=rel_path,
-                    line_number=find_line(content, host_key, True),
+                    line_number=pod_spec_line(w, host_key),
                     category="kubernetes",
                     compliance=["CIS-K8s-5.2.2", "NIST-CM-7"],
                 )
@@ -163,7 +164,7 @@ def k8s_003(w: K8sWorkload) -> list[IaCFinding]:
 
 def k8s_008(w: K8sWorkload) -> list[IaCFinding]:
     """K8S-008: default namespace."""
-    kind, name, namespace, content, rel_path = w.kind, w.name, w.namespace, w.content, w.rel_path
+    kind, name, namespace, rel_path = w.kind, w.name, w.namespace, w.rel_path
     findings: list[IaCFinding] = []
     if namespace == "default" or (not namespace and kind != "Pod"):
         findings.append(
@@ -173,7 +174,7 @@ def k8s_008(w: K8sWorkload) -> list[IaCFinding]:
                 title="Using default namespace",
                 message=(f"Resource '{name}' uses the default namespace. Use dedicated namespaces for workload isolation and RBAC."),
                 file_path=rel_path,
-                line_number=find_key_line(content, "namespace", 1),
+                line_number=w.metadata_line,
                 category="kubernetes",
                 compliance=["CIS-K8s-5.7.1", "NIST-AC-4"],
             )
@@ -183,7 +184,7 @@ def k8s_008(w: K8sWorkload) -> list[IaCFinding]:
 
 def k8s_010(w: K8sWorkload) -> list[IaCFinding]:
     """K8S-010: automountServiceAccountToken."""
-    name, pod_spec, content, rel_path = w.name, w.pod_spec, w.content, w.rel_path
+    name, pod_spec, rel_path = w.name, w.pod_spec, w.rel_path
     findings: list[IaCFinding] = []
     if pod_spec.get("automountServiceAccountToken") is not False:
         findings.append(
@@ -197,7 +198,7 @@ def k8s_010(w: K8sWorkload) -> list[IaCFinding]:
                     "enabling lateral movement if compromised."
                 ),
                 file_path=rel_path,
-                line_number=find_key_line(content, "spec"),
+                line_number=pod_spec_line(w),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.1.6", "NIST-AC-6"],
             )
@@ -207,7 +208,7 @@ def k8s_010(w: K8sWorkload) -> list[IaCFinding]:
 
 def k8s_033(w: K8sWorkload) -> list[IaCFinding]:
     """K8S-033: shareProcessNamespace: true."""
-    name, pod_spec, content, rel_path = w.name, w.pod_spec, w.content, w.rel_path
+    name, pod_spec, rel_path = w.name, w.pod_spec, w.rel_path
     findings: list[IaCFinding] = []
     if pod_spec.get("shareProcessNamespace") is True:
         findings.append(
@@ -222,7 +223,7 @@ def k8s_033(w: K8sWorkload) -> list[IaCFinding]:
                     "Only enable when explicitly required."
                 ),
                 file_path=rel_path,
-                line_number=find_line(content, "shareProcessNamespace", True),
+                line_number=pod_spec_line(w, "shareProcessNamespace"),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.2.2", "NIST-CM-7"],
             )
@@ -232,7 +233,7 @@ def k8s_033(w: K8sWorkload) -> list[IaCFinding]:
 
 def k8s_030(w: K8sWorkload) -> list[IaCFinding]:
     """K8S-030: Deployment without PodAntiAffinity."""
-    kind, name, pod_spec, content, rel_path = w.kind, w.name, w.pod_spec, w.content, w.rel_path
+    kind, name, pod_spec, rel_path = w.kind, w.name, w.pod_spec, w.rel_path
     findings: list[IaCFinding] = []
     if kind == "Deployment":
         affinity = pod_spec.get("affinity", {}) or {}
@@ -248,7 +249,7 @@ def k8s_030(w: K8sWorkload) -> list[IaCFinding]:
                         "creating a single point of failure."
                     ),
                     file_path=rel_path,
-                    line_number=find_key_line(content, "spec"),
+                    line_number=pod_spec_line(w),
                     category="kubernetes",
                     compliance=["NIST-CP-10"],
                 )
@@ -258,12 +259,13 @@ def k8s_030(w: K8sWorkload) -> list[IaCFinding]:
 
 def k8s_014_019(w: K8sWorkload) -> list[IaCFinding]:
     """K8S-019: emptyDir without sizeLimit / K8S-014: hostPath."""
-    name, pod_spec, content, rel_path = w.name, w.pod_spec, w.content, w.rel_path
+    name, pod_spec, rel_path = w.name, w.pod_spec, w.rel_path
     findings: list[IaCFinding] = []
     volumes = pod_spec.get("volumes", []) or []
-    for vol in volumes:
+    for vol_index, vol in enumerate(volumes):
         if not isinstance(vol, dict):
             continue
+        vol_line = item_line(volumes, vol_index, pod_spec_line(w, "volumes"))
         empty_dir = vol.get("emptyDir")
         if empty_dir is not None and not (isinstance(empty_dir, dict) and empty_dir.get("sizeLimit")):
             vol_name = vol.get("name", "unknown")
@@ -274,7 +276,7 @@ def k8s_014_019(w: K8sWorkload) -> list[IaCFinding]:
                     title=f"emptyDir '{vol_name}' without sizeLimit",
                     message=f"Volume '{vol_name}' uses emptyDir without sizeLimit. Set sizeLimit to prevent disk exhaustion.",
                     file_path=rel_path,
-                    line_number=find_key_line(content, vol_name),
+                    line_number=key_line(vol, "emptyDir", vol_line),
                     category="kubernetes",
                     compliance=["NIST-SC-6"],
                 )
@@ -288,7 +290,7 @@ def k8s_014_019(w: K8sWorkload) -> list[IaCFinding]:
                     title=f"hostPath volume mount '{vol_name}'",
                     message=f"Volume '{vol_name}' mounts a host path. This breaks container isolation. Use PVCs instead.",
                     file_path=rel_path,
-                    line_number=find_key_line(content, vol_name),
+                    line_number=key_line(vol, "hostPath", vol_line),
                     category="kubernetes",
                     compliance=["CIS-K8s-5.2.12", "NIST-SC-7"],
                 )
@@ -308,7 +310,7 @@ def k8s_014_019(w: K8sWorkload) -> list[IaCFinding]:
                             "Use the NVIDIA device plugin instead of hostPath mounts."
                         ),
                         file_path=rel_path,
-                        line_number=find_key_line(content, vol_name),
+                        line_number=key_line(vol, "hostPath", vol_line),
                         category="kubernetes",
                         compliance=["CIS-K8s-5.2.12", "NIST-AC-6", "NIST-SI-3"],
                         attack_techniques=["T1611"],
@@ -319,7 +321,7 @@ def k8s_014_019(w: K8sWorkload) -> list[IaCFinding]:
 
 def k8s_013(w: K8sWorkload) -> list[IaCFinding]:
     """K8S-013: No securityContext at pod level."""
-    name, pod_spec, content, rel_path = w.name, w.pod_spec, w.content, w.rel_path
+    name, pod_spec, rel_path = w.name, w.pod_spec, w.rel_path
     findings: list[IaCFinding] = []
     if not pod_spec.get("securityContext"):
         findings.append(
@@ -329,7 +331,7 @@ def k8s_013(w: K8sWorkload) -> list[IaCFinding]:
                 title="No securityContext at pod level",
                 message=f"Pod '{name}' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
                 file_path=rel_path,
-                line_number=find_key_line(content, "spec"),
+                line_number=pod_spec_line(w),
                 category="kubernetes",
                 compliance=["CIS-K8s-5.2.6", "NIST-AC-6"],
             )
@@ -341,7 +343,7 @@ def k8s_021(docs: list[Any], content: str, rel_path: str) -> list[IaCFinding]:
     """K8S-021: Missing PodDisruptionBudget for Deployments."""
     findings: list[IaCFinding] = []
     # Collect Deployment names and PDB matchLabels from the same manifest
-    deployment_names: set[str] = set()
+    deployment_names: dict[str, int] = {}
     pdb_selectors: set[str] = set()
     for doc in docs:
         if not isinstance(doc, dict):
@@ -349,7 +351,7 @@ def k8s_021(docs: list[Any], content: str, rel_path: str) -> list[IaCFinding]:
         dk = doc.get("kind", "")
         dm = doc.get("metadata", {}) or {}
         if dk == "Deployment":
-            deployment_names.add(dm.get("name", ""))
+            deployment_names.setdefault(dm.get("name", ""), key_line(dm, "name", node_line(doc, 1)))
         if dk == "PodDisruptionBudget":
             selector = doc.get("spec", {}).get("selector", {}) or {}
             match_labels = selector.get("matchLabels", {}) or {}
@@ -357,7 +359,7 @@ def k8s_021(docs: list[Any], content: str, rel_path: str) -> list[IaCFinding]:
             for _lbl_key, lbl_val in match_labels.items():
                 pdb_selectors.add(lbl_val)
 
-    for dep_name in deployment_names:
+    for dep_name, dep_line in deployment_names.items():
         if dep_name and dep_name not in pdb_selectors:
             findings.append(
                 IaCFinding(
@@ -370,7 +372,7 @@ def k8s_021(docs: list[Any], content: str, rel_path: str) -> list[IaCFinding]:
                         "during voluntary disruptions like node drains."
                     ),
                     file_path=rel_path,
-                    line_number=find_key_line(content, dep_name),
+                    line_number=dep_line,
                     category="kubernetes",
                     compliance=["NIST-CP-10"],
                 )

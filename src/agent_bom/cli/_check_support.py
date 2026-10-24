@@ -250,7 +250,7 @@ def _check_payload_to_sarif(payload: dict) -> dict:
                 "tool": {
                     "driver": {
                         "name": "agent-bom check",
-                        "informationUri": "https://github.com/msaad00/agent-bom",
+                        "informationUri": "https://github.com/koda-ai-studio/agent-bom",
                         "semanticVersion": __version__,
                         "rules": rules,
                     }

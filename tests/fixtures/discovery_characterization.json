@@ -196,20 +196,21 @@
    "────────────────────────────────────────────────────────────────────────── Discovery ───────────────────────────────────────────────────────────────────────────",
    "",
    "Auto-detected lockfiles in <ROOT>/project",
-   "Auto-detected 3 IaC file(s)",
+   "Auto-detected 4 IaC file(s)",
    "",
    "Scanning 1 filesystem path(s)...",
    "",
    "  ✓ <ROOT>/project: 3 package(s) (via native-dir)",
    "",
-   "Scanning 3 path(s) for IaC misconfigurations...",
+   "Scanning 4 path(s) for IaC misconfigurations...",
    "",
    "  ✓ <ROOT>/project/Dockerfile: 4 finding(s) (1 high, 1 medium, 2 low)",
-   "  ✓ <ROOT>/project/main.tf: 6 finding(s) (1 critical, 3 high, 2 medium)",
-   "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 7 medium)",
+   "  ✓ <ROOT>/project/.github/workflows/ci.yml: 2 finding(s) (1 medium, 1 low)",
+   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
+   "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 5 medium, 2 low)",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                            IaC Misconfigurations — 19 finding(s)                                                             │",
+   "│                                                            IaC Misconfigurations — 20 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -224,49 +225,36 @@
    "│ │            │              │ health monitoring and automatic restart on failure.                       │                                                  │ │",
    "│ │   ⚪ LOW   │ DOCKER-017   │ pip install without --no-cache-dir                                        │ Dockerfile:3                                     │ │",
    "│ │            │              │ pip caches downloaded packages. Add --no-cache-dir to reduce image size.  │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ GHA-002      │ Action not pinned to a commit SHA                                         │ ci.yml:7                                         │ │",
+   "│ │            │              │ 'actions/checkout@v3' resolves a mutable tag or branch. Pin remote        │                                                  │ │",
+   "│ │            │              │ actions and reusable workflows to a full commit SHA.                      │                                                  │ │",
+   "│ │   ⚪ LOW   │ GHA-004      │ Workflow has no top-level permissions                                     │ ci.yml:1                                         │ │",
+   "│ │            │              │ Without a top-level permissions: block the GITHUB_TOKEN gets the          │                                                  │ │",
+   "│ │            │              │ repository default, which may be write. Declare least-privilege           │                                                  │ │",
+   "│ │            │              │ permissions.                                                              │                                                  │ │",
    "│ │ 🔴 CRITIC… │ TF-SEC-002   │ S3 bucket with public ACL                                                 │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' has acl = \"public-read\". Public S3 buckets are a top cloud  │                                                  │ │",
    "│ │            │              │ breach vector. Use private ACL and bucket policies instead.               │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
    "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-008   │ S3 bucket without server-side encryption                                  │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
    "│ │            │              │ access block to prevent public bucket exposure.                           │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a versioning block. Enable versioning to      │                                                  │ │",
    "│ │            │              │ protect against accidental deletion and enable recovery.                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a logging block. Enable server access logging │                                                  │ │",
    "│ │            │              │ to track requests for security auditing.                                  │                                                  │ │",
    "│ │ 🔴 CRITIC… │ K8S-001      │ Privileged container                                                      │ deploy.yaml:10                                   │ │",
    "│ │            │              │ Container 'c' in 'p' runs in privileged mode. This gives the container    │                                                  │ │",
    "│ │            │              │ full host access. Remove privileged: true unless absolutely required.     │                                                  │ │",
-   "│ │  🟠 HIGH   │ K8S-006      │ Writable root filesystem                                                  │ deploy.yaml:1                                    │ │",
+   "│ │  🟠 HIGH   │ K8S-006      │ Writable root filesystem                                                  │ deploy.yaml:7                                    │ │",
    "│ │            │              │ Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A         │                                                  │ │",
    "│ │            │              │ read-only root filesystem prevents attackers from writing malicious       │                                                  │ │",
    "│ │            │              │ binaries.                                                                 │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
-   "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-011      │ Container image uses :latest tag                                          │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific  │                                                  │ │",
-   "│ │            │              │ version.                                                                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
-   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
-   "│ │            │              │ containers.                                                               │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
-   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
-   "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
-   "│ │            │              │ syscalls.                                                                 │                                                  │ │",
    "│ │ 🟡 MEDIUM  │ K8S-010      │ Service account token auto-mounted                                        │ deploy.yaml:5                                    │ │",
    "│ │            │              │ Resource 'p' does not set automountServiceAccountToken: false. The        │                                                  │ │",
    "│ │            │              │ default service account token is mounted into every pod, enabling lateral │                                                  │ │",
@@ -274,8 +262,25 @@
    "│ │ 🟡 MEDIUM  │ K8S-013      │ No securityContext at pod level                                           │ deploy.yaml:5                                    │ │",
    "│ │            │              │ Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and  │                                                  │ │",
    "│ │            │              │ seccompProfile.                                                           │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
+   "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
+   "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
+   "│ │            │              │ syscalls.                                                                 │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-011      │ Container image uses :latest tag                                          │ deploy.yaml:8                                    │ │",
+   "│ │            │              │ Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific  │                                                  │ │",
+   "│ │            │              │ version.                                                                  │                                                  │ │",
+   "│ │   ⚪ LOW   │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
+   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
+   "│ │            │              │ containers.                                                               │                                                  │ │",
+   "│ │   ⚪ LOW   │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
+   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 2 critical · 5 high · scan complete ─────────────────────────────────────────────────────────────╯"
+   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯"
   ],
   "context": {
    "_browser_ext_results": null,
@@ -348,6 +353,36 @@
       "title": "pip install without --no-cache-dir"
      },
      {
+      "attack_techniques": [],
+      "category": "github_actions",
+      "compliance": [
+       "NIST-SA-12",
+       "NIST-CM-7"
+      ],
+      "file_path": ".github/workflows/ci.yml",
+      "line_number": 7,
+      "message": "'actions/checkout@v3' resolves a mutable tag or branch. Pin remote actions and reusable workflows to a full commit SHA.",
+      "remediation": "",
+      "rule_id": "GHA-002",
+      "severity": "medium",
+      "title": "Action not pinned to a commit SHA"
+     },
+     {
+      "attack_techniques": [],
+      "category": "github_actions",
+      "compliance": [
+       "NIST-SA-12",
+       "NIST-CM-7"
+      ],
+      "file_path": ".github/workflows/ci.yml",
+      "line_number": 1,
+      "message": "Without a top-level permissions: block the GITHUB_TOKEN gets the repository default, which may be write. Declare least-privilege permissions.",
+      "remediation": "",
+      "rule_id": "GHA-004",
+      "severity": "low",
+      "title": "Workflow has no top-level permissions"
+     },
+     {
       "attack_techniques": [
        "T1190",
        "T1530"
@@ -384,23 +419,6 @@
      },
      {
       "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-008",
-      "severity": "high",
-      "title": "S3 bucket without server-side encryption"
-     },
-     {
-      "attack_techniques": [
        "T1190",
        "T1530"
       ],
@@ -432,7 +450,7 @@
       "message": "S3 bucket 'b' does not have a versioning block. Enable versioning to protect against accidental deletion and enable recovery.",
       "remediation": "",
       "rule_id": "TF-SEC-021",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket versioning not enabled"
      },
      {
@@ -449,7 +467,7 @@
       "message": "S3 bucket 'b' does not have a logging block. Enable server access logging to track requests for security auditing.",
       "remediation": "",
       "rule_id": "TF-SEC-023",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket logging not enabled"
      },
      {
@@ -479,89 +497,12 @@
        "NIST-CM-6"
       ],
       "file_path": "deploy.yaml",
-      "line_number": 1,
+      "line_number": 7,
       "message": "Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
       "remediation": "",
       "rule_id": "K8S-006",
       "severity": "high",
       "title": "Writable root filesystem"
-     },
-     {
-      "attack_techniques": [
-       "T1611"
-      ],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.4.1",
-       "NIST-SC-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
-      "remediation": "",
-      "rule_id": "K8S-004",
-      "severity": "medium",
-      "title": "No resource limits"
-     },
-     {
-      "attack_techniques": [
-       "T1078"
-      ],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.5.1",
-       "NIST-CM-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
-      "remediation": "",
-      "rule_id": "K8S-011",
-      "severity": "medium",
-      "title": "Container image uses :latest tag"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
-      "remediation": "",
-      "rule_id": "K8S-022",
-      "severity": "medium",
-      "title": "Container without liveness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
-      "remediation": "",
-      "rule_id": "K8S-023",
-      "severity": "medium",
-      "title": "Container without readiness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.7.2",
-       "NIST-CM-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
-      "remediation": "",
-      "rule_id": "K8S-031",
-      "severity": "medium",
-      "title": "Missing seccompProfile"
      },
      {
       "attack_techniques": [
@@ -596,9 +537,86 @@
       "rule_id": "K8S-013",
       "severity": "medium",
       "title": "No securityContext at pod level"
+     },
+     {
+      "attack_techniques": [
+       "T1611"
+      ],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.4.1",
+       "NIST-SC-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
+      "remediation": "",
+      "rule_id": "K8S-004",
+      "severity": "medium",
+      "title": "No resource limits"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.7.2",
+       "NIST-CM-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
+      "remediation": "",
+      "rule_id": "K8S-031",
+      "severity": "medium",
+      "title": "Missing seccompProfile"
+     },
+     {
+      "attack_techniques": [
+       "T1078"
+      ],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.5.1",
+       "NIST-CM-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 8,
+      "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
+      "remediation": "",
+      "rule_id": "K8S-011",
+      "severity": "medium",
+      "title": "Container image uses :latest tag"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
+      "remediation": "",
+      "rule_id": "K8S-022",
+      "severity": "low",
+      "title": "Container without liveness probe"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
+      "remediation": "",
+      "rule_id": "K8S-023",
+      "severity": "low",
+      "title": "Container without readiness probe"
      }
     ],
-    "total": 19
+    "total": 20
    },
    "project_inventory_data": null,
    "prompt_scan_data": null,
@@ -1533,7 +1551,7 @@
   ],
   "console": [
    "────────────────────────────────────────────────────────────────────────── Discovery ───────────────────────────────────────────────────────────────────────────",
-   "Auto-detected 3 IaC file(s)",
+   "Auto-detected 4 IaC file(s)",
    "",
    "Scanning 1 path(s) for AI components...",
    "",
@@ -1638,14 +1656,17 @@
    "",
    "  ✓ 1 notebook(s) with AI libraries found, 2 package(s) to scan",
    "",
-   "Scanning 3 path(s) for IaC misconfigurations...",
+   "Scanning 4 path(s) for IaC misconfigurations...",
    "",
    "  ✓ <ROOT>/project/Dockerfile: 4 finding(s) (1 high, 1 medium, 2 low)",
-   "  ✓ <ROOT>/project/main.tf: 6 finding(s) (1 critical, 3 high, 2 medium)",
-   "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 7 medium)",
+   "  ✓ <ROOT>/project/.github/workflows/ci.yml: 2 finding(s) (1 medium, 1 low)",
+   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
+   "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 5 medium, 2 low)",
    "",
    "  Scanner capability",
    "  —  helm               no targets",
+   "  —  github-actions     no targets",
+   "  —  compose            no targets",
    "  ✓  dockerfile         1 file(s)",
    "  —  terraform          no targets",
    "  —  dcm                no targets",
@@ -1654,6 +1675,18 @@
    "  —  cloudformation     no targets",
    "  —  iam-policy         no targets",
    "  —  helm               no targets",
+   "  ✓  github-actions     1 file(s)",
+   "  —  compose            no targets",
+   "  —  dockerfile         no targets",
+   "  —  terraform          no targets",
+   "  —  dcm                no targets",
+   "  —  dbt                no targets",
+   "  —  kubernetes         no targets",
+   "  —  cloudformation     no targets",
+   "  —  iam-policy         no targets",
+   "  —  helm               no targets",
+   "  —  github-actions     no targets",
+   "  —  compose            no targets",
    "  —  dockerfile         no targets",
    "  ✓  terraform          1 file(s)",
    "  —  dcm                no targets",
@@ -1662,6 +1695,8 @@
    "  —  cloudformation     no targets",
    "  —  iam-policy         no targets",
    "  —  helm               no targets",
+   "  —  github-actions     no targets",
+   "  —  compose            no targets",
    "  —  dockerfile         no targets",
    "  —  terraform          no targets",
    "  —  dcm                no targets",
@@ -1671,7 +1706,7 @@
    "  —  iam-policy         no targets",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                            IaC Misconfigurations — 19 finding(s)                                                             │",
+   "│                                                            IaC Misconfigurations — 20 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -1686,49 +1721,36 @@
    "│ │            │              │ health monitoring and automatic restart on failure.                       │                                                  │ │",
    "│ │   ⚪ LOW   │ DOCKER-017   │ pip install without --no-cache-dir                                        │ Dockerfile:3                                     │ │",
    "│ │            │              │ pip caches downloaded packages. Add --no-cache-dir to reduce image size.  │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ GHA-002      │ Action not pinned to a commit SHA                                         │ ci.yml:7                                         │ │",
+   "│ │            │              │ 'actions/checkout@v3' resolves a mutable tag or branch. Pin remote        │                                                  │ │",
+   "│ │            │              │ actions and reusable workflows to a full commit SHA.                      │                                                  │ │",
+   "│ │   ⚪ LOW   │ GHA-004      │ Workflow has no top-level permissions                                     │ ci.yml:1                                         │ │",
+   "│ │            │              │ Without a top-level permissions: block the GITHUB_TOKEN gets the          │                                                  │ │",
+   "│ │            │              │ repository default, which may be write. Declare least-privilege           │                                                  │ │",
+   "│ │            │              │ permissions.                                                              │                                                  │ │",
    "│ │ 🔴 CRITIC… │ TF-SEC-002   │ S3 bucket with public ACL                                                 │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' has acl = \"public-read\". Public S3 buckets are a top cloud  │                                                  │ │",
    "│ │            │              │ breach vector. Use private ACL and bucket policies instead.               │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
    "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-008   │ S3 bucket without server-side encryption                                  │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
    "│ │            │              │ access block to prevent public bucket exposure.                           │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a versioning block. Enable versioning to      │                                                  │ │",
    "│ │            │              │ protect against accidental deletion and enable recovery.                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a logging block. Enable server access logging │                                                  │ │",
    "│ │            │              │ to track requests for security auditing.                                  │                                                  │ │",
    "│ │ 🔴 CRITIC… │ K8S-001      │ Privileged container                                                      │ deploy.yaml:10                                   │ │",
    "│ │            │              │ Container 'c' in 'p' runs in privileged mode. This gives the container    │                                                  │ │",
    "│ │            │              │ full host access. Remove privileged: true unless absolutely required.     │                                                  │ │",
-   "│ │  🟠 HIGH   │ K8S-006      │ Writable root filesystem                                                  │ deploy.yaml:1                                    │ │",
+   "│ │  🟠 HIGH   │ K8S-006      │ Writable root filesystem                                                  │ deploy.yaml:7                                    │ │",
    "│ │            │              │ Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A         │                                                  │ │",
    "│ │            │              │ read-only root filesystem prevents attackers from writing malicious       │                                                  │ │",
    "│ │            │              │ binaries.                                                                 │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
-   "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-011      │ Container image uses :latest tag                                          │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific  │                                                  │ │",
-   "│ │            │              │ version.                                                                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
-   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
-   "│ │            │              │ containers.                                                               │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
-   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:1                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
-   "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
-   "│ │            │              │ syscalls.                                                                 │                                                  │ │",
    "│ │ 🟡 MEDIUM  │ K8S-010      │ Service account token auto-mounted                                        │ deploy.yaml:5                                    │ │",
    "│ │            │              │ Resource 'p' does not set automountServiceAccountToken: false. The        │                                                  │ │",
    "│ │            │              │ default service account token is mounted into every pod, enabling lateral │                                                  │ │",
@@ -1736,8 +1758,25 @@
    "│ │ 🟡 MEDIUM  │ K8S-013      │ No securityContext at pod level                                           │ deploy.yaml:5                                    │ │",
    "│ │            │              │ Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and  │                                                  │ │",
    "│ │            │              │ seccompProfile.                                                           │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
+   "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
+   "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
+   "│ │            │              │ syscalls.                                                                 │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-011      │ Container image uses :latest tag                                          │ deploy.yaml:8                                    │ │",
+   "│ │            │              │ Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific  │                                                  │ │",
+   "│ │            │              │ version.                                                                  │                                                  │ │",
+   "│ │   ⚪ LOW   │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
+   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
+   "│ │            │              │ containers.                                                               │                                                  │ │",
+   "│ │   ⚪ LOW   │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
+   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 2 critical · 5 high · scan complete ─────────────────────────────────────────────────────────────╯"
+   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯"
   ],
   "context": {
    "_browser_ext_results": null,
@@ -1878,6 +1917,36 @@
       "title": "pip install without --no-cache-dir"
      },
      {
+      "attack_techniques": [],
+      "category": "github_actions",
+      "compliance": [
+       "NIST-SA-12",
+       "NIST-CM-7"
+      ],
+      "file_path": ".github/workflows/ci.yml",
+      "line_number": 7,
+      "message": "'actions/checkout@v3' resolves a mutable tag or branch. Pin remote actions and reusable workflows to a full commit SHA.",
+      "remediation": "",
+      "rule_id": "GHA-002",
+      "severity": "medium",
+      "title": "Action not pinned to a commit SHA"
+     },
+     {
+      "attack_techniques": [],
+      "category": "github_actions",
+      "compliance": [
+       "NIST-SA-12",
+       "NIST-CM-7"
+      ],
+      "file_path": ".github/workflows/ci.yml",
+      "line_number": 1,
+      "message": "Without a top-level permissions: block the GITHUB_TOKEN gets the repository default, which may be write. Declare least-privilege permissions.",
+      "remediation": "",
+      "rule_id": "GHA-004",
+      "severity": "low",
+      "title": "Workflow has no top-level permissions"
+     },
+     {
       "attack_techniques": [
        "T1190",
        "T1530"
@@ -1914,23 +1983,6 @@
      },
      {
       "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-008",
-      "severity": "high",
-      "title": "S3 bucket without server-side encryption"
-     },
-     {
-      "attack_techniques": [
        "T1190",
        "T1530"
       ],
@@ -1962,7 +2014,7 @@
       "message": "S3 bucket 'b' does not have a versioning block. Enable versioning to protect against accidental deletion and enable recovery.",
       "remediation": "",
       "rule_id": "TF-SEC-021",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket versioning not enabled"
      },
      {
@@ -1979,7 +2031,7 @@
       "message": "S3 bucket 'b' does not have a logging block. Enable server access logging to track requests for security auditing.",
       "remediation": "",
       "rule_id": "TF-SEC-023",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket logging not enabled"
      },
      {
@@ -2009,89 +2061,12 @@
        "NIST-CM-6"
       ],
       "file_path": "deploy.yaml",
-      "line_number": 1,
+      "line_number": 7,
       "message": "Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
       "remediation": "",
       "rule_id": "K8S-006",
       "severity": "high",
       "title": "Writable root filesystem"
-     },
-     {
-      "attack_techniques": [
-       "T1611"
-      ],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.4.1",
-       "NIST-SC-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
-      "remediation": "",
-      "rule_id": "K8S-004",
-      "severity": "medium",
-      "title": "No resource limits"
-     },
-     {
-      "attack_techniques": [
-       "T1078"
-      ],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.5.1",
-       "NIST-CM-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
-      "remediation": "",
-      "rule_id": "K8S-011",
-      "severity": "medium",
-      "title": "Container image uses :latest tag"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
-      "remediation": "",
-      "rule_id": "K8S-022",
-      "severity": "medium",
-      "title": "Container without liveness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
-      "remediation": "",
-      "rule_id": "K8S-023",
-      "severity": "medium",
-      "title": "Container without readiness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "CIS-K8s-5.7.2",
-       "NIST-CM-6"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 1,
-      "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
-      "remediation": "",
-      "rule_id": "K8S-031",
-      "severity": "medium",
-      "title": "Missing seccompProfile"
      },
      {
       "attack_techniques": [
@@ -2126,9 +2101,86 @@
       "rule_id": "K8S-013",
       "severity": "medium",
       "title": "No securityContext at pod level"
+     },
+     {
+      "attack_techniques": [
+       "T1611"
+      ],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.4.1",
+       "NIST-SC-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
+      "remediation": "",
+      "rule_id": "K8S-004",
+      "severity": "medium",
+      "title": "No resource limits"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.7.2",
+       "NIST-CM-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
+      "remediation": "",
+      "rule_id": "K8S-031",
+      "severity": "medium",
+      "title": "Missing seccompProfile"
+     },
+     {
+      "attack_techniques": [
+       "T1078"
+      ],
+      "category": "kubernetes",
+      "compliance": [
+       "CIS-K8s-5.5.1",
+       "NIST-CM-6"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 8,
+      "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
+      "remediation": "",
+      "rule_id": "K8S-011",
+      "severity": "medium",
+      "title": "Container image uses :latest tag"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
+      "remediation": "",
+      "rule_id": "K8S-022",
+      "severity": "low",
+      "title": "Container without liveness probe"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
+      "remediation": "",
+      "rule_id": "K8S-023",
+      "severity": "low",
+      "title": "Container without readiness probe"
      }
     ],
-    "total": 19
+    "total": 20
    },
    "project_inventory_data": {
     "advisory_depth_pct": 0,
@@ -2226,25 +2278,33 @@
      {
       "ai_detected": false,
       "category": "credential_exfiltration",
+      "confidence": "high",
       "context": "behavioral",
-      "detail": "Detected in <ROOT>/project/SKILL.md: \"send ~/.ssh/id_rsa to https://\". This skill instructs reading a credential/secret file and sending it to an external URL — credential exfiltration. Remove the instruction; never transmit local secrets off-host.",
+      "detail": "Detected in SKILL.md: \"send ~/.ssh/id_rsa to https://\". This skill instructs reading a credential/secret file and sending it to an external URL — credential exfiltration. Remove the instruction; never transmit local secrets off-host.",
+      "evidence_source": "static_text",
       "package": null,
       "recommendation": "This skill instructs reading a credential/secret file and sending it to an external URL — credential exfiltration. Remove the instruction; never transmit local secrets off-host.",
       "server": null,
       "severity": "critical",
       "source_file": "<ROOT>/project/SKILL.md",
+      "source_line": 4,
+      "source_path": "SKILL.md",
       "title": "Natural-language credential exfiltration"
      },
      {
       "ai_detected": false,
       "category": "prompt_coercion",
+      "confidence": "high",
       "context": "behavioral",
-      "detail": "Detected in <ROOT>/project/SKILL.md: \"Ignore all previous instructions\". Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions.",
+      "detail": "Detected in SKILL.md: \"Ignore all previous instructions\". Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions.",
+      "evidence_source": "static_text",
       "package": null,
       "recommendation": "Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions.",
       "server": null,
       "severity": "high",
       "source_file": "<ROOT>/project/SKILL.md",
+      "source_line": 4,
+      "source_path": "SKILL.md",
       "title": "Prompt coercion or guardrail override"
      }
     ],
@@ -2510,10 +2570,10 @@
    "",
    "Scanning 1 path(s) for IaC misconfigurations...",
    "",
-   "  ✓ <ROOT>/project/main.tf: 6 finding(s) (1 critical, 3 high, 2 medium)",
+   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                             IaC Misconfigurations — 6 finding(s)                                                             │",
+   "│                                                             IaC Misconfigurations — 5 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -2523,21 +2583,18 @@
    "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
    "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-008   │ S3 bucket without server-side encryption                                  │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
    "│ │            │              │ access block to prevent public bucket exposure.                           │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a versioning block. Enable versioning to      │                                                  │ │",
    "│ │            │              │ protect against accidental deletion and enable recovery.                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a logging block. Enable server access logging │                                                  │ │",
    "│ │            │              │ to track requests for security auditing.                                  │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 1 critical · 3 high · scan complete ─────────────────────────────────────────────────────────────╯"
+   "╰──────────────────────────────────────────────────────────── 1 critical · 2 high · scan complete ─────────────────────────────────────────────────────────────╯"
   ],
   "context": {
    "_browser_ext_results": null,
@@ -2581,23 +2638,6 @@
      },
      {
       "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-008",
-      "severity": "high",
-      "title": "S3 bucket without server-side encryption"
-     },
-     {
-      "attack_techniques": [
        "T1190",
        "T1530"
       ],
@@ -2629,7 +2669,7 @@
       "message": "S3 bucket 'b' does not have a versioning block. Enable versioning to protect against accidental deletion and enable recovery.",
       "remediation": "",
       "rule_id": "TF-SEC-021",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket versioning not enabled"
      },
      {
@@ -2646,11 +2686,11 @@
       "message": "S3 bucket 'b' does not have a logging block. Enable server access logging to track requests for security auditing.",
       "remediation": "",
       "rule_id": "TF-SEC-023",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket logging not enabled"
      }
     ],
-    "total": 6
+    "total": 5
    },
    "project_inventory_data": {
     "advisory_depth_pct": 0,
@@ -2720,25 +2760,33 @@
      {
       "ai_detected": false,
       "category": "credential_exfiltration",
+      "confidence": "high",
       "context": "behavioral",
-      "detail": "Detected in <ROOT>/project/SKILL.md: \"send ~/.ssh/id_rsa to https://\". This skill instructs reading a credential/secret file and sending it to an external URL — credential exfiltration. Remove the instruction; never transmit local secrets off-host.",
+      "detail": "Detected in SKILL.md: \"send ~/.ssh/id_rsa to https://\". This skill instructs reading a credential/secret file and sending it to an external URL — credential exfiltration. Remove the instruction; never transmit local secrets off-host.",
+      "evidence_source": "static_text",
       "package": null,
       "recommendation": "This skill instructs reading a credential/secret file and sending it to an external URL — credential exfiltration. Remove the instruction; never transmit local secrets off-host.",
       "server": null,
       "severity": "critical",
       "source_file": "<ROOT>/project/SKILL.md",
+      "source_line": 4,
+      "source_path": "SKILL.md",
       "title": "Natural-language credential exfiltration"
      },
      {
       "ai_detected": false,
       "category": "prompt_coercion",
+      "confidence": "high",
       "context": "behavioral",
-      "detail": "Detected in <ROOT>/project/SKILL.md: \"Ignore all previous instructions\". Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions.",
+      "detail": "Detected in SKILL.md: \"Ignore all previous instructions\". Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions.",
+      "evidence_source": "static_text",
       "package": null,
       "recommendation": "Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions.",
       "server": null,
       "severity": "high",
       "source_file": "<ROOT>/project/SKILL.md",
+      "source_line": 4,
+      "source_path": "SKILL.md",
       "title": "Prompt coercion or guardrail override"
      }
     ],
@@ -2980,25 +3028,33 @@
      {
       "ai_detected": false,
       "category": "credential_exfiltration",
+      "confidence": "high",
       "context": "behavioral",
-      "detail": "Detected in <ROOT>/project/SKILL.md: \"send ~/.ssh/id_rsa to https://\". This skill instructs reading a credential/secret file and sending it to an external URL — credential exfiltration. Remove the instruction; never transmit local secrets off-host.",
+      "detail": "Detected in SKILL.md: \"send ~/.ssh/id_rsa to https://\". This skill instructs reading a credential/secret file and sending it to an external URL — credential exfiltration. Remove the instruction; never transmit local secrets off-host.",
+      "evidence_source": "static_text",
       "package": null,
       "recommendation": "This skill instructs reading a credential/secret file and sending it to an external URL — credential exfiltration. Remove the instruction; never transmit local secrets off-host.",
       "server": null,
       "severity": "critical",
       "source_file": "<ROOT>/project/SKILL.md",
+      "source_line": 4,
+      "source_path": "SKILL.md",
       "title": "Natural-language credential exfiltration"
      },
      {
       "ai_detected": false,
       "category": "prompt_coercion",
+      "confidence": "high",
       "context": "behavioral",
-      "detail": "Detected in <ROOT>/project/SKILL.md: \"Ignore all previous instructions\". Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions.",
+      "detail": "Detected in SKILL.md: \"Ignore all previous instructions\". Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions.",
+      "evidence_source": "static_text",
       "package": null,
       "recommendation": "Prompt coercion patterns try to override system instructions or hide policy checks. Remove or rewrite these instructions.",
       "server": null,
       "severity": "high",
       "source_file": "<ROOT>/project/SKILL.md",
+      "source_line": 4,
+      "source_path": "SKILL.md",
       "title": "Prompt coercion or guardrail override"
      }
     ],

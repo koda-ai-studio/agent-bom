@@ -203,9 +203,12 @@ def autodetect_lockfiles(run: DiscoveryRun) -> None:
 
 def _top_level_iac_files(cwd: Path) -> list[str]:
     _auto_iac: list[str] = []
-    for name in ["Dockerfile", "docker-compose.yml", "docker-compose.yaml"]:
+    for name in ["Dockerfile", "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"]:
         if (cwd / name).exists():
             _auto_iac.append(str(cwd / name))
+    workflows = cwd / ".github" / "workflows"
+    if workflows.is_dir():
+        _auto_iac.extend(str(f) for f in sorted((*workflows.glob("*.yml"), *workflows.glob("*.yaml"))))
     for f in cwd.glob("*.tf"):
         _auto_iac.append(str(f))
     for f in cwd.glob("*.yaml"):
@@ -313,7 +316,7 @@ def scan_iac(run: DiscoveryRun) -> None:
     """Step 1g5: IaC misconfiguration scan (--iac)."""
     if run.skill_only or not run.iac_paths:
         return
-    from agent_bom.cli.agents._preflight import _print_scanner_verdicts
+    from agent_bom.cli.agents._preflight import _print_scanner_verdicts, iac_partial_coverage_notes, iac_unevaluated_note
     from agent_bom.iac import scan_iac_with_context
     from agent_bom.iac.models import ScanContext as IaCContext
 
@@ -337,8 +340,12 @@ def scan_iac(run: DiscoveryRun) -> None:
             printed_iac_heading = True
         if result.findings:
             con.print(f"  [green]✓[/green] {iac_path}: {len(result.findings)} finding(s) ({iac_severity_summary(result.findings)})")
+        elif note := iac_unevaluated_note(iac_path, result):
+            con.print(note)
         else:
             con.print(f"  [dim]  {iac_path}: no misconfigurations found[/dim]")
+        for coverage_note in iac_partial_coverage_notes(iac_path, result):
+            con.print(coverage_note)
     if run.verbose and all_iac_verdicts:
         _print_scanner_verdicts(con, all_iac_verdicts)
     if all_iac_findings:

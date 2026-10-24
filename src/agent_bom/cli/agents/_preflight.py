@@ -28,7 +28,7 @@ def _print_scanner_verdicts(con: Any, verdicts: list) -> None:
     for v in verdicts:
         if v.status == "ran":
             icon, style = "✓", "green"
-            detail = f"{v.files_scanned} file(s)"
+            detail = f"{v.files_scanned} file(s)" + (f" ({v.reason})" if v.reason else "")
         elif v.status == "not-applicable":
             icon, style = "—", "dim"
             detail = "no targets"
@@ -201,6 +201,49 @@ def emit_dry_run_plan(
     )
 
 
+def iac_unevaluated_note(iac_path: str, result: Any) -> str | None:
+    """Console line for a path whose files no IaC rule module evaluated, else ``None``.
+
+    Zero findings is only "clean" when a scanner actually ran; a file type
+    with no rule module must read as not evaluated.
+    """
+    if result.findings:
+        return None
+    if result.not_evaluated:
+        names = ", ".join(result.not_evaluated)
+        return f"  [yellow]![/yellow] {iac_path}: not evaluated (no IaC rule module for {names})"
+    if not result.evaluated:
+        return f"  [yellow]![/yellow] {iac_path}: not evaluated (no supported IaC files found)"
+    return None
+
+
+def iac_partial_coverage_notes(iac_path: str, result: Any) -> list[str]:
+    """Console lines for scanners that ran with reduced coverage (e.g. Helm rendering skipped)."""
+    return [
+        f"  [yellow]![/yellow] {iac_path}: {v.scanner_id} partial — {v.reason}"
+        for v in result.verdicts
+        if v.status == "ran" and "skipped" in (v.reason or "")
+    ]
+
+
+def _print_iac_path_result(con: Any, iac_path: str, result: Any) -> None:
+    if result.findings:
+        from collections import Counter
+
+        severity_counts = Counter(f.severity for f in result.findings)
+        severity_parts = [
+            f"[red]{severity_counts.get('critical', 0)} critical[/red]",
+            f"[yellow]{severity_counts.get('high', 0)} high[/yellow]",
+        ]
+        con.print(f"  [red]⚠[/red]  {iac_path}: {len(result.findings)} finding(s) ({', '.join(severity_parts)})")
+    elif note := iac_unevaluated_note(iac_path, result):
+        con.print(note)
+    else:
+        con.print(f"  [green]✓[/green] {iac_path}: no misconfigurations")
+    for coverage_note in iac_partial_coverage_notes(iac_path, result):
+        con.print(coverage_note)
+
+
 def run_iac_only_scan(
     *,
     con: Any,
@@ -243,17 +286,7 @@ def run_iac_only_scan(
             result = scan_iac_with_context(iac_path, iac_scan_ctx)
             all_iac_findings.extend(result.findings)
             all_iac_verdicts.extend(result.verdicts)
-            if result.findings:
-                from collections import Counter
-
-                severity_counts = Counter(f.severity for f in result.findings)
-                severity_parts = [
-                    f"[red]{severity_counts.get('critical', 0)} critical[/red]",
-                    f"[yellow]{severity_counts.get('high', 0)} high[/yellow]",
-                ]
-                con.print(f"  [red]⚠[/red]  {iac_path}: {len(result.findings)} finding(s) ({', '.join(severity_parts)})")
-            else:
-                con.print(f"  [green]✓[/green] {iac_path}: no misconfigurations")
+            _print_iac_path_result(con, iac_path, result)
         if verbose and all_iac_verdicts:
             _print_scanner_verdicts(con, all_iac_verdicts)
 

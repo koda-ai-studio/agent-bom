@@ -55,7 +55,7 @@ def skills_report_to_sarif(report: Any) -> dict[str, Any]:
                 "tool": {
                     "driver": {
                         "name": "agent-bom skills",
-                        "informationUri": "https://github.com/msaad00/agent-bom",
+                        "informationUri": "https://github.com/koda-ai-studio/agent-bom",
                         "rules": rules,
                     }
                 },

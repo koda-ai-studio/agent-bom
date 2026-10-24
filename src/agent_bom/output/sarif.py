@@ -9,10 +9,7 @@ import re
 from pathlib import Path
 from typing import Any, Optional
 
-from agent_bom.asset_provenance import (
-    agent_discovery_provenance,
-    sanitize_discovery_provenance,
-)
+from agent_bom.asset_provenance import agent_discovery_provenance, sanitize_discovery_provenance
 from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
@@ -43,7 +40,13 @@ from agent_bom.output.sarif_taxonomy import (
     _framework_taxa_references,
     _taxonomies_as_tool_extensions,
 )
-from agent_bom.output.source_locations import SourceIndex, finding_image_reference, finding_package_location, package_source_index
+from agent_bom.output.source_locations import (
+    SourceIndex,
+    evidence_relative_path,
+    finding_image_reference,
+    finding_package_location,
+    package_source_index,
+)
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text, sanitize_url
 
 _SARIF_SEVERITY_MAP = {
@@ -92,7 +95,7 @@ _SECURITY_SEVERITY_SCORE = {
 # read the way ``graph.severity.normalize_severity`` reads it, which is what
 # ``Finding.__post_init__`` has already applied to anything in that stream.
 _SARIF_INFO_LABELS = frozenset({"info", "informational"})
-_UNIFIED_RULE_HELP_URI = "https://github.com/msaad00/agent-bom#readme"
+_UNIFIED_RULE_HELP_URI = "https://github.com/koda-ai-studio/agent-bom#readme"
 _SARIF_RULE_TOKEN_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
 
@@ -831,15 +834,11 @@ def _unified_finding_properties(finding: Finding, rule_id: str, evidence: dict[s
 
 
 def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence: dict[str, Any]) -> dict[str, Any]:
-    file_path = (
-        _to_relative_path(
-            finding.asset.location,
-            _ecosystem_from_purl(finding.asset.identifier),
-        )
-        if finding.asset.location
-        else None
-    )
-    raw_start_line = finding.evidence.get("line_number") or finding.evidence.get("line")
+    location = finding.asset.location
+    file_path = _to_relative_path(location, _ecosystem_from_purl(finding.asset.identifier)) if location else None
+    if file_path is None or file_path.startswith("<"):  # a redacted <path:...> label is not a URI
+        file_path = evidence_relative_path(finding.evidence)
+    raw_start_line = finding.evidence.get("line_number") or finding.evidence.get("line") or finding.evidence.get("source_line")
     start_line = raw_start_line if isinstance(raw_start_line, int) and raw_start_line > 0 else 1
     fingerprint_uri = file_path or f"{finding.asset.asset_type}:{finding.asset.stable_id}"
     fp_input = f"{finding.id}:{fingerprint_uri}:{finding.asset.stable_id}"
@@ -1148,7 +1147,7 @@ def _build_sarif_run(report: AIBOMReport, catalog: _SarifCatalog, scan_run: Scan
             "driver": {
                 "name": "agent-bom",
                 "version": report.tool_version,
-                "informationUri": "https://github.com/msaad00/agent-bom",
+                "informationUri": "https://github.com/koda-ai-studio/agent-bom",
                 "rules": catalog.rules,
             }
         },

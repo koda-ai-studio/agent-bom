@@ -56,6 +56,7 @@ from agent_bom.iac import kubernetes_containers as _containers
 from agent_bom.iac import kubernetes_resources as _resources
 from agent_bom.iac.kubernetes_common import K8sContainer, K8sDocument, K8sWorkload
 from agent_bom.iac.models import IaCFinding
+from agent_bom.iac.yaml_lines import key_line, safe_load_all_with_lines
 
 # Workload kinds that have a pod spec
 _WORKLOAD_KINDS = frozenset(
@@ -111,6 +112,17 @@ _VOLUME_AND_POD_CONTEXT_CHECKS: tuple[_WorkloadCheck, ...] = (
     _resources.k8s_014_019,
     _resources.k8s_013,
 )
+
+
+def _pod_spec_key_line(doc: dict[str, Any]) -> int:
+    """Line of the ``spec:`` key that opens the pod spec (so absence findings point at it)."""
+    kind = doc.get("kind", "")
+    parent: Any = doc
+    if kind == "CronJob":
+        parent = doc.get("spec", {}).get("jobTemplate", {}).get("spec", {}).get("template", {})
+    elif kind != "Pod":
+        parent = doc.get("spec", {}).get("template", {})
+    return key_line(parent, "spec")
 
 
 def _get_pod_spec(doc: dict[str, Any]) -> dict[str, Any] | None:
@@ -173,6 +185,8 @@ def _scan_document(doc: dict[str, Any], content: str, rel_path: str) -> list[IaC
         pod_spec=pod_spec,
         content=content,
         rel_path=rel_path,
+        metadata_line=key_line(metadata, "namespace", key_line(doc, "metadata", 1)),
+        spec_line=_pod_spec_key_line(doc),
     )
     findings.extend(_scan_workload(workload))
     return findings
@@ -194,13 +208,15 @@ def scan_k8s_manifest(file_path: str | Path) -> list[IaCFinding]:
     path = Path(file_path)
     if not path.is_file():
         return []
+    return scan_k8s_text(path.read_text(encoding="utf-8", errors="replace"), str(path))
 
-    content = path.read_text(encoding="utf-8", errors="replace")
-    rel_path = str(path)
+
+def scan_k8s_text(content: str, rel_path: str) -> list[IaCFinding]:
+    """Scan Kubernetes manifest text (one or more YAML documents)."""
     findings: list[IaCFinding] = []
 
     try:
-        docs = list(yaml.safe_load_all(content))
+        docs = safe_load_all_with_lines(content)
     except yaml.YAMLError:
         return []
 

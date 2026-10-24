@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -169,12 +170,31 @@ output = "{profile_output}"
 
 
 def test_iac_command_exits_zero_when_clean(tmp_path: Path):
-    _scan_result = ScanResult(findings=[], verdicts=[])
+    _scan_result = ScanResult(findings=[], verdicts=[ScannerVerdict("terraform", "ran", 1)])
     with patch("agent_bom.iac.scan_iac_with_context", return_value=_scan_result):
         result = CliRunner().invoke(main, ["iac", str(tmp_path)])
 
     assert result.exit_code == 0
     assert "no misconfigurations" in " ".join(result.output.split())
+
+
+def test_iac_command_reports_unmatched_file_as_not_evaluated(tmp_path: Path):
+    target = tmp_path / "settings.yaml"
+    target.write_text("feature: true\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["iac", str(target)])
+
+    output = " ".join(result.output.split())
+    assert "not evaluated (no IaC rule module for settings.yaml)" in output
+    assert "no misconfigurations" not in output
+
+
+def test_iac_command_evaluates_compose_file(tmp_path: Path):
+    target = tmp_path / "docker-compose.yml"
+    target.write_text("services:\n  web:\n    image: nginx:1.27\n    privileged: true\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["iac", str(target), "--format", "json"])
+
+    assert '"rule_id": "COMPOSE-001"' in result.output
+    assert '"line_number": 4' in result.output
 
 
 def test_focused_gate_uses_canonical_severity_order():
@@ -325,3 +345,39 @@ def test_image_missing_tar_errors_nonzero(tmp_path: Path):
     missing = tmp_path / "nope.tar"
     result = CliRunner().invoke(main, ["image", "--tar", str(missing)])
     assert result.exit_code == 2
+
+
+def test_iac_command_gates_and_emits_sarif_for_workflow_findings(tmp_path: Path):
+    workflows = tmp_path / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "ci.yml").write_text(
+        "on: issues\npermissions:\n  contents: read\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n"
+        '      - run: echo "${{ github.event.issue.title }}"\n',
+        encoding="utf-8",
+    )
+    out = tmp_path / "out.sarif"
+    result = CliRunner().invoke(main, ["iac", str(tmp_path), "-f", "sarif", "-o", str(out), "--fail-on-severity", "high"])
+
+    assert result.exit_code == 1, result.output
+    sarif = json.loads(out.read_text(encoding="utf-8"))
+    hits = [r for r in sarif["runs"][0]["results"] if r["ruleId"].endswith("GHA-003")]
+    assert len(hits) == 1
+    location = hits[0]["locations"][0]["physicalLocation"]
+    assert location["artifactLocation"]["uri"] == ".github/workflows/ci.yml"
+    assert location["region"]["startLine"] == 8
+
+
+def test_iac_command_says_helm_rendering_was_skipped(tmp_path: Path, monkeypatch):
+    chart = tmp_path / "chart"
+    (chart / "templates").mkdir(parents=True)
+    (chart / "Chart.yaml").write_text("apiVersion: v2\nname: c\nversion: 0.1.0\n", encoding="utf-8")
+    (chart / "templates" / "pod.yaml").write_text(
+        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: {{ .Release.Name }}\nspec:\n  hostNetwork: true\n", encoding="utf-8"
+    )
+    monkeypatch.setattr("agent_bom.iac.helm_templates.shutil.which", lambda _name: None)
+    result = CliRunner().invoke(main, ["iac", str(chart)])
+
+    output = " ".join(result.output.split())
+    assert "helm partial" in output
+    assert "rendering skipped" in output
+    assert "1 high" in output

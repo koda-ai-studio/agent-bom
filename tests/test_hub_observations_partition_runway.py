@@ -250,6 +250,8 @@ def test_retention_failure_is_logged_at_error_naming_the_runway_end(monkeypatch,
     class InsufficientPrivilegeError(Exception):
         """Stands in for psycopg's ``InsufficientPrivilege`` (SQLSTATE 42501)."""
 
+        sqlstate = "42501"
+
     existing = {partition_table_name(2026, m) for m in (6, 7, 8, 9)}
     maintenance = _FailingMaintenance(existing, InsufficientPrivilegeError("permission denied for schema public"))
     _install_maintenance(monkeypatch, maintenance, frozen_now=datetime(2026, 8, 1, tzinfo=timezone.utc))
@@ -262,8 +264,9 @@ def test_retention_failure_is_logged_at_error_naming_the_runway_end(monkeypatch,
     message = " ".join(r.getMessage() for r in errors)
     assert "2026-09-30" in message, f"runway end not named in operator alert: {message!r}"
     assert "hub_findings_current_observations" in message
-    # The alert must carry the original privilege error, not just a bare string.
-    assert any(r.exc_info and r.exc_info[0] is InsufficientPrivilegeError for r in errors)
+    # The expected DDL denial is one clear line naming the cause, not a traceback.
+    assert "denied the DDL that extends it" in message
+    assert not any(r.exc_info for r in caplog.records)
     # Nothing may be reported at DEBUG-only any more.
     assert not any(r.levelno == logging.DEBUG and "retention skipped" in r.getMessage() for r in caplog.records)
 
@@ -300,6 +303,8 @@ def test_denied_top_up_with_a_healthy_runway_warns_instead_of_paging(monkeypatch
     class InsufficientPrivilegeError(Exception):
         """Stands in for psycopg's ``InsufficientPrivilege`` (SQLSTATE 42501)."""
 
+        sqlstate = "42501"
+
     existing = {partition_table_name(2027, m) for m in range(1, 13)} | {partition_table_name(2026, m) for m in range(7, 13)}
     maintenance = _FailingMaintenance(existing, InsufficientPrivilegeError("permission denied for schema public"))
     _install_maintenance(monkeypatch, maintenance, frozen_now=datetime(2026, 8, 1, tzinfo=timezone.utc))
@@ -310,6 +315,7 @@ def test_denied_top_up_with_a_healthy_runway_warns_instead_of_paging(monkeypatch
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert warnings, f"the denied top-up must stay visible, got {[(r.levelname, r.getMessage()) for r in caplog.records]}"
+    assert not any(r.exc_info for r in warnings)
     # Still names the runway end, so the operator can see the cliff approaching.
     assert "2027-12-31" in " ".join(r.getMessage() for r in warnings)
 
@@ -338,3 +344,16 @@ def test_retention_stays_quiet_while_the_runway_is_healthy(monkeypatch, caplog) 
         run_hub_observations_retention(retention_days=365)
 
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
+
+
+def test_unexpected_top_up_failure_keeps_its_traceback(monkeypatch, caplog) -> None:
+    existing = {partition_table_name(2026, m) for m in (6, 7, 8, 9)}
+    maintenance = _FailingMaintenance(existing, RuntimeError("disk full"))
+    _install_maintenance(monkeypatch, maintenance, frozen_now=datetime(2026, 8, 1, tzinfo=timezone.utc))
+
+    with caplog.at_level(logging.DEBUG, logger=partitions.logger.name):
+        assert run_hub_observations_retention(retention_days=365) == 0
+
+    errors = [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert any(r.exc_info and r.exc_info[0] is RuntimeError for r in errors)
+    assert "top-up failed unexpectedly" in " ".join(r.getMessage() for r in errors)
