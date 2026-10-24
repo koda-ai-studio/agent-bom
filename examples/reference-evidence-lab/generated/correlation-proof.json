@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:b70e4e4c30c642cce482c92a68739ea6a01f1750ef5175e4cb497ea5254cf321",
+  "artifact_sha256": "sha256:c5b8769158dc09dcfc6a4d4b011349d665e86220af3f11511e2f342ab0e6d9ab",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -373,7 +373,7 @@
                 "severity": "high"
               }
             ],
-            "id": "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863",
+            "id": "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
             "label": "CVE-2023-4863 via reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "nodeIds": [
               "container:iac:reference-api",
@@ -471,7 +471,7 @@
               "severity": "high"
             }
           },
-          "id": "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863",
+          "id": "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
           "next_actions": [
             {
               "detail": "Open the first finding and confirm the root cause before expanding the graph.",
@@ -758,7 +758,7 @@
           ],
           "occurrence_count": 1,
           "occurrence_path_ids": [
-            "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863"
+            "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to"
           ],
           "rank": 1,
           "rank_meta": {
@@ -1113,7 +1113,7 @@
                 "severity": "high"
               }
             ],
-            "id": "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863",
+            "id": "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
             "label": "CVE-2023-4863 via reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "nodeIds": [
               "container:sbom:reference-api",
@@ -1211,7 +1211,7 @@
               "severity": "high"
             }
           },
-          "id": "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863",
+          "id": "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
           "next_actions": [
             {
               "detail": "Open the first finding and confirm the root cause before expanding the graph.",
@@ -1498,7 +1498,7 @@
           ],
           "occurrence_count": 1,
           "occurrence_path_ids": [
-            "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863"
+            "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to"
           ],
           "rank": 2,
           "rank_meta": {
@@ -1849,7 +1849,7 @@
                 "severity": "high"
               }
             ],
-            "id": "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863",
+            "id": "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863::depends_on,vulnerable_to",
             "label": "CVE-2023-4863 via pinned-package.txt",
             "nodeIds": [
               "source:pinned-package",
@@ -1947,7 +1947,7 @@
               "severity": "high"
             }
           },
-          "id": "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863",
+          "id": "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863::depends_on,vulnerable_to",
           "next_actions": [
             {
               "detail": "Open the first finding and confirm the root cause before expanding the graph.",
@@ -2234,7 +2234,7 @@
           ],
           "occurrence_count": 1,
           "occurrence_path_ids": [
-            "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863"
+            "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863::depends_on,vulnerable_to"
           ],
           "rank": 3,
           "rank_meta": {
@@ -2646,7 +2646,7 @@
                 "role": "unknown"
               }
             ],
-            "id": "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records",
+            "id": "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,authenticates_as,has_permission",
             "label": "Modeled customer records via reference-evidence-workload",
             "nodeIds": [
               "service:reference-api",
@@ -2753,7 +2753,7 @@
               "role": "unknown"
             }
           },
-          "id": "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records",
+          "id": "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,authenticates_as,has_permission",
           "next_actions": [
             {
               "detail": "Review the agent, user, or service account that can trigger this path.",
@@ -3121,7 +3121,7 @@
           ],
           "occurrence_count": 1,
           "occurrence_path_ids": [
-            "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records"
+            "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,authenticates_as,has_permission"
           ],
           "rank": 4,
           "rank_meta": {
