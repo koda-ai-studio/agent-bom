@@ -35,7 +35,6 @@ def test_vuln_db_cache_key_rolls_daily_and_restores_the_last_copy() -> None:
     assert "-v1" not in key
 
 
-
 def test_setup_python_does_not_require_caller_python_manifests() -> None:
     setup = _step("actions/setup-python@")
     assert "cache" not in setup.get("with", {})

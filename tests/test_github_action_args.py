@@ -98,7 +98,7 @@ def _write_runner_home(home: Path) -> None:
     cursor = home / ".cursor"
     cursor.mkdir(parents=True)
     (cursor / "mcp.json").write_text(
-        json.dumps({"mcpServers": {"runner-home-server": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/"]}}}),
+        json.dumps({"mcpServers": {"runner-home-server": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem"]}}}),
         encoding="utf-8",
     )
 
@@ -256,6 +256,7 @@ def test_baseline_input_runs_against_the_cli(tmp_path: Path) -> None:
     assert (repo / "baseline.json").is_file(), base.stderr
 
     args = action_args(auto_update_db="false", baseline="baseline.json", format="json", output="out.json")
-    result = subprocess.run([sys.executable, "-m", "agent_bom", *args, "--offline", "-q"], cwd=repo, env=env, capture_output=True, text=True)
+    command = [sys.executable, "-m", "agent_bom", *args, "--offline", "-q"]
+    result = subprocess.run(command, cwd=repo, env=env, capture_output=True, text=True)
     assert result.returncode != 2, result.stderr
     assert json.loads((repo / "out.json").read_text(encoding="utf-8"))["delta"]["enabled"] is True
