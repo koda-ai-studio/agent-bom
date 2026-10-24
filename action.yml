@@ -155,6 +155,10 @@ inputs:
     description: 'Exclude vulnerabilities without available fixes from SARIF output'
     required: false
     default: 'false'
+  mcp-gate:
+    description: 'On pull_request events, fail when the PR adds or redefines an MCP server (in .mcp.json or mcp.json) that is blocked by the launcher check, ships a known-malicious package, or reaches a vulnerability at or above severity-threshold.'
+    required: false
+    default: 'false'
   sbom-artifact:
     description: 'Also write an SBOM / AI-BOM of the scanned scope and upload it as a workflow artifact: cyclonedx (agent-bom-sbom.cdx.json), spdx (agent-bom-sbom.spdx.json), or none. Reuses the local vulnerability data offline. Supported for scan-type scan, image, fs and sbom.'
     required: false
@@ -845,6 +849,29 @@ runs:
         if [ -n "$RESULT_FILE" ] && [ -f "$RESULT_FILE" ]; then
           python3 "$GITHUB_ACTION_PATH/scripts/emit_github_annotations.py" "$RESULT_FILE" --max "$INPUT_MAX_ANNOTATIONS"
         fi
+
+    - name: MCP gate
+      if: always() && inputs.mcp-gate == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        INPUT_SEVERITY: ${{ inputs.severity-threshold }}
+        INPUT_AUTO_UPDATE_DB: ${{ inputs.auto-update-db }}
+      run: |
+        # pull_request checkouts are the merge commit: its first parent is the
+        # base the PR merges into. Fetch it when the clone is shallow.
+        git fetch --no-tags --quiet --depth=2 origin "$(git rev-parse HEAD)" 2>/dev/null || true
+        if git rev-parse --verify --quiet HEAD^2 > /dev/null; then
+          GATE_BASE="$(git rev-parse HEAD^1)"
+        else
+          git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null || git fetch --no-tags --quiet --depth=1 origin "$BASE_SHA"
+          GATE_BASE="$BASE_SHA"
+        fi
+        GATE_ARGS=(--base "$GATE_BASE" --head "$(git rev-parse HEAD)" --severity "${INPUT_SEVERITY:-high}")
+        if [ "$INPUT_AUTO_UPDATE_DB" = "true" ]; then
+          GATE_ARGS+=(--offline)
+        fi
+        python3 "$GITHUB_ACTION_PATH/scripts/action_mcp_gate.py" "${GATE_ARGS[@]}"
 
     - name: Post PR comment with findings summary
       if: always() && inputs.pr-comment != 'false' && github.event_name == 'pull_request'
