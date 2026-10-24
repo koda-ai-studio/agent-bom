@@ -29,6 +29,7 @@ from agent_bom.constants import is_credential_key
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_band_rank
 from agent_bom.graph.compat import export_entity_type
 from agent_bom.output.finding_views import sanitize_output_text, with_output_sanitizer_cache
+from agent_bom.output.graph_export_grafts import CLOUD_ENTITY_TYPES as _CLOUD_ENTITY_TYPES
 from agent_bom.output.package_attributes import _package_node_attributes
 from agent_bom.output.technique_evidence import copy_atlas_graph_receipts
 from agent_bom.security import sanitize_sensitive_payload
@@ -277,40 +278,6 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
 
     _merge_unified_graph_evidence(graph, data)
     return graph
-
-
-# Entity types only the unified builder produces (cloud inventory, CIEM, CIS,
-# Snowflake, RBAC), grafted so `agent-bom graph` shows the cloud estate. Cloud
-# AI assets (hosted agents, endpoints, model deployments, prompt templates) are
-# typed agent/server/model/config_file; the base projection already carries the
-# MCP inventory under the same ids, so only the estate's own nodes graft.
-_CLOUD_ENTITY_TYPES = frozenset(
-    {
-        "cloud_resource",
-        "agent",
-        "server",
-        "model",
-        "config_file",
-        "resource",
-        "data_store",
-        "misconfiguration",
-        "org",
-        "account",
-        "user",
-        "group",
-        "role",
-        "policy",
-        "service_account",
-        "service_principal",
-        "federated_identity",
-        "access_grant",
-        "access_policy",
-        "environment",
-        "fleet",
-        "cluster",
-        "infra",
-    }
-)
 
 
 def _merge_unified_graph_evidence(graph: DepGraph, data: dict[str, Any]) -> None:

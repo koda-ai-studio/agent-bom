@@ -306,6 +306,21 @@ def _attack_techniques(check: EstateCheck) -> tuple[str, ...]:
     return techniques
 
 
+def _stamp_estate_asset_types(findings, estate) -> None:
+    """Carry each finding's estate asset type with its node id.
+
+    A graph rebuilt from the report then draws the same node the estate
+    snapshot holds, instead of minting a stub from the asset identifier.
+    """
+    from agent_bom.demo_estate.estate_graph import entity_type_for_resource_type
+
+    resource_types = {asset.asset_id: asset.resource_type for asset in estate.assets}
+    for finding in findings:
+        resource_type = resource_types.get(finding.asset.identifier or "")
+        if resource_type is not None:
+            finding.entity_type = entity_type_for_resource_type(resource_type).value
+
+
 def build_estate_findings(
     estate: EnterpriseEstate,
     *,
@@ -440,15 +455,9 @@ def build_estate_findings(
     current_snapshot = next(snapshot for snapshot in estate.snapshots if snapshot.stage.value == "current")
     first_seen = current_snapshot.observed_at.isoformat()
     from agent_bom.demo_estate.estate_finding_nodes import estate_finding_node_id
-    from agent_bom.demo_estate.estate_graph import entity_type_for_resource_type
-
-    # The asset node a finding attaches to is the estate asset's node; its type
-    # rides with the id so a graph rebuilt from the report draws the same node.
-    resource_types = {asset.asset_id: asset.resource_type for asset in estate.assets}
+    _stamp_estate_asset_types(findings, estate)
     for finding in findings:
         finding.node_id = finding.asset.identifier
-        if (resource_type := resource_types.get(finding.asset.identifier or "")) is not None:
-            finding.entity_type = entity_type_for_resource_type(resource_type).value
         finding.finding_node_id = estate_finding_node_id(finding)
         finding.owner = _TRIAGE_OWNER_BY_DOMAIN[finding.security_domain]
         finding.first_seen = first_seen
