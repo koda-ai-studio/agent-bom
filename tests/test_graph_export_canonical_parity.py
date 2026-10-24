@@ -196,3 +196,39 @@ def test_showcase_snapshot_cloud_assets_the_report_names_reach_the_export(tmp_pa
     # The multi-source compute lane joins on its merged strong-key id, not the posture row's ARN.
     lane = {nid for nid in named if nid.startswith("cloud_resource:aws:aws_instance:")}
     assert len(lane) == 12
+
+
+_STATIC_INVENTORY_KINDS = {"agent", "server", "provider", "source_file", "directory", "package", "vulnerability"}
+
+
+@cache
+def _sbom_and_repository_report(root: str) -> dict:
+    project = Path(root) / "project"
+    project.mkdir(parents=True, exist_ok=True)
+    (project / "requirements.txt").write_text("requests==2.31.0\n")
+    sbom = Path(__file__).parent / "fixtures" / "test-sbom.cdx.json"
+    out = Path(root) / "sbom-repo.json"
+    with mock.patch("agent_bom.db.local_analytics.record_scan_report_best_effort", lambda *_a, **_k: None):
+        result = CliRunner().invoke(
+            main,
+            ["scan", "-p", str(project), "--sbom", str(sbom), "--offline", "--no-auto-update-db", "--quiet"]
+            + ["--format", "json", "--output", str(out)],
+            catch_exceptions=False,
+        )
+    assert out.exists(), result.output
+    return json.loads(out.read_text())
+
+
+def test_sbom_and_repository_inventory_export_with_the_graph_ids(tmp_path_factory):
+    report = _sbom_and_repository_report(str(tmp_path_factory.getbasetemp() / "sbom-repo-parity"))
+    sources = {agent.get("source") for agent in report["agents"]}
+    assert {"sbom", "project"} <= sources
+    canonical = _canonical(report)
+    exported = {node["id"]: node["entity_type"] for node in to_json(build_graph_from_scan_data(report))["nodes"]}
+    inventory = {nid: kind for nid, kind in exported.items() if kind in _STATIC_INVENTORY_KINDS}
+    assert {nid: kind for nid, kind in inventory.items() if canonical.get(nid) != kind} == {}
+    static_prefixes = ("source_file:sbom:", "directory:repository:", "directory:manifest:")
+    static = {nid for nid in canonical if nid.startswith(static_prefixes)}
+    assert len(static) == 3
+    assert static <= set(exported)
+    assert not [nid for nid in exported if nid.startswith(("provider:sbom", "provider:project"))]

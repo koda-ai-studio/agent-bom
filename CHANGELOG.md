@@ -84,6 +84,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - A graph read whose `scan_id` (or `scan`) names no snapshot of the caller's tenant returns 404 instead of 200 with no nodes and `complete: true`. This covers `/v1/graph` and the 14 sibling reads that served an empty page (agents, attack and exposure paths, clusters, governance, rollup, scoped, node neighbors, incident edges, fix-first, `should-i-deploy` and more); MCP `exposure_paths` and `should_i_deploy` return `AGENTBOM_MCP_NOT_FOUND_RESOURCE`.
 - `/v1/graph`, `/graph/search`, `/graph/agents` and `/v1/inventory/assets` reject a `cursor` sent with a non-zero `offset` with 400, as the attack-path queues do, instead of serving the cursor's page and echoing the ignored offset.
 - A cursor that does not decode, or that belongs to another tenant, query or replaced incident-edge page, is a 422 on every graph and inventory route. `/v1/graph`, the attack-path queues, incident edges and inventory assets returned 400, and `/graph/agents` returned 500.
+- Graph exports of an `--sbom` input or a project's repository inventory name them as the graph does (`source_file:sbom:…`, `directory:repository:…`, `directory:manifest:…`) instead of an agent, an MCP server and a `provider:sbom` / `provider:project` node the graph never draws. 6 export ids that joined nothing in a scan with both inputs now join.
 
 ## [0.110.0] - 2026-10-21
 

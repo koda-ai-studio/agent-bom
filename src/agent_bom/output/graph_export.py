@@ -24,9 +24,10 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Union
 
-from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
+from agent_bom.canonical_ids import mcp_server_graph_id_for
 from agent_bom.constants import is_credential_key
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_band_rank
+from agent_bom.graph.agent_projection import AgentScope, inventory_label, inventory_scope, repository_manifest_node_id
 from agent_bom.graph.compat import export_entity_type
 from agent_bom.output.finding_views import sanitize_output_text, with_output_sanitizer_cache
 from agent_bom.output.graph_export_grafts import CLOUD_ENTITY_TYPES as _CLOUD_ENTITY_TYPES
@@ -197,17 +198,24 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
     graph = DepGraph()
 
     for agent in data.get("agents", []):
-        agent_name = agent.get("name", "unknown-agent")
+        scope = inventory_scope(agent)
         source = agent.get("source") or "local"
-        source_id = f"provider:{source}"
-        graph.add_node(source_id, source, "provider", attributes={"provider": source})
-
-        agent_id = agent_graph_id_for(agent)
-        graph.add_node(agent_id, agent_name, "agent", attributes=_agent_node_attributes(agent))
-        graph.add_edge(source_id, agent_id, "hosts")
+        agent_id = scope.agent_id
+        if scope.static_inventory:
+            # SBOM imports and repository manifests are inventory, not running agents.
+            graph.add_node(agent_id, inventory_label(scope), scope.inventory_type.value, attributes=_agent_node_attributes(agent))
+        else:
+            source_id = f"provider:{source}"
+            graph.add_node(source_id, source, "provider", attributes={"provider": source})
+            graph.add_node(agent_id, agent.get("name", "unknown-agent"), "agent", attributes=_agent_node_attributes(agent))
+            graph.add_edge(source_id, agent_id, "hosts")
 
         for server in agent.get("mcp_servers", []):
             srv_name = server.get("name", "unknown-server")
+            if scope.static_inventory:
+                srv_id = _add_static_inventory_server(graph, scope, srv_name)
+                _add_server_packages(graph, server, srv_id, "contains" if scope.sbom_import else "depends_on")
+                continue
             has_creds = server.get("has_credentials", False)
             if server.get("security_blocked"):
                 srv_kind = "server_blocked"
@@ -247,37 +255,46 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
                         },
                     )
 
-            for pkg in server.get("packages", []):
-                pkg_name = pkg.get("name", "?")
-                pkg_ver = pkg.get("version", "")
-                pkg_eco = pkg.get("ecosystem", "")
-                is_direct = pkg.get("is_direct", True)
-                dep_depth = pkg.get("dependency_depth", 0)
-                vulns = pkg.get("vulnerabilities", [])
-
-                pkg_kind = "pkg_vuln" if vulns else ("pkg_transitive" if is_direct is False else "pkg")
-                pkg_attributes = {**_package_node_attributes(pkg), "legacy_id": f"pkg:{pkg_eco}/{pkg_name}@{pkg_ver}"}
-                pkg_id = str(pkg_attributes["canonical_node_id"])
-                pkg_label = f"{pkg_name}@{pkg_ver}" if pkg_ver else pkg_name
-                if dep_depth and dep_depth > 0:
-                    pkg_label += f" (depth {dep_depth})"
-                graph.add_node(pkg_id, pkg_label, pkg_kind, attributes=pkg_attributes)
-                graph.add_edge(
-                    srv_id,
-                    pkg_id,
-                    "depends_on",
-                    evidence={"version_provenance": pkg_attributes.get("version_provenance")},
-                )
-
-                for vuln in vulns:
-                    vid = vuln.get("id", "UNKNOWN")
-                    severity = vuln.get("severity", "unknown").lower()
-                    cve_id = f"vuln:{vid}"
-                    graph.add_node(cve_id, vid, "cve", severity, attributes={"canonical_node_id": cve_id, "legacy_id": f"cve:{vid}"})
-                    graph.add_edge(pkg_id, cve_id, "affects")
+            _add_server_packages(graph, server, srv_id, "depends_on")
 
     _merge_unified_graph_evidence(graph, data)
     return graph
+
+
+def _add_static_inventory_server(graph: DepGraph, scope: AgentScope, srv_name: str) -> str:
+    """An SBOM's components hang off its file node; a repository manifest is its own directory."""
+    if scope.sbom_import:
+        return scope.agent_id
+    manifest_id = repository_manifest_node_id(scope, srv_name)
+    graph.add_node(manifest_id, srv_name, "directory", attributes={"inventory_role": "manifest_dependencies"})
+    graph.add_edge(scope.agent_id, manifest_id, "contains")
+    return manifest_id
+
+
+def _add_server_packages(graph: DepGraph, server: dict[str, Any], srv_id: str, relationship: str) -> None:
+    for pkg in server.get("packages", []):
+        pkg_name = pkg.get("name", "?")
+        pkg_ver = pkg.get("version", "")
+        pkg_eco = pkg.get("ecosystem", "")
+        is_direct = pkg.get("is_direct", True)
+        dep_depth = pkg.get("dependency_depth", 0)
+        vulns = pkg.get("vulnerabilities", [])
+
+        pkg_kind = "pkg_vuln" if vulns else ("pkg_transitive" if is_direct is False else "pkg")
+        pkg_attributes = {**_package_node_attributes(pkg), "legacy_id": f"pkg:{pkg_eco}/{pkg_name}@{pkg_ver}"}
+        pkg_id = str(pkg_attributes["canonical_node_id"])
+        pkg_label = f"{pkg_name}@{pkg_ver}" if pkg_ver else pkg_name
+        if dep_depth and dep_depth > 0:
+            pkg_label += f" (depth {dep_depth})"
+        graph.add_node(pkg_id, pkg_label, pkg_kind, attributes=pkg_attributes)
+        graph.add_edge(srv_id, pkg_id, relationship, evidence={"version_provenance": pkg_attributes.get("version_provenance")})
+
+        for vuln in vulns:
+            vid = vuln.get("id", "UNKNOWN")
+            severity = vuln.get("severity", "unknown").lower()
+            cve_id = f"vuln:{vid}"
+            graph.add_node(cve_id, vid, "cve", severity, attributes={"canonical_node_id": cve_id, "legacy_id": f"cve:{vid}"})
+            graph.add_edge(pkg_id, cve_id, "affects")
 
 
 def _merge_unified_graph_evidence(graph: DepGraph, data: dict[str, Any]) -> None:
