@@ -173,6 +173,7 @@ without re-parsing logs.
 | `scan-status` | string | parsed from exit code + findings | `clean`, `violations`, `usage_error` (exit `2`), `stale_data` (exit `3`), or `error`. |
 | `vulnerability-count` | string | parsed from SARIF or skills JSON | Number of vulnerability findings, or skill findings for `scan-type: skills`. |
 | `badge-file` | string | computed | Path to generated shields.io badge JSON when `badge` is set. |
+| `sbom-file` | string | computed | Path to the SBOM / AI-BOM artifact when `sbom-artifact` is `cyclonedx` or `spdx`. |
 | `graph-export-path` | string | computed | Path to generated `mermaid`, `svg`, `graph`, or `graph-html` artifact. |
 | `exposure-paths-count` | string | parsed from graph-capable JSON | Number of exposure, lateral, or attack paths in the result artifact. |
 | `blast-radius-critical-count` | string | parsed from SARIF/JSON | Number of critical blast-radius or SARIF findings. |
