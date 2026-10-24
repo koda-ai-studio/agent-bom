@@ -71,7 +71,7 @@ agent-bom/
 ├─ src/agent_bom/              # Python package: CLI, scanners, API, MCP, runtime, graph
 ├─ ui/                         # Next.js dashboard
 ├─ deploy/helm/agent-bom/      # Kubernetes and Helm control-plane/runtime chart
-├─ integrations/               # MCP registries, OpenClaw/Cortex/Docker integration assets
+├─ integrations/               # Claude Code and Codex plugins, MCP registries, OpenClaw/Cortex/Docker assets
 ├─ docs/                       # repo docs, security evidence, architecture, skills
 ├─ site-docs/                  # published documentation site
 ├─ tests/                      # Python regression and contract tests
@@ -284,6 +284,37 @@ Minimum verification matrix:
   bug.
 - For docs, avoid vague capability lists. Prefer "first command -> artifact ->
   next step."
+
+## Setup and pre-push checks CI enforces
+
+- **Setup:** open the Codespace / dev container, or run `uv sync --extra dev`
+  then `uv tool install pre-commit && pre-commit install`. `pre-commit` is not
+  in the `dev` extra, so `uv run pre-commit` fails on a fresh checkout.
+- **Size ratchet:** no file over 1,000 lines, and function size, `api/`
+  imports and deferred imports may only shrink. Run
+  `python scripts/check_architecture.py --base-ref origin/main`; split code
+  into a subpackage instead of growing a large file.
+- **Optional dependencies stay lazy:** CI test jobs install `dev` plus at most
+  `api`, `mcp-server` and `otel`. Do not import `psycopg`, `boto3` or a cloud
+  SDK at module level in shared code or tests. Run your changed tests in that
+  environment, not only with `--all-extras`.
+- **Postgres-only tests** must be listed in the "Run real Postgres storage
+  contract" step of `.github/workflows/ci.yml`, or CI never runs them.
+- **Generated artifacts:** `make preflight` checks most of them (OpenAPI, v1
+  schemas, reference evidence lab, product metrics, vendor coverage, env-var
+  reference). Graph or storage changes also need
+  `python scripts/generate_graph_data_model.py --check`; plugin skill changes
+  need `python scripts/render_plugin_skills.py --check`. Regenerate with the
+  owning script and commit the result.
+- **Goldens:** refresh scan and renderer goldens deliberately with
+  `AGENT_BOM_UPDATE_SCAN_GOLDENS=1` / `AGENT_BOM_UPDATE_OUTPUT_GOLDENS=1` and
+  review the diff; never hand-edit them.
+- **Product screenshots:** a change to their inputs (`ui/`, `src/agent_bom/graph`,
+  the reference evidence lab) needs `npm run capture:product-proof` from a clean,
+  committed tree, after `rm -rf .next && npm run build`; otherwise
+  `check_release_consistency.py` fails on the recorded digest.
+- **UI:** run `npm run typecheck` and the full `npx vitest run`; contract tests
+  pin exact lines of scripts such as the capture script.
 
 ## Release Readiness
 
