@@ -317,6 +317,8 @@ runs:
         # Determine output file path
         if [ -n "$INPUT_OUTPUT" ]; then
           RESULT_FILE="$INPUT_OUTPUT"
+        elif [ "$INPUT_FORMAT" = "json" ]; then
+          RESULT_FILE="agent-bom-results.json"
         else
           RESULT_FILE="agent-bom-results.sarif"
         fi
@@ -471,7 +473,7 @@ runs:
           ARGS+=(-f sarif -o "$RESULT_FILE")
         elif [ -n "$INPUT_FORMAT" ]; then
           ARGS+=(-f "$INPUT_FORMAT")
-          if [ -n "$INPUT_OUTPUT" ] || [ "$INPUT_SCAN_TYPE" = "skills" ]; then
+          if [ -n "$INPUT_OUTPUT" ] || [ "$INPUT_SCAN_TYPE" = "skills" ] || [ "$INPUT_FORMAT" = "json" ]; then
             ARGS+=(-o "$RESULT_FILE")
           fi
         fi
@@ -715,8 +717,9 @@ runs:
         if [ "$INPUT_FORMAT" = "sarif" ] && [ -f "$RESULT_FILE" ]; then
           SARIF_FILE="$RESULT_FILE"
           VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); print(len(d.get('runs',[{}])[0].get('results',[])))" 2>/dev/null || echo 0)
-        elif [ "$INPUT_SCAN_TYPE" = "skills" ] && [ -f "$RESULT_FILE" ]; then
-          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); print(d.get('summary',{}).get('findings',0))" 2>/dev/null || echo 0)
+        elif [ "$INPUT_FORMAT" = "json" ] && [ -f "$RESULT_FILE" ]; then
+          # skills: summary.findings; secrets: findings list; scan: unified findings list
+          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); s=d.get('summary'); f=d.get('findings'); print(s['findings'] if isinstance(s, dict) and isinstance(s.get('findings'), int) else len(f) if isinstance(f, list) else int(d.get('total') or 0))" 2>/dev/null || echo 0)
         fi
 
         case "$INPUT_FORMAT" in

@@ -306,3 +306,38 @@ def test_sbom_artifact_is_uploaded() -> None:
     assert upload["uses"].startswith("actions/upload-artifact@")
     assert upload["with"]["path"] == "${{ steps.scan.outputs.sbom_file }}"
     assert "steps.scan.outputs.sbom_file != ''" in upload["if"]
+
+
+# ── Status from JSON results ────────────────────────────────────────────────
+
+
+def _run_scan_step(tmp_path: Path, inputs: dict[str, str], result: dict, exit_code: int) -> dict[str, str]:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    stub = bin_dir / "agent-bom"
+    payload = json.dumps(result).replace("'", "'\\''")
+    stub.write_text(
+        "#!/usr/bin/env bash\n"
+        'while [ $# -gt 0 ]; do if [ "$1" = "-o" ]; then out="$2"; fi; shift; done\n'
+        f"printf '%s' '{payload}' > \"$out\"\nexit {exit_code}\n",
+        encoding="utf-8",
+    )
+    stub.chmod(0o755)
+    outputs = tmp_path / "outputs"
+    env = {**_env_for(inputs), "PATH": f"{bin_dir}:{os.environ['PATH']}", "GITHUB_OUTPUT": str(outputs), "GITHUB_ACTION_PATH": str(ROOT)}
+    env.pop("GITHUB_STEP_SUMMARY", None)
+    subprocess.run(["bash", "-eo", "pipefail", "-c", SCAN_STEP["run"]], cwd=tmp_path, env=env, capture_output=True, text=True)
+    return dict(line.split("=", 1) for line in outputs.read_text(encoding="utf-8").splitlines() if "=" in line)
+
+
+@pytest.mark.parametrize(
+    ("scan_type", "result"),
+    [
+        ("secrets", {"findings": [{"severity": "critical"}], "total": 1}),
+        ("scan", {"findings": [{"severity": "high"}, {"severity": "low"}], "blast_radius": []}),
+    ],
+)
+def test_json_results_with_findings_report_violations_not_errors(tmp_path: Path, scan_type: str, result: dict) -> None:
+    outputs = _run_scan_step(tmp_path, {"scan-type": scan_type, "scan-ref": ".", "format": "json", "severity-threshold": ""}, result, 1)
+    assert outputs["scan_status"] == "violations", outputs
+    assert int(outputs["vuln_count"]) == len(result["findings"])
