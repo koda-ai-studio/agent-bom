@@ -117,6 +117,16 @@ def _check_remediation_reads_the_findings_window(surfaces: dict[str, dict]) -> N
     assert remediation_window["label"] == findings_window["label"]
 
 
+def _check_remediation_counts_held_credentials_apart_from_exposure(surfaces: dict[str, dict]) -> None:
+    plan = surfaces["remediation"]["remediation_plan"]
+    held = [item for item in plan if item.get("server_credential_count") is not None]
+    assert held, "demo scans record the credentials their servers hold"
+    for item in held:
+        assert item["server_credential_count"] == len(item["server_credentials"])
+        assert set(item["exposed_credentials"]) <= set(item["server_credentials"]), item["package"]
+    assert any(item["server_credential_count"] > len(item["exposed_credentials"]) for item in held)
+
+
 def _check_graph_snapshot_severity_names_its_unit(surfaces: dict[str, dict]) -> None:
     """Snapshot severity counts finding nodes: a third unit, labelled, and equal to the graph's own tally.
 
@@ -165,6 +175,7 @@ def test_every_surface_reads_one_count_source(demo_estate_client: TestClient) ->
     _check_open_cve_findings_agree_between_overview_and_posture(surfaces)
     _check_vuln_card_equals_its_drill_down(surfaces, demo_estate_client)
     _check_remediation_reads_the_findings_window(surfaces)
+    _check_remediation_counts_held_credentials_apart_from_exposure(surfaces)
     _check_graph_snapshot_severity_names_its_unit(surfaces)
     _check_agent_counts_carry_their_scope(surfaces)
     _check_unique_credentials_match_the_posture_dimension_on_the_same_inventory(surfaces)

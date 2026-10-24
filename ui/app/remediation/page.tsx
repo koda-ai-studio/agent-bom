@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState, useMemo } from "react";
-import { EXPOSED_BY_IMPACT_NOTE, exposedByImpactLabel } from "@/lib/credential-basis";
+import { EXPOSED_BY_IMPACT_NOTE, HELD_ON_SERVER_NOTE, exposedByImpactLabel, heldOnServerLabel } from "@/lib/credential-basis";
 import { useSearchParams } from "next/navigation";
 import {
   api,
@@ -215,6 +215,9 @@ function NarrativeRow({
         <td className="px-4 py-3 text-xs text-ink-secondary" title="Across every occurrence of this package version, not one path">
           <div>{item.affected_agents?.length ?? 0} agent{(item.affected_agents?.length ?? 0) !== 1 ? "s" : ""}</div>
           <div className="text-ink-tertiary" title={EXPOSED_BY_IMPACT_NOTE}>{exposedByImpactLabel(item.exposed_credentials?.length ?? 0)}</div>
+          {typeof item.server_credential_count === "number" && (
+            <div className="text-ink-tertiary" title={HELD_ON_SERVER_NOTE}>{heldOnServerLabel(item.server_credential_count)}</div>
+          )}
         </td>
 
         {/* Compliance tags */}

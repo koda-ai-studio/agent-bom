@@ -665,7 +665,6 @@ def blast_radius_to_finding(br: object) -> "Finding":
 
     def entity_name(entity: object) -> str:
         """Return the cheap display name without eagerly rendering dataclasses."""
-
         name = getattr(entity, "name", None)
         return str(name) if name else str(entity)
 
@@ -715,6 +714,7 @@ def blast_radius_to_finding(br: object) -> "Finding":
         "graph_credential_refs": _sanitized_evidence_field(graph_credential_refs),
         "package_purl": pkg.purl,
         "exposed_credential_count": len(br.exposed_credentials),
+        "server_credentials": _sanitized_evidence_field(sorted(set(getattr(br, "all_server_credentials", []) or []))),
         "exposed_tool_count": len(br.exposed_tools),
         "hop_depth": getattr(br, "hop_depth", 1),
         "delegation_chain": _sanitized_evidence_field(getattr(br, "delegation_chain", [])),

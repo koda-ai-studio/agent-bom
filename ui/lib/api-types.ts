@@ -1355,6 +1355,9 @@ export interface RemediationItem {
   agents_pct: number;
   exposed_credentials: string[];
   credentials_pct: number;
+  /** Credential names the hosting servers hold; null when the evidence did not record them. */
+  server_credentials?: string[] | null | undefined;
+  server_credential_count?: number | null | undefined;
   reachable_tools: string[];
   tools_pct: number;
   owasp_tags: string[];

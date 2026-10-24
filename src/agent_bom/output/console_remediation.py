@@ -20,6 +20,7 @@ from agent_bom.output.finding_views import (
     package_version,
 )
 from agent_bom.remediation_commands import build_fix_command, build_remove_command, build_verify_command
+from agent_bom.security import sanitize_sensitive_payload
 
 
 def build_remediation_plan(blast_radii: Sequence[object]) -> list[dict]:
@@ -75,8 +76,6 @@ def print_remediation_plan(report: AIBOMReport) -> None:
         return
 
     plan = build_remediation_plan(all_cve)
-    from agent_bom.security import sanitize_sensitive_payload
-
     sanitized_plan = sanitize_sensitive_payload(plan, max_str_len=10_000)
     plan = sanitized_plan if isinstance(sanitized_plan, list) else []
     # A malicious package sets fix=None to signal REMOVAL (not a version bump),
@@ -254,6 +253,8 @@ def _new_remediation_group() -> dict:
         "vulns": [],
         "agents": set(),
         "creds": set(),
+        # Names the hosting servers hold; None until a finding records them.
+        "server_creds": None,
         "tools": set(),
         "owasp": set(),
         "atlas": set(),
@@ -289,6 +290,11 @@ def _add_remediation_finding(g: dict, finding: Finding, severity_order: dict[Sev
     g["vulns"].append(vuln_id)
     g["agents"].update(finding.affected_agents)
     g["creds"].update(finding.exposed_credentials)
+    held = (finding.evidence or {}).get("server_credentials")
+    if isinstance(held, list):
+        g["server_creds"] = (
+            (g["server_creds"] or set()) | {name for name in held if isinstance(name, str)} | set(finding.exposed_credentials)
+        )
     g["tools"].update(finding.exposed_tools)
     g["owasp"].update(finding.owasp_tags)
     g["atlas"].update(finding.atlas_tags)
@@ -337,6 +343,7 @@ def _finish_remediation_group(g: dict) -> dict:
     g["vulns"] = sorted(set(g["vulns"]))
     g["agents"] = sorted(g["agents"])
     g["creds"] = sorted(g["creds"])
+    g["server_creds"] = sorted(g["server_creds"]) if g["server_creds"] is not None else None
     g["tools"] = sorted(g["tools"])
     g["owasp"] = sorted(g["owasp"])
     g["atlas"] = sorted(g["atlas"])
@@ -473,7 +480,11 @@ def _print_fixable(fixable: list[dict], total_agents: int, total_creds: int, tot
             if item["agents"]:
                 _console().print(f"     [dim]agents:[/dim]  {', '.join(item['agents'])}")
             if item["creds"]:
-                _console().print(f"     [dim]credentials:[/dim]  [yellow]{', '.join(item['creds'])}[/yellow]")
+                _console().print(f"     [dim]credentials exposed by impact:[/dim]  [yellow]{', '.join(item['creds'])}[/yellow]")
+            if item["server_creds"]:
+                held = item["server_creds"]
+                more = f" +{len(held) - 8} more" if len(held) > 8 else ""
+                _console().print(f"     [dim]credentials on server:[/dim]  {len(held)} ({', '.join(held[:8])}{more})")
             if item["tools"]:
                 _console().print(
                     f"     [dim]tools:[/dim]  {', '.join(item['tools'][:8])}"

@@ -150,13 +150,8 @@ def remediation_json(cve_rows: list[Finding], *, total_agents: int = 0) -> list[
     plan = build_remediation_plan(cve_rows)
     total_agents = total_agents or len({agent for row in cve_rows for agent in row.affected_agents}) or 1
 
-    all_creds: set[str] = set()
-    all_tools: set[str] = set()
-    for finding in cve_rows:
-        all_creds.update(finding.exposed_credentials)
-        all_tools.update(finding.exposed_tools)
-    total_creds = len(all_creds) or 1
-    total_tools = len(all_tools) or 1
+    total_creds = len({name for finding in cve_rows for name in finding.exposed_credentials}) or 1
+    total_tools = len({name for finding in cve_rows for name in finding.exposed_tools}) or 1
 
     result = []
     for item in plan:
@@ -185,6 +180,8 @@ def remediation_json(cve_rows: list[Finding], *, total_agents: int = 0) -> list[
                 "agents_pct": round(n_agents / total_agents * 100),
                 "exposed_credentials": item["creds"],
                 "credentials_pct": round(n_creds / total_creds * 100) if n_creds else 0,
+                "server_credentials": item.get("server_creds"),
+                "server_credential_count": None if item.get("server_creds") is None else len(item["server_creds"]),
                 "reachable_tools": item["tools"],
                 "tools_pct": round(n_tools / total_tools * 100) if n_tools else 0,
                 "owasp_tags": item["owasp"],

@@ -121,6 +121,20 @@ describe("RemediationPage", () => {
     expect(cell.closest("[title]")?.getAttribute("title")).toMatch(/advisory's impact.*exploit story counts every credential the hosting servers hold/);
   });
 
+  it("counts the credentials the hosting servers hold apart from exposure by impact", async () => {
+    navigationState.query = "scan=scan-held";
+    apiMock.getRemediation.mockResolvedValue([
+      { ...remediationItem("held-pkg", "high"), server_credentials: ["DATABASE_URL", "STRIPE_KEY"], server_credential_count: 2 },
+      { ...remediationItem("unrecorded-pkg", "high"), server_credential_count: null },
+    ]);
+    apiMock.listTickets.mockResolvedValue({ tickets: [] });
+    render(<RemediationPage />);
+    const [cell] = await screen.findAllByText("2 credentials on server");
+    expect(cell!.closest("[title]")?.getAttribute("title")).toMatch(/hosting servers hold.*not filtered by this advisory's impact/);
+    expect(screen.getAllByText("0 credentials exposed by impact").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryAllByText(/credentials? on server/)).toHaveLength(screen.getAllByText("2 credentials on server").length);
+  });
+
   it("shows retained current findings when the newest scan has no remediation", async () => {
     apiMock.getRemediation.mockResolvedValue([]);
     apiMock.getCurrentRemediation.mockResolvedValue({ remediation_plan: [remediationItem("retained-pkg", "critical")], truncated: false, warnings: [] });
