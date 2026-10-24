@@ -1,0 +1,21 @@
+# agent-bom on Bitbucket Pipelines: scan every pull request and the main
+# branch, fail on high or critical findings, and keep the SARIF report.
+image: python:3.11-slim
+
+definitions:
+  steps:
+    - step: &agent-bom
+        name: agent-bom scan
+        script:
+          - pip install --quiet agent-bom==0.110.0
+          - agent-bom scan . -f sarif -o agent-bom-results.sarif --fail-on-severity high
+        artifacts:
+          - agent-bom-results.sarif
+
+pipelines:
+  pull-requests:
+    "**":
+      - step: *agent-bom
+  branches:
+    main:
+      - step: *agent-bom
