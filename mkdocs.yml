@@ -165,6 +165,7 @@ nav:
       - Remediate Output Contract: reference/remediate-output.md
       - Configuration: reference/configuration.md
   - Integrations:
+      - GitHub Action: integrations/github-action.md
       - Smithery: integrations/smithery.md
   - API Reference:
       - Python API: api/python-sdk.md

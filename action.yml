@@ -190,11 +190,19 @@ runs:
         python-version: ${{ inputs.python-version }}
         cache: pip
 
+    - name: Compute vulnerability database cache bucket
+      id: vulndb-cache-key
+      shell: bash
+      run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+    # One cache entry per UTC day: the first run of a day restores the newest
+    # earlier copy through restore-keys, refreshes it when stale, and saves it
+    # under the new key, so later runs that day start warm.
     - name: Cache agent-bom vulnerability database
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: ~/.agent-bom/vulns.db
-        key: agent-bom-vulndb-${{ runner.os }}-${{ inputs.python-version }}-v1
+        path: ~/.agent-bom/db/vulns.db
+        key: agent-bom-vulndb-${{ runner.os }}-${{ steps.vulndb-cache-key.outputs.day }}
         restore-keys: |
           agent-bom-vulndb-${{ runner.os }}-
 
