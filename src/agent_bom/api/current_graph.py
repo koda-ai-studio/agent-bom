@@ -35,6 +35,7 @@ from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.models import JobStatus
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.core.settings import env_raw
+from agent_bom.demo_estate.boot_seed import demo_estate_seeding
 from agent_bom.graph import UnifiedGraph
 from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuses
 from agent_bom.storage.state_home import state_dir
@@ -83,6 +84,20 @@ def _generation_rotating() -> HTTPException:
     detail = {"code": ROTATING_CODE, "message": "The current estate is being updated; retry the read shortly."}
     # Starlette types detail as str, but the API's handler serializes any JSON value.
     return HTTPException(503, cast(str, detail), headers={"Retry-After": "1"})
+
+
+SEEDING_CODE = "current_estate_seeding"
+
+
+def refuse_unpinned_read_while_seeding(requested_scan_id: str) -> None:
+    """An unpinned estate read during the demo boot seed would serve a partial or empty estate as complete.
+
+    Applied at the request boundary only: the seed's own writers and posture
+    precompute read the same store while it runs.
+    """
+    if not requested_scan_id and demo_estate_seeding():
+        detail = {"code": SEEDING_CODE, "message": "The demo estate is still being seeded; retry the read shortly."}
+        raise HTTPException(503, cast(str, detail), headers={"Retry-After": "2"})
 
 
 class _EvidenceMovedError(Exception):

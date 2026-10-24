@@ -41,6 +41,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import Response
 
+from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.graph_contracts import (
     _ATTACK_PATH_ITEM_OPENAPI_SCHEMA as _ATTACK_PATH_ITEM_OPENAPI_SCHEMA,
 )
@@ -286,6 +287,7 @@ async def get_graph(
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
     requested_scan_id = _coalesce_alias(scan_id, scan, primary_name="scan_id", alias_name="scan")
+    refuse_unpinned_read_while_seeding(requested_scan_id or "")
 
     if not requested_scan_id and not await _runtime._graph_store_call(graph_store.latest_snapshot_id, tenant_id=tenant):
         raise HTTPException(status_code=503, detail="Graph snapshots not found. Run a scan first.")
