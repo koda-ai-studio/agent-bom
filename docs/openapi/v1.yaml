@@ -42889,7 +42889,7 @@ paths:
           - type: 'null'
           description: Max traversal depth
           title: Max Depth
-      - description: Read revision from the first page
+      - description: Optional with cursor; mismatch is 409
         in: query
         name: snapshot_generation
         required: false
@@ -42898,9 +42898,9 @@ paths:
           - maxLength: 128
             type: string
           - type: 'null'
-          description: Read revision from the first page
+          description: Optional with cursor; mismatch is 409
           title: Snapshot Generation
-      - description: Opaque cursor for keyset node pagination
+      - description: Opaque keyset cursor; carries the snapshot generation
         in: query
         name: cursor
         required: false
@@ -42908,7 +42908,7 @@ paths:
           anyOf:
           - type: string
           - type: 'null'
-          description: Opaque cursor for keyset node pagination
+          description: Opaque keyset cursor; carries the snapshot generation
           title: Cursor
       - description: Pagination offset for nodes
         in: query
@@ -43105,7 +43105,7 @@ paths:
           - type: 'null'
           description: Scan ID
           title: Scan Id
-      - description: Generation from the first page; required for continuation
+      - description: Optional with cursor; mismatch is 409
         in: query
         name: snapshot_generation
         required: false
@@ -43114,7 +43114,7 @@ paths:
           - maxLength: 128
             type: string
           - type: 'null'
-          description: Generation from the first page; required for continuation
+          description: Optional with cursor; mismatch is 409
           title: Snapshot Generation
       - description: Pagination offset
         in: query
@@ -43187,7 +43187,8 @@ paths:
             or through none (false); the same filter as MCP exposure_paths kev. Not
             combinable with node, finding or control focus.
           title: Kev
-      - description: next_cursor from the previous page (replaces offset)
+      - description: next_cursor from the previous page; carries the generation (replaces
+          offset)
         in: query
         name: cursor
         required: false
@@ -43196,7 +43197,8 @@ paths:
           - maxLength: 1024
             type: string
           - type: 'null'
-          description: next_cursor from the previous page (replaces offset)
+          description: next_cursor from the previous page; carries the generation
+            (replaces offset)
           title: Cursor
       - description: Only paths through this node (replaced ids resolve to canonical)
         in: query

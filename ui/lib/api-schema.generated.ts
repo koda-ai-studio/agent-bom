@@ -34439,9 +34439,9 @@ export interface operations {
                 dynamic_only?: boolean;
                 /** @description Max traversal depth */
                 max_depth?: number | null;
-                /** @description Read revision from the first page */
+                /** @description Optional with cursor; mismatch is 409 */
                 snapshot_generation?: string | null;
-                /** @description Opaque cursor for keyset node pagination */
+                /** @description Opaque keyset cursor; carries the snapshot generation */
                 cursor?: string | null;
                 /** @description Pagination offset for nodes */
                 offset?: number;
@@ -34552,7 +34552,7 @@ export interface operations {
             query?: {
                 /** @description Scan ID */
                 scan_id?: string | null;
-                /** @description Generation from the first page; required for continuation */
+                /** @description Optional with cursor; mismatch is 409 */
                 snapshot_generation?: string | null;
                 /** @description Pagination offset */
                 offset?: number;
@@ -34566,7 +34566,7 @@ export interface operations {
                 source_type?: string | null;
                 /** @description Only paths through a known-exploited (CISA KEV) finding (true) or through none (false); the same filter as MCP exposure_paths kev. Not combinable with node, finding or control focus. */
                 kev?: boolean | null;
-                /** @description next_cursor from the previous page (replaces offset) */
+                /** @description next_cursor from the previous page; carries the generation (replaces offset) */
                 cursor?: string | null;
                 /** @description Only paths through this node (replaced ids resolve to canonical) */
                 node_id?: string | null;

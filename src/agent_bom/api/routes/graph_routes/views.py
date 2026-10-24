@@ -336,9 +336,7 @@ async def _apply_path_suppression(
 async def get_graph_attack_paths(
     request: Request,
     scan_id: Optional[str] = Query(None, description="Scan ID"),
-    snapshot_generation: Optional[str] = Query(
-        None, max_length=128, description="Generation from the first page; required for continuation"
-    ),
+    snapshot_generation: Optional[str] = Query(None, max_length=128, description="Optional with cursor; mismatch is 409"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(100, ge=1, le=1000, description="Max attack paths"),
     min_severity: Optional[Literal["critical", "high", "medium", "low"]] = Query(
@@ -353,7 +351,9 @@ async def get_graph_attack_paths(
             "the same filter as MCP exposure_paths kev. Not combinable with node, finding or control focus."
         ),
     ),
-    cursor: Optional[str] = Query(None, max_length=1024, description="next_cursor from the previous page (replaces offset)"),
+    cursor: Optional[str] = Query(
+        None, max_length=1024, description="next_cursor from the previous page; carries the generation (replaces offset)"
+    ),
     path_focus: PathFocusQuery = Depends(),
 ) -> dict:
     """Return the global attack-path queue independent of node pagination.
