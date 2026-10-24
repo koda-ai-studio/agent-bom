@@ -85,6 +85,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `/v1/graph`, `/graph/search`, `/graph/agents` and `/v1/inventory/assets` reject a `cursor` sent with a non-zero `offset` with 400, as the attack-path queues do, instead of serving the cursor's page and echoing the ignored offset.
 - A cursor that does not decode, or that belongs to another tenant, query or replaced incident-edge page, is a 422 on every graph and inventory route. `/v1/graph`, the attack-path queues, incident edges and inventory assets returned 400, and `/graph/agents` returned 500.
 - Graph exports of an `--sbom` input or a project's repository inventory name them as the graph does (`source_file:sbom:…`, `directory:repository:…`, `directory:manifest:…`) instead of an agent, an MCP server and a `provider:sbom` / `provider:project` node the graph never draws. 6 export ids that joined nothing in a scan with both inputs now join.
+- The showcase snapshot places each demo code finding on the file it names (`source_file:` / `config_file:`, the ids a repository scan gives those files), and a finding row's declared `finding_node_id` names its node in report-built graphs. The showcase job's graph export now joins the showcase snapshot on all but 10 of 2,481 nodes (previously 45): the 8 data-store companions of Snowflake warehouses and the 2 tool-drift rows the showcase draws as `drift_incident` governance nodes.
 
 ## [0.110.0] - 2026-10-21
 

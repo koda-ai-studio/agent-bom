@@ -232,3 +232,33 @@ def test_sbom_and_repository_inventory_export_with_the_graph_ids(tmp_path_factor
     assert len(static) == 3
     assert static <= set(exported)
     assert not [nid for nid in exported if nid.startswith(("provider:sbom", "provider:project"))]
+
+
+def _drift_rows_as_report_findings(report: dict) -> set[str]:
+    """A report graph projects a TOOL_DRIFT row as a finding; the showcase draws the
+    same incident as the governance ``drift_incident`` node its row declares."""
+    return {
+        f"misconfig:{str(row['source']).lower()}:{row['id']}"
+        for row in report["findings"]
+        if str(row.get("finding_node_id") or "").startswith("drift_incident:")
+    }
+
+
+@_estate_parity
+def test_every_showcase_export_id_joins_the_snapshot_apart_from_documented_exceptions(tmp_path_factory):
+    report, snapshot = _showcase(str(tmp_path_factory.getbasetemp() / "showcase-parity"))
+    exported = {node["id"]: node["entity_type"] for node in _showcase_export(report)}
+    companions = {nid for nid in exported if nid.startswith("data_store:") and nid.removeprefix("data_store:") in snapshot}
+    drift = _drift_rows_as_report_findings(report)
+    assert len(drift) == 2 and drift <= set(exported)
+    unmatched = {nid: kind for nid, kind in exported.items() if snapshot.get(nid) != kind and nid not in companions | drift}
+    assert unmatched == {}
+
+
+@_estate_parity
+def test_showcase_secret_findings_are_locatable_by_file_in_the_snapshot(tmp_path_factory):
+    report, snapshot = _showcase(str(tmp_path_factory.getbasetemp() / "showcase-parity"))
+    files = {str((row.get("evidence") or {}).get("file") or "") for row in report["findings"] if row.get("source") == "SECRET_SCAN"}
+    files.discard("")
+    assert len(files) >= 30
+    assert {path for path in files if f"source_file:{path}" not in snapshot and f"config_file:{path}" not in snapshot} == set()

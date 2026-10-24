@@ -31,7 +31,8 @@ from agent_bom.graph.finding_row_projection import finding_signal_attributes
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.node_aliases import record_node_aliases
 from agent_bom.graph.relationship_specs import relationship_spec
-from agent_bom.graph.types import EntityType, RelationshipType
+from agent_bom.graph.repo_structure_overlay import finding_file_node
+from agent_bom.graph.types import EntityType, GraphSemanticLayer, RelationshipType
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.finding import Finding
@@ -172,7 +173,30 @@ def project_estate_finding(graph: UnifiedGraph, finding: Finding, asset_id: str,
         _add_occurrence_edge(graph, asset_id, node_id, RelationshipType.VULNERABLE_TO, occurrence)
     if not (asset_kind == EntityType.PACKAGE and node.entity_type == EntityType.VULNERABILITY):
         add_estate_edge(graph, asset_id, node_id, RelationshipType.CONTAINS)
+    if node.entity_type == EntityType.MISCONFIGURATION:
+        _locate_in_file(graph, node_id, finding.evidence.get("file"))
     return node_id
+
+
+def _locate_in_file(graph: UnifiedGraph, node_id: str, raw_path: Any) -> None:
+    """A code finding affects the file it names, at the id a scan's repository overlay gives that file."""
+    placed = finding_file_node(raw_path)
+    if placed is None:
+        return
+    file_id, entity_type, file_path = placed
+    if file_id not in graph.nodes:
+        graph.add_node(
+            UnifiedNode(
+                id=file_id,
+                entity_type=entity_type,
+                label=file_path.rsplit("/", 1)[-1],
+                attributes={"path": file_path, "directory": file_path.rsplit("/", 1)[0] if "/" in file_path else "."},
+                data_sources=[ESTATE_DATA_SOURCE],
+                dimensions=NodeDimensions(surface=GraphSemanticLayer.CODE.value),
+            )
+        )
+    if not any(edge.target == file_id for edge in graph.edges_from(node_id)):
+        add_estate_edge(graph, node_id, file_id, RelationshipType.AFFECTS)
 
 
 __all__ = [

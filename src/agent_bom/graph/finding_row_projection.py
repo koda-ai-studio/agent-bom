@@ -32,6 +32,8 @@ from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.security import sanitize_text
 
 _FINDING_ENTITIES = frozenset({EntityType.VULNERABILITY, EntityType.MISCONFIGURATION})
+# Ids ``_new_node`` builds as a finding node; any other declared id is not one this projection owns.
+_FINDING_NODE_PREFIXES = ("misconfig:", "vuln:")
 _NO_INVENTED_ASSET = frozenset({"SECRET_SCAN"})
 _OBSERVED_ASSETS = frozenset({EntityType.CLOUD_RESOURCE, EntityType.DATA_STORE, EntityType.CLUSTER})
 # Asset kinds a scanner names that have no inventory alias of their own.
@@ -290,6 +292,15 @@ def _propose_label_matches(graph: UnifiedGraph, asset: UnifiedNode, candidates: 
         )
 
 
+def _declared_finding_node_id(graph: UnifiedGraph, row: dict[str, Any]) -> str | None:
+    """The finding node a row names, when it is a finding node: one a connector built, or a new one to build."""
+    declared_id = _text(row.get("finding_node_id"))
+    declared = graph.nodes.get(declared_id)
+    if declared is not None:
+        return declared.id if declared.entity_type in _FINDING_ENTITIES else None
+    return declared_id if declared_id.startswith(_FINDING_NODE_PREFIXES) else None
+
+
 def project_finding_rows(graph: UnifiedGraph, findings: Any) -> None:
     """Give every finding row a node with its compliance tags, attached to its asset."""
     if not isinstance(findings, list):
@@ -300,8 +311,7 @@ def project_finding_rows(graph: UnifiedGraph, findings: Any) -> None:
     index = _AssetIndex(graph)
     for row in rows:
         # A connector projection that already materialized the row owns its node.
-        declared = graph.nodes.get(_text(row.get("finding_node_id")))
-        node_id = declared.id if declared is not None and declared.entity_type in _FINDING_ENTITIES else finding_row_node_id(row)
+        node_id = _declared_finding_node_id(graph, row) or finding_row_node_id(row)
         if node_id is None:
             continue
         collector, tier = _collector(row)

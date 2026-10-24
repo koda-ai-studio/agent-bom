@@ -149,6 +149,17 @@ def _file_entity_type(file_path: str) -> EntityType:
     return EntityType.SOURCE_FILE if ext in _CODE_EXTENSIONS else EntityType.CONFIG_FILE
 
 
+def finding_file_node(raw_path: Any) -> tuple[str, EntityType, str] | None:
+    """``(node id, kind, normalised path)`` the overlay gives a finding's file; None when it is not a path."""
+    if not _looks_like_path(raw_path):
+        return None
+    file_path = _norm_path(raw_path)
+    if not file_path:
+        return None
+    entity_type = _file_entity_type(file_path)
+    return _file_node_id(file_path, entity_type), entity_type, file_path
+
+
 def _looks_like_path(value: Any) -> bool:
     """True when *value* is a concrete repo file path (not a placeholder/blank).
 
