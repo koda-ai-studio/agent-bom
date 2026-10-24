@@ -188,7 +188,8 @@ runs:
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: ${{ inputs.python-version }}
-        cache: pip
+        # No pip cache: setup-python's pip cache needs Python manifests in the
+        # caller's workspace and fails on repositories without them.
 
     - name: Compute vulnerability database cache bucket
       id: vulndb-cache-key

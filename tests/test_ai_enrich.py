@@ -870,19 +870,6 @@ def test_action_yml_composite():
     assert data["runs"]["using"] == "composite"
 
 
-def test_action_yml_enables_pip_cache():
-    """The composite action should enable pip caching via setup-python."""
-    from pathlib import Path
-
-    import yaml
-
-    action_path = Path(__file__).parent.parent / "action.yml"
-    data = yaml.safe_load(action_path.read_text())
-    steps = data["runs"]["steps"]
-    setup_python = next(step for step in steps if step.get("name") == "Set up Python")
-    assert setup_python["with"]["cache"] == "pip"
-
-
 def test_action_yml_skills_mode_skips_vulnerability_scan_flags():
     """Skills scan mode should not inherit package-scan-only CLI flags."""
     from pathlib import Path
@@ -944,18 +931,6 @@ def test_action_yml_sanitizes_pr_comment_body_and_single_loads_sarif():
     assert "sarif = json.load(open('$SARIF_FILE'))" in action_text
     assert "run = sarif.get('runs', [{}])[0]" in action_text
     assert "::warning::Badge generation failed" in action_text
-
-
-def test_action_yml_enables_pip_cache_in_setup_python():
-    """The composite action should enable pip caching in setup-python."""
-    from pathlib import Path
-
-    import yaml
-
-    action_path = Path(__file__).parent.parent / "action.yml"
-    data = yaml.safe_load(action_path.read_text())
-    setup_step = next(step for step in data["runs"]["steps"] if step.get("name") == "Set up Python")
-    assert setup_step["with"]["cache"] == "pip"
 
 
 # ── Skill file AI analysis tests ────────────────────────────────────────────
