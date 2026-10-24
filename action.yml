@@ -155,11 +155,18 @@ inputs:
     description: 'Exclude vulnerabilities without available fixes from SARIF output'
     required: false
     default: 'false'
+  sbom-artifact:
+    description: 'Also write an SBOM / AI-BOM of the scanned scope and upload it as a workflow artifact: cyclonedx (agent-bom-sbom.cdx.json), spdx (agent-bom-sbom.spdx.json), or none. Reuses the local vulnerability data offline. Supported for scan-type scan, image, fs and sbom.'
+    required: false
+    default: 'none'
 
 outputs:
   sarif-file:
     description: 'Path to generated SARIF file (if format=sarif).'
     value: ${{ steps.scan.outputs.sarif_file }}
+  sbom-file:
+    description: 'Path to the SBOM / AI-BOM artifact when sbom-artifact is cyclonedx or spdx.'
+    value: ${{ steps.scan.outputs.sbom_file }}
   exit-code:
     description: 'Scan process exit code.'
     value: ${{ steps.scan.outputs.exit_code }}
@@ -301,6 +308,7 @@ runs:
         INPUT_SKILLS_CI: ${{ inputs.skills-ci }}
         INPUT_GPU_SCAN: ${{ inputs.gpu-scan }}
         INPUT_EXCLUDE_UNFIXABLE: ${{ inputs.exclude-unfixable }}
+        INPUT_SBOM_ARTIFACT: ${{ inputs.sbom-artifact }}
       run: |
         # Determine output file path
         if [ -n "$INPUT_OUTPUT" ]; then
@@ -433,6 +441,9 @@ runs:
           echo "::error::$1 cannot be enforced by scan-type=${INPUT_SCAN_TYPE}. Remove it or use scan-type=scan."
           exit 1
         }
+
+        # Command and target without output or gate flags, reused for the SBOM artifact.
+        BASE_ARGS=("${ARGS[@]}")
 
         if [ "$INPUT_SCAN_TYPE" = "secrets" ] || [ "$INPUT_SCAN_TYPE" = "code" ]; then
           # These commands emit console or JSON only. The default SARIF format
@@ -635,6 +646,39 @@ runs:
           fi
         fi
 
+        # Optional SBOM / AI-BOM artifact of the same scope
+        SBOM_ARGS=()
+        SBOM_FILE=""
+        case "${INPUT_SBOM_ARTIFACT:-none}" in
+          none|"") ;;
+          cyclonedx|spdx)
+            case "${INPUT_SCAN_TYPE:-scan}" in
+              scan|agents|""|image|fs|sbom) ;;
+              *)
+                echo "::error::sbom-artifact is not supported for scan-type=$INPUT_SCAN_TYPE. Use scan-type scan, image, fs or sbom."
+                exit 1
+                ;;
+            esac
+            if [ "$INPUT_SBOM_ARTIFACT" = "cyclonedx" ]; then
+              SBOM_FILE="agent-bom-sbom.cdx.json"
+            else
+              SBOM_FILE="agent-bom-sbom.spdx.json"
+            fi
+            SBOM_ARGS=("${BASE_ARGS[@]}")
+            if [ -n "$INPUT_IMAGE" ] && [ "$INPUT_SCAN_TYPE" != "image" ]; then
+              SBOM_ARGS+=(--image "$INPUT_IMAGE")
+            fi
+            if [ -n "$INPUT_SBOM" ] && [ "$INPUT_SCAN_TYPE" != "sbom" ]; then
+              SBOM_ARGS+=(--sbom "$INPUT_SBOM")
+            fi
+            SBOM_ARGS+=(-f "$INPUT_SBOM_ARTIFACT" -o "$SBOM_FILE" --offline)
+            ;;
+          *)
+            echo "::error::sbom-artifact must be one of: cyclonedx, spdx, none"
+            exit 1
+            ;;
+        esac
+
         # Run scan, capture exit code
         set +e
         echo "::group::agent-bom command"
@@ -646,6 +690,16 @@ runs:
         echo "::endgroup::"
         agent-bom "${ARGS[@]}"
         EXIT_CODE=$?
+        if [ "${#SBOM_ARGS[@]}" -gt 0 ]; then
+          echo "::group::agent-bom SBOM artifact"
+          agent-bom "${SBOM_ARGS[@]}" -q
+          SBOM_EXIT=$?
+          echo "::endgroup::"
+          if [ ! -f "$SBOM_FILE" ]; then
+            echo "::warning::SBOM artifact was not written (exit $SBOM_EXIT)"
+            SBOM_FILE=""
+          fi
+        fi
         set -e
 
         SARIF_FILE=""
@@ -732,6 +786,7 @@ runs:
 
         echo "sarif_file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
         echo "result_file=$RESULT_FILE" >> "$GITHUB_OUTPUT"
+        echo "sbom_file=$SBOM_FILE" >> "$GITHUB_OUTPUT"
         echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
         echo "scan_status=$SCAN_STATUS" >> "$GITHUB_OUTPUT"
         echo "vuln_count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
@@ -824,6 +879,14 @@ runs:
           gh api "repos/$REPO/issues/$PR_NUMBER/comments" -F "body=@$BODY_FILE" > /dev/null \
             || skip_or_fail "token lacks pull-requests: write"
         fi
+
+    - name: Upload SBOM artifact
+      if: always() && steps.scan.outputs.sbom_file != ''
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: agent-bom-sbom
+        path: ${{ steps.scan.outputs.sbom_file }}
+        if-no-files-found: warn
 
     - name: Detect SARIF output
       id: sarif

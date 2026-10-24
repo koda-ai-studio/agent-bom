@@ -260,3 +260,49 @@ def test_baseline_input_runs_against_the_cli(tmp_path: Path) -> None:
     result = subprocess.run(command, cwd=repo, env=env, capture_output=True, text=True)
     assert result.returncode != 2, result.stderr
     assert json.loads((repo / "out.json").read_text(encoding="utf-8"))["delta"]["enabled"] is True
+
+
+# ── SBOM artifact ───────────────────────────────────────────────────────────
+
+
+def _sbom_command(**inputs: str) -> list[str]:
+    result = run_arg_script({key.replace("_", "-"): value for key, value in inputs.items()})
+    assert result.returncode == 0, result.stdout
+    script = ARG_SCRIPT + '\nprintf "%s\\n" "${SBOM_ARGS[@]}"'
+    out = subprocess.run(
+        ["bash", "-c", script], env=_env_for({k.replace("_", "-"): v for k, v in inputs.items()}), capture_output=True, text=True
+    )
+    return [arg for arg in _args_only(out.stdout) if arg]
+
+
+@pytest.mark.parametrize(("choice", "fmt", "suffix"), [("cyclonedx", "cyclonedx", ".cdx.json"), ("spdx", "spdx", ".spdx.json")])
+def test_sbom_artifact_reuses_the_scan_scope_offline(choice: str, fmt: str, suffix: str) -> None:
+    command = _sbom_command(sbom_artifact=choice)
+    assert command[:2] == ["scan", "."]
+    assert command[command.index("-f") + 1] == fmt
+    assert command[command.index("-o") + 1] == f"agent-bom-sbom{suffix}"
+    assert "--offline" in command
+    assert "--fail-on-severity" not in command
+    assert not _options(command) - _accepted_options(_cli_command(command))
+
+
+def test_sbom_artifact_for_an_image_scans_that_image() -> None:
+    command = _sbom_command(scan_type="image", scan_ref="nginx:1.25", sbom_artifact="cyclonedx")
+    assert command[:2] == ["image", "nginx:1.25"]
+    assert not _options(command) - _accepted_options(_cli_command(command))
+
+
+def test_sbom_artifact_defaults_off_and_rejects_unknown_values() -> None:
+    assert ACTION["inputs"]["sbom-artifact"]["default"] == "none"
+    assert _sbom_command() == []
+    result = run_arg_script({"sbom-artifact": "xml"})
+    assert result.returncode != 0 and "::error::" in result.stdout
+    result = run_arg_script({"scan-type": "iac", "scan-ref": "infra", "sbom-artifact": "cyclonedx"})
+    assert result.returncode != 0
+
+
+def test_sbom_artifact_is_uploaded() -> None:
+    upload = next(step for step in ACTION["runs"]["steps"] if step.get("name") == "Upload SBOM artifact")
+    assert upload["uses"].startswith("actions/upload-artifact@")
+    assert upload["with"]["path"] == "${{ steps.scan.outputs.sbom_file }}"
+    assert "steps.scan.outputs.sbom_file != ''" in upload["if"]
