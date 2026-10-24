@@ -4556,6 +4556,8 @@ export interface paths {
         /**
          * Get Graph Exposure Paths
          * @description Return the MCP-compatible ExposurePath queue over REST for SDK consumers.
+         *
+         *     A supplied ``snapshot_generation`` that is not the generation the page was read from is a 409.
          */
         get: operations["get_graph_exposure_paths_v1_graph_exposure_paths_get"];
         put?: never;
@@ -5685,7 +5687,8 @@ export interface paths {
          *
          *     Every filter and the exact whole-query total is evaluated natively by the
          *     graph store. Facet buckets are self-excluding and computed across the whole
-         *     filtered snapshot, never only the displayed page.
+         *     filtered snapshot, never only the displayed page. A supplied
+         *     ``snapshot_generation`` that is no longer the snapshot's is a 409.
          */
         get: operations["list_inventory_assets_v1_inventory_assets_get"];
         put?: never;
@@ -35708,6 +35711,8 @@ export interface operations {
                 min_risk?: number;
                 /** @description Continuation cursor pinned to the snapshot and risk filter */
                 cursor?: string | null;
+                /** @description Generation from the first page; mismatch is 409 */
+                snapshot_generation?: string | null;
             };
             header?: never;
             path?: never;
@@ -36819,9 +36824,9 @@ export interface operations {
                 compliance_prefixes?: string | null;
                 /** @description Comma-separated data sources */
                 data_sources?: string | null;
-                /** @description Read revision from the first page */
+                /** @description Optional with cursor; mismatch is 409 */
                 snapshot_generation?: string | null;
-                /** @description Opaque cursor for keyset search pagination */
+                /** @description Opaque keyset cursor; carries the snapshot generation */
                 cursor?: string | null;
                 /** @description Pagination offset */
                 offset?: number;
@@ -38999,6 +39004,8 @@ export interface operations {
                 offset?: number;
                 /** @description Max rows to return */
                 limit?: number;
+                /** @description Generation from the first page; mismatch is 409 */
+                snapshot_generation?: string | null;
             };
             header?: never;
             path?: never;
