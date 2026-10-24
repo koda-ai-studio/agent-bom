@@ -14,8 +14,11 @@ from dataclasses import dataclass
 from functools import cache
 
 from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id, mcp_server_graph_id_for
+from agent_bom.demo import DEMO_INVENTORY_SOURCE, demo_inventory_document
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_SERVERS
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node_aliases import record_node_aliases
+from agent_bom.inventory import build_agents_from_inventory
 
 # Former hand-written ids of the named credentials the hero chains point at.
 _RETIRED_NAMED_CREDENTIALS: dict[tuple[str, str], str] = {
@@ -40,9 +43,6 @@ class ShowcaseIds:
 
 @cache
 def showcase_ids() -> ShowcaseIds:
-    from agent_bom.demo import DEMO_INVENTORY_SOURCE, demo_inventory_document
-    from agent_bom.inventory import build_agents_from_inventory
-
     agents: dict[str, str] = {}
     servers: dict[str, str] = {}
     credentials: dict[tuple[str, str], str] = {}
@@ -91,8 +91,6 @@ def retired_showcase_credential_id(server: str, env_var: str) -> str:
 
 def retired_showcase_aliases() -> dict[str, list[str]]:
     """Current node id -> the hand-written ids it replaced."""
-    from agent_bom.demo_estate.showcase_constants import SHOWCASE_SERVERS
-
     ids = showcase_ids()
     aliases: dict[str, list[str]] = {agent_id: [f"agent:{name}"] for name, agent_id in ids.agents.items()}
     for server, (_owner, tools) in SHOWCASE_SERVERS.items():

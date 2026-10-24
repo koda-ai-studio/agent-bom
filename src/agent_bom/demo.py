@@ -16,6 +16,8 @@ includes:
 
 from __future__ import annotations
 
+import copy
+
 DEMO_INVENTORY: dict = {
     "agents": [
         {
@@ -242,8 +244,6 @@ def demo_inventory_document() -> dict:
     machine. A home-relative config path would make those ids depend on
     ``$HOME``, and editing the shared dict in place would leak into later scans.
     """
-    import copy
-
     document = copy.deepcopy(DEMO_INVENTORY)
     for agent in document.get("agents", []):
         agent.setdefault("config_path", DEMO_INVENTORY_SOURCE)
