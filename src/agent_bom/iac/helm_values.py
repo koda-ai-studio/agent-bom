@@ -308,7 +308,7 @@ def helm_014(v: HelmValues) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="HELM-014",
-                severity="medium",
+                severity="low",
                 title="Missing livenessProbe in values.yaml",
                 message=(
                     "values.yaml does not define livenessProbe defaults. "

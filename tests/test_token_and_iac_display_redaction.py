@@ -59,3 +59,19 @@ def test_lockfile_provenance_keeps_the_actual_source_label(kind, tmp_path):
         packages = parse_pnpm_lock(tmp_path)
     assert packages
     assert {sanitize_path_label(e["source_file"]) for p in packages for e in p.version_evidence} == {f"<path:{filename}>"}
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Pod 'p' sets automountServiceAccountToken: true. Set it to false.",
+        "token_required: false, then retry",
+        "api_token: no;",
+    ],
+)
+def test_boolean_setting_under_a_credential_named_key_is_not_redacted(text):
+    assert sanitize_text(text) == text
+
+
+def test_secret_value_followed_by_punctuation_is_still_redacted():
+    assert "s3cr3t-value" not in sanitize_text("api_token: s3cr3t-value.")

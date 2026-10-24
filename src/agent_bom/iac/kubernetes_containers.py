@@ -281,7 +281,7 @@ def k8s_022(c: K8sContainer) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="K8S-022",
-                severity="medium",
+                severity="low",
                 title="Container without liveness probe",
                 message=(
                     f"Container '{cname}' in '{name}' has no livenessProbe. "
@@ -305,7 +305,7 @@ def k8s_023(c: K8sContainer) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="K8S-023",
-                severity="medium",
+                severity="low",
                 title="Container without readiness probe",
                 message=(
                     f"Container '{cname}' in '{name}' has no readinessProbe. "

@@ -249,7 +249,7 @@ def tf_sec_029(res: TfResource) -> list[IaCFinding]:
             findings.append(
                 IaCFinding(
                     rule_id="TF-SEC-029",
-                    severity="medium",
+                    severity="low",
                     title="Load balancer access logging not enabled",
                     message=(
                         f"Load balancer '{rname}' has access_logs block but "
@@ -266,7 +266,7 @@ def tf_sec_029(res: TfResource) -> list[IaCFinding]:
         findings.append(
             IaCFinding(
                 rule_id="TF-SEC-029",
-                severity="medium",
+                severity="low",
                 title="Load balancer access logging not enabled",
                 message=(
                     f"Load balancer '{rname}' ({rtype}) does not have an "

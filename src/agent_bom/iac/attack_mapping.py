@@ -15,7 +15,6 @@ IAC_ATTACK_MAP: dict[str, list[str]] = {
     # Encryption / Data Protection
     "TF-SEC-001": ["T1530"],  # S3 without encryption → Data from Cloud Storage
     "TF-SEC-005": ["T1530", "T1565"],  # RDS without encryption → Data Manipulation
-    "TF-SEC-008": ["T1530"],  # S3 without SSE
     "TF-SEC-011": ["T1530"],  # RDS without storage encryption
     "TF-SEC-017": ["T1557"],  # ElastiCache no transit encryption → Adversary-in-the-Middle
     "TF-SEC-027": ["T1530"],  # EBS not encrypted

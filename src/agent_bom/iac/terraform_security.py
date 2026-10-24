@@ -21,7 +21,7 @@ TF-SEC-004  IAM policy/policy document with Action * (or *:*) or Resource * (AWS
 TF-SEC-005  RDS without encryption (AWS SEC08, CIS 2.3.1)
 TF-SEC-006  CloudWatch logging not enabled (AWS SEC04, CIS 3.1)
 TF-SEC-007  SSH key hardcoded in resource (AWS SEC02, CIS 1.14)
-TF-SEC-008  S3 bucket without server-side encryption (AWS SEC08, CIS 2.1.1)
+TF-SEC-008  Retired: duplicated TF-SEC-001 on the same bucket line
 TF-SEC-009  Security group rule with 0.0.0.0/0 (CIS 5.2)
 TF-SEC-010  IAM policy with service-wide wildcard action, e.g. s3:* (AWS SEC03, CIS 1.16)
 TF-SEC-011  RDS without storage encryption (AWS SEC08, CIS 2.3.1)
@@ -93,7 +93,6 @@ _RULES: tuple[tuple[frozenset[str] | None, TfCheck], ...] = (
     (frozenset({"aws_db_instance", "aws_rds_cluster"}), _database.tf_sec_005),
     (frozenset({"aws_db_instance", "aws_rds_cluster", "aws_elasticsearch_domain"}), _identity.tf_sec_006),
     (None, _identity.tf_sec_007),
-    (frozenset({"aws_s3_bucket"}), _storage.tf_sec_008),
     (frozenset({"aws_security_group_rule"}), _network.tf_sec_009),
     (_IAM_POLICY_TYPES, _identity.tf_sec_010),
     (frozenset({"aws_db_instance", "aws_rds_cluster"}), _database.tf_sec_011),

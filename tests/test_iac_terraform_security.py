@@ -344,7 +344,7 @@ resource "aws_s3_bucket" "data" {
         findings = scan_terraform_security(tmp_tf(content))
         hits = [f for f in findings if f.rule_id == "TF-SEC-021"]
         assert len(hits) == 1
-        assert hits[0].severity == "medium"
+        assert hits[0].severity == "low"  # hygiene control, not an exposure
 
     def test_versioning_enabled_ok(self, tmp_tf):
         content = """\
@@ -411,7 +411,7 @@ resource "aws_s3_bucket" "data" {
         findings = scan_terraform_security(tmp_tf(content))
         hits = [f for f in findings if f.rule_id == "TF-SEC-023"]
         assert len(hits) == 1
-        assert hits[0].severity == "medium"
+        assert hits[0].severity == "low"  # hygiene control, not an exposure
 
     def test_with_logging_ok(self, tmp_tf):
         content = """\

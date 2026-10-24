@@ -212,3 +212,43 @@ class TestHelmTemplates:
         monkeypatch.setattr("agent_bom.iac.helm_templates.shutil.which", lambda _name: None)
         verdicts = {v.scanner_id: v for v in scan_iac_with_context(FIXTURE / "chart").verdicts}
         assert verdicts["kubernetes"].status == "not-applicable"
+
+
+class TestDuplicatesAndHygiene:
+    def test_each_issue_gets_one_finding(self) -> None:
+        findings = scan_iac_with_context(FIXTURE).findings
+        by_location: dict[tuple[str, int], list[str]] = {}
+        for f in findings:
+            by_location.setdefault((f.file_path, f.line_number), []).append(f.rule_id)
+        pairs = [("TF-SEC-001", "TF-SEC-008"), ("CFN-003", "CFN-013"), ("DOCKER-004", "DOCKER-022"), ("DOCKER-001", "DOCKER-010")]
+        for a, b in pairs:
+            assert not [loc for loc, rules in by_location.items() if a in rules and b in rules], (a, b)
+        assert "TF-SEC-008" not in {f.rule_id for f in findings}
+        assert "CFN-013" not in {f.rule_id for f in findings}
+
+    def test_dockerfile_rules_are_distinct(self) -> None:
+        findings = _scan("docker/Dockerfile")
+        assert {(f.rule_id, f.line_number) for f in findings if f.rule_id.startswith("DOCKER-0") and f.line_number <= 4} >= {
+            ("DOCKER-001", 1),
+            ("DOCKER-022", 2),
+            ("DOCKER-004", 3),
+            ("DOCKER-010", 4),
+        }
+        assert not [f for f in findings if f.rule_id == "DOCKER-010" and f.line_number == 1]
+        assert not [f for f in findings if f.rule_id == "DOCKER-004" and f.line_number == 2]
+
+    def test_hygiene_rules_are_low(self) -> None:
+        findings = scan_iac_with_context(FIXTURE).findings
+        hygiene = {"K8S-022", "K8S-023", "HELM-014", "DOCKER-006", "TF-SEC-006", "TF-SEC-013", "TF-SEC-021", "TF-SEC-023"}
+        seen = {f.rule_id: f.severity for f in findings if f.rule_id in hygiene}
+        assert seen and set(seen.values()) == {"low"}, seen
+
+    def test_bucket_encrypted_by_separate_resource_is_not_flagged(self, tmp_path: Path) -> None:
+        tf = tmp_path / "enc.tf"
+        tf.write_text(
+            'resource "aws_s3_bucket" "b" {\n  bucket = "b"\n}\n'
+            'resource "aws_s3_bucket_server_side_encryption_configuration" "b" {\n'
+            "  bucket = aws_s3_bucket.b.id\n"
+            '  rule {\n    apply_server_side_encryption_by_default {\n      sse_algorithm = "aws:kms"\n    }\n  }\n}\n'
+        )
+        assert [f for f in scan_iac_with_context(tf).findings if f.rule_id == "TF-SEC-001"] == []

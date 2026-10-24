@@ -89,8 +89,9 @@ def docker_001_010(ln: DockerLine) -> list[IaCFinding]:
                 )
             )
 
-    # DOCKER-010: FROM with unpinned base image (no hash pin)
-    if image.lower() != "scratch" and "@sha256:" not in image:
+    # DOCKER-010: a pinned tag without a digest. An untagged/:latest image is
+    # already DOCKER-001 on this line, so it is not reported twice.
+    if image.lower() != "scratch" and "@sha256:" not in image and not findings:
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-010",
@@ -163,23 +164,24 @@ def docker_003(ln: DockerLine) -> list[IaCFinding]:
 def docker_004_022(ln: DockerLine) -> list[IaCFinding]:
     """DOCKER-004 (ADD instead of COPY) and DOCKER-022 (ADD fetches a remote URL)."""
     findings: list[IaCFinding] = []
-    # ADD with URLs is the concern — but even local ADD is discouraged
-    findings.append(
-        IaCFinding(
-            rule_id="DOCKER-004",
-            severity="medium",
-            title="ADD used instead of COPY",
-            message=(
-                "ADD can fetch remote URLs and auto-extract archives, introducing "
-                "supply chain risk. Use COPY unless you specifically need ADD features."
-            ),
-            file_path=ln.rel_path,
-            line_number=ln.number,
-            category="dockerfile",
-            compliance=["CIS-Docker-4.9", "NIST-CM-7"],
+    # A remote ADD is DOCKER-022 (high); DOCKER-004 covers only local ADD.
+    if not _REMOTE_ADD_RE.search(ln.stripped):
+        findings.append(
+            IaCFinding(
+                rule_id="DOCKER-004",
+                severity="medium",
+                title="ADD used instead of COPY",
+                message=(
+                    "ADD can fetch remote URLs and auto-extract archives, introducing "
+                    "supply chain risk. Use COPY unless you specifically need ADD features."
+                ),
+                file_path=ln.rel_path,
+                line_number=ln.number,
+                category="dockerfile",
+                compliance=["CIS-Docker-4.9", "NIST-CM-7"],
+            )
         )
-    )
-    if _REMOTE_ADD_RE.search(ln.stripped):
+    else:
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-022",

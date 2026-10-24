@@ -206,11 +206,11 @@
    "",
    "  ✓ <ROOT>/project/Dockerfile: 4 finding(s) (1 high, 1 medium, 2 low)",
    "  ✓ <ROOT>/project/.github/workflows/ci.yml: 2 finding(s) (1 medium, 1 low)",
-   "  ✓ <ROOT>/project/main.tf: 6 finding(s) (1 critical, 3 high, 2 medium)",
-   "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 7 medium)",
+   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
+   "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 5 medium, 2 low)",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                            IaC Misconfigurations — 21 finding(s)                                                             │",
+   "│                                                            IaC Misconfigurations — 20 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -238,17 +238,14 @@
    "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
    "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-008   │ S3 bucket without server-side encryption                                  │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
    "│ │            │              │ access block to prevent public bucket exposure.                           │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a versioning block. Enable versioning to      │                                                  │ │",
    "│ │            │              │ protect against accidental deletion and enable recovery.                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a logging block. Enable server access logging │                                                  │ │",
    "│ │            │              │ to track requests for security auditing.                                  │                                                  │ │",
    "│ │ 🔴 CRITIC… │ K8S-001      │ Privileged container                                                      │ deploy.yaml:10                                   │ │",
@@ -268,20 +265,22 @@
    "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:7                                    │ │",
    "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
    "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:7                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
-   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
-   "│ │            │              │ containers.                                                               │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:7                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
-   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:7                                    │ │",
    "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
    "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
    "│ │            │              │ syscalls.                                                                 │                                                  │ │",
-   "│ │    ...     │              │ +1 more                                                                   │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-011      │ Container image uses :latest tag                                          │ deploy.yaml:8                                    │ │",
+   "│ │            │              │ Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific  │                                                  │ │",
+   "│ │            │              │ version.                                                                  │                                                  │ │",
+   "│ │   ⚪ LOW   │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
+   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
+   "│ │            │              │ containers.                                                               │                                                  │ │",
+   "│ │   ⚪ LOW   │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
+   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 2 critical · 5 high · scan complete ─────────────────────────────────────────────────────────────╯"
+   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯"
   ],
   "context": {
    "_browser_ext_results": null,
@@ -420,23 +419,6 @@
      },
      {
       "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-008",
-      "severity": "high",
-      "title": "S3 bucket without server-side encryption"
-     },
-     {
-      "attack_techniques": [
        "T1190",
        "T1530"
       ],
@@ -468,7 +450,7 @@
       "message": "S3 bucket 'b' does not have a versioning block. Enable versioning to protect against accidental deletion and enable recovery.",
       "remediation": "",
       "rule_id": "TF-SEC-021",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket versioning not enabled"
      },
      {
@@ -485,7 +467,7 @@
       "message": "S3 bucket 'b' does not have a logging block. Enable server access logging to track requests for security auditing.",
       "remediation": "",
       "rule_id": "TF-SEC-023",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket logging not enabled"
      },
      {
@@ -577,34 +559,6 @@
       "attack_techniques": [],
       "category": "kubernetes",
       "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 7,
-      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
-      "remediation": "",
-      "rule_id": "K8S-022",
-      "severity": "medium",
-      "title": "Container without liveness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 7,
-      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
-      "remediation": "",
-      "rule_id": "K8S-023",
-      "severity": "medium",
-      "title": "Container without readiness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
        "CIS-K8s-5.7.2",
        "NIST-CM-6"
       ],
@@ -632,9 +586,37 @@
       "rule_id": "K8S-011",
       "severity": "medium",
       "title": "Container image uses :latest tag"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
+      "remediation": "",
+      "rule_id": "K8S-022",
+      "severity": "low",
+      "title": "Container without liveness probe"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
+      "remediation": "",
+      "rule_id": "K8S-023",
+      "severity": "low",
+      "title": "Container without readiness probe"
      }
     ],
-    "total": 21
+    "total": 20
    },
    "project_inventory_data": null,
    "prompt_scan_data": null,
@@ -1678,8 +1660,8 @@
    "",
    "  ✓ <ROOT>/project/Dockerfile: 4 finding(s) (1 high, 1 medium, 2 low)",
    "  ✓ <ROOT>/project/.github/workflows/ci.yml: 2 finding(s) (1 medium, 1 low)",
-   "  ✓ <ROOT>/project/main.tf: 6 finding(s) (1 critical, 3 high, 2 medium)",
-   "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 7 medium)",
+   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
+   "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 5 medium, 2 low)",
    "",
    "  Scanner capability",
    "  —  helm               no targets",
@@ -1724,7 +1706,7 @@
    "  —  iam-policy         no targets",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                            IaC Misconfigurations — 21 finding(s)                                                             │",
+   "│                                                            IaC Misconfigurations — 20 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -1752,17 +1734,14 @@
    "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
    "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-008   │ S3 bucket without server-side encryption                                  │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
    "│ │            │              │ access block to prevent public bucket exposure.                           │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a versioning block. Enable versioning to      │                                                  │ │",
    "│ │            │              │ protect against accidental deletion and enable recovery.                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a logging block. Enable server access logging │                                                  │ │",
    "│ │            │              │ to track requests for security auditing.                                  │                                                  │ │",
    "│ │ 🔴 CRITIC… │ K8S-001      │ Privileged container                                                      │ deploy.yaml:10                                   │ │",
@@ -1782,20 +1761,22 @@
    "│ │ 🟡 MEDIUM  │ K8S-004      │ No resource limits                                                        │ deploy.yaml:7                                    │ │",
    "│ │            │              │ Container 'c' in 'p' has no resource limits. Set CPU and memory limits to │                                                  │ │",
    "│ │            │              │ prevent resource exhaustion and noisy-neighbor issues.                    │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:7                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
-   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
-   "│ │            │              │ containers.                                                               │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:7                                    │ │",
-   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
-   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ │ 🟡 MEDIUM  │ K8S-031      │ Missing seccompProfile                                                    │ deploy.yaml:7                                    │ │",
    "│ │            │              │ Container 'c' in 'p' has no seccompProfile set at container or pod level. │                                                  │ │",
    "│ │            │              │ Set seccompProfile.type to RuntimeDefault or Localhost to restrict        │                                                  │ │",
    "│ │            │              │ syscalls.                                                                 │                                                  │ │",
-   "│ │    ...     │              │ +1 more                                                                   │                                                  │ │",
+   "│ │ 🟡 MEDIUM  │ K8S-011      │ Container image uses :latest tag                                          │ deploy.yaml:8                                    │ │",
+   "│ │            │              │ Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific  │                                                  │ │",
+   "│ │            │              │ version.                                                                  │                                                  │ │",
+   "│ │   ⚪ LOW   │ K8S-022      │ Container without liveness probe                                          │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no livenessProbe. Without a liveness probe,      │                                                  │ │",
+   "│ │            │              │ Kubernetes cannot detect and restart deadlocked or unresponsive           │                                                  │ │",
+   "│ │            │              │ containers.                                                               │                                                  │ │",
+   "│ │   ⚪ LOW   │ K8S-023      │ Container without readiness probe                                         │ deploy.yaml:7                                    │ │",
+   "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
+   "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 2 critical · 5 high · scan complete ─────────────────────────────────────────────────────────────╯"
+   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯"
   ],
   "context": {
    "_browser_ext_results": null,
@@ -2002,23 +1983,6 @@
      },
      {
       "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-008",
-      "severity": "high",
-      "title": "S3 bucket without server-side encryption"
-     },
-     {
-      "attack_techniques": [
        "T1190",
        "T1530"
       ],
@@ -2050,7 +2014,7 @@
       "message": "S3 bucket 'b' does not have a versioning block. Enable versioning to protect against accidental deletion and enable recovery.",
       "remediation": "",
       "rule_id": "TF-SEC-021",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket versioning not enabled"
      },
      {
@@ -2067,7 +2031,7 @@
       "message": "S3 bucket 'b' does not have a logging block. Enable server access logging to track requests for security auditing.",
       "remediation": "",
       "rule_id": "TF-SEC-023",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket logging not enabled"
      },
      {
@@ -2159,34 +2123,6 @@
       "attack_techniques": [],
       "category": "kubernetes",
       "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 7,
-      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
-      "remediation": "",
-      "rule_id": "K8S-022",
-      "severity": "medium",
-      "title": "Container without liveness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
-       "NIST-SI-13"
-      ],
-      "file_path": "deploy.yaml",
-      "line_number": 7,
-      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
-      "remediation": "",
-      "rule_id": "K8S-023",
-      "severity": "medium",
-      "title": "Container without readiness probe"
-     },
-     {
-      "attack_techniques": [],
-      "category": "kubernetes",
-      "compliance": [
        "CIS-K8s-5.7.2",
        "NIST-CM-6"
       ],
@@ -2214,9 +2150,37 @@
       "rule_id": "K8S-011",
       "severity": "medium",
       "title": "Container image uses :latest tag"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
+      "remediation": "",
+      "rule_id": "K8S-022",
+      "severity": "low",
+      "title": "Container without liveness probe"
+     },
+     {
+      "attack_techniques": [],
+      "category": "kubernetes",
+      "compliance": [
+       "NIST-SI-13"
+      ],
+      "file_path": "deploy.yaml",
+      "line_number": 7,
+      "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
+      "remediation": "",
+      "rule_id": "K8S-023",
+      "severity": "low",
+      "title": "Container without readiness probe"
      }
     ],
-    "total": 21
+    "total": 20
    },
    "project_inventory_data": {
     "advisory_depth_pct": 0,
@@ -2598,10 +2562,10 @@
    "",
    "Scanning 1 path(s) for IaC misconfigurations...",
    "",
-   "  ✓ <ROOT>/project/main.tf: 6 finding(s) (1 critical, 3 high, 2 medium)",
+   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                             IaC Misconfigurations — 6 finding(s)                                                             │",
+   "│                                                             IaC Misconfigurations — 5 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -2611,21 +2575,18 @@
    "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
    "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-008   │ S3 bucket without server-side encryption                                  │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
    "│ │            │              │ access block to prevent public bucket exposure.                           │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-021   │ S3 bucket versioning not enabled                                          │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a versioning block. Enable versioning to      │                                                  │ │",
    "│ │            │              │ protect against accidental deletion and enable recovery.                  │                                                  │ │",
-   "│ │ 🟡 MEDIUM  │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
+   "│ │   ⚪ LOW   │ TF-SEC-023   │ S3 bucket logging not enabled                                             │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have a logging block. Enable server access logging │                                                  │ │",
    "│ │            │              │ to track requests for security auditing.                                  │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 1 critical · 3 high · scan complete ─────────────────────────────────────────────────────────────╯"
+   "╰──────────────────────────────────────────────────────────── 1 critical · 2 high · scan complete ─────────────────────────────────────────────────────────────╯"
   ],
   "context": {
    "_browser_ext_results": null,
@@ -2669,23 +2630,6 @@
      },
      {
       "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-008",
-      "severity": "high",
-      "title": "S3 bucket without server-side encryption"
-     },
-     {
-      "attack_techniques": [
        "T1190",
        "T1530"
       ],
@@ -2717,7 +2661,7 @@
       "message": "S3 bucket 'b' does not have a versioning block. Enable versioning to protect against accidental deletion and enable recovery.",
       "remediation": "",
       "rule_id": "TF-SEC-021",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket versioning not enabled"
      },
      {
@@ -2734,11 +2678,11 @@
       "message": "S3 bucket 'b' does not have a logging block. Enable server access logging to track requests for security auditing.",
       "remediation": "",
       "rule_id": "TF-SEC-023",
-      "severity": "medium",
+      "severity": "low",
       "title": "S3 bucket logging not enabled"
      }
     ],
-    "total": 6
+    "total": 5
    },
    "project_inventory_data": {
     "advisory_depth_pct": 0,
