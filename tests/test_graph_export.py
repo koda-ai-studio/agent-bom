@@ -686,8 +686,8 @@ def test_cli_graph_evaluates_expected_fixture(tmp_path: Path):
                 "expected_nodes": [
                     agent_graph_id_for(data["agents"][0]),
                     mcp_server_graph_id_for(data["agents"][0]["mcp_servers"][0], data["agents"][0]),
-                    "pkg:npm/next@16.2.6",
-                    "cve:CVE-2026-21441",
+                    "pkg:npm:next@16.2.6",
+                    "vuln:CVE-2026-21441",
                 ],
                 "expected_edges": [
                     [
@@ -695,8 +695,8 @@ def test_cli_graph_evaluates_expected_fixture(tmp_path: Path):
                         mcp_server_graph_id_for(data["agents"][0]["mcp_servers"][0], data["agents"][0]),
                         "uses",
                     ],
-                    [mcp_server_graph_id_for(data["agents"][0]["mcp_servers"][0], data["agents"][0]), "pkg:npm/next@16.2.6", "depends_on"],
-                    ["pkg:npm/next@16.2.6", "cve:CVE-2026-21441", "affects"],
+                    [mcp_server_graph_id_for(data["agents"][0]["mcp_servers"][0], data["agents"][0]), "pkg:npm:next@16.2.6", "depends_on"],
+                    ["pkg:npm:next@16.2.6", "vuln:CVE-2026-21441", "affects"],
                 ],
             }
         )

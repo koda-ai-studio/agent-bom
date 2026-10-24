@@ -868,6 +868,12 @@ a collector name never upgrades a node to successful execution. Timestamps are
 recorded observation times, not a fresh authorization check. Modeled, static and
 runtime evidence remain distinct, and a possible path is not proof of compromise.
 
+Scan graph exports (`GET /v1/scan/{job_id}/graph-export`, `agent-bom graph`,
+`agent-bom scan -f graph`) name nodes with the same `id` and `entity_type` the
+graph API serves for that scan. Their `kind` / `type` field is a display kind
+(`pkg_vuln`, `server_cred`, `cve`, ...) for styling only; join on `id`. Package
+and advisory nodes keep their pre-0.111 spelling in `attributes.legacy_id`.
+
 First retrieve the schema, then fetch a pinned graph or exposure path and save its
 scope and completeness alongside the evidence. Use snapshot diffs to investigate
 changes; confirm effective permission and successful access against their own
