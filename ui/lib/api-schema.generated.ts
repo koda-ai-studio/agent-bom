@@ -4648,7 +4648,7 @@ export interface paths {
          * @description Page recorded incident relationships without loading the full neighborhood.
          *
          *     Reuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.
-         *     Snapshot replacement invalidates cursors (400: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
+         *     Snapshot replacement invalidates cursors (422: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
          *     Completeness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.
          */
         get: operations["get_graph_incident_edges_v1_graph_incident_edges_get"];

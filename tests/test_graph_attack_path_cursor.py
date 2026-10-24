@@ -53,10 +53,10 @@ def test_cursor_is_bound_to_its_tenant_query_and_generation(api):  # noqa: F811
     store.save_graph(_three_path_graph("tenant-a"))
     params = {"scan_id": "shared-scan", "limit": 1}
     cursor = client.get("/v1/graph/attack-paths", params=params, headers=headers["tenant-a"]).json()["pagination"]["next_cursor"]
-    assert client.get("/v1/graph/attack-paths", params=params | {"cursor": "not-a-cursor"}, headers=headers["tenant-a"]).status_code == 400
-    assert client.get("/v1/graph/attack-paths", params=params | {"cursor": cursor}, headers=headers["tenant-b"]).status_code == 400
+    assert client.get("/v1/graph/attack-paths", params=params | {"cursor": "not-a-cursor"}, headers=headers["tenant-a"]).status_code == 422
+    assert client.get("/v1/graph/attack-paths", params=params | {"cursor": cursor}, headers=headers["tenant-b"]).status_code == 422
     filtered = params | {"cursor": cursor, "min_severity": "high"}
-    assert client.get("/v1/graph/attack-paths", params=filtered, headers=headers["tenant-a"]).status_code == 400
+    assert client.get("/v1/graph/attack-paths", params=filtered, headers=headers["tenant-a"]).status_code == 422
     store.save_graph(_three_path_graph("tenant-a"))
     assert client.get("/v1/graph/attack-paths", params=params | {"cursor": cursor}, headers=headers["tenant-a"]).status_code == 409
 

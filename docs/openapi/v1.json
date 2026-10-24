@@ -67410,7 +67410,7 @@
     },
     "/v1/graph/incident-edges": {
       "get": {
-        "description": "Page recorded incident relationships without loading the full neighborhood.\n\nReuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.\nSnapshot replacement invalidates cursors (400: restart). A replaced id resolves to its canonical node, echoed as resolved_from.\nCompleteness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.",
+        "description": "Page recorded incident relationships without loading the full neighborhood.\n\nReuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.\nSnapshot replacement invalidates cursors (422: restart). A replaced id resolves to its canonical node, echoed as resolved_from.\nCompleteness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.",
         "operationId": "get_graph_incident_edges_v1_graph_incident_edges_get",
         "parameters": [
           {

@@ -29,9 +29,9 @@ def continue_node_cursor(cursor: str | None, generation: str | None) -> tuple[st
     try:
         carried, store_cursor = json.loads(base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)))
     except (ValueError, binascii.Error) as exc:
-        raise HTTPException(400, "Invalid cursor for this query; restart from the first page.") from exc
+        raise HTTPException(422, "Invalid cursor for this query; restart from the first page.") from exc
     if not isinstance(carried, str) or not isinstance(store_cursor, str):
-        raise HTTPException(400, "Invalid cursor for this query; restart from the first page.")
+        raise HTTPException(422, "Invalid cursor for this query; restart from the first page.")
     if generation is not None and generation != carried:
         raise HTTPException(409, "snapshot_generation does not match the cursor's; restart the query from its first page.")
     return store_cursor, carried

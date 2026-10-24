@@ -102,9 +102,14 @@ def test_auth_tenant_and_cursor_scope_fail_closed(boundary):
     assert client.get("/v1/graph/incident-edges", params={"node_id": ROOT}).status_code == 401
     page = fetch(boundary, limit=1).json()
     cursor = page["next_cursor"]
-    for params in ({"direction": "in"}, {"node_id": "peer"}, {"scan_id": "missing"}, {"tenant": "tenant-b"}):
+    for params, status in (
+        ({"direction": "in"}, 422),
+        ({"node_id": "peer"}, 422),
+        ({"scan_id": "missing"}, 404),
+        ({"tenant": "tenant-b"}, 422),
+    ):
         response = fetch(boundary, cursor=cursor, **params)
-        assert response.status_code == 400
+        assert response.status_code == status
         assert "tenant-a" not in response.text
     response = client.get(
         "/v1/graph/incident-edges",
@@ -129,15 +134,15 @@ def test_missing_and_stale_snapshots_never_claim_complete(boundary):
     assert missing["snapshot_generation"] is None
     page = fetch(boundary, limit=1).json()
     store.save_graph(graph())  # Same ID, timestamp and manifest; new durable generation.
-    assert fetch(boundary, cursor=page["next_cursor"]).status_code == 400
-    assert fetch(boundary, cursor="not-a-token").status_code == 400
+    assert fetch(boundary, cursor=page["next_cursor"]).status_code == 422
+    assert fetch(boundary, cursor="not-a-token").status_code == 422
 
 
 def test_latest_cursor_requires_returned_snapshot_id(boundary):
     _, store, _, _ = boundary
     page = fetch(boundary, limit=1).json()
     store.save_graph(graph(scan="new", created="2026-09-24T00:00:00Z"))
-    assert fetch(boundary, cursor=page["next_cursor"]).status_code == 400
+    assert fetch(boundary, cursor=page["next_cursor"]).status_code == 422
     assert fetch(boundary, cursor=page["next_cursor"], scan_id=page["scan_id"]).status_code == 200
 
 
@@ -152,8 +157,8 @@ def test_missing_generation_and_endpoints_are_honest(boundary):
     assert all(edge["target_id"] != "peer" for edge in body["edges"])
     with sqlite3.connect(db) as conn:
         conn.execute("UPDATE graph_snapshots SET read_revision='' WHERE tenant_id='tenant-a'")
-    assert fetch(boundary).status_code == 400
-    assert fetch(boundary, cursor=initial["next_cursor"]).status_code == 400
+    assert fetch(boundary).status_code == 422
+    assert fetch(boundary, cursor=initial["next_cursor"]).status_code == 422
 
 
 def test_neptune_is_explicitly_unsupported(boundary, monkeypatch):
@@ -172,7 +177,7 @@ def test_cross_node_expansion_requires_same_snapshot_generation(boundary):
     assert fetch(boundary, node_id="peer", snapshot_generation=generation, scan_id=first["scan_id"]).status_code == 200
     store.save_graph(graph())
     response = fetch(boundary, node_id="peer", snapshot_generation=generation, scan_id=first["scan_id"])
-    assert response.status_code == 400
+    assert response.status_code == 422
     current = fetch(boundary).json()
     assert current["snapshot_generation"] != generation
     assert (

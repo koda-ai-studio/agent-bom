@@ -35,3 +35,25 @@ def test_graph_cursor_with_offset_is_rejected_not_echoed(client):  # noqa: F811
 def test_every_cursor_route_rejects_an_offset_beside_the_cursor(client, path, params):  # noqa: F811
     response = client.get(path, params={**params, "cursor": "g1.AAAA", "offset": 2})
     assert response.status_code == 400, response.text
+
+
+MALFORMED_CURSORS = ["g1.@@@", "g1.WyJhIl0", "not-a-cursor"]
+MALFORMED_CURSOR_ROUTES = [
+    ("/v1/graph", {}),
+    ("/v1/graph/agents", {}),
+    ("/v1/graph/search", {"q": "tenant"}),
+    ("/v1/graph/attack-paths", {}),
+    ("/v1/graph/attack-paths/cross-vendor", {}),
+    ("/v1/graph/incident-edges", {"node_id": "principal:reader"}),
+    ("/v1/inventory/assets", {}),
+]
+
+
+@pytest.mark.parametrize("cursor", MALFORMED_CURSORS)
+@pytest.mark.parametrize(("path", "params"), MALFORMED_CURSOR_ROUTES, ids=[p for p, _ in MALFORMED_CURSOR_ROUTES])
+def test_malformed_cursor_is_a_validation_error_on_every_route(client, path, params, cursor):  # noqa: F811
+    first = client.get(path, params={**params, "scan_id": "shared-scan", "limit": 1})
+    assert first.status_code == 200, first.text
+    generation = first.json().get("snapshot_generation") or ""
+    response = client.get(path, params={**params, "scan_id": "shared-scan", "cursor": cursor, "snapshot_generation": generation})
+    assert response.status_code == 422, response.text

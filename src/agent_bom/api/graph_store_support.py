@@ -71,6 +71,10 @@ def encode_graph_cursor(node: UnifiedNode) -> str:
     return base64.urlsafe_b64encode(payload).decode().rstrip("=")
 
 
+class InvalidGraphCursorError(ValueError):
+    """A continuation cursor that does not decode: a client validation error (422)."""
+
+
 def decode_graph_cursor(cursor: str) -> tuple[int, float, str, str]:
     try:
         padded = cursor + "=" * (-len(cursor) % 4)
@@ -81,7 +85,7 @@ def decode_graph_cursor(cursor: str) -> tuple[int, float, str, str]:
         severity_id, risk_score, label, node_id = values
         return int(severity_id), float(risk_score), str(label), str(node_id)
     except Exception as exc:  # pragma: no cover - normalized into ValueError for route handling
-        raise ValueError("Invalid graph cursor") from exc
+        raise InvalidGraphCursorError("Invalid graph cursor") from exc
 
 
 _DYNAMIC_RELATIONSHIP_VALUES = {

@@ -45422,7 +45422,7 @@ paths:
         Reuse scan_id and snapshot_generation on every node expansion; keep node_id
         and direction fixed while following next_cursor.
 
-        Snapshot replacement invalidates cursors (400: restart). A replaced id resolves
+        Snapshot replacement invalidates cursors (422: restart). A replaced id resolves
         to its canonical node, echoed as resolved_from.
 
         Completeness covers only recorded page rows, never collection, permissions,

@@ -14,7 +14,7 @@ import base64
 import json
 from typing import Any
 
-from agent_bom.api.graph_store_support import _escape_like_query, decode_graph_cursor
+from agent_bom.api.graph_store_support import InvalidGraphCursorError, _escape_like_query, decode_graph_cursor
 
 OTHER_MATCH = 3
 
@@ -44,7 +44,7 @@ def decode_search_cursor(cursor: str) -> tuple[int, int, float, str, str]:
     try:
         values = json.loads(base64.urlsafe_b64decode((cursor + "=" * (-len(cursor) % 4)).encode()).decode())
     except Exception as exc:  # noqa: BLE001 - normalized into ValueError for route handling
-        raise ValueError("Invalid graph cursor") from exc
+        raise InvalidGraphCursorError("Invalid graph cursor") from exc
     if isinstance(values, list) and len(values) == 5:
         rank, severity_id, risk_score, label, node_id = values
         return int(rank), int(severity_id), float(risk_score), str(label), str(node_id)

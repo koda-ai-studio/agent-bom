@@ -358,7 +358,7 @@ async def get_graph_incident_edges(
     """Page recorded incident relationships without loading the full neighborhood.
 
     Reuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.
-    Snapshot replacement invalidates cursors (400: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
+    Snapshot replacement invalidates cursors (422: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
     Completeness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.
     """
     store = _runtime._get_graph_store_or_503()
@@ -380,7 +380,7 @@ async def get_graph_incident_edges(
             snapshot_generation=snapshot_generation,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid or stale incident relationship page; restart from the first page") from exc
+        raise HTTPException(status_code=422, detail="Invalid or stale incident relationship page; restart from the first page") from exc
     if page is None:
         return {
             "scan_id": scan_id or "",

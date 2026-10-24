@@ -444,7 +444,7 @@ async def build_asset_list(
             limit=limit,
         )
     except ValueError as exc:
-        raise InventoryError(str(sanitize_error(exc)), status_code=400) from exc
+        raise InventoryError(str(sanitize_error(exc)), status_code=422) from exc
 
     if not result.get("scan_id"):
         raise InventoryError("No graph snapshot is available for the selected scope", status_code=404)
@@ -539,7 +539,7 @@ async def build_asset_detail(
             snapshot_generation=snapshot_generation,
         )
     except ValueError as exc:
-        raise InventoryError("Invalid relationship page or changed snapshot; restart asset inspection.", status_code=400) from exc
+        raise InventoryError("Invalid relationship page or changed snapshot; restart asset inspection.", status_code=422) from exc
     if context is None:
         return None
 
