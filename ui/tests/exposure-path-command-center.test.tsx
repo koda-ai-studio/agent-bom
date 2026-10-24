@@ -197,6 +197,15 @@ describe("ExposurePathCommandCenter", () => {
     expect(screen.getByText("Mapped ATT&CK analysis")).not.toBeVisible();
   });
 
+  it("never wraps the target advisory id inside the path title", () => {
+    render(<ExposurePathCommandCenter path={basePath} />);
+    const title = screen.getByRole("heading", { level: 2 });
+    expect(title).toHaveTextContent("Analyst Agent → CVE-2026-0002");
+    const id = title.querySelector("[data-advisory-id]");
+    expect(id).toHaveTextContent("CVE-2026-0002");
+    expect(id?.className).toContain("whitespace-nowrap");
+  });
+
   it("gives the title a full mobile row and keeps the summary readable", () => {
     render(<ExposurePathCommandCenter path={basePath} />);
 

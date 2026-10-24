@@ -1,9 +1,28 @@
 // One placement pass per canvas, batched after React Flow renders the edges.
 const pending = new WeakSet<HTMLElement>();
+const moving = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+// Captions keep clear of the canvas border so none is drawn flush or cut.
+const CANVAS_INSET = 4;
+const MOVE_SETTLE_MS = 120;
 type Box = { left: number; right: number; top: number; bottom: number };
 type Point = { x: number; y: number };
 const intersects = (a: Box, b: Box) => a.left < b.right + 2 && a.right > b.left - 2
   && a.top < b.bottom + 2 && a.bottom > b.top - 2;
+
+/**
+ * A pan keeps the zoom, so captions placed for the previous viewport can
+ * straddle the new canvas edge. Re-place them once the camera settles rather
+ * than on every animation frame of the move.
+ */
+export function scheduleRelationshipLabelLayoutAfterMove(label: HTMLElement | null) {
+  const canvas = label?.closest<HTMLElement>(".react-flow");
+  if (!canvas) return;
+  clearTimeout(moving.get(canvas));
+  moving.set(canvas, setTimeout(() => {
+    moving.delete(canvas);
+    scheduleRelationshipLabelLayout(label);
+  }, MOVE_SETTLE_MS));
+}
 
 export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
   const canvas = label?.closest<HTMLElement>(".react-flow");
@@ -57,8 +76,21 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
     };
     // A caption pushed past the canvas edge is clipped; never place one there.
     const frame = canvas.getBoundingClientRect();
-    const insideCanvas = (box: Box) => frame.width <= 0 || frame.height <= 0
-      || (box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom);
+    const sized = frame.width > 0 && frame.height > 0;
+    const inner = { left: frame.left + CANVAS_INSET, right: frame.right - CANVAS_INSET,
+      top: frame.top + CANVAS_INSET, bottom: frame.bottom - CANVAS_INSET };
+    const insideCanvas = (box: Box) => !sized
+      || (box.left >= inner.left && box.right <= inner.right && box.top >= inner.top && box.bottom <= inner.bottom);
+    // With no clear spot on its line, a caption the canvas edge would cut is
+    // moved wholly inside; one whose link is panned out of view stays put.
+    const shiftInside = (low: number, high: number, min: number, max: number) =>
+      low < min ? min - low : high > max ? max - high : 0;
+    const keepInside = ({ point, box }: { point: Point; box: Box }, scaleX: number, scaleY: number): Point => {
+      const visible = box.right > frame.left && box.left < frame.right && box.bottom > frame.top && box.top < frame.bottom;
+      if (insideCanvas(box) || !visible) return point;
+      return { x: point.x + shiftInside(box.left, box.right, inner.left, inner.right) / scaleX,
+        y: point.y + shiftInside(box.top, box.bottom, inner.top, inner.bottom) / scaleY };
+    };
     const labels = [...canvas.querySelectorAll<HTMLElement>(".graph-relationship-label[data-edge-id]")].flatMap(element => {
       const edge = canvas.querySelector(`.react-flow__edge[data-id="${CSS.escape(element.dataset.edgeId!)}"]`);
       const path = edge?.querySelector<SVGPathElement>(".react-flow__edge-path");
@@ -75,6 +107,7 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
           top: centerY - bounds.height / 2, bottom: centerY + bounds.height / 2 };
       };
       const fallback = { point: preferred, box: boxAt(preferred) };
+      const scale = { x: Math.abs(matrix.a) || 1, y: Math.abs(matrix.d) || 1 };
       const byDistance = (a: Point, b: Point) => ((a.x - preferred.x) ** 2 + (a.y - preferred.y) ** 2)
         - ((b.x - preferred.x) ** 2 + (b.y - preferred.y) ** 2);
       const clearOfNodes = ({ box }: { box: Box }) => insideCanvas(box) && !nodes.some(node => intersects(box, node));
@@ -84,7 +117,7 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
       if (!nodeClear.length) {
         // A short link can lie wholly inside its endpoint cards: nudge the
         // caption off the line, nearest the midpoint first, in growing steps.
-        const scaleX = Math.abs(matrix.a) || 1, scaleY = Math.abs(matrix.d) || 1;
+        const scaleX = scale.x, scaleY = scale.y;
         const nudges = onPath.slice(0, 24).flatMap(({ x, y }) => [4, 16, 32, 56].flatMap(gap => {
           const dx = (bounds.width / 2 + gap) / scaleX, dy = (bounds.height / 2 + gap) / scaleY;
           return [{ x, y: y - dy }, { x, y: y + dy }, { x: x - dx, y }, { x: x + dx, y }];
@@ -94,7 +127,7 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
         // the caption inside the canvas, rather than restoring an overlap.
         const centerX = (fallback.box.left + fallback.box.right) / 2;
         const centerY = (fallback.box.top + fallback.box.bottom) / 2;
-        const boundaries = frame.width > 0 && frame.height > 0 ? nodes.filter(node => intersects(fallback.box, node)).flatMap(node => [
+        const boundaries = sized ? nodes.filter(node => intersects(fallback.box, node)).flatMap(node => [
           { x: preferred.x, y: preferred.y + (node.top - 4 - bounds.height / 2 - centerY) / scaleY },
           { x: preferred.x, y: preferred.y + (node.bottom + 4 + bounds.height / 2 - centerY) / scaleY },
           { x: preferred.x + (node.left - 4 - bounds.width / 2 - centerX) / scaleX, y: preferred.y },
@@ -104,7 +137,7 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
       }
       const clearOfEdges = nodeClear.filter(({ box }) => !onForeignEdge(box, element.dataset.edgeId!));
       const candidates = clearOfEdges.length ? clearOfEdges : nodeClear;
-      return [{ element, length, candidates, fallback }];
+      return [{ element, length, candidates, fallback, scale }];
     }).sort((a, b) => a.candidates.length - b.candidates.length || a.length - b.length
       || a.element.dataset.edgeId!.localeCompare(b.element.dataset.edgeId!));
     type Placement = { point: Point; box: Box };
@@ -131,8 +164,8 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
     }
     // Finish all measurements before writing styles. Never hide a label when a
     // crowded graph has no collision-free position.
-    labels.forEach(({ element }, index) => {
-      const { x, y } = chosen[index]!.point;
+    labels.forEach(({ element, scale }, index) => {
+      const { x, y } = keepInside(chosen[index]!, scale.x, scale.y);
       element.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
     });
   });

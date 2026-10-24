@@ -32,6 +32,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - The `ai-enrich` extra requires `litellm>=1.96.2`, the first release clear of every LiteLLM advisory on OSV, including CVE-2026-84377. The lockfile already used 1.100.1; the floor stops a pip resolve from landing an affected version.
+- Graph UI: a selected path title wraps before an advisory id (CVE, GHSA, OSV) instead of splitting it across lines; relationship labels stay inside the canvas after the node stepper or a pan moves the view, never cut at its edge; and the snapshot selector shows its full label when there is room, otherwise an ellipsis with the full label on hover.
 - IaC findings can be accepted one at a time with an inline `agent-bom: ignore[RULE-ID] <reason>` marker on the offending line or the line above; a marker without a reason suppresses nothing, and accepted findings stay in the scan result's `suppressed` list. The reusable workflow uses one for its deliberate `@v0` action reference, so the repository's own scan passes.
 - GitHub Action: the default scan covers the checkout, so Terraform, Kubernetes, Helm, CloudFormation and workflow files are scanned and the runner's home-directory MCP configs no longer leak into CI reports.
 - GitHub Action: `scan-type` `image`, `fs`, `sbom`, `iac`, `secrets` and `code` no longer exit 2 with default inputs; only flags the selected command accepts are passed, and gates it cannot enforce fail with an error.

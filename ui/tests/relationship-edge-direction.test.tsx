@@ -1,15 +1,27 @@
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { EdgeProps } from "@xyflow/react";
+const flowStore = vi.hoisted(() => {
+  const listeners = new Set<(state: { transform: [number, number, number] }) => void>();
+  let state = { transform: [0, 0, 1] as [number, number, number] };
+  return {
+    getState: () => state,
+    subscribe: (listener: (next: { transform: [number, number, number] }) => void) => { listeners.add(listener); return () => listeners.delete(listener); },
+    pan: (x: number, y: number) => { state = { transform: [x, y, state.transform[2]] }; listeners.forEach(listener => listener(state)); },
+    listeners,
+  };
+});
 vi.mock("@xyflow/react", async (importOriginal) => ({
   ...await importOriginal<typeof import("@xyflow/react")>(),
   useStore: (select: (state: unknown) => unknown) => select({ nodes: [], transform: [0, 0, 1] }),
   BaseEdge: ({ markerStart, markerEnd }: { markerStart?: string; markerEnd?: string }) => <path data-testid="edge" markerStart={markerStart} markerEnd={markerEnd} />,
   EdgeLabelRenderer: ({ children }: { children: React.ReactNode }) => <foreignObject>{children}</foreignObject>,
   SmoothStepEdge: () => <path />,
+  useStoreApi: () => flowStore,
 }));
-vi.mock("@/lib/relationship-label-layout", () => ({ scheduleRelationshipLabelLayout: vi.fn() }));
+vi.mock("@/lib/relationship-label-layout", () => ({ scheduleRelationshipLabelLayout: vi.fn(), scheduleRelationshipLabelLayoutAfterMove: vi.fn() }));
 import { RelationshipEdge } from "@/components/relationship-edge";
+import { scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
 
 const props = { id: "finding-affects-asset", source: "finding", target: "asset", sourceX: 200, sourceY: 0, targetX: 0, targetY: 0, sourcePosition: "left", targetPosition: "right", markerEnd: "url(#recorded-target)", data: { relationship: "affects", quietLabel: true } } as EdgeProps;
 function mount(extra: Partial<EdgeProps> = {}) {
@@ -44,4 +56,17 @@ it("keeps neighborhood labels quiet while explicit path steps remain named", () 
   expect(queryByText("Affects")).not.toBeInTheDocument();
   rerender(<svg><RelationshipEdge {...props} label="Affects" data={{ ...props.data, directionEmphasis: true, pathEmphasis: true }} /></svg>);
   expect(queryByText("Affects")).toBeVisible();
+});
+
+it("re-places its caption after the canvas pans, not on unrelated store updates, and unsubscribes on unmount", () => {
+  const afterMove = vi.mocked(scheduleRelationshipLabelLayoutAfterMove);
+  afterMove.mockClear();
+  const { unmount } = mount({ label: "Acted As", data: { relationship: "acted_as", pathEmphasis: true } });
+  flowStore.pan(0, 0);
+  expect(afterMove).not.toHaveBeenCalled();
+  flowStore.pan(-240, 0);
+  expect(afterMove).toHaveBeenCalledTimes(1);
+  expect(afterMove.mock.calls[0]![0]).toHaveTextContent("Acted As");
+  unmount();
+  expect(flowStore.listeners.size).toBe(0);
 });
