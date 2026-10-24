@@ -7,7 +7,10 @@ stay quiet, so a regression in either direction fails here.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
+
+import pytest
 
 from agent_bom.iac import scan_iac_with_context
 from agent_bom.iac.models import IaCFinding
@@ -184,3 +187,28 @@ class TestKubernetesLines:
         findings = scan_iac_with_context(manifest).findings
         assert _lines(findings, "K8S-007") == [10]
         assert _lines(findings, "K8S-018") == [14]
+
+
+class TestHelmTemplates:
+    def _chart_findings(self, findings: list[IaCFinding]) -> set[tuple[str, int]]:
+        return {(f.rule_id, f.line_number) for f in findings if f.file_path == "templates/deployment.yaml"}
+
+    def test_textual_fallback_finds_privileged_and_host_network_and_says_rendering_skipped(self, monkeypatch) -> None:
+        monkeypatch.setattr("agent_bom.iac.helm_templates.shutil.which", lambda _name: None)
+        result = scan_iac_with_context(FIXTURE / "chart")
+        assert {("K8S-002", 8), ("K8S-001", 13)} <= self._chart_findings(result.findings)
+        helm = next(v for v in result.verdicts if v.scanner_id == "helm")
+        assert helm.status == "ran"
+        assert "rendering skipped" in helm.reason
+
+    @pytest.mark.skipif(shutil.which("helm") is None, reason="helm not installed")
+    def test_rendered_chart_maps_findings_back_to_template_lines(self) -> None:
+        result = scan_iac_with_context(FIXTURE / "chart")
+        assert {("K8S-002", 8), ("K8S-001", 13)} <= self._chart_findings(result.findings)
+        helm = next(v for v in result.verdicts if v.scanner_id == "helm")
+        assert "rendered with helm template" in helm.reason
+
+    def test_template_files_are_not_counted_as_clean_kubernetes(self, monkeypatch) -> None:
+        monkeypatch.setattr("agent_bom.iac.helm_templates.shutil.which", lambda _name: None)
+        verdicts = {v.scanner_id: v for v in scan_iac_with_context(FIXTURE / "chart").verdicts}
+        assert verdicts["kubernetes"].status == "not-applicable"

@@ -196,9 +196,11 @@ def scan_k8s_manifest(file_path: str | Path) -> list[IaCFinding]:
     path = Path(file_path)
     if not path.is_file():
         return []
+    return scan_k8s_text(path.read_text(encoding="utf-8", errors="replace"), str(path))
 
-    content = path.read_text(encoding="utf-8", errors="replace")
-    rel_path = str(path)
+
+def scan_k8s_text(content: str, rel_path: str) -> list[IaCFinding]:
+    """Scan Kubernetes manifest text (one or more YAML documents)."""
     findings: list[IaCFinding] = []
 
     try:

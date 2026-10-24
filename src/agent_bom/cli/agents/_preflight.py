@@ -28,7 +28,7 @@ def _print_scanner_verdicts(con: Any, verdicts: list) -> None:
     for v in verdicts:
         if v.status == "ran":
             icon, style = "✓", "green"
-            detail = f"{v.files_scanned} file(s)"
+            detail = f"{v.files_scanned} file(s)" + (f" ({v.reason})" if v.reason else "")
         elif v.status == "not-applicable":
             icon, style = "—", "dim"
             detail = "no targets"
@@ -217,6 +217,15 @@ def iac_unevaluated_note(iac_path: str, result: Any) -> str | None:
     return None
 
 
+def iac_partial_coverage_notes(iac_path: str, result: Any) -> list[str]:
+    """Console lines for scanners that ran with reduced coverage (e.g. Helm rendering skipped)."""
+    return [
+        f"  [yellow]![/yellow] {iac_path}: {v.scanner_id} partial — {v.reason}"
+        for v in result.verdicts
+        if v.status == "ran" and "skipped" in (v.reason or "")
+    ]
+
+
 def run_iac_only_scan(
     *,
     con: Any,
@@ -272,6 +281,8 @@ def run_iac_only_scan(
                 con.print(note)
             else:
                 con.print(f"  [green]✓[/green] {iac_path}: no misconfigurations")
+            for coverage_note in iac_partial_coverage_notes(iac_path, result):
+                con.print(coverage_note)
         if verbose and all_iac_verdicts:
             _print_scanner_verdicts(con, all_iac_verdicts)
 

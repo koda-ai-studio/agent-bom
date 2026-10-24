@@ -36,6 +36,7 @@ from agent_bom.iac.dcm import is_dcm_migration, scan_dcm_migration
 from agent_bom.iac.dockerfile import scan_dockerfile
 from agent_bom.iac.github_actions_rules import is_workflow_file, scan_github_workflow
 from agent_bom.iac.helm import scan_chart_yaml, scan_values_yaml
+from agent_bom.iac.helm_templates import chart_root_for_template, scan_chart_templates
 from agent_bom.iac.iam_policy import is_iam_policy_document, scan_iam_policy
 from agent_bom.iac.kubernetes import scan_k8s_manifest
 from agent_bom.iac.models import IaCFinding, ScanContext, ScannerVerdict, ScanResult, set_repository_context
@@ -216,6 +217,8 @@ def scan_iac_with_context(
 
     findings: list[IaCFinding] = []
     not_evaluated: list[str] = []
+    chart_roots: set[Path] = set()
+    verdict_reasons: dict[str, list[str]] = defaultdict(list)
     files_matched: dict[str, int] = defaultdict(int)
     from agent_bom.core.severity import severity_worst_first_rank
 
@@ -234,6 +237,12 @@ def scan_iac_with_context(
                 continue
 
         first_finding = len(findings)
+        chart_root = chart_root_for_template(path)
+        if chart_root is not None:
+            # Templates are evaluated per chart after the walk (rendered or textual).
+            if "helm" not in disabled:
+                chart_roots.add(chart_root)
+            continue
         if _is_chart_yaml(path) or _is_values_yaml(path):
             if "helm" not in disabled:
                 files_matched["helm"] += 1
@@ -296,6 +305,14 @@ def scan_iac_with_context(
 
         set_repository_context(findings[first_finding:], path.relative_to(walk_root).as_posix())
 
+    # A subchart under charts/ is rendered as part of its parent chart.
+    for chart_root in sorted(r for r in chart_roots if not any(other in r.parents for other in chart_roots)):
+        chart = scan_chart_templates(chart_root, walk_root)
+        files_matched["helm"] += chart.files
+        findings.extend(chart.findings)
+        if chart.reason:
+            verdict_reasons["helm"].append(chart.reason)
+
     # Enrich with MITRE ATT&CK and MITRE ATLAS technique IDs
     from agent_bom.iac.atlas_mapping import get_atlas_techniques
     from agent_bom.iac.attack_mapping import get_attack_techniques
@@ -326,6 +343,7 @@ def scan_iac_with_context(
                     scanner_id=sid,
                     status="ran",
                     files_scanned=files_matched[sid],
+                    reason="; ".join(verdict_reasons.get(sid, [])),
                 )
             )
         else:

@@ -316,7 +316,7 @@ def scan_iac(run: DiscoveryRun) -> None:
     """Step 1g5: IaC misconfiguration scan (--iac)."""
     if run.skill_only or not run.iac_paths:
         return
-    from agent_bom.cli.agents._preflight import _print_scanner_verdicts, iac_unevaluated_note
+    from agent_bom.cli.agents._preflight import _print_scanner_verdicts, iac_partial_coverage_notes, iac_unevaluated_note
     from agent_bom.iac import scan_iac_with_context
     from agent_bom.iac.models import ScanContext as IaCContext
 
@@ -344,6 +344,8 @@ def scan_iac(run: DiscoveryRun) -> None:
             con.print(note)
         else:
             con.print(f"  [dim]  {iac_path}: no misconfigurations found[/dim]")
+        for coverage_note in iac_partial_coverage_notes(iac_path, result):
+            con.print(coverage_note)
     if run.verbose and all_iac_verdicts:
         _print_scanner_verdicts(con, all_iac_verdicts)
     if all_iac_findings:

@@ -365,3 +365,19 @@ def test_iac_command_gates_and_emits_sarif_for_workflow_findings(tmp_path: Path)
     location = hits[0]["locations"][0]["physicalLocation"]
     assert location["artifactLocation"]["uri"] == ".github/workflows/ci.yml"
     assert location["region"]["startLine"] == 8
+
+
+def test_iac_command_says_helm_rendering_was_skipped(tmp_path: Path, monkeypatch):
+    chart = tmp_path / "chart"
+    (chart / "templates").mkdir(parents=True)
+    (chart / "Chart.yaml").write_text("apiVersion: v2\nname: c\nversion: 0.1.0\n", encoding="utf-8")
+    (chart / "templates" / "pod.yaml").write_text(
+        "apiVersion: v1\nkind: Pod\nmetadata:\n  name: {{ .Release.Name }}\nspec:\n  hostNetwork: true\n", encoding="utf-8"
+    )
+    monkeypatch.setattr("agent_bom.iac.helm_templates.shutil.which", lambda _name: None)
+    result = CliRunner().invoke(main, ["iac", str(chart)])
+
+    output = " ".join(result.output.split())
+    assert "helm partial" in output
+    assert "rendering skipped" in output
+    assert "1 high" in output
