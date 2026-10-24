@@ -38,3 +38,16 @@ def test_vuln_db_cache_key_rolls_daily_and_restores_the_last_copy() -> None:
 def test_setup_python_does_not_require_caller_python_manifests() -> None:
     setup = _step("actions/setup-python@")
     assert "cache" not in setup.get("with", {})
+
+
+def test_no_expression_is_interpolated_into_a_run_script() -> None:
+    offenders = [step.get("name") or step.get("id") for step in STEPS if "${{" in str(step.get("run", ""))]
+    assert offenders == []
+
+
+def test_inputs_never_become_python_source() -> None:
+    import re
+
+    for step in STEPS:
+        script = str(step.get("run", ""))
+        assert not re.search(r"'\$[A-Z_]+'", script), step.get("name")

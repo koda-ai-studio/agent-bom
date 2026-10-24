@@ -652,9 +652,9 @@ runs:
         POSTURE_GRADE="unknown"
         if [ "$INPUT_FORMAT" = "sarif" ] && [ -f "$RESULT_FILE" ]; then
           SARIF_FILE="$RESULT_FILE"
-          VULN_COUNT=$(python3 -c "import json; d=json.load(open('$RESULT_FILE')); print(len(d.get('runs',[{}])[0].get('results',[])))" 2>/dev/null || echo 0)
+          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); print(len(d.get('runs',[{}])[0].get('results',[])))" 2>/dev/null || echo 0)
         elif [ "$INPUT_SCAN_TYPE" = "skills" ] && [ -f "$RESULT_FILE" ]; then
-          VULN_COUNT=$(python3 -c "import json; d=json.load(open('$RESULT_FILE')); print(d.get('summary',{}).get('findings',0))" 2>/dev/null || echo 0)
+          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); print(d.get('summary',{}).get('findings',0))" 2>/dev/null || echo 0)
         fi
 
         case "$INPUT_FORMAT" in
@@ -749,10 +749,10 @@ runs:
         # Generate badge from SARIF results (no second scan)
         BADGE_FILE=""
         if [ -n "$INPUT_BADGE" ] && [ -f "$SARIF_FILE" ]; then
-          python3 -c "
-        import json, sys
+          SARIF_FILE="$SARIF_FILE" INPUT_BADGE="$INPUT_BADGE" python3 -c "
+        import json, os, sys
         try:
-            sarif = json.load(open('$SARIF_FILE'))
+            sarif = json.load(open(os.environ['SARIF_FILE']))
             run = sarif.get('runs', [{}])[0]
             results = run.get('results', [])
             rules = {r['id']: r for r in run.get('tool', {}).get('driver', {}).get('rules', [])}
@@ -773,7 +773,7 @@ runs:
             else:
                 color, msg = 'brightgreen', 'clean'
             badge = {'schemaVersion': 1, 'label': 'agent-bom', 'message': msg, 'color': color, 'namedLogo': 'shield'}
-            with open('$INPUT_BADGE', 'w') as f:
+            with open(os.environ['INPUT_BADGE'], 'w') as f:
                 json.dump(badge, f, indent=2)
         except Exception as e:
             print(f'Badge generation failed: {e}', file=sys.stderr)
@@ -828,8 +828,10 @@ runs:
     - name: Emit finding annotations
       if: inputs.annotations == 'true' && always()
       shell: bash
+      env:
+        INPUT_OUTPUT: ${{ inputs.output }}
       run: |
-        RESULT_FILE="${{ inputs.output }}"
+        RESULT_FILE="$INPUT_OUTPUT"
         if [ -z "$RESULT_FILE" ]; then
           RESULT_FILE="agent-bom-results.sarif"
         fi
@@ -923,8 +925,9 @@ runs:
       id: sarif
       if: always()
       shell: bash
+      env:
+        SARIF_FILE: ${{ steps.scan.outputs.sarif_file }}
       run: |
-        SARIF_FILE="${{ steps.scan.outputs.sarif_file }}"
         if [ -n "$SARIF_FILE" ] && [ -f "$SARIF_FILE" ]; then
           echo "exists=true" >> "$GITHUB_OUTPUT"
           echo "path=$SARIF_FILE" >> "$GITHUB_OUTPUT"

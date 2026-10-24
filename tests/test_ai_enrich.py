@@ -928,7 +928,7 @@ def test_action_yml_sanitizes_pr_comment_body_and_single_loads_sarif():
     action_text = (Path(__file__).parent.parent / "action.yml").read_text()
     assert "def _sanitize_md(value: str) -> str:" in action_text
     assert "_sanitize_md(msg)" in action_text
-    assert "sarif = json.load(open('$SARIF_FILE'))" in action_text
+    assert "sarif = json.load(open(os.environ['SARIF_FILE']))" in action_text
     assert "run = sarif.get('runs', [{}])[0]" in action_text
     assert "::warning::Badge generation failed" in action_text
 
