@@ -41,6 +41,15 @@ from agent_bom.demo_estate.showcase_identities import _demo_identity_id as _demo
 from agent_bom.demo_estate.showcase_identities import build_demo_identity_store as build_demo_identity_store
 from agent_bom.demo_estate.showcase_identities import demo_identity_records as demo_identity_records
 from agent_bom.demo_estate.showcase_identities import seed_showcase_identities as seed_showcase_identities
+from agent_bom.demo_estate.showcase_ids import (
+    record_retired_showcase_inventory_ids,
+    showcase_agent_id,
+    showcase_credential_id,
+    showcase_ids,
+    showcase_retired_server_id,
+    showcase_server_id,
+    showcase_tool_id,
+)
 from agent_bom.demo_estate.showcase_packages import seed_showcase_packages
 from agent_bom.graph.asset_entity import link_report_findings_to_graph
 from agent_bom.graph.cnapp_overlay import apply_cnapp_overlay
@@ -101,16 +110,19 @@ def build_showcase_graph(
     def edge(s: str, d: str, r: RelationshipType, evidence: dict[str, Any] | None = None, **kw) -> None:
         g.add_edge(UnifiedEdge(source=s, target=d, relationship=r, evidence=fixture_edge_evidence(r, SHOWCASE_SOURCE, evidence), **kw))
 
+    provider = showcase_ids().provider
+    node(provider, EntityType.PROVIDER, provider.removeprefix("provider:"), provider=provider.removeprefix("provider:"))
     for aid, label in SHOWCASE_AGENTS.items():
-        node(f"agent:{aid}", EntityType.AGENT, label, environment="production")
+        node(showcase_agent_id(aid), EntityType.AGENT, label, environment="production")
+        edge(provider, showcase_agent_id(aid), RelationshipType.HOSTS)
 
     for sid, (owner, tools) in SHOWCASE_SERVERS.items():
-        node(f"server:{sid}", EntityType.SERVER, sid)
-        edge(f"agent:{owner}", f"server:{sid}", RelationshipType.USES)
+        node(showcase_server_id(sid), EntityType.SERVER, sid)
+        edge(showcase_agent_id(owner), showcase_server_id(sid), RelationshipType.USES)
         for tname in tools:
-            tid = f"tool:{sid}:{tname}"
+            tid = showcase_tool_id(sid, tname)
             node(tid, EntityType.TOOL, tname)
-            edge(f"server:{sid}", tid, RelationshipType.PROVIDES_TOOL)
+            edge(showcase_server_id(sid), tid, RelationshipType.PROVIDES_TOOL)
 
     # Real CVEs on real package@versions, under every server the demo inventory records.
     seed_showcase_packages(node, edge, SHOWCASE_PACKAGES)
@@ -120,23 +132,31 @@ def build_showcase_graph(
     # Hero blast-radius chain: the PyYAML RCE on shell-runner-server reaches an
     # AWS credential AND the run_shell tool → potential RCE. This is the top
     # exposure path the graph/posture surfaces should headline.
-    edge("vuln:CVE-2020-14343", "cred:aws-secret", RelationshipType.EXPLOITABLE_VIA, weight=9.8)
-    edge("vuln:CVE-2020-14343", "tool:shell-runner-server:run_shell", RelationshipType.EXPLOITABLE_VIA, weight=9.8)
-    edge("cred:aws-secret", "tool:shell-runner-server:run_shell", RelationshipType.REACHES_TOOL)
+    aws_secret = showcase_credential_id("shell-runner-server", "AWS_SECRET_ACCESS_KEY")
+    run_shell = showcase_tool_id("shell-runner-server", "run_shell")
+    eval_expression = showcase_tool_id("llm-orchestrator-server", "eval_expression")
+    edge("vuln:CVE-2020-14343", aws_secret, RelationshipType.EXPLOITABLE_VIA, weight=9.8)
+    edge("vuln:CVE-2020-14343", run_shell, RelationshipType.EXPLOITABLE_VIA, weight=9.8)
+    edge(aws_secret, run_shell, RelationshipType.REACHES_TOOL)
     # Second high-signal chain: LangChain RCE reaches the eval_expression tool.
-    edge("vuln:CVE-2023-36258", "tool:llm-orchestrator-server:eval_expression", RelationshipType.EXPLOITABLE_VIA, weight=9.8)
-    edge("vuln:CVE-2023-36258", "cred:openai-key", RelationshipType.EXPLOITABLE_VIA, weight=9.8)
+    edge("vuln:CVE-2023-36258", eval_expression, RelationshipType.EXPLOITABLE_VIA, weight=9.8)
+    edge(
+        "vuln:CVE-2023-36258",
+        showcase_credential_id("llm-orchestrator-server", "OPENAI_API_KEY"),
+        RelationshipType.EXPLOITABLE_VIA,
+        weight=9.8,
+    )
 
     for i, (aid, tid) in enumerate(
         [
-            ("cursor", "tool:shell-runner-server:run_shell"),
-            ("data-pipeline", "tool:warehouse-server:execute_sql"),
-            ("langchain-service", "tool:llm-orchestrator-server:eval_expression"),
+            ("cursor", run_shell),
+            ("data-pipeline", showcase_tool_id("warehouse-server", "execute_sql")),
+            ("langchain-service", eval_expression),
         ]
     ):
         cid = f"call:{i}"
         node(cid, EntityType.TOOL_CALL, "observed invocation")
-        edge(f"agent:{aid}", cid, RelationshipType.INVOKED)
+        edge(showcase_agent_id(aid), cid, RelationshipType.INVOKED)
         edge(cid, tid, RelationshipType.CALLED)
 
     node(
@@ -197,7 +217,7 @@ def build_showcase_graph(
     edge("account:aws:123456789012", "env:production", RelationshipType.CONTAINS)
     # The showcase agents run in that production environment: they are part of the estate, not beside it.
     for aid in SHOWCASE_AGENTS:
-        edge("env:production", f"agent:{aid}", RelationshipType.CONTAINS)
+        edge("env:production", showcase_agent_id(aid), RelationshipType.CONTAINS)
     for cloud_id in (
         "cloud:pii-bucket",
         "cloud:payments-db",
@@ -245,15 +265,16 @@ def build_showcase_graph(
 
     # cursor drives the shell-runner (AWS creds + run_shell) → toxic combo with
     # prod-admin; data-pipeline maps to the least-privilege pipeline role.
-    edge("agent:cursor", "role:prod-admin", RelationshipType.ASSUMES)
-    edge("agent:data-pipeline", "role:data-pipeline", RelationshipType.ASSUMES)
+    edge(showcase_agent_id("cursor"), "role:prod-admin", RelationshipType.ASSUMES)
+    edge(showcase_agent_id("data-pipeline"), "role:data-pipeline", RelationshipType.ASSUMES)
 
     # Retired MCP server — removed in the current snapshot so drift shows a removal.
     if is_baseline:
-        node("server:legacy-chat-server", EntityType.SERVER, "legacy-chat-server")
-        edge("agent:support-copilot", "server:legacy-chat-server", RelationshipType.USES)
-        node("tool:legacy-chat-server:send_message", EntityType.TOOL, "send_message")
-        edge("server:legacy-chat-server", "tool:legacy-chat-server:send_message", RelationshipType.PROVIDES_TOOL)
+        legacy = showcase_retired_server_id()
+        node(legacy, EntityType.SERVER, "legacy-chat-server")
+        edge(showcase_agent_id("support-copilot"), legacy, RelationshipType.USES)
+        node(f"tool:{legacy}:send_message", EntityType.TOOL, "send_message")
+        edge(legacy, f"tool:{legacy}:send_message", RelationshipType.PROVIDES_TOOL)
 
     # Enriched, deterministic NHI estate (owner / last_used / standing scopes) so
     # the governance overlay projects a real identity story. Shared with the live
@@ -266,6 +287,7 @@ def build_showcase_graph(
             for i, bp, score, n, tool in SHOWCASE_DRIFT_INCIDENTS
         ]
     )
+    record_retired_showcase_inventory_ids(g)
     if not is_baseline:
         project_mcp_auth_findings(g, bind_mcp_auth_findings(demo_mcp_auth_findings(), SHOWCASE_SERVERS))
     return g, store, drift
@@ -340,7 +362,7 @@ def finalize_showcase_snapshot(graph: UnifiedGraph, *, profile: ShowcaseProfile)
         node = graph.nodes.get(node_id)
         if node is not None:
             node.attributes["evidence_tier"] = "runtime_observed"
-    blocked_tool = graph.nodes.get("tool:shell-runner-server:run_shell")
+    blocked_tool = graph.nodes.get(showcase_tool_id("shell-runner-server", "run_shell"))
     if blocked_tool is not None:
         blocked_tool.attributes["evidence_tier"] = "runtime_blocked"
 
@@ -512,8 +534,8 @@ def project_estate_onto_showcase(
     """Extend a showcase snapshot with the enterprise estate.
 
     *Extend*, not replace. The showcase's hand-built incident chain
-    (``agent:cursor`` → ``server:shell-runner-server`` → ``pkg:pypi:pyyaml@5.3`` →
-    ``vuln:CVE-2020-14343`` → ``cred:aws-secret``) is the demo's headline and is
+    (Cursor → shell-runner-server → ``pkg:pypi:pyyaml@5.3`` →
+    ``vuln:CVE-2020-14343`` → its AWS secret credential) is the demo's headline and is
     asserted by ``tests/test_demo_estate_bootstrap.py``; it is untouched here.
     Seeding the estate as a *separate* snapshot was the alternative and was
     rejected: the read path serves the newest snapshot, so a prospect would land

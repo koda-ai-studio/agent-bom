@@ -11,6 +11,7 @@ from __future__ import annotations
 from agent_bom.demo import DEMO_INVENTORY
 from agent_bom.demo_estate.showcase_constants import SHOWCASE_SERVERS
 from agent_bom.demo_estate.showcase_graph import build_showcase_graph
+from agent_bom.demo_estate.showcase_ids import showcase_server_id
 from agent_bom.graph.types import RelationshipType
 
 
@@ -24,6 +25,6 @@ def test_graph_credentials_match_the_scanned_server_env():
             linked = sorted(
                 graph.nodes[edge.target].label
                 for edge in graph.edges
-                if edge.source == f"server:{server['name']}" and edge.relationship == RelationshipType.EXPOSES_CRED
+                if edge.source == showcase_server_id(server["name"]) and edge.relationship == RelationshipType.EXPOSES_CRED
             )
             assert linked == expected, server["name"]

@@ -12,6 +12,7 @@ import pytest
 
 from agent_bom.demo import DEMO_INVENTORY
 from agent_bom.demo_estate.showcase_graph import build_showcase_graph
+from agent_bom.demo_estate.showcase_ids import showcase_agent_id, showcase_server_id
 from agent_bom.graph.types import RelationshipType
 from agent_bom.package_utils import canonical_package_key
 
@@ -42,26 +43,31 @@ def test_every_named_holder_exists_and_is_linked_to_the_package(graph, local_row
     for row in local_rows:
         package = f"pkg:{canonical_package_key(row['package_name'], row['package_version'], row['ecosystem'])}"
         assert package in graph.nodes, package
-        servers = [f"server:{name}" for name in row["affected_servers"]]
+        servers = [showcase_server_id(name) for name in row["affected_servers"]]
         for server in servers:
             assert server in graph.nodes, (row["package"], server)
             assert (server, package, RelationshipType.DEPENDS_ON) in pairs, (row["package"], server)
         for agent in row["affected_agents"]:
-            assert f"agent:{agent}" in graph.nodes, (row["package"], agent)
-            assert any((f"agent:{agent}", server, RelationshipType.USES) in pairs for server in servers), (row["package"], agent)
+            assert showcase_agent_id(agent) in graph.nodes, (row["package"], agent)
+            assert any((showcase_agent_id(agent), server, RelationshipType.USES) in pairs for server in servers), (row["package"], agent)
         multi_holder += len(servers) > 1
     assert multi_holder >= 6, "pyyaml, requests, cryptography, axios, node-fetch and jinja2 each have several holders"
 
 
 def test_package_impact_returns_every_recorded_holder(graph) -> None:
     affected = set(graph.impact_of("pkg:pypi:pyyaml@5.3", max_depth=4)["affected_nodes"])
-    assert {"server:shell-runner-server", "server:warehouse-server", "agent:cursor", "agent:data-pipeline"} <= affected
+    assert {
+        showcase_server_id("shell-runner-server"),
+        showcase_server_id("warehouse-server"),
+        showcase_agent_id("cursor"),
+        showcase_agent_id("data-pipeline"),
+    } <= affected
 
 
 def test_graph_draws_exactly_the_inventory_holders(graph) -> None:
     """No holder beyond what the inventory records: the graph follows the inventory, both ways."""
     recorded = {
-        (f"server:{server['name']}", f"pkg:{canonical_package_key(pkg['name'], pkg['version'], pkg['ecosystem'])}")
+        (showcase_server_id(server["name"]), f"pkg:{canonical_package_key(pkg['name'], pkg['version'], pkg['ecosystem'])}")
         for agent in DEMO_INVENTORY["agents"]
         for server in agent["mcp_servers"]
         for pkg in server["packages"]

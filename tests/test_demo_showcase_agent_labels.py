@@ -6,12 +6,13 @@ from agent_bom.demo_estate.showcase_constants import SHOWCASE_AGENTS
 from agent_bom.demo_estate.showcase_gateway import _FEED_EVENTS
 from agent_bom.demo_estate.showcase_graph import build_showcase_graph
 from agent_bom.demo_estate.showcase_identities import _DEMO_IDENTITIES
+from agent_bom.demo_estate.showcase_ids import showcase_agent_id
 
 
 def test_langchain_service_is_labelled_without_an_unrecorded_suffix() -> None:
     assert SHOWCASE_AGENTS["langchain-service"] == "LangChain Service"
     graph, _, _ = build_showcase_graph(profile="current")
-    assert graph.nodes["agent:langchain-service"].label == "LangChain Service"
+    assert graph.nodes[showcase_agent_id("langchain-service")].label == "LangChain Service"
 
 
 def test_every_demo_surface_names_agents_by_their_graph_label() -> None:
