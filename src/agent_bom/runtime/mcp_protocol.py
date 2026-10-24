@@ -86,6 +86,9 @@ def validate_request_headers(message: dict[str, Any], headers: Any) -> None:
         raise ValueError("MCP client capabilities are required")
 
 
+MAX_TOOL_CATALOG_PAGES = 20
+
+
 async def parameter_headers(transport: Any, target: Any, message: dict[str, Any], headers: dict[str, str]) -> dict[str, str]:
     """Resolve x-mcp-header mappings using an authenticated, uncached listing.
 
@@ -102,7 +105,7 @@ async def parameter_headers(transport: Any, target: Any, message: dict[str, Any]
         return {}
     cursor = None
     seen = set()
-    for page in range(20):
+    for page in range(MAX_TOOL_CATALOG_PAGES):
         listing_params: dict[str, Any] = {"_meta": meta}
         if cursor is not None:
             listing_params["cursor"] = cursor

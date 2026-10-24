@@ -691,6 +691,8 @@ DROP POLICY IF EXISTS drift_incidents_tenant_isolation ON public.drift_incidents
 CREATE POLICY drift_incidents_tenant_isolation ON public.drift_incidents USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant()) WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.drift_incidents TO agent_bom_app, agent_bom_rls_maintenance;
 INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('drift_incidents',1,now()) ON CONFLICT(component) DO UPDATE SET version=GREATEST(control_plane_schema_versions.version,1);
+-- Gateway drift enforcement reads open incidents per (tenant, blueprint); see 20261024_01.
+CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_blueprint_open ON public.drift_incidents (tenant_id, (lower(replace(btrim(data->>'blueprint_id', E' \t\n\x0b\f\r'), '-', '_'))), last_detected_at DESC) WHERE NOT resolved;
 
 
 CREATE TABLE IF NOT EXISTS public.campaign_evidence_state (

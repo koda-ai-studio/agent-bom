@@ -9,6 +9,7 @@ blueprints from advisory metadata into enforced contracts with an audit trail.
 
 from __future__ import annotations
 
+import builtins
 import hashlib
 import json
 import threading
@@ -53,10 +54,22 @@ def incident_signature(tenant_id: str, blueprint_id: str, violations: list[dict[
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
 
 
+def drift_blueprint_key(blueprint_id: str) -> str:
+    """Match key for a blueprint id: case-, edge-whitespace- and ``-``/``_``-insensitive."""
+    return (blueprint_id or "").strip().lower().replace("-", "_")
+
+
+# Store-side twin of ``drift_blueprint_key`` over the JSON payload; the SQL text
+# must stay byte-identical to the index expression so the planner can use it.
+SQLITE_BLUEPRINT_KEY_SQL = "lower(replace(trim(json_extract(data, '$.blueprint_id'), char(32, 9, 10, 11, 12, 13)), '-', '_'))"
+
+
 class DriftIncidentStore(Protocol):
     def upsert(self, incident: DriftIncident) -> DriftIncident: ...
 
     def list(self, tenant_id: str, *, include_resolved: bool = False, limit: int = 200) -> list[DriftIncident]: ...
+
+    def list_open_for_blueprint(self, tenant_id: str, blueprint_id: str, *, limit: int) -> builtins.list[DriftIncident]: ...
 
     def get(self, tenant_id: str, incident_id: str) -> DriftIncident | None: ...
 
@@ -87,6 +100,12 @@ class InMemoryDriftIncidentStore:
         with self._lock:
             rows = [i for i in self._by_tenant.get(tenant_id, {}).values() if include_resolved or not i.resolved]
             return sorted(rows, key=lambda i: i.last_detected_at, reverse=True)[:limit]
+
+    def list_open_for_blueprint(self, tenant_id: str, blueprint_id: str, *, limit: int) -> builtins.list[DriftIncident]:
+        key = drift_blueprint_key(blueprint_id)
+        with self._lock:
+            rows = [i for i in self._by_tenant.get(tenant_id, {}).values() if not i.resolved and drift_blueprint_key(i.blueprint_id) == key]
+        return sorted(rows, key=lambda i: (i.last_detected_at, i.incident_id), reverse=True)[: max(0, limit)]
 
     def get(self, tenant_id: str, incident_id: str) -> DriftIncident | None:
         with self._lock:
@@ -120,6 +139,8 @@ class SQLiteDriftIncidentStore(SQLiteRegistryStore[DriftIncident]):
             )
             """,
         "CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_open ON drift_incidents(tenant_id, resolved, last_detected_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_blueprint_open ON drift_incidents"
+        f"(tenant_id, {SQLITE_BLUEPRINT_KEY_SQL}, last_detected_at DESC) WHERE resolved = 0",
     )
 
     def _decode(self, raw: str) -> DriftIncident:
@@ -135,6 +156,17 @@ class SQLiteDriftIncidentStore(SQLiteRegistryStore[DriftIncident]):
             order="last_detected_at DESC",
             limit=limit,
         )
+
+    def _open_for_blueprint_query(self, tenant_id: str, blueprint_id: str, limit: int) -> tuple[str, tuple[str, str, int]]:
+        sql = (
+            f"SELECT data FROM drift_incidents WHERE tenant_id = ? AND resolved = 0 AND {SQLITE_BLUEPRINT_KEY_SQL} = ? "  # nosec B608 - fixed adapter SQL
+            "ORDER BY last_detected_at DESC, incident_id DESC LIMIT ?"
+        )
+        return sql, (tenant_id, drift_blueprint_key(blueprint_id), max(0, limit))
+
+    def list_open_for_blueprint(self, tenant_id: str, blueprint_id: str, *, limit: int) -> builtins.list[DriftIncident]:
+        sql, params = self._open_for_blueprint_query(tenant_id, blueprint_id, limit)
+        return [self._decode(row[0]) for row in self._conn.execute(sql, params).fetchall()]
 
     def get(self, tenant_id: str, incident_id: str) -> DriftIncident | None:
         return self._get("tenant_id = ? AND incident_id = ?", (tenant_id, incident_id))

@@ -111,15 +111,11 @@ def _open_drift_violates_tool(tenant_id: str, blueprint_id: str, tool_name: str)
     try:
         from agent_bom.api.drift_incident_store import get_drift_incident_store
 
-        incidents = get_drift_incident_store().list(tenant_id, include_resolved=False, limit=_DRIFT_INCIDENT_LOOKUP_CAP)
+        incidents = get_drift_incident_store().list_open_for_blueprint(tenant_id, blueprint_id, limit=_DRIFT_INCIDENT_LOOKUP_CAP + 1)
     except Exception as exc:  # noqa: BLE001
         logger.warning("gateway drift check failed: %s", sanitize_text(_sanitize_for_log(exc)))
         return _DriftLookup(unavailable=True, reason="drift incident store unavailable")
-    blueprint_key = blueprint_id.strip().lower().replace("-", "_")
-    for incident in incidents:
-        incident_blueprint = (getattr(incident, "blueprint_id", "") or "").strip().lower().replace("-", "_")
-        if incident_blueprint != blueprint_key:
-            continue
+    for incident in incidents[:_DRIFT_INCIDENT_LOOKUP_CAP]:
         drifted_tools = {
             str(v.get("tool_name", "")).strip() for v in (getattr(incident, "top_violations", None) or []) if isinstance(v, dict)
         }
@@ -128,18 +124,17 @@ def _open_drift_violates_tool(tenant_id: str, blueprint_id: str, tool_name: str)
                 violates=True,
                 reason=f"tool '{tool_name}' is outside role blueprint '{blueprint_id}'",
             )
-    if len(incidents) >= _DRIFT_INCIDENT_LOOKUP_CAP:
-        # The open-incident set was capped, so a violation may exist in the tail
-        # we never inspected. Surface this as unavailable (partial) instead of a
-        # clean pass, so enforce-mode callers fail closed rather than silently
-        # under-enforce for the tenant's tail incidents.
+    if len(incidents) > _DRIFT_INCIDENT_LOOKUP_CAP:
+        # This blueprint alone has more open incidents than one lookup reads, so
+        # a violation may sit in the unread tail. Report partial coverage rather
+        # than a clean pass; enforce-mode callers then fail closed.
         logger.warning(
-            "gateway drift check truncated at %d open incidents for tenant; enforcement coverage is partial",
+            "gateway drift check truncated at %d open incidents for one blueprint; enforcement coverage is partial",
             _DRIFT_INCIDENT_LOOKUP_CAP,
         )
         return _DriftLookup(
             unavailable=True,
-            reason=f"open drift incidents exceed lookup cap ({_DRIFT_INCIDENT_LOOKUP_CAP}); enforcement coverage partial",
+            reason=f"open drift incidents for blueprint exceed lookup cap ({_DRIFT_INCIDENT_LOOKUP_CAP}); enforcement coverage partial",
         )
     return _DriftLookup()
 

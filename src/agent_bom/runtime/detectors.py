@@ -208,15 +208,15 @@ class ToolDriftDetector:
         self._baseline = set(tools)
         self._persist_baseline()
 
-    def check(self, current_tools: list[str]) -> list[Alert]:
-        """Compare current tools against baseline. Returns alerts for new tools."""
+    def check(self, current_tools: list[str], *, complete: bool = True) -> list[Alert]:
+        """Compare against baseline; an incomplete catalog never sets the baseline nor reports removals."""
         if self._baseline is None:
-            self.set_baseline(current_tools)
+            if complete:
+                self.set_baseline(current_tools)
             return []
 
-        current = set(current_tools)
-        new_tools = current - self._baseline
-        removed_tools = self._baseline - current
+        new_tools = set(current_tools) - self._baseline
+        removed_tools = self._baseline - set(current_tools) if complete else set()
 
         alerts: list[Alert] = []
         if new_tools:
@@ -225,7 +225,7 @@ class ToolDriftDetector:
                     detector="tool_drift",
                     severity=AlertSeverity.HIGH,
                     message=f"New tools detected after startup: {', '.join(sorted(new_tools))}",
-                    details={"new_tools": sorted(new_tools), "baseline_count": len(self._baseline)},
+                    details={"new_tools": sorted(new_tools), "baseline_count": len(self._baseline), "catalog_complete": complete},
                 )
             )
         if removed_tools:

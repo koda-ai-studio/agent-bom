@@ -25,6 +25,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Awaitable, Callable
 
+from agent_bom.runtime.mcp_protocol import MAX_TOOL_CATALOG_PAGES
+
 if TYPE_CHECKING:
     from agent_bom.runtime.proxy_session import ProxySession
 
@@ -241,6 +243,7 @@ async def gate_client_message(session: ProxySession, msg: dict, trace_meta: dict
     session.metrics.total_messages_client_to_server += 1
     if msg.get("method") == "tools/list" and "id" in msg:
         session.tools_list_request_ids.add(msg["id"])
+        session.tool_catalog.note_request(msg)
     policy_subject = session.host.policy_subject_from_message(msg)
     if not policy_subject:
         return False, None
@@ -332,10 +335,18 @@ async def track_declared_tools(session: ProxySession, resp: ServerMessage) -> No
     """Capture tools/list responses as declared-tool evidence and check for drift."""
     if not session.host.is_tools_list_response(resp.msg):
         return
-    new_tools = session.host.extract_declared_tools(resp.msg)
-    session.declared_tools.update(new_tools)
+    page_tools = session.host.extract_declared_tools(resp.msg)
+    session.declared_tools.update(page_tools)
     session.host.logger.debug("Declared tools updated: %s", session.declared_tools)
-    await session.handle_alerts(session.detectors.drift.check(new_tools), session.log_file)
+    catalog = session.tool_catalog.accept(resp.msg, page_tools)
+    if catalog is None:
+        return
+    if not catalog.complete:
+        session.host.logger.warning(
+            "tools/list pagination stopped early (page cap %d or invalid cursor); catalog incomplete, removed-tool drift suppressed",
+            MAX_TOOL_CATALOG_PAGES,
+        )
+    await session.handle_alerts(session.detectors.drift.check(catalog.names, complete=catalog.complete), session.log_file)
 
 
 async def redact_leaked_credentials(session: ProxySession, resp: ServerMessage) -> None:

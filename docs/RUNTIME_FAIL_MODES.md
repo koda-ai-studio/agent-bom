@@ -25,7 +25,7 @@ evaluator that raises. The canonical inventory is code, not prose:
 | Spend budgets (cost-store error) | fail-open | no |
 | Cost-anomaly enforcement (cost-store error) | fail-open | no |
 | Fleet quarantine (fleet-store error, enforce mode) | fail-closed | no |
-| Drift enforcement (drift-store error) | fail-open | no |
+| Drift enforcement (drift-store error or per-blueprint lookup cap) | fail-open; secured enforce (identity required): deny | no |
 | Graph reachability (evaluation error) | fail-open | no |
 | Audit export (sink/webhook delivery failure) | fail-open | no |
 
@@ -37,6 +37,12 @@ Two rules explain the split:
 - **Advisory and telemetry lanes fail open** by design: a spend-, drift-,
   or audit-store error must never take the data plane down. A
   successfully evaluated enforce-mode rule in those lanes still blocks.
+
+Drift enforcement reads open incidents for the caller's own role blueprint
+only, newest first, up to 200 per lookup. Open incidents on other blueprints
+never affect the lookup. When that blueprint alone has more than 200 open
+incidents and none of those read names the tool, the result is reported as
+unavailable rather than a clean pass, the same as a store error.
 
 Per-entry failure behavior (the `on_failure` text) is part of the matrix and
 shows verbatim in the `/healthz` output. For the surface map around the

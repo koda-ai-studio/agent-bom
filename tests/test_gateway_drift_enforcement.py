@@ -183,7 +183,7 @@ def test_off_is_advisory_no_block():
 
 def test_secured_enforce_fails_closed_when_drift_store_is_unavailable():
     class _Boom:
-        def list(self, *a, **k):
+        def list_open_for_blueprint(self, *a, **k):
             raise RuntimeError("store down")
 
     _identity_id, token = _managed_identity(blueprint_id="finance")
@@ -234,15 +234,19 @@ def test_loopback_enforce_allows_legacy_unbound_identity_for_development():
 # ── Open-incident lookup cap must not silently under-enforce (honest partial) ──
 
 
-def _seed_many_open_incidents(count: int, *, blueprint_id: str = "unrelated", tenant_id: str = "default") -> None:
-    """Seed more open incidents than the lookup cap, none matching the caller."""
+def _seed_many_open_incidents(count: int, *, blueprint_id: str = "unrelated", tenant_id: str = "default", distinct: bool = True) -> None:
+    """Seed open incidents that never name the caller's tool.
+
+    ``distinct`` spreads them over ``count`` blueprints; otherwise they all
+    belong to ``blueprint_id``, which is what can exceed a per-blueprint read.
+    """
     store = InMemoryDriftIncidentStore()
     for i in range(count):
         store.upsert(
             DriftIncident(
                 incident_id=f"bulk-{i}",
                 tenant_id=tenant_id,
-                blueprint_id=f"{blueprint_id}-{i}",
+                blueprint_id=f"{blueprint_id}-{i}" if distinct else blueprint_id,
                 status="drift_detected",
                 drift_score=0.5,
                 violation_count=1,
@@ -258,11 +262,19 @@ def _seed_many_open_incidents(count: int, *, blueprint_id: str = "unrelated", te
 def test_lookup_over_cap_returns_unavailable_not_clean_pass():
     from agent_bom.gateway_server import _DRIFT_INCIDENT_LOOKUP_CAP, _open_drift_violates_tool
 
-    _seed_many_open_incidents(_DRIFT_INCIDENT_LOOKUP_CAP + 5)
+    _seed_many_open_incidents(_DRIFT_INCIDENT_LOOKUP_CAP + 5, blueprint_id="finance", distinct=False)
     result = _open_drift_violates_tool("default", "finance", "run_shell")
     assert result.unavailable is True
     assert result.violates is False
     assert str(_DRIFT_INCIDENT_LOOKUP_CAP) in result.reason
+
+
+def test_other_blueprints_over_cap_do_not_degrade_the_lookup():
+    from agent_bom.gateway_server import _DRIFT_INCIDENT_LOOKUP_CAP, _open_drift_violates_tool
+
+    _seed_many_open_incidents(_DRIFT_INCIDENT_LOOKUP_CAP * 5)
+    result = _open_drift_violates_tool("default", "finance", "run_shell")
+    assert (result.violates, result.unavailable) == (False, False)
 
 
 def test_lookup_under_cap_returns_clean_pass():
@@ -278,7 +290,7 @@ def test_secured_enforce_fails_closed_when_open_incidents_exceed_cap():
     from agent_bom.gateway_server import _DRIFT_INCIDENT_LOOKUP_CAP
 
     _identity_id, token = _managed_identity(blueprint_id="finance")
-    _seed_many_open_incidents(_DRIFT_INCIDENT_LOOKUP_CAP + 5)
+    _seed_many_open_incidents(_DRIFT_INCIDENT_LOOKUP_CAP + 5, blueprint_id="finance", distinct=False)
     client = TestClient(create_gateway_app(_settings("enforce", listener_host="0.0.0.0")))
     resp = client.post(
         "/mcp/filesystem",
@@ -293,7 +305,7 @@ def test_observable_enforce_audits_partial_coverage_when_over_cap():
     from agent_bom.gateway_server import _DRIFT_INCIDENT_LOOKUP_CAP
 
     _identity_id, token = _managed_identity(blueprint_id="finance")
-    _seed_many_open_incidents(_DRIFT_INCIDENT_LOOKUP_CAP + 5)
+    _seed_many_open_incidents(_DRIFT_INCIDENT_LOOKUP_CAP + 5, blueprint_id="finance", distinct=False)
     audit: list[dict[str, Any]] = []
     client = TestClient(create_gateway_app(_settings("enforce", audit=audit)))
     resp = client.post("/mcp/filesystem", json=_call(token=token, tool="run_shell"))

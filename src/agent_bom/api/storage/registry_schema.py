@@ -16,6 +16,15 @@ REGISTRY_TABLES = {
     "PRIMARY KEY (tenant_id, incident_id)",
 }
 
+# Match key for open-incident lookups by (tenant, blueprint); mirrors
+# ``drift_incident_store.drift_blueprint_key``. Must stay byte-identical to the
+# expression in the index below (and its Alembic revision 20261024_01).
+DRIFT_BLUEPRINT_KEY_SQL = r"lower(replace(btrim(data->>'blueprint_id', E' \t\n\x0b\f\r'), '-', '_'))"
+DRIFT_BLUEPRINT_OPEN_INDEX_DDL = (
+    "CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_blueprint_open ON public.drift_incidents "
+    f"(tenant_id, ({DRIFT_BLUEPRINT_KEY_SQL}), last_detected_at DESC) WHERE NOT resolved"
+)
+
 
 def registry_table_ddl(table: str) -> str:
     return (
