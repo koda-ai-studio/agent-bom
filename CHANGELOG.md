@@ -10,6 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Contributor path: `GOVERNANCE.md` with the triager, reviewer and maintainer ladder, `MAINTAINERS.md`, and a Codespaces dev container that installs the dev extras and pre-commit hooks.
 
 - GitHub Action: `sbom-artifact` (`cyclonedx` | `spdx` | `none`) uploads an SBOM / AI-BOM workflow artifact; `mcp-gate` fails a pull request that adds or redefines a blocked, malicious or vulnerable MCP server; `max-annotations` caps annotations with an explicit "N more" notice. The job summary lists the top findings (severity, file:line, rule, fix), and the PR comment ranks findings by severity, then blast radius.
 - A reusable workflow (`.github/workflows/agent-bom-reusable.yml`), GitLab CI, Azure Pipelines and Bitbucket Pipelines templates under `examples/ci/`, and a GitHub Action guide with quick-start, full PR gate and new-findings-only examples.
