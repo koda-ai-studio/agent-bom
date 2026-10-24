@@ -365,3 +365,59 @@ def test_webhook_signing_secret_is_sealed_at_rest_on_postgres(monkeypatch):
     finally:
         pool.close()
         connection_crypto.reset_key_cache()
+
+
+def test_drift_open_incidents_filter_by_blueprint_past_tenant_cap():
+    import os
+    from uuid import uuid4
+
+    from agent_bom.api import gateway_policy
+    from agent_bom.api.drift_incident_store import set_drift_incident_store
+    from agent_bom.api.postgres_common import _new_application_pool, _tenant_connection
+    from agent_bom.api.storage.registry_schema import DRIFT_BLUEPRINT_KEY_SQL
+    from agent_bom.api.storage.registry_stores import DriftIncident, PostgresDriftIncidentStore
+    from tests.test_postgres_job_evidence_revision import tenant_scope
+
+    if not os.environ.get("AGENT_BOM_POSTGRES_URL"):
+        pytest.skip("requires restricted-role Postgres")
+
+    tenant, other = "drift-bp-" + uuid4().hex, "drift-bp-" + uuid4().hex
+
+    def incident(tenant_id, incident_id, blueprint, at, resolved=False):
+        return DriftIncident(
+            incident_id, tenant_id, blueprint, "drift_detected", 1, 1, 0, [{"tool_name": "shell_exec"}], at, at, resolved=resolved
+        )
+
+    pool = _new_application_pool(min_size=1, max_size=2)
+    try:
+        store = PostgresDriftIncidentStore(pool=pool)
+        with tenant_scope(tenant):
+            store.upsert(incident(tenant, "target", " Target-Role ", "2026-01-01T00:00:00Z"))
+            for n in range(999):
+                store.upsert(incident(tenant, f"noise-{n}", f"blueprint_{n % 250}", f"2026-06-01T00:{n // 60:02d}:{n % 60:02d}Z"))
+            store.upsert(incident(tenant, "closed", "resolved_role", "2026-07-01T00:00:00Z", resolved=True))
+            assert [r.incident_id for r in store.list_open_for_blueprint(tenant, "target_role", limit=10)] == ["target"]
+            assert len(store.list_open_for_blueprint(tenant, "blueprint_7", limit=10)) == 4
+            assert store.list_open_for_blueprint(tenant, "resolved_role", limit=10) == []
+            set_drift_incident_store(store)
+            try:
+                hit = gateway_policy._open_drift_violates_tool(tenant, "target_role", "shell_exec")
+                miss = gateway_policy._open_drift_violates_tool(tenant, "target_role", "read_file")
+                clean = gateway_policy._open_drift_violates_tool(tenant, "clean_role", "shell_exec")
+            finally:
+                set_drift_incident_store(None)
+            assert (hit.violates, hit.unavailable) == (True, False)
+            assert (miss.violates, miss.unavailable) == (False, False)
+            assert (clean.violates, clean.unavailable) == (False, False)
+            with _tenant_connection(pool) as conn:
+                conn.execute("SET LOCAL enable_seqscan = off")
+                plan = conn.execute(
+                    "EXPLAIN SELECT data FROM drift_incidents WHERE tenant_id=%s AND NOT resolved "  # nosec B608 - fixed test SQL
+                    f"AND {DRIFT_BLUEPRINT_KEY_SQL}=%s ORDER BY last_detected_at DESC LIMIT 5",
+                    (tenant, "target_role"),
+                ).fetchall()
+            assert "idx_drift_incidents_tenant_blueprint_open" in " ".join(row[0] for row in plan)
+        with tenant_scope(other):
+            assert store.list_open_for_blueprint(other, "target_role", limit=10) == []
+    finally:
+        pool.close()

@@ -163,7 +163,11 @@ GATEWAY_FAIL_MODE_MATRIX: tuple[SubsystemFailMode, ...] = (
         default_posture=FailPosture.OPEN,
         follows_gateway_fail_mode=False,
         control="drift_enforcement_mode (default: off)",
-        on_failure="Drift-store errors during the behavioral-drift lookup never block the relay.",
+        on_failure=(
+            "A drift-store error, or more open incidents for the caller's blueprint than one lookup reads (200), "
+            "is reported as unavailable: warn and loopback enforce mode allow and audit gateway.drift_binding_unavailable; "
+            "enforce mode with required agent identity denies. Open incidents on other blueprints never count toward the cap."
+        ),
     ),
     SubsystemFailMode(
         subsystem="graph_reachability_enforcement",

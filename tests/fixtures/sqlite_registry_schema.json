@@ -36,6 +36,11 @@
   "drift": [
     [
       "index",
+      "idx_drift_incidents_tenant_blueprint_open",
+      "CREATE INDEX idx_drift_incidents_tenant_blueprint_open ON drift_incidents(tenant_id, lower(replace(trim(json_extract(data, '$.blueprint_id'), char(32, 9, 10, 11, 12, 13)), '-', '_')), last_detected_at DESC) WHERE resolved = 0"
+    ],
+    [
+      "index",
       "idx_drift_incidents_tenant_open",
       "CREATE INDEX idx_drift_incidents_tenant_open ON drift_incidents(tenant_id, resolved, last_detected_at DESC)"
     ],

@@ -8,9 +8,14 @@ from typing import Any
 
 from agent_bom.api import postgres_common
 from agent_bom.api.dataset_version_store import DatasetVersionRecord
-from agent_bom.api.drift_incident_store import DriftIncident
+from agent_bom.api.drift_incident_store import DriftIncident, drift_blueprint_key
 from agent_bom.api.evaluation_store import EvaluationRunRecord
-from agent_bom.api.storage.registry_schema import REGISTRY_TABLES, registry_table_ddl
+from agent_bom.api.storage.registry_schema import (
+    DRIFT_BLUEPRINT_KEY_SQL,
+    DRIFT_BLUEPRINT_OPEN_INDEX_DDL,
+    REGISTRY_TABLES,
+    registry_table_ddl,
+)
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.api.webhook_store import WebhookSubscription, storage_payload, unseal_subscription
 from agent_bom.core.tenancy import require_explicit_tenant_id
@@ -23,12 +28,16 @@ class RegistryStore:
     keys: tuple[str, ...]
     columns: tuple[str, ...]
     record_type: Any
+    # Development/test bootstrap only; deployed schemas get these from Alembic.
+    index_ddl: tuple[str, ...] = ()
 
     def __init__(self, pool: Any = None) -> None:
         self._pool = pool or postgres_common._get_pool()
         with self._pool.connection() as conn:
             if ensure_postgres_schema_version(conn, self.table):
                 conn.execute(registry_table_ddl(self.table))
+                for statement in self.index_ddl:
+                    conn.execute(statement)
                 postgres_common._ensure_tenant_rls(conn, self.table, "tenant_id")
                 conn.commit()
 
@@ -140,9 +149,19 @@ class PostgresDriftIncidentStore(RegistryStore):
     keys = ("incident_id",)
     columns = ("incident_id", "resolved", "last_detected_at")
     record_type = DriftIncident
+    index_ddl = (DRIFT_BLUEPRINT_OPEN_INDEX_DDL,)
 
     def get(self, tenant_id: str, incident_id: str) -> DriftIncident | None:
         return self._get(tenant_id, incident_id)
+
+    def list_open_for_blueprint(self, tenant_id: str, blueprint_id: str, *, limit: int) -> builtins.list[DriftIncident]:
+        return self._list(
+            tenant_id,
+            f"AND NOT resolved AND {DRIFT_BLUEPRINT_KEY_SQL}=%s",
+            (drift_blueprint_key(blueprint_id),),
+            "last_detected_at DESC, incident_id DESC",
+            limit,
+        )
 
     def list(self, tenant_id: str, *, include_resolved: bool = False, limit: int = 200) -> list[DriftIncident]:
         return self._list(tenant_id, "" if include_resolved else "AND NOT resolved", (), "last_detected_at DESC, incident_id", limit)
