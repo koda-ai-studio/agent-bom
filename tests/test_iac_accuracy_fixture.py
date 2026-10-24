@@ -92,3 +92,43 @@ class TestTerraformPublicS3:
         )
         findings = scan_iac_with_context(tf).findings
         assert _lines(findings, "TF-SEC-022") == [4]
+
+
+class TestCompose:
+    def test_every_planted_compose_issue_is_reported_at_its_line(self) -> None:
+        findings = _scan("compose")
+        by_line = {f.line_number: f.rule_id for f in findings}
+        assert by_line == {
+            4: "COMPOSE-001",
+            5: "COMPOSE-003",
+            6: "COMPOSE-004",
+            8: "COMPOSE-005",
+            10: "COMPOSE-002",
+            12: "COMPOSE-006",
+            16: "COMPOSE-005",
+            18: "COMPOSE-006",
+        }
+        assert all(f.file_path == "docker-compose.yml" and f.category == "compose" for f in findings)
+
+    def test_secret_findings_name_the_variable_never_the_value(self) -> None:
+        secrets = [f for f in _scan("compose") if f.rule_id == "COMPOSE-006"]
+        assert {"DATABASE_PASSWORD", "API_TOKEN"} <= {word for f in secrets for word in f.message.replace("'", " ").split()}
+        assert all("REPLACE_ME" not in f.message and "REPLACE_ME" not in f.title for f in secrets)
+
+    def test_interpolated_secret_is_not_hardcoded(self, tmp_path: Path) -> None:
+        compose = tmp_path / "compose.yaml"
+        compose.write_text("services:\n  a:\n    image: x:1\n    environment:\n      DB_PASSWORD: ${DB_PASSWORD}\n")
+        assert [f for f in scan_iac_with_context(compose).findings if f.rule_id == "COMPOSE-006"] == []
+
+    def test_compose_scanner_verdict_ran(self) -> None:
+        verdicts = {v.scanner_id: v for v in scan_iac_with_context(FIXTURE / "compose").verdicts}
+        assert verdicts["compose"].status == "ran"
+        assert verdicts["compose"].files_scanned == 1
+
+    def test_unrecognised_explicit_file_is_not_evaluated_rather_than_clean(self, tmp_path: Path) -> None:
+        other = tmp_path / "settings.yaml"
+        other.write_text("feature: true\n")
+        result = scan_iac_with_context(other)
+        assert result.findings == []
+        assert result.not_evaluated == ["settings.yaml"]
+        assert all(v.status != "ran" for v in result.verdicts)

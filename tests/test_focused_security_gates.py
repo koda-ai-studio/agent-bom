@@ -169,12 +169,31 @@ output = "{profile_output}"
 
 
 def test_iac_command_exits_zero_when_clean(tmp_path: Path):
-    _scan_result = ScanResult(findings=[], verdicts=[])
+    _scan_result = ScanResult(findings=[], verdicts=[ScannerVerdict("terraform", "ran", 1)])
     with patch("agent_bom.iac.scan_iac_with_context", return_value=_scan_result):
         result = CliRunner().invoke(main, ["iac", str(tmp_path)])
 
     assert result.exit_code == 0
     assert "no misconfigurations" in " ".join(result.output.split())
+
+
+def test_iac_command_reports_unmatched_file_as_not_evaluated(tmp_path: Path):
+    target = tmp_path / "settings.yaml"
+    target.write_text("feature: true\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["iac", str(target)])
+
+    output = " ".join(result.output.split())
+    assert "not evaluated (no IaC rule module for settings.yaml)" in output
+    assert "no misconfigurations" not in output
+
+
+def test_iac_command_evaluates_compose_file(tmp_path: Path):
+    target = tmp_path / "docker-compose.yml"
+    target.write_text("services:\n  web:\n    image: nginx:1.27\n    privileged: true\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["iac", str(target), "--format", "json"])
+
+    assert '"rule_id": "COMPOSE-001"' in result.output
+    assert '"line_number": 4' in result.output
 
 
 def test_focused_gate_uses_canonical_severity_order():

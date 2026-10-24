@@ -1,4 +1,4 @@
-"""IaC misconfiguration scanning — Dockerfile, Kubernetes, Terraform, CloudFormation, IAM, Helm, DCM, dbt.
+"""IaC misconfiguration scanning — Dockerfile, Compose, Kubernetes, Terraform, CloudFormation, IAM, Helm, DCM, dbt.
 
 Coordinator module that discovers and scans IaC files across all supported
 formats.  Each scanner is regex/YAML-based with zero external dependencies.
@@ -30,6 +30,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from agent_bom.iac.cloudformation import _is_cloudformation, scan_cloudformation
+from agent_bom.iac.compose import is_compose_file, scan_compose
 from agent_bom.iac.dbt_security import is_dbt_file, scan_dbt_file
 from agent_bom.iac.dcm import is_dcm_migration, scan_dcm_migration
 from agent_bom.iac.dockerfile import scan_dockerfile
@@ -60,6 +61,7 @@ __all__ = [
 # Add new scanners here; the verdict table always has one entry per ID.
 _SCANNER_IDS: tuple[str, ...] = (
     "helm",
+    "compose",
     "dockerfile",
     "terraform",
     "dcm",
@@ -135,7 +137,7 @@ def is_iac_file(path: Path, root: Path | None = None) -> bool:
     """
     if _is_chart_yaml(path) or _is_values_yaml(path):
         return True
-    if _is_dockerfile(path):
+    if _is_dockerfile(path) or is_compose_file(path):
         return True
     if path.suffix == ".tf":
         return True
@@ -211,6 +213,7 @@ def scan_iac_with_context(
         disabled = frozenset()
 
     findings: list[IaCFinding] = []
+    not_evaluated: list[str] = []
     files_matched: dict[str, int] = defaultdict(int)
     from agent_bom.core.severity import severity_worst_first_rank
 
@@ -238,6 +241,10 @@ def scan_iac_with_context(
                     findings.extend(scan_values_yaml(path))
             else:
                 files_matched.setdefault("helm", 0)
+        elif is_compose_file(path):
+            if "compose" not in disabled:
+                files_matched["compose"] += 1
+                findings.extend(scan_compose(path))
         elif _is_dockerfile(path):
             if "dockerfile" not in disabled:
                 files_matched["dockerfile"] += 1
@@ -274,6 +281,8 @@ def scan_iac_with_context(
             if "iam-policy" not in disabled:
                 files_matched["iam-policy"] += 1
                 findings.extend(scan_iam_policy(path))
+        elif explicit_file:
+            not_evaluated.append(path.name)
 
         set_repository_context(findings[first_finding:], path.relative_to(walk_root).as_posix())
 
@@ -319,7 +328,7 @@ def scan_iac_with_context(
                 )
             )
 
-    return ScanResult(findings=findings, verdicts=verdicts)
+    return ScanResult(findings=findings, verdicts=verdicts, not_evaluated=not_evaluated)
 
 
 def scan_iac_directory(root: str | Path) -> list[IaCFinding]:

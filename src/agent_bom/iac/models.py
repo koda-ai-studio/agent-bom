@@ -131,6 +131,14 @@ class ScanResult:
 
     findings: list[IaCFinding] = field(default_factory=list)
     verdicts: list[ScannerVerdict] = field(default_factory=list)
+    # Explicitly named files that no rule module evaluates. Zero findings for
+    # them means "not evaluated", never "clean".
+    not_evaluated: list[str] = field(default_factory=list)
+
+    @property
+    def evaluated(self) -> bool:
+        """True when at least one scanner ran over at least one file."""
+        return any(v.status == "ran" for v in self.verdicts)
 
 
 def set_repository_context(findings: list[IaCFinding], relative_path: str) -> None:

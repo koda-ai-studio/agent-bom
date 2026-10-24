@@ -201,6 +201,22 @@ def emit_dry_run_plan(
     )
 
 
+def iac_unevaluated_note(iac_path: str, result: Any) -> str | None:
+    """Console line for a path whose files no IaC rule module evaluated, else ``None``.
+
+    Zero findings is only "clean" when a scanner actually ran; a file type
+    with no rule module must read as not evaluated.
+    """
+    if result.findings:
+        return None
+    if result.not_evaluated:
+        names = ", ".join(result.not_evaluated)
+        return f"  [yellow]![/yellow] {iac_path}: not evaluated (no IaC rule module for {names})"
+    if not result.evaluated:
+        return f"  [yellow]![/yellow] {iac_path}: not evaluated (no supported IaC files found)"
+    return None
+
+
 def run_iac_only_scan(
     *,
     con: Any,
@@ -252,6 +268,8 @@ def run_iac_only_scan(
                     f"[yellow]{severity_counts.get('high', 0)} high[/yellow]",
                 ]
                 con.print(f"  [red]⚠[/red]  {iac_path}: {len(result.findings)} finding(s) ({', '.join(severity_parts)})")
+            elif note := iac_unevaluated_note(iac_path, result):
+                con.print(note)
             else:
                 con.print(f"  [green]✓[/green] {iac_path}: no misconfigurations")
         if verbose and all_iac_verdicts:
