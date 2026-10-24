@@ -7,6 +7,7 @@ from functools import cache
 from pathlib import Path
 from unittest import mock
 
+import pytest
 from click.testing import CliRunner
 
 from agent_bom.cli import main
@@ -139,3 +140,59 @@ def test_cli_demo_leaves_the_shared_demo_inventory_untouched(tmp_path_factory):
 
     _demo_outputs(str(tmp_path_factory.getbasetemp() / "graph-parity"))
     assert [agent.get("config_path") for agent in DEMO_INVENTORY["agents"]] == [None] * len(DEMO_INVENTORY["agents"])
+
+
+_ESTATE_KINDS = {"cloud_resource", "data_store"}
+# The conservative package->tool mapping records no evidence tier for the demo's
+# collector; strict mode would drop the whole unified graft these tests read.
+_KNOWN_CONTRACT_GAPS = {"missing_evidence_tier: exploitable_via vulnerability->tool"}
+_estate_parity = pytest.mark.graph_contract("warn")
+
+
+def _showcase_export(report: dict) -> list[dict]:
+    return to_json(build_graph_from_scan_data(report))["nodes"]
+
+
+@_estate_parity
+def test_showcase_report_graph_breaks_no_relationship_contract_beyond_known_gaps(tmp_path_factory):
+    report, _ = _showcase(str(tmp_path_factory.getbasetemp() / "showcase-parity"))
+    from agent_bom.graph.relationship_contract import audit_graph_contract
+
+    audit = audit_graph_contract(build_unified_graph_from_report(report), record=False)
+    assert set(audit["pairs"]) | set(audit["rejected_pairs"]) <= _KNOWN_CONTRACT_GAPS
+
+
+@_estate_parity
+def test_showcase_job_export_names_cloud_resources_and_data_stores_as_the_snapshot(tmp_path_factory):
+    report, snapshot = _showcase(str(tmp_path_factory.getbasetemp() / "showcase-parity"))
+    nodes = _showcase_export(report)
+    exported = {node["id"]: node["entity_type"] for node in nodes if node["entity_type"] in _ESTATE_KINDS}
+    # The CNAPP overlay gives a keyword-matched cloud resource a data-store companion;
+    # the showcase projects its estate after that overlay, so only the backing resource joins.
+    companions = {nid: nid.removeprefix("data_store:") for nid in exported if nid.startswith("data_store:")}
+    companions = {nid: backing for nid, backing in companions.items() if backing in exported}
+    assert len(exported) > 700
+    assert {nid: kind for nid, kind in exported.items() if nid not in companions and snapshot.get(nid) != kind} == {}
+    assert {backing for backing in companions.values() if snapshot.get(backing) != "cloud_resource"} == set()
+    assert not [nid for nid in exported if nid.startswith(("cloud_resource:aws:arn:", "data_store:cloud_resource:"))]
+
+
+@_estate_parity
+def test_showcase_snapshot_cloud_assets_the_report_names_reach_the_export(tmp_path_factory):
+    report, snapshot = _showcase(str(tmp_path_factory.getbasetemp() / "showcase-parity"))
+    exported = {node["id"]: node["entity_type"] for node in _showcase_export(report)}
+    named = {row["node_id"] for row in report["findings"] if snapshot.get(row.get("node_id") or "") in _ESTATE_KINDS}
+    for section in ("cis_benchmark", "azure_cis_benchmark", "gcp_cis_benchmark", "snowflake_cis_benchmark"):
+        for check in (report.get(section) or {}).get("checks", []):
+            if str(check.get("status", "")).upper() == "FAIL":
+                named |= {rid for rid in check.get("resource_ids", []) if snapshot.get(rid) in _ESTATE_KINDS}
+    drawn = {nid for nid in named if nid in exported}
+    assert len(named) > 700
+    assert {nid: (snapshot[nid], exported[nid]) for nid in drawn if exported[nid] != snapshot[nid]} == {}
+    # One finding node anchors one asset in a report-built graph, so an IaC rule shared
+    # by many assets draws only its first; no named asset reaches the export under another id.
+    assert len(drawn) >= 0.98 * len(named)
+    assert not [nid for nid in exported if nid.startswith("cloud_resource:") and nid.split(":", 2)[-1] in named]
+    # The multi-source compute lane joins on its merged strong-key id, not the posture row's ARN.
+    lane = {nid for nid in named if nid.startswith("cloud_resource:aws:aws_instance:")}
+    assert len(lane) == 12

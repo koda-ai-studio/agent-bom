@@ -280,10 +280,17 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
 
 
 # Entity types only the unified builder produces (cloud inventory, CIEM, CIS,
-# Snowflake, RBAC), grafted so `agent-bom graph` shows the cloud estate.
+# Snowflake, RBAC), grafted so `agent-bom graph` shows the cloud estate. Cloud
+# AI assets (hosted agents, endpoints, model deployments, prompt templates) are
+# typed agent/server/model/config_file; the base projection already carries the
+# MCP inventory under the same ids, so only the estate's own nodes graft.
 _CLOUD_ENTITY_TYPES = frozenset(
     {
         "cloud_resource",
+        "agent",
+        "server",
+        "model",
+        "config_file",
         "resource",
         "data_store",
         "misconfiguration",

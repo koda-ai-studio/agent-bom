@@ -8,6 +8,7 @@ from typing import Any
 
 from agent_bom.evidence.finding_node_ids import benchmark_misconfig_node_id
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.declared_assets import DeclaredAsset
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.identity_nodes import identity_node_id as _identity_node_id
@@ -42,13 +43,23 @@ def benchmark_inputs(report_json: Mapping[str, Any]) -> list[BenchmarkInput]:
     return result
 
 
-def project_benchmarks(graph: UnifiedGraph, benchmarks: list[BenchmarkInput]) -> None:
+def project_benchmarks(
+    graph: UnifiedGraph,
+    benchmarks: list[BenchmarkInput],
+    declared_assets: Mapping[tuple[str, str], DeclaredAsset] | None = None,
+) -> None:
+    """Anchor each check on its resources; a resource a finding row declares lands on that node."""
     cloud_resource_alias_index = _build_cloud_resource_alias_index(graph)
     for benchmark in benchmarks:
-        _project_benchmark(graph, benchmark, cloud_resource_alias_index)
+        _project_benchmark(graph, benchmark, cloud_resource_alias_index, declared_assets or {})
 
 
-def _project_benchmark(graph: UnifiedGraph, benchmark: BenchmarkInput, cloud_resource_alias_index: _CloudResourceAliasIndex) -> None:
+def _project_benchmark(
+    graph: UnifiedGraph,
+    benchmark: BenchmarkInput,
+    cloud_resource_alias_index: _CloudResourceAliasIndex,
+    declared_assets: Mapping[tuple[str, str], DeclaredAsset],
+) -> None:
     section_key, cis_data, default_cloud_provider = benchmark.section_key, benchmark.cis_data, benchmark.default_cloud_provider
     cloud_provider = (
         _clean_graph_part(cis_data.get("provider")) or _clean_graph_part(cis_data.get("cloud_provider")) or default_cloud_provider
@@ -58,7 +69,7 @@ def _project_benchmark(graph: UnifiedGraph, benchmark: BenchmarkInput, cloud_res
         cis_data.get("subscription_id") or cis_data.get("account_id") or cis_data.get("aws_account_id") or cis_data.get("project_id")
     )
     for check in checks:
-        _project_check(graph, check, section_key, cloud_provider, cloud_account_id, cloud_resource_alias_index)
+        _project_check(graph, check, section_key, cloud_provider, cloud_account_id, cloud_resource_alias_index, declared_assets)
 
 
 def _project_check(
@@ -68,6 +79,7 @@ def _project_check(
     cloud_provider: str,
     cloud_account_id: str,
     cloud_resource_alias_index: _CloudResourceAliasIndex,
+    declared_assets: Mapping[tuple[str, str], DeclaredAsset],
 ) -> None:
     if str(check.get("status", "")).upper() != "FAIL":
         return
@@ -96,7 +108,9 @@ def _project_check(
             dimensions=NodeDimensions(cloud_provider=cloud_provider),
         )
     )
-    _project_resources(graph, resource_ids, section_key, cloud_provider, misconfig_id, cloud_resource_alias_index, cloud_account_id)
+    _project_resources(
+        graph, resource_ids, section_key, cloud_provider, misconfig_id, cloud_resource_alias_index, cloud_account_id, declared_assets
+    )
     _project_account(graph, resource_ids, section_key, cloud_provider, cloud_account_id, misconfig_id)
 
 
@@ -108,6 +122,7 @@ def _project_resources(
     misconfig_id: str,
     cloud_resource_alias_index: _CloudResourceAliasIndex,
     cloud_account_id: str,
+    declared_assets: Mapping[tuple[str, str], DeclaredAsset],
 ) -> None:
     for resource_id in sorted(set(resource_ids)):
         resource_node_id = _resolve_cloud_resource_node_id(
@@ -117,6 +132,9 @@ def _project_resources(
             alias_index=cloud_resource_alias_index,
             account_id=cloud_account_id,
         )
+        declared = None if resource_node_id else declared_assets.get((cloud_provider.casefold(), resource_id))
+        if declared is not None:
+            resource_node_id = declared.node_id
         canonical_resource = graph.get_node(resource_node_id) if resource_node_id else None
         resource_node_id = resource_node_id or f"cloud_resource:{cloud_provider or 'generic'}:{resource_id}"
         attributes: dict[str, Any] = {
@@ -145,8 +163,16 @@ def _project_resources(
         graph.add_node(
             UnifiedNode(
                 id=resource_node_id,
-                entity_type=canonical_resource.entity_type if canonical_resource is not None else EntityType.CLOUD_RESOURCE,
-                label=canonical_resource.label if canonical_resource is not None else resource_id,
+                entity_type=(
+                    canonical_resource.entity_type
+                    if canonical_resource is not None
+                    else declared.entity_type
+                    if declared is not None
+                    else EntityType.CLOUD_RESOURCE
+                ),
+                label=(
+                    canonical_resource.label if canonical_resource is not None else declared.label if declared is not None else resource_id
+                ),
                 attributes=attributes,
                 data_sources=[section_key],
                 dimensions=NodeDimensions(cloud_provider=cloud_provider),

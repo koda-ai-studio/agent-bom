@@ -22,6 +22,7 @@ from agent_bom.core.reachability import node_reachability
 from agent_bom.evidence.finding_node_ids import _dict, _text, finding_row_node_id, stamp_finding_node_ids
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.container_kind import container_kind_attributes
+from agent_bom.graph.declared_assets import declared_asset
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import SOURCE_TIERS, edge_evidence
 from agent_bom.graph.node import UnifiedNode
@@ -130,7 +131,10 @@ def _ensure_asset_node(graph: UnifiedGraph, row: dict[str, Any], entity: EntityT
     canonical = _text(asset.get("canonical_id")) or _text(asset.get("stable_id"))
     if not identifier and not canonical:
         return None
-    if entity == EntityType.CLOUD_RESOURCE and identifier:
+    declared = declared_asset(row)
+    if declared is not None:
+        node_id, entity = declared.node_id, declared.entity_type
+    elif entity == EntityType.CLOUD_RESOURCE and identifier:
         provider = _text(asset.get("provider")) or _text(asset.get("location")) or "generic"
         node_id = f"cloud_resource:{provider}:{identifier}"
     else:
@@ -146,7 +150,7 @@ def _ensure_asset_node(graph: UnifiedGraph, row: dict[str, Any], entity: EntityT
                 attributes={
                     "asset_type": _text(asset.get("asset_type")),
                     "identifier": sanitize_text(identifier, max_len=500),
-                    **(_native_keys(row, asset, identifier) if entity == EntityType.CLOUD_RESOURCE else {}),
+                    **(_native_keys(row, asset, identifier) if declared is not None or entity == EntityType.CLOUD_RESOURCE else {}),
                     **(container_kind_attributes(asset) if entity == EntityType.CONTAINER else {}),
                 },
                 data_sources=[collector],
