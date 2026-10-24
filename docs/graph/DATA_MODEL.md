@@ -7,58 +7,17 @@ Every node kind, edge kind, evidence tier and normalization table behind the sec
 
 ## Overview
 
-Entity types grouped by domain (from each type's semantic layer in `graph/container.py` `ENTITY_LEGEND`). An arrow carries every relationship whose allowed pairs connect the two domains.
+Entity types grouped into domains by each type's semantic layer (`graph/container.py` `ENTITY_LEGEND`), laid out along an attack path. A line counts the relationships allowed between two domains; each domain page has the ERD and every relationship by name.
 
-```mermaid
-flowchart LR
-  subgraph identity["Identity and access"]
-    identity_0[access_grant · access_policy · account · credential]
-    identity_4[credential_ref · federated_identity · group · managed_identity]
-    identity_8[org · policy · role · service_account]
-    identity_12[service_principal · user]
-  end
-  subgraph ai["AI and agents"]
-    ai_0[agent · application · blueprint · framework]
-    ai_4[server · tool · tool_call]
-  end
-  subgraph supply["Code and supply chain"]
-    supply_0[ci_job · code_module · config_file · directory]
-    supply_4[external_import · package · source_file]
-  end
-  subgraph cloud["Cloud, infrastructure and data"]
-    cloud_0[api_gateway · cloud_resource · cluster · container]
-    cloud_4[data_store · dataset · environment · fleet]
-    cloud_8[model · provider · resource]
-  end
-  subgraph findings["Findings"]
-    findings_0[drift_incident · misconfiguration · vulnerability]
-  end
-  ai -- "belongs_to, called, can_access, correlates_with<br/>delegated_to, exposed_to, governs, invoked<br/>lateral_path, member_of, observes, part_of<br/>possibly_correlates_with, provides_tool, reaches_tool, shares_cred<br/>shares_server, trace_step, uses, uses_framework" --> ai
-  ai -- "accessed, can_access, exposed_to, hosted_on<br/>member_of, part_of, serves_model, stores<br/>trace_step" --> cloud
-  ai -- "contains, exhibits_drift, governs, vulnerable_to" --> findings
-  ai -- "accessed, assumes, authenticates_as, exposes_cred<br/>governs, member_of, part_of, trace_step<br/>used_credential" --> identity
-  ai -- "can_access, depends_on, trace_step" --> supply
-  cloud -- "belongs_to, can_access, contains, hosts<br/>trace_step" --> ai
-  cloud -- "can_access, contains, depends_on, exposed_to<br/>hosted_on, hosts, part_of, possibly_correlates_with<br/>protects, serves_model, stores, trace_step" --> cloud
-  cloud -- "contains, vulnerable_to" --> findings
-  cloud -- "assumes, contains, exposed_to, hosts<br/>part_of, trace_step" --> identity
-  cloud -- "can_access, contains, depends_on, trace_step" --> supply
-  findings -- "affects, belongs_to, exploitable_via, scoped_to" --> ai
-  findings -- "affects" --> cloud
-  findings -- "triggers" --> findings
-  findings -- "affects, exploitable_via" --> identity
-  findings -- "affects" --> supply
-  identity -- "acted_as, belongs_to, can_access, contains<br/>governs, has_permission, hosts, invoked<br/>manages, member_of, owns, reaches_tool<br/>scoped_to, trace_step" --> ai
-  identity -- "accessed, can_access, contains, has_permission<br/>hosts, invoked, manages, member_of<br/>owns, part_of, trace_step" --> cloud
-  identity -- "contains, governs, vulnerable_to" --> findings
-  identity -- "assumes, attached, authenticates_as, can_access<br/>contains, cross_account_trust, governs, has_permission<br/>hosts, inherits, member_of, owns<br/>part_of, possibly_correlates_with, trace_step, trusts" --> identity
-  identity -- "can_access, trace_step" --> supply
-  supply -- "belongs_to, configures, contains, defines<br/>part_of, runs, trace_step" --> ai
-  supply -- "contains, trace_step" --> cloud
-  supply -- "contains, remediates, vulnerable_to" --> findings
-  supply -- "trace_step" --> identity
-  supply -- "configures, contains, defines, depends_on<br/>imports, trace_step" --> supply
-```
+<p align="center"><picture><source media="(prefers-color-scheme: light)" srcset="../images/graph-data-model-light.svg"><img src="../images/graph-data-model-dark.svg" alt="Security graph domains with their entity types, and the backbone path from an agent through its MCP server, packages and vulnerabilities to credentials, tools and data stores" width="100%"></picture></p>
+
+| Domain | Entity types | Relationships inside | To other domains | Detail |
+|---|---|---|---|---|
+| AI and agents | `agent`, `application`, `blueprint`, `framework`, `server`, `tool`, `tool_call` | 20 | 32 | [ERD and relationships](data-model/domains/ai.md) |
+| Code and supply chain | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `package`, `source_file` | 6 | 12 | [ERD and relationships](data-model/domains/supply.md) |
+| Findings | `drift_incident`, `misconfiguration`, `vulnerability` | 1 | 9 | [ERD and relationships](data-model/domains/findings.md) |
+| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 12 | 20 | [ERD and relationships](data-model/domains/cloud.md) |
+| Identity and access | `access_grant`, `access_policy`, `account`, `credential`, `credential_ref`, `federated_identity`, `group`, `managed_identity`, `org`, `policy`, `role`, `service_account`, `service_principal`, `user` | 16 | 24 | [ERD and relationships](data-model/domains/identity.md) |
 
 ## Entities
 

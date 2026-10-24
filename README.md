@@ -16,14 +16,14 @@
 
 <p align="center"><b>Find vulnerable software behind your AI agents—and trace the exposure evidence.</b></p>
 
+**Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.**
 For AppSec and platform engineers responsible for AI agents and MCP servers:
 scan a repository, correlate its findings with agent and infrastructure context,
-and prioritize fixes using blast radius and reachability evidence. Explain what
-is affected, what the evidence supports, and which action needs review.
-**Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.** Local scans need no account.
+and prioritize fixes by blast radius and reachability evidence. Local scans need no account.
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
+  <a href="#use-it-from-claude-code-or-codex">Claude Code and Codex</a> ·
   <a href="#open-the-sample-graph">Sample graph</a> ·
   <a href="#self-host-in-your-environment">Self-host</a> ·
   <a href="docs/GALLERY.md">Product tour</a> ·
@@ -54,6 +54,32 @@ See the [exit codes](site-docs/reference/exit-codes.md).
 The recording uses labeled sample data and bundled advisories. Credential
 references are names, not secret values. Recorded relationships do not prove
 exploitation or successful data access.
+
+## Use it from Claude Code or Codex
+
+Ask your coding agent instead of reading a report. In Claude Code:
+
+```text
+/plugin marketplace add koda-ai-studio/agent-bom
+/plugin install agent-bom@agent-bom
+```
+
+In Codex, run `codex plugin marketplace add koda-ai-studio/agent-bom`, then
+install **agent-bom-local** from the Plugins Directory. Both plugins run the
+pinned agent-bom release locally and send nothing to an agent-bom service.
+
+| Ask | Skill |
+|---|---|
+| "Is this project safe to ship?" | `checkup`: one verdict and the three fixes that matter most |
+| "Am I affected by CVE-2025-29927?" | `affected`: affected or not found in what was scanned, never "safe" |
+| "What have my agents been doing?" | `activity`: MCP usage, unused servers, risky commands from local session history |
+| "Are my agent settings too permissive?" | `audit-mcp` and `audit-skills` |
+| "Give me an AI-BOM" | `bom`: CycloneDX or SPDX for this machine, a project, an image or a cloud account |
+
+Add `/plugin install agent-bom-guard@agent-bom` to block malicious and
+typosquatted package installs before Claude runs them.
+[All skills and their permissions](integrations/claude-code/README.md) ·
+[Guard details](integrations/agent-bom-guard/README.md)
 
 ## Investigate context and exposure
 
@@ -142,11 +168,7 @@ Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneD
 SPDX, JSON and HTML**. Cloud connectors and fleet sync collect inventory;
 proxy and gateway deployments add runtime evidence.
 
-For coding assistants, run `agent-bom mcp server`.
-In Claude Code, install the plugin with `/plugin marketplace add koda-ai-studio/agent-bom`
-then `/plugin install agent-bom@agent-bom` ([details](integrations/claude-code/README.md)).
-Add `/plugin install agent-bom-guard@agent-bom` to block malicious and typosquatted package
-installs before Claude runs them ([details](integrations/agent-bom-guard/README.md)).
+For other MCP clients, run `agent-bom mcp server`.
 Start with eight focused tools in the default profile.
 [Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
 [Try three investigations](docs/MCP_SERVER.md): affected agents, exposure receipts and a before/after scan comparison.

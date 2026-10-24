@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="658" viewBox="0 0 1480 658" fill="none">
+<title>Security graph data model</title>
+<rect width="1480" height="658" fill="#0a0a0c"/>
+<text x="32" y="40" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="20" font-weight="700" fill="#f4f4f5" text-anchor="start">Security graph data model</text>
+<text x="32" y="62" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="12.5" font-weight="500" fill="#8b8b95" text-anchor="start">Entity types by domain, in the order an exposure path crosses them. Generated from the code.</text>
+<rect x="32" y="84" width="269" height="276" rx="10" fill="#111114" stroke="#26262c"/>
+<rect x="32" y="84" width="269" height="4" rx="2" fill="#a78bfa"/>
+<text x="46" y="110" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="13.5" font-weight="700" fill="#f4f4f5" text-anchor="start">AI and agents</text>
+<text x="46" y="127" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="500" fill="#8b8b95" text-anchor="start">7 entity types</text>
+<rect x="46" y="140" width="116" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="104" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">agent</text>
+<rect x="170" y="140" width="116" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="229" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">application</text>
+<rect x="46" y="170" width="116" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="104" y="186" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">blueprint</text>
+<rect x="170" y="170" width="116" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="229" y="186" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">framework</text>
+<rect x="46" y="200" width="116" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="104" y="216" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">server</text>
+<rect x="170" y="200" width="116" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="229" y="216" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">tool</text>
+<rect x="46" y="230" width="116" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="104" y="246" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">tool_call</text>
+<path d="M306 216 L313 222 L306 228" stroke="#71717a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<rect x="319" y="84" width="269" height="276" rx="10" fill="#111114" stroke="#26262c"/>
+<rect x="319" y="84" width="269" height="4" rx="2" fill="#60a5fa"/>
+<text x="333" y="110" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="13.5" font-weight="700" fill="#f4f4f5" text-anchor="start">Code and supply chain</text>
+<text x="333" y="127" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="500" fill="#8b8b95" text-anchor="start">7 entity types</text>
+<rect x="333" y="140" width="116" height="24" rx="6" fill="#111c2e" stroke="#60a5fa" stroke-opacity="0.55"/><text x="391" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">ci_job</text>
+<rect x="457" y="140" width="116" height="24" rx="6" fill="#111c2e" stroke="#60a5fa" stroke-opacity="0.55"/><text x="515" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">code_module</text>
+<rect x="333" y="170" width="116" height="24" rx="6" fill="#111c2e" stroke="#60a5fa" stroke-opacity="0.55"/><text x="391" y="186" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">config_file</text>
+<rect x="457" y="170" width="116" height="24" rx="6" fill="#111c2e" stroke="#60a5fa" stroke-opacity="0.55"/><text x="515" y="186" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">directory</text>
+<rect x="333" y="200" width="116" height="24" rx="6" fill="#111c2e" stroke="#60a5fa" stroke-opacity="0.55"/><text x="391" y="216" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">external_import</text>
+<rect x="457" y="200" width="116" height="24" rx="6" fill="#111c2e" stroke="#60a5fa" stroke-opacity="0.55"/><text x="515" y="216" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">package</text>
+<rect x="333" y="230" width="116" height="24" rx="6" fill="#111c2e" stroke="#60a5fa" stroke-opacity="0.55"/><text x="391" y="246" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">source_file</text>
+<path d="M593 216 L600 222 L593 228" stroke="#71717a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<rect x="606" y="84" width="269" height="276" rx="10" fill="#111114" stroke="#26262c"/>
+<rect x="606" y="84" width="269" height="4" rx="2" fill="#f87171"/>
+<text x="620" y="110" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="13.5" font-weight="700" fill="#f4f4f5" text-anchor="start">Findings</text>
+<text x="620" y="127" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="500" fill="#8b8b95" text-anchor="start">3 entity types</text>
+<rect x="620" y="140" width="116" height="24" rx="6" fill="#2a1416" stroke="#f87171" stroke-opacity="0.55"/><text x="678" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">drift_incident</text>
+<rect x="744" y="140" width="116" height="24" rx="6" fill="#2a1416" stroke="#f87171" stroke-opacity="0.55"/><text x="802" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">misconfiguration</text>
+<rect x="620" y="170" width="116" height="24" rx="6" fill="#2a1416" stroke="#f87171" stroke-opacity="0.55"/><text x="678" y="186" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">vulnerability</text>
+<path d="M879 216 L886 222 L879 228" stroke="#71717a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<rect x="892" y="84" width="269" height="276" rx="10" fill="#111114" stroke="#26262c"/>
+<rect x="892" y="84" width="269" height="4" rx="2" fill="#fbbf24"/>
+<text x="906" y="110" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="13.5" font-weight="700" fill="#f4f4f5" text-anchor="start">Cloud, infrastructure and data</text>
+<text x="906" y="127" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="500" fill="#8b8b95" text-anchor="start">11 entity types</text>
+<rect x="906" y="140" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="965" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">api_gateway</text>
+<rect x="1031" y="140" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="1089" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">cloud_resource</text>
+<rect x="906" y="170" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="965" y="186" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">cluster</text>
+<rect x="1031" y="170" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="1089" y="186" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">container</text>
+<rect x="906" y="200" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="965" y="216" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">data_store</text>
+<rect x="1031" y="200" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="1089" y="216" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">dataset</text>
+<rect x="906" y="230" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="965" y="246" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">environment</text>
+<rect x="1031" y="230" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="1089" y="246" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">fleet</text>
+<rect x="906" y="260" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="965" y="276" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">model</text>
+<rect x="1031" y="260" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="1089" y="276" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">provider</text>
+<rect x="906" y="290" width="116" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="965" y="306" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">resource</text>
+<path d="M1166 216 L1173 222 L1166 228" stroke="#71717a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<rect x="1179" y="84" width="269" height="276" rx="10" fill="#111114" stroke="#26262c"/>
+<rect x="1179" y="84" width="269" height="4" rx="2" fill="#34d399"/>
+<text x="1193" y="110" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="13.5" font-weight="700" fill="#f4f4f5" text-anchor="start">Identity and access</text>
+<text x="1193" y="127" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="500" fill="#8b8b95" text-anchor="start">14 entity types</text>
+<rect x="1193" y="140" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1251" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">access_grant</text>
+<rect x="1318" y="140" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1376" y="156" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">access_policy</text>
+<rect x="1193" y="170" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1251" y="186" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">account</text>
+<rect x="1318" y="170" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1376" y="186" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">credential</text>
+<rect x="1193" y="200" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1251" y="216" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">credential_ref</text>
+<rect x="1318" y="200" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1376" y="216" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">federated_identity</text>
+<rect x="1193" y="230" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1251" y="246" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">group</text>
+<rect x="1318" y="230" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1376" y="246" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">managed_identity</text>
+<rect x="1193" y="260" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1251" y="276" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">org</text>
+<rect x="1318" y="260" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1376" y="276" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">policy</text>
+<rect x="1193" y="290" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1251" y="306" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">role</text>
+<rect x="1318" y="290" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1376" y="306" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">service_account</text>
+<rect x="1193" y="320" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1251" y="336" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">service_principal</text>
+<rect x="1318" y="320" width="116" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="1376" y="336" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">user</text>
+<text x="32" y="404" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="15" font-weight="700" fill="#f4f4f5" text-anchor="start">How a path reads</text>
+<text x="32" y="424" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="12" font-weight="500" fill="#8b8b95" text-anchor="start">Backbone relationships from an agent to what it can reach. Every other relationship is listed by name on the domain pages.</text>
+<rect x="32" y="450" width="150" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="107" y="466" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">agent</text>
+<line x1="182" y1="462" x2="286" y2="462" stroke="#71717a" stroke-width="1.6"/>
+<path d="M284 457 L292 462 L284 467" fill="#71717a"/>
+<text x="237" y="455" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#8b8b95" text-anchor="middle">uses</text>
+<rect x="292" y="450" width="150" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="367" y="466" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">server</text>
+<line x1="442" y1="462" x2="546" y2="462" stroke="#71717a" stroke-width="1.6"/>
+<path d="M544 457 L552 462 L544 467" fill="#71717a"/>
+<text x="497" y="455" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#8b8b95" text-anchor="middle">depends_on</text>
+<rect x="552" y="450" width="150" height="24" rx="6" fill="#111c2e" stroke="#60a5fa" stroke-opacity="0.55"/><text x="627" y="466" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">package</text>
+<line x1="702" y1="462" x2="806" y2="462" stroke="#71717a" stroke-width="1.6"/>
+<path d="M804 457 L812 462 L804 467" fill="#71717a"/>
+<text x="757" y="455" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#8b8b95" text-anchor="middle">vulnerable_to</text>
+<rect x="812" y="450" width="150" height="24" rx="6" fill="#2a1416" stroke="#f87171" stroke-opacity="0.55"/><text x="887" y="466" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">vulnerability</text>
+<path d="M367 474 V508" stroke="#71717a" stroke-width="1.6" fill="none"/>
+<line x1="367" y1="508" x2="546" y2="508" stroke="#71717a" stroke-width="1.6"/>
+<path d="M544 503 L552 508 L544 513" fill="#71717a"/>
+<text x="460" y="501" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#8b8b95" text-anchor="middle">exposes_cred</text>
+<rect x="552" y="496" width="150" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="627" y="512" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">credential</text>
+<path d="M367 474 V554" stroke="#71717a" stroke-width="1.6" fill="none"/>
+<line x1="367" y1="554" x2="546" y2="554" stroke="#71717a" stroke-width="1.6"/>
+<path d="M544 549 L552 554 L544 559" fill="#71717a"/>
+<text x="460" y="547" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#8b8b95" text-anchor="middle">provides_tool</text>
+<rect x="552" y="542" width="150" height="24" rx="6" fill="#1b1630" stroke="#a78bfa" stroke-opacity="0.55"/><text x="627" y="558" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">tool</text>
+<line x1="702" y1="554" x2="806" y2="554" stroke="#71717a" stroke-width="1.6"/>
+<path d="M804 549 L812 554 L804 559" fill="#71717a"/>
+<text x="757" y="547" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#8b8b95" text-anchor="middle">can_access</text>
+<rect x="812" y="542" width="150" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="887" y="558" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">data_store</text>
+<rect x="32" y="588" width="150" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="107" y="604" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">cloud_resource</text>
+<line x1="182" y1="600" x2="286" y2="600" stroke="#71717a" stroke-width="1.6"/>
+<path d="M284 595 L292 600 L284 605" fill="#71717a"/>
+<text x="237" y="593" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#8b8b95" text-anchor="middle">assumes</text>
+<rect x="292" y="588" width="150" height="24" rx="6" fill="#0f241c" stroke="#34d399" stroke-opacity="0.55"/><text x="367" y="604" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">role</text>
+<line x1="442" y1="600" x2="546" y2="600" stroke="#71717a" stroke-width="1.6"/>
+<path d="M544 595 L552 600 L544 605" fill="#71717a"/>
+<text x="497" y="593" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#8b8b95" text-anchor="middle">can_access</text>
+<rect x="552" y="588" width="150" height="24" rx="6" fill="#2a2110" stroke="#fbbf24" stroke-opacity="0.55"/><text x="627" y="604" font-family="Inter,system-ui,-apple-system,Segoe UI,sans-serif" font-size="11.5" font-weight="600" fill="#e4e4e7" text-anchor="middle">data_store</text>
+</svg>
