@@ -1,0 +1,23 @@
+# agent-bom on Azure Pipelines: scan the repository, fail on high or
+# critical findings, and publish the SARIF report as a pipeline artifact.
+trigger:
+  - main
+pr:
+  - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "3.11"
+  - script: pip install --quiet agent-bom==0.110.0
+    displayName: Install agent-bom
+  - script: agent-bom scan . -f sarif -o agent-bom-results.sarif --fail-on-severity high
+    displayName: Scan with agent-bom
+  - task: PublishPipelineArtifact@1
+    condition: always()
+    inputs:
+      targetPath: agent-bom-results.sarif
+      artifact: CodeAnalysisLogs

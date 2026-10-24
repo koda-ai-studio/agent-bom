@@ -11,6 +11,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- GitHub Action: `sbom-artifact` (`cyclonedx` | `spdx` | `none`) uploads an SBOM / AI-BOM workflow artifact; `mcp-gate` fails a pull request that adds or redefines a blocked, malicious or vulnerable MCP server; `max-annotations` caps annotations with an explicit "N more" notice. The job summary lists the top findings (severity, file:line, rule, fix), and the PR comment ranks findings by severity, then blast radius.
+- A reusable workflow (`.github/workflows/agent-bom-reusable.yml`), GitLab CI, Azure Pipelines and Bitbucket Pipelines templates under `examples/ci/`, and a GitHub Action guide with quick-start, full PR gate and new-findings-only examples.
 - Source-built language runtimes are detected in images (PHP, Python, Node.js, Go, Ruby, Java from image config) and on hosts and VM snapshots (`/usr/local` and `/opt` builds), and matched through NVD CPEs. Offline, a runtime reports a coverage gap, never a clean result.
 - Operator advisories match before feeds publish: `agent-bom db advisory add|list|remove|match`, `/v1/intel/operator-advisories` and MCP `intel_lookup`. Declared advisories match the newest stored scan per target, tenant-scoped; a later feed record with the same id or alias supersedes it.
 - NVIDIA GPU stack detection in `fs` scans, VM side-scans and image layers: driver, CUDA toolkit and NVIDIA Container Toolkit versions with NVD CPE identities, so their CVEs match GPU nodes.
@@ -23,11 +25,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- GitHub Action: `pr-comment` defaults to `auto` (posts when the token has `pull-requests: write`, otherwise skips with a notice); annotations are error, warning or notice by severity; `format: json` writes `agent-bom-results.json`; docs reference `@v0` and `scan-type: scan`.
 - PR CI sizes pytest workers to the runner, skips smoke when the full shards replace it, and splits UI E2E across four runners.
 - Migration `20261023_02` revokes writes on `alembic_version` from the application and RLS-maintenance roles; migrations run as the admin role.
 
 ### Fixed
 
+- GitHub Action: the default scan covers the checkout, so Terraform, Kubernetes, Helm, CloudFormation and workflow files are scanned and the runner's home-directory MCP configs no longer leak into CI reports.
+- GitHub Action: `scan-type` `image`, `fs`, `sbom`, `iac`, `secrets` and `code` no longer exit 2 with default inputs; only flags the selected command accepts are passed, and gates it cannot enforce fail with an error.
+- GitHub Action: `baseline` passes `--delta` instead of the nonexistent `--delta-mode`, and `--baseline --delta` now suppresses pre-existing IaC, secret, skill and other non-CVE findings, matched without line numbers.
+- GitHub Action: the vulnerability database cache uses the real path (`~/.agent-bom/db/vulns.db`) with a daily key, `setup-python` no longer fails on repositories without Python manifests, and inputs reach run scripts only through `env`.
 - An unpinned `GET /v1/graph` whose evidence changes during assembly rebuilds a bounded number of times, then returns 503 with `Retry-After` instead of 409. A pinned generation that changed still returns 409.
 - Feed re-match pages on (modified, id), so records sharing a timestamp are no longer skipped, honours an advisory's `limit_version` through the same range check as scan time, and marks a run `incomplete` when tenant or job caps are reached.
 - MCP `intel_lookup` reads advisories declared through the API when a store is configured.

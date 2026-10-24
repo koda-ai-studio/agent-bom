@@ -38,6 +38,33 @@ def _annotation(
     return f"::{level} {','.join(properties)}::{_escape_data(message)}"
 
 
+_SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+
+
+def _level(severity: str) -> str:
+    """Map a finding severity to the GitHub annotation level."""
+    rank = _SEVERITY_RANK.get(severity.lower(), 0)
+    if rank >= 3:
+        return "error"
+    if rank == 2:
+        return "warning"
+    return "notice"
+
+
+def _score_severity(value: object) -> str:
+    try:
+        score = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return "unknown"
+    if score > 9.0:
+        return "critical"
+    if score >= 7.0:
+        return "high"
+    if score >= 4.0:
+        return "medium"
+    return "low" if score >= 0.1 else "unknown"
+
+
 def _as_int(value: object) -> int | None:
     try:
         parsed = int(value)  # type: ignore[arg-type]
@@ -46,7 +73,7 @@ def _as_int(value: object) -> int | None:
     return parsed if parsed > 0 else None
 
 
-def _skills_json_annotations(data: dict[str, Any]) -> Iterable[str]:
+def _skills_json_annotations(data: dict[str, Any]) -> Iterable[tuple[str, str]]:
     for file_report in data.get("files", []):
         if not isinstance(file_report, dict):
             continue
@@ -60,21 +87,24 @@ def _skills_json_annotations(data: dict[str, Any]) -> Iterable[str]:
             path = str(finding.get("source_file") or fallback_path)
             if not path:
                 continue
-            severity = str(finding.get("severity") or "unknown").upper()
+            severity = str(finding.get("severity") or "unknown")
             category = str(finding.get("category") or "skill")
             title = str(finding.get("title") or "agent-bom skill finding")
             detail = str(finding.get("detail") or title)
-            yield _annotation(
-                level="warning",
-                path=path,
-                line=_as_int(finding.get("source_line")),
-                col=_as_int(finding.get("source_column")),
-                title=f"agent-bom {severity} {category}",
-                message=f"{title}: {detail}",
+            yield (
+                severity,
+                _annotation(
+                    level=_level(severity),
+                    path=path,
+                    line=_as_int(finding.get("source_line")),
+                    col=_as_int(finding.get("source_column")),
+                    title=f"agent-bom {severity.upper()} {category}",
+                    message=f"{title}: {detail}",
+                ),
             )
 
 
-def _sarif_annotations(data: dict[str, Any]) -> Iterable[str]:
+def _sarif_annotations(data: dict[str, Any]) -> Iterable[tuple[str, str]]:
     run = (data.get("runs") or [{}])[0]
     if not isinstance(run, dict):
         return
@@ -93,28 +123,42 @@ def _sarif_annotations(data: dict[str, Any]) -> Iterable[str]:
         rule = rules.get(rule_id, {})
         rule_name = rule.get("name") if isinstance(rule, dict) else None
         message = str(result.get("message", {}).get("text") or rule_name or rule_id)
-        yield _annotation(
-            level="warning",
-            path=path,
-            line=_as_int(region.get("startLine")) if isinstance(region, dict) else None,
-            col=_as_int(region.get("startColumn")) if isinstance(region, dict) else None,
-            title=f"agent-bom {rule_id}",
-            message=message,
+        rule_props = rule.get("properties", {}) if isinstance(rule, dict) else {}
+        severity = _score_severity(rule_props.get("security-severity") if isinstance(rule_props, dict) else None)
+        if severity == "unknown":
+            severity = {"error": "high", "warning": "medium", "note": "low"}.get(str(result.get("level") or "warning"), "medium")
+        yield (
+            severity,
+            _annotation(
+                level=_level(severity),
+                path=path,
+                line=_as_int(region.get("startLine")) if isinstance(region, dict) else None,
+                col=_as_int(region.get("startColumn")) if isinstance(region, dict) else None,
+                title=f"agent-bom {rule_id}",
+                message=message,
+            ),
         )
 
 
 def emit_annotations(path: Path, *, max_annotations: int) -> list[str]:
+    """Return annotations, highest severity first, capped with a remainder notice."""
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         return []
     if "runs" in data:
-        annotations = list(_sarif_annotations(data))
+        ranked = list(_sarif_annotations(data))
     elif data.get("report_type") == "skills_scan":
-        annotations = list(_skills_json_annotations(data))
+        ranked = list(_skills_json_annotations(data))
     else:
-        annotations = []
-    if max_annotations >= 0:
+        ranked = []
+    ranked.sort(key=lambda item: -_SEVERITY_RANK.get(item[0].lower(), 0))
+    annotations = [annotation for _severity, annotation in ranked]
+    if 0 <= max_annotations < len(annotations):
+        remainder = len(annotations) - max_annotations
         annotations = annotations[:max_annotations]
+        annotations.append(
+            f"::notice title=agent-bom::{remainder} more finding(s) in {_escape_data(path.name)} (annotation cap {max_annotations})"
+        )
     return annotations
 
 

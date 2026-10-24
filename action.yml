@@ -1,5 +1,5 @@
 name: 'agent-bom Scan'
-description: 'Run agent-bom in CI/CD to scan AI agents, MCP servers, images, and IaC. Emit SARIF and map blast radius from packages to credentials and tools.'
+description: 'Security gate for AI-era repos: scan MCP configs, agents, skills, dependencies, IaC and secrets; SARIF, PR summary and SBOM.'
 author: 'agent-bom'
 
 branding:
@@ -8,11 +8,11 @@ branding:
 
 inputs:
   scan-type:
-    description: 'Scan mode. Default `scan` runs the full agent/MCP discovery pipeline. Focused modes: image, fs, iac, sbom, secrets, code, and skills.'
+    description: 'Scan mode. Default `scan` scans the checkout (packages, MCP configs, IaC, workflows, skills, secrets). Focused modes: image, fs, iac, sbom, secrets, code, and skills.'
     required: false
     default: 'scan'
   scan-ref:
-    description: 'Target reference for focused modes — image reference, filesystem path, SBOM file path, or IaC paths (comma-separated). Not required for the default `scan` mode.'
+    description: 'Scan scope or target. For scan: the directory to scan (default: the checkout, "."). For focused modes: image reference, filesystem path, SBOM file path, or IaC paths (comma-separated).'
     required: false
     default: ''
   severity-threshold:
@@ -92,13 +92,17 @@ inputs:
     required: false
     default: ''
   pr-comment:
-    description: 'Post a findings summary comment on the pull request (requires GITHUB_TOKEN with pull-requests: write).'
+    description: 'Pull request comment with the top findings: auto (default) posts on pull_request events when the token has pull-requests: write and skips with a notice otherwise; true fails the step if the comment cannot be posted; false never posts.'
     required: false
-    default: 'false'
+    default: 'auto'
   annotations:
-    description: 'Emit GitHub Actions line-level annotations for SARIF and skills findings.'
+    description: 'Emit GitHub Actions line-level annotations for SARIF and skills findings, highest severity first (critical/high = error, medium = warning, low = notice).'
     required: false
     default: 'true'
+  max-annotations:
+    description: 'Maximum annotations to emit; the remainder is reported as "N more finding(s)" in one notice. -1 emits all.'
+    required: false
+    default: '50'
   ignore-file:
     description: 'Path to ignore/allowlist file (default: .agent-bom-ignore.yaml). Suppress known false positives by CVE ID, package, or finding type.'
     required: false
@@ -116,7 +120,7 @@ inputs:
     required: false
     default: 'false'
   baseline:
-    description: 'Path to a baseline report JSON for delta scanning (only report new findings).'
+    description: 'Path to a baseline agent-bom JSON report (format: json) from the base branch. Runs scan --baseline <file> --delta, so the report and every gate cover only findings that are new versus the baseline. scan-type=scan only.'
     required: false
     default: ''
   skill-only:
@@ -151,11 +155,22 @@ inputs:
     description: 'Exclude vulnerabilities without available fixes from SARIF output'
     required: false
     default: 'false'
+  mcp-gate:
+    description: 'On pull_request events, fail when the PR adds or redefines an MCP server (in .mcp.json or mcp.json) that is blocked by the launcher check, ships a known-malicious package, or reaches a vulnerability at or above severity-threshold.'
+    required: false
+    default: 'false'
+  sbom-artifact:
+    description: 'Also write an SBOM / AI-BOM of the scanned scope and upload it as a workflow artifact: cyclonedx (agent-bom-sbom.cdx.json), spdx (agent-bom-sbom.spdx.json), or none. Reuses the local vulnerability data offline. Supported for scan-type scan, image, fs and sbom.'
+    required: false
+    default: 'none'
 
 outputs:
   sarif-file:
     description: 'Path to generated SARIF file (if format=sarif).'
     value: ${{ steps.scan.outputs.sarif_file }}
+  sbom-file:
+    description: 'Path to the SBOM / AI-BOM artifact when sbom-artifact is cyclonedx or spdx.'
+    value: ${{ steps.scan.outputs.sbom_file }}
   exit-code:
     description: 'Scan process exit code.'
     value: ${{ steps.scan.outputs.exit_code }}
@@ -188,13 +203,22 @@ runs:
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: ${{ inputs.python-version }}
-        cache: pip
+        # No pip cache: setup-python's pip cache needs Python manifests in the
+        # caller's workspace and fails on repositories without them.
 
+    - name: Compute vulnerability database cache bucket
+      id: vulndb-cache-key
+      shell: bash
+      run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+    # One cache entry per UTC day: the first run of a day restores the newest
+    # earlier copy through restore-keys, refreshes it when stale, and saves it
+    # under the new key, so later runs that day start warm.
     - name: Cache agent-bom vulnerability database
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: ~/.agent-bom/vulns.db
-        key: agent-bom-vulndb-${{ runner.os }}-${{ inputs.python-version }}-v1
+        path: ~/.agent-bom/db/vulns.db
+        key: agent-bom-vulndb-${{ runner.os }}-${{ steps.vulndb-cache-key.outputs.day }}
         restore-keys: |
           agent-bom-vulndb-${{ runner.os }}-
 
@@ -288,10 +312,13 @@ runs:
         INPUT_SKILLS_CI: ${{ inputs.skills-ci }}
         INPUT_GPU_SCAN: ${{ inputs.gpu-scan }}
         INPUT_EXCLUDE_UNFIXABLE: ${{ inputs.exclude-unfixable }}
+        INPUT_SBOM_ARTIFACT: ${{ inputs.sbom-artifact }}
       run: |
         # Determine output file path
         if [ -n "$INPUT_OUTPUT" ]; then
           RESULT_FILE="$INPUT_OUTPUT"
+        elif [ "$INPUT_FORMAT" = "json" ]; then
+          RESULT_FILE="agent-bom-results.json"
         else
           RESULT_FILE="agent-bom-results.sarif"
         fi
@@ -310,7 +337,7 @@ runs:
           esac
         }
         fail_unsupported_focused_mode() {
-          echo "::error::scan-type=$INPUT_SCAN_TYPE does not support SARIF upload or vulnerability gates. Use format=json or format=console with upload-sarif=false and no severity/policy gates, or use scan-type=scan/image/fs/iac/sbom."
+          echo "::error::scan-type=$INPUT_SCAN_TYPE does not produce SARIF, so upload-sarif cannot be honoured. Set upload-sarif=false, or use scan-type=scan/image/fs/iac/sbom/skills."
           exit 1
         }
         # Map scan-type to focused command
@@ -367,15 +394,23 @@ runs:
           code)
             ARGS=(code "${INPUT_SCAN_REF:-.}")
             ;;
-          agents)
-            # Accept the legacy input while invoking the canonical command.
-            ARGS=(scan)
-            ;;
           skills)
             ARGS=(skills scan "${INPUT_SCAN_REF:-.}")
             ;;
-          scan|"")
-            ARGS=(scan)
+          scan|agents|"")
+            # `agents` is the legacy name for the canonical scan command.
+            # Scope the scan to the checkout so the recursive project detector
+            # (Terraform, Kubernetes, Helm, CloudFormation, workflows, skills)
+            # runs and the runner's home-directory MCP configs stay out of CI.
+            # An explicit artifact (sbom/image) without a scope scans only that
+            # artifact.
+            if [ -n "$INPUT_SCAN_REF" ]; then
+              ARGS=(scan "$INPUT_SCAN_REF")
+            elif [ -n "$INPUT_SBOM" ] || [ -n "$INPUT_IMAGE" ]; then
+              ARGS=(scan --no-discover)
+            else
+              ARGS=(scan .)
+            fi
             ;;
           *)
             echo "::error::Unknown scan-type: $INPUT_SCAN_TYPE. Use: scan, image, fs, sbom, iac, secrets, code, skills"
@@ -388,137 +423,174 @@ runs:
           exit 1
         fi
 
+        # Flags each subcommand accepts, verified against `agent-bom <cmd> --help`.
+        # An input the selected subcommand cannot honour is never forwarded:
+        # a blocking gate or scan target fails closed, anything else warns.
+        case "${INPUT_SCAN_TYPE:-scan}" in
+          scan|agents|"") CAPS="severity warn-on policy enrich auto-update-db kev image config-dir sbom remediate ai-enrich ignore-file iac ai-inventory os-packages baseline skill-only gpu-scan exclude-unfixable" ;;
+          image|fs) CAPS="severity enrich exclude-unfixable" ;;
+          sbom) CAPS="severity enrich" ;;
+          iac) CAPS="severity" ;;
+          skills) CAPS="policy" ;;
+          *) CAPS="" ;;
+        esac
+        supports() {
+          case " $CAPS " in
+            *" $1 "*) return 0 ;;
+            *) return 1 ;;
+          esac
+        }
+        ignore_input() {
+          echo "::warning::$1 is not supported by scan-type=${INPUT_SCAN_TYPE} and was ignored"
+        }
+        reject_input() {
+          echo "::error::$1 cannot be enforced by scan-type=${INPUT_SCAN_TYPE}. Remove it or use scan-type=scan."
+          exit 1
+        }
+
+        # Command and target without output or gate flags, reused for the SBOM artifact.
+        BASE_ARGS=("${ARGS[@]}")
+
         if [ "$INPUT_SCAN_TYPE" = "secrets" ] || [ "$INPUT_SCAN_TYPE" = "code" ]; then
-          if [ -z "$INPUT_FORMAT" ] || [ "$INPUT_FORMAT" = "sarif" ]; then
-            fail_unsupported_focused_mode
-          fi
+          # These commands emit console or JSON only. The default SARIF format
+          # falls back to JSON; an explicit SARIF upload cannot be honoured.
           [ "$INPUT_UPLOAD_SARIF" = "true" ] && fail_unsupported_focused_mode
-          [ -n "$INPUT_SEVERITY" ] && fail_unsupported_focused_mode
-          [ -n "$INPUT_WARN_ON" ] && fail_unsupported_focused_mode
-          [ -n "$INPUT_POLICY" ] && fail_unsupported_focused_mode
-          [ "$INPUT_FAIL_ON_KEV" = "true" ] && fail_unsupported_focused_mode
-          [ "$INPUT_EXCLUDE_UNFIXABLE" = "true" ] && fail_unsupported_focused_mode
-          [ "$INPUT_GPU_SCAN" = "true" ] && fail_unsupported_focused_mode
-          [ "$INPUT_SKILL_ONLY" = "true" ] && fail_unsupported_focused_mode
+          if [ -z "$INPUT_FORMAT" ] || [ "$INPUT_FORMAT" = "sarif" ]; then
+            echo "::notice::scan-type=$INPUT_SCAN_TYPE writes JSON (SARIF is not available for this command)"
+            INPUT_FORMAT="json"
+            if [ -z "$INPUT_OUTPUT" ]; then
+              RESULT_FILE="agent-bom-results.json"
+            fi
+            ARGS+=(-f json -o "$RESULT_FILE")
+            FORMAT_SET=true
+          fi
         fi
 
         # Output format
-        if [ "$INPUT_FORMAT" = "sarif" ]; then
+        if [ "${FORMAT_SET:-false}" = "true" ]; then
+          :
+        elif [ "$INPUT_FORMAT" = "sarif" ]; then
           ARGS+=(-f sarif -o "$RESULT_FILE")
         elif [ -n "$INPUT_FORMAT" ]; then
           ARGS+=(-f "$INPUT_FORMAT")
-          if [ -n "$INPUT_OUTPUT" ] || [ "$INPUT_SCAN_TYPE" = "skills" ]; then
+          if [ -n "$INPUT_OUTPUT" ] || [ "$INPUT_SCAN_TYPE" = "skills" ] || [ "$INPUT_FORMAT" = "json" ]; then
             ARGS+=(-o "$RESULT_FILE")
           fi
         fi
 
-        # Skills scans have their own narrower CLI surface and should not
-        # inherit vulnerability-scan flags like --auto-update-db. The shared
-        # policy input is passed below as a skills policy file.
-        if [ "$INPUT_SCAN_TYPE" != "skills" ]; then
-          if [ "$INPUT_SCAN_TYPE" != "secrets" ] && [ "$INPUT_SCAN_TYPE" != "code" ]; then
-            # Severity gate
-            if [ -n "$INPUT_SEVERITY" ]; then
-              validate_severity_choice "$INPUT_SEVERITY" "severity-threshold"
-              ARGS+=(--fail-on-severity "$INPUT_SEVERITY")
-            fi
-
-            # Warn-on severity (non-blocking)
-            if [ -n "$INPUT_WARN_ON" ]; then
-              validate_severity_choice "$INPUT_WARN_ON" "warn-on-severity"
-              ARGS+=(--warn-on "$INPUT_WARN_ON")
-            fi
-
-            # Policy file
-            if [ -n "$INPUT_POLICY" ]; then
-              ARGS+=(--policy "$INPUT_POLICY")
-            fi
-
-            # Enrichment
-            if [ "$INPUT_ENRICH" = "true" ]; then
-              ARGS+=(--enrich)
-            fi
-
-            # Auto-update vulnerability database
-            if [ "$INPUT_AUTO_UPDATE_DB" = "true" ]; then
-              ARGS+=(--auto-update-db)
-            fi
-
-            # KEV gate
-            if [ "$INPUT_FAIL_ON_KEV" = "true" ]; then
-              ARGS+=(--fail-on-kev)
-            fi
-
-            # Docker image (skip if scan-type=image — already in command)
-            if [ -n "$INPUT_IMAGE" ] && [ "$INPUT_SCAN_TYPE" != "image" ]; then
-              ARGS+=(--image "$INPUT_IMAGE")
-            fi
-
-            # Config directory
-            if [ -n "$INPUT_CONFIG_DIR" ]; then
-              ARGS+=(--config-dir "$INPUT_CONFIG_DIR")
-            fi
-
-            # Existing SBOM (skip if scan-type=sbom — already in command)
-            if [ -n "$INPUT_SBOM" ] && [ "$INPUT_SCAN_TYPE" != "sbom" ]; then
-              ARGS+=(--sbom "$INPUT_SBOM")
-            fi
-
-            # Remediation plan
-            if [ -n "$INPUT_REMEDIATE" ]; then
-              ARGS+=(--remediate "$INPUT_REMEDIATE")
-            fi
-
-            # AI enrichment
-            if [ "$INPUT_AI_ENRICH" = "true" ]; then
-              ARGS+=(--ai-enrich)
-              if [ -n "$INPUT_AI_MODEL" ]; then
-                ARGS+=(--ai-model "$INPUT_AI_MODEL")
-              fi
-            fi
-
-            # Ignore file
-            if [ -n "$INPUT_IGNORE_FILE" ]; then
-              ARGS+=(--ignore-file "$INPUT_IGNORE_FILE")
-            fi
-
-            # IaC scanning paths (skip if scan-type=iac — already in command)
-            if [ -n "$INPUT_IAC" ] && [ "$INPUT_SCAN_TYPE" != "iac" ]; then
-              IFS=',' read -ra IAC_PATHS <<< "$INPUT_IAC"
-              for p in "${IAC_PATHS[@]}"; do
-                p="$(trim_arg "$p")"
-                if [ -n "$p" ]; then
-                  ARGS+=(--iac "$p")
-                fi
-              done
-            fi
-
-            # AI inventory scanning paths
-            if [ -n "$INPUT_AI_INVENTORY" ]; then
-              IFS=',' read -ra AI_PATHS <<< "$INPUT_AI_INVENTORY"
-              for p in "${AI_PATHS[@]}"; do
-                p="$(trim_arg "$p")"
-                if [ -n "$p" ]; then
-                  ARGS+=(--ai-inventory "$p")
-                fi
-              done
-            fi
-
-            # OS package scanning
-            if [ "$INPUT_OS_PACKAGES" = "true" ]; then
-              ARGS+=(--os-packages)
-            fi
-
-            # Delta scanning baseline
-            if [ -n "$INPUT_BASELINE" ]; then
-              ARGS+=(--baseline "$INPUT_BASELINE" --delta-mode new-only)
-            fi
+        # Severity gates
+        if [ -n "$INPUT_SEVERITY" ]; then
+          validate_severity_choice "$INPUT_SEVERITY" "severity-threshold"
+          if supports severity; then
+            ARGS+=(--fail-on-severity "$INPUT_SEVERITY")
+          else
+            echo "::notice::severity-threshold does not apply to scan-type=${INPUT_SCAN_TYPE}; it gates with its own verdict and exit code"
+          fi
+        fi
+        if [ -n "$INPUT_WARN_ON" ]; then
+          validate_severity_choice "$INPUT_WARN_ON" "warn-on-severity"
+          if supports warn-on; then
+            ARGS+=(--warn-on "$INPUT_WARN_ON")
+          else
+            ignore_input "warn-on-severity"
           fi
         fi
 
-        # Skill-only mode
-        if [ "$INPUT_SKILL_ONLY" = "true" ] && [ "$INPUT_SCAN_TYPE" != "skills" ]; then
-          ARGS+=(--skill-only)
+        # Policy file (scan policy, or the skills policy for scan-type=skills)
+        if [ -n "$INPUT_POLICY" ]; then
+          supports policy || reject_input "policy"
+          ARGS+=(--policy "$INPUT_POLICY")
+        fi
+
+        if [ "$INPUT_FAIL_ON_KEV" = "true" ]; then
+          supports kev || reject_input "fail-on-kev"
+          ARGS+=(--fail-on-kev)
+        fi
+
+        # Delta scanning: report and gate on new findings only
+        if [ -n "$INPUT_BASELINE" ]; then
+          supports baseline || reject_input "baseline"
+          ARGS+=(--baseline "$INPUT_BASELINE" --delta)
+        fi
+
+        # Extra scan targets (skip the one already in the focused command)
+        if [ -n "$INPUT_IMAGE" ] && [ "$INPUT_SCAN_TYPE" != "image" ]; then
+          supports image || reject_input "image"
+          ARGS+=(--image "$INPUT_IMAGE")
+        fi
+        if [ -n "$INPUT_SBOM" ] && [ "$INPUT_SCAN_TYPE" != "sbom" ]; then
+          supports sbom || reject_input "sbom"
+          ARGS+=(--sbom "$INPUT_SBOM")
+        fi
+        if [ -n "$INPUT_CONFIG_DIR" ]; then
+          supports config-dir || reject_input "config-dir"
+          ARGS+=(--config-dir "$INPUT_CONFIG_DIR")
+        fi
+        if [ -n "$INPUT_IAC" ] && [ "$INPUT_SCAN_TYPE" != "iac" ]; then
+          supports iac || reject_input "iac"
+          IFS=',' read -ra IAC_PATHS <<< "$INPUT_IAC"
+          for p in "${IAC_PATHS[@]}"; do
+            p="$(trim_arg "$p")"
+            if [ -n "$p" ]; then
+              ARGS+=(--iac "$p")
+            fi
+          done
+        fi
+
+        if [ "$INPUT_ENRICH" = "true" ]; then
+          if supports enrich; then ARGS+=(--enrich); else ignore_input "enrich"; fi
+        fi
+
+        # Auto-update is a scan-only flag; focused commands manage their own
+        # advisory lookups, so the default is dropped silently for them.
+        if [ "$INPUT_AUTO_UPDATE_DB" = "true" ] && supports auto-update-db; then
+          ARGS+=(--auto-update-db)
+        fi
+
+        if [ -n "$INPUT_REMEDIATE" ]; then
+          if supports remediate; then ARGS+=(--remediate "$INPUT_REMEDIATE"); else ignore_input "remediate"; fi
+        fi
+
+        if [ "$INPUT_AI_ENRICH" = "true" ]; then
+          if supports ai-enrich; then
+            ARGS+=(--ai-enrich)
+            if [ -n "$INPUT_AI_MODEL" ]; then
+              ARGS+=(--ai-model "$INPUT_AI_MODEL")
+            fi
+          else
+            ignore_input "ai-enrich"
+          fi
+        fi
+
+        if [ -n "$INPUT_IGNORE_FILE" ]; then
+          if supports ignore-file; then ARGS+=(--ignore-file "$INPUT_IGNORE_FILE"); else ignore_input "ignore-file"; fi
+        fi
+
+        if [ -n "$INPUT_AI_INVENTORY" ]; then
+          if supports ai-inventory; then
+            IFS=',' read -ra AI_PATHS <<< "$INPUT_AI_INVENTORY"
+            for p in "${AI_PATHS[@]}"; do
+              p="$(trim_arg "$p")"
+              if [ -n "$p" ]; then
+                ARGS+=(--ai-inventory "$p")
+              fi
+            done
+          else
+            ignore_input "ai-inventory"
+          fi
+        fi
+
+        if [ "$INPUT_OS_PACKAGES" = "true" ]; then
+          if supports os-packages; then ARGS+=(--os-packages); else ignore_input "os-packages"; fi
+        fi
+        if [ "$INPUT_SKILL_ONLY" = "true" ]; then
+          if supports skill-only; then ARGS+=(--skill-only); else ignore_input "skill-only"; fi
+        fi
+        if [ "$INPUT_GPU_SCAN" = "true" ]; then
+          if supports gpu-scan; then ARGS+=(--gpu-scan); else ignore_input "gpu-scan"; fi
+        fi
+        if [ "$INPUT_EXCLUDE_UNFIXABLE" = "true" ]; then
+          if supports exclude-unfixable; then ARGS+=(--exclude-unfixable); else ignore_input "exclude-unfixable"; fi
         fi
 
         validate_skill_verdict_choice() {
@@ -549,13 +621,7 @@ runs:
           fi
         }
 
-        # Skills verdict and policy gates
-        if [ "$INPUT_SCAN_TYPE" = "skills" ] && [ -n "$INPUT_POLICY" ]; then
-          ARGS+=(--policy "$INPUT_POLICY")
-        elif [ "$INPUT_SCAN_TYPE" != "skills" ] && [ -n "$INPUT_POLICY" ]; then
-          :
-        fi
-
+        # Skills verdict gates
         if [ -n "$INPUT_FAIL_ON_VERDICT" ]; then
           validate_skill_verdict_choice "$INPUT_FAIL_ON_VERDICT" "fail-on-verdict"
           add_skill_arg_or_warn "--fail-on-verdict" "$INPUT_FAIL_ON_VERDICT"
@@ -586,15 +652,38 @@ runs:
           fi
         fi
 
-        # GPU infrastructure scanning
-        if [ "$INPUT_GPU_SCAN" = "true" ]; then
-          ARGS+=(--gpu-scan)
-        fi
-
-        # Exclude unfixable findings from SARIF output
-        if [ "$INPUT_EXCLUDE_UNFIXABLE" = "true" ]; then
-          ARGS+=(--exclude-unfixable)
-        fi
+        # Optional SBOM / AI-BOM artifact of the same scope
+        SBOM_ARGS=()
+        SBOM_FILE=""
+        case "${INPUT_SBOM_ARTIFACT:-none}" in
+          none|"") ;;
+          cyclonedx|spdx)
+            case "${INPUT_SCAN_TYPE:-scan}" in
+              scan|agents|""|image|fs|sbom) ;;
+              *)
+                echo "::error::sbom-artifact is not supported for scan-type=$INPUT_SCAN_TYPE. Use scan-type scan, image, fs or sbom."
+                exit 1
+                ;;
+            esac
+            if [ "$INPUT_SBOM_ARTIFACT" = "cyclonedx" ]; then
+              SBOM_FILE="agent-bom-sbom.cdx.json"
+            else
+              SBOM_FILE="agent-bom-sbom.spdx.json"
+            fi
+            SBOM_ARGS=("${BASE_ARGS[@]}")
+            if [ -n "$INPUT_IMAGE" ] && [ "$INPUT_SCAN_TYPE" != "image" ]; then
+              SBOM_ARGS+=(--image "$INPUT_IMAGE")
+            fi
+            if [ -n "$INPUT_SBOM" ] && [ "$INPUT_SCAN_TYPE" != "sbom" ]; then
+              SBOM_ARGS+=(--sbom "$INPUT_SBOM")
+            fi
+            SBOM_ARGS+=(-f "$INPUT_SBOM_ARTIFACT" -o "$SBOM_FILE" --offline)
+            ;;
+          *)
+            echo "::error::sbom-artifact must be one of: cyclonedx, spdx, none"
+            exit 1
+            ;;
+        esac
 
         # Run scan, capture exit code
         set +e
@@ -607,6 +696,16 @@ runs:
         echo "::endgroup::"
         agent-bom "${ARGS[@]}"
         EXIT_CODE=$?
+        if [ "${#SBOM_ARGS[@]}" -gt 0 ]; then
+          echo "::group::agent-bom SBOM artifact"
+          agent-bom "${SBOM_ARGS[@]}" -q
+          SBOM_EXIT=$?
+          echo "::endgroup::"
+          if [ ! -f "$SBOM_FILE" ]; then
+            echo "::warning::SBOM artifact was not written (exit $SBOM_EXIT)"
+            SBOM_FILE=""
+          fi
+        fi
         set -e
 
         SARIF_FILE=""
@@ -617,9 +716,10 @@ runs:
         POSTURE_GRADE="unknown"
         if [ "$INPUT_FORMAT" = "sarif" ] && [ -f "$RESULT_FILE" ]; then
           SARIF_FILE="$RESULT_FILE"
-          VULN_COUNT=$(python3 -c "import json; d=json.load(open('$RESULT_FILE')); print(len(d.get('runs',[{}])[0].get('results',[])))" 2>/dev/null || echo 0)
-        elif [ "$INPUT_SCAN_TYPE" = "skills" ] && [ -f "$RESULT_FILE" ]; then
-          VULN_COUNT=$(python3 -c "import json; d=json.load(open('$RESULT_FILE')); print(d.get('summary',{}).get('findings',0))" 2>/dev/null || echo 0)
+          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); print(len(d.get('runs',[{}])[0].get('results',[])))" 2>/dev/null || echo 0)
+        elif [ "$INPUT_FORMAT" = "json" ] && [ -f "$RESULT_FILE" ]; then
+          # skills: summary.findings; secrets: findings list; scan: unified findings list
+          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); s=d.get('summary'); f=d.get('findings'); print(s['findings'] if isinstance(s, dict) and isinstance(s.get('findings'), int) else len(f) if isinstance(f, list) else int(d.get('total') or 0))" 2>/dev/null || echo 0)
         fi
 
         case "$INPUT_FORMAT" in
@@ -637,64 +737,7 @@ runs:
               blast_radius_critical_count) BLAST_RADIUS_CRITICAL_COUNT="$value" ;;
               posture_grade) POSTURE_GRADE="$value" ;;
             esac
-          done < <(RESULT_FILE="$RESULT_FILE" VULN_COUNT="$VULN_COUNT" python3 - <<'PY'
-        import json
-        import os
-
-        path = os.environ.get("RESULT_FILE", "")
-        vuln_count = int(os.environ.get("VULN_COUNT") or "0")
-        exposure_paths = 0
-        critical = 0
-        high = 0
-
-        def _walk(value):
-            if isinstance(value, dict):
-                yield value
-                for child in value.values():
-                    yield from _walk(child)
-            elif isinstance(value, list):
-                for child in value:
-                    yield from _walk(child)
-
-        try:
-            data = json.load(open(path, encoding="utf-8"))
-            if isinstance(data, dict) and "runs" in data:
-                run = data.get("runs", [{}])[0]
-                rules = {rule.get("id"): rule for rule in run.get("tool", {}).get("driver", {}).get("rules", [])}
-                for result in run.get("results", []):
-                    rule = rules.get(result.get("ruleId"), {})
-                    score = float(rule.get("properties", {}).get("security-severity", "0") or "0")
-                    if score > 9.0:
-                        critical += 1
-                    elif score >= 7.0:
-                        high += 1
-            else:
-                for item in _walk(data):
-                    for key in ("exposure_paths", "lateral_paths", "attack_paths"):
-                        paths = item.get(key)
-                        if isinstance(paths, list):
-                            exposure_paths += len(paths)
-                    severity = str(item.get("severity") or item.get("level") or "").lower()
-                    if severity == "critical":
-                        critical += 1
-                    elif severity == "high":
-                        high += 1
-            if critical > 0:
-                grade = "F"
-            elif high > 0:
-                grade = "D"
-            elif vuln_count > 0:
-                grade = "C"
-            else:
-                grade = "A"
-        except Exception:
-            grade = "unknown"
-
-        print(f"exposure_paths_count={exposure_paths}")
-        print(f"blast_radius_critical_count={critical}")
-        print(f"posture_grade={grade}")
-        PY
-          )
+          done < <(RESULT_FILE="$RESULT_FILE" VULN_COUNT="$VULN_COUNT" python3 "$GITHUB_ACTION_PATH/scripts/action_result_metrics.py")
         fi
 
         case "$EXIT_CODE" in
@@ -714,10 +757,10 @@ runs:
         # Generate badge from SARIF results (no second scan)
         BADGE_FILE=""
         if [ -n "$INPUT_BADGE" ] && [ -f "$SARIF_FILE" ]; then
-          python3 -c "
-        import json, sys
+          SARIF_FILE="$SARIF_FILE" INPUT_BADGE="$INPUT_BADGE" python3 -c "
+        import json, os, sys
         try:
-            sarif = json.load(open('$SARIF_FILE'))
+            sarif = json.load(open(os.environ['SARIF_FILE']))
             run = sarif.get('runs', [{}])[0]
             results = run.get('results', [])
             rules = {r['id']: r for r in run.get('tool', {}).get('driver', {}).get('rules', [])}
@@ -738,7 +781,7 @@ runs:
             else:
                 color, msg = 'brightgreen', 'clean'
             badge = {'schemaVersion': 1, 'label': 'agent-bom', 'message': msg, 'color': color, 'namedLogo': 'shield'}
-            with open('$INPUT_BADGE', 'w') as f:
+            with open(os.environ['INPUT_BADGE'], 'w') as f:
                 json.dump(badge, f, indent=2)
         except Exception as e:
             print(f'Badge generation failed: {e}', file=sys.stderr)
@@ -749,6 +792,8 @@ runs:
         fi
 
         echo "sarif_file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
+        echo "result_file=$RESULT_FILE" >> "$GITHUB_OUTPUT"
+        echo "sbom_file=$SBOM_FILE" >> "$GITHUB_OUTPUT"
         echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
         echo "scan_status=$SCAN_STATUS" >> "$GITHUB_OUTPUT"
         echo "vuln_count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
@@ -759,12 +804,17 @@ runs:
         echo "posture_grade=$POSTURE_GRADE" >> "$GITHUB_OUTPUT"
 
         if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+          SUMMARY_SOURCE="$RESULT_FILE"
+          if [ -n "$SARIF_FILE" ]; then
+            SUMMARY_SOURCE="$SARIF_FILE"
+          fi
+          python3 "$GITHUB_ACTION_PATH/scripts/action_report.py" summary "$SUMMARY_SOURCE" --exit-code "$EXIT_CODE" --scan-type "${INPUT_SCAN_TYPE:-scan}" >> "$GITHUB_STEP_SUMMARY" || echo "::warning::agent-bom job summary rendering failed"
           {
-            echo "## agent-bom scan summary"
+            echo ""
+            echo "<details><summary>Scan details</summary>"
             echo ""
             echo "| Field | Value |"
             echo "|---|---|"
-            echo "| Scan type | \`${INPUT_SCAN_TYPE:-scan}\` |"
             echo "| Format | \`${INPUT_FORMAT:-sarif}\` |"
             echo "| Status | \`${SCAN_STATUS}\` |"
             echo "| Exit code | \`${EXIT_CODE}\` |"
@@ -785,6 +835,8 @@ runs:
             if [ -n "$BADGE_FILE" ]; then
               echo "| Badge file | \`${BADGE_FILE}\` |"
             fi
+            echo ""
+            echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
         fi
 
@@ -793,103 +845,86 @@ runs:
     - name: Emit finding annotations
       if: inputs.annotations == 'true' && always()
       shell: bash
+      env:
+        RESULT_FILE: ${{ steps.scan.outputs.result_file }}
+        INPUT_MAX_ANNOTATIONS: ${{ inputs.max-annotations }}
       run: |
-        RESULT_FILE="${{ inputs.output }}"
-        if [ -z "$RESULT_FILE" ]; then
-          RESULT_FILE="agent-bom-results.sarif"
-        fi
-        if [ -f "$RESULT_FILE" ]; then
-          python3 "$GITHUB_ACTION_PATH/scripts/emit_github_annotations.py" "$RESULT_FILE"
+        if [ -n "$RESULT_FILE" ] && [ -f "$RESULT_FILE" ]; then
+          python3 "$GITHUB_ACTION_PATH/scripts/emit_github_annotations.py" "$RESULT_FILE" --max "$INPUT_MAX_ANNOTATIONS"
         fi
 
+    - name: MCP gate
+      if: always() && inputs.mcp-gate == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        INPUT_SEVERITY: ${{ inputs.severity-threshold }}
+        INPUT_AUTO_UPDATE_DB: ${{ inputs.auto-update-db }}
+      run: |
+        # pull_request checkouts are the merge commit: its first parent is the
+        # base the PR merges into. Fetch it when the clone is shallow.
+        git fetch --no-tags --quiet --depth=2 origin "$(git rev-parse HEAD)" 2>/dev/null || true
+        if git rev-parse --verify --quiet HEAD^2 > /dev/null; then
+          GATE_BASE="$(git rev-parse HEAD^1)"
+        else
+          git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null || git fetch --no-tags --quiet --depth=1 origin "$BASE_SHA"
+          GATE_BASE="$BASE_SHA"
+        fi
+        GATE_ARGS=(--base "$GATE_BASE" --head "$(git rev-parse HEAD)" --severity "${INPUT_SEVERITY:-high}")
+        if [ "$INPUT_AUTO_UPDATE_DB" = "true" ]; then
+          GATE_ARGS+=(--offline)
+        fi
+        python3 "$GITHUB_ACTION_PATH/scripts/action_mcp_gate.py" "${GATE_ARGS[@]}"
+
     - name: Post PR comment with findings summary
-      if: always() && inputs.pr-comment == 'true' && github.event_name == 'pull_request'
-      shell: python
+      if: always() && inputs.pr-comment != 'false' && github.event_name == 'pull_request'
+      shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
+        INPUT_PR_COMMENT: ${{ inputs.pr-comment }}
         SARIF_FILE: ${{ steps.scan.outputs.sarif_file }}
-        VULN_COUNT: ${{ steps.scan.outputs.vuln_count }}
+        RESULT_FILE: ${{ steps.scan.outputs.result_file }}
         EXIT_CODE: ${{ steps.scan.outputs.exit_code }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
         REPO: ${{ github.repository }}
       run: |
-        import html, json, os, subprocess
+        SOURCE="${SARIF_FILE:-$RESULT_FILE}"
+        BODY_FILE="$(mktemp)"
+        python3 "$GITHUB_ACTION_PATH/scripts/action_report.py" comment "$SOURCE" --exit-code "$EXIT_CODE" > "$BODY_FILE"
+        skip_or_fail() {
+          if [ "$INPUT_PR_COMMENT" = "true" ]; then
+            echo "::error::Could not post the agent-bom PR comment: $1"
+            exit 1
+          fi
+          echo "::notice::agent-bom PR comment skipped ($1). Grant the job pull-requests: write to enable it, or set pr-comment: false."
+          exit 0
+        }
+        EXISTING_ID="$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+          --jq '.[] | select(.body | contains("<!-- agent-bom-scan-comment -->")) | .id' 2>/dev/null | head -n 1)" \
+          || skip_or_fail "cannot read pull request comments"
+        if [ -n "$EXISTING_ID" ]; then
+          gh api "repos/$REPO/issues/comments/$EXISTING_ID" -X PATCH -F "body=@$BODY_FILE" > /dev/null \
+            || skip_or_fail "token lacks pull-requests: write"
+        else
+          gh api "repos/$REPO/issues/$PR_NUMBER/comments" -F "body=@$BODY_FILE" > /dev/null \
+            || skip_or_fail "token lacks pull-requests: write"
+        fi
 
-        marker = "<!-- agent-bom-scan-comment -->"
-        sarif_file = os.environ.get("SARIF_FILE", "")
-        exit_code = os.environ.get("EXIT_CODE", "0")
-        vuln_count = os.environ.get("VULN_COUNT", "0")
-        pr_number = os.environ.get("PR_NUMBER", "")
-        repo = os.environ.get("REPO", "")
-
-        if exit_code == "0":
-            status = "✅ Clean — no violations found"
-        elif exit_code == "1" and int(vuln_count or "0") > 0:
-            status = f"⚠️ {vuln_count} vulnerability finding(s)"
-        elif exit_code == "2":
-            status = "❌ Invalid or empty scan input"
-        elif exit_code == "3":
-            status = "❌ Vulnerability database freshness gate failed"
-        else:
-            status = f"❌ Scan failed (exit code {exit_code})"
-
-        def _sanitize_md(value: str) -> str:
-            text = html.escape(value or "", quote=False)
-            return text.replace("`", "'").replace("\r", " ").replace("\n", " ")
-
-        # Map SARIF security-severity scores to agent-bom severity labels
-        def _score_to_severity(score: float) -> str:
-            if score > 9.0:
-                return "CRITICAL"
-            if score >= 7.0:
-                return "HIGH"
-            if score >= 4.0:
-                return "MEDIUM"
-            if score >= 0.1:
-                return "LOW"
-            return "NONE"
-
-        findings_lines = []
-        if sarif_file and os.path.isfile(sarif_file):
-            try:
-                sarif = json.load(open(sarif_file))
-                run = sarif.get("runs", [{}])[0]
-                results = run.get("results", [])
-                rules = {r["id"]: r for r in run.get("tool", {}).get("driver", {}).get("rules", [])}
-                for r in results[:10]:
-                    rule_id = r.get("ruleId", "")
-                    rule = rules.get(rule_id, {})
-                    score = float(rule.get("properties", {}).get("security-severity", "0"))
-                    severity = _score_to_severity(score)
-                    msg = r.get("message", {}).get("text", "")
-                    findings_lines.append(
-                        f"- **{_sanitize_md(severity)}** `{_sanitize_md(rule_id)}` — {_sanitize_md(msg)}"
-                    )
-                if len(results) > 10:
-                    findings_lines.append(f"- ... and {len(results) - 10} more")
-            except Exception:
-                pass
-
-        findings_text = "\n".join(findings_lines) if findings_lines else "No findings."
-        body = f"{marker}\n## agent-bom Security Scan\n\n**Status:** {status}\n\n### Findings\n{findings_text}\n\n<sub>Generated by [agent-bom](https://github.com/msaad00/agent-bom)</sub>"
-
-        result = subprocess.run(
-            ["gh", "api", f"repos/{repo}/issues/{pr_number}/comments", "--jq", f'.[] | select(.body | contains("{marker}")) | .id'],
-            capture_output=True, text=True
-        )
-        existing_id = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
-
-        if existing_id:
-            subprocess.run(["gh", "api", f"repos/{repo}/issues/comments/{existing_id}", "-X", "PATCH", "-f", f"body={body}"], check=True)
-        else:
-            subprocess.run(["gh", "api", f"repos/{repo}/issues/{pr_number}/comments", "-f", f"body={body}"], check=True)
+    - name: Upload SBOM artifact
+      if: always() && steps.scan.outputs.sbom_file != ''
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: agent-bom-sbom
+        path: ${{ steps.scan.outputs.sbom_file }}
+        if-no-files-found: warn
 
     - name: Detect SARIF output
       id: sarif
       if: always()
       shell: bash
+      env:
+        SARIF_FILE: ${{ steps.scan.outputs.sarif_file }}
       run: |
-        SARIF_FILE="${{ steps.scan.outputs.sarif_file }}"
         if [ -n "$SARIF_FILE" ] && [ -f "$SARIF_FILE" ]; then
           echo "exists=true" >> "$GITHUB_OUTPUT"
           echo "path=$SARIF_FILE" >> "$GITHUB_OUTPUT"

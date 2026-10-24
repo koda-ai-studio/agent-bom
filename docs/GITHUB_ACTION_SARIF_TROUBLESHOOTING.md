@@ -23,9 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: koda-ai-studio/agent-bom@v0.110.0
+      - uses: koda-ai-studio/agent-bom@v0
         with:
-          scan-type: agents
+          scan-type: scan
           format: sarif
           upload-sarif: true
           pr-comment: true

@@ -870,29 +870,15 @@ def test_action_yml_composite():
     assert data["runs"]["using"] == "composite"
 
 
-def test_action_yml_enables_pip_cache():
-    """The composite action should enable pip caching via setup-python."""
-    from pathlib import Path
-
-    import yaml
-
-    action_path = Path(__file__).parent.parent / "action.yml"
-    data = yaml.safe_load(action_path.read_text())
-    steps = data["runs"]["steps"]
-    setup_python = next(step for step in steps if step.get("name") == "Set up Python")
-    assert setup_python["with"]["cache"] == "pip"
-
-
 def test_action_yml_skills_mode_skips_vulnerability_scan_flags():
     """Skills scan mode should not inherit package-scan-only CLI flags."""
     from pathlib import Path
 
     action_text = (Path(__file__).parent.parent / "action.yml").read_text()
-    guard = 'if [ "$INPUT_SCAN_TYPE" != "skills" ]; then'
-    assert guard in action_text
-    guarded_block = action_text.split(guard, 1)[1].split("# Skill-only mode", 1)[0]
-    assert 'ARGS+=(--policy "$INPUT_POLICY")' in guarded_block
-    assert "auto-update-db" in guarded_block
+    # Per-subcommand capability table; executable coverage lives in
+    # tests/test_github_action_args.py (every scan-type x accepted CLI flags).
+    assert 'skills) CAPS="policy" ;;' in action_text
+    assert 'if [ "$INPUT_AUTO_UPDATE_DB" = "true" ] && supports auto-update-db; then' in action_text
 
 
 def test_action_yml_uses_safe_argv_execution_and_step_summary():
@@ -940,23 +926,11 @@ def test_action_yml_sanitizes_pr_comment_body_and_single_loads_sarif():
     from pathlib import Path
 
     action_text = (Path(__file__).parent.parent / "action.yml").read_text()
-    assert "def _sanitize_md(value: str) -> str:" in action_text
-    assert "_sanitize_md(msg)" in action_text
-    assert "sarif = json.load(open('$SARIF_FILE'))" in action_text
+    # Comment cells are escaped in scripts/action_report.py (tests/test_action_report.py).
+    assert 'scripts/action_report.py" comment' in action_text
+    assert "sarif = json.load(open(os.environ['SARIF_FILE']))" in action_text
     assert "run = sarif.get('runs', [{}])[0]" in action_text
     assert "::warning::Badge generation failed" in action_text
-
-
-def test_action_yml_enables_pip_cache_in_setup_python():
-    """The composite action should enable pip caching in setup-python."""
-    from pathlib import Path
-
-    import yaml
-
-    action_path = Path(__file__).parent.parent / "action.yml"
-    data = yaml.safe_load(action_path.read_text())
-    setup_step = next(step for step in data["runs"]["steps"] if step.get("name") == "Set up Python")
-    assert setup_step["with"]["cache"] == "pip"
 
 
 # ── Skill file AI analysis tests ────────────────────────────────────────────

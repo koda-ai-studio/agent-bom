@@ -1,0 +1,77 @@
+# Reusable agent-bom scan. Call it from another repository with:
+#
+#   jobs:
+#     agent-bom:
+#       uses: koda-ai-studio/agent-bom/.github/workflows/agent-bom-reusable.yml@v0
+#       permissions:
+#         contents: read
+#         security-events: write
+#         pull-requests: write
+#       with:
+#         severity-threshold: high
+name: agent-bom reusable scan
+
+on:
+  workflow_call:
+    inputs:
+      scan-type:
+        description: Scan mode (scan, image, fs, sbom, iac, secrets, code, skills).
+        type: string
+        default: scan
+      scan-ref:
+        description: Scan scope or target; empty scans the checkout.
+        type: string
+        default: ""
+      severity-threshold:
+        description: Fail at or above this severity (critical, high, medium, low); empty disables the gate.
+        type: string
+        default: high
+      baseline:
+        description: Baseline JSON report; only new findings are reported and gated.
+        type: string
+        default: ""
+      upload-sarif:
+        description: Upload SARIF to code scanning (needs security-events write).
+        type: boolean
+        default: true
+      sbom-artifact:
+        description: SBOM artifact format (cyclonedx, spdx, none).
+        type: string
+        default: cyclonedx
+      mcp-gate:
+        description: Fail pull requests that add a risky MCP server.
+        type: boolean
+        default: true
+    outputs:
+      scan-status:
+        description: clean, violations, usage_error, stale_data, or error.
+        value: ${{ jobs.scan.outputs.scan-status }}
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: agent-bom
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    outputs:
+      scan-status: ${{ steps.agent-bom.outputs.scan-status }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: agent-bom
+        uses: koda-ai-studio/agent-bom@v0
+        with:
+          scan-type: ${{ inputs.scan-type }}
+          scan-ref: ${{ inputs.scan-ref }}
+          severity-threshold: ${{ inputs.severity-threshold }}
+          baseline: ${{ inputs.baseline }}
+          upload-sarif: ${{ inputs.upload-sarif }}
+          sbom-artifact: ${{ inputs.sbom-artifact }}
+          mcp-gate: ${{ inputs.mcp-gate }}

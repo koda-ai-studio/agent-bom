@@ -683,12 +683,12 @@ for (const width of [1440, 390]) {
       const packageNode = page.getByTestId(`rf__node-${pkg.id}`);
       // Returning from Paths remounts the camera. On phones this package can
       // start outside the clipped canvas; keyboard focus pans it into view.
-      // Finish both motions before pointer activation so mousedown cannot
-      // move the target away from the subsequent mouseup.
+      // Activate from the keyboard: a pointer click can land while the camera
+      // is still panning, so mousedown and mouseup hit different points.
       await settledViewportZoom(page);
       await packageNode.focus();
       await settledViewportZoom(page);
-      await packageNode.click();
+      await packageNode.press("Enter");
       await expect(page.getByRole("heading", { name: "pillow@9.0.0", exact: true })).toBeVisible();
       await page.setViewportSize({ width: width === 390 ? 1440 : 390, height: 811 });
       await expect(page.getByRole("heading", { name: "pillow@9.0.0", exact: true })).toBeVisible();

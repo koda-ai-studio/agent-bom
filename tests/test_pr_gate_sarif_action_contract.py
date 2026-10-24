@@ -67,7 +67,7 @@ def test_action_legacy_agents_input_dispatches_canonical_scan() -> None:
         text=True,
         check=True,
     )
-    assert result.stdout.strip() == "scan"
+    assert result.stdout.split() == ["scan", "."]
     assert "code, agents" not in action["inputs"]["scan-type"]["description"]
 
 
@@ -102,9 +102,8 @@ def test_action_rejects_secrets_and_code_sarif_or_gate_contracts() -> None:
 
     assert "INPUT_UPLOAD_SARIF" in scan_step["env"]
     assert "fail_unsupported_focused_mode" in run_script
-    assert "scan-type=$INPUT_SCAN_TYPE does not support SARIF upload or vulnerability gates" in run_script
+    assert "does not produce SARIF, so upload-sarif cannot be honoured" in run_script
     assert '[ "$INPUT_SCAN_TYPE" = "secrets" ] || [ "$INPUT_SCAN_TYPE" = "code" ]' in run_script
-    assert '[ "$INPUT_SCAN_TYPE" != "secrets" ] && [ "$INPUT_SCAN_TYPE" != "code" ]' in run_script
 
 
 def test_action_exposes_policy_aware_skills_gates() -> None:
@@ -132,8 +131,6 @@ def test_action_allows_skills_sarif_upload_contract() -> None:
     run_script = scan_step["run"]
 
     assert "scan-type=skills only supports format=json, format=console, or format=sarif" in run_script
-    assert 'INPUT_FORMAT="json"' not in run_script
-    assert "agent-bom-results.json" not in run_script
     assert 'if [ "$INPUT_FORMAT" = "sarif" ]; then' in run_script
     assert "github/codeql-action/upload-sarif" in action_text
 
@@ -147,10 +144,10 @@ def test_action_defaults_to_repo_scan_with_high_severity_gate_and_failure_commen
 
     assert action["inputs"]["scan-type"]["default"] == "scan"
     assert action["inputs"]["severity-threshold"]["default"] == "high"
-    assert 'scan|"")' in run_script
-    assert "ARGS=(scan)" in run_script
+    assert 'scan|agents|"")' in run_script
+    assert "ARGS=(scan .)" in run_script
     assert 'ARGS+=(--fail-on-severity "$INPUT_SEVERITY")' in run_script
-    assert "always() && inputs.pr-comment == 'true'" in comment_step["if"]
+    assert "always() && inputs.pr-comment != 'false'" in comment_step["if"]
 
 
 def test_focused_secrets_and_code_reject_sarif_format(tmp_path: Path) -> None:

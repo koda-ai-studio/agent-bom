@@ -1,0 +1,16 @@
+# agent-bom on GitLab CI: scan the repository, fail on high or critical
+# findings, and keep the SARIF and CycloneDX reports as job artifacts.
+agent-bom:
+  image: python:3.11-slim
+  stage: test
+  variables:
+    PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  script:
+    - pip install --quiet agent-bom==0.110.0
+    - agent-bom scan . -f cyclonedx -o agent-bom-sbom.cdx.json -q
+    - agent-bom scan . -f sarif -o agent-bom-results.sarif --fail-on-severity high
+  artifacts:
+    when: always
+    paths:
+      - agent-bom-results.sarif
+      - agent-bom-sbom.cdx.json

@@ -1,0 +1,99 @@
+name: Action Smoke
+
+# Runs the composite action once per scan-type against a small generated
+# fixture so a flag a subcommand rejects (exit 2) can never ship again.
+on:
+  pull_request:
+    paths:
+      - action.yml
+      - scripts/action_*.py
+      - scripts/emit_github_annotations.py
+      - .github/workflows/action-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: action-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Action smoke (${{ matrix.scan-type }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scan-type: scan
+            scan-ref: .action-smoke
+          - scan-type: image
+            # A tiny image with a package database; busybox has none, so the
+            # scan rightly fails closed instead of reporting an empty inventory.
+            scan-ref: alpine:3.20.3
+          - scan-type: fs
+            scan-ref: .action-smoke
+          - scan-type: sbom
+            scan-ref: tests/fixtures/test-sbom.cdx.json
+          - scan-type: iac
+            scan-ref: .action-smoke/infra,.action-smoke/k8s
+          - scan-type: secrets
+            scan-ref: .action-smoke
+          - scan-type: code
+            scan-ref: .action-smoke
+          - scan-type: skills
+            scan-ref: .action-smoke
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Write fixture
+        shell: bash
+        run: |
+          mkdir -p .action-smoke/infra .action-smoke/k8s
+          cat > .action-smoke/infra/main.tf <<'TF'
+          resource "aws_s3_bucket" "data" {
+            bucket = "example-data"
+          }
+          TF
+          cat > .action-smoke/k8s/pod.yaml <<'K8S'
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: web
+          spec:
+            containers:
+              - name: web
+                image: nginx:1.27
+          K8S
+          printf '# Project notes\nSummarise the README for reviewers.\n' > .action-smoke/CLAUDE.md
+          printf 'import os\nprint(os.getcwd())\n' > .action-smoke/app.py
+
+      - name: Run the action
+        id: action
+        continue-on-error: true
+        uses: ./
+        with:
+          scan-type: ${{ matrix.scan-type }}
+          scan-ref: ${{ matrix.scan-ref }}
+          severity-threshold: ''
+          auto-update-db: 'false'
+          install-from-source: 'true'
+          pr-comment: 'false'
+
+      - name: Verify the scan ran
+        shell: bash
+        env:
+          SCAN_STATUS: ${{ steps.action.outputs.scan-status }}
+          EXIT_CODE: ${{ steps.action.outputs.exit-code }}
+          SCAN_TYPE: ${{ matrix.scan-type }}
+        run: |
+          echo "scan-status=$SCAN_STATUS exit-code=$EXIT_CODE"
+          if [ -z "$EXIT_CODE" ] || [ "$SCAN_STATUS" = "usage_error" ] || [ "$EXIT_CODE" = "2" ]; then
+            echo "::error::scan-type $SCAN_TYPE did not run (status=$SCAN_STATUS, exit=$EXIT_CODE)"
+            exit 1
+          fi
+          ls agent-bom-results.* > /dev/null

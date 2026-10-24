@@ -65,10 +65,10 @@ def test_action_preserves_usage_and_stale_data_exit_meaning() -> None:
 
     assert '2) SCAN_STATUS="usage_error"' in action
     assert '3) SCAN_STATUS="stale_data"' in action
-    assert 'exit_code == "2"' in action
-    assert 'exit_code == "3"' in action
-    assert "Invalid or empty scan input" in action
-    assert "Vulnerability database freshness gate failed" in action
+    from scripts.action_report import status_line
+
+    assert "invalid or empty scan input" in status_line("2", 0)
+    assert "vulnerability database freshness gate" in status_line("3", 0)
     assert "`usage_error` (exit `2`)" in doc
     assert "`stale_data` (exit `3`)" in doc
 

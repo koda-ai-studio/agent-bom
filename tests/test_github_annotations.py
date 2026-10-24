@@ -37,7 +37,7 @@ def test_emit_skills_json_annotations(tmp_path):
     annotations = emit_annotations(result, max_annotations=50)
 
     assert annotations == [
-        "::warning file=skills/example/SKILL.md,line=12,col=5,title=agent-bom HIGH shell_execution::"
+        "::error file=skills/example/SKILL.md,line=12,col=5,title=agent-bom HIGH shell_execution::"
         "Runs shell commands: Skill can execute arbitrary commands"
     ]
 
@@ -111,5 +111,6 @@ def test_emit_annotations_honors_limit(tmp_path):
 
     annotations = emit_annotations(result, max_annotations=1)
 
-    assert len(annotations) == 1
+    assert len(annotations) == 2
     assert "one" in annotations[0]
+    assert "1 more finding(s)" in annotations[1]
