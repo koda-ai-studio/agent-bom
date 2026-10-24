@@ -17,10 +17,10 @@ compatibility: >-
   (AWS/Azure/GCP/Snowflake).
 metadata:
   author: msaad00
-  homepage: https://github.com/msaad00/agent-bom
-  source: https://github.com/msaad00/agent-bom
+  homepage: https://github.com/koda-ai-studio/agent-bom
+  source: https://github.com/koda-ai-studio/agent-bom
   pypi: https://pypi.org/project/agent-bom/
-  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/msaad00/agent-bom
+  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom
   tests: 7239
   install:
     pipx: agent-bom
@@ -38,7 +38,7 @@ metadata:
       and sensitive env values in discovered config are replaced with
       ***REDACTED*** before reporting; benign configuration values may remain
       in memory. Verify the sanitize_env_vars() implementation at
-      https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/security.py
+      https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/security.py
     optional_env:
       - name: SNYK_TOKEN
         purpose: "Optional third-party vulnerability enrichment for code_scan (requires SNYK_TOKEN)"
@@ -74,8 +74,8 @@ metadata:
       - semgrep
       - kubectl
     emoji: "\U0001F6E1"
-    homepage: https://github.com/msaad00/agent-bom
-    source: https://github.com/msaad00/agent-bom
+    homepage: https://github.com/koda-ai-studio/agent-bom
+    source: https://github.com/koda-ai-studio/agent-bom
     license: Apache-2.0
     os:
       - darwin
@@ -91,7 +91,7 @@ metadata:
       sanitize_env_vars() replaces credential-like and sensitive environment
       values with ***REDACTED*** before reporting. Benign configuration values
       may remain in the in-memory model. Source:
-      https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/security.py
+      https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/security.py
     data_flow: >-
       Scanning is local-first. What leaves the machine: (1) public package names
       and CVE IDs sent to vulnerability databases (OSV, NVD, EPSS, GitHub
@@ -394,10 +394,10 @@ pip install agent-bom
 # Step 2: Review redaction logic BEFORE scanning
 # sanitize_env_vars() redacts credential-like and sensitive env values before
 # reporting; benign configuration values may remain in the in-memory model:
-# https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/security.py
+# https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/security.py
 
 # Step 3: Review config parsing — only structural data extracted:
-# https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/discovery/__init__.py
+# https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/discovery/__init__.py
 
 # Step 4: Verify package provenance (Sigstore)
 agent-bom verify agent-bom
@@ -416,7 +416,7 @@ provider's own APIs.
 
 ## Verification
 
-- **Source**: [github.com/msaad00/agent-bom](https://github.com/msaad00/agent-bom) (Apache-2.0)
+- **Source**: [github.com/koda-ai-studio/agent-bom](https://github.com/koda-ai-studio/agent-bom) (Apache-2.0)
 - **Sigstore signed**: `agent-bom verify agent-bom@0.110.0`
 - **7,100+ tests** with CodeQL + OpenSSF Scorecard
 - **No telemetry**: Zero tracking, zero analytics

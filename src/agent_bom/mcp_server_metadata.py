@@ -565,7 +565,7 @@ def build_server_card(*, auth_required: bool = False, profile: str = "full", oau
         "name": "agent-bom",
         "version": __version__,
         "description": ("Security scanner and graph for AI supply chain and infrastructure — agents, MCP, runtime, and blast radius."),
-        "repository": "https://github.com/msaad00/agent-bom",
+        "repository": "https://github.com/koda-ai-studio/agent-bom",
         "transport": ["stdio", "sse", "streamable-http"],
         "tools": _SERVER_CARD_TOOLS,
         "resources": _SERVER_CARD_RESOURCES,

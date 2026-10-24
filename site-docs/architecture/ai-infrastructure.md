@@ -1,6 +1,6 @@
 # AI Infrastructure Scanning
 
-For the comprehensive guide, see [AI_INFRASTRUCTURE_SCANNING.md](https://github.com/msaad00/agent-bom/blob/main/docs/AI_INFRASTRUCTURE_SCANNING.md).
+For the comprehensive guide, see [AI_INFRASTRUCTURE_SCANNING.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/AI_INFRASTRUCTURE_SCANNING.md).
 
 For the seven-layer AI-BOM evidence map, see
 [AI-BOM coverage map](ai-bom-coverage.md).

@@ -13,7 +13,7 @@ this page only covers Docker-specific commands and image variants.
 Pilot on one workstation:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/msaad00/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
+curl -fsSL https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
 docker compose -f docker-compose.pilot.yml up -d
 # Dashboard -> http://localhost:3000
 ```

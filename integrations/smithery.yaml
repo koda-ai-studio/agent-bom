@@ -4,7 +4,7 @@
 # contract Smithery executes — do not change its shape.
 name: agent-bom
 description: "Open security scanner and self-hosted control plane for AI/MCP infrastructure — agents, MCP servers, runtime, and blast radius. Starts with 8 focused MCP tools for scanning, exposure analysis, and remediation."
-homepage: "https://github.com/msaad00/agent-bom"
+homepage: "https://github.com/koda-ai-studio/agent-bom"
 
 runtime: "python"
 startCommand:

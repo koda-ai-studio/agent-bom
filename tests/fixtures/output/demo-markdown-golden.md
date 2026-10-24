@@ -59,4 +59,4 @@
 - **Affected agents**: claude
 
 ---
-*Scanned by [agent-bom](https://github.com/msaad00/agent-bom) v0.70.6*
+*Scanned by [agent-bom](https://github.com/koda-ai-studio/agent-bom) v0.70.6*

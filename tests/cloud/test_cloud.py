@@ -105,7 +105,12 @@ def _install_mock_boto3():
     """
     if "botocore.exceptions" in sys.modules and hasattr(sys.modules["botocore.exceptions"], "NoCredentialsError"):
         botocore_exc = sys.modules["botocore.exceptions"]
-        boto3 = sys.modules["boto3"]
+        # Another test may have removed boto3 while leaving botocore loaded.
+        boto3 = sys.modules.get("boto3")
+        if boto3 is None:
+            boto3 = types.ModuleType("boto3")
+            boto3.Session = MagicMock
+            sys.modules["boto3"] = boto3
         return boto3, botocore_exc
 
     botocore = types.ModuleType("botocore")

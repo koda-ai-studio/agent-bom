@@ -32,7 +32,7 @@ AWS-specific reference once that decision is already made.
 Pilot on one workstation:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/msaad00/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
+curl -fsSL https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
 docker compose -f docker-compose.pilot.yml up -d
 ```
 
@@ -311,7 +311,7 @@ through a managed tap instead of direct package upload.
 ```bash
 python3 scripts/render_homebrew_formula.py \
   --version 0.110.0 \
-  --url https://github.com/msaad00/agent-bom/archive/refs/tags/v0.110.0.tar.gz \
+  --url https://github.com/koda-ai-studio/agent-bom/archive/refs/tags/v0.110.0.tar.gz \
   --sha256 <release-sha256>
 ```
 

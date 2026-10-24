@@ -14,10 +14,12 @@ def _probe(phase, database):
     import threading
     import time
     from dataclasses import replace
+    from types import SimpleNamespace
     from unittest.mock import patch
 
     from agent_bom.api import native_trace_import
     from agent_bom.api.runtime_event_store import RuntimeObservationRecord, SQLiteRuntimeEventStore
+    from agent_bom.api.storage import cooperative
     from agent_bom.api.storage.sql import SQLiteBackend
     from agent_bom.api.trace_collection import langfuse
     from agent_bom.api.trace_collection.store import TraceCollectionStore
@@ -28,7 +30,8 @@ def _probe(phase, database):
     store = TraceCollectionStore(SQLiteBackend(database))
     store.init_schema()
     claim = store.claim("a", "connection", initial(), now=100)
-    entered = threading.Event()
+    handed_off = threading.Event()
+    reader_done = threading.Event()
     ready = threading.Event()
     progress = []
     count = 0
@@ -36,11 +39,23 @@ def _probe(phase, database):
     def reader():
         assert runtime.list_observations("a") == []
         ready.set()
-        assert entered.wait(5)
+        assert handed_off.wait(5)
         progress.append(count)
         if phase == "serialize":
             # A scheduler handoff is not a transaction boundary.
             progress.append(len(runtime.list_observations("a")))
+        reader_done.set()
+
+    def handoff(_seconds):
+        # The collector's handoff is a scheduling opportunity, not a latency
+        # guarantee, so a loaded host may not run the reader inside it. Hold
+        # the first handoff until the reader has looked: this asserts the
+        # collector offers a handoff mid-batch without depending on the OS.
+        # Earlier pipeline stages hand off too; engage once the measured step
+        # has started, so the reader must see partial progress.
+        if count and not handed_off.is_set():
+            handed_off.set()
+            assert reader_done.wait(5)
 
     target, name = {
         "normalize": (langfuse, "native_span"),
@@ -52,7 +67,6 @@ def _probe(phase, database):
     def costly_record(*args, **kwargs):
         nonlocal count
         count += 1
-        entered.set()
         until = time.perf_counter() + 0.001
         while time.perf_counter() < until:
             pass
@@ -64,7 +78,11 @@ def _probe(phase, database):
     thread = threading.Thread(target=reader)
     thread.start()
     assert ready.wait(5)
-    with patch.object(target, name, costly_record), patch("agent_bom.trace_connectors._validate_pull_url"):
+    with (
+        patch.object(target, name, costly_record),
+        patch.object(cooperative, "time", SimpleNamespace(sleep=handoff)),
+        patch("agent_bom.trace_connectors._validate_pull_url"),
+    ):
         if phase == "serialize":
             records = [
                 replace(

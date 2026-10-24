@@ -66,4 +66,4 @@ Every MCP server you install is an attack surface. Know what's running.
 
 ---
 
-*agent-bom is open-source (Apache 2.0). Star it on [GitHub](https://github.com/msaad00/agent-bom) if you found this useful.*
+*agent-bom is open-source (Apache 2.0). Star it on [GitHub](https://github.com/koda-ai-studio/agent-bom) if you found this useful.*

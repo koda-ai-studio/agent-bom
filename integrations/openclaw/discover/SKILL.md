@@ -11,10 +11,10 @@ compatibility: >-
   Registry data (1256 MCP servers) is bundled in-package with zero network calls.
 metadata:
   author: msaad00
-  homepage: https://github.com/msaad00/agent-bom
-  source: https://github.com/msaad00/agent-bom
+  homepage: https://github.com/koda-ai-studio/agent-bom
+  source: https://github.com/koda-ai-studio/agent-bom
   pypi: https://pypi.org/project/agent-bom/
-  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/msaad00/agent-bom
+  scorecard: https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom
   tests: 7239
   install:
     pipx: agent-bom
@@ -29,14 +29,14 @@ metadata:
     optional_env: []
     optional_bins: []
     emoji: "\U0001F50E"
-    homepage: https://github.com/msaad00/agent-bom
-    source: https://github.com/msaad00/agent-bom
+    homepage: https://github.com/koda-ai-studio/agent-bom
+    source: https://github.com/koda-ai-studio/agent-bom
     license: Apache-2.0
     os:
       - darwin
       - linux
       - windows
-    credential_handling: "sanitize_env_vars() redacts credential-like and sensitive environment values before reporting; benign configuration values may remain in the in-memory model. Source: https://github.com/msaad00/agent-bom/blob/main/src/agent_bom/security.py"
+    credential_handling: "sanitize_env_vars() redacts credential-like and sensitive environment values before reporting; benign configuration values may remain in the in-memory model. Source: https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/security.py"
     data_flow: "Purely local. Reads MCP client config files across 29 first-class client types. Structural fields and benign configuration values may be retained in memory; credential-like and sensitive values are redacted before reporting. No data leaves the machine."
     file_reads:
       # Claude Desktop

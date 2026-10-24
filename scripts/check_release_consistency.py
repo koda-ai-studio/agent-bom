@@ -161,6 +161,7 @@ PUBLISHED_VERSION_REFS: list[tuple[Path, re.Pattern[str], str]] = [
     (ROOT / "docs" / "RELEASE_VERIFICATION.md", re.compile(r"^TAG=v([0-9]+\.[0-9]+\.[0-9]+)$", re.M), "release verification tag"),
 ]
 # GitHub Action refs must name a tag that exists: PUBLISHED_VERSION.
+OPENCLAW_DOCKER_PIN = re.compile(r"ghcr\.io/(?:koda-ai-studio|msaad00)/agent-bom:([0-9]+\.[0-9]+\.[0-9]+)")
 MANAGED_ACTION_REFS: list[Path] = [
     ROOT / "README.md",
     ROOT / "docs" / "AI_INFRASTRUCTURE_SCANNING.md",
@@ -666,7 +667,7 @@ def main() -> int:
     for skill in sorted((ROOT / "integrations" / "openclaw").rglob("SKILL.md")):
         _assert_versions(skill, re.compile(r"^version:\s*([0-9]+\.[0-9]+\.[0-9]+)$", re.M), version, "OpenClaw skill frontmatter version")
         text = skill.read_text()
-        docker_versions = set(re.findall(r"ghcr\.io/msaad00/agent-bom:([0-9]+\.[0-9]+\.[0-9]+)", text))
+        docker_versions = set(OPENCLAW_DOCKER_PIN.findall(text))
         verify_versions = set(re.findall(r"agent-bom verify agent-bom@([0-9]+\.[0-9]+\.[0-9]+)", text))
         if docker_versions and docker_versions != {version}:
             _fail(f"{skill.relative_to(ROOT)} has stale OpenClaw Docker pin(s): {sorted(docker_versions)} != {version}")

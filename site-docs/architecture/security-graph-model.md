@@ -181,7 +181,7 @@ operator jobs:
    every finding separately.
 
 For the product and review rubric behind these jobs, see
-[`docs/graph/SECURITY_GRAPH_UX_RUBRIC.md`](https://github.com/msaad00/agent-bom/blob/main/docs/graph/SECURITY_GRAPH_UX_RUBRIC.md).
+[`docs/graph/SECURITY_GRAPH_UX_RUBRIC.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/graph/SECURITY_GRAPH_UX_RUBRIC.md).
 
 ## Reading the graph in the UI
 

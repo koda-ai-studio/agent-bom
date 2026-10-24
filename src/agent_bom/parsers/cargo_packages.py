@@ -61,7 +61,7 @@ def resolve_cargo_version(
     api_url = f"{crates_io_url}/api/v1/crates/{encoded_name}"
     from agent_bom import __version__
 
-    user_agent = f"agent-bom/{__version__} (github.com/msaad00/agent-bom)"
+    user_agent = f"agent-bom/{__version__} (github.com/koda-ai-studio/agent-bom)"
 
     try:
         from agent_bom.http_client import fetch_bytes

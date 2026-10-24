@@ -38,7 +38,9 @@ IAC_CATEGORIES: OrderedDict[str, list[str]] = OrderedDict(
 @click.version_option(
     version=__version__,
     prog_name="agent-iac",
-    message=(f"agent-iac {__version__}\nPython {sys.version.split()[0]} · {sys.platform}\nPart of: https://github.com/msaad00/agent-bom"),
+    message=(
+        f"agent-iac {__version__}\nPython {sys.version.split()[0]} · {sys.platform}\nPart of: https://github.com/koda-ai-studio/agent-bom"
+    ),
 )
 def iac():
     """agent-iac — Infrastructure-as-code security scanning.

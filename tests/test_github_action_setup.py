@@ -18,7 +18,10 @@ def _step(prefix: str) -> dict:
 
 def test_vuln_db_cache_targets_the_directory_the_cli_reads() -> None:
     cache = _step("actions/cache@")
-    expected = "~/" + str((schema._DEFAULT_DB_DIR / "vulns.db").relative_to(Path.home()))
+    # _DEFAULT_DB_DIR is <home at import>/.agent-bom/db; per-test homes differ, so
+    # take the path relative to the home it was built from, not today's HOME.
+    import_home = schema._DEFAULT_DB_DIR.parent.parent
+    expected = "~/" + str((schema._DEFAULT_DB_DIR / "vulns.db").relative_to(import_home))
     assert cache["with"]["path"].strip() == expected
 
 

@@ -129,7 +129,7 @@ storing raw tool arguments or response bodies.
 At shutdown, the proxy appends a `proxy_summary` record with call counts,
 blocked counts, latency, replay rejections, relay errors, and audit delivery
 backlog fields. The complete field guide lives in
-[`docs/RUNTIME_PROXY_AUDIT_JSONL.md`](https://github.com/msaad00/agent-bom/blob/main/docs/RUNTIME_PROXY_AUDIT_JSONL.md).
+[`docs/RUNTIME_PROXY_AUDIT_JSONL.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/RUNTIME_PROXY_AUDIT_JSONL.md).
 
 ## Claude Desktop integration
 

@@ -7,7 +7,7 @@ body:
       value: |
         A good first issue should take a new contributor an afternoon, not a week.
         Spell out where to start and what "done" looks like, so nobody has to read the
-        whole codebase first. [`docs/CODE_MAP.md`](https://github.com/msaad00/agent-bom/blob/main/docs/CODE_MAP.md)
+        whole codebase first. [`docs/CODE_MAP.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/CODE_MAP.md)
         maps areas to owning packages.
 
   - type: dropdown

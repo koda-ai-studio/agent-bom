@@ -197,7 +197,7 @@ def emit_dry_run_plan(
     con.print("  [bold green]✓ agent-bom is read-only.[/bold green] It never writes to configs or executes MCP servers.")
     con.print("  [bold green]✓ Credential values are never read.[/bold green] Only env var names appear in reports.")
     con.print(
-        "  See [link=https://github.com/msaad00/agent-bom/blob/main/PERMISSIONS.md]PERMISSIONS.md[/link] for the full trust contract."
+        "  See [link=https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERMISSIONS.md]PERMISSIONS.md[/link] for the trust model."
     )
 
 

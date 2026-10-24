@@ -455,7 +455,7 @@ def _extract_listing_version(page: str) -> str:
 
     page = _visible_text(page)
     patterns = [
-        r"uses:\s*msaad00/agent-bom@v([0-9]+\.[0-9]+\.[0-9]+)",
+        r"uses:\s*(?:koda-ai-studio|msaad00)/agent-bom@v([0-9]+\.[0-9]+\.[0-9]+)",
         r"\bv\s*([0-9]+\.[0-9]+\.[0-9]+)(?![\w.+-])",
     ]
     for pattern in patterns:

@@ -5,7 +5,7 @@ Historical planning only. See the [current capabilities and contributor roadmap]
 This roadmap reflects the current post-`v0.76.0` direction for `agent-bom`.
 It is organized around product phases, not a loose feature wish list.
 
-For the full backlog, see [open issues](https://github.com/msaad00/agent-bom/issues).
+For the full backlog, see [open issues](https://github.com/koda-ai-studio/agent-bom/issues).
 
 ---
 
@@ -53,8 +53,8 @@ Goal: make the product secure and explainable by default in real deployments.
 
 | Item | Issue | Status |
 |------|-------|--------|
-| Helm security defaults: security context, probes, NetworkPolicy wiring | [#1214](https://github.com/msaad00/agent-bom/pull/1214) | Landed |
-| Tenant isolation enforcement on fleet and schedule routes | [#1222](https://github.com/msaad00/agent-bom/pull/1222) | Landed |
+| Helm security defaults: security context, probes, NetworkPolicy wiring | [#1214](https://github.com/koda-ai-studio/agent-bom/pull/1214) | Landed |
+| Tenant isolation enforcement on fleet and schedule routes | [#1222](https://github.com/koda-ai-studio/agent-bom/pull/1222) | Landed |
 | Postgres tenant session plumbing + first DB-level RLS slice | New lane | In progress |
 
 ### Next

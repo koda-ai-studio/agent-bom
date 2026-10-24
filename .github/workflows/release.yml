@@ -1112,7 +1112,7 @@ jobs:
                   "driver": {
                     "name": "agent-bom release self-scan",
                     "version": "${{ needs.version-guard.outputs.version }}",
-                    "informationUri": "https://github.com/msaad00/agent-bom"
+                    "informationUri": "https://github.com/koda-ai-studio/agent-bom"
                   }
                 },
                 "results": []
@@ -1153,7 +1153,7 @@ jobs:
                   "driver": {
                     "name": "agent-bom release self-scan",
                     "version": "${{ needs.version-guard.outputs.version }}",
-                    "informationUri": "https://github.com/msaad00/agent-bom"
+                    "informationUri": "https://github.com/koda-ai-studio/agent-bom"
                   }
                 },
                 "results": []

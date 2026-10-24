@@ -4,12 +4,12 @@ Thank you for your interest in contributing to **agent-bom**! This project aims 
 
 ## Code of Conduct
 
-Please read and follow our [Code of Conduct](https://github.com/msaad00/agent-bom/blob/main/CODE_OF_CONDUCT.md). Be respectful, inclusive, and constructive.
+Please read and follow our [Code of Conduct](https://github.com/koda-ai-studio/agent-bom/blob/main/CODE_OF_CONDUCT.md). Be respectful, inclusive, and constructive.
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/msaad00/agent-bom.git
+git clone https://github.com/koda-ai-studio/agent-bom.git
 cd agent-bom
 
 uv sync --extra dev-all
@@ -78,4 +78,4 @@ to submit the work under this project's license per the
 
 ## Reporting Security Issues
 
-If you discover a security vulnerability, please use [GitHub Security Advisories](https://github.com/msaad00/agent-bom/security/advisories) or email andwgdysaad@gmail.com instead of opening a public issue.
+If you discover a security vulnerability, please use [GitHub Security Advisories](https://github.com/koda-ai-studio/agent-bom/security/advisories) or email andwgdysaad@gmail.com instead of opening a public issue.

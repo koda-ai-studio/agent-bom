@@ -130,7 +130,7 @@ _update_check_done = threading.Event()
 # upgraded through its own tool (running pip against a frozen binary, pipx venv,
 # uv tool, or Homebrew Cellar is a no-op at best and corrupts the install at
 # worst). The releases page is the upgrade path for standalone frozen binaries.
-_RELEASES_URL = "https://github.com/msaad00/agent-bom/releases/latest"
+_RELEASES_URL = "https://github.com/koda-ai-studio/agent-bom/releases/latest"
 # Published container image; override with AGENT_BOM_DOCKER_IMAGE.
 _DEFAULT_DOCKER_IMAGE = "agentbom/agent-bom"
 

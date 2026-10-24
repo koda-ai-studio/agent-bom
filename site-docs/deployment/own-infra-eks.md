@@ -47,7 +47,7 @@ also covers developer endpoints, pair this page with
 
 If you need the fastest packaged control-plane demo before standing up
 Postgres, there is now a single-node SQLite preset at
-[eks-control-plane-sqlite-pilot-values.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-control-plane-sqlite-pilot-values.yaml).
+[eks-control-plane-sqlite-pilot-values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-control-plane-sqlite-pilot-values.yaml).
 Use it only for pilots and demos; multi-replica EKS still belongs on Postgres.
 
 For sizing bands, graph investigation boundaries, and the shipped load-test
@@ -192,27 +192,27 @@ data to a vendor-hosted control plane.
 These are the maintained building blocks for this model:
 
 - recommended full self-hosted entrypoint:
-  [deploy/terraform/platform-eks](https://github.com/msaad00/agent-bom/tree/main/deploy/terraform/platform-eks)
+  [deploy/terraform/platform-eks](https://github.com/koda-ai-studio/agent-bom/tree/main/deploy/terraform/platform-eks)
 - control plane:
-  [deploy/helm/agent-bom](https://github.com/msaad00/agent-bom/tree/main/deploy/helm/agent-bom)
+  [deploy/helm/agent-bom](https://github.com/koda-ai-studio/agent-bom/tree/main/deploy/helm/agent-bom)
 - AWS baseline module:
-  [deploy/terraform/aws/baseline](https://github.com/msaad00/agent-bom/tree/main/deploy/terraform/aws/baseline)
+  [deploy/terraform/aws/baseline](https://github.com/koda-ai-studio/agent-bom/tree/main/deploy/terraform/aws/baseline)
 - advanced local Compose references, not the primary production path:
-  [deploy/docker-compose.platform.yml](https://github.com/msaad00/agent-bom/blob/main/deploy/docker-compose.platform.yml)
+  [deploy/docker-compose.platform.yml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/docker-compose.platform.yml)
   and
-  [deploy/docker-compose.runtime-example.yml](https://github.com/msaad00/agent-bom/blob/main/deploy/docker-compose.runtime-example.yml)
+  [deploy/docker-compose.runtime-example.yml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/docker-compose.runtime-example.yml)
 - sidecar examples:
-  [deploy/k8s/sidecar-example.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/k8s/sidecar-example.yaml)
+  [deploy/k8s/sidecar-example.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/k8s/sidecar-example.yaml)
   and
-  [deploy/k8s/proxy-sidecar-pilot.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/k8s/proxy-sidecar-pilot.yaml)
+  [deploy/k8s/proxy-sidecar-pilot.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/k8s/proxy-sidecar-pilot.yaml)
 - Postgres bootstrap:
-  [deploy/supabase/postgres/init.sql](https://github.com/msaad00/agent-bom/blob/main/deploy/supabase/postgres/init.sql)
+  [deploy/supabase/postgres/init.sql](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/supabase/postgres/init.sql)
 - ClickHouse bootstrap:
-  [deploy/supabase/clickhouse/init.sql](https://github.com/msaad00/agent-bom/blob/main/deploy/supabase/clickhouse/init.sql)
+  [deploy/supabase/clickhouse/init.sql](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/supabase/clickhouse/init.sql)
 - production values example:
-  [eks-production-values.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-production-values.yaml)
+  [eks-production-values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-production-values.yaml)
 - focused pilot values example:
-  [eks-mcp-pilot-values.yaml](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)
+  [eks-mcp-pilot-values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)
 
 If you want one official answer to "what is the full deployment path?", use the
 reference installer first. Drop to the raw Helm examples only when you
@@ -274,7 +274,7 @@ There are two distinct IAM concerns in this shape, and you provision them from
 two different modules. Neither expects you to hand-craft roles or policies.
 
 **1. Platform cluster IAM — provisioned by Terraform.** The
-[`deploy/terraform/platform-eks`](https://github.com/msaad00/agent-bom/tree/main/deploy/terraform/platform-eks)
+[`deploy/terraform/platform-eks`](https://github.com/koda-ai-studio/agent-bom/tree/main/deploy/terraform/platform-eks)
 module stands the platform up with `enable_irsa = true`, wires the cluster OIDC
 provider, and delegates RDS, IRSA, S3 backups, and Secrets Manager to its
 baseline module. It exports `scanner_role_arn` — the IRSA role bound to the
@@ -282,10 +282,10 @@ scanner service account. Operators do not build these roles by hand.
 
 **2. AWS-account scan access — the read-only connect role.** To let
 `agent-bom` inventory an AWS account, apply
-[`deploy/terraform/connect-aws`](https://github.com/msaad00/agent-bom/tree/main/deploy/terraform/connect-aws).
+[`deploy/terraform/connect-aws`](https://github.com/koda-ai-studio/agent-bom/tree/main/deploy/terraform/connect-aws).
 It creates a read-only role with the AWS-managed **SecurityAudit** policy
 (optional additive **ViewOnlyAccess**), and an opt-in
-[`deep-scan.tf`](https://github.com/msaad00/agent-bom/blob/main/deploy/terraform/connect-aws/deep-scan.tf)
+[`deep-scan.tf`](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/terraform/connect-aws/deep-scan.tf)
 that adds narrowly-scoped read grants for Lambda code, ECR images, Inspector,
 Bedrock-agent inventory, and (the one sensitive grant) S3 object sampling. The
 module emits the `role_arn` output.
@@ -303,16 +303,16 @@ serviceAccount:
 The same annotation shape covers GKE Workload Identity
 (`iam.gke.io/gcp-service-account`) and AKS workload identity; see the worked
 examples in
-[`values.yaml`](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/values.yaml).
+[`values.yaml`](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/values.yaml).
 
 For the full walkthrough — associating the cluster OIDC provider, federating the
 connect-aws role trust policy to the namespace/service account, and enabling
 `scanner.cloud.aws.inventory` — start from
-[`eks-collector-irsa-values.yaml`](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-collector-irsa-values.yaml)
+[`eks-collector-irsa-values.yaml`](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-collector-irsa-values.yaml)
 or
-[`eks-production-values.yaml`](https://github.com/msaad00/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-production-values.yaml),
+[`eks-production-values.yaml`](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/examples/eks-production-values.yaml),
 and follow
-[`deploy/RUNBOOK.md`](https://github.com/msaad00/agent-bom/blob/main/deploy/RUNBOOK.md).
+[`deploy/RUNBOOK.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/RUNBOOK.md).
 
 ## Helm Knobs That Matter
 
@@ -438,7 +438,7 @@ export/backup buckets**, **VPC-private access**, and **Postgres RLS** as
 deployment prerequisites before ingesting production findings. Selected fields
 still get app-layer protection (hashed API tokens, HMAC audit chain, signed
 sessions, envelope-encrypted cloud-connection secrets). Full buyer checklist:
-[`docs/DEPLOY_PLATFORM.md`](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md#finding-and-scan-payload-encryption-at-rest-deployment-prerequisite).
+[`docs/DEPLOY_PLATFORM.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md#finding-and-scan-payload-encryption-at-rest-deployment-prerequisite).
 
 ## What You Still Own
 

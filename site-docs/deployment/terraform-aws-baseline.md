@@ -19,7 +19,7 @@ around the Helm chart:
 
 The module lives at:
 
-- [`deploy/terraform/aws/baseline`](https://github.com/msaad00/agent-bom/tree/main/deploy/terraform/aws/baseline)
+- [`deploy/terraform/aws/baseline`](https://github.com/koda-ai-studio/agent-bom/tree/main/deploy/terraform/aws/baseline)
 
 ## Ownership split
 
