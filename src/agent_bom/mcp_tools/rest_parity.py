@@ -36,7 +36,9 @@ def api_unavailable() -> str:
     return mcp_error_json(CODE_UNSUPPORTED_BACKEND, API_EXTRA_REQUIRED)
 
 
-def tenant_request(tenant_id: str, path: str) -> Any:
+def tenant_request(tenant_id: str, path: str, query: dict[str, Any] | None = None) -> Any:
+    from urllib.parse import urlencode
+
     from starlette.requests import Request
 
     return Request(
@@ -47,7 +49,7 @@ def tenant_request(tenant_id: str, path: str) -> Any:
             "path": path,
             "raw_path": path.encode(),
             "root_path": "",
-            "query_string": b"",
+            "query_string": urlencode({key: value for key, value in (query or {}).items() if value is not None}).encode(),
             "headers": [],
             "client": ("mcp", 0),
             "server": ("mcp", 0),
@@ -73,7 +75,7 @@ async def call_route(route_name: str, *, tenant_id: str, path: str, **params: An
     if reads is None:
         return None, api_unavailable()
     try:
-        return await getattr(reads, route_name)(tenant_request(tenant_id, path), **params), None
+        return await reads.call_read(route_name, tenant_request(tenant_id, path, params), **params), None
     except reads.HTTPException as exc:
         return None, _error_for_status(exc.status_code, exc.detail)
 

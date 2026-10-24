@@ -88,3 +88,19 @@ def test_has_more_always_carries_a_cursor_that_continues_rest_and_mcp(api, monke
         headers=headers["tenant-a"],
     )
     assert other.status_code == 422
+
+
+def test_unknown_or_foreign_scan_is_not_found_like_rest(api, monkeypatch):  # noqa: F811
+    client, store, headers = api
+    store.save_graph(_graph("tenant-a"))
+    foreign = _graph("tenant-b")
+    foreign.scan_id = "b-only-scan"
+    store.save_graph(foreign)
+    monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", "tenant-a")
+    for scan_id in ("nope", "b-only-scan"):
+        rest = client.get("/v1/graph/attack-paths/cross-vendor", params={"scan_id": scan_id}, headers=headers["tenant-a"])
+        assert rest.status_code == 404, rest.text
+        text = asyncio.run(cross_vendor_paths_impl(tenant_id="tenant-a", scan_id=scan_id))
+        body = json.loads(text)
+        assert body["error"]["code"] == "AGENTBOM_MCP_NOT_FOUND_RESOURCE", body
+        assert "tenant-b" not in text and "b-only-scan" not in text

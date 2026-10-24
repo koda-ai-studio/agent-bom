@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import sys
 from contextvars import ContextVar
 from typing import Any, Callable
 
-from fastapi import HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.routing import APIRoute
 from starlette.responses import Response
 
@@ -40,6 +41,20 @@ async def _require_addressed_snapshot(request: Request) -> None:
     scan_id = request.query_params.get("scan_id") or request.query_params.get("scan") or ""
     if scan_id and not scan_id.startswith(CURRENT_PREFIX):
         await _runtime.require_graph_snapshot_ids(_runtime._get_graph_store_or_503(), _runtime._tenant(request), scan_id)
+
+
+async def admitted_graph_read(endpoint: Callable[..., Any], request: Request, **params: Any) -> Any:
+    """Run a graph route function the way its route runs it, for callers that skip HTTP (MCP tools)."""
+    with finding_read_scope(), estate_read_boundary():
+        await _require_addressed_snapshot(request)
+        return await endpoint(request, **params)
+
+
+def graph_admitted(endpoint: Callable[..., Any]) -> bool:
+    """Whether *endpoint* is served by a graph-admission route in its own module."""
+    module = sys.modules.get(getattr(endpoint, "__module__", ""), None)
+    routers = [value for value in vars(module).values() if isinstance(value, APIRouter)] if module else []
+    return any(isinstance(route, _GraphAdmissionRoute) and route.endpoint is endpoint for router in routers for route in router.routes)
 
 
 class _GraphAdmissionRoute(APIRoute):

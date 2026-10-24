@@ -22,6 +22,7 @@ from agent_bom.api.mcp_context_estate import estate_context_page as estate_conte
 from agent_bom.api.routes.compliance import get_compliance_by_framework, get_compliance_summary
 from agent_bom.api.routes.compliance_routes.common import estate_agent_count
 from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
+from agent_bom.api.routes.graph_routes._admission import admitted_graph_read, graph_admitted
 from agent_bom.api.routes.graph_routes.vendor_paths import get_cross_vendor_attack_paths as get_cross_vendor_attack_paths
 from agent_bom.api.routes.operator_advisories import operator_advisory_matches
 from agent_bom.api.routes.scan import list_findings
@@ -29,6 +30,14 @@ from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant, 
 from agent_bom.api.stores import _get_operator_advisory_store, operator_advisory_store_configured
 from agent_bom.finding_scope import safe_finding_response_payload
 from agent_bom.scanners.operator_advisory import OPERATOR_ADVISORY_PROVENANCE, OperatorAdvisory
+
+
+async def call_read(route_name: str, request: Any, **params: Any) -> Any:
+    """Run the named route function as its route does: graph routes keep their snapshot admission."""
+    endpoint = globals()[route_name]
+    if graph_admitted(endpoint):
+        return await admitted_graph_read(endpoint, request, **params)
+    return await endpoint(request, **params)
 
 
 def has_completed_scans(tenant_id: str) -> bool:
@@ -90,6 +99,7 @@ def tenant_operator_advisory(tenant_id: str, advisory_id: str) -> dict[str, Any]
 
 __all__ = [
     "HTTPException",
+    "call_read",
     "current_estate_agent_total",
     "get_compliance_by_framework",
     "get_compliance_summary",
