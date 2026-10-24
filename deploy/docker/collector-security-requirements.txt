@@ -5,3 +5,7 @@
 # GHSA-6q48-6c7w-9gw2
 certifi==2026.10.19 \
     --hash=sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b
+# GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92: release locks before
+# 0.111.0 hold filelock 3.32.x. The universal wheel works on Debian amd64 and arm64.
+filelock==4.2.4 \
+    --hash=sha256:301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e
