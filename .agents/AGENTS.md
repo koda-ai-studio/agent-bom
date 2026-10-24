@@ -7,6 +7,15 @@ contributors using one. Follows the [agents.md](https://agents.md) convention.
 Keep it concise and route deep implementation details to the owning docs,
 tests, or package directories.
 
+**Coding agents: load the repo skills first.** `.agents/skills/develop`
+(test-first loop and the checks CI runs) and `.agents/skills/secure-change`
+(what a change must never do) apply to every change. Codex reads
+`.agents/skills/`; Claude Code reads the same files through `.claude/skills`.
+CI enforces both: a PR that changes `src/agent_bom/**.py` without touching
+`tests/` fails unless a maintainer applies `no-tests-needed`, and every
+`AGENTS.md`, `CLAUDE.md` and `SKILL.md` in the repo must scan benign with
+agent-bom's own skill auditor.
+
 `agent-bom` is an open security scanner and self-hosted control plane for
 AI-era infrastructure. The product must prove value across local scans, CI
 evidence, fleet inventory, graph-backed findings, MCP/runtime enforcement, and
