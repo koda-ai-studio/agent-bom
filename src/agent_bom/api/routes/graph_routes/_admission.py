@@ -29,6 +29,19 @@ class EstateReadRoute(APIRoute):
         return bounded_handler
 
 
+async def _require_addressed_snapshot(request: Request) -> None:
+    """A read addressed to an unknown snapshot is 404, not an empty page marked complete.
+
+    Current-estate ids are left to the route: a retired generation is a 409.
+    """
+    from agent_bom.api.current_graph import CURRENT_PREFIX
+    from agent_bom.api.routes.graph_routes import _runtime
+
+    scan_id = request.query_params.get("scan_id") or request.query_params.get("scan") or ""
+    if scan_id and not scan_id.startswith(CURRENT_PREFIX):
+        await _runtime.require_graph_snapshot_ids(_runtime._get_graph_store_or_503(), _runtime._tenant(request), scan_id)
+
+
 class _GraphAdmissionRoute(APIRoute):
     """Reserve capacity for the whole request, before any graph work starts.
 
@@ -48,6 +61,7 @@ class _GraphAdmissionRoute(APIRoute):
                     token = _graph_request_admitted.set(True)
                     try:
                         with finding_read_scope(), estate_read_boundary():
+                            await _require_addressed_snapshot(request)
                             return await handler(request)
                     finally:
                         _graph_request_admitted.reset(token)

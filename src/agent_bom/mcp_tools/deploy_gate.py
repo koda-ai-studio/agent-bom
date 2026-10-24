@@ -23,6 +23,7 @@ from agent_bom.mcp_tools.exposure_queue import (
     project_paths,
     snapshot_changed,
     summary_path,
+    unknown_snapshot_error,
     validate_request,
     whole_queue,
 )
@@ -211,6 +212,9 @@ async def deploy_decision_for_tenant(
     scan_id, resolution_error = await _resolve_scan(tenant_id, scan_id)
     if resolution_error:
         return resolution_error
+    missing = await unknown_snapshot_error(_get_graph_store(), tenant_id, scan_id)
+    if missing:
+        return missing
     search = await _search(_get_graph_store(), tenant_id, scan_id, candidate_value)
     if isinstance(search, str):
         return search

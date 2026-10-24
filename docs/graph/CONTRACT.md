@@ -13,7 +13,9 @@ The generated [data model reference](DATA_MODEL.md) lists every entity, relation
 An omitted `scan_id` on inventory and graph reads selects the current tenant
 estate. A complete rescan replaces only its own target. Incomplete observations
 retain prior evidence for that target; other targets and observed clean assets
-remain visible. Explicit historical scan IDs keep their original scope.
+remain visible. Explicit historical scan IDs keep their original scope. A graph read whose
+`scan_id` names no snapshot of the caller's tenant returns 404, never an empty
+page marked complete; MCP graph tools return `AGENTBOM_MCP_NOT_FOUND_RESOURCE`.
 
 ```bash
 curl -H "X-API-Key: $AGENT_BOM_API_KEY" \
