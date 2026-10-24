@@ -490,6 +490,13 @@ jobs:
           ARCHITECTURE_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || github.sha }}
         run: uv run python scripts/check_architecture.py --base-ref "$ARCHITECTURE_BASE"
 
+      - name: Source changes carry tests
+        if: github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true')
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          WAIVED: ${{ contains(github.event.pull_request.labels.*.name, 'no-tests-needed') }}
+        run: uv run python scripts/check_tests_accompany_source.py --base "$BASE_SHA" $([ "$WAIVED" = true ] && echo --waived)
+
       - name: Ruff format
         if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
         run: uv run make format-check
