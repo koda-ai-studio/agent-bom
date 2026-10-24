@@ -42,7 +42,7 @@ import { GraphChangesPanel } from "@/components/graph-changes-panel";
 import { GraphSearchResults } from "@/components/graph-search-results";
 import { GraphSnapshotDiff } from "@/components/graph-snapshot-diff";
 import { snapshotChangesHeadline } from "@/lib/graph-estate-changes";
-import { snapshotLabel } from "@/lib/snapshot-label";
+import { snapshotLabel, snapshotOptionLabel } from "@/lib/snapshot-label";
 import { estateIssueLine } from "@/lib/graph-issue-labels";
 import { GraphPulseStyles as PulseStyles } from "@/components/graph-pulse-styles";
 import { RollupNavigationPanel } from "@/components/graph-rollup-navigation-panel";
@@ -191,6 +191,9 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           />
   );
 
+  const selectedSnapshot = snapshots.find(item => item.scan_id === selectedScanId);
+  const selectedSnapshotTitle = selectedSnapshot ? snapshotOptionLabel(selectedSnapshot)
+    : selectedScanId && selectedScanId === currentEstateId ? "Current tenant estate" : selectedScanId || undefined;
   const snapshotViewControls = (
     <>
       {!investigationMode && !firstFramePending && flow.summary && (
@@ -228,15 +231,15 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
       <select
         aria-label="Graph snapshot"
         value={selectedScanId}
+        title={selectedSnapshotTitle}
         onChange={(event) => setSelectedScanId(event.target.value)}
-        className="graph-page-select max-w-full sm:max-w-56"
+        className="graph-page-select min-w-0 max-w-full truncate"
       >
         {selectedScanId && selectedScanId !== currentEstateId && !snapshots.some(item => item.scan_id === selectedScanId) && <option value={selectedScanId}>{selectedScanId}</option>}
         {currentEstateId && !snapshots.some(item => item.scan_id === currentEstateId) && <option value={currentEstateId}>Current tenant estate</option>}
         {snapshots.map((snapshot) => (
           <option key={snapshot.scan_id} value={snapshot.scan_id} title={snapshot.scan_id}>
-            {snapshotLabel(snapshot.scan_id)} ·{" "}
-            {new Date(snapshot.created_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}
+            {snapshotOptionLabel(snapshot)}
           </option>
         ))}
       </select>
