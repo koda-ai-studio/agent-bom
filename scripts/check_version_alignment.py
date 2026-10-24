@@ -96,10 +96,11 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         re.compile(r"(ghcr\.io/(?:koda-ai-studio|msaad00)/agent-bom(?:-[a-z]+)?:)(\d+\.\d+\.\d+)"),
         "image",
     ),
-    # A pip install of a release; uvx `--from` pins have their own patterns.
+    # A pip install of a release; uvx `--from` pins and the plugin launcher's
+    # `dependencies` pin have their own patterns.
     ManagedPattern(
         "PyPI install pin",
-        re.compile(r"""(?<!--from )(?<!--from ')(?<!"--from", ")(\bagent-bom(?:\[[a-z,]+\])?==)(\d+\.\d+\.\d+)"""),
+        re.compile(r"""(?<!--from )(?<!--from ')(?<!"--from", ")(?<!dependencies = \[")(\bagent-bom(?:\[[a-z,]+\])?==)(\d+\.\d+\.\d+)"""),
         "published",
     ),
     ManagedPattern(

@@ -57,6 +57,7 @@ async def test_compliance_local_scan_says_framework_was_not_applied(monkeypatch:
 def test_inventory_missing_path_is_an_invalid_path_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from agent_bom.mcp_tools.runtime import inventory_impl
 
+    monkeypatch.setenv("AGENT_BOM_MCP_WORKSPACE_ROOTS", str(tmp_path))
     monkeypatch.setattr("agent_bom.discovery.discover_all", lambda **_kw: pytest.fail("must not discover a missing path"))
     error = _error(inventory_impl(config_path=str(tmp_path / "does-not-exist"), _truncate_response=lambda s: s))
     assert error["code"] == "AGENTBOM_MCP_VALIDATION_INVALID_PATH"
