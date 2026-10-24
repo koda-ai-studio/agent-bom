@@ -52,6 +52,11 @@ uv tool install pre-commit && pre-commit install   # ruff + ruff-format on every
 uv run agent-bom scan --demo --offline
 ```
 
+**Using a coding agent?** Point it at `.agents/AGENTS.md` and the repo skills
+in `.agents/skills/` (`develop` and `secure-change`); Codex and Claude Code load
+them automatically. You are responsible for every line it writes: tests first,
+no new network egress, no weakened checks.
+
 **2. Find where your change goes (about 5 minutes).** Open
 [`docs/CODE_MAP.md`](docs/CODE_MAP.md). It maps "I want to add X" to the
 subpackage that owns it. New Python files go in a subpackage, not directly

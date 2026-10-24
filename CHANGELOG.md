@@ -10,6 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Agent contributor skills `.agents/skills/develop` (test-first loop) and `.agents/skills/secure-change` (security rules), loaded by Codex and Claude Code; CI now fails a PR that changes Python source without a test change (maintainer label `no-tests-needed` waives it) and scans every repo `AGENTS.md`, `CLAUDE.md` and `SKILL.md` with the skill auditor.
 - Contributor path: `GOVERNANCE.md` with the triager, reviewer and maintainer ladder, `MAINTAINERS.md`, and a Codespaces dev container that installs the dev extras and pre-commit hooks.
 
 - GitHub Action: `sbom-artifact` (`cyclonedx` | `spdx` | `none`) uploads an SBOM / AI-BOM workflow artifact; `mcp-gate` fails a pull request that adds or redefines a blocked, malicious or vulnerable MCP server; `max-annotations` caps annotations with an explicit "N more" notice. The job summary lists the top findings (severity, file:line, rule, fix), and the PR comment ranks findings by severity, then blast radius.
