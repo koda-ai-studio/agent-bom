@@ -10,8 +10,9 @@ already-issued attestations or the Go module path. Everything else repoints.
 from __future__ import annotations
 
 import re
-import subprocess
 from pathlib import Path
+
+from tests._tracked_files import tracked_files
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -63,15 +64,8 @@ CURRENT_TREE_LINK = re.compile(
 
 
 def _shipped_files() -> list[Path]:
-    listed = subprocess.run(
-        ["git", "ls-files", "-z", "--", *SCOPES],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-    ).stdout.split(b"\0")
     files = []
-    for raw in listed:
-        rel = raw.decode()
+    for rel in tracked_files(ROOT, *SCOPES):
         if not rel or any(part in rel for part in EXCLUDED_PARTS):
             continue
         path = ROOT / rel

@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import re
-import subprocess
 from pathlib import Path
 
 import yaml
+
+from tests._tracked_files import tracked_files
 
 ROOT = Path(__file__).resolve().parents[1]
 PAGE = ROOT / "site-docs" / "integrations" / "github-action.md"
 
 
 def _public_docs() -> list[Path]:
-    tracked = subprocess.run(["git", "ls-files", "README.md", "docs", "site-docs"], cwd=ROOT, capture_output=True, text=True, check=True)
-    return [ROOT / line for line in tracked.stdout.splitlines() if line.endswith(".md") and "/archive/" not in line]
+    tracked = tracked_files(ROOT, "README.md", "docs", "site-docs")
+    return [ROOT / line for line in tracked if line.endswith(".md") and "/archive/" not in line]
 
 
 def test_action_snippets_use_the_floating_major_ref() -> None:
