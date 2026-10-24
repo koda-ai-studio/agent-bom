@@ -55,8 +55,9 @@ async def containment_ancestors(
     if not ancestor_ids:
         return [], []
     nodes = await call_store(graph_store.nodes_by_ids, scan_id=scan_id, tenant_id=tenant_id, node_ids=ancestor_ids)
-    # Nearest parents first, so a context cap cuts the farthest ancestors.
-    ordered = sorted(nodes, key=lambda node: (levels.get(node.id, 5), node.id))
+    # Top of the spine first: the few orgs and accounts outrank the many direct
+    # parents, which a page usually receives anyway as incident-edge endpoints.
+    ordered = sorted(nodes, key=lambda node: (-levels.get(node.id, 0), node.id))
     return ordered, list(ancestor_edges.values())
 
 
@@ -88,10 +89,10 @@ async def page_context(
     """Context for a ranked page: the agent stack, containment above page and stack, then edge endpoints.
 
     Stack and containment nodes are capped at ``context_limit`` (stack first,
-    then nearest ancestors); a context edge whose end was cut is dropped with
-    it. The off-page endpoints of every remaining edge follow, bounded by the
-    incident-edge slice, so no edge in the payload points at a node the client
-    never received.
+    then ancestors from the top of the spine down). The off-page endpoints of
+    every returned edge follow, bounded by the incident-edge slice; a cut node
+    can return that way. A context edge to a cut node that did not return is
+    dropped, so no edge in the payload points at a node the client never received.
     """
     stack = await page_agent_stack(graph_store, scan_id=scan_id, tenant_id=tenant_id, page_nodes=page_nodes, call_store=call_store)
     ranked_ids = {node.id for node in page_nodes}
@@ -103,10 +104,21 @@ async def page_context(
     cap = len(context) if context_limit is None else context_limit
     kept = context[:cap]
     cut = {node.id for node in context[cap:]}
-    context_edges = [edge for edge in [*stack.edges, *ancestor_edges] if edge.source not in cut and edge.target not in cut]
+    all_context_edges = [*stack.edges, *ancestor_edges]
+    context_edges = [edge for edge in all_context_edges if edge.source not in cut and edge.target not in cut]
     present = ranked_ids | {node.id for node in kept}
     missing = {end for edge in [*page_edges, *context_edges] for end in (edge.source, edge.target)} - present
-    endpoints = await call_store(graph_store.nodes_by_ids, scan_id=scan_id, tenant_id=tenant_id, node_ids=missing) if missing else []
+    known = {node.id: node for node in context[cap:] if node.id in missing}
+    fetched = missing - set(known)
+    endpoints = [*known.values()]
+    if fetched:
+        endpoints += await call_store(graph_store.nodes_by_ids, scan_id=scan_id, tenant_id=tenant_id, node_ids=fetched)
+    returned = present | {node.id for node in endpoints}
+    context_edges += [
+        edge
+        for edge in all_context_edges
+        if (edge.source in cut or edge.target in cut) and edge.source in returned and edge.target in returned
+    ]
     return PageContext(
         nodes=kept,
         edges=context_edges,

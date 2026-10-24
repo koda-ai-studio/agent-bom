@@ -1002,10 +1002,12 @@ Context is the agent stack and the containment ancestors
 and the length of `nodes`.
 
 Stack and containment context is capped at `completeness.context_limit`
-(`max(limit, 500)`). The stack comes first, then the nearest ancestors.
-`completeness.context_omitted` and `context_truncated` report the cut. A
-context relationship to a cut node is dropped. If a cut ancestor is the
-endpoint of an incident relationship, it returns as an endpoint instead.
+(`max(limit, 500)`). The stack comes first, then ancestors from the top of
+the spine down, so the few orgs and accounts outrank the many direct parents.
+`completeness.context_omitted` and `context_truncated` report the cut. A cut
+node that is the endpoint of a returned relationship returns as an endpoint,
+together with its containment relationships. Otherwise its context
+relationships are dropped.
 Endpoints are bounded by the returned relationships, so a page carries at
 most `limit + context_limit` nodes plus one endpoint per returned relationship.
 The floor of 500 keeps the containment spine of small canvas pages whole.
