@@ -26,7 +26,7 @@ def recording_graph_store():
 @pytest.mark.parametrize(
     "node_id",
     [
-        "cloud_resource:aws:aws_instance:210987654321/us-east-1/i-0de00000000000001",
+        "cloud_resource:aws:aws_instance:111122223333/us-east-1/i-0de00000000000001",
         "misconfig:iac:/workspace/Dockerfile:2",
         "pkg:npm/@scope/tool",
     ],
