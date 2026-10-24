@@ -276,7 +276,7 @@ should_i_deploy     — allow/warn/block guidance from ExposurePath risk
 ### CI/CD (GitHub Action)
 
 ```yaml
-- uses: koda-ai-studio/agent-bom@v0.110.0
+- uses: koda-ai-studio/agent-bom@v0
   with:
     format: sarif
     upload-sarif: 'true'
