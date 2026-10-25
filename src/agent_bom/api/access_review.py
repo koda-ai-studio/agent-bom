@@ -33,6 +33,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
+from agent_bom.api.sqlite_rekey import rekey_table
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.timestamps import parse_timestamp as _parse_iso
 from agent_bom.storage.factory import validate_sqlite_path
@@ -137,26 +138,56 @@ class AccessReviewStore(Protocol):
     def list_items(self, campaign_id: str, tenant_id: str | None = None, *, limit: int = 1000) -> list[AccessReviewItem]: ...
 
 
+_CREATE_CAMPAIGNS_SQL = """
+    CREATE TABLE IF NOT EXISTS {table} (
+        campaign_id TEXT NOT NULL,
+        tenant_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        due_at TEXT NOT NULL DEFAULT '',
+        data TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, campaign_id)
+    )
+"""
+_CREATE_ITEMS_SQL = """
+    CREATE TABLE IF NOT EXISTS {table} (
+        item_id TEXT NOT NULL,
+        campaign_id TEXT NOT NULL,
+        tenant_id TEXT NOT NULL,
+        subject_id TEXT NOT NULL,
+        decision TEXT NOT NULL,
+        data TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, item_id)
+    )
+"""
+_TENANT_KEYS = (
+    (
+        "access_review_campaigns",
+        ["tenant_id", "campaign_id"],
+        _CREATE_CAMPAIGNS_SQL,
+        "campaign_id, tenant_id, status, created_at, due_at, data",
+    ),
+    ("access_review_items", ["tenant_id", "item_id"], _CREATE_ITEMS_SQL, "item_id, campaign_id, tenant_id, subject_id, decision, data"),
+)
+
+
 class InMemoryAccessReviewStore:
     """Dict-based in-memory access-review store."""
 
     def __init__(self) -> None:
-        self._campaigns: dict[str, AccessReviewCampaign] = {}
-        self._items: dict[str, AccessReviewItem] = {}
+        self._campaigns: dict[tuple[str, str], AccessReviewCampaign] = {}
+        self._items: dict[tuple[str, str], AccessReviewItem] = {}
         self._lock = threading.Lock()
 
     def put_campaign(self, campaign: AccessReviewCampaign) -> None:
         with self._lock:
-            self._campaigns[campaign.campaign_id] = campaign
+            self._campaigns[(campaign.tenant_id, campaign.campaign_id)] = campaign
 
     def get_campaign(self, campaign_id: str, tenant_id: str | None = None) -> AccessReviewCampaign | None:
         with self._lock:
-            campaign = self._campaigns.get(campaign_id)
-        if campaign is None:
-            return None
-        if tenant_id is not None and campaign.tenant_id != tenant_id:
-            return None
-        return campaign
+            if tenant_id is not None:
+                return self._campaigns.get((tenant_id, campaign_id))
+            return next((c for c in self._campaigns.values() if c.campaign_id == campaign_id), None)
 
     def list_campaigns(self, tenant_id: str, *, limit: int = 200) -> list[AccessReviewCampaign]:
         with self._lock:
@@ -165,16 +196,13 @@ class InMemoryAccessReviewStore:
 
     def put_item(self, item: AccessReviewItem) -> None:
         with self._lock:
-            self._items[item.item_id] = item
+            self._items[(item.tenant_id, item.item_id)] = item
 
     def get_item(self, item_id: str, tenant_id: str | None = None) -> AccessReviewItem | None:
         with self._lock:
-            item = self._items.get(item_id)
-        if item is None:
-            return None
-        if tenant_id is not None and item.tenant_id != tenant_id:
-            return None
-        return item
+            if tenant_id is not None:
+                return self._items.get((tenant_id, item_id))
+            return next((i for i in self._items.values() if i.item_id == item_id), None)
 
     def list_items(self, campaign_id: str, tenant_id: str | None = None, *, limit: int = 1000) -> list[AccessReviewItem]:
         with self._lock:
@@ -202,40 +230,22 @@ class SQLiteAccessReviewStore:
 
     def _init_db(self) -> None:
         ensure_sqlite_schema_version(self._conn, "access_reviews")
-        self._conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS access_review_campaigns (
-                campaign_id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                status TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                due_at TEXT NOT NULL DEFAULT '',
-                data TEXT NOT NULL
-            )
-            """
-        )
+        self._conn.execute(_CREATE_CAMPAIGNS_SQL.format(table="access_review_campaigns"))
         self._conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_access_review_campaigns_tenant ON access_review_campaigns(tenant_id, created_at)"
         )
-        self._conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS access_review_items (
-                item_id TEXT PRIMARY KEY,
-                campaign_id TEXT NOT NULL,
-                tenant_id TEXT NOT NULL,
-                subject_id TEXT NOT NULL,
-                decision TEXT NOT NULL,
-                data TEXT NOT NULL
-            )
-            """
-        )
+        self._conn.execute(_CREATE_ITEMS_SQL.format(table="access_review_items"))
+        # Older tables keyed rows by id alone, so one tenant's write could replace another's.
+        for table, key, create_sql, columns in _TENANT_KEYS:
+            rekey_table(self._conn, table, key=key, create_sql=create_sql, columns=columns)
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_access_review_items_campaign ON access_review_items(campaign_id, tenant_id)")
         self._conn.commit()
 
     def put_campaign(self, campaign: AccessReviewCampaign) -> None:
         self._conn.execute(
-            "INSERT OR REPLACE INTO access_review_campaigns "
-            "(campaign_id, tenant_id, status, created_at, due_at, data) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO access_review_campaigns (campaign_id, tenant_id, status, created_at, due_at, data) VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (tenant_id, campaign_id) DO UPDATE SET status = excluded.status, created_at = excluded.created_at, "
+            "due_at = excluded.due_at, data = excluded.data",
             (
                 campaign.campaign_id,
                 campaign.tenant_id,
@@ -266,8 +276,9 @@ class SQLiteAccessReviewStore:
 
     def put_item(self, item: AccessReviewItem) -> None:
         self._conn.execute(
-            "INSERT OR REPLACE INTO access_review_items "
-            "(item_id, campaign_id, tenant_id, subject_id, decision, data) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO access_review_items (item_id, campaign_id, tenant_id, subject_id, decision, data) VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (tenant_id, item_id) DO UPDATE SET campaign_id = excluded.campaign_id, subject_id = excluded.subject_id, "
+            "decision = excluded.decision, data = excluded.data",
             (
                 item.item_id,
                 item.campaign_id,
