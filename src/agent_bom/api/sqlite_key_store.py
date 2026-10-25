@@ -16,10 +16,9 @@ _COLUMNS = (
     "tenant_id, key_id, key_hash, key_salt, key_prefix, name, role, scopes, created_at, expires_at, "
     "revoked_at, rotation_overlap_until, replacement_key_id, scim_subject_id, owner, principal_id"
 )
-_INSERT = f"INSERT INTO api_keys ({_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-_UPSERT = (
-    _INSERT
-    + """
+_INSERT = f"INSERT INTO api_keys ({_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"  # nosec B608 - fixed column list; values are bound
+_UPSERT = _INSERT + (  # nosec B608 - fixed column list; values are bound
+    """
     ON CONFLICT (tenant_id, key_id) DO UPDATE SET
       key_hash = excluded.key_hash,
       key_salt = excluded.key_salt,
@@ -159,8 +158,8 @@ class SQLiteKeyStore:
             where += " AND tenant_id = ?"
             params = (principal_id, tenant_id)
         with self._write_lock:
-            rows = self._conn.execute(f"SELECT key_id FROM api_keys WHERE {where}", params).fetchall()
-            self._conn.execute(f"UPDATE api_keys SET revoked_at = ?, rotation_overlap_until = NULL WHERE {where}", (_now(), *params))
+            rows = self._conn.execute(f"SELECT key_id FROM api_keys WHERE {where}", params).fetchall()  # nosec B608 - fixed column list; values are bound
+            self._conn.execute(f"UPDATE api_keys SET revoked_at = ?, rotation_overlap_until = NULL WHERE {where}", (_now(), *params))  # nosec B608 - fixed column list; values are bound
             self._conn.commit()
         return [row[0] for row in rows]
 
@@ -169,15 +168,15 @@ class SQLiteKeyStore:
         return self._write(sql, (replacement_key_id, overlap_until, key_id)) > 0
 
     def get(self, key_id: str) -> ApiKey | None:
-        row = self._conn.execute(f"SELECT {_COLUMNS} FROM api_keys WHERE key_id = ?", (key_id,)).fetchone()
+        row = self._conn.execute(f"SELECT {_COLUMNS} FROM api_keys WHERE key_id = ?", (key_id,)).fetchone()  # nosec B608 - fixed column list; values are bound
         return self._row_to_key(row) if row else None
 
     def list_keys(self, tenant_id: str | None = None) -> list[ApiKey]:
         if tenant_id is None:
-            rows = self._conn.execute(f"SELECT {_COLUMNS} FROM api_keys ORDER BY created_at DESC").fetchall()
+            rows = self._conn.execute(f"SELECT {_COLUMNS} FROM api_keys ORDER BY created_at DESC").fetchall()  # nosec B608 - fixed column list; values are bound
         else:
             rows = self._conn.execute(
-                f"SELECT {_COLUMNS} FROM api_keys WHERE tenant_id = ? ORDER BY created_at DESC",
+                f"SELECT {_COLUMNS} FROM api_keys WHERE tenant_id = ? ORDER BY created_at DESC",  # nosec B608 - fixed column list; values are bound
                 (tenant_id,),
             ).fetchall()
         return [self._row_to_key(row) for row in rows]
@@ -186,7 +185,7 @@ class SQLiteKeyStore:
         return self._write("DELETE FROM api_keys WHERE tenant_id = ?", (tenant_id,))
 
     def verify(self, raw_key: str) -> ApiKey | None:
-        rows = self._conn.execute(f"SELECT {_COLUMNS} FROM api_keys WHERE key_prefix = ?", (raw_key[:12],)).fetchall()
+        rows = self._conn.execute(f"SELECT {_COLUMNS} FROM api_keys WHERE key_prefix = ?", (raw_key[:12],)).fetchall()  # nosec B608 - fixed column list; values are bound
         return verify_api_key(raw_key, [self._row_to_key(row) for row in rows])
 
     def has_keys(self) -> bool:
