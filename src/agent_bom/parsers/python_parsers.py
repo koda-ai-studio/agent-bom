@@ -15,112 +15,16 @@ from pathlib import Path
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
 from agent_bom.parsers.file_limits import read_json_limited, read_text_limited
+from agent_bom.parsers.python_requirements import (
+    bare_name_package,
+    clean_requirement_line,
+    requirement_line_package,
+    requirements_file_packages,
+)
 from agent_bom.parsers.uv_lock import parse_uv_lock as parse_uv_lock
 from agent_bom.parsers.uv_workspace import uv_lock_owner
-from agent_bom.version_utils import strip_pip_extras
 
 logger = logging.getLogger(__name__)
-
-# PEP 508 direct-URL git reference (``flask @ git+https://…/flask.git@<sha>``)
-# and the legacy ``git+https://…#egg=name`` form.
-_GIT_DIRECT_URL_RE = re.compile(r"^(?P<name>[a-zA-Z0-9_.-]+)\s*@\s*(?P<url>\S+)$")
-_GIT_EGG_RE = re.compile(r"[#&]egg=(?P<name>[a-zA-Z0-9_.-]+)")
-
-_GIT_REF_FLOATING_REASON = (
-    "declared as a git URL/SHA reference — a pinned git ref is not a released "
-    "version, so any reported version is resolved from the installed host "
-    "package, not the pinned ref"
-)
-
-
-#: Operators that pin an exact installed version. Everything else (``>=``,
-#: ``<``, ``~=``, ``!=`` or a ``==x.*`` wildcard) is a range/constraint and does
-#: not identify the installed version.
-_EXACT_OPERATORS = {"==", "==="}
-
-
-def _looks_like_git_requirement(url: str) -> bool:
-    lowered = url.lower()
-    return lowered.startswith(("git+", "git@", "git://")) or "git+" in lowered
-
-
-def _with_manifest_location(package: Package, path: Path, line: int) -> Package:
-    """Attach the declaration location used by machine-readable outputs."""
-    package.version_evidence.append(
-        {
-            "type": "manifest",
-            "source_file": str(path),
-            "line": line,
-        }
-    )
-    return package
-
-
-def _requirement_package(name: str, operator: str, version: str, *, is_direct: bool) -> Package:
-    """Build a Package for a ``name<op>version`` declaration line.
-
-    An exact ``==`` pin is reported as the installed version. A range/inequality
-    (``>=``/``<``/``~=``/``!=`` or a ``==x.*`` wildcard) does NOT identify an
-    installed version — the named bound is a constraint the resolved version may
-    even exclude (``<2.3`` excludes 2.3). Emitting ``pkg@<bound>`` as an exact pin
-    is a fabricated fact, so a range is recorded as a floating declaration
-    reference with lowered confidence instead. Packages come from a declaration
-    manifest (no runtime/import proof), so reachability is ``declaration_only``.
-    """
-    if operator in _EXACT_OPERATORS and "*" not in version:
-        return Package(
-            name=name,
-            version=version,
-            ecosystem="pypi",
-            purl=f"pkg:pypi/{name}@{version}",
-            is_direct=is_direct,
-            reachability_evidence="declaration_only",
-        )
-    return Package(
-        name=name,
-        version="unknown",
-        ecosystem="pypi",
-        is_direct=is_direct,
-        declared_version=f"{operator}{version}",
-        floating_reference=True,
-        floating_reference_reason=(
-            f"declared as a version constraint ({operator}{version}), not an exact "
-            "pin — the installed version is unknown and may differ from the bound"
-        ),
-        version_confidence="low",
-        reachability_evidence="declaration_only",
-    )
-
-
-def _git_reference_package(line: str, *, is_direct: bool = True) -> Package | None:
-    """Return a Package for a git-URL requirement line, or None if not one.
-
-    A git reference resolves (at scan time) to whatever the host environment has
-    installed, which is *not* an exact match to the pinned ref. Mark it
-    ``floating_reference`` with lowered confidence so downstream matching does not
-    treat the host-env coincidence as an exact pin.
-    """
-    direct = _GIT_DIRECT_URL_RE.match(line)
-    if direct and _looks_like_git_requirement(direct.group("url")):
-        name, url = direct.group("name"), direct.group("url")
-    elif _looks_like_git_requirement(line):
-        egg = _GIT_EGG_RE.search(line)
-        if not egg:
-            return None
-        name, url = egg.group("name"), line.split()[0]
-    else:
-        return None
-    return Package(
-        name=name,
-        version="unknown",
-        ecosystem="pypi",
-        is_direct=is_direct,
-        declared_version=url,
-        floating_reference=True,
-        floating_reference_reason=_GIT_REF_FLOATING_REASON,
-        version_confidence="low",
-        reachability_evidence="declaration_only",
-    )
 
 
 def parse_poetry_lock(directory: Path) -> list[Package]:
@@ -260,68 +164,9 @@ def parse_pip_packages(directory: Path) -> list[Package]:
 
     packages = []
 
-    # Try requirements.txt
     req_file = directory / "requirements.txt"
     if req_file.exists():
-        malformed_requirements = False
-        try:
-            for line_number, raw_line in enumerate(read_text_limited(req_file).splitlines(), start=1):
-                line = raw_line.strip()
-                if not line or line.startswith("#") or line.startswith("-"):
-                    continue
-                line = re.split(r"\s+#", line, maxsplit=1)[0].strip()
-                # Git URL/SHA reference (``flask @ git+…@<sha>``): version can't be
-                # pinned from the ref, so flag it floating rather than dropping it.
-                git_pkg = _git_reference_package(line, is_direct=True)
-                if git_pkg is not None:
-                    packages.append(_with_manifest_location(git_pkg, req_file, line_number))
-                    continue
-                # Parse name==version, name>=version, etc.
-                match = re.match(r"^([a-zA-Z0-9_.-]+(?:\[[^\]]+\])?)\s*([=<>!~]+)\s*([a-zA-Z0-9_.*+-]+)", line)
-                if match:
-                    raw_name, operator, version = match.groups()
-                    name, _ = strip_pip_extras(raw_name)
-                    packages.append(
-                        _with_manifest_location(
-                            _requirement_package(name, operator, version, is_direct=True),
-                            req_file,
-                            line_number,
-                        )
-                    )
-                else:
-                    # Just a name, no version
-                    name_match = re.fullmatch(r"([a-zA-Z0-9_.-]+(?:\[[^\]]+\])?)(?:\s*;.*)?", line)
-                    if name_match:
-                        name, _ = strip_pip_extras(name_match.group(1))
-                        packages.append(
-                            _with_manifest_location(
-                                Package(
-                                    name=name,
-                                    version="unknown",
-                                    ecosystem="pypi",
-                                    is_direct=True,
-                                    reachability_evidence="declaration_only",
-                                ),
-                                req_file,
-                                line_number,
-                            )
-                        )
-                    else:
-                        malformed_requirements = True
-        except (OSError, UnicodeDecodeError) as exc:
-            logger.debug("Failed to read requirements.txt in %s: %s", directory, exc)
-            record_manifest_parse_warning(
-                ecosystem="pypi",
-                path=str(req_file),
-                detail="requirements.txt could not be read; Python dependencies were not scanned",
-            )
-        else:
-            if malformed_requirements:
-                record_manifest_parse_warning(
-                    ecosystem="pypi",
-                    path=str(req_file),
-                    detail="requirements.txt contains malformed or truncated entries; Python dependency coverage is partial",
-                )
+        packages.extend(requirements_file_packages(req_file))
 
     # Try Pipfile.lock
     pipfile_lock = directory / "Pipfile.lock"
@@ -368,24 +213,11 @@ def parse_pip_packages(directory: Path) -> list[Package]:
                     spec = str(raw_spec or "*")
                     deps.append(f"{raw_name}{spec}")
             for dep in deps:
-                match = re.match(r"^([a-zA-Z0-9_.-]+(?:\[[^\]]+\])?)\s*([=<>!~]+)\s*([a-zA-Z0-9_.*+-]+)", dep)
-                if match:
-                    raw_name, operator, version = match.groups()
-                    name, _ = strip_pip_extras(raw_name)
-                    packages.append(_requirement_package(name, operator, version, is_direct=True))
-                else:
-                    bare = re.match(r"^([a-zA-Z0-9_.-]+(?:\[[^\]]+\])?)", dep)
-                    if bare:
-                        name, _ = strip_pip_extras(bare.group(1))
-                        packages.append(
-                            Package(
-                                name=name,
-                                version="unknown",
-                                ecosystem="pypi",
-                                is_direct=True,
-                                reachability_evidence="declaration_only",
-                            )
-                        )
+                parsed = requirement_line_package(str(dep), is_direct=True)
+                if parsed is None:
+                    parsed = bare_name_package(str(dep), is_direct=True)
+                if isinstance(parsed, Package):
+                    packages.append(parsed)
         except Exception as e:
             logger.debug(f"Failed to parse pyproject.toml at {pyproject}: {e}")
             record_manifest_parse_warning(
@@ -410,24 +242,11 @@ def _parse_requirements_lines(lines: list[str], is_direct: bool = True) -> list[
         line = raw.strip()
         if not line or line.startswith("#") or line.startswith("-"):
             continue
-        m = re.match(r"^([a-zA-Z0-9_.-]+(?:\[[^\]]+\])?)\s*([=<>!~]+)\s*([a-zA-Z0-9_.*+-]+)", line)
-        if m:
-            raw_name, operator, req_version = m.groups()
-            req_name, _ = strip_pip_extras(raw_name)
-            packages.append(_requirement_package(req_name, operator, req_version, is_direct=is_direct))
-        else:
-            bare = re.match(r"^([a-zA-Z0-9_.-]+(?:\[[^\]]+\])?)", line)
-            if bare:
-                req_name, _ = strip_pip_extras(bare.group(1))
-                packages.append(
-                    Package(
-                        name=req_name,
-                        version="unknown",
-                        ecosystem="pypi",
-                        is_direct=is_direct,
-                        reachability_evidence="declaration_only",
-                    )
-                )
+        parsed = requirement_line_package(clean_requirement_line(line), is_direct=is_direct)
+        if parsed is None:
+            parsed = bare_name_package(line, is_direct=is_direct)
+        if isinstance(parsed, Package):
+            packages.append(parsed)
     return packages
 
 
