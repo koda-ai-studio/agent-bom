@@ -154,6 +154,7 @@ from agent_bom.api.routes.graph_routes.params import (
     _validate_relationship_list,
 )
 from agent_bom.api.routes.graph_routes.params import _raise_mcp_error_as_http as _raise_mcp_error_as_http
+from agent_bom.api.routes.graph_routes.path_count import node_page_stats
 from agent_bom.api.routes.graph_routes.payloads import (
     _encode_node_page,
     _encoded_graph_response,
@@ -380,13 +381,7 @@ async def get_graph(
         context_limit=node_page_context_limit(limit),
     )
     nodes_by_id = {node.id: node for node in [*paged_nodes, *attack_path_nodes, *context.nodes]}
-    snapshot_stats = await _runtime._graph_store_call(
-        graph_store.snapshot_stats,
-        scan_id=effective_scan_id,
-        tenant_id=tenant,
-        entity_types=et_set,
-        min_severity_rank=min_rank,
-    )
+    snapshot_stats = await node_page_stats(graph_store, effective_scan_id, tenant, et_set, min_rank, identity)
 
     if identity is not None:
         await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(nodes_by_id))

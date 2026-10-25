@@ -48,6 +48,30 @@ class SQLiteSnapshotPathsMixin(SQLiteGraphStoreBase):
         finally:
             conn.close()
 
+    def snapshot_path_summary(self, *, tenant_id: str = "", scan_id: str = "") -> tuple[int, float] | None:
+        """``(path count, max composite risk)`` of the queue index, or ``None`` without a current index."""
+        tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
+        conn = self._open_ro_conn()
+        if conn is None:
+            return None
+        try:
+            effective_scan_id = scan_id or sqlite_graph_store.latest_snapshot_id(conn, tenant_id=tenant_id)
+            row = conn.execute(
+                "SELECT analysis_status FROM graph_snapshots WHERE tenant_id = ? AND scan_id = ?",
+                (tenant_id, effective_scan_id),
+            ).fetchone()
+            if row is None or not stored_paths_current(json.loads(row["analysis_status"] or "{}")):
+                return None
+            count, max_risk = conn.execute(
+                "SELECT COUNT(*), COALESCE(MAX(composite_risk), 0.0) FROM graph_attack_paths WHERE tenant_id = ? AND scan_id = ?",
+                (tenant_id, effective_scan_id),
+            ).fetchone()
+            return int(count), float(max_risk)
+        except sqlite3.OperationalError:
+            return None
+        finally:
+            conn.close()
+
     def snapshot_queue_page(
         self,
         *,
