@@ -58,8 +58,8 @@ def db_cmd() -> None:
 @click.option(
     "--max-nvd-entries",
     type=int,
-    default=1000,
-    help="Limit NVD CVEs to enrich (default: 1000).",
+    default=None,
+    help="Cap NVD records read per run (default: whole window with NVD_API_KEY, 60,000 without).",
     hidden=True,
 )
 @click.option(
@@ -81,7 +81,7 @@ def db_update(
     db_path: str | None,
     max_osv_entries: int,
     max_ghsa_entries: int,
-    max_nvd_entries: int,
+    max_nvd_entries: int | None,
     osv_ecosystems: tuple,
     ghsa_ecosystems: tuple,
 ) -> None:
@@ -143,9 +143,9 @@ def db_update(
         if not con.is_terminal:
             if phase == "start":
                 con.print(f"  [cyan]→[/cyan] {source}: starting")
-            elif phase == "complete":
+            elif phase in _DONE_MARKS:
                 size = f"; downloaded {_format_mb(downloaded[source])}" if source in downloaded else ""
-                con.print(f"  [green]✓[/green] {source}: complete{size}")
+                con.print(f"  {_DONE_MARKS[phase]} {source}: {phase}{size}")
             return
 
         task_id = tasks.get(source)
@@ -154,9 +154,9 @@ def db_update(
             tasks[source] = task_id
         if phase == "download":
             renderer.update(task_id, description=f"{source}: downloading", completed=current, total=total)
-        elif phase == "complete":
+        elif phase in _DONE_MARKS:
             byte_count = downloaded.get(source, 1)
-            renderer.update(task_id, description=f"{source}: complete", completed=byte_count, total=byte_count)
+            renderer.update(task_id, description=f"{source}: {phase}", completed=byte_count, total=byte_count)
             renderer.stop_task(task_id)
 
     try:
@@ -175,25 +175,29 @@ def db_update(
         con.print(f"[red]Sync failed: {exc}[/red]")
         raise SystemExit(1) from exc
 
-    for src, count in results.items():
-        con.print(f"  [green]✓[/green] {src}: {count:,} records")
-    _print_nvd_window_status(con, Path(db_path) if db_path else None, results)
+    _print_sync_results(con, Path(db_path) if db_path else None, results)
     con.print("[bold green]Done.[/bold green]")
 
 
-def _print_nvd_window_status(con: Console, db_path: Path | None, results: dict) -> None:
-    """A rate-limited, timed-out or truncated NVD window is partial, never silently synced."""
-    if "nvd" not in results:
-        return
+_DONE_MARKS = {"complete": "[green]✓[/green]", "partial": "[yellow]![/yellow]"}
+
+
+def _print_sync_results(con: Console, db_path: Path | None, results: dict) -> None:
+    """Per-source record counts; a rate-limited, timed-out or capped NVD window is PARTIAL, never complete."""
     from agent_bom.db.schema import DB_PATH, init_db
     from agent_bom.db.sync_common import _read_sync_metadata
 
-    conn = init_db(db_path or DB_PATH)
-    try:
-        meta = _read_sync_metadata(conn, "nvd")
-    finally:
-        conn.close()
-    if meta.get("status") != "partial":
+    meta: dict = {}
+    if "nvd" in results:
+        conn = init_db(db_path or DB_PATH)
+        try:
+            meta = _read_sync_metadata(conn, "nvd")
+        finally:
+            conn.close()
+    partial = meta.get("status") == "partial"
+    for src, count in results.items():
+        con.print(f"  {_DONE_MARKS['partial' if src == 'nvd' and partial else 'complete']} {src}: {count:,} records")
+    if not partial:
         return
     con.print(
         f"  [yellow]![/yellow] nvd: PARTIAL ({meta.get('partial_reason')}) — this is not a complete NVD window; "
@@ -262,6 +266,8 @@ def db_status(db_path: str | None) -> None:
             coverage = str(metadata.get("coverage") or metadata.get("mode") or "—")
             if metadata.get("cap_hit"):
                 coverage = f"{coverage} [yellow](cap hit)[/yellow]"
+            if metadata.get("status") == "partial":
+                coverage = f"{coverage} [yellow]partial ({metadata.get('partial_reason')})[/yellow]"
             table.add_row(src, info.get("last_synced") or "—", f"{info.get('count', 0):,}", coverage)
         con.print(table)
     else:

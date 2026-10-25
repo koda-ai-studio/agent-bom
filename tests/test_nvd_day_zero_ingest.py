@@ -243,3 +243,31 @@ def test_db_update_cli_reports_partial_nvd_window(tmp_path, monkeypatch) -> None
     assert result.exit_code == 0, result.output
     assert "nvd: PARTIAL (rate_limited)" in result.output
     assert "not a complete NVD window" in result.output
+
+
+def test_unscored_nvd_cve_is_matchable_and_not_refetched_by_the_backfill(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("NVD_API_KEY", raising=False)
+    page = _page()
+    for item in page["vulnerabilities"]:
+        item["cve"].pop("metrics", None)
+        item["cve"].pop("weaknesses", None)
+    calls: list[str] = []
+
+    def fetch(url: str, *, timeout: float = 60, headers: dict | None = None) -> dict:
+        calls.append(url)
+        return page if "lastModStartDate" in url else {"totalResults": 0, "vulnerabilities": []}
+
+    db_path = tmp_path / "vulns.db"
+    with patch("agent_bom.http_client.fetch_json", side_effect=fetch), patch("time.sleep"):
+        sync_db(path=db_path, sources=["nvd"], nvd_url=_NVD_URL)
+
+    assert not [url for url in calls if "cveId=" in url], "the backfill re-requested CVEs the window just read from NVD"
+    conn = init_db(db_path)
+    try:
+        severities = {row[0]: row[1] for row in conn.execute("SELECT id, severity FROM vulns WHERE id LIKE 'CVE-2026-1096%'")}
+        runtime = _php_runtime("8.3.30")
+        _scan_packages_db_conn(conn, [runtime], set())
+    finally:
+        conn.close()
+    assert severities == {"CVE-2026-109618": "unknown", "CVE-2026-109619": "unknown"}
+    assert {v.id for v in runtime.vulnerabilities} == _PHP2SHELL

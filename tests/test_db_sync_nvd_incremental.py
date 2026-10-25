@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from unittest.mock import patch
-from urllib.parse import parse_qs, urlparse
 
 from agent_bom.db.schema import init_db
 from agent_bom.db.sync import sync_nvd_incremental
@@ -155,47 +154,6 @@ def test_sync_nvd_incremental_keeps_checkpoint_when_capped() -> None:
     assert payload["last_modified_end"] == payload["last_modified_start"]
 
 
-def _cve_object(cve_id: str) -> dict:
-    return {
-        "cve": {
-            "id": cve_id,
-            "descriptions": [{"lang": "en", "value": f"NVD CVE {cve_id}"}],
-            "metrics": {
-                "cvssMetricV31": [
-                    {
-                        "cvssData": {
-                            "baseScore": 7.5,
-                            "baseSeverity": "HIGH",
-                            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
-                        }
-                    }
-                ]
-            },
-            "weaknesses": [{"description": [{"lang": "en", "value": "CWE-79"}]}],
-        }
-    }
-
-
-def _paginated_pool_fetch(pool: list[str]):
-    """Mock NVD that serves a fixed pool of distinct CVEs paginated by the
-    request's startIndex/resultsPerPage — so a capped run fetches a contiguous
-    prefix and a later run can reach the unsynced tail."""
-
-    def fetch(url, *, timeout=60, headers=None):
-        q = parse_qs(urlparse(url).query)
-        start = int(q["startIndex"][0])
-        per = int(q["resultsPerPage"][0])
-        window = pool[start : start + per]
-        return {
-            "resultsPerPage": per,
-            "startIndex": start,
-            "totalResults": len(pool),
-            "vulnerabilities": [_cve_object(cid) for cid in window],
-        }
-
-    return fetch
-
-
 def test_sync_nvd_incremental_capped_runs_make_forward_progress() -> None:
     """Regression: a capped window must ingest its unsynced tail across runs.
 
@@ -203,13 +161,21 @@ def test_sync_nvd_incremental_capped_runs_make_forward_progress() -> None:
     pinned, start_index reset to 0, every CVE counted toward the cap), so the
     tail was never reached and was eventually skipped by the lookback clamp.
     """
+    from datetime import datetime, timedelta, timezone
+
+    from tests._nvd_window_fake import FakeNvdWindow
+
     conn = init_db(Path(":memory:"))
-    pool = [f"CVE-2026-2{n:04d}" for n in range(5)]  # 5 distinct CVEs
+    now = datetime.now(timezone.utc)
+    # 5 distinct CVEs modified in the last few hours. The fake honours the
+    # lastModified range, since the window is now walked newest first in day
+    # slices and a capped run resumes inside its half-read slice.
+    pool = [(f"CVE-2026-2{n:04d}", now - timedelta(hours=1 + n)) for n in range(5)]
 
     def distinct(n: int) -> int:
         return conn.execute("SELECT COUNT(DISTINCT id) FROM vulns WHERE source='nvd'").fetchone()[0]
 
-    with patch("agent_bom.http_client.fetch_json", side_effect=_paginated_pool_fetch(pool)):
+    with patch("agent_bom.http_client.fetch_json", side_effect=FakeNvdWindow(pool)):
         with patch("time.sleep"):
             kwargs = dict(
                 nvd_api_key="test-key",

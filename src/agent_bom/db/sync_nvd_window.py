@@ -22,13 +22,13 @@ from agent_bom import http_client
 from agent_bom.db.sync_common import (
     _NVD_API_URL,
     _logger,
-    _nvd_api_timestamp,
     _read_sync_metadata,
     _update_sync_meta,
     _upsert_cpe_matches,
     _upsert_nvd_enrichment_row,
     _validate_sync_url,
 )
+from agent_bom.db.sync_nvd_coverage import Interval, Resume, load_covered, load_resume, merge, nvd_ts, plan, resume_index
 from agent_bom.db.sync_parsing import _extract_nvd_cpe_matches, _extract_nvd_cve_fields
 
 NVD_WINDOW_SECONDS = 30.0
@@ -38,6 +38,11 @@ NVD_KEYED_REQUESTS_PER_WINDOW = 50
 # finish in a few pages at 5 requests per 30 seconds.
 KEYED_LOOKBACK_DAYS = 120
 KEYLESS_LOOKBACK_DAYS = 14
+NVD_PAGE_SIZE = 2000
+# Thirty pages, about three minutes at the anonymous budget. A live two-week
+# window held about 50,000 modified CVEs (11,209 in three days on 2026-10-24),
+# so a keyless run from scratch usually finishes in one pass.
+KEYLESS_MAX_RECORDS = 60_000
 
 
 def _sleep(seconds: float) -> None:
@@ -134,27 +139,15 @@ def fetch_nvd_page(url: str, headers: dict[str, str], limiter: NvdRateLimiter) -
 
 
 @dataclass
-class _Window:
-    start_ts: str
-    end_ts: str
-    lookback_days: int
-    enriched: int = 0
-    start_index: int = 0
-    total_seen: int = 0
+class _Run:
+    """One window run: the request budget left and what it reached."""
+
+    remaining: float
+    covered: list[Interval]
+    fetched: int = 0
+    new_rows: int = 0
+    resume: Resume | None = None
     partial_reason: str | None = None
-
-
-def _window_start(conn: sqlite3.Connection, now: datetime, lookback_days: int) -> datetime:
-    floor = now - timedelta(days=lookback_days)
-    checkpoint = _read_sync_metadata(conn, "nvd").get("last_modified_end")
-    if not (isinstance(checkpoint, str) and checkpoint.strip()):
-        return floor
-    try:
-        start = datetime.fromisoformat(checkpoint.replace("Z", "+00:00"))
-    except ValueError:
-        return floor
-    start = start if start.tzinfo else start.replace(tzinfo=timezone.utc)
-    return max(start, floor)
 
 
 def _upsert_nvd_cve(conn: sqlite3.Connection, cve_data: dict[str, Any]) -> bool:
@@ -181,100 +174,124 @@ def _upsert_nvd_cve(conn: sqlite3.Connection, cve_data: dict[str, Any]) -> bool:
     return inserted
 
 
-def _ingest_page(conn: sqlite3.Connection, items: list[Any], window: _Window, max_results: int) -> None:
+def _ingest_page(conn: sqlite3.Connection, items: list[Any], run: _Run) -> None:
     for item in items:
         cve_data = item.get("cve") if isinstance(item, dict) else None
-        if not isinstance(cve_data, dict) or not str(cve_data.get("id") or "").startswith("CVE-"):
-            continue
-        if _upsert_nvd_cve(conn, cve_data):
-            window.enriched += 1
-            if window.enriched >= max_results:
-                break
+        run.fetched += 1
+        run.remaining -= 1
+        if isinstance(cve_data, dict) and str(cve_data.get("id") or "").startswith("CVE-") and _upsert_nvd_cve(conn, cve_data):
+            run.new_rows += 1
     conn.commit()
 
 
-def _page_window(
-    conn: sqlite3.Connection, base_url: str, api_key: str | None, window: _Window, limiter: NvdRateLimiter, max_results: int
-) -> None:
-    headers = {"Accept": "application/json"}
-    if api_key:
-        headers["apiKey"] = api_key
-    page_size = min(2000, max_results)
-    while window.enriched < max_results:
+def _page_slice(conn: sqlite3.Connection, query: _Query, piece: Interval, start_index: int, run: _Run) -> bool:
+    """Page one slice; ``True`` when every record in it was read."""
+    index = start_index
+    while run.remaining > 0:
         params = {
-            "lastModStartDate": window.start_ts,
-            "lastModEndDate": window.end_ts,
-            "resultsPerPage": page_size,
-            "startIndex": window.start_index,
+            "lastModStartDate": nvd_ts(piece[0]),
+            "lastModEndDate": nvd_ts(piece[1]),
+            "resultsPerPage": int(min(query.page_size, run.remaining)),
+            "startIndex": index,
         }
         try:
-            data = fetch_nvd_page(f"{base_url}?{urllib.parse.urlencode(params)}", headers, limiter)
+            data = fetch_nvd_page(f"{query.base_url}?{urllib.parse.urlencode(params)}", query.headers, query.limiter)
         except NvdWindowError as exc:
-            _logger.warning("NVD window sync stopped at startIndex=%s: %s", window.start_index, exc.reason)
-            window.partial_reason = exc.reason
-            return
+            _logger.warning("NVD window sync stopped in slice %s..%s: %s", params["lastModStartDate"], params["lastModEndDate"], exc.reason)
+            run.partial_reason = exc.reason
+            run.resume = Resume(piece[0], piece[1], index) if index else None
+            return False
         items = data.get("vulnerabilities") or []
-        if not items:
-            return
-        _ingest_page(conn, items, window, max_results)
-        window.total_seen = max(window.total_seen, int(data.get("totalResults") or 0))
-        window.start_index += len(items)
-        if window.start_index >= window.total_seen:
-            return
-    if window.start_index < window.total_seen:
-        window.partial_reason = "truncated"
-        _logger.warning(
-            "NVD window sync truncated at max_results=%d (window has >=%d modified CVEs); the next run resumes the tail.",
-            max_results,
-            window.total_seen,
-        )
+        _ingest_page(conn, items, run)
+        index += len(items)
+        if not items or index >= int(data.get("totalResults") or 0):
+            return True
+    run.partial_reason = "truncated"
+    run.resume = Resume(piece[0], piece[1], index)
+    return False
 
 
-def _record_window(conn: sqlite3.Connection, window: _Window, max_results: int, api_key_used: bool) -> None:
-    partial = window.partial_reason is not None
+@dataclass(frozen=True)
+class _Query:
+    base_url: str
+    headers: dict[str, str]
+    limiter: NvdRateLimiter
+    page_size: int = NVD_PAGE_SIZE
+
+
+def _walk(conn: sqlite3.Connection, query: _Query, pieces: list[Interval], resume: Resume | None, run: _Run) -> None:
+    for piece in pieces:
+        if not _page_slice(conn, query, piece, resume_index(resume, piece, query.page_size), run):
+            return
+        run.covered.append(piece)
+
+
+def _record(
+    conn: sqlite3.Connection, run: _Run, window: Interval, *, lookback_days: int, max_results: int | None, api_key_used: bool
+) -> None:
+    floor, now = window
+    covered = merge(run.covered, floor)
+    partial = run.partial_reason is not None
+    complete = covered == [(floor, now)]
     _update_sync_meta(
         conn,
         "nvd",
-        window.enriched,
+        run.new_rows,
         {
             "mode": "incremental",
             "status": "partial" if partial else "synced",
-            "partial_reason": window.partial_reason,
-            "lookback_days": window.lookback_days,
-            "last_modified_start": window.start_ts,
-            # Advance the synced-through cursor only when the whole window was
-            # fetched, so the next run retries what this one could not reach.
-            "last_modified_end": window.start_ts if partial else window.end_ts,
+            "partial_reason": run.partial_reason,
+            "lookback_days": lookback_days,
+            "covered": [[nvd_ts(start), nvd_ts(end)] for start, end in covered],
+            "resume": run.resume.to_meta() if run.resume else None,
+            "records_fetched": run.fetched,
+            "new_rows": run.new_rows,
+            "last_modified_start": nvd_ts(floor),
+            # The synced-through cursor reaches ``now`` only when the whole
+            # window is held, so a capped or failed run is never read as synced.
+            "last_modified_end": nvd_ts(now) if complete and not partial else nvd_ts(floor),
             "max_results": max_results,
             "api_key_used": api_key_used,
-            "sync_failed": partial and window.partial_reason != "truncated",
-            "sync_truncated": window.partial_reason == "truncated",
+            "sync_failed": partial and run.partial_reason != "truncated",
+            "sync_truncated": run.partial_reason == "truncated",
         },
     )
+
+
+def default_max_results(api_key: str | None) -> int | None:
+    """Keyed runs cover the whole window; keyless runs stay bounded (still newest first)."""
+    return None if api_key else KEYLESS_MAX_RECORDS
 
 
 def sync_nvd_incremental(
     conn: sqlite3.Connection,
     nvd_api_key: Optional[str] = None,
     url: Optional[str] = None,
-    max_results: int = 2000,
+    max_results: Optional[int] = None,
     lookback_days: Optional[int] = None,
     limiter: Optional[NvdRateLimiter] = None,
 ) -> int:
-    """Ingest CVEs NVD published or modified in a bounded window, CPE ranges included.
+    """Ingest CVEs NVD published or modified in a bounded window, newest first, CPE ranges included.
 
-    Works with or without an API key: the key only raises the request budget
-    and the default lookback (120 days keyed, 14 keyless). A rate-limited,
-    timed-out or truncated window is recorded ``status: partial`` and keeps
-    the checkpoint, never reported as synced.
+    The window (120 days keyed, 14 keyless) is walked in day slices from now
+    backwards and only ranges not already covered are fetched. ``max_results``
+    caps records read this run (default: unbounded with a key, 60,000
+    without). A rate-limited, timed-out or capped run is ``status: partial``
+    and the next run resumes where it stopped. Returns new CVE rows.
     """
     base_url = url or _NVD_API_URL
     _validate_sync_url(base_url, "nvd url")
     days = lookback_days or (KEYED_LOOKBACK_DAYS if nvd_api_key else KEYLESS_LOOKBACK_DAYS)
-    now = datetime.now(timezone.utc)
-    window = _Window(_nvd_api_timestamp(_window_start(conn, now, days)), _nvd_api_timestamp(now), days)
-    _page_window(conn, base_url, nvd_api_key, window, limiter or NvdRateLimiter.for_key(nvd_api_key), max_results)
+    cap = max_results if max_results is not None else default_max_results(nvd_api_key)
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    floor = now - timedelta(days=days)
+    meta = _read_sync_metadata(conn, "nvd")
+    covered, resume = merge(load_covered(meta), floor), load_resume(meta)
+    headers = {"Accept": "application/json", **({"apiKey": nvd_api_key} if nvd_api_key else {})}
+    query = _Query(base_url, headers, limiter or NvdRateLimiter.for_key(nvd_api_key), min(NVD_PAGE_SIZE, cap or NVD_PAGE_SIZE))
+    run = _Run(remaining=float(cap) if cap is not None else float("inf"), covered=list(covered))
+    _walk(conn, query, plan(floor, now, covered, resume), resume, run)
     conn.commit()
-    _record_window(conn, window, max_results, bool(nvd_api_key))
-    _logger.info("NVD window sync %s: %d new CVE rows", "partial" if window.partial_reason else "complete", window.enriched)
-    return window.enriched
+    _record(conn, run, (floor, now), lookback_days=days, max_results=cap, api_key_used=bool(nvd_api_key))
+    _logger.info("NVD window sync %s: %d records read, %d new CVE rows", run.partial_reason or "complete", run.fetched, run.new_rows)
+    return run.new_rows

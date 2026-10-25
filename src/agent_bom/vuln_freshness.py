@@ -18,8 +18,10 @@ Design notes:
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -117,6 +119,9 @@ class VulnDataFreshness:
     # Set when the local cache cannot be trusted regardless of its age: its
     # freshness metadata is unreadable, or a newer agent-bom wrote its schema.
     integrity_issue: str | None = None
+    # Feeds whose last sync was partial (rate-limited, timed out or capped):
+    # ``[{"source": "NVD", "reason": "truncated"}]``.
+    partial_sources: list[dict[str, str]] = field(default_factory=list)
 
     @property
     def age_days(self) -> int | None:
@@ -146,6 +151,8 @@ class VulnDataFreshness:
         }
         if self.integrity_issue:
             payload["integrity_issue"] = self.integrity_issue
+        if self.partial_sources:
+            payload["partial_sources"] = [dict(item) for item in self.partial_sources]
         if cache_hits:
             payload["osv_response_cache"] = cache
         return payload
@@ -157,6 +164,12 @@ class VulnDataFreshness:
         "No local vulnerability DB found" warning, and reusable by any other
         text surface. Markup-free so it is safe for logs and JSON notes.
         """
+        line = self._base_summary()
+        for item in self.partial_sources:
+            line += f"; {item['source']} sync partial ({item['reason']}) — rerun `agent-bom db update`"
+        return line
+
+    def _base_summary(self) -> str:
         if self.mode == "bundled-demo":
             noun = "advisory" if self.record_count == 1 else "advisories"
             return f"Vuln data: bundled demo advisory DB ({self.record_count} curated {noun})"
@@ -240,6 +253,29 @@ def _query_sync_meta(conn: sqlite3.Connection) -> tuple[list[tuple[str, str | No
     return rows, int(version_row[0]) if version_row and version_row[0] is not None else None
 
 
+def _read_partial_sources(db_path: Path, label: Callable[[str], str]) -> list[dict[str, str]]:
+    """Sources whose sync metadata records ``status: partial``; never raises."""
+    try:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return []
+    try:
+        rows = conn.execute("SELECT source, metadata_json FROM sync_meta WHERE metadata_json LIKE '%\"partial\"%'").fetchall()
+    except sqlite3.Error:
+        return []
+    finally:
+        conn.close()
+    partial: list[dict[str, str]] = []
+    for source, raw in sorted(rows):
+        try:
+            meta = json.loads(raw or "{}")
+        except json.JSONDecodeError:
+            continue
+        if isinstance(meta, dict) and meta.get("status") == "partial":
+            partial.append({"source": label(str(source)), "reason": str(meta.get("partial_reason") or "unknown")})
+    return partial
+
+
 def _schema_issue(schema_version: int | None) -> str | None:
     from agent_bom.db.schema import CODE_SCHEMA_VERSION
 
@@ -316,6 +352,7 @@ def compute_freshness(
             sources.append(_label(src))
 
     record_count = sum(count for _src, _ts, count in rows)
+    partial_sources = _read_partial_sources(resolved_path, _label)
 
     oldest: datetime | None = None
     for _src, ts, _count in rows:
@@ -354,6 +391,7 @@ def compute_freshness(
         danger=danger,
         max_age_hours=threshold,
         integrity_issue=integrity_issue,
+        partial_sources=partial_sources,
     )
 
 

@@ -445,14 +445,14 @@ def sync_nvd(
     total_candidates = conn.execute(
         """
         SELECT COUNT(*) FROM vulns
-        WHERE (severity = 'unknown' OR cvss_score IS NULL)
+        WHERE (severity = 'unknown' OR cvss_score IS NULL) AND source != 'nvd'
           AND (id LIKE '%CVE-%' OR aliases LIKE '%CVE-%')
         """
     ).fetchone()[0]
     rows = conn.execute(
         """
         SELECT id, COALESCE(aliases, '') AS aliases FROM vulns
-        WHERE (severity = 'unknown' OR cvss_score IS NULL)
+        WHERE (severity = 'unknown' OR cvss_score IS NULL) AND source != 'nvd'
           AND (id LIKE '%CVE-%' OR aliases LIKE '%CVE-%')
         LIMIT :max_entries
         """,
@@ -589,7 +589,7 @@ def sync_nvd(
     return enriched
 
 
-def _sync_nvd_keyless(conn: sqlite3.Connection, url: Optional[str], max_entries: int) -> int:
+def _sync_nvd_keyless(conn: sqlite3.Connection, url: Optional[str], max_entries: Optional[int]) -> int:
     """Keyless NVD: the bounded new-CVE window first, then the CVSS/CWE backfill.
 
     Both phases share one anonymous rate budget. The window's checkpoint and
@@ -599,7 +599,7 @@ def _sync_nvd_keyless(conn: sqlite3.Connection, url: Optional[str], max_entries:
     limiter = NvdRateLimiter.for_key(None)
     ingested = sync_nvd_incremental(conn, url=url, max_results=max_entries, limiter=limiter)
     window_meta = _read_sync_metadata(conn, "nvd")
-    backfilled = sync_nvd(conn, url=url, max_entries=max_entries, limiter=limiter)
+    backfilled = sync_nvd(conn, url=url, max_entries=max_entries or 1000, limiter=limiter)
     _update_sync_meta(conn, "nvd", ingested + backfilled, {**window_meta, "enrichment": _read_sync_metadata(conn, "nvd")})
     return ingested + backfilled
 
@@ -616,7 +616,7 @@ def sync_db(
     debian_elts_url: Optional[str] = None,
     max_osv_entries: int = 0,
     max_ghsa_entries: int = 5000,
-    max_nvd_entries: int = 1000,
+    max_nvd_entries: Optional[int] = None,
     github_token: Optional[str] = None,
     nvd_api_key: Optional[str] = None,
     ghsa_ecosystems: Optional[list[str]] = None,
@@ -634,7 +634,8 @@ def sync_db(
         osv_url / epss_url / kev_url / ghsa_url / nvd_url: URL overrides (for testing).
         max_osv_entries: limit for OSV entries (0 = unlimited; for tests).
         max_ghsa_entries: limit for GHSA entries (default 5000).
-        max_nvd_entries: limit for NVD enrichment (default 1000).
+        max_nvd_entries: NVD records read per window run (default: whole window keyed,
+                 60,000 keyless) and the keyless CVSS backfill cap (default 1000).
         github_token: override GITHUB_TOKEN env var for GHSA fetches.
         nvd_api_key: override NVD_API_KEY env var for NVD fetches.
         ghsa_ecosystems: list of GHSA ecosystem names to sync (default: all supported).
@@ -663,7 +664,8 @@ def sync_db(
         notify(source, "start")
         count = sync()
         results[source] = count
-        notify(source, "complete", count)
+        partial = _read_sync_metadata(conn, source).get("status") == "partial"
+        notify(source, "partial" if partial else "complete", count)
 
     try:
         if "osv" in enabled:
