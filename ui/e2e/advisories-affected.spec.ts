@@ -45,11 +45,12 @@ for (const theme of ["light", "dark"]) {
     await expect(table.getByText("Possibly affected — verify distro advisory")).toBeVisible();
     await expect(table.getByRole("link", { name: "Blast radius for php 8.3.30 on php:8.3.30-cli" }))
       .toHaveAttribute("href", /\/security-graph\?lens=attack-path&scan=scan-php-8\.3\.30&node=pkg%3Ageneric%3Aphp%408\.3\.30/);
-    await page.screenshot({ path: testInfo.outputPath(`advisories-affected-${theme}-1440.png`), fullPage: true });
-
-    await page.setViewportSize({ width: 390, height: 844 });
-    await noPageOverflow(page);
-    await page.screenshot({ path: testInfo.outputPath(`advisories-affected-${theme}-390.png`), fullPage: true });
+    for (const width of [1440, 1280, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+      if (width === 390) await noPageOverflow(page);
+      await page.getByTestId("affected-assets").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath(`advisories-affected-${theme}-${width}.png`) });
+    }
 
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/advisories?tab=declare");
@@ -62,9 +63,60 @@ for (const theme of ["light", "dark"]) {
     await page.getByLabel("Fixed").fill("8.3.0");
     await page.getByRole("button", { name: "Declare advisory" }).click();
     await expect(page.getByRole("alert", { name: "The server rejected this advisory" })).toContainText("Affected product 1: introduced must precede fixed");
-    await page.screenshot({ path: testInfo.outputPath(`advisories-declare-${theme}-1440.png`), fullPage: true });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await noPageOverflow(page);
-    await page.screenshot({ path: testInfo.outputPath(`advisories-declare-${theme}-390.png`), fullPage: true });
+    for (const width of [1440, 1280, 390]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+      if (width === 390) await noPageOverflow(page);
+      await page.screenshot({ path: testInfo.outputPath(`advisories-declare-${theme}-${width}.png`) });
+    }
+  });
+}
+
+/** Every verdict and patch target must sit inside the viewport, and no region may scroll sideways. */
+async function answerFitsViewport(page: Page) {
+  const overflow = await page.evaluate(() => {
+    const region = document.querySelector('[data-testid="affected-assets"]');
+    const scrolling = region
+      ? [region, ...Array.from(region.querySelectorAll("*"))].filter((el) => el.scrollWidth > el.clientWidth + 1 && ["auto", "scroll"].includes(getComputedStyle(el).overflowX))
+      : [];
+    return { page: document.documentElement.scrollWidth - window.innerWidth, scrollingRegions: scrolling.length };
+  });
+  expect(overflow).toEqual({ page: 0, scrollingRegions: 0 });
+  const width = page.viewportSize()!.width;
+  for (const row of php2shell.rows) {
+    const card = page.getByTestId("affected-asset-card").filter({ hasText: row.asset_label });
+    await expect(card).toHaveCount(1);
+    await expect(card).toContainText(row.verdict === "possibly_affected" ? "Possibly affected — verify distro advisory" : row.verdict === "affected" ? "Affected" : "Not affected");
+    for (const target of [card.getByTestId("verdict-badge"), card.getByTestId("patch-target")]) {
+      await expect(target).toBeVisible();
+      const box = (await target.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    }
+  }
+}
+
+test("at 390px each affected asset is a card with its verdict and patch target on screen", async ({ page }) => {
+  await baseline(page, "dark");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/advisories?id=CVE-2026-109618");
+  await expect(page.getByTestId("affected-assets")).toBeVisible();
+  await answerFitsViewport(page);
+});
+
+for (const width of [1280, 1440]) {
+  test(`at ${width}px the blast-radius action sits fully inside the table container`, async ({ page }) => {
+    await baseline(page, "light");
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/advisories?id=CVE-2026-109618");
+    const table = page.getByRole("table", { name: "Affected assets" });
+    await expect(table).toBeVisible();
+    const container = (await page.getByTestId("affected-assets").boundingBox())!;
+    const scroll = await page.getByTestId("affected-assets").evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(scroll).toBeLessThanOrEqual(0);
+    for (const link of await table.getByRole("link", { name: /^Blast radius for / }).all()) {
+      const box = (await link.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(container.x);
+      expect(box.x + box.width).toBeLessThanOrEqual(container.x + container.width);
+    }
   });
 }
