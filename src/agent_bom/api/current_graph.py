@@ -38,10 +38,11 @@ from agent_bom.core.estate_read_boundary import inside_estate_read_boundary
 from agent_bom.core.settings import env_raw
 from agent_bom.demo_estate.boot_seed import SEEDING_CODE, SEEDING_MESSAGE, SEEDING_RETRY_AFTER_SECONDS, demo_estate_seeding
 from agent_bom.graph import UnifiedGraph
+from agent_bom.graph.adjacency_page import CURRENT_ESTATE_SCAN_PREFIX
 from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuses
 from agent_bom.storage.state_home import state_dir
 
-CURRENT_PREFIX = "current-estate:"
+CURRENT_PREFIX = CURRENT_ESTATE_SCAN_PREFIX
 _PROJECTION_FORMAT = 3
 # Restarts of an unpinned read whose generation another worker retired between
 # resolve and read. In-process readers are pinned and never need one.

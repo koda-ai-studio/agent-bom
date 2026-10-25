@@ -145,6 +145,9 @@ def _raise_mcp_error_as_http(payload: dict[str, Any]) -> None:
     if error.get("code") == CODE_UPSTREAM_UNAVAILABLE:
         retry_after = (error.get("details") or {}).get("retry_after_seconds")
         raise HTTPException(status_code=503, detail=error, headers={"Retry-After": str(retry_after)} if retry_after else None)
+    details = error.get("details")
+    if isinstance(details, dict) and details.get("http_status") == 409:
+        raise HTTPException(status_code=409, detail=error)
     if error.get("code") == CODE_UNSUPPORTED_BACKEND:
         # Same status the direct store calls use for a backend capability gap.
         raise HTTPException(status_code=501, detail=error)

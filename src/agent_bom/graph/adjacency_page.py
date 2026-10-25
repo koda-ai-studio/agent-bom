@@ -21,6 +21,9 @@ from typing import Any
 
 from agent_bom.graph.completeness import graph_completeness
 
+# The id prefix of a derived current-estate projection; ``agent_bom.api.current_graph`` mints these ids.
+CURRENT_ESTATE_SCAN_PREFIX = "current-estate:"
+
 
 class SnapshotGenerationMismatchError(ValueError):
     """The requested or cursor-carried generation is not the snapshot's current one: restart (409), not a bad request."""
@@ -42,13 +45,22 @@ def validate_graph_identifiers(*values: str) -> None:
         raise ValueError("Graph identifiers cannot contain NUL")
 
 
-def _require_cursor_scope(carried: Any, scope: list[str]) -> None:
-    """A cursor for this tenant, snapshot id, node and direction whose snapshot was re-saved is a 409, not a bad cursor."""
+def _require_cursor_scope(carried: Any, scope: list[str], *, unpinned: bool) -> None:
+    """A cursor for this tenant, node and direction whose snapshot was replaced is a 409, not a bad cursor.
+
+    Replaced means re-saved under the same scan id, or, for a read that names
+    no scan, superseded by a newer latest snapshot (or current-estate generation).
+    """
     if carried == scope:
         return
-    if isinstance(carried, list) and len(carried) == len(scope) and carried[:2] == scope[:2] and carried[5:] == scope[5:]:
-        raise SnapshotGenerationMismatchError("Incident-edge cursor snapshot was replaced")
+    if isinstance(carried, list) and len(carried) == len(scope) and carried[0] == scope[0] and carried[5:] == scope[5:]:
+        if carried[1] == scope[1] or unpinned or (_current_estate_id(carried[1]) and _current_estate_id(scope[1])):
+            raise SnapshotGenerationMismatchError("Incident-edge cursor snapshot was replaced")
     raise ValueError("Incident-edge cursor does not match request scope")
+
+
+def _current_estate_id(scan_id: Any) -> bool:
+    return isinstance(scan_id, str) and scan_id.startswith(CURRENT_ESTATE_SCAN_PREFIX)
 
 
 def incident_edge_page(
@@ -113,7 +125,7 @@ def incident_edge_page(
     effective_scan_id, created_at = str(snapshot[0]), str(snapshot[1])
     scope = [tenant_id, effective_scan_id, created_at, str(snapshot[2] or ""), str(snapshot[3]), node_id, direction]
     if token is not None:
-        _require_cursor_scope(token.get("scope"), scope)
+        _require_cursor_scope(token.get("scope"), scope, unpinned=not scan_id)
     seed = conn.execute(
         f"SELECT {NODE_COLUMNS} FROM graph_nodes WHERE tenant_id = {marker} AND scan_id = {marker} AND id = {marker}",  # nosec B608
         (tenant_id, effective_scan_id, node_id),
