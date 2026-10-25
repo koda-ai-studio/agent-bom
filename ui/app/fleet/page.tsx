@@ -400,17 +400,17 @@ export default function FleetPage() {
 
       {warning && !loading && !error && (
         <div className="rounded-xl border border-[color:var(--severity-medium-border)] bg-[color:var(--severity-medium-bg)] px-4 py-3">
-          <p className="text-sm text-yellow-300">Fleet loaded with partial data</p>
-          <p className="mt-1 text-xs text-yellow-100/70">{warning}</p>
+          <p className="text-sm text-amber-800 dark:text-yellow-300">Fleet loaded with partial data</p>
+          <p className="mt-1 text-xs text-amber-900/80 dark:text-yellow-100/70">{warning}</p>
         </div>
       )}
 
       {notice && (
         <div className="flex items-start justify-between gap-3 rounded-xl border border-[color:var(--severity-critical-border)] bg-[color:var(--severity-critical-bg)] px-4 py-3">
-          <p className="text-sm text-red-200">{notice}</p>
+          <p className="text-sm text-red-800 dark:text-red-200">{notice}</p>
           <button
             onClick={() => setNotice(null)}
-            className="text-xs text-red-300/70 hover:text-red-200"
+            className="text-xs text-red-800/80 hover:text-red-900 dark:text-red-300/70 dark:hover:text-red-200"
           >
             Dismiss
           </button>

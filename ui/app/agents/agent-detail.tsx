@@ -365,7 +365,7 @@ export function AgentDetail({ agentName }: { agentName: string }) {
                               <div key={entry.entry_id} className="agents-intel-card">
                                 <div className="flex flex-wrap items-start justify-between gap-2">
                                   <div className="min-w-0">
-                                    <div className="text-xs font-semibold text-cyan-100">{entry.title}</div>
+                                    <div className="text-xs font-semibold text-cyan-900 dark:text-cyan-100">{entry.title}</div>
                                     <div className="mt-1 flex flex-wrap gap-1.5">
                                       <span className="agents-intel-chip">
                                         {entry.confidence}
@@ -404,7 +404,7 @@ export function AgentDetail({ agentName }: { agentName: string }) {
                                           href={href}
                                           target="_blank"
                                           rel="noreferrer"
-                                          className="text-cyan-300 underline decoration-cyan-800 underline-offset-2 hover:text-cyan-200"
+                                          className="text-cyan-800 underline decoration-cyan-800 underline-offset-2 hover:text-cyan-950 dark:text-cyan-300 dark:hover:text-cyan-200"
                                         >
                                           Reference {index + 1}
                                         </a>
