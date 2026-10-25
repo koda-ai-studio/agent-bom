@@ -82,6 +82,11 @@ def _demo_identity_id(slug: str) -> str:
     return f"demo-nhi-{slug}"
 
 
+def _globally_unique(value: str, tenant_id: str) -> str:
+    """Token hashes and grant ids are unique across tenants; only the showcase tenant keeps the bare demo value."""
+    return value if tenant_id == SHOWCASE_TENANT else f"{value}@{tenant_id}"
+
+
 def demo_identity_records(
     tenant_id: str = SHOWCASE_TENANT,
 ) -> tuple[list[agent_identity_store.AgentIdentity], list[agent_identity_store.AgentJITGrant]]:
@@ -107,7 +112,7 @@ def demo_identity_records(
                 identity_id=identity_id,
                 agent_id=str(spec["agent_label"]),
                 tenant_id=tenant_id,
-                token_hash=f"demo-nhi-hash-{slug}",
+                token_hash=_globally_unique(f"demo-nhi-hash-{slug}", tenant_id),
                 token_prefix="demo",
                 role=str(spec.get("role") or "agent"),
                 blueprint_id=str(spec["agent_label"]),
@@ -130,7 +135,7 @@ def demo_identity_records(
             continue
         grants.append(
             agent_identity_store.AgentJITGrant(
-                grant_id=f"demo-jit-{slug}-{tool_name}",
+                grant_id=_globally_unique(f"demo-jit-{slug}-{tool_name}", tenant_id),
                 identity_id=grant_identity_id,
                 agent_id=next(str(s["agent_label"]) for s in _DEMO_IDENTITIES if s["slug"] == slug),
                 tenant_id=tenant_id,

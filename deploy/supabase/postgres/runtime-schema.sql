@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS access_review_items (item_id TEXT NOT NULL, campaign_
 CREATE INDEX IF NOT EXISTS idx_access_review_campaigns_tenant ON access_review_campaigns(tenant_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_access_review_items_campaign ON access_review_items(tenant_id,campaign_id);
 
-CREATE TABLE IF NOT EXISTS agent_identities (identity_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, status TEXT NOT NULL, issued_at TEXT NOT NULL, data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS agent_identities (identity_id TEXT NOT NULL, tenant_id TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, status TEXT NOT NULL, issued_at TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(tenant_id,identity_id));
 ALTER TABLE agent_identities ADD COLUMN IF NOT EXISTS agent_id TEXT NOT NULL DEFAULT '';
 UPDATE agent_identities SET agent_id = TRIM(data::jsonb ->> 'agent_id') WHERE agent_id = '' AND data::jsonb ->> 'agent_id' IS NOT NULL;
 CREATE TABLE IF NOT EXISTS agent_identity_jit_grants (grant_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, identity_id TEXT NOT NULL, tool_name TEXT NOT NULL, status TEXT NOT NULL, requested_at TEXT NOT NULL, expires_at TEXT NOT NULL, data TEXT NOT NULL);

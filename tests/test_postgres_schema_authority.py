@@ -503,7 +503,7 @@ def test_managed_identity_store_rejects_stale_migrated_schema(monkeypatch) -> No
 
     monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgresql://agent_bom_app@postgres/agent_bom")
     connection = _Connection()
-    with pytest.raises(RuntimeError, match="version 2 is required"):
+    with pytest.raises(RuntimeError, match="version 3 is required"):
         PostgresAgentIdentityStore(pool=_Pool(connection))
     assert len(connection.statements) == 1
 
