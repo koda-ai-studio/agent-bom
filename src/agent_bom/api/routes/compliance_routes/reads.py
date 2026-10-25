@@ -21,6 +21,7 @@ from agent_bom.api.read_models.compliance import (
     IncidentCorrelationResponse,
 )
 from agent_bom.api.routes.compliance_routes.common import (
+    SEEDING_GUARD,
     _credential_rotation_governance,
     _current_narrative_evidence,
     _latest_aisvs_benchmark_from_jobs,
@@ -170,7 +171,7 @@ def get_aisvs_compliance(request: Request) -> dict:
     return _latest_aisvs_benchmark_from_jobs(_tenant_jobs(request))
 
 
-@posture_router.get("/posture", **read_models.documented(read_models.PostureResponse), tags=["compliance"])
+@posture_router.get("/posture", **read_models.documented(read_models.PostureResponse), tags=["compliance"], dependencies=[SEEDING_GUARD])
 async def get_posture_scorecard(request: Request) -> dict:
     """Compute enterprise posture scorecard from the latest completed scan.
 

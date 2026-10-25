@@ -14,6 +14,7 @@ from typing import Any
 
 from agent_bom.mcp_errors import CODE_NOT_FOUND_RESOURCE, CODE_VALIDATION_INVALID_ARGUMENT, CODE_VALIDATION_MISSING_REQUIRED, mcp_error_json
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
+from agent_bom.mcp_tools.estate_refusal import seeding_refusal
 from agent_bom.mcp_tools.exploit_story import finding_exploit_story
 from agent_bom.mcp_tools.exposure_queue import hydrate, project_paths, summary_path
 from agent_bom.mcp_tools.finding_graph import load_snapshot_paths, project_finding, public_graph_block
@@ -177,6 +178,9 @@ async def finding_detail_impl(
     if not 1 <= path_limit <= 25:
         return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, "path_limit must be between 1 and 25", details={"argument": "path_limit"})
     tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
+    refusal = seeding_refusal(tenant_id, scan_id)
+    if refusal is not None:
+        return refusal
     reads = api_reads()
     if reads is None:
         return api_unavailable()

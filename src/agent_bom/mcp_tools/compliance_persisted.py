@@ -18,6 +18,7 @@ from agent_bom.compliance_coverage import framework_output_key_by_slug, normaliz
 from agent_bom.mcp_errors import CODE_NOT_FOUND_RESOURCE, CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.compliance import compliance_impl
+from agent_bom.mcp_tools.estate_refusal import seeding_refusal
 from agent_bom.mcp_tools.rest_parity import api_reads, call_route
 
 SOURCES = ("auto", "persisted", "local_scan")
@@ -116,6 +117,9 @@ async def compliance_tool_impl(
         return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, "limit must be between 1 and 500", details={"argument": "limit"})
     tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
     if source != "local_scan":
+        refusal = seeding_refusal(tenant_id)
+        if refusal is not None:
+            return refusal
         if await asyncio.to_thread(_has_persisted_evidence, tenant_id):
             payload, error = await _persisted(tenant_id, framework, control, limit, cursor)
             return error if error else _encode(payload or {}, _truncate_response)

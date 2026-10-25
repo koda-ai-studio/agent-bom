@@ -32,6 +32,7 @@ from agent_bom.graph.compat import export_entity_type
 from agent_bom.output.finding_views import sanitize_output_text, with_output_sanitizer_cache
 from agent_bom.output.package_attributes import _package_node_attributes
 from agent_bom.output.technique_evidence import copy_atlas_graph_receipts
+from agent_bom.output.unified_projection import merge_unified_graph
 from agent_bom.security import sanitize_sensitive_payload
 
 # ── Internal graph representation ──────────────────────────────────────────────
@@ -324,24 +325,7 @@ def _merge_unified_graph_evidence(graph: DepGraph, data: dict[str, Any]) -> None
         return
 
     copy_atlas_graph_receipts(graph, unified)
-
-    for node in unified.nodes.values():
-        if node.id in graph._nodes:
-            continue
-        etype = node.entity_type.value if hasattr(node.entity_type, "value") else str(node.entity_type)
-        graph.add_node(
-            node.id,
-            node.label or node.id,
-            etype,
-            severity=str(getattr(node, "severity", "") or ""),
-            attributes=dict(node.attributes or {}),
-        )
-
-    edges = unified.edges.values() if isinstance(unified.edges, dict) else unified.edges
-    for edge in edges:
-        rel = edge.relationship.value if hasattr(edge.relationship, "value") else str(edge.relationship)
-        if edge.source in graph._nodes and edge.target in graph._nodes and not graph.has_relationship(edge.source, edge.target, rel):
-            graph.add_edge(edge.source, edge.target, rel, evidence=dict(getattr(edge, "evidence", {}) or {}))
+    merge_unified_graph(graph, unified)
 
 
 def load_graph_from_scan(scan_path: Union[str, Path]) -> DepGraph:

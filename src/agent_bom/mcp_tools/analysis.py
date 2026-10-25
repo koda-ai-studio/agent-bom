@@ -22,7 +22,7 @@ from agent_bom.mcp_tools.context_graph_source import (
     live_context_report,
     persisted_context_report,
 )
-from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal, seeding_refusal
 from agent_bom.mcp_tools.finding_graph import exposure_lists, load_snapshot_paths, project_finding, public_graph_block
 from agent_bom.mcp_tools.findings import RISK_SCALE
 from agent_bom.mcp_tools.host_local import HostLocalForbiddenError
@@ -30,6 +30,15 @@ from agent_bom.mcp_tools.rest_parity import api_reads
 from agent_bom.mcp_tools.storage import default_graph_store
 
 logger = logging.getLogger(__name__)
+
+
+def _tool_failure(exc: Exception) -> str:
+    """A not-ready current estate is the typed retryable refusal; anything else is logged as internal."""
+    refusal = retryable_estate_refusal(exc)
+    if refusal is not None:
+        return refusal
+    logger.exception("MCP tool error")
+    return mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc)
 
 
 async def blast_radius_impl(
@@ -54,6 +63,8 @@ async def blast_radius_impl(
         from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 
         tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
+        if (refusal := seeding_refusal(tenant_id, scan_id)) is not None:
+            return refusal
         if _get_persisted_evidence is not None:
             persisted = _get_persisted_evidence(tenant_id=tenant_id, cve_id=validated_cve, scan_id=scan_id)
             if persisted.get("available"):
@@ -109,8 +120,7 @@ async def blast_radius_impl(
     except HostLocalForbiddenError:
         raise
     except Exception as exc:
-        logger.exception("MCP tool error")
-        return mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc)
+        return _tool_failure(exc)
 
 
 async def _persisted_blast_radius(
@@ -255,11 +265,7 @@ async def context_graph_impl(
     except HostLocalForbiddenError:
         raise
     except Exception as exc:
-        refusal = retryable_estate_refusal(exc)
-        if refusal is not None:
-            return refusal
-        logger.exception("MCP tool error")
-        return mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc)
+        return _tool_failure(exc)
 
 
 def _context_graph_payload(agents: list[dict], blast_radius: list[dict], source_agent: str | None, max_depth: int) -> dict[str, Any]:

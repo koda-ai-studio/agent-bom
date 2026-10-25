@@ -8,11 +8,19 @@ from fastapi.testclient import TestClient
 
 from agent_bom.api import auth
 from agent_bom.api.middleware import APIKeyMiddleware, TrustHeadersMiddleware
+from agent_bom.api.routes import compliance as compliance_routes
 from agent_bom.api.routes import fleet as fleet_routes
 from agent_bom.api.routes import scan as scan_routes
 from tests.test_current_estate_seeding_refusal import TENANT, seeding  # noqa: F401 - pytest fixture
 
-UNPINNED = [("/v1/findings", {}), ("/v1/findings", {"limit": 5, "sort": "severity"}), ("/v1/fleet", {}), ("/v1/fleet/stats", {})]
+UNPINNED = [
+    ("/v1/findings", {}),
+    ("/v1/findings", {"limit": 5, "sort": "severity"}),
+    ("/v1/fleet", {}),
+    ("/v1/fleet/stats", {}),
+    ("/v1/compliance", {}),
+    ("/v1/posture", {}),
+]
 
 
 @pytest.fixture()
@@ -29,6 +37,7 @@ def client(monkeypatch):
     app = FastAPI()
     app.include_router(scan_routes.router, prefix="/v1")
     app.include_router(fleet_routes.router, prefix="/v1")
+    app.include_router(compliance_routes.router, prefix="/v1")
     app.add_middleware(APIKeyMiddleware, api_key="", allow_unauthenticated=False)
     app.add_middleware(TrustHeadersMiddleware)
     with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as test_client:
@@ -47,13 +56,14 @@ def test_unpinned_read_refuses_while_seeding_then_serves(client, seeding, path, 
     assert client.get(path, params=params).status_code == 200
 
 
-def test_findings_pinned_to_a_scan_are_not_refused(client, seeding):  # noqa: F811
-    pinned = client.get("/v1/findings", params={"scan_id": "some-recorded-scan"})
+@pytest.mark.parametrize("path", ["/v1/findings", "/v1/compliance"])
+def test_reads_pinned_to_a_scan_are_not_refused(client, seeding, path):  # noqa: F811
+    pinned = client.get(path, params={"scan_id": "some-recorded-scan"})
     assert pinned.status_code != 503, pinned.text
 
 
 def test_a_seed_for_another_tenant_does_not_refuse_this_one(client, seeding, monkeypatch):  # noqa: F811
     seeding._boot_seed_done.set()
     monkeypatch.setattr(seeding, "_persisted_seed_active", lambda tenant_id: tenant_id in (None, "other-tenant"))
-    assert client.get("/v1/findings").status_code == 200
-    assert client.get("/v1/fleet").status_code == 200
+    for path, params in UNPINNED:
+        assert client.get(path, params=params).status_code == 200, path

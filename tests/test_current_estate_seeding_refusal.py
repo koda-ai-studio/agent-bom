@@ -145,3 +145,28 @@ def test_a_seed_marker_naming_this_tenant_refuses(client, marker_for, method, pa
     refused = _call(client, method, path, params, body)
     assert refused.status_code == 503, refused.text
     assert "current_estate_seeding" in refused.text
+
+
+UNPINNED_HISTORY_READS = [("/v1/graph/diff", {}), ("/v1/graph/changes", {})]
+
+
+@pytest.mark.parametrize(("path", "params"), UNPINNED_HISTORY_READS, ids=[p for p, _ in UNPINNED_HISTORY_READS])
+def test_unpinned_history_read_refuses_while_seeding_not_answers_from_a_partial_estate(client, seeding, path, params):
+    refused = client.get(path, params=params)
+    assert refused.status_code == 503, refused.text
+    assert refused.headers["Retry-After"] == "2"
+    assert refused.json()["detail"]["code"] == "current_estate_seeding"
+
+    seeding._boot_seed_done.set()
+    assert client.get(path, params=params).status_code != 503
+
+
+@pytest.mark.parametrize(("path", "params"), UNPINNED_HISTORY_READS, ids=[p for p, _ in UNPINNED_HISTORY_READS])
+def test_history_read_ignores_a_seed_for_another_tenant(client, marker_for, path, params):
+    marker_for("acme")
+    assert client.get(path, params=params).status_code != 503
+
+
+def test_a_diff_between_two_named_snapshots_is_not_refused_while_seeding(client, seeding):
+    pinned = client.get("/v1/graph/diff", params={"old": "shared-scan", "new": "shared-scan"})
+    assert pinned.status_code != 503, pinned.text

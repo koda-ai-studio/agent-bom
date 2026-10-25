@@ -16,6 +16,7 @@ from agent_bom.mcp_errors import (
     mcp_error_json,
 )
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 
 
 async def compromise_assessment_impl(
@@ -73,8 +74,10 @@ async def compromise_assessment_impl(
         )
     except BackpressureRejectedError:
         return mcp_error_json(CODE_UPSTREAM_UNAVAILABLE, "Graph assessment capacity is busy; retry later.")
-    except Exception:
-        return mcp_error_json(CODE_UPSTREAM_UNAVAILABLE, "Graph storage is temporarily unavailable; retry the request.")
+    except Exception as exc:
+        return retryable_estate_refusal(exc) or mcp_error_json(
+            CODE_UPSTREAM_UNAVAILABLE, "Graph storage is temporarily unavailable; retry the request."
+        )
 
 
 def register_compromise_tool(mcp: Any, *, read_only: Any, execute_tool_async: Any, truncate_response: Any) -> None:

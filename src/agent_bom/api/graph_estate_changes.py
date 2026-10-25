@@ -19,7 +19,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request
 
-from agent_bom.api.current_graph import available_sources, graph_scan_id
+from agent_bom.api.current_graph import available_sources, graph_scan_id, refuse_unpinned_read_while_seeding
 from agent_bom.api.finding_job_metadata import scan_evidence_authority_key, scan_scope_key
 from agent_bom.api.finding_row_shapes import _scan_source_labels
 from agent_bom.api.graph_diff_read import _compute_rows, _stored_paths
@@ -312,6 +312,7 @@ async def graph_estate_changes_read(request: Request, *, limit: int = SOURCE_LIM
     if offset < 0:
         raise HTTPException(status_code=422, detail="offset must be non-negative")
     tenant = _runtime._tenant(request)
+    refuse_unpinned_read_while_seeding("", tenant)
     store = _runtime._get_graph_store_or_503()
     scopes, reasons = await _runtime._graph_store_call(_plan, store, _get_store(), tenant)
     page = scopes[offset : offset + limit]
