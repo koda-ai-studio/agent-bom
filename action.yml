@@ -47,6 +47,10 @@ inputs:
     description: 'Auto-update vulnerability database if stale (>7 days). Disable for air-gapped or fully cached runs.'
     required: false
     default: 'true'
+  nvd-api-key:
+    description: 'Optional NVD API key for the vulnerability database refresh (wider NVD window, higher rate limit). Pass it from a secret, e.g. `nvd-api-key: ${{ secrets.NVD_API_KEY }}`; it reaches the scan only as the NVD_API_KEY environment variable and is never printed. Without it the refresh still reads NVD, keyless.'
+    required: false
+    default: ''
   fail-on-kev:
     description: 'Fail if any CISA Known Exploited Vulnerability is found.'
     required: false
@@ -178,7 +182,7 @@ outputs:
     description: 'High-level scan status: clean, violations, usage_error, stale_data, or error.'
     value: ${{ steps.scan.outputs.scan_status }}
   vulnerability-count:
-    description: 'Number of vulnerabilities found, or skill findings when scan-type=skills.'
+    description: 'Number of vulnerabilities found, or skill findings when scan-type=skills. Possibly-affected distro results (SARIF verdict possibly_affected) are not counted.'
     value: ${{ steps.scan.outputs.vuln_count }}
   badge-file:
     description: 'Path to generated badge JSON (if badge input is set).'
@@ -281,6 +285,7 @@ runs:
         REQUESTS_CA_BUNDLE: ${{ env.REQUESTS_CA_BUNDLE }}
         CURL_CA_BUNDLE: ${{ env.CURL_CA_BUNDLE }}
         PIP_CERT: ${{ env.PIP_CERT }}
+        NVD_API_KEY: ${{ inputs.nvd-api-key || env.NVD_API_KEY }}
         INPUT_SCAN_TYPE: ${{ inputs.scan-type }}
         INPUT_SCAN_REF: ${{ inputs.scan-ref }}
         INPUT_FORMAT: ${{ inputs.format }}
@@ -716,7 +721,7 @@ runs:
         POSTURE_GRADE="unknown"
         if [ "$INPUT_FORMAT" = "sarif" ] && [ -f "$RESULT_FILE" ]; then
           SARIF_FILE="$RESULT_FILE"
-          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); print(len(d.get('runs',[{}])[0].get('results',[])))" 2>/dev/null || echo 0)
+          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); print(sum(1 for r in d.get('runs',[{}])[0].get('results',[]) if (r.get('properties') or {}).get('verdict') != 'possibly_affected'))" 2>/dev/null || echo 0)
         elif [ "$INPUT_FORMAT" = "json" ] && [ -f "$RESULT_FILE" ]; then
           # skills: summary.findings; secrets: findings list; scan: unified findings list
           VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); s=d.get('summary'); f=d.get('findings'); print(s['findings'] if isinstance(s, dict) and isinstance(s.get('findings'), int) else len(f) if isinstance(f, list) else int(d.get('total') or 0))" 2>/dev/null || echo 0)
@@ -762,7 +767,8 @@ runs:
         try:
             sarif = json.load(open(os.environ['SARIF_FILE']))
             run = sarif.get('runs', [{}])[0]
-            results = run.get('results', [])
+            # Possibly-affected distro results stay in the SARIF but are not confirmed findings.
+            results = [r for r in run.get('results', []) if (r.get('properties') or {}).get('verdict') != 'possibly_affected']
             rules = {r['id']: r for r in run.get('tool', {}).get('driver', {}).get('rules', [])}
             critical = high = 0
             for r in results:

@@ -223,6 +223,7 @@ Neither is required, and neither is ever written to the database, reports or log
 
 - **This project's CI.** `NVD_API_KEY` is an environment secret in the GitHub `release` environment, which only `main` and `v*` tags can use. Only scheduled or manually dispatched jobs that run `agent-bom db update` declare that environment, and the key is passed only to that step; no pull-request job can read it. `GITHUB_TOKEN` is the workflow's own short-lived `github.token`, passed to the same step, with the job limited to `contents: read`.
 - **Self-hosted deployments.** Bring your own key. Export `NVD_API_KEY` (and optionally `GITHUB_TOKEN`) in the environment of whatever runs `agent-bom db update`, pass it through docker-compose or `render.yaml`, or, on Kubernetes, point the Helm value `nvdApiKey.existingSecret` at an existing Secret; the chart reads it with `secretKeyRef` and has no plaintext value.
+- **The agent-bom GitHub Action.** Store the key as a repository or environment secret and pass `nvd-api-key: ${{ secrets.NVD_API_KEY }}`. The Action sets it only as the `NVD_API_KEY` environment variable of its scan step (the step that refreshes the database) and never writes it into a script or log line.
 - **A workstation.** Keep the key in the OS keychain rather than a shell profile and export it only for the command that needs it, for example on macOS `NVD_API_KEY="$(security find-generic-password -s nvd-api-key -w)" agent-bom db update --source nvd`. agent-bom does not read the keychain itself.
 
 ---
