@@ -17,7 +17,9 @@ permissions:
 # separate event groups; release still requires a completed current-main push.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+  # Superseded PR runs are cancelled; every main push runs to completion so
+  # each main commit has a verdict and the build badge never reads a cancel.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -495,7 +497,10 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           WAIVED: ${{ contains(github.event.pull_request.labels.*.name, 'no-tests-needed') }}
-        run: uv run python scripts/check_tests_accompany_source.py --base "$BASE_SHA" $([ "$WAIVED" = true ] && echo --waived)
+        run: |
+          args=(--base "$BASE_SHA")
+          if [ "$WAIVED" = true ]; then args+=(--waived); fi
+          uv run python scripts/check_tests_accompany_source.py "${args[@]}"
 
       - name: Ruff format
         if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
