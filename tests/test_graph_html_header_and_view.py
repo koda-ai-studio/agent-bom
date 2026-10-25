@@ -91,7 +91,23 @@ def test_phone_layout_collapses_panels_and_gives_the_canvas_the_viewport() -> No
     from agent_bom.output.graph_html_template_head import _GRAPH_HTML_TEMPLATE_HEAD
 
     phone = _GRAPH_HTML_TEMPLATE_HEAD[_GRAPH_HTML_TEMPLATE_HEAD.index("@media (max-width: 767px)") :]
-    assert "#riskpanel, #legend {{ display: none; }}" in phone
-    assert "#cy {{ flex: 1 1 auto;" in phone
+    assert "#riskpanel {{ display: none; position: fixed;" in phone
     assert "togglePanel('riskpanel')" in _GRAPH_HTML_TEMPLATE_HEAD and "togglePanel('legend')" in _GRAPH_HTML_TEMPLATE_HEAD
     assert "function togglePanel(id)" in _GRAPH_HTML_TEMPLATE_BODY
+
+
+def test_desktop_layout_keeps_overlays_off_the_canvas() -> None:
+    from agent_bom.output.graph_html_template_head import _GRAPH_HTML_TEMPLATE_HEAD
+
+    desktop = _GRAPH_HTML_TEMPLATE_HEAD[: _GRAPH_HTML_TEMPLATE_HEAD.index("@media (max-width: 767px)")]
+    # The risk list is a column beside the canvas, not an overlay on it.
+    assert re.search(
+        r'<div id="main">\s*<div id="riskpanel" class="panel">.*?</div>\s*<div id="cy"></div>\s*</div>', _GRAPH_HTML_TEMPLATE_HEAD, re.S
+    )
+    assert "#riskpanel {{ position: static; flex: 0 0 360px;" in desktop
+    assert "#riskpanel.collapsed {{ display: none; }}" in desktop
+    # The legend starts collapsed and the controls sit in their own bar.
+    assert "#legend {{ display: none;" in desktop and "#legend.open {{ display: block; }}" in desktop
+    assert "position: fixed" not in desktop[desktop.index("#controls {{") : desktop.index("#controls button")]
+    toggle = _function(_GRAPH_HTML_TEMPLATE_BODY, "togglePanel")
+    assert "classList.toggle('collapsed')" in toggle and "fitAll();" in toggle

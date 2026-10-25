@@ -538,7 +538,15 @@ function searchNodes(query){{
   }}
 }}
 
+// Desktop keeps the risk list as a column beside the canvas; collapsing it
+// gives the canvas the full width and refits. Phones open it as a sheet.
 function togglePanel(id){{
+  const phone = window.matchMedia('(max-width: 767px)').matches;
+  if(id === 'riskpanel' && !phone) {{
+    document.getElementById('riskpanel').classList.toggle('collapsed');
+    fitAll();
+    return;
+  }}
   ['riskpanel','legend'].forEach((other)=>{{
     const el=document.getElementById(other);
     if(el) el.classList.toggle('open', other===id ? !el.classList.contains('open') : false);
