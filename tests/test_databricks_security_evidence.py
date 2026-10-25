@@ -59,6 +59,7 @@ def test_billable_usage_delivery_is_not_audit_log_delivery():
 
 def test_sdk_enums_do_not_hide_running_unsafe_clusters():
     from enum import Enum
+
     from agent_bom.cloud.databricks_security import _check_2_2
 
     class State(Enum):
@@ -73,6 +74,7 @@ def test_sdk_enums_do_not_hide_running_unsafe_clusters():
 
 def test_sdk_job_source_enum_is_excluded_from_interactive_checks():
     from enum import Enum
+
     from agent_bom.cloud.databricks_security import _check_2_1
 
     class Source(Enum):

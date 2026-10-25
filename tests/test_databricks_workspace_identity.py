@@ -80,3 +80,21 @@ def test_sdk_cluster_state_retains_cluster_inventory(workspace):
     cluster = next(agent for agent in agents if agent.name.startswith("databricks-cluster:"))
     assert cluster.metadata["cloud_origin"]["scope"]["project_id"] == workspace.config.host
     assert cluster.mcp_servers[0].packages[0].version == "1.0"
+
+
+def test_workspace_scope_survives_graph_export(workspace):
+    from agent_bom.models import AIBOMReport
+    from agent_bom.output.graph import build_graph_elements
+
+    first = discover(workspace_client=workspace)[0][0]
+    workspace.config.host = "https://two.cloud.databricks.com"
+    second = discover(workspace_client=workspace)[0][0]
+    elements = build_graph_elements(AIBOMReport(agents=[first, second]))
+    nodes = [e["data"] for e in elements if "source" not in e["data"]]
+    edges = [e["data"] for e in elements if "source" in e["data"]]
+    agent_nodes = [n for n in nodes if n.get("type") == "agent"]
+    assert len(agent_nodes) == 2
+    assert len({n["id"] for n in agent_nodes}) == 2
+    assert edges
+    ids = {n["id"] for n in nodes}
+    assert all(e["source"] in ids and e["target"] in ids for e in edges)
