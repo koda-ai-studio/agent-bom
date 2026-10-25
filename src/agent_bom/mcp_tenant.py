@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Final
 
 from agent_bom.cli._tenant import (
@@ -73,3 +75,21 @@ def resolve_mcp_tool_tenant_id(requested_tenant_id: str | None = None) -> str:
             MCP_TENANT_ENV_VAR,
         )
     return resolved
+
+
+@contextmanager
+def bound_postgres_tenant() -> Iterator[None]:
+    """Run one MCP call with Postgres RLS scoped to the server-bound tenant.
+
+    Only HTTP middleware binds the Postgres tenant context, so without this an
+    MCP call reads as ``default`` and RLS hides the bound tenant's estate.
+    """
+    from agent_bom.api.storage_schema import postgres_deployment_configured
+
+    if not postgres_deployment_configured():
+        yield
+        return
+    from agent_bom.api.tenant_worker import tenant_bound_context
+
+    with tenant_bound_context(resolve_mcp_tenant_id()):
+        yield
