@@ -1,0 +1,123 @@
+{
+  "benchmark": "native image parser: synthetic docker-save images, two layers per image",
+  "command": "uv run python scripts/bench/image_layer_bench.py --sizes 128,512 --gzip-outer [--src <baseline src>]",
+  "date": "2026-10-25",
+  "environment": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "python": "3.13.5",
+    "load_avg": [
+      13.22,
+      15.42,
+      13.13
+    ],
+    "host": "macOS arm64 laptop, shared with other jobs (wall time is noisy)"
+  },
+  "before": {
+    "source": "f2bccb461 (0.111.0, whole-layer buffering)",
+    "environment": {
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "python": "3.13.5",
+      "load_avg": [
+        15.64,
+        15.36,
+        12.6
+      ]
+    },
+    "results": [
+      {
+        "layer_mib": 128,
+        "image_mib": 256.2,
+        "gzip_outer": false,
+        "run": 1,
+        "packages": 2000,
+        "wall_s": 0.93,
+        "tracemalloc_peak_mib": 2309.5,
+        "max_rss_mib": 454.8
+      },
+      {
+        "layer_mib": 128,
+        "image_mib": 256.1,
+        "gzip_outer": true,
+        "run": 1,
+        "packages": 2000,
+        "wall_s": 2.72,
+        "tracemalloc_peak_mib": 2325.8,
+        "max_rss_mib": 457.3
+      },
+      {
+        "layer_mib": 512,
+        "image_mib": 1024.3,
+        "gzip_outer": false,
+        "run": 1,
+        "packages": 2000,
+        "wall_s": 6.06,
+        "tracemalloc_peak_mib": 3077.6,
+        "max_rss_mib": 673.2
+      },
+      {
+        "layer_mib": 512,
+        "image_mib": 1024.5,
+        "gzip_outer": true,
+        "run": 1,
+        "packages": 2000,
+        "wall_s": 7.73,
+        "tracemalloc_peak_mib": 3093.9,
+        "max_rss_mib": 717.1
+      }
+    ]
+  },
+  "after": {
+    "source": "ce070a05b (streamed layers)",
+    "environment": {
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "python": "3.13.5",
+      "load_avg": [
+        13.22,
+        15.42,
+        13.13
+      ]
+    },
+    "results": [
+      {
+        "layer_mib": 128,
+        "image_mib": 256.2,
+        "gzip_outer": false,
+        "run": 1,
+        "packages": 2000,
+        "wall_s": 0.57,
+        "tracemalloc_peak_mib": 8.5,
+        "max_rss_mib": 98.7
+      },
+      {
+        "layer_mib": 128,
+        "image_mib": 256.1,
+        "gzip_outer": true,
+        "run": 1,
+        "packages": 2000,
+        "wall_s": 2.21,
+        "tracemalloc_peak_mib": 8.7,
+        "max_rss_mib": 85.8
+      },
+      {
+        "layer_mib": 512,
+        "image_mib": 1024.3,
+        "gzip_outer": false,
+        "run": 1,
+        "packages": 2000,
+        "wall_s": 1.25,
+        "tracemalloc_peak_mib": 8.6,
+        "max_rss_mib": 102.2
+      },
+      {
+        "layer_mib": 512,
+        "image_mib": 1024.5,
+        "gzip_outer": true,
+        "run": 1,
+        "packages": 2000,
+        "wall_s": 2.97,
+        "tracemalloc_peak_mib": 8.8,
+        "max_rss_mib": 110.7
+      }
+    ]
+  }
+}
