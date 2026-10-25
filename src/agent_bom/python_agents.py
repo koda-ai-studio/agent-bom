@@ -36,10 +36,11 @@ import re
 from pathlib import Path
 from typing import Any, NamedTuple
 
+from agent_bom.ast.call_scopes import call_scopes
 from agent_bom.ast.source_reader import parse_python_source
 from agent_bom.ast_signal_utils import is_agent_tool_decorator
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
-from agent_bom.parsers.pyproject_declared import parse_pyproject_dependencies
+from agent_bom.parsers.declared_requirements import parse_pyproject_dependencies, parse_requirements_txt
 from agent_bom.traversal import iter_discovery_files
 
 # ─── Framework registry ───────────────────────────────────────────────────────
@@ -126,30 +127,6 @@ class _PythonAgentDef(NamedTuple):
 # ─── Requirement file parsers ─────────────────────────────────────────────────
 
 
-def _parse_requirements_txt(path: Path) -> dict[str, str]:
-    """Parse requirements.txt / constraints.txt → {package: version}."""
-    pkgs: dict[str, str] = {}
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        line = line.strip()
-        if not line or line.startswith(("#", "-")):
-            continue
-        # name==1.2.3, name>=1.2, name~=1.2, name[extra]==1.2
-        m = re.match(r"^([A-Za-z0-9_\-]+)(?:\[[^\]]*\])?\s*[=~!<>]+\s*([^\s;#,]+)", line)
-        if m:
-            pkgs[m.group(1).lower().replace("_", "-")] = m.group(2)
-        else:
-            # bare name with no version
-            bare = re.match(r"^([A-Za-z0-9_\-]+)", line)
-            if bare:
-                pkgs[bare.group(1).lower().replace("_", "-")] = "unknown"
-    return pkgs
-
-
-def _parse_pyproject_toml(path: Path) -> dict[str, str]:
-    """Parse pyproject.toml dependencies → {package: version}."""
-    return parse_pyproject_dependencies(path)
-
-
 def _collect_requirements(project: Path) -> dict[str, str]:
     """Collect {package: version} from all requirement files in the project.
 
@@ -162,9 +139,9 @@ def _collect_requirements(project: Path) -> dict[str, str]:
         name = path.name
         try:
             if name.startswith("requirements") and name.endswith(".txt"):
-                pkgs.update(_parse_requirements_txt(path))
+                pkgs.update(parse_requirements_txt(path))
             elif name == "pyproject.toml":
-                pkgs.update(_parse_pyproject_toml(path))
+                pkgs.update(parse_pyproject_dependencies(path))
         except OSError:
             pass
     return pkgs
@@ -316,23 +293,6 @@ def _extract_agent_defs_regex(content: str, filename: str) -> list[_PythonAgentD
     return defs
 
 
-def _call_scopes(tree: ast.Module) -> dict[int, str]:
-    """Map each call node (by ``id``) to its enclosing class/function qualname."""
-    scopes: dict[int, str] = {}
-
-    def visit(node: ast.AST, scope: str) -> None:
-        for child in ast.iter_child_nodes(node):
-            child_scope = scope
-            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                child_scope = f"{scope}.{child.name}" if scope else child.name
-            elif isinstance(child, ast.Call):
-                scopes[id(child)] = scope
-            visit(child, child_scope)
-
-    visit(tree, "")
-    return scopes
-
-
 def _extract_agent_defs(content: str, filename: str) -> list[_PythonAgentDef]:
     """Extract agent definitions from Python source with AST heuristics."""
     try:
@@ -416,7 +376,7 @@ def _extract_agent_defs(content: str, filename: str) -> list[_PythonAgentDef]:
 
     defs: list[_PythonAgentDef] = []
     candidate_calls = {"Agent", "AgentExecutor", "Crew", "create_react_agent", "initialize_agent"}
-    scopes = _call_scopes(tree)
+    scopes = call_scopes(tree)
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
@@ -449,9 +409,7 @@ def _extract_agent_defs(content: str, filename: str) -> list[_PythonAgentDef]:
         if tool_source == "positional-tools-arg":
             all_tools = [(tool_name, f"{source}+{tool_source}", confidence) for tool_name, source, confidence in all_tools]
 
-        model = _extract_string_literal(_keyword_value(node, "model"))
-        if not model:
-            model = _extract_string_literal(_keyword_value(node, "llm"))
+        model = _extract_string_literal(_keyword_value(node, "model")) or _extract_string_literal(_keyword_value(node, "llm"))
         if not model and call_name == "create_react_agent" and node.args:
             model = _extract_string_literal(node.args[0])
 
@@ -564,6 +522,19 @@ def _attach_system_prompts(agent_defs: list[_PythonAgentDef], project: Path) -> 
         prompts = tuple(prompts_by_file.get(agent_def.file, []))
         enriched.append(agent_def._replace(system_prompts=prompts))
     return enriched
+
+
+def _definition_identity(project: Path, d: _PythonAgentDef) -> tuple[str, str, dict[str, Any]]:
+    """Scope-qualified name, defining-file config path and metadata of one definition."""
+    qualified = f"{d.scope}.{d.name}" if d.scope else d.name
+    defining_file = project / d.file
+    config_path = str(defining_file) if defining_file.is_file() else str(project)
+    metadata: dict[str, Any] = {"definition_file": d.file, "definition_scope": d.scope}
+    if d.system_prompts:
+        metadata["system_prompts"] = d.system_prompts
+        metadata["system_prompt_count"] = len(d.system_prompts)
+        metadata["system_prompt_risk_flags"] = sorted({flag for prompt in d.system_prompts for flag in prompt.get("risk_flags", [])})
+    return qualified, config_path, metadata
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
@@ -682,18 +653,7 @@ def scan_python_agents(project_path: str) -> tuple[list[Agent], list[str]]:
             tools.append(MCPTool(name=d.model, description="LLM model"))
 
         cred_env = {k: "***REDACTED***" for k in d.env_refs}
-        qualified = f"{d.scope}.{d.name}" if d.scope else d.name
-        defining_file = project / d.file
-        config_path = str(defining_file) if defining_file.is_file() else str(project)
-        metadata: dict[str, Any] = {"definition_file": d.file, "definition_scope": d.scope}
-        if d.system_prompts:
-            metadata.update(
-                {
-                    "system_prompts": d.system_prompts,
-                    "system_prompt_count": len(d.system_prompts),
-                    "system_prompt_risk_flags": sorted({flag for prompt in d.system_prompts for flag in prompt.get("risk_flags", [])}),
-                }
-            )
+        qualified, config_path, metadata = _definition_identity(project, d)
 
         server = MCPServer(
             name=f"{d.framework}:{qualified}",

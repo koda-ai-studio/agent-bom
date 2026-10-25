@@ -76,8 +76,4 @@ def test_unified_graph_draws_framework_agents_and_delegation(json_report: dict) 
     planner, writer = agents["planner"]["stable_id"], agents["writer"]["stable_id"]
     assert graph.nodes[planner].entity_type == EntityType.AGENT
     assert graph.nodes[writer].entity_type == EntityType.AGENT
-    assert any(
-        e.source == planner and e.target == writer and e.relationship == RelationshipType.DELEGATED_TO for e in graph.edges
-    )
-
-
+    assert any(e.source == planner and e.target == writer and e.relationship == RelationshipType.DELEGATED_TO for e in graph.edges)

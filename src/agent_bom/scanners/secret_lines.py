@@ -56,6 +56,7 @@ def is_placeholder_value(value: str) -> bool:
     """Whether an assigned credential value is an obvious template placeholder."""
     return bool(ENTROPY_PLACEHOLDER_RE.fullmatch(value) or _FILLER_PLACEHOLDER_RE.fullmatch(value))
 
+
 # Markers that make a credential-shaped value a documentation sample: vendor
 # sample values carry EXAMPLE, and docs pad or elide the body (xxxx, ****, ...).
 _SAMPLE_MARKER_RE = re.compile(

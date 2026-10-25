@@ -1,4 +1,4 @@
-"""Declared dependency names and versions from a ``pyproject.toml``.
+"""Declared dependency names and versions from ``requirements*.txt`` and ``pyproject.toml``.
 
 Reads PEP 621 ``[project] dependencies`` and ``optional-dependencies``, PEP 735
 ``[dependency-groups]``, and Poetry ``dependencies`` / ``dev-dependencies`` /
@@ -80,6 +80,24 @@ def declared_dependencies(data: dict[str, Any]) -> dict[str, str]:
     for group in (_table(poetry, "group") or {}).values():
         out.update(_from_poetry_table(_table(group, "dependencies")))
     return out
+
+
+def parse_requirements_txt(path: Path) -> dict[str, str]:
+    """``{normalized_name: version}`` from a requirements/constraints file (``unknown`` when unpinned)."""
+    pkgs: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line or line.startswith(("#", "-")):
+            continue
+        # name==1.2.3, name>=1.2, name~=1.2, name[extra]==1.2
+        m = re.match(r"^([A-Za-z0-9_\-]+)(?:\[[^\]]*\])?\s*[=~!<>]+\s*([^\s;#,]+)", line)
+        if m:
+            pkgs[m.group(1).lower().replace("_", "-")] = m.group(2)
+        else:
+            bare = re.match(r"^([A-Za-z0-9_\-]+)", line)
+            if bare:
+                pkgs[bare.group(1).lower().replace("_", "-")] = "unknown"
+    return pkgs
 
 
 def parse_pyproject_dependencies(path: Path) -> dict[str, str]:
