@@ -15,6 +15,8 @@ import process from "node:process";
 import { exportedRoutes } from "./generate-static-demo-data.mjs";
 import { startStaticDemoServer } from "./static-demo-server.mjs";
 
+// Sample data is dated at its snapshot; wall-clock ages would read months or years old.
+const WALL_CLOCK_AGE = /\b\d+\s*(months?|years?|mo|yr)\s+ago\b|\b[1-9]\d{2,}\s*(d|days?)\s+ago\b|overdue by \d+ (months?|years?)/i;
 const ERROR_TEXT = /no sample data in the read-only demo|something went wrong|failed to load|could not be loaded|network request failed|application error/i;
 
 const PAGES = [
@@ -94,6 +96,7 @@ async function main() {
           const text = await page.locator("#main-content").innerText().catch(() => "");
           if (demoRoutes.has(route) === panel) problems.push(`${route}: ${panel ? "panel shown on a recorded page" : "unrecorded page rendered without the panel"}`);
           if (ERROR_TEXT.test(text)) problems.push(`${route}: error state: ${text.match(ERROR_TEXT)[0]}`);
+          if (WALL_CLOCK_AGE.test(text)) problems.push(`${route}: wall-clock age: ${text.match(WALL_CLOCK_AGE)[0]}`);
           if (!(await page.getByTestId("static-demo-banner").isVisible())) problems.push(`${route}: demo banner not visible`);
           const hidden = await page.getByRole("navigation").getByRole("link").evaluateAll((links, base) => links
             .map((link) => new URL(link.href).pathname.slice(base.length) || "/"), basePath);

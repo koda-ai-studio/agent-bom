@@ -1,5 +1,6 @@
 import type { Vulnerability } from "@/lib/api";
 import type { FindingFacets, FindingOccurrenceSummary, FindingReconfirmation, WorkloadRuntimeEvidence } from "@/lib/api-types";
+import { nowForRelativeTime } from "@/lib/relative-clock";
 
 export interface EnrichedVuln extends Vulnerability {
   /** Verified against the repository scan root by the scanner; absent is unknown. */
@@ -199,7 +200,7 @@ export interface SlaDue {
  * state. Returns null when no deadline is known (an explicit "SLA unavailable"),
  * never a fabricated date.
  */
-export function formatSlaDue(value: string | undefined | null, now: number = Date.now()): SlaDue | null {
+export function formatSlaDue(value: string | undefined | null, now: number = nowForRelativeTime()): SlaDue | null {
   if (!value || !value.trim()) return null;
   const parsed = Date.parse(value);
   if (Number.isNaN(parsed)) return null;
