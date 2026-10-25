@@ -1,3 +1,4 @@
+import { ASSET_BASE } from "@/lib/asset-base";
 /** Agent identity comes from recorded source fields, never its display name. */
 export interface AgentSource {
   id: string;
@@ -20,21 +21,21 @@ type SourceInput = {
 };
 
 const BRANDS: Record<string, AgentSource> = {
-  okta: { id: "okta", label: "Okta", src: "/logos/okta.svg", monogram: "Ok", accent: "#70809c", mono: true, badgeMonogram: true },
-  databricks: { id: "databricks", label: "Databricks", src: "/logos/databricks.svg", monogram: "Da", accent: "#70809c", mono: true },
-  kubernetes: { id: "kubernetes", label: "Kubernetes", src: "/logos/kubernetes.svg", monogram: "Ku", accent: "#70809c", mono: true },
-  clickhouse: { id: "clickhouse", label: "ClickHouse", src: "/logos/clickhouse.svg", monogram: "Cl", accent: "#70809c", mono: true },
+  okta: { id: "okta", label: "Okta", src: `${ASSET_BASE}/logos/okta.svg`, monogram: "Ok", accent: "#70809c", mono: true, badgeMonogram: true },
+  databricks: { id: "databricks", label: "Databricks", src: `${ASSET_BASE}/logos/databricks.svg`, monogram: "Da", accent: "#70809c", mono: true },
+  kubernetes: { id: "kubernetes", label: "Kubernetes", src: `${ASSET_BASE}/logos/kubernetes.svg`, monogram: "Ku", accent: "#70809c", mono: true },
+  clickhouse: { id: "clickhouse", label: "ClickHouse", src: `${ASSET_BASE}/logos/clickhouse.svg`, monogram: "Cl", accent: "#70809c", mono: true },
 
-  claude: { id: "claude", label: "Claude", src: "/logos/claude.svg", monogram: "Cl", accent: "#c76b4e" },
-  cursor: { id: "cursor", label: "Cursor", src: "/logos/cursor.svg", monogram: "Cu", accent: "#8170d5", mono: true },
-  openai: { id: "openai", label: "OpenAI", src: "/logos/openai.svg", monogram: "OA", accent: "#169c88", darkMark: true },
-  windsurf: { id: "windsurf", label: "Windsurf", src: "/logos/windsurf.svg", monogram: "W", accent: "#158d96", mono: true },
-  copilot: { id: "copilot", label: "GitHub Copilot", src: "/logos/copilot.svg", monogram: "Co", accent: "#7565d8", mono: true },
-  snowflake: { id: "snowflake", label: "Snowflake", src: "/logos/snowflake.svg", monogram: "Sn", accent: "#278dbe" },
-  aws: { id: "aws", label: "AWS", src: "/logos/aws.svg", monogram: "AWS", accent: "#bd790f", mono: true },
-  azure: { id: "azure", label: "Azure", src: "/logos/azure.svg", monogram: "Az", accent: "#168bd1" },
-  gcp: { id: "gcp", label: "Google Cloud", src: "/logos/gcp.svg", monogram: "GC", accent: "#4285c4" },
-  github: { id: "github", label: "GitHub", src: "/logos/github.svg", monogram: "GH", accent: "#70809c", mono: true },
+  claude: { id: "claude", label: "Claude", src: `${ASSET_BASE}/logos/claude.svg`, monogram: "Cl", accent: "#c76b4e" },
+  cursor: { id: "cursor", label: "Cursor", src: `${ASSET_BASE}/logos/cursor.svg`, monogram: "Cu", accent: "#8170d5", mono: true },
+  openai: { id: "openai", label: "OpenAI", src: `${ASSET_BASE}/logos/openai.svg`, monogram: "OA", accent: "#169c88", darkMark: true },
+  windsurf: { id: "windsurf", label: "Windsurf", src: `${ASSET_BASE}/logos/windsurf.svg`, monogram: "W", accent: "#158d96", mono: true },
+  copilot: { id: "copilot", label: "GitHub Copilot", src: `${ASSET_BASE}/logos/copilot.svg`, monogram: "Co", accent: "#7565d8", mono: true },
+  snowflake: { id: "snowflake", label: "Snowflake", src: `${ASSET_BASE}/logos/snowflake.svg`, monogram: "Sn", accent: "#278dbe" },
+  aws: { id: "aws", label: "AWS", src: `${ASSET_BASE}/logos/aws.svg`, monogram: "AWS", accent: "#bd790f", mono: true },
+  azure: { id: "azure", label: "Azure", src: `${ASSET_BASE}/logos/azure.svg`, monogram: "Az", accent: "#168bd1" },
+  gcp: { id: "gcp", label: "Google Cloud", src: `${ASSET_BASE}/logos/gcp.svg`, monogram: "GC", accent: "#4285c4" },
+  github: { id: "github", label: "GitHub", src: `${ASSET_BASE}/logos/github.svg`, monogram: "GH", accent: "#70809c", mono: true },
 };
 
 // Product types are more specific than collector or hosting metadata.

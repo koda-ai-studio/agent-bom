@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AuthGate } from "@/components/auth-gate";
 import { DemoSeedNotice } from "@/components/demo-seed-notice";
 import { Nav } from "@/components/nav";
+import { StaticDemoBanner } from "@/components/static-demo-banner";
 import {
   SidebarLayoutProvider,
   mainContentPaddingClass,
@@ -19,6 +20,7 @@ function ShellMain({ children }: { children: React.ReactNode }) {
       className={`min-h-screen pt-16 transition-[padding-left] duration-200 ${mainContentPaddingClass(collapsed)}`}
     >
       <div className="mx-auto w-full max-w-[2560px] px-4 py-6 sm:px-6 lg:px-8">
+        <StaticDemoBanner />
         <DemoSeedNotice />
         {children}
       </div>

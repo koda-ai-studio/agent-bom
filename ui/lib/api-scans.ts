@@ -1,4 +1,5 @@
 import { getConfiguredApiUrl } from "./runtime-config";
+import { isStaticDemo } from "./static-demo";
 import type {
   JobListItem,
   JobStatus,
@@ -135,6 +136,10 @@ export const scansApi = {
 
   /** Connect to SSE stream for real-time progress */
   streamScan: (jobId: string, onMessage: (data: SSEEvent) => void, onDone: () => void) => {
+    if (isStaticDemo()) {
+      onDone();
+      return () => undefined;
+    }
     const es = new EventSource(`${getConfiguredApiUrl()}/v1/scan/${jobId}/stream`, { withCredentials: true });
     es.onmessage = (e) => {
       try {

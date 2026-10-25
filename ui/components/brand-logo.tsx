@@ -1,4 +1,5 @@
 "use client";
+import { ASSET_BASE } from "@/lib/asset-base";
 
 import { useThemeMode } from "@/lib/theme-mode";
 
@@ -35,7 +36,7 @@ export function BrandLogo({
     <span className={`inline-flex min-w-0 items-center gap-2.5 ${className}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`/brand/mark-${theme}.svg?${BRAND_ASSET_REV}`}
+        src={`${ASSET_BASE}/brand/mark-${theme}.svg?${BRAND_ASSET_REV}`}
         alt=""
         aria-hidden="true"
         className={`${markClassName} shrink-0 object-contain`}
@@ -43,7 +44,7 @@ export function BrandLogo({
       {showWordmark ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={`/brand/wordmark-${theme}.svg?${BRAND_ASSET_REV}`}
+          src={`${ASSET_BASE}/brand/wordmark-${theme}.svg?${BRAND_ASSET_REV}`}
           alt="agent-bom"
           className={`${wordmarkClassName} max-w-[9.5rem] shrink-0 object-contain object-left`}
         />

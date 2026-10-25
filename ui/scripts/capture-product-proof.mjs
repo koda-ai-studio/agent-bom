@@ -9,6 +9,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./product-proof-scope.mjs";
 import { waitForOwnedServer } from "./product-proof-server.mjs";
 import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
@@ -1580,7 +1581,7 @@ async function fulfill(route, body, status = 200) {
   });
 }
 
-async function installRoutes(page, fixtureGraph = graph) {
+export async function installRoutes(page, fixtureGraph = graph) {
   const graph = fixtureGraph;
   // The offline fixture has no successful feed-run receipt; freshness stays unknown.
   await page.route("**/v1/intel/sources", (route) => fulfill(route, {
@@ -4057,7 +4058,11 @@ function checkAdvisoryFixtures() {
   }
 }
 checkAdvisoryFixtures();
-(process.argv.includes("--check-fixtures") ? Promise.resolve() : main()).catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+export { overviewProof };
+// Importable by the static demo generator, which reuses these fixture routes.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  (process.argv.includes("--check-fixtures") ? Promise.resolve() : main()).catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

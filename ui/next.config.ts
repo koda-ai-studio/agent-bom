@@ -5,6 +5,9 @@ import { securityHeaders as buildSecurityHeaders } from "./lib/security-headers.
 // NEXT_EXPORT=1 → static export bundled into the Python package (agent-bom api).
 // Rewrites require a running Node server so they are disabled in export mode.
 const isExport = process.env.NEXT_EXPORT === "1";
+// NEXT_PUBLIC_STATIC_DEMO=1 → read-only sample-data export served under a
+// sub-path (GitHub Pages /agent-bom/demo); it reads shipped JSON, never an API.
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || undefined;
 
 // Single source of truth for CSP + companion headers lives in
 // lib/security-headers.ts. ui/scripts/sync-vercel-headers.mjs regenerates
@@ -46,6 +49,7 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  ...(basePath && { basePath }),
   images: { unoptimized: true },
   productionBrowserSourceMaps: false,
   // The Python package uses static export, while the standalone Docker image
