@@ -93,6 +93,7 @@ _DYNAMIC_RELATIONSHIP_VALUES = {
     RelationshipType.ACCESSED.value,
     RelationshipType.DELEGATED_TO.value,
     RelationshipType.TRACE_STEP.value,
+    RelationshipType.RECORDED_ACTIVITY.value,
 }
 
 

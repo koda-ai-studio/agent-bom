@@ -136,6 +136,12 @@ def sanitize_runtime_metadata(value: object, *, max_items: int = 50, _cache: Run
             _string_cache=_cache.strings if _cache is not None else None,
             _key_cache=_cache.keys if _cache is not None else None,
         )
+        if key == "graph_context" and isinstance(raw_value, dict) and isinstance(safe[key], dict):
+            # A shortened/redacted reference must never become another asset's ID.
+            for field in ("agent_ref", "target_ref", "upstream_ref", "account_ref", "provider"):
+                original = raw_value.get(field)
+                if not isinstance(original, str) or safe[key].get(field) != original:
+                    safe[key].pop(field, None)
     return safe
 
 

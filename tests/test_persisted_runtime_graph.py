@@ -292,3 +292,51 @@ def test_matching_native_owner_and_provider_can_bind():
     graph.get_node("agent:one").attributes["arn"] = "arn:aws:lambda:us-east-1:111111111111:function:fixture"
     project_recorded_activity(graph, _projection_payload(account_ref="111111111111", provider="aws"), "tenant-a")
     assert graph.edges[0].source == "agent:one"
+
+
+def test_persisted_graph_coordinate_survives_field_sensitive_redaction():
+    target = "tool:server:cfg-862185e36f77:bridge-fixture:111c239b-bb2c-530c-bebb-82ef9842e23b:query"
+    event = _ocsf()
+    event["unmapped"]["agent_bom.inventory_node_id"] = target
+    record = _runtime_observation_from_event(_normalize_ocsf_event(event, tenant_id="tenant-a"), tenant_id="tenant-a")
+    assert record.metadata["graph_context"]["target_ref"] == target
+
+
+@pytest.mark.parametrize("field", ["agent_ref", "target_ref", "upstream_ref"])
+def test_graph_reference_fields_still_redact_embedded_credentials(field):
+    from agent_bom.security import sanitize_sensitive_payload
+
+    token = "ghp_" + "aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5"
+    value = "tool:server:" + token + ":query"
+    assert token not in str(sanitize_sensitive_payload({field: value}))
+
+
+def test_metadata_never_turns_a_long_graph_reference_into_a_shorter_identity():
+    target = "tool:" + "a" * 496
+    record = _runtime_observation_from_event(
+        {"event_id": "long-coordinate", "observed_at": STAMP, "metadata": {"graph_context": {"target_ref": target}}},
+        tenant_id="tenant-a",
+    )
+    assert "target_ref" not in record.metadata["graph_context"]
+
+
+def test_recorded_activity_is_in_runtime_views_without_becoming_traversable(tmp_path):
+    from agent_bom.api.graph_store import SQLiteGraphStore
+    from agent_bom.graph.activity_projection import project_recorded_activity
+
+    graph = _inventory()
+    project_recorded_activity(graph, _projection_payload(), "tenant-a")
+    assert len(graph.runtime_view().edges) == 1
+    assert len(graph.filter_edges(dynamic_only=True)) == 1
+    assert not graph.filter_edges(static_only=True)
+    assert not graph.filter_edges(traversable_only=True)
+    store = SQLiteGraphStore(tmp_path / "graph.db")
+    store.save_graph(graph)
+    for backend in (graph, store):
+        scope = {} if backend is graph else {"tenant_id": "tenant-a", "scan_id": "scan"}
+        dynamic, _, _ = backend.traverse_subgraph(roots=["agent:one"], dynamic_only=True, **scope)
+        static, _, _ = backend.traverse_subgraph(roots=["agent:one"], static_only=True, **scope)
+        attack, _, _ = backend.traverse_subgraph(roots=["agent:one"], dynamic_only=True, traversable_only=True, **scope)
+        assert len(dynamic.edges) == 1
+        assert not static.edges
+        assert not attack.edges

@@ -1108,4 +1108,10 @@ class UnifiedGraph:
 
 # ── Dynamic relationship set ─────────────────────────────────────────────
 
-_DYNAMIC_RELS = {RelationshipType.INVOKED, RelationshipType.ACCESSED, RelationshipType.DELEGATED_TO, RelationshipType.TRACE_STEP}
+_DYNAMIC_RELS = {
+    RelationshipType.INVOKED,
+    RelationshipType.ACCESSED,
+    RelationshipType.DELEGATED_TO,
+    RelationshipType.TRACE_STEP,
+    RelationshipType.RECORDED_ACTIVITY,
+}
