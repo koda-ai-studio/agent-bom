@@ -115,6 +115,8 @@ def with_trace_events(report_json: dict[str, Any], tenant_id: str, *, store: Run
     gateway = _available_store(get_gateway_activity_store, "gateway", failures)
     window = load_runtime_window(runtime, gateway, tenant_id, window_start=window_start, window_end=window_end, traces=traces)
     window.failures.extend(failures)
+    if not (window.activity or window.truncated or window.failures or (traces and window.traces)):
+        return report_json
     result = dict(report_json)
     if window.activity or window.truncated or window.failures:
         result["runtime_activity_events"] = {
