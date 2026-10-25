@@ -541,7 +541,9 @@ def test_pr_runs_cancel_superseded_runs_and_every_main_push_completes() -> None:
     concurrency = _ci()["concurrency"]
     assert "github.event.pull_request.number" in concurrency["group"]
     assert "github.event_name" in concurrency["group"]
-    assert "github.sha" not in concurrency["group"]
+    # Main pushes need distinct groups: disabling cancellation alone still
+    # allows GitHub's single pending slot to replace an older queued commit.
+    assert "github.event_name == 'push' && github.ref == 'refs/heads/main' && github.sha" in concurrency["group"]
     assert "github.ref" in concurrency["group"]
     assert concurrency["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}"
     for name in ("codeql.yml", "pr-security-gate.yml"):
