@@ -64125,7 +64125,7 @@
             }
           },
           {
-            "description": "Read revision from the first page",
+            "description": "Optional with cursor; mismatch is 409",
             "in": "query",
             "name": "snapshot_generation",
             "required": false,
@@ -64139,12 +64139,12 @@
                   "type": "null"
                 }
               ],
-              "description": "Read revision from the first page",
+              "description": "Optional with cursor; mismatch is 409",
               "title": "Snapshot Generation"
             }
           },
           {
-            "description": "Opaque cursor for keyset pagination",
+            "description": "Opaque keyset cursor; carries the snapshot generation",
             "in": "query",
             "name": "cursor",
             "required": false,
@@ -64157,7 +64157,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Opaque cursor for keyset pagination",
+              "description": "Opaque keyset cursor; carries the snapshot generation",
               "title": "Cursor"
             }
           },
@@ -67429,7 +67429,7 @@
     },
     "/v1/graph/incident-edges": {
       "get": {
-        "description": "Page recorded incident relationships without loading the full neighborhood.\n\nReuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.\nSnapshot replacement invalidates cursors (422: restart). A replaced id resolves to its canonical node, echoed as resolved_from.\nCompleteness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.",
+        "description": "Page recorded incident relationships without loading the full neighborhood.\n\nReuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.\nSnapshot replacement or a stale snapshot_generation is a 409 (restart); a malformed cursor is a 422.\nA replaced id resolves to its canonical node, echoed as resolved_from.\nCompleteness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.",
         "operationId": "get_graph_incident_edges_v1_graph_incident_edges_get",
         "parameters": [
           {

@@ -33,6 +33,7 @@ from agent_bom.api.routes.graph_routes.exploit_story import router as exploit_st
 from agent_bom.api.routes.graph_routes.params import _parse_entity_type_filter
 from agent_bom.api.time_window import MAX_WINDOW_DAYS
 from agent_bom.graph import SEVERITY_RANK
+from agent_bom.graph.adjacency_page import SnapshotGenerationMismatchError
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.semantic_clusters import SEMANTIC_CLUSTER_KINDS
 from agent_bom.graph.view_payloads import _semantic_cluster_payload
@@ -213,8 +214,8 @@ async def list_graph_agents(
     request: Request,
     q: str = Query("", description="Optional agent label/id search"),
     scan_id: Optional[str] = Query(None, description="Scan ID"),
-    snapshot_generation: Optional[str] = Query(None, max_length=128, description="Read revision from the first page"),
-    cursor: Optional[str] = Query(None, description="Opaque cursor for keyset pagination"),
+    snapshot_generation: Optional[str] = Query(None, max_length=128, description="Optional with cursor; mismatch is 409"),
+    cursor: Optional[str] = Query(None, description="Opaque keyset cursor; carries the snapshot generation"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(100, ge=1, le=500, description="Max agents"),
 ) -> dict:
@@ -222,6 +223,7 @@ async def list_graph_agents(
     _enforce_node_offset_cap(offset, cursor)
     graph_store = _runtime._get_graph_store_or_503()
     tenant_id = _runtime._tenant(request)
+    store_cursor, snapshot_generation = continue_node_cursor(cursor, snapshot_generation)
     identity = await _runtime._graph_store_call(
         optional_generation,
         graph_store,
@@ -240,7 +242,7 @@ async def list_graph_agents(
             tenant_id=tenant_id,
             query=query,
             entity_types={"agent"},
-            cursor=cursor,
+            cursor=store_cursor,
             offset=offset,
             limit=limit,
         )
@@ -256,12 +258,13 @@ async def list_graph_agents(
             scan_id=scan_id or "",
             tenant_id=tenant_id,
             entity_types={"agent"},
-            cursor=cursor,
+            cursor=store_cursor,
             offset=offset,
             limit=limit,
         )
     if identity is not None:
         await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant_id, identity=identity, has_rows=bool(agents))
+        next_cursor = wrap_node_cursor(next_cursor, identity[1])
     return {
         "snapshot_generation": identity[1] if identity else None,
         "scan_id": effective_scan_id,
@@ -360,7 +363,8 @@ async def get_graph_incident_edges(
     """Page recorded incident relationships without loading the full neighborhood.
 
     Reuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.
-    Snapshot replacement invalidates cursors (422: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
+    Snapshot replacement or a stale snapshot_generation is a 409 (restart); a malformed cursor is a 422.
+    A replaced id resolves to its canonical node, echoed as resolved_from.
     Completeness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.
     """
     store = _runtime._get_graph_store_or_503()
@@ -381,8 +385,10 @@ async def get_graph_incident_edges(
             cursor=cursor,
             snapshot_generation=snapshot_generation,
         )
+    except SnapshotGenerationMismatchError as exc:
+        raise HTTPException(status_code=409, detail="Graph snapshot changed; restart the query from its first page.") from exc
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail="Invalid or stale incident relationship page; restart from the first page") from exc
+        raise HTTPException(status_code=422, detail="Invalid incident relationship page; restart from the first page") from exc
     if page is None:
         return {
             "scan_id": scan_id or "",

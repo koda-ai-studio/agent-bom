@@ -24,6 +24,7 @@ def client(tmp_path, monkeypatch):
     graph = _path_graph("default")
     for index in range(3):
         graph.add_node(UnifiedNode(id=f"principal:reader-{index}", entity_type=EntityType.SERVICE_ACCOUNT, label=f"reader-{index}"))
+        graph.add_node(UnifiedNode(id=f"agent:reader-{index}", entity_type=EntityType.AGENT, label=f"agent-reader-{index}"))
     store.save_graph(graph)
     monkeypatch.setattr(api_stores, "_graph_store", store)
     return TestClient(app), store
@@ -60,6 +61,36 @@ def test_search_cursor_carries_its_generation_like_graph_and_attack_paths(client
     assert pinned.status_code == 200 and pinned.json()["results"] == second.json()["results"]
     mismatch = http.get("/v1/graph/search", params={"q": "reader", "limit": 1, "cursor": cursor, "snapshot_generation": _other(generation)})
     assert mismatch.status_code == 409, mismatch.text
+
+
+@pytest.mark.parametrize("params", [{}, {"q": "reader"}], ids=["page", "search"])
+def test_agents_cursor_carries_its_generation_like_graph_and_search(client, params):
+    http, _store = client
+    first = http.get("/v1/graph/agents", params=params | {"limit": 1})
+    assert first.status_code == 200, first.text
+    body = first.json()
+    cursor, generation = body["pagination"]["next_cursor"], body["snapshot_generation"]
+    assert cursor and generation
+    second = http.get("/v1/graph/agents", params=params | {"limit": 1, "cursor": cursor})
+    assert second.status_code == 200, second.text
+    assert second.json()["snapshot_generation"] == generation
+    assert second.json()["agents"][0]["id"] != body["agents"][0]["id"]
+    pinned = http.get("/v1/graph/agents", params=params | {"limit": 1, "cursor": cursor, "snapshot_generation": generation})
+    assert pinned.status_code == 200 and pinned.json()["agents"] == second.json()["agents"]
+    mismatch = http.get("/v1/graph/agents", params=params | {"limit": 1, "cursor": cursor, "snapshot_generation": _other(generation)})
+    assert mismatch.status_code == 409, mismatch.text
+
+
+@pytest.mark.parametrize(
+    ("path", "params"),
+    [("/v1/graph/incident-edges", {"node_id": "principal:reader"}), ("/v1/inventory/assets/principal:reader", {})],
+)
+def test_generation_mismatch_is_a_conflict_not_a_validation_error(client, path, params):
+    http, _store = client
+    generation = http.get("/v1/inventory/assets").json()["snapshot_generation"]
+    assert http.get(path, params=params | {"snapshot_generation": generation}).status_code == 200
+    stale = http.get(path, params=params | {"snapshot_generation": _other(generation)})
+    assert stale.status_code == 409, stale.text
 
 
 @pytest.mark.asyncio
