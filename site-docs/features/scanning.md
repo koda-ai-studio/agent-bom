@@ -213,6 +213,18 @@ verify against the distribution's advisory", and `match` exits 2. The mapping
 from CPE product to distro packages is explicit
 (`src/agent_bom/scanners/cpe_distro_packages.py`); unlisted products map to nothing.
 
+### Am I affected?
+
+`GET /v1/intel/advisories/{id}/affected` (and the read-only MCP tool
+`affected_assets`) answers for one advisory, declared or from the local feed
+with NVD CPE ranges, across the tenant's newest stored scan of each target:
+affected rows with the fixed version to patch to, possibly affected distro
+packages with the reason to verify the distribution's advisory, and not
+affected rows, with graph node ids for the blast radius. Possibly-affected
+results are listed but never counted as confirmed vulnerabilities in severity
+totals or gates. The operator runbook is
+[Respond to a new CVE](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/RESPOND_TO_A_NEW_CVE.md).
+
 ### Daily re-match
 
 Set `AGENT_BOM_ADVISORY_REMATCH=1` on the API server to re-match stored
