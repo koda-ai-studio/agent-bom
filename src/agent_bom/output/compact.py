@@ -653,7 +653,8 @@ def print_compact_remediation(report: AIBOMReport, limit: int = 5, page: int = 1
             f"  [{style}]{row_number}.[/{style}] "
             f"[bold]{item['package']}[/bold] [dim]{item['current']}[/dim] → [green]{item['fix']}[/green]{kev}"
         )
-        console.print(f"     [bold]Priority:[/bold] {item['priority']} [dim]· clears {reach}[/dim]")
+        reason = f" ({item['priority_reason']})" if item.get("priority_reason") else ""
+        console.print(f"     [bold]Priority:[/bold] {item['priority']}{reason} [dim]· clears {reach}[/dim]")
         console.print(f"     [bold]Action:[/bold] [dim]{_compact_detail(item['action'], limit=96)}[/dim]")
         if item.get("command"):
             console.print(f"     [bold cyan]Install:[/bold cyan] [cyan]$ {item['command']}[/cyan]")

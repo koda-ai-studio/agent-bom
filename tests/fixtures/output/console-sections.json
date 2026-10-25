@@ -19,5 +19,5 @@
   "print_threat_frameworks:False:True": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "print_threat_frameworks:True:False": "da4425a3f0a04bb2be6418176028aac3e402a440b2cc82315aa15804c15f6f1a",
   "print_threat_frameworks:True:True": "1bee89ddb7fadfca8218d8a9305c91b9b69b6fc9116791c768b2b96cbfdb10fd",
-  "remediation-plan": "c17993ff544c378a9d15e5e11e07ffad9d968cd223c883bdf102566ac650102b"
+  "remediation-plan": "27a80052360b5b983e67ee649633d0c27c659c000a1690240720b5f9dc19ab41"
 }
