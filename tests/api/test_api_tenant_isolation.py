@@ -1232,6 +1232,7 @@ async def test_ocsf_ingest_normalizes_expected_analytics_contract():
         {
             "event_id": "finding-42",
             "event_timestamp": "2026-04-22T04:00:00+00:00",
+            "timestamp_basis": "reported",
             "tenant_id": "tenant-alpha",
             "event_type": "ocsf_detection_finding",
             "detector": "visual_leak",
@@ -1239,12 +1240,16 @@ async def test_ocsf_ingest_normalizes_expected_analytics_contract():
             "tool_name": "screenshot-tool",
             "message": "Credential exposed in screenshot",
             "agent_name": "",
-            "session_id": "",
+            "session_id": "8f46c305-b676-5923-9c48-33086ba06279",
             "trace_id": "",
             "request_id": "",
             "source_id": "splunk",
             "ocsf_class_uid": 2004,
             "ocsf_class_name": "Detection Finding",
+            "actor": {"user": {}, "session": {}},
+            "cloud": {"account": {}},
+            "device": {},
+            "session_id_basis": "event",
         }
     ]
 

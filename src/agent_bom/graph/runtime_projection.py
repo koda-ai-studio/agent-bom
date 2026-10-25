@@ -14,11 +14,12 @@ from agent_bom.graph.projection_support import _add_rel_edge, _mapping_list
 from agent_bom.graph.trace_projection import _Binder
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.runtime.incident_feedback import (
+    IncidentReadResult,
     RuntimeIncidentRecord,
     incident_attribute,
     iter_observed_targets,
-    load_incident_records,
     merge_records,
+    read_incident_records,
 )
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
@@ -141,6 +142,11 @@ def _add_agentic_identity_graph_projections(
 
 
 def _iter_runtime_incident_records(report_json: Mapping[str, Any]) -> list[RuntimeIncidentRecord]:
+    """Compatibility list projection; the graph also retains the collection receipt."""
+    return _collect_runtime_incident_records(report_json).records
+
+
+def _collect_runtime_incident_records(report_json: Mapping[str, Any]) -> IncidentReadResult:
     """Collect runtime incident-feedback records for this scan.
 
     Two sources, both optional and default-off:
@@ -158,9 +164,11 @@ def _iter_runtime_incident_records(report_json: Mapping[str, Any]) -> list[Runti
         if record is not None:
             records.append(record)
     path = report_json.get("runtime_incident_feedback_path")
+    result = IncidentReadResult()
     if isinstance(path, str) and path.strip():
-        records.extend(load_incident_records(path))
-    return records
+        result = read_incident_records(path)
+    result.records = records + result.records
+    return result
 
 
 def _resolve_feedback_agent_ids(
@@ -209,19 +217,19 @@ def _add_runtime_incident_feedback(
       agent to each observed node id, or to a synthetic observed-tool node for
       label-only reaches. Every node/edge is tagged ``source="runtime-feedback"``.
     """
-    records = _iter_runtime_incident_records(report_json)
-    if not records:
-        return
-
+    batch = _collect_runtime_incident_records(report_json)
     ambiguous = 0
-    for (source_id, agent_id), agent_records in merge_records(records).items():
+    for (source_id, agent_id), agent_records in merge_records(batch.records).items():
         node_ids = _resolve_feedback_agent_ids(agent_id, agent_name_to_ids, source_id=source_id, known_ids=graph.has_node)
         ambiguous += not node_ids
         for node_id in node_ids:
             _project_agent_feedback(graph, node_id, agent_records, data_source_tag)
-    if ambiguous:
+    reasons = batch.reason_codes + (("ambiguous_agent_name",) if ambiguous else ())
+    if reasons:
         graph.analysis_status["runtime_incident_feedback"] = GraphAnalysisStatus(
-            status=GraphAnalysisState.LIMITED, reason_codes=("ambiguous_agent_name",), observed={"unbound_agents": ambiguous}
+            status=GraphAnalysisState.LIMITED,
+            reason_codes=reasons,
+            observed={"unbound_agents": ambiguous, "bytes_read": batch.bytes_read, "records": len(batch.records)},
         )
 
 

@@ -9,7 +9,7 @@ from typing import Any, cast
 
 from fastapi import Request
 
-from agent_bom.api.ocsf_fields import _ocsf_finding_message, _resource_name
+from agent_bom.api.ocsf_fields import _ocsf_finding_message, _resource_name, ocsf_identity_context
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, get_runtime_event_store, sanitize_runtime_metadata
 from agent_bom.api.storage.runtime_records import RuntimeMetadataCache
 from agent_bom.api.stores import _get_analytics_store
@@ -114,7 +114,8 @@ def _normalize_ocsf_event(event: dict, *, tenant_id: str) -> dict:
             severity = ocsf_to_severity(int(event.get("severity_id", 0)))
         except Exception:
             severity = "unknown"
-    event_timestamp = _ocsf_timestamp(event.get("time") or event.get("start_time") or event.get("event_time"))
+    reported_time = event.get("time") or event.get("start_time") or event.get("event_time")
+    event_timestamp = _ocsf_timestamp(reported_time)
     detector = _ocsf_finding_detector(event)
     tool_name = _resource_name(event)
     message = _ocsf_finding_message(event)
@@ -126,7 +127,7 @@ def _normalize_ocsf_event(event: dict, *, tenant_id: str) -> dict:
             "ocsf_event",
             tenant_id,
             source_id,
-            event_timestamp,
+            event_timestamp if reported_time else "",
             class_uid,
             class_name,
             detector,
@@ -136,6 +137,7 @@ def _normalize_ocsf_event(event: dict, *, tenant_id: str) -> dict:
     normalized = {
         "event_id": event_id,
         "event_timestamp": event_timestamp,
+        "timestamp_basis": "reported" if reported_time else "receipt",
         "tenant_id": tenant_id,
         "event_type": f"ocsf_{class_slug}",
         "detector": detector,
@@ -158,6 +160,7 @@ def _normalize_ocsf_event(event: dict, *, tenant_id: str) -> dict:
                 if trace_id:
                     normalized["trace_id"] = trace_id
                     break
+    normalized.update(ocsf_identity_context(event, tenant_id=tenant_id, source_id=source_id, event_id=event_id))
     return normalized
 
 
