@@ -1,7 +1,7 @@
 # MCP Server — Connect agent-bom to AI Assistants
 
 agent-bom starts with 8 focused MCP tools. Select a task profile for graph, cloud, runtime or audit work;
-`--profile full` explicitly exposes the complete compatibility catalog of 96 MCP tools. Clients that negotiate the
+`--profile full` explicitly exposes the complete compatibility catalog of 97 MCP tools. Clients that negotiate the
 MCP SDK's legacy `2025-11-25` handshake can connect over stdio or
 Streamable HTTP. The `2026-07-28` protocol also supports stateless requests,
 `server/discover`, per-request capabilities, required HTTP headers, and private
@@ -230,7 +230,7 @@ For prerequisite checks and bounded identity paths, use [`consequence_assessment
 
 For scoped historical permission receipts, use [`compromise_assessment`](MCP_SERVER.md#assess-an-assumed-compromise) in the graph profile.
 
-## Tool Categories (96 tools)
+## Tool Categories (97 tools)
 
 These categories describe `--profile full`, not the default startup catalog.
 The [profile guide](#choose-a-profile-for-other-work) lists the smaller task surfaces.
@@ -250,9 +250,9 @@ The [profile guide](#choose-a-profile-for-other-work) lists the smaller task sur
 | **AI supply chain** | `dataset_card_scan`, `training_pipeline_scan`, `browser_extension_scan`, `model_provenance_scan`, `prompt_scan`, `model_file_scan`, `ingest_external_scan`, `runtime_evidence_ingest` | Scan AI artifacts, prompts, model files, and browser extensions; import tool-agnostic SARIF/SBOM/scanner evidence without executing its producer; merge CWPP runtime signals |
 
 <details>
-<summary>Complete current catalog (96 tools)</summary>
+<summary>Complete current catalog (97 tools)</summary>
 
-`scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
+`scan`, `check`, `intel_lookup`, `affected_assets`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
 `graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `findings_query`, `finding_detail`,
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
@@ -624,7 +624,7 @@ expose different profiles; connect only the entries needed for the task.
 | Profile | Tools | Use it for | Workflow prompts |
 |---|---:|---|---|
 | `scan` (default) | 8 | Package/project scan, exposure and fix planning | quick-audit, pre-install-check, remediation-plan |
-| `graph` | 15 | Inventory rollup, asset drill-down and scoped correlation | Use inventory_summary → inventory_list → inventory_asset, then inspect paths |
+| `graph` | 17 | Inventory rollup, asset drill-down, scoped correlation and which assets an advisory affects (`affected_assets`) | Use inventory_summary → inventory_list → inventory_asset, then inspect paths |
 | `cloud` | 6 | Inventory, connection scope and CIS posture | cloud-connection-review |
 | `runtime` | 7 | Gateway policy, alerts and incident evidence | incident-triage, gateway-fleet-live-demo |
 | `audit` | 9 | Scan, agent inventory, descriptor and permission checks, skill/instruction and prompt inspection, framework mapping, policy and audit integrity | compliance-report |

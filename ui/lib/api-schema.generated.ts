@@ -5510,6 +5510,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/intel/advisories/{advisory_id}/affected": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Advisory Affected Assets
+         * @description Affected / possibly affected (distro) / not affected assets for one advisory, with patch targets and graph node ids.
+         */
+        get: operations["get_advisory_affected_assets_v1_intel_advisories__advisory_id__affected_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/intel/daily-brief": {
         parameters: {
             query?: never;
@@ -18467,6 +18487,8 @@ export interface components {
             last_validated_at: string | null;
             /** Parse Errors */
             parse_errors: number;
+            /** Partial Reason */
+            partial_reason?: string | null;
             /** Record Count */
             record_count: number;
             /** Status */
@@ -38583,6 +38605,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IntelAdvisoryResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_advisory_affected_assets_v1_intel_advisories__advisory_id__affected_get: {
+        parameters: {
+            query?: {
+                verdict?: "all" | "affected" | "possibly_affected" | "not_affected";
+                q?: string | null;
+                limit?: number;
+                cursor?: string | null;
+            };
+            header?: never;
+            path: {
+                advisory_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
