@@ -244,10 +244,12 @@ def test_identical_input_yields_identical_edges_and_paths(runtime, hub):
     assert first.analysis_status[STATUS_KEY].to_dict() == second.analysis_status[STATUS_KEY].to_dict()
 
 
-def test_events_outside_the_snapshot_window_are_counted_not_projected(runtime, hub):
-    graph, _ = _build(runtime, report={**REPORT, "scan_timestamp": "2026-12-31T00:00:00+00:00"})
+def test_events_outside_the_snapshot_window_are_excluded_before_loading(runtime, hub):
+    graph, graph_input = _build(runtime, report={**REPORT, "scan_timestamp": "2026-12-31T00:00:00+00:00"})
     assert _runtime_edges(graph) == []
-    assert graph.analysis_status[STATUS_KEY].to_dict()["observed"]["out_of_window"] == 5
+    # Window reads do not count unrelated retained history as snapshot evidence.
+    assert "runtime_trace_events" not in graph_input
+    assert STATUS_KEY not in graph.analysis_status
 
 
 def test_no_trace_events_leaves_the_graph_unchanged(hub):
