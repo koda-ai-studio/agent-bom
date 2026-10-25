@@ -19,9 +19,9 @@ invoke them.
 scan tools. Use `--profile full` for the complete 90-tool catalog.
 
 <details>
-<summary>Explicit full-profile catalog (96 tools)</summary>
+<summary>Explicit full-profile catalog (97 tools)</summary>
 
-`scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
+`scan`, `check`, `intel_lookup`, `affected_assets`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
 `graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `findings_query`, `finding_detail`,
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
@@ -67,6 +67,14 @@ check(package="langchain", ecosystem="pypi")
 Look up a CVE, GHSA, or OSV advisory in the local threat-intel database.
 ```
 intel_lookup(advisory_id="CVE-2026-12345")
+```
+
+### affected_assets
+Which scanned assets an advisory (declared, or a local feed record such as an NVD-only CVE) affects: affected with the
+patch target, possibly affected (distro package; verify the distribution's advisory) or not affected, with graph node
+ids for blast radius. Same answer and cursor as `GET /v1/intel/advisories/{id}/affected`. Graph profile.
+```
+affected_assets(advisory_id="CVE-2026-109618", verdict="all", limit=50)
 ```
 
 ### intel_match
