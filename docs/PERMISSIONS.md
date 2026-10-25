@@ -213,8 +213,17 @@ agent-bom does not validate leaked credentials, call provider APIs with them,
 or transmit the matched value. Validation of whether a secret is live belongs
 in a separate, explicit, operator-approved workflow.
 
-agent-bom itself optionally uses one env var:
+agent-bom itself optionally uses two env vars when refreshing the local database:
 - `NVD_API_KEY` — increases NVD rate limit from 5 to 50 requests per 30 seconds and widens the `db update --source nvd` window from 14 to 120 days. This key is sent only to `services.nvd.nist.gov`, only in the `apiKey` request header (never a URL), and is never logged, cached, or transmitted elsewhere.
+- `GITHUB_TOKEN` — raises the GitHub Security Advisories rate limit for `db update --source ghsa` from 60 to 5,000 requests per hour. It is sent only to `api.github.com` and needs no scopes beyond public read (`contents: read` in Actions).
+
+Neither is required, and neither is ever written to the database, reports or logs.
+
+### Where the keys live
+
+- **This project's CI.** `NVD_API_KEY` is an environment secret in the GitHub `release` environment, which only `main` and `v*` tags can use. Only scheduled or manually dispatched jobs that run `agent-bom db update` declare that environment, and the key is passed only to that step; no pull-request job can read it. `GITHUB_TOKEN` is the workflow's own short-lived `github.token`, passed to the same step, with the job limited to `contents: read`.
+- **Self-hosted deployments.** Bring your own key. Export `NVD_API_KEY` (and optionally `GITHUB_TOKEN`) in the environment of whatever runs `agent-bom db update`, pass it through docker-compose or `render.yaml`, or, on Kubernetes, point the Helm value `nvdApiKey.existingSecret` at an existing Secret; the chart reads it with `secretKeyRef` and has no plaintext value.
+- **A workstation.** Keep the key in the OS keychain rather than a shell profile and export it only for the command that needs it, for example on macOS `NVD_API_KEY="$(security find-generic-password -s nvd-api-key -w)" agent-bom db update --source nvd`. agent-bom does not read the keychain itself.
 
 ---
 
