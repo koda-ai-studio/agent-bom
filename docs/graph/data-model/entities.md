@@ -150,7 +150,7 @@ Id formats:
 
 ## `framework`
 
-Emitted by: `graph/framework_topology_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/framework_topology_projection.py`, `output/graph_framework_agents.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 Id formats:
 

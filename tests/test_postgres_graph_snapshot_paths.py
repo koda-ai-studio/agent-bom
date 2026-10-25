@@ -190,3 +190,23 @@ def test_node_with_large_incompressible_attributes_persists(store) -> None:
         loaded = store.load_graph(tenant_id=tenant, scan_id=scan)
         store.delete_snapshot(tenant_id=tenant, scan_id=scan)
     assert loaded.nodes["db:prod"].attributes["tables"] == evidence
+
+
+def test_path_summary_counts_the_queue_index_per_tenant(store) -> None:
+    scan = f"summary-{uuid4().hex[:10]}"
+    tenant_a, tenant_b = f"sa-{uuid4().hex[:8]}", f"sb-{uuid4().hex[:8]}"
+    with tenant_scope(tenant_a):
+        store.save_graph(build_unified_graph_from_report(shared_server_estate(agents=20, group_size=10), scan_id=scan, tenant_id=tenant_a))
+        summary = store.snapshot_path_summary(tenant_id=tenant_a, scan_id=scan)
+        latest = store.snapshot_path_summary(tenant_id=tenant_a)
+        queue = store.snapshot_queue_page(tenant_id=tenant_a, scan_id=scan, limit=1)
+        stored = store.snapshot_attack_paths(tenant_id=tenant_a, scan_id=scan)
+    with tenant_scope(tenant_b):
+        foreign = store.snapshot_path_summary(tenant_id=tenant_b, scan_id=scan)
+    with tenant_scope(tenant_a):
+        store.delete_snapshot(tenant_id=tenant_a, scan_id=scan)
+        purged = store.snapshot_path_summary(tenant_id=tenant_a, scan_id=scan)
+    assert queue is not None and stored is not None and queue.snapshot_total > 0
+    assert summary == latest == (queue.snapshot_total, max(path.composite_risk for path in stored.paths))
+    assert foreign is None
+    assert purged is None

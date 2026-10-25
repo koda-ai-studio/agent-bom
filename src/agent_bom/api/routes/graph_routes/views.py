@@ -30,7 +30,7 @@ from agent_bom.api.read_models.graph import (
     documented_list,
 )
 from agent_bom.api.request_contract import reject_unknown_query_params
-from agent_bom.api.routes.graph_routes import _runtime
+from agent_bom.api.routes.graph_routes import _runtime, path_count
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.consequences import router as consequence_router
 from agent_bom.api.routes.graph_routes.control_focus import control_occurrences
@@ -405,6 +405,7 @@ async def get_graph_attack_paths(
         filters=active_filters,
     )
 
+    path_count.remember_queue_total(tenant, identity[1], ranked, payload["stats"], filtered=bool(active_filters))
     await _apply_path_suppression(payload, graph_store, tenant, identity, filters, ranked, focused=focus is not None, matching=matching)
     await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(nodes or ranked.paths))
     payload["snapshot_generation"] = identity[1]

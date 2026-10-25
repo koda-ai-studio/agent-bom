@@ -167,6 +167,28 @@ def _html_escape(value: object) -> str:
     return sanitize_output_text(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
+def drawn_header_counts(elements: list[dict[str, Any]]) -> dict[str, int]:
+    """Header counts of what the canvas draws: agent and server nodes, vulnerable
+    package nodes, and the distinct CVEs those nodes carry (collapsed or expanded)."""
+    nodes = [el.get("data", {}) for el in elements if "source" not in el.get("data", {})]
+    cves: set[str] = set()
+    for node in nodes:
+        kind = str(node.get("type", ""))
+        if kind == "pkg_vuln":
+            try:
+                cves.update(str(item.get("id")) for item in json.loads(node.get("cveList") or "[]") if isinstance(item, dict))
+            except (TypeError, ValueError):
+                continue
+        elif kind.startswith("cve"):
+            cves.add(str(node.get("id")))
+    return {
+        "total_agents": sum(1 for n in nodes if n.get("type") == "agent"),
+        "total_servers": sum(1 for n in nodes if str(n.get("type", "")).startswith("server_")),
+        "total_pkgs": sum(1 for n in nodes if n.get("type") == "pkg_vuln"),
+        "total_vulns": len(cves),
+    }
+
+
 def _to_offline_graph_html(
     *,
     total_agents: int,
@@ -228,7 +250,7 @@ def _to_offline_graph_html(
   <div class="cards">
     <div class="card"><strong>{total_agents}</strong>agents</div>
     <div class="card"><strong>{total_servers}</strong>servers</div>
-    <div class="card"><strong>{total_pkgs}</strong>packages</div>
+    <div class="card"><strong>{total_pkgs}</strong>vulnerable packages</div>
     <div class="card"><strong>{total_vulns}</strong>CVEs</div>
   </div>
   <h2>Top Risk Paths</h2>

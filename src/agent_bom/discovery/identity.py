@@ -133,9 +133,28 @@ def project_root_for(agent: Agent) -> str | None:
     if not agent.config_path:
         return None
     path = Path(agent.config_path)
+    definition_root = _definition_root(path, (agent.metadata or {}).get("definition_file"))
+    if definition_root is not None:
+        return definition_root
     if not path.is_dir():
         return None
     return str(path.resolve())
+
+
+def _definition_root(config_path: Path, definition_file: object) -> str | None:
+    """Project root of a code-defined agent whose config path is its defining file.
+
+    The scanner records the file relative to the project root, so the root is
+    the config path with that relative suffix removed.
+    """
+    if not isinstance(definition_file, str) or not definition_file:
+        return None
+    relative = Path(definition_file).parts
+    if not relative or ".." in relative or len(config_path.parts) <= len(relative):
+        return None
+    if config_path.parts[-len(relative) :] != relative or not config_path.is_file():
+        return None
+    return str(Path(*config_path.parts[: -len(relative)]).resolve())
 
 
 def consolidate_project_agents(agents: list[Agent]) -> list[Agent]:
@@ -166,6 +185,24 @@ def consolidate_project_agents(agents: list[Agent]) -> list[Agent]:
     return [merged_at.get(index, agent) for index, agent in enumerate(agents) if index not in absorbed]
 
 
+def _code_agent_definitions(member: Agent, seen: list[dict[str, str]]) -> list[dict[str, str]]:
+    member_metadata = member.metadata or {}
+    prior = member_metadata.get("code_agent_definitions")
+    if isinstance(prior, list):
+        candidates = [item for item in prior if isinstance(item, dict)]
+    elif member.source == "python-agents" and member_metadata.get("definition_file"):
+        candidates = [
+            {
+                "name": member.name,
+                "file": str(member_metadata.get("definition_file") or ""),
+                "scope": str(member_metadata.get("definition_scope") or ""),
+            }
+        ]
+    else:
+        candidates = []
+    return [item for item in candidates if item not in seen]
+
+
 def _merge_project_members(root: str, members: list[Agent], label: str) -> Agent:
     name = f"project:{label}"
     manifest = next((member for member in members if member.source == "project" and member.name == name), None)
@@ -185,6 +222,7 @@ def _merge_project_members(root: str, members: list[Agent], label: str) -> Agent
     metadata: dict[str, object] = {}
     evidence: set[str] = set()
     code_agents: list[str] = []
+    definitions: list[dict[str, str]] = []
     for member in members:
         member_metadata = member.metadata or {}
         for key, value in member_metadata.items():
@@ -199,10 +237,15 @@ def _merge_project_members(root: str, members: list[Agent], label: str) -> Agent
         if not candidates and member.source == "python-agents":
             candidates = [member.name]
         code_agents.extend(item for item in candidates if item not in code_agents)
+        definitions.extend(_code_agent_definitions(member, definitions))
     metadata[PROJECT_ROOT_METADATA_KEY] = root
     metadata["evidence_sources"] = sorted(evidence)
     if code_agents:
         metadata["code_agents"] = code_agents
+    if definitions:
+        # Names alone collide (two "assistant" agents in two files); the
+        # definition file and scope keep each code-level agent distinct.
+        metadata["code_agent_definitions"] = definitions
 
     discovered = sorted(member.discovered_at for member in members if member.discovered_at)
     last_seen = sorted(member.last_seen for member in members if member.last_seen)

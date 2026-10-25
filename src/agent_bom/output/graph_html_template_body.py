@@ -75,6 +75,8 @@ const cy=cytoscape({{
       'shape':'diamond','width':100,'height':44}}}},
     {{selector:'node[type="cve"][severity="unknown"], node[type^="cve_unknown"]',style:{{'background-color':'#4b5563','color':'#d1d5db',
       'shape':'roundrectangle','width':90,'height':40,'opacity':0.66}}}},
+    {{selector:'node[type="framework"]',style:{{'background-color':'#1e1b4b','border-color':'#818cf8','border-width':2,
+      'shape':'round-tag','width':150,'height':40,'font-size':12}}}},
     {{selector:'node[type="finding"]',style:{{'background-color':'#2d1f47','border-color':'#a371f7','border-width':2,
       'shape':'hexagon','width':180,'height':56,'font-size':11}}}},
     {{selector:'edge',style:{{'width':1.5,'line-color':'#444','target-arrow-color':'#444',
@@ -92,6 +94,8 @@ const cy=cytoscape({{
       'line-color':'#ff5d5d','target-arrow-color':'#ff5d5d','width':2.5
     }}}},
     {{selector:'edge[type="depends_on"][maxSeverity = "high"]',style:{{'line-color':'#ff8a24','target-arrow-color':'#ff8a24','width':2}}}},
+    {{selector:'edge[type="delegated_to"]',style:{{'line-color':'#2ea043','target-arrow-color':'#2ea043','width':2.4}}}},
+    {{selector:'edge[type="uses_framework"]',style:{{'line-style':'dotted','line-color':'#818cf8','target-arrow-color':'#818cf8','width':1.4}}}},
     {{selector:'edge[type="contains"]',style:{{'line-color':'#0d9488','target-arrow-color':'#0d9488','width':1.6}}}},
     {{selector:'edge[type="has_finding"]',style:{{'line-style':'dashed','line-color':'#a371f7','target-arrow-color':'#a371f7','width':1.8}}}},
     {{selector:'edge[type="affects"]',style:{{'line-style':'dashed','line-color':'#ff5d5d','target-arrow-color':'#ff5d5d','width':1.8}}}},
@@ -373,7 +377,10 @@ function applyFilters(){{
   cy.elements().removeClass('filtered');
   let visible = cy.elements();
 
-  const severityNodes = matchingSeverityNodes();
+  // "All severities" is no filter. Treating it as "nodes with a severity and
+  // their predecessors" hid every unrelated node, so the first fit zoomed onto
+  // a lone finding instead of the whole graph.
+  const severityNodes = activeSeverity !== 'all' ? matchingSeverityNodes() : cy.collection();
   if(!severityNodes.empty()) {{
     let severityGraph = cy.collection();
     severityNodes.forEach((node)=>{{
@@ -406,7 +413,8 @@ function fitAll(){{
   focusedPathOnly=false;
   document.getElementById('chip-focus').classList.remove('active');
   applyFilters();
-  cy.fit(cy.elements(), 60);
+  cy.resize();
+  cy.fit(cy.elements(':visible'), 60);
 }}
 
 function focusNode(nodeId, opts){{
@@ -528,6 +536,21 @@ function searchNodes(query){{
   if(match && !match.empty()){{
     cy.animate({{ fit: {{ eles: match.closedNeighborhood(), padding: 120 }}, duration: 250 }});
   }}
+}}
+
+// Desktop keeps the risk list as a column beside the canvas; collapsing it
+// gives the canvas the full width and refits. Phones open it as a sheet.
+function togglePanel(id){{
+  const phone = window.matchMedia('(max-width: 767px)').matches;
+  if(id === 'riskpanel' && !phone) {{
+    document.getElementById('riskpanel').classList.toggle('collapsed');
+    fitAll();
+    return;
+  }}
+  ['riskpanel','legend'].forEach((other)=>{{
+    const el=document.getElementById(other);
+    if(el) el.classList.toggle('open', other===id ? !el.classList.contains('open') : false);
+  }});
 }}
 
 function dlPng(){{

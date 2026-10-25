@@ -1,7 +1,8 @@
 import { ownershipSummary, type OwnershipFields } from "@/lib/finding-ownership";
+import { nowForRelativeTime } from "@/lib/relative-clock";
 
 /** Owner/team and remediation SLA for a top risk, on the card itself. */
-export function RiskOwnershipLine({ ownership, now = Date.now() }: { ownership: OwnershipFields | undefined; now?: number }) {
+export function RiskOwnershipLine({ ownership, now = nowForRelativeTime() }: { ownership: OwnershipFields | undefined; now?: number }) {
   if (!ownership) return null;
   const summary = ownershipSummary(ownership, now);
   const slaTone = summary.slaState === "overdue" ? "font-semibold text-red-700 dark:text-red-300" : "text-foreground";

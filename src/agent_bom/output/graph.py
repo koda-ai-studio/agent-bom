@@ -17,6 +17,7 @@ from agent_bom.graph import SEVERITY_RANK as _SEVERITY_RANK
 from agent_bom.graph.compat import stamp_export_entity_types
 from agent_bom.graph.node import stable_node_id
 from agent_bom.output.finding_views import package_graph_node_id as _package_node_id
+from agent_bom.output.graph_framework_agents import append_framework_agent_elements
 from agent_bom.output.graph_html import _CDN_FALLBACK_TAGS as _CDN_FALLBACK_TAGS
 from agent_bom.output.graph_html import _GRAPH_HTML_TEMPLATE as _GRAPH_HTML_TEMPLATE
 from agent_bom.output.graph_html import _VENDOR_JS_FILES as _VENDOR_JS_FILES
@@ -27,6 +28,7 @@ from agent_bom.output.graph_html import _json_for_script as _json_for_script
 from agent_bom.output.graph_html import _sanitize_graph_reference_payload as _sanitize_graph_reference_payload
 from agent_bom.output.graph_html import _to_offline_graph_html as _to_offline_graph_html
 from agent_bom.output.graph_html import _vendor_script_tags as _vendor_script_tags
+from agent_bom.output.graph_html import drawn_header_counts
 from agent_bom.output.graph_inventory import append_agent_elements, append_server_elements, package_edge_type, server_node_id
 from agent_bom.output.graph_policy import _SEVERITY_BADGE as _SEVERITY_BADGE
 from agent_bom.output.graph_policy import _graph_policy_finding_elements as _graph_policy_finding_elements
@@ -355,6 +357,7 @@ def build_graph_elements(
                         )
 
     _append_source_tool_elements(elements, report)
+    append_framework_agent_elements(elements, report)
     _append_repo_structure_elements(elements, report, collapse_cves=collapse_cves, vuln_pkg_keys=vuln_pkg_keys)
     elements.extend(_graph_policy_finding_elements(report))
     return stamp_export_entity_types(elements)
@@ -494,7 +497,7 @@ def _append_source_tool_elements(elements: list[dict], report: "AIBOMReport") ->
                 {
                     "data": {
                         "id": entry_id,
-                        "label": entry_name,
+                        "label": f"{entry_name} · {source_file.rsplit('/', 1)[-1]}",
                         "type": "application_entrypoint",
                         "entrypointKind": kind,
                         "handler": handler,
@@ -880,10 +883,8 @@ def export_graph_html(
     elements, graph_id_map = sanitize_graph_elements(build_graph_elements(report, blast_radii, include_cve_nodes=False, collapse_cves=True))
     elements_json = _json_for_script(elements)
 
-    total_agents = len(report.agents)
-    total_servers = report.total_servers
-    total_pkgs = sum(a.total_packages for a in report.agents)
-    total_vulns = len(findings)
+    # Header counts are derived from the drawn elements so they always match the canvas.
+    counts = drawn_header_counts(elements)
     all_findings = findings + policy_findings
     top_risks = _sanitize_graph_reference_payload(_graph_priority_summary(all_findings, collapse_cves=True), graph_id_map)
     top_risks_json = _json_for_script(top_risks)
@@ -911,17 +912,11 @@ def export_graph_html(
         top_risks_json=top_risks_json,
         overview_json=overview_json,
         category_findings_json=category_findings_json,
-        total_agents=total_agents,
-        total_servers=total_servers,
-        total_pkgs=total_pkgs,
-        total_vulns=total_vulns,
+        **counts,
     )
     if offline_assets:
         html_content = _to_offline_graph_html(
-            total_agents=total_agents,
-            total_servers=total_servers,
-            total_pkgs=total_pkgs,
-            total_vulns=total_vulns,
+            **counts,
             top_risks=_graph_priority_summary(all_findings, collapse_cves=True),
             overview=_graph_overview(all_findings),
         )

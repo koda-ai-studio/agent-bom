@@ -21,6 +21,7 @@ class TfResource:
     block_start_line: int
     rel_path: str
     content: str
+    block_offset: int = 0
 
 
 TfCheck = Callable[[TfResource], list[IaCFinding]]

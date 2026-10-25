@@ -1087,6 +1087,17 @@
    "tools": []
   },
   "ai_bom_version": "<VERSION>",
+  "ai_inventory": {
+   "api_keys_count": 0,
+   "components": [],
+   "deprecated_models_count": 0,
+   "files_scanned": 0,
+   "framework_agents": [],
+   "shadow_ai_count": 0,
+   "total_components": 0,
+   "unique_models": [],
+   "unique_sdks": []
+  },
   "assets": [],
   "blast_radius": [],
   "canonical_id_schema_version": "3",
@@ -1109,6 +1120,59 @@
    }
   ],
   "document_type": "AI-BOM",
+  "enforcement": {
+   "coverage": [
+    {
+     "agent_name": "project:proj",
+     "authorization_bypass": {
+      "reason": "Authentication checks inspect configuration only.",
+      "status": "not_assessed"
+     },
+     "permission_scope": {
+      "basis": "agent_type_heuristic",
+      "expected_capabilities": null,
+      "reason": "Missing tool descriptors or expected capability profile.",
+      "status": "not_assessed"
+     },
+     "prompts": {
+      "discovered": 0,
+      "inspected": 0,
+      "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+      "status": "configuration_only"
+     },
+     "rendered_prompts": {
+      "reason": "Audit does not render prompts.",
+      "status": "not_inspected"
+     },
+     "resource_content": {
+      "reason": "General resource-body injection inspection was not performed.",
+      "status": "not_inspected"
+     },
+     "resources": {
+      "discovered": 0,
+      "inspected": 0,
+      "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+      "status": "configuration_only"
+     },
+     "server_canonical_id": "<UUID>",
+     "server_identity": "<UUID>",
+     "server_name": "filesystem",
+     "tools": {
+      "discovered": 0,
+      "inspected": 0,
+      "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+      "status": "configuration_only"
+     }
+    }
+   ],
+   "critical_count": 0,
+   "findings": [],
+   "findings_count": 0,
+   "high_count": 0,
+   "passed": true,
+   "servers_checked": 1,
+   "tools_checked": 0
+  },
   "exposure_paths": {
    "path_count": 0,
    "paths": [],
@@ -1900,6 +1964,51 @@
    "policy_source": "default",
    "score": 0.0,
    "summary": "Vulnerability coverage incomplete \u2014 posture grade unavailable. Re-run once vulnerability data is available."
+  },
+  "project_inventory": {
+   "advisory_depth_pct": 0,
+   "declaration_only_direct_packages": 4,
+   "declaration_only_directories": 1,
+   "declaration_only_files": 2,
+   "declaration_only_packages": 4,
+   "declaration_only_transitive_packages": 0,
+   "direct_packages": 4,
+   "directories": [
+    {
+     "advisory_evidence": "declaration_only",
+     "declaration_files": [
+      "package.json",
+      "requirements.txt"
+     ],
+     "direct_packages": 4,
+     "ecosystems": {
+      "npm": 2,
+      "pypi": 2
+     },
+     "lockfile_files": [],
+     "manifest_files": [
+      "package.json",
+      "requirements.txt"
+     ],
+     "package_count": 4,
+     "path": ".",
+     "transitive_packages": 0
+    }
+   ],
+   "ecosystems": {
+    "npm": 2,
+    "pypi": 2
+   },
+   "lockfile_backed_direct_packages": 0,
+   "lockfile_backed_packages": 0,
+   "lockfile_backed_transitive_packages": 0,
+   "lockfile_directories": 0,
+   "lockfiles": 0,
+   "manifest_directories": 1,
+   "manifest_files": 2,
+   "package_count": 4,
+   "root": "<path:proj>",
+   "transitive_packages": 0
   },
   "remediation_plan": [],
   "scan_id": "",

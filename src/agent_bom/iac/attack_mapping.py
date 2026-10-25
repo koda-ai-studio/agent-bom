@@ -41,6 +41,7 @@ IAC_ATTACK_MAP: dict[str, list[str]] = {
     "TF-SEC-039": ["T1552.001"],  # Secrets Manager no KMS → Credentials In Files
     "TF-SEC-040": ["T1552.001"],  # SSM plaintext SecureString
     "TF-SEC-046": ["T1552.001"],  # Lambda env vars with sensitive values
+    "TF-SEC-051": ["T1552.001"],  # Hardcoded secret in a resource argument
     # Logging / Detection Evasion
     "TF-SEC-006": ["T1562.008"],  # CloudWatch not enabled → Disable Cloud Logs
     "TF-SEC-013": ["T1562.008"],  # CloudWatch no retention

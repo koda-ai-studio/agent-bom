@@ -1,5 +1,6 @@
 import { getSessionAuthHeaders } from "./auth";
 import { getConfiguredApiUrl } from "./runtime-config";
+import { isStaticDemo, staticDemoFetch } from "./static-demo";
 
 import { cachedGet, clearCache as _clearCache, invalidate as _invalidate } from "./api-cache";
 import type { CacheOptions } from "./api-cache";
@@ -43,6 +44,7 @@ async function _parseBody(res: Response): Promise<unknown> {
 }
 
 export async function _doFetch(path: string, init: RequestInit, method: string): Promise<Response> {
+  if (isStaticDemo()) return staticDemoFetch(path, init, method);
   const url = `${getConfiguredApiUrl()}${path}`;
   let res: Response;
   try {

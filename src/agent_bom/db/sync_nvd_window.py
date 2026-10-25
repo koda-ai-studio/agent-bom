@@ -8,6 +8,7 @@ URL, a log line or the database.
 
 from __future__ import annotations
 
+import math
 import sqlite3
 import time
 import urllib.parse
@@ -19,6 +20,7 @@ from typing import Any, Callable, Optional
 import httpx
 
 from agent_bom import http_client
+from agent_bom.core.settings import env_float
 from agent_bom.db.sync_common import (
     _NVD_API_URL,
     _logger,
@@ -43,10 +45,48 @@ NVD_PAGE_SIZE = 2000
 # window held about 50,000 modified CVEs (11,209 in three days on 2026-10-24),
 # so a keyless run from scratch usually finishes in one pass.
 KEYLESS_MAX_RECORDS = 60_000
+# Per-CVE CVSS/CWE lookups after a keyless window: one request each, so 50 is
+# about five minutes at the anonymous budget instead of an hour and a half.
+KEYLESS_BACKFILL_MAX = 50
+# Wall-clock budget for one keyless run (window plus backfill); a run that hits
+# it stops as ``partial`` with ``partial_reason: time_budget`` and resumes next
+# time. Keyed runs have no default budget.
+KEYLESS_TIME_BUDGET_SECONDS = 480.0
+TIME_BUDGET_ENV = "AGENT_BOM_NVD_TIME_BUDGET_SECONDS"
+
+# ``(source, phase, current, total, detail=...)``: phases ``slice`` (slices
+# started / planned, detail = slice date), ``records`` (records read / cap) and
+# ``rate_wait`` (seconds the rate budget is waiting).
+Progress = Callable[..., None]
 
 
 def _sleep(seconds: float) -> None:
     time.sleep(seconds)
+
+
+def _clock() -> float:
+    return time.monotonic()
+
+
+class NvdBudget:
+    """A wall-clock budget from construction; ``seconds=None`` never expires."""
+
+    def __init__(self, seconds: float | None) -> None:
+        self.seconds = seconds
+        self._start = _clock()
+
+    def expired(self, at: float | None = None) -> bool:
+        return self.seconds is not None and (_clock() if at is None else at) - self._start >= self.seconds
+
+
+def resolve_time_budget(explicit: float | None, api_key: str | None) -> float | None:
+    """Seconds for this run: the option, else ``AGENT_BOM_NVD_TIME_BUDGET_SECONDS``, else 8 minutes keyless; 0 disables."""
+    if explicit is None:
+        configured = env_float(TIME_BUDGET_ENV, -1.0, minimum=0.0, on_invalid="default")
+        explicit = configured if configured >= 0 else None
+    if explicit is None:
+        return None if api_key else KEYLESS_TIME_BUDGET_SECONDS
+    return explicit if explicit > 0 else None
 
 
 class NvdRateLimiter:
@@ -57,15 +97,17 @@ class NvdRateLimiter:
         max_requests: int,
         window_seconds: float = NVD_WINDOW_SECONDS,
         *,
-        clock: Callable[[], float] = time.monotonic,
+        clock: Callable[[], float] | None = None,
         sleep: Callable[[float], None] = _sleep,
     ) -> None:
         self.max_requests = max(1, max_requests)
         self.window_seconds = window_seconds
-        self._clock = clock
+        self._clock = clock or (lambda: _clock())
         self._sleep = sleep
         self._stamps: deque[float] = deque()
         self._not_before = 0.0
+        self.budget: NvdBudget | None = None
+        self.on_wait: Callable[[float], None] | None = None
 
     @classmethod
     def for_key(cls, api_key: str | None) -> NvdRateLimiter:
@@ -75,19 +117,25 @@ class NvdRateLimiter:
         """Push the next request out by ``seconds`` (a server ``Retry-After``)."""
         self._not_before = max(self._not_before, self._clock() + max(0.0, seconds))
 
-    def acquire(self) -> None:
+    def acquire(self) -> bool:
+        """Take a request slot; ``False`` (without waiting) when the run's budget would be spent first."""
         now = self._clock()
         wait = max(0.0, self._not_before - now)
         self._expire(now + wait)
         if len(self._stamps) >= self.max_requests:
             wait = max(wait, self._stamps[0] + self.window_seconds - now)
+        if self.budget is not None and self.budget.expired(now + wait):
+            return False
         if wait > 0:
+            if self.on_wait is not None:
+                self.on_wait(wait)
             self._sleep(wait)
         # Account with the logical post-wait time so a patched or coarse
         # clock can never let a request through early or spin.
         stamp = max(self._clock(), now + wait)
         self._expire(stamp)
         self._stamps.append(stamp)
+        return True
 
     def _expire(self, now: float) -> None:
         while self._stamps and self._stamps[0] <= now - self.window_seconds:
@@ -118,7 +166,8 @@ def _retry_after_seconds(response: httpx.Response) -> float | None:
 def fetch_nvd_page(url: str, headers: dict[str, str], limiter: NvdRateLimiter) -> dict[str, Any]:
     """Fetch one NVD page inside the rate budget; 403/429 back off (``Retry-After`` first) then give up."""
     for attempt in range(_RATE_LIMIT_RETRIES + 1):
-        limiter.acquire()
+        if not limiter.acquire():
+            raise NvdWindowError("time_budget")
         try:
             data = http_client.fetch_json(url, timeout=60, headers=headers)
         except httpx.HTTPStatusError as exc:
@@ -148,6 +197,7 @@ class _Run:
     new_rows: int = 0
     resume: Resume | None = None
     partial_reason: str | None = None
+    slice_label: str = ""
 
 
 def _upsert_nvd_cve(conn: sqlite3.Connection, cve_data: dict[str, Any]) -> bool:
@@ -197,12 +247,14 @@ def _page_slice(conn: sqlite3.Connection, query: _Query, piece: Interval, start_
         try:
             data = fetch_nvd_page(f"{query.base_url}?{urllib.parse.urlencode(params)}", query.headers, query.limiter)
         except NvdWindowError as exc:
-            _logger.warning("NVD window sync stopped in slice %s..%s: %s", params["lastModStartDate"], params["lastModEndDate"], exc.reason)
+            log = _logger.info if exc.reason == "time_budget" else _logger.warning
+            log("NVD window sync stopped in slice %s..%s: %s", params["lastModStartDate"], params["lastModEndDate"], exc.reason)
             run.partial_reason = exc.reason
             run.resume = Resume(piece[0], piece[1], index) if index else None
             return False
         items = data.get("vulnerabilities") or []
         _ingest_page(conn, items, run)
+        _emit(query, "records", run.fetched, query.cap, run.slice_label)
         index += len(items)
         if not items or index >= int(data.get("totalResults") or 0):
             return True
@@ -217,17 +269,34 @@ class _Query:
     headers: dict[str, str]
     limiter: NvdRateLimiter
     page_size: int = NVD_PAGE_SIZE
+    cap: int | None = None
+    progress: Progress | None = None
+
+
+def _emit(query: _Query, phase: str, current: int, total: int | None, detail: str) -> None:
+    if query.progress is not None:
+        query.progress("nvd", phase, current, total, detail=detail)
 
 
 def _walk(conn: sqlite3.Connection, query: _Query, pieces: list[Interval], resume: Resume | None, run: _Run) -> None:
-    for piece in pieces:
+    query.limiter.on_wait = lambda seconds: _emit(query, "rate_wait", math.ceil(seconds), None, run.slice_label)
+    for number, piece in enumerate(pieces, start=1):
+        run.slice_label = piece[0].date().isoformat()
+        _emit(query, "slice", number, len(pieces), run.slice_label)
         if not _page_slice(conn, query, piece, resume_index(resume, piece, query.page_size), run):
             return
         run.covered.append(piece)
 
 
 def _record(
-    conn: sqlite3.Connection, run: _Run, window: Interval, *, lookback_days: int, max_results: int | None, api_key_used: bool
+    conn: sqlite3.Connection,
+    run: _Run,
+    window: Interval,
+    *,
+    lookback_days: int,
+    max_results: int | None,
+    api_key_used: bool,
+    time_budget: float | None = None,
 ) -> None:
     floor, now = window
     covered = merge(run.covered, floor)
@@ -252,7 +321,9 @@ def _record(
             "last_modified_end": nvd_ts(now) if complete and not partial else nvd_ts(floor),
             "max_results": max_results,
             "api_key_used": api_key_used,
-            "sync_failed": partial and run.partial_reason != "truncated",
+            "time_budget_seconds": time_budget,
+            # A capped or out-of-time run is unfinished, not failed: it resumes.
+            "sync_failed": partial and run.partial_reason not in {"truncated", "time_budget"},
             "sync_truncated": run.partial_reason == "truncated",
         },
     )
@@ -270,6 +341,8 @@ def sync_nvd_incremental(
     max_results: Optional[int] = None,
     lookback_days: Optional[int] = None,
     limiter: Optional[NvdRateLimiter] = None,
+    progress: Optional[Progress] = None,
+    budget: Optional[NvdBudget] = None,
 ) -> int:
     """Ingest CVEs NVD published or modified in a bounded window, newest first, CPE ranges included.
 
@@ -277,7 +350,9 @@ def sync_nvd_incremental(
     backwards and only ranges not already covered are fetched. ``max_results``
     caps records read this run (default: unbounded with a key, 60,000
     without). A rate-limited, timed-out or capped run is ``status: partial``
-    and the next run resumes where it stopped. Returns new CVE rows.
+    and the next run resumes where it stopped; so is a run that spends its
+    ``budget`` (``partial_reason: time_budget``). ``progress`` receives slice,
+    record and rate-wait events. Returns new CVE rows.
     """
     base_url = url or _NVD_API_URL
     _validate_sync_url(base_url, "nvd url")
@@ -288,10 +363,14 @@ def sync_nvd_incremental(
     meta = _read_sync_metadata(conn, "nvd")
     covered, resume = merge(load_covered(meta), floor), load_resume(meta)
     headers = {"Accept": "application/json", **({"apiKey": nvd_api_key} if nvd_api_key else {})}
-    query = _Query(base_url, headers, limiter or NvdRateLimiter.for_key(nvd_api_key), min(NVD_PAGE_SIZE, cap or NVD_PAGE_SIZE))
+    limiter = limiter or NvdRateLimiter.for_key(nvd_api_key)
+    limiter.budget = budget if budget is not None else limiter.budget
+    query = _Query(base_url, headers, limiter, min(NVD_PAGE_SIZE, cap or NVD_PAGE_SIZE), cap, progress)
     run = _Run(remaining=float(cap) if cap is not None else float("inf"), covered=list(covered))
     _walk(conn, query, plan(floor, now, covered, resume), resume, run)
+    limiter.on_wait = None
     conn.commit()
-    _record(conn, run, (floor, now), lookback_days=days, max_results=cap, api_key_used=bool(nvd_api_key))
+    seconds = limiter.budget.seconds if limiter.budget is not None else None
+    _record(conn, run, (floor, now), lookback_days=days, max_results=cap, api_key_used=bool(nvd_api_key), time_budget=seconds)
     _logger.info("NVD window sync %s: %d records read, %d new CVE rows", run.partial_reason or "complete", run.fetched, run.new_rows)
     return run.new_rows

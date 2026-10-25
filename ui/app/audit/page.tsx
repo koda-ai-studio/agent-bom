@@ -18,6 +18,7 @@ import { KeyLifecyclePanel } from "@/components/key-lifecycle-panel";
 import { AuditEvidencePanel } from "@/components/audit-evidence-panel";
 import { PageLaneHeader } from "@/components/page-lane";
 import { Collapsible } from "@/components/collapsible";
+import { nowForRelativeTime } from "@/lib/relative-clock";
 
 const PAGE_SIZE = 50;
 const FIELD = "min-w-0 rounded-md border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-2 text-sm";
@@ -171,7 +172,7 @@ export default function AuditLogPage() {
             <select className={FIELD} value={range} onChange={(e) => {
               const value = e.target.value;
               setRange(value);
-              setSince(value === "all" ? "" : new Date(Date.now() - Number(value) * 86400000).toISOString());
+              setSince(value === "all" ? "" : new Date(nowForRelativeTime() - Number(value) * 86400000).toISOString());
               setPage(0);
             }}>
               <option value="all">All retained events</option><option value="1">Last 24 hours</option>

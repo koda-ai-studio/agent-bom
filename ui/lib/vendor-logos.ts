@@ -1,3 +1,4 @@
+import { ASSET_BASE } from "@/lib/asset-base";
 /**
  * Vendor brand marks shipped under `public/logos/`. `vendorLogo(provider)`
  * resolves a provider/account string to its SVG path (served from the app
@@ -9,13 +10,13 @@
 export type VendorId = "aws" | "gcp" | "azure" | "snowflake" | "github" | "claude" | "cursor";
 
 const LOGO_PATH: Record<VendorId, string> = {
-  aws: "/logos/aws.svg",
-  gcp: "/logos/gcp.svg",
-  azure: "/logos/azure.svg",
-  snowflake: "/logos/snowflake.svg",
-  github: "/logos/github.svg",
-  claude: "/logos/claude.svg",
-  cursor: "/logos/cursor.svg",
+  aws: `${ASSET_BASE}/logos/aws.svg`,
+  gcp: `${ASSET_BASE}/logos/gcp.svg`,
+  azure: `${ASSET_BASE}/logos/azure.svg`,
+  snowflake: `${ASSET_BASE}/logos/snowflake.svg`,
+  github: `${ASSET_BASE}/logos/github.svg`,
+  claude: `${ASSET_BASE}/logos/claude.svg`,
+  cursor: `${ASSET_BASE}/logos/cursor.svg`,
 };
 
 /** Common provider aliases normalize onto a canonical VendorId. */

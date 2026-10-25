@@ -64,6 +64,7 @@ TF-SEC-047  Redshift cluster without encryption (AWS SEC08, CIS 2.7)
 TF-SEC-048  Redshift cluster publicly accessible (AWS SEC01)
 TF-SEC-049  WAF not associated with ALB/CloudFront (AWS SEC05)
 TF-SEC-050  GuardDuty not enabled (AWS SEC04, CIS 4.1)
+TF-SEC-051  Hardcoded secret in a resource argument (AWS SEC02, NIST IA-5)
 """
 
 from __future__ import annotations
@@ -74,6 +75,7 @@ from pathlib import Path
 from agent_bom.iac import terraform_security_database as _database
 from agent_bom.iac import terraform_security_identity as _identity
 from agent_bom.iac import terraform_security_network as _network
+from agent_bom.iac import terraform_security_secrets as _secrets
 from agent_bom.iac import terraform_security_storage as _storage
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.terraform_security_common import TfCheck, TfResource, extract_block, line_number
@@ -137,6 +139,7 @@ _RULES: tuple[tuple[frozenset[str] | None, TfCheck], ...] = (
     (frozenset({"aws_redshift_cluster"}), _database.tf_sec_048),
     (frozenset({"aws_lb", "aws_alb", "aws_cloudfront_distribution"}), _network.tf_sec_049),
     (frozenset({"aws_guardduty_detector"}), _identity.tf_sec_050),
+    (None, _secrets.tf_sec_051),
 )
 
 
@@ -199,6 +202,7 @@ def scan_terraform_security(file_path: str | Path) -> list[IaCFinding]:
             block_start_line=line_number(content, m.start()),
             rel_path=rel_path,
             content=content,
+            block_offset=brace_pos + 1,
         )
         checks = _DATA_CHECKS[rtype] if block_kind == "data" else _CHECKS_BY_TYPE.get(rtype, _GENERIC_CHECKS)
         for check in checks:
