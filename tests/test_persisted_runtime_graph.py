@@ -275,3 +275,20 @@ def test_foreign_tenant_payload_never_creates_nodes():
     graph = _inventory()
     project_recorded_activity(graph, _projection_payload(tenant_id="tenant-b"), "tenant-a")
     assert not graph.edges and len(graph.nodes) == 2
+
+
+def test_reported_cloud_provider_cannot_borrow_unscoped_inventory():
+    from agent_bom.graph.activity_projection import project_recorded_activity
+
+    graph = _inventory()
+    project_recorded_activity(graph, _projection_payload(provider="aws"), "tenant-a")
+    assert all(edge.source != "agent:one" and edge.target != "tool:one" for edge in graph.edges)
+
+
+def test_matching_native_owner_and_provider_can_bind():
+    from agent_bom.graph.activity_projection import project_recorded_activity
+
+    graph = _inventory()
+    graph.get_node("agent:one").attributes["arn"] = "arn:aws:lambda:us-east-1:111111111111:function:fixture"
+    project_recorded_activity(graph, _projection_payload(account_ref="111111111111", provider="aws"), "tenant-a")
+    assert graph.edges[0].source == "agent:one"

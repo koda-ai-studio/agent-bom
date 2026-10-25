@@ -61,8 +61,12 @@ def _scoped(node: UnifiedNode, event: Mapping[str, Any]) -> bool:
         or (origin.get("provider") if isinstance(origin, dict) else "")
     )
     reported = event.get("provider") or ""
-    if reported and assess_cloud_scope(str(reported), attrs)["status"] == "conflict":
+    if assessed["status"] == "scoped" and not reported:
         return False
+    if reported:
+        reported_scope = assess_cloud_scope(str(reported), attrs)
+        if reported_scope["status"] == "conflict" or (not provider and reported_scope["status"] != "scoped"):
+            return False
     return not provider or bool(reported and str(provider).lower() == str(reported).lower())
 
 
