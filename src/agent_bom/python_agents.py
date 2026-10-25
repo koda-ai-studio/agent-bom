@@ -658,7 +658,9 @@ def scan_python_agents(project_path: str) -> tuple[list[Agent], list[str]]:
         server = MCPServer(
             name=f"{d.framework}:{qualified}",
             command="python",
-            args=[],
+            # The defining file is part of the server's identity, so same-named
+            # agents from different files never share one server.
+            args=[d.file] if config_path != str(project) else [],
             env=cred_env,
             transport=TransportType.STDIO,
             surface=ServerSurface.OTHER,

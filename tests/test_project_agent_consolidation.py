@@ -222,3 +222,42 @@ def test_project_scan_reports_one_agent_and_only_real_mcp_servers(tmp_path: Path
     assert report["summary"]["total_mcp_servers"] == 2
     servers = {server["name"] for server in report["agents"][0]["mcp_servers"]}
     assert {"filesystem", "github", "app"} <= servers
+
+
+def test_same_named_code_agents_in_two_files_fold_into_one_project_agent_and_stay_distinct(tmp_path: Path, monkeypatch) -> None:
+    import shutil
+
+    from agent_bom.cli import main
+    from agent_bom.graph.builder import build_unified_graph_from_report
+
+    monkeypatch.delenv("AGENT_BOM_CONFIG", raising=False)
+    root = tmp_path / "teamapp"
+    shutil.copytree(Path(__file__).parent / "fixtures" / "agent_frameworks" / "autogen_same_name", root)
+    (root / "requirements.txt").write_text("autogen-agentchat==0.4.0\n", encoding="utf-8")
+    out = tmp_path / "report.json"
+
+    result = CliRunner().invoke(
+        main,
+        ["scan", "-p", str(root), "--no-scan", "--offline", "--no-auto-update-db", "-f", "json", "-o", str(out)],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0, result.output
+    report = json.loads(out.read_text())
+    assert [agent["name"] for agent in report["agents"]] == ["project:teamapp"]
+    project = report["agents"][0]
+    definitions = project["metadata"]["code_agent_definitions"]
+    assert sorted((d["name"], d["file"], d["scope"]) for d in definitions) == [
+        ("autogen:assistant", "app_agent.py", ""),
+        ("autogen:assistant", "app_team.py", ""),
+    ]
+    tools_by_server = {
+        server["canonical_id"]: {tool["name"] for tool in server.get("tools", [])}
+        for server in project["mcp_servers"]
+        if server["name"] == "autogen:assistant"
+    }
+    assert sorted(map(sorted, tools_by_server.values())) == [["team_lookup"], ["weather_tool"]]
+
+    graph = build_unified_graph_from_report(report)
+    assistant_servers = [n for n in graph.nodes.values() if n.entity_type.value == "server" and n.label == "autogen:assistant"]
+    assert len(assistant_servers) == 2
