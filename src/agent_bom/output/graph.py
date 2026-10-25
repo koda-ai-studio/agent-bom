@@ -496,7 +496,7 @@ def _append_source_tool_elements(elements: list[dict], report: "AIBOMReport") ->
                 {
                     "data": {
                         "id": entry_id,
-                        "label": entry_name,
+                        "label": f"{entry_name} · {source_file.rsplit('/', 1)[-1]}",
                         "type": "application_entrypoint",
                         "entrypointKind": kind,
                         "handler": handler,
@@ -883,7 +883,12 @@ def export_graph_html(
     elements_json = _json_for_script(elements)
 
     total_agents = len(report.agents)
-    total_servers = report.total_servers
+    # The header counts the server nodes the canvas draws. report.total_servers
+    # counts MCP servers only, so a project of framework agents read "0 servers"
+    # above several drawn server nodes.
+    total_servers = sum(
+        1 for el in elements if "source" not in el.get("data", {}) and str(el["data"].get("type", "")).startswith("server_")
+    )
     total_pkgs = sum(a.total_packages for a in report.agents)
     total_vulns = len(findings)
     all_findings = findings + policy_findings

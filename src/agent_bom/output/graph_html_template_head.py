@@ -114,6 +114,7 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
 <div id="legend" class="panel">
   <div><span class="dot" style="background:#4a9eff"></span> Provider</div>
   <div><span class="dot" style="background:#2ea043"></span> Agent</div>
+  <div><span class="dot" style="background:#818cf8"></span> Agent framework</div>
   <div><span class="dot" style="background:#6e7681"></span> Server (clean)</div>
   <div><span class="dot" style="background:#f85149"></span> Server (vulnerable)</div>
   <div><span class="dot" style="background:#d29922"></span> Server (credentials)</div>
