@@ -36,9 +36,10 @@ def advisory_affected_page(
     try:
         return page_answer(answer, tenant_id=tenant_id, verdict=verdict, q=q, limit=limit, cursor=cursor)
     except AffectedCursorError as exc:
-        raise HTTPException(status_code=409 if exc.kind == "stale" else 422, detail=str(exc)) from exc
+        status = 409 if exc.kind == "stale" else 422
+        raise HTTPException(status_code=status, detail=str(exc)) from exc  # exc-safe: fixed cursor messages from page_answer
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=422, detail=str(exc)) from exc  # exc-safe: fixed verdict/limit messages from page_answer
 
 
 @router.get("/intel/advisories/{advisory_id}/affected", tags=_TAGS)
