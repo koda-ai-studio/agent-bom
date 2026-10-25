@@ -301,7 +301,7 @@ Homepage = "https://github.com/koda-ai-studio/agent-bom"
 Repository = "https://github.com/koda-ai-studio/agent-bom"
 Issues = "https://github.com/koda-ai-studio/agent-bom/issues"
 Changelog = "https://github.com/koda-ai-studio/agent-bom/releases"
-Documentation = "https://github.com/koda-ai-studio/agent-bom#readme"
+Documentation = "https://koda-ai-studio.github.io/agent-bom/"
 "Security Policy" = "https://github.com/koda-ai-studio/agent-bom/blob/main/SECURITY.md"
 "Trust & Permissions" = "https://github.com/koda-ai-studio/agent-bom/blob/main/PERMISSIONS.md"
 
