@@ -96,7 +96,7 @@ def test_emit_is_best_effort_when_no_subscriptions(sub_store):
 
 def test_disable_stops_matching(sub_store):
     sub = create_subscription(sub_store, tenant_id="t1", url="https://a.example.com/h", event_types=["drift.detected"])
-    set_subscription_status(sub_store, sub.subscription_id, status="disabled")
+    set_subscription_status(sub_store, sub.subscription_id, tenant_id=sub.tenant_id, status="disabled")
     outbox = _FakeOutbox()
     assert emit_governance_event(event_type="drift.detected", tenant_id="t1", source="t", payload={}, store=sub_store, outbox=outbox) == 0
 
@@ -251,14 +251,14 @@ def test_sqlite_store_encrypts_signing_secret_at_rest(tmp_path, connections_key)
     raw = _raw_sqlite_secret(db, sub.subscription_id)
     assert raw.startswith("enc:v1:")
     assert "whsec_plain_value" not in raw
-    assert store.get(sub.subscription_id).signing_secret == "whsec_plain_value"
+    assert store.get(sub.subscription_id, tenant_id=sub.tenant_id).signing_secret == "whsec_plain_value"
     assert store.list("t1")[0].signing_secret == "whsec_plain_value"
     assert store.matching("t1", "identity.revoked")[0].signing_secret == "whsec_plain_value"
 
     # Re-saving a loaded record (status change) keeps it sealed, never double-wrapped.
-    set_subscription_status(store, sub.subscription_id, status="disabled")
+    set_subscription_status(store, sub.subscription_id, tenant_id=sub.tenant_id, status="disabled")
     assert _raw_sqlite_secret(db, sub.subscription_id).startswith("enc:v1:")
-    assert store.get(sub.subscription_id).signing_secret == "whsec_plain_value"
+    assert store.get(sub.subscription_id, tenant_id=sub.tenant_id).signing_secret == "whsec_plain_value"
 
 
 def test_sqlite_store_reads_legacy_plaintext_rows(tmp_path, connections_key):
@@ -278,12 +278,12 @@ def test_sqlite_store_reads_legacy_plaintext_rows(tmp_path, connections_key):
             "INSERT INTO webhook_subscriptions (subscription_id, tenant_id, status, created_at, data) VALUES (?, ?, ?, ?, ?)",
             (legacy.subscription_id, legacy.tenant_id, legacy.status, legacy.created_at, json.dumps(asdict(legacy))),
         )
-    assert store.get("whsub_legacy").signing_secret == "whsec_legacy"
+    assert store.get("whsub_legacy", tenant_id=legacy.tenant_id).signing_secret == "whsec_legacy"
 
     # The next write of a legacy row upgrades it to ciphertext.
-    set_subscription_status(store, "whsub_legacy", status="disabled")
+    set_subscription_status(store, "whsub_legacy", tenant_id=legacy.tenant_id, status="disabled")
     assert _raw_sqlite_secret(db, "whsub_legacy").startswith("enc:v1:")
-    assert store.get("whsub_legacy").signing_secret == "whsec_legacy"
+    assert store.get("whsub_legacy", tenant_id=legacy.tenant_id).signing_secret == "whsec_legacy"
 
 
 def test_sqlite_store_without_key_keeps_working_in_plaintext(tmp_path, monkeypatch):
@@ -297,7 +297,7 @@ def test_sqlite_store_without_key_keeps_working_in_plaintext(tmp_path, monkeypat
     store = SQLiteWebhookSubscriptionStore(db)
     sub = create_subscription(store, tenant_id="t1", url="https://hooks.example.com/x", signing_secret="whsec_nokey")
     assert _raw_sqlite_secret(db, sub.subscription_id) == "whsec_nokey"
-    assert store.get(sub.subscription_id).signing_secret == "whsec_nokey"
+    assert store.get(sub.subscription_id, tenant_id=sub.tenant_id).signing_secret == "whsec_nokey"
 
 
 def test_undecryptable_secret_is_dropped_not_leaked(tmp_path, connections_key, monkeypatch):
@@ -311,6 +311,6 @@ def test_undecryptable_secret_is_dropped_not_leaked(tmp_path, connections_key, m
     sub = create_subscription(store, tenant_id="t1", url="https://hooks.example.com/x", signing_secret="whsec_rotated")
     monkeypatch.setenv("AGENT_BOM_CONNECTIONS_KEY", Fernet.generate_key().decode())
     connection_crypto.reset_key_cache()
-    loaded = store.get(sub.subscription_id)
+    loaded = store.get(sub.subscription_id, tenant_id=sub.tenant_id)
     assert loaded.signing_secret == ""
     assert loaded.to_public_dict()["secret_fingerprint"] == ""
