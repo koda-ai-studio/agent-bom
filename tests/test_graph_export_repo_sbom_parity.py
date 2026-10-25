@@ -96,12 +96,6 @@ def test_cli_graph_format_names_repo_and_sbom_nodes_with_persisted_graph_ids(tmp
     assert edges - {(source, target) for source, target, _ in served_edges} == set()
 
 
-def _canonical_edge(edge: dict) -> tuple[str, str, str]:
-    """The export keeps the legacy ``affects`` label on the package -> vulnerability edge."""
-    relationship = "vulnerable_to" if edge["relationship"] == "affects" and edge["target"].startswith("vuln:") else edge["relationship"]
-    return edge["source"], edge["target"], relationship
-
-
 def test_scan_graph_export_equals_persisted_graph_for_repo_and_sbom(tmp_path, tmp_path_factory, monkeypatch):
     from agent_bom.api.scan_graph_view import _graph_export_response
     from agent_bom.output.graph_export import build_graph_from_scan_data, to_json
@@ -114,7 +108,9 @@ def test_scan_graph_export_equals_persisted_graph_for_repo_and_sbom(tmp_path, tm
     assert isinstance(api, dict)
     for exported in (api, to_json(build_graph_from_scan_data(report))):
         assert {node["id"]: node["entity_type"] for node in exported["nodes"]} == served_nodes
-        assert {_canonical_edge(edge) for edge in exported["edges"]} == served_edges
-        legacy = {(e["source"], e["target"]) for e in exported["edges"] if e["relationship"] == "affects"}
+        # relationship is the persisted name; the legacy ``affects`` label stays on kind.
+        assert {(edge["source"], edge["target"], edge["relationship"]) for edge in exported["edges"]} == served_edges
+        legacy = {(e["source"], e["target"]) for e in exported["edges"] if e["kind"] == "affects"}
+        assert all(e["relationship"] == "vulnerable_to" for e in exported["edges"] if e["kind"] == "affects")
         assert legacy and all(source.startswith("pkg:") and target.startswith("vuln:") for source, target in legacy)
         assert exported["stats"] == {"node_count": len(served_nodes), "edge_count": len(served_edges)}
