@@ -183,3 +183,23 @@ def test_possibly_affected_is_not_counted_as_a_confirmed_severity(estate) -> Non
     breakdown = hub.current_severity_breakdown("default", origin="bulk_ingest", status="open")
     assert breakdown.get("critical") == 1
     assert breakdown.get("unknown") == 1
+
+
+@pytest.mark.parametrize(
+    ("patch", "message"),
+    [
+        ({"id": "not an id"}, "id must look like CVE-YYYY-NNNN or PREFIX-ID"),
+        ({"affected": [{"cpe_product": "php", "ranges": [{"fixed": "8.3.36"}]}]}, "cpe_product must be vendor:product"),
+        (
+            {"affected": [{"ecosystem": "generic", "name": "php", "ranges": [{"introduced": "8.4.0", "fixed": "8.3.0"}]}]},
+            "introduced must precede fixed",
+        ),
+        ({"affected": [{"ecosystem": "generic", "name": "php"}]}, "affected product needs ranges or versions"),
+        ({"references": ["http://example.test/advisory"]}, "references must be https URLs"),
+    ],
+)
+def test_declaring_an_invalid_advisory_is_422_with_a_clear_message(estate, patch: dict, message: str) -> None:
+    client, _, _ = estate
+    response = client.post("/v1/intel/operator-advisories", json={**ADVISORY, "id": "CVE-2026-777777", **patch})
+    assert response.status_code == 422
+    assert message in response.text
