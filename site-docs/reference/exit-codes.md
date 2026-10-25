@@ -14,7 +14,7 @@ automation can distinguish caller mistakes from control-plane outages.
 | Code  | Name                | Meaning                                                                                                       | Typical sources                                                            |
 | ----- | ------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `0`   | success             | Command completed; no findings or all findings under the default or configured severity threshold.             | Any subcommand that finished cleanly; `scan --exit-zero` with vulnerability findings only. |
-| `1`   | scan verdict or operational failure | Either (a) a scan gate matched — see "Why `scan` exits 1" below — or (b) a precondition failed: missing config, unreachable backend, missing required env var, dependency not present. | Default critical threshold or `--fail-on-severity` matched, an incomplete scan such as a missing or unreadable offline vulnerability database, `agent-bom scan --demo` (malicious package fails closed), `--clickhouse-url` missing, NVD unreachable, optional dependency not installed, `agent-bom connect <provider>` failing to verify or register. |
+| `1`   | scan verdict or operational failure | Either (a) a scan gate matched — see "Why `scan` exits 1" below — or (b) a precondition failed: missing config, unreachable backend, missing required env var, dependency not present. | Default high threshold or `--fail-on-severity` matched, an incomplete scan such as a missing or unreadable offline vulnerability database, `agent-bom scan --demo` (malicious package fails closed), `--clickhouse-url` missing, NVD unreachable, optional dependency not installed, `agent-bom connect <provider>` failing to verify or register. |
 | `2`   | usage or empty      | Invalid arguments, no input to act on, or report contained no rows after filtering.                            | Click `UsageError` (auto), `agent-bom skills scan` with no skill files, empty result rendering, `agent-bom connect` when the control plane rejects the payload (`400`/`422`). |
 | `3`   | policy gate failed  | An opt-in policy gate failed. Currently emitted by `--require-fresh-db` / `AGENT_BOM_REQUIRE_FRESH_DB` when the local vuln DB is stale. Otherwise reserved for future policy gates. | `agent-bom scan --require-fresh-db` or `agent-bom check --require-fresh-db` against a stale local vuln DB. |
 | `4`   | (reserved)          | Reserved for "auth required" / "auth invalid" on commands that talk to an authenticated control plane.        | Not yet emitted.                                                           |
@@ -30,7 +30,7 @@ named on the last line of the output. A scan exits `1` when any of these hold.
 
 | Gate | Opt-in? | What it means |
 | --- | --- | --- |
-| Default critical severity gate / `--fail-on-severity` | Critical is the default; the flag selects another threshold | A vulnerability met or exceeded the active threshold. Use `--exit-zero` only for an explicitly reporting-only vulnerability scan. |
+| Default high severity gate / `--fail-on-severity` | High is the default (the same as the GitHub Action); the flag selects another threshold | A vulnerability met or exceeded the active threshold. Use `--exit-zero` only for an explicitly reporting-only vulnerability scan. |
 | `--fail-on-kev` / `--fail-if-ai-risk` matched | Yes — you set the flag | A finding met the additional gate you asked to block on. |
 | A policy rule failed | Yes — `--policy`, or `--model-policy-mode enforce` / `--require-model-signatures` / `--block-unsafe-model-formats` (all default off) | Your policy rejected the result. |
 | A known-malicious package was found | **No — fails closed** | A typosquat, dependency-confusion, or known-malicious advisory match. Exiting `0` here would let the package install. |
@@ -80,8 +80,8 @@ but `completeness` still says `incomplete`. `--require-fresh-db` /
 than `AGENT_BOM_DB_STALE_DAYS` (default 14) before any lookup, for `check` and
 `scan` alike, and takes precedence over `--allow-stale-db`.
 
-`scan` defaults to a `critical` vulnerability gate, so a report containing
-critical findings exits non-zero even when no threshold flag was passed. The
+`scan` defaults to a `high` vulnerability gate, the same default as the GitHub
+Action, so a report containing high or critical findings exits non-zero even when no threshold flag was passed. The
 malicious-package and incomplete-evidence gates also fail closed. Use
 `--fail-on-severity` to choose a stricter threshold, or `--exit-zero` for an
 explicitly reporting-only vulnerability scan. `--exit-zero` never suppresses a
@@ -91,7 +91,7 @@ the reporting-only path should still print a named warning tier.
 #### Unknown severity fails closed
 
 A finding whose severity is `unknown` (or `none`) trips any active severity
-gate, including the default `critical` gate, because an unscored vulnerability
+gate, including the default `high` gate, because an unscored vulnerability
 must not silently pass CI. To keep that rare, a distro fix advisory that has no
 severity of its own (Debian `DLA-`/`DSA-`, Ubuntu `USN-`, AlmaLinux `ALSA-`,
 Red Hat `RHSA-`, and similar) takes the highest severity of the upstream CVEs it
