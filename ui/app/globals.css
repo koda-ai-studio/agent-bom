@@ -873,6 +873,7 @@ main > div {
 .advisory-source-status[data-status="synced"] { @apply border-emerald-700/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200; }
 .advisory-source-status[data-status="failed"], .advisory-source-status[data-status="error"] { @apply border-red-700/30 bg-red-500/10 text-red-800 dark:text-red-200; }
 .advisory-source-status[data-status="unknown"] { @apply border-outline bg-surface-muted text-ink-secondary; }
+.advisory-source-status[data-status="partial"], .advisory-source-status[data-status="stale"] { border-color: var(--status-warn-border); background-color: var(--status-warn-bg); color: var(--status-warn); }
 .advisory-source-note { @apply rounded-full border border-amber-700/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200; }
 .advisory-source-link { @apply inline-flex min-h-10 items-center rounded-lg px-1 text-sm font-medium text-emerald-700 underline underline-offset-4 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200; }
 .advisory-source-empty { @apply rounded-lg border border-dashed border-outline px-3 py-4 text-sm text-ink-secondary; }

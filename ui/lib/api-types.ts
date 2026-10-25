@@ -5193,6 +5193,8 @@ export interface IntelFeedRun {
   parse_errors: number;
   validation_failures: number;
   cap_hit: boolean;
+  /** Set with `status: "partial"` when the last sync was rate-limited, timed out or capped. */
+  partial_reason?: string | null | undefined;
 }
 
 export interface IntelSource {
