@@ -4,7 +4,7 @@ description: >-
   Enforce security policies on MCP tool calls and block dangerous operations at
   runtime. Use when: "block risky calls", "apply policy", "proxy",
   "runtime protection", "policy enforcement", "intercept MCP calls".
-version: 0.110.0
+version: 0.111.0
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Install via pipx or pip. No credentials required.

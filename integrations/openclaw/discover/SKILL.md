@@ -4,7 +4,7 @@ description: >-
   Discover AI agents, MCP servers, and configurations on this machine or
   environment. Use when: "find agents", "what's configured", "doctor",
   "what MCP servers", "show me what's installed", "mcp inventory".
-version: 0.110.0
+version: 0.111.0
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Install via pipx or pip. No credentials required.

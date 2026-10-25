@@ -7,9 +7,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
+## [0.111.0] - 2026-10-25
 
 ### Added
+- Persisted runtime, proxy and gateway activity appears in the graph as `recorded_activity`, with source receipts, replay-safe counts and exact tenant/cloud-scoped identity binding. One bounded UTC window covers both evidence stores. Unmatched identities remain unverified shadows; recorded decisions do not establish execution or permission and never form attack paths.
 - Agent contributor skills `.agents/skills/develop` (test-first loop) and `.agents/skills/secure-change` (security rules), loaded by Codex and Claude Code; CI now fails a PR that changes Python source without a test change (maintainer label `no-tests-needed` waives it) and scans every repo `AGENTS.md`, `CLAUDE.md` and `SKILL.md` with the skill auditor.
 - Contributor path: `GOVERNANCE.md` with the triager, reviewer and maintainer ladder, `MAINTAINERS.md`, and a Codespaces dev container that installs the dev extras and pre-commit hooks.
 
@@ -41,6 +42,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Migration `20261023_02` revokes writes on `alembic_version` from the application and RLS-maintenance roles; migrations run as the admin role.
 
 ### Fixed
+- Release preparation keeps OpenClaw pull and signature-verification commands on the published version until artifacts are available; repeated version generation and validation agree.
+- Runtime evidence retains bounded actor/session/cloud attribution, preserves available evidence when another store fails, and orders timestamp offsets in UTC. Structured graph IDs survive redaction while embedded credentials and shortened identities cannot bind.
+- Databricks discovery retains resolved workspace scope and serializes incomplete security evidence without converting collection errors into passes. Workspace-user observations do not establish account-wide coverage.
+- Malicious skill findings fail the default CLI gate; explicit audit mode retains a non-blocking review path.
 - `agent-bom db update` shows NVD progress live: each `lastModified` slice with its date, the running record count and every rate-limit wait. Keyless NVD runs stop after a wall-clock budget of 8 minutes (`--nvd-time-budget SECONDS`, `AGENT_BOM_NVD_TIME_BUDGET_SECONDS`, `0` = no limit; keyed runs have none by default) as `PARTIAL` with `partial_reason: time_budget`, keeping the window checkpoint, and the summary says how to resume. The start-of-run note now describes the progress each selected source actually reports instead of saying "live progress follows" only for OSV.
 - Keyless `agent-bom db update` no longer spends up to about 100 minutes on the NVD CVSS/CWE backfill: it makes at most 50 per-CVE requests per run, and rows whose CVE the `lastModified` window already scored take that score locally without a request. Keyed runs are unchanged.
 - `/v1/graph` `stats.attack_path_count` now equals the `/v1/graph/attack-paths` total for topology-only snapshots instead of reporting 0. The node page reads the snapshot path index (one COUNT/MAX query, cached per tenant, scan and snapshot generation) and never loads the graph; a snapshot without a current index reports the queue's derived total once the queue has been read, and `stats.attack_path_count_basis` says which count (`queue_total` or `persisted_paths`) is shown.

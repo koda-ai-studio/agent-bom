@@ -1,4 +1,4 @@
-# agent-bom v0.110.0 terminal demo
+# agent-bom v0.111.0 terminal demo
 # Real CLI output, presented as three labeled excerpts by the owning renderer.
 Output docs/images/demo-latest.gif
 Set Shell "bash"

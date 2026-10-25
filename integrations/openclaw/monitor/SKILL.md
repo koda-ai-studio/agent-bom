@@ -4,7 +4,7 @@ description: >-
   Monitor agent fleet, track trust scores, and manage lifecycle states. Use
   when: "fleet", "watch agents", "runtime status", "trust scores",
   "fleet sync", "agent lifecycle", "serve dashboard".
-version: 0.110.0
+version: 0.111.0
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Install via pipx or pip. No credentials required for

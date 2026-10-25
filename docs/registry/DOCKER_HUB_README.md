@@ -243,7 +243,7 @@ Focused agent mesh graph:
 | Tag | Description |
 |-----|-------------|
 | `latest` | Most recent stable release |
-| `0.110.0` | Version used by the examples below; verify registry availability before pinning |
+| `0.111.0` | Version used by the examples below; verify registry availability before pinning |
 
 Published images:
 
