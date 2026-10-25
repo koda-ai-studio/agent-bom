@@ -1,8 +1,13 @@
 [
   {
     "name": "scan",
-    "description": "Run a full AI supply chain security scan and return an AI-BOM.\n\nPoint it at a target with one of:\n  \u2022 repo_url     \u2014 a public git repo URL (cloned + scanned, no checkout)\n  \u2022 config_path  \u2014 a local project / MCP-config directory\n  \u2022 image        \u2014 a Docker image\n  \u2022 sbom_path    \u2014 an existing CycloneDX/SPDX SBOM\n  \u2022 package      \u2014 a single package or MCP launch command (pair it with\n                   ``ecosystem`` when the spec names no launcher)\nWith none of these, it auto-discovers local MCP clients (Claude Desktop,\nCursor, Windsurf, VS Code Copilot, OpenClaw, etc.).\n\nIt extracts package dependencies, looks up CVEs (online via OSV.dev and\nadvisory sources unless offline mode is requested or configured),\nassesses config security (credential exposure, tool access), computes\nblast radius, and returns structured results. Scanning is fully static\nand read-only \u2014 repository and image contents are parsed, never executed.\n\nReturns:\n    JSON. By default a bounded summary: counts (packages, agents,\n    findings by severity/category), top findings, affected paths, and a\n    result_id. Page any full-fidelity section with\n    scan(result_id=..., section='findings', offset=0, limit=25).\n    An incomplete scan (e.g. vulnerability source unavailable) is\n    returned as an error result whose body is still JSON.",
+    "description": "Run a full AI supply chain security scan and return an AI-BOM.\n\nPoint it at a target with one of:\n  \u2022 project_path \u2014 a local project / repo directory (\"scan this repo\";\n                   must be inside home or AGENT_BOM_MCP_WORKSPACE_ROOTS)\n  \u2022 repo_url     \u2014 a public git repo URL (cloned + scanned, no checkout)\n  \u2022 config_path  \u2014 a local MCP-config directory\n  \u2022 image        \u2014 a Docker image\n  \u2022 sbom_path    \u2014 an existing CycloneDX/SPDX SBOM\n  \u2022 package      \u2014 a single package or MCP launch command (pair it with\n                   ``ecosystem`` when the spec names no launcher)\nWith none of these, it auto-discovers local MCP clients (Claude Desktop,\nCursor, Windsurf, VS Code Copilot, OpenClaw, etc.).\n\nIt extracts package dependencies, looks up CVEs (online via OSV.dev and\nadvisory sources unless offline mode is requested or configured),\nassesses config security (credential exposure, tool access), computes\nblast radius, and returns structured results. Scanning is fully static\nand read-only \u2014 repository and image contents are parsed, never executed.\n\nReturns:\n    JSON. By default a bounded summary: counts (packages, agents,\n    findings by severity/category), top findings, affected paths, and a\n    result_id. Page any full-fidelity section with\n    scan(result_id=..., section='findings', offset=0, limit=25).\n    An incomplete scan (e.g. vulnerability source unavailable) is\n    returned as an error result whose body is still JSON.",
     "arguments": [
+      {
+        "name": "project_path",
+        "type": "string",
+        "desc": "Local project / repository directory to scan, e.g. the agent's current workspace checkout. Scans dependency manifests and lockfiles, project MCP configs, source AI usage, secrets (values redacted), IaC, and GitHub Actions, statically and read-only. Must resolve (symlinks followed) to an existing directory inside the user's home or a root listed in AGENT_BOM_MCP_WORKSPACE_ROOTS; traversal, symlink escapes, files, and missing paths are refused with AGENTBOM_MCP_VALIDATION_INVALID_PATH. Mutually exclusive with config_path and repo_url."
+      },
       {
         "name": "repo_url",
         "type": "string",
@@ -11,7 +16,7 @@
       {
         "name": "config_path",
         "type": "string",
-        "desc": "Local directory to scan \u2014 a project root or an MCP client config directory. Auto-discovers installed MCP clients if omitted unless no_discover=true. Mutually exclusive with repo_url."
+        "desc": "Local directory to scan \u2014 a project root or an MCP client config directory. Auto-discovers installed MCP clients if omitted unless no_discover=true. Same sandbox as project_path. Mutually exclusive with project_path and repo_url."
       },
       {
         "name": "no_discover",

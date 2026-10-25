@@ -22,7 +22,8 @@ Run the agent-bom `scan` MCP tool, then report what matters.
    - nothing named: call `scan` with no arguments. It discovers the MCP clients on this machine (Claude Code, Claude Desktop, Cursor and others) and scans their servers and packages.
    - a container image: `image`
    - an SBOM file: `sbom_path`
-   - a repository: `repo_url`
+   - the local project or repository being worked on: `project_path` (a directory inside home or `AGENT_BOM_MCP_WORKSPACE_ROOTS`)
+   - a remote repository: `repo_url`
    - one MCP client config directory: `config_path`
 2. Start with `detail: "summary"`. Page with `result_id`, `section`, `offset` and `limit` rather than asking for everything at once.
 3. Report, most urgent first:
