@@ -535,15 +535,17 @@ def test_pull_request_classifiers_diff_from_the_merge_base() -> None:
     assert CI_WORKFLOW.read_text(encoding="utf-8").count(three_dot) == 2
 
 
-def test_pr_and_main_push_runs_cancel_only_their_own_superseded_runs() -> None:
+def test_pr_runs_cancel_superseded_runs_and_every_main_push_completes() -> None:
+    # A cancelled main run leaves the README build badge reading "failing"
+    # and no verdict for that commit; every main push must finish.
     concurrency = _ci()["concurrency"]
     assert "github.event.pull_request.number" in concurrency["group"]
     assert "github.event_name" in concurrency["group"]
-    assert "github.sha" not in concurrency["group"]
+    # Main pushes need distinct groups: disabling cancellation alone still
+    # allows GitHub's single pending slot to replace an older queued commit.
+    assert "github.event_name == 'push' && github.ref == 'refs/heads/main' && github.sha" in concurrency["group"]
     assert "github.ref" in concurrency["group"]
-    assert concurrency["cancel-in-progress"] == (
-        "${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}"
-    )
+    assert concurrency["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}"
     for name in ("codeql.yml", "pr-security-gate.yml"):
         other = yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"))
         assert other["concurrency"]["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}", name

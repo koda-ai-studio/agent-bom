@@ -13,11 +13,13 @@ permissions:
 #                  Postgres, musl, Docker, UI E2E, dogfood. The release gate
 #                  reads this.
 #   schedule       nightly full run, including the full musl suite.
-# Supersede obsolete PR and main-push runs. Scheduled/manual evidence uses
-# separate event groups; release still requires a completed current-main push.
+# Supersede obsolete PR runs. Each main commit keeps an independent run;
+# scheduled/manual evidence uses separate event groups.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.sha) || github.event.pull_request.number || github.ref }}
+  # Distinct main groups also avoid replacing a pending main commit when
+  # another push arrives. PRs still cancel their superseded runs.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -495,7 +497,10 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           WAIVED: ${{ contains(github.event.pull_request.labels.*.name, 'no-tests-needed') }}
-        run: uv run python scripts/check_tests_accompany_source.py --base "$BASE_SHA" $([ "$WAIVED" = true ] && echo --waived)
+        run: |
+          args=(--base "$BASE_SHA")
+          if [ "$WAIVED" = true ]; then args+=(--waived); fi
+          uv run python scripts/check_tests_accompany_source.py "${args[@]}"
 
       - name: Ruff format
         if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
