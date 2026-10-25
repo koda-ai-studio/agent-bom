@@ -92,3 +92,23 @@ def test_a_second_tenant_demo_seed_lands_beside_the_first(store, monkeypatch):
         grants_b = store.list_jit_grants(b, include_inactive=True)
     assert ids_a == ids_b and ids_a
     assert grants_b and {grant.tenant_id for grant in grants_b} == {b}
+
+
+def test_postgres_matches_the_local_stores_on_upsert_and_token_hash(store):
+    from psycopg.errors import UniqueViolation
+
+    a, b = TENANTS
+    with _as(a):
+        store.put(_identity(a))
+    with _as(b):
+        store.put(_identity(b))
+        with pytest.raises(UniqueViolation):
+            store.put(replace(_identity(b, identity_id="other"), token_hash=f"hash-{a}-shared-identity"))
+    with _as(a):
+        store.put(replace(_identity(a), status="revoked", token_hash="hash-reissued"))
+        assert store.get("shared-identity", tenant_id=a).status == "revoked"
+        assert store.get_by_token_hash(f"hash-{a}-shared-identity") is None
+        assert store.get_by_token_hash("hash-reissued").tenant_id == a
+    with _as(b):
+        assert store.get("shared-identity", tenant_id=b).status == "active"
+        assert store.get("other", tenant_id=b) is None
