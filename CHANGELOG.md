@@ -42,6 +42,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Migration `20261023_02` revokes writes on `alembic_version` from the application and RLS-maintenance roles; migrations run as the admin role.
 
 ### Fixed
+- Persisted tool-drift baselines are scoped to an explicit server identity and written atomically. Sessions without that identity keep their baseline in memory; legacy shared files are not assigned to an inferred owner.
 - Release preparation keeps OpenClaw pull and signature-verification commands on the published version until artifacts are available; repeated version generation and validation agree.
 - Runtime evidence retains bounded actor/session/cloud attribution, preserves available evidence when another store fails, and orders timestamp offsets in UTC. Structured graph IDs survive redaction while embedded credentials and shortened identities cannot bind.
 - Databricks discovery retains resolved workspace scope and serializes incomplete security evidence without converting collection errors into passes. Workspace-user observations do not establish account-wide coverage.
