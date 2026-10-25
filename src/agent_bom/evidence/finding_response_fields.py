@@ -69,6 +69,32 @@ def restored_public_fields(row: Mapping[str, Any]) -> dict[str, Any]:
         fields["provenance"] = provenance
     if (guidance := catalog_remediation(row)) is not None:
         fields["remediation_guidance"] = guidance
+    fields.update(advisory_verdict_fields(row))
+    return fields
+
+
+_ADVISORY_SOURCES = frozenset({"operator_advisory", "feed"})
+_ADVISORY_VERDICTS = frozenset({"affected", "possibly_affected"})
+_ADVISORY_VERDICT_REASONS = frozenset({"distro_backport_unverified", "version_incomparable"})
+_ADVISORY_SEVERITIES = frozenset({"critical", "high", "medium", "low", "unknown"})
+POSSIBLY_AFFECTED_STATUS = "possibly affected — verify distro advisory"
+
+
+def advisory_verdict_fields(row: Mapping[str, Any]) -> dict[str, Any]:
+    """An operator-advisory / feed re-match verdict, rebuilt from enums (never echoed free text)."""
+    source = row.get("advisory_source")
+    if source not in _ADVISORY_SOURCES:
+        return {}
+    fields: dict[str, Any] = {"advisory_source": source}
+    verdict = row.get("verdict")
+    if verdict in _ADVISORY_VERDICTS:
+        fields["verdict"] = verdict
+        if verdict == "possibly_affected":
+            fields["status_detail"] = POSSIBLY_AFFECTED_STATUS
+    if row.get("verdict_reason") in _ADVISORY_VERDICT_REASONS:
+        fields["verdict_reason"] = row["verdict_reason"]
+    if row.get("advisory_severity") in _ADVISORY_SEVERITIES:
+        fields["advisory_severity"] = row["advisory_severity"]
     return fields
 
 
