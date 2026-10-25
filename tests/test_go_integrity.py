@@ -45,12 +45,11 @@ GO_SUM_CONTENT = textwrap.dedent("""\
     github.com/stretchr/testify v1.8.4/go.mod h1:IIJJKKLL==
 """)
 
-# Checksum DB response format (tile protocol):
-#   line 0 — tree size
-#   line 1 — hash matching go.sum
-#   line 2+ — signed tree head (ignored here)
-_DB_RESPONSE_OK = "3\nh1:AABBCCDD==\n\nsome signed tree head\n"
-_DB_RESPONSE_MISMATCH = "3\nh1:TAMPERED==\n\nsome signed tree head\n"
+# sumdb /lookup response: record id, the go.sum lines for module@version,
+# a blank line, then the signed tree note (ignored here).
+_GIN_GO_MOD_LINE = "github.com/gin-gonic/gin v1.9.1/go.mod h1:ZZYYXXWW==\n"
+_DB_RESPONSE_OK = "3\ngithub.com/gin-gonic/gin v1.9.1 h1:AABBCCDD==\n" + _GIN_GO_MOD_LINE + "\nsome signed tree head\n"
+_DB_RESPONSE_MISMATCH = "3\ngithub.com/gin-gonic/gin v1.9.1 h1:TAMPERED==\n" + _GIN_GO_MOD_LINE + "\nsome signed tree head\n"
 
 # GOPROXY list response (newline-separated versions)
 _PROXY_LIST_STABLE = "v1.2.3\nv1.3.0\nv2.0.0\n"
