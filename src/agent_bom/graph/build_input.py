@@ -44,6 +44,7 @@ class GraphEvidenceSections(TypedDict, total=False):
     runtime_incident_feedback: list[Record]
     runtime_incident_feedback_path: str
     runtime_trace_events: Record
+    runtime_activity_events: Record
     toxic_combinations: Record | list[Record]
     aws_organization: Record
     cloud_audit_trail: Record | list[Record]

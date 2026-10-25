@@ -228,3 +228,37 @@ def test_postgres_mixed_provenance_versions_preserve_replay() -> None:
     finally:
         reset_current_tenant(token)
         _cleanup(store, tenant_id)
+
+
+@pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="requires a migrated live PostgreSQL database")
+def test_postgres_graph_window_uses_utc_keysets_and_request_tenant() -> None:
+    from dataclasses import replace
+
+    from agent_bom.api.gateway_activity_store import _digest_payload
+
+    store = PostgresGatewayActivityStore(max_events_per_tenant=100)
+    tenant_id = f"gateway-window-{uuid.uuid4().hex}"
+    token = set_current_tenant(tenant_id)
+    try:
+        rows = [
+            _record("old", tenant_id, timestamp="2026-10-01T00:00:00Z"),
+            _record("a", tenant_id, timestamp="2026-10-20T00:00:00Z"),
+            _record("b", tenant_id, timestamp="2026-10-20T00:00:00Z"),
+            _record("future", tenant_id, timestamp="2026-10-25T00:00:00Z"),
+        ]
+        rows[2] = replace(rows[2], event_timestamp="2026-10-19T20:00:00-04:00")
+        rows[2] = replace(rows[2], event_digest=_digest_payload(rows[2]))
+        store.append_batch(rows)
+        kwargs = {"window_start": "2026-10-01T00:00:00Z", "window_end": "2026-10-20T00:00:00Z", "limit": 2}
+        page = store.window_activity(tenant_id, **kwargs)
+        assert [row.event_id for row in page] == ["b", "a"]
+        next_page = store.window_activity(tenant_id, **kwargs, before=(page[-1].event_timestamp, page[-1].event_id))
+        assert [row.event_id for row in next_page] == ["old"]
+    finally:
+        reset_current_tenant(token)
+    token = set_current_tenant(f"foreign-{uuid.uuid4().hex}")
+    try:
+        assert store.window_activity(tenant_id, **kwargs) == []
+    finally:
+        reset_current_tenant(token)
+        _cleanup(store, tenant_id)

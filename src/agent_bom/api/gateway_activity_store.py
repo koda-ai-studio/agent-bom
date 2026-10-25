@@ -15,20 +15,22 @@ import json
 import sqlite3
 import threading
 from collections import deque
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
 from agent_bom.api.proxy_provenance import GatewaySubmissionProvenance, ProducerAssurance
+from agent_bom.api.storage.gateway_activity_window import (
+    GatewayActivityWindowSummary,
+    _window_summary,
+    memory_activity_window,
+    sql_activity_window,
+)
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
 from agent_bom.runtime.gateway_events import (
-    GATEWAY_ALLOWED_EVENT_TYPES,
-    GATEWAY_BLOCKED_EVENT_TYPES,
     GATEWAY_CANONICAL_EVENT_TYPES,
-    GATEWAY_DATA_FILTER_EVENT_TYPES,
 )
-from agent_bom.runtime.profile_resolution import classify_profile_shadow_reason
 from agent_bom.storage.base import BackendKind, StorageSchema, TableSchema
 
 GATEWAY_ACTIVITY_SCHEMA_VERSION = 1
@@ -299,20 +301,6 @@ class GatewayActivityPage:
     dedupe_window_events: int
 
 
-@dataclass(frozen=True)
-class GatewayActivityWindowSummary:
-    tenant_id: str
-    start: str
-    end: str
-    tool_calls_authorized: int
-    blocked: int
-    shadow_blocked: int
-    data_filters: int
-    retention_floor_ordinal: int
-    latest_ordinal: int
-    producer_assurance_counts: dict[str, int] = field(default_factory=lambda: {"unknown": 0, "caller_asserted": 0})
-
-
 class GatewayActivityStore(Protocol):
     """Shared contract for the tenant-scoped gateway activity ledger."""
 
@@ -330,6 +318,8 @@ class GatewayActivityStore(Protocol):
         cursor: str | None = None,
         limit: int = 100,
     ) -> GatewayActivityPage: ...
+
+    def window_activity(self, tenant_id: str, **kwargs: Any) -> list[GatewayActivityRecord]: ...
 
     def encode_cursor(self, tenant_id: str, ordinal: int) -> str: ...
 
@@ -405,63 +395,6 @@ def _validate_store_config(max_events_per_tenant: int, max_tombstones_per_tenant
         raise ValueError("gateway activity max_events_per_tenant must be at least 1")
     if isinstance(max_tombstones_per_tenant, bool) or max_tombstones_per_tenant < 1:
         raise ValueError("gateway activity max_tombstones_per_tenant must be at least 1")
-
-
-_SHADOW_REASON_MARKERS = (
-    "undeclared",
-    "shadow",
-    "unknown_agent",
-    "unknown agent",
-    "unregistered",
-    "unknown-agent",
-)
-
-
-def _is_shadow_reason(reason_code: str) -> bool:
-    canonical = classify_profile_shadow_reason(reason_code)
-    if canonical is not None:
-        return canonical
-    normalized = reason_code.lower()
-    return any(marker in normalized for marker in _SHADOW_REASON_MARKERS)
-
-
-def _window_summary(
-    tenant_id: str,
-    *,
-    start: str,
-    end: str,
-    event_rows: list[tuple[str, str, int, str]],
-    floor: int,
-    latest: int,
-) -> GatewayActivityWindowSummary:
-    authorized = sum(count for event_type, _reason, count, _assurance in event_rows if event_type in GATEWAY_ALLOWED_EVENT_TYPES)
-    blocked = sum(count for event_type, _reason, count, _assurance in event_rows if event_type in GATEWAY_BLOCKED_EVENT_TYPES)
-    data_filters = sum(count for event_type, _reason, count, _assurance in event_rows if event_type in GATEWAY_DATA_FILTER_EVENT_TYPES)
-    shadow_blocked = sum(
-        count
-        for event_type, reason, count, _assurance in event_rows
-        if event_type in GATEWAY_BLOCKED_EVENT_TYPES and _is_shadow_reason(reason)
-    )
-    return GatewayActivityWindowSummary(
-        tenant_id=tenant_id,
-        start=start,
-        end=end,
-        tool_calls_authorized=authorized,
-        blocked=blocked,
-        shadow_blocked=shadow_blocked,
-        data_filters=data_filters,
-        retention_floor_ordinal=floor,
-        latest_ordinal=latest,
-        producer_assurance_counts={
-            assurance: sum(
-                count
-                for event_type, _reason, count, value in event_rows
-                if value == assurance
-                and event_type in GATEWAY_ALLOWED_EVENT_TYPES | GATEWAY_BLOCKED_EVENT_TYPES | GATEWAY_DATA_FILTER_EVENT_TYPES
-            )
-            for assurance in ("unknown", "caller_asserted")
-        },
-    )
 
 
 def _digest_payload(record: GatewayActivityRecord) -> str:
@@ -735,6 +668,11 @@ class InMemoryGatewayActivityStore:
                 max_tombstones=self.max_tombstones_per_tenant,
             )
 
+    def window_activity(self, tenant_id: str, **kwargs: Any) -> list[GatewayActivityRecord]:
+        with self._lock:
+            rows = (row for (tenant, _), row in self._events.items() if tenant == tenant_id)
+            return memory_activity_window(rows, **kwargs)
+
     def summarize_window(self, tenant_id: str, *, start: str, end: str) -> GatewayActivityWindowSummary:
         with self._lock:
             rows = [
@@ -957,6 +895,9 @@ class SQLiteGatewayActivityStore:
             max_events=self.max_events_per_tenant,
             max_tombstones=self.max_tombstones_per_tenant,
         )
+
+    def window_activity(self, tenant_id: str, **kwargs: Any) -> list[GatewayActivityRecord]:
+        return [_record_from_json(row) for row in sql_activity_window(self._conn, tenant_id, **kwargs)]
 
     def summarize_window(self, tenant_id: str, *, start: str, end: str) -> GatewayActivityWindowSummary:
         rows = self._conn.execute(

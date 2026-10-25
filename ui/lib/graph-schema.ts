@@ -141,6 +141,7 @@ export enum RelationshipType {
   CALLED = "called",
   ACCESSED = "accessed",
   TRACE_STEP = "trace_step",
+  RECORDED_ACTIVITY = "recorded_activity",
   USED_CREDENTIAL = "used_credential",
   DELEGATED_TO = "delegated_to",
   // Cross-environment correlation (#1892)
@@ -487,6 +488,7 @@ export const RELATIONSHIP_COLOR_MAP: Record<string, string> & Record<Relationshi
   [RelationshipType.INVOKED]: "#10b981",
   [RelationshipType.CALLED]: "#a855f7",
   [RelationshipType.ACCESSED]: "#3b82f6",
+  [RelationshipType.RECORDED_ACTIVITY]: "#64748b",
   [RelationshipType.TRACE_STEP]: "#6366f1",
   [RelationshipType.USED_CREDENTIAL]: "#facc15",
   [RelationshipType.DELEGATED_TO]: "#a855f7",

@@ -56,6 +56,7 @@ SOURCE_TIERS: dict[str, str] = {
     "cnapp-overlay": _MODELED,
     "nhi-discovery": _MODELED,
     "governance-overlay": _RECORDED,
+    "persisted-runtime-activity": _RECORDED,
     "hardware-attestation-ingest": _RECORDED,
     "access-advisor": _RECORDED,
     "authorization-evidence": _RECORDED,
@@ -172,6 +173,11 @@ def evidence_problems(evidence: dict[str, Any], required: tuple[str, ...]) -> li
 
 def merge_edge_provenance(stored: Any, incoming: Any) -> None:
     """Union provenance sources and keep the strongest confidence on re-add."""
+    if stored.evidence.get("source") == "persisted-runtime-activity" and incoming.evidence.get("source") == "persisted-runtime-activity":
+        # The projection emits canonical UTC timestamps, so lexical bounds are exact.
+        stamps = [row["observed_at"] for row in stored.evidence.get("receipts", []) if row.get("observed_at")]
+        if stamps:
+            stored.first_seen, stored.last_seen = min(stamps), max(stamps)
     if incoming.confidence > stored.confidence:
         stored.confidence = incoming.confidence
     if not incoming.provenance:

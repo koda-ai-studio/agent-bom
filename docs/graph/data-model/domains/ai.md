@@ -45,7 +45,7 @@ erDiagram
   server }o--o{ tool : "can_access"
 ```
 
-Not drawn, because they can connect almost any two types: `correlates_with`, `lateral_path`, `possibly_correlates_with`, `shares_cred`, `shares_server`, `trace_step`. They are listed in the tables below.
+Not drawn, because they can connect almost any two types: `correlates_with`, `lateral_path`, `possibly_correlates_with`, `recorded_activity`, `shares_cred`, `shares_server`, `trace_step`. They are listed in the tables below.
 
 ## Relationship reference
 
@@ -68,6 +68,7 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `la
 | `possibly_correlates_with` | `correlation` | no | `agent`, `server` | `agent`, `server` |
 | `provides_tool` | `structural` | yes | `server` | `tool` |
 | `reaches_tool` | `authority` | yes | `agent` | `tool` |
+| `recorded_activity` | `correlation` | no | `agent`, `server`, `tool_call` | `agent`, `application`, `framework`, `server`, `tool`, `tool_call` |
 | `shares_cred` | `correlation` | no | `agent` | `agent` |
 | `shares_server` | `correlation` | no | `agent` | `agent` |
 | `trace_step` | `runtime` | yes | `agent`, `application`, `framework`, `server`, `tool` | `agent`, `application`, `framework`, `server`, `tool` |
@@ -103,6 +104,7 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `la
 | `owns` | `governance` | yes | Identity and access: `account`, `group`, `org`, `role`, `service_account`, `service_principal`, `user` | `agent` |
 | `part_of` | `structural` | yes | `agent`, `server`<br/>Code and supply chain: `ci_job` | `application`<br/>Cloud, infrastructure and data: `cluster`, `environment`, `fleet`<br/>Identity and access: `org` |
 | `reaches_tool` | `authority` | yes | Identity and access: `credential` | `tool` |
+| `recorded_activity` | `correlation` | no | `agent`, `server`, `tool_call`<br/>Identity and access: `federated_identity`, `managed_identity`, `role`, `service_account`, `service_principal`, `user`<br/>Cloud, infrastructure and data: `resource` | `agent`, `application`, `framework`, `server`, `tool`, `tool_call`<br/>Identity and access: `access_policy`, `credential`, `credential_ref`, `policy`, `role`, `service_account`, `service_principal`, `user`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource`<br/>Code and supply chain: `ci_job`, `config_file`, `package` |
 | `runs` | `structural` | yes | Code and supply chain: `ci_job` | `agent`, `server`, `tool` |
 | `scoped_to` | `governance` | yes | Identity and access: `access_grant`, `managed_identity`<br/>Findings: `drift_incident` | `tool` |
 | `serves_model` | `dependency` | yes | `agent`, `framework`, `server` | Cloud, infrastructure and data: `model` |

@@ -22,7 +22,7 @@ LABEL_CAP = 3
 # Overlays connect almost any two types (a trace hop, a candidate identity
 # match), so drawing them would hide the domain's structure. They are named
 # under each diagram instead.
-OVERLAY_RELATIONSHIPS = frozenset({"trace_step"})
+OVERLAY_RELATIONSHIPS = frozenset({"trace_step", "recorded_activity"})
 OVERLAY_CLASSES = frozenset({"correlation", "derived"})
 # One view per kind of relationship. A view with more lines than this becomes a
 # source-by-target matrix: past that density a diagram is unreadable.

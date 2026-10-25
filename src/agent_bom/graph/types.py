@@ -90,6 +90,7 @@ class RelationshipType(str, Enum):
     ACCESSED = "accessed"  # tool/tool call → resource (runtime)
     DELEGATED_TO = "delegated_to"  # agent → agent (runtime)
     TRACE_STEP = "trace_step"  # asset → next asset one correlated multi-source trace touched (recorded)
+    RECORDED_ACTIVITY = "recorded_activity"  # reported actor → target; recorded association, never execution or authority
 
     # ── Cross-environment correlation (#1892) ──
     # CORRELATES_WITH is reserved for HIGH-confidence local↔cloud agent

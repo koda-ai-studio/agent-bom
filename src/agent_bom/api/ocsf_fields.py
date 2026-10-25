@@ -40,6 +40,27 @@ def ocsf_identity_context(event: dict, *, tenant_id: str, source_id: str, event_
         "device": _fields(event.get("device"), "uid", "hostname"),
         "session_id": canonical_id("ocsf_session", tenant_id, source_id, account_scope, native_session or event_id),
         "session_id_basis": "reported" if native_session else "event",
+        **({"graph_context": context} if (context := ocsf_graph_context(event)) else {}),
+    }
+
+
+def ocsf_graph_context(event: dict) -> dict[str, str]:
+    """Explicit graph references are separate from provider-native/display identities.
+
+    Never bind a truncated or redacted identifier. Native OCSF resource/user UIDs
+    are not globally scoped inventory IDs and are deliberately not promoted.
+    """
+    unmapped, cloud = _object(event.get("unmapped")), _object(event.get("cloud"))
+    refs = {
+        "agent_ref": unmapped.get("agent_bom.agent_ref"),
+        "target_ref": unmapped.get("agent_bom.inventory_node_id"),
+        "account_ref": _object(cloud.get("account")).get("uid"),
+        "provider": cloud.get("provider"),
+    }
+    return {
+        key: value
+        for key, value in refs.items()
+        if isinstance(value, str) and value and len(value) <= 512 and sanitize_text(value, max_len=512) == value
     }
 
 

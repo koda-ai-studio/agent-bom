@@ -327,3 +327,27 @@ use the same candidate matcher; an agent-only finding cannot match an arbitrary
 tool call. Screened content signals and exact inventory trace edges retain their
 separate evidence contracts. Existing stored snapshots and audit records are
 preserved; this behavior applies to newly ingested traces.
+
+## Persisted runtime activity in the graph
+
+Authenticated `POST /v1/ocsf/ingest` and gateway activity ingestion persist
+metadata for the request tenant. Rebuild a scan graph after ingestion to include
+records within its evidence window. The exported graph contains
+`recorded_activity` edges and a `runtime_activity_projection` analysis receipt.
+This overlay includes stored runtime, proxy and gateway observations and does
+not require the experimental trace-provider opt-in.
+
+An OCSF producer may supply exact inventory references in
+`unmapped["agent_bom.agent_ref"]` and
+`unmapped["agent_bom.inventory_node_id"]`. Cloud bindings also require the
+matching `cloud.provider` and `cloud.account.uid`. Native actor/resource IDs and
+display names are not automatically treated as inventory IDs. Inspect the edge's
+source receipts and unverified resource shadows before relying on a binding.
+A recorded allow or deny decision does not establish completed execution or
+permission; these edges are excluded from attack-path traversal.
+
+One inclusive UTC window and 20,000-event budget cover both persisted stores.
+The analysis receipt reports truncated loads, unavailable stores and rejected
+bindings. A failed store preserves the other store's evidence. Receipts contain
+allowlisted metadata only; prompts, arguments and results are not projected.
+See [runtime failure behavior](RUNTIME_FAIL_MODES.md#graph-evidence-reads).

@@ -51,7 +51,7 @@ erDiagram
 | `container` | can_access | can_access | can_access | can_access | can_access | can_access | can_access | can_access |
 | `model` | can_access | can_access | can_access | can_access | can_access | can_access | can_access | can_access |
 
-Not drawn, because they can connect almost any two types: `possibly_correlates_with`, `trace_step`. They are listed in the tables below.
+Not drawn, because they can connect almost any two types: `possibly_correlates_with`, `recorded_activity`, `trace_step`. They are listed in the tables below.
 
 ## Relationship reference
 
@@ -68,6 +68,7 @@ Not drawn, because they can connect almost any two types: `possibly_correlates_w
 | `part_of` | `structural` | yes | `cloud_resource`, `container`, `resource` | `cloud_resource`, `cluster`, `environment`, `fleet`, `resource` |
 | `possibly_correlates_with` | `correlation` | no | `cloud_resource`, `cluster`, `container`, `data_store` | `cloud_resource`, `cluster`, `container`, `data_store` |
 | `protects` | `governance` | no | `api_gateway`, `cloud_resource` | `cloud_resource`, `data_store`, `resource` |
+| `recorded_activity` | `correlation` | no | `resource` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource` |
 | `serves_model` | `dependency` | yes | `container` | `model` |
 | `stores` | `structural` | yes | `cloud_resource`, `data_store`, `resource` | `data_store`, `dataset` |
 | `trace_step` | `runtime` | yes | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model` |
@@ -92,6 +93,7 @@ Not drawn, because they can connect almost any two types: `possibly_correlates_w
 | `member_of` | `authority` | yes | AI and agents: `agent`<br/>Identity and access: `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user` | `fleet` |
 | `owns` | `governance` | yes | Identity and access: `account`, `group`, `org`, `role`, `service_account`, `service_principal`, `user` | `api_gateway`, `cloud_resource`, `data_store`, `environment` |
 | `part_of` | `structural` | yes | `container`<br/>Identity and access: `account`<br/>AI and agents: `agent`, `server` | `cluster`, `environment`, `fleet`<br/>Identity and access: `org` |
+| `recorded_activity` | `correlation` | no | `resource`<br/>AI and agents: `agent`, `server`, `tool_call`<br/>Identity and access: `federated_identity`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource`<br/>Identity and access: `access_policy`, `credential`, `credential_ref`, `policy`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`, `tool_call`<br/>Code and supply chain: `ci_job`, `config_file`, `package` |
 | `serves_model` | `dependency` | yes | AI and agents: `agent`, `framework`, `server` | `model` |
 | `stores` | `structural` | yes | AI and agents: `server` | `data_store`, `dataset` |
 | `trace_step` | `runtime` | yes | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`<br/>Identity and access: `access_policy`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`<br/>Code and supply chain: `ci_job`, `config_file`, `package` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`<br/>Identity and access: `access_policy`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`<br/>Code and supply chain: `ci_job`, `config_file`, `package` |

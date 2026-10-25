@@ -36414,6 +36414,7 @@
           "accessed",
           "delegated_to",
           "trace_step",
+          "recorded_activity",
           "correlates_with",
           "possibly_correlates_with",
           "belongs_to"

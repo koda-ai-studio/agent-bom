@@ -220,7 +220,7 @@ Id formats:
 
 ## `resource`
 
-Emitted by: `graph/builder_cloud_principals.py`, `graph/delta_digest.py`, `hardware_evidence.py`
+Emitted by: `graph/activity_projection.py`, `graph/builder_cloud_principals.py`, `graph/delta_digest.py`, `hardware_evidence.py`
 
 Id formats:
 

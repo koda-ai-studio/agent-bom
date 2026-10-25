@@ -5,19 +5,20 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
-from typing import Any
+from typing import Any, Callable, TypeVar
 
+from agent_bom.api.gateway_activity_store import get_gateway_activity_store
 from agent_bom.api.models import JobStatus
 from agent_bom.api.runtime_event_store import RuntimeEventStore, get_runtime_event_store
 from agent_bom.api.trace_collection.normalized_events import (
     coverage_summary,
-    load_window_events,
     normalize_otlp_body,
     normalized_from_native_span,
     persist_normalized_events,
     signals_by_span,
     trace_window,
 )
+from agent_bom.api.trace_collection.runtime_evidence import load_runtime_window
 from agent_bom.api.trace_collection.trace_findings import (
     FindingSink,
     shadow_findings,
@@ -87,24 +88,49 @@ def record_native_evidence(spans: Iterable[Mapping[str, Any]], *, tenant_id: str
     return _summary(events, len(findings), write_findings(tenant_id, findings, sink))
 
 
+_Store = TypeVar("_Store")
+
+
+def _available_store(factory: Callable[[], _Store], kind: str, failures: list[str]) -> _Store | None:
+    try:
+        return factory()
+    except Exception:  # broad-except: unavailable stores remain explicit missing evidence
+        _logger.warning("Runtime evidence store unavailable for graph build", exc_info=False)
+        failures.append(f"{kind}_store_unavailable")
+        return None
+
+
 def with_trace_events(report_json: dict[str, Any], tenant_id: str, *, store: RuntimeEventStore | None = None) -> dict[str, Any]:
-    """Overlay the tenant's canonical trace events for the snapshot window on a shallow copy."""
-    if not is_enabled("traces"):
-        return report_json
+    """Overlay persisted runtime evidence through one tenant-scoped, bounded window.
+
+    Trace providers retain their experimental opt-in. Runtime and gateway records
+    are metadata-only evidence already accepted by authenticated ingest routes.
+    """
+    traces = is_enabled("traces")
     anchor = report_json.get("scan_timestamp") or report_json.get("observed_at") or report_json.get("generated_at")
     window_start, window_end = trace_window(anchor)
-    payload: dict[str, Any] = {"events": [], "window_start": window_start, "window_end": window_end}
-    try:
-        events, truncated = load_window_events(
-            store or get_runtime_event_store(), tenant_id, window_start=window_start, window_end=window_end
-        )
-    except Exception:  # broad-except: a trace-store outage is recorded on the graph instead of failing the snapshot
-        _logger.warning("Runtime trace events unavailable for graph build", exc_info=False)
-        return {**report_json, "runtime_trace_events": {**payload, "load_failed": True}}
-    if not events and not truncated:
-        return report_json
-    payload.update(events=events, load_truncated=truncated)
-    return {**report_json, "runtime_trace_events": payload}
+    base: dict[str, Any] = {"window_start": window_start, "window_end": window_end}
+    failures: list[str] = []
+    runtime = _available_store(lambda: store or get_runtime_event_store(), "runtime", failures)
+    gateway = _available_store(get_gateway_activity_store, "gateway", failures)
+    window = load_runtime_window(runtime, gateway, tenant_id, window_start=window_start, window_end=window_end, traces=traces)
+    window.failures.extend(failures)
+    result = dict(report_json)
+    if window.activity or window.truncated or window.failures:
+        result["runtime_activity_events"] = {
+            **base,
+            "events": window.activity,
+            "load_truncated": window.truncated,
+            "load_failures": sorted(set(window.failures)),
+        }
+    if traces and (window.traces or window.truncated or window.failures):
+        result["runtime_trace_events"] = {
+            **base,
+            "events": window.traces,
+            "load_truncated": window.truncated,
+            "load_failed": "runtime_store_unavailable" in window.failures,
+        }
+    return result
 
 
 def emit_shadow_findings(graph: UnifiedGraph, tenant_id: str, sink: FindingSink | None) -> int:

@@ -13,11 +13,11 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 
 | Domain | Entity types | Relationships inside | To other domains | Detail |
 |---|---|---|---|---|
-| AI and agents | `agent`, `application`, `blueprint`, `framework`, `server`, `tool`, `tool_call` | 20 | 32 | [ERD and relationships](data-model/domains/ai.md) |
-| Code and supply chain | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `package`, `source_file` | 6 | 12 | [ERD and relationships](data-model/domains/supply.md) |
+| AI and agents | `agent`, `application`, `blueprint`, `framework`, `server`, `tool`, `tool_call` | 21 | 33 | [ERD and relationships](data-model/domains/ai.md) |
+| Code and supply chain | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `package`, `source_file` | 6 | 13 | [ERD and relationships](data-model/domains/supply.md) |
 | Findings | `drift_incident`, `misconfiguration`, `vulnerability` | 1 | 9 | [ERD and relationships](data-model/domains/findings.md) |
-| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 12 | 20 | [ERD and relationships](data-model/domains/cloud.md) |
-| Identity and access | `access_grant`, `access_policy`, `account`, `credential`, `credential_ref`, `federated_identity`, `group`, `managed_identity`, `org`, `policy`, `role`, `service_account`, `service_principal`, `user` | 16 | 24 | [ERD and relationships](data-model/domains/identity.md) |
+| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 13 | 21 | [ERD and relationships](data-model/domains/cloud.md) |
+| Identity and access | `access_grant`, `access_policy`, `account`, `credential`, `credential_ref`, `federated_identity`, `group`, `managed_identity`, `org`, `policy`, `role`, `service_account`, `service_principal`, `user` | 17 | 25 | [ERD and relationships](data-model/domains/identity.md) |
 
 ## Entities
 
@@ -57,7 +57,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 6 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 5 (+1 demo) |
 | `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 (+1 demo) |
-| `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 |
+| `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 4 |
 | `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 8 (+2 demo) |
 | `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 4 (+2 demo) |
 | `service_account` | Service Account | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
@@ -70,7 +70,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 
 ## Relationships
 
-51 relationship types, one `RelationshipSpec` each (`agent_bom.graph.relationship_specs`). Source and target kinds are the spec's `source_types` / `target_types`; the exact allowed pairs are in [relationship pairs](data-model/relationships.md). *Traversable* is the default for the attack-path view (`UnifiedGraph.attack_path_view` keeps traversable edges only).
+52 relationship types, one `RelationshipSpec` each (`agent_bom.graph.relationship_specs`). Source and target kinds are the spec's `source_types` / `target_types`; the exact allowed pairs are in [relationship pairs](data-model/relationships.md). *Traversable* is the default for the attack-path view (`UnifiedGraph.attack_path_view` keeps traversable edges only).
 
 Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Dependency reach (blast radius) · **LT** Toxic-combination lateral reach · **MT** ATT&CK / ATLAS hop mapping · **RT** Runtime-observed path evidence.
 
@@ -113,6 +113,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `protects` | `governance` | exposure | directed | no | `api_gateway`, `cloud_resource` | `cloud_resource`, `data_store`, `resource` | 6 | — | 1 |
 | `provides_tool` | `structural` | inventory | directed | yes | `server` | `tool` | 1 | FU, CR, BR | 2 (+1 demo) |
 | `reaches_tool` | `authority` | inventory | directed | yes | `agent`, `credential` | `tool` | 2 | FU, CR | 2 (+1 demo) |
+| `recorded_activity` | `correlation` | runtime | directed | no | `agent`, `federated_identity`, `managed_identity`, `resource`, `role`, `server` (+4 more) | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+19 more) | 250 | — | 1 |
 | `remediates` | `finding` | vulnerability | directed | no | `package` | `misconfiguration`, `vulnerability` | 2 | — | 0 |
 | `runs` | `structural` | code_topology | directed | yes | `ci_job` | `agent`, `server`, `tool` | 3 | — | 1 |
 | `scoped_to` | `governance` | governance | directed | yes | `access_grant`, `drift_incident`, `managed_identity` | `tool` | 3 | FU | 1 |
@@ -138,7 +139,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `exposure` | `exposed_to` |
 | `finding` | `affects`, `exploitable_via`, `remediates`, `triggers`, `vulnerable_to` |
 | `runtime` | `accessed`, `acted_as`, `called`, `delegated_to`, `invoked`, `trace_step`, `used_credential` |
-| `correlation` | `correlates_with`, `possibly_correlates_with`, `shares_cred`, `shares_server` |
+| `correlation` | `correlates_with`, `possibly_correlates_with`, `recorded_activity`, `shares_cred`, `shares_server` |
 | `derived` | `lateral_path` |
 | `governance` | `exhibits_drift`, `governs`, `manages`, `owns`, `protects`, `scoped_to` |
 

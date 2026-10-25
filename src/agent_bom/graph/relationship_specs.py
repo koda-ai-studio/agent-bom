@@ -331,6 +331,14 @@ _SPECS: tuple[RelationshipSpec, ...] = (
     # Consecutive assets one correlated trace touched, across vendors' audit logs.
     _spec(R.TRACE_STEP, T.RUNTIME, "runtime", _TRACE_ASSETS, _TRACE_ASSETS),
     _spec(
+        R.RECORDED_ACTIVITY,
+        T.CORRELATION,
+        "runtime",
+        (*_HUMAN_AND_WORKLOAD, E.AGENT, E.SERVER, E.TOOL_CALL, E.RESOURCE, E.MANAGED_IDENTITY, E.ROLE),
+        (*_TRACE_ASSETS, E.RESOURCE, E.CREDENTIAL, E.CREDENTIAL_REF, E.TOOL_CALL, E.POLICY),
+        traversable=False,
+    ),
+    _spec(
         R.CORRELATES_WITH,
         T.CORRELATION,
         "correlation",
