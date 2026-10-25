@@ -158,6 +158,12 @@ function recommendationHtml(risk){{
   return `<ul>${{steps.map((item)=>`<li>${{item}}</li>`).join('')}}</ul>`;
 }}
 
+function intelligenceDetail(d){{
+  let titles=[];
+  try{{ titles=JSON.parse(d.securityIntelligence||'[]'); }}catch(_e){{ titles=[]; }}
+  if(!Array.isArray(titles) || !titles.length) return '';
+  return `<div class="subtle">MCP intelligence: ${{titles.map(t=>escapeHtml(String(t))).join(', ')}}</div>`;
+}}
 function setDetail(title, bodyHtml){{
   document.getElementById('detail').style.display='block';
   document.getElementById('dt').textContent=title;
@@ -418,7 +424,7 @@ function focusNode(nodeId, opts){{
       setRiskDetail(risk);
     }} else {{
       const d=node.data();
-      setDetail(d.label||d.id, `<div class="subtle">${{escapeHtml(d.tip || '')}}</div>`);
+      setDetail(d.label||d.id, `<div class="subtle">${{escapeHtml(d.tip || '')}}</div>${{intelligenceDetail(d)}}`);
     }}
   }}
   applyFilters();

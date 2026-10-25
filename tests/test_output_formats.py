@@ -1235,3 +1235,35 @@ def test_graph_html_starts_with_full_graph_and_preserves_zero_counts(tmp_path):
     assert "String(value ?? '')" in html
     assert "document.getElementById('chip-focus').classList.add('active')" not in html
     assert "setTimeout(function(){ fitAll(); }, 120)" in html
+
+
+def test_cytoscape_server_intelligence_stays_in_its_structured_field_not_the_tooltip():
+    from agent_bom.output.graph import build_graph_elements
+
+    server = _make_server("ticketing")
+    server.security_intelligence = [{"entry_id": "intel-1", "title": "Known malicious MCP fork"}]
+    report = _make_report(agents=[_make_agent(servers=[server])])
+
+    elements = build_graph_elements(report, [])
+    server_nodes = [e["data"] for e in elements if e.get("data", {}).get("securityIntelligenceCount")]
+
+    assert len(server_nodes) == 1
+    node = server_nodes[0]
+    assert json.loads(node["securityIntelligence"]) == ["Known malicious MCP fork"]
+    assert "Known malicious MCP fork" not in node["tip"]
+    assert node["tip"].startswith("MCP Server: ticketing")
+
+
+def test_graph_html_detail_panel_lists_server_intelligence_from_its_field(tmp_path):
+    from agent_bom.output.graph import export_graph_html
+
+    server = _make_server("ticketing")
+    server.security_intelligence = [{"entry_id": "intel-1", "title": "Known malicious MCP fork"}]
+    report = _make_report(agents=[_make_agent(servers=[server])])
+
+    out = tmp_path / "graph.html"
+    export_graph_html(report, [], str(out))
+    html = out.read_text(encoding="utf-8")
+
+    assert "Known malicious MCP fork" in html
+    assert "intelligenceDetail(d)" in html, "the detail panel must render securityIntelligence, escaped"
