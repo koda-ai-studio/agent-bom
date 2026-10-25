@@ -13,12 +13,12 @@ permissions:
 #                  Postgres, musl, Docker, UI E2E, dogfood. The release gate
 #                  reads this.
 #   schedule       nightly full run, including the full musl suite.
-# Supersede obsolete PR and main-push runs. Scheduled/manual evidence uses
-# separate event groups; release still requires a completed current-main push.
+# Supersede obsolete PR runs. Each main commit keeps an independent run;
+# scheduled/manual evidence uses separate event groups.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
-  # Superseded PR runs are cancelled; every main push runs to completion so
-  # each main commit has a verdict and the build badge never reads a cancel.
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.sha) || github.event.pull_request.number || github.ref }}
+  # Distinct main groups also avoid replacing a pending main commit when
+  # another push arrives. PRs still cancel their superseded runs.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
