@@ -138,11 +138,11 @@ def test_missing_and_stale_snapshots_never_claim_complete(boundary):
     assert fetch(boundary, cursor="not-a-token").status_code == 422
 
 
-def test_latest_cursor_requires_returned_snapshot_id(boundary):
+def test_latest_cursor_after_a_newer_snapshot_is_a_conflict_unless_pinned(boundary):
     _, store, _, _ = boundary
     page = fetch(boundary, limit=1).json()
     store.save_graph(graph(scan="new", created="2026-09-24T00:00:00Z"))
-    assert fetch(boundary, cursor=page["next_cursor"]).status_code == 422
+    assert fetch(boundary, cursor=page["next_cursor"]).status_code == 409
     assert fetch(boundary, cursor=page["next_cursor"], scan_id=page["scan_id"]).status_code == 200
 
 
