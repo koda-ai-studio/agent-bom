@@ -36,6 +36,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
+    environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

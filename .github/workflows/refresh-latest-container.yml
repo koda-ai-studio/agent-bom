@@ -14,6 +14,7 @@ concurrency:
 jobs:
   refresh-latest:
     name: Rebuild and publish latest from latest release tag
+    environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -276,6 +277,7 @@ jobs:
 
   refresh-ui-latest:
     name: Rebuild and publish UI latest from latest release tag
+    environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -492,6 +494,7 @@ jobs:
     # overlays and base-image patches. Python/provider SDK versions stay frozen
     # to the release tag's uv.lock; version changes require a reviewed lockfile
     # update rather than silently drifting during a scheduled build.
+    environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
