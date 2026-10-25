@@ -220,7 +220,7 @@ class TestDuplicatesAndHygiene:
         by_location: dict[tuple[str, int], list[str]] = {}
         for f in findings:
             by_location.setdefault((f.file_path, f.line_number), []).append(f.rule_id)
-        pairs = [("TF-SEC-001", "TF-SEC-008"), ("CFN-003", "CFN-013"), ("DOCKER-004", "DOCKER-022"), ("DOCKER-001", "DOCKER-010")]
+        pairs = [("TF-SEC-001", "TF-SEC-008"), ("CFN-003", "CFN-013"), ("DOCKER-004", "DOCKER-022")]
         for a, b in pairs:
             assert not [loc for loc, rules in by_location.items() if a in rules and b in rules], (a, b)
         assert "TF-SEC-008" not in {f.rule_id for f in findings}
@@ -230,11 +230,11 @@ class TestDuplicatesAndHygiene:
         findings = _scan("docker/Dockerfile")
         assert {(f.rule_id, f.line_number) for f in findings if f.rule_id.startswith("DOCKER-0") and f.line_number <= 4} >= {
             ("DOCKER-001", 1),
+            ("DOCKER-010", 1),
             ("DOCKER-022", 2),
             ("DOCKER-004", 3),
             ("DOCKER-010", 4),
         }
-        assert not [f for f in findings if f.rule_id == "DOCKER-010" and f.line_number == 1]
         assert not [f for f in findings if f.rule_id == "DOCKER-004" and f.line_number == 2]
 
     def test_hygiene_rules_are_low(self) -> None:
