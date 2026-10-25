@@ -21,14 +21,30 @@ ScanRepoUrl = Annotated[
     ),
 ]
 
+ScanProjectPath = Annotated[
+    str | None,
+    Field(
+        description=(
+            "Local project / repository directory to scan, e.g. the agent's current "
+            "workspace checkout. Scans dependency manifests and lockfiles, project MCP "
+            "configs, source AI usage, secrets (values redacted), IaC, and GitHub "
+            "Actions, statically and read-only. Must resolve (symlinks followed) to an "
+            "existing directory inside the user's home or a root listed in "
+            "AGENT_BOM_MCP_WORKSPACE_ROOTS; traversal, symlink escapes, files, and "
+            "missing paths are refused with AGENTBOM_MCP_VALIDATION_INVALID_PATH. "
+            "Mutually exclusive with config_path and repo_url."
+        )
+    ),
+]
+
 ScanConfigPath = Annotated[
     str | None,
     Field(
         description=(
             "Local directory to scan — a project root or an MCP client config "
             "directory. Auto-discovers installed MCP clients if omitted unless "
-            "no_discover=true. "
-            "Mutually exclusive with repo_url."
+            "no_discover=true. Same sandbox as project_path. "
+            "Mutually exclusive with project_path and repo_url."
         )
     ),
 ]
@@ -163,8 +179,10 @@ ScanLimit = Annotated[int, Field(ge=1, le=200, description="Maximum items per pa
 _SCAN_DESCRIPTION = """Run a full AI supply chain security scan and return an AI-BOM.
 
 Point it at a target with one of:
+  • project_path — a local project / repo directory ("scan this repo";
+                   must be inside home or AGENT_BOM_MCP_WORKSPACE_ROOTS)
   • repo_url     — a public git repo URL (cloned + scanned, no checkout)
-  • config_path  — a local project / MCP-config directory
+  • config_path  — a local MCP-config directory
   • image        — a Docker image
   • sbom_path    — an existing CycloneDX/SPDX SBOM
   • package      — a single package or MCP launch command (pair it with
@@ -205,6 +223,7 @@ def _register_scan(
 
     @mcp.tool(annotations=read_only, title="Security Scan", description=_SCAN_DESCRIPTION)
     async def scan(
+        project_path: ScanProjectPath = None,
         repo_url: ScanRepoUrl = None,
         config_path: ScanConfigPath = None,
         no_discover: ScanNoDiscover = False,
@@ -232,6 +251,7 @@ def _register_scan(
         text = await _execute_tool_async(
             "scan",
             scan_impl,
+            project_path=project_path,
             config_path=config_path,
             no_discover=no_discover,
             repo_url=repo_url,
