@@ -7,6 +7,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- Version ordering no longer reports installed versions as past a fix they have not reached, which hid real CVE matches in four ecosystems. RPM compares `[epoch:]version` before the release as `rpmvercmp` does, so `2.4-12.el8` is affected by a `2.4.1-1.el8` fix (RHEL, Rocky, Alma, SUSE). crates.io/Cargo, Pub, Hex and Swift packages use SemVer 2.0 precedence instead of PEP 440, so `1.0.0-test.1 < 1.0.0` and `canary.1 < canary.2`. Go ignores `+incompatible` as build metadata (`v2.0.0+incompatible` equals `v2.0.0`) and orders pseudo-versions as the pre-releases they are (`v1.5.0-0.<ts>-<sha> < v1.5.0-rc.1`). PyPI dash-spelled `-dev1` / `-post1` releases normalise as PEP 440 requires (`4.2.0-dev1 < 4.2.0`), and local labels such as `+r1` are left untouched.
+
 ## [0.111.0] - 2026-10-25
 
 ### Added
