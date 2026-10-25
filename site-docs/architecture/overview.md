@@ -43,7 +43,7 @@ graph LR
 |--------|------|---------|
 | Discovery | `src/agent_bom/discovery/` | MCP client config parsing |
 | Enrichment | `src/agent_bom/enrichment.py` | CVE lookup (OSV, NVD, EPSS, KEV) |
-| Blast Radius | `src/agent_bom/blast_radius.py` | Impact chain mapping |
+| Blast Radius | `src/agent_bom/scanners/blast_radius.py` | Impact chain mapping |
 | Context Graph | `src/agent_bom/context_graph.py` | Lateral movement analysis |
 | Registry | `src/agent_bom/registry.py` | 1256 server security metadata entries |
 | Compliance | `src/agent_bom/compliance/` | 15 framework mappings plus AISVS benchmark evidence |

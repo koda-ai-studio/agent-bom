@@ -234,7 +234,7 @@ flowchart LR
 Net new code:
 
 - `src/agent_bom/gateway_server.py` — the FastAPI app, upstream registry, HTTP JSON-RPC relay
-- `src/agent_bom/cli/gateway.py` — `agent-bom gateway serve` entry point
+- `src/agent_bom/cli/_gateway.py` — `agent-bom gateway serve` entry point
 - `src/agent_bom/gateway_upstreams.py` — upstream config loader + auth injector
 - `tests/test_gateway_server.py` — real upstream + real policy + TestClient integration
 

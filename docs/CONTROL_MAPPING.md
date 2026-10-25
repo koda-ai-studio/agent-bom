@@ -23,7 +23,7 @@ customer environment.
 | Audit chain verification | `POST /v1/audit/export/verify` | `src/agent_bom/api/audit_log.py` |
 | Compliance report | `GET /v1/compliance/{framework}/report` | `src/agent_bom/api/routes/compliance.py` |
 | Evidence bundle signing posture | `GET /v1/compliance/signing/status` | `src/agent_bom/api/compliance_signing.py` |
-| Auth and secret posture | `GET /v1/auth/policy` | `src/agent_bom/api/routes/auth.py`, `src/agent_bom/api/audit_log.py` |
+| Auth and secret posture | `GET /v1/auth/policy` | `src/agent_bom/api/routes/enterprise.py`, `src/agent_bom/api/audit_log.py` |
 | Security header posture | `GET /v1/auth/policy` | `src/agent_bom/api/middleware.py`, `tests/api/test_api_operator_policy.py` |
 | Release artifact verification | GitHub Release assets | `docs/RELEASE_VERIFICATION.md`, `.github/workflows/release.yml` |
 | Dependency and image audit | CI artifacts and release SBOM | `docs/SUPPLY_CHAIN.md`, `.github/workflows/pr-security-gate.yml`, `.github/workflows/extras-audit.yml` |
@@ -35,7 +35,7 @@ customer environment.
 |---|---|---|
 | CC6.1 logical access | API keys, OIDC, SAML metadata, trusted proxy mode, route-level RBAC | `src/agent_bom/api/middleware.py`, `src/agent_bom/rbac.py`, `docs/TRUST.md` |
 | CC6.2 least privilege | Admin, analyst, and viewer capabilities are enforced by middleware before route handlers | `src/agent_bom/rbac.py`, `tests/api/test_api_operator_policy.py`, `tests/test_enterprise_gaps.py` |
-| CC6.3 access changes | API key creation, revocation, and rotation are explicit API operations with audit events | `src/agent_bom/api/auth.py`, `src/agent_bom/api/routes/auth.py` |
+| CC6.3 access changes | API key creation, revocation, and rotation are explicit API operations with audit events | `src/agent_bom/api/auth.py`, `src/agent_bom/api/routes/enterprise_routes/keys.py`, `src/agent_bom/api/routes/enterprise_routes/sessions.py` |
 | CC6.6 transmission boundaries | TLS terminates at customer ingress; gateway/proxy policy can fail closed for runtime traffic | `deploy/helm/agent-bom/templates/controlplane-ingress.yaml`, `src/agent_bom/gateway_server.py` |
 | CC6.7 data access restriction | Tenant propagation, Postgres RLS, ClickHouse tenant filters, and cross-tenant tests | `src/agent_bom/api/middleware.py`, `src/agent_bom/api/postgres_common.py`, `tests/test_cross_tenant_leakage.py` |
 | CC7.2 monitoring | Prometheus metrics, client error telemetry, audit events, and SIEM integration | `src/agent_bom/api/routes/observability.py`, `site-docs/deployment/siem-integration.md` |
@@ -65,7 +65,7 @@ customer environment.
 | 2 Inventory and control of software assets | Package, MCP, container, OS package, and SBOM scanning | `src/agent_bom/discovery`, `src/agent_bom/parsers`, `src/agent_bom/scanners` |
 | 3 Data protection | Tenant-scoped data model, signed evidence bundles, backup encryption knobs | `docs/DATA_MODEL.md`, `docs/COMPLIANCE_SIGNING.md`, `deploy/helm/agent-bom/values.yaml` |
 | 4 Secure configuration | IaC and cloud benchmark scanning, Kubernetes and Helm guidance | `src/agent_bom/iac`, `src/agent_bom/cloud`, `site-docs/deployment/kubernetes.md` |
-| 5 Account management | API-key expiry, rotation overlap, revocation, and OIDC/SAML integrations | `src/agent_bom/api/auth.py`, `src/agent_bom/api/routes/auth.py` |
+| 5 Account management | API-key expiry, rotation overlap, revocation, and OIDC/SAML integrations | `src/agent_bom/api/auth.py`, `src/agent_bom/api/routes/enterprise_routes/keys.py`, `src/agent_bom/api/routes/enterprise_routes/sessions.py` |
 | 6 Access control management | RBAC matrix and middleware-enforced route permissions | `src/agent_bom/rbac.py`, `docs/TRUST.md` |
 | 7 Continuous vulnerability management | Dependency audits, CVE freshness, image rescans, Dependabot | `.github/workflows/cve-freshness.yml`, `.github/workflows/extras-audit.yml` |
 | 8 Audit log management | HMAC chain, export, verification, SIEM push | `src/agent_bom/api/audit_log.py`, `site-docs/deployment/siem-integration.md` |
