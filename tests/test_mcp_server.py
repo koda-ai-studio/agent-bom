@@ -1642,8 +1642,15 @@ def test_where_tool_returns_json():
     assert "platform" in result
 
 
+@pytest.fixture
+def local_export_mode(monkeypatch):
+    """graph_export scans locally only when nothing binds the server to a tenant or a Postgres control plane."""
+    for name in ("AGENT_BOM_TENANT_ID", "AGENT_BOM_MCP_TENANT_ID", "AGENT_BOM_POSTGRES_URL", "AGENT_BOM_DB"):
+        monkeypatch.delenv(name, raising=False)
+
+
 @patch("agent_bom.mcp_server._run_scan_pipeline")
-def test_graph_export_uses_scan_pipeline_tuple_contract(mock_pipeline):
+def test_graph_export_uses_scan_pipeline_tuple_contract(mock_pipeline, local_export_mode):
     """graph_export should serialize nodes from the tuple-style scan pipeline result."""
     from agent_bom.mcp_server import create_mcp_server
     from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType, Vulnerability
@@ -1662,7 +1669,7 @@ def test_graph_export_uses_scan_pipeline_tuple_contract(mock_pipeline):
 
 
 @patch("agent_bom.mcp_server._run_scan_pipeline")
-def test_graph_export_mermaid_limit_zero_renders_full_graph(mock_pipeline):
+def test_graph_export_mermaid_limit_zero_renders_full_graph(mock_pipeline, local_export_mode):
     """graph_export should pass the full-render sentinel through for Mermaid output."""
     from agent_bom.mcp_server import create_mcp_server
     from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
@@ -1694,7 +1701,7 @@ def test_graph_export_mermaid_limit_zero_renders_full_graph(mock_pipeline):
 
 
 @patch("agent_bom.mcp_server._run_scan_pipeline")
-def test_graph_export_passes_through_pipeline_error_payload(mock_pipeline):
+def test_graph_export_passes_through_pipeline_error_payload(mock_pipeline, local_export_mode):
     """graph_export should return a pipeline error payload instead of crashing on string results."""
     from agent_bom.mcp_server import create_mcp_server
 

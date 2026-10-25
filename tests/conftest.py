@@ -18,7 +18,7 @@ import pytest
 
 # Seeded demo-estate clients: per-test ``demo_estate_client`` and per-module
 # ``shared_demo_estate_client`` for read-only suites.
-pytest_plugins = ["tests._demo_estate_fixtures", "tests._registry_isolation"]
+pytest_plugins = ["tests._demo_estate_fixtures", "tests._registry_isolation", "tests._tenant_env_isolation"]
 
 os.environ.setdefault("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", "1")
 os.environ.setdefault("AGENT_BOM_NO_AUTH_ROLE", "admin")
