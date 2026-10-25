@@ -44,7 +44,7 @@ _FILLER_PLACEHOLDER_RE = re.compile(
     r"(?:insert|enter|add|put|paste|set)?[-_]?(?:replace[-_]?(?:with|me)|your)[-_][a-z0-9_.-]*"
     r"|[a-z0-9_.-]*[-_]here"
     r"|(?:dummy|sample|fake)(?:[-_][a-z0-9_.-]+)?"
-    r"|(?:changeme|replaceme)(?:[-_.]?(?:changeme|replaceme|\d+))*"
+    r"|(?:changeme|replaceme)(?:[-_.]?(?:changeme|replaceme))*(?:[-_.]?\d+)?"
     r"|x{3,}[a-z0-9_.-]*"
     r"|(.)\1{7,}"
     r"|\*{3,}|\.{3,}|<[^>]+>"
