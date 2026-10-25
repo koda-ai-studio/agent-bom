@@ -7958,11 +7958,30 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
+    "CIS-AWS-1.14",
+    "NIST-IA-5",
+    "NIST-SC-28"
+   ],
+   "file_path": "terraform/synthetic_all_rules_bad.tf",
+   "line_number": 69,
+   "message": "Resource 'db_unencrypted' (aws_db_instance) sets 'password' to a literal value. The value lands in version control and Terraform state. Pass it from a sensitive variable, random_password, or a secrets manager reference.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-051",
+   "severity": "critical",
+   "title": "Hardcoded secret in Terraform resource"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
     "CIS-AWS-2.3.1",
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 71,
+   "line_number": 72,
    "message": "RDS instance 'db_unset' does not set storage_encrypted. Add storage_encrypted = true to encrypt data at rest.",
    "remediation": "",
    "repository_relative_path": null,
@@ -7980,7 +7999,7 @@
     "NIST-AU-2"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 71,
+   "line_number": 72,
    "message": "Resource 'db_unset' (aws_db_instance) does not configure CloudWatch log exports. Enable logging for audit and incident response.",
    "remediation": "",
    "repository_relative_path": null,
@@ -7998,7 +8017,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 71,
+   "line_number": 72,
    "message": "RDS resource 'db_unset' (aws_db_instance) does not have storage_encrypted = true. Enable encryption at rest for database storage.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8016,7 +8035,7 @@
     "NIST-CP-9"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 71,
+   "line_number": 72,
    "message": "RDS instance 'db_unset' does not set backup_retention_period. Default may be 0 (no backups). Set to at least 7 days.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8034,7 +8053,7 @@
     "NIST-SC-36"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 71,
+   "line_number": 72,
    "message": "RDS instance 'db_unset' does not have multi_az = true. Enable multi-AZ deployment for high availability and automatic failover.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8052,7 +8071,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 71,
+   "line_number": 72,
    "message": "RDS resource 'db_unset' does not have deletion_protection = true. Enable deletion protection to prevent accidental database removal.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8070,7 +8089,7 @@
     "NIST-AU-2"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 83,
+   "line_number": 85,
    "message": "Resource 'cluster_zero_backup' (aws_rds_cluster) does not configure CloudWatch log exports. Enable logging for audit and incident response.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8088,7 +8107,7 @@
     "NIST-CP-9"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 83,
+   "line_number": 85,
    "message": "RDS instance 'cluster_zero_backup' has backup_retention_period = 0. Set to at least 7 days for adequate disaster recovery.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8106,7 +8125,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 83,
+   "line_number": 85,
    "message": "RDS resource 'cluster_zero_backup' does not have deletion_protection = true. Enable deletion protection to prevent accidental database removal.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8124,7 +8143,7 @@
     "NIST-IA-5"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 88,
+   "line_number": 90,
    "message": "Resource 'hardcoded' (aws_key_pair) contains a hardcoded SSH key. Store keys in a secrets manager or use file() with a gitignored key file.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8142,7 +8161,7 @@
     "NIST-AC-3"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 92,
+   "line_number": 94,
    "message": "EC2 instance 'no_imds' has no metadata_options block. Add metadata_options with http_tokens = \"required\" to enforce IMDSv2.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8160,7 +8179,7 @@
     "NIST-AC-3"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 96,
+   "line_number": 98,
    "message": "EC2 instance 'imds_optional' does not enforce IMDSv2 (http_tokens = \"required\"). IMDSv1 is vulnerable to SSRF attacks. Set http_tokens = \"required\".",
    "remediation": "",
    "repository_relative_path": null,
@@ -8178,7 +8197,7 @@
     "NIST-AU-11"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 110,
+   "line_number": 112,
    "message": "CloudWatch log group 'no_retention' does not set retention_in_days. Logs will be retained indefinitely, increasing costs. Set a retention period.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8197,7 +8216,7 @@
     "NIST-SI-4"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 124,
+   "line_number": 126,
    "message": "VPC 'main' does not have an associated aws_flow_log resource in this file. Enable VPC Flow Logs for network traffic monitoring.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8215,7 +8234,7 @@
     "NIST-SC-12"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 128,
+   "line_number": 130,
    "message": "EKS cluster 'eks' does not have an encryption_config block. Enable envelope encryption of Kubernetes secrets with a KMS key.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8232,7 +8251,7 @@
     "NIST-SI-11"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 132,
+   "line_number": 134,
    "message": "Lambda function 'fn' does not have a dead_letter_config block. Configure a dead letter queue (SQS/SNS) to capture failed invocations.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8250,7 +8269,7 @@
     "NIST-SC-7"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 132,
+   "line_number": 134,
    "message": "Lambda function 'fn' does not have a vpc_config block. Consider placing the function in a VPC if it accesses private resources.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8268,7 +8287,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 132,
+   "line_number": 134,
    "message": "Lambda function 'fn' appears to have sensitive values (password, secret, api_key, token) in environment variables. Use AWS Secrets Manager or SSM Parameter Store instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8286,7 +8305,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 141,
+   "line_number": 143,
    "message": "ElastiCache resource 'redis' (aws_elasticache_replication_group) does not set transit_encryption_enabled = true. Enable encryption in transit to protect data on the wire.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8304,7 +8323,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 145,
+   "line_number": 147,
    "message": "ElastiCache resource 'memcache' (aws_elasticache_cluster) does not set transit_encryption_enabled = true. Enable encryption in transit to protect data on the wire.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8322,7 +8341,7 @@
     "NIST-CP-9"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 149,
+   "line_number": 151,
    "message": "DynamoDB table 'no_pitr' does not have a point_in_time_recovery block. Enable PITR for continuous backups and disaster recovery.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8340,7 +8359,7 @@
     "NIST-CP-9"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 153,
+   "line_number": 155,
    "message": "DynamoDB table 'pitr_disabled' has point_in_time_recovery but enabled is not set to true. Enable PITR for continuous backups and disaster recovery.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8358,7 +8377,7 @@
     "NIST-SI-4"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 160,
+   "line_number": 162,
    "message": "API Gateway stage 'stage_v1' (aws_api_gateway_stage) does not have an access_log_settings block. Enable access logging for API monitoring and compliance.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8376,7 +8395,7 @@
     "NIST-SI-4"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 164,
+   "line_number": 166,
    "message": "API Gateway stage 'stage_v2' (aws_apigatewayv2_stage) does not have an access_log_settings block. Enable access logging for API monitoring and compliance.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8394,7 +8413,7 @@
     "NIST-SC-12"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 168,
+   "line_number": 170,
    "message": "KMS key 'no_rotation' does not set enable_key_rotation = true. Enable automatic key rotation to reduce risk of key compromise.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8412,7 +8431,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 172,
+   "line_number": 174,
    "message": "EBS volume 'vol' does not have encrypted = true. Enable encryption at rest for EBS volumes to protect sensitive data.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8429,7 +8448,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 176,
+   "line_number": 178,
    "message": "EBS snapshot 'snap' is not encrypted. Ensure the source EBS volume is encrypted or copy the snapshot with encryption enabled.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8447,7 +8466,7 @@
     "NIST-AU-2"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 180,
+   "line_number": 182,
    "message": "Load balancer 'lb_no_logs' (aws_lb) does not have an access_logs block. Enable access logging for security monitoring and compliance.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8464,7 +8483,7 @@
     "NIST-CP-9"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 180,
+   "line_number": 182,
    "message": "Load balancer 'lb_no_logs' does not have enable_deletion_protection = true. Enable deletion protection to prevent accidental removal.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8482,7 +8501,7 @@
     "NIST-SI-4"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 180,
+   "line_number": 182,
    "message": "Resource 'lb_no_logs' (aws_lb) does not have an associated aws_wafv2_web_acl_association in this file. Attach a WAF web ACL to protect against common web exploits.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8500,7 +8519,7 @@
     "NIST-AU-2"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 184,
+   "line_number": 186,
    "message": "Load balancer 'alb_logs_disabled' has access_logs block but enabled is not true. Enable access logging for security monitoring and compliance.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8517,7 +8536,7 @@
     "NIST-CP-9"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 184,
+   "line_number": 186,
    "message": "Load balancer 'alb_logs_disabled' does not have enable_deletion_protection = true. Enable deletion protection to prevent accidental removal.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8535,7 +8554,7 @@
     "NIST-SI-4"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 184,
+   "line_number": 186,
    "message": "Resource 'alb_logs_disabled' (aws_alb) does not have an associated aws_wafv2_web_acl_association in this file. Attach a WAF web ACL to protect against common web exploits.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8553,7 +8572,7 @@
     "NIST-AU-2"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 192,
+   "line_number": 194,
    "message": "Load balancer 'classic' (aws_elb) does not have an access_logs block. Enable access logging for security monitoring and compliance.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8571,7 +8590,7 @@
     "NIST-AU-2"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 196,
+   "line_number": 198,
    "message": "CloudTrail 'trail' does not have is_multi_region_trail = true. Enable multi-region trailing to capture API calls in all AWS regions.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8589,7 +8608,7 @@
     "NIST-AU-9"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 196,
+   "line_number": 198,
    "message": "CloudTrail 'trail' does not have enable_log_file_validation = true. Enable log file validation to detect tampering of log files.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8607,7 +8626,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 200,
+   "line_number": 202,
    "message": "SNS topic 'topic' does not have kms_master_key_id set. Enable server-side encryption with a KMS key to protect messages at rest.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8625,7 +8644,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 204,
+   "line_number": 206,
    "message": "SQS queue 'queue' does not have kms_master_key_id set. Enable server-side encryption with a KMS key to protect messages at rest.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8643,7 +8662,7 @@
     "NIST-SI-2"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 208,
+   "line_number": 210,
    "message": "ECR repository 'repo_no_scan' does not have an image_scanning_configuration block. Enable scan on push to detect vulnerabilities in container images.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8661,7 +8680,7 @@
     "NIST-SA-10"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 208,
+   "line_number": 210,
    "message": "ECR repository 'repo_no_scan' does not set image_tag_mutability = \"IMMUTABLE\". Mutable tags allow image replacement, which can introduce supply chain risks.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8679,7 +8698,7 @@
     "NIST-SI-2"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 212,
+   "line_number": 214,
    "message": "ECR repository 'repo_scan_off' has image_scanning_configuration but scan_on_push is not true. Enable scan on push to detect vulnerabilities in container images.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8697,7 +8716,7 @@
     "NIST-SA-10"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 212,
+   "line_number": 214,
    "message": "ECR repository 'repo_scan_off' does not set image_tag_mutability = \"IMMUTABLE\". Mutable tags allow image replacement, which can introduce supply chain risks.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8715,7 +8734,7 @@
     "NIST-SC-7"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 219,
+   "line_number": 221,
    "message": "ECS task definition 'task_host' uses network_mode = \"host\". Host networking bypasses container network isolation. Use awsvpc or bridge mode instead.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8733,7 +8752,7 @@
     "NIST-CM-7"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 219,
+   "line_number": 221,
    "message": "ECS task definition 'task_host' does not specify a non-root user. Running containers as root increases the blast radius of container escapes. Set a non-root user in the container definition.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8751,7 +8770,7 @@
     "NIST-CM-7"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 225,
+   "line_number": 227,
    "message": "ECS task definition 'task_root_user' does not specify a non-root user. Running containers as root increases the blast radius of container escapes. Set a non-root user in the container definition.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8769,7 +8788,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 230,
+   "line_number": 232,
    "message": "Secrets Manager secret 'secret' does not set kms_key_id. Without a customer-managed KMS key, the secret is encrypted with the default AWS key. Use a CMK for better key management and audit trail.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8787,7 +8806,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 234,
+   "line_number": 236,
    "message": "SSM parameter 'param' is a SecureString but does not specify key_id for a customer-managed KMS key. Use a CMK for enhanced encryption control.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8805,7 +8824,7 @@
     "NIST-AC-4"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 240,
+   "line_number": 242,
    "message": "Default security group 'default' has ingress or egress rules defined. The VPC default security group should have no rules to ensure all traffic goes through explicitly managed security groups.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8823,7 +8842,7 @@
     "NIST-AU-2"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 250,
+   "line_number": 252,
    "message": "Resource 'es' (aws_elasticsearch_domain) does not configure CloudWatch log exports. Enable logging for audit and incident response.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8840,7 +8859,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 250,
+   "line_number": 252,
    "message": "Domain 'es' (aws_elasticsearch_domain) has encrypt_at_rest block but enabled is not true. Enable encryption at rest to protect stored data.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8857,7 +8876,7 @@
     "NIST-SC-8"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 250,
+   "line_number": 252,
    "message": "Domain 'es' (aws_elasticsearch_domain) has node_to_node_encryption block but enabled is not true. Enable node-to-node encryption to protect data in transit between nodes.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8874,7 +8893,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 260,
+   "line_number": 262,
    "message": "Domain 'os' (aws_opensearch_domain) does not have an encrypt_at_rest block. Enable encryption at rest to protect stored data.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8891,7 +8910,7 @@
     "NIST-SC-8"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 260,
+   "line_number": 262,
    "message": "Domain 'os' (aws_opensearch_domain) does not have a node_to_node_encryption block. Enable node-to-node encryption to protect data in transit between nodes.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8909,7 +8928,7 @@
     "NIST-SC-28"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 264,
+   "line_number": 266,
    "message": "Redshift cluster 'rs' does not have encrypted = true. Enable encryption at rest to protect data warehouse contents.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8927,7 +8946,7 @@
     "NIST-SC-7"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 264,
+   "line_number": 266,
    "message": "Redshift cluster 'rs' has publicly_accessible = true. Data warehouses should not be directly accessible from the internet. Set publicly_accessible = false.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8945,7 +8964,7 @@
     "NIST-SI-4"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 269,
+   "line_number": 271,
    "message": "Resource 'cdn' (aws_cloudfront_distribution) does not have an associated aws_wafv2_web_acl_association in this file. Attach a WAF web ACL to protect against common web exploits.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8963,7 +8982,7 @@
     "NIST-SI-4"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 273,
+   "line_number": 275,
    "message": "GuardDuty detector 'gd' has enable = false. Enable GuardDuty for continuous threat detection and monitoring of malicious activity.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8981,7 +9000,7 @@
     "NIST-IA-5"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 277,
+   "line_number": 279,
    "message": "Resource 'other' (aws_unrecognized_thing) contains a hardcoded SSH key. Store keys in a secrets manager or use file() with a gitignored key file.",
    "remediation": "",
    "repository_relative_path": null,
@@ -8999,7 +9018,7 @@
     "NIST-AC-6"
    ],
    "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 283,
+   "line_number": 285,
    "message": "IAM policy 'service_star' grants every action of a service (for example \"s3:*\"). Scope actions to the specific operations the principal needs.",
    "remediation": "",
    "repository_relative_path": null,

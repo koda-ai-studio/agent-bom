@@ -66,10 +66,12 @@ resource "aws_db_instance" "db_unencrypted" {
   storage_encrypted       = false
   publicly_accessible     = true
   backup_retention_period = 3
+  password                = "fixture-literal-db-pass"
 }
 
 resource "aws_db_instance" "db_unset" {
-  engine = "postgres"
+  engine   = "postgres"
+  password = var.db_password
 }
 
 resource "aws_db_instance" "db_good" {
