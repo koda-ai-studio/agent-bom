@@ -108,4 +108,6 @@ def append_framework_agent_elements(elements: list[dict], report: "AIBOMReport")
                 relationship,
                 evidence=_text(edge.get("evidence"), 200),
                 line=edge.get("line_number") if isinstance(edge.get("line_number"), int) else None,
+                branch=_text(edge.get("branch"), 100),
+                provenance=_text(edge.get("provenance"), 50),
             )

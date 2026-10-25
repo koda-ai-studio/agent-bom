@@ -7,6 +7,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- LangGraph topology in `scan`: `add_edge(START, …)` / `set_entry_point`, `add_edge(…, END)` / `set_finish_point`, `add_conditional_edges` and `set_conditional_entry_point` (one `delegated_to` edge per branch, carrying the branch label), `add_node(fn)` with the inferred name, subgraphs (`add_node("sub", child.compile())`, nested under their node via `parent_id`) and `Command(goto=…)` handoffs now reach the JSON report and both graph views with `declared` provenance. Routes the parser cannot resolve (no path map, a non-literal path map, a computed `goto`) are listed on the source node as `unresolved_routes` and mark it `dynamic_edges` instead of being dropped. Previously only `add_node("name", fn)` and string-literal `add_edge` were read, so a supervisor graph scanned as disconnected nodes.
+
 ## [0.111.0] - 2026-10-25
 
 ### Added

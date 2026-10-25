@@ -9,14 +9,17 @@ from __future__ import annotations
 
 import ast
 import os
-from dataclasses import dataclass, field
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+from agent_bom.ai_components.framework_models import FrameworkAgent, FrameworkCapability, FrameworkTopologyEdge
+from agent_bom.ai_components.langgraph_topology import collect_langgraph_topology
 from agent_bom.ast.source_reader import parse_python_source
 from agent_bom.ast_signal_utils import is_agent_tool_decorator
 from agent_bom.constants import is_credential_key
-from agent_bom.finding import stable_id
+
+__all__ = ["FrameworkAgent", "FrameworkCapability", "FrameworkTopologyEdge", "scan_framework_agents"]
 
 _SKIP_DIRS = {
     ".git",
@@ -73,97 +76,6 @@ _TOOL_CALLS = {"Tool", "StructuredTool", "FunctionTool", "tool", "from_function"
 _TOOL_REGISTRATION_CALLS = {"register_function", "register_for_llm", "register_for_execution", "add_node", "add_tool"}
 
 
-@dataclass(frozen=True)
-class FrameworkCapability:
-    """A capability registered to a framework-native agent."""
-
-    name: str
-    source: str
-    line_number: int
-    confidence: str = "medium"
-    dynamic: bool = False
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "name": self.name,
-            "source": self.source,
-            "line_number": self.line_number,
-            "confidence": self.confidence,
-            "dynamic": self.dynamic,
-        }
-
-
-@dataclass(frozen=True)
-class FrameworkTopologyEdge:
-    """A static relationship observed between framework-native agents."""
-
-    source_id: str
-    source_name: str
-    target_id: str
-    target_name: str
-    relationship: str
-    file_path: str
-    line_number: int
-    framework: str
-    evidence: str
-    confidence: str = "medium"
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "source_id": self.source_id,
-            "source_name": self.source_name,
-            "target_id": self.target_id,
-            "target_name": self.target_name,
-            "relationship": self.relationship,
-            "file_path": self.file_path,
-            "line_number": self.line_number,
-            "framework": self.framework,
-            "evidence": self.evidence,
-            "confidence": self.confidence,
-        }
-
-
-@dataclass(frozen=True)
-class FrameworkAgent:
-    """A non-MCP framework agent with relationship evidence."""
-
-    framework: str
-    name: str
-    file_path: str
-    line_number: int
-    capabilities: list[FrameworkCapability] = field(default_factory=list)
-    model_refs: list[str] = field(default_factory=list)
-    credential_refs: list[str] = field(default_factory=list)
-    topology_edges: list[FrameworkTopologyEdge] = field(default_factory=list)
-    dynamic_edges: bool = False
-    confidence: str = "medium"
-
-    @property
-    def stable_id(self) -> str:
-        return stable_id("framework_agent", self.framework, self.name, self.file_path, str(self.line_number))
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "stable_id": self.stable_id,
-            "kind": "framework_agent",
-            "framework": self.framework,
-            "name": self.name,
-            "file_path": self.file_path,
-            "line_number": self.line_number,
-            "confidence": self.confidence,
-            "capabilities": [capability.to_dict() for capability in self.capabilities],
-            "model_refs": list(self.model_refs),
-            "credential_refs": list(self.credential_refs),
-            "topology_edges": [edge.to_dict() for edge in self.topology_edges],
-            "dynamic_edges": self.dynamic_edges,
-            "provenance": {
-                "source": "source-ast",
-                "language": "python",
-                "relationship_model": "non-mcp-framework",
-            },
-        }
-
-
 def scan_framework_agents(*paths: str | Path) -> list[FrameworkAgent]:
     """Scan Python source for framework-native agents and relationships."""
     agents: list[FrameworkAgent] = []
@@ -212,7 +124,6 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
     framework_agents: list[FrameworkAgent] = []
     agent_by_binding: dict[str, FrameworkAgent] = {}
     agent_by_line: dict[int, FrameworkAgent] = {}
-    langgraph_nodes: dict[str, dict[str, FrameworkAgent]] = {}
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Call):
@@ -227,33 +138,8 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
         agent_by_binding[binding] = agent
         agent_by_line[getattr(node.value, "lineno", 1)] = agent
 
-    graph_bindings = {binding for binding, agent in agent_by_binding.items() if agent.framework == "langgraph"}
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        func = node.func
-        if not isinstance(func, ast.Attribute) or func.attr != "add_node":
-            continue
-        graph_name = _call_name(func.value)
-        if graph_name not in graph_bindings or not node.args:
-            continue
-        node_name = _string_literal(node.args[0])
-        if not node_name:
-            continue
-        graph_nodes = langgraph_nodes.setdefault(graph_name, {})
-        if node_name in graph_nodes:
-            continue
-        graph_agent = FrameworkAgent(
-            framework="langgraph",
-            name=node_name,
-            file_path=rel_path,
-            line_number=getattr(node, "lineno", 1),
-            credential_refs=credential_refs,
-            dynamic_edges=False,
-            confidence="medium",
-        )
-        graph_nodes[node_name] = graph_agent
-        framework_agents.append(graph_agent)
+    langgraph = collect_langgraph_topology(tree, rel_path, credential_refs, agent_by_binding)
+    framework_agents.extend(langgraph.node_agents)
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
@@ -264,28 +150,40 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
         if agent:
             framework_agents.append(agent)
 
-    topology_edges = _collect_topology_edges(tree, rel_path, agent_by_binding, agent_by_line, langgraph_nodes)
-    if topology_edges:
-        by_source: dict[str, list[FrameworkTopologyEdge]] = {}
-        for edge in topology_edges:
-            by_source.setdefault(edge.source_id, []).append(edge)
-        framework_agents = [
-            FrameworkAgent(
-                framework=agent.framework,
-                name=agent.name,
-                file_path=agent.file_path,
-                line_number=agent.line_number,
-                capabilities=agent.capabilities,
-                model_refs=agent.model_refs,
-                credential_refs=agent.credential_refs,
-                topology_edges=by_source.get(agent.stable_id, []),
-                dynamic_edges=agent.dynamic_edges,
-                confidence=agent.confidence,
-            )
-            for agent in framework_agents
-        ]
+    topology_edges = _collect_topology_edges(tree, rel_path, agent_by_binding, agent_by_line) + langgraph.edges
+    return _attach_topology(framework_agents, topology_edges, langgraph.parent_ids, langgraph.unresolved_routes)
 
-    return framework_agents
+
+def _attach_topology(
+    agents: list[FrameworkAgent],
+    topology_edges: list[FrameworkTopologyEdge],
+    parent_ids: dict[str, str],
+    unresolved_routes: dict[str, list[dict[str, Any]]],
+) -> list[FrameworkAgent]:
+    """Rebuild the frozen agents with their outgoing edges, nesting and unresolved routes."""
+    if not topology_edges and not parent_ids and not unresolved_routes:
+        return agents
+    by_source: dict[str, list[FrameworkTopologyEdge]] = {}
+    seen: set[tuple[str, str, str, str, str]] = set()
+    for edge in topology_edges:
+        key = (edge.source_id, edge.target_id, edge.relationship, edge.evidence, edge.branch)
+        if key in seen:  # the same declaration repeated is one edge; the first line is kept
+            continue
+        seen.add(key)
+        by_source.setdefault(edge.source_id, []).append(edge)
+    rebuilt: list[FrameworkAgent] = []
+    for agent in agents:
+        unresolved = unresolved_routes.get(agent.stable_id, [])
+        rebuilt.append(
+            replace(
+                agent,
+                topology_edges=by_source.get(agent.stable_id, []),
+                parent_id=parent_ids.get(agent.stable_id, agent.parent_id),
+                unresolved_routes=unresolved,
+                dynamic_edges=agent.dynamic_edges or bool(unresolved),
+            )
+        )
+    return rebuilt
 
 
 def _agent_from_call(
@@ -472,61 +370,23 @@ def _collect_topology_edges(
     rel_path: str,
     agent_by_binding: dict[str, FrameworkAgent],
     agent_by_line: dict[int, FrameworkAgent],
-    langgraph_nodes: dict[str, dict[str, FrameworkAgent]],
 ) -> list[FrameworkTopologyEdge]:
+    """Crew and GroupChat membership edges; LangGraph wiring lives in ``langgraph_topology``."""
     edges: list[FrameworkTopologyEdge] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
-        call_name = _call_name(node.func)
-        short_name = call_name.split(".")[-1]
-        if short_name in {"Crew", "GroupChat"}:
-            source = agent_by_line.get(getattr(node, "lineno", 1))
-            members = _agents_from_expr(_keyword_value(node, "agents"), agent_by_binding)
-            if source:
-                for member in members:
-                    edges.append(
-                        _topology_edge(
-                            source,
-                            member,
-                            "delegated_to",
-                            rel_path,
-                            getattr(node, "lineno", 1),
-                            f"{short_name}(agents=[...])",
-                            "high",
-                        )
-                    )
-            for left, right in _member_pairs(members):
-                edges.append(
-                    _topology_edge(
-                        left,
-                        right,
-                        "shares_server",
-                        rel_path,
-                        getattr(node, "lineno", 1),
-                        f"shared {short_name} membership",
-                        "medium",
-                    )
-                )
-        elif isinstance(node.func, ast.Attribute) and node.func.attr == "add_edge" and len(node.args) >= 2:
-            graph_name = _call_name(node.func.value)
-            graph_nodes = langgraph_nodes.get(graph_name, {})
-            source_name = _string_literal(node.args[0])
-            target_name = _string_literal(node.args[1])
-            source = graph_nodes.get(source_name)
-            target = graph_nodes.get(target_name)
-            if source and target:
-                edges.append(
-                    _topology_edge(
-                        source,
-                        target,
-                        "delegated_to",
-                        rel_path,
-                        getattr(node, "lineno", 1),
-                        "StateGraph.add_edge",
-                        "high",
-                    )
-                )
+        short_name = _call_name(node.func).split(".")[-1]
+        if short_name not in {"Crew", "GroupChat"}:
+            continue
+        line_number = getattr(node, "lineno", 1)
+        source = agent_by_line.get(line_number)
+        members = _agents_from_expr(_keyword_value(node, "agents"), agent_by_binding)
+        if source:
+            for member in members:
+                edges.append(_topology_edge(source, member, "delegated_to", rel_path, line_number, f"{short_name}(agents=[...])", "high"))
+        for left, right in _member_pairs(members):
+            edges.append(_topology_edge(left, right, "shares_server", rel_path, line_number, f"shared {short_name} membership", "medium"))
     return edges
 
 

@@ -224,6 +224,8 @@ class _FrameworkTopology:
                         "line_number": edge.get("line_number", 0),
                         "confidence": edge.get("confidence", ""),
                         "evidence": edge.get("evidence", ""),
+                        "branch": edge.get("branch", ""),
+                        "provenance": edge.get("provenance", "declared"),
                     },
                 )
             )
