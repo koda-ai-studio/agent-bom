@@ -17,6 +17,7 @@ from agent_bom.graph import SEVERITY_RANK as _SEVERITY_RANK
 from agent_bom.graph.compat import stamp_export_entity_types
 from agent_bom.graph.node import stable_node_id
 from agent_bom.output.finding_views import package_graph_node_id as _package_node_id
+from agent_bom.output.graph_framework_agents import append_framework_agent_elements
 from agent_bom.output.graph_html import _CDN_FALLBACK_TAGS as _CDN_FALLBACK_TAGS
 from agent_bom.output.graph_html import _GRAPH_HTML_TEMPLATE as _GRAPH_HTML_TEMPLATE
 from agent_bom.output.graph_html import _VENDOR_JS_FILES as _VENDOR_JS_FILES
@@ -355,6 +356,7 @@ def build_graph_elements(
                         )
 
     _append_source_tool_elements(elements, report)
+    append_framework_agent_elements(elements, report)
     _append_repo_structure_elements(elements, report, collapse_cves=collapse_cves, vuln_pkg_keys=vuln_pkg_keys)
     elements.extend(_graph_policy_finding_elements(report))
     return stamp_export_entity_types(elements)
