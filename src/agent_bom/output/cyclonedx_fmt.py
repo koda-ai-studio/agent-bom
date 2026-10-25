@@ -42,6 +42,7 @@ from agent_bom.output.finding_views import (
     workflow_status,
 )
 from agent_bom.output.package_attributes import cyclonedx_identifiers
+from agent_bom.output.possibly_affected import cyclonedx_vulnerabilities as undecided_cdx
 from agent_bom.output.technique_evidence import scoped_vulnerability_properties
 from agent_bom.sbom_formats.cyclonedx import merge_properties as _merge_properties
 from agent_bom.sbom_formats.cyclonedx import merge_vulnerability_observation as _merge_vulnerability_observation
@@ -850,7 +851,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
     components = _merge_bom_ref_items(components)
     services = _merge_bom_ref_items(services)
     dependencies = _merge_dependencies(dependencies)
-    vulnerabilities_cdx = [vulnerabilities_by_id[vuln_id] for vuln_id in sorted(vulnerabilities_by_id)]
+    vulnerabilities_cdx = [vulnerabilities_by_id[key] for key in sorted(vulnerabilities_by_id)] + undecided_cdx(report, _sanitize_bom_ref)
 
     cdx = {
         "bomFormat": "CycloneDX",
@@ -917,5 +918,4 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
 
 def export_cyclonedx(report: AIBOMReport, output_path: str) -> None:
     """Export report as CycloneDX 1.7 JSON file."""
-    cdx = to_cyclonedx(report)
-    Path(output_path).write_text(json.dumps(cdx, indent=2))
+    Path(output_path).write_text(json.dumps(to_cyclonedx(report), indent=2))

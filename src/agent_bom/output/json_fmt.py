@@ -79,6 +79,7 @@ from agent_bom.output.json_inventory import (
 )
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
 from agent_bom.output.json_writer import write_json_file
+from agent_bom.output.possibly_affected import json_section as possibly_affected_json
 from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
 from agent_bom.redaction.report_paths import prepare_iac_path_redaction
 from agent_bom.security import (
@@ -889,8 +890,8 @@ def to_json(report: AIBOMReport) -> dict:
         result["delta"] = report.delta_data
     if report.scan_performance_data:
         result["scan_performance"] = report.scan_performance_data
-    if report.vuln_data_freshness:
-        result["vuln_data_freshness"] = report.vuln_data_freshness
+    result.update({"vuln_data_freshness": report.vuln_data_freshness} if report.vuln_data_freshness else {})
+    result.update(possibly_affected_json(report))
     if report.runtime_session_graph:
         result["runtime_session_graph"] = report.runtime_session_graph
     if mcp_runtime_diff:

@@ -11,6 +11,7 @@ from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.malicious import flag_malicious_from_vulns
 from agent_bom.models import Package, Severity, Vulnerability
 from agent_bom.scanners.advisory_merge import self_consistent_aliases
+from agent_bom.scanners.distro_cpe_scan import attach_possibly_affected, shipped_cpe_product
 from agent_bom.scanners.local_data_freshness import local_hits_line
 from agent_bom.scanners.osv import is_valid_fix_version as _is_valid_fix_version
 from agent_bom.scanners.osv import package_lookup_names as _package_lookup_names
@@ -225,6 +226,11 @@ def _attach_cpe_candidates(
         # debs and rpms) pins the upstream release in its CPE; compare that.
         version, target_sw = cpe_applicability(pkg)
         local_vulns.extend(cpe_lookup_package(conn, identity[1], version or pkg.version, vendor=identity[0], target_sw=target_sw))
+        return
+    product = shipped_cpe_product(pkg)
+    if product is not None:
+        # Upstream ranges never decide a distro package; record what its distro feed has not.
+        attach_possibly_affected(conn, pkg, product)
         return
     if not config.ENABLE_CPE_MATCH or db_hit:
         return

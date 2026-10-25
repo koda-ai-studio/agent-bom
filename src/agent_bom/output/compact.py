@@ -20,6 +20,7 @@ from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.cis_posture import finding_free_posture
 from agent_bom.output.dependency_hierarchy import dependency_count_label
+from agent_bom.output.possibly_affected import print_possibly_affected
 
 # The cross-cutting helpers (`console`, `_sev_badge`, `build_remediation_plan`)
 # live in the package's __init__. Import lazily inside functions to avoid a
@@ -690,6 +691,7 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
     from agent_bom.output import _finding_sev_badge, console
     from agent_bom.output.finding_views import _MACHINE_EXPORT_TYPES
 
+    print_possibly_affected(report, console)
     findings = [finding for finding in report.to_findings() if finding.finding_type not in _MACHINE_EXPORT_TYPES]
     if not findings:
         return
@@ -724,10 +726,7 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
         grouped[existing] = (representative, count + 1, assets)
 
     console.print()
-    title = f"Graph & Policy Findings ({len(findings)} occurrences"
-    if len(grouped) != len(findings):
-        title += f" · {len(grouped)} groups"
-    title += ")"
+    title = f"Graph & Policy Findings ({len(findings)} occurrences{f' · {len(grouped)} groups' if len(grouped) != len(findings) else ''})"
     console.print(Rule(lane_title("analyze", title), style="dim"))
     for finding, occurrence_count, assets in grouped[:limit]:
         category = finding.finding_type.value
