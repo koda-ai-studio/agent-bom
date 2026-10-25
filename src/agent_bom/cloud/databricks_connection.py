@@ -8,6 +8,29 @@ from urllib.parse import urlsplit
 from agent_bom.cloud.base import CloudDiscoveryError
 
 
+def sdk_value(value: Any) -> str:
+    """Normalize SDK enum members without serializing their Python repr."""
+    raw = getattr(value, "value", value)
+    return raw.upper() if isinstance(raw, str) else ""
+
+
+def resolved_workspace_host(client: Any, fallback: str = "") -> str:
+    """Use the authenticated SDK workspace, including OAuth profile resolution.
+
+    This is inventory attribution, not credential destination validation. Strip
+    non-origin components before recording it; stored-token connections still
+    use the stricter ``workspace_host`` boundary below.
+    """
+    configured = getattr(getattr(client, "config", None), "host", None)
+    value = configured if isinstance(configured, str) and configured else fallback
+    parsed = urlsplit(value)
+    if parsed.scheme not in ("https", "http") or not parsed.hostname:
+        return ""
+    port = parsed.port
+    suffix = f":{port}" if port and port != (443 if parsed.scheme == "https" else 80) else ""
+    return f"{parsed.scheme}://{parsed.hostname}{suffix}"
+
+
 def workspace_host(value: str) -> str:
     """Accept hosted workspace origins only, before a stored token is decrypted."""
     parsed = urlsplit(value.strip())
