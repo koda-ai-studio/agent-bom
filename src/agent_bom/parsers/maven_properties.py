@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from defusedxml.common import DefusedXmlException
@@ -19,40 +20,101 @@ def read_pom(path: Path) -> ET.Element:
     return fromstring(read_text_limited(path))
 
 
-def local_properties(path: Path, root: ET.Element, scan_root: Path, seen: frozenset[Path] = frozenset(), hops: int = 0) -> dict[str, str]:
+@dataclass
+class PomModel:
+    """Locally inherited POM state: properties, managed versions and parent dependencies."""
+
+    properties: dict[str, str] = field(default_factory=dict)
+    managed: list[ET.Element] = field(default_factory=list)
+    inherited: list[ET.Element] = field(default_factory=list)
+
+
+def child(element: ET.Element, tag: str) -> ET.Element | None:
+    ns = element.tag.partition("}")[0] + "}" if element.tag.startswith("{") else ""
+    found = element.find(f"{ns}{tag}")
+    return found if found is not None else element.find(tag)
+
+
+def child_text(element: ET.Element, tag: str) -> str:
+    found = child(element, tag)
+    return (found.text or "").strip() if found is not None else ""
+
+
+def dependency_elements(root: ET.Element, *path: str) -> list[ET.Element]:
+    node: ET.Element | None = root
+    for tag in path:
+        node = child(node, tag) if node is not None else None
+    if node is None:
+        return []
+    ns = node.tag.partition("}")[0] + "}" if node.tag.startswith("{") else ""
+    return node.findall(f"{ns}dependency") or node.findall("dependency")
+
+
+def _local_parent(path: Path, root: ET.Element, scan_root: Path, seen: frozenset[Path]) -> tuple[Path, ET.Element] | None:
+    parent = child(root, "parent")
+    if parent is None:
+        return None
+    rel = child(parent, "relativePath")
+    relative = "../pom.xml" if rel is None else (rel.text or "").strip()
+    if not relative:
+        return None
+    candidate = (path.parent / relative).resolve()
+    if candidate.is_dir():
+        candidate /= "pom.xml"
+    if not candidate.is_relative_to(scan_root) or candidate in seen | {path.resolve()}:
+        return None
+    try:
+        parent_root = read_pom(candidate)
+    except (OSError, ValueError, ET.ParseError, DefusedXmlException):
+        return None  # Unresolved dependency values below produce the coverage warning.
+    # A relative path is only applicable when supplied parent coordinates agree.
+    if all(
+        not child_text(parent, key) or child_text(parent, key) == child_text(parent_root, key)
+        for key in ("groupId", "artifactId", "version")
+    ):
+        return candidate, parent_root
+    return None
+
+
+def local_model(path: Path, root: ET.Element, scan_root: Path, seen: frozenset[Path] = frozenset(), hops: int = 0) -> PomModel:
     """Merge at most eight local parents, with child values taking precedence."""
-    properties: dict[str, str] = {}
-    ns = root.tag.partition("}")[0] + "}" if root.tag.startswith("{") else ""
-    parent = root.find(f"{ns}parent")
-    if parent is not None and hops < 8:
-        rel = parent.find(f"{ns}relativePath")
-        relative = "../pom.xml" if rel is None else (rel.text or "").strip()
-        if relative:
-            candidate = (path.parent / relative).resolve()
-            if candidate.is_dir():
-                candidate /= "pom.xml"
-            if candidate.is_relative_to(scan_root) and candidate not in seen | {path.resolve()}:
-                try:
-                    parent_root = read_pom(candidate)
-                    # A relative path is only applicable when supplied parent coordinates agree.
-                    matches = all(
-                        not (expected := parent.findtext(f"{ns}{key}"))
-                        or expected.strip() == (parent_root.findtext(f"{ns}{key}") or "").strip()
-                        for key in ("groupId", "artifactId", "version")
-                    )
-                    if matches:
-                        properties.update(local_properties(candidate, parent_root, scan_root, seen | {path.resolve()}, hops + 1))
-                except (OSError, ValueError, ET.ParseError, DefusedXmlException):
-                    pass  # Unresolved dependency values below produce the coverage warning.
-    own = root.find(f"{ns}properties")
+    model = PomModel()
+    found = _local_parent(path, root, scan_root, seen) if hops < 8 else None
+    if found is not None:
+        parent_path, parent_root = found
+        inherited = local_model(parent_path, parent_root, scan_root, seen | {path.resolve()}, hops + 1)
+        model.properties.update(inherited.properties)
+        model.managed.extend(inherited.managed)
+        model.inherited.extend(inherited.inherited + dependency_elements(parent_root, "dependencies"))
+    own = child(root, "properties")
     if own is not None:
-        properties.update({child.tag.rsplit("}", 1)[-1]: (child.text or "").strip() for child in own})
+        model.properties.update({item.tag.rsplit("}", 1)[-1]: (item.text or "").strip() for item in own})
     for key in ("groupId", "artifactId", "version"):
-        value = root.findtext(f"{ns}{key}")
+        value = child_text(root, key)
         if value:
-            properties[f"project.{key}"] = value.strip()
-            properties[f"pom.{key}"] = value.strip()
-    return properties
+            model.properties[f"project.{key}"] = value
+            model.properties[f"pom.{key}"] = value
+    model.managed.extend(dependency_elements(root, "dependencyManagement", "dependencies"))
+    return model
+
+
+def substitute(value: str, properties: dict[str, str]) -> str:
+    for _ in range(8):
+        if "${" not in value:
+            break
+        value = _PROPERTY.sub(lambda match: properties.get(match[1], match[0]), value)
+    return value
+
+
+def managed_versions(model: PomModel) -> dict[tuple[str, str], ET.Element]:
+    """``(groupId, artifactId) -> managed <dependency>``; later (child) entries win; BOM imports skipped."""
+    managed: dict[tuple[str, str], ET.Element] = {}
+    for dep in model.managed:
+        if child_text(dep, "scope") == "import":
+            continue
+        key = (substitute(child_text(dep, "groupId"), model.properties), substitute(child_text(dep, "artifactId"), model.properties))
+        managed[key] = dep
+    return managed
 
 
 def resolve_property(value: str, properties: dict[str, str], path: Path) -> str | None:

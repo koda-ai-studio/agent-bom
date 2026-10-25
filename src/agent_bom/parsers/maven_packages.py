@@ -8,13 +8,22 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from collections.abc import Callable
 from pathlib import Path
 
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
 from agent_bom.parsers.go_resolution import _validate_https_url, logger
-from agent_bom.parsers.maven_properties import dependency_coordinates, local_properties, read_pom
+from agent_bom.parsers.maven_properties import (
+    PomModel,
+    child,
+    child_text,
+    dependency_coordinates,
+    dependency_elements,
+    local_model,
+    managed_versions,
+    read_pom,
+    substitute,
+)
 
 _MAVEN_CENTRAL_URL = "https://search.maven.org"
 
@@ -102,40 +111,36 @@ def resolve_maven_version(
 
 def _pom_dependency(
     dep: ET.Element,
-    find: Callable[[ET.Element, str], ET.Element | None],
     properties: dict[str, str],
     pom: Path,
+    managed: dict[tuple[str, str], ET.Element],
 ) -> Package | None:
-    group_el = find(dep, "groupId")
-    artifact_el = find(dep, "artifactId")
-    version_el = find(dep, "version")
-    scope_el = find(dep, "scope")
-
-    if group_el is None or artifact_el is None:
-        return None
-
-    group_id = (group_el.text or "").strip()
-    artifact_id = (artifact_el.text or "").strip()
+    group_id, artifact_id = child_text(dep, "groupId"), child_text(dep, "artifactId")
     if not group_id or not artifact_id:
         return None
-
-    coordinates = dependency_coordinates(
-        group_id, artifact_id, (version_el.text or "").strip() if version_el is not None else "", properties, pom
-    )
+    version, scope = child_text(dep, "version"), child_text(dep, "scope")
+    managed_dep = managed.get((substitute(group_id, properties), substitute(artifact_id, properties)))
+    if managed_dep is not None:
+        version = version or child_text(managed_dep, "version")
+        scope = scope or child_text(managed_dep, "scope")
+    coordinates = dependency_coordinates(group_id, artifact_id, version, properties, pom)
     if coordinates is None:
         return None
     group_id, artifact_id, version = coordinates
-    scope = (scope_el.text or "compile").strip().lower() if scope_el is not None else "compile"
-    is_direct = scope not in {"test", "provided", "system"}
-    name = f"{group_id}:{artifact_id}"
-    purl = f"pkg:maven/{group_id}/{artifact_id}@{version}"
     return Package(
-        name=name,
+        name=f"{group_id}:{artifact_id}",
         version=version,
         ecosystem="maven",
-        purl=purl,
-        is_direct=is_direct,
+        purl=f"pkg:maven/{group_id}/{artifact_id}@{version}",
+        is_direct=(scope or "compile").lower() not in {"test", "provided", "system"},
     )
+
+
+def _effective_dependencies(xml_root: ET.Element, model: PomModel) -> list[ET.Element]:
+    own = dependency_elements(xml_root, "dependencies")
+    declared = {(child_text(dep, "groupId"), child_text(dep, "artifactId")) for dep in own}
+    inherited = [dep for dep in model.inherited if (child_text(dep, "groupId"), child_text(dep, "artifactId")) not in declared]
+    return own + inherited
 
 
 def _parse_pom_modules(root_dir: Path, depth: int = 0, *, scan_root: Path | None = None) -> list[Package]:
@@ -174,32 +179,19 @@ def _parse_pom_modules(root_dir: Path, depth: int = 0, *, scan_root: Path | None
         )
         return []
 
-    # Namespace may or may not be present
-    ns = ""
-    if xml_root.tag.startswith("{"):
-        ns = xml_root.tag.split("}")[0] + "}"
-
-    def _find(el: "ET.Element", tag: str) -> "ET.Element | None":
-        result = el.find(f"{ns}{tag}")
-        return result if result is not None else el.find(tag)
-
-    def _findall(el: "ET.Element", tag: str) -> "list[ET.Element]":
-        results = el.findall(f"{ns}{tag}")
-        return results if results else el.findall(tag)
-
-    properties = local_properties(pom, xml_root, scan_root)
+    model = local_model(pom, xml_root, scan_root)
+    managed = managed_versions(model)
     packages: list[Package] = []
-
-    for deps_el in _findall(xml_root, "dependencies"):
-        for dep in _findall(deps_el, "dependency"):
-            package = _pom_dependency(dep, _find, properties, pom)
-            if package is not None:
-                packages.append(package)
+    for dep in _effective_dependencies(xml_root, model):
+        package = _pom_dependency(dep, model.properties, pom, managed)
+        if package is not None:
+            packages.append(package)
 
     # Recurse into sub-modules declared in <modules><module>...</module></modules>
-    modules_el = _find(xml_root, "modules")
+    modules_el = child(xml_root, "modules")
     if modules_el is not None:
-        for module_el in _findall(modules_el, "module"):
+        ns = modules_el.tag.partition("}")[0] + "}" if modules_el.tag.startswith("{") else ""
+        for module_el in modules_el.findall(f"{ns}module") or modules_el.findall("module"):
             module_path = (module_el.text or "").strip()
             if not module_path:
                 continue
