@@ -31,6 +31,9 @@ _boot_seed_done = threading.Event()
 _boot_seed_done.set()
 
 DEMO_SEEDING_SUMMARY = "Seeding the demo estate. Posture appears when the curated scan lands."
+SEEDING_CODE = "current_estate_seeding"
+SEEDING_MESSAGE = "The demo estate is still being seeded; retry the read shortly."
+SEEDING_RETRY_AFTER_SECONDS = 2
 
 
 def serialized_seed(fn: _F) -> _F:

@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
+from agent_bom.demo_estate.boot_seed import SEEDING_CODE, SEEDING_MESSAGE, SEEDING_RETRY_AFTER_SECONDS, demo_estate_seeding
 from agent_bom.mcp_errors import CODE_UPSTREAM_UNAVAILABLE, mcp_error_json
+
+
+def seeding_refusal(tenant_id: str, scan_id: str | None = None) -> str | None:
+    """The typed refusal for an unpinned estate read while *tenant_id* is being seeded, else ``None``."""
+    if scan_id or not demo_estate_seeding(tenant_id):
+        return None
+    return mcp_error_json(
+        CODE_UPSTREAM_UNAVAILABLE, SEEDING_MESSAGE, details={"reason": SEEDING_CODE, "retry_after_seconds": SEEDING_RETRY_AFTER_SECONDS}
+    )
 
 
 def retryable_estate_refusal(exc: BaseException) -> str | None:

@@ -11,6 +11,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request
 
+from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.graph.attack_path_queue import attack_path_rank_window
@@ -37,6 +38,7 @@ async def _resolve_pair(store: Any, tenant: str, old: str | None, new: str | Non
     if old and new:
         resolved_old, resolved_new = await _runtime.require_graph_snapshot_ids(store, tenant, old, new)
         return resolved_old, resolved_new
+    refuse_unpinned_read_while_seeding("", tenant)
     latest = await _runtime._graph_store_call(store.list_snapshots, tenant_id=tenant, limit=2)
     if len(latest or []) < 2:
         raise HTTPException(status_code=404, detail="Two graph snapshots are needed to compute a diff.")

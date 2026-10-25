@@ -361,6 +361,15 @@ def _search_covers_snapshot(page: QueuePage, query: PathQuery) -> bool:
     return page.covers_all_matches if query.needs_full_set() else True
 
 
+def _snapshot_replaced() -> str:
+    """A well-formed continuation whose snapshot was replaced: restart (HTTP 409), not a bad argument."""
+    return mcp_error_json(
+        CODE_VALIDATION_INVALID_ARGUMENT,
+        "Exposure snapshot changed; restart the query.",
+        details={"argument": "cursor", "http_status": 409},
+    )
+
+
 async def _read_exposure(
     store: Any, tenant_id: str, scan_id: str | None, query: PathQuery, offset: int, limit: int, continuation: dict[str, Any]
 ) -> _Read | str:
@@ -372,11 +381,11 @@ async def _read_exposure(
     effective_scan_id = page.ranked.scan_id
     revision = _queue_revision(page, generation)
     if continuation and continuation["revision"] != revision:
-        return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, "Exposure snapshot changed; restart the query.")
+        return _snapshot_replaced()
     nodes, edges = await hydrate(store, tenant_id, effective_scan_id, paths)
     stats = await asyncio.to_thread(store.snapshot_stats, tenant_id=tenant_id, scan_id=effective_scan_id)
     if await snapshot_changed(store, tenant_id, identity, has_rows=bool(paths)):
-        return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, "Exposure snapshot changed; restart the query.")
+        return _snapshot_replaced()
     projected = project_paths(paths, nodes=nodes, edges=edges, first_rank=offset + 1, scan_id=effective_scan_id)
     covered = _search_covers_snapshot(page, query)
     return _Read(page, total, paths, generation, revision, nodes, edges, stats, projected, covered)

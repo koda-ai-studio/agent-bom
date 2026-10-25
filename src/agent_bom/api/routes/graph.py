@@ -293,7 +293,7 @@ async def get_graph(
 
     if not requested_scan_id and not await _runtime._graph_store_call(graph_store.latest_snapshot_id, tenant_id=tenant):
         raise HTTPException(status_code=503, detail="Graph snapshots not found. Run a scan first.")
-    store_cursor, snapshot_generation = node_page_continuation(requested_scan_id or "", cursor, snapshot_generation)
+    store_cursor, snapshot_generation = node_page_continuation(requested_scan_id or "", cursor, snapshot_generation, tenant)
 
     identity = await _runtime._graph_store_call(
         optional_generation,

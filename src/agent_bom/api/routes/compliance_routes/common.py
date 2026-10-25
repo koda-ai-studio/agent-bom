@@ -6,11 +6,12 @@ import logging
 from typing import Any, cast
 
 import anyio.to_thread
-from fastapi import Request
+from fastapi import Depends, Request
 
 from agent_bom.api import time_window
 from agent_bom.api.compliance_hub_store import get_compliance_hub_store as _hub_store
 from agent_bom.api.credential_rotation import build_credential_rotation_governance
+from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.finding_read_context import finding_read_snapshot
 from agent_bom.api.models import JobStatus
 from agent_bom.api.posture_counts_cache import POSTURE_COUNTS_CACHE, cached_posture_block
@@ -213,6 +214,14 @@ def _current_narrative_evidence(request: Request) -> dict[str, Any] | None:
     return snapshot
 
 
+def refuse_unpinned_request_while_seeding(request: Request) -> None:
+    """503 ``current_estate_seeding`` while the caller's tenant is seeded, unless the read names a ``scan_id``."""
+    refuse_unpinned_read_while_seeding(request.query_params.get("scan_id") or "", require_request_tenant_id(request))
+
+
+SEEDING_GUARD = Depends(refuse_unpinned_request_while_seeding)
+
+
 @finding_read_snapshot
 def _posture_scorecard_impl(request: Request) -> dict:
     """Select the latest scan and compose the exec posture over one parse of each job payload."""
@@ -226,7 +235,7 @@ def _posture_scorecard_impl(request: Request) -> dict:
     )
 
     if latest_result is None:
-        seeding = demo_estate_seeding()
+        seeding = demo_estate_seeding(require_request_tenant_id(request))
         return {
             "grade": "N/A",
             "score": 0,

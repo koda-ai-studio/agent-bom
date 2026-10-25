@@ -18,6 +18,7 @@ from agent_bom.mcp_errors import (
 )
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.compromise import assessment_api
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 from agent_bom.mcp_tools.storage import default_graph_store
 
 
@@ -52,8 +53,8 @@ async def consequence_assessment_impl(
         return mcp_error_json(code, "Assessment unavailable; verify the snapshot and assumptions.", details={"status": exc.status_code})
     except BackpressureRejectedError:
         return mcp_error_json(CODE_UPSTREAM_UNAVAILABLE, "Graph assessment capacity is busy; retry later.")
-    except Exception:  # broad-except: Optional storage backends must return a sanitized MCP transport error.
-        return mcp_error_json(CODE_UPSTREAM_UNAVAILABLE, "Graph storage is temporarily unavailable.")
+    except Exception as exc:  # broad-except: Optional storage backends must return a sanitized MCP transport error.
+        return retryable_estate_refusal(exc) or mcp_error_json(CODE_UPSTREAM_UNAVAILABLE, "Graph storage is temporarily unavailable.")
 
 
 def register_consequence_tool(mcp: Any, *, read_only: Any, execute_tool_async: Any) -> None:

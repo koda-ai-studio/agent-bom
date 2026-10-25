@@ -124,11 +124,11 @@ def unseal_subscription(subscription: WebhookSubscription) -> WebhookSubscriptio
 class WebhookSubscriptionStore(Protocol):
     def put(self, subscription: WebhookSubscription) -> None: ...
 
-    def get(self, subscription_id: str) -> WebhookSubscription | None: ...
+    def get(self, subscription_id: str, *, tenant_id: str) -> WebhookSubscription | None: ...
 
     def list(self, tenant_id: str, *, include_disabled: bool = False, limit: int = 200) -> builtins.list[WebhookSubscription]: ...
 
-    def delete(self, subscription_id: str) -> bool: ...
+    def delete(self, subscription_id: str, *, tenant_id: str) -> bool: ...
 
     def matching(self, tenant_id: str, event_type: str) -> builtins.list[WebhookSubscription]: ...
 
@@ -142,18 +142,23 @@ class InMemoryWebhookSubscriptionStore:
         with self._lock:
             self._by_id[subscription.subscription_id] = subscription
 
-    def get(self, subscription_id: str) -> WebhookSubscription | None:
+    def get(self, subscription_id: str, *, tenant_id: str) -> WebhookSubscription | None:
         with self._lock:
-            return self._by_id.get(subscription_id)
+            subscription = self._by_id.get(subscription_id)
+            return subscription if subscription is not None and subscription.tenant_id == tenant_id else None
 
     def list(self, tenant_id: str, *, include_disabled: bool = False, limit: int = 200) -> builtins.list[WebhookSubscription]:
         with self._lock:
             rows = [s for s in self._by_id.values() if s.tenant_id == tenant_id and (include_disabled or s.status == "active")]
             return sorted(rows, key=lambda s: s.created_at, reverse=True)[:limit]
 
-    def delete(self, subscription_id: str) -> bool:
+    def delete(self, subscription_id: str, *, tenant_id: str) -> bool:
         with self._lock:
-            return self._by_id.pop(subscription_id, None) is not None
+            subscription = self._by_id.get(subscription_id)
+            if subscription is None or subscription.tenant_id != tenant_id:
+                return False
+            del self._by_id[subscription_id]
+            return True
 
     def matching(self, tenant_id: str, event_type: str) -> builtins.list[WebhookSubscription]:
         with self._lock:
@@ -186,8 +191,8 @@ class SQLiteWebhookSubscriptionStore(SQLiteRegistryStore[WebhookSubscription]):
             storage_payload(subscription),
         )
 
-    def get(self, subscription_id: str) -> WebhookSubscription | None:
-        return self._get("subscription_id = ?", (subscription_id,))
+    def get(self, subscription_id: str, *, tenant_id: str) -> WebhookSubscription | None:
+        return self._get("subscription_id = ? AND tenant_id = ?", (subscription_id, tenant_id))
 
     def list(self, tenant_id: str, *, include_disabled: bool = False, limit: int = 200) -> builtins.list[WebhookSubscription]:
         return self._list(
@@ -197,8 +202,10 @@ class SQLiteWebhookSubscriptionStore(SQLiteRegistryStore[WebhookSubscription]):
             limit=limit,
         )
 
-    def delete(self, subscription_id: str) -> bool:
-        cur = self._conn.execute("DELETE FROM webhook_subscriptions WHERE subscription_id = ?", (subscription_id,))
+    def delete(self, subscription_id: str, *, tenant_id: str) -> bool:
+        cur = self._conn.execute(
+            "DELETE FROM webhook_subscriptions WHERE subscription_id = ? AND tenant_id = ?", (subscription_id, tenant_id)
+        )
         self._conn.commit()
         return cur.rowcount > 0
 
@@ -252,10 +259,12 @@ def create_subscription(
     return subscription
 
 
-def set_subscription_status(store: WebhookSubscriptionStore, subscription_id: str, *, status: str) -> WebhookSubscription | None:
+def set_subscription_status(
+    store: WebhookSubscriptionStore, subscription_id: str, *, tenant_id: str, status: str
+) -> WebhookSubscription | None:
     if status not in ("active", "disabled"):
         raise ValueError("status must be 'active' or 'disabled'")
-    subscription = store.get(subscription_id)
+    subscription = store.get(subscription_id, tenant_id=tenant_id)
     if subscription is None:
         return None
     subscription.status = status

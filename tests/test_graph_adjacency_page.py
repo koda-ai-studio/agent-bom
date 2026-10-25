@@ -97,8 +97,10 @@ def test_cursor_rejects_scope_changes_and_new_snapshot(store):
     with pytest.raises(ValueError, match="scope"):
         store.incident_edges_page(tenant_id=other, node_id="hub", cursor=cursor)
     save_fixture(store, tenant, "new", "2026-09-24T00:00:00Z")
-    with pytest.raises(ValueError, match="scope"):
+    with pytest.raises(SnapshotGenerationMismatchError, match="replaced"):
         store.incident_edges_page(tenant_id=tenant, node_id="hub", cursor=cursor)
+    with pytest.raises(ValueError, match="scope"):
+        store.incident_edges_page(tenant_id=tenant, scan_id="new", node_id="hub", cursor=cursor)
     assert store.incident_edges_page(tenant_id=tenant, scan_id="scan", node_id="hub", cursor=cursor)
     save_fixture(store, tenant, created="2026-09-25T00:00:00Z")
     with pytest.raises(SnapshotGenerationMismatchError, match="replaced"):

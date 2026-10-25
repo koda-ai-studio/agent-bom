@@ -1129,7 +1129,6 @@ def test_policy_audit_dedup_is_tenant_safe_and_old_replica_compatible():
 _AUDITED_GLOBAL_TENANT_INDEXES = {
     # Server-issued or globally canonical opaque identifiers.
     ("agent_conditional_access_policies", "agent_conditional_access_policies_pkey"),
-    ("agent_identities", "agent_identities_pkey"),
     ("agent_identity_jit_grants", "agent_identity_jit_grants_pkey"),
     ("agents", "agents_pkey"),
     ("api_keys", "api_keys_pkey"),

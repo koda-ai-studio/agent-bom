@@ -35736,11 +35736,8 @@ paths:
       - cloud
   /v1/compliance:
     get:
-      description: 'Aggregate OWASP LLM Top 10, OWASP MCP Top 10, MITRE ATLAS, NIST
-        AI RMF,
-
-        OWASP Agentic Top 10, and EU AI Act compliance posture across all completed
-        scans.
+      description: 'OWASP LLM/MCP/Agentic Top 10, MITRE ATLAS, NIST AI RMF and EU
+        AI Act posture across completed scans.
 
 
         Returns scored control posture plus applicability-only risk/technique
@@ -50110,7 +50107,11 @@ paths:
 
         filtered snapshot, never only the displayed page. A supplied
 
-        ``snapshot_generation`` that is no longer the snapshot''s is a 409.'
+        ``snapshot_generation`` that is no longer the snapshot''s is a 409, and so
+
+        is a ``next_cursor`` continued after the snapshot it was issued for was
+
+        replaced; the cursor carries its generation, so the parameter is optional.'
       operationId: list_inventory_assets_v1_inventory_assets_get
       parameters:
       - description: Comma-separated asset entity types (e.g. agent,cloud_resource)
@@ -50193,7 +50194,7 @@ paths:
           - type: 'null'
           description: Scan snapshot ID; latest if omitted
           title: Scan Id
-      - description: Opaque keyset cursor from a previous page's next_cursor
+      - description: Opaque keyset cursor; carries the snapshot generation
         in: query
         name: cursor
         required: false
@@ -50201,7 +50202,7 @@ paths:
           anyOf:
           - type: string
           - type: 'null'
-          description: Opaque keyset cursor from a previous page's next_cursor
+          description: Opaque keyset cursor; carries the snapshot generation
           title: Cursor
       - description: Pagination offset (non-cursor paging only)
         in: query
@@ -50224,7 +50225,7 @@ paths:
           minimum: 1
           title: Limit
           type: integer
-      - description: Generation from the first page; mismatch is 409
+      - description: Optional with cursor; mismatch is 409
         in: query
         name: snapshot_generation
         required: false
@@ -50233,7 +50234,7 @@ paths:
           - maxLength: 128
             type: string
           - type: 'null'
-          description: Generation from the first page; mismatch is 409
+          description: Optional with cursor; mismatch is 409
           title: Snapshot Generation
       responses:
         '200':

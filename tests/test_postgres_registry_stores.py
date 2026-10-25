@@ -63,7 +63,7 @@ def test_registry_restricted_replicas_and_cross_tenant(kind):
         a, b = (cls(pool=pool) for pool in pools)
 
         def read(store, tenant_id):
-            return store.get(*keys) if kind == "webhook" else store.get(tenant_id, *keys)
+            return store.get(*keys, tenant_id=tenant_id) if kind == "webhook" else store.get(tenant_id, *keys)
 
         with tenant_scope(tenant):
             a.put(record)
@@ -358,8 +358,8 @@ def test_webhook_signing_secret_is_sealed_at_rest_on_postgres(monkeypatch):
             assert raw["hook-sealed"].startswith("enc:v1:")
             assert "whsec_pg_plain" not in raw["hook-sealed"]
             assert raw["hook-legacy"] == "whsec_pg_legacy"
-            assert store.get("hook-sealed").signing_secret == "whsec_pg_plain"
-            assert store.get("hook-legacy").signing_secret == "whsec_pg_legacy"
+            assert store.get("hook-sealed", tenant_id=tenant).signing_secret == "whsec_pg_plain"
+            assert store.get("hook-legacy", tenant_id=tenant).signing_secret == "whsec_pg_legacy"
             listed = {s.subscription_id: s.signing_secret for s in store.list(tenant)}
             assert listed == {"hook-sealed": "whsec_pg_plain", "hook-legacy": "whsec_pg_legacy"}
     finally:
@@ -421,3 +421,26 @@ def test_drift_open_incidents_filter_by_blueprint_past_tenant_cap():
             assert store.list_open_for_blueprint(other, "target_role", limit=10) == []
     finally:
         pool.close()
+
+
+def test_postgres_webhook_reads_and_deletes_are_tenant_scoped():
+    import os
+    from uuid import uuid4
+
+    from agent_bom.api.storage import registry_stores as stores
+    from tests.test_postgres_job_evidence_revision import tenant_scope
+
+    if not os.environ.get("AGENT_BOM_POSTGRES_URL"):
+        pytest.skip("AGENT_BOM_POSTGRES_URL not set")
+    tenant, other = "registry-" + uuid4().hex, "registry-" + uuid4().hex
+    store = stores.PostgresWebhookSubscriptionStore()
+    with tenant_scope(tenant):
+        store.put(stores.WebhookSubscription("hook-scoped", tenant, "https://example.com", "whsec_placeholder"))
+        assert store.get("hook-scoped", tenant_id=other) is None
+        assert store.delete("hook-scoped", tenant_id=other) is False
+    with tenant_scope(other):
+        assert store.get("hook-scoped", tenant_id=tenant) is None
+        assert store.delete("hook-scoped", tenant_id=tenant) is False
+    with tenant_scope(tenant):
+        assert store.get("hook-scoped", tenant_id=tenant) is not None
+        assert store.delete("hook-scoped", tenant_id=tenant) is True

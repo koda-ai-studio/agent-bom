@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import Field
+
+from agent_bom.mcp_tools.graph_export_persisted import persisted_export_graph, persisted_export_mode
 
 from .bindings import OperatorToolBindings
 
@@ -96,6 +98,11 @@ def register_graph_export(bindings: OperatorToolBindings) -> None:
     ) -> str:
         """Export the agent dependency graph in graph-native formats.
 
+        A tenant-bound (or Postgres-backed) server exports the tenant's
+        persisted current-estate graph, bounded and labelled with
+        ``source``/``scope``/``completeness`` in JSON, and never scans this
+        host; ``config_path`` exports that directory's agents instead.
+
         Formats:
         - **graphml** — yEd, Gephi, NetworkX compatible with AIBOM-typed attributes
         - **cypher** — Neo4j import script with AIBOM node labels (AIAgent, MCPServer, Package, Vulnerability)
@@ -107,15 +114,18 @@ def register_graph_export(bindings: OperatorToolBindings) -> None:
             Graph in the requested format as a string.
         """
 
-        async def _impl() -> str:
+        async def _host_graph() -> tuple[Any, dict[str, Any]] | str:
             scan_result = await bindings.run_scan_pipeline(config_path=config_path)
             if isinstance(scan_result, str):
-                return bindings.truncate_response(scan_result)
-
+                return scan_result
             agents, _blast_radii, _warnings, _sources = scan_result
-            agents_data = [asdict(agent) for agent in agents]
+            return bindings.build_dep_graph_from_agents([asdict(agent) for agent in agents]), {}
 
-            graph = bindings.build_dep_graph_from_agents(agents_data)
+        async def _impl() -> str:
+            exported = await (persisted_export_graph() if config_path is None and persisted_export_mode() else _host_graph())
+            if isinstance(exported, str):
+                return bindings.truncate_response(exported)
+            graph, metadata = exported
 
             _fmt = format.lower()
             if _fmt == "graphml":
@@ -128,7 +138,7 @@ def register_graph_export(bindings: OperatorToolBindings) -> None:
                 if mermaid_limit == 0:
                     return bindings.truncate_response(bindings.implementations["_to_mermaid"](graph, max_nodes=None, max_edges=None))
                 return bindings.truncate_response(bindings.implementations["_to_mermaid"](graph, max_nodes=mermaid_limit))
-            return bindings.truncate_response(json.dumps(bindings.implementations["_graph_to_json"](graph), indent=2))
+            return bindings.truncate_response(json.dumps({**bindings.implementations["_graph_to_json"](graph), **metadata}, indent=2))
 
         return await bindings.execute_tool_async("graph_export", _impl)
 

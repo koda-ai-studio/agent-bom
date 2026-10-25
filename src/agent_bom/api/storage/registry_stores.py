@@ -123,15 +123,18 @@ class PostgresWebhookSubscriptionStore(RegistryStore):
     def put(self, subscription: WebhookSubscription) -> None:
         self._put_payload(subscription, storage_payload(subscription))
 
-    def get(self, subscription_id: str) -> WebhookSubscription | None:
-        # Legacy interface omits tenant; RLS binds the authenticated request scope.
+    def get(self, subscription_id: str, *, tenant_id: str) -> WebhookSubscription | None:
         with postgres_common._tenant_connection(self._pool) as conn:
-            row = conn.execute("SELECT data FROM webhook_subscriptions WHERE subscription_id=%s", (subscription_id,)).fetchone()
+            row = conn.execute(
+                "SELECT data FROM webhook_subscriptions WHERE subscription_id=%s AND tenant_id=%s", (subscription_id, tenant_id)
+            ).fetchone()
         return unseal_subscription(WebhookSubscription(**row[0])) if row else None
 
-    def delete(self, subscription_id: str) -> bool:
+    def delete(self, subscription_id: str, *, tenant_id: str) -> bool:
         with postgres_common._tenant_connection(self._pool) as conn:
-            count = conn.execute("DELETE FROM webhook_subscriptions WHERE subscription_id=%s", (subscription_id,)).rowcount
+            count = conn.execute(
+                "DELETE FROM webhook_subscriptions WHERE subscription_id=%s AND tenant_id=%s", (subscription_id, tenant_id)
+            ).rowcount
             conn.commit()
         return count > 0
 

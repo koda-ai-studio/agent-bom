@@ -34,7 +34,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api import inventory_service
-from agent_bom.api.graph_generation import optional_generation, verify_generation
+from agent_bom.api.inventory_paging import build_pinned_asset_list
 from agent_bom.api.inventory_service import MAX_PAGE_LIMIT, InventoryError
 from agent_bom.api.neptune_graph import NeptuneGraphStoreUnsupportedOperationError
 from agent_bom.api.read_models import documented
@@ -136,24 +136,24 @@ async def list_inventory_assets(
     severity: Optional[str] = Query(None, description="Filter by highest directly linked finding severity"),
     min_severity: Optional[str] = Query(None, description="Minimum severity floor (critical/high/medium/low)"),
     scan_id: Optional[str] = Query(None, description="Scan snapshot ID; latest if omitted"),
-    cursor: Optional[str] = Query(None, description="Opaque keyset cursor from a previous page's next_cursor"),
+    cursor: Optional[str] = Query(None, description="Opaque keyset cursor; carries the snapshot generation"),
     offset: int = Query(0, ge=0, description="Pagination offset (non-cursor paging only)"),
     limit: int = Query(50, ge=1, le=MAX_PAGE_LIMIT, description="Max rows to return"),
-    snapshot_generation: Optional[str] = Query(None, max_length=128, description="Generation from the first page; mismatch is 409"),
+    snapshot_generation: Optional[str] = Query(None, max_length=128, description="Optional with cursor; mismatch is 409"),
 ) -> dict[str, Any]:
     """Paginated, filterable asset rows across every source in the unified graph.
 
     Every filter and the exact whole-query total is evaluated natively by the
     graph store. Facet buckets are self-excluding and computed across the whole
     filtered snapshot, never only the displayed page. A supplied
-    ``snapshot_generation`` that is no longer the snapshot's is a 409.
+    ``snapshot_generation`` that is no longer the snapshot's is a 409, and so
+    is a ``next_cursor`` continued after the snapshot it was issued for was
+    replaced; the cursor carries its generation, so the parameter is optional.
     """
     tenant = _tenant(request)
-    store = _get_graph_store()
-    identity = await _store_call(optional_generation, store, tenant=tenant, scan_id=scan_id or "", generation=snapshot_generation, offset=0)
     try:
-        body = await inventory_service.build_asset_list(
-            store=store,
+        return await build_pinned_asset_list(
+            store=_get_graph_store(),
             tenant_id=tenant,
             type=type,
             search=search,
@@ -162,18 +162,15 @@ async def list_inventory_assets(
             source=source,
             severity=severity,
             min_severity=min_severity,
-            scan_id=identity[0] if identity else scan_id,
+            scan_id=scan_id,
             cursor=cursor,
+            snapshot_generation=snapshot_generation,
             offset=offset,
             limit=limit,
             store_call=_store_call,
         )
     except InventoryError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    if identity is not None:
-        await _store_call(verify_generation, store, tenant=tenant, identity=identity, has_rows=bool(body.get("assets")))
-        body["snapshot_generation"] = body.get("snapshot_generation") or identity[1]
-    return body
 
 
 # ═══════════════════════════════════════════════════════════════════════════

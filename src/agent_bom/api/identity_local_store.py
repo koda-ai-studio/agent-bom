@@ -13,6 +13,7 @@ from datetime import datetime
 from agent_bom.api.identity_grants import AgentJITGrant, require_grant_tenant
 from agent_bom.api.identity_models import AgentIdentity
 from agent_bom.api.identity_policies import ConditionalAccessPolicy, require_policy_tenant
+from agent_bom.api.sqlite_rekey import rekey_table
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
@@ -21,30 +22,50 @@ def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
     return {str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}  # nosec B608 - table is static
 
 
+_CREATE_IDENTITIES_SQL = """
+    CREATE TABLE IF NOT EXISTS {table} (
+        identity_id TEXT NOT NULL,
+        tenant_id TEXT NOT NULL,
+        token_hash TEXT NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        issued_at TEXT NOT NULL,
+        agent_id TEXT NOT NULL DEFAULT '',
+        data TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, identity_id)
+    )
+"""
+_IDENTITY_COLUMNS = "identity_id, tenant_id, token_hash, status, issued_at, agent_id, data"
+
+
 class InMemoryAgentIdentityStore:
     def __init__(self) -> None:
-        self._by_id: dict[str, AgentIdentity] = {}
-        self._by_hash: dict[str, str] = {}
+        self._by_id: dict[tuple[str, str], AgentIdentity] = {}
+        self._by_hash: dict[str, tuple[str, str]] = {}
         self._jit_by_id: dict[str, AgentJITGrant] = {}
         self._cond_by_id: dict[str, ConditionalAccessPolicy] = {}
         self._lock = threading.Lock()
 
     def put(self, identity: AgentIdentity) -> None:
+        """Upsert keyed by ``(tenant_id, identity_id)``; a token hash stays unique across tenants."""
+        key = (identity.tenant_id, identity.identity_id)
         with self._lock:
-            self._by_id[identity.identity_id] = identity
-            self._by_hash[identity.token_hash] = identity.identity_id
+            holder = self._by_hash.get(identity.token_hash)
+            if holder is not None and holder != key:
+                raise ValueError("Token hash already belongs to another identity")
+            previous = self._by_id.get(key)
+            if previous is not None and previous.token_hash != identity.token_hash:
+                self._by_hash.pop(previous.token_hash, None)
+            self._by_id[key] = identity
+            self._by_hash[identity.token_hash] = key
 
     def get(self, identity_id: str, *, tenant_id: str) -> AgentIdentity | None:
         with self._lock:
-            identity = self._by_id.get(identity_id)
-            if identity is None or identity.tenant_id != tenant_id:
-                return None
-            return identity
+            return self._by_id.get((tenant_id, identity_id))
 
     def get_by_token_hash(self, token_hash: str) -> AgentIdentity | None:
         with self._lock:
-            iid = self._by_hash.get(token_hash)
-            return self._by_id.get(iid) if iid else None
+            key = self._by_hash.get(token_hash)
+            return self._by_id.get(key) if key else None
 
     def list(self, tenant_id: str, *, include_inactive: bool = False, limit: int = 200) -> list[AgentIdentity]:
         with self._lock:
@@ -164,26 +185,19 @@ class SQLiteAgentIdentityStore:
         return conn
 
     def _init_db(self) -> None:
-        ensure_sqlite_schema_version(self._conn, "agent_identities", version=2)
-        self._conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS agent_identities (
-                identity_id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
-                token_hash TEXT NOT NULL UNIQUE,
-                status TEXT NOT NULL,
-                issued_at TEXT NOT NULL,
-                agent_id TEXT NOT NULL DEFAULT '',
-                data TEXT NOT NULL
-            )
-            """
-        )
+        self._conn.execute(_CREATE_IDENTITIES_SQL.format(table="agent_identities"))
         # Revocation is looked up per agent, not per tenant. Without this column
         # the check had to page the tenant's whole roster and could miss an old
         # revoked row behind the page cap.
         if "agent_id" not in _table_columns(self._conn, "agent_identities"):
             self._conn.execute("ALTER TABLE agent_identities ADD COLUMN agent_id TEXT NOT NULL DEFAULT ''")
             self._backfill_agent_ids()
+        self._conn.commit()
+        # Pre-v3 tables keyed rows by identity_id alone, so a second tenant's write replaced the first's.
+        rekey_table(
+            self._conn, "agent_identities", key=["tenant_id", "identity_id"], create_sql=_CREATE_IDENTITIES_SQL, columns=_IDENTITY_COLUMNS
+        )
+        ensure_sqlite_schema_version(self._conn, "agent_identities", version=3)
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_identities_tenant ON agent_identities(tenant_id, status)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_identities_hash ON agent_identities(token_hash)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_identities_agent ON agent_identities(tenant_id, agent_id)")
@@ -232,14 +246,16 @@ class SQLiteAgentIdentityStore:
                 continue
             if agent_id:
                 self._conn.execute(
-                    "UPDATE agent_identities SET agent_id = ? WHERE identity_id = ?",
+                    "UPDATE agent_identities SET agent_id = ? WHERE identity_id = ? AND agent_id = ''",
                     (agent_id, identity_id),
                 )
 
     def put(self, identity: AgentIdentity) -> None:
         self._conn.execute(
-            "INSERT OR REPLACE INTO agent_identities "
-            "(identity_id, tenant_id, token_hash, status, issued_at, agent_id, data) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO agent_identities "
+            "(identity_id, tenant_id, token_hash, status, issued_at, agent_id, data) VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (tenant_id, identity_id) DO UPDATE SET token_hash = excluded.token_hash, status = excluded.status, "
+            "issued_at = excluded.issued_at, agent_id = excluded.agent_id, data = excluded.data",
             (
                 identity.identity_id,
                 identity.tenant_id,

@@ -26,6 +26,7 @@ from agent_bom.cli._tenant import (
     _canonicalize_resolved_tenant_id,
     _multi_tenant_signals_present,
 )
+from agent_bom.core.settings import env_str
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,11 @@ def resolve_mcp_tenant_id() -> str:
             MCP_TENANT_ENV_VAR,
         )
     return DEFAULT_TENANT_ID
+
+
+def mcp_tenant_bound() -> bool:
+    """Whether the operator bound this MCP server process to a tenant (rather than the local default)."""
+    return bool(env_str(MCP_TENANT_ENV_VAR) or env_str(TENANT_ENV_VAR))
 
 
 def resolve_mcp_tool_tenant_id(requested_tenant_id: str | None = None) -> str:

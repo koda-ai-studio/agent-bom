@@ -44,7 +44,7 @@ def _actor(request: Request) -> str:
 
 
 def _subscription_for_tenant(request: Request, subscription_id: str) -> WebhookSubscription:
-    subscription = get_webhook_subscription_store().get(subscription_id)
+    subscription = get_webhook_subscription_store().get(subscription_id, tenant_id=_tenant(request))
     if subscription is None or subscription.tenant_id != _tenant(request):
         raise HTTPException(status_code=404, detail="Webhook subscription not found")
     return subscription
@@ -128,7 +128,7 @@ def get_webhook_subscription(request: Request, subscription_id: str) -> dict[str
 def disable_webhook_subscription(request: Request, subscription_id: str) -> dict[str, object]:
     """Disable a subscription without deleting it."""
     _subscription_for_tenant(request, subscription_id)
-    subscription = set_subscription_status(get_webhook_subscription_store(), subscription_id, status="disabled")
+    subscription = set_subscription_status(get_webhook_subscription_store(), subscription_id, tenant_id=_tenant(request), status="disabled")
     if subscription is None:
         raise HTTPException(status_code=404, detail="Webhook subscription not found")
     log_action(
@@ -144,7 +144,7 @@ def disable_webhook_subscription(request: Request, subscription_id: str) -> dict
 def enable_webhook_subscription(request: Request, subscription_id: str) -> dict[str, object]:
     """Re-enable a disabled subscription."""
     _subscription_for_tenant(request, subscription_id)
-    subscription = set_subscription_status(get_webhook_subscription_store(), subscription_id, status="active")
+    subscription = set_subscription_status(get_webhook_subscription_store(), subscription_id, tenant_id=_tenant(request), status="active")
     if subscription is None:
         raise HTTPException(status_code=404, detail="Webhook subscription not found")
     log_action(
@@ -160,7 +160,7 @@ def enable_webhook_subscription(request: Request, subscription_id: str) -> dict[
 def delete_webhook_subscription(request: Request, subscription_id: str) -> dict[str, object]:
     """Delete a webhook subscription."""
     _subscription_for_tenant(request, subscription_id)
-    deleted = get_webhook_subscription_store().delete(subscription_id)
+    deleted = get_webhook_subscription_store().delete(subscription_id, tenant_id=_tenant(request))
     if not deleted:
         raise HTTPException(status_code=404, detail="Webhook subscription not found")
     log_action(

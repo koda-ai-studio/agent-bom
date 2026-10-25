@@ -36,7 +36,7 @@ def read(store, kind, tenant="alpha"):
         return store.get(tenant, "evaluation")
     if kind == "drift":
         return store.get(tenant, "incident")
-    return store.get("subscription")
+    return store.get("subscription", tenant_id=tenant)
 
 
 def schema(store):
@@ -106,14 +106,15 @@ def test_webhook_encryption_matching_and_delete(tmp_path, monkeypatch):
     raw = store._conn.execute("SELECT data FROM webhook_subscriptions").fetchone()[0]
     assert "fixture-secret" not in raw
     assert json.loads(raw)["signing_secret"].startswith("enc:v1:")
-    assert store.get("subscription").signing_secret == "fixture-secret"
+    assert store.get("subscription", tenant_id="alpha").signing_secret == "fixture-secret"
     assert len(store.matching("alpha", "identity.issued")) == 1
     assert store.matching("alpha", "budget.exceeded") == []
     store.put(replace(record, status="disabled"))
     assert store.list("alpha") == []
     assert len(store.list("alpha", include_disabled=True)) == 1
-    assert store.delete("subscription") is True
-    assert store.delete("subscription") is False
+    assert store.delete("subscription", tenant_id="beta") is False
+    assert store.delete("subscription", tenant_id="alpha") is True
+    assert store.delete("subscription", tenant_id="alpha") is False
     store._conn.close()
 
 

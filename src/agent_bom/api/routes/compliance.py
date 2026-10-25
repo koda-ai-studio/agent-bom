@@ -47,8 +47,8 @@ from agent_bom.api.routes.compliance_routes.bundle import (
 )
 from agent_bom.api.routes.compliance_routes.cis import list_cis_benchmark_checks as list_cis_benchmark_checks
 from agent_bom.api.routes.compliance_routes.common import _POSTURE_COUNTS_CACHE as _POSTURE_COUNTS_CACHE
-from agent_bom.api.routes.compliance_routes.common import _cached_issue_severity_counts as _cached_issue_severity_counts
 from agent_bom.api.routes.compliance_routes.common import (
+    SEEDING_GUARD,
     _compliance_evidence_authority_key,
     _get_hub_posture_impl,
     _get_posture_counts_impl,
@@ -57,6 +57,7 @@ from agent_bom.api.routes.compliance_routes.common import (
     _tenant_jobs,
     framework_posture_with_count,
 )
+from agent_bom.api.routes.compliance_routes.common import _cached_issue_severity_counts as _cached_issue_severity_counts
 from agent_bom.api.routes.compliance_routes.common import _derive_deployment_context as _derive_deployment_context
 from agent_bom.api.routes.compliance_routes.common import estate_agent_count as estate_agent_count
 from agent_bom.api.routes.compliance_routes.evidence import (
@@ -104,13 +105,12 @@ _logger = logging.getLogger(__name__)
 _AUDIT_EVIDENCE_FETCH_LIMIT = 10_000
 
 
-@router.get("/compliance", **read_models.documented(read_models.ComplianceResponse), tags=["compliance"])
+@router.get("/compliance", **read_models.documented(read_models.ComplianceResponse), tags=["compliance"], dependencies=[SEEDING_GUARD])
 async def get_compliance(
     request: Request,
     scan_id: Annotated[str | None, Query(max_length=200)] = None,
 ) -> dict:
-    """Aggregate OWASP LLM Top 10, OWASP MCP Top 10, MITRE ATLAS, NIST AI RMF,
-    OWASP Agentic Top 10, and EU AI Act compliance posture across all completed scans.
+    """OWASP LLM/MCP/Agentic Top 10, MITRE ATLAS, NIST AI RMF and EU AI Act posture across completed scans.
 
     Returns scored control posture plus applicability-only risk/technique
     catalogs and an overall score derived only from the scored frameworks.

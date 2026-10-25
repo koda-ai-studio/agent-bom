@@ -72,17 +72,17 @@ def test_health_answers_while_demo_estate_seed_is_in_flight(gated_demo_boot) -> 
     assert calls == [SHOWCASE_TENANT]
 
 
-def test_empty_posture_and_overview_say_the_demo_is_seeding(gated_demo_boot) -> None:
-    """An empty estate mid-seed must not read as a product with no scans."""
+def test_posture_refuses_and_overview_says_the_demo_is_seeding(gated_demo_boot) -> None:
+    """Mid-seed, posture refuses like every unpinned estate read; the overview the UI polls says why."""
     api_server, boot_seed, release, started, _calls = gated_demo_boot
 
     with TestClient(api_server.app) as client:
         assert started.wait(10)
 
-        posture = client.get("/v1/posture").json()
-        assert posture["no_data"] is True
-        assert posture["demo_estate_seeding"] is True
-        assert "seeding" in posture["summary"].lower()
+        posture = client.get("/v1/posture")
+        assert posture.status_code == 503, posture.text
+        assert posture.headers["Retry-After"] == "2"
+        assert posture.json()["detail"]["code"] == "current_estate_seeding"
         overview = client.get("/v1/overview")
         assert overview.status_code == 200
         assert overview.json()["demo_estate_seeding"] is True

@@ -57,17 +57,18 @@ class PostgresAgentIdentityStore:
 
     def _init_tables(self) -> None:
         with self._pool.connection() as conn:
-            if not ensure_postgres_schema_version(conn, "agent_identities", version=2):
+            if not ensure_postgres_schema_version(conn, "agent_identities", version=3):
                 return
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS agent_identities (
-                    identity_id TEXT PRIMARY KEY,
+                    identity_id TEXT NOT NULL,
                     tenant_id   TEXT NOT NULL,
                     token_hash  TEXT NOT NULL UNIQUE,
                     status      TEXT NOT NULL,
                     issued_at   TEXT NOT NULL,
                     agent_id    TEXT NOT NULL DEFAULT '',
-                    data        TEXT NOT NULL
+                    data        TEXT NOT NULL,
+                    PRIMARY KEY (tenant_id, identity_id)
                 )
             """)
             # Revocation is an agent-keyed question. Without this column the
@@ -124,7 +125,7 @@ class PostgresAgentIdentityStore:
                 """
                 INSERT INTO agent_identities (identity_id, tenant_id, token_hash, status, issued_at, agent_id, data)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (identity_id) DO UPDATE SET
+                ON CONFLICT (tenant_id, identity_id) DO UPDATE SET
                     token_hash = EXCLUDED.token_hash,
                     status = EXCLUDED.status,
                     issued_at = EXCLUDED.issued_at,

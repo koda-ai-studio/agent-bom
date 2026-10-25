@@ -52870,7 +52870,7 @@
     },
     "/v1/compliance": {
       "get": {
-        "description": "Aggregate OWASP LLM Top 10, OWASP MCP Top 10, MITRE ATLAS, NIST AI RMF,\nOWASP Agentic Top 10, and EU AI Act compliance posture across all completed scans.\n\nReturns scored control posture plus applicability-only risk/technique\ncatalogs and an overall score derived only from the scored frameworks.",
+        "description": "OWASP LLM/MCP/Agentic Top 10, MITRE ATLAS, NIST AI RMF and EU AI Act posture across completed scans.\n\nReturns scored control posture plus applicability-only risk/technique\ncatalogs and an overall score derived only from the scored frameworks.",
         "operationId": "get_compliance_v1_compliance_get",
         "parameters": [
           {
@@ -74205,7 +74205,7 @@
     },
     "/v1/inventory/assets": {
       "get": {
-        "description": "Paginated, filterable asset rows across every source in the unified graph.\n\nEvery filter and the exact whole-query total is evaluated natively by the\ngraph store. Facet buckets are self-excluding and computed across the whole\nfiltered snapshot, never only the displayed page. A supplied\n``snapshot_generation`` that is no longer the snapshot's is a 409.",
+        "description": "Paginated, filterable asset rows across every source in the unified graph.\n\nEvery filter and the exact whole-query total is evaluated natively by the\ngraph store. Facet buckets are self-excluding and computed across the whole\nfiltered snapshot, never only the displayed page. A supplied\n``snapshot_generation`` that is no longer the snapshot's is a 409, and so\nis a ``next_cursor`` continued after the snapshot it was issued for was\nreplaced; the cursor carries its generation, so the parameter is optional.",
         "operationId": "list_inventory_assets_v1_inventory_assets_get",
         "parameters": [
           {
@@ -74353,7 +74353,7 @@
             }
           },
           {
-            "description": "Opaque keyset cursor from a previous page's next_cursor",
+            "description": "Opaque keyset cursor; carries the snapshot generation",
             "in": "query",
             "name": "cursor",
             "required": false,
@@ -74366,7 +74366,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Opaque keyset cursor from a previous page's next_cursor",
+              "description": "Opaque keyset cursor; carries the snapshot generation",
               "title": "Cursor"
             }
           },
@@ -74398,7 +74398,7 @@
             }
           },
           {
-            "description": "Generation from the first page; mismatch is 409",
+            "description": "Optional with cursor; mismatch is 409",
             "in": "query",
             "name": "snapshot_generation",
             "required": false,
@@ -74412,7 +74412,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Generation from the first page; mismatch is 409",
+              "description": "Optional with cursor; mismatch is 409",
               "title": "Snapshot Generation"
             }
           }

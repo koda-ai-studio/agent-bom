@@ -1916,8 +1916,7 @@ export interface paths {
         };
         /**
          * Get Compliance
-         * @description Aggregate OWASP LLM Top 10, OWASP MCP Top 10, MITRE ATLAS, NIST AI RMF,
-         *     OWASP Agentic Top 10, and EU AI Act compliance posture across all completed scans.
+         * @description OWASP LLM/MCP/Agentic Top 10, MITRE ATLAS, NIST AI RMF and EU AI Act posture across completed scans.
          *
          *     Returns scored control posture plus applicability-only risk/technique
          *     catalogs and an overall score derived only from the scored frameworks.
@@ -5708,7 +5707,9 @@ export interface paths {
          *     Every filter and the exact whole-query total is evaluated natively by the
          *     graph store. Facet buckets are self-excluding and computed across the whole
          *     filtered snapshot, never only the displayed page. A supplied
-         *     ``snapshot_generation`` that is no longer the snapshot's is a 409.
+         *     ``snapshot_generation`` that is no longer the snapshot's is a 409, and so
+         *     is a ``next_cursor`` continued after the snapshot it was issued for was
+         *     replaced; the cursor carries its generation, so the parameter is optional.
          */
         get: operations["list_inventory_assets_v1_inventory_assets_get"];
         put?: never;
@@ -39067,13 +39068,13 @@ export interface operations {
                 min_severity?: string | null;
                 /** @description Scan snapshot ID; latest if omitted */
                 scan_id?: string | null;
-                /** @description Opaque keyset cursor from a previous page's next_cursor */
+                /** @description Opaque keyset cursor; carries the snapshot generation */
                 cursor?: string | null;
                 /** @description Pagination offset (non-cursor paging only) */
                 offset?: number;
                 /** @description Max rows to return */
                 limit?: number;
-                /** @description Generation from the first page; mismatch is 409 */
+                /** @description Optional with cursor; mismatch is 409 */
                 snapshot_generation?: string | null;
             };
             header?: never;
