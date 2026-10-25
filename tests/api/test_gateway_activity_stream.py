@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from starlette.testclient import TestClient
@@ -89,7 +90,21 @@ def test_stream_requires_auth_even_in_local_no_auth_mode(store, monkeypatch):
     assert TestClient(app).get(URL).status_code == 401
 
 
-def test_stream_backfills_beyond_latest_200_and_preserves_every_event_class(store):
+def test_stream_backfills_beyond_latest_200_and_preserves_every_event_class(store, monkeypatch):
+    # This is a content/paging contract, not a 250 ms throughput benchmark.
+    # End the connection after it reaches the empty tail, irrespective of how
+    # long SQLite or the CI scheduler takes to deliver the historical pages.
+    clock = [0.0]
+    read = gateway_feed._read_stream_page
+
+    def until_tail(*args, **kwargs):
+        page = read(*args, **kwargs)
+        if not page.events:
+            clock[0] = 1.0
+        return page
+
+    monkeypatch.setattr(gateway_feed, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+    monkeypatch.setattr(gateway_feed, "_read_stream_page", until_tail)
     records = [record(i) for i in range(230)]
     records += [record(230, event_type="gateway.runtime_profile.blocked"), record(231, event_type="gateway.enforcement.warned")]
     store.append_batch(records)
@@ -107,6 +122,23 @@ def test_stream_backfills_beyond_latest_200_and_preserves_every_event_class(stor
     assert events[-1]["policy_id"] == "policy-7"
     assert events[-1]["evidence_id"] == "evidence-7"
     assert received[-1]["event"] == "reconnect"
+
+
+@pytest.mark.asyncio
+async def test_deadline_reconnect_keeps_the_last_delivered_cursor(store, monkeypatch):
+    store.append_batch([record(1), record(2), record(3)])
+    clock = [0.0]
+    monkeypatch.setattr(gateway_feed, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+    first = gateway_feed._read_stream_page("tenant-a", None, 1)
+    iterator = gateway_feed._stream_activity("tenant-a", first, 1, 1.0)
+    delivered = await anext(iterator)
+    clock[0] = 2.0
+    terminal = await anext(iterator)
+    assert terminal == {"event": "reconnect", "data": '{"reason":"reauthenticate"}'}
+    with pytest.raises(StopAsyncIteration):
+        await anext(iterator)
+    resumed = gateway_feed._read_stream_page("tenant-a", delivered["id"], 100)
+    assert [event.event_id for event in resumed.events] == ["evt-2", "evt-3"]
 
 
 def test_rest_cursor_handoff_and_last_event_id_precedence(store):
