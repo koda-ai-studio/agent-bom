@@ -636,9 +636,8 @@ async def list_findings(
 ) -> dict:
     """List unified findings aggregated from completed scan results.
 
-    Dedup/sort and synchronous store reads run in a worker thread (the context,
-    including tenant scope and projection, propagates) to avoid blocking the
-    event loop. Adaptive backpressure rejects saturation with 429 + Retry-After.
+    Dedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event
+    loop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.
 
     Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls``
     restores the full per-finding control mappings.

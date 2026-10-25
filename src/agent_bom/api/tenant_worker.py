@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from typing import ParamSpec, TypeVar
 
 from agent_bom.api.postgres_common import _bypass_tenant_rls, reset_current_tenant, set_current_tenant
+from agent_bom.api.storage_schema import postgres_deployment_configured
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
 P = ParamSpec("P")
@@ -24,6 +25,16 @@ def tenant_bound_context(tenant_id: str) -> Iterator[None]:
     finally:
         _bypass_tenant_rls.reset(bypass_token)
         reset_current_tenant(token)
+
+
+@contextmanager
+def postgres_tenant_scope(tenant_id: str) -> Iterator[None]:
+    """:func:`tenant_bound_context` on a Postgres deployment; nothing to bind otherwise."""
+    if not postgres_deployment_configured():
+        yield
+        return
+    with tenant_bound_context(tenant_id):
+        yield
 
 
 def run_tenant_bound(

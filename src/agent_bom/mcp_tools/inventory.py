@@ -37,6 +37,12 @@ def _resolve_store(_get_graph_store: Optional[Callable[[], Any]]) -> Any:
     return _get_graph_store()
 
 
+def _inventory_service() -> Any:
+    from agent_bom.api import inventory_service
+
+    return inventory_service
+
+
 def _encode(payload: dict[str, Any], _truncate_response: Optional[Callable[[str], str]]) -> str:
     encoded = json.dumps(payload, indent=2, default=str)
     return _truncate_response(encoded) if _truncate_response is not None else encoded
@@ -57,7 +63,7 @@ async def inventory_summary_impl(
     _truncate_response: Optional[Callable[[str], str]] = None,
 ) -> str:
     """Return asset counts by type and group for the tenant's selected evidence scope."""
-    from agent_bom.api import inventory_service
+    inventory_service = _inventory_service()
 
     tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
     try:
@@ -114,7 +120,7 @@ async def inventory_list_impl(
     _truncate_response: Optional[Callable[[str], str]] = None,
 ) -> str:
     """Return a filtered, paginated page of inventory asset rows."""
-    from agent_bom.api import inventory_service
+    inventory_service = _inventory_service()
 
     tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
     try:
@@ -157,7 +163,7 @@ async def inventory_asset_impl(
     _truncate_response: Optional[Callable[[str], str]] = None,
 ) -> str:
     """Return asset attributes and one bounded page of recorded relationships."""
-    from agent_bom.api import inventory_service
+    inventory_service = _inventory_service()
 
     asset_id = (asset_id or "").strip()
     if not asset_id:

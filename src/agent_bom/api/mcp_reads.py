@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import HTTPException
+# Starlette's base class, so the current-estate store's refusals are caught with route errors.
+from starlette.exceptions import HTTPException
 
 from agent_bom.api.finding_view_filters import _finding_triage_state
 from agent_bom.api.findings_current import current_scan_jobs

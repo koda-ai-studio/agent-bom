@@ -232,8 +232,7 @@ async def list_graph_agents(
         generation=snapshot_generation,
         offset=offset or int(bool(cursor)),
     )
-    if identity is not None:
-        scan_id = identity[0]
+    scan_id = identity[0] if identity is not None else scan_id
     query = q.strip()
     if query:
         agents, total, next_cursor = await _runtime._graph_store_call(
@@ -247,9 +246,7 @@ async def list_graph_agents(
             limit=limit,
         )
         effective_scan_id = scan_id or await _runtime._graph_store_call(
-            graph_store.latest_snapshot_id,
-            tenant_id=tenant_id,
-            snapshot_kind="scan",
+            graph_store.latest_snapshot_id, tenant_id=tenant_id, snapshot_kind="scan"
         )
         created_at = ""
     else:
@@ -338,6 +335,16 @@ async def get_graph_node(
     }
 
 
+async def _read_incident_page(store: Any, **query: Any) -> dict[str, Any] | None:
+    """The store's page; a stale or replaced snapshot generation is 409, a malformed or foreign cursor 422."""
+    try:
+        return await _runtime._graph_store_call(store.incident_edges_page, **query)
+    except SnapshotGenerationMismatchError as exc:
+        raise HTTPException(status_code=409, detail="Graph snapshot changed; restart the query from its first page.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid incident relationship page; restart from the first page") from exc
+
+
 @node_router.get("/graph/incident-edges", tags=["graph"], response_model=IncidentEdgePageResponse)
 async def get_graph_incident_edges(
     request: Request,
@@ -374,21 +381,16 @@ async def get_graph_incident_edges(
     read_id, resolved_from = await _runtime._graph_store_call(
         resolve_snapshot_node_id, store, tenant_id=tenant_id, scan_id=scan_id or "", node_id=node_id
     )
-    try:
-        page = await _runtime._graph_store_call(
-            store.incident_edges_page,
-            tenant_id=tenant_id,
-            scan_id=scan_id or "",
-            node_id=read_id,
-            direction=direction,
-            limit=limit,
-            cursor=cursor,
-            snapshot_generation=snapshot_generation,
-        )
-    except SnapshotGenerationMismatchError as exc:
-        raise HTTPException(status_code=409, detail="Graph snapshot changed; restart the query from its first page.") from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail="Invalid incident relationship page; restart from the first page") from exc
+    page = await _read_incident_page(
+        store,
+        tenant_id=tenant_id,
+        scan_id=scan_id or "",
+        node_id=read_id,
+        direction=direction,
+        limit=limit,
+        cursor=cursor,
+        snapshot_generation=snapshot_generation,
+    )
     if page is None:
         return {
             "scan_id": scan_id or "",

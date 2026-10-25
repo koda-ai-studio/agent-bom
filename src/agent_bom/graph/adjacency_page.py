@@ -42,6 +42,15 @@ def validate_graph_identifiers(*values: str) -> None:
         raise ValueError("Graph identifiers cannot contain NUL")
 
 
+def _require_cursor_scope(carried: Any, scope: list[str]) -> None:
+    """A cursor for this tenant, snapshot id, node and direction whose snapshot was re-saved is a 409, not a bad cursor."""
+    if carried == scope:
+        return
+    if isinstance(carried, list) and len(carried) == len(scope) and carried[:2] == scope[:2] and carried[5:] == scope[5:]:
+        raise SnapshotGenerationMismatchError("Incident-edge cursor snapshot was replaced")
+    raise ValueError("Incident-edge cursor does not match request scope")
+
+
 def incident_edge_page(
     conn: Any,
     *,
@@ -103,11 +112,8 @@ def incident_edge_page(
         raise ValueError("Incident-edge snapshot generation is unavailable")
     effective_scan_id, created_at = str(snapshot[0]), str(snapshot[1])
     scope = [tenant_id, effective_scan_id, created_at, str(snapshot[2] or ""), str(snapshot[3]), node_id, direction]
-    if token is not None and token.get("scope") != scope:
-        carried = token.get("scope")
-        if isinstance(carried, list) and len(carried) == len(scope) and carried[5:] == scope[5:] and carried[:2] == scope[:2]:
-            raise SnapshotGenerationMismatchError("Incident-edge cursor snapshot was replaced")
-        raise ValueError("Incident-edge cursor does not match request scope")
+    if token is not None:
+        _require_cursor_scope(token.get("scope"), scope)
     seed = conn.execute(
         f"SELECT {NODE_COLUMNS} FROM graph_nodes WHERE tenant_id = {marker} AND scan_id = {marker} AND id = {marker}",  # nosec B608
         (tenant_id, effective_scan_id, node_id),

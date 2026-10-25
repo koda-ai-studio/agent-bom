@@ -79,11 +79,9 @@ async def call_route(route_name: str, *, tenant_id: str, path: str, **params: An
     reads = api_reads()
     if reads is None:
         return None, api_unavailable()
-    from starlette.exceptions import HTTPException
-
     try:
         return await reads.call_read(route_name, tenant_request(tenant_id, path, params), **params), None
-    except HTTPException as exc:
+    except reads.HTTPException as exc:
         return None, _error_for_status(exc)
 
 

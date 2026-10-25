@@ -84,12 +84,7 @@ def bound_postgres_tenant() -> Iterator[None]:
     Only HTTP middleware binds the Postgres tenant context, so without this an
     MCP call reads as ``default`` and RLS hides the bound tenant's estate.
     """
-    from agent_bom.api.storage_schema import postgres_deployment_configured
+    from agent_bom.api.tenant_worker import postgres_tenant_scope
 
-    if not postgres_deployment_configured():
-        yield
-        return
-    from agent_bom.api.tenant_worker import tenant_bound_context
-
-    with tenant_bound_context(resolve_mcp_tenant_id()):
+    with postgres_tenant_scope(resolve_mcp_tenant_id()):
         yield
