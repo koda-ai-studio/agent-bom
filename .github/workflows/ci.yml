@@ -1792,6 +1792,7 @@ jobs:
             tests/test_trace_collection_recovery.py \
             tests/test_postgres_agent_lifecycle.py \
             tests/test_postgres_agent_identity_tenant_key.py \
+            tests/test_tenant_key_invariant.py \
             tests/test_postgres_mcp_results.py \
             tests/test_mcp_postgres_tenant_rls.py \
             tests/test_postgres_operator_advisory_store.py \
