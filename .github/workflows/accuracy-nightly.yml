@@ -45,6 +45,9 @@ jobs:
         # A green scan on a stale DB is a false clean — that is the whole reason
         # this job exists. Measuring accuracy against stale advisories would
         # reproduce the exact defect it is meant to detect.
+        env:
+          # Optional; unset when the secret is absent. Only `--source nvd` uses it.
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: uv run agent-bom db update
 
       - name: Offline CVE range-matching accuracy
