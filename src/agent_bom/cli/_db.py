@@ -59,7 +59,7 @@ def db_cmd() -> None:
     "--max-nvd-entries",
     type=int,
     default=None,
-    help="Cap NVD records read per run (default: whole window with NVD_API_KEY, 60,000 without).",
+    help="Cap NVD records read per run (default: whole window with NVD_API_KEY, 60,000 without) and keyless CVSS lookups (default 50).",
     hidden=True,
 )
 @click.option(

@@ -49,7 +49,7 @@ from agent_bom.db.sync_common import (
 )
 from agent_bom.db.sync_distributions import sync_alpine_secdb, sync_debian_tracker
 from agent_bom.db.sync_exploit_feeds import sync_epss, sync_kev
-from agent_bom.db.sync_nvd_window import NvdRateLimiter
+from agent_bom.db.sync_nvd_window import KEYLESS_BACKFILL_MAX, NvdRateLimiter
 from agent_bom.db.sync_nvd_window import sync_nvd_incremental as sync_nvd_incremental
 from agent_bom.db.sync_parsing import _CVSS_SEVERITY as _CVSS_SEVERITY
 from agent_bom.db.sync_parsing import _cpe_version_bound as _cpe_version_bound
@@ -401,12 +401,32 @@ def sync_ghsa(
     return count
 
 
+def _copy_local_nvd_score(conn: sqlite3.Connection, row_id: str, cve_id: str) -> bool:
+    """Score ``row_id`` from a stored NVD row for ``cve_id``; ``True`` when one existed.
+
+    ``sync_nvd`` runs this over every unscored row (point lookups, no
+    requests), so its request cap is spent only on CVEs nothing stored answers.
+    """
+    scored = conn.execute(
+        "SELECT cvss_score, cvss_vector, severity FROM vulns WHERE id = ? AND source = 'nvd' AND cvss_score IS NOT NULL",
+        (cve_id,),
+    ).fetchone()
+    if scored is None:
+        return False
+    conn.execute(
+        "UPDATE vulns SET cvss_score = ?, cvss_vector = ?, severity = ? WHERE id = ?",
+        (scored["cvss_score"], scored["cvss_vector"], scored["severity"], row_id),
+    )
+    return True
+
+
 def sync_nvd(
     conn: sqlite3.Connection,
     nvd_api_key: Optional[str] = None,
     url: Optional[str] = None,
     max_entries: int = 1000,
     limiter: Optional[NvdRateLimiter] = None,
+    reuse_local_scores: bool = False,
 ) -> int:
     """Enrich local DB entries missing CVSS data using the NVD API.
 
@@ -424,6 +444,8 @@ def sync_nvd(
         nvd_api_key: NVD API key (or set ``NVD_API_KEY`` env var).
         url: base URL override for the NVD API (must be HTTPS).
         max_entries: maximum number of CVEs to enrich (default 1000).
+        reuse_local_scores: copy scores from an NVD row the window sync already
+            stored for the same CVE instead of requesting it again.
 
     Returns the number of CVEs successfully enriched.
     """
@@ -456,13 +478,15 @@ def sync_nvd(
           AND (id LIKE '%CVE-%' OR aliases LIKE '%CVE-%')
         LIMIT :max_entries
         """,
-        {"max_entries": max_entries},
+        {"max_entries": -1 if reuse_local_scores else max_entries},
     ).fetchall()
 
     row_targets: list[tuple[str, str]] = []
     for row in rows:
         candidates = _nvd_cve_candidates(row["id"], row["aliases"])
-        if candidates:
+        if not candidates or (reuse_local_scores and _copy_local_nvd_score(conn, row["id"], candidates[0])):
+            continue
+        if len(row_targets) < max_entries:
             row_targets.append((row["id"], candidates[0]))
 
     if not row_targets:
@@ -599,7 +623,8 @@ def _sync_nvd_keyless(conn: sqlite3.Connection, url: Optional[str], max_entries:
     limiter = NvdRateLimiter.for_key(None)
     ingested = sync_nvd_incremental(conn, url=url, max_results=max_entries, limiter=limiter)
     window_meta = _read_sync_metadata(conn, "nvd")
-    backfilled = sync_nvd(conn, url=url, max_entries=max_entries or 1000, limiter=limiter)
+    backfill_cap = max_entries if max_entries is not None else KEYLESS_BACKFILL_MAX
+    backfilled = sync_nvd(conn, url=url, max_entries=backfill_cap, limiter=limiter, reuse_local_scores=True)
     _update_sync_meta(conn, "nvd", ingested + backfilled, {**window_meta, "enrichment": _read_sync_metadata(conn, "nvd")})
     return ingested + backfilled
 
@@ -640,7 +665,8 @@ def sync_db(
         max_osv_entries: limit for OSV entries (0 = unlimited; for tests).
         max_ghsa_entries: limit for GHSA entries (default 5000).
         max_nvd_entries: NVD records read per window run (default: whole window keyed,
-                 60,000 keyless) and the keyless CVSS backfill cap (default 1000).
+                 60,000 keyless) and the keyless CVSS backfill cap (default 50; CVEs the
+                 window already scored are copied locally, not requested again).
         github_token: override GITHUB_TOKEN env var for GHSA fetches.
         nvd_api_key: override NVD_API_KEY env var for NVD fetches.
         ghsa_ecosystems: list of GHSA ecosystem names to sync (default: all supported).

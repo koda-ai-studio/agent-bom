@@ -43,6 +43,9 @@ NVD_PAGE_SIZE = 2000
 # window held about 50,000 modified CVEs (11,209 in three days on 2026-10-24),
 # so a keyless run from scratch usually finishes in one pass.
 KEYLESS_MAX_RECORDS = 60_000
+# Per-CVE CVSS/CWE lookups after a keyless window: one request each, so 50 is
+# about five minutes at the anonymous budget instead of an hour and a half.
+KEYLESS_BACKFILL_MAX = 50
 
 
 def _sleep(seconds: float) -> None:
