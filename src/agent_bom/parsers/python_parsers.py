@@ -21,6 +21,7 @@ from agent_bom.parsers.python_requirements import (
     requirement_line_package,
     requirements_file_packages,
 )
+from agent_bom.parsers.python_setup import setup_declared_packages
 from agent_bom.parsers.uv_lock import parse_uv_lock as parse_uv_lock
 from agent_bom.parsers.uv_workspace import uv_lock_owner
 
@@ -226,6 +227,8 @@ def parse_pip_packages(directory: Path) -> list[Package]:
                 detail=f"pyproject.toml failed to parse ({e}); Python dependencies were not scanned",
             )
 
+    if not packages:
+        packages.extend(setup_declared_packages(directory))
     return packages
 
 
