@@ -48,7 +48,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `external_import` | External Import | Code and supply chain | `code` | 5 / 4001 |  | 0 |
 | `federated_identity` | Federated Identity | Identity and access | `identity` | 3 / 3001 |  | 2 |
 | `fleet` | Fleet | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 1 |
-| `framework` | AI Framework | AI and agents | `orchestration` | 5 / 4001 |  | 1 (+1 demo) |
+| `framework` | AI Framework | AI and agents | `orchestration` | 5 / 4001 |  | 2 (+1 demo) |
 | `group` | Group | Identity and access | `identity` | 3 / 3001 |  | 4 |
 | `managed_identity` | Managed Identity | Identity and access | `identity` | 3 / 3001 |  | 8 |
 | `misconfiguration` | Misconfiguration | Findings | `finding` | 2 / 2003 | yes | 9 (+3 demo) |

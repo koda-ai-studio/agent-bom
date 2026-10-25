@@ -1338,6 +1338,24 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_10d27fc7b23a2f0d.Dockerfile",
+   "line_number": 1,
+   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-010",
+   "severity": "medium",
+   "title": "FROM without digest pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
     "CIS-Docker-4.1",
     "NIST-AC-6"
    ],
@@ -1464,6 +1482,24 @@
    "rule_id": "DOCKER-001",
    "severity": "high",
    "title": "FROM uses :latest tag"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_3ed379df068359cf.Dockerfile",
+   "line_number": 1,
+   "message": "Image 'ubuntu:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-010",
+   "severity": "medium",
+   "title": "FROM without digest pin"
   },
   {
    "atlas_techniques": [],
@@ -1624,6 +1660,24 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_5d2ad98194f39534.Dockerfile",
+   "line_number": 1,
+   "message": "Image 'python:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-010",
+   "severity": "medium",
+   "title": "FROM without digest pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
     "CIS-Docker-4.1",
     "NIST-AC-6"
    ],
@@ -1680,6 +1734,24 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_5d3b6802f9acaee8.Dockerfile",
+   "line_number": 1,
+   "message": "Image 'ubuntu:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-010",
+   "severity": "medium",
+   "title": "FROM without digest pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
     "CIS-Docker-4.1",
     "NIST-AC-6"
    ],
@@ -1730,6 +1802,24 @@
    "rule_id": "DOCKER-001",
    "severity": "high",
    "title": "FROM uses no tag (defaults to :latest)"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_6fa512445136b920.Dockerfile",
+   "line_number": 1,
+   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-010",
+   "severity": "medium",
+   "title": "FROM without digest pin"
   },
   {
    "atlas_techniques": [],
@@ -1898,6 +1988,24 @@
    "rule_id": "DOCKER-001",
    "severity": "high",
    "title": "FROM uses no tag (defaults to :latest)"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_9d361887fa68fac1.Dockerfile",
+   "line_number": 1,
+   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-010",
+   "severity": "medium",
+   "title": "FROM without digest pin"
   },
   {
    "atlas_techniques": [],
@@ -2219,6 +2327,24 @@
    "rule_id": "DOCKER-001",
    "severity": "high",
    "title": "FROM uses no tag (defaults to :latest)"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_c14f90dad8bc7eb1.Dockerfile",
+   "line_number": 1,
+   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-010",
+   "severity": "medium",
+   "title": "FROM without digest pin"
   },
   {
    "atlas_techniques": [],
@@ -2569,6 +2695,24 @@
    "category": "dockerfile",
    "compliance": [
     "CIS-Docker-4.7",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
+   "line_number": 3,
+   "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-010",
+   "severity": "medium",
+   "title": "FROM without digest pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
     "NIST-CM-6"
    ],
    "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
@@ -2580,6 +2724,24 @@
    "rule_id": "DOCKER-001",
    "severity": "high",
    "title": "FROM uses :latest tag"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
+   "line_number": 4,
+   "message": "Image 'python:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-010",
+   "severity": "medium",
+   "title": "FROM without digest pin"
   },
   {
    "atlas_techniques": [],

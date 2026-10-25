@@ -9,6 +9,8 @@ import { AppShell } from "@/components/app-shell";
 // Editing the script body in only one place will cause the sync test to fail.
 import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/csp-source.mjs";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 // Local fonts — no network fetch at build time (works in air-gapped environments)
 const inter = localFont({
   src: [
@@ -30,7 +32,7 @@ const mono = localFont({
 export const metadata: Metadata = {
   title: "agent-bom",
   description: "Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure",
-  icons: { icon: "/favicon.ico" },
+  icons: { icon: `${BASE_PATH}/favicon.ico` },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -38,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <head />
       <body className={`${inter.variable} ${mono.variable} font-sans bg-background text-foreground min-h-screen antialiased selection:bg-emerald-500/20`}>
-        <Script src="/runtime-config.js" strategy="beforeInteractive" />
+        <Script src={`${BASE_PATH}/runtime-config.js`} strategy="beforeInteractive" />
         <Script id="theme-bootstrap" strategy="beforeInteractive">
           {THEME_BOOTSTRAP_SCRIPT}
         </Script>

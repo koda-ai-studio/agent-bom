@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from agent_bom.a2a_auth_posture import evaluate_a2a_auth_posture
+from agent_bom.cli.agents.scan_pipeline.context_evidence import attach_context_evidence
 from agent_bom.cli.agents.scan_pipeline.helpers import (
     _benchmark_scan_issues,
     _cloud_scan_scope,
@@ -311,34 +312,7 @@ def _attach_context_data(opts: ScanOptions, st: ScanState) -> None:
         except Exception:
             pass
 
-    # Attach skill/trust/prompt/enforcement data from context
-    if st.ctx.skill_audit_data:
-        st.report.skill_audit_data = st.ctx.skill_audit_data
-        from agent_bom.parsers.skill_audit import replace_skill_findings
-
-        replace_skill_findings(st.report, st.ctx.skill_audit_data)
-    if st.ctx.trust_assessment_data:
-        st.report.trust_assessment_data = st.ctx.trust_assessment_data
-    if st.ctx.prompt_scan_data:
-        st.report.prompt_scan_data = st.ctx.prompt_scan_data
-        from agent_bom.parsers.prompt_scanner import prompt_scan_data_to_findings
-
-        st.report.findings.extend(prompt_scan_data_to_findings(st.ctx.prompt_scan_data))
-    if st.ctx.external_findings:
-        _known_ids = {f.id for f in st.report.findings}
-        st.report.findings.extend(f for f in st.ctx.external_findings if f.id not in _known_ids)
-    if st.ctx.enforcement_data:
-        st.report.enforcement_data = st.ctx.enforcement_data
-    if st.ctx.sast_data:
-        st.report.sast_data = st.ctx.sast_data
-    if st.ctx.ai_inventory_data:
-        st.report.ai_inventory_data = st.ctx.ai_inventory_data
-    if st.ctx.project_inventory_data:
-        st.report.project_inventory_data = st.ctx.project_inventory_data
-    if st.ctx.repo_trust_data:
-        st.report.repo_trust_data = st.ctx.repo_trust_data
-    if st.ctx.model_hash_verification_data:
-        st.report.model_hash_verification_data = st.ctx.model_hash_verification_data
+    attach_context_evidence(st.report, st.ctx)
 
 
 def _attach_benchmarks(opts: ScanOptions, st: ScanState) -> None:

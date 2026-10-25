@@ -61,6 +61,7 @@ import {
 } from "@/lib/deployment-context";
 import { useDeploymentContext } from "@/hooks/use-deployment-context";
 import { openIssueSeverity } from "@/lib/open-issue-counts";
+import { isStaticDemoRoute, useStaticDemoRoutes } from "@/lib/static-demo-routes";
 
 // ─── Navigation Structure ──────────────────────────────────────────────────
 
@@ -471,8 +472,12 @@ export function Nav() {
     : NAV_GROUPS;
 
   const demoEstate = isDemoEstate(counts);
+  const staticDemoRoutes = useStaticDemoRoutes();
   const roleAllowsLink = useCallback(
     (link: NavLink) => {
+      if (staticDemoRoutes && !isStaticDemoRoute(staticDemoRoutes, link.href)) {
+        return false;
+      }
       if (link.hiddenInDemoEstate && demoEstate) {
         return false;
       }
@@ -487,7 +492,7 @@ export function Nav() {
       }
       return hasCapability(link.capability);
     },
-    [demoEstate, hasCapability, session]
+    [demoEstate, hasCapability, session, staticDemoRoutes]
   );
 
   const navGroups = filteredGroups

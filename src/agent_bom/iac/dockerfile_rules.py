@@ -89,9 +89,9 @@ def docker_001_010(ln: DockerLine) -> list[IaCFinding]:
                 )
             )
 
-    # DOCKER-010: a pinned tag without a digest. An untagged/:latest image is
-    # already DOCKER-001 on this line, so it is not reported twice.
-    if image.lower() != "scratch" and "@sha256:" not in image and not findings:
+    # DOCKER-010 is independent of DOCKER-001: a mutable tag and a missing
+    # digest are separate controls, and pinning a version tag fixes only one.
+    if image.lower() != "scratch" and "@sha256:" not in image:
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-010",

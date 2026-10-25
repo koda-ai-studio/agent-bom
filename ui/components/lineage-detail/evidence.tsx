@@ -1,5 +1,6 @@
 import { Hourglass, Lock, Shield, ShieldOff } from "lucide-react";
 import type { RuntimeEvidenceTier } from "../lineage-nodes";
+import { nowForRelativeTime } from "@/lib/relative-clock";
 
 /**
  * Evidence redaction tier badge (issue #2261).
@@ -44,7 +45,7 @@ export function EvidenceTierBadge({
     if (!Number.isNaN(expiry)) {
       const deltaDays = Math.max(
         0,
-        Math.floor((expiry - Date.now()) / 86_400_000),
+        Math.floor((expiry - nowForRelativeTime()) / 86_400_000),
       );
       rotatesIn = deltaDays;
     }

@@ -7,6 +7,10 @@ on:
       - 'site-docs/**'
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
+      # The read-only demo at /demo/ is the UI export plus product-proof fixtures.
+      - 'ui/**'
+      - 'examples/reference-evidence-lab/generated/**'
+      - '.github/actions/setup-ui/**'
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -22,7 +26,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     permissions:
       contents: read
     steps:
@@ -41,6 +45,47 @@ jobs:
           --with mkdocstrings-python==2.0.3
           --with pymdown-extensions==11.0.2
           mkdocs build --strict
+
+      - name: Set up UI toolchain
+        uses: ./.github/actions/setup-ui
+
+      - name: Install UI dependencies
+        working-directory: ui
+        run: npm ci
+
+      # Read-only demo: a static export that reads shipped sample JSON and
+      # never calls an API. Served at /agent-bom/demo/ next to the docs.
+      - name: Build read-only demo export
+        working-directory: ui
+        env:
+          NEXT_EXPORT: '1'
+          NEXT_PUBLIC_STATIC_DEMO: '1'
+          NEXT_PUBLIC_BASE_PATH: /agent-bom/demo
+        run: npm run build
+
+      - name: Install Playwright browser
+        working-directory: ui
+        run: npx playwright install chromium
+
+      - name: Record demo sample data from product-proof fixtures
+        working-directory: ui
+        run: node scripts/generate-static-demo-data.mjs --out out --base-path /agent-bom/demo
+
+      - name: Fail on real-looking data in the demo bundle
+        working-directory: ui
+        run: node scripts/static-demo-leak-scan.mjs out
+
+      - name: Click through the demo with no API behind it
+        working-directory: ui
+        run: node scripts/verify-static-demo.mjs --out out --base-path /agent-bom/demo
+
+      - name: Place demo under the docs site
+        run: |
+          rm -rf site/demo
+          mv ui/out site/demo
+          # Next requests the base route's RSC payload as /agent-bom/demo.txt.
+          cp site/demo/index.txt site/demo.txt
+          du -sh site/demo
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

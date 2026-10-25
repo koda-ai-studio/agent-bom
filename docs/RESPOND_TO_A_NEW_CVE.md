@@ -18,7 +18,9 @@ agent-bom db status
 `db update` syncs OSV, Alpine, Debian, EPSS, KEV and NVD by default, so a CVE
 that only NVD has analysed so far, with its CPE version ranges, reaches the
 local database. Without `NVD_API_KEY` NVD is read keyless (a 14-day window);
-with it, 120 days. A capped or rate-limited NVD run shows `PARTIAL`. Key
+with it, 120 days. A keyless run stops after 8 minutes (`--nvd-time-budget`
+or `AGENT_BOM_NVD_TIME_BUDGET_SECONDS`) and resumes next run. A capped,
+rate-limited or out-of-time NVD run shows `PARTIAL`. Key
 handling for workstations, Helm and the GitHub Action is in
 [PERMISSIONS.md](PERMISSIONS.md#where-the-keys-live).
 

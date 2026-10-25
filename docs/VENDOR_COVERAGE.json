@@ -2896,7 +2896,7 @@
         },
         {
           "family": "TF-SEC",
-          "rule_count": 49
+          "rule_count": 50
         }
       ],
       "note": "Distinct rule-id literals per prefix.",

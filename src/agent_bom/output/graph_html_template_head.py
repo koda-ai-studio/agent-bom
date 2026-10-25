@@ -8,14 +8,16 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
 <title>agent-bom Supply Chain Graph</title>
 <style>
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{ font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: #0f1419; color: #e7e9ea; }}
+  body {{ font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: #0f1419; color: #e7e9ea;
+    display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }}
   #header {{ padding: 16px 24px; display: flex; align-items: flex-start; justify-content: space-between;
     border-bottom: 1px solid #2f3336; gap: 16px; }}
   #header h1 {{ font-size: 20px; font-weight: 700; }}
   #header p {{ font-size: 13px; color: #9ba1a6; margin-top: 6px; max-width: 780px; }}
   #stats {{ font-size: 13px; color: #71767b; white-space: nowrap; padding-top: 4px; }}
   #stats span {{ margin: 0 8px; }}
-  #cy {{ width: 100%; height: calc(100vh - 176px); }}
+  #main {{ flex: 1 1 auto; min-height: 0; display: flex; }}
+  #cy {{ flex: 1 1 auto; min-width: 0; height: auto; }}
   #toolbar {{ padding: 10px 24px; display: flex; align-items: center; justify-content: space-between;
     gap: 16px; border-bottom: 1px solid #2f3336; background: #10151b; }}
   #toolbar .left, #toolbar .right {{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }}
@@ -34,7 +36,9 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
   }}
   .panel {{ position: fixed; z-index: 10; background: rgba(26, 31, 37, 0.96); border: 1px solid #2f3336;
     border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.28); backdrop-filter: blur(10px); }}
-  #riskpanel {{ top: 138px; left: 16px; width: 360px; max-height: calc(100vh - 270px); overflow: auto; }}
+  #riskpanel {{ position: static; flex: 0 0 360px; overflow: auto; border-width: 0 1px 0 0; border-radius: 0;
+    box-shadow: none; }}
+  #riskpanel.collapsed {{ display: none; }}
   #riskpanel h2, #detail h2 {{ font-size: 14px; font-weight: 700; margin-bottom: 10px; }}
   #riskpanel .inner, #detail .inner {{ padding: 14px; }}
   #riskpanel .hint {{ font-size: 12px; color: #9ba1a6; line-height: 1.45; margin-bottom: 10px; }}
@@ -52,7 +56,8 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
   .pill.high {{ background: #5b341f; color: #ffd1a5; }}
   .pill.medium {{ background: #4b3d18; color: #ffe28a; }}
   .pill.low {{ background: #30363d; color: #e7e9ea; }}
-  #legend {{ bottom: 16px; left: 16px; padding: 12px; font-size: 11px; width: 220px; }}
+  #legend {{ display: none; bottom: 64px; right: 16px; padding: 12px; font-size: 11px; width: 220px; }}
+  #legend.open {{ display: block; }}
   #legend div {{ display: flex; align-items: center; gap: 6px; margin: 4px 0; }}
   .dot {{ width: 12px; height: 12px; border-radius: 3px; display: inline-block; }}
   #detail {{ top: 138px; right: 16px; width: 360px; max-height: calc(100vh - 270px); overflow: auto; display: none; }}
@@ -62,10 +67,30 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
     text-transform: uppercase; letter-spacing: .04em; }}
   #detail ul {{ padding-left: 18px; color: #c6ccd3; font-size: 12px; line-height: 1.5; }}
   #detail code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #11161c; padding: 1px 4px; border-radius: 4px; }}
-  #controls {{ position: fixed; bottom: 16px; right: 16px; z-index: 10; display: flex; gap: 8px; }}
+  #controls {{ flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 8px 16px;
+    border-top: 1px solid #2f3336; background: #10151b; }}
   #controls button {{ padding: 8px 12px; border: 1px solid #2f3336; background: rgba(26, 31, 37, 0.96);
     color: #e7e9ea; border-radius: 8px; cursor: pointer; font-size: 12px; }}
   #controls button:hover {{ background: #2f3336; }}
+  /* Phones: header and toolbar stack full-width, the canvas takes the rest
+     of the viewport, and the risk list and legend open on demand. */
+  @media (max-width: 767px) {{
+    #header {{ flex-direction: column; padding: 10px 16px; gap: 4px; }}
+    #header h1 {{ font-size: 16px; }}
+    #header p {{ display: none; }}
+    #stats {{ white-space: normal; padding-top: 0; }}
+    #stats span {{ margin: 0 4px 0 0; }}
+    #toolbar {{ flex-direction: column; align-items: stretch; padding: 8px 16px; gap: 6px; }}
+    #toolbar .left, #toolbar .right {{ gap: 6px; }}
+    .chip {{ padding: 5px 8px; font-size: 11px; }}
+    #search {{ width: 100%; }}
+    #riskpanel {{ display: none; position: fixed; border-width: 1px; border-radius: 12px; }}
+    #riskpanel.open {{ display: block; }}
+    #riskpanel, #detail {{ top: auto; bottom: 108px; left: 16px; right: 16px; width: auto; max-height: 45vh; }}
+    #legend {{ bottom: 108px; left: 16px; right: auto; }}
+    #controls {{ gap: 6px; }}
+    #controls button {{ padding: 7px 10px; }}
+  }}
 </style>
 </head>
 <body>
@@ -78,7 +103,7 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
   </div>
   <div id="stats">
     <span>{total_agents} agents</span> | <span>{total_servers} servers</span> |
-    <span>{total_pkgs} packages</span> | <span>{total_vulns} CVEs</span>
+    <span>{total_pkgs} vulnerable packages</span> | <span>{total_vulns} CVEs</span>
   </div>
 </div>
 <div id="toolbar">
@@ -99,7 +124,7 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
     <input id="search" type="search" placeholder="Search CVE, package, server, agent" oninput="searchNodes(this.value)">
   </div>
 </div>
-<div id="cy"></div>
+<div id="main">
 <div id="riskpanel" class="panel">
   <div class="inner">
     <h2>Top risky paths</h2>
@@ -111,9 +136,12 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
     <div id="findingList"></div>
   </div>
 </div>
+<div id="cy"></div>
+</div>
 <div id="legend" class="panel">
   <div><span class="dot" style="background:#4a9eff"></span> Provider</div>
   <div><span class="dot" style="background:#2ea043"></span> Agent</div>
+  <div><span class="dot" style="background:#818cf8"></span> Agent framework</div>
   <div><span class="dot" style="background:#6e7681"></span> Server (clean)</div>
   <div><span class="dot" style="background:#f85149"></span> Server (vulnerable)</div>
   <div><span class="dot" style="background:#d29922"></span> Server (credentials)</div>
@@ -132,6 +160,8 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
   </div>
 </div>
 <div id="controls">
+  <button class="panel-toggle" id="toggle-riskpanel" onclick="togglePanel('riskpanel')">Risks</button>
+  <button class="panel-toggle" id="toggle-legend" onclick="togglePanel('legend')">Legend</button>
   <button onclick="focusTopRisk()">Top risk</button>
   <button onclick="fitAll()">Fit all</button>
   <button onclick="cy.zoom(cy.zoom()*1.2);cy.center()">+</button>

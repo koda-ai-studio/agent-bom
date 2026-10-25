@@ -68,6 +68,7 @@ _READS = frozenset(
         "attack_paths",
         "snapshot_attack_paths",
         "snapshot_queue_page",
+        "snapshot_path_summary",
         "snapshot_cross_vendor_page",
         "incident_edges_page",
         "node_context",

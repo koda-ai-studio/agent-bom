@@ -18,6 +18,7 @@ from agent_bom.core.errors import (
 )
 from agent_bom.core.versions.osv import is_release_range, range_limits, range_match_state, range_windows
 from agent_bom.core.versions.osv import is_valid_fix_version as is_valid_fix_version
+from agent_bom.cpe_match import cpe_identity
 from agent_bom.enrichment_posture import enrichment_source_available, record_enrichment_source
 from agent_bom.http_client import OfflineModeError, create_client, request_with_retry
 from agent_bom.models import Package
@@ -297,6 +298,37 @@ def _record_unavailable_osv(packages: list[Package], reason: str) -> None:
     )
 
 
+def _log_non_osv_package(pkg: Package, eco_key: str, non_osv_ecosystems: Any) -> None:
+    """Say why a package is not sent to OSV, at the level that matches whether anything else covers it."""
+    if eco_key in non_osv_ecosystems:
+        _logger.debug(
+            "Skipping package %s/%s: ecosystem %r is not OSV-queryable (handled by other pipeline)",
+            pkg.ecosystem,
+            pkg.name,
+            pkg.ecosystem,
+        )
+    elif cpe_identity(pkg) is not None:
+        _logger.debug(
+            "Not querying OSV for %s/%s: no OSV ecosystem; matched by CPE %s against the local advisory DB",
+            pkg.ecosystem,
+            pkg.name,
+            pkg.cpe,
+        )
+    elif eco_key == "generic":
+        _logger.warning(
+            "Package %s/%s has no OSV ecosystem and no CPE identity; only opt-in CPE name matching can find advisories for it",
+            pkg.ecosystem,
+            pkg.name,
+        )
+    else:
+        _logger.warning(
+            "Skipping package %s/%s: unknown ecosystem %r — add to ECOSYSTEM_MAP or _NON_OSV_ECOSYSTEMS",
+            pkg.ecosystem,
+            pkg.name,
+            pkg.ecosystem,
+        )
+
+
 async def query_osv_batch_impl(
     packages: list[Package],
     *,
@@ -325,20 +357,7 @@ async def query_osv_batch_impl(
         eco_key = pkg.ecosystem.lower()
         osv_ecosystems = osv_ecosystems_for_package(pkg)
         if not osv_ecosystems:
-            if eco_key in non_osv_ecosystems:
-                _logger.debug(
-                    "Skipping package %s/%s: ecosystem %r is not OSV-queryable (handled by other pipeline)",
-                    pkg.ecosystem,
-                    pkg.name,
-                    pkg.ecosystem,
-                )
-            else:
-                _logger.warning(
-                    "Skipping package %s/%s: unknown ecosystem %r — add to ECOSYSTEM_MAP or _NON_OSV_ECOSYSTEMS",
-                    pkg.ecosystem,
-                    pkg.name,
-                    pkg.ecosystem,
-                )
+            _log_non_osv_package(pkg, eco_key, non_osv_ecosystems)
             skipped_ecosystems[eco_key] = skipped_ecosystems.get(eco_key, 0) + 1
             bump_scan_perf("skipped_non_osv_ecosystems", 1)
             continue

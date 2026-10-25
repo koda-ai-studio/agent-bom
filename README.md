@@ -136,6 +136,10 @@ Follow a public API gateway into a vulnerable workload, its role and a PII bucke
 
 ## Open the sample graph
 
+[Try the demo in your browser](https://koda-ai-studio.github.io/agent-bom/demo/): a read-only copy of the UI on
+labelled sample data, with no install and no backend. Scans, settings and
+sign-in are turned off there. To open the same graph locally:
+
 ```bash
 pip install 'agent-bom[ui]==0.110.0'
 agent-bom quickstart --run --offline

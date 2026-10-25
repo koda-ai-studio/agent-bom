@@ -1,9 +1,10 @@
+import { ASSET_BASE } from "@/lib/asset-base";
 import type { AgentSource } from "@/lib/agent-source";
 
 type RepositoryInput = { nodeType: string; entityType?: string | undefined; attributes?: Record<string, unknown> | undefined };
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
 const HOSTS: Record<string, AgentSource> = {
-  github: { id: "github", label: "GitHub", src: "/logos/github.svg", monogram: "GH", accent: "#70809c" },
+  github: { id: "github", label: "GitHub", src: `${ASSET_BASE}/logos/github.svg`, monogram: "GH", accent: "#70809c" },
   gitlab: { id: "gitlab", label: "GitLab", src: null, monogram: "GL", accent: "#70809c" },
   bitbucket: { id: "bitbucket", label: "Bitbucket", src: null, monogram: "BB", accent: "#70809c" },
 };

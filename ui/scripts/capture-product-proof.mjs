@@ -3,14 +3,15 @@ import { auditRenderedGraph } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { gunzipSync } from "node:zlib";
 import { once } from "node:events";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./product-proof-scope.mjs";
 import { waitForOwnedServer } from "./product-proof-server.mjs";
+import { CREATED_AT, intelSourcesFixture, loadOverviewProof } from "./product-proof-fixtures.mjs";
 import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
 import {
@@ -50,10 +51,9 @@ function advisory(id) {
   if (!item) throw new Error(`Gallery advisory is not verified: ${id}`);
   return item;
 }
-const overviewProof = JSON.parse(gunzipSync(await fs.readFile(path.join(UI_ROOT, "fixtures/overview-proof.json.gz"))).toString());
+const overviewProof = await loadOverviewProof();
 const UI_PACKAGE = JSON.parse(await fs.readFile(path.join(UI_ROOT, "package.json"), "utf8"));
 const RELEASE_VERSION = UI_PACKAGE.version;
-const CREATED_AT = "2026-06-03T20:30:00Z";
 const SCAN_ID = "scan-proof-ai-platform";
 const PREVIOUS_SCAN_ID = "scan-proof-ai-platform-prev";
 const SCENARIO_ID = "scenario-private-service-endpoint";
@@ -1580,12 +1580,9 @@ async function fulfill(route, body, status = 200) {
   });
 }
 
-async function installRoutes(page, fixtureGraph = graph) {
+export async function installRoutes(page, fixtureGraph = graph) {
   const graph = fixtureGraph;
-  // The offline fixture has no successful feed-run receipt; freshness stays unknown.
-  await page.route("**/v1/intel/sources", (route) => fulfill(route, {
-    schema_version: "intel.sources.v1", sources: [], count: 0,
-  }));
+  await page.route("**/v1/intel/sources", (route) => fulfill(route, intelSourcesFixture()));
   // Canonical persisted neighborhood fixture. IDs and edges come from the same
   // demo snapshot used by the other graph surfaces; no label-based joins.
   const generation = "0123456789abcdef0123456789abcdef";
@@ -4057,7 +4054,11 @@ function checkAdvisoryFixtures() {
   }
 }
 checkAdvisoryFixtures();
-(process.argv.includes("--check-fixtures") ? Promise.resolve() : main()).catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+export { overviewProof };
+// Importable by the static demo generator, which reuses these fixture routes.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  (process.argv.includes("--check-fixtures") ? Promise.resolve() : main()).catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

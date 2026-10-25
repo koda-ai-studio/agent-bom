@@ -59,8 +59,15 @@ def db_cmd() -> None:
     "--max-nvd-entries",
     type=int,
     default=None,
-    help="Cap NVD records read per run (default: whole window with NVD_API_KEY, 60,000 without).",
+    help="Cap NVD records read per run (default: whole window with NVD_API_KEY, 60,000 without) and keyless CVSS lookups (default 50).",
     hidden=True,
+)
+@click.option(
+    "--nvd-time-budget",
+    type=click.FloatRange(min=0),
+    default=None,
+    help="Seconds the NVD sync may run before stopping as PARTIAL and resuming next time "
+    "(default: 480 without NVD_API_KEY, unlimited with it; env AGENT_BOM_NVD_TIME_BUDGET_SECONDS; 0 = no limit).",
 )
 @click.option(
     "--osv-ecosystem",
@@ -82,6 +89,7 @@ def db_update(
     max_osv_entries: int,
     max_ghsa_entries: int,
     max_nvd_entries: int | None,
+    nvd_time_budget: float | None,
     osv_ecosystems: tuple,
     ghsa_ecosystems: tuple,
 ) -> None:
@@ -104,8 +112,10 @@ def db_update(
     by advisory ID.
     """
     from rich.console import Console
-    from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeElapsedColumn
+    from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
+    from agent_bom.cli._db_progress import SyncProgress, progress_note
+    from agent_bom.core.settings import env_opt
     from agent_bom.db.sync import DEFAULT_SYNC_SOURCES, sync_db
 
     con = Console()
@@ -119,11 +129,9 @@ def db_update(
             "Coverage is limited to the selected OSV ecosystem(s): "
             f"{', '.join(osv_ecosystems)}. Other ecosystems remain uncovered for offline scans."
         )
-    elif "osv" in selected_sources:
-        con.print("The OSV all-ecosystems archive can exceed 1 GB and take several minutes; live progress follows.")
+    for note in progress_note(selected_sources, osv_ecosystems, nvd_keyless=not env_opt("NVD_API_KEY")):
+        con.print(note)
 
-    tasks: dict[str, TaskID] = {}
-    downloaded: dict[str, int] = {}
     renderer = Progress(
         SpinnerColumn(),
         TextColumn("{task.description}"),
@@ -133,31 +141,7 @@ def db_update(
         console=con,
         transient=False,
     )
-
-    def _format_mb(value: int) -> str:
-        return f"{value / (1024 * 1024):.1f} MB"
-
-    def _progress(source: str, phase: str, current: int, total: int | None) -> None:
-        if phase == "download":
-            downloaded[source] = current
-        if not con.is_terminal:
-            if phase == "start":
-                con.print(f"  [cyan]→[/cyan] {source}: starting")
-            elif phase in _DONE_MARKS:
-                size = f"; downloaded {_format_mb(downloaded[source])}" if source in downloaded else ""
-                con.print(f"  {_DONE_MARKS[phase]} {source}: {phase}{size}")
-            return
-
-        task_id = tasks.get(source)
-        if task_id is None:
-            task_id = renderer.add_task(f"{source}: starting", total=None)
-            tasks[source] = task_id
-        if phase == "download":
-            renderer.update(task_id, description=f"{source}: downloading", completed=current, total=total)
-        elif phase in _DONE_MARKS:
-            byte_count = downloaded.get(source, 1)
-            renderer.update(task_id, description=f"{source}: {phase}", completed=byte_count, total=byte_count)
-            renderer.stop_task(task_id)
+    _progress = SyncProgress(con, renderer)
 
     try:
         with renderer:
@@ -167,6 +151,7 @@ def db_update(
                 max_osv_entries=max_osv_entries,
                 max_ghsa_entries=max_ghsa_entries,
                 max_nvd_entries=max_nvd_entries,
+                nvd_time_budget=nvd_time_budget,
                 osv_ecosystems=list(osv_ecosystems) if osv_ecosystems else None,
                 ghsa_ecosystems=list(ghsa_ecosystems) if ghsa_ecosystems else None,
                 progress=_progress,
@@ -179,7 +164,7 @@ def db_update(
     con.print("[bold green]Done.[/bold green]")
 
 
-_DONE_MARKS = {"complete": "[green]✓[/green]", "partial": "[yellow]![/yellow]"}
+from agent_bom.cli._db_progress import DONE_MARKS as _DONE_MARKS  # noqa: E402
 
 
 def _print_sync_results(con: Console, db_path: Path | None, results: dict) -> None:
@@ -198,6 +183,13 @@ def _print_sync_results(con: Console, db_path: Path | None, results: dict) -> No
     for src, count in results.items():
         con.print(f"  {_DONE_MARKS['partial' if src == 'nvd' and partial else 'complete']} {src}: {count:,} records")
     if not partial:
+        return
+    if meta.get("partial_reason") == "time_budget":
+        con.print(
+            f"  [yellow]![/yellow] nvd: PARTIAL (time_budget) — stopped at the {meta.get('time_budget_seconds') or 0:g}-second "
+            "time budget with the window checkpoint saved; run `agent-bom db update --source nvd` again to resume, "
+            "or raise --nvd-time-budget / AGENT_BOM_NVD_TIME_BUDGET_SECONDS (0 = no limit)."
+        )
         return
     con.print(
         f"  [yellow]![/yellow] nvd: PARTIAL ({meta.get('partial_reason')}) — this is not a complete NVD window; "

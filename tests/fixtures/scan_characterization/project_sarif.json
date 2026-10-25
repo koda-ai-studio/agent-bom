@@ -25,6 +25,50 @@
      }
     ],
     "properties": {
+     "mcp_audit_coverage": [
+      {
+       "agent_name": "project:proj",
+       "authorization_bypass": {
+        "reason": "Authentication checks inspect configuration only.",
+        "status": "not_assessed"
+       },
+       "permission_scope": {
+        "basis": "agent_type_heuristic",
+        "expected_capabilities": null,
+        "reason": "Missing tool descriptors or expected capability profile.",
+        "status": "not_assessed"
+       },
+       "prompts": {
+        "discovered": 0,
+        "inspected": 0,
+        "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+        "status": "configuration_only"
+       },
+       "rendered_prompts": {
+        "reason": "Audit does not render prompts.",
+        "status": "not_inspected"
+       },
+       "resource_content": {
+        "reason": "General resource-body injection inspection was not performed.",
+        "status": "not_inspected"
+       },
+       "resources": {
+        "discovered": 0,
+        "inspected": 0,
+        "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+        "status": "configuration_only"
+       },
+       "server_canonical_id": "<UUID>",
+       "server_identity": "<UUID>",
+       "server_name": "filesystem",
+       "tools": {
+        "discovered": 0,
+        "inspected": 0,
+        "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+        "status": "configuration_only"
+       }
+      }
+     ],
      "scan_outcome": "partial"
     },
     "results": [],

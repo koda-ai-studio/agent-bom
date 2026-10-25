@@ -10,6 +10,7 @@ import { ActivityStreamError, gatewayActivityPage, mergeActivity, streamGatewayA
 
 import { ActivityRows } from "./GatewayActivityRows";
 import { ActivityWindow } from "./GatewayActivityWindow";
+import { nowForRelativeTime } from "@/lib/relative-clock";
 
 const messages = {
   connecting: "Connecting to durable activity…",
@@ -90,7 +91,7 @@ function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSea
     setState("connecting"); setEpoch(value => value + 1);
   };
   const receiptTime = events[0]?.ingested_at;
-  const staleReceipt = Boolean(receiptTime && Date.now() - Date.parse(receiptTime) > 120000);
+  const staleReceipt = Boolean(receiptTime && nowForRelativeTime() - Date.parse(receiptTime) > 120000);
   const displayed = frozen ?? events;
   const visible = displayed.filter(row => (!filter || (filter === "deny" ? row.decision === "deny" : filter === "data" ? /dlp|visual/.test(row.event_type) : row.event_type.includes(filter))) &&
     [row.agent_id, row.tool, row.upstream, row.reason_code].join(" ").toLowerCase().includes(search.toLowerCase()));

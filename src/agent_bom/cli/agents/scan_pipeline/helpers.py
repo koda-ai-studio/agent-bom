@@ -10,6 +10,7 @@ import click
 from agent_bom.cli.agents._context import ScanContext
 from agent_bom.cli.agents._output import render_output
 from agent_bom.cli.agents._posture import render_posture_summary
+from agent_bom.cli.agents.scan_pipeline.context_evidence import attach_context_evidence
 from agent_bom.core.settings import env_first, env_raw, env_str
 from agent_bom.models import AIBOMReport
 from agent_bom.scanners import IncompleteScanError
@@ -125,6 +126,8 @@ def _exit_incomplete_scan_with_partial_summary(
     """Render discovered inventory before exiting an incomplete scan."""
     ctx.blast_radii = []
     ctx.report = _incomplete_scan_report(agents, exc)
+    # Discovery evidence is complete even when vulnerability data is not.
+    attach_context_evidence(ctx.report, ctx)
     explicit_output_target = _scan_output_target_was_explicit()
     machine_stdout = explicit_output_target and output_format != "console" and output in (None, "", "-")
     if not machine_stdout:

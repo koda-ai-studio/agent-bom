@@ -81,6 +81,23 @@ class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
             rows = conn.execute(sql + " ORDER BY rank_index", params).fetchall()
         return StoredPathSet(effective_scan_id, created_at, [path_from_json(item[0]) for item in rows])
 
+    def snapshot_path_summary(self, *, tenant_id: str = "", scan_id: str = "") -> tuple[int, float] | None:
+        """``(path count, max composite risk)`` of the queue index, or ``None`` without a current index."""
+        tenant_id = normalize_graph_tenant_id(tenant_id)
+        effective_scan_id = scan_id or self.latest_snapshot_id(tenant_id=tenant_id)
+        if not effective_scan_id:
+            return None
+        key = (tenant_id, effective_scan_id)
+        with _tenant_connection(self._pool) as conn:
+            row = conn.execute("SELECT analysis_status FROM graph_snapshots WHERE tenant_id = %s AND scan_id = %s", key).fetchone()
+            if row is None or not stored_paths_current(_decode_json_object(row[0], field="graph snapshot analysis status")):
+                return None
+            summary = conn.execute(
+                "SELECT COUNT(*), COALESCE(MAX(composite_risk), 0.0) FROM graph_attack_paths WHERE tenant_id = %s AND scan_id = %s", key
+            ).fetchone()
+        count, max_risk = summary or (0, 0.0)
+        return int(count), float(max_risk)
+
     def snapshot_queue_page(
         self,
         *,
