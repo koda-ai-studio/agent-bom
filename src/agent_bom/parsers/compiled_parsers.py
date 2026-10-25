@@ -28,6 +28,23 @@ from agent_bom.parsers.gradle_packages import parse_gradle_packages as parse_gra
 # Versions that require crates.io resolution
 
 
+_GO_REPLACE_BLOCK_RE = re.compile(r"^replace[ \t]*\(([^)]*)\)", re.MULTILINE)
+_GO_REPLACE_SINGLE_RE = re.compile(r"^replace[ \t]+([^(\s][^\n]*)$", re.MULTILINE)
+_GO_REPLACE_SPEC_RE = re.compile(r"^(\S+)(?:[ \t]+\S+)?[ \t]+=>[ \t]+(\S+)(?:[ \t]+(\S+))?$")
+
+
+def _go_replace_directives(content: str) -> dict[str, tuple[str, str]]:
+    """``old -> (new, version)``; a local-path replacement has an empty version."""
+    specs = [line for block in _GO_REPLACE_BLOCK_RE.finditer(content) for line in block.group(1).splitlines()]
+    specs.extend(match.group(1) for match in _GO_REPLACE_SINGLE_RE.finditer(content))
+    replacements: dict[str, tuple[str, str]] = {}
+    for spec in specs:
+        match = _GO_REPLACE_SPEC_RE.match(spec.split("//", 1)[0].strip())
+        if match:
+            replacements[match.group(1)] = (match.group(2), match.group(3) or "")
+    return replacements
+
+
 def _parse_go_mod_requires(
     go_mod: Path,
 ) -> tuple[dict[str, str], dict[str, str], dict[str, tuple[str, str]]]:
@@ -63,7 +80,6 @@ def _parse_go_mod_requires(
     # that, offline, was treated as DB-uncovered and silently dropped the whole
     # report. ``[ \t]+`` keeps the match on one line and skips the block opener.
     single_re = re.compile(r"^require[ \t]+(\S+)[ \t]+(\S+)([^\n]*)$", re.MULTILINE)
-    replace_re = re.compile(r"^replace\s+(\S+)(?:\s+\S+)?\s+=>\s+(\S+)\s+(\S+)", re.MULTILINE)
 
     # Block-style: require ( ... )
     for block in block_re.finditer(content):
@@ -83,10 +99,7 @@ def _parse_go_mod_requires(
         mod, ver, rest = m.group(1), m.group(2), m.group(3)
         (indirect if "indirect" in rest else direct)[mod] = ver
 
-    # Replace directives: replace old => new version
-    for m in replace_re.finditer(content):
-        old_mod, new_mod, new_ver = m.group(1), m.group(2), m.group(3)
-        replace_map[old_mod] = (new_mod, new_ver)
+    replace_map.update(_go_replace_directives(content))
 
     return direct, indirect, replace_map
 
@@ -205,11 +218,9 @@ def parse_go_packages(
     all_mods: dict[str, tuple[str, bool]] = {}
     for source_map, is_direct in ((direct, True), (indirect_mods, False)):
         for mod, ver in source_map.items():
-            if mod in replace_map:
-                new_mod, new_ver = replace_map[mod]
-                all_mods[new_mod] = (new_ver, is_direct)
-            else:
-                all_mods[mod] = (ver, is_direct)
+            target, target_ver = replace_map.get(mod, (mod, ver))
+            if target_ver:
+                all_mods[target] = (target_ver, is_direct)
 
     if all_mods:
         packages = []
