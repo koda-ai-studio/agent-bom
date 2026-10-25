@@ -489,6 +489,18 @@ def _assert_no_unmanaged_version_drift(version: str) -> None:
         )
 
 
+def _assert_openclaw_versions(version: str, published: str) -> None:
+    for skill in sorted((ROOT / "integrations" / "openclaw").rglob("SKILL.md")):
+        _assert_versions(skill, re.compile(r"^version:\s*([0-9]+\.[0-9]+\.[0-9]+)$", re.M), version, "OpenClaw skill frontmatter version")
+        text = skill.read_text()
+        docker_versions = set(OPENCLAW_DOCKER_PIN.findall(text))
+        verify_versions = set(re.findall(r"agent-bom verify agent-bom@([0-9]+\.[0-9]+\.[0-9]+)", text))
+        if docker_versions and docker_versions != {published}:
+            _fail(f"{skill.relative_to(ROOT)} has stale OpenClaw Docker pin(s): {sorted(docker_versions)} != published {published}")
+        if verify_versions and verify_versions != {published}:
+            _fail(f"{skill.relative_to(ROOT)} has stale OpenClaw verify pin(s): {sorted(verify_versions)} != published {published}")
+
+
 def main() -> int:
     try:
         registry_manifest = check_local_identity(ROOT)
@@ -664,15 +676,7 @@ def main() -> int:
     ui_lock_versions = {ui_lock.get("version"), ui_lock.get("packages", {}).get("", {}).get("version")}
     if ui_lock_versions != {version}:
         _fail(f"ui/package-lock.json has stale root package version(s): {sorted(ui_lock_versions)} != {version}")
-    for skill in sorted((ROOT / "integrations" / "openclaw").rglob("SKILL.md")):
-        _assert_versions(skill, re.compile(r"^version:\s*([0-9]+\.[0-9]+\.[0-9]+)$", re.M), version, "OpenClaw skill frontmatter version")
-        text = skill.read_text()
-        docker_versions = set(OPENCLAW_DOCKER_PIN.findall(text))
-        verify_versions = set(re.findall(r"agent-bom verify agent-bom@([0-9]+\.[0-9]+\.[0-9]+)", text))
-        if docker_versions and docker_versions != {version}:
-            _fail(f"{skill.relative_to(ROOT)} has stale OpenClaw Docker pin(s): {sorted(docker_versions)} != {version}")
-        if verify_versions and verify_versions != {version}:
-            _fail(f"{skill.relative_to(ROOT)} has stale OpenClaw verify pin(s): {sorted(verify_versions)} != {version}")
+    _assert_openclaw_versions(version, published)
     for path in MANAGED_ACTION_REFS:
         text = path.read_text()
         action_versions = set(re.findall(r"(?:msaad00|koda-ai-studio)/agent-bom@v([0-9]+\.[0-9]+\.[0-9]+)", text))

@@ -96,6 +96,11 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         re.compile(r"(ghcr\.io/(?:koda-ai-studio|msaad00)/agent-bom(?:-[a-z]+)?:)(\d+\.\d+\.\d+)"),
         "image",
     ),
+    ManagedPattern(
+        "release verification pin",
+        re.compile(r"(agent-bom verify agent-bom@)(\d+\.\d+\.\d+)"),
+        "published",
+    ),
     # A pip install of a release; uvx `--from` pins and the plugin launcher's
     # `dependencies` pin have their own patterns.
     ManagedPattern(
