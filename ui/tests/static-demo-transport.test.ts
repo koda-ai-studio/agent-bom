@@ -25,10 +25,29 @@ describe("static demo transport", () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const { get } = await loadTransport();
-    await expect(get("/v1/overview?x=1")).resolves.toEqual({ ok: true });
+    await expect(get("/v1/overview")).resolves.toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const url = String((fetchMock.mock.calls[0] as unknown[])[0]);
     expect(url.startsWith("/agent-bom/demo/demo-data/v1_overview.json")).toBe(true);
+  });
+
+  it("reads the query-specific file first and falls back to the path file", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STATIC_DEMO", "1");
+    const { staticDemoQueryKey } = await import("@/lib/static-demo-key.mjs");
+    expect(staticDemoQueryKey("/v1/inventory/summary?type=package")).toBe(staticDemoQueryKey("/v1/inventory/summary?type=package"));
+    expect(staticDemoQueryKey("/v1/a?x=1&y=2")).toBe(staticDemoQueryKey("/v1/a?y=2&x=1"));
+    expect(staticDemoQueryKey("/v1/a?x=1")).not.toBe(staticDemoQueryKey("/v1/a?x=2"));
+    expect(staticDemoQueryKey("/v1/a")).toBeNull();
+    const fetchMock = vi.fn(async (url: string) => url.includes("__q")
+      ? new Response("", { status: 404 })
+      : new Response(JSON.stringify({ scope: "all" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { get } = await loadTransport();
+    await expect(get("/v1/inventory/summary?type=package")).resolves.toEqual({ scope: "all" });
+    expect(fetchMock.mock.calls.map((call) => String((call as unknown[])[0]).split("?")[0])).toEqual([
+      `/demo-data/${staticDemoQueryKey("/v1/inventory/summary?type=package")}.json`,
+      "/demo-data/v1_inventory_summary.json",
+    ]);
   });
 
   it("refuses writes with the read-only message and makes no request", async () => {
