@@ -36,7 +36,9 @@ describe("product-proof overview fixture", () => {
     const synced = sources.filter((source) => source.enabled && source.feed_run.status === "synced");
     expect(synced.map((source) => source.source_id).sort()).toEqual(["cisa_kev", "epss", "ghsa", "nvd", "osv"]);
     for (const source of synced) expect(source.feed_run.last_synced).toBe(CREATED_AT);
-    for (const source of sources.filter((item) => item.feed_run.status !== "synced")) {
+    // Feeds the sample estate never uses are disabled, so the overview reads "5 enabled · All synced".
+    expect(sources.filter((source) => source.enabled)).toEqual(synced);
+    for (const source of sources.filter((item) => !item.enabled)) {
       expect(source.feed_run).toMatchObject({ status: "freshness_unknown", last_synced: null });
     }
   });

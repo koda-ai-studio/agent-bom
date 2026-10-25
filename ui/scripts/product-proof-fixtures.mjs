@@ -49,8 +49,8 @@ export async function loadOverviewProof() {
 
 const INTEL_CATALOG = JSON.parse(readFileSync(path.join(UI_ROOT, "fixtures/intel-sources.json"), "utf8"));
 const GALLERY_ADVISORIES = JSON.parse(readFileSync(path.join(UI_ROOT, "fixtures/gallery-advisories.json"), "utf8")).advisories;
-// The bundled sample is matched with these feeds; vendor and distro feeds stay unsynced.
-const SAMPLE_FEEDS = new Set(["osv", "ghsa", "nvd", "epss", "cisa_kev"]);
+// The bundled sample is matched with these feeds; the rest of the catalog is disabled.
+const SAMPLE_FEEDS = new Set(INTEL_CATALOG.sample_feeds);
 
 /** `GET /v1/intel/sources` for the sample estate, in the product's catalog order and shape. */
 export function intelSourcesFixture(syncedAt = CREATED_AT) {
@@ -58,6 +58,7 @@ export function intelSourcesFixture(syncedAt = CREATED_AT) {
     const synced = SAMPLE_FEEDS.has(source.source_id);
     return {
       ...source,
+      enabled: synced,
       feed_run: {
         sync_meta_source,
         status: synced ? "synced" : "freshness_unknown",

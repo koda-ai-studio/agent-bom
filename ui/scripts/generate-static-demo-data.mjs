@@ -15,6 +15,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { installRoutes, overviewProof } from "./capture-product-proof.mjs";
+import { CREATED_AT } from "./product-proof-fixtures.mjs";
 import { staticDemoDataKey, staticDemoQueryKey } from "../lib/static-demo-key.mjs";
 import { startStaticDemoServer } from "./static-demo-server.mjs";
 
@@ -139,6 +140,8 @@ async function main() {
     const included = routes.filter((route) => complete(route) && (!redirects.has(route) || complete(redirects.get(route))));
     await fs.writeFile(path.join(dataDir, "routes.json"), JSON.stringify({
       schema_version: "static-demo-routes.v1",
+      // The sample data is dated at this snapshot; the UI measures ages from it.
+      snapshot_at: CREATED_AT,
       routes: included,
       excluded: routes.filter((route) => !included.includes(route)),
     }, null, 2));
