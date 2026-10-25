@@ -22,6 +22,7 @@ from agent_bom.mcp_tools.dispatch import ToolErrorPayload as ToolErrorPayload
 from agent_bom.mcp_tools.dispatch import record_completion as _record_completion
 from agent_bom.mcp_tools.dispatch import resolve_tool_path as resolve_tool_path
 from agent_bom.mcp_tools.dispatch import tool_result_error as tool_result_error
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 from agent_bom.security import sanitize_log_label
 
 _ToolReturn = TypeVar("_ToolReturn")
@@ -659,6 +660,12 @@ async def execute_tool_async(
         )
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - start) * 1000)
+        refusal = retryable_estate_refusal(exc)
+        if refusal is not None:
+            _record_completion(
+                tool_name, refusal, elapsed_ms, request_meta, log_caller, record_tool_metric_fn, record_tool_request_fn, logger
+            )
+            return ToolErrorPayload(truncate_response_fn(refusal))
         sanitized = _log_value(sanitize_error_fn(exc), max_len=200)
         record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=False, error=sanitized)
         record_tool_request_fn(
@@ -784,6 +791,12 @@ async def execute_tool_sync_async(
             )
         except Exception as exc:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
+            refusal = retryable_estate_refusal(exc)
+            if refusal is not None:
+                _record_completion(
+                    tool_name, refusal, elapsed_ms, request_meta, log_caller, record_tool_metric_fn, record_tool_request_fn, logger
+                )
+                return truncate_response_fn(refusal)
             sanitized = _log_value(sanitize_error_fn(exc), max_len=200)
             record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=False, error=sanitized)
             record_tool_request_fn(

@@ -24,6 +24,7 @@ from agent_bom.mcp_errors import (
     mcp_error_json,
 )
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,10 @@ async def inventory_summary_impl(
         if exc.status_code == 404 and scan_id is None:
             return _encode(inventory_service.empty_summary(tenant_id=tenant_id), _truncate_response)
         return _inventory_error(exc)
-    except Exception:
+    except Exception as exc:
+        refusal = retryable_estate_refusal(exc)
+        if refusal is not None:
+            return refusal
         logger.exception("MCP inventory_summary error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, "An internal error has occurred.")
 
@@ -133,7 +137,10 @@ async def inventory_list_impl(
         return _encode(payload, _truncate_response)
     except inventory_service.InventoryError as exc:
         return _inventory_error(exc)
-    except Exception:
+    except Exception as exc:
+        refusal = retryable_estate_refusal(exc)
+        if refusal is not None:
+            return refusal
         logger.exception("MCP inventory_list error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, "An internal error has occurred.")
 
@@ -180,6 +187,9 @@ async def inventory_asset_impl(
         return _encode(payload, _truncate_response)
     except inventory_service.InventoryError as exc:
         return _inventory_error(exc)
-    except Exception:
+    except Exception as exc:
+        refusal = retryable_estate_refusal(exc)
+        if refusal is not None:
+            return refusal
         logger.exception("MCP inventory_asset error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, "An internal error has occurred.")

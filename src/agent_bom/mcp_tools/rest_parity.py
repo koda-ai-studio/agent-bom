@@ -19,6 +19,7 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_ARGUMENT,
     mcp_error_json,
 )
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 
 API_EXTRA_REQUIRED = "This tool reads the control-plane API's persisted evidence; install agent-bom[api] to enable it."
 
@@ -58,7 +59,11 @@ def tenant_request(tenant_id: str, path: str, query: dict[str, Any] | None = Non
     )
 
 
-def _error_for_status(status: int, detail: Any) -> str:
+def _error_for_status(exc: Any) -> str:
+    refusal = retryable_estate_refusal(exc)
+    if refusal is not None:
+        return refusal
+    status, detail = exc.status_code, exc.detail
     message = detail if isinstance(detail, str) else "The request was rejected."
     if status == 404:
         return mcp_error_json(CODE_NOT_FOUND_RESOURCE, message)
@@ -74,10 +79,12 @@ async def call_route(route_name: str, *, tenant_id: str, path: str, **params: An
     reads = api_reads()
     if reads is None:
         return None, api_unavailable()
+    from starlette.exceptions import HTTPException
+
     try:
         return await reads.call_read(route_name, tenant_request(tenant_id, path, params), **params), None
-    except reads.HTTPException as exc:
-        return None, _error_for_status(exc.status_code, exc.detail)
+    except HTTPException as exc:
+        return None, _error_for_status(exc)
 
 
 __all__ = ["API_EXTRA_REQUIRED", "api_reads", "api_unavailable", "call_route", "tenant_request"]
