@@ -17,7 +17,7 @@ You need [uv](https://docs.astral.sh/uv/) on `PATH`. No account or API key is ne
 | Skill | What it does |
 |---|---|
 | `checkup` | Start here: one screen with a verdict, totals, and the three fixes that matter most, from the inventory, a configuration audit and a scan. |
-| `affected` | Am I affected? Says which packages, servers and agents on this machine carry a CVE, GHSA or OSV id, with the fixed version. |
+| `affected` | Am I affected? Says which packages, servers and agents carry a CVE, GHSA or OSV id with the version to patch to, which distro packages are possibly affected (verify the distribution's advisory), and what was scanned. |
 | `bom` | Write an AI-BOM (CycloneDX or SPDX) for this machine, a project, an image, or an AWS, Azure or GCP account. |
 | `scan` | Scan this machine's MCP clients, or an image, SBOM or repository, for CVEs, malicious packages and credential reach. |
 | `check` | Vet a package or MCP server before adding it: CVEs, KEV, typosquats, fixed version. |
@@ -36,9 +36,12 @@ from the CLI of the pinned release:
 
 - The skills never collect live tool listings, so MCP servers are judged from
   their configuration and package metadata only.
-- `affected` matches the id against the scan's findings and their aliases;
-  there is no separate advisory lookup, so it cannot describe an advisory that
-  is not present on this machine.
+- `affected` matches the id against the scan's findings and their aliases,
+  and against an advisory an operator declared with `db advisory add`; there
+  is no separate advisory lookup, so it cannot describe an advisory that is not
+  present on this machine. `db advisory match` and possibly-affected distro
+  rows are available only on agent-bom releases after 0.110.0; on 0.110.0 the
+  skill skips that step and says so.
 - `audit-mcp` reports coding-agent permission findings, and `activity` works,
   only on agent-bom releases after 0.110.0. On 0.110.0, `activity` says the
   command is not available and stops.
@@ -61,6 +64,9 @@ from the CLI of the pinned release:
   - `cloud aws`, `cloud azure` and `cloud gcp`, from the `agent-bom[aws]`,
     `[azure]` or `[gcp]` extra (`bom`, only when you ask for a cloud BOM)
   - `where` (`inventory`, only to show which paths were checked)
+  - `db`, only as `db advisory match` (`affected`; it reads advisories an
+    operator already declared and the scan result it just wrote, with no
+    network calls)
 
   The skills tell you each command before running it. They never pass flags
   that write, connect or launch (`--apply`, `--open-pr`, `--live`,
