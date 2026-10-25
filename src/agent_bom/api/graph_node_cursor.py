@@ -38,7 +38,9 @@ def continue_node_cursor(cursor: str | None, generation: str | None) -> tuple[st
     return store_cursor, carried
 
 
-def node_page_continuation(requested_scan_id: str, cursor: str | None, generation: str | None) -> tuple[str | None, str | None]:
+def node_page_continuation(
+    requested_scan_id: str, cursor: str | None, generation: str | None, tenant_id: str
+) -> tuple[str | None, str | None]:
     """Admission for a ``/v1/graph`` node page: ``(store cursor, generation to pin)``."""
-    refuse_unpinned_read_while_seeding(requested_scan_id)
+    refuse_unpinned_read_while_seeding(requested_scan_id, tenant_id)
     return continue_node_cursor(cursor, generation)

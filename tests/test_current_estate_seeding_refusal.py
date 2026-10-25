@@ -121,3 +121,27 @@ def test_mcp_exposure_paths_refuses_while_seeding(client, seeding, monkeypatch):
     served = call()
     assert "error" not in served, served
     assert served["paths"], served
+
+
+@pytest.fixture()
+def marker_for():
+    from agent_bom.demo_estate import boot_seed
+
+    assert boot_seed._boot_seed_done.is_set()
+    yield lambda *tenants: boot_seed.mark_seed_started(tenants)
+    boot_seed.clear_seed_marker()
+
+
+@pytest.mark.parametrize(("method", "path", "params", "body"), UNPINNED_READS, ids=[f"{m} {p}" for m, p, _, _ in UNPINNED_READS])
+def test_a_seed_marker_for_another_tenant_never_refuses_this_one(client, marker_for, method, path, params, body):
+    marker_for("acme")
+    served = _call(client, method, path, params, body)
+    assert served.status_code == 200, served.text
+
+
+@pytest.mark.parametrize(("method", "path", "params", "body"), UNPINNED_READS, ids=[f"{m} {p}" for m, p, _, _ in UNPINNED_READS])
+def test_a_seed_marker_naming_this_tenant_refuses(client, marker_for, method, path, params, body):
+    marker_for(TENANT)
+    refused = _call(client, method, path, params, body)
+    assert refused.status_code == 503, refused.text
+    assert "current_estate_seeding" in refused.text
