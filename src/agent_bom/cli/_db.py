@@ -9,10 +9,16 @@ Commands:
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import click
 
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.db.sync import GHSA_ECOSYSTEMS, OSV_APPLICATION_ECOSYSTEMS
+
+if TYPE_CHECKING:
+    from rich.console import Console
 
 
 @click.group("db", cls=SuggestingGroup)
@@ -26,12 +32,13 @@ def db_cmd() -> None:
     "sources",
     multiple=True,
     type=click.Choice(["osv", "alpine", "debian", "epss", "kev", "ghsa", "nvd"], case_sensitive=False),
-    help="Which sources to sync (default: osv, alpine, debian, epss, kev). Repeatable. "
+    help="Which sources to sync (default: osv, alpine, debian, epss, kev, nvd). Repeatable. "
     "Use --source alpine to sync Alpine package secfix data from Alpine secdb. "
     "Use --source debian to sync the Debian Security Tracker (authoritative per-release "
     "status + backported fixes, including end-of-life releases such as buster/Debian 10). "
     "Use --source ghsa to sync GitHub Security Advisories (all ecosystems). "
-    "Use --source nvd to enrich unknown-severity CVEs from NVD (slow without NVD_API_KEY).",
+    "Use --source nvd to ingest CVEs NVD published or modified recently, with their CPE ranges "
+    "(14-day window without NVD_API_KEY, 120 days with it), and backfill unknown severities.",
 )
 @click.option("--path", "db_path", type=click.Path(), default=None, help="Override DB file path.")
 @click.option(
@@ -51,8 +58,8 @@ def db_cmd() -> None:
 @click.option(
     "--max-nvd-entries",
     type=int,
-    default=1000,
-    help="Limit NVD CVEs to enrich (default: 1000).",
+    default=None,
+    help="Cap NVD records read per run (default: whole window with NVD_API_KEY, 60,000 without).",
     hidden=True,
 )
 @click.option(
@@ -74,7 +81,7 @@ def db_update(
     db_path: str | None,
     max_osv_entries: int,
     max_ghsa_entries: int,
-    max_nvd_entries: int,
+    max_nvd_entries: int | None,
     osv_ecosystems: tuple,
     ghsa_ecosystems: tuple,
 ) -> None:
@@ -87,8 +94,8 @@ def db_update(
     Pass --source ghsa to also fetch GitHub Security Advisories across all supported
     ecosystems (pip, npm, go, maven, nuget, rubygems, cargo, composer, swift,
     pub, erlang, actions).
-    Pass --source nvd to enrich CVEs missing CVSS data from the NVD API (requires NVD_API_KEY
-    for reasonable speed; without a key the rate limit is 5 req/30s).
+    Pass --source nvd to ingest recently published/modified NVD CVEs with their CPE
+    ranges (14-day window keyless, 120 days with NVD_API_KEY); partial windows resume.
 
     Requires internet access. Use --osv-ecosystem for a smaller, explicitly
     scoped application-ecosystem archive. The OSV all-ecosystems archive can
@@ -96,17 +103,15 @@ def db_update(
     size. Repeat syncs download the selected archive again, then update records
     by advisory ID.
     """
-    from pathlib import Path
-
     from rich.console import Console
     from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeElapsedColumn
 
-    from agent_bom.db.sync import sync_db
+    from agent_bom.db.sync import DEFAULT_SYNC_SOURCES, sync_db
 
     con = Console()
     if sources and osv_ecosystems and "osv" not in {str(source).lower() for source in sources}:
         raise click.UsageError("--osv-ecosystem requires --source osv when --source is specified")
-    selected = list(sources) or (["osv"] if osv_ecosystems else ["osv", "alpine", "debian", "epss", "kev"])
+    selected = list(sources) or (["osv"] if osv_ecosystems else list(DEFAULT_SYNC_SOURCES))
     con.print(f"[bold]Syncing local vuln DB[/bold] — sources: {', '.join(selected)}")
     selected_sources = {str(source).lower() for source in selected}
     if "osv" in selected_sources and osv_ecosystems:
@@ -138,9 +143,9 @@ def db_update(
         if not con.is_terminal:
             if phase == "start":
                 con.print(f"  [cyan]→[/cyan] {source}: starting")
-            elif phase == "complete":
+            elif phase in _DONE_MARKS:
                 size = f"; downloaded {_format_mb(downloaded[source])}" if source in downloaded else ""
-                con.print(f"  [green]✓[/green] {source}: complete{size}")
+                con.print(f"  {_DONE_MARKS[phase]} {source}: {phase}{size}")
             return
 
         task_id = tasks.get(source)
@@ -149,9 +154,9 @@ def db_update(
             tasks[source] = task_id
         if phase == "download":
             renderer.update(task_id, description=f"{source}: downloading", completed=current, total=total)
-        elif phase == "complete":
+        elif phase in _DONE_MARKS:
             byte_count = downloaded.get(source, 1)
-            renderer.update(task_id, description=f"{source}: complete", completed=byte_count, total=byte_count)
+            renderer.update(task_id, description=f"{source}: {phase}", completed=byte_count, total=byte_count)
             renderer.stop_task(task_id)
 
     try:
@@ -170,9 +175,34 @@ def db_update(
         con.print(f"[red]Sync failed: {exc}[/red]")
         raise SystemExit(1) from exc
 
-    for src, count in results.items():
-        con.print(f"  [green]✓[/green] {src}: {count:,} records")
+    _print_sync_results(con, Path(db_path) if db_path else None, results)
     con.print("[bold green]Done.[/bold green]")
+
+
+_DONE_MARKS = {"complete": "[green]✓[/green]", "partial": "[yellow]![/yellow]"}
+
+
+def _print_sync_results(con: Console, db_path: Path | None, results: dict) -> None:
+    """Per-source record counts; a rate-limited, timed-out or capped NVD window is PARTIAL, never complete."""
+    from agent_bom.db.schema import DB_PATH, init_db
+    from agent_bom.db.sync_common import _read_sync_metadata
+
+    meta: dict = {}
+    if "nvd" in results:
+        conn = init_db(db_path or DB_PATH)
+        try:
+            meta = _read_sync_metadata(conn, "nvd")
+        finally:
+            conn.close()
+    partial = meta.get("status") == "partial"
+    for src, count in results.items():
+        con.print(f"  {_DONE_MARKS['partial' if src == 'nvd' and partial else 'complete']} {src}: {count:,} records")
+    if not partial:
+        return
+    con.print(
+        f"  [yellow]![/yellow] nvd: PARTIAL ({meta.get('partial_reason')}) — this is not a complete NVD window; "
+        "the next `agent-bom db update --source nvd` resumes from the last synced checkpoint."
+    )
 
 
 @db_cmd.command("status")
@@ -236,6 +266,8 @@ def db_status(db_path: str | None) -> None:
             coverage = str(metadata.get("coverage") or metadata.get("mode") or "—")
             if metadata.get("cap_hit"):
                 coverage = f"{coverage} [yellow](cap hit)[/yellow]"
+            if metadata.get("status") == "partial":
+                coverage = f"{coverage} [yellow]partial ({metadata.get('partial_reason')})[/yellow]"
             table.add_row(src, info.get("last_synced") or "—", f"{info.get('count', 0):,}", coverage)
         con.print(table)
     else:

@@ -14,6 +14,10 @@ Precedence and honesty rules:
   second finding.
 - A version the comparator cannot order is ``indeterminate`` and makes the
   result incomplete; it is never reported as clean.
+- A distro package that ships a ``cpe_product`` (``php8.2-cli`` for
+  ``php:php``) is never compared against upstream ranges, because distros
+  backport fixes. The distro feed record decides it when one exists;
+  otherwise it is ``indeterminate`` with reason ``distro_backport_unverified``.
 """
 
 from __future__ import annotations
@@ -23,14 +27,19 @@ import re
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from agent_bom.core.versions import compare_version_order
 from agent_bom.core.versions.osv import version_match_state
+from agent_bom.scanners.cpe_distro_packages import distro_ships_cpe_product
+
+if TYPE_CHECKING:
+    from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn
 
 OPERATOR_ADVISORY_PROVENANCE = "operator_advisory"
+DISTRO_BACKPORT_UNVERIFIED = "distro_backport_unverified"
 _ADVISORY_ID = re.compile(r"[A-Z][A-Z0-9]{1,15}-[A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
 _CPE_PRODUCT = re.compile(r"[a-z0-9_.\-~%]{1,64}:[a-z0-9_.\-~%]{1,64}")
 _VERSION = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+~_:\-]{0,63}")
@@ -159,6 +168,11 @@ class AdvisoryMatchResult:
     def complete(self) -> bool:
         return self.reports_examined > 0 and not self.indeterminate
 
+    @property
+    def blocking_indeterminate(self) -> list[dict[str, Any]]:
+        """Indeterminates a retry could resolve; a distro package awaiting its distro record is stable."""
+        return [row for row in self.indeterminate if row.get("reason") != DISTRO_BACKPORT_UNVERIFIED]
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "findings": self.findings,
@@ -237,6 +251,7 @@ class _ReportContext:
     scan_id: str
     observed_at: str | None
     provenance: str
+    distro_verdict: DistroVerdictFn | None = None
 
 
 def _finding(
@@ -260,6 +275,33 @@ def _finding(
     }
 
 
+def _distro_product(advisory: OperatorAdvisory, package: dict[str, Any]) -> str | None:
+    return next((p.cpe_product for p in advisory.affected if p.cpe_product and distro_ships_cpe_product(p.cpe_product, package)), None)
+
+
+def _match_distro_package(
+    advisory: OperatorAdvisory, package: dict[str, Any], product: str, asset: dict[str, str], ctx: _ReportContext, out: AdvisoryMatchResult
+) -> None:
+    label = f"{package['name']}@{package['version']}"
+    feed_id = _feed_id(advisory, package)
+    if feed_id:
+        out.superseded.append({"advisory_id": advisory.id, "feed_id": feed_id, "package": label})
+        return
+    verdict = ctx.distro_verdict(advisory.identifiers, package) if ctx.distro_verdict else None
+    if verdict is None:
+        detail = (
+            f"distro package {package['name']} {package['version']} ships {product.split(':', 1)[1]}; "
+            "verify against the distribution's advisory"
+        )
+        out.indeterminate.append({"advisory_id": advisory.id, "package": label, "reason": DISTRO_BACKPORT_UNVERIFIED, "detail": detail})
+    elif verdict.affected is None:
+        out.indeterminate.append({"advisory_id": advisory.id, "package": label, "reason": "version_incomparable"})
+    elif verdict.affected:
+        finding = _finding(advisory, package, asset, verdict.fixed, ctx)
+        finding["distro_verdict"] = {"ecosystem": verdict.ecosystem, "record": verdict.record}
+        out.findings.append(finding)
+
+
 def _match_package(
     advisory: OperatorAdvisory, package: dict[str, Any], asset: dict[str, str], ctx: _ReportContext, out: AdvisoryMatchResult
 ) -> None:
@@ -277,6 +319,9 @@ def _match_package(
             else:
                 out.findings.append(_finding(advisory, package, asset, fixed, ctx))
         return
+    distro_product = _distro_product(advisory, package)
+    if distro_product:
+        _match_distro_package(advisory, package, distro_product, asset, ctx, out)
 
 
 def match_advisories_against_reports(
@@ -284,18 +329,21 @@ def match_advisories_against_reports(
     reports: Iterable[dict[str, Any]],
     *,
     provenance: str = OPERATOR_ADVISORY_PROVENANCE,
+    distro_verdict: DistroVerdictFn | None = None,
 ) -> AdvisoryMatchResult:
     """Match advisories against stored scan reports without rescanning.
 
     ``provenance`` labels the findings; feed records re-matched by the daily
     job pass ``"feed"`` so they are never presented as operator-declared.
+    ``distro_verdict`` resolves distro packages of a CPE product from the
+    distro feed; without it they are indeterminate.
     """
     result = AdvisoryMatchResult()
     advisory_list = list(advisories)
     for report in reports:
         result.reports_examined += 1
         observed = report.get("scan_completed_at")
-        ctx = _ReportContext(str(report.get("scan_id") or ""), str(observed) if observed else None, provenance)
+        ctx = _ReportContext(str(report.get("scan_id") or ""), str(observed) if observed else None, provenance, distro_verdict)
         for asset, package in _report_packages(report):
             result.packages_examined += 1
             for advisory in advisory_list:

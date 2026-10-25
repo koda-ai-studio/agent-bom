@@ -1,0 +1,412 @@
+{
+ "resultsPerPage": 2,
+ "startIndex": 0,
+ "totalResults": 2,
+ "format": "NVD_CVE",
+ "version": "2.0",
+ "timestamp": "2026-10-25T02:26:32.305",
+ "vulnerabilities": [
+  {
+   "cve": {
+    "id": "CVE-2026-109618",
+    "sourceIdentifier": "security@php.net",
+    "published": "2026-10-21T14:17:09.357",
+    "lastModified": "2026-10-23T16:26:54.713",
+    "vulnStatus": "Analyzed",
+    "descriptions": [
+     {
+      "lang": "en",
+      "value": "PHP uses longjmp() for out-of-memory (OOM) errors to exit the current context and abort handling of the request. Some contexts may not properly account for this scenario and leave request memory in an uninitialized state before performing an allocation. The subsequent request cleanup procedure may read or branch on this memory. Multiple OOM strategies can consistently trigger this condition and lead to remote code execution (RCE)."
+     }
+    ],
+    "metrics": {
+     "cvssMetricV40": [
+      {
+       "source": "security@php.net",
+       "type": "Secondary",
+       "cvssData": {
+        "version": "4.0",
+        "vectorString": "CVSS:4.0/AV:N/AC:H/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+        "baseScore": 9.2,
+        "baseSeverity": "CRITICAL",
+        "attackVector": "NETWORK",
+        "attackComplexity": "HIGH",
+        "attackRequirements": "PRESENT",
+        "privilegesRequired": "NONE",
+        "userInteraction": "NONE",
+        "vulnConfidentialityImpact": "HIGH",
+        "vulnIntegrityImpact": "HIGH",
+        "vulnAvailabilityImpact": "HIGH",
+        "subConfidentialityImpact": "NONE",
+        "subIntegrityImpact": "NONE",
+        "subAvailabilityImpact": "NONE",
+        "exploitMaturity": "NOT_DEFINED",
+        "confidentialityRequirement": "NOT_DEFINED",
+        "integrityRequirement": "NOT_DEFINED",
+        "availabilityRequirement": "NOT_DEFINED",
+        "modifiedAttackVector": "NOT_DEFINED",
+        "modifiedAttackComplexity": "NOT_DEFINED",
+        "modifiedAttackRequirements": "NOT_DEFINED",
+        "modifiedPrivilegesRequired": "NOT_DEFINED",
+        "modifiedUserInteraction": "NOT_DEFINED",
+        "modifiedVulnConfidentialityImpact": "NOT_DEFINED",
+        "modifiedVulnIntegrityImpact": "NOT_DEFINED",
+        "modifiedVulnAvailabilityImpact": "NOT_DEFINED",
+        "modifiedSubConfidentialityImpact": "NOT_DEFINED",
+        "modifiedSubIntegrityImpact": "NOT_DEFINED",
+        "modifiedSubAvailabilityImpact": "NOT_DEFINED",
+        "Safety": "NOT_DEFINED",
+        "Automatable": "NOT_DEFINED",
+        "Recovery": "NOT_DEFINED",
+        "valueDensity": "NOT_DEFINED",
+        "vulnerabilityResponseEffort": "NOT_DEFINED",
+        "providerUrgency": "NOT_DEFINED"
+       }
+      }
+     ],
+     "cvssMetricV31": [
+      {
+       "source": "nvd@nist.gov",
+       "type": "Primary",
+       "cvssData": {
+        "version": "3.1",
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        "baseScore": 9.8,
+        "baseSeverity": "CRITICAL",
+        "attackVector": "NETWORK",
+        "attackComplexity": "LOW",
+        "privilegesRequired": "NONE",
+        "userInteraction": "NONE",
+        "scope": "UNCHANGED",
+        "confidentialityImpact": "HIGH",
+        "integrityImpact": "HIGH",
+        "availabilityImpact": "HIGH"
+       },
+       "exploitabilityScore": 3.9,
+       "impactScore": 5.9
+      }
+     ]
+    },
+    "weaknesses": [
+     {
+      "source": "security@php.net",
+      "type": "Secondary",
+      "description": [
+       {
+        "lang": "en",
+        "value": "CWE-416"
+       },
+       {
+        "lang": "en",
+        "value": "CWE-755"
+       },
+       {
+        "lang": "en",
+        "value": "CWE-824"
+       },
+       {
+        "lang": "en",
+        "value": "CWE-1325"
+       }
+      ]
+     }
+    ],
+    "configurations": [
+     {
+      "nodes": [
+       {
+        "operator": "OR",
+        "negate": false,
+        "cpeMatch": [
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:a:php:php:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "7.3.0",
+          "versionEndExcluding": "8.2.35",
+          "matchCriteriaId": "6F6AF526-A467-44E0-9865-81DC17D9D921"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:a:php:php:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "8.3.0",
+          "versionEndExcluding": "8.3.36",
+          "matchCriteriaId": "40BD58D9-94BD-41B6-9DDA-30CA729409FB"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:a:php:php:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "8.4.0",
+          "versionEndExcluding": "8.4.27",
+          "matchCriteriaId": "D057202A-94FF-4118-A41F-BA8ABB76346E"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:a:php:php:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "8.5.0",
+          "versionEndExcluding": "8.5.12",
+          "matchCriteriaId": "CAF7FA75-7F87-405F-A222-C5C17D42C31F"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "operator": "AND",
+      "nodes": [
+       {
+        "operator": "OR",
+        "negate": false,
+        "cpeMatch": [
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:o:siemens:ruggedcom_ape1808_firmware:-:*:*:*:*:*:*:*",
+          "matchCriteriaId": "37FDCA69-9049-40B4-88AF-F476901022B6"
+         }
+        ]
+       },
+       {
+        "operator": "OR",
+        "negate": false,
+        "cpeMatch": [
+         {
+          "vulnerable": false,
+          "criteria": "cpe:2.3:h:siemens:ruggedcom_ape1808:-:*:*:*:*:*:*:*",
+          "matchCriteriaId": "B89A6863-B602-4404-8D26-337FECABFFF0"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "nodes": [
+       {
+        "operator": "OR",
+        "negate": false,
+        "cpeMatch": [
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:o:paloaltonetworks:pan-os:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "10.2.0",
+          "versionEndExcluding": "10.2.7",
+          "matchCriteriaId": "243077CD-5021-4DF3-8AC7-5B14F7FD9710"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:o:paloaltonetworks:pan-os:10.2.7:-:*:*:*:*:*:*",
+          "matchCriteriaId": "A8C42D98-CF8F-456B-9D57-80BBDC2C8E74"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:o:paloaltonetworks:pan-os:10.2.7:h1:*:*:*:*:*:*",
+          "matchCriteriaId": "B3AAD4BA-22DD-43D3-91F1-8A6F5FBBF029"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "cve": {
+    "id": "CVE-2026-109619",
+    "sourceIdentifier": "security@php.net",
+    "published": "2026-10-21T14:17:09.823",
+    "lastModified": "2026-10-23T16:06:48.917",
+    "vulnStatus": "Analyzed",
+    "descriptions": [
+     {
+      "lang": "en",
+      "value": "PHP has various global state that temporarily points into request memory. In some scenarios, global state may not be correctly reset, or may be repopulated after being reset. The global state may then refer to request memory even after it has been freed. Subsequent requests may read or branch on this stale state before it is fully initialized. Multiple strategies can trigger this condition and produce remote code execution (RCE)."
+     }
+    ],
+    "metrics": {
+     "cvssMetricV40": [
+      {
+       "source": "security@php.net",
+       "type": "Secondary",
+       "cvssData": {
+        "version": "4.0",
+        "vectorString": "CVSS:4.0/AV:N/AC:H/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:X/CR:X/IR:X/AR:X/MAV:X/MAC:X/MAT:X/MPR:X/MUI:X/MVC:X/MVI:X/MVA:X/MSC:X/MSI:X/MSA:X/S:X/AU:X/R:X/V:X/RE:X/U:X",
+        "baseScore": 9.2,
+        "baseSeverity": "CRITICAL",
+        "attackVector": "NETWORK",
+        "attackComplexity": "HIGH",
+        "attackRequirements": "PRESENT",
+        "privilegesRequired": "NONE",
+        "userInteraction": "NONE",
+        "vulnConfidentialityImpact": "HIGH",
+        "vulnIntegrityImpact": "HIGH",
+        "vulnAvailabilityImpact": "HIGH",
+        "subConfidentialityImpact": "NONE",
+        "subIntegrityImpact": "NONE",
+        "subAvailabilityImpact": "NONE",
+        "exploitMaturity": "NOT_DEFINED",
+        "confidentialityRequirement": "NOT_DEFINED",
+        "integrityRequirement": "NOT_DEFINED",
+        "availabilityRequirement": "NOT_DEFINED",
+        "modifiedAttackVector": "NOT_DEFINED",
+        "modifiedAttackComplexity": "NOT_DEFINED",
+        "modifiedAttackRequirements": "NOT_DEFINED",
+        "modifiedPrivilegesRequired": "NOT_DEFINED",
+        "modifiedUserInteraction": "NOT_DEFINED",
+        "modifiedVulnConfidentialityImpact": "NOT_DEFINED",
+        "modifiedVulnIntegrityImpact": "NOT_DEFINED",
+        "modifiedVulnAvailabilityImpact": "NOT_DEFINED",
+        "modifiedSubConfidentialityImpact": "NOT_DEFINED",
+        "modifiedSubIntegrityImpact": "NOT_DEFINED",
+        "modifiedSubAvailabilityImpact": "NOT_DEFINED",
+        "Safety": "NOT_DEFINED",
+        "Automatable": "NOT_DEFINED",
+        "Recovery": "NOT_DEFINED",
+        "valueDensity": "NOT_DEFINED",
+        "vulnerabilityResponseEffort": "NOT_DEFINED",
+        "providerUrgency": "NOT_DEFINED"
+       }
+      }
+     ],
+     "cvssMetricV31": [
+      {
+       "source": "nvd@nist.gov",
+       "type": "Primary",
+       "cvssData": {
+        "version": "3.1",
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        "baseScore": 8.1,
+        "baseSeverity": "HIGH",
+        "attackVector": "NETWORK",
+        "attackComplexity": "HIGH",
+        "privilegesRequired": "NONE",
+        "userInteraction": "NONE",
+        "scope": "UNCHANGED",
+        "confidentialityImpact": "HIGH",
+        "integrityImpact": "HIGH",
+        "availabilityImpact": "HIGH"
+       },
+       "exploitabilityScore": 2.2,
+       "impactScore": 5.9
+      }
+     ]
+    },
+    "weaknesses": [
+     {
+      "source": "security@php.net",
+      "type": "Secondary",
+      "description": [
+       {
+        "lang": "en",
+        "value": "CWE-416"
+       },
+       {
+        "lang": "en",
+        "value": "CWE-755"
+       },
+       {
+        "lang": "en",
+        "value": "CWE-824"
+       },
+       {
+        "lang": "en",
+        "value": "CWE-1325"
+       }
+      ]
+     }
+    ],
+    "configurations": [
+     {
+      "nodes": [
+       {
+        "operator": "OR",
+        "negate": false,
+        "cpeMatch": [
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:a:php:php:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "5.4.0",
+          "versionEndExcluding": "8.2.35",
+          "matchCriteriaId": "A6268753-FD8A-45EB-A420-22A94B02BB34"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:a:php:php:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "8.3.0",
+          "versionEndExcluding": "8.3.36",
+          "matchCriteriaId": "40BD58D9-94BD-41B6-9DDA-30CA729409FB"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:a:php:php:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "8.4.0",
+          "versionEndExcluding": "8.4.27",
+          "matchCriteriaId": "D057202A-94FF-4118-A41F-BA8ABB76346E"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:a:php:php:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "8.5.0",
+          "versionEndExcluding": "8.5.12",
+          "matchCriteriaId": "CAF7FA75-7F87-405F-A222-C5C17D42C31F"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "operator": "AND",
+      "nodes": [
+       {
+        "operator": "OR",
+        "negate": false,
+        "cpeMatch": [
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:o:siemens:ruggedcom_ape1808_firmware:-:*:*:*:*:*:*:*",
+          "matchCriteriaId": "37FDCA69-9049-40B4-88AF-F476901022B6"
+         }
+        ]
+       },
+       {
+        "operator": "OR",
+        "negate": false,
+        "cpeMatch": [
+         {
+          "vulnerable": false,
+          "criteria": "cpe:2.3:h:siemens:ruggedcom_ape1808:-:*:*:*:*:*:*:*",
+          "matchCriteriaId": "B89A6863-B602-4404-8D26-337FECABFFF0"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "nodes": [
+       {
+        "operator": "OR",
+        "negate": false,
+        "cpeMatch": [
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:o:paloaltonetworks:pan-os:*:*:*:*:*:*:*:*",
+          "versionStartIncluding": "10.2.0",
+          "versionEndExcluding": "10.2.7",
+          "matchCriteriaId": "243077CD-5021-4DF3-8AC7-5B14F7FD9710"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:o:paloaltonetworks:pan-os:10.2.7:-:*:*:*:*:*:*",
+          "matchCriteriaId": "A8C42D98-CF8F-456B-9D57-80BBDC2C8E74"
+         },
+         {
+          "vulnerable": true,
+          "criteria": "cpe:2.3:o:paloaltonetworks:pan-os:10.2.7:h1:*:*:*:*:*:*",
+          "matchCriteriaId": "B3AAD4BA-22DD-43D3-91F1-8A6F5FBBF029"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

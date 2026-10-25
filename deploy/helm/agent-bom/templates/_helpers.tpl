@@ -84,6 +84,20 @@ newer SDK-only build between control-plane releases.
 {{- printf "%s:%s" $repo $tag -}}
 {{- end }}
 
+{{/*
+NVD_API_KEY from an existing Secret; renders nothing unless `nvdApiKey.existingSecret.name` is set.
+*/}}
+{{- define "agent-bom.nvdApiKeyEnv" -}}
+{{- $ref := (.Values.nvdApiKey | default dict).existingSecret | default dict -}}
+{{- if $ref.name }}
+- name: NVD_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ $ref.name | quote }}
+      key: {{ $ref.key | default "NVD_API_KEY" | quote }}
+{{- end }}
+{{- end }}
+
 {{- define "agent-bom.collectorImagePullPolicy" -}}
 {{- $c := .Values.collectorImage | default dict -}}
 {{- $c.pullPolicy | default .Values.image.pullPolicy -}}

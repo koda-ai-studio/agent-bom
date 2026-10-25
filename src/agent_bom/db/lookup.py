@@ -232,6 +232,7 @@ def cpe_lookup_package(
     if not matches:
         return []
     cve_ids = [m["cve_id"] for m in matches]
+    range_fixes = {m["cve_id"]: m.get("fixed_version") for m in matches}
     placeholders = ", ".join("?" for _ in cve_ids)
     rows = {
         row["id"]: row
@@ -253,7 +254,7 @@ def cpe_lookup_package(
                 summary=row["summary"],
                 severity=severity,
                 cvss_score=cvss_score,
-                fixed_version=row["fixed_version"],
+                fixed_version=range_fixes.get(cve_id) or row["fixed_version"],
                 cvss_vector=row["cvss_vector"],
                 source="nvd",
                 package_name=name,

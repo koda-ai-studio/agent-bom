@@ -93,6 +93,19 @@ tests:
       cpu: 100m
       memory: 128Mi
 
+# ─── NVD API key (optional) ──────────────────────────────────────────────────
+# Raises the NVD rate limit from 5 to 50 requests per 30s and widens the
+# `db update --source nvd` window from 14 to 120 days. Leave `name` empty to
+# run keyless. The key is read only from an existing Kubernetes Secret
+# (`kubectl create secret generic nvd-api --from-literal=NVD_API_KEY=...`);
+# the chart has no plaintext value. It is injected as NVD_API_KEY into the
+# scanner CronJob and the control-plane API, and agent-bom sends it only as
+# the `apiKey` header to services.nvd.nist.gov.
+nvdApiKey:
+  existingSecret:
+    name: ""
+    key: NVD_API_KEY
+
 scanner:
   enabled: true
   schedule: "0 */6 * * *"

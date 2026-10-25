@@ -163,6 +163,7 @@ spec:
                 {{- end }}
                 {{- end }}
                 {{- end }}
+                {{- include "agent-bom.nvdApiKeyEnv" . | nindent 16 }}
                 {{- with .Values.scanner.env }}
                 {{- toYaml . | nindent 16 }}
                 {{- end }}

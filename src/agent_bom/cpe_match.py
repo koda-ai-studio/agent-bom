@@ -204,7 +204,7 @@ def match_component_cpe(
     params.append(limit)
     rows = conn.execute(query, params).fetchall()
 
-    matched: dict[str, str] = {}
+    matched: dict[str, sqlite3.Row] = {}
     for row in rows:
         cve_id = row["cve_id"]
         if cve_id in matched or (target_sw and not _target_sw_applies(row["criteria"], target_sw)):
@@ -214,13 +214,21 @@ def match_component_cpe(
         except Exception:  # noqa: BLE001 - a malformed range must not abort the scan
             applies = False
         if applies:
-            matched[cve_id] = row["criteria"]
+            matched[cve_id] = row
 
     return [
         {
             "cve_id": cve_id,
-            "cpe": criteria,
+            "cpe": row["criteria"],
+            "fixed_version": _range_fix(row),
             "match_confidence_tier": MATCH_CONFIDENCE_NVD_CPE_CANDIDATE,
         }
-        for cve_id, criteria in matched.items()
+        for cve_id, row in matched.items()
     ]
+
+
+def _range_fix(row: sqlite3.Row) -> str | None:
+    """The first fixed release of the matched range: an exclusive upper bound is it."""
+    if row["version"] or row["version_end_op"] == "including":
+        return None
+    return row["version_end"] or None

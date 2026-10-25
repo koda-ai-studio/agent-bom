@@ -29,6 +29,9 @@ jobs:
   accuracy:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # NVD_API_KEY lives in the `release` environment (main and v* tags only).
+    # This job runs on schedule and workflow_dispatch, never on pull requests.
+    environment: release
     permissions:
       contents: read
     steps:
@@ -45,6 +48,11 @@ jobs:
         # A green scan on a stale DB is a false clean — that is the whole reason
         # this job exists. Measuring accuracy against stale advisories would
         # reproduce the exact defect it is meant to detect.
+        env:
+          # Optional; empty when unset. Only `--source nvd` uses the NVD key and
+          # only `--source ghsa` the token (5,000 requests/hour instead of 60).
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: uv run agent-bom db update
 
       - name: Offline CVE range-matching accuracy
