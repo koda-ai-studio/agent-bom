@@ -319,7 +319,7 @@ The effective-permissions overlay inherits a principal's access through the
 access is recorded on `HAS_PERMISSION` as `access="group"` and is not, by itself,
 a privilege escalation (only assume/trust chains are).
 
-### Relationship types (51)
+### Relationship types (52)
 
 | Group | Relationships | Direction |
 |---|---|---|
@@ -331,6 +331,7 @@ a privilege escalation (only assume/trust chains are).
 | Agent-identity governance | `AUTHENTICATES_AS`, `SCOPED_TO`, `GOVERNS`, `EXHIBITS_DRIFT` | agent → identity → grant → tool; agent ↔ drift |
 | Cloud-CNAPP | `EXPOSED_TO`, `STORES`, `HAS_PERMISSION`, `PROTECTS` | internet exposure; data-at-rest; effective permission; WAF/gateway fronts a resource |
 | Runtime | `ACTED_AS`, `INVOKED`, `CALLED`, `USED_CREDENTIAL`, `ACCESSED`, `DELEGATED_TO`, `TRACE_STEP` | source → target, time-stamped |
+| Recorded runtime metadata | `RECORDED_ACTIVITY` | source → target; execution and permissions unconfirmed; excluded from attack-path traversal |
 | Cross-environment correlation | `CORRELATES_WITH`, `POSSIBLY_CORRELATES_WITH` | local ↔ cloud agent correlation |
 | ASPM | `BELONGS_TO` | finding / component → application |
 
