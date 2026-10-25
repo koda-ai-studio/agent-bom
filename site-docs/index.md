@@ -26,6 +26,9 @@ boundaries, see the
 
 The shared security graph connects packages, workloads, agents, tools, identities, and data assets through typed relationships with source evidence and explicit completeness.
 
+[Try the demo in your browser](https://koda-ai-studio.github.io/agent-bom/demo/): a read-only copy of the UI on labelled
+sample data. Nothing is installed and no request leaves the page's origin.
+
 ## What it does
 
 ```

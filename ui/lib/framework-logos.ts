@@ -1,3 +1,4 @@
+import { ASSET_BASE } from "@/lib/asset-base";
 /**
  * Compliance framework marks under `public/logos/frameworks/`.
  * `frameworkLogoMeta(id)` returns a vendored SVG path or a monogram fallback
@@ -34,18 +35,18 @@ export type FrameworkLogoMeta = {
 const LOGO_ASSET_REV = "v7";
 
 const LOGO_PATH: Partial<Record<FrameworkLogoId, string>> = {
-  "owasp-llm": `/logos/frameworks/owasp.svg?${LOGO_ASSET_REV}`,
-  "owasp-mcp": `/logos/frameworks/owasp.svg?${LOGO_ASSET_REV}`,
-  "owasp-agentic": `/logos/frameworks/owasp.svg?${LOGO_ASSET_REV}`,
-  atlas: `/logos/frameworks/mitre-atlas.svg?${LOGO_ASSET_REV}`,
-  "nist-ai-rmf": `/logos/frameworks/nist-ai-rmf.svg?${LOGO_ASSET_REV}`,
-  "nist-csf": `/logos/frameworks/nist-csf.svg?${LOGO_ASSET_REV}`,
-  iso27001: `/logos/frameworks/iso.svg?${LOGO_ASSET_REV}`,
-  cis: `/logos/frameworks/cis.svg?${LOGO_ASSET_REV}`,
-  "eu-ai-act": `/logos/frameworks/eu-ai-act.svg?${LOGO_ASSET_REV}`,
-  soc2: `/logos/frameworks/soc2.svg?${LOGO_ASSET_REV}`,
-  cmmc: `/logos/frameworks/cmmc.svg?${LOGO_ASSET_REV}`,
-  "nist-800-53": `/logos/frameworks/nist.svg?${LOGO_ASSET_REV}`,
+  "owasp-llm": `${ASSET_BASE}/logos/frameworks/owasp.svg?${LOGO_ASSET_REV}`,
+  "owasp-mcp": `${ASSET_BASE}/logos/frameworks/owasp.svg?${LOGO_ASSET_REV}`,
+  "owasp-agentic": `${ASSET_BASE}/logos/frameworks/owasp.svg?${LOGO_ASSET_REV}`,
+  atlas: `${ASSET_BASE}/logos/frameworks/mitre-atlas.svg?${LOGO_ASSET_REV}`,
+  "nist-ai-rmf": `${ASSET_BASE}/logos/frameworks/nist-ai-rmf.svg?${LOGO_ASSET_REV}`,
+  "nist-csf": `${ASSET_BASE}/logos/frameworks/nist-csf.svg?${LOGO_ASSET_REV}`,
+  iso27001: `${ASSET_BASE}/logos/frameworks/iso.svg?${LOGO_ASSET_REV}`,
+  cis: `${ASSET_BASE}/logos/frameworks/cis.svg?${LOGO_ASSET_REV}`,
+  "eu-ai-act": `${ASSET_BASE}/logos/frameworks/eu-ai-act.svg?${LOGO_ASSET_REV}`,
+  soc2: `${ASSET_BASE}/logos/frameworks/soc2.svg?${LOGO_ASSET_REV}`,
+  cmmc: `${ASSET_BASE}/logos/frameworks/cmmc.svg?${LOGO_ASSET_REV}`,
+  "nist-800-53": `${ASSET_BASE}/logos/frameworks/nist.svg?${LOGO_ASSET_REV}`,
 };
 
 /** Theme-token badges — readable on both light and dark (no dark-only pastels). */

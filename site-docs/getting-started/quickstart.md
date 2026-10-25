@@ -1,5 +1,8 @@
 # Quick Start
 
+Want to look before installing? [Try the demo in your browser](https://koda-ai-studio.github.io/agent-bom/demo/): a
+read-only copy of the UI on labelled sample data.
+
 ## Install
 
 ```bash

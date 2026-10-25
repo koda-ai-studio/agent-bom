@@ -7,7 +7,7 @@ declare global {
   }
 }
 
-const DEFAULT_API_URL = "http://localhost:8422";
+const DEFAULT_API_URL = process.env.NEXT_PUBLIC_STATIC_DEMO === "1" ? "" : "http://localhost:8422";
 const DEFAULT_SIGN_IN_URL = "/login";
 
 function normalizeApiUrl(value: string | undefined | null): string | undefined {

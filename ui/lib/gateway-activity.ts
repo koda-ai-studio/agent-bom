@@ -1,5 +1,6 @@
 import { getSessionAuthHeaders } from "./auth";
 import { getConfiguredApiUrl } from "./runtime-config";
+import { isStaticDemo } from "./static-demo";
 
 export interface GatewayActivity {
   tenant_id: string;
@@ -46,6 +47,7 @@ export class ActivityStreamError extends Error {
 
 /** Complete batches only; retain the caller's cursor on any failed/partial frame. */
 export async function* streamGatewayActivity(cursor: string | undefined, signal: AbortSignal, expectedTenant?: string): AsyncGenerator<ActivityPage> {
+  if (isStaticDemo()) throw new ActivityStreamError("unavailable");
   let response: Response;
   try {
     response = await fetch(`${getConfiguredApiUrl()}/v1/gateway/feed/stream?limit=200`, {

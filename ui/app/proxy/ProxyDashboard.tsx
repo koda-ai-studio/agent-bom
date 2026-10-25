@@ -9,6 +9,7 @@ import {
 } from "@/lib/api";
 import { getSessionWebSocketToken } from "@/lib/auth";
 import { getConfiguredApiUrl } from "@/lib/runtime-config";
+import { isStaticDemo } from "@/lib/static-demo";
 import {
   ResponsiveContainer,
   BarChart,
@@ -129,6 +130,7 @@ export default function ProxyDashboard() {
 
   // WebSocket for live metrics
   useEffect(() => {
+    if (isStaticDemo()) return;
     const base = getConfiguredApiUrl() || window.location.origin;
     const wsTarget = new URL(base.replace(/^http/, "ws") + "/ws/proxy/metrics");
     const token = getSessionWebSocketToken();
