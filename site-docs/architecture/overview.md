@@ -46,7 +46,7 @@ graph LR
 | Blast Radius | `src/agent_bom/scanners/blast_radius.py` | Impact chain mapping |
 | Context Graph | `src/agent_bom/context_graph.py` | Lateral movement analysis |
 | Registry | `src/agent_bom/registry.py` | 1256 server security metadata entries |
-| Compliance | `src/agent_bom/compliance/` | 15 framework mappings plus AISVS benchmark evidence |
+| Compliance | `src/agent_bom/framework_catalog.py`, `src/agent_bom/vuln_compliance.py` | 15 framework mappings plus AISVS benchmark evidence |
 | Asset Tracker | `src/agent_bom/asset_tracker.py` | Persistent vuln tracking — first_seen, resolved, MTTR |
 | Proxy | `src/agent_bom/proxy.py` | Runtime MCP interception |
 | Protection | `src/agent_bom/runtime/` | 7-detector anomaly engine |
