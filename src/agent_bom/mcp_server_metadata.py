@@ -37,6 +37,11 @@ _SERVER_CARD_TOOLS = [
         "annotations": {"readOnlyHint": True},
     },
     {
+        "name": "affected_assets",
+        "description": "List the scanned assets an advisory affects, possibly affects (distro) or does not, with patch targets",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
         "name": "intel_match",
         "description": "Match package inventory coordinates to local advisory intel",
         "annotations": {"readOnlyHint": True},

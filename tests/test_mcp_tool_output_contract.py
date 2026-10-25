@@ -159,6 +159,7 @@ def _minimal_args(name: str, workdir: Path) -> dict[str, Any]:
             "signals_json": "[]",
         },
         "intel_lookup": {"advisory_id": "GHSA-xxxx-xxxx-xxxx"},
+        "affected_assets": {"advisory_id": "GHSA-xxxx-xxxx-xxxx"},
         # No YDC_API_KEY in CI, so this returns the structured missing-key
         # error without touching the network — which is the contract.
         "youcom_search": {"query": "agent-bom"},

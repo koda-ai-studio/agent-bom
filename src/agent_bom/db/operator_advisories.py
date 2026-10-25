@@ -19,6 +19,7 @@ from typing import Any
 from agent_bom.db import schema
 from agent_bom.db.schema import open_existing_db_readonly
 from agent_bom.history import latest_report, load_report_or_sbom
+from agent_bom.scanners.advisory_affected import affected_answer, feed_advisory_from_db
 from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn, local_distro_verdict
 from agent_bom.scanners.operator_advisory import AdvisoryMatchResult, OperatorAdvisory, match_advisories_against_reports
 from agent_bom.storage import state_home
@@ -75,6 +76,34 @@ def match_local(advisories: list[OperatorAdvisory], report_paths: list[Path] | N
     reports: list[dict[str, Any]] = [load_report_or_sbom(path) for path in paths]
     with distro_verdicts() as verdict:
         return match_advisories_against_reports(advisories, reports, distro_verdict=verdict)
+
+
+def _local_feed_advisory(advisory_id: str) -> OperatorAdvisory | None:
+    if not schema.DB_PATH.exists():
+        return None
+    try:
+        conn = open_existing_db_readonly(schema.DB_PATH)
+    except sqlite3.Error:
+        return None
+    try:
+        return feed_advisory_from_db(conn, advisory_id)
+    finally:
+        conn.close()
+
+
+def local_affected_answer(advisory_id: str, report_paths: list[Path] | None = None) -> dict[str, Any] | None:
+    """The affected-assets answer from the local declaration (else the local feed record); ``None`` when unknown."""
+    declared = local_advisory(advisory_id)
+    advisory, source = (declared, "operator_advisory") if declared else (_local_feed_advisory(advisory_id), "feed")
+    if advisory is None:
+        return None
+    paths = list(report_paths or [])
+    if not paths:
+        latest = latest_report()
+        paths = [latest] if latest is not None else []
+    reports = [load_report_or_sbom(path) for path in paths]
+    with distro_verdicts() as verdict:
+        return affected_answer(advisory, reports, source=source, distro_verdict=verdict)
 
 
 @contextmanager

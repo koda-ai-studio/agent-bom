@@ -6,6 +6,7 @@ _TOOL_CAPABILITY_CLASSES = {
     "scan": ["READ", "NETWORK", "LOCAL_FILE_READ"],
     "check": ["READ", "NETWORK"],
     "intel_lookup": ["READ", "THREAT_INTEL"],
+    "affected_assets": ["READ", "THREAT_INTEL"],
     "intel_match": ["READ", "THREAT_INTEL", "INVENTORY"],
     "intel_sources": ["READ", "THREAT_INTEL"],
     "intel_daily_brief": ["READ", "THREAT_INTEL", "INVENTORY"],
