@@ -99,3 +99,55 @@ async def test_mcp_inventory_unknown_scan_is_not_found(client, tool):
     _http, store = client
     body = json.loads(await tool(scan_id="nope", _get_graph_store=lambda: store, _truncate_response=lambda v: v))
     assert body["error"]["code"] == CODE_NOT_FOUND_RESOURCE, body
+
+
+def _rotate(store: SQLiteGraphStore) -> None:
+    graph = _path_graph("default")
+    graph.scan_id = "rotated-scan"
+    graph.created_at = "2026-09-26T00:00:00Z"
+    for index in range(4):
+        graph.add_node(UnifiedNode(id=f"principal:rotated-{index}", entity_type=EntityType.SERVICE_ACCOUNT, label=f"rotated-{index}"))
+    store.save_graph(graph)
+
+
+def test_inventory_cursor_carries_its_generation_and_refuses_a_rotated_snapshot(client):
+    http, store = client
+    first = http.get("/v1/inventory/assets", params={"limit": 1})
+    assert first.status_code == 200, first.text
+    body = first.json()
+    cursor, generation = body["pagination"]["next_cursor"], body["snapshot_generation"]
+    assert cursor and generation
+    second = http.get("/v1/inventory/assets", params={"limit": 1, "cursor": cursor})
+    assert second.status_code == 200, second.text
+    assert second.json()["snapshot_generation"] == generation
+    assert second.json()["assets"][0]["id"] != body["assets"][0]["id"]
+    pinned = http.get("/v1/inventory/assets", params={"limit": 1, "cursor": cursor, "snapshot_generation": generation})
+    assert pinned.status_code == 200 and pinned.json()["assets"] == second.json()["assets"]
+    mismatch = http.get("/v1/inventory/assets", params={"limit": 1, "cursor": cursor, "snapshot_generation": _other(generation)})
+    assert mismatch.status_code == 409, mismatch.text
+
+    _rotate(store)
+    assert http.get("/v1/inventory/assets", params={"limit": 1}).json()["snapshot_generation"] != generation
+    stale = http.get("/v1/inventory/assets", params={"limit": 1, "cursor": cursor})
+    assert stale.status_code == 409, stale.text
+
+
+@pytest.mark.asyncio
+async def test_mcp_inventory_list_cursor_refuses_a_rotated_snapshot(client):
+    _http, store = client
+
+    async def page(**kwargs) -> dict:
+        return json.loads(await inventory_list_impl(limit=1, _get_graph_store=lambda: store, _truncate_response=lambda v: v, **kwargs))
+
+    first = await page()
+    cursor = first["pagination"]["next_cursor"]
+    assert cursor and first["snapshot_generation"]
+    second = await page(cursor=cursor)
+    assert "error" not in second, second
+    assert second["assets"][0]["id"] != first["assets"][0]["id"]
+
+    _rotate(store)
+    stale = await page(cursor=cursor)
+    assert stale["error"]["details"]["http_status"] == 409, stale
+    malformed = await page(cursor="g1.NQ")
+    assert malformed["error"]["details"]["http_status"] == 422, malformed

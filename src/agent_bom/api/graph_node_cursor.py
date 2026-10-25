@@ -6,7 +6,7 @@ import base64
 import binascii
 import json
 
-from fastapi import HTTPException
+from starlette.exceptions import HTTPException
 
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 

@@ -43,6 +43,12 @@ def _inventory_service() -> Any:
     return inventory_service
 
 
+def _inventory_paging() -> Any:
+    from agent_bom.api import inventory_paging
+
+    return inventory_paging
+
+
 def _encode(payload: dict[str, Any], _truncate_response: Optional[Callable[[str], str]]) -> str:
     encoded = json.dumps(payload, indent=2, default=str)
     return _truncate_response(encoded) if _truncate_response is not None else encoded
@@ -99,7 +105,7 @@ async def inventory_summary_impl(
 def _inventory_error(exc: Any) -> str:
     """The shared service's HTTP status, as the MCP error code the route's status maps to."""
     code = CODE_NOT_FOUND_RESOURCE if exc.status_code == 404 else CODE_VALIDATION_INVALID_ARGUMENT
-    return mcp_error_json(code, exc.detail)
+    return mcp_error_json(code, exc.detail, details={"http_status": exc.status_code})
 
 
 async def inventory_list_impl(
@@ -125,9 +131,10 @@ async def inventory_list_impl(
     tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
     try:
         store = _resolve_store(_get_graph_store)
-        payload = await inventory_service.build_asset_list(
+        payload = await _inventory_paging().build_pinned_asset_list(
             store=store,
             tenant_id=tenant_id,
+            snapshot_generation=None,
             type=type,
             search=search,
             environment=environment,
