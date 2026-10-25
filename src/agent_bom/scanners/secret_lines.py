@@ -34,6 +34,27 @@ ENTROPY_PLACEHOLDER_RE = re.compile(
     r"https?://[^\s]+)$"
 )
 ASSIGNED_VALUE_RE = re.compile(r"[=:]\s*['\"]?([^'\"\s,;#]+)")
+# The credential body of an assignment or header; skips a ``Bearer`` scheme
+# so ``Authorization: Bearer your-token-here`` judges the token, not "Bearer".
+_CREDENTIAL_BODY_RE = re.compile(r"(?i)[=:]\s*['\"]?(?:bearer[ \t]+)?([^'\"\s,;#]+)")
+# Template fillers a real credential never is. Each alternative must cover the
+# whole value, so a random key that happens to contain "your" still reports.
+_FILLER_PLACEHOLDER_RE = re.compile(
+    r"(?i)^(?:"
+    r"(?:insert|enter|add|put|paste|set)?[-_]?(?:replace[-_]?(?:with|me)|your)[-_][a-z0-9_.-]*"
+    r"|[a-z0-9_.-]*[-_]here"
+    r"|(?:dummy|sample|fake)(?:[-_][a-z0-9_.-]+)?"
+    r"|(?:changeme|replaceme)(?:[-_.]?(?:changeme|replaceme|\d+))*"
+    r"|x{3,}[a-z0-9_.-]*"
+    r"|(.)\1{7,}"
+    r"|\*{3,}|\.{3,}|<[^>]+>"
+    r")$"
+)
+
+
+def is_placeholder_value(value: str) -> bool:
+    """Whether an assigned credential value is an obvious template placeholder."""
+    return bool(ENTROPY_PLACEHOLDER_RE.fullmatch(value) or _FILLER_PLACEHOLDER_RE.fullmatch(value))
 
 # Markers that make a credential-shaped value a documentation sample: vendor
 # sample values carry EXAMPLE, and docs pad or elide the body (xxxx, ****, ...).
@@ -55,8 +76,8 @@ def matched_assignment_is_placeholder(match: re.Match) -> bool:
     """Return whether a secret-pattern match is an explicit sample value."""
     if match.group(0) == "AKIAIOSFODNN7EXAMPLE":
         return True
-    assigned = ASSIGNED_VALUE_RE.search(match.group(0))
-    return bool(assigned and ENTROPY_PLACEHOLDER_RE.fullmatch(assigned.group(1)))
+    assigned = _CREDENTIAL_BODY_RE.search(match.group(0))
+    return bool(assigned and is_placeholder_value(assigned.group(1)))
 
 
 def is_comment_line(line: str) -> bool:
