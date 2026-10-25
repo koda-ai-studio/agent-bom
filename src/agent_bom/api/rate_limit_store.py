@@ -11,6 +11,10 @@ from typing import Any
 
 _logger = logging.getLogger(__name__)
 
+SHARED_STORE_TIMEOUT_SECONDS = 0.5
+SHARED_STORE_COOLDOWN_SECONDS = 5.0
+SHARED_STORE_WARNING_INTERVAL_SECONDS = 60.0
+
 
 class InMemoryRateLimitStore:
     """Process-local sliding-window limiter state."""
@@ -107,6 +111,7 @@ class PostgresRateLimitStore:
 
             pool = _get_pool()
         self._pool = pool
+        self._next_global_prune = 0.0
         self._init_tables()
 
     def _init_tables(self) -> None:
@@ -122,16 +127,21 @@ class PostgresRateLimitStore:
                 )
             """)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_api_rate_limit_hits_bucket_hit_at ON api_rate_limit_hits (bucket_key, hit_at)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_api_rate_limit_hits_hit_at ON api_rate_limit_hits (hit_at)")
 
     def hit(self, key: str, now: float) -> tuple[int, int]:
         """Record a request and return (hit_count, reset_epoch)."""
         window_start = now - self._window
         with self._pool.connection() as conn:
-            # Trim stale hits opportunistically to keep the table bounded.
             conn.execute(
-                "DELETE FROM api_rate_limit_hits WHERE hit_at < %s",
-                (window_start,),
+                "DELETE FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at < %s",
+                (key, window_start),
             )
+            # Buckets that never return are trimmed by a table-wide prune at
+            # most once per window per process, off the per-request path.
+            if now >= self._next_global_prune:
+                self._next_global_prune = now + self._window
+                conn.execute("DELETE FROM api_rate_limit_hits WHERE hit_at < %s", (window_start,))
             conn.execute(
                 "INSERT INTO api_rate_limit_hits (bucket_key, hit_at) VALUES (%s, %s)",
                 (key, now),
@@ -187,8 +197,59 @@ class PostgresRateLimitStore:
         return int(row[0]) if row and row[0] is not None else 0
 
 
-async def record_rate_limit_hit(store: InMemoryRateLimitStore | PostgresRateLimitStore, key: str, now: float) -> tuple[int, int]:
+class FailOpenRateLimitStore:
+    """Shared limiter that degrades to process-local counting while its backend is unavailable.
+
+    Rate limiting is abuse protection, not an authorization boundary, so a
+    shared-store error or stall must not turn every request (including probes)
+    into a 500 or a hang. Each degraded request is still counted against the
+    in-memory window; after ``cooldown_seconds`` the shared store is retried.
+    """
+
+    def __init__(
+        self,
+        primary: Any,
+        *,
+        window_seconds: int = 60,
+        timeout_seconds: float = SHARED_STORE_TIMEOUT_SECONDS,
+        cooldown_seconds: float = SHARED_STORE_COOLDOWN_SECONDS,
+    ) -> None:
+        self.primary = primary
+        self.fallback = InMemoryRateLimitStore(window_seconds=window_seconds)
+        self._timeout = timeout_seconds
+        self._cooldown = cooldown_seconds
+        self._degraded_until = 0.0
+        self._last_warning = float("-inf")
+        self._lock = threading.Lock()
+
+    def _degrade(self, exc: BaseException) -> None:
+        current = time.monotonic()
+        with self._lock:
+            self._degraded_until = current + self._cooldown
+            should_log = current - self._last_warning >= SHARED_STORE_WARNING_INTERVAL_SECONDS
+            if should_log:
+                self._last_warning = current
+        if should_log:
+            _logger.warning(
+                "Shared rate-limit store unavailable (%s); enforcing process-local limits until it recovers",
+                type(exc).__name__,
+            )
+
+    async def hit_async(self, key: str, now: float) -> tuple[int, int]:
+        if time.monotonic() >= self._degraded_until:
+            try:
+                return await asyncio.wait_for(asyncio.to_thread(self.primary.hit, key, now), self._timeout)
+            except Exception as exc:  # noqa: BLE001 - any backend failure degrades to local limits
+                self._degrade(exc)
+        return await record_rate_limit_hit(self.fallback, key, now)
+
+
+async def record_rate_limit_hit(
+    store: InMemoryRateLimitStore | PostgresRateLimitStore | FailOpenRateLimitStore, key: str, now: float
+) -> tuple[int, int]:
     """Keep SQL, cleanup, large buckets and contended locks off the event loop."""
+    if isinstance(store, FailOpenRateLimitStore):
+        return await store.hit_async(key, now)
     if type(store) is InMemoryRateLimitStore:
         result = store._try_hit_bounded(key, now)
         if result is not None:

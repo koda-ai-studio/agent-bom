@@ -22,6 +22,7 @@ from starlette.types import ASGIApp
 from agent_bom.api.error_envelope import (
     with_middleware_error_envelope,
 )
+from agent_bom.api.rate_limit_store import FailOpenRateLimitStore
 from agent_bom.api.rate_limit_store import InMemoryRateLimitStore as InMemoryRateLimitStore
 from agent_bom.api.rate_limit_store import PostgresRateLimitStore as PostgresRateLimitStore
 from agent_bom.api.rate_limit_store import record_rate_limit_hit
@@ -94,6 +95,14 @@ def _build_rate_limit_store(window_seconds: int) -> InMemoryRateLimitStore | Pos
     return InMemoryRateLimitStore(window_seconds=window_seconds)
 
 
+def _build_admission_rate_limit_store(window_seconds: int) -> InMemoryRateLimitStore | FailOpenRateLimitStore:
+    """Request-path limiter: a shared store outage degrades to local limits instead of failing requests."""
+    store = _build_rate_limit_store(window_seconds)
+    if isinstance(store, InMemoryRateLimitStore):
+        return store
+    return FailOpenRateLimitStore(store, window_seconds=window_seconds)
+
+
 def global_ip_rate_limit_rpm() -> int:
     """Resolve the coarse per-IP ceiling, honoring an operator override."""
     raw = (env_raw("AGENT_BOM_GLOBAL_IP_RATE_LIMIT_RPM") or "").strip()
@@ -127,9 +136,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # Health/readiness/liveness probes must never self-throttle: orchestrators
     # (k8s, ELB, uptime monitors) hit these on short intervals and a probe storm
     # would otherwise consume the per-tenant/IP read budget and 429 the probes.
-    # These stay behind the OUTERMOST GlobalRateLimitMiddleware flood cap, so an
-    # anonymous flood is still bounded pre-auth — this only removes the finer
-    # per-tenant/IP read limiter for liveness endpoints.
+    # GlobalRateLimitMiddleware exempts them as well: they are constant-cost,
+    # unauthenticated handlers that must answer even when the shared limiter
+    # backend is unavailable.
     _HEALTH_EXEMPT_PATHS = frozenset(
         {
             "/health",
@@ -166,8 +175,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._window = 60
         self._store = self._build_store()
 
-    def _build_store(self) -> InMemoryRateLimitStore | PostgresRateLimitStore:
-        return _build_rate_limit_store(self._window)
+    def _build_store(self) -> InMemoryRateLimitStore | FailOpenRateLimitStore:
+        return _build_admission_rate_limit_store(self._window)
 
     async def _resolve_tenant_scope(self, request: StarletteRequest, raw_key: str) -> str | None:
         tenant_id = getattr(request.state, "tenant_id", "").strip() or None
@@ -289,7 +298,7 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._rpm = _validate_rate_limit("global_ip_rpm", rpm, max_rpm=MAX_RATE_LIMIT_RPM * 5)
         self._window = 60
-        self._store = _build_rate_limit_store(self._window)
+        self._store = _build_admission_rate_limit_store(self._window)
 
     def _bucket_key(self, request: StarletteRequest) -> str:
         client_ip = request.client.host if request.client else "unknown"
@@ -298,6 +307,10 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
     @with_middleware_error_envelope
     async def dispatch(self, request: StarletteRequest, call_next: RequestResponseEndpoint) -> Response:
         if RateLimitMiddleware._is_dashboard_static_asset(request.url.path, request.method):
+            return await call_next(request)
+        # Probes are unauthenticated, constant-cost handlers; they must keep
+        # answering when the shared limiter backend is slow or down.
+        if request.url.path in RateLimitMiddleware._HEALTH_EXEMPT_PATHS:
             return await call_next(request)
 
         now = time.time()

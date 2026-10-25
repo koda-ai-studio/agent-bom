@@ -15,6 +15,11 @@ from agent_bom.api.durable_store import default_state_db_path, postgres_configur
 from agent_bom.api.storage.deployment import clustered_control_plane_required
 
 
+# Below the chart's readiness probe timeoutSeconds so a stalled dependency
+# reports not-ready instead of timing out the probe.
+READINESS_TIMEOUT_SECONDS = 3.0
+
+
 @dataclass(frozen=True)
 class ReadinessStatus:
     ready: bool
@@ -30,7 +35,10 @@ async def control_plane_readiness_response(is_draining: Callable[[], bool]) -> J
     """Probe storage off-loop while respecting drain transitions during the wait."""
     if is_draining():
         return JSONResponse(status_code=503, content={"status": "draining"})
-    status = await asyncio.to_thread(evaluate_control_plane_readiness)
+    try:
+        status = await asyncio.wait_for(asyncio.to_thread(evaluate_control_plane_readiness), READINESS_TIMEOUT_SECONDS)
+    except TimeoutError:
+        status = ReadinessStatus(ready=False, reason="readiness_timeout")
     if is_draining():
         return JSONResponse(status_code=503, content={"status": "draining"})
     return JSONResponse(status_code=200 if status.ready else 503, content=status.as_dict())
