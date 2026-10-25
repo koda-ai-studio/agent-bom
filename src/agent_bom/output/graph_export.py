@@ -612,8 +612,9 @@ def to_mermaid(
 def to_json(graph: DepGraph, *, scan_id: str | None = None, tenant_id: str | None = None) -> dict:
     """Serialize sanitized dependency evidence, preserving legacy aliases and receipt objects.
 
-    Nodes and edges are the persisted scan graph's for the same report; the
-    package → vulnerability edge keeps its legacy ``affects`` label.
+    Nodes and edges are the persisted scan graph's for the same report: each
+    edge's ``relationship`` is the persisted one, while the package →
+    vulnerability edge keeps its legacy ``affects`` label on ``kind``.
     """
     graph = _sanitized_graph(graph)
     return {
@@ -629,7 +630,8 @@ def to_json(graph: DepGraph, *, scan_id: str | None = None, tenant_id: str | Non
             for n in graph.nodes
         ],
         "edges": [
-            {"source": e.source, "target": e.target, "kind": e.kind, "relationship": e.kind, "evidence": e.evidence} for e in graph.edges
+            {"source": e.source, "target": e.target, "kind": e.kind, "relationship": e.relationship, "evidence": e.evidence}
+            for e in graph.edges
         ],
         "schema_version": "1",
         **({"scan_id": scan_id} if scan_id is not None else {}),
