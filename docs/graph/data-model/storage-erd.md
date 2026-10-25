@@ -88,7 +88,7 @@ Excluded:
 | `agents` | [Inventory and assets](storage-erd/inventory.md) | Postgres | `agent_id` | `agent_id`, `scan_run_id`, `team_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql` |
 | `ai_system_blueprint_versions` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `blueprint_id`, `version` | `tenant_id`, `blueprint_id`, `version` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/blueprint_store.py`, `api/postgres_blueprint.py` |
 | `ai_system_blueprints` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `blueprint_id` | `tenant_id`, `blueprint_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/blueprint_store.py`, `api/postgres_blueprint.py` |
-| `api_keys` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `key_id` | `key_id`, `team_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql`, `api/postgres_access.py` |
+| `api_keys` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `key_id` | `key_id`, `team_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql`, `api/postgres_access.py`, `api/sqlite_key_store.py` |
 | `api_rate_limit_hits` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | — | `bucket_key` | **none** | persistent | `deploy/supabase/postgres/init.sql`, `api/rate_limit_store.py` |
 | `api_rate_limits` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `bucket_key`, `window_started` | `bucket_key`, `window_started` | **none** | persistent | `deploy/supabase/postgres/init.sql` |
 | `assets` | [Inventory and assets](storage-erd/inventory.md) | SQLite | `tenant_id`, `vuln_id`, `package`, `ecosystem` | `tenant_id`, `vuln_id`, `package`, `ecosystem` | `tenant_id` | persistent | `asset_tracker.py` |
@@ -350,6 +350,7 @@ Tables defined for both backends whose column sets differ (columns added by `ALT
 
 | Table | Postgres only | SQLite only |
 |---|---|---|
+| `api_keys` | `created_by`, `last_used`, `revoked`, `team_id` | `tenant_id` |
 | `audit_chain_checkpoint` | `updated_at` | — |
 | `audit_log` | `team_id` | `tenant_id` |
 | `exceptions` | `team_id` | `tenant_id` |
