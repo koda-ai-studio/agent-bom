@@ -142,8 +142,9 @@ def _run_boot_seed() -> None:
         if not wait_for_posture_precompute(_POSTURE_PRECOMPUTE_READY_TIMEOUT_SECONDS):
             _logger.warning("demo estate posture precompute still running at readiness")
     finally:
-        _boot_seed_done.set()
         clear_seed_marker()
+        # Publish completion only after other processes can observe it too.
+        _boot_seed_done.set()
 
 
 async def _seed_then(after: Callable[[], Awaitable[None]] | None) -> None:
