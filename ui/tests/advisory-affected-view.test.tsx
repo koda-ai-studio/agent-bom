@@ -54,7 +54,7 @@ describe("advisory affected assets", () => {
     expect(within(affected).getByTestId("patch-target")).toHaveTextContent("8.3.36");
     expect(within(affected).getByText("Operator advisory")).toBeInTheDocument();
     expect(within(affected).getByRole("link", { name: "Blast radius for php 8.3.30 on php:8.3.30-cli" }))
-      .toHaveAttribute("href", "/security-graph?lens=attack-path&scan=scan-php-8.3.30&node=pkg%3Ageneric%2Fphp%408.3.30");
+      .toHaveAttribute("href", "/security-graph?lens=attack-path&scan=scan-php-8.3.30&node=pkg%3Ageneric%3Aphp%408.3.30");
 
     const distro = rowFor("abtest/php-debian:12");
     const badge = within(distro).getByTestId("verdict-badge");

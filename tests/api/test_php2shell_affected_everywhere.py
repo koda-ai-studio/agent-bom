@@ -62,7 +62,7 @@ def test_same_php2shell_answer_on_cli_rest_mcp_and_ui(control_plane, tmp_path: P
         assert _verdict_reasons(body) == [None, "distro_backport_unverified", None]
         assert body["advisory"]["fixed_versions"] == ["8.2.35", "8.3.36", "8.4.27", "8.5.12"]
     assert mcp == rest
-    assert [row["graph"] for row in cli["rows"]] == [row["graph"] for row in rest["rows"]]
+    assert [row["graph"] for row in cli["rows"]] == [row["graph"] for row in rest["rows"]] == [row["graph"] for row in ui["rows"]]
 
     assert "affected\tphp:8.3.30-cli\tphp@8.3.30\tpatch to 8.3.36" in table
     distro = "possibly affected — verify distro advisory\tabtest/php-debian:12\tphp8.2-cli@8.2.29-1~deb12u1"

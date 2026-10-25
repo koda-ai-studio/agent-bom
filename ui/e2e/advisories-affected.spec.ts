@@ -44,7 +44,7 @@ for (const theme of ["light", "dark"]) {
     ]);
     await expect(table.getByText("Possibly affected — verify distro advisory")).toBeVisible();
     await expect(table.getByRole("link", { name: "Blast radius for php 8.3.30 on php:8.3.30-cli" }))
-      .toHaveAttribute("href", /\/security-graph\?lens=attack-path&scan=scan-php-8\.3\.30&node=pkg%3Ageneric%2Fphp%408\.3\.30/);
+      .toHaveAttribute("href", /\/security-graph\?lens=attack-path&scan=scan-php-8\.3\.30&node=pkg%3Ageneric%3Aphp%408\.3\.30/);
     await page.screenshot({ path: testInfo.outputPath(`advisories-affected-${theme}-1440.png`), fullPage: true });
 
     await page.setViewportSize({ width: 390, height: 844 });
