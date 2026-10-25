@@ -1,4 +1,5 @@
 import type { AgentBomManifestResponse } from "./api";
+import { nowForRelativeTime } from "@/lib/relative-clock";
 
 export type ManifestReviewFilter = "all" | "review needed" | "not assessed";
 export type ManifestFreshnessFilter = "all" | "seen_24h" | "seen_7d" | "stale" | "unknown";
@@ -75,7 +76,7 @@ function rowSource(serverRow: Record<string, unknown>, observed: Record<string, 
   return asString(manifest.source, "unknown");
 }
 
-export function classifyFreshness(lastSeen: string, now: Date = new Date()): ManifestRow["freshness"] {
+export function classifyFreshness(lastSeen: string, now: Date = new Date(nowForRelativeTime())): ManifestRow["freshness"] {
   if (!lastSeen || lastSeen === "-") return "unknown";
   const parsed = Date.parse(lastSeen);
   if (!Number.isFinite(parsed)) return "unknown";
@@ -97,7 +98,7 @@ function classifyRuntimeState(observed: Record<string, unknown>): ManifestRow["r
   return "shadow runtime";
 }
 
-export function deriveManifestRows(manifest: AgentBomManifestResponse, now: Date = new Date()): ManifestRow[] {
+export function deriveManifestRows(manifest: AgentBomManifestResponse, now: Date = new Date(nowForRelativeTime())): ManifestRow[] {
   const agentsById = new Map<string, Record<string, unknown>>();
   const agentsByServer = new Map<string, Record<string, unknown>[]>();
   for (const agent of manifest.agents) {

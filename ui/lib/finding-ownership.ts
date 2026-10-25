@@ -1,3 +1,5 @@
+import { nowForRelativeTime } from "@/lib/relative-clock";
+
 /** Owner and remediation-SLA facts recorded on a finding occurrence. */
 export interface OwnershipFields {
   owner?: string | null | undefined;
@@ -22,7 +24,7 @@ const BASIS: Record<string, string> = {
 
 const plural = (count: number, unit: string) => `${count} ${unit}${count === 1 ? "" : "s"}`;
 
-export function ownershipSummary(fields: OwnershipFields, now = Date.now()): OwnershipSummary {
+export function ownershipSummary(fields: OwnershipFields, now = nowForRelativeTime()): OwnershipSummary {
   const owner = fields.owner?.trim() || null;
   const due = fields.sla_due_at ? Date.parse(fields.sla_due_at) : Number.NaN;
   const basis = fields.sla_due_at_source ? BASIS[fields.sla_due_at_source] ?? null : null;

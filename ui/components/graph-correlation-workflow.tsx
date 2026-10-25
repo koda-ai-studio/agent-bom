@@ -16,6 +16,7 @@ import {
 
 import { api, formatDate, type GraphCorrelationRun, type GraphSnapshot } from "@/lib/api";
 import { userFacingApiErrorMessage } from "@/lib/api-errors";
+import { nowForRelativeTime } from "@/lib/relative-clock";
 
 const DEFAULT_MAX_AGE_HOURS = 24 * 7;
 
@@ -87,7 +88,7 @@ function correlationAnalysisLabel(state: CorrelationAnalysisState): string {
   return "Analysis status unavailable";
 }
 
-function evidenceAge(createdAt: string | undefined, maxAgeHours: number, now = Date.now()): EvidenceAge {
+function evidenceAge(createdAt: string | undefined, maxAgeHours: number, now = nowForRelativeTime()): EvidenceAge {
   const observedAt = Date.parse(createdAt ?? "");
   if (!Number.isFinite(observedAt)) return "unknown";
   if (observedAt - now > 5 * 60 * 1000) return "future";

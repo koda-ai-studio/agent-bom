@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { nowForRelativeTime, setDemoSnapshotAt } from "./relative-clock";
 import { isStaticDemo, staticDemoBasePath } from "./static-demo";
 
 /** Routes the generator recorded complete sample data for (`demo-data/routes.json`). */
@@ -21,6 +22,7 @@ function loadManifest(): Promise<StaticDemoManifest | null> {
       const body = (await res.json()) as { routes?: unknown; snapshot_at?: unknown };
       if (!Array.isArray(body.routes)) return null;
       const snapshotAt = typeof body.snapshot_at === "string" ? Date.parse(body.snapshot_at) : Number.NaN;
+      setDemoSnapshotAt(Number.isNaN(snapshotAt) ? null : snapshotAt);
       return {
         routes: new Set(body.routes.filter((r): r is string => typeof r === "string").map(normalize)),
         snapshotAt: Number.isNaN(snapshotAt) ? null : snapshotAt,
@@ -40,7 +42,7 @@ export async function loadStaticDemoRoutes(): Promise<StaticDemoRoutes | null> {
  * (its data is dated then), the wall clock everywhere else.
  */
 export function demoNow(snapshotAt: number | null | undefined): number {
-  return snapshotAt ?? Date.now();
+  return snapshotAt ?? nowForRelativeTime();
 }
 
 /** Snapshot time in the demo; `undefined` while loading, `null` outside the demo or without one. */
