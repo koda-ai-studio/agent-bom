@@ -16,7 +16,6 @@ from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 from agent_bom.scanners import reset_scan_warnings
 
-
 # Shared with the GitHub Action default (action.yml severity-threshold).
 DEFAULT_FAIL_ON_SEVERITY = "high"
 
