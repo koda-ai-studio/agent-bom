@@ -16,6 +16,7 @@ from fastapi.responses import Response
 
 from agent_bom.api import job_status_count_cache
 from agent_bom.api.bulk_findings_ingest import BulkFindingsRequest, PackageCheckRequest, _normalized_bulk_finding
+from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.finding_facets import _FACET_DEADLINE_SECONDS as _FACET_DEADLINE_SECONDS
 from agent_bom.api.finding_facets import _FACET_SCAN_BUDGET as _FACET_SCAN_BUDGET
 from agent_bom.api.finding_facets import _FACET_SEVERITY_BANDS as _FACET_SEVERITY_BANDS
@@ -108,7 +109,7 @@ from agent_bom.api.scan_request_context import (
     _visible_to_tenant,
 )
 from agent_bom.api.stores import _get_idempotency_store, _get_store, _job_lock, _jobs_get, _jobs_pop
-from agent_bom.api.tenancy import require_body_tenant_match
+from agent_bom.api.tenancy import require_body_tenant_match, require_request_tenant_id
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.finding_scope import FindingClass
 from agent_bom.security import sanitize_error, sanitize_text
@@ -635,9 +636,8 @@ async def list_findings(
 ) -> dict:
     """List unified findings aggregated from completed scan results.
 
-    Dedup/sort and synchronous store reads run in a worker thread (the context,
-    including tenant scope and projection, propagates) to avoid blocking the
-    event loop. Adaptive backpressure rejects saturation with 429 + Retry-After.
+    Dedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event
+    loop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.
 
     Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls``
     restores the full per-finding control mappings.
@@ -646,6 +646,7 @@ async def list_findings(
     endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.
     """
     includes = list_query_or_422(include, framework=framework, control=control)
+    refuse_unpinned_read_while_seeding(scan_id or "", require_request_tenant_id(request))
     try:
         async with adaptive_backpressure("findings"):
             implementation = _list_finding_groups_impl if group_occurrences else _list_findings_view_impl

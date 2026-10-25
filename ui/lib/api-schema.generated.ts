@@ -3172,9 +3172,8 @@ export interface paths {
          * List Findings
          * @description List unified findings aggregated from completed scan results.
          *
-         *     Dedup/sort and synchronous store reads run in a worker thread (the context,
-         *     including tenant scope and projection, propagates) to avoid blocking the
-         *     event loop. Adaptive backpressure rejects saturation with 429 + Retry-After.
+         *     Dedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event
+         *     loop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.
          *
          *     Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls``
          *     restores the full per-finding control mappings.
@@ -4556,6 +4555,8 @@ export interface paths {
         /**
          * Get Graph Exposure Paths
          * @description Return the MCP-compatible ExposurePath queue over REST for SDK consumers.
+         *
+         *     A supplied ``snapshot_generation`` that is not the generation the page was read from is a 409.
          */
         get: operations["get_graph_exposure_paths_v1_graph_exposure_paths_get"];
         put?: never;
@@ -4648,7 +4649,8 @@ export interface paths {
          * @description Page recorded incident relationships without loading the full neighborhood.
          *
          *     Reuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.
-         *     Snapshot replacement invalidates cursors (422: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
+         *     Snapshot replacement or a stale snapshot_generation is a 409 (restart); a malformed cursor is a 422.
+         *     A replaced id resolves to its canonical node, echoed as resolved_from.
          *     Completeness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.
          */
         get: operations["get_graph_incident_edges_v1_graph_incident_edges_get"];
@@ -5685,7 +5687,8 @@ export interface paths {
          *
          *     Every filter and the exact whole-query total is evaluated natively by the
          *     graph store. Facet buckets are self-excluding and computed across the whole
-         *     filtered snapshot, never only the displayed page.
+         *     filtered snapshot, never only the displayed page. A supplied
+         *     ``snapshot_generation`` that is no longer the snapshot's is a 409.
          */
         get: operations["list_inventory_assets_v1_inventory_assets_get"];
         put?: never;
@@ -34553,9 +34556,9 @@ export interface operations {
                 q?: string;
                 /** @description Scan ID */
                 scan_id?: string | null;
-                /** @description Read revision from the first page */
+                /** @description Optional with cursor; mismatch is 409 */
                 snapshot_generation?: string | null;
-                /** @description Opaque cursor for keyset pagination */
+                /** @description Opaque keyset cursor; carries the snapshot generation */
                 cursor?: string | null;
                 /** @description Pagination offset */
                 offset?: number;
@@ -35708,6 +35711,8 @@ export interface operations {
                 min_risk?: number;
                 /** @description Continuation cursor pinned to the snapshot and risk filter */
                 cursor?: string | null;
+                /** @description Generation from the first page; mismatch is 409 */
+                snapshot_generation?: string | null;
             };
             header?: never;
             path?: never;
@@ -36819,9 +36824,9 @@ export interface operations {
                 compliance_prefixes?: string | null;
                 /** @description Comma-separated data sources */
                 data_sources?: string | null;
-                /** @description Read revision from the first page */
+                /** @description Optional with cursor; mismatch is 409 */
                 snapshot_generation?: string | null;
-                /** @description Opaque cursor for keyset search pagination */
+                /** @description Opaque keyset cursor; carries the snapshot generation */
                 cursor?: string | null;
                 /** @description Pagination offset */
                 offset?: number;
@@ -38999,6 +39004,8 @@ export interface operations {
                 offset?: number;
                 /** @description Max rows to return */
                 limit?: number;
+                /** @description Generation from the first page; mismatch is 409 */
+                snapshot_generation?: string | null;
             };
             header?: never;
             path?: never;

@@ -25,7 +25,7 @@ def test_bounded_edges_preserve_postgres_tenant_and_projection_contract(migrated
         assert store.edges_for_node_ids(tenant_id="tenant-b", scan_id="estate", node_ids={"agent:root"}, limit=11) == []
         assert store.edges_for_node_ids(tenant_id="tenant-a", scan_id="estate", node_ids={"agent:root"}, direction="in", limit=11) == []
         incoming = store.edges_for_node_ids(
-            tenant_id="tenant-a", scan_id="estate", node_ids={"finding:00001"}, direction="in", relationships={"uses"}, limit=11
+            tenant_id="tenant-a", scan_id="estate", node_ids={"finding:00001"}, direction="in", relationships={"vulnerable_to"}, limit=11
         )
         assert len(incoming) == 1 and incoming[0].target == "finding:00001"
     finally:

@@ -16,11 +16,13 @@ from pathlib import Path
 from typing import AbstractSet, Any, Awaitable, Callable, TypeVar
 
 from agent_bom.core.estate_read_boundary import estate_read_boundary
+from agent_bom.mcp_tenant import bound_postgres_tenant
 from agent_bom.mcp_tools.dispatch import _TOOL_ERROR_TYPES as _TOOL_ERROR_TYPES
 from agent_bom.mcp_tools.dispatch import ToolErrorPayload as ToolErrorPayload
 from agent_bom.mcp_tools.dispatch import record_completion as _record_completion
 from agent_bom.mcp_tools.dispatch import resolve_tool_path as resolve_tool_path
 from agent_bom.mcp_tools.dispatch import tool_result_error as tool_result_error
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 from agent_bom.security import sanitize_log_label
 
 _ToolReturn = TypeVar("_ToolReturn")
@@ -624,7 +626,7 @@ async def execute_tool_async(
     logger.info("mcp tool start: %s caller=%s request_id=%s", tool_name, log_caller, log_request_id)
     try:
         async with get_tool_semaphore_fn():
-            with estate_read_boundary():
+            with bound_postgres_tenant(), estate_read_boundary():
                 result = await asyncio.wait_for(handler(*args, **kwargs), timeout=timeout_seconds)
     except TimeoutError:
         elapsed_ms = int((time.perf_counter() - start) * 1000)
@@ -658,6 +660,12 @@ async def execute_tool_async(
         )
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - start) * 1000)
+        refusal = retryable_estate_refusal(exc)
+        if refusal is not None:
+            _record_completion(
+                tool_name, refusal, elapsed_ms, request_meta, log_caller, record_tool_metric_fn, record_tool_request_fn, logger
+            )
+            return ToolErrorPayload(truncate_response_fn(refusal))
         sanitized = _log_value(sanitize_error_fn(exc), max_len=200)
         record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=False, error=sanitized)
         record_tool_request_fn(
@@ -748,7 +756,7 @@ async def execute_tool_sync_async(
         start = time.perf_counter()
         logger.info("mcp tool start: %s caller=%s request_id=%s", tool_name, log_caller, log_request_id)
         try:
-            with estate_read_boundary():
+            with bound_postgres_tenant(), estate_read_boundary():
                 result = await asyncio.wait_for(
                     asyncio.to_thread(handler, *args, **kwargs),
                     timeout=timeout_seconds,
@@ -783,6 +791,12 @@ async def execute_tool_sync_async(
             )
         except Exception as exc:
             elapsed_ms = int((time.perf_counter() - start) * 1000)
+            refusal = retryable_estate_refusal(exc)
+            if refusal is not None:
+                _record_completion(
+                    tool_name, refusal, elapsed_ms, request_meta, log_caller, record_tool_metric_fn, record_tool_request_fn, logger
+                )
+                return truncate_response_fn(refusal)
             sanitized = _log_value(sanitize_error_fn(exc), max_len=200)
             record_tool_metric_fn(tool_name, elapsed_ms=elapsed_ms, success=False, error=sanitized)
             record_tool_request_fn(

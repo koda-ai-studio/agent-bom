@@ -24,6 +24,7 @@ from agent_bom.mcp_errors import (
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools import deploy_gate as _deploy_gate
 from agent_bom.mcp_tools import exposure_queue as _exposure_queue
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 from agent_bom.mcp_tools.storage import default_graph_store
 
 logger = logging.getLogger(__name__)
@@ -37,24 +38,8 @@ else:
     _STORAGE_UNAVAILABLE_ERRORS += (_PostgresOperationalError,)
 
 
-def _retryable_estate_refusal(exc: Exception) -> str | None:
-    """A 503 the current-estate store raised (seeding or rotating generations), kept retryable for the caller."""
-    detail = getattr(exc, "detail", None)
-    if getattr(exc, "status_code", None) != 503 or not isinstance(detail, dict):
-        return None
-    try:
-        retry_after = int((getattr(exc, "headers", None) or {}).get("Retry-After", 1))
-    except (TypeError, ValueError):
-        retry_after = 1
-    return mcp_error_json(
-        CODE_UPSTREAM_UNAVAILABLE,
-        str(detail.get("message") or "The current estate is not ready; retry the request."),
-        details={"reason": str(detail.get("code") or ""), "retry_after_seconds": retry_after},
-    )
-
-
 def _graph_read_error(exc: Exception) -> str:
-    refusal = _retryable_estate_refusal(exc)
+    refusal = retryable_estate_refusal(exc)
     if refusal is not None:
         return refusal
     if isinstance(exc, _STORAGE_UNAVAILABLE_ERRORS):

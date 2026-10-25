@@ -24,6 +24,7 @@ from agent_bom.mcp_errors import (
     mcp_error_json,
 )
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,12 @@ def _resolve_store(_get_graph_store: Optional[Callable[[], Any]]) -> Any:
 
         _get_graph_store = _default_get_graph_store
     return _get_graph_store()
+
+
+def _inventory_service() -> Any:
+    from agent_bom.api import inventory_service
+
+    return inventory_service
 
 
 def _encode(payload: dict[str, Any], _truncate_response: Optional[Callable[[str], str]]) -> str:
@@ -56,7 +63,7 @@ async def inventory_summary_impl(
     _truncate_response: Optional[Callable[[str], str]] = None,
 ) -> str:
     """Return asset counts by type and group for the tenant's selected evidence scope."""
-    from agent_bom.api import inventory_service
+    inventory_service = _inventory_service()
 
     tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
     try:
@@ -80,10 +87,19 @@ async def inventory_summary_impl(
         # requested scope is never confirmed as empty-and-clean.
         if exc.status_code == 404 and scan_id is None:
             return _encode(inventory_service.empty_summary(tenant_id=tenant_id), _truncate_response)
-        return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, exc.detail)
-    except Exception:
+        return _inventory_error(exc)
+    except Exception as exc:
+        refusal = retryable_estate_refusal(exc)
+        if refusal is not None:
+            return refusal
         logger.exception("MCP inventory_summary error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, "An internal error has occurred.")
+
+
+def _inventory_error(exc: Any) -> str:
+    """The shared service's HTTP status, as the MCP error code the route's status maps to."""
+    code = CODE_NOT_FOUND_RESOURCE if exc.status_code == 404 else CODE_VALIDATION_INVALID_ARGUMENT
+    return mcp_error_json(code, exc.detail)
 
 
 async def inventory_list_impl(
@@ -104,7 +120,7 @@ async def inventory_list_impl(
     _truncate_response: Optional[Callable[[str], str]] = None,
 ) -> str:
     """Return a filtered, paginated page of inventory asset rows."""
-    from agent_bom.api import inventory_service
+    inventory_service = _inventory_service()
 
     tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
     try:
@@ -126,8 +142,11 @@ async def inventory_list_impl(
         )
         return _encode(payload, _truncate_response)
     except inventory_service.InventoryError as exc:
-        return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, exc.detail)
-    except Exception:
+        return _inventory_error(exc)
+    except Exception as exc:
+        refusal = retryable_estate_refusal(exc)
+        if refusal is not None:
+            return refusal
         logger.exception("MCP inventory_list error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, "An internal error has occurred.")
 
@@ -144,7 +163,7 @@ async def inventory_asset_impl(
     _truncate_response: Optional[Callable[[str], str]] = None,
 ) -> str:
     """Return asset attributes and one bounded page of recorded relationships."""
-    from agent_bom.api import inventory_service
+    inventory_service = _inventory_service()
 
     asset_id = (asset_id or "").strip()
     if not asset_id:
@@ -173,7 +192,10 @@ async def inventory_asset_impl(
             )
         return _encode(payload, _truncate_response)
     except inventory_service.InventoryError as exc:
-        return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, exc.detail)
-    except Exception:
+        return _inventory_error(exc)
+    except Exception as exc:
+        refusal = retryable_estate_refusal(exc)
+        if refusal is not None:
+            return refusal
         logger.exception("MCP inventory_asset error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, "An internal error has occurred.")

@@ -19,6 +19,7 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_ARGUMENT,
     mcp_error_json,
 )
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 
 API_EXTRA_REQUIRED = "This tool reads the control-plane API's persisted evidence; install agent-bom[api] to enable it."
 
@@ -36,7 +37,9 @@ def api_unavailable() -> str:
     return mcp_error_json(CODE_UNSUPPORTED_BACKEND, API_EXTRA_REQUIRED)
 
 
-def tenant_request(tenant_id: str, path: str) -> Any:
+def tenant_request(tenant_id: str, path: str, query: dict[str, Any] | None = None) -> Any:
+    from urllib.parse import urlencode
+
     from starlette.requests import Request
 
     return Request(
@@ -47,7 +50,7 @@ def tenant_request(tenant_id: str, path: str) -> Any:
             "path": path,
             "raw_path": path.encode(),
             "root_path": "",
-            "query_string": b"",
+            "query_string": urlencode({key: value for key, value in (query or {}).items() if value is not None}).encode(),
             "headers": [],
             "client": ("mcp", 0),
             "server": ("mcp", 0),
@@ -56,7 +59,11 @@ def tenant_request(tenant_id: str, path: str) -> Any:
     )
 
 
-def _error_for_status(status: int, detail: Any) -> str:
+def _error_for_status(exc: Any) -> str:
+    refusal = retryable_estate_refusal(exc)
+    if refusal is not None:
+        return refusal
+    status, detail = exc.status_code, exc.detail
     message = detail if isinstance(detail, str) else "The request was rejected."
     if status == 404:
         return mcp_error_json(CODE_NOT_FOUND_RESOURCE, message)
@@ -73,9 +80,9 @@ async def call_route(route_name: str, *, tenant_id: str, path: str, **params: An
     if reads is None:
         return None, api_unavailable()
     try:
-        return await getattr(reads, route_name)(tenant_request(tenant_id, path), **params), None
+        return await reads.call_read(route_name, tenant_request(tenant_id, path, params), **params), None
     except reads.HTTPException as exc:
-        return None, _error_for_status(exc.status_code, exc.detail)
+        return None, _error_for_status(exc)
 
 
 __all__ = ["API_EXTRA_REQUIRED", "api_reads", "api_unavailable", "call_route", "tenant_request"]

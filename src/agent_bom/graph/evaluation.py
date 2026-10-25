@@ -240,8 +240,14 @@ def _path_key(path: ExpectedPath) -> tuple[str, ...]:
     return tuple(path.hops)
 
 
+# Graph exports label package → vulnerability edges ``affects`` on ``kind`` but
+# persist them as ``vulnerable_to``; specs written with either name match.
+_RELATIONSHIP_ALIASES = {"affects": "vulnerable_to"}
+
+
 def _normalize_relationship(value: str) -> str:
-    return value.strip().lower().replace(" ", "_")
+    normalized = value.strip().lower().replace(" ", "_")
+    return _RELATIONSHIP_ALIASES.get(normalized, normalized)
 
 
 def _score_sets(expected: set[Any], actual: set[Any]) -> MetricScore:

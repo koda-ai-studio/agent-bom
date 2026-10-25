@@ -204,9 +204,8 @@ def test_mapping_receipts_survive_database_api_and_graph_export(monkeypatch, tmp
         response = client.get(url)
         assert response.status_code == 200
         exported = [e for e in response.json()["edges"] if e["evidence"].get("atlas_mapping_receipts")]
-        # The dependency export has one package occurrence; unified graph also
-        # carries agent/server rollups. The receipt, not that projection count, is shared.
-        assert len(exported) == (len(edges) if url.startswith("/v1/graph?") else 1)
+        # The export carries the persisted graph's edges, agent/server rollups included.
+        assert len(exported) == len(edges)
         assert all(e["evidence"]["atlas_mapping_receipts"][0]["techniques"] == expected for e in exported)
 
 

@@ -26,8 +26,8 @@ returned count and the true total for each list, and `summary` /
 ```json
 "bounds": {
   "events":       {"returned": 200, "total": 12219, "limit": 200, "truncated": true},
-  "correlations": {"returned":  50, "total":  2324, "limit":  50, "truncated": true},
-  "findings":     {"returned": 100, "total":  2674, "limit": 100, "truncated": true}
+  "correlations": {"returned":  50, "total":  2320, "limit":  50, "truncated": true},
+  "findings":     {"returned": 100, "total":  2681, "limit": 100, "truncated": true}
 }
 ```
 

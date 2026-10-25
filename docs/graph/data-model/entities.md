@@ -118,7 +118,7 @@ Id formats:
 
 ## `directory`
 
-Emitted by: `graph/agent_projection.py`, `graph/repo_structure_overlay.py`
+Emitted by: `graph/agent_projection.py`, `graph/repo_structure_overlay.py`, `output/graph_inventory.py`
 
 ## `drift_incident`
 
@@ -244,7 +244,7 @@ Emitted by: `graph/authorization_evidence.py`, `graph/cloud_context.py`, `graph/
 
 ## `source_file`
 
-Emitted by: `graph/agent_projection.py`, `graph/ast_tool_projection.py`, `graph/repo_structure_overlay.py`
+Emitted by: `graph/agent_projection.py`, `graph/ast_tool_projection.py`, `graph/repo_structure_overlay.py`, `output/graph_inventory.py`
 
 Id formats:
 

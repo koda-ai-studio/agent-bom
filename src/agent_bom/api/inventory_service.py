@@ -22,6 +22,7 @@ from typing import Any, Awaitable, Callable, Optional
 from agent_bom.api.graph_store import MAX_NODE_PAGE_OFFSET
 from agent_bom.domain.display_names import agent_display_name
 from agent_bom.graph import SEVERITY_RANK, EntityType
+from agent_bom.graph.adjacency_page import SnapshotGenerationMismatchError
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.ocsf import FINDING_ENTITY_TYPES
 from agent_bom.security import sanitize_error
@@ -542,8 +543,10 @@ async def build_asset_detail(
             cursor=cursor,
             snapshot_generation=snapshot_generation,
         )
+    except SnapshotGenerationMismatchError as exc:
+        raise InventoryError("Graph snapshot changed; restart asset inspection from its first page.", status_code=409) from exc
     except ValueError as exc:
-        raise InventoryError("Invalid relationship page or changed snapshot; restart asset inspection.", status_code=422) from exc
+        raise InventoryError("Invalid relationship page; restart asset inspection.", status_code=422) from exc
     if context is None:
         return None
 

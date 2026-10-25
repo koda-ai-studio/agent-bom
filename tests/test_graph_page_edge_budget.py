@@ -22,7 +22,7 @@ def _graph(tenant: str, count: int = 1100) -> UnifiedGraph:
     for index in range(count):
         node = UnifiedNode(id=f"finding:{index:05}", entity_type=EntityType.VULNERABILITY, label=f"{tenant}:finding:{index}")
         graph.add_node(node)
-        graph.add_edge(UnifiedEdge(source="agent:root", target=node.id, relationship=RelationshipType.USES))
+        graph.add_edge(UnifiedEdge(source="agent:root", target=node.id, relationship=RelationshipType.VULNERABLE_TO))
     return graph
 
 

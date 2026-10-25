@@ -134,7 +134,7 @@ def test_missing_and_stale_snapshots_never_claim_complete(boundary):
     assert missing["snapshot_generation"] is None
     page = fetch(boundary, limit=1).json()
     store.save_graph(graph())  # Same ID, timestamp and manifest; new durable generation.
-    assert fetch(boundary, cursor=page["next_cursor"]).status_code == 422
+    assert fetch(boundary, cursor=page["next_cursor"]).status_code == 409
     assert fetch(boundary, cursor="not-a-token").status_code == 422
 
 
@@ -177,7 +177,7 @@ def test_cross_node_expansion_requires_same_snapshot_generation(boundary):
     assert fetch(boundary, node_id="peer", snapshot_generation=generation, scan_id=first["scan_id"]).status_code == 200
     store.save_graph(graph())
     response = fetch(boundary, node_id="peer", snapshot_generation=generation, scan_id=first["scan_id"])
-    assert response.status_code == 422
+    assert response.status_code == 409
     current = fetch(boundary).json()
     assert current["snapshot_generation"] != generation
     assert (

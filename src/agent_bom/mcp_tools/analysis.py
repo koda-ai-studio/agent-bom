@@ -22,6 +22,7 @@ from agent_bom.mcp_tools.context_graph_source import (
     live_context_report,
     persisted_context_report,
 )
+from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 from agent_bom.mcp_tools.finding_graph import exposure_lists, load_snapshot_paths, project_finding, public_graph_block
 from agent_bom.mcp_tools.findings import RISK_SCALE
 from agent_bom.mcp_tools.host_local import HostLocalForbiddenError
@@ -254,6 +255,9 @@ async def context_graph_impl(
     except HostLocalForbiddenError:
         raise
     except Exception as exc:
+        refusal = retryable_estate_refusal(exc)
+        if refusal is not None:
+            return refusal
         logger.exception("MCP tool error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc)
 

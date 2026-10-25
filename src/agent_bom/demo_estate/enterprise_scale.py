@@ -24,6 +24,7 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
+from agent_bom.demo_estate.cloud_names import globally_unique_name
 from agent_bom.demo_estate.enterprise import (
     ENTERPRISE_SCHEMA_VERSION,
     CollectionRun,
@@ -372,10 +373,8 @@ def _workload_name(provider: str, scope: str, resource_type: str, environment: s
     Deterministic: the same (provider, account, type, slot) always yields the
     same name, so snapshots, the drift lens and every pinned test stay stable.
 
-    The environment suffix carries real information — ``claims-etl-prod`` and
-    ``claims-etl-staging`` are genuinely different blast radii — and the numeric
-    tail only appears when a pool wraps within one account, so the common case
-    reads as a name rather than a serial number.
+    The environment suffix carries real information (``claims-etl-prod`` vs
+    ``-staging`` blast radii); a numeric tail appears only when a pool wraps.
     """
     pool_key = _RESOURCE_NAME_POOL.get(resource_type, "compute")
     pool = _WORKLOAD_NAMES[pool_key]
@@ -427,6 +426,7 @@ def _build_assets(profile: ScaleProfile, tenant_id: str) -> tuple[EstateAsset, .
                 environment = ENVIRONMENTS[slot % len(ENVIRONMENTS)]
                 name = _workload_name(provider, scope, resource_type, environment, slot)
                 region = regions[_stable_index(provider, scope, name) % len(regions)]
+                name = globally_unique_name(resource_type, name, scope)
                 assets.append(
                     EstateAsset(
                         asset_id=f"{provider}:{resource_type}:{scope}:{name}",

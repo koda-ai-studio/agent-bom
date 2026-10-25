@@ -113,7 +113,8 @@ def postgres_gated_suites(root: Path = ROOT) -> set[str]:
         names = _derived_names(tree)
         if _gated_scopes(tree, names):
             gated.add(rel)
-        shared_fixtures[rel[: -len(".py")].replace("/", ".")] = _gated_fixtures(tree, names)
+        # A module-level skip mark gates every suite that imports it.
+        shared_fixtures[rel[: -len(".py")].replace("/", ".")] = _gated_fixtures(tree, names) | ({"pytestmark"} if rel in gated else set())
 
     for path in sorted((root / "tests").rglob("test_*.py")):
         rel = path.relative_to(root).as_posix()
@@ -165,3 +166,7 @@ def test_detector_recognizes_each_gating_pattern(tmp_path: Path) -> None:
         f"tests/{name}"
         for name in ("test_mark.py", "test_alias.py", "test_body.py", "test_fixture.py", "test_importer.py", "test_admin.py")
     }
+
+
+def test_a_suite_that_imports_a_gated_pytestmark_is_gated() -> None:
+    assert "tests/test_graph_page_edge_budget_postgres.py" in postgres_gated_suites()

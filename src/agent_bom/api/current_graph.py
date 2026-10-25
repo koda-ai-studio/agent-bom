@@ -96,15 +96,15 @@ def seeding_refusal() -> HTTPException:
     return HTTPException(503, cast(str, detail), headers={"Retry-After": str(SEEDING_RETRY_AFTER_SECONDS)})
 
 
-def refuse_unpinned_read_while_seeding(requested_scan_id: str) -> None:
+def refuse_unpinned_read_while_seeding(requested_scan_id: str, tenant_id: str | None = None) -> None:
     """An unpinned estate read during the demo boot seed would serve a partial or empty estate as complete."""
-    if not requested_scan_id and demo_estate_seeding():
+    if not requested_scan_id and demo_estate_seeding(tenant_id):
         raise seeding_refusal()
 
 
-def _refuse_current_read_while_seeding() -> None:
+def _refuse_current_read_while_seeding(tenant_id: str | None = None) -> None:
     """Refuse a caller's read of the current estate; the seed's own reads run outside any boundary."""
-    if inside_estate_read_boundary() and demo_estate_seeding():
+    if inside_estate_read_boundary() and demo_estate_seeding(tenant_id):
         raise seeding_refusal()
 
 
@@ -207,9 +207,11 @@ class CurrentGraphStore:
 
             @wraps(method)
             def latest(*args: Any, **kwargs: Any) -> str:
+                # Locating the latest snapshot is an unpinned read either way:
+                # before the first seeded snapshot lands it must refuse, not 503 "not found".
+                _refuse_current_read_while_seeding(str(kwargs.get("tenant_id") or "default"))
                 if "snapshot_kind" in kwargs:
                     return str(method(*args, **kwargs))
-                _refuse_current_read_while_seeding()
                 return self._current_id(str(kwargs.get("tenant_id") or "default")) or str(method(*args, **kwargs, snapshot_kind="scan"))
 
             return latest
@@ -236,7 +238,7 @@ class CurrentGraphStore:
             requested = str(kwargs.get("scan_id") or "")
             if requested and not requested.startswith(CURRENT_PREFIX):
                 return method(*args, **kwargs)
-            _refuse_current_read_while_seeding()
+            _refuse_current_read_while_seeding(str(kwargs.get("tenant_id") or "default"))
             # Retire rebuildable generations only after active readers finish.
             # Iterators hold a shared read while consuming their SQLite cursor.
             if name in {"iter_nodes", "iter_edges"}:

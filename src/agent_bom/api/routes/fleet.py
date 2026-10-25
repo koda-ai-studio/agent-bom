@@ -21,6 +21,7 @@ from typing import Annotated, Any, TypeVar, cast
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.fleet_stats import fleet_stats_payload
 from agent_bom.api.idempotency_store import IdempotencyConflictError, idempotency_request_fingerprint
 from agent_bom.api.mcp_observation_store import MCPObservation, agent_observation_id, merge_observations
@@ -135,6 +136,7 @@ async def list_fleet(
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
     tenant_id = require_request_tenant_id(request)
+    refuse_unpinned_read_while_seeding("", tenant_id)
     min_trust_value = float(min_trust) if min_trust is not None else None
     search_value = (search or "").strip() or None
     store = _get_fleet_store()
@@ -179,6 +181,7 @@ async def list_fleet(
 async def fleet_stats(request: Request) -> dict[str, Any]:
     """Fleet-wide statistics."""
     tenant_id = require_request_tenant_id(request)
+    refuse_unpinned_read_while_seeding("", tenant_id)
     agents = await _store_call(_get_fleet_store().list_by_tenant, tenant_id)
     return fleet_stats_payload(agents)
 

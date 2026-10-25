@@ -58584,7 +58584,7 @@
     },
     "/v1/findings": {
       "get": {
-        "description": "List unified findings aggregated from completed scan results.\n\nDedup/sort and synchronous store reads run in a worker thread (the context,\nincluding tenant scope and projection, propagates) to avoid blocking the\nevent loop. Adaptive backpressure rejects saturation with 429 + Retry-After.\n\nRows carry ``framework_tags`` and ``controls_count``; ``?include=controls``\nrestores the full per-finding control mappings.\n\n``offset`` is a compatibility path capped at 10,000: past the ceiling the\nendpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.",
+        "description": "List unified findings aggregated from completed scan results.\n\nDedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event\nloop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.\n\nRows carry ``framework_tags`` and ``controls_count``; ``?include=controls``\nrestores the full per-finding control mappings.\n\n``offset`` is a compatibility path capped at 10,000: past the ceiling the\nendpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.",
         "operationId": "list_findings_v1_findings_get",
         "parameters": [
           {
@@ -64125,7 +64125,7 @@
             }
           },
           {
-            "description": "Read revision from the first page",
+            "description": "Optional with cursor; mismatch is 409",
             "in": "query",
             "name": "snapshot_generation",
             "required": false,
@@ -64139,12 +64139,12 @@
                   "type": "null"
                 }
               ],
-              "description": "Read revision from the first page",
+              "description": "Optional with cursor; mismatch is 409",
               "title": "Snapshot Generation"
             }
           },
           {
-            "description": "Opaque cursor for keyset pagination",
+            "description": "Opaque keyset cursor; carries the snapshot generation",
             "in": "query",
             "name": "cursor",
             "required": false,
@@ -64157,7 +64157,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Opaque cursor for keyset pagination",
+              "description": "Opaque keyset cursor; carries the snapshot generation",
               "title": "Cursor"
             }
           },
@@ -66993,7 +66993,7 @@
     },
     "/v1/graph/exposure-paths": {
       "get": {
-        "description": "Return the MCP-compatible ExposurePath queue over REST for SDK consumers.",
+        "description": "Return the MCP-compatible ExposurePath queue over REST for SDK consumers.\n\nA supplied ``snapshot_generation`` that is not the generation the page was read from is a 409.",
         "operationId": "get_graph_exposure_paths_v1_graph_exposure_paths_get",
         "parameters": [
           {
@@ -67059,6 +67059,25 @@
               ],
               "description": "Continuation cursor pinned to the snapshot and risk filter",
               "title": "Cursor"
+            }
+          },
+          {
+            "description": "Generation from the first page; mismatch is 409",
+            "in": "query",
+            "name": "snapshot_generation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Generation from the first page; mismatch is 409",
+              "title": "Snapshot Generation"
             }
           }
         ],
@@ -67410,7 +67429,7 @@
     },
     "/v1/graph/incident-edges": {
       "get": {
-        "description": "Page recorded incident relationships without loading the full neighborhood.\n\nReuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.\nSnapshot replacement invalidates cursors (422: restart). A replaced id resolves to its canonical node, echoed as resolved_from.\nCompleteness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.",
+        "description": "Page recorded incident relationships without loading the full neighborhood.\n\nReuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.\nSnapshot replacement or a stale snapshot_generation is a 409 (restart); a malformed cursor is a 422.\nA replaced id resolves to its canonical node, echoed as resolved_from.\nCompleteness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.",
         "operationId": "get_graph_incident_edges_v1_graph_incident_edges_get",
         "parameters": [
           {
@@ -69149,7 +69168,7 @@
             }
           },
           {
-            "description": "Read revision from the first page",
+            "description": "Optional with cursor; mismatch is 409",
             "in": "query",
             "name": "snapshot_generation",
             "required": false,
@@ -69163,12 +69182,12 @@
                   "type": "null"
                 }
               ],
-              "description": "Read revision from the first page",
+              "description": "Optional with cursor; mismatch is 409",
               "title": "Snapshot Generation"
             }
           },
           {
-            "description": "Opaque cursor for keyset search pagination",
+            "description": "Opaque keyset cursor; carries the snapshot generation",
             "in": "query",
             "name": "cursor",
             "required": false,
@@ -69181,7 +69200,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Opaque cursor for keyset search pagination",
+              "description": "Opaque keyset cursor; carries the snapshot generation",
               "title": "Cursor"
             }
           },
@@ -74055,7 +74074,7 @@
     },
     "/v1/inventory/assets": {
       "get": {
-        "description": "Paginated, filterable asset rows across every source in the unified graph.\n\nEvery filter and the exact whole-query total is evaluated natively by the\ngraph store. Facet buckets are self-excluding and computed across the whole\nfiltered snapshot, never only the displayed page.",
+        "description": "Paginated, filterable asset rows across every source in the unified graph.\n\nEvery filter and the exact whole-query total is evaluated natively by the\ngraph store. Facet buckets are self-excluding and computed across the whole\nfiltered snapshot, never only the displayed page. A supplied\n``snapshot_generation`` that is no longer the snapshot's is a 409.",
         "operationId": "list_inventory_assets_v1_inventory_assets_get",
         "parameters": [
           {
@@ -74245,6 +74264,25 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Generation from the first page; mismatch is 409",
+            "in": "query",
+            "name": "snapshot_generation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Generation from the first page; mismatch is 409",
+              "title": "Snapshot Generation"
             }
           }
         ],

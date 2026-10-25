@@ -11,6 +11,7 @@ import pytest
 
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
+from agent_bom.graph.adjacency_page import SnapshotGenerationMismatchError
 
 # Hand-built graphs here use placeholder relationship pairs to exercise graph
 # mechanics; producers are held to the contract in test_graph_relationship_contract.
@@ -100,7 +101,7 @@ def test_cursor_rejects_scope_changes_and_new_snapshot(store):
         store.incident_edges_page(tenant_id=tenant, node_id="hub", cursor=cursor)
     assert store.incident_edges_page(tenant_id=tenant, scan_id="scan", node_id="hub", cursor=cursor)
     save_fixture(store, tenant, created="2026-09-25T00:00:00Z")
-    with pytest.raises(ValueError, match="scope"):
+    with pytest.raises(SnapshotGenerationMismatchError, match="replaced"):
         store.incident_edges_page(tenant_id=tenant, scan_id="scan", node_id="hub", cursor=cursor)
 
 
@@ -283,7 +284,7 @@ def test_replacement_with_same_timestamp_and_manifest_invalidates_cursor(store, 
     new_scope = json.loads(base64.urlsafe_b64decode(fresh["next_cursor"]))["scope"]
     assert old_scope[:4] == new_scope[:4]  # Same tenant, ID, timestamp, manifest.
     assert old_scope[4] != new_scope[4]  # Every successful save advances generation.
-    with pytest.raises(ValueError, match="scope"):
+    with pytest.raises(SnapshotGenerationMismatchError, match="replaced"):
         store.incident_edges_page(tenant_id=tenant, scan_id="scan", node_id="hub", cursor=page["next_cursor"])
 
 
