@@ -66,6 +66,29 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
   #controls button {{ padding: 8px 12px; border: 1px solid #2f3336; background: rgba(26, 31, 37, 0.96);
     color: #e7e9ea; border-radius: 8px; cursor: pointer; font-size: 12px; }}
   #controls button:hover {{ background: #2f3336; }}
+  .panel-toggle {{ display: none; }}
+  /* Phones: header and toolbar stack full-width, the canvas takes the rest
+     of the viewport, and the risk list and legend open on demand. */
+  @media (max-width: 767px) {{
+    body {{ display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }}
+    #header {{ flex-direction: column; padding: 10px 16px; gap: 4px; }}
+    #header h1 {{ font-size: 16px; }}
+    #header p {{ display: none; }}
+    #stats {{ white-space: normal; padding-top: 0; }}
+    #stats span {{ margin: 0 4px 0 0; }}
+    #toolbar {{ flex-direction: column; align-items: stretch; padding: 8px 16px; gap: 6px; }}
+    #toolbar .left, #toolbar .right {{ gap: 6px; }}
+    .chip {{ padding: 5px 8px; font-size: 11px; }}
+    #search {{ width: 100%; }}
+    #cy {{ flex: 1 1 auto; height: auto; min-height: 0; }}
+    #riskpanel, #legend {{ display: none; }}
+    #riskpanel.open, #legend.open {{ display: block; }}
+    #riskpanel, #detail {{ top: auto; bottom: 96px; left: 16px; right: 16px; width: auto; max-height: 45vh; }}
+    #legend {{ bottom: 96px; }}
+    #controls {{ left: 16px; right: 16px; bottom: 12px; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }}
+    #controls button {{ padding: 7px 10px; }}
+    .panel-toggle {{ display: inline-block; }}
+  }}
 </style>
 </head>
 <body>
@@ -133,6 +156,8 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
   </div>
 </div>
 <div id="controls">
+  <button class="panel-toggle" id="toggle-riskpanel" onclick="togglePanel('riskpanel')">Risks</button>
+  <button class="panel-toggle" id="toggle-legend" onclick="togglePanel('legend')">Legend</button>
   <button onclick="focusTopRisk()">Top risk</button>
   <button onclick="fitAll()">Fit all</button>
   <button onclick="cy.zoom(cy.zoom()*1.2);cy.center()">+</button>

@@ -538,6 +538,13 @@ function searchNodes(query){{
   }}
 }}
 
+function togglePanel(id){{
+  ['riskpanel','legend'].forEach((other)=>{{
+    const el=document.getElementById(other);
+    if(el) el.classList.toggle('open', other===id ? !el.classList.contains('open') : false);
+  }});
+}}
+
 function dlPng(){{
   const a=document.createElement('a');
   a.href=cy.png({{scale:2,bg:'#0f1419'}});

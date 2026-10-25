@@ -85,3 +85,13 @@ def test_application_entrypoint_label_names_its_file() -> None:
     labels = sorted(el["data"]["label"] for el in build_graph_elements(report) if el["data"].get("type") == "application_entrypoint")
 
     assert labels == ["main · routing.py", "main · worker.py"]
+
+
+def test_phone_layout_collapses_panels_and_gives_the_canvas_the_viewport() -> None:
+    from agent_bom.output.graph_html_template_head import _GRAPH_HTML_TEMPLATE_HEAD
+
+    phone = _GRAPH_HTML_TEMPLATE_HEAD[_GRAPH_HTML_TEMPLATE_HEAD.index("@media (max-width: 767px)") :]
+    assert "#riskpanel, #legend {{ display: none; }}" in phone
+    assert "#cy {{ flex: 1 1 auto;" in phone
+    assert "togglePanel('riskpanel')" in _GRAPH_HTML_TEMPLATE_HEAD and "togglePanel('legend')" in _GRAPH_HTML_TEMPLATE_HEAD
+    assert "function togglePanel(id)" in _GRAPH_HTML_TEMPLATE_BODY
