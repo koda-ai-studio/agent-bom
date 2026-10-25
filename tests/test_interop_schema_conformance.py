@@ -759,7 +759,9 @@ def test_possibly_affected_entries_stay_schema_valid() -> None:
     report = _possibly_affected_report()
     cdx = to_cyclonedx(report)
     assert any(entry.get("analysis", {}).get("state") == "in_triage" for entry in cdx["vulnerabilities"])
-    _assert_schema_valid("CycloneDX 1.7 possibly affected", "cyclonedx-1.7.schema.json", Draft7Validator, cdx, registry=_cyclonedx_registry())
+    _assert_schema_valid(
+        "CycloneDX 1.7 possibly affected", "cyclonedx-1.7.schema.json", Draft7Validator, cdx, registry=_cyclonedx_registry()
+    )
     sarif = to_sarif(report)
     assert any(result["level"] == "note" for result in sarif["runs"][0]["results"])
     _assert_schema_valid("SARIF 2.1.0 possibly affected", "sarif-schema-2.1.0.json", Draft7Validator, sarif)
