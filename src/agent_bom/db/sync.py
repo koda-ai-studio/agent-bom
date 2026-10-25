@@ -633,7 +633,7 @@ def sync_db(
     Args:
         path: DB file path (default: DB_PATH from schema.py).
         sources: list of source names to sync, e.g. ["osv", "kev"]. Default: ``DEFAULT_SYNC_SOURCES``.
-                 Note: "nvd" is NOT in the default set — it is slow without an API key.
+                 "nvd" is in the default set, so NVD-only CVEs and their CPE ranges arrive with a plain update.
                  Keyless "nvd" ingests a 14-day window of new/modified CVEs then
                  backfills CVSS/CWE; with a key it ingests a 120-day window.
         osv_url / epss_url / kev_url / ghsa_url / nvd_url: URL overrides (for testing).
