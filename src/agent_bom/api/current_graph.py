@@ -96,9 +96,9 @@ def seeding_refusal() -> HTTPException:
     return HTTPException(503, cast(str, detail), headers={"Retry-After": str(SEEDING_RETRY_AFTER_SECONDS)})
 
 
-def refuse_unpinned_read_while_seeding(requested_scan_id: str) -> None:
+def refuse_unpinned_read_while_seeding(requested_scan_id: str, tenant_id: str | None = None) -> None:
     """An unpinned estate read during the demo boot seed would serve a partial or empty estate as complete."""
-    if not requested_scan_id and demo_estate_seeding():
+    if not requested_scan_id and demo_estate_seeding(tenant_id):
         raise seeding_refusal()
 
 
