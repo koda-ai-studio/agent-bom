@@ -82,7 +82,7 @@ Excluded:
 | `agent_bom_tenant_access` | [Tenancy, identity and access](storage-erd/tenancy.md) | Snowflake | `tenant_id`, `snowflake_role` | `tenant_id`, `snowflake_role` | `tenant_id` | persistent | `api/snowflake_store.py` |
 | `agent_bom_tenant_binding_keys` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `key_id` | `key_id` | **none** | persistent | `deploy/supabase/postgres/alembic/versions/20260819_01_tenant_binding_authority.py`, `deploy/supabase/postgres/init.sql`, `deploy/supabase/postgres/runtime-schema.sql` |
 | `agent_conditional_access_policies` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `policy_id` | `policy_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/identity_local_store.py`, `api/postgres_agent_identity.py` |
-| `agent_identities` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `identity_id` | `identity_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/identity_local_store.py`, `api/postgres_agent_identity.py` |
+| `agent_identities` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `tenant_id`, `identity_id` | `identity_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/identity_local_store.py`, `api/postgres_agent_identity.py` |
 | `agent_identity_jit_grants` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `grant_id` | `grant_id`, `tenant_id`, `identity_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/identity_local_store.py`, `api/postgres_agent_identity.py` |
 | `agent_lifecycle_records` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `kind`, `record_id` | `tenant_id`, `kind`, `record_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_01_agent_lifecycle.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/lifecycle_store.py` |
 | `agents` | [Inventory and assets](storage-erd/inventory.md) | Postgres | `agent_id` | `agent_id`, `scan_run_id`, `team_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql` |
@@ -285,7 +285,6 @@ These tables carry a tenant column, but their primary key (per backend) does not
 | `access_review_items` | SQLite | `item_id` | `tenant_id` |
 | `agent_conditional_access_policies` | Postgres | `policy_id` | `tenant_id` |
 | `agent_conditional_access_policies` | SQLite | `policy_id` | `tenant_id` |
-| `agent_identities` | Postgres | `identity_id` | `tenant_id` |
 | `agent_identities` | SQLite | `identity_id` | `tenant_id` |
 | `agent_identity_jit_grants` | Postgres | `grant_id` | `tenant_id` |
 | `agent_identity_jit_grants` | SQLite | `grant_id` | `tenant_id` |

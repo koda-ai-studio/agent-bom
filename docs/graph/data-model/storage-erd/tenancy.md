@@ -33,7 +33,7 @@ erDiagram
   }
   agent_identities {
     text identity_id PK
-    text tenant_id
+    text tenant_id PK
   }
   agent_identity_jit_grants {
     text grant_id PK
