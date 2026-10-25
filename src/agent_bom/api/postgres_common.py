@@ -24,6 +24,7 @@ from agent_bom.config import (
     POSTGRES_CONNECT_TIMEOUT_SECONDS,
     POSTGRES_POOL_MAX_SIZE,
     POSTGRES_POOL_MIN_SIZE,
+    POSTGRES_POOL_TIMEOUT_SECONDS,
     POSTGRES_STATEMENT_TIMEOUT_MS,
 )
 
@@ -356,6 +357,7 @@ def _new_application_pool(*, min_size: int, max_size: int) -> ConnectionPool:
             max_size=max_size,
             kwargs=kwargs,
             connection_class=iam_auth_connection_class,
+            timeout=POSTGRES_POOL_TIMEOUT_SECONDS,
             open=True,
         )
     return psycopg_pool.ConnectionPool(
@@ -363,6 +365,7 @@ def _new_application_pool(*, min_size: int, max_size: int) -> ConnectionPool:
         min_size=min_size,
         max_size=max_size,
         kwargs=kwargs,
+        timeout=POSTGRES_POOL_TIMEOUT_SECONDS,
         open=True,
     )
 
@@ -479,6 +482,7 @@ def _get_maintenance_pool() -> ConnectionPool:
             min_size=1,
             max_size=max_size,
             kwargs=kwargs,
+            timeout=POSTGRES_POOL_TIMEOUT_SECONDS,
             open=True,
         )
         try:
