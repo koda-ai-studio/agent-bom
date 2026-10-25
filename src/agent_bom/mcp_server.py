@@ -10,7 +10,6 @@ Full profile Tools (97):
     scan                — Full discovery → scan → output pipeline
     check               — Check a specific package for CVEs before installing
     intel_lookup        — Look up a CVE, GHSA, or OSV advisory from local threat intel
-    affected_assets     — List the scanned assets an advisory affects, with patch targets
     intel_match         — Match package inventory coordinates to local advisory intel
     intel_sources       — Return canonical intel sources and local feed-run freshness
     intel_daily_brief   — Return a local analyst threat brief from governed intel sources

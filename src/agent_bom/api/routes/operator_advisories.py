@@ -18,8 +18,10 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 
 from agent_bom.api.advisory_affected_read import persist_affected_answer, retire_advisory_findings, tenant_affected_answer
+from agent_bom.api.advisory_graph_overlay import with_advisory_vulnerabilities
 from agent_bom.api.audit_log import log_action
 from agent_bom.api.findings_current import current_scan_jobs
+from agent_bom.api.graph_input_overlays import register_graph_input_overlay
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
 from agent_bom.api.stores import _get_operator_advisory_store
 from agent_bom.api.tenancy import require_request_tenant_id
@@ -33,6 +35,13 @@ _TAGS: list[str | Any] = ["intel"]
 
 def _store() -> Any:
     return _get_operator_advisory_store()
+
+
+def _declared_overlay(report: dict[str, Any], tenant_id: str) -> dict[str, Any]:
+    return with_advisory_vulnerabilities(report, _store().list(tenant_id))
+
+
+register_graph_input_overlay("operator_advisories", _declared_overlay)
 
 
 def _current_reports(tenant_id: str) -> list[dict[str, Any]]:
