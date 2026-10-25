@@ -17,6 +17,7 @@ from agent_bom.api.storage.runtime_observation_query import (
     sql_observation_page,
     sql_sessions,
 )
+from agent_bom.api.storage.runtime_observation_window import memory_window, sql_window
 from agent_bom.api.storage.runtime_records import (
     RuntimeObservationRecord as RuntimeObservationRecord,
 )
@@ -96,6 +97,8 @@ class RuntimeEventStore(Protocol):
     def put_observations_batch(self, records: list[RuntimeObservationRecord]) -> int: ...
 
     def query_observations(self, tenant_id: str, *, limit: int = 100, offset: int = 0, **filters: Any) -> dict[str, Any]: ...
+
+    def window_observations(self, tenant_id: str, **query: Any) -> list[RuntimeObservationRecord]: ...
 
     def list_sessions(self, tenant_id: str, *, limit: int = 100, offset: int = 0) -> list[RuntimeSessionRecord]: ...
 
@@ -240,6 +243,11 @@ class InMemoryRuntimeEventStore:
         with self._lock:
             rows = [row for (owner, _), row in self._observations.items() if owner == tenant_id]
         return memory_observation_page(rows, limit=limit, offset=offset, **filters)
+
+    def window_observations(self, tenant_id: str, **query: Any) -> list[RuntimeObservationRecord]:
+        with self._lock:
+            rows = [row for (owner, _), row in self._observations.items() if owner == tenant_id]
+        return memory_window(rows, **query)
 
     def list_sessions(self, tenant_id: str, *, limit: int = 100, offset: int = 0) -> list[RuntimeSessionRecord]:
         with self._lock:
@@ -433,6 +441,9 @@ class SQLiteRuntimeEventStore:
 
     def query_observations(self, tenant_id: str, *, limit: int = 100, offset: int = 0, **filters: Any) -> dict[str, Any]:
         return sql_observation_page(self._conn, tenant_id, limit=limit, offset=offset, **filters)
+
+    def window_observations(self, tenant_id: str, **query: Any) -> list[RuntimeObservationRecord]:
+        return sql_window(self._conn, tenant_id, **query)
 
     def list_sessions(self, tenant_id: str, *, limit: int = 100, offset: int = 0) -> list[RuntimeSessionRecord]:
         rows = self._conn.execute(

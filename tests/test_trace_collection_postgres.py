@@ -16,6 +16,50 @@ from agent_bom.api.trace_collection.store import TraceCollectionStore
 pytestmark = pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="requires migrated private PostgreSQL")
 
 
+def test_postgres_window_filters_before_budget_and_enforces_application_rls(monkeypatch):
+    from agent_bom.api.trace_collection import normalized_events as reads
+    from agent_bom.runtime.normalized_trace import NormalizedTraceEvent
+
+    tenant = "trace-window-" + uuid4().hex
+    token = set_current_tenant(tenant)
+    pool = _new_application_pool(min_size=1, max_size=2)
+    try:
+        runtime = PostgresRuntimeEventStore(pool)
+        with pool.connection() as conn:
+            assert conn.execute("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone() == (False,)
+        for identity, stamp in [
+            ("new", "2026-10-25T00:00:00Z"),
+            ("a", "2026-10-19T20:00:00-04:00"),
+            ("b", "2026-10-20T00:00:00Z"),
+            ("c", "2026-10-20T00:00:00Z"),
+        ]:
+            runtime.put_observation(
+                reads._record(
+                    NormalizedTraceEvent(
+                        tenant_id=tenant, source="otel", source_trace_id="trace", source_span_id=identity, started_at=stamp
+                    )
+                )
+            )
+        monkeypatch.setattr(reads, "MAX_WINDOW_EVENTS", 2)
+        monkeypatch.setattr(reads, "_PAGE", 1)
+        events, limited = reads.load_window_events(runtime, tenant, window_start="2026-10-10T00:00:00Z", window_end="2026-10-20T00:00:00Z")
+        assert len(events) == 2 and limited
+        assert all(event["source_span_id"] != "new" for event in events)
+        other = set_current_tenant(tenant + "-other")
+        try:
+            assert (
+                runtime.window_observations(
+                    tenant, window_start="2026-10-10T00:00:00Z", window_end="2026-10-20T00:00:00Z", surfaces=(reads.NORMALIZED_SURFACE,)
+                )
+                == []
+            )
+        finally:
+            reset_current_tenant(other)
+    finally:
+        pool.close()
+        reset_current_tenant(token)
+
+
 def test_postgres_atomic_restart_replay_fencing_and_rls():
     tenant = "trace-test-" + uuid4().hex
     token = set_current_tenant(tenant)

@@ -259,6 +259,14 @@ def test_no_trace_events_leaves_the_graph_unchanged(hub):
     assert _runtime_edges(graph) == []
 
 
+def test_capped_load_without_valid_events_still_reports_missing_evidence(monkeypatch):
+    from agent_bom.api.trace_collection import trace_evidence
+
+    monkeypatch.setattr(trace_evidence, "load_window_events", lambda *a, **k: ([], True))
+    report = with_trace_events(REPORT, "tenant-a", store=InMemoryRuntimeEventStore())
+    assert report["runtime_trace_events"]["load_truncated"] is True
+
+
 def test_otlp_route_binds_the_request_tenant_never_the_span_claim(hub):
     from starlette.testclient import TestClient
 

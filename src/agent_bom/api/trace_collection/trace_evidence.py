@@ -101,7 +101,7 @@ def with_trace_events(report_json: dict[str, Any], tenant_id: str, *, store: Run
     except Exception:  # broad-except: a trace-store outage is recorded on the graph instead of failing the snapshot
         _logger.warning("Runtime trace events unavailable for graph build", exc_info=False)
         return {**report_json, "runtime_trace_events": {**payload, "load_failed": True}}
-    if not events:
+    if not events and not truncated:
         return report_json
     payload.update(events=events, load_truncated=truncated)
     return {**report_json, "runtime_trace_events": payload}

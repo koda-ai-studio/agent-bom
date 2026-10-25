@@ -81,6 +81,30 @@ also preserve the original peer (for Uvicorn, `--no-proxy-headers`).
 `X-Forwarded-For` cannot establish context authority; existing trusted-proxy
 settings only resolve the client IP used by separate source-CIDR conditions.
 
+## Graph evidence reads
+
+Historical trace windows filter tenant, surface and inclusive UTC time bounds
+before consuming the 20,000-event budget. Pages use a timestamp/id cursor;
+unrelated retained history is neither counted nor projected. A capped load is
+reported as limited even if no valid event survives normalization. Store errors
+produce a failed evidence receipt; they do not turn missing telemetry into a
+clean graph or change gateway enforcement.
+
+OCSF ingestion retains bounded, allowlisted actor/session, cloud and device
+attribution. Actor principal identifiers use tenant-bound digests; missing
+deployment HMAC keys retain the explicit weak-digest marker. Source-reported
+identity is not verified agent identity. Session identities include tenant,
+source and account scope. Without a native session, only retries of the same
+event are grouped. A timestamp synthesized at ingestion is marked `receipt`,
+not evidence of execution time.
+
+Local incident feedback reads at most 8 MiB, 10,000 records and 64 KiB per line
+(plus one byte or line for limit detection). Byte/line/record limits, malformed
+records and unavailable files appear as limited graph evidence. Reading never
+truncates, rewrites or removes the source JSONL. The existing append sink remains
+fail-open for relay availability; operators retain ownership of file rotation
+and evidence retention.
+
 ## What is *not* an isolation boundary
 
 The stdio proxy's launcher check (`agent_bom.security.require_recognized_launcher`)

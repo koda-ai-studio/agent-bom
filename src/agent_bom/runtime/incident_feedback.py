@@ -41,6 +41,9 @@ SCHEMA_VERSION = "runtime_incident_feedback.v1"
 
 # Env var that turns the feedback sink on without code changes.
 ENV_FEEDBACK_PATH = "AGENT_BOM_RUNTIME_FEEDBACK_PATH"
+MAX_FEEDBACK_BYTES = 8 * 1024 * 1024
+MAX_FEEDBACK_LINE_BYTES = 64 * 1024
+MAX_FEEDBACK_RECORDS = 10_000
 
 
 class IncidentKind(str, Enum):
@@ -197,34 +200,60 @@ class RuntimeIncidentSink:
             return False
 
 
-def load_incident_records(path: str | os.PathLike[str] | None) -> list[RuntimeIncidentRecord]:
-    """Load and parse runtime incident records from a JSONL file.
+@dataclass
+class IncidentReadResult:
+    """Bounded evidence plus explicit reasons why the returned window is incomplete."""
 
-    Fail-safe: a missing path, unreadable file, or malformed lines yield an
-    empty list / skipped rows rather than an exception. Absent data ⇒ no records
-    ⇒ the graph build behaves exactly as it does today.
-    """
+    records: list[RuntimeIncidentRecord] = field(default_factory=list)
+    reason_codes: tuple[str, ...] = ()
+    bytes_read: int = 0
+
+
+def read_incident_records(path: str | os.PathLike[str] | None) -> IncidentReadResult:
+    """Stream a bounded prefix without altering evidence; report omissions and read failures."""
     resolved = resolve_sink_path(path)
-    if resolved is None or not resolved.exists():
-        return []
-    records: list[RuntimeIncidentRecord] = []
+    result = IncidentReadResult()
+    if resolved is None:
+        return result
+    reasons: set[str] = set()
     try:
-        text = resolved.read_text(encoding="utf-8")
+        with resolved.open("rb") as handle:
+            while True:
+                remaining = MAX_FEEDBACK_BYTES - result.bytes_read
+                line = handle.readline(min(MAX_FEEDBACK_LINE_BYTES, max(0, remaining)) + 1)
+                result.bytes_read += len(line)
+                if not line:
+                    break
+                if len(line) > remaining:
+                    reasons.add("feedback_byte_limit")
+                    break
+                if len(line) > MAX_FEEDBACK_LINE_BYTES:
+                    reasons.add("feedback_line_limit")
+                    break
+                if len(result.records) >= MAX_FEEDBACK_RECORDS:
+                    reasons.add("feedback_record_limit")
+                    break
+                if not line.strip():
+                    continue
+                try:
+                    payload = json.loads(line)
+                    record = RuntimeIncidentRecord.from_dict(payload) if isinstance(payload, Mapping) else None
+                except (ValueError, UnicodeDecodeError, TypeError, OverflowError, RecursionError):
+                    record = None
+                if record is None:
+                    reasons.add("malformed_feedback")
+                else:
+                    result.records.append(record)
     except OSError:
         logger.debug("Could not read runtime incident feedback file (non-fatal)", exc_info=False)
-        return []
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            payload = json.loads(stripped)
-        except (json.JSONDecodeError, ValueError):
-            continue
-        record = RuntimeIncidentRecord.from_dict(payload) if isinstance(payload, Mapping) else None
-        if record is not None:
-            records.append(record)
-    return records
+        reasons.add("feedback_unavailable")
+    result.reason_codes = tuple(sorted(reasons))
+    return result
+
+
+def load_incident_records(path: str | os.PathLike[str] | None) -> list[RuntimeIncidentRecord]:
+    """Compatibility list read; graph consumers use the receipt from ``read_incident_records``."""
+    return read_incident_records(path).records
 
 
 def incident_attribute(kind: str) -> str | None:

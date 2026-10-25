@@ -30,6 +30,7 @@ from agent_bom.api.runtime_event_store import (
     _session_from_json,
 )
 from agent_bom.api.storage.runtime_observation_query import sql_observation_page, sql_sessions
+from agent_bom.api.storage.runtime_observation_window import sql_window
 from agent_bom.api.storage.runtime_trace_imports import (
     RUNTIME_TRACE_STORAGE_VERSION,
     TRACE_IMPORT_TABLE_SQL,
@@ -215,6 +216,10 @@ class PostgresRuntimeEventStore:
     def query_observations(self, tenant_id: str, *, limit: int = 100, offset: int = 0, **filters: Any) -> dict[str, Any]:
         with _tenant_connection(self._pool) as conn:
             return sql_observation_page(conn, tenant_id, limit=limit, offset=offset, postgres=True, **filters)
+
+    def window_observations(self, tenant_id: str, **query: Any) -> list[RuntimeObservationRecord]:
+        with _tenant_connection(self._pool) as conn:
+            return sql_window(conn, tenant_id, postgres=True, **query)
 
     def list_sessions(self, tenant_id: str, *, limit: int = 100, offset: int = 0) -> list[RuntimeSessionRecord]:
         with _tenant_connection(self._pool) as conn:

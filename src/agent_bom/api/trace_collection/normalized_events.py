@@ -150,27 +150,29 @@ def load_window_events(
 ) -> tuple[list[dict[str, Any]], bool]:
     """Read canonical events for one tenant inside the window, newest first, bounded."""
     events: list[dict[str, Any]] = []
-    start = datetime.fromisoformat(window_start)
-    for surface in (IMPORTED_SURFACE, NORMALIZED_SURFACE):
-        offset = 0
-        while len(events) < MAX_WINDOW_EVENTS:
-            page = store.query_observations(tenant_id, limit=_PAGE, offset=offset, surface=surface)["observations"]
-            for record in page:
-                normalized = record.metadata.get("normalized") if record.tenant_id == tenant_id else None
-                if isinstance(normalized, dict) and normalized.get("tenant_id") == tenant_id:
-                    events.append(normalized)
-            if len(page) < _PAGE or _before(page[-1].observed_at, start):
-                break
-            offset += _PAGE
-    return events[:MAX_WINDOW_EVENTS], len(events) >= MAX_WINDOW_EVENTS
-
-
-def _before(observed_at: str, start: datetime) -> bool:
-    try:
-        moment = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
-    except ValueError:
-        return False
-    return moment.tzinfo is not None and moment < start
+    before = None
+    examined = 0
+    while examined <= MAX_WINDOW_EVENTS:
+        limit = min(_PAGE, MAX_WINDOW_EVENTS + 1 - examined)
+        page = store.window_observations(
+            tenant_id,
+            limit=limit,
+            before=before,
+            window_start=window_start,
+            window_end=window_end,
+            surfaces=(IMPORTED_SURFACE, NORMALIZED_SURFACE),
+        )
+        for record in page:
+            examined += 1
+            if examined > MAX_WINDOW_EVENTS:
+                return events, True
+            normalized = record.metadata.get("normalized") if record.tenant_id == tenant_id else None
+            if isinstance(normalized, dict) and normalized.get("tenant_id") == tenant_id:
+                events.append(normalized)
+        if len(page) < limit:
+            return events, False
+        before = (page[-1].observed_at, page[-1].observation_id)
+    return events, True
 
 
 def coverage_summary(events: list[NormalizedTraceEvent]) -> dict[str, dict[str, Any]]:
