@@ -31,16 +31,10 @@ sample data. Nothing is installed and no request leaves the page's origin.
 
 ## What it does
 
-```
-better-sqlite3@9.0.0  (npm package)
-  ├─ OSV/GHSA finding  (critical · advisory-backed)
-  └─ sqlite-mcp  (MCP Server · unverified)
-       ├─ Cursor IDE  (Agent · 4 servers · 12 tools)
-       ├─ ANTHROPIC_KEY, DB_URL, AWS_SECRET  (Credential env names visible)
-       └─ query_db, read_file, write_file  (Tools at risk)
-
- Fix: upgrade better-sqlite3 → 11.7.0
-```
+Follow an agent to its MCP server, the vulnerable package it uses, and the
+advisory finding. Inspect each relationship's source, review the proposed
+remediation, then rescan the changed input. Credential references are names,
+not secret values; a modeled path does not prove execution or successful access.
 
 Package risk is only the start. The committed **Reference evidence lab —
 modeled local infrastructure** correlates real parser and bundled-advisory

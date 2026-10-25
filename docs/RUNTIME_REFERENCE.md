@@ -41,7 +41,7 @@ This page is the canonical runtime surface map. The detail docs:
 |---|---|---|
 | **HTTP gateway** | `src/agent_bom/api/` (FastAPI app), `src/agent_bom/api/policy_store.py` | Edge auth, tenant resolution, RBAC, rate limits, multi-MCP fan-out from one URL. |
 | **Inter-agent firewall** | `src/agent_bom/firewall.py` | Whether agent A may delegate to agent B. Returns `allow`/`deny` for an `(source, target)` pair. |
-| **Proxy / sidecar** | `src/agent_bom/proxy.py`, `src/agent_bom/sidecar.py` | Per-method runtime policy on a single MCP server: which JSON-RPC methods are enabled, which tools are allow-listed, response-body credential redaction, approval-required gating. |
+| **Proxy / sidecar** | `src/agent_bom/proxy.py` | Per-method runtime policy on a single MCP server: which JSON-RPC methods are enabled, which tools are allow-listed, response-body credential redaction, approval-required gating. |
 | **MCP server** | `src/agent_bom/mcp_server.py` | Exposes agent-bom's own tools (scan, blast-radius, evidence) over MCP for Claude/Cursor to consume. *Not* a policy layer; it's a tool surface. |
 | **Sidecar injection webhook** | `src/agent_bom/sidecar_injector.py`, Helm `sidecarInjection` block | Mutates Pod specs at admission time so workloads get the proxy automatically. *Not* a runtime decision; it's a deploy-time injection path. |
 

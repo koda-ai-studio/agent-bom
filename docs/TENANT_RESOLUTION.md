@@ -204,5 +204,6 @@ For an operator deploying `agent-bom` for more than one tenant:
   SAML-with-tenant-attribute, or RBAC API keys — never
   `AGENT_BOM_OIDC_ALLOW_DEFAULT_TENANT=1` or
   `AGENT_BOM_SAML_ALLOW_DEFAULT_TENANT=1`.
-- [ ] Postgres RLS policies enabled (`scripts/check_postgres_rls.py` or
-  the integration tests in `tests/test_postgres_integration.py`).
+- [ ] Postgres RLS policies enabled (startup role checks in
+  `src/agent_bom/api/server_storage.py` and integration tests in
+  `tests/test_postgres_integration.py`).

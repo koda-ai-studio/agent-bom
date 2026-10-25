@@ -1,6 +1,6 @@
 # Gateway Relay Latency Evidence
 
-Evidence status: measured
+Evidence status: historical measurement (2026-07-23)
 Related decision: [ADR-009](../decisions/009-python-primary-go-sidecar-later.md)
 Raw result artifacts:
 
@@ -25,7 +25,7 @@ DLP / visual-leak paths, or stdio proxy performance.
 
 ## Scope
 
-- Harness: `scripts/run_gateway_relay_benchmark.py`
+- Historical harness: [`scripts/run_gateway_relay_benchmark.py` at the measurement commit](https://github.com/koda-ai-studio/agent-bom/blob/52152995e/scripts/run_gateway_relay_benchmark.py); removed when the Go runtime tier was retired in #4474.
 - Mock upstream: `scripts/perf/mock_mcp_upstream.py` (`POST /mcp` JSON-RPC echo)
 - Gateway: `agent-bom gateway serve --bind 127.0.0.1:<port> --upstreams <tmp.yaml>`
 - Client path: `POST /mcp/echo` with `tools/call`
@@ -62,7 +62,12 @@ At concurrency **500** (200 requests per level in this run), the gate trips if
   / keepalive `20` — **not** env-configurable today; tuned mode could not enlarge
   the gateway pool without a CLI/settings change
 
-## Commands
+## Historical commands
+
+These commands record the original measurement procedure at commit
+`52152995e`; the retired harness is not available on current main. The
+retained JSON artifacts above preserve the measurements. See ADR-009 for the
+retirement decision; these results do not establish current-release latency.
 
 ```bash
 uv run python scripts/run_gateway_relay_benchmark.py \

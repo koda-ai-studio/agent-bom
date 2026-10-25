@@ -11,6 +11,22 @@ from agent_bom.cli import main
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_registry_docs_disclose_disk_side_scan_mutations() -> None:
+    for name in ("DOCKER_HUB_README.md", "PYPI_README.md"):
+        text = " ".join((ROOT / "docs/registry" / name).read_text().lower().split())
+        assert "temporary cloud resources" in text, name
+        assert "read-only by default" in text, name
+        assert "snapshot-based cwpp, read-only" not in text, name
+
+
+def test_registry_production_commands_link_required_secret_bootstrap() -> None:
+    for name in ("DOCKER_HUB_README.md", "PYPI_README.md"):
+        text = (ROOT / "docs/registry" / name).read_text()
+        prerequisite = "#production-externalsecrets-are-a-separate-stage"
+        assert prerequisite in text, name
+        assert text.index(prerequisite) < text.index("helm upgrade --install"), name
+
+
 def test_clickhouse_skill_uses_http_endpoint_and_registered_analytics_command() -> None:
     import re
     import shlex

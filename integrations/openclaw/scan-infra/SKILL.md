@@ -4,7 +4,7 @@ description: >-
   Scan infrastructure-as-code, cloud configurations, and find secrets. Use when:
   "check terraform", "scan kubernetes", "IaC", "find secrets",
   "scan dockerfile", "cloud security", "misconfigurations".
-version: 0.110.0
+version: 0.111.0
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Install via pipx or pip. Optional: kubectl for

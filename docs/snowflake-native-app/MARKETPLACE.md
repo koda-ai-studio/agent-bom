@@ -87,7 +87,7 @@ Authoritative Snowflake references:
 The review-ready listing content is versioned at
 `docs/snowflake-native-app/listing-template.yml`. The consumer-visible resource
 contract is `deploy/snowflake/native-app/marketplace.yml`; it declares the
-`AGENT_BOM_CONSUMER_POOL` compute requirement, and `scripts/setup.sql` creates that pool
+`AGENT_BOM_CONSUMER_POOL` compute requirement, and `deploy/snowflake/native-app/scripts/setup.sql` creates that pool
 during installation.
 
 Before submitting a listing, install in a private-preview account and retain the

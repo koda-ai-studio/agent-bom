@@ -16,6 +16,8 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "check_release_consistency.py"
 BUMP = ROOT / "scripts" / "bump-version.py"
@@ -145,3 +147,17 @@ class TestIndependentVersionsAreDeclared:
         monkeypatch.setattr(crc, "INDEPENDENTLY_VERSIONED", {})
         problems = crc.sweep_version_drift(_release_version())
         assert any("sdks/typescript" in problem for problem in problems)
+
+
+def test_openclaw_release_checker_accepts_only_published_install_pins(tmp_path, monkeypatch):
+    skill = tmp_path / "integrations/openclaw/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("version: 0.111.0\ndocker: ghcr.io/koda-ai-studio/agent-bom:0.110.0\n`agent-bom verify agent-bom@0.110.0`\n")
+    monkeypatch.setattr(crc, "ROOT", tmp_path)
+    crc._assert_openclaw_versions("0.111.0", "0.110.0")
+    for old, new in (("agent-bom:0.110.0", "agent-bom:0.111.0"), ("agent-bom@0.110.0", "agent-bom@0.111.0")):
+        prepared = skill.read_text()
+        skill.write_text(prepared.replace(old, new))
+        with pytest.raises(SystemExit):
+            crc._assert_openclaw_versions("0.111.0", "0.110.0")
+        skill.write_text(prepared)

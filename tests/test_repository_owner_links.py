@@ -120,13 +120,18 @@ def _load_script(name: str, root: Path = ROOT):
     return module
 
 
-def test_release_bump_rewrites_openclaw_image_pins_under_the_current_owner() -> None:
+def test_openclaw_image_pins_move_with_the_published_image_under_either_owner() -> None:
     bump = _load_script("bump-version.py")
-    text = "docker: ghcr.io/koda-ai-studio/agent-bom:0.1.0\nlegacy: ghcr.io/msaad00/agent-bom:0.1.0\n"
+    alignment = _load_script("check_version_alignment.py")
+    original = "docker: ghcr.io/koda-ai-studio/agent-bom:0.1.0\nlegacy: ghcr.io/msaad00/agent-bom:0.1.0\n"
+    source_bumped = original
     for _glob, pattern, template in bump.OPENCLAW_SKILL_PATTERNS:
-        text = pattern.sub(template.format(v="9.9.9"), text)
-    assert "ghcr.io/koda-ai-studio/agent-bom:9.9.9" in text
-    assert "ghcr.io/msaad00/agent-bom:9.9.9" in text
+        source_bumped = pattern.sub(template.format(v="9.9.9"), source_bumped)
+    assert source_bumped == original
+    (ghcr,) = [managed for managed in alignment.MANAGED_PATTERNS if managed.label == "GHCR image pin"]
+    published = ghcr.regex.sub(lambda match: match.group(1) + "9.9.9", original)
+    assert "ghcr.io/koda-ai-studio/agent-bom:9.9.9" in published
+    assert "ghcr.io/msaad00/agent-bom:9.9.9" in published
 
 
 def test_release_consistency_sees_openclaw_image_pins_under_either_owner() -> None:
