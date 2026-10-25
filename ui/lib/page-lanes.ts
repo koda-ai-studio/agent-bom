@@ -23,6 +23,7 @@ export const PAGE_LANE_META: Record<
 const PATH_TO_LANE: Record<string, PageLane> = {
   "/": "command",
   "/findings": "command",
+  "/advisories": "command",
   "/security-graph": "command",
   "/remediation": "command",
   "/graph": "command",

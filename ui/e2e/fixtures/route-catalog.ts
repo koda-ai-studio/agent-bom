@@ -6,6 +6,7 @@ export const PRODUCT_ROUTES = [
   "/",
   "/accounts/_",
   "/activity",
+  "/advisories",
   "/agents",
   "/agents/topology",
   "/audit",

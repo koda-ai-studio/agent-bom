@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileSearch, Loader2, Newspaper, RefreshCw, Search, ShieldAlert } from "lucide-react";
 
@@ -229,7 +230,12 @@ function AdvisoryLookup() {
       </form>
 
       {error ? <InlineNotice tone="error">{error}</InlineNotice> : null}
-      {notFound ? <InlineNotice tone="info">No advisory found for that identifier.</InlineNotice> : null}
+      {notFound ? (
+        <InlineNotice tone="info">
+          No advisory found for that identifier.{" "}
+          <Link href="/advisories?tab=declare" className="font-medium text-[color:var(--accent)] underline-offset-2 hover:underline">Declare an emergency advisory</Link>
+        </InlineNotice>
+      ) : null}
       {advisory ? (
         <div className="space-y-2 rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] p-3" data-testid="intel-advisory-result">
           <div className="flex flex-wrap items-center gap-2">
@@ -249,6 +255,9 @@ function AdvisoryLookup() {
             {advisory.published_at ? ` · published ${formatDate(advisory.published_at)}` : ""}
             {` · ${advisory.affected?.length ?? 0} affected package record(s). Fixes depend on package and ecosystem.`}
           </div>
+          <Link href={`/advisories?id=${encodeURIComponent(advisory.id)}`} className="inline-flex text-xs font-medium text-[color:var(--accent)] underline-offset-2 hover:underline">
+            Which of my assets are affected?
+          </Link>
         </div>
       ) : null}
     </div>
