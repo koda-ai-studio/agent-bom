@@ -22,10 +22,9 @@ from starlette.types import ASGIApp
 from agent_bom.api.error_envelope import (
     with_middleware_error_envelope,
 )
-from agent_bom.api.rate_limit_store import FailOpenRateLimitStore
+from agent_bom.api.rate_limit_store import FailOpenRateLimitStore, record_rate_limit_hit
 from agent_bom.api.rate_limit_store import InMemoryRateLimitStore as InMemoryRateLimitStore
 from agent_bom.api.rate_limit_store import PostgresRateLimitStore as PostgresRateLimitStore
-from agent_bom.api.rate_limit_store import record_rate_limit_hit
 from agent_bom.api.storage.deployment import (
     _configured_api_replicas,
     _production_or_clustered_control_plane,

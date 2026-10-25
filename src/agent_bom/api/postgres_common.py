@@ -334,6 +334,7 @@ def _new_application_pool(*, min_size: int, max_size: int) -> ConnectionPool:
         # Keep the secret out of the conninfo/DSN; psycopg forwards these
         # per-connection kwargs to libpq for every new connection.
         kwargs["password"] = password
+    pool_options: dict[str, object] = {}
     if auth_mode == AUTH_MODE_IAM:
         import psycopg
 
@@ -346,19 +347,10 @@ def _new_application_pool(*, min_size: int, max_size: int) -> ConnectionPool:
 
         # Construct the optional psycopg subclass dynamically so importing
         # this module remains dependency-free in non-Postgres installs.
-        iam_auth_connection_class = type(
+        pool_options["connection_class"] = type(
             "IamAuthConnection",
             (psycopg.Connection,),
             {"connect": classmethod(connect_with_iam_token)},
-        )
-        return psycopg_pool.ConnectionPool(
-            conninfo=url,
-            min_size=min_size,
-            max_size=max_size,
-            kwargs=kwargs,
-            connection_class=iam_auth_connection_class,
-            timeout=POSTGRES_POOL_TIMEOUT_SECONDS,
-            open=True,
         )
     return psycopg_pool.ConnectionPool(
         conninfo=url,
@@ -367,6 +359,7 @@ def _new_application_pool(*, min_size: int, max_size: int) -> ConnectionPool:
         kwargs=kwargs,
         timeout=POSTGRES_POOL_TIMEOUT_SECONDS,
         open=True,
+        **pool_options,
     )
 
 

@@ -14,7 +14,6 @@ from agent_bom import config
 from agent_bom.api.durable_store import default_state_db_path, postgres_configured
 from agent_bom.api.storage.deployment import clustered_control_plane_required
 
-
 # Below the chart's readiness probe timeoutSeconds so a stalled dependency
 # reports not-ready instead of timing out the probe.
 READINESS_TIMEOUT_SECONDS = 3.0
