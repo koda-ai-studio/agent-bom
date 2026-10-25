@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, type IntelSource } from "@/lib/api";
+import { demoNow, useStaticDemoSnapshotAt } from "@/lib/static-demo-routes";
 
 function statusLabel(status: string | null | undefined): string {
   if (status === "freshness_unknown") return "Freshness unknown";
@@ -56,6 +57,7 @@ function syncSummary(recorded: number, total: number, partial: number, stale: nu
 export function AdvisoryFreshness() {
   const [sources, setSources] = useState<IntelSource[] | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const snapshotAt = useStaticDemoSnapshotAt();
   useEffect(() => {
     let active = true;
     async function load() {
@@ -70,7 +72,8 @@ export function AdvisoryFreshness() {
     return () => { active = false; };
   }, []);
   const recordedSyncs = sources?.filter(source => Boolean(source.feed_run?.last_synced)).length ?? 0;
-  const now = Date.now();
+  // Until the demo snapshot time is known, nothing is judged stale.
+  const now = snapshotAt === undefined ? Number.NEGATIVE_INFINITY : demoNow(snapshotAt);
   const health = new Map((sources ?? []).map(source => [source.source_id, sourceHealth(source, now)]));
   const healthCount = (status: string) => [...health.values()].filter(item => item.status === status).length;
   return <details className="advisory-freshness" aria-label="Advisory data freshness">

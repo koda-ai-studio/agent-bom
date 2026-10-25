@@ -1,5 +1,12 @@
 {
   "evidence": "Source catalog from agent_bom.intel_lookup.CANONICAL_INTEL_SOURCES; sync receipts are simulated by the fixture.",
+  "sample_feeds": [
+    "osv",
+    "ghsa",
+    "nvd",
+    "epss",
+    "cisa_kev"
+  ],
   "sources": [
     {
       "source_id": "osv",

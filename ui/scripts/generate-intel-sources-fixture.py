@@ -13,14 +13,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "ui" / "fixtures" / "intel-sources.json"
+# Feeds the bundled sample estate is matched with. The screenshot and demo
+# fixtures enable only these, so no unused feed reads as "never recorded".
+SAMPLE_FEEDS = ("osv", "ghsa", "nvd", "epss", "cisa_kev")
 
 
 def catalog() -> dict[str, object]:
     sys.path.insert(0, str(ROOT / "src"))
     from agent_bom.intel_lookup import CANONICAL_INTEL_SOURCES
 
+    unknown = set(SAMPLE_FEEDS) - {s.source_id for s in CANONICAL_INTEL_SOURCES}
+    if unknown:
+        raise SystemExit(f"sample feeds not in the product catalog: {sorted(unknown)}")
+
     return {
         "evidence": "Source catalog from agent_bom.intel_lookup.CANONICAL_INTEL_SOURCES; sync receipts are simulated by the fixture.",
+        "sample_feeds": list(SAMPLE_FEEDS),
         "sources": [
             {
                 "source_id": s.source_id,
