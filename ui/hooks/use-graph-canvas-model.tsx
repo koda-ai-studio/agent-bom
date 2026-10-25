@@ -170,11 +170,11 @@ export function useGraphCanvasModel(page: GraphPageData) {
     // A destination can render before navigation commits. Writing native
     // history then would replace the origin route and interrupt the drill-in.
     if (window.location.pathname !== pathname) return;
-    // Read the live address bar rather than useSearchParams(): on this page the
-    // filter/layout state churns rapidly on load and useSearchParams() can lag
-    // or read empty across those re-renders. The current query drives the
-    // no-op guard below so we never re-sync an unchanged URL.
+    // Native history can move before Next commits its query snapshot. An
+    // older graph render must not replace that pending navigation with its
+    // own root or filters. Resume synchronization when the router catches up.
     const currentSearch = new URLSearchParams(window.location.search);
+    if (currentSearch.toString() !== searchParams.toString()) return;
     const nextParams = encodeFiltersToParams(filters);
     // Client-side lens navigation can mount this surface before the snapshot
     // request resolves. Preserve the destination scan until the canonical
