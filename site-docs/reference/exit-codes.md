@@ -44,6 +44,19 @@ input were valid. The narrower `check` command retains its established
 precondition contract and exits `2` when its requested offline advisory lookup
 cannot start.
 
+### Skill and instruction scans
+
+`agent-bom skills scan . -f json -o skills.json` writes its report and exits
+`1` if any file is classified as **malicious**. Benign and suspicious content
+return `0` under this default content gate. A zero exit does not prove the
+files are safe: inspect their verdicts and coverage in `skills.json`.
+
+Use `--ci` or `--fail-on-verdict suspicious` to also block suspicious content.
+Use `--audit-only` for an explicitly reporting-only content scan. It preserves
+all findings, but cannot be combined with `--ci`, `--fail-on-verdict`, or their
+environment-variable equivalents. Explicit policy and review-verdict gates
+still apply in audit-only mode.
+
 ### Outdated local data fails closed
 
 When the local vulnerability DB is past the age `agent-bom db freshness` warns
