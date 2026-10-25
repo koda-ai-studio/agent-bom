@@ -42,6 +42,7 @@ dependencies = [
     "regex>=2026.9.10",  # bounded runtime policy matching with engine-enforced timeouts
     "toml>=0.10",
     "pyyaml>=6.0",
+    "defusedxml>=0.7.1",  # XML manifests (pom.xml, .csproj) are untrusted input
     "jsonschema>=4.0",
     # Workstation preset process/listener inventory must work from the base
     # package. The collector reads names and local bind classes only; it never
