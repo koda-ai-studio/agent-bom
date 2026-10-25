@@ -56,3 +56,16 @@ def test_azure_storage_account_names_are_unique_and_valid() -> None:
     assert shared == {}, f"{len(shared)} of {len(accounts_by_name)} storage account names span subscriptions"
     invalid = [name for name in accounts_by_name if not re.fullmatch(r"[a-z0-9]{3,24}", name)]
     assert invalid == [], f"names break Azure's 3-24 lowercase letters-and-digits rule: {invalid[:5]}"
+
+
+def test_azure_function_app_names_are_unique_and_valid() -> None:
+    """Function apps answer on <name>.azurewebsites.net, so a name exists once across all subscriptions."""
+    import re
+
+    estate = build_demo_estate(tenant_id="default")
+    names = [asset.display_name for asset in estate.assets if asset.provider == "azure" and asset.resource_type == "function_app"]
+
+    assert len(names) > 1
+    assert len(set(names)) == len(names), f"{len(names) - len(set(names))} of {len(names)} function app names repeat"
+    invalid = [name for name in names if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?", name)]
+    assert invalid == [], f"names break Azure's 2-60 letters, digits and inner hyphens rule: {invalid[:5]}"
