@@ -10,9 +10,9 @@ from starlette.testclient import TestClient
 from agent_bom.api import stores as api_stores
 from agent_bom.api.current_graph import _READS, CURRENT_PREFIX
 from agent_bom.api.graph_store import SQLiteGraphStore
-from agent_bom.api.store import InMemoryJobStore
 from agent_bom.api.routes.graph_routes import path_count
 from agent_bom.api.server import app
+from agent_bom.api.store import InMemoryJobStore
 from agent_bom.api.stores import set_graph_store
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 
