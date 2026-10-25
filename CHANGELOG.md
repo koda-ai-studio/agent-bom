@@ -27,6 +27,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 - `agent-bom db update --source nvd` ingests NVD-only CVEs and their CPE ranges without an API key: a 14-day `lastModified` window at 5 requests per rolling 30 seconds (120 days and 50 per 30 seconds with `NVD_API_KEY`), so a source-built runtime such as `php 8.3.30` matches a CVE NVD has analysed before OSV or KEV list it, with the range's fixed release. A rate-limited, timed-out or truncated window is reported `PARTIAL` and resumes next run.
 - Operator advisories that name a `cpe_product` no longer report distro packages of that product as clean: Debian `php8.2-cli 8.2.29-1~deb12u1` against a `php:php` advisory takes the local Debian/Alpine/RHEL feed verdict when one exists, and is otherwise listed as `indeterminate` (`distro_backport_unverified`, shown in the `db advisory match` table) instead of comparing backported versions to upstream ranges. The daily re-match counts these as `indeterminate_distro` without freezing its cursor.
+- Helm: optional `nvdApiKey.existingSecret` injects `NVD_API_KEY` from an existing Kubernetes Secret (`secretKeyRef`, unset by default) into the scanner CronJob and control-plane API; the chart never takes a plaintext key.
 
 ### Changed
 

@@ -159,6 +159,8 @@ blank `collectorImage.tag` falls back to `image.tag`.
 | `controlPlane.connectionsScheduler.enabled` | `false` | Injects `AGENT_BOM_CONNECTIONS_SCHEDULER=1` on the API; still requires per-connection `scan_interval_minutes` |
 | `controlPlane.connectionsScheduler.maxConcurrency` | `4` | Injects `AGENT_BOM_CONNECTIONS_SCHEDULER_MAX_CONCURRENCY` (due full-scans + continuous event drains) |
 | `controlPlane.connectionsScheduler.pollSeconds` | _(unset)_ | Optional; injects `AGENT_BOM_CONNECTIONS_SCHEDULER_POLL_SECONDS` when set |
+| `nvdApiKey.existingSecret.name` | `""` (keyless) | Existing Secret holding the NVD API key; when set, injects `NVD_API_KEY` via `secretKeyRef` into the scanner CronJob and the control-plane API. Raises the NVD budget to 50 requests / 30s and the `db update --source nvd` window to 120 days. The chart takes no plaintext key. |
+| `nvdApiKey.existingSecret.key` | `NVD_API_KEY` | Key inside that Secret |
 | `collectorImage.repository` | `agentbom/agent-bom-collector` | Cloud-SDK collector image the scan CronJob runs |
 | `collectorImage.tag` | release version | Collector tag — override to bump the SDK layer independently of the control plane; blank falls back to `image.tag` |
 | `controlPlane.enabled` | `false` | Package API + dashboard Deployments |

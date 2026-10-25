@@ -99,6 +99,7 @@ spec:
               value: {{ .Values.controlPlane.autoCorrelation.enabled | quote }}
             - name: AGENT_BOM_GRAPH_AUTO_CORRELATE_MAX_AGE_HOURS
               value: {{ .Values.controlPlane.autoCorrelation.maxAgeHours | quote }}
+            {{- include "agent-bom.nvdApiKeyEnv" . | nindent 12 }}
           {{- with .Values.controlPlane.api.env }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
