@@ -93,6 +93,7 @@ kind, then rescan the same scope to check what changed.
 
 *Fictional sample estate. Dashed use, credential and access links are configured
 or modeled, not observed at runtime; path analysis covers the collected snapshot only.*
+[Open the full-size environment graph](docs/images/graph-environment-dark-live.png).
 
 **From agent to verified fix:** select Document Intake Agent → inspect
 CVE-2023-4863 (high, KEV-listed) and the evidence on each arrow → take the
@@ -108,6 +109,7 @@ receipt is open.
 <p align="center"><a href="docs/images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-relationship-light-live.png"><img src="docs/images/graph-relationship-dark-live.png" alt="Repository pin, image inventory and Kubernetes deployment occurrence resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the plain-language relationship evidence open" width="1100"></picture></a></p>
 
 *Real parsers, modeled infrastructure; a graph path does not prove exploitation.*
+[Open the full-size relationship graph](docs/images/graph-relationship-dark-live.png).
 
 [Explore context, correlation and reachability](docs/GALLERY.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md) · [Reproduce these screenshots](docs/GALLERY.md#reproduce-the-readme-screenshots)
 
@@ -196,6 +198,11 @@ with `uvx agent-bom check requests@2.33.0 --ecosystem pypi`. Add
 Discovery uses read-only access by default. Explicit disk side-scans create
 temporary cloud resources. Missing evidence stays unavailable or partial;
 control mappings are not audit certification.
+
+Persisted runtime, proxy and gateway activity retains source receipts and
+bounded time windows in the graph. Exact inventory references can bind records;
+unresolved identities and collection gaps remain explicit. Recorded activity
+does not prove execution or grant access. See the [runtime evidence boundaries](docs/TRACE_CONNECTIONS.md).
 
 MITRE technique associations provide investigation context, not proof of an
 attack. [ATLAS mapping receipts](docs/ATLAS_COVERAGE.md) retain the weakness

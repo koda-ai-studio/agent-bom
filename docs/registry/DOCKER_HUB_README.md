@@ -25,9 +25,8 @@ README.
 - **`agentbom/agent-bom`** — API/runtime image for CLI, API, scanner jobs, gateway, proxy, and MCP server mode
 - **`agentbom/agent-bom-ui`** — UI companion image for the self-hosted control plane
 
-Keep the split. The Python runtime surfaces and the Node UI have different
-runtime, patch cadence, and scaling characteristics. They are companion images,
-not separate products.
+Deploy the API and UI images together for the control plane, or use the API
+image alone for CLI and runtime workloads. Each can be scaled and patched independently.
 
 ## Run This First
 
@@ -39,7 +38,9 @@ docker compose -f docker-compose.pilot.yml up -d
 # Dashboard -> http://localhost:3000
 ```
 
-Production in your own cluster from a checked-out repo:
+For production, configure the database, identity and ingress settings in a
+release checkout. Follow the [required secret bootstrap](https://github.com/koda-ai-studio/agent-bom/tree/main/deploy/helm/agent-bom#production-externalsecrets-are-a-separate-stage)
+and wait for all four target Secrets before installing the workload:
 
 ```bash
 helm upgrade --install agent-bom deploy/helm/agent-bom \
@@ -75,7 +76,7 @@ feed the same evidence model.
 |------|------------|----------|
 | **Try the sample** | `docker run --rm -v agentbom-state:/home/abom/.agent-bom agentbom/agent-bom:latest scan --demo --offline` | bundled sample findings in the terminal; security-verdict exit `1` is expected |
 | **Send evidence to a control plane** | `docker compose -f docker-compose.pilot.yml up -d` | fleet inventory, scan jobs, graph state, compliance exports |
-| **Enforce runtime behavior** | `agent-bom proxy` or `agent-bom mcp server` from this image | MCP tools, audit JSONL, policy blocks, runtime alerts |
+| **Enforce runtime behavior** | Configure `agent-bom proxy` for a selected MCP server | policy decisions, audit JSONL and runtime alerts; MCP server mode separately exposes scanner tools |
 
 ## CLI And Runtime Quick Start
 
@@ -133,9 +134,11 @@ docker run --rm -v "$(pwd):/workspace" agentbom/agent-bom:latest iac /workspace
 - AI/MCP coverage across agents, MCP, skills, AI models/datasets, runtime,
   containers, cloud, IaC, and GPU
 - Supply-chain scanning across 15 package ecosystems with OSV/GHSA enrichment
-- Read-only, keyless cloud estate inventory (AWS/Azure/GCP/Snowflake) plus CIS
-  benchmarks, registry-wide container image sweeps (ECR/ACR/GAR), and agentless
-  AWS EBS disk side-scan (snapshot-based CWPP, read-only)
+- Cloud estate inventory (AWS/Azure/GCP/Snowflake) using scoped provider
+  credentials, CIS benchmarks and registry-wide image sweeps (ECR/ACR/GAR).
+  Inventory is read-only by default. Explicit AWS EBS disk side-scans create
+  temporary cloud resources, including snapshots and analysis volumes; they
+  require additional permissions and can incur provider charges.
 - Non-human identity governance (NHI discovery, credential-expiry, access
   review) and LLM cost forecasting with chargeback and spend-anomaly detection
 - Malicious-model detection via safe pickle-opcode disassembly (no execution)
@@ -177,23 +180,16 @@ cadence, not separate security products.
 
 ## OTEL and Policy
 
-`agent-bom` already supports OpenTelemetry as a real interoperability surface:
+OpenTelemetry support includes:
 
 - API request tracing with W3C trace context
 - OTLP export for operator telemetry
 - OTEL trace ingest through `/v1/traces`
-- runtime workflows that consume OTEL traces as evidence
+- experimental trace collection and graph workflows, enabled with
+  `AGENT_BOM_EXPERIMENTAL=traces`; see the [trace connection guide](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/TRACE_CONNECTIONS.md)
 
 Policy is native by default. The shipped gateway and proxy use the repo's JSON
-policy engine, not an embedded OPA/Rego runtime. That is intentional: one
-shared policy model across scan, gateway, proxy, and runtime, without adding an
-extra policy binary to the operator stack.
-
-The right enterprise story is:
-
-- OTEL is first-class today
-- native JSON policy remains the default
-- OPA/Rego is an optional future interoperability path, not the core engine
+policy engine. An OPA/Rego runtime is not included.
 
 ## Deploy In Your Own Infra
 

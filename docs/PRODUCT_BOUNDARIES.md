@@ -5,7 +5,7 @@ This is the GitHub-facing companion to
 the deployment lanes, see [DEPLOY_PLATFORM.md](DEPLOY_PLATFORM.md) — the canonical lanes page.
 This page is the boundary and copy-rules reference.
 
-`agent-bom` has three current product lanes:
+Available delivery options and their boundaries:
 
 | Lane | Shipped today | Boundary |
 |---|---|---|

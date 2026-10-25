@@ -90,7 +90,9 @@ docker compose -f docker-compose.pilot.yml up -d
 # Dashboard -> http://localhost:3000
 ```
 
-Production chart from a checked-out repo:
+For production, configure the database, identity and ingress settings in a
+release checkout. Follow the [required secret bootstrap](https://github.com/koda-ai-studio/agent-bom/tree/main/deploy/helm/agent-bom#production-externalsecrets-are-a-separate-stage)
+and wait for all four target Secrets before installing the workload:
 
 ```bash
 helm upgrade --install agent-bom deploy/helm/agent-bom \
@@ -141,10 +143,11 @@ Real parsers, modeled local infrastructure: a repository pin, image SBOM and Kub
 - **Dependency confusion detection** — flags internal naming patterns
 - **VEX generation** — auto-triage with CWE/CVE/CPE-aware reachability (package + function-level when advisory symbols exist)
 
-Discovery and static/cloud scanning are read-only and agentless. Proxy,
-gateway, Shield, and control-plane write tools are separate, explicit runtime
-or authenticated operations. No secrets leave your machine unless you
-explicitly enable an outbound integration.
+Discovery and static/cloud scanning are read-only by default. Explicit disk
+side-scans create temporary cloud resources and need additional permissions.
+Proxy, gateway, Shield, and control-plane write tools are separate, explicit
+runtime or authenticated operations. See the [permission and network boundaries](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERMISSIONS.md)
+before enabling cloud scans or outbound integrations.
 
 ## How the data moves
 
