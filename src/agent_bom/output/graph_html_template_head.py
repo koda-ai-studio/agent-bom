@@ -78,7 +78,7 @@ _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
   </div>
   <div id="stats">
     <span>{total_agents} agents</span> | <span>{total_servers} servers</span> |
-    <span>{total_pkgs} packages</span> | <span>{total_vulns} CVEs</span>
+    <span>{total_pkgs} vulnerable packages</span> | <span>{total_vulns} CVEs</span>
   </div>
 </div>
 <div id="toolbar">

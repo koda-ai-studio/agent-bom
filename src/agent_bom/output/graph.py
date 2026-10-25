@@ -28,6 +28,7 @@ from agent_bom.output.graph_html import _json_for_script as _json_for_script
 from agent_bom.output.graph_html import _sanitize_graph_reference_payload as _sanitize_graph_reference_payload
 from agent_bom.output.graph_html import _to_offline_graph_html as _to_offline_graph_html
 from agent_bom.output.graph_html import _vendor_script_tags as _vendor_script_tags
+from agent_bom.output.graph_html import drawn_header_counts
 from agent_bom.output.graph_inventory import append_agent_elements, append_server_elements, package_edge_type, server_node_id
 from agent_bom.output.graph_policy import _SEVERITY_BADGE as _SEVERITY_BADGE
 from agent_bom.output.graph_policy import _graph_policy_finding_elements as _graph_policy_finding_elements
@@ -882,15 +883,8 @@ def export_graph_html(
     elements, graph_id_map = sanitize_graph_elements(build_graph_elements(report, blast_radii, include_cve_nodes=False, collapse_cves=True))
     elements_json = _json_for_script(elements)
 
-    total_agents = len(report.agents)
-    # The header counts the server nodes the canvas draws. report.total_servers
-    # counts MCP servers only, so a project of framework agents read "0 servers"
-    # above several drawn server nodes.
-    total_servers = sum(
-        1 for el in elements if "source" not in el.get("data", {}) and str(el["data"].get("type", "")).startswith("server_")
-    )
-    total_pkgs = sum(a.total_packages for a in report.agents)
-    total_vulns = len(findings)
+    # Header counts are derived from the drawn elements so they always match the canvas.
+    counts = drawn_header_counts(elements)
     all_findings = findings + policy_findings
     top_risks = _sanitize_graph_reference_payload(_graph_priority_summary(all_findings, collapse_cves=True), graph_id_map)
     top_risks_json = _json_for_script(top_risks)
@@ -918,17 +912,11 @@ def export_graph_html(
         top_risks_json=top_risks_json,
         overview_json=overview_json,
         category_findings_json=category_findings_json,
-        total_agents=total_agents,
-        total_servers=total_servers,
-        total_pkgs=total_pkgs,
-        total_vulns=total_vulns,
+        **counts,
     )
     if offline_assets:
         html_content = _to_offline_graph_html(
-            total_agents=total_agents,
-            total_servers=total_servers,
-            total_pkgs=total_pkgs,
-            total_vulns=total_vulns,
+            **counts,
             top_risks=_graph_priority_summary(all_findings, collapse_cves=True),
             overview=_graph_overview(all_findings),
         )
