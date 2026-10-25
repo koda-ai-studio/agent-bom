@@ -49,7 +49,7 @@ from agent_bom.db.sync_common import (
 )
 from agent_bom.db.sync_distributions import sync_alpine_secdb, sync_debian_tracker
 from agent_bom.db.sync_exploit_feeds import sync_epss, sync_kev
-from agent_bom.db.sync_nvd_window import KEYLESS_BACKFILL_MAX, NvdRateLimiter
+from agent_bom.db.sync_nvd_window import KEYLESS_BACKFILL_MAX, NvdBudget, NvdRateLimiter, Progress, resolve_time_budget
 from agent_bom.db.sync_nvd_window import sync_nvd_incremental as sync_nvd_incremental
 from agent_bom.db.sync_parsing import _CVSS_SEVERITY as _CVSS_SEVERITY
 from agent_bom.db.sync_parsing import _cpe_version_bound as _cpe_version_bound
@@ -420,6 +420,18 @@ def _copy_local_nvd_score(conn: sqlite3.Connection, row_id: str, cve_id: str) ->
     return True
 
 
+def _backfill_targets(conn: sqlite3.Connection, rows: list[Any], *, max_entries: int, reuse_local_scores: bool) -> list[tuple[str, str]]:
+    """``(row id, CVE id)`` pairs to request, at most ``max_entries``; locally answerable rows are scored in place."""
+    targets: list[tuple[str, str]] = []
+    for row in rows:
+        candidates = _nvd_cve_candidates(row["id"], row["aliases"])
+        if not candidates or (reuse_local_scores and _copy_local_nvd_score(conn, row["id"], candidates[0])):
+            continue
+        if len(targets) < max_entries:
+            targets.append((row["id"], candidates[0]))
+    return targets
+
+
 def sync_nvd(
     conn: sqlite3.Connection,
     nvd_api_key: Optional[str] = None,
@@ -481,13 +493,7 @@ def sync_nvd(
         {"max_entries": -1 if reuse_local_scores else max_entries},
     ).fetchall()
 
-    row_targets: list[tuple[str, str]] = []
-    for row in rows:
-        candidates = _nvd_cve_candidates(row["id"], row["aliases"])
-        if not candidates or (reuse_local_scores and _copy_local_nvd_score(conn, row["id"], candidates[0])):
-            continue
-        if len(row_targets) < max_entries:
-            row_targets.append((row["id"], candidates[0]))
+    row_targets = _backfill_targets(conn, rows, max_entries=max_entries, reuse_local_scores=reuse_local_scores)
 
     if not row_targets:
         _logger.info("NVD enrichment: no CVEs missing CVSS data — nothing to do")
@@ -513,8 +519,8 @@ def sync_nvd(
         fetch_url = f"{base_url}?{urllib.parse.urlencode({'cveId': cve_id})}"
         # NVD API 2.0 honours the key only in the apiKey header; never the URL.
         headers = {"Accept": "application/json", **({"apiKey": api_key} if api_key else {})}
-        limiter.acquire()
-
+        if not limiter.acquire():
+            break
         try:
             data = fetch_json(fetch_url, timeout=30, headers=headers)
         except Exception as exc:
@@ -613,20 +619,41 @@ def sync_nvd(
     return enriched
 
 
-def _sync_nvd_keyless(conn: sqlite3.Connection, url: Optional[str], max_entries: Optional[int]) -> int:
+def _sync_nvd_keyless(
+    conn: sqlite3.Connection, url: Optional[str], max_entries: Optional[int], progress: Optional[Progress], budget: NvdBudget
+) -> int:
     """Keyless NVD: the bounded new-CVE window first, then the CVSS/CWE backfill.
 
-    Both phases share one anonymous rate budget. The window's checkpoint and
-    status stay the source-level ``nvd`` metadata; the backfill is nested under
-    ``enrichment`` so it can never overwrite the window cursor.
+    Both phases share one anonymous rate budget and one wall-clock ``budget``;
+    a window that spent the budget skips the backfill. The window's checkpoint
+    and status stay the source-level ``nvd`` metadata; the backfill is nested
+    under ``enrichment`` so it can never overwrite the window cursor.
     """
     limiter = NvdRateLimiter.for_key(None)
-    ingested = sync_nvd_incremental(conn, url=url, max_results=max_entries, limiter=limiter)
+    ingested = sync_nvd_incremental(conn, url=url, max_results=max_entries, limiter=limiter, progress=progress, budget=budget)
     window_meta = _read_sync_metadata(conn, "nvd")
+    if window_meta.get("partial_reason") == "time_budget" or budget.expired():
+        _update_sync_meta(conn, "nvd", ingested, {**window_meta, "enrichment": {"skipped": "time_budget"}})
+        return ingested
     backfill_cap = max_entries if max_entries is not None else KEYLESS_BACKFILL_MAX
     backfilled = sync_nvd(conn, url=url, max_entries=backfill_cap, limiter=limiter, reuse_local_scores=True)
     _update_sync_meta(conn, "nvd", ingested + backfilled, {**window_meta, "enrichment": _read_sync_metadata(conn, "nvd")})
     return ingested + backfilled
+
+
+def _sync_nvd_source(
+    conn: sqlite3.Connection,
+    key: Optional[str],
+    url: Optional[str],
+    max_entries: Optional[int],
+    progress: Progress,
+    time_budget: Optional[float],
+) -> int:
+    """The keyed window, or the keyless window plus backfill, under one wall-clock budget."""
+    budget = NvdBudget(resolve_time_budget(time_budget, key))
+    if not key:
+        return _sync_nvd_keyless(conn, url, max_entries, progress, budget)
+    return sync_nvd_incremental(conn, nvd_api_key=key, url=url, max_results=max_entries, progress=progress, budget=budget)
 
 
 # NVD is a default source: it carries CVEs (and CPE ranges for runtimes such as
@@ -651,7 +678,8 @@ def sync_db(
     nvd_api_key: Optional[str] = None,
     ghsa_ecosystems: Optional[list[str]] = None,
     osv_ecosystems: Optional[list[str]] = None,
-    progress: Callable[[str, str, int, int | None], None] | None = None,
+    progress: Callable[..., None] | None = None,
+    nvd_time_budget: Optional[float] = None,
 ) -> dict:
     """Sync the local vuln DB from all (or selected) upstream sources.
 
@@ -672,7 +700,12 @@ def sync_db(
         ghsa_ecosystems: list of GHSA ecosystem names to sync (default: all supported).
         osv_ecosystems: selected OSV application ecosystems (default: all ecosystems).
         progress: optional callback receiving ``(source, phase, current, total)``.
-            Phases are ``start``, ``download`` (OSV bytes), and ``complete``.
+            Phases are ``start``, ``download`` (OSV bytes), ``complete`` and
+            ``partial``; NVD adds ``slice``, ``records`` and ``rate_wait`` with a
+            ``detail=`` keyword (the slice date).
+        nvd_time_budget: wall-clock seconds for the NVD run (default 480 keyless,
+            none keyed; ``AGENT_BOM_NVD_TIME_BUDGET_SECONDS``; 0 disables). A run
+            that hits it is ``partial`` (``time_budget``) and resumes next time.
 
     Returns a dict of {source: record_count}.
     """
@@ -687,9 +720,9 @@ def sync_db(
     enabled = set(sources or DEFAULT_SYNC_SOURCES)
     results: dict[str, int] = {}
 
-    def notify(source: str, phase: str, current: int = 0, total: int | None = None) -> None:
+    def notify(source: str, phase: str, current: int = 0, total: int | None = None, detail: str | None = None) -> None:
         if progress is not None:
-            progress(source, phase, current, total)
+            progress(source, phase, current, total, **({"detail": detail} if detail is not None else {}))
 
     def run_source(source: str, sync: Callable[[], int]) -> None:
         notify(source, "start")
@@ -760,18 +793,7 @@ def sync_db(
             )
         if "nvd" in enabled:
             key = nvd_api_key or os.environ.get("NVD_API_KEY")
-            if key:
-                run_source(
-                    "nvd",
-                    lambda: sync_nvd_incremental(
-                        conn,
-                        nvd_api_key=key,
-                        url=nvd_url,
-                        max_results=max_nvd_entries,
-                    ),
-                )
-            else:
-                run_source("nvd", lambda: _sync_nvd_keyless(conn, nvd_url, max_nvd_entries))
+            run_source("nvd", lambda: _sync_nvd_source(conn, key, nvd_url, max_nvd_entries, notify, nvd_time_budget))
     finally:
         # Fold the (potentially large) -wal back into the main DB so concurrent
         # readers don't race a big write-ahead log right after a sync.

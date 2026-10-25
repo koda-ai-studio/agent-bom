@@ -18,6 +18,7 @@ AGENT_BOM_EXPERIMENTAL
 # CLI machine-readable envelope toggle; read by the entrypoint before config is loaded.
 AGENT_BOM_AGENT_MODE
 # Literal Snowflake object names emitted by the onboarding SQL template; not process environment variables.
+AGENT_BOM_NVD_TIME_BUDGET_SECONDS  # read per db update run (tests and operators change it between runs), not at import
 AGENT_BOM_READONLY
 AGENT_BOM_SVC
 AGENT_BOM_WH
