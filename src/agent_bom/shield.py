@@ -66,6 +66,9 @@ class Shield:
             threat-level escalation, automatic kill-switch).
         correlation_window: Seconds for alert correlation (default 30).
         block_on_critical: Auto-block when threat reaches CRITICAL.
+        server_id: Stable server identity, including tenant/account scope where
+            applicable. Enables scoped tool-baseline persistence; deep mode
+            restores it. Omit to keep tool baselines in this instance only.
 
     Example::
 
@@ -88,11 +91,13 @@ class Shield:
         deep: bool = False,
         correlation_window: float = 30.0,
         block_on_critical: bool = True,
+        server_id: str | None = None,
     ) -> None:
         self._engine = ProtectionEngine(
             shield=deep,
             correlation_window=correlation_window,
             block_on_critical=block_on_critical,
+            server_id=server_id,
         )
         self._engine.start()
         self._cred_detector = CredentialLeakDetector()

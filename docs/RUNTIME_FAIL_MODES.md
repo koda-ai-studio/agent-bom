@@ -105,6 +105,32 @@ truncates, rewrites or removes the source JSONL. The existing append sink remain
 fail-open for relay availability; operators retain ownership of file rotation
 and evidence retention.
 
+## Local tool-drift baselines
+
+`Shield(deep=True, server_id="tenant-a/account-a/server-a")` restores the
+named server's tool baseline from `drift_baselines/<sha256>.json` under
+`AGENT_BOM_STATE_DIR` (default `~/.agent-bom`). Use a stable identity that
+includes the tenant, account and server boundaries of the caller. Each Shield
+instance must observe only that server's catalog. The identity is hashed for
+the filename and is not written into the baseline; hashing is not authorization
+or protection from an actor who controls the state directory.
+
+Without `server_id`, tool baselines remain in memory per instance. This also
+applies to the stdio proxy and the CLI/API protection engines, which do not
+identify one persistent upstream server. The proxy still establishes a baseline
+from its first complete `tools/list` catalog and detects later tool-name changes
+within that session. A session restart without an identified, restored baseline
+cannot prove cross-session drift.
+
+The legacy `drift_baseline.json` has no trustworthy server attribution. It is
+ignored and preserved, never migrated to a guessed owner. Missing, malformed or
+unreadable scoped baselines start without a historical baseline. Persistence
+errors are **fail-open**: in-memory drift detection continues, but history may
+be unavailable after restart. The first complete catalog then establishes a new
+baseline; it is not proof that the server is unchanged or safe. Scoped files are
+written atomically with owner-only permissions. This changes tool-baseline
+storage only; other runtime policy and kill-switch behavior is unchanged.
+
 ## What is *not* an isolation boundary
 
 The stdio proxy's launcher check (`agent_bom.security.require_recognized_launcher`)
