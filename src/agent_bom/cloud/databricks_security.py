@@ -32,6 +32,8 @@ from agent_bom.security import sanitize_error
 
 from .aws_cis_benchmark import CheckStatus, CISCheckResult
 from .base import CloudDiscoveryError
+from .databricks_connection import resolved_workspace_host, sdk_value
+from .databricks_iam import _check_1_3, _check_1_4
 
 
 @dataclass
@@ -108,10 +110,12 @@ def _check_1_1(ws: Any) -> CISCheckResult:
     )
     try:
         admin_users = []
-        for user in ws.users.list(attributes="id,userName,roles"):
+        for user in ws.users.list(attributes="id,userName,roles,groups"):
             roles = getattr(user, "roles", None) or []
             role_values = [getattr(r, "value", str(r)) for r in roles]
-            if any("admin" in str(v).lower() for v in role_values):
+            groups = getattr(user, "groups", None) or []
+            is_workspace_admin = any(getattr(group, "display", "") == "admins" for group in groups)
+            if is_workspace_admin or any("admin" in str(v).lower() for v in role_values):
                 admin_users.append(getattr(user, "user_name", str(user.id)))
         count = len(admin_users)
         if count <= 3:
@@ -158,81 +162,6 @@ def _check_1_2(ws: Any) -> CISCheckResult:
     return result
 
 
-def _check_1_3(ws: Any) -> CISCheckResult:
-    """1.3 — Ensure Personal Access Token expiry policy is enforced."""
-    result = CISCheckResult(
-        check_id="1.3",
-        title="Enforce Personal Access Token expiry policy",
-        status=CheckStatus.ERROR,
-        severity="medium",
-        cis_section=_IAM_SECTION,
-        recommendation="Set a PAT expiry policy: Workspace Settings > Advanced > "
-        "Access tokens > Token lifetime (maximum 90 days recommended).",
-    )
-    try:
-        # Try workspace settings API
-        settings = ws.settings.personal_access_token_expiry.get()
-        if settings is not None:
-            max_lifetime = getattr(settings, "setting_value", None)
-            if max_lifetime and max_lifetime != "0":
-                result.status = CheckStatus.PASS
-                result.evidence = f"PAT expiry enforced: maximum lifetime = {max_lifetime}s."
-            else:
-                result.status = CheckStatus.FAIL
-                result.evidence = "PAT expiry not enforced — tokens may never expire."
-        else:
-            # Fallback: check token list for tokens with no expiry
-            tokens = list(ws.token_management.list() or [])
-            non_expiring = [t for t in tokens if getattr(t, "expiry_time", -1) in (-1, None, 0)]
-            if non_expiring:
-                result.status = CheckStatus.FAIL
-                result.evidence = f"{len(non_expiring)} token(s) with no expiry found."
-                result.resource_ids = [getattr(t, "comment", str(i)) for i, t in enumerate(non_expiring[:5])]
-            else:
-                result.status = CheckStatus.PASS
-                result.evidence = "All enumerable tokens have expiry dates set."
-    except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check PAT policy: {sanitize_error(exc, generic=True)}"
-    return result
-
-
-def _check_1_4(ws: Any) -> CISCheckResult:
-    """1.4 — Ensure service principals use short-lived tokens."""
-    result = CISCheckResult(
-        check_id="1.4",
-        title="Ensure service principals use short-lived or federated tokens",
-        status=CheckStatus.ERROR,
-        severity="medium",
-        cis_section=_IAM_SECTION,
-        recommendation="Replace long-lived service principal PATs with OAuth M2M tokens or workload identity federation where possible.",
-    )
-    try:
-        sps = list(ws.service_principals.list() or [])
-        if not sps:
-            result.status = CheckStatus.PASS
-            result.evidence = "No service principals found."
-            return result
-        # Check tokens for service principals — look for tokens with distant expiry
-        import time
-
-        tokens = list(ws.token_management.list() or [])
-        now_ms = int(time.time() * 1000)
-        ninety_days_ms = 90 * 24 * 60 * 60 * 1000
-        long_lived = [t for t in tokens if getattr(t, "expiry_time", 0) and (getattr(t, "expiry_time", 0) - now_ms) > ninety_days_ms]
-        if long_lived:
-            result.status = CheckStatus.FAIL
-            result.evidence = f"{len(long_lived)} token(s) valid for more than 90 days detected."
-            result.resource_ids = [getattr(t, "comment", f"token-{i}") for i, t in enumerate(long_lived[:5])]
-        else:
-            result.status = CheckStatus.PASS
-            result.evidence = f"{len(sps)} service principal(s) found — no long-lived tokens detected."
-    except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check service principal tokens: {sanitize_error(exc, generic=True)}"
-    return result
-
-
 # ---------------------------------------------------------------------------
 # Section 2 — Cluster Security
 # ---------------------------------------------------------------------------
@@ -253,7 +182,7 @@ def _check_2_1(ws: Any) -> CISCheckResult:
     )
     try:
         clusters = list(ws.clusters.list() or [])
-        interactive = [c for c in clusters if getattr(c, "cluster_source", "") not in ("JOB", "PIPELINE")]
+        interactive = [c for c in clusters if sdk_value(getattr(c, "cluster_source", "")) not in ("JOB", "PIPELINE")]
         no_term = [c for c in interactive if not getattr(c, "auto_termination_minutes", 0)]
         if not interactive:
             result.status = CheckStatus.PASS
@@ -284,8 +213,11 @@ def _check_2_2(ws: Any) -> CISCheckResult:
     )
     try:
         clusters = list(ws.clusters.list() or [])
-        running = [c for c in clusters if getattr(c, "state", "") in ("RUNNING", "RESIZING", "RESTARTING")]
-        no_isolation = [c for c in running if str(getattr(c, "data_security_mode", "NONE")).upper() in ("NONE", "LEGACY_PASSTHROUGH", "")]
+        running = [c for c in clusters if sdk_value(getattr(c, "state", "")) in ("RUNNING", "RESIZING", "RESTARTING")]
+        unsafe = {"NONE", "LEGACY_PASSTHROUGH"}
+        safe = {"USER_ISOLATION", "SINGLE_USER", "DATA_SECURITY_MODE_STANDARD", "DATA_SECURITY_MODE_DEDICATED"}
+        no_isolation = [c for c in running if sdk_value(getattr(c, "data_security_mode", None)) in unsafe]
+        unknown = [c for c in running if sdk_value(getattr(c, "data_security_mode", None)) not in unsafe | safe]
         if not running:
             result.status = CheckStatus.PASS
             result.evidence = "No running clusters found."
@@ -293,6 +225,8 @@ def _check_2_2(ws: Any) -> CISCheckResult:
             result.status = CheckStatus.FAIL
             result.evidence = f"{len(no_isolation)} running cluster(s) use no-isolation or legacy passthrough mode."
             result.resource_ids = [getattr(c, "cluster_name", getattr(c, "cluster_id", str(i))) for i, c in enumerate(no_isolation[:10])]
+        elif unknown:
+            result.evidence = f"Isolation cannot be established for {len(unknown)} running cluster(s) from the returned access mode."
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {len(running)} running cluster(s) use isolated data security mode."
@@ -342,27 +276,34 @@ def _check_2_4(ws: Any) -> CISCheckResult:
     )
     try:
         clusters = list(ws.clusters.list() or [])
-        running = [c for c in clusters if getattr(c, "state", "") in ("RUNNING", "RESIZING")]
-        public_ip = [c for c in running if getattr(c, "enable_elastic_disk", None) is not None and not getattr(c, "no_public_ips", False)]
-        # Also check via AWS/Azure attributes
-        public_ip_clusters = [
-            c
-            for c in running
-            if getattr(c, "aws_attributes", None) is not None
-            and getattr(getattr(c, "aws_attributes", None), "ebs_volume_count", 0) == 0
-            and not getattr(c, "no_public_ips", True)
-        ]
-        combined = {getattr(c, "cluster_id", str(i)): c for i, c in enumerate(public_ip + public_ip_clusters)}
+        running = [c for c in clusters if sdk_value(getattr(c, "state", "")) in ("RUNNING", "RESIZING")]
+        public_ids, unknown_ids = [], []
+        for cluster in running:
+            cluster_id = getattr(cluster, "cluster_id", "unknown")
+            nodes = [getattr(cluster, "driver", None), *(getattr(cluster, "executors", None) or [])]
+            public_dns = any(isinstance(getattr(node, "public_dns", None), str) and node.public_dns for node in nodes)
+            no_public_ips = getattr(cluster, "no_public_ips", None)
+            if public_dns or no_public_ips is False:
+                public_ids.append(cluster_id)
+            elif no_public_ips is not True:
+                unknown_ids.append(cluster_id)
         if not running:
             result.status = CheckStatus.PASS
             result.evidence = "No running clusters found."
-        elif combined:
+        elif public_ids:
             result.status = CheckStatus.FAIL
-            result.evidence = f"{len(combined)} running cluster(s) may have public IPs."
-            result.resource_ids = list(combined.keys())[:10]
+            result.evidence = f"{len(public_ids)} running cluster(s) expose public DNS or explicitly permit public IPs."
+            result.resource_ids = public_ids[:10]
+            if unknown_ids:
+                result.evidence += f" Networking evidence is also unavailable for {len(unknown_ids)} cluster(s)."
+        elif unknown_ids:
+            result.evidence = (
+                f"Private networking cannot be established for {len(unknown_ids)} running cluster(s) from the returned fields."
+            )
+            result.resource_ids = unknown_ids[:10]
         else:
             result.status = CheckStatus.PASS
-            result.evidence = f"All {len(running)} running cluster(s) appear to use private networking."
+            result.evidence = f"All {len(running)} running cluster(s) explicitly disable public IPs."
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check cluster networking: {sanitize_error(exc, generic=True)}"
@@ -420,12 +361,14 @@ def _check_4_1(ws: Any) -> CISCheckResult:
         recommendation="Configure audit log delivery to S3, ADLS, or GCS. Enable workspace and account-level audit logs.",
     )
     try:
+        if not hasattr(ws, "log_delivery"):
+            result.evidence = "Audit log delivery requires account-level evidence; the workspace client does not expose this API."
+            return result
         log_configs = list(ws.log_delivery.list() or [])
         audit_configs = [
             lc
             for lc in log_configs
-            if str(getattr(lc, "log_type", "")).upper() in ("AUDIT_LOGS", "BILLABLE_USAGE")
-            and str(getattr(lc, "status", "")).upper() == "ENABLED"
+            if sdk_value(getattr(lc, "log_type", "")) == "AUDIT_LOGS" and sdk_value(getattr(lc, "status", "")) == "ENABLED"
         ]
         if audit_configs:
             result.status = CheckStatus.PASS
@@ -572,7 +515,7 @@ def run_security_checks(
     except Exception as exc:
         raise CloudDiscoveryError(f"Could not connect to Databricks workspace: {sanitize_error(exc, generic=True)}") from exc
 
-    resolved_host = host if host is not None else (os.environ.get("DATABRICKS_HOST") or "unknown")
+    resolved_host = resolved_workspace_host(ws, host or os.environ.get("DATABRICKS_HOST", "")) or "unknown"
     report = DatabricksSecurityReport(workspace_host=resolved_host)
 
     for check_fn in _ALL_CHECKS:

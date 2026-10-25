@@ -30,6 +30,7 @@ from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
 from agent_bom.security import sanitize_error
 
 from .base import CloudDiscoveryError
+from .databricks_connection import resolved_workspace_host, sdk_value
 from .normalization import build_cloud_origin, build_cloud_state, build_package_purl, normalize_cloud_lifecycle_state
 
 logger = logging.getLogger(__name__)
@@ -73,15 +74,15 @@ def discover(
         warnings.append(f"Could not connect to Databricks: {sanitize_error(exc, generic=True)}")
         return agents, warnings
 
-    resolved_host = host or os.environ.get("DATABRICKS_HOST", "")
+    resolved_host = resolved_workspace_host(ws, host or os.environ.get("DATABRICKS_HOST", ""))
 
     agents.extend(_discover_cluster_agents(ws, resolved_host, warnings, PermissionDenied))
     agents.extend(_discover_serving_agents(ws, resolved_host, warnings, PermissionDenied))
 
     # Per-run discovery envelope (#2083 PR B).
     scope: list[str] = []
-    if host:
-        scope.append(f"databricks:workspace/{host}")
+    if resolved_host:
+        scope.append(f"databricks:workspace/{resolved_host}")
     attach_envelope_to_agents(
         agents,
         scan_mode=ScanMode.SAAS_READ_ONLY,
@@ -130,7 +131,7 @@ def _cluster_agent(ws: Any, cluster: Any, resolved_host: str, warnings: list[str
     state = getattr(cluster, "state", None)
 
     # Only scan running or terminated (recently used) clusters
-    state_str = str(state).upper() if state else ""
+    state_str = sdk_value(state)
     lifecycle_state = normalize_cloud_lifecycle_state(
         provider="databricks",
         service="clusters",
@@ -164,7 +165,8 @@ def _cluster_agent(ws: Any, cluster: Any, resolved_host: str, warnings: list[str
                 resource_type="cluster",
                 resource_id=cluster_id,
                 resource_name=cluster_name,
-                raw_identity={"cluster_id": cluster_id, "cluster_name": cluster_name},
+                project_id=resolved_host or None,
+                raw_identity={"cluster_id": cluster_id, "cluster_name": cluster_name, "workspace_host": resolved_host},
             ),
             "cloud_state": build_cloud_state(
                 provider="databricks",
@@ -236,7 +238,8 @@ def _serving_endpoint_agent(ep: Any, resolved_host: str) -> Agent | None:
                 resource_type="serving-endpoint",
                 resource_id=ep_name,
                 resource_name=ep_name,
-                raw_identity={"name": ep_name},
+                project_id=resolved_host or None,
+                raw_identity={"name": ep_name, "workspace_host": resolved_host},
             ),
             "cloud_state": build_cloud_state(
                 provider="databricks",
