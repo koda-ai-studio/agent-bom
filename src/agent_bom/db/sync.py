@@ -8,8 +8,9 @@ Sources:
     epss   — FIRST EPSS v4 CSV bulk export
     kev    — CISA KEV JSON catalog
     ghsa   — GitHub Security Advisories across all supported ecosystems
-    nvd    — NVD incremental CVE enrichment when ``NVD_API_KEY`` is set; otherwise
-             backfills missing CVSS/CWE for existing CVE rows only
+    nvd    — NVD CVEs published/modified in a bounded recent window, with their
+             CPE applicability ranges (120 days with ``NVD_API_KEY``, 14 days
+             without; keyless runs also backfill CVSS/CWE for existing rows)
 
 Usage:
     agent-bom db update            # sync all sources
@@ -24,7 +25,6 @@ from __future__ import annotations
 
 import sqlite3
 import zipfile
-from datetime import datetime, timedelta, timezone
 from importlib import import_module
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -41,17 +41,16 @@ from agent_bom.db.sync_common import (
     _logger,
     _normalize_ghsa_db_ecosystem,
     _normalize_sync_cvss_score,
-    _nvd_api_timestamp,
     _nvd_cve_candidates,
     _osv_bulk_url,
     _read_sync_metadata,
     _update_sync_meta,
-    _upsert_cpe_matches,
-    _upsert_nvd_enrichment_row,
     _validate_sync_url,
 )
 from agent_bom.db.sync_distributions import sync_alpine_secdb, sync_debian_tracker
 from agent_bom.db.sync_exploit_feeds import sync_epss, sync_kev
+from agent_bom.db.sync_nvd_window import NvdRateLimiter
+from agent_bom.db.sync_nvd_window import sync_nvd_incremental as sync_nvd_incremental
 from agent_bom.db.sync_parsing import _CVSS_SEVERITY as _CVSS_SEVERITY
 from agent_bom.db.sync_parsing import _cpe_version_bound as _cpe_version_bound
 from agent_bom.db.sync_parsing import _cvss_to_severity as _cvss_to_severity
@@ -402,160 +401,12 @@ def sync_ghsa(
     return count
 
 
-def sync_nvd_incremental(
-    conn: sqlite3.Connection,
-    nvd_api_key: Optional[str] = None,
-    url: Optional[str] = None,
-    max_results: int = 2000,
-    lookback_days: int = 120,
-) -> int:
-    """Fetch recently modified CVEs from NVD and upsert enrichment into the local DB.
-
-    Requires ``NVD_API_KEY`` for practical rate limits. Uses ``lastModStartDate`` /
-    ``lastModEndDate`` windows and stores the end timestamp in sync metadata for
-    the next incremental run.
-    """
-    import os
-    import time
-    import urllib.parse
-
-    from agent_bom.http_client import fetch_json
-
-    base_url = url or _NVD_API_URL
-    _validate_sync_url(base_url, "nvd url")
-
-    api_key = nvd_api_key or os.environ.get("NVD_API_KEY")
-    sleep_seconds = 0.6 if api_key else 6.0
-
-    now = datetime.now(timezone.utc)
-    end_ts = _nvd_api_timestamp(now)
-    metadata = _read_sync_metadata(conn, "nvd")
-    checkpoint = metadata.get("last_modified_end")
-    if isinstance(checkpoint, str) and checkpoint.strip():
-        try:
-            start_dt = datetime.fromisoformat(checkpoint.replace("Z", "+00:00"))
-            if start_dt.tzinfo is None:
-                start_dt = start_dt.replace(tzinfo=timezone.utc)
-        except ValueError:
-            start_dt = now - timedelta(days=lookback_days)
-    else:
-        start_dt = now - timedelta(days=lookback_days)
-
-    if now - start_dt > timedelta(days=lookback_days):
-        start_dt = now - timedelta(days=lookback_days)
-    start_ts = _nvd_api_timestamp(start_dt)
-
-    enriched = 0
-    start_index = 0
-    page_size = min(2000, max_results)
-
-    sync_failed = False
-    sync_truncated = False
-    total_results_seen = 0
-
-    while enriched < max_results:
-        params: dict[str, str | int] = {
-            "lastModStartDate": start_ts,
-            "lastModEndDate": end_ts,
-            "resultsPerPage": page_size,
-            "startIndex": start_index,
-        }
-        # NVD API 2.0 only honors the key in the `apiKey` request header; a
-        # query-string key is ignored and the call is throttled as anonymous
-        # (5 req/30s), so the key must travel in the headers.
-        request_headers = {"Accept": "application/json"}
-        if api_key:
-            request_headers["apiKey"] = api_key
-        fetch_url = f"{base_url}?{urllib.parse.urlencode(params)}"
-
-        try:
-            data = fetch_json(fetch_url, timeout=60, headers=request_headers)
-        except Exception as exc:
-            _logger.warning("NVD incremental sync failed at startIndex=%s: %s", start_index, exc)
-            sync_failed = True
-            break
-
-        if not isinstance(data, dict):
-            # Wrong-shape JSON (array/string) would raise AttributeError on .get
-            # and abort the whole sequential sync_db. Treat it as a failed window
-            # so the checkpoint isn't advanced over unsynced CVEs.
-            _logger.warning(
-                "NVD incremental sync got unexpected payload type at startIndex=%s: %s",
-                start_index,
-                type(data).__name__,
-            )
-            sync_failed = True
-            break
-
-        items = data.get("vulnerabilities") or []
-        if not items:
-            break
-
-        for item in items:
-            cve_data = item.get("cve") or {}
-            cve_id = str(cve_data.get("id") or "")
-            if not cve_id.startswith("CVE-"):
-                continue
-            fields = _extract_nvd_cve_fields(cve_data)
-            # Store CPE applicability for every synced CVE — it powers the
-            # nvd_cpe_candidate matcher independently of whether the CVE already
-            # has an enrichment row.
-            _upsert_cpe_matches(conn, cve_id, _extract_nvd_cpe_matches(cve_data))
-            if _upsert_nvd_enrichment_row(conn, cve_id, fields):
-                enriched += 1
-                if enriched >= max_results:
-                    break
-
-        if enriched % _BATCH_SIZE == 0:
-            conn.commit()
-
-        total_results = int(data.get("totalResults") or 0)
-        total_results_seen = max(total_results_seen, total_results)
-        start_index += len(items)
-        if start_index >= total_results:
-            break
-        # Cap reached for this run: stop now rather than sleeping a full
-        # inter-page delay (up to 6s anonymous) only to exit the while check.
-        if enriched >= max_results:
-            break
-        time.sleep(sleep_seconds)
-
-    if not sync_failed and enriched >= max_results and start_index < total_results_seen:
-        sync_truncated = True
-        _logger.warning(
-            "NVD incremental sync truncated at max_results=%d (window has >=%d modified CVEs); "
-            "the next run resumes the unsynced tail. Raise max_results or narrow the window to catch up faster.",
-            max_results,
-            total_results_seen,
-        )
-
-    conn.commit()
-    _update_sync_meta(
-        conn,
-        "nvd",
-        enriched,
-        {
-            "mode": "incremental",
-            "last_modified_start": start_ts,
-            # Only advance the synced-through cursor when the whole window
-            # fetched cleanly; on failure keep the window start so the next run
-            # retries it instead of permanently skipping the unsynced CVEs.
-            "last_modified_end": start_ts if (sync_failed or sync_truncated) else end_ts,
-            "max_results": max_results,
-            "api_key_used": bool(api_key),
-            "sync_failed": sync_failed,
-            "sync_truncated": sync_truncated,
-        },
-    )
-    _logger.info("NVD incremental sync complete: %d CVE rows upserted", enriched)
-    return enriched
-
-
 def sync_nvd(
     conn: sqlite3.Connection,
     nvd_api_key: Optional[str] = None,
     url: Optional[str] = None,
     max_entries: int = 1000,
+    limiter: Optional[NvdRateLimiter] = None,
 ) -> int:
     """Enrich local DB entries missing CVSS data using the NVD API.
 
@@ -565,8 +416,8 @@ def sync_nvd(
     or aliased canonical CVE ID so native image scans do not stay unknown.
 
     Rate limiting:
-        - Without key: 5 requests / 30s (sleep 6s between requests)
-        - With ``NVD_API_KEY``: 50 requests / 30s (sleep 1s between requests)
+        - Without key: 5 requests per rolling 30s
+        - With ``NVD_API_KEY``: 50 requests per rolling 30s
 
     Args:
         conn: open DB connection.
@@ -577,7 +428,6 @@ def sync_nvd(
     Returns the number of CVEs successfully enriched.
     """
     import os
-    import time
     import urllib.parse
 
     from agent_bom.http_client import fetch_json
@@ -586,8 +436,8 @@ def sync_nvd(
     _validate_sync_url(base_url, "nvd url")
 
     api_key = nvd_api_key or os.environ.get("NVD_API_KEY")
-    # Rate limit: 5 req/30s without key → 6s between; 50 req/30s with key → 0.6s between
-    sleep_seconds = 0.6 if api_key else 6.0
+    # Rolling NVD budget (5 or 50 requests / 30s), shared with the window sync when passed in.
+    limiter = limiter or NvdRateLimiter.for_key(api_key)
 
     # Find CVE-backed rows in our DB that are missing CVSS data. Some OSV
     # distro advisories use IDs such as DEBIAN-CVE-2014-6271 but still map to
@@ -636,22 +486,20 @@ def sync_nvd(
     enriched = 0
 
     for row_id, cve_id in row_targets:
-        params = {"cveId": cve_id}
-        if api_key:
-            params["apiKey"] = api_key
-        fetch_url = f"{base_url}?{urllib.parse.urlencode(params)}"
+        fetch_url = f"{base_url}?{urllib.parse.urlencode({'cveId': cve_id})}"
+        # NVD API 2.0 honours the key only in the apiKey header; never the URL.
+        headers = {"Accept": "application/json", **({"apiKey": api_key} if api_key else {})}
+        limiter.acquire()
 
         try:
-            data = fetch_json(fetch_url, timeout=30, headers={"Accept": "application/json"})
+            data = fetch_json(fetch_url, timeout=30, headers=headers)
         except Exception as exc:
             _logger.debug("NVD API error for %s: %s", cve_id, exc)
-            time.sleep(sleep_seconds)
             continue
 
         # Extract CVSS v3.1 metrics
         cve_items = data.get("vulnerabilities") or []
         if not cve_items:
-            time.sleep(sleep_seconds)
             continue
 
         cve_data = cve_items[0].get("cve") or {}
@@ -687,7 +535,6 @@ def sync_nvd(
                     nvd_cwes.append(cwe_val)
 
         if cvss_score is None and not nvd_cwes:
-            time.sleep(sleep_seconds)
             continue
 
         if not severity and cvss_score is not None:
@@ -725,8 +572,6 @@ def sync_nvd(
             conn.commit()
             _logger.debug("NVD enriched %d CVEs …", enriched)
 
-        time.sleep(sleep_seconds)
-
     conn.commit()
     _update_sync_meta(
         conn,
@@ -742,6 +587,21 @@ def sync_nvd(
     )
     _logger.info("NVD enrichment complete: %d CVEs updated", enriched)
     return enriched
+
+
+def _sync_nvd_keyless(conn: sqlite3.Connection, url: Optional[str], max_entries: int) -> int:
+    """Keyless NVD: the bounded new-CVE window first, then the CVSS/CWE backfill.
+
+    Both phases share one anonymous rate budget. The window's checkpoint and
+    status stay the source-level ``nvd`` metadata; the backfill is nested under
+    ``enrichment`` so it can never overwrite the window cursor.
+    """
+    limiter = NvdRateLimiter.for_key(None)
+    ingested = sync_nvd_incremental(conn, url=url, max_results=max_entries, limiter=limiter)
+    window_meta = _read_sync_metadata(conn, "nvd")
+    backfilled = sync_nvd(conn, url=url, max_entries=max_entries, limiter=limiter)
+    _update_sync_meta(conn, "nvd", ingested + backfilled, {**window_meta, "enrichment": _read_sync_metadata(conn, "nvd")})
+    return ingested + backfilled
 
 
 def sync_db(
@@ -769,6 +629,8 @@ def sync_db(
         path: DB file path (default: DB_PATH from schema.py).
         sources: list of source names to sync, e.g. ["osv", "kev"]. Default: ["osv","alpine","debian","epss","kev"].
                  Note: "nvd" is NOT in the default set — it is slow without an API key.
+                 Keyless "nvd" ingests a 14-day window of new/modified CVEs then
+                 backfills CVSS/CWE; with a key it ingests a 120-day window.
         osv_url / epss_url / kev_url / ghsa_url / nvd_url: URL overrides (for testing).
         max_osv_entries: limit for OSV entries (0 = unlimited; for tests).
         max_ghsa_entries: limit for GHSA entries (default 5000).
@@ -876,15 +738,7 @@ def sync_db(
                     ),
                 )
             else:
-                run_source(
-                    "nvd",
-                    lambda: sync_nvd(
-                        conn,
-                        nvd_api_key=key,
-                        url=nvd_url,
-                        max_entries=max_nvd_entries,
-                    ),
-                )
+                run_source("nvd", lambda: _sync_nvd_keyless(conn, nvd_url, max_nvd_entries))
     finally:
         # Fold the (potentially large) -wal back into the main DB so concurrent
         # readers don't race a big write-ahead log right after a sync.

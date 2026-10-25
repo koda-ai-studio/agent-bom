@@ -9,10 +9,16 @@ Commands:
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import click
 
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.db.sync import GHSA_ECOSYSTEMS, OSV_APPLICATION_ECOSYSTEMS
+
+if TYPE_CHECKING:
+    from rich.console import Console
 
 
 @click.group("db", cls=SuggestingGroup)
@@ -31,7 +37,8 @@ def db_cmd() -> None:
     "Use --source debian to sync the Debian Security Tracker (authoritative per-release "
     "status + backported fixes, including end-of-life releases such as buster/Debian 10). "
     "Use --source ghsa to sync GitHub Security Advisories (all ecosystems). "
-    "Use --source nvd to enrich unknown-severity CVEs from NVD (slow without NVD_API_KEY).",
+    "Use --source nvd to ingest CVEs NVD published or modified recently, with their CPE ranges "
+    "(14-day window without NVD_API_KEY, 120 days with it), and backfill unknown severities.",
 )
 @click.option("--path", "db_path", type=click.Path(), default=None, help="Override DB file path.")
 @click.option(
@@ -87,8 +94,8 @@ def db_update(
     Pass --source ghsa to also fetch GitHub Security Advisories across all supported
     ecosystems (pip, npm, go, maven, nuget, rubygems, cargo, composer, swift,
     pub, erlang, actions).
-    Pass --source nvd to enrich CVEs missing CVSS data from the NVD API (requires NVD_API_KEY
-    for reasonable speed; without a key the rate limit is 5 req/30s).
+    Pass --source nvd to ingest recently published/modified NVD CVEs with their CPE
+    ranges (14-day window keyless, 120 days with NVD_API_KEY); partial windows resume.
 
     Requires internet access. Use --osv-ecosystem for a smaller, explicitly
     scoped application-ecosystem archive. The OSV all-ecosystems archive can
@@ -96,8 +103,6 @@ def db_update(
     size. Repeat syncs download the selected archive again, then update records
     by advisory ID.
     """
-    from pathlib import Path
-
     from rich.console import Console
     from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeElapsedColumn
 
@@ -172,7 +177,28 @@ def db_update(
 
     for src, count in results.items():
         con.print(f"  [green]✓[/green] {src}: {count:,} records")
+    _print_nvd_window_status(con, Path(db_path) if db_path else None, results)
     con.print("[bold green]Done.[/bold green]")
+
+
+def _print_nvd_window_status(con: Console, db_path: Path | None, results: dict) -> None:
+    """A rate-limited, timed-out or truncated NVD window is partial, never silently synced."""
+    if "nvd" not in results:
+        return
+    from agent_bom.db.schema import DB_PATH, init_db
+    from agent_bom.db.sync_common import _read_sync_metadata
+
+    conn = init_db(db_path or DB_PATH)
+    try:
+        meta = _read_sync_metadata(conn, "nvd")
+    finally:
+        conn.close()
+    if meta.get("status") != "partial":
+        return
+    con.print(
+        f"  [yellow]![/yellow] nvd: PARTIAL ({meta.get('partial_reason')}) — this is not a complete NVD window; "
+        "the next `agent-bom db update --source nvd` resumes from the last synced checkpoint."
+    )
 
 
 @db_cmd.command("status")

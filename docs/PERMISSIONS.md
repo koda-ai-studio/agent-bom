@@ -140,7 +140,7 @@ contents or credential values are included in those requests.
 | Service | URL | What we send | What we receive | Auth |
 |---------|-----|-------------|----------------|------|
 | OSV.dev | `https://api.osv.dev/v1/querybatch` | Package names + versions | CVE IDs, advisories | None |
-| NVD/NIST | `https://services.nvd.nist.gov/rest/json/cves/2.0` | CVE IDs | CVSS scores, CWE IDs | Optional (NVD_API_KEY for higher rate limits) |
+| NVD/NIST | `https://services.nvd.nist.gov/rest/json/cves/2.0` | CVE IDs, or a `lastModStartDate`/`lastModEndDate` time window during `db update --source nvd` | CVE records: CVSS scores, CWE IDs, CPE applicability ranges | Optional (NVD_API_KEY for higher rate limits, sent only as the `apiKey` header) |
 | FIRST EPSS | `https://api.first.org/data/v1/epss` | CVE IDs | Exploit probability scores | None |
 | CISA KEV | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` | _(none — full download)_ | KEV catalog | None |
 | npm registry | `https://registry.npmjs.org/{pkg}/{version}` | Package name + version | Package metadata | None |
@@ -214,7 +214,7 @@ or transmit the matched value. Validation of whether a secret is live belongs
 in a separate, explicit, operator-approved workflow.
 
 agent-bom itself optionally uses one env var:
-- `NVD_API_KEY` — increases NVD rate limit from 5 to 50 requests per 30 seconds. This key is sent only to `services.nvd.nist.gov` and is never logged, cached, or transmitted elsewhere.
+- `NVD_API_KEY` — increases NVD rate limit from 5 to 50 requests per 30 seconds and widens the `db update --source nvd` window from 14 to 120 days. This key is sent only to `services.nvd.nist.gov`, only in the `apiKey` request header (never a URL), and is never logged, cached, or transmitted elsewhere.
 
 ---
 
