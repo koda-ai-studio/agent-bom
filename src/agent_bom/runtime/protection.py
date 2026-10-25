@@ -267,14 +267,11 @@ class ProtectionEngine:
             threat-level escalation, kill-switch capability).
         correlation_window: Seconds to correlate alerts across detectors (default 30s).
         block_on_critical: Auto-block tool calls when threat level reaches CRITICAL.
+        server_id: Stable, caller-scoped server identity for drift persistence.
+            Omit to keep the tool baseline in memory for this engine only.
 
-    Typical lifecycle::
-
-        engine = ProtectionEngine(dispatcher, shield=True)
-        engine.start()
-        alerts = await engine.process_tool_call("read_file", {"path": "/etc/passwd"})
-        assessment = engine.assess_threat()  # deep defense assessment
-        engine.stop()
+    Call ``start()`` before processing tool traffic and ``stop()`` on shutdown.
+    ``assess_threat()`` returns the current deep-defense assessment.
     """
 
     def __init__(
@@ -285,8 +282,9 @@ class ProtectionEngine:
         correlation_window: float = 30.0,
         block_on_critical: bool = True,
         feedback_sink: RuntimeIncidentSink | str | None = None,
+        server_id: str | None = None,
     ) -> None:
-        self.drift_detector = ToolDriftDetector(restore=shield)
+        self.drift_detector = ToolDriftDetector(restore=shield, server_id=server_id)
         self.arg_analyzer = ArgumentAnalyzer()
         self.cred_detector = CredentialLeakDetector()
         self.rate_tracker = RateLimitTracker()

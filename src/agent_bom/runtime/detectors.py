@@ -11,15 +11,14 @@ Pluggable detectors that analyze MCP JSON-RPC traffic in real-time:
 
 from __future__ import annotations
 
-import json
 import re
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
 
+from agent_bom.runtime.drift_baseline import baseline_path, persist_baseline, restore_baseline
 from agent_bom.runtime.patterns import (
     CREDENTIAL_PATTERNS,
     DANGEROUS_ARG_PATTERNS,
@@ -39,7 +38,6 @@ from agent_bom.runtime.patterns import (
     PII_PATTERNS as _PII_PATTERNS,
 )
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
-from agent_bom.storage import state_home
 
 
 class AlertSeverity(str, Enum):
@@ -170,43 +168,20 @@ class ToolDriftDetector:
 
     Compares the initial tools/list snapshot against subsequent ones.
     New tools that weren't in the initial set trigger HIGH alerts.
-    Persists baseline to disk so it survives engine restarts.
+    Persists only an explicitly identified server's baseline across restarts.
+    Unidentified sessions keep their baseline in memory.
     """
 
-    def __init__(self, *, restore: bool = False) -> None:
+    def __init__(self, *, restore: bool = False, server_id: str | None = None) -> None:
         self._baseline: set[str] | None = None
+        self._path = baseline_path(server_id)
         if restore:
-            self._restore_baseline()
-
-    @staticmethod
-    def _baseline_path() -> Path:
-        state_dir = state_home.state_dir()
-        state_dir.mkdir(parents=True, exist_ok=True)
-        return state_dir / "drift_baseline.json"
-
-    def _persist_baseline(self) -> None:
-        try:
-            path = self._baseline_path()
-            tmp = path.with_suffix(".tmp")
-            tmp.write_text(json.dumps(sorted(self._baseline or [])))
-            tmp.replace(path)
-        except OSError:
-            pass
-
-    def _restore_baseline(self) -> None:
-        try:
-            path = self._baseline_path()
-            if path.exists():
-                tools = json.loads(path.read_text())
-                if isinstance(tools, list):
-                    self._baseline = set(tools)
-        except (OSError, json.JSONDecodeError):
-            pass
+            self._baseline = restore_baseline(self._path)
 
     def set_baseline(self, tools: list[str]) -> None:
         """Set the initial tool baseline from the first tools/list response."""
         self._baseline = set(tools)
-        self._persist_baseline()
+        persist_baseline(self._path, self._baseline)
 
     def check(self, current_tools: list[str], *, complete: bool = True) -> list[Alert]:
         """Compare against baseline; an incomplete catalog never sets the baseline nor reports removals."""
