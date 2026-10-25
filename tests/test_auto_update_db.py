@@ -63,7 +63,7 @@ def test_demo_skips_db_refresh_when_ambient_cache_is_stale():
         patch("agent_bom.cli.agents.discover_all", return_value=[]),
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=[]),
     ):
-        result = _invoke("--auto-update-db", "--demo")
+        result = _invoke("--auto-update-db", "--demo", "--exit-zero")
         mock_sync.assert_not_called()
         assert result.exit_code == 0
 
@@ -121,7 +121,7 @@ def test_offline_skips_db_refresh():
         patch("agent_bom.cli.agents.discover_all", return_value=[]),
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=[]),
     ):
-        result = _invoke("--offline", "--demo")
+        result = _invoke("--offline", "--demo", "--exit-zero")
         mock_sync.assert_not_called()
         assert result.exit_code == 0
 

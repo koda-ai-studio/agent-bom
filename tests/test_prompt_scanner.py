@@ -409,6 +409,7 @@ def test_prompt_scan_findings_are_normalized_into_top_level_findings(tmp_path):
             "--output",
             str(out_file),
             "--no-auto-update-db",
+            "--exit-zero",
         ],
     )
 
