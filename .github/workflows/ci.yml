@@ -1794,6 +1794,7 @@ jobs:
             tests/test_postgres_mcp_results.py \
             tests/test_mcp_postgres_tenant_rls.py \
             tests/test_postgres_operator_advisory_store.py \
+            tests/test_postgres_advisory_findings.py \
             tests/test_endpoint_connector_postgres.py \
             tests/test_postgres_schema.py \
             tests/test_postgres_migrations.py \
