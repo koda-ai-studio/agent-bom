@@ -25,22 +25,28 @@ def _env_flag(name: str) -> bool:
     return env_bool(name, False, on_invalid="default")
 
 
-def _resolve_ci_fail_verdict(ci: bool, fail_on_verdict: str | None) -> str | None:
-    """Resolve the effective content fail threshold for CI-friendly gating.
+def _resolve_ci_fail_verdict(ci: bool, fail_on_verdict: str | None, audit_only: bool = False) -> str | None:
+    """Fail on malicious content by default; CI also gates suspicious content.
 
     Precedence: an explicit ``--fail-on-verdict`` always wins. Otherwise ``--ci``
     or the ``AGENT_BOM_SKILLS_CI`` env var enables a default ``suspicious`` gate so
     CI can block on suspicious/malicious skills without authoring a policy file.
     ``AGENT_BOM_SKILLS_FAIL_ON_VERDICT`` may override the default level.
+    Audit-only explicitly disables the default, never a separately requested gate.
     """
+    env_level = os.environ.get("AGENT_BOM_SKILLS_FAIL_ON_VERDICT")
+    ci_enabled = ci or _env_flag("AGENT_BOM_SKILLS_CI")
+    if audit_only:
+        if ci_enabled or fail_on_verdict or env_level:
+            raise click.UsageError("--audit-only cannot be combined with a CLI or environment content-verdict gate")
+        return None
     if fail_on_verdict:
         return fail_on_verdict
-    env_level = os.environ.get("AGENT_BOM_SKILLS_FAIL_ON_VERDICT")
     if env_level and env_level.strip().lower() in {"suspicious", "malicious"}:
         return env_level.strip().lower()
-    if ci or _env_flag("AGENT_BOM_SKILLS_CI"):
+    if ci_enabled:
         return _CI_DEFAULT_FAIL_VERDICT
-    return None
+    return "malicious"
 
 
 def _display_path(path: str) -> str:
@@ -100,6 +106,7 @@ def skills_group(ctx: click.Context) -> None:
 @click.argument("paths", nargs=-1, type=click.Path(exists=True, path_type=Path))
 @click.option("-f", "--format", "output_format", type=click.Choice(["console", "json", "sarif"]), default="console", show_default=True)
 @click.option("-o", "--output", "output_path", type=click.Path(path_type=Path), help="Write output to this file")
+@click.option("--audit-only", is_flag=True, help="Disable the default malicious-content gate; explicit policy and review gates still apply")
 @click.option(
     "--ci",
     is_flag=True,
@@ -149,6 +156,7 @@ def skills_scan_cmd(
     output_format: str,
     output_path: Path | None,
     ci: bool,
+    audit_only: bool,
     fail_on_verdict: str | None,
     warn_on_verdict: str | None,
     fail_on_review_verdict: str | None,
@@ -175,7 +183,7 @@ def skills_scan_cmd(
 
     setup_logging(level="ERROR" if quiet else "INFO", json_output=log_json, log_file=str(log_file) if log_file else None)
 
-    effective_fail_on_verdict = _resolve_ci_fail_verdict(ci, fail_on_verdict)
+    effective_fail_on_verdict = _resolve_ci_fail_verdict(ci, fail_on_verdict, audit_only)
 
     report = scan_skill_targets(paths, intel_source=intel_source, catalog_path=catalog_path)
     payload = report.to_dict()
