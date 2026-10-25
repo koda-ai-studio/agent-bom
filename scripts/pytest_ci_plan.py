@@ -478,6 +478,8 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             "src/agent_bom/api/scan_finding_read.py",
             "src/agent_bom/api/scan_graph_view.py",
             "src/agent_bom/api/routes/observability.py",
+            "src/agent_bom/api/observability_events.py",
+            "src/agent_bom/api/ocsf_fields.py",
         }:
             selected.update(
                 candidate
