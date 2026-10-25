@@ -281,11 +281,8 @@ These tables carry a tenant column, but their primary key (per backend) does not
 
 | Table | Backend | Primary key | Tenant column |
 |---|---|---|---|
-| `access_review_campaigns` | SQLite | `campaign_id` | `tenant_id` |
-| `access_review_items` | SQLite | `item_id` | `tenant_id` |
 | `agent_conditional_access_policies` | Postgres | `policy_id` | `tenant_id` |
 | `agent_conditional_access_policies` | SQLite | `policy_id` | `tenant_id` |
-| `agent_identities` | SQLite | `identity_id` | `tenant_id` |
 | `agent_identity_jit_grants` | Postgres | `grant_id` | `tenant_id` |
 | `agent_identity_jit_grants` | SQLite | `grant_id` | `tenant_id` |
 | `agents` | Postgres | `agent_id` | `team_id` |
