@@ -72,8 +72,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: agent-bom-cache
+    # Unauthenticated cache: reachable from this host only.
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes
@@ -103,7 +104,7 @@ services:
       - postgres_maintenance_password
     ports:
       # Exposed for dev — platform compose does NOT expose this
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./supabase/postgres/init-wrapper.sh:/docker-entrypoint-initdb.d/00-init-wrapper.sh:ro
