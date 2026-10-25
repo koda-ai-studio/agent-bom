@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agent_bom.db.operator_advisories import local_affected_answer
+from agent_bom.db.advisory_affected_local import local_affected_answer
 from agent_bom.mcp_errors import CODE_NOT_FOUND_RESOURCE, CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.rest_parity import api_reads, call_route

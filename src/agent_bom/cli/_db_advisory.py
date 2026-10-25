@@ -17,12 +17,10 @@ from pydantic import ValidationError
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.db.operator_advisories import (
     load_local_advisories,
-    local_affected_answer,
     match_local,
     remove_local_advisory,
     save_local_advisory,
 )
-from agent_bom.scanners.advisory_affected import MAX_LIMIT, page_answer
 from agent_bom.scanners.operator_advisory import OperatorAdvisory
 
 
@@ -113,12 +111,12 @@ _VERDICT_LABELS = {
 def advisory_affected(advisory_id: str, reports: tuple[Path, ...], fmt: str) -> None:
     """Which scanned assets an advisory (declared, or a local feed record) affects."""
 
-    answer = local_affected_answer(advisory_id, list(reports))
-    if answer is None:
+    # Deferred: the answer carries graph node ids, and the CLI must not import the graph package at startup.
+    from agent_bom.db.advisory_affected_local import local_affected_body
+
+    body = local_affected_body(advisory_id, list(reports))
+    if body is None:
         raise click.ClickException(f"{advisory_id} is neither declared locally nor in the local vulnerability DB")
-    body = page_answer(answer, tenant_id="local", limit=MAX_LIMIT)
-    body["rows"] = answer["rows"]
-    body["count"], body["has_more"], body["next_cursor"] = len(answer["rows"]), False, None
     if fmt == "json":
         click.echo(json.dumps(body, indent=2))
     else:

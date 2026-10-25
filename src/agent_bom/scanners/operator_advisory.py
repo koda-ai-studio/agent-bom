@@ -33,7 +33,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from agent_bom.core.versions import compare_version_order
 from agent_bom.core.versions.osv import version_match_state
-from agent_bom.scanners.advisory_graph_ids import occurrence_graph_ids
 from agent_bom.scanners.cpe_distro_packages import distro_ships_cpe_product
 
 if TYPE_CHECKING:
@@ -304,7 +303,9 @@ def _row(
         "provenance": provenance or occ.ctx.provenance,
         "scan_id": occ.ctx.scan_id or None,
         "last_observed_at": occ.ctx.observed_at,
-        "graph": occurrence_graph_ids(*occ.owners, package),
+        # The agent and server records the graph names the occurrence after;
+        # ``advisory_affected`` turns them into node ids so matching stays graph-free.
+        "_owners": occ.owners,
     }
 
 

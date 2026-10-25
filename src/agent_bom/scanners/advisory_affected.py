@@ -29,6 +29,7 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
 
+from agent_bom.scanners.advisory_graph_ids import occurrence_graph_ids
 from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn
 from agent_bom.scanners.operator_advisory import (
     DISTRO_BACKPORT_UNVERIFIED,
@@ -81,6 +82,11 @@ def _row_order(row: dict[str, Any]) -> tuple:
     return (VERDICTS.index(row["verdict"]), row["asset_label"], package.get("name", ""), row["installed_version"], row["id"])
 
 
+def _with_graph_ids(row: dict[str, Any]) -> dict[str, Any]:
+    agent, server = row.pop("_owners")
+    return {**row, "graph": occurrence_graph_ids(agent, server, row["package"])}
+
+
 def affected_answer(
     advisory: OperatorAdvisory,
     reports: Iterable[dict[str, Any]],
@@ -91,7 +97,7 @@ def affected_answer(
     """The whole answer for one advisory over the newest stored scans; ``rows`` are unpaged."""
     provenance = "feed" if source == "feed" else "operator_advisory"
     result = match_advisories_against_reports([advisory], reports, provenance=provenance, distro_verdict=distro_verdict)
-    rows = sorted(result.rows, key=_row_order)
+    rows = sorted((_with_graph_ids(row) for row in result.rows), key=_row_order)
     counts = {verdict: sum(1 for row in rows if row["verdict"] == verdict) for verdict in VERDICTS}
     flagged = {
         (row["scan_id"] or "", row["asset"].get("agent", ""), row["asset"].get("server", ""))
