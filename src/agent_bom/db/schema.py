@@ -411,3 +411,12 @@ def db_stats(conn: sqlite3.Connection) -> dict:
         for r in rows
     }
     return stats
+
+
+def sync_meta_run_status(run: dict[str, object], metadata: dict[str, object]) -> dict[str, str | None]:
+    """Feed-run status from a ``sync_meta`` row: a capped, rate-limited or timed-out sync is ``partial``, never ``synced``."""
+    if not run.get("last_synced"):
+        return {"status": "freshness_unknown", "partial_reason": None}
+    if metadata.get("status") == "partial":
+        return {"status": "partial", "partial_reason": str(metadata.get("partial_reason") or "unknown")}
+    return {"status": "synced", "partial_reason": None}

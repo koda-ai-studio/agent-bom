@@ -14,7 +14,7 @@ from typing import Any
 from urllib.parse import unquote
 
 from agent_bom.db.lookup import LocalVuln, _current_severity, lookup_package
-from agent_bom.db.schema import DB_PATH, _validated_db_path, init_db
+from agent_bom.db.schema import DB_PATH, _validated_db_path, init_db, sync_meta_run_status
 from agent_bom.package_utils import normalize_package_name
 
 _CVE_RE = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
@@ -468,7 +468,7 @@ def list_intel_sources(*, db_path: Path | None = None) -> dict[str, Any]:
                     "sync_meta_source": source.sync_meta_source,
                     "last_synced": run.get("last_synced"),
                     "record_count": run.get("record_count", 0),
-                    "status": "freshness_unknown" if not run.get("last_synced") else "synced",
+                    **sync_meta_run_status(run, metadata),
                     "last_validated_at": metadata.get("last_validated_at"),
                     "fetched_at": metadata.get("fetched_at") or run.get("last_synced"),
                     "content_hash": metadata.get("content_hash"),
