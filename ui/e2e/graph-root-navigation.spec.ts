@@ -55,6 +55,22 @@ for (const theme of ["light", "dark"]) for (const width of [390, 1440]) {
     await expect.poll(() => requested.at(-1)).toBe("server:missing");
     await expect(page.locator(".react-flow__node")).toHaveCount(0);
     expect(requested).not.toContain(first);
+    if (theme === "light" && width === 1440) {
+      await page.getByRole("button", { name: "View & layers", exact: true }).click();
+      params.set("root", exact);
+      const pendingUrl = `/graph?${params}`;
+      // Hold the router on its old snapshot while the address bar has already
+      // changed. This makes the navigation/render race deterministic.
+      await page.evaluate(href => History.prototype.pushState.call(history, null, "", href), pendingUrl);
+      const beforeReload = requested.length;
+      await page.getByRole("combobox", { name: "Traversal direction" }).selectOption("forward");
+      await expect.poll(() => requested.length).toBeGreaterThan(beforeReload);
+      await expect(page.locator(".react-flow__node")).toHaveCount(0);
+      expect(new URL(page.url()).searchParams.get("root")).toBe(exact);
+      // Deliver the same destination through Next's native-history integration.
+      await page.evaluate(href => window.history.pushState(null, "", href), pendingUrl);
+      await expect(inspector.getByRole("heading", { name: "Exact file server", exact: true })).toBeVisible();
+    }
     expect(errors).toEqual([]);
   });
 }

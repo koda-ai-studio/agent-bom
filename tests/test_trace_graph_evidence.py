@@ -260,10 +260,25 @@ def test_no_trace_events_leaves_the_graph_unchanged(hub):
 
 
 def test_capped_load_without_valid_events_still_reports_missing_evidence(monkeypatch):
-    from agent_bom.api.trace_collection import trace_evidence
+    from agent_bom.api.gateway_activity_store import InMemoryGatewayActivityStore
+    from agent_bom.api.storage.runtime_records import RuntimeObservationRecord
+    from agent_bom.api.trace_collection import runtime_evidence, trace_evidence
 
-    monkeypatch.setattr(trace_evidence, "load_window_events", lambda *a, **k: ([], True))
-    report = with_trace_events(REPORT, "tenant-a", store=InMemoryRuntimeEventStore())
+    monkeypatch.setattr(runtime_evidence, "MAX_WINDOW_EVENTS", 1)
+    monkeypatch.setattr(trace_evidence, "get_gateway_activity_store", InMemoryGatewayActivityStore)
+    store = InMemoryRuntimeEventStore()
+    for index in range(2):
+        store.put_observation(
+            RuntimeObservationRecord(
+                tenant_id="tenant-a",
+                observation_id=str(index),
+                session_id="fixture",
+                observed_at=SCAN_AT,
+                surface="normalized_trace",
+                metadata={},
+            )
+        )
+    report = with_trace_events(REPORT, "tenant-a", store=store)
     assert report["runtime_trace_events"]["load_truncated"] is True
 
 

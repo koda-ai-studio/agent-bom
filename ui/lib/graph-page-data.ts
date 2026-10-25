@@ -95,6 +95,7 @@ export const RELATIONSHIP_SCOPE_MAP: Record<
     RelationshipType.INVOKED,
     RelationshipType.ACCESSED,
     RelationshipType.TRACE_STEP,
+    RelationshipType.RECORDED_ACTIVITY,
     RelationshipType.CALLED,
     RelationshipType.USED_CREDENTIAL,
     RelationshipType.DELEGATED_TO,

@@ -28,7 +28,7 @@ erDiagram
   package }o--o{ source_file : "contains, depends_on, imports"
 ```
 
-Not drawn, because they can connect almost any two types: `trace_step`. They are listed in the tables below.
+Not drawn, because they can connect almost any two types: `recorded_activity`, `trace_step`. They are listed in the tables below.
 
 ## Relationship reference
 
@@ -55,6 +55,7 @@ Not drawn, because they can connect almost any two types: `trace_step`. They are
 | `defines` | `structural` | yes | `source_file` | AI and agents: `tool` |
 | `depends_on` | `dependency` | yes | Cloud, infrastructure and data: `container`<br/>AI and agents: `framework`, `server` | `package` |
 | `part_of` | `structural` | yes | `ci_job` | AI and agents: `application` |
+| `recorded_activity` | `correlation` | no | AI and agents: `agent`, `server`, `tool_call`<br/>Identity and access: `federated_identity`, `managed_identity`, `role`, `service_account`, `service_principal`, `user`<br/>Cloud, infrastructure and data: `resource` | `ci_job`, `config_file`, `package` |
 | `remediates` | `finding` | no | `package` | Findings: `misconfiguration`, `vulnerability` |
 | `runs` | `structural` | yes | `ci_job` | AI and agents: `agent`, `server`, `tool` |
 | `trace_step` | `runtime` | yes | `ci_job`, `config_file`, `package`<br/>Identity and access: `access_policy`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model` | `ci_job`, `config_file`, `package`<br/>Identity and access: `access_policy`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model` |

@@ -83,12 +83,24 @@ settings only resolve the client IP used by separate source-CIDR conditions.
 
 ## Graph evidence reads
 
-Historical trace windows filter tenant, surface and inclusive UTC time bounds
-before consuming the 20,000-event budget. Pages use a timestamp/id cursor;
+Persisted trace, runtime, proxy and gateway observations share one
+20,000-event graph-read budget with the gateway activity ledger. Reads filter
+tenant, surface and inclusive UTC time bounds before consuming that budget. Pages use a timestamp/id cursor;
 unrelated retained history is neither counted nor projected. A capped load is
 reported as limited even if no valid event survives normalization. Store errors
 produce a failed evidence receipt; they do not turn missing telemetry into a
-clean graph or change gateway enforcement.
+clean graph or change gateway enforcement. A failing store does not hide
+records from the other store. Trace providers retain their experimental opt-in;
+already-ingested runtime and gateway metadata does not require it.
+
+The `recorded_activity` relationship retains metadata-only source receipts and
+never participates in attack-path traversal. Allow and deny decisions are
+records, not proof that execution completed or a permission exists. Exact node
+references bind only within the tenant and consistent recorded cloud scope.
+Name-only, missing-scope and conflicting identities remain unverified resource
+shadows with candidate counts. Replayed receipts do not increase event counts.
+Load caps and rejected bindings appear in `runtime_activity_projection` analysis
+status. No stored event is rewritten or deleted by projection.
 
 OCSF ingestion retains bounded, allowlisted actor/session, cloud and device
 attribution. Actor principal identifiers use tenant-bound digests; missing

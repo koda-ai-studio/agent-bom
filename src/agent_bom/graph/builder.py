@@ -16,6 +16,7 @@ from typing import Any
 from agent_bom.api.tracing import get_tracer
 from agent_bom.cloud.normalization import coerce_truthy as coerce_truthy
 from agent_bom.core.cloud_identity import cloud_resource_node_id as cloud_resource_node_id
+from agent_bom.graph.activity_projection import project_recorded_activity
 from agent_bom.graph.agent_cloud_lineage import _add_agent_cloud_lineage as _add_agent_cloud_lineage
 from agent_bom.graph.agent_projection import project_agents
 from agent_bom.graph.asset_canonicalize import canonicalize_assets
@@ -451,6 +452,7 @@ def _project_runtime_topology(
     _add_agentic_identity_graph_projections(graph, report, inputs.data_source, tenant_id)
     _add_runtime_incident_feedback(graph, report, indexes.agent_name_to_ids, inputs.data_source)
     project_report_trace_events(graph, report.get("runtime_trace_events"), tenant_id)
+    project_recorded_activity(graph, report.get("runtime_activity_events"), tenant_id)
 
 
 def _project_cloud_authority(

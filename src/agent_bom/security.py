@@ -67,6 +67,7 @@ from agent_bom.core.security_validation import (
 )
 from agent_bom.redaction.emails import _contains_email, mask_email
 from agent_bom.redaction.env_values import container_has_secret
+from agent_bom.redaction.field_policy import _REPORT_AUTH_MODES, _REPORT_COORDINATE_KEYS
 
 logger = logging.getLogger(__name__)
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -689,34 +690,6 @@ def sanitize_path_label(value: object) -> str:
     return f"<path:{basename}>"
 
 
-_REPORT_COORDINATE_KEYS = {
-    "id",
-    "canonical_id",
-    "node_id",
-    "node_ids",
-    "nodeids",
-    "edge_id",
-    "edge_ids",
-    "edgeids",
-    "source",
-    "target",
-    "source_id",
-    "target_id",
-    "source_node_id",
-    "target_node_id",
-    "purl",
-    "identifier",
-    "finding_group_key",
-    "finding_node_id",
-}
-_REPORT_AUTH_MODES = {
-    "env-credentials",
-    "url-embedded-credentials",
-    "network-no-auth-observed",
-    "local-stdio",
-    "managed_identity",
-    "workload_identity",
-}
 # ``\s`` on a str pattern is the same predicate as ``str.isspace``.
 _WHITESPACE_RE = re.compile(r"\s")
 _WHITESPACE_OR_C0_RE = re.compile(r"[\s\x00-\x1f]")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Any
 
 from agent_bom.api.gateway_activity_store import (
     DEFAULT_MAX_EVENTS_PER_TENANT,
@@ -27,6 +28,7 @@ from agent_bom.api.gateway_activity_store import (
     _window_summary,
 )
 from agent_bom.api.postgres_common import Connection, ConnectionPool, _ensure_tenant_rls, _get_pool, _tenant_connection
+from agent_bom.api.storage.gateway_activity_window import sql_activity_window
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.storage.base import BackendKind
 
@@ -259,6 +261,10 @@ class PostgresGatewayActivityStore:
             max_events=self.max_events_per_tenant,
             max_tombstones=self.max_tombstones_per_tenant,
         )
+
+    def window_activity(self, tenant_id: str, **kwargs: Any) -> list[GatewayActivityRecord]:
+        with _tenant_connection(self._pool) as conn:
+            return [_record_from_json(row) for row in sql_activity_window(conn, tenant_id, postgres=True, **kwargs)]
 
     def summarize_window(self, tenant_id: str, *, start: str, end: str) -> GatewayActivityWindowSummary:
         with _tenant_connection(self._pool) as conn:

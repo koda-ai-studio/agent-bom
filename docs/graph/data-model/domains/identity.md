@@ -40,7 +40,7 @@ erDiagram
 | `service_principal` | attached | cross_account_trust<br/>has_permission<br/>member_of | can_access | cross_account_trust | member_of | can_access | has_permission | attached<br/>inherits | assumes<br/>can_access<br/>cross_account_trust<br/>inherits | can_access | can_access<br/>cross_account_trust |  |
 | `user` | attached | has_permission<br/>member_of | can_access |  | member_of |  | has_permission | attached<br/>inherits | assumes<br/>inherits<br/>member_of |  |  |  |
 
-Not drawn, because they can connect almost any two types: `possibly_correlates_with`, `trace_step`. They are listed in the tables below.
+Not drawn, because they can connect almost any two types: `possibly_correlates_with`, `recorded_activity`, `trace_step`. They are listed in the tables below.
 
 ## Relationship reference
 
@@ -62,6 +62,7 @@ Not drawn, because they can connect almost any two types: `possibly_correlates_w
 | `owns` | `governance` | yes | `account`, `org` | `group`, `policy`, `role`, `service_account`, `service_principal`, `user` |
 | `part_of` | `structural` | yes | `account` | `org` |
 | `possibly_correlates_with` | `correlation` | no | `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `managed_identity`, `role`, `service_account`, `service_principal`, `user` |
+| `recorded_activity` | `correlation` | no | `federated_identity`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `access_policy`, `credential`, `credential_ref`, `policy`, `role`, `service_account`, `service_principal`, `user` |
 | `trace_step` | `runtime` | yes | `access_policy`, `role`, `service_account`, `service_principal`, `user` | `access_policy`, `role`, `service_account`, `service_principal`, `user` |
 | `trusts` | `authority` | yes | `account`, `role` | `account`, `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user` |
 
@@ -89,6 +90,7 @@ Not drawn, because they can connect almost any two types: `possibly_correlates_w
 | `owns` | `governance` | yes | `account`, `group`, `org`, `role`, `service_account`, `service_principal`, `user` | AI and agents: `agent`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `data_store`, `environment` |
 | `part_of` | `structural` | yes | `account`<br/>AI and agents: `agent`, `server`<br/>Cloud, infrastructure and data: `container` | `org`<br/>Cloud, infrastructure and data: `cluster`, `environment`, `fleet` |
 | `reaches_tool` | `authority` | yes | `credential` | AI and agents: `tool` |
+| `recorded_activity` | `correlation` | no | `federated_identity`, `managed_identity`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `server`, `tool_call`<br/>Cloud, infrastructure and data: `resource` | `access_policy`, `credential`, `credential_ref`, `policy`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`, `tool_call`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource`<br/>Code and supply chain: `ci_job`, `config_file`, `package` |
 | `scoped_to` | `governance` | yes | `access_grant`, `managed_identity` | AI and agents: `tool` |
 | `trace_step` | `runtime` | yes | `access_policy`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`<br/>Code and supply chain: `ci_job`, `config_file`, `package` | `access_policy`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`<br/>Code and supply chain: `ci_job`, `config_file`, `package` |
 | `used_credential` | `runtime` | yes | AI and agents: `agent`, `tool`, `tool_call` | `credential`, `credential_ref` |

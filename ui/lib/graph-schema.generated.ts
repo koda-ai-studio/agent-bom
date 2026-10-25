@@ -567,6 +567,7 @@ export enum GraphEdgeKind {
   PROTECTS = "protects",
   PROVIDES_TOOL = "provides_tool",
   REACHES_TOOL = "reaches_tool",
+  RECORDED_ACTIVITY = "recorded_activity",
   REMEDIATES = "remediates",
   RUNS = "runs",
   SCOPED_TO = "scoped_to",
@@ -583,11 +584,11 @@ export enum GraphEdgeKind {
   VULNERABLE_TO = "vulnerable_to",
 }
 
-export type GraphEdgeKindKey = "accessed" | "acted_as" | "affects" | "assumes" | "attached" | "authenticates_as" | "belongs_to" | "called" | "can_access" | "configures" | "contains" | "correlates_with" | "cross_account_trust" | "defines" | "delegated_to" | "depends_on" | "exhibits_drift" | "exploitable_via" | "exposed_to" | "exposes_cred" | "governs" | "has_permission" | "hosted_on" | "hosts" | "imports" | "inherits" | "invoked" | "lateral_path" | "manages" | "member_of" | "observes" | "owns" | "part_of" | "possibly_correlates_with" | "protects" | "provides_tool" | "reaches_tool" | "remediates" | "runs" | "scoped_to" | "serves_model" | "shares_cred" | "shares_server" | "stores" | "trace_step" | "triggers" | "trusts" | "used_credential" | "uses" | "uses_framework" | "vulnerable_to";
+export type GraphEdgeKindKey = "accessed" | "acted_as" | "affects" | "assumes" | "attached" | "authenticates_as" | "belongs_to" | "called" | "can_access" | "configures" | "contains" | "correlates_with" | "cross_account_trust" | "defines" | "delegated_to" | "depends_on" | "exhibits_drift" | "exploitable_via" | "exposed_to" | "exposes_cred" | "governs" | "has_permission" | "hosted_on" | "hosts" | "imports" | "inherits" | "invoked" | "lateral_path" | "manages" | "member_of" | "observes" | "owns" | "part_of" | "possibly_correlates_with" | "protects" | "provides_tool" | "reaches_tool" | "recorded_activity" | "remediates" | "runs" | "scoped_to" | "serves_model" | "shares_cred" | "shares_server" | "stores" | "trace_step" | "triggers" | "trusts" | "used_credential" | "uses" | "uses_framework" | "vulnerable_to";
 
 export type GraphTraversalClass = "authority" | "correlation" | "dependency" | "derived" | "exposure" | "finding" | "governance" | "runtime" | "structural";
 
-export const GRAPH_EDGE_KINDS: readonly GraphEdgeKindKey[] = ["accessed", "acted_as", "affects", "assumes", "attached", "authenticates_as", "belongs_to", "called", "can_access", "configures", "contains", "correlates_with", "cross_account_trust", "defines", "delegated_to", "depends_on", "exhibits_drift", "exploitable_via", "exposed_to", "exposes_cred", "governs", "has_permission", "hosted_on", "hosts", "imports", "inherits", "invoked", "lateral_path", "manages", "member_of", "observes", "owns", "part_of", "possibly_correlates_with", "protects", "provides_tool", "reaches_tool", "remediates", "runs", "scoped_to", "serves_model", "shares_cred", "shares_server", "stores", "trace_step", "triggers", "trusts", "used_credential", "uses", "uses_framework", "vulnerable_to"] as const;
+export const GRAPH_EDGE_KINDS: readonly GraphEdgeKindKey[] = ["accessed", "acted_as", "affects", "assumes", "attached", "authenticates_as", "belongs_to", "called", "can_access", "configures", "contains", "correlates_with", "cross_account_trust", "defines", "delegated_to", "depends_on", "exhibits_drift", "exploitable_via", "exposed_to", "exposes_cred", "governs", "has_permission", "hosted_on", "hosts", "imports", "inherits", "invoked", "lateral_path", "manages", "member_of", "observes", "owns", "part_of", "possibly_correlates_with", "protects", "provides_tool", "reaches_tool", "recorded_activity", "remediates", "runs", "scoped_to", "serves_model", "shares_cred", "shares_server", "stores", "trace_step", "triggers", "trusts", "used_credential", "uses", "uses_framework", "vulnerable_to"] as const;
 
 export interface GraphEdgeKindMeta {
   label: string;
@@ -1422,6 +1423,53 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     ],
     "traversable": true,
     "traversal_class": "authority"
+  },
+  "recorded_activity": {
+    "label": "Recorded Activity (execution unconfirmed)",
+    "color": "#64748b",
+    "category": "runtime",
+    "direction": "directed",
+    "source_types": [
+      "user",
+      "service_account",
+      "service_principal",
+      "federated_identity",
+      "agent",
+      "server",
+      "tool_call",
+      "resource",
+      "managed_identity",
+      "role"
+    ],
+    "target_types": [
+      "agent",
+      "server",
+      "container",
+      "cluster",
+      "model",
+      "cloud_resource",
+      "role",
+      "service_account",
+      "service_principal",
+      "data_store",
+      "dataset",
+      "api_gateway",
+      "application",
+      "tool",
+      "package",
+      "framework",
+      "config_file",
+      "ci_job",
+      "access_policy",
+      "user",
+      "resource",
+      "credential",
+      "credential_ref",
+      "tool_call",
+      "policy"
+    ],
+    "traversable": false,
+    "traversal_class": "correlation"
   },
   "remediates": {
     "label": "Remediates",

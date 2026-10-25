@@ -9,6 +9,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from agent_bom.canonical_ids import canonical_graph_edge_id, legacy_canonical_id_v2
+from agent_bom.graph.activity_receipts import merge_activity_receipts
 from agent_bom.graph.runtime_receipts import merge_runtime_receipts
 from agent_bom.graph.types import RelationshipType
 from agent_bom.graph.util import _now_iso
@@ -51,6 +52,7 @@ def merge_union_evidence_keys(stored: dict[str, Any], incoming: dict[str, Any]) 
 
 def _merge_receipt_sets(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
     changed = merge_union_evidence_keys(stored, incoming)
+    changed = merge_activity_receipts(stored, incoming) or changed
     changed = merge_runtime_receipts(stored, incoming) or changed
     # Mapping catalog versions belong to whole receipts. Do not combine a
     # newer source hash with an older technique claim or discard either one.

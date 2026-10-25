@@ -453,6 +453,23 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 
 Emitted by: `graph/builder_snowflake_cortex.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
+## `recorded_activity`
+
+Class `correlation` · directed · not traversable · required evidence `source`, `tier` · 250 pairs
+
+- `agent` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+- `federated_identity` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+- `managed_identity` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+- `resource` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+- `role` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+- `server` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+- `service_account` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+- `service_principal` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+- `tool_call` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+- `user` → `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `credential_ref`, `data_store`, `dataset`, `framework`, `model`, `package`, `policy`, `resource`, `role`, `server`, `service_account`, `service_principal`, `tool`, `tool_call`, `user`
+
+Emitted by: `graph/activity_projection.py`
+
 ## `remediates`
 
 Class `finding` · directed · not traversable · required evidence `source`, `tier` · 2 pairs
