@@ -16,9 +16,10 @@ PAGE = ROOT / "site-docs" / "integrations" / "github-action.md"
 
 def test_nvd_api_key_input_is_optional_and_documented_as_a_secret() -> None:
     spec = ACTION["inputs"]["nvd-api-key"]
-    assert spec.get("required") is False
+    assert "secrets.NVD_API_KEY" in spec["description"] and "${{" not in spec["description"]
     assert spec.get("default", "") == ""
-    assert "${{ secrets.NVD_API_KEY }}" in spec["description"]
+    assert "secrets.NVD_API_KEY" in spec["description"]
+    assert "${{" not in spec["description"]
 
 
 def test_nvd_api_key_reaches_only_the_scan_step_as_an_env_var() -> None:

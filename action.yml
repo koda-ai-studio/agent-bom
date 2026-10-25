@@ -48,7 +48,7 @@ inputs:
     required: false
     default: 'true'
   nvd-api-key:
-    description: 'Optional NVD API key for the vulnerability database refresh (wider NVD window, higher rate limit). Pass it from a secret, e.g. `nvd-api-key: ${{ secrets.NVD_API_KEY }}`; it reaches the scan only as the NVD_API_KEY environment variable and is never printed. Without it the refresh still reads NVD, keyless.'
+    description: 'Optional NVD API key for the vulnerability database refresh (wider NVD window, higher rate limit). Pass it from a repository secret (secrets.NVD_API_KEY in the calling workflow); it reaches the scan only as the NVD_API_KEY environment variable and is never printed. Without it the refresh still reads NVD, keyless.'
     required: false
     default: ''
   fail-on-kev:
