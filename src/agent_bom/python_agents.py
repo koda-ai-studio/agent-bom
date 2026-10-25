@@ -39,6 +39,7 @@ from typing import Any, NamedTuple
 from agent_bom.ast.source_reader import parse_python_source
 from agent_bom.ast_signal_utils import is_agent_tool_decorator
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
+from agent_bom.parsers.pyproject_declared import parse_pyproject_dependencies
 from agent_bom.traversal import iter_discovery_files
 
 # ─── Framework registry ───────────────────────────────────────────────────────
@@ -118,6 +119,8 @@ class _PythonAgentDef(NamedTuple):
     env_refs: list[str]  # credential env var names referenced (never values)
     file: str
     system_prompts: tuple[dict[str, Any], ...] = ()
+    # Enclosing class/function qualname; "" at module level.
+    scope: str = ""
 
 
 # ─── Requirement file parsers ─────────────────────────────────────────────────
@@ -144,26 +147,7 @@ def _parse_requirements_txt(path: Path) -> dict[str, str]:
 
 def _parse_pyproject_toml(path: Path) -> dict[str, str]:
     """Parse pyproject.toml dependencies → {package: version}."""
-    pkgs: dict[str, str] = {}
-    text = path.read_text(encoding="utf-8", errors="replace")
-    # Find [project.dependencies] or [tool.poetry.dependencies] sections
-    in_deps = False
-    for line in text.splitlines():
-        stripped = line.strip()
-        if re.match(r"^\[(?:project\.dependencies|tool\.poetry\.dependencies)\]", stripped):
-            in_deps = True
-            continue
-        if stripped.startswith("[") and in_deps:
-            in_deps = False
-        if not in_deps:
-            continue
-        # "package>=1.2" or package = ">=1.2"
-        m = re.match(r'^["\']?([A-Za-z0-9_\-]+)["\']?\s*(?:=\s*["\'])?[=~!<>^]*\s*([0-9][^\s"\']*)?', stripped)
-        if m and m.group(1):
-            name = m.group(1).lower().replace("_", "-")
-            ver = m.group(2) or "unknown"
-            pkgs[name] = ver
-    return pkgs
+    return parse_pyproject_dependencies(path)
 
 
 def _collect_requirements(project: Path) -> dict[str, str]:
@@ -332,6 +316,23 @@ def _extract_agent_defs_regex(content: str, filename: str) -> list[_PythonAgentD
     return defs
 
 
+def _call_scopes(tree: ast.Module) -> dict[int, str]:
+    """Map each call node (by ``id``) to its enclosing class/function qualname."""
+    scopes: dict[int, str] = {}
+
+    def visit(node: ast.AST, scope: str) -> None:
+        for child in ast.iter_child_nodes(node):
+            child_scope = scope
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                child_scope = f"{scope}.{child.name}" if scope else child.name
+            elif isinstance(child, ast.Call):
+                scopes[id(child)] = scope
+            visit(child, child_scope)
+
+    visit(tree, "")
+    return scopes
+
+
 def _extract_agent_defs(content: str, filename: str) -> list[_PythonAgentDef]:
     """Extract agent definitions from Python source with AST heuristics."""
     try:
@@ -415,6 +416,7 @@ def _extract_agent_defs(content: str, filename: str) -> list[_PythonAgentDef]:
 
     defs: list[_PythonAgentDef] = []
     candidate_calls = {"Agent", "AgentExecutor", "Crew", "create_react_agent", "initialize_agent"}
+    scopes = _call_scopes(tree)
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
@@ -461,6 +463,7 @@ def _extract_agent_defs(content: str, filename: str) -> list[_PythonAgentDef]:
                 model=model,
                 env_refs=env_refs,
                 file=filename,
+                scope=scopes.get(id(node), ""),
             )
         )
 
@@ -475,12 +478,13 @@ def _scan_python_files(project: Path) -> list[_PythonAgentDef]:
     seen_names: set[str] = set()
 
     py_files = sorted(project.rglob("*.py"))
-    # Exclude common non-project dirs
+    # Exclude common non-project dirs below the project root only; a project
+    # that itself lives under a ``tests``/``build`` directory is still scanned.
     py_files = [
         f
         for f in py_files
         if not any(
-            part in f.parts
+            part in f.relative_to(project).parts[:-1]
             for part in (
                 ".venv",
                 "venv",
@@ -508,9 +512,11 @@ def _scan_python_files(project: Path) -> list[_PythonAgentDef]:
         if not any(root in content for root in _ALL_IMPORT_ROOTS):
             continue
 
-        defs = _extract_agent_defs(content, py_file.name)
+        defs = _extract_agent_defs(content, py_file.relative_to(project).as_posix())
         for d in defs:
-            key = f"{d.framework}:{d.name}"
+            # Identity is the definition site, not the name: two ``assistant``
+            # agents in different files or functions are different agents.
+            key = f"{d.framework}:{d.file}:{d.scope}:{d.name}"
             if key not in seen_names:
                 seen_names.add(key)
                 all_defs.append(d)
@@ -676,31 +682,37 @@ def scan_python_agents(project_path: str) -> tuple[list[Agent], list[str]]:
             tools.append(MCPTool(name=d.model, description="LLM model"))
 
         cred_env = {k: "***REDACTED***" for k in d.env_refs}
+        qualified = f"{d.scope}.{d.name}" if d.scope else d.name
+        defining_file = project / d.file
+        config_path = str(defining_file) if defining_file.is_file() else str(project)
+        metadata: dict[str, Any] = {"definition_file": d.file, "definition_scope": d.scope}
+        if d.system_prompts:
+            metadata.update(
+                {
+                    "system_prompts": d.system_prompts,
+                    "system_prompt_count": len(d.system_prompts),
+                    "system_prompt_risk_flags": sorted({flag for prompt in d.system_prompts for flag in prompt.get("risk_flags", [])}),
+                }
+            )
 
         server = MCPServer(
-            name=f"{d.framework}:{d.name}",
+            name=f"{d.framework}:{qualified}",
             command="python",
             args=[],
             env=cred_env,
             transport=TransportType.STDIO,
             surface=ServerSurface.OTHER,
             packages=pkgs,
-            config_path=str(project),
+            config_path=config_path,
             tools=tools,
         )
         agent = Agent(
-            name=f"{d.framework}:{d.name}",
+            name=f"{d.framework}:{qualified}",
             agent_type=AgentType.CUSTOM,
-            config_path=str(project),
+            config_path=config_path,
             mcp_servers=[server],
             source="python-agents",
-            metadata={
-                "system_prompts": d.system_prompts,
-                "system_prompt_count": len(d.system_prompts),
-                "system_prompt_risk_flags": sorted({flag for prompt in d.system_prompts for flag in prompt.get("risk_flags", [])}),
-            }
-            if d.system_prompts
-            else {},
+            metadata=metadata,
         )
         agents.append(agent)
 
