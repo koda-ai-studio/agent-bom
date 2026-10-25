@@ -21,6 +21,7 @@ from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
 from agent_bom.api.stores import _get_operator_advisory_store
 from agent_bom.api.tenancy import require_request_tenant_id
+from agent_bom.db.operator_advisories import distro_verdicts
 from agent_bom.scanners.operator_advisory import OPERATOR_ADVISORY_PROVENANCE, OperatorAdvisory, match_advisories_against_reports
 
 router = APIRouter()
@@ -48,7 +49,8 @@ def operator_advisory_matches(tenant_id: str, advisory_id: str | None = None) ->
         if not rows:
             return None
     advisories = [OperatorAdvisory.model_validate({k: v for k, v in row.items() if k != "updated_at"}) for row in rows]
-    result = match_advisories_against_reports(advisories, _current_reports(tenant_id))
+    with distro_verdicts() as verdict:
+        result = match_advisories_against_reports(advisories, _current_reports(tenant_id), distro_verdict=verdict)
     return {
         "tenant_id": tenant_id,
         "advisory_ids": [a.id for a in advisories],

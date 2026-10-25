@@ -38,6 +38,7 @@ from agent_bom.api.stores import _get_operator_advisory_store, _get_store
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.core.settings import env_bool, env_int
 from agent_bom.db import schema as _schema
+from agent_bom.db.operator_advisories import distro_verdicts
 from agent_bom.db.schema import open_existing_db_readonly
 from agent_bom.scanners.operator_advisory import AffectedProduct, FeedAffectedRange, OperatorAdvisory, match_advisories_against_reports
 
@@ -254,11 +255,14 @@ def run_tenant_rematch(
         reports = _stored_reports(tenant_id)
     except _UNAVAILABLE:
         return _record(store, tenant_id, state, {**status, "reason": "store_unavailable"})
-    results = [
-        match_advisories_against_reports(operator, reports),
-        match_advisories_against_reports(batch.advisories, reports, provenance=FEED_PROVENANCE),
-    ]
-    if any(not result.complete for result in results) and reports:
+    with distro_verdicts() as verdict:
+        results = [
+            match_advisories_against_reports(operator, reports, distro_verdict=verdict),
+            match_advisories_against_reports(batch.advisories, reports, provenance=FEED_PROVENANCE, distro_verdict=verdict),
+        ]
+    # A distro package awaiting its distro record stays indeterminate until the
+    # distro feed updates; reporting it must not freeze the cursors forever.
+    if any(result.blocking_indeterminate for result in results) and reports:
         return _record(store, tenant_id, state, {**status, "reason": "version_incomparable"})
     seen: dict[str, str] = dict(state.get("seen") or {})
     findings = [finding for result in results for finding in result.findings]
@@ -274,6 +278,7 @@ def run_tenant_rematch(
         "new_findings": len(fresh),
         "findings_total": len(findings),
         "reports_examined": len(reports),
+        "indeterminate_distro": sum(len(result.indeterminate) - len(result.blocking_indeterminate) for result in results),
     }
     return _record(store, tenant_id, state, complete)
 

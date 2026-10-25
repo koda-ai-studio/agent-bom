@@ -93,10 +93,12 @@ def _print_table(body: dict) -> None:
         click.echo(f"{finding['advisory_id']}\t{pkg['name']}@{pkg['version']}\tfixed in {fixed}\t{finding['asset']['server']}")
     for row in body["superseded"]:
         click.echo(f"{row['advisory_id']}\t{row['package']}\tsuperseded by feed record {row['feed_id']}")
+    for row in body["indeterminate"]:
+        click.echo(f"{row['advisory_id']}\t{row['package']}\tindeterminate: {row.get('detail') or row['reason'].replace('_', ' ')}")
     click.echo(
         f"{len(body['findings'])} operator-advisory finding(s) across {body['packages_examined']} package(s) "
         f"in {body['reports_examined']} saved scan(s)"
     )
     if not body["complete"]:
-        reason = "no saved scan found" if not body["reports_examined"] else f"{len(body['indeterminate'])} version(s) could not be ordered"
+        reason = "no saved scan found" if not body["reports_examined"] else f"{len(body['indeterminate'])} package(s) indeterminate"
         click.echo(f"INCOMPLETE: {reason}; this is not a clean result.", err=True)

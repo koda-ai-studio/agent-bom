@@ -9,11 +9,17 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from agent_bom.db import schema
+from agent_bom.db.schema import open_existing_db_readonly
 from agent_bom.history import latest_report, load_report_or_sbom
+from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn, local_distro_verdict
 from agent_bom.scanners.operator_advisory import AdvisoryMatchResult, OperatorAdvisory, match_advisories_against_reports
 from agent_bom.storage import state_home
 
@@ -67,4 +73,26 @@ def match_local(advisories: list[OperatorAdvisory], report_paths: list[Path] | N
         latest = latest_report()
         paths = [latest] if latest is not None else []
     reports: list[dict[str, Any]] = [load_report_or_sbom(path) for path in paths]
-    return match_advisories_against_reports(advisories, reports)
+    with distro_verdicts() as verdict:
+        return match_advisories_against_reports(advisories, reports, distro_verdict=verdict)
+
+
+@contextmanager
+def distro_verdicts() -> Iterator[DistroVerdictFn | None]:
+    """Distro-feed verdicts from the local vulnerability DB, or ``None`` when it is absent or unreadable.
+
+    Distro packages of a CPE product take the distro feed's verdict; without
+    one they stay indeterminate, never clean.
+    """
+    if not schema.DB_PATH.exists():
+        yield None
+        return
+    try:
+        conn = open_existing_db_readonly(schema.DB_PATH)
+    except sqlite3.Error:
+        yield None
+        return
+    try:
+        yield local_distro_verdict(conn)
+    finally:
+        conn.close()

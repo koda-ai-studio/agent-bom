@@ -200,6 +200,19 @@ target), and the MCP `intel_lookup` tool includes the declared record and its
 matches. Advisories persist in the control-plane store (SQLite, or Postgres
 with tenant row-level security).
 
+Distributions backport fixes without changing the upstream version, so a
+distro package that ships a `cpe_product` (for `php:php`: Debian `php8.x-*`
+built from source `php8.x`, Alpine `php8x-*` except PECL extensions, RPM `php`
+and its core subpackages) is never compared against the upstream ranges. When
+the local DB holds a distro feed record for the advisory's CVE and that
+package's release (Debian tracker, Alpine secdb, distro OSV rows), the distro
+verdict decides it: affected with the distro's fixed version, or clean. Without
+one it is listed under `indeterminate` with reason `distro_backport_unverified`
+and a detail such as "distro package php8.2-cli 8.2.29-1~deb12u1 ships php;
+verify against the distribution's advisory", and `match` exits 2. The mapping
+from CPE product to distro packages is explicit
+(`src/agent_bom/scanners/cpe_distro_packages.py`); unlisted products map to nothing.
+
 ### Daily re-match
 
 Set `AGENT_BOM_ADVISORY_REMATCH=1` on the API server to re-match stored
@@ -208,7 +221,9 @@ inventory once per `AGENT_BOM_ADVISORY_REMATCH_INTERVAL_SECONDS` (default
 updated since each tenant's cursor. No host is rescanned. Each finding records
 `first_seen` and `new_since_published` (the matched scan completed before the
 advisory was published). If the feed or store is unreachable, or a version
-cannot be ordered, the run is `incomplete` and the cursor does not move. This
+cannot be ordered, the run is `incomplete` and the cursor does not move. Distro
+packages awaiting their distro record are counted in `indeterminate_distro` on
+a complete run instead, since a retry cannot resolve them. This
 replica's last run is in `GET /v1/system/health` under `advisory_rematch`; the
 tenant's cursor, last run and recent findings are in
 `GET /v1/intel/operator-advisories` under `rematch`.

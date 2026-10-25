@@ -340,3 +340,27 @@ def test_tenant_cap_rotates_so_every_tenant_is_reached_within_ceil_n_over_cap_ru
     assert set().union(*two_per_run) == {"tenant-a", "tenant-b", "tenant-c"}
     skipped = rematch._get_operator_advisory_store().get_rematch_state(sorted({"tenant-a", "tenant-b", "tenant-c"} - two_per_run[-1])[0])
     assert skipped["last_run"]["reason"] == "tenant_cap"
+
+
+def test_distro_package_awaiting_its_distro_record_is_reported_without_freezing_the_cursor(
+    env: InMemoryOperatorAdvisoryStore, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_bom.api.store import InMemoryJobStore as _Jobs
+    from agent_bom.db import schema
+
+    monkeypatch.setattr(schema, "DB_PATH", tmp_path / "absent.db")
+    jobs = _Jobs()
+    job = _job("tenant-d", "php8.2-cli", "8.2.29-1~deb12u1", "deb")
+    job.result["agents"][0]["mcp_servers"][0]["packages"][0].update(
+        {"source_package": "php8.2", "distro_name": "debian", "distro_version": "12"}
+    )
+    jobs.put(job)
+    set_job_store(jobs)
+    env.put("tenant-d", ADVISORY)
+
+    status = rematch.run_tenant_rematch("tenant-d", feed_source=_Feed([]), now=NOW)
+
+    assert status["status"] == "complete"
+    assert status["new_findings"] == 0
+    assert status["indeterminate_distro"] == 1
+    assert env.get_rematch_state("tenant-d")["operator_cursor"] == NOW.isoformat()
