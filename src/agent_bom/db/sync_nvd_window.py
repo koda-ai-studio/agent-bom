@@ -20,6 +20,7 @@ from typing import Any, Callable, Optional
 import httpx
 
 from agent_bom import http_client
+from agent_bom.core.settings import env_float
 from agent_bom.db.sync_common import (
     _NVD_API_URL,
     _logger,
@@ -81,8 +82,6 @@ class NvdBudget:
 def resolve_time_budget(explicit: float | None, api_key: str | None) -> float | None:
     """Seconds for this run: the option, else ``AGENT_BOM_NVD_TIME_BUDGET_SECONDS``, else 8 minutes keyless; 0 disables."""
     if explicit is None:
-        from agent_bom.core.settings import env_float
-
         configured = env_float(TIME_BUDGET_ENV, -1.0, minimum=0.0, on_invalid="default")
         explicit = configured if configured >= 0 else None
     if explicit is None:
