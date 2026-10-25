@@ -32,6 +32,7 @@ from agent_bom.output.finding_views import (
     package_name,
     package_version,
 )
+from agent_bom.output.possibly_affected import add_sarif_results as add_possibly_affected_sarif
 from agent_bom.output.sarif_taxonomy import (
     _FRAMEWORK_TAXONOMY_META,  # noqa: F401
     _attach_cwe_taxonomy,
@@ -1186,6 +1187,7 @@ def to_sarif(
     _add_iac_results(catalog, report)
     _add_ai_inventory_results(catalog, report)
     _add_cis_benchmark_results(catalog, report)
+    add_possibly_affected_sarif(catalog.rules, catalog.results, report)
     document: dict[str, Any] = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
         "version": "2.1.0",
@@ -1198,12 +1200,7 @@ def to_sarif(
     return sanitize_linked_document(document)
 
 
-def export_sarif(
-    report: AIBOMReport,
-    output_path: str,
-    *,
-    exclude_unfixable: bool = False,
-) -> None:
+def export_sarif(report: AIBOMReport, output_path: str, *, exclude_unfixable: bool = False) -> None:
     """Export report as SARIF 2.1.0 JSON file."""
     data = to_sarif(report, exclude_unfixable=exclude_unfixable)
     Path(output_path).write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")

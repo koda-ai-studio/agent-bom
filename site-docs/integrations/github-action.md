@@ -161,6 +161,44 @@ Set `auto-update-db: 'false'` for air-gapped runs or when a cached database is
 managed elsewhere; the scan then uses the cached data plus targeted advisory
 lookups.
 
+The refresh uses the default `agent-bom db update` sources (OSV, Alpine,
+Debian, EPSS, KEV and NVD), so CVEs that only NVD carries, with their CPE
+version ranges, reach the cached database. Without a key NVD is read keyless
+(a 14-day window at a lower rate limit). To widen it to 120 days, store an
+[NVD API key](https://nvd.nist.gov/developers/request-an-api-key) as a
+repository or environment secret and pass it in:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: koda-ai-studio/agent-bom@v0
+  with:
+    nvd-api-key: ${{ secrets.NVD_API_KEY }}
+```
+
+The Action sets it only as the `NVD_API_KEY` environment variable of the scan
+step (a job-level `NVD_API_KEY` works too); it is never written into a script
+or printed, and agent-bom sends it only to the NVD API in a request header
+(see [PERMISSIONS.md](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERMISSIONS.md)).
+Secrets are not available to pull requests from forks, so those runs read NVD
+keyless.
+
+## Possibly affected distro packages
+
+Distributions backport fixes without changing the upstream version, so a
+distro package of a CPE product (for example Debian `php8.2-cli` for
+`php:php`) cannot be judged from upstream NVD ranges. When the local database
+has no distro record for it, the scan reports it as possibly affected: the
+SARIF result has level `note` and `properties.verdict: possibly_affected`, it
+shows in code scanning, as a `notice` annotation and in a separate
+"Possibly affected" line of the job summary and pull request comment.
+
+These results are not counted as findings: they are left out of
+`vulnerability-count`, the summary's severity totals, the badge and the
+posture grade, and they do not fail `severity-threshold` or any other gate.
+Verify each one against the distribution's security advisory. The
+[new CVE runbook](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/RESPOND_TO_A_NEW_CVE.md)
+walks through the whole flow.
+
 ## Other CI systems
 
 - Reusable workflow: call

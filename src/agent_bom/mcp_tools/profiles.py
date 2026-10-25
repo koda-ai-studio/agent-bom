@@ -82,6 +82,7 @@ PROFILES = {
                 "graph_correlate",
                 "graph_correlation_status",
                 "graph_export",
+                "affected_assets",
             }
         ),
         frozenset(),

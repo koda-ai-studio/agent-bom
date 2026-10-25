@@ -18327,6 +18327,11 @@ components:
         parse_errors:
           title: Parse Errors
           type: integer
+        partial_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Partial Reason
         record_count:
           title: Record Count
           type: integer
@@ -49673,6 +49678,88 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
       summary: Get Intel Advisory
+      tags:
+      - intel
+  /v1/intel/advisories/{advisory_id}/affected:
+    get:
+      description: Affected / possibly affected (distro) / not affected assets for
+        one advisory, with patch targets and graph node ids.
+      operationId: get_advisory_affected_assets_v1_intel_advisories__advisory_id__affected_get
+      parameters:
+      - in: path
+        name: advisory_id
+        required: true
+        schema:
+          maxLength: 96
+          minLength: 3
+          pattern: ^[A-Za-z][A-Za-z0-9._:-]+$
+          title: Advisory Id
+          type: string
+      - in: query
+        name: verdict
+        required: false
+        schema:
+          default: all
+          enum:
+          - all
+          - affected
+          - possibly_affected
+          - not_affected
+          title: Verdict
+          type: string
+      - in: query
+        name: q
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 128
+            type: string
+          - type: 'null'
+          title: Q
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            type: string
+          - type: 'null'
+          title: Cursor
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                title: Response Get Advisory Affected Assets V1 Intel Advisories  Advisory
+                  Id  Affected Get
+                type: object
+          description: Successful Response
+        4XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: 'Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED,
+            403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413
+            PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429
+            RATE_LIMITED'
+        5XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
+      summary: Get Advisory Affected Assets
       tags:
       - intel
   /v1/intel/daily-brief:

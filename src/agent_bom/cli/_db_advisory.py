@@ -15,7 +15,12 @@ import click
 from pydantic import ValidationError
 
 from agent_bom.cli._grouped_help import SuggestingGroup
-from agent_bom.db.operator_advisories import load_local_advisories, match_local, remove_local_advisory, save_local_advisory
+from agent_bom.db.operator_advisories import (
+    load_local_advisories,
+    match_local,
+    remove_local_advisory,
+    save_local_advisory,
+)
 from agent_bom.scanners.operator_advisory import OperatorAdvisory
 
 
@@ -84,6 +89,55 @@ def advisory_match(advisory_id: str | None, reports: tuple[Path, ...], fmt: str)
         _print_table(result.to_dict())
     if not result.complete:
         raise SystemExit(2)
+
+
+_VERDICT_LABELS = {
+    "affected": "affected",
+    "possibly_affected": "possibly affected — verify distro advisory",
+    "not_affected": "not affected",
+}
+
+
+@advisory_group.command("affected")
+@click.argument("advisory_id")
+@click.option(
+    "--report",
+    "reports",
+    multiple=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Saved JSON report or SBOM to check (repeatable). Default: most recent saved scan.",
+)
+@click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table", show_default=True)
+def advisory_affected(advisory_id: str, reports: tuple[Path, ...], fmt: str) -> None:
+    """Which scanned assets an advisory (declared, or a local feed record) affects."""
+
+    # Deferred: the answer carries graph node ids, and the CLI must not import the graph package at startup.
+    from agent_bom.db.advisory_affected_local import local_affected_body
+
+    body = local_affected_body(advisory_id, list(reports))
+    if body is None:
+        raise click.ClickException(f"{advisory_id} is neither declared locally nor in the local vulnerability DB")
+    if fmt == "json":
+        click.echo(json.dumps(body, indent=2))
+    else:
+        _print_affected(body)
+    if not body["complete"]:
+        raise SystemExit(2)
+
+
+def _print_affected(body: dict) -> None:
+    for row in body["rows"]:
+        patch = row["fixed_version"] or ("verify distro advisory" if row["verdict"] == "possibly_affected" else "-")
+        package = f"{row['package'].get('name', '')}@{row['installed_version']}"
+        click.echo(f"{_VERDICT_LABELS[row['verdict']]}\t{row['asset_label']}\t{package}\tpatch to {patch}")
+    summary = body["summary"]
+    click.echo(
+        f"{summary['affected']} affected, {summary['possibly_affected']} possibly affected, {summary['not_affected']} not affected; "
+        f"{summary['clean_scanned']} of {summary['assets_examined']} scanned asset(s) not found affected in what was scanned"
+    )
+    if not body["complete"]:
+        reason = "no saved scan found" if not summary["reports_examined"] else "some versions could not be ordered"
+        click.echo(f"INCOMPLETE: {reason}; this is not a clean result.", err=True)
 
 
 def _print_table(body: dict) -> None:

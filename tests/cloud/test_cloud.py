@@ -814,7 +814,9 @@ def test_graph_blocklisted_server_is_not_rendered_clean():
     assert server_node["securityBlocked"] is True
     assert server_node["securityIntelligenceCount"] == 1
     assert "BLOCK credential-stealer" in server_node["label"]
-    assert "Suspicious credential exfiltration MCP server" in server_node["tip"]
+    # The intelligence title lives in its structured field; the tooltip no longer repeats it.
+    assert json.loads(server_node["securityIntelligence"]) == ["Suspicious credential exfiltration MCP server"]
+    assert "Suspicious credential exfiltration MCP server" not in server_node["tip"]
     assert uses_edge["securityBlocked"] == 1
 
 

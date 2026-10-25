@@ -163,6 +163,10 @@ class AdvisoryMatchResult:
     indeterminate: list[dict[str, Any]] = field(default_factory=list)
     reports_examined: int = 0
     packages_examined: int = 0
+    # One verdict per (advisory, asset, package) whose identity the advisory names;
+    # what the "affected assets" read pages over.
+    rows: list[dict[str, Any]] = field(default_factory=list)
+    assets_examined: set[tuple[str, str, str]] = field(default_factory=set)
 
     @property
     def complete(self) -> bool:
@@ -234,7 +238,7 @@ def _feed_id(advisory: OperatorAdvisory, package: dict[str, Any]) -> str | None:
     return None
 
 
-def _report_packages(report: dict[str, Any]) -> Iterator[tuple[dict[str, str], dict[str, Any]]]:
+def _report_packages(report: dict[str, Any]) -> Iterator[tuple[dict[str, str], dict[str, Any], tuple[dict, dict]]]:
     for agent in report.get("agents") or []:
         if not isinstance(agent, dict):
             continue
@@ -243,7 +247,7 @@ def _report_packages(report: dict[str, Any]) -> Iterator[tuple[dict[str, str], d
                 continue
             for package in server.get("packages") or []:
                 if isinstance(package, dict) and package.get("name") and package.get("version"):
-                    yield {"agent": str(agent.get("name") or ""), "server": str(server.get("name") or "")}, package
+                    yield {"agent": str(agent.get("name") or ""), "server": str(server.get("name") or "")}, package, (agent, server)
 
 
 @dataclass(frozen=True)
@@ -254,13 +258,70 @@ class _ReportContext:
     distro_verdict: DistroVerdictFn | None = None
 
 
+@dataclass(frozen=True)
+class _Occurrence:
+    """One package on one asset of one stored report."""
+
+    asset: dict[str, str]
+    package: dict[str, Any]
+    owners: tuple[dict, dict]
+    ctx: _ReportContext
+
+
+def _package_ref(package: dict[str, Any]) -> dict[str, Any]:
+    return {key: package.get(key) for key in ("name", "version", "ecosystem", "purl", "cpe", "stable_id") if package.get(key)}
+
+
+def occurrence_id(advisory_id: str, package: dict[str, Any], asset: dict[str, str], provenance: str) -> str:
+    """Stable per-tenant identity of an advisory on one package occurrence (asset-scoped)."""
+    digest = hashlib.sha256("|".join([advisory_id, str(package.get("stable_id") or package.get("purl") or ""), *asset.values()]).encode())
+    return f"{provenance.replace('_', '-')}:{digest.hexdigest()[:24]}"
+
+
+def _row(
+    advisory: OperatorAdvisory,
+    occ: _Occurrence,
+    verdict: str,
+    *,
+    fixed: str | None = None,
+    provenance: str | None = None,
+    reason: str | None = None,
+    detail: str | None = None,
+) -> dict[str, Any]:
+    package, asset = occ.package, occ.asset
+    return {
+        "id": occurrence_id(advisory.id, package, asset, occ.ctx.provenance),
+        "advisory_id": advisory.id,
+        "asset": dict(asset),
+        "asset_label": asset.get("server") or asset.get("agent") or "",
+        "package": _package_ref(package),
+        "installed_version": str(package.get("version") or ""),
+        "fixed_version": fixed,
+        "verdict": verdict,
+        "verdict_reason": reason,
+        "verdict_detail": detail,
+        "provenance": provenance or occ.ctx.provenance,
+        "scan_id": occ.ctx.scan_id or None,
+        "last_observed_at": occ.ctx.observed_at,
+        # The agent and server records the graph names the occurrence after;
+        # ``advisory_affected`` turns them into node ids so matching stays graph-free.
+        "_owners": occ.owners,
+    }
+
+
+def _feed_fixed(advisory: OperatorAdvisory, package: dict[str, Any]) -> str | None:
+    for vuln in package.get("vulnerabilities") or []:
+        if isinstance(vuln, dict) and {str(vuln.get("id") or ""), *(str(a) for a in vuln.get("aliases") or [])} & advisory.identifiers:
+            return str(vuln.get("fixed_version")) if vuln.get("fixed_version") else None
+    return None
+
+
 def _finding(
     advisory: OperatorAdvisory, package: dict[str, Any], asset: dict[str, str], fixed: str | None, ctx: _ReportContext
 ) -> dict[str, Any]:
-    package_ref = {key: package.get(key) for key in ("name", "version", "ecosystem", "purl", "cpe", "stable_id") if package.get(key)}
-    digest = hashlib.sha256("|".join([advisory.id, str(package.get("stable_id") or package.get("purl") or ""), *asset.values()]).encode())
+    package_ref = _package_ref(package)
     return {
-        "id": f"{ctx.provenance.replace('_', '-')}:{digest.hexdigest()[:24]}",
+        "id": occurrence_id(advisory.id, package, asset, ctx.provenance),
         "advisory_id": advisory.id,
         "aliases": list(advisory.aliases),
         "summary": advisory.summary,
@@ -279,32 +340,38 @@ def _distro_product(advisory: OperatorAdvisory, package: dict[str, Any]) -> str 
     return next((p.cpe_product for p in advisory.affected if p.cpe_product and distro_ships_cpe_product(p.cpe_product, package)), None)
 
 
-def _match_distro_package(
-    advisory: OperatorAdvisory, package: dict[str, Any], product: str, asset: dict[str, str], ctx: _ReportContext, out: AdvisoryMatchResult
-) -> None:
+def distro_backport_detail(package: dict[str, Any], product: str) -> str:
+    shipped = product.split(":", 1)[1]
+    return f"distro package {package['name']} {package['version']} ships {shipped}; verify against the distribution's advisory"
+
+
+def _match_distro_package(advisory: OperatorAdvisory, occ: _Occurrence, product: str, out: AdvisoryMatchResult) -> None:
+    package, asset, ctx = occ.package, occ.asset, occ.ctx
     label = f"{package['name']}@{package['version']}"
     feed_id = _feed_id(advisory, package)
     if feed_id:
         out.superseded.append({"advisory_id": advisory.id, "feed_id": feed_id, "package": label})
+        out.rows.append(_row(advisory, occ, "affected", fixed=_feed_fixed(advisory, package), provenance="scan"))
         return
     verdict = ctx.distro_verdict(advisory.identifiers, package) if ctx.distro_verdict else None
     if verdict is None:
-        detail = (
-            f"distro package {package['name']} {package['version']} ships {product.split(':', 1)[1]}; "
-            "verify against the distribution's advisory"
-        )
+        detail = distro_backport_detail(package, product)
         out.indeterminate.append({"advisory_id": advisory.id, "package": label, "reason": DISTRO_BACKPORT_UNVERIFIED, "detail": detail})
+        out.rows.append(_row(advisory, occ, "possibly_affected", reason=DISTRO_BACKPORT_UNVERIFIED, detail=detail))
     elif verdict.affected is None:
         out.indeterminate.append({"advisory_id": advisory.id, "package": label, "reason": "version_incomparable"})
+        out.rows.append(_row(advisory, occ, "possibly_affected", reason="version_incomparable"))
     elif verdict.affected:
         finding = _finding(advisory, package, asset, verdict.fixed, ctx)
         finding["distro_verdict"] = {"ecosystem": verdict.ecosystem, "record": verdict.record}
         out.findings.append(finding)
+        out.rows.append(_row(advisory, occ, "affected", fixed=verdict.fixed))
+    else:
+        out.rows.append(_row(advisory, occ, "not_affected"))
 
 
-def _match_package(
-    advisory: OperatorAdvisory, package: dict[str, Any], asset: dict[str, str], ctx: _ReportContext, out: AdvisoryMatchResult
-) -> None:
+def _match_package(advisory: OperatorAdvisory, occ: _Occurrence, out: AdvisoryMatchResult) -> None:
+    package, asset, ctx = occ.package, occ.asset, occ.ctx
     label = f"{package['name']}@{package['version']}"
     for product in advisory.affected:
         if not _identity_matches(product, package):
@@ -312,16 +379,21 @@ def _match_package(
         affected, fixed = _affected(product, str(package["version"]), str(package.get("ecosystem") or "generic").lower())
         if affected is None:
             out.indeterminate.append({"advisory_id": advisory.id, "package": label, "reason": "version_incomparable"})
+            out.rows.append(_row(advisory, occ, "possibly_affected", reason="version_incomparable"))
         elif affected:
             feed_id = _feed_id(advisory, package)
             if feed_id:
                 out.superseded.append({"advisory_id": advisory.id, "feed_id": feed_id, "package": label})
+                out.rows.append(_row(advisory, occ, "affected", fixed=_feed_fixed(advisory, package) or fixed, provenance="scan"))
             else:
                 out.findings.append(_finding(advisory, package, asset, fixed, ctx))
+                out.rows.append(_row(advisory, occ, "affected", fixed=fixed))
+        else:
+            out.rows.append(_row(advisory, occ, "not_affected"))
         return
     distro_product = _distro_product(advisory, package)
     if distro_product:
-        _match_distro_package(advisory, package, distro_product, asset, ctx, out)
+        _match_distro_package(advisory, occ, distro_product, out)
 
 
 def match_advisories_against_reports(
@@ -344,8 +416,10 @@ def match_advisories_against_reports(
         result.reports_examined += 1
         observed = report.get("scan_completed_at")
         ctx = _ReportContext(str(report.get("scan_id") or ""), str(observed) if observed else None, provenance, distro_verdict)
-        for asset, package in _report_packages(report):
+        for asset, package, owners in _report_packages(report):
             result.packages_examined += 1
+            result.assets_examined.add((ctx.scan_id, asset["agent"], asset["server"]))
+            occurrence = _Occurrence(asset, package, owners, ctx)
             for advisory in advisory_list:
-                _match_package(advisory, package, asset, ctx, result)
+                _match_package(advisory, occurrence, result)
     return result

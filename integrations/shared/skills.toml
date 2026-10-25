@@ -90,20 +90,22 @@ Vet one package before it is installed.
 """
 
 [skills.affected]
-description = "Answer \"am I affected by this CVE?\" with agent-bom - look up a CVE, GHSA or OSV advisory and check whether any agent, MCP server or package on this machine carries it, with the fixed version. Use when the user names an advisory id or a vulnerability in the news and asks whether they are exposed."
+description = "Answer \"am I affected by this CVE?\" with agent-bom - look up a CVE, GHSA or OSV advisory (including CVEs only NVD has published) and report which agents, MCP servers, images or packages carry it with the version to patch to, which distro packages are possibly affected, and what was scanned. Use when the user names an advisory id or a vulnerability in the news and asks whether they are exposed."
 capabilities = { read_inventory = true, read_findings = true, read_audit_log = false, write_findings = false, outbound_http = true }
 optional_bins = ["docker"]
 codex_body = """
-Answer whether the named advisory is present on this machine.
+Answer whether the named advisory is present in what agent-bom scanned. This skill is read-only.
 
 1. Run `{ab} scan -q -f json -o "$OUT/scan.json"` (add `--no-discover --config-dir <dir> -p <dir>`, `--no-discover --image <ref>` or `--no-discover --repo <url>` if the user named a target).
-2. Keep entries of `findings[]` whose `cve_id`, `advisory_ids` or `advisory_aliases` contain the advisory id, ignoring case. For each, read `title` (package and version), `affected_servers`, `affected_agents`, `severity`, `is_kev` and `fixed_version`.
-3. Answer in one line first:
-   - **Affected**: name each package and version, the agents and MCP servers that use it, and the first fixed version, for example "Yes: pillow 9.0.0 via the `image-tools` server, fixed in 10.0.1".
-   - **Not found**: say the advisory was not found in what was scanned, and name what was scanned (`summary.total_agents`, `summary.total_mcp_servers`, `summary.total_packages`). Do not say "safe" or "not affected" beyond that scope.
-4. Add context in two or three lines: severity, KEV status and whether a fix exists. If `vuln_data_freshness.stale` is true, say the local vulnerability data is out of date and the answer may miss newer records.
-5. This release has no separate advisory lookup, so describe the advisory only from the matching findings; when nothing matched, do not describe it from memory.
-6. If affected, offer the `fix` skill for the upgrade plan.
+2. Keep entries of `findings[]` whose `cve_id`, `advisory_ids` or `advisory_aliases` contain the advisory id, ignoring case. For each, read `title` (package and version), `affected_servers`, `affected_agents`, `severity`, `is_kev` and `fixed_version`. Also keep entries of the top-level `possibly_affected[]`, if present, whose `id` matches: read `package.name`, `package.version`, `detail`, `upstream_fixed_version` and `agents`.
+3. If an operator declared this advisory before the feeds published it, also run `{ab} db advisory match --id <advisory-id> --report "$OUT/scan.json" --format json > "$OUT/match.json"` and read `findings[]` (`package`, `fixed_version`, `asset.server`), `indeterminate[]` (`package`, `reason`, `detail`), `superseded[]` and `complete`. If it reports that no matching operator advisory is declared, or the shell says `No such command` (the pinned release predates it), skip this step and continue; never declare an advisory yourself.
+4. Answer in three groups, affected first:
+   - **Affected**: name each package and version, the agents and MCP servers that use it, and the fixed version to patch to, for example "Yes: pillow 9.0.0 via the `image-tools` server, patch to 10.0.1".
+   - **Possibly affected**: distro packages (from `possibly_affected[]`, or `indeterminate[]` with reason `distro_backport_unverified`) whose distribution may have backported the fix. Quote `detail`, tell the user to check the distribution's security advisory for that package, and give the upstream fixed version only as a reference. These are not confirmed vulnerabilities.
+   - **Not found in what was scanned**: name what was scanned (`summary.total_agents`, `summary.total_mcp_servers`, `summary.total_packages`). Do not say "safe" or "not affected" beyond that scope, and when `complete` is false say the answer is incomplete.
+5. Add context in two or three lines: severity, KEV status and whether a fix exists. If `vuln_data_freshness.stale` is true, say the local vulnerability data is out of date and the answer may miss newer records; an NVD-only CVE reaches the local data only through `agent-bom db update`.
+6. Describe the advisory only from the matching results; when nothing matched, do not describe it from memory.
+7. If affected, offer the `fix` skill for the upgrade plan.
 """
 
 [skills.fix]

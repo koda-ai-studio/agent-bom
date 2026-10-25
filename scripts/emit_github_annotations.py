@@ -127,14 +127,17 @@ def _sarif_annotations(data: dict[str, Any]) -> Iterable[tuple[str, str]]:
         severity = _score_severity(rule_props.get("security-severity") if isinstance(rule_props, dict) else None)
         if severity == "unknown":
             severity = {"error": "high", "warning": "medium", "note": "low"}.get(str(result.get("level") or "warning"), "medium")
+        props = result.get("properties")
+        # A distro package whose fix may be backported is a lead to verify, not a confirmed finding.
+        possibly = isinstance(props, dict) and props.get("verdict") == "possibly_affected"
         yield (
-            severity,
+            "unknown" if possibly else severity,
             _annotation(
-                level=_level(severity),
+                level="notice" if possibly else _level(severity),
                 path=path,
                 line=_as_int(region.get("startLine")) if isinstance(region, dict) else None,
                 col=_as_int(region.get("startColumn")) if isinstance(region, dict) else None,
-                title=f"agent-bom {rule_id}",
+                title=f"agent-bom {rule_id} (possibly affected)" if possibly else f"agent-bom {rule_id}",
                 message=message,
             ),
         )

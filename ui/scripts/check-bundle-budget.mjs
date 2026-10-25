@@ -141,7 +141,12 @@ const BUDGETS = {
   // summary, posture-basis trend, change-issue basis) measure 4238.9 KiB
   // versus 4208.4 KiB before them, with no new dependency. Keep 17.1 KiB of
   // bounded headroom at 4256 KiB; shared-runtime and largest-chunk limits stay fixed.
-  totalClientJsBytes: 4_358_144,
+  // The advisories page (affected assets for a CVE, emergency-advisory form,
+  // phone cards) adds a 41.3 KiB route chunk of our own components, no new
+  // dependency; code splitting cannot lower this total-of-all-chunks figure.
+  // The build measures 4297.8 KiB; keep 18.2 KiB of bounded headroom at
+  // 4316 KiB. Shared-runtime and largest-chunk limits stay fixed.
+  totalClientJsBytes: 4_419_584,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.

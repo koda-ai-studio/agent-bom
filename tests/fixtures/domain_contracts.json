@@ -1211,7 +1211,8 @@
         "source_repo",
         "occurrences",
         "discovery_provenance",
-        "cpe"
+        "cpe",
+        "possibly_affected"
       ]
     },
     "ScanJob": {

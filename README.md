@@ -114,6 +114,11 @@ receipt is open.
 Explain a finding to your team: [create an impact brief](docs/operations/IMPACT_BRIEF.md)
 with affected assets, source receipts, evidence gaps and the next action to review.
 
+Am I affected by a new CVE? [Respond to a new CVE](docs/RESPOND_TO_A_NEW_CVE.md):
+match it against stored scans, including CVEs only NVD has published, and get
+affected assets with their patch target, possibly affected distro packages to
+verify, and the blast radius.
+
 <details>
 <summary>Repository and cloud investigations</summary>
 

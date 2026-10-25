@@ -311,6 +311,7 @@ class SiemFormatsResponse(ReadResponse):
 
 class IntelFeedRun(ReadModel):
     status: str
+    partial_reason: str | None = None
     sync_meta_source: str
     cap_hit: bool
     record_count: int

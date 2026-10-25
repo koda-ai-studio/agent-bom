@@ -723,3 +723,45 @@ def test_sarif_exposure_rank_stable_under_score_ties() -> None:
 
     order = [r["ruleId"] for r in to_sarif(report)["runs"][0]["results"] if r["ruleId"].startswith("CVE-")]
     assert order == ["CVE-2026-0001", "CVE-2026-0002", "CVE-2026-0003"], order
+
+
+def _possibly_affected_report() -> AIBOMReport:
+    report = _conformance_report()
+    distro_pkg = Package(
+        name="php8.2-cli",
+        version="8.2.29-1~deb12u1",
+        ecosystem="deb",
+        purl="pkg:deb/debian/php8.2-cli@8.2.29-1~deb12u1?distro=debian-12",
+        source_package="php8.2",
+        distro_name="debian",
+        distro_version="12",
+    )
+    distro_pkg.possibly_affected = [
+        {
+            "id": "CVE-2026-109618",
+            "verdict": "possibly_affected",
+            "reason": "distro_backport_unverified",
+            "detail": "distro package php8.2-cli 8.2.29-1~deb12u1 ships php; verify against the distribution's advisory",
+            "cpe_product": "php:php",
+            "upstream_version": "8.2.29",
+            "upstream_fixed_version": "8.2.35",
+            "severity": "critical",
+            "cvss_score": 9.8,
+            "summary": "PHP core RCE",
+            "source": "nvd",
+        }
+    ]
+    report.agents[0].mcp_servers[0].packages.append(distro_pkg)
+    return report
+
+
+def test_possibly_affected_entries_stay_schema_valid() -> None:
+    report = _possibly_affected_report()
+    cdx = to_cyclonedx(report)
+    assert any(entry.get("analysis", {}).get("state") == "in_triage" for entry in cdx["vulnerabilities"])
+    _assert_schema_valid(
+        "CycloneDX 1.7 possibly affected", "cyclonedx-1.7.schema.json", Draft7Validator, cdx, registry=_cyclonedx_registry()
+    )
+    sarif = to_sarif(report)
+    assert any(result["level"] == "note" for result in sarif["runs"][0]["results"])
+    _assert_schema_valid("SARIF 2.1.0 possibly affected", "sarif-schema-2.1.0.json", Draft7Validator, sarif)

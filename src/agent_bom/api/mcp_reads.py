@@ -20,6 +20,7 @@ from agent_bom.api.mcp_blast_reads import blast_holders as blast_holders
 from agent_bom.api.mcp_blast_reads import public_holders as public_holders
 from agent_bom.api.mcp_blast_reads import stamp_rows as stamp_rows
 from agent_bom.api.mcp_context_estate import estate_context_page as estate_context_page
+from agent_bom.api.routes.advisory_affected import get_advisory_affected_assets as get_advisory_affected_assets
 from agent_bom.api.routes.compliance import get_compliance_by_framework, get_compliance_summary
 from agent_bom.api.routes.compliance_routes.common import estate_agent_count
 from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
@@ -102,6 +103,7 @@ __all__ = [
     "HTTPException",
     "call_read",
     "current_estate_agent_total",
+    "get_advisory_affected_assets",
     "get_compliance_by_framework",
     "get_compliance_summary",
     "graph_diff_read",

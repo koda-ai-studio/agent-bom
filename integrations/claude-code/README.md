@@ -35,7 +35,7 @@ install one. In Claude Code this plugin is still `agent-bom`, with
 | Skill | What it does |
 |---|---|
 | `/agent-bom:checkup` | Start here: one screen with a verdict, totals, and the three fixes that matter most, from the inventory, a passive config audit and a scan. |
-| `/agent-bom:affected <advisory>` | Am I affected? Looks up a CVE, GHSA or OSV id and says which packages, servers and agents on this machine carry it, with the fixed version. |
+| `/agent-bom:affected <advisory>` | Am I affected? Looks up a CVE, GHSA or OSV id (including NVD-only CVEs) and says which packages, servers and agents carry it with the version to patch to, which distro packages are possibly affected, and what was scanned. |
 | `/agent-bom:bom [target]` | Write an AI-BOM (CycloneDX or SPDX) for this machine, a project, an image, a repository, or an AWS, Azure or GCP account: agents, MCP servers, tools, models and packages, with how they connect. |
 | `/agent-bom:scan` | Discover the MCP clients on this machine and scan their servers and packages, or scan an image, SBOM or repository. |
 | `/agent-bom:check <package>[@version] [ecosystem]` | Vet a package or MCP server before adding it: CVEs, KEV, typosquats, fixed version. |

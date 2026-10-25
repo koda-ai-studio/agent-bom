@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from agent_bom.api.routes.adoption import router as _adoption_router
+from agent_bom.api.routes.advisory_affected import router as _advisory_affected_router
 from agent_bom.api.routes.agent_lifecycle import router as _agent_lifecycle_router
 from agent_bom.api.routes.agent_manifest import router as _agent_manifest_router
 from agent_bom.api.routes.ai_scans import router as _ai_scans_router
@@ -95,6 +96,7 @@ def register_domain_routes(application: FastAPI) -> None:
         _identities_router,
         _intel_router,
         _operator_advisories_router,
+        _advisory_affected_router,
         _inventory_assets_router,
         _kspm_router,
         _mcp_config_router,

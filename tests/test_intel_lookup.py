@@ -663,3 +663,17 @@ def test_external_scanner_purl_coordinates_use_maven_group_colon_artifact() -> N
         "2.14.0",
         "maven",
     )
+
+
+def test_partial_nvd_sync_is_reported_partial_with_its_reason(tmp_path) -> None:  # noqa: ANN001
+    db_path = tmp_path / "vulns.db"
+    conn = init_db(db_path)
+    conn.execute(
+        "INSERT OR REPLACE INTO sync_meta(source, last_synced, record_count, metadata_json) VALUES (?, ?, ?, ?)",
+        ("nvd", "2026-10-24T00:00:00+00:00", 2, json.dumps({"status": "partial", "partial_reason": "truncated"})),
+    )
+    conn.commit()
+    conn.close()
+    nvd = next(source for source in list_intel_sources(db_path=db_path)["sources"] if source["source_id"] == "nvd")
+    assert nvd["feed_run"]["status"] == "partial"
+    assert nvd["feed_run"]["partial_reason"] == "truncated"

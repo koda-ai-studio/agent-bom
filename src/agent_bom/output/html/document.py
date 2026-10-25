@@ -37,6 +37,7 @@ from agent_bom.output.html.sections import (
     _vuln_table,
     _warn_gate_banner,
 )
+from agent_bom.output.html.sections_possibly_affected import possibly_affected_section
 from agent_bom.output.html.styles import render_styles
 from agent_bom.output.html.tabs import _apply_tabs
 
@@ -334,7 +335,7 @@ def to_html(
 
   <!-- Vuln / Blast / Remediation -->
   {policy_section}
-  {vuln_sections}
+  {vuln_sections}{possibly_affected_section(report)}
 
   <!-- Compliance posture -->
   {compliance_html}

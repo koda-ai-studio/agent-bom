@@ -1,5 +1,5 @@
 {
-  "generated_on": "2026-10-24",
+  "generated_on": "2026-10-25",
   "version": "0.110.0",
   "metrics": [
     {
@@ -10,7 +10,7 @@
     },
     {
       "name": "MCP tools",
-      "value": 96,
+      "value": 97,
       "source": "src/agent_bom/mcp_server_metadata.py",
       "notes": "Counted from the advertised server-card tools."
     },
@@ -34,19 +34,19 @@
     },
     {
       "name": "API route modules",
-      "value": 92,
+      "value": 93,
       "source": "src/agent_bom/api/routes",
       "notes": "Counts Python files in the routes package, including __init__.py."
     },
     {
       "name": "UI app pages",
-      "value": 45,
+      "value": 46,
       "source": "ui/app",
       "notes": "Counts page.tsx and page.jsx files recursively."
     },
     {
       "name": "Python modules",
-      "value": 1865,
+      "value": 1876,
       "source": "src/agent_bom",
       "notes": "Counts all Python files recursively."
     },

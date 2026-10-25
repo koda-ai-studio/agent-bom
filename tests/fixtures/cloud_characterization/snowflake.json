@@ -1305,7 +1305,8 @@
          "source_repo": null,
          "occurrences": [],
          "discovery_provenance": null,
-         "cpe": null
+         "cpe": null,
+         "possibly_affected": []
         },
         {
          "name": "pandas",
@@ -1360,7 +1361,8 @@
          "source_repo": null,
          "occurrences": [],
          "discovery_provenance": null,
-         "cpe": null
+         "cpe": null,
+         "possibly_affected": []
         },
         {
          "name": "torch",
@@ -1415,7 +1417,8 @@
          "source_repo": null,
          "occurrences": [],
          "discovery_provenance": null,
-         "cpe": null
+         "cpe": null,
+         "possibly_affected": []
         },
         {
          "name": "Sentence-Transformers",
@@ -1470,7 +1473,8 @@
          "source_repo": null,
          "occurrences": [],
          "discovery_provenance": null,
-         "cpe": null
+         "cpe": null,
+         "possibly_affected": []
         }
        ],
        "config_path": null,

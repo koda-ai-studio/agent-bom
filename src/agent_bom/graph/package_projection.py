@@ -139,6 +139,9 @@ def _add_exploitable_via_edges(
         )
 
 
+_ADVISORY_PROVENANCES = frozenset({"operator_advisory", "feed"})
+
+
 def _has_mappable_package_version(evidence: dict[str, Any]) -> bool:
     version = str(evidence.get("version") or evidence.get("package_version") or "").strip().lower()
     return bool(version and version not in {"unknown", "latest", "*", "main", "master"})
@@ -186,6 +189,7 @@ def _add_vuln_node(
                 "is_kev": vuln_dict.get("is_kev", False),
                 "fixed_version": vuln_dict.get("fixed_version"),
                 "cwe_ids": vuln_dict.get("cwe_ids", []),
+                **({"provenance": vuln_dict["provenance"]} if vuln_dict.get("provenance") in _ADVISORY_PROVENANCES else {}),
             },
             data_sources=[data_source],
         )

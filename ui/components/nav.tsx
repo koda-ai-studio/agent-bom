@@ -40,7 +40,7 @@ import {
   Scale,
   Cog,
   ListChecks,
-  ShieldCheck,
+  ShieldCheck, ShieldAlert,
   HardDrive,
   ScrollText,
 } from "lucide-react";
@@ -128,9 +128,9 @@ const NAV_GROUPS: NavGroup[] = [
         desc: "Current estate topology with evidence-linked investigation lenses",
       },
       { href: "/findings", label: "Findings", icon: Bug, desc: "Queue of evidence; open a row to investigate the estate node" },
+      { href: "/advisories", label: "Advisories", icon: ShieldAlert, desc: "Which assets a CVE or emergency advisory affects, and declaring one before feeds publish it" },
       { href: "/remediation", label: "Remediation", icon: Wrench },
     ],
-
   },
   {
     label: "Inventory",

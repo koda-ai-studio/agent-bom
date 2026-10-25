@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from agent_bom import __version__
 from agent_bom.api.graph_commit_hooks import run_commit_hooks
+from agent_bom.api.graph_input_overlays import registered_overlays
 from agent_bom.api.trace_collection.trace_evidence import emit_shadow_findings, with_trace_events
 from agent_bom.api.trace_collection.trace_findings import FindingSink
 from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
@@ -186,6 +187,16 @@ def _persist_via_build_workspace(graph_store: GraphStoreProtocol, graph: Unified
         return counts
 
 
+def _overlaid(report_json: dict[str, Any], tenant_id: str) -> dict[str, Any]:
+    """Apply registered graph-input overlays (operator advisories); the graph must never fail on one."""
+    for overlay in registered_overlays():
+        try:
+            report_json = overlay(report_json, tenant_id)
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning("graph input overlay skipped: %s", sanitize_text(exc))
+    return report_json
+
+
 def _with_cost_records(report_json: dict[str, Any], tenant_id: str) -> dict[str, Any]:
     """Overlay tenant costs on a shallow copy; leave the persisted report intact."""
     try:
@@ -354,7 +365,7 @@ def persist_graph_snapshot(
     tenant_id = require_explicit_tenant_id(job.tenant_id)
     with tenant_bound_context(tenant_id):
         scan_id = report_json.get("scan_id") or job.job_id
-        graph_input = with_trace_events(_with_cost_records(report_json, tenant_id), tenant_id)
+        graph_input = with_trace_events(_with_cost_records(_overlaid(report_json, tenant_id), tenant_id), tenant_id)
         store_backed = _graph_store_backed_build_enabled(report_json)
         with _build_container(store_backed=store_backed, tenant_id=tenant_id, scan_id=scan_id) as container:
             graph = build_unified_graph_from_report(graph_input, scan_id=scan_id, tenant_id=tenant_id, container=container)

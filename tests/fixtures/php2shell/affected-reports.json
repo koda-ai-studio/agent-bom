@@ -1,0 +1,83 @@
+[
+  {
+    "ai_bom_version": "1",
+    "scan_id": "scan-php-8.3.30",
+    "scan_completed_at": "2026-10-22T08:00:00+00:00",
+    "agents": [
+      {
+        "name": "image:php:8.3.30-cli",
+        "mcp_servers": [
+          {
+            "name": "php:8.3.30-cli",
+            "packages": [
+              {
+                "name": "php",
+                "version": "8.3.30",
+                "ecosystem": "generic",
+                "cpe": "cpe:2.3:a:php:php:8.3.30:*:*:*:*:*:*:*"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "ai_bom_version": "1",
+    "scan_id": "scan-php-8.3.36",
+    "scan_completed_at": "2026-10-23T08:00:00+00:00",
+    "agents": [
+      {
+        "name": "image:php:8.3.36-cli",
+        "mcp_servers": [
+          {
+            "name": "php:8.3.36-cli",
+            "packages": [
+              {
+                "name": "php",
+                "version": "8.3.36",
+                "ecosystem": "generic",
+                "cpe": "cpe:2.3:a:php:php:8.3.36:*:*:*:*:*:*:*"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "ai_bom_version": "1",
+    "scan_id": "scan-php-debian-12",
+    "scan_completed_at": "2026-10-23T09:00:00+00:00",
+    "agents": [
+      {
+        "name": "image:abtest/php-debian:12",
+        "mcp_servers": [
+          {
+            "name": "abtest/php-debian:12",
+            "packages": [
+              {
+                "name": "php-common",
+                "version": "2:93",
+                "ecosystem": "deb",
+                "purl": "pkg:deb/debian/php-common@2:93",
+                "source_package": "php-defaults",
+                "distro_name": "debian",
+                "distro_version": "12"
+              },
+              {
+                "name": "php8.2-cli",
+                "version": "8.2.29-1~deb12u1",
+                "ecosystem": "deb",
+                "purl": "pkg:deb/debian/php8.2-cli@8.2.29-1~deb12u1",
+                "source_package": "php8.2",
+                "distro_name": "debian",
+                "distro_version": "12"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

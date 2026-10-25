@@ -1,0 +1,115 @@
+{
+  "schema_version": "advisory-affected.v1",
+  "tenant_id": "default",
+  "advisory": {
+    "id": "CVE-2026-109618",
+    "aliases": [
+      "CVE-2026-109619"
+    ],
+    "summary": "php2shell: unauthenticated remote code execution in PHP core",
+    "severity": "critical",
+    "source": "operator_advisory",
+    "published_at": "2026-10-21T00:00:00+00:00",
+    "fixed_versions": [
+      "8.2.35",
+      "8.3.36",
+      "8.4.27",
+      "8.5.12"
+    ]
+  },
+  "summary": {
+    "affected": 1,
+    "possibly_affected": 1,
+    "not_affected": 1,
+    "clean_scanned": 1,
+    "assets_examined": 3,
+    "reports_examined": 3
+  },
+  "complete": true,
+  "generation": "gen-php2shell-fixture",
+  "rows": [
+    {
+      "asset": {
+        "agent": "image:php:8.3.30-cli",
+        "server": "php:8.3.30-cli"
+      },
+      "asset_label": "php:8.3.30-cli",
+      "package": {
+        "name": "php",
+        "version": "8.3.30",
+        "ecosystem": "generic",
+        "cpe": "cpe:2.3:a:php:php:8.3.30:*:*:*:*:*:*:*"
+      },
+      "installed_version": "8.3.30",
+      "fixed_version": "8.3.36",
+      "verdict": "affected",
+      "verdict_reason": null,
+      "verdict_detail": null,
+      "provenance": "operator_advisory",
+      "scan_id": "scan-php-8.3.30",
+      "last_observed_at": "2026-10-22T08:00:00+00:00",
+      "graph": {
+        "package_node_id": "pkg:generic:php@8.3.30",
+        "server_node_id": "server:image%3Aphp%3A8.3.30-cli:php:8.3.30-cli",
+        "agent_node_id": "agent:image%3Aphp%3A8.3.30-cli"
+      }
+    },
+    {
+      "asset": {
+        "agent": "image:abtest/php-debian:12",
+        "server": "abtest/php-debian:12"
+      },
+      "asset_label": "abtest/php-debian:12",
+      "package": {
+        "name": "php8.2-cli",
+        "version": "8.2.29-1~deb12u1",
+        "ecosystem": "deb",
+        "purl": "pkg:deb/debian/php8.2-cli@8.2.29-1~deb12u1"
+      },
+      "installed_version": "8.2.29-1~deb12u1",
+      "fixed_version": null,
+      "verdict": "possibly_affected",
+      "verdict_reason": "distro_backport_unverified",
+      "verdict_detail": "distro package php8.2-cli 8.2.29-1~deb12u1 ships php; verify against the distribution's advisory",
+      "provenance": "operator_advisory",
+      "scan_id": "scan-php-debian-12",
+      "last_observed_at": "2026-10-23T09:00:00+00:00",
+      "graph": {
+        "package_node_id": "pkg:deb:debian/php8.2-cli@8.2.29-1~deb12u1",
+        "server_node_id": "server:image%3Aabtest%2Fphp-debian%3A12:abtest/php-debian:12",
+        "agent_node_id": "agent:image%3Aabtest%2Fphp-debian%3A12"
+      }
+    },
+    {
+      "asset": {
+        "agent": "image:php:8.3.36-cli",
+        "server": "php:8.3.36-cli"
+      },
+      "asset_label": "php:8.3.36-cli",
+      "package": {
+        "name": "php",
+        "version": "8.3.36",
+        "ecosystem": "generic",
+        "cpe": "cpe:2.3:a:php:php:8.3.36:*:*:*:*:*:*:*"
+      },
+      "installed_version": "8.3.36",
+      "fixed_version": null,
+      "verdict": "not_affected",
+      "verdict_reason": null,
+      "verdict_detail": null,
+      "provenance": "operator_advisory",
+      "scan_id": "scan-php-8.3.36",
+      "last_observed_at": "2026-10-23T08:00:00+00:00",
+      "graph": {
+        "package_node_id": "pkg:generic:php@8.3.36",
+        "server_node_id": "server:image%3Aphp%3A8.3.36-cli:php:8.3.36-cli",
+        "agent_node_id": "agent:image%3Aphp%3A8.3.36-cli"
+      }
+    }
+  ],
+  "count": 3,
+  "limit": 50,
+  "has_more": false,
+  "next_cursor": null,
+  "warnings": []
+}

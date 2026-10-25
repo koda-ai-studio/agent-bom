@@ -31,6 +31,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
 from agent_bom.api import health_models
+from agent_bom.api.advisory_affected_read import persist_tenant_advisories
 from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.models import JobStatus
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
@@ -207,6 +208,11 @@ def _stored_reports(tenant_id: str) -> list[dict[str, Any]]:
     return reports
 
 
+def _all_declared(store: Any, tenant_id: str) -> list[OperatorAdvisory]:
+    """Every declaration is re-persisted each run, so a rescan that no longer matches retires its findings."""
+    return [OperatorAdvisory.model_validate({k: v for k, v in row.items() if k != "updated_at"}) for row in store.list(tenant_id)]
+
+
 def _stamp(findings: list[dict[str, Any]], seen: dict[str, str], now: datetime) -> list[dict[str, Any]]:
     fresh = []
     for finding in findings:
@@ -260,10 +266,22 @@ def run_tenant_rematch(
             match_advisories_against_reports(operator, reports, distro_verdict=verdict),
             match_advisories_against_reports(batch.advisories, reports, provenance=FEED_PROVENANCE, distro_verdict=verdict),
         ]
-    # A distro package awaiting its distro record stays indeterminate until the
-    # distro feed updates; reporting it must not freeze the cursors forever.
-    if any(result.blocking_indeterminate for result in results) and reports:
-        return _record(store, tenant_id, state, {**status, "reason": "version_incomparable"})
+        # A distro package awaiting its distro record stays indeterminate until the
+        # distro feed updates; reporting it must not freeze the cursors forever.
+        if any(result.blocking_indeterminate for result in results) and reports:
+            return _record(store, tenant_id, state, {**status, "reason": "version_incomparable"})
+        try:
+            state["persisted_feed_ids"] = persist_tenant_advisories(
+                tenant_id,
+                _all_declared(store, tenant_id),
+                batch.advisories,
+                reports,
+                distro_verdict=verdict,
+                prior_feed_ids=list(state.get("persisted_feed_ids") or []),
+                observed_at=now.isoformat(),
+            )
+        except _UNAVAILABLE:
+            return _record(store, tenant_id, state, {**status, "reason": "finding_store_unavailable"})
     seen: dict[str, str] = dict(state.get("seen") or {})
     findings = [finding for result in results for finding in result.findings]
     fresh = _stamp(findings, seen, now)

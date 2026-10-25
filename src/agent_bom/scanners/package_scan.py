@@ -45,6 +45,7 @@ from agent_bom.reachability_cve import advisory_affected_symbols_by_path, adviso
 from agent_bom.scanners import cpython_advisory as runtime_cve
 from agent_bom.scanners.blast_radius import expand_blast_radius_hops
 from agent_bom.scanners.compat_exports import resolve_legacy_export
+from agent_bom.scanners.distro_cpe_scan import propagate_possibly_affected
 from agent_bom.scanners.kev_default_join import join_default_kev_catalog
 from agent_bom.scanners.local_advisories import _scan_local_advisories, merge_scanner_vulnerabilities
 from agent_bom.scanners.osv import enrich_results_if_needed as _enrich_results_if_needed_impl
@@ -588,9 +589,7 @@ async def scan_agents(
                 key = _pkg_key(pkg)
                 all_packages.append(pkg)
 
-                if key not in pkg_to_servers:
-                    pkg_to_servers[key] = []
-                pkg_to_servers[key].append(server)
+                pkg_to_servers.setdefault(key, []).append(server)
 
                 if key not in pkg_to_agents:
                     pkg_to_agents[key] = []
@@ -606,6 +605,7 @@ async def scan_agents(
 
     total_vulns = await _scanners_patchable("scan_packages")(unique_packages, options=scan_options)
     runtime_cve.propagate_runtime_assessments(all_packages, unique_packages)
+    propagate_possibly_affected(all_packages, unique_packages, _pkg_key)
 
     # Propagate vulnerabilities back to all instances
     vuln_map = {}
