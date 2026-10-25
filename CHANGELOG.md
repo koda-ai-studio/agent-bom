@@ -35,6 +35,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Migration `20261023_02` revokes writes on `alembic_version` from the application and RLS-maintenance roles; migrations run as the admin role.
 
 ### Fixed
+- `agent-bom db update` now includes NVD by default (newest first, incremental), so CVEs published only in NVD, such as PHP2Shell (CVE-2026-109618/109619), reach the local database without `--source nvd`.
 - `agent-bom db update --source nvd` with `NVD_API_KEY` read only the oldest 1,000 records of a 120-day window (about 91,000 modified CVEs) and printed `complete`, so the newest CVEs never landed. The window is now walked newest first in day slices, keyed runs cover the whole window by default (keyless runs read up to 60,000 records), the checkpoint records covered ranges so later runs fill the older tail without re-reading, and a capped, rate-limited or timed-out run shows `PARTIAL` in `db update`, `db status` and `db freshness`.
 - The SSE/HTTP proxy (`agent-bom proxy --url`) now reads every page of the upstream `tools/list` before applying `--block-undeclared`; tools declared after the first page were blocked as undeclared.
 

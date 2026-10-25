@@ -13,7 +13,7 @@ Sources:
              without; keyless runs also backfill CVSS/CWE for existing rows)
 
 Usage:
-    agent-bom db update            # sync all sources
+    agent-bom db update            # sync the default sources (osv, alpine, debian, epss, kev, nvd)
     agent-bom db update --source osv
     agent-bom db update --source debian
     agent-bom db update --source epss
@@ -604,6 +604,11 @@ def _sync_nvd_keyless(conn: sqlite3.Connection, url: Optional[str], max_entries:
     return ingested + backfilled
 
 
+# NVD is a default source: it carries CVEs (and CPE ranges for runtimes such as
+# PHP) that no other feed has yet. Its sync is incremental and newest first.
+DEFAULT_SYNC_SOURCES: tuple[str, ...] = ("osv", "alpine", "debian", "epss", "kev", "nvd")
+
+
 def sync_db(
     path: Optional[Path] = None,
     sources: Optional[list[str]] = None,
@@ -627,7 +632,7 @@ def sync_db(
 
     Args:
         path: DB file path (default: DB_PATH from schema.py).
-        sources: list of source names to sync, e.g. ["osv", "kev"]. Default: ["osv","alpine","debian","epss","kev"].
+        sources: list of source names to sync, e.g. ["osv", "kev"]. Default: ``DEFAULT_SYNC_SOURCES``.
                  Note: "nvd" is NOT in the default set — it is slow without an API key.
                  Keyless "nvd" ingests a 14-day window of new/modified CVEs then
                  backfills CVSS/CWE; with a key it ingests a 120-day window.
@@ -653,7 +658,7 @@ def sync_db(
     # The update rewrites the database, so it is the right place to pay for a
     # full integrity check — and the only place that still does.
     conn = init_db(db_path, verify_integrity=True)
-    enabled = set(sources or ["osv", "alpine", "debian", "epss", "kev"])
+    enabled = set(sources or DEFAULT_SYNC_SOURCES)
     results: dict[str, int] = {}
 
     def notify(source: str, phase: str, current: int = 0, total: int | None = None) -> None:

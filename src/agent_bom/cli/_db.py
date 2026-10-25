@@ -32,7 +32,7 @@ def db_cmd() -> None:
     "sources",
     multiple=True,
     type=click.Choice(["osv", "alpine", "debian", "epss", "kev", "ghsa", "nvd"], case_sensitive=False),
-    help="Which sources to sync (default: osv, alpine, debian, epss, kev). Repeatable. "
+    help="Which sources to sync (default: osv, alpine, debian, epss, kev, nvd). Repeatable. "
     "Use --source alpine to sync Alpine package secfix data from Alpine secdb. "
     "Use --source debian to sync the Debian Security Tracker (authoritative per-release "
     "status + backported fixes, including end-of-life releases such as buster/Debian 10). "
@@ -106,12 +106,12 @@ def db_update(
     from rich.console import Console
     from rich.progress import BarColumn, DownloadColumn, Progress, SpinnerColumn, TaskID, TextColumn, TimeElapsedColumn
 
-    from agent_bom.db.sync import sync_db
+    from agent_bom.db.sync import DEFAULT_SYNC_SOURCES, sync_db
 
     con = Console()
     if sources and osv_ecosystems and "osv" not in {str(source).lower() for source in sources}:
         raise click.UsageError("--osv-ecosystem requires --source osv when --source is specified")
-    selected = list(sources) or (["osv"] if osv_ecosystems else ["osv", "alpine", "debian", "epss", "kev"])
+    selected = list(sources) or (["osv"] if osv_ecosystems else list(DEFAULT_SYNC_SOURCES))
     con.print(f"[bold]Syncing local vuln DB[/bold] — sources: {', '.join(selected)}")
     selected_sources = {str(source).lower() for source in selected}
     if "osv" in selected_sources and osv_ecosystems:
