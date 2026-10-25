@@ -6,6 +6,7 @@ import { Building2, ChevronDown, LogOut, Settings, UserRound } from "lucide-reac
 import { useAuthState } from "@/components/auth-provider";
 import { ThemePreferenceControl } from "@/components/theme-toggle";
 import { sessionPresentation } from "@/lib/session-presentation";
+import { isStaticDemo } from "@/lib/static-demo";
 
 export function AccountMenu() {
   const { session, loading, signOut, hasCapability } = useAuthState();
@@ -29,7 +30,7 @@ export function AccountMenu() {
             <p className="break-words text-sm font-semibold text-foreground">{session ? identity.name : "Offline report"}</p>
             <p className="mt-1 text-xs text-ink-secondary">{session ? identity.method : "No control-plane session"}{session?.role_summary?.display_name ? ` · ${session.role_summary.display_name}` : ""}</p>
             <span className="mt-2 inline-flex items-center rounded-full border border-outline bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-secondary">
-              {!session ? "Offline" : session.auth_required === false ? "Unauthenticated access" : session.authenticated ? "Signed in" : "Sign-in required"}
+              {!session ? "Offline" : isStaticDemo() ? "Read-only demo" : session.auth_required === false ? "Unauthenticated access" : session.authenticated ? "Signed in" : "Sign-in required"}
             </span>
           </div>
         </div>

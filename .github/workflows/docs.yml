@@ -83,6 +83,8 @@ jobs:
         run: |
           rm -rf site/demo
           mv ui/out site/demo
+          # Next requests the base route's RSC payload as /agent-bom/demo.txt.
+          cp site/demo/index.txt site/demo.txt
           du -sh site/demo
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

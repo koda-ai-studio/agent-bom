@@ -1,7 +1,16 @@
 import type { AuthMeResponse } from "@/lib/api";
+import { isStaticDemo } from "@/lib/static-demo";
 
 /** Presentation of verified session fields; never interprets a key as a human. */
 export function sessionPresentation(session: AuthMeResponse | null) {
+  if (isStaticDemo()) {
+    return {
+      name: "Demo visitor",
+      method: "Read-only demo",
+      description: "Everything here is labelled sample data. Install agent-bom to sign in and scan your own environment.",
+      canSignOut: false,
+    };
+  }
   const method = session?.auth_method ?? "";
   const anonymous = method === "anonymous" || session?.auth_required === false;
   const local = method === "browser_session_dev_key";

@@ -12,7 +12,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
+import { exportedRoutes } from "./generate-static-demo-data.mjs";
 import { startStaticDemoServer } from "./static-demo-server.mjs";
+
+const ERROR_TEXT = /no sample data in the read-only demo|something went wrong|failed to load|could not be loaded|network request failed|application error/i;
 
 const PAGES = [
   ["overview", "/", "Overview"],
@@ -51,13 +54,15 @@ async function main() {
         requests += 1;
         const url = new URL(request.url());
         if (url.protocol === "data:" || url.protocol === "blob:") return;
-        if (url.origin !== server.origin || !url.pathname.startsWith(`${basePath}/`) && url.pathname !== basePath) {
+        const baseRsc = url.pathname === `${basePath}.txt`;
+        if (url.origin !== server.origin || !baseRsc && !url.pathname.startsWith(`${basePath}/`) && url.pathname !== basePath) {
           problems.push(`${label}: request outside the demo origin/base path: ${request.method()} ${request.url()}`);
         }
       });
       page.on("response", (response) => {
         const url = new URL(response.url());
-        if (url.pathname.includes("/demo-data/") && response.status() !== 200) {
+        // Exact-query files are optional; the path file behind them must exist.
+        if (url.pathname.includes("/demo-data/") && !url.pathname.includes("__q") && response.status() !== 200) {
           problems.push(`${label}: no sample data for ${url.searchParams.get("path")} on ${new URL(page.url()).pathname}`);
         }
       });
@@ -70,6 +75,30 @@ async function main() {
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         if (overflow > 0) problems.push(`${label} ${name}: horizontal overflow ${overflow}px`);
         if (shots) await page.screenshot({ path: path.join(shots, `${name}-${theme}-${viewport.width}.png`) });
+      }
+      const demoRoutes = new Set(JSON.parse(await fs.readFile(path.join(outDir, "demo-data", "routes.json"), "utf8")).routes);
+      const unavailable = (await exportedRoutes(outDir)).filter((route) => !demoRoutes.has(route));
+      if (unavailable.length) {
+        await page.goto(`${server.origin}${basePath}${unavailable[0]}`, { waitUntil: "networkidle" });
+        if (!(await page.getByTestId("static-demo-unavailable").isVisible())) problems.push(`${label}: not-in-demo panel missing on ${unavailable[0]}`);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+        if (overflow > 0) problems.push(`${label} not-in-demo: horizontal overflow ${overflow}px`);
+        if (shots) await page.screenshot({ path: path.join(shots, `not-in-demo-${theme}-${viewport.width}.png`) });
+      }
+      if (viewport.width === 1440 && theme === "light") {
+        // Every exported route: recorded pages show data, the rest show the panel, none an error.
+        for (const route of await exportedRoutes(outDir)) {
+          await page.goto(`${server.origin}${basePath}${route}`, { waitUntil: "networkidle" });
+          await page.waitForTimeout(300);
+          const panel = await page.getByTestId("static-demo-unavailable").isVisible();
+          const text = await page.locator("#main-content").innerText().catch(() => "");
+          if (demoRoutes.has(route) === panel) problems.push(`${route}: ${panel ? "panel shown on a recorded page" : "unrecorded page rendered without the panel"}`);
+          if (ERROR_TEXT.test(text)) problems.push(`${route}: error state: ${text.match(ERROR_TEXT)[0]}`);
+          if (!(await page.getByTestId("static-demo-banner").isVisible())) problems.push(`${route}: demo banner not visible`);
+          const hidden = await page.getByRole("navigation").getByRole("link").evaluateAll((links, base) => links
+            .map((link) => new URL(link.href).pathname.slice(base.length) || "/"), basePath);
+          for (const href of hidden) if (!demoRoutes.has(href.replace(/\/+$/, "") || "/")) problems.push(`${route}: nav links to ${href}, which is not in the demo`);
+        }
       }
       if (viewport.width === 1440) {
         await page.goto(`${server.origin}${basePath}/`, { waitUntil: "networkidle" });

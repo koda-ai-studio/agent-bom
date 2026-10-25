@@ -1,5 +1,5 @@
 import { ApiError, ApiNetworkError, classifyApiResponse } from "./api-errors";
-import { staticDemoDataKey } from "./static-demo-key.mjs";
+import { staticDemoDataKey, staticDemoQueryKey } from "./static-demo-key.mjs";
 
 export const STATIC_DEMO_READ_ONLY_MESSAGE =
   "This is a read-only demo — install agent-bom to run it on your own environment.";
@@ -23,18 +23,21 @@ export function staticDemoBasePath(): string {
 }
 
 /** The query carries the original API path only so the generator can record it; static hosts ignore it. */
-export function staticDemoDataUrl(apiPath: string): string {
-  return `${staticDemoBasePath()}/demo-data/${staticDemoDataKey(apiPath)}.json?path=${encodeURIComponent(apiPath)}`;
+export function staticDemoDataUrl(apiPath: string, key: string = staticDemoDataKey(apiPath)): string {
+  return `${staticDemoBasePath()}/demo-data/${key}.json?path=${encodeURIComponent(apiPath)}`;
 }
 
 export async function staticDemoFetch(apiPath: string, init: RequestInit, method: string): Promise<Response> {
   if (method !== "GET") {
     throw new StaticDemoReadOnlyError(apiPath, method);
   }
+  const queryKey = staticDemoQueryKey(apiPath);
   const url = staticDemoDataUrl(apiPath);
   let res: Response;
   try {
-    res = await fetch(url, { signal: init.signal ?? null, credentials: "same-origin" });
+    // An answer recorded for this exact query wins over the path's default answer.
+    const exact = queryKey ? await fetch(staticDemoDataUrl(apiPath, queryKey), { signal: init.signal ?? null, credentials: "same-origin" }) : null;
+    res = exact?.ok ? exact : await fetch(url, { signal: init.signal ?? null, credentials: "same-origin" });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause);
     throw new ApiNetworkError(`Demo data could not be loaded: ${message}`, { url, method, cause });

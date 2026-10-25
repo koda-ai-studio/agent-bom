@@ -26,6 +26,11 @@ export async function startStaticDemoServer(root, basePath) {
   const absRoot = path.resolve(root);
   const server = http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url ?? "/", "http://127.0.0.1");
+    // Next fetches the base route's RSC payload as `<base>.txt`; docs.yml places index.txt there too.
+    if (pathname === `${basePath}.txt`) {
+      res.writeHead(200, { "content-type": "text/plain" }).end(await fs.readFile(path.join(absRoot, "index.txt")));
+      return;
+    }
     if (!pathname.startsWith(`${basePath}/`) && pathname !== basePath) {
       res.writeHead(pathname === "/" ? 200 : 404, { "content-type": "text/html" }).end("<!doctype html><title>blank</title>");
       return;
