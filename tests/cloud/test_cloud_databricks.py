@@ -34,7 +34,7 @@ def test_discover_no_sdk():
     original = builtins.__import__
 
     def mock_import(name, *args, **kwargs):
-        if name.startswith("databricks"):
+        if name == "databricks" or name.startswith("databricks."):
             raise ImportError("mocked")
         return original(name, *args, **kwargs)
 
@@ -80,7 +80,7 @@ def test_discover_with_host_and_token():
     original = builtins.__import__
 
     def mock_import(name, *args, **kwargs):
-        if name.startswith("databricks"):
+        if name == "databricks" or name.startswith("databricks."):
             raise ImportError("mocked")
         return original(name, *args, **kwargs)
 

@@ -513,6 +513,18 @@ def _drain_graph_warmups() -> None:
             assert module.wait_idle(10), f"Background graph warm-up did not finish: {name}"
 
 
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_teardown(item: pytest.Item, nextitem: pytest.Item | None):
+    """Finish readers before fixture finalizers restore their stores and patches."""
+    del item, nextitem
+    try:
+        _drain_scan_executor()
+        _drain_graph_warmups()
+    finally:
+        # Preserve fixture cleanup and still propagate a failed drain.
+        yield
+
+
 def _reset_proxy_route_state() -> None:
     # The proxy status/alerts route keeps process-global in-memory buffers:
     # a bounded _proxy_alerts deque, its _proxy_alerts_total counter, the latest
