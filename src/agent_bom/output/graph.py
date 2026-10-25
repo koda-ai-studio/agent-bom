@@ -147,14 +147,13 @@ def build_graph_elements(
                 for item in intelligence
                 if isinstance(item, dict) and (item.get("title") or item.get("entry_id"))
             ][:5]
-            intel_note = f"\nMCP intelligence: {', '.join(intelligence_titles)}" if intelligence_titles else ""
             security_warnings = list(getattr(srv, "security_warnings", []) or [])
 
             server_data = {
                 "id": sid,
                 "label": server_label,
                 "type": stype,
-                "tip": f"MCP Server: {srv.name}{pkg_note}{cinfo}{intel_note}",
+                "tip": f"MCP Server: {srv.name}{pkg_note}{cinfo}",
                 "command": sanitize_launch_command(srv.command or "", srv.args or [], max_args=3)[:80],
                 "packageCount": len(srv.packages),
                 "vulnPackageCount": vulnerable_pkg_count,
