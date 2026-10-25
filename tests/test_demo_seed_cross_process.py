@@ -17,6 +17,7 @@ from agent_bom.api import auth, stores
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.middleware import APIKeyMiddleware, TrustHeadersMiddleware
 from agent_bom.api.routes import graph as graph_routes
+from agent_bom.api.store import InMemoryJobStore
 from agent_bom.demo_estate import boot_seed
 from tests.test_graph_tenant_scope_and_bounds import _path_graph
 
@@ -34,6 +35,7 @@ if sys.argv[2] == "finish":
 
 @pytest.fixture()
 def store(tmp_path, monkeypatch):
+    monkeypatch.setattr(stores, "_store", InMemoryJobStore())
     graph_store = SQLiteGraphStore(tmp_path / "graph.db")
     graph_store.save_graph(_path_graph(TENANT))
     monkeypatch.setattr(stores, "_graph_store", graph_store)
@@ -97,6 +99,7 @@ def empty_client(tmp_path, monkeypatch):
     from agent_bom.backpressure import reset_backpressure_for_tests
 
     reset_backpressure_for_tests()
+    monkeypatch.setattr(stores, "_store", InMemoryJobStore())
     monkeypatch.setattr(stores, "_graph_store", SQLiteGraphStore(tmp_path / "empty.db"))
     keys = auth.KeyStore()
     monkeypatch.setattr(auth, "_key_store", keys)
