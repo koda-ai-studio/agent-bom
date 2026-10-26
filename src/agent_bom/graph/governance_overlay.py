@@ -18,6 +18,7 @@ or denies access. Unmatched governance nodes remain visible and unlinked.
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
@@ -74,6 +75,63 @@ def _gedge(source: str, target: str, rel: RelationshipType, *, seen: tuple[str, 
     )
 
 
+def _record_seen(record: Any, first_field: str, last_field: str, fallback: str) -> tuple[str, str]:
+    """When the record was written, never when it is read."""
+    first = getattr(record, first_field, "") or fallback
+    return first, getattr(record, last_field, "") or first
+
+
+def _project_blueprints(
+    graph: UnifiedGraph,
+    tenant_id: str,
+    blueprint_store: Any,
+    agents_by_label: dict[str, list[str]],
+    add_node: Callable[[UnifiedNode], None],
+    add_edge: Callable[[UnifiedEdge], None],
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Emit the stored, approved blueprints; return their node ids by seed and by id.
+
+    The snapshot references a durable blueprint entity (by id) rather than a code
+    constant, so drift incidents tie back to the persisted blueprint they derive
+    from. Best-effort: a store failure degrades to no blueprint nodes.
+    """
+    by_seed: dict[str, str] = {}
+    by_id: dict[str, str] = {}
+    try:
+        if blueprint_store is None:
+            from agent_bom.api.blueprint_store import get_blueprint_store
+
+            blueprint_store = get_blueprint_store()
+        blueprints = blueprint_store.list_blueprints(tenant_id, limit=200).blueprints
+    except Exception:  # noqa: BLE001
+        blueprints = []
+    for blueprint in blueprints:
+        bnid = f"blueprint:{blueprint.blueprint_id}"
+        by_id[blueprint.blueprint_id] = bnid
+        if blueprint.seeded_from:
+            by_seed[blueprint.seeded_from] = bnid
+        blueprint_seen = _record_seen(blueprint, "created_at", "updated_at", graph.created_at)
+        add_node(
+            _gnode(
+                bnid,
+                EntityType.BLUEPRINT,
+                blueprint.name or blueprint.blueprint_id,
+                seen=blueprint_seen,
+                attributes={
+                    "blueprint_id": blueprint.blueprint_id,
+                    "owner": blueprint.owner,
+                    "approval_status": blueprint.approval_status,
+                    "current_version": blueprint.current_version,
+                    "latest_version": blueprint.latest_version,
+                    "seeded_from": blueprint.seeded_from,
+                },
+            )
+        )
+        for agent_id in agents_by_label.get(blueprint.owner.strip().lower(), []):
+            add_edge(_gedge(bnid, agent_id, RelationshipType.GOVERNS, seen=blueprint_seen))
+    return by_seed, by_id
+
+
 def apply_governance_overlay(
     graph: UnifiedGraph,
     *,
@@ -118,9 +176,7 @@ def apply_governance_overlay(
         reasons.add("conditional_policies_unavailable")
 
     def seen(record: Any, first_field: str, last_field: str) -> tuple[str, str]:
-        # A projection reports when its record was written, never when it was read.
-        first = getattr(record, first_field, "") or graph.created_at
-        return first, getattr(record, last_field, "") or first
+        return _record_seen(record, first_field, last_field, graph.created_at)
 
     def add_node(node: UnifiedNode) -> None:
         nonlocal added_nodes
@@ -336,46 +392,9 @@ def apply_governance_overlay(
             if tool_name != "*":
                 link_tool(pid, tool_name, RelationshipType.GOVERNS, seen=policy_seen)
 
-    # ── Persisted AI-system blueprints ──
-    # Emit the stored, approved blueprints so the snapshot references a durable
-    # blueprint entity (by id) rather than a code constant — drift incidents then
-    # tie back to the persisted blueprint they derive from. Best-effort: a store
-    # failure degrades to no blueprint nodes.
-    blueprint_node_by_seed: dict[str, str] = {}
-    blueprint_node_by_id: dict[str, str] = {}
-    try:
-        if blueprint_store is None:
-            from agent_bom.api.blueprint_store import get_blueprint_store
-
-            blueprint_store = get_blueprint_store()
-        blueprints = blueprint_store.list_blueprints(tenant_id, limit=200).blueprints
-    except Exception:  # noqa: BLE001
-        blueprints = []
-    for blueprint in blueprints:
-        bnid = f"blueprint:{blueprint.blueprint_id}"
-        blueprint_node_by_id[blueprint.blueprint_id] = bnid
-        if blueprint.seeded_from:
-            blueprint_node_by_seed[blueprint.seeded_from] = bnid
-        blueprint_seen = seen(blueprint, "created_at", "updated_at")
-        add_node(
-            _gnode(
-                bnid,
-                EntityType.BLUEPRINT,
-                blueprint.name or blueprint.blueprint_id,
-                seen=blueprint_seen,
-                attributes={
-                    "blueprint_id": blueprint.blueprint_id,
-                    "owner": blueprint.owner,
-                    "approval_status": blueprint.approval_status,
-                    "current_version": blueprint.current_version,
-                    "latest_version": blueprint.latest_version,
-                    "seeded_from": blueprint.seeded_from,
-                },
-            )
-        )
-        for owner_name in {blueprint.owner}:
-            for agent_id in agents_by_label.get(owner_name.strip().lower(), []):
-                add_edge(_gedge(bnid, agent_id, RelationshipType.GOVERNS, seen=blueprint_seen))
+    blueprint_node_by_seed, blueprint_node_by_id = _project_blueprints(
+        graph, tenant_id, blueprint_store, agents_by_label, add_node, add_edge
+    )
 
     # ── Drift incidents (open) ──
     try:
