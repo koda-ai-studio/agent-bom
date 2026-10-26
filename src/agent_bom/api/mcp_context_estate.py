@@ -142,10 +142,13 @@ def estate_context_page(tenant_id: str, *, offset: int = 0, limit: int = 25) -> 
                             "ecosystem": entry["ecosystem"],
                             "affected_servers": [server.label],
                             "affected_agents": [agent.label],
+                            "affected_agent_graph_ids": [agent.id],
                         }
                     )
         agent_type = str((agent.attributes or {}).get("agent_framework") or "")
-        report_agents.append({"name": agent.label, "type": agent_type, "mcp_servers": servers})
+        report_agents.append(
+            {"name": agent.label, "graph_id": agent.id, "canonical_id": agent.canonical_id, "type": agent_type, "mcp_servers": servers}
+        )
     return {
         "agents": report_agents,
         "blast_radius": blast,

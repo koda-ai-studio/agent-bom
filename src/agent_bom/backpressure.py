@@ -178,9 +178,24 @@ class BackpressureController:
             self._latencies_ms.append(latency_ms)
             while len(self._latencies_ms) > self.window_size:
                 self._latencies_ms.popleft()
-            if len(self._latencies_ms) >= self.min_samples and self.p99_ms > self.p99_threshold_ms:
+            if self._tail_exceeds_threshold():
                 self.open_until_monotonic = time.monotonic() + self.cooldown_seconds
                 self.last_trigger_reason = "p99_latency_threshold"
+
+    def _tail_exceeds_threshold(self) -> bool:
+        """Whether more than the p99 tail (and more than one outlier) is over budget.
+
+        Below ~50 samples the nearest-rank p99 is the maximum, so one cold read
+        (first build after a seed) would open the breaker for every reader. A
+        sustained tail needs more slow samples than 1% of the window allows; an
+        operator who sets ``MIN_SAMPLES=1`` still opts in to single-sample trips.
+        """
+        samples = len(self._latencies_ms)
+        if samples < self.min_samples:
+            return False
+        slow = sum(1 for latency in self._latencies_ms if latency > self.p99_threshold_ms)
+        tolerated = min(self.min_samples - 1, max(1, samples // 100))
+        return slow > tolerated
 
     def retry_after_seconds(self, now: float | None = None) -> int:
         # Multiplicative jitter in [-15%, +35%]. The previous additive form
