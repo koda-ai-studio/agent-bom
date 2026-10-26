@@ -16,6 +16,9 @@ from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 from agent_bom.scanners import reset_scan_warnings
 
+# Shared with the GitHub Action default (action.yml severity-threshold).
+DEFAULT_FAIL_ON_SEVERITY = "high"
+
 
 def _normalize_flags(opts: ScanOptions, st: ScanState) -> None:
     if opts.ai_gate_findings and not opts.ai_enrich:
@@ -139,8 +142,8 @@ def _apply_presets_and_modes(opts: ScanOptions, st: ScanState) -> None:
     if opts.preset == "ci":
         opts.quiet = True
         opts.output_format = opts.output_format if opts.output_format != "console" else "json"
-        opts.fail_on_severity = opts.fail_on_severity or "critical"
-        opts.warn_on_severity = opts.warn_on_severity or "high"
+        opts.fail_on_severity = opts.fail_on_severity or DEFAULT_FAIL_ON_SEVERITY
+        opts.warn_on_severity = opts.warn_on_severity or "medium"
     elif opts.preset == "enterprise":
         opts.enrich = True
         opts.introspect = True
@@ -164,14 +167,14 @@ def _apply_presets_and_modes(opts: ScanOptions, st: ScanState) -> None:
         opts.transitive = False
         opts.enrich = False
 
-    # A critical vulnerability is a failed security verdict by default. The
+    # A high or critical vulnerability is a failed security verdict by default. The
     # explicit escape hatch is deliberately limited to vulnerability severity:
     # malicious packages, policy failures, and incomplete evidence remain
     # fail-closed in ``compute_exit_code``.
     if opts.exit_zero:
         opts.fail_on_severity = None
     elif opts.fail_on_severity is None:
-        opts.fail_on_severity = "critical"
+        opts.fail_on_severity = DEFAULT_FAIL_ON_SEVERITY
 
     if opts.preset == "workstation":
         opts.browser_extensions = True

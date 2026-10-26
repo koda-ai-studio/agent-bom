@@ -417,7 +417,8 @@ def test_docker_save_skips_layer_over_uncompressed_limit(monkeypatch):
     result = parse_oci_tarball(tar)
 
     assert result.packages == []
-    assert any("uncompressed extraction limit" in warning for warning in result.warnings)
+    assert [warning.reason for warning in result.coverage_warnings] == ["oci_layer_size_limit"]
+    assert any("uncompressed safety limit" in warning for warning in result.warnings)
 
 
 def test_decompression_ratio_guard_is_configurable(monkeypatch):

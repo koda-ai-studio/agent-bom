@@ -121,7 +121,7 @@ def test_scan_help_advertises_the_control_plane_push_handoff():
 
 def test_scan_agent_mode_emits_machine_envelope(monkeypatch):
     monkeypatch.delenv("AGENT_BOM_CONFIG", raising=False)
-    result = _run(["agents", "--agent-mode", "--demo", "--no-scan", "--offline", "--no-auto-update-db"])
+    result = _run(["agents", "--agent-mode", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"])
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -150,7 +150,7 @@ output = "profile-report.json"
     )
     monkeypatch.setenv("AGENT_BOM_CONFIG", str(config_path))
 
-    result = _run(["agents", "--agent-mode", "--demo", "--no-scan", "--offline", "--no-auto-update-db"])
+    result = _run(["agents", "--agent-mode", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"])
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -159,7 +159,9 @@ output = "profile-report.json"
 
 def test_scan_agent_mode_token_budget_reports_truncation(monkeypatch):
     monkeypatch.delenv("AGENT_BOM_CONFIG", raising=False)
-    result = _run(["agents", "--agent-mode", "--agent-token-budget", "200", "--demo", "--no-scan", "--offline", "--no-auto-update-db"])
+    result = _run(
+        ["agents", "--agent-mode", "--agent-token-budget", "200", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"]
+    )
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -301,7 +303,7 @@ def test_summarize_scan_data_records_output_path():
 
 def test_agent_mode_scan_summary_envelope_omits_provenance_end_to_end(monkeypatch):
     monkeypatch.delenv("AGENT_BOM_CONFIG", raising=False)
-    result = _run(["agents", "--agent-mode", "--demo", "--no-scan", "--offline", "--no-auto-update-db"])
+    result = _run(["agents", "--agent-mode", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"])
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -571,7 +573,7 @@ def test_scan_records_local_analytics_without_save():
         patch("agent_bom.cli.agents.discover_all", return_value=[]),
         patch("agent_bom.db.local_analytics.record_scan_report_best_effort", side_effect=_record),
     ):
-        result = _run(["scan", "--demo", "--no-scan", "--quiet"])
+        result = _run(["scan", "--demo", "--exit-zero", "--no-scan", "--quiet"])
 
     assert result.exit_code == 0
     assert len(calls) == 1
@@ -651,7 +653,7 @@ def test_scan_agent_mode_reuses_canonical_report_projection(monkeypatch):
     monkeypatch.setattr(json_fmt, "to_json", _unexpected_reprojection)
     monkeypatch.setattr("agent_bom.db.local_analytics.record_scan_report_best_effort", lambda *_args, **_kwargs: None)
 
-    result = _run(["agents", "--agent-mode", "--demo", "--no-scan", "--offline", "--no-auto-update-db"])
+    result = _run(["agents", "--agent-mode", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"])
 
     assert result.exit_code == 0, result.output
     assert projection_calls == 1
@@ -677,7 +679,7 @@ def test_scan_save_records_local_analytics_once(monkeypatch, tmp_path):
     monkeypatch.setattr(history, "HISTORY_DIR", tmp_path / "history")
     monkeypatch.setattr("agent_bom.db.local_analytics.record_scan_report_best_effort", lambda *args, **kwargs: calls.append((args, kwargs)))
 
-    result = _run(["scan", "--demo", "--save", "--no-scan", "--quiet"])
+    result = _run(["scan", "--demo", "--exit-zero", "--save", "--no-scan", "--quiet"])
 
     assert result.exit_code == 0, result.output
     assert len(calls) == 1
@@ -773,7 +775,7 @@ def test_scan_output_appends_format_extension_for_extensionless_path(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "sarif", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "sarif", "--output", str(out), "--no-scan"])
 
     assert result.exit_code == 0, result.output
     assert expected.exists()
@@ -1440,6 +1442,7 @@ def test_scan_delta_filters_json_output_before_render(tmp_path):
                 "-o",
                 str(output),
                 "--no-auto-update-db",
+                "--exit-zero",
             ]
         )
 
@@ -1488,7 +1491,7 @@ def test_demo_scan_hides_synthetic_project_temp_path():
         patch("agent_bom.cli.agents.discover_all", return_value=[]),
         patch("agent_bom.parsers.scan_project_directory", return_value={}),
     ):
-        result = _run(["scan", "--demo", "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--no-scan"])
     assert result.exit_code == 0
     assert "agent-bom-demo-dir-" not in result.output
     assert "Scanning project directory for package manifests" not in result.output
@@ -1508,7 +1511,7 @@ def test_demo_scan_preserves_curated_inventory_without_registry_fallback(monkeyp
     monkeypatch.setattr("agent_bom.cli.agents.extract_packages", _extract_packages)
     monkeypatch.setattr("agent_bom.cli.agents.scan_agents_sync", _scan_agents_sync)
 
-    result = _run(["scan", "--demo", "--offline", "--no-auto-update-db"])
+    result = _run(["scan", "--demo", "--exit-zero", "--offline", "--no-auto-update-db"])
 
     assert result.exit_code == 0
     assert captured["packages"] == 23
@@ -1582,7 +1585,7 @@ def test_scan_sarif_auto_enables_enrich(monkeypatch):
     monkeypatch.setattr("agent_bom.cli.agents.discover_all", lambda *args, **kwargs: [])
     monkeypatch.setattr("agent_bom.cli.agents.scan_agents_sync", _scan_agents_sync)
 
-    result = _run(["scan", "--format", "sarif", "--demo", "--no-auto-update-db"])
+    result = _run(["scan", "--format", "sarif", "--demo", "--exit-zero", "--no-auto-update-db"])
 
     assert result.exit_code == 0
     assert captured["enable_enrichment"] is True
@@ -1740,7 +1743,7 @@ def test_scan_format_pdf(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "pdf", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "pdf", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     assert out.exists()
     assert out.read_bytes().startswith(b"%PDF")
@@ -2396,7 +2399,7 @@ def test_scan_format_badge_writes_json(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "badge", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "badge", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     assert out.exists(), "badge output file was not created"
     data = json.loads(out.read_text())
@@ -2410,7 +2413,7 @@ def test_scan_format_svg_writes_file(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "svg", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "svg", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     assert out.exists(), "svg output file was not created"
     content = out.read_text()
@@ -2424,7 +2427,7 @@ def test_scan_format_graph_writes_json(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "graph", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "graph", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     assert out.exists(), "graph output file was not created"
     data = json.loads(out.read_text())
@@ -2439,7 +2442,7 @@ def test_scan_format_mermaid_writes_file(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "mermaid", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "mermaid", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     assert out.exists(), "mermaid output file was not created"
 
@@ -2451,7 +2454,7 @@ def test_scan_format_mermaid_accepts_mermaid_extension(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "mermaid", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "mermaid", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     assert out.exists(), "mermaid output file was not created"
 
@@ -2463,7 +2466,7 @@ def test_scan_format_graph_html_writes_file(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "graph-html", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "graph-html", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     assert out.exists(), "graph-html output file was not created"
     assert "<html" in out.read_text().lower()
@@ -2476,7 +2479,7 @@ def test_scan_format_graph_html_writes_nested_graph_html_extension(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "graph-html", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "graph-html", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0, result.output
     assert out.exists(), "nested graph-html output file was not created"
     assert "<html" in out.read_text(encoding="utf-8").lower()
@@ -2488,7 +2491,7 @@ def test_scan_infers_graph_html_from_graph_html_extension(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0, result.output
     assert out.exists()
     assert "<html" in out.read_text(encoding="utf-8").lower()
@@ -2501,7 +2504,7 @@ def test_scan_format_graph_html_offline_omits_cdn_scripts(tmp_path):
         patch("agent_bom.cli.agents.scan_agents_sync", return_value=([], [])),
         patch("agent_bom.cli.agents.resolve_all_versions_sync", return_value=[]),
     ):
-        result = _run(["scan", "--demo", "--format", "graph-html", "--offline-html", "--output", str(out), "--no-scan"])
+        result = _run(["scan", "--demo", "--exit-zero", "--format", "graph-html", "--offline-html", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     content = out.read_text(encoding="utf-8")
     assert "Offline HTML mode" in content
@@ -2536,6 +2539,7 @@ def test_compliance_export_accepts_zip_output_as_bundle_path(tmp_path):
         [
             "scan",
             "--demo",
+            "--exit-zero",
             "--no-scan",
             "--compliance",
             "--compliance-export",
@@ -2555,7 +2559,7 @@ def test_compliance_export_keeps_profile_report_and_uses_framework_bundle_name(t
     monkeypatch.chdir(tmp_path)
     profile_defaults = ("agent-bom-report.json", "json", None, None, None, None, None)
     with patch("agent_bom.cli._profiles.apply_scan_profile_defaults", return_value=profile_defaults):
-        result = _run(["scan", "--demo", "--no-scan", "--compliance", "--compliance-export", "owasp-mcp"])
+        result = _run(["scan", "--demo", "--exit-zero", "--no-scan", "--compliance", "--compliance-export", "owasp-mcp"])
 
     assert result.exit_code == 0, result.output
     assert (tmp_path / "agent-bom-report.json").exists()
@@ -2571,6 +2575,7 @@ def test_compliance_export_keeps_explicit_non_zip_report_path(tmp_path, monkeypa
         [
             "scan",
             "--demo",
+            "--exit-zero",
             "--no-scan",
             "--compliance",
             "--compliance-export",

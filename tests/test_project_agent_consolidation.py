@@ -211,7 +211,7 @@ def test_project_scan_reports_one_agent_and_only_real_mcp_servers(tmp_path: Path
 
     result = CliRunner().invoke(
         main,
-        ["scan", "-p", str(root), "--no-scan", "--offline", "--no-auto-update-db", "-f", "json", "-o", str(out)],
+        ["scan", "-p", str(root), "--no-scan", "--offline", "--no-auto-update-db", "--exit-zero", "-f", "json", "-o", str(out)],
         catch_exceptions=False,
     )
 

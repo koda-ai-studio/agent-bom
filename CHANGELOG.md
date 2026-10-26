@@ -9,7 +9,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [0.111.0] - 2026-10-25
 
+### Upgrade notes
+- **The CLI severity gate now defaults to `high`**, the same as the GitHub Action, so a repository no longer passes locally and fails in CI. A plain `agent-bom scan` with a high or critical finding exits `1`. Keep the old behaviour with `--fail-on-severity critical`, or make a run reporting-only with `--exit-zero`.
+- `agent-bom proxy` and the gateway can now enforce, not only alert, on poisoned tool descriptions and injected tool results (`--injection-mode enforce`). The default stays alert-only in this release.
+
 ### Added
+- MCP `scan` takes `project_path` to scan a repository directly; the path must resolve inside the home directory or `AGENT_BOM_MCP_WORKSPACE_ROOTS`, and project discovery runs off the event loop.
+- Opt-in runtime enforcement (`--injection-mode enforce`, the matching environment variables, policy key and Helm value): poisoned tools are removed from `tools/list` and later calls to them are refused for the session; injected tool results are replaced by a JSON-RPC error that names the detector and never forwards the injected text. Every action is audited with `action: blocked|stripped`. See `docs/RUNTIME_FAIL_MODES.md`.
+- `agent-bom cloud databricks`, `snowflake`, `huggingface`, `ollama` and `posture`, previously reachable only through `agent-cloud`.
+- Helm: an ingress-only NetworkPolicy for the control-plane API and UI that admits their namespace and the ingress controller (`controlPlane.networkPolicy`).
 - Persisted runtime, proxy and gateway activity appears in the graph as `recorded_activity`, with source receipts, replay-safe counts and exact tenant/cloud-scoped identity binding. One bounded UTC window covers both evidence stores. Unmatched identities remain unverified shadows; recorded decisions do not establish execution or permission and never form attack paths.
 - Agent contributor skills `.agents/skills/develop` (test-first loop) and `.agents/skills/secure-change` (security rules), loaded by Codex and Claude Code; CI now fails a PR that changes Python source without a test change (maintainer label `no-tests-needed` waives it) and scans every repo `AGENTS.md`, `CLAUDE.md` and `SKILL.md` with the skill auditor.
 - Contributor path: `GOVERNANCE.md` with the triager, reviewer and maintainer ladder, `MAINTAINERS.md`, and a Codespaces dev container that installs the dev extras and pre-commit hooks.
@@ -37,11 +45,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Image scans stream layers instead of buffering them: peak traced memory for a 1 GiB image fell from about 3 GB to 9 MB. A time budget (`AGENT_BOM_OCI_SCAN_TIMEOUT_SECONDS`, default 900) and member, size and decompression limits report a `partial` scan that names the skipped layers instead of exhausting the host.
+- Fix First explains each priority (for example "P3: high severity; not known exploited, no credential reach"), the AI component summary no longer calls a clean or empty scan "safe", and Findings rows leave remediation cells blank instead of printing filler.
+- The Docker Hub push token is available only to release jobs in a `docker-release` environment; pull-request CI uses a pull-only token. Main-failure alerts react only to pushes to this repository's main branch.
+- Compose files publish ports on loopback by default, including the development Postgres and Redis and the runtime example proxy.
+
 - GitHub Action: `pr-comment` defaults to `auto` (posts when the token has `pull-requests: write`, otherwise skips with a notice); annotations are error, warning or notice by severity; `format: json` writes `agent-bom-results.json`; docs reference `@v0` and `scan-type: scan`.
 - PR CI sizes pytest workers to the runner, skips smoke when the full shards replace it, and splits UI E2E across four runners.
 - Migration `20261023_02` revokes writes on `alembic_version` from the application and RLS-maintenance roles; migrations run as the admin role.
 
 ### Fixed
+- Tenant isolation: the legacy SQLite backfills for agent identities and fleet agents rewrote rows by id alone, so two tenants sharing an agent id could overwrite each other's agent data. Both are tenant-scoped, and a guard fails CI on any SQLite write to a tenant-keyed table that filters by id without the tenant.
+- `.csproj` parsing refuses XML entity declarations instead of expanding them, and `defusedxml` is a declared dependency.
 - "Am I affected by CVE-X" answers from every alias record of a vulnerability. A CVE row that carries only distribution ranges no longer hides the PyPI, npm or Maven range on its GHSA alias, GHSA ids match regardless of case, and the advisory takes the worst severity across its records. Packages the scan itself flags (urllib3 for CVE-2023-43804, django for CVE-2022-34265, pillow for CVE-2023-4863) are now reported affected instead of clean.
 - Dependency accuracy on real repositories: Gradle versions given as `$var`/`${var}` resolve from `gradle.properties` and `ext` blocks, and builds without a lockfile report partial coverage; `setup.cfg` and static `setup.py` dependencies are read (setup.py is parsed, never executed); requirement specifiers keep the whole range and environment markers; members of a lockfile-owned pnpm/npm/yarn workspace are no longer re-resolved to invented versions; Maven modules inherit local parent POM dependencies and managed versions; go.sum checksum verification reads the checksum database format and case-encodes module paths; go.mod `replace` blocks parse correctly; OSV records that enumerate git-tag versions no longer produce unverified matches.
 - Health probes stay up when Postgres is down or stalled: probes bypass the shared rate limiter, the limiter falls back to memory when its store errors or is slow, database outages return a JSON 503, `/readyz` gives up after 3 s, and every chart probe sets `timeoutSeconds`. A request waits at most `AGENT_BOM_POSTGRES_POOL_TIMEOUT_SECONDS` (default 10) for a pooled connection instead of psycopg_pool's 30 s per attempt.

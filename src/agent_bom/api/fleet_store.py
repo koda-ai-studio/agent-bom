@@ -455,9 +455,9 @@ class SQLiteFleetStore:
             self._conn.execute("ALTER TABLE fleet_agents ADD COLUMN canonical_id TEXT NOT NULL DEFAULT ''")
         if "device_fingerprint" not in _table_columns(self._conn, "fleet_agents"):
             self._conn.execute("ALTER TABLE fleet_agents ADD COLUMN device_fingerprint TEXT NOT NULL DEFAULT ''")
+        self._migrate_to_tenant_scoped_key()  # first: the backfills below are tenant-scoped
         self._backfill_canonical_ids()
         self._backfill_device_fingerprints()
-        self._migrate_to_tenant_scoped_key()
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_fleet_name ON fleet_agents(name)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_fleet_canonical_id ON fleet_agents(canonical_id)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_fleet_tenant_canonical_id ON fleet_agents(tenant_id, canonical_id)")
@@ -513,12 +513,12 @@ class SQLiteFleetStore:
         self._conn.commit()
 
     def _backfill_canonical_ids(self) -> None:
-        rows = self._conn.execute("SELECT agent_id, data FROM fleet_agents WHERE canonical_id = ''").fetchall()
-        for agent_id, raw in rows:
+        rows = self._conn.execute("SELECT tenant_id, agent_id, data FROM fleet_agents WHERE canonical_id = ''").fetchall()
+        for tenant_id, agent_id, raw in rows:
             agent = FleetAgent.model_validate_json(raw)
             self._conn.execute(
-                "UPDATE fleet_agents SET canonical_id = ?, data = ? WHERE agent_id = ?",
-                (agent.canonical_id, agent.model_dump_json(), agent_id),
+                "UPDATE fleet_agents SET canonical_id = ?, data = ? WHERE tenant_id = ? AND agent_id = ?",
+                (agent.canonical_id, agent.model_dump_json(), tenant_id, agent_id),
             )
 
     def _backfill_device_fingerprints(self) -> None:
@@ -529,15 +529,15 @@ class SQLiteFleetStore:
         (the common case) keep a null/empty column and are never re-processed.
         """
         rows = self._conn.execute(
-            "SELECT agent_id, data FROM fleet_agents "
+            "SELECT tenant_id, agent_id, data FROM fleet_agents "
             "WHERE COALESCE(device_fingerprint, '') = '' "
             "AND COALESCE(json_extract(data, '$.device_fingerprint'), '') != ''"
         ).fetchall()
-        for agent_id, raw in rows:
+        for tenant_id, agent_id, raw in rows:
             agent = FleetAgent.model_validate_json(raw)
             self._conn.execute(
-                "UPDATE fleet_agents SET device_fingerprint = ? WHERE agent_id = ?",
-                (agent.device_fingerprint, agent_id),
+                "UPDATE fleet_agents SET device_fingerprint = ? WHERE tenant_id = ? AND agent_id = ?",
+                (agent.device_fingerprint, tenant_id, agent_id),
             )
 
     def put(self, agent: FleetAgent) -> None:

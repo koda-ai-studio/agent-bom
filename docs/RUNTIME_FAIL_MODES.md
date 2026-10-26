@@ -28,6 +28,7 @@ evaluator that raises. The canonical inventory is code, not prose:
 | Drift enforcement (drift-store error or per-blueprint lookup cap) | fail-open; secured enforce (identity required): deny | no |
 | Graph reachability (evaluation error) | fail-open | no |
 | Audit export (sink/webhook delivery failure) | fail-open | no |
+| Injection protection (detector error) | alert profile (default): fail-open with alert; enforce profile: fail-closed | no |
 
 Two rules explain the split:
 
@@ -48,6 +49,81 @@ Per-entry failure behavior (the `on_failure` text) is part of the matrix and
 shows verbatim in the `/healthz` output. For the surface map around the
 gateway see [`RUNTIME_REFERENCE.md`](RUNTIME_REFERENCE.md); for policy-layer
 ordering inside a single tool call see `docs/POLICY_PRECEDENCE.md`.
+
+## Injection protection: alert and enforce profiles
+
+The stdio proxy and the gateway inspect every tool result, and every tool in a
+`tools/list` result, for prompt injection, semantic injection, HTML/CSS
+cloaking, SVG payloads and invisible characters (`response_inspector`), plus
+cache poisoning on vector/RAG tools (`vector_db_injection`). Two profiles
+decide what happens on a detection.
+
+| | `alert` (default in 0.111.0) | `enforce` |
+|---|---|---|
+| Poisoned tool description | forwarded; alert | tool removed from `tools/list`; alert `action: stripped` |
+| Later call to a removed tool | forwarded | proxy rejects it before the server sees it; alert `action: blocked` |
+| Injected tool result | forwarded; alert | result replaced by a JSON-RPC error; alert `action: blocked` |
+| Detector error | fail-open: forwarded; `detector_error` alert | fail-closed: that tool or result withheld; alert tagged as above |
+
+Select enforce with one setting:
+
+```bash
+agent-bom proxy --injection-mode enforce --no-isolate --log audit.jsonl -- npx @mcp/server-filesystem /workspace
+agent-bom gateway serve --upstreams upstreams.yaml --injection-mode enforce
+```
+
+The equivalents are `AGENT_BOM_PROXY_INJECTION_MODE=enforce`,
+`AGENT_BOM_GATEWAY_INJECTION_MODE=enforce`, the Helm value
+`gateway.injectionMode: enforce`, or `"injection_mode": "enforce"` in the proxy
+or gateway policy file. The strictest source wins: a policy file selecting
+`enforce` cannot be lowered by the flag. Unknown flag, environment, Helm or
+proxy policy values reject startup without echoing the value. An invalid value
+in the gateway policy file (at startup or after a hot reload) is treated as
+`enforce`. `--log-only` together with `enforce` refuses to start.
+The SSE/HTTP proxy (`agent-bom proxy --url`) has no enforcement path yet and
+refuses to start when `enforce` is selected; use the stdio proxy or the gateway.
+
+What enforcement acts on: `response_inspector` detections in the categories
+`prompt_injection`, `semantic_injection`, `cloaking`, `svg_payload` and
+`invisible_text` at high or critical severity, and all `vector_db_injection`
+detections. Medium-severity semantic scores and base64 blobs stay alert-only.
+Error responses and notifications are not inspected by this profile; inline
+scanning (`inline_scanning` in the policy) and gateway DLP still cover them.
+
+Why poisoned tools are removed rather than rewritten: a description is not the
+only place a tool carries instructions (`inputSchema` field descriptions and
+annotations are scanned as well), and a placeholder description would leave a
+callable tool whose behaviour the client can no longer judge. Removing it fails
+safe. The stdio proxy also refuses calls to it for the rest of the session; a
+later clean `tools/list` restores it. The gateway relay keeps no session state,
+so it strips the tool from each listing but does not refuse a call made with a
+cached name. The result of such a call is still inspected.
+
+The replacement error for a blocked result is:
+
+```json
+{"jsonrpc": "2.0", "id": 7, "error": {"code": -32001,
+  "message": "Tool result withheld by agent-bom injection protection",
+  "data": {"policy_source": "injection_protection", "action": "blocked",
+           "detectors": ["response_inspector"], "categories": ["prompt_injection"]}}}
+```
+
+It names the detector and category and never contains upstream text.
+
+Audit: enforcement emits the same detection alert, with the `action` field set
+to `blocked` or `stripped`. Proxy `runtime_alert` records carry it at the top
+level and count towards `blocked_runtime_alerts` in the session summary. Gateway
+audit events are `gateway.injection_alert` with the alert under `alert`; the
+enforced ones also carry the typed result event (`data_action`
+`injected_result_blocked` or `poisoned_tools_stripped`, `policy_source`
+`injection_protection`). Persisted alerts pass through the existing evidence
+redaction; enforcement adds no upstream text. A detector error records only the
+exception class name.
+
+The default stays `alert` in 0.111.0 so an upgrade changes no traffic. It is
+planned to become `enforce` once detector false-positive rates have been
+measured on real catalogs and results. Pin `--injection-mode alert` now if you
+need today's behaviour after that change.
 
 ## Conditional-access header authority
 

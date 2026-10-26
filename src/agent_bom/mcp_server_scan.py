@@ -6,6 +6,7 @@ while moving the discovery + scan pipeline out of the monolith.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import shlex
 from contextvars import ContextVar
@@ -18,6 +19,7 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_IMAGE_REF,
     CODE_VALIDATION_INVALID_PATH,
 )
+from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings, restore_scan_warnings
 from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstream importers
 
 
@@ -186,8 +188,15 @@ def consume_repo_tree_inventory() -> Optional[dict]:
     return inventory
 
 
-def _scan_config_path_statically(config_path: str, agents: list, warnings: list[str], scan_sources: list[str], *, offline: bool) -> None:
-    """Repo-tree, Python-agent, Terraform and GitHub Actions passes over an explicit target."""
+def _scan_config_path_statically(
+    config_path: str, agents: list, warnings: list[str], scan_sources: list[str], *, offline: bool
+) -> Optional[dict]:
+    """Repo-tree, Python-agent, Terraform and GitHub Actions passes over an explicit target.
+
+    Returns the repo-tree AI inventory; the caller publishes it, because this
+    runs in a worker thread whose context-variable writes do not propagate.
+    """
+    inventory: Optional[dict] = None
     try:
         from agent_bom.api.repo_tree_scan import scan_cloned_repo_tree
         from agent_bom.github_actions import scan_github_actions
@@ -195,7 +204,7 @@ def _scan_config_path_statically(config_path: str, agents: list, warnings: list[
         from agent_bom.terraform import scan_terraform_dir
 
         tree = scan_cloned_repo_tree(config_path, agents=agents, warnings=warnings, offline=offline)
-        _REPO_TREE_INVENTORY.set(tree.ai_inventory_data or None)
+        inventory = tree.ai_inventory_data or None
         scan_sources.append("repo_tree")
         # IaC is scanned opportunistically here, so a tree without .tf files is not a warning.
         passes = (
@@ -213,6 +222,32 @@ def _scan_config_path_statically(config_path: str, agents: list, warnings: list[
         msg = f"Repo static scan failed for {config_path}: {sanitize_error(exc)}"
         logger.warning(msg)
         warnings.append(msg)
+    return inventory
+
+
+def _scan_project_dir(discover_all, project_dir: str, warnings: list[str], scan_sources: list[str], *, offline: bool):
+    """Project-scoped discovery plus the static passes; runs in a worker thread.
+
+    Scanner warnings are thread-local, so the worker drains its own channels and
+    hands them back for the event-loop thread to re-record.
+    """
+    reset_scan_warnings()
+    agents = discover_all(project_dir=project_dir)
+    if agents:
+        scan_sources.append("agent_discovery")
+    inventory = _scan_config_path_statically(project_dir, agents, warnings, scan_sources, offline=offline)
+    return agents, inventory, consume_scan_warnings(), consume_coverage_warnings()
+
+
+def _resolve_scan_dir(safe_path, value: str, *, argument: str) -> str:
+    """Sandbox-resolve a directory target; a missing path or a file fails closed."""
+    try:
+        resolved = safe_path(value)
+    except ValueError as exc:
+        raise McpScanValidationError(CODE_VALIDATION_INVALID_PATH, exc, argument=argument) from exc
+    if not Path(resolved).is_dir():
+        raise McpScanValidationError(CODE_VALIDATION_INVALID_PATH, "Path is not an existing directory", argument=argument)
+    return str(resolved)
 
 
 def _host_discovery_refused(config_path: str | None, explicit_target: bool, warnings: list[str]) -> bool:
@@ -225,6 +260,7 @@ def _host_discovery_refused(config_path: str | None, explicit_target: bool, warn
 async def run_scan_pipeline(
     *,
     safe_path,
+    project_path: Optional[str] = None,
     config_path: Optional[str] = None,
     image: Optional[str] = None,
     sbom_path: Optional[str] = None,
@@ -245,11 +281,13 @@ async def run_scan_pipeline(
     scan_sources: list[str] = []
     _REPO_TREE_INVENTORY.set(None)
 
-    if config_path:
-        try:
-            config_path = str(safe_path(config_path))
-        except ValueError as exc:
-            raise McpScanValidationError(CODE_VALIDATION_INVALID_PATH, exc, argument="config_path") from exc
+    if project_path and config_path:
+        conflict = "Provide only one of project_path or config_path"
+        raise McpScanValidationError(CODE_VALIDATION_INVALID_PATH, conflict, argument="project_path")
+    if project_path:
+        config_path = _resolve_scan_dir(safe_path, project_path, argument="project_path")
+    elif config_path:
+        config_path = _resolve_scan_dir(safe_path, config_path, argument="config_path")
 
     if sbom_path:
         try:
@@ -269,16 +307,18 @@ async def run_scan_pipeline(
     # still scanned with project-scoped discovery, like `--no-discover --config-dir`.
     # Machine-wide discovery reads host data, so shared transports refuse it.
     if config_path:
-        agents = discover_all(project_dir=config_path)
+        # A large repo walk must not stall the MCP event loop (and its timeout).
+        agents, inventory, thread_warnings, thread_coverage = await asyncio.to_thread(
+            _scan_project_dir, discover_all, config_path, warnings, scan_sources, offline=offline
+        )
+        _REPO_TREE_INVENTORY.set(inventory)
+        restore_scan_warnings(thread_warnings, thread_coverage)
     elif no_discover or _host_discovery_refused(config_path, any((image, sbom_path, package)), warnings):
         agents = []
     else:
         agents = discover_all()
-    if agents:
-        scan_sources.append("agent_discovery")
-
-    if config_path:
-        _scan_config_path_statically(config_path, agents, warnings, scan_sources, offline=offline)
+        if agents:
+            scan_sources.append("agent_discovery")
 
     if package:
         try:

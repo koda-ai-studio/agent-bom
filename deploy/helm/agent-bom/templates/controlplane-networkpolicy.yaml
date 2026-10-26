@@ -1,0 +1,37 @@
+{{- $np := .Values.controlPlane.networkPolicy | default dict }}
+{{- if and .Values.controlPlane.enabled (ne $np.enabled false) }}
+{{- range $component := list "api" "ui" }}
+{{- if (index $.Values.controlPlane $component).enabled }}
+---
+# Ingress-only: the API and UI accept traffic from their own namespace and the
+# ingress controller, never from every namespace. Egress stays open so
+# Postgres, identity providers and cloud APIs keep working.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "agent-bom.name" $ }}-{{ $component }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "agent-bom.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "agent-bom.name" $ }}
+      app.kubernetes.io/component: {{ $component }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+        {{- range ($np.ingressNamespaces | default (list "ingress-nginx")) }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . }}
+        {{- end }}
+    {{- with $np.additionalIngress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

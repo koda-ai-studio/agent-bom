@@ -271,7 +271,7 @@ def _run_scenario(name: str, spec: dict[str, Any], tmp_path: Path, monkeypatch: 
     audit = tmp_path / "audit.jsonl"
     exit_code = asyncio.run(
         proxy_mod.run_proxy(
-            ["python3", str(FAKE_SERVER), str(record)],
+            ["python3", str(spec.get("server", FAKE_SERVER)), str(record)],
             log_path=str(audit),
             metrics_port=0,
             **kwargs,

@@ -151,7 +151,8 @@ caller would otherwise receive the operator's local history: `agent_activity`
 `tool_risk_assessment`, `scan`, `compliance` (local scan), `policy_check`,
 `runtime_correlate`, `context_graph` with `live`, and `blast_radius` when no
 persisted evidence answers it, each called without `config_path`. With
-`config_path` inside HOME or `AGENT_BOM_MCP_WORKSPACE_ROOTS` they still work. A
+`config_path` (or, for `scan`, `project_path`) inside HOME or
+`AGENT_BOM_MCP_WORKSPACE_ROOTS` they still work. A
 `scan` that names its own `image`, `sbom_path` or `package` runs over HTTP
 without host discovery and says so in its warnings. Set `AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS=1` only for a
 single-user server whose callers may read that host. Stdio is unaffected.

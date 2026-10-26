@@ -68,7 +68,16 @@ def cloud():
 
 # ── Register cloud provider commands (reuse from _cloud_group.py) ────────────
 
-from agent_bom.cli._cloud_group import aws_cmd, azure_cmd, gcp_cmd, resilience_cmd, scan_cmd, supabase_cmd, vercel_cmd  # noqa: E402
+from agent_bom.cli._cloud_group import (  # noqa: E402
+    aws_cmd,
+    azure_cmd,
+    cloud_group,
+    gcp_cmd,
+    resilience_cmd,
+    scan_cmd,
+    supabase_cmd,
+    vercel_cmd,
+)
 
 cloud.add_command(scan_cmd, "scan")
 cloud.add_command(supabase_cmd, "supabase")
@@ -192,6 +201,10 @@ cloud.add_command(databricks_cmd, "databricks")
 cloud.add_command(huggingface_cmd, "huggingface")
 cloud.add_command(ollama_cmd, "ollama")
 cloud.add_command(posture_cmd, "posture")
+
+# ``agent-bom cloud`` serves every provider command, not only the standalone ``agent-cloud``.
+for _name, _command in cloud.commands.items():
+    cloud_group.commands.setdefault(_name, _command)
 
 # ── Entry point ──────────────────────────────────────────────────────────────
 

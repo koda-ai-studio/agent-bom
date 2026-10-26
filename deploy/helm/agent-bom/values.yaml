@@ -380,6 +380,11 @@ gateway:
   profileEnforcement: "off"
   profileEnvironment: ""
   profileIssuer: "agent-bom"
+  # Poisoned tool descriptions / injected tool results. "alert" (default)
+  # audits detections and forwards traffic unchanged; "enforce" strips
+  # poisoned tools from tools/list and withholds injected results.
+  # See docs/RUNTIME_FAIL_MODES.md.
+  injectionMode: "alert"
   # OCR-scan image responses for leaked credentials/PII.
   detectVisualLeaks: false
   # Allow startup to continue when OCR runtime support is unavailable.
@@ -489,6 +494,14 @@ teardownHooks:
 
 controlPlane:
   enabled: false
+  # Ingress-only policy for the API and UI pods: their own namespace and the
+  # ingress controller namespaces below may connect; other namespaces may not.
+  # Egress is untouched. Add monitoring or mesh namespaces via additionalIngress.
+  networkPolicy:
+    enabled: true
+    ingressNamespaces:
+      - ingress-nginx
+    additionalIngress: []
   # Provider label for diagnostics and evidence only. It never changes the
   # PostgreSQL protocol contract or upgrades compatibility into certification.
   postgres:

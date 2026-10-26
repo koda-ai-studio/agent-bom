@@ -418,7 +418,7 @@ main.add_command(skills_group)
 # ---------------------------------------------------------------------------
 # Cloud command group — `agent-bom cloud [aws|azure|gcp]`
 # ---------------------------------------------------------------------------
-from agent_bom.cli._cloud_group import cloud_group  # noqa: E402
+from agent_bom.cli.cloud import cloud_group  # noqa: E402
 
 main.add_command(cloud_group)
 

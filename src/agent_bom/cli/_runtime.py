@@ -2,12 +2,26 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 
 import click
 from rich.console import Console
 
 from agent_bom.cli._common import OPTIONAL_PORT_RANGE, PORT_RANGE
+from agent_bom.runtime.injection_protection import SSE_UNSUPPORTED, InjectionModeError
+
+
+def _run_sse_proxy(
+    url: str, policy: str | None, log_path: str | None, block_undeclared: bool, alert_webhook: str | None, mode: str | None
+) -> int:
+    if (mode or "").lower() == "enforce":
+        raise click.UsageError(SSE_UNSUPPORTED)
+    from agent_bom.proxy import _proxy_sse_server
+
+    return asyncio.run(
+        _proxy_sse_server(url=url, policy_path=policy, log_path=log_path, block_undeclared=block_undeclared, alert_webhook=alert_webhook)
+    )
 
 
 @click.command("proxy")
@@ -23,35 +37,25 @@ from agent_bom.cli._common import OPTIONAL_PORT_RANGE, PORT_RANGE
 @click.option("--rate-limit-threshold", type=int, default=0, help="Max calls per tool per 60s (0=disabled)")
 @click.option("--log-only", is_flag=True, help="Log alerts without blocking (advisory mode)")
 @click.option(
+    "--injection-mode",
+    type=click.Choice(["alert", "enforce"], case_sensitive=False),
+    default=None,
+    envvar="AGENT_BOM_PROXY_INJECTION_MODE",
+    help="Poisoned tool descriptions / injected results: alert (default) forwards with an alert; enforce strips the tool or "
+    "withholds the result. A policy file's injection_mode can also select enforce. See docs/RUNTIME_FAIL_MODES.md.",
+)
+@click.option(
     "--alert-webhook", default=None, envvar="AGENT_BOM_ALERT_WEBHOOK", help="Webhook URL for runtime alerts (Slack/Teams/PagerDuty)"
 )
 @click.option("--metrics-port", default=8422, show_default=True, type=OPTIONAL_PORT_RANGE, help="Prometheus metrics port (0 to disable)")
 @click.option("--metrics-token", default=None, envvar="AGENT_BOM_METRICS_TOKEN", help="Bearer token for Prometheus /metrics endpoint")
+@click.option("--control-plane-url", envvar="AGENT_BOM_API_URL", help="Control-plane base URL for gateway policy pull and proxy audit push")
+@click.option("--control-plane-token", envvar="AGENT_BOM_API_TOKEN", help="Bearer token or API key for control-plane auth")
 @click.option(
-    "--control-plane-url",
-    default=None,
-    envvar="AGENT_BOM_API_URL",
-    help="Control-plane base URL for gateway policy pull and proxy audit push",
+    "--policy-refresh-seconds", type=int, default=30, show_default=True, help="Refresh interval for enabled control-plane gateway policies"
 )
 @click.option(
-    "--control-plane-token",
-    default=None,
-    envvar="AGENT_BOM_API_TOKEN",
-    help="Bearer token or API key for control-plane auth",
-)
-@click.option(
-    "--policy-refresh-seconds",
-    type=int,
-    default=30,
-    show_default=True,
-    help="How often to refresh enabled gateway policies from the control plane",
-)
-@click.option(
-    "--audit-push-interval",
-    type=int,
-    default=10,
-    show_default=True,
-    help="How often to batch-push proxy alerts to the control plane",
+    "--audit-push-interval", type=int, default=10, show_default=True, help="How often to batch-push proxy alerts to the control plane"
 )
 @click.option(
     "--response-sign-key",
@@ -179,6 +183,7 @@ def proxy_cmd(
     detect_visual_leaks,
     rate_limit_threshold,
     log_only,
+    injection_mode,
     alert_webhook,
     metrics_port,
     metrics_token,
@@ -253,8 +258,6 @@ def proxy_cmd(
         }
       }
     """
-    import asyncio
-
     from agent_bom.project_config import get_policy_path, load_project_config
 
     # Auto-load .agent-bom.yaml policy if --policy not explicitly given
@@ -263,20 +266,8 @@ def proxy_cmd(
         if _cfg and (cfg_policy := get_policy_path(_cfg)):
             policy = str(cfg_policy)
 
-    # SSE/HTTP mode: --url provided
-    if url:
-        from agent_bom.proxy import _proxy_sse_server
-
-        exit_code = asyncio.run(
-            _proxy_sse_server(
-                url=url,
-                policy_path=policy,
-                log_path=log_path,
-                block_undeclared=block_undeclared,
-                alert_webhook=alert_webhook,
-            )
-        )
-        sys.exit(exit_code)
+    if url:  # SSE/HTTP mode
+        sys.exit(_run_sse_proxy(url, policy, log_path, block_undeclared, alert_webhook, injection_mode))
 
     # Stdio mode: server_cmd required
     if not server_cmd:
@@ -309,33 +300,37 @@ def proxy_cmd(
             "or pass an existing docker/podman run command for the proxy to harden."
         )
 
-    exit_code = asyncio.run(
-        run_proxy(
-            server_cmd=list(server_cmd),
-            policy_path=policy,
-            log_path=log_path,
-            block_undeclared=block_undeclared,
-            detect_credentials=detect_credentials,
-            detect_visual_leaks=detect_visual_leaks,
-            rate_limit_threshold=rate_limit_threshold,
-            log_only=log_only,
-            alert_webhook=alert_webhook,
-            metrics_port=metrics_port,
-            metrics_token=metrics_token,
-            control_plane_url=control_plane_url,
-            control_plane_token=control_plane_token,
-            policy_refresh_seconds=policy_refresh_seconds,
-            audit_push_interval=audit_push_interval,
-            response_signing_key=response_sign_key,
-            sandbox_config=sandbox_config,
-            firewall_gateway_url=firewall_gateway_url,
-            firewall_gateway_token=firewall_gateway_token,
-            firewall_local_policy_path=firewall_local_policy_path,
-            firewall_target_id=firewall_target_id,
-            firewall_cache_ttl_seconds=firewall_cache_ttl_seconds,
-            firewall_fail_mode=firewall_fail_mode.lower(),
+    try:
+        exit_code = asyncio.run(
+            run_proxy(
+                server_cmd=list(server_cmd),
+                policy_path=policy,
+                log_path=log_path,
+                block_undeclared=block_undeclared,
+                detect_credentials=detect_credentials,
+                detect_visual_leaks=detect_visual_leaks,
+                rate_limit_threshold=rate_limit_threshold,
+                log_only=log_only,
+                alert_webhook=alert_webhook,
+                metrics_port=metrics_port,
+                metrics_token=metrics_token,
+                control_plane_url=control_plane_url,
+                control_plane_token=control_plane_token,
+                policy_refresh_seconds=policy_refresh_seconds,
+                audit_push_interval=audit_push_interval,
+                response_signing_key=response_sign_key,
+                sandbox_config=sandbox_config,
+                firewall_gateway_url=firewall_gateway_url,
+                firewall_gateway_token=firewall_gateway_token,
+                firewall_local_policy_path=firewall_local_policy_path,
+                firewall_target_id=firewall_target_id,
+                firewall_cache_ttl_seconds=firewall_cache_ttl_seconds,
+                firewall_fail_mode=firewall_fail_mode.lower(),
+                injection_mode=injection_mode,
+            )
         )
-    )
+    except InjectionModeError as exc:
+        raise click.UsageError(str(exc)) from exc
     sys.exit(exit_code)
 
 

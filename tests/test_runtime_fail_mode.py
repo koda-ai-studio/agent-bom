@@ -45,7 +45,16 @@ def test_matrix_covers_every_gateway_enforcement_subsystem() -> None:
         "graph_reachability_enforcement",
         "device_posture_enrichment",
         "audit_export",
+        "injection_protection",
     }
+
+
+def test_injection_protection_posture_follows_its_profile() -> None:
+    entry = _BY_NAME["injection_protection"]
+    assert entry.default_posture is FailPosture.OPEN
+    assert not entry.follows_gateway_fail_mode
+    assert "AGENT_BOM_GATEWAY_INJECTION_MODE" in entry.control
+    assert "enforce" in entry.on_failure and "withh" in entry.on_failure
 
 
 def test_every_entry_is_fully_documented() -> None:

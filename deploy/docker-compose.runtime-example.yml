@@ -59,7 +59,7 @@ services:
       - "@modelcontextprotocol/server-filesystem"
       - "/workspace"
     ports:
-      - "8422:8422"
+      - "127.0.0.1:8422:8422"
     restart: unless-stopped
     healthcheck:
       # Proxy serves the standard /health endpoint on its API port.

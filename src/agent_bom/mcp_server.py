@@ -516,23 +516,15 @@ async def _run_scan_pipeline(
     sbom_path: Optional[str] = None,
     package: Optional[str] = None,
     enrich: bool = False,
-    transitive: bool = False,
-    offline: bool = False,
-    ecosystem: Optional[str] = None,
-    no_discover: bool = False,
+    **options: Any,
 ):
-    """Run discovery -> extraction -> scanning and return (agents, blast_radii, warnings)."""
+    """Run discovery -> extraction -> scanning and return (agents, blast_radii, warnings).
+
+    ``options`` are the keyword-only pipeline flags of ``run_scan_pipeline``
+    (transitive, offline, ecosystem, no_discover, project_path).
+    """
     return await _mcp_scan.run_scan_pipeline(
-        safe_path=_safe_path,
-        config_path=config_path,
-        image=image,
-        sbom_path=sbom_path,
-        package=package,
-        enrich=enrich,
-        transitive=transitive,
-        offline=offline,
-        ecosystem=ecosystem,
-        no_discover=no_discover,
+        safe_path=_safe_path, config_path=config_path, image=image, sbom_path=sbom_path, package=package, enrich=enrich, **options
     )
 
 

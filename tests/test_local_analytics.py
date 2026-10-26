@@ -379,7 +379,7 @@ def test_cli_agents_scan_mirrors_to_local_analytics(monkeypatch, tmp_path):
     runner = CliRunner()
     result = runner.invoke(
         main,
-        ["agents", "--agent-mode", "--demo", "--no-scan", "--offline", "--no-auto-update-db"],
+        ["agents", "--agent-mode", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"],
         catch_exceptions=False,
     )
     assert result.exit_code == 0, result.output
@@ -408,7 +408,7 @@ def test_cli_local_analytics_mirror_is_best_effort(monkeypatch, tmp_path):
     runner = CliRunner()
     result = runner.invoke(
         main,
-        ["agents", "--agent-mode", "--demo", "--no-scan", "--offline", "--no-auto-update-db"],
+        ["agents", "--agent-mode", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"],
         catch_exceptions=False,
     )
     assert result.exit_code == 0, result.output

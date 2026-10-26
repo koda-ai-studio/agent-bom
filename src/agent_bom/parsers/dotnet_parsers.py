@@ -13,6 +13,9 @@ import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from defusedxml.common import DefusedXmlException
+from defusedxml.ElementTree import parse as safe_parse
+
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
 
@@ -113,7 +116,7 @@ def _parse_csproj_files(directory: Path) -> list[Package]:
     seen: set[tuple[str, str]] = set()
     for csproj in csproj_files:
         try:
-            tree = ET.parse(csproj)  # noqa: S314  # nosec B314
+            tree = safe_parse(csproj)
             root = tree.getroot()
             # ElementTree may or may not have namespace prefixes
             for ref in root.iter("PackageReference"):
@@ -134,7 +137,7 @@ def _parse_csproj_files(directory: Path) -> list[Package]:
                         is_direct=True,
                     )
                 )
-        except (ET.ParseError, OSError) as exc:
+        except (ET.ParseError, DefusedXmlException, OSError) as exc:
             logger.debug("Failed to parse .csproj at %s: %s", csproj, exc)
             record_manifest_parse_warning(
                 ecosystem="nuget",

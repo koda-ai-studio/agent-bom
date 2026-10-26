@@ -118,6 +118,19 @@ def consume_scan_warnings() -> list[str]:
     return warnings
 
 
+def restore_scan_warnings(warnings: list[str], coverage_warnings: list[dict]) -> None:
+    """Re-record warnings a worker thread drained from its own thread-local channels.
+
+    Bypasses the coverage capture: a capture active in the worker already saw them.
+    """
+    for message in warnings:
+        record_scan_warning(message)
+    channel = _coverage_warnings_state()
+    for warning in coverage_warnings:
+        if not any(existing.get("release") == warning.get("release") for existing in channel):
+            channel.append(warning)
+
+
 def record_coverage_warning(warning: dict) -> None:
     """Record a structured per-release coverage-gap warning (deduped by release)."""
     captured = _coverage_capture.get()

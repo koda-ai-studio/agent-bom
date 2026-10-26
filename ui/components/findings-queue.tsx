@@ -328,7 +328,7 @@ function MobileFindingCard({
     asset: [...vuln.packages.map((name, index) => index === 0 ? packageVersionLabel(vuln) : name), ...vuln.agents, ...vuln.affected_servers].slice(0, 2).join(", ") || "Unavailable",
     detection: <DetectionEvidence vuln={vuln} />,
     observed: <ObservedEvidence vuln={vuln} />,
-    remediation: `${vuln.fixed_version ? `Upgrade ${vuln.fixed_version}` : "Fix not provided"} · ${remediationLifecycle(vuln)}`,
+    remediation: [vuln.fixed_version ? `Upgrade ${vuln.fixed_version}` : "Fix not provided", remediationLifecycle(vuln)].filter(Boolean).join(" · "),
     reach: vuln.graph_reachable === true ? `Reachable · ${exploit}` : vuln.graph_reachable === false ? `Unreachable · ${exploit}` : exploit,
     owner: `${vuln.owner || triage?.assignee || "Unassigned"} · ${due?.label ?? "SLA unavailable"}`,
     controls: controls.join(", ") || "Unavailable",
@@ -644,10 +644,12 @@ function EngineeringCells({
           <span className={vuln.fixed_version ? "font-mono text-emerald-700 dark:text-emerald-300" : "text-ink-tertiary"}>
             {vuln.fixed_version ? `Upgrade ${vuln.fixed_version}` : "Fix not provided"}
           </span>
-          <span className="text-ink-secondary">{remediationLifecycle(vuln)}</span>
-          <span className="max-w-[14rem] truncate font-mono text-[11px] text-ink-tertiary" title={verifyCommand ?? "No scanner-provided verification command"}>
-            {verifyCommand ? `Verify: ${verifyCommand}` : "No scanner-provided verification command"}
-          </span>
+          {remediationLifecycle(vuln) ? <span className="text-ink-secondary">{remediationLifecycle(vuln)}</span> : null}
+          {verifyCommand || vuln.fixed_version ? (
+            <span className="max-w-[14rem] truncate font-mono text-[11px] text-ink-tertiary" title={verifyCommand ?? "No scanner-provided verification command"}>
+              {verifyCommand ? `Verify: ${verifyCommand}` : "No scanner-provided verification command"}
+            </span>
+          ) : null}
         </div>
       </td>),
     owner: (<td className="px-3 py-3">
@@ -743,13 +745,13 @@ function EngineeringCells({
   return <>{[...columns, "action" as const].map((key) => <Fragment key={key}>{cells[key]}</Fragment>)}</>;
 }
 
-function remediationLifecycle(vuln: EnrichedVuln): string {
+function remediationLifecycle(vuln: EnrichedVuln): string | null {
   switch (vuln.lifecycle_status) {
     case "open": return "Open";
     case "reopened": return "Reopened";
     case "resolved": return "Reported resolved · verification not provided";
     case "suppressed": return "Suppressed · not verified fixed";
-    default: return "Status unavailable";
+    default: return null;
   }
 }
 function ObservedEvidence({ vuln }: { vuln: EnrichedVuln }) {

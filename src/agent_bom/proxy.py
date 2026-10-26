@@ -30,6 +30,7 @@ from agent_bom.async_stdin import create_async_stdin_reader, read_async_stdin_li
 from agent_bom.langfuse_otel import set_langfuse_runtime_attributes
 from agent_bom.proxy_sandbox import SandboxConfig
 from agent_bom.proxy_scanner import ScanConfig, load_scan_config, scan_jsonrpc_response, scan_tool_call
+from agent_bom.runtime import injection_protection as _injection_protection
 from agent_bom.runtime import proxy_relay as _proxy_relay
 from agent_bom.runtime import proxy_session as _proxy_session
 from agent_bom.runtime.proxy_messages import (
@@ -341,10 +342,7 @@ async def _proxy_sse_server(
     """
     import httpx
 
-    from agent_bom.runtime.detectors import (
-        ArgumentAnalyzer,
-        SequenceAnalyzer,
-    )
+    from agent_bom.runtime.detectors import ArgumentAnalyzer, SequenceAnalyzer
 
     # Load policy
     policy: dict = {}
@@ -356,6 +354,8 @@ async def _proxy_sse_server(
         except (json.JSONDecodeError, OSError, SecurityError) as exc:
             logger.error("Failed to load policy from %s: %s", policy_path, sanitize_text(exc))
             return 1
+    if not _injection_protection.sse_policy_supported(policy, logger):
+        return 1
 
     # Open audit log
     log_file = None
@@ -703,6 +703,7 @@ async def run_proxy(
     firewall_target_id: Optional[str] = None,
     firewall_cache_ttl_seconds: float = 60.0,
     firewall_fail_mode: str = "open",
+    injection_mode: Optional[str] = None,
 ) -> int:
     """Main proxy loop. Spawns server subprocess, relays JSON-RPC.
 
@@ -712,22 +713,20 @@ async def run_proxy(
         log_path: Path to audit JSONL log.
         block_undeclared: Block tools not in initial tools/list.
         detect_credentials: Enable credential leak detection in responses.
-        detect_visual_leaks: Enable OCR-based credential/PII detection on
-            image tool responses (Playwright-MCP, Puppeteer-MCP, screen
-            capture tools — see issue #1568). Requires the ``visual`` extra
-            and tesseract on PATH; startup now fails closed when requested
-            without the OCR runtime.
+        detect_visual_leaks: OCR-scan image tool responses (requires the ``visual`` extra
+            and tesseract on PATH; fails closed at startup without the OCR runtime).
         rate_limit_threshold: Max calls per tool per 60s (0 = disabled).
         log_only: Log alerts without blocking (advisory mode).
         alert_webhook: Optional webhook URL for runtime alert notifications.
+        injection_mode: ``alert`` (default) or ``enforce``; a policy-file ``injection_mode: enforce`` also enforces.
         metrics_token: Optional bearer token for Prometheus /metrics endpoint.
-        control_plane_url: Optional control-plane URL for policy pull and audit push.
-        control_plane_token: Optional bearer/API token for control-plane auth.
+        control_plane_url, control_plane_token: Optional control-plane URL and bearer/API token (policy pull, audit push).
         sandbox_config: Optional container isolation posture for stdio MCP servers.
 
     Returns the server process exit code.
     """
     policy: dict = _load_proxy_policy(policy_path)
+    injection_mode = _injection_protection.resolve_injection_mode(injection_mode, policy, log_only=log_only)
     log_file = RotatingAuditLog(log_path) if log_path else None  # 0o600, symlink-refusing, rotates at 100 MB
     metrics, status_strip_active = _proxy_session.start_metrics(sys.modules[__name__])
     metrics_server = ProxyMetricsServer(metrics, port=metrics_port, token=metrics_token)
@@ -746,6 +745,7 @@ async def run_proxy(
         alert_webhook=alert_webhook,
         response_signing_key=response_signing_key,
         policy_refresh_seconds=policy_refresh_seconds,
+        injection_mode=injection_mode,
     )
     session = _compose_session(policy, log_file, metrics, detectors, options, control_plane_url, control_plane_token, audit_push_interval)
     await session.connect_control_plane()

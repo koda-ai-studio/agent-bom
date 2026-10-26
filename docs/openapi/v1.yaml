@@ -23878,6 +23878,11 @@ components:
     ProxyAlertRow:
       additionalProperties: true
       properties:
+        action:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Action
         agent_name:
           anyOf:
           - type: string
