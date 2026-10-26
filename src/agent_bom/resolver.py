@@ -13,6 +13,7 @@ from typing import Optional
 import httpx
 from rich.console import Console
 
+from agent_bom.core.packages import apply_registry_latest, copy_registry_observation
 from agent_bom.http_client import (
     create_client,
     registry_breaker_tripped,
@@ -161,8 +162,7 @@ def _apply_registry_version_fallback(pkg: Package) -> bool:
     fallback_version = getattr(pkg, "registry_version", None)
     if not fallback_version or fallback_version in _INVALID_VERSIONS:
         return False
-    pkg.version = fallback_version
-    pkg.purl = package_purl(pkg.name, fallback_version, pkg.ecosystem)
+    apply_registry_latest(pkg, fallback_version)
     pkg.version_source = "registry_fallback"
     return True
 
@@ -186,6 +186,7 @@ def _copy_resolution_fields(source: Package, target: Package) -> bool:
         target.resolved_version = source.resolved_version
         target.resolved_from_registry = source.resolved_from_registry
         target.version_resolved_at = source.version_resolved_at
+    copy_registry_observation(source, target)
     if source.license and not target.license:
         target.license = source.license
     if source.version_source == "registry_fallback":
@@ -538,8 +539,7 @@ async def resolve_package_version(pkg: Package, client: httpx.AsyncClient) -> bo
         group, artifact = pkg.name.split(":", 1)
         version, lic = await resolve_maven_metadata(group, artifact, client)
     if version:
-        pkg.version = version
-        pkg.purl = package_purl(pkg.name, version, pkg.ecosystem)
+        apply_registry_latest(pkg, version)
         if lic and not pkg.license:
             pkg.license = lic
         return True
