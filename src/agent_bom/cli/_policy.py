@@ -28,7 +28,7 @@ def policy_template(output: str):
     console = Console()
     out_path = Path(output)
     out_path.write_text(_json.dumps(POLICY_TEMPLATE, indent=2))
-    console.print(f"\n  [green]✓[/green] Policy template written to {out_path}")
+    console.print(f"\n  [green]✓[/green] Policy template written to {out_path}", soft_wrap=True)
     console.print("  [dim]Edit the rules, then run:[/dim]")
     console.print(f"  [bold]agent-bom scan --policy {out_path}[/bold]\n")
 

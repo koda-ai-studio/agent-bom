@@ -430,7 +430,7 @@ def secrets_cmd(
             from pathlib import Path as _Path
 
             _Path(output_path).write_text(output)
-            diagnostic_con.print(f"[green]Secrets report written[/green] → {output_path}")
+            diagnostic_con.print(f"[green]Secrets report written[/green] → {output_path}", soft_wrap=True)
         else:
             click.echo(output)
         if _has_finding_at_or_above(result.findings):
@@ -509,7 +509,7 @@ def code_cmd(path: str, output_format: str, output_path: Optional[str], quiet: b
             from pathlib import Path as _Path
 
             _Path(output_path).write_text(output)
-            con.print(f"[green]Analysis written[/green] → {output_path}")
+            con.print(f"[green]Analysis written[/green] → {output_path}", soft_wrap=True)
         else:
             click.echo(output)
         return

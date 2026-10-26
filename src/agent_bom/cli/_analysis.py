@@ -298,7 +298,7 @@ def graph_cmd(
     from agent_bom.graph.evaluation import evaluate_graph, load_expected_graph_spec
     from agent_bom.output.graph_export import load_graph_from_scan, to_cypher, to_dot, to_graphml, to_json, to_mermaid
 
-    _con = _Console()
+    _con = _Console(soft_wrap=True)
     _err_con = _Console(stderr=True)
 
     try:
@@ -497,7 +497,7 @@ def mesh_cmd(scan_file: Optional[str], project_dir: Optional[str], fmt: str, out
         if output_path:
             Path(output_path).write_text(output)
             if not quiet:
-                con.print(f"[green]Mesh exported[/green] → {output_path}")
+                con.print(f"[green]Mesh exported[/green] → {output_path}", soft_wrap=True)
         else:
             click.echo(output)
         return
@@ -505,7 +505,7 @@ def mesh_cmd(scan_file: Optional[str], project_dir: Optional[str], fmt: str, out
     if output_path:
         Path(output_path).write_text(_mesh_summary_text(agents_data, mesh, scope_label=scope_label, quiet=quiet))
         if not quiet:
-            con.print(f"[green]Mesh summary exported[/green] → {output_path}")
+            con.print(f"[green]Mesh summary exported[/green] → {output_path}", soft_wrap=True)
         return
 
     _render_mesh_summary(con, agents_data, mesh, scope_label=scope_label, quiet=quiet)

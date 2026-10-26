@@ -412,14 +412,14 @@ def remediate_cmd(
             json_out["apply_result"] = apply_outcome.to_json()
         _emit_json(json_out, output_path)
         if output_path and not quiet:
-            output_console.print(f"[green]Remediation plan written[/green] -> {output_path}")
+            output_console.print(f"[green]Remediation plan written[/green] -> {output_path}", soft_wrap=True)
 
     elif output_format == "markdown":
         md = _render_markdown(plan, blast_radii)
         if output_path:
             Path(output_path).write_text(md)
             if not quiet:
-                output_console.print(f"[green]Remediation report written[/green] -> {output_path}")
+                output_console.print(f"[green]Remediation report written[/green] -> {output_path}", soft_wrap=True)
         else:
             click.echo(md)
 

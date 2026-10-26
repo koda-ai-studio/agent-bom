@@ -464,61 +464,61 @@ def render_output(
             else:
                 out_path = _resolve_output_path(output, output_format)
                 export_json(report, out_path, report_json=ctx.report_json)
-                con.print(f"\n  [green]✓[/green] JSON report: {out_path}")
+                con.print(f"\n  [green]✓[/green] JSON report: {out_path}", soft_wrap=True)
         elif output_format == "cyclonedx":
             out_path = _resolve_output_path(output, output_format)
             export_cyclonedx(report, out_path)
-            con.print(f"\n  [green]✓[/green] CycloneDX BOM: {out_path}")
+            con.print(f"\n  [green]✓[/green] CycloneDX BOM: {out_path}", soft_wrap=True)
         elif output_format == "sarif":
             out_path = _resolve_output_path(output, output_format)
             export_sarif(report, out_path, exclude_unfixable=exclude_unfixable)
-            con.print(f"\n  [green]✓[/green] SARIF report: {out_path}")
+            con.print(f"\n  [green]✓[/green] SARIF report: {out_path}", soft_wrap=True)
             if not quiet:
                 con.print("  [dim]SARIF includes enrichment context when available: CVSS/CWE, EPSS, and CISA KEV.[/dim]")
         elif output_format == "spdx":
             out_path = _resolve_output_path(output, output_format)
             export_spdx(report, out_path)
-            con.print(f"\n  [green]✓[/green] SPDX 3.0 BOM: {out_path}")
+            con.print(f"\n  [green]✓[/green] SPDX 3.0 BOM: {out_path}", soft_wrap=True)
         elif output_format == "spdx2":
             out_path = _resolve_output_path(output, output_format)
             export_spdx2(report, out_path)
-            con.print(f"\n  [green]✓[/green] SPDX 2.3 BOM: {out_path}")
+            con.print(f"\n  [green]✓[/green] SPDX 2.3 BOM: {out_path}", soft_wrap=True)
         elif output_format == "junit":
             out_path = _resolve_output_path(output, output_format)
             export_junit(report, out_path, blast_radii)
-            con.print(f"\n  [green]✓[/green] JUnit XML: {out_path}")
+            con.print(f"\n  [green]✓[/green] JUnit XML: {out_path}", soft_wrap=True)
         elif output_format == "csv":
             out_path = _resolve_output_path(output, output_format)
             export_csv(report, out_path, blast_radii)
-            con.print(f"\n  [green]✓[/green] CSV report: {out_path}")
+            con.print(f"\n  [green]✓[/green] CSV report: {out_path}", soft_wrap=True)
         elif output_format == "parquet":
             out_path = _resolve_output_path(output, output_format)
             export_parquet(report, out_path, blast_radii)
-            con.print(f"\n  [green]✓[/green] Parquet findings: {out_path}")
+            con.print(f"\n  [green]✓[/green] Parquet findings: {out_path}", soft_wrap=True)
             _register_iceberg_if_configured(report, blast_radii, con, quiet)
         elif output_format == "markdown":
             out_path = _resolve_output_path(output, output_format)
             export_markdown(report, out_path, blast_radii)
-            con.print(f"\n  [green]✓[/green] Markdown report: {out_path}")
+            con.print(f"\n  [green]✓[/green] Markdown report: {out_path}", soft_wrap=True)
         elif output_format == "html":
             out_path = _resolve_output_path(output, output_format)
             export_html(report, out_path, blast_radii, offline_assets=offline_html)
-            con.print(f"\n  [green]✓[/green] HTML report: {out_path}")
+            con.print(f"\n  [green]✓[/green] HTML report: {out_path}", soft_wrap=True)
             if open_report:
                 import webbrowser
 
-                con.print(f"  [green]✓[/green] Opening report in browser: {out_path}")
+                con.print(f"  [green]✓[/green] Opening report in browser: {out_path}", soft_wrap=True)
                 webbrowser.open(f"file://{Path(out_path).resolve()}")
             else:
-                con.print(f"  [dim]Open with:[/dim] open {out_path}")
+                con.print(f"  [dim]Open with:[/dim] open {out_path}", soft_wrap=True)
         elif output_format == "pdf":
             out_path = _resolve_output_path(output, output_format)
             export_pdf(report, out_path, blast_radii)
-            con.print(f"\n  [green]✓[/green] PDF report: {out_path}")
+            con.print(f"\n  [green]✓[/green] PDF report: {out_path}", soft_wrap=True)
         elif output_format == "prometheus":
             out_path = _resolve_output_path(output, output_format)
             export_prometheus(report, out_path, blast_radii)
-            con.print(f"\n  [green]✓[/green] Prometheus metrics: {out_path}")
+            con.print(f"\n  [green]✓[/green] Prometheus metrics: {out_path}", soft_wrap=True)
             con.print("  [dim]Scrape with node_exporter textfile or push via --push-gateway[/dim]")
         elif output_format == "graph":
             from agent_bom.output.graph import build_graph_elements
@@ -526,7 +526,7 @@ def render_output(
             out_path = _resolve_output_path(output, output_format)
             elements = build_graph_elements(report, blast_radii)
             Path(out_path).write_text(json.dumps({"elements": elements, "format": "cytoscape"}, indent=2))
-            con.print(f"\n  [green]✓[/green] Graph JSON: {out_path}")
+            con.print(f"\n  [green]✓[/green] Graph JSON: {out_path}", soft_wrap=True)
             con.print("  [dim]Cytoscape.js-compatible element list — open with Cytoscape desktop or any JS graph library[/dim]")
         elif output_format == "mermaid":
             out_path = _resolve_output_path(output, output_format)
@@ -542,37 +542,37 @@ def render_output(
                 from agent_bom.output.mermaid import to_mermaid_supply_chain
 
                 Path(out_path).write_text(to_mermaid_supply_chain(report))
-            con.print(f"\n  [green]✓[/green] Mermaid diagram ({mermaid_mode}): {out_path}")
+            con.print(f"\n  [green]✓[/green] Mermaid diagram ({mermaid_mode}): {out_path}", soft_wrap=True)
             con.print("  [dim]Render with: mermaid-cli, GitHub markdown, or mermaid.live[/dim]")
         elif output_format == "svg":
             from agent_bom.output.svg import export_svg
 
             out_path = _resolve_output_path(output, output_format)
             export_svg(report, blast_radii, out_path)
-            con.print(f"\n  [green]✓[/green] SVG diagram: {out_path}")
+            con.print(f"\n  [green]✓[/green] SVG diagram: {out_path}", soft_wrap=True)
             con.print("  [dim]Open in any browser or image viewer[/dim]")
         elif output_format == "graph-html":
             from agent_bom.output.graph import export_graph_html
 
             out_path = _resolve_output_path(output, output_format)
             export_graph_html(report, blast_radii, out_path, offline_assets=offline_html)
-            con.print(f"\n  [green]✓[/green] Interactive graph: {out_path}")
+            con.print(f"\n  [green]✓[/green] Interactive graph: {out_path}", soft_wrap=True)
             if open_report:
                 import webbrowser
 
-                con.print(f"  [green]✓[/green] Opening report in browser: {out_path}")
+                con.print(f"  [green]✓[/green] Opening report in browser: {out_path}", soft_wrap=True)
                 webbrowser.open(f"file://{Path(out_path).resolve()}")
             else:
-                con.print(f"  [dim]Open with:[/dim] open {out_path}")
+                con.print(f"  [dim]Open with:[/dim] open {out_path}", soft_wrap=True)
         elif output_format == "badge":
             out_path = _resolve_output_path(output, output_format)
             export_badge(report, out_path)
-            con.print(f"\n  [green]✓[/green] Badge JSON: {out_path}")
+            con.print(f"\n  [green]✓[/green] Badge JSON: {out_path}", soft_wrap=True)
             con.print("  [dim]Use with: https://img.shields.io/endpoint?url=<public-url-to-badge-json>[/dim]")
         elif output_format in ("text", "plain") and output:
             out_path = _resolve_output_path(output, output_format)
             Path(out_path).write_text(_format_text(report, blast_radii))
-            con.print(f"\n  [green]✓[/green] Plain text report: {out_path}")
+            con.print(f"\n  [green]✓[/green] Plain text report: {out_path}", soft_wrap=True)
         elif output:
             if output.endswith(".cdx.json"):
                 export_cyclonedx(report, output)
@@ -605,7 +605,7 @@ def render_output(
                     err=True,
                 )
                 raise SystemExit(2)
-            con.print(f"\n  [green]✓[/green] Report: {output}")
+            con.print(f"\n  [green]✓[/green] Report: {output}", soft_wrap=True)
 
     # ``--output *.zip`` names the compliance bundle when a compliance export
     # is requested.  ZIP is not a normal report format, so do not send that
