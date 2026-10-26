@@ -51,6 +51,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Image layers emit the canonical purl for scoped npm packages (`pkg:npm/%40scope/name@…`), matching every other scan path.
 
 ### Fixed
+- The MCP `scan` tool's `image` argument builds the same image carrier as `scan --image` and API scans, so its agent and server ids now match theirs (previously the server was named `image:<ref>` with an unknown transport and the agent had no `docker://` config path). The image scan also runs off the MCP event loop. Filesystem, OS-package and image-archive carriers come from the same builders on every surface.
 - Image references with both a tag and a digest (`ghcr.io/org/app:1.2@sha256:…`) are split the same way everywhere: the container image SBOM no longer reads the repository as `app:1.2@sha256` and the digest as the tag, and cloud (AWS, GCP, Kubernetes GPU), `docker run` MCP and Docker Compose packages name the image without its tag. Compose images pinned by digest now carry the full digest as their version instead of its first 12 characters, and `localhost/<name>` is read as a local registry.
 - Image layer provenance (`created_by` on package occurrences) redacts credentials passed as build args or `ENV` values instead of copying them into reports.
 - A `--policy` result no longer clears an earlier failed gate (image signature or model provenance policy) in the scan exit code.
