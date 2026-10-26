@@ -10,6 +10,7 @@ Reference: https://github.com/ossf/malicious-packages
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 from difflib import SequenceMatcher
@@ -221,6 +222,28 @@ def _extends(name: str, target: str) -> bool:
     return name.startswith(target + "-") or name.endswith("-" + target)
 
 
+@functools.lru_cache(maxsize=8)
+def _popular_index(popular: frozenset[str]) -> tuple[tuple[str, ...], dict[int, tuple[int, ...]], dict[int, tuple[str, ...]]]:
+    """Popular names in iteration order, their positions by length, and the sorted names by length."""
+    ordered = tuple(popular)
+    positions: dict[int, list[int]] = {}
+    for index, candidate in enumerate(ordered):
+        positions.setdefault(len(candidate), []).append(index)
+    by_length: dict[int, list[str]] = {}
+    for candidate in sorted(popular):
+        by_length.setdefault(len(candidate), []).append(candidate)
+    return ordered, {k: tuple(v) for k, v in positions.items()}, {k: tuple(v) for k, v in by_length.items()}
+
+
+def _typosquat_candidates(name: str, popular: frozenset[str] | set[str]) -> tuple[list[str] | frozenset[str] | set[str], tuple[str, ...]]:
+    """Only names within ``_MAX_EDITS`` of ``name``'s length can match, kept in the set's own order for ties."""
+    if not isinstance(popular, frozenset):
+        return popular, tuple(c for c in sorted(popular) if len(c) == len(name))
+    ordered, positions, by_length = _popular_index(popular)
+    near = sorted(i for delta in range(-_MAX_EDITS, _MAX_EDITS + 1) for i in positions.get(len(name) + delta, ()))
+    return [ordered[i] for i in near], by_length.get(len(name), ())
+
+
 def typosquat_target(
     name: str, ecosystem: str, popular: frozenset[str] | set[str], legitimate: frozenset[str], threshold: float = 0.85
 ) -> str | None:
@@ -229,9 +252,10 @@ def typosquat_target(
         return None
     best_ratio = 0.0
     best_match = ""
+    candidates, same_length = _typosquat_candidates(name, popular)
     # difflib caches its analysis of the second sequence, so hold ``name`` there.
     matcher = SequenceMatcher(None, "", name, autojunk=False)
-    for candidate in popular:
+    for candidate in candidates:
         # 2*min/(sum) bounds the ratio from above: skip without building anything.
         if 2 * min(len(name), len(candidate)) < threshold * (len(name) + len(candidate)) or _extends(name, candidate):
             continue
@@ -251,7 +275,7 @@ def typosquat_target(
     # character is a strong signal, without lowering the ratio threshold (which
     # would pull in genuine near-neighbours).
     if len(name) >= _EDIT1_MIN_LEN:
-        return next((c for c in sorted(popular) if _single_substitution(name, c)), None)
+        return next((c for c in same_length if _single_substitution(name, c)), None)
     return None
 
 

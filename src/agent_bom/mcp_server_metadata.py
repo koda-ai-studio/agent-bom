@@ -377,7 +377,10 @@ _SERVER_CARD_TOOLS = [
     },
     {
         "name": "gpu_infra_scan",
-        "description": "Discover GPU containers, K8s GPU nodes, CUDA versions, and unauthenticated DCGM endpoints (MAESTRO KC6)",
+        "description": (
+            "Discover GPU containers, K8s GPU nodes and GPU workloads (pool, service account, IRSA role, host driver/toolkit), "
+            "CUDA versions, unauthenticated DCGM endpoints and GPU posture findings (MAESTRO KC6)"
+        ),
         "annotations": {"readOnlyHint": True},
     },
     {

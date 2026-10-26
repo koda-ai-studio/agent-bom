@@ -20,6 +20,9 @@ Current evidence pages:
 
 - [`image-layer-streaming.md`](image-layer-streaming.md) — native image
   parser peak memory and wall time on synthetic 256 MiB / 1 GiB images.
+- [`image-scan-end-to-end.md`](image-scan-end-to-end.md) — `agent-bom image
+  php:8.3.30-cli` end to end (extraction, matching, kernel-header CVE fan-out,
+  report build) and a 40,000-package offline manifest, before and after.
 
 - [`gateway-relay-latency.md`](gateway-relay-latency.md) — HTTP gateway JSON-RPC
   relay p50/p95/p99 + RSS under concurrency (Go-gate evidence for ADR-009).
@@ -40,6 +43,10 @@ Current raw result artifact:
 - [`results/postgres-graph-explain-sample.json`](results/postgres-graph-explain-sample.json)
   — dry-run Postgres EXPLAIN artifact index; it contains no measured query
   plans.
+
+- [`results/image-scan-end-to-end-2026-10-26.json`](results/image-scan-end-to-end-2026-10-26.json)
+  — `php:8.3.30-cli` and 40,000-package manifest before/after wall time, max
+  RSS and load average per run.
 
 - [`results/gateway-relay-baseline-2026-07-23.json`](results/gateway-relay-baseline-2026-07-23.json)
   — local gateway relay baseline (mock MCP upstream, concurrency ladder to 500).

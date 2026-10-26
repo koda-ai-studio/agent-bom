@@ -1,0 +1,41 @@
+{
+  "node_types": [
+    {"node_type_id": "g5.xlarge", "num_gpus": 1, "memory_mb": 16384, "num_cores": 4.0},
+    {"node_type_id": "g5.12xlarge", "num_gpus": 4, "memory_mb": 196608, "num_cores": 48.0},
+    {"node_type_id": "i3.xlarge", "num_gpus": 0, "memory_mb": 31232, "num_cores": 4.0}
+  ],
+  "clusters": [
+    {
+      "cluster_id": "0901-120000-gpushare",
+      "cluster_name": "shared-gpu-training",
+      "state": "RUNNING",
+      "spark_version": "15.4.x-gpu-ml-scala2.12",
+      "node_type_id": "g5.12xlarge",
+      "driver_node_type_id": "g5.xlarge",
+      "num_workers": 2,
+      "data_security_mode": "NONE",
+      "single_user_name": null
+    },
+    {
+      "cluster_id": "0901-120000-gpuprivate",
+      "cluster_name": "alice-gpu",
+      "state": "TERMINATED",
+      "spark_version": "15.4.x-gpu-ml-scala2.12",
+      "node_type_id": "g5.xlarge",
+      "driver_node_type_id": "g5.xlarge",
+      "num_workers": 0,
+      "data_security_mode": "SINGLE_USER",
+      "single_user_name": "alice@example.com"
+    },
+    {
+      "cluster_id": "0901-120000-cpuetl",
+      "cluster_name": "etl",
+      "state": "RUNNING",
+      "spark_version": "15.4.x-scala2.12",
+      "node_type_id": "i3.xlarge",
+      "driver_node_type_id": "i3.xlarge",
+      "num_workers": 4,
+      "data_security_mode": "USER_ISOLATION"
+    }
+  ]
+}

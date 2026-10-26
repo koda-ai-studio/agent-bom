@@ -55,6 +55,7 @@ class GraphEvidenceSections(TypedDict, total=False):
     snowflake_login_anomalies: Record
     snowflake_auth_posture: Record
     snowflake_services: Record
+    gpu_infra: Record
     snowflake_pipeline: Record
     snowflake_integrations: Record
     snowflake_external_data: Record

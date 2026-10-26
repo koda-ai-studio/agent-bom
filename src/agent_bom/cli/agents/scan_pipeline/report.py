@@ -336,7 +336,7 @@ def _attach_benchmarks(opts: ScanOptions, st: ScanState) -> None:
     if st.ctx.vector_db_results:
         st.report.vector_db_scan_data = [r.to_dict() for r in st.ctx.vector_db_results]
     if st.ctx.gpu_infra_report is not None:
-        st.report.gpu_infra_data = st.ctx.gpu_infra_report.risk_summary
+        st.report.gpu_infra_data = st.ctx.gpu_infra_report.report_data
     if st.ctx.iac_findings_data:
         st.report.iac_findings_data = st.ctx.iac_findings_data
     if st.ctx.kubernetes_inventories:

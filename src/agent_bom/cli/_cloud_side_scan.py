@@ -11,12 +11,12 @@ import json
 from typing import TYPE_CHECKING, Any, Optional, cast
 
 import click
+from rich.console import Console
+from rich.table import Table
 
 from agent_bom.cli._tenant import resolve_cli_tenant_id
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from rich.console import Console
-
     from agent_bom.cloud.side_scan import SideScanResult
 
 
@@ -115,8 +115,6 @@ def side_scan_cmd(provider: str, image_id: Optional[str], output_format: str, **
     """
     import asyncio
 
-    from rich.console import Console
-
     from agent_bom.cloud.base import CloudDiscoveryError
     from agent_bom.cloud.side_scan_inventory import side_scan_record
 
@@ -202,7 +200,6 @@ _CONSOLE_CVE_ROWS = 25
 
 def _render_vulnerable_packages(con: Console, records: list[dict]) -> None:
     """Vulnerable packages per VM / image — the same records the JSON report and graph carry."""
-    from rich.table import Table
 
     for record in records:
         holder = record.get("instance_name") or record.get("instance_id") or record.get("target_id") or "unknown"
@@ -245,9 +242,6 @@ def side_scan_capabilities_cmd(output_format: str) -> None:
     lifecycle contract only until credentialed smoke proves otherwise.
     """
 
-    from rich.console import Console
-    from rich.table import Table
-
     from agent_bom.cloud.side_scan_lifecycle import side_scan_provider_capabilities
 
     capabilities = [cap.to_dict() for cap in side_scan_provider_capabilities().values()]
@@ -283,7 +277,6 @@ def side_scan_capabilities_cmd(output_format: str) -> None:
 
 def _render_side_scan_results(con: Console, results: list[SideScanResult]) -> None:
     """Render side-scan results in Rich tables — metadata only, no overflow."""
-    from rich.table import Table
 
     con.print("\n  [bold]EBS side-scan[/bold] [dim]· agentless · opt-in temp disks · metadata-only · cleanup recorded[/dim]")
 
@@ -330,7 +323,6 @@ def _render_side_scan_results(con: Console, results: list[SideScanResult]) -> No
 
 def _render_provider_side_scan_results(con: Console, provider: str, results: list) -> None:
     """Render Azure/GCP side-scan results — metadata only, cleanup + warnings honest."""
-    from rich.table import Table
 
     label = "Azure Managed Disk" if provider == "azure" else "GCP Persistent Disk"
     con.print(f"\n  [bold]{label} side-scan[/bold] [dim]· agentless · opt-in temp disks · metadata-only · cleanup recorded[/dim]")

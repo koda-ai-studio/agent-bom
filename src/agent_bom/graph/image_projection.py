@@ -62,7 +62,9 @@ def carrier_node_id(agent: Mapping[str, Any]) -> str | None:
 def previous_carrier_ids(agent: Mapping[str, Any], agent_graph_id: str) -> list[str]:
     """The agent and server ids earlier builds gave this carrier, kept as aliases."""
     servers = [srv for srv in agent.get("mcp_servers") or [] if isinstance(srv, Mapping)]
-    return sorted({agent_graph_id, *(mcp_server_graph_id_for(srv, dict(agent)) for srv in servers)})
+    # The carrier agent's own identity too, so findings naming it bind to the image.
+    identities = {str(agent.get(key) or "") for key in ("stable_id", "canonical_id")} - {""}
+    return sorted({agent_graph_id, *identities, *(mcp_server_graph_id_for(srv, dict(agent)) for srv in servers)})
 
 
 def add_image_node(graph: UnifiedGraph, agent: Mapping[str, Any], node_id: str, data_source: str, aliases: list[str]) -> None:

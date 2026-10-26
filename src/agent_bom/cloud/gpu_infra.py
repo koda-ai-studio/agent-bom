@@ -30,9 +30,11 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import Any
 
-from agent_bom.cloud.normalization import build_package_purl
+from agent_bom.cloud.gpu_infra_agents import gpu_infra_to_agents as gpu_infra_to_agents
+from agent_bom.cloud.gpu_k8s_inventory import K8sGpuInventory, collect_k8s_gpu_inventory
+from agent_bom.cloud.gpu_k8s_workloads import gfd_driver_version
+from agent_bom.cloud.gpu_posture import gpu_posture_from_report
 from agent_bom.http_client import create_client, request_with_retry
-from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
 from agent_bom.scanners.firmware_advisory import check_firmware_advisories
 from agent_bom.security import sanitize_text
 
@@ -156,6 +158,7 @@ class GpuInfraReport:
     warnings: list[str]
     driver_findings: list[dict] = field(default_factory=list)
     firmware_findings: list[dict] = field(default_factory=list)
+    k8s: K8sGpuInventory | None = None
 
     @property
     def total_gpu_containers(self) -> int:
@@ -194,7 +197,18 @@ class GpuInfraReport:
             "gpu_k8s_nodes": len(self.gpu_nodes),
             "driver_cve_count": len(self.driver_findings),
             "firmware_cve_count": len(self.firmware_findings),
+            "gpu_k8s_workloads": len(self.k8s.workloads) if self.k8s else 0,
         }
+
+    @property
+    def posture_findings(self) -> list[dict[str, Any]]:
+        """GPU posture for the discovered Kubernetes workloads (the report-wide judgement, scoped here)."""
+        return gpu_posture_from_report({"gpu_infra": self.report_data})
+
+    @property
+    def report_data(self) -> dict[str, Any]:
+        """``gpu_infra`` report block: the risk summary plus the Kubernetes GPU workload inventory."""
+        return {**self.risk_summary, **({"k8s": self.k8s.to_dict()} if self.k8s else {})}
 
 
 # ─── Docker discovery ─────────────────────────────────────────────────────────
@@ -675,13 +689,8 @@ def discover_k8s_gpu_nodes(
             if gpu_cap == 0:
                 continue  # not a GPU node
 
-            # CUDA driver version from labels (NVIDIA-specific)
-            cuda_driver = labels.get("nvidia.com/cuda.driver.major")
-            cuda_minor = labels.get("nvidia.com/cuda.driver.minor")
-            if cuda_driver and cuda_minor:
-                cuda_driver = f"{cuda_driver}.{cuda_minor}"
-            else:
-                cuda_driver = labels.get("nvidia.com/cuda.driver-version")
+            # NVIDIA driver version from GPU Feature Discovery labels
+            cuda_driver: str | None = gfd_driver_version(labels) or None
 
             # If label-based version is unavailable, attempt runtime query via nvidia-smi / rocm-smi / i915
             if not cuda_driver and gpu_vendor == "nvidia":
@@ -834,6 +843,9 @@ async def scan_gpu_infra(
     # Firmware/BMC advisory scan — matches GPU model labels against CVE seed
     all_firmware_findings = [f.to_dict() for f in check_firmware_advisories(k8s_nodes)]
 
+    k8s_inventory = collect_k8s_gpu_inventory(_run_kubectl, k8s_context)
+    all_warnings.extend(w for w in k8s_inventory.warnings if not w.startswith("kubectl not available"))
+
     return GpuInfraReport(
         gpu_containers=docker_containers,
         dcgm_endpoints=dcgm_endpoints,
@@ -841,96 +853,5 @@ async def scan_gpu_infra(
         warnings=all_warnings,
         driver_findings=all_driver_findings,
         firmware_findings=all_firmware_findings,
+        k8s=k8s_inventory if k8s_inventory.cluster_key else None,
     )
-
-
-# ─── Agent conversion (for scan output) ──────────────────────────────────────
-
-
-def _gpu_container_agent(c: GpuContainer) -> Agent:
-    """Build the agent for one GPU container, with CUDA/cuDNN versions as packages."""
-    packages: list[Package] = []
-    for pkg_name, version in (("cuda-toolkit", c.cuda_version), ("cudnn", c.cudnn_version)):
-        if version:
-            packages.append(
-                Package(
-                    name=pkg_name,
-                    version=version,
-                    ecosystem="container",
-                    purl=build_package_purl(ecosystem="container", name=pkg_name, version=version),
-                )
-            )
-
-    server = MCPServer(name=c.image, command="", transport=TransportType.STDIO, packages=packages)
-    cloud_origin = {
-        "provider": "gpu",
-        "service": "container_runtime",
-        "resource_type": c.gpu_vendor or "unknown",
-        "resource_id": c.container_id,
-        "resource_name": c.name or c.container_id,
-        "scope": {
-            "image": c.image,
-            "gpu_requested": c.gpu_requested,
-            "cuda_version": c.cuda_version,
-            "cudnn_version": c.cudnn_version,
-        },
-    }
-    return Agent(
-        name=c.name or c.container_id,
-        agent_type=AgentType.CUSTOM,
-        config_path=f"docker://{c.container_id}",
-        source="gpu_infra",
-        mcp_servers=[server],
-        metadata={"cloud_origin": cloud_origin},
-    )
-
-
-def _k8s_gpu_cluster_agent(report: GpuInfraReport) -> Agent:
-    """Aggregate the report's K8s GPU nodes into one synthetic cluster agent."""
-    total_gpus = sum(n.gpu_capacity for n in report.gpu_nodes)
-    vendors = sorted({n.gpu_vendor for n in report.gpu_nodes if n.gpu_vendor})
-    node_name = f"k8s-gpu-cluster ({len(report.gpu_nodes)} nodes, {total_gpus} GPUs)"
-    node_server = MCPServer(name=node_name, command="", transport=TransportType.STDIO, packages=[])
-    cloud_origin = {
-        "provider": "gpu",
-        "service": "kubernetes",
-        "resource_type": vendors[0] if len(vendors) == 1 else "mixed" if vendors else "unknown",
-        "resource_id": "k8s-gpu-cluster",
-        "resource_name": "k8s-gpu-cluster",
-        "scope": {
-            "node_count": len(report.gpu_nodes),
-            "gpu_capacity_total": total_gpus,
-            "vendors": vendors,
-            "driver_cve_count": len(report.driver_findings),
-            "firmware_cve_count": len(report.firmware_findings),
-        },
-    }
-    return Agent(
-        name="k8s-gpu-cluster",
-        agent_type=AgentType.CUSTOM,
-        config_path="k8s://gpu-nodes",
-        source="gpu_infra",
-        mcp_servers=[node_server],
-        metadata={"cloud_origin": cloud_origin},
-    )
-
-
-def gpu_infra_to_agents(report: GpuInfraReport) -> list[Agent]:
-    """Convert GpuInfraReport to Agent objects for inclusion in AIBOMReport.
-
-    Each GPU container becomes an Agent with its image name as the MCP server.
-    K8s GPU nodes appear as a synthetic "k8s-gpu-cluster" agent. Both shapes
-    populate ``Agent.metadata["cloud_origin"]`` so the unified-graph builder
-    can promote the underlying GPU asset (vendor, runtime, container/node id)
-    into ``cloud_resource`` lineage nodes via the existing promoter in
-    ``src/agent_bom/graph/builder.py``.
-    """
-    agents = [_gpu_container_agent(c) for c in report.gpu_containers]
-
-    # Aggregate K8s GPU nodes as a single agent. Lineage promotion happens at
-    # the cluster level so dashboards see one cloud_resource per cluster, not
-    # one per GPU node — node-level facts live in the scope envelope.
-    if report.gpu_nodes:
-        agents.append(_k8s_gpu_cluster_agent(report))
-
-    return agents

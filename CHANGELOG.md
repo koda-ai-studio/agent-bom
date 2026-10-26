@@ -10,17 +10,30 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+### Changed
+- Image scans (`--image`, `--image-tar`, `--k8s`, the MCP `scan` tool, API scans) project as container image nodes keyed by digest instead of agents with MCP servers; earlier node ids are kept as aliases.
+- The packaged scanner reader role (Helm and `deploy/k8s/rbac.yaml`) grants get/list on workloads, service accounts, role bindings and admission objects so in-cluster inventories are complete; it still grants no Secrets and no mutation verbs.
+- Console output groups kernel-header CVEs into one block per image distro release (Debian/Ubuntu `linux-libc-dev` and `linux-headers-*`, RHEL-family `kernel-headers`/`kernel-devel`, SUSE `linux-glibc-devel`/`kernel-*-devel`, Alpine `linux-headers`), with the full severity breakdown; the scan verdict says how many of the CVEs they are. KEV and critical kernel-header CVEs are named on the group line and stay as their own rows, and JSON, SARIF and CycloneDX still carry every CVE. Recognition is scoped to the ecosystem and `os-release` family, so a same-named package elsewhere is never grouped.
+- The `docker export` fallback of `agent-bom image` scans the exported filesystem with the same bounded walk and extractors as image layers: the `AGENT_BOM_OCI_*` member, size and time limits apply, and a crossed limit is a coverage gap under `docker-export` (a partial scan) rather than an unbounded read.
+- Image layers emit the canonical purl for scoped npm packages (`pkg:npm/%40scope/name@…`), matching every other scan path.
+
+### Fixed
+- A GKE pod's node VM and the GCE inventory or side-scan VM are now one graph node, so an OS CVE on the node disk is an attack path through the pod.
+- Kubernetes GPU nodes read the full driver version from GPU Feature Discovery's `nvidia.com/cuda.driver-version.full` label instead of a `major.minor` prefix.
+- Each CVE on a package now carries only its own `ai_risk_context`. The context was extended in place across a package's CVEs, so the Nth CVE repeated the attack summaries of all before it; on `php:8.3.30-cli` that built about 0.9 GB of text for `linux-libc-dev` and dominated JSON export time.
+
+### Performance
+- `agent-bom image` on `php:8.3.30-cli` (4,424 findings) peaks at 413 MiB for console and 758 MiB for JSON output instead of about 2.5 GiB, and JSON output uses 52 s instead of 277 s of CPU, with an identical finding set (`docs/perf/image-scan-end-to-end.md`). Text redaction is memoized for the life of one scan (bounded at 8M input characters and cleared when the scan ends), and the inventory snapshot, graph-store compliance stats and typosquat check no longer do quadratic work over large package lists. A 40,000-package offline manifest scan is measured after every merge against a 1,000 MiB peak-RSS budget.
+
 - Kubernetes workload graph from live clusters (`scan --k8s`) and manifests/Helm charts (`--iac`, API repository scans): `cluster → namespace → workload → image → package → CVE`, with each workload's service account, its RBAC grants (scope and Secret access) and the Secrets it references. Live pods collapse into their owning controller and images are scanned at the running digest. A new attack-path family follows a vulnerable workload through the service account it runs as to the Secrets and scopes it can reach; a pod with no mounted token never starts one. The report carries a `kubernetes_inventory` section (each container with its image's scan result), the console prints a most-vulnerable-first workload table, and the new read-only `kspm_workload_inventory` MCP tool returns the same inventory. Secrets are never listed.
 - Read-only admission posture in live KSPM: namespaces running workloads without a `baseline`/`restricted` Pod Security enforce level, audit-only ValidatingAdmissionPolicy bindings, fail-open policies and webhooks, and a cluster with no policy control mechanism (CIS Kubernetes 5.2.1). Manifest rules `K8S-037`/`K8S-038` cover Namespace documents.
 - Disk side-scan packages and CVEs project onto the VM's own inventory node (EC2 instance, Azure VM, GCE instance) and reach attack paths; `POST /v1/cloud/side-scan` returns per-package/CVE detail and stores it in the tenant graph, and `agent-bom cloud side-scan -f json` and the MCP tool return the same records. A `side_scan_results` report section carries them.
 - Machine-image side-scan: AWS AMIs (from the AMI's root snapshot, never modified or deleted) and GCE images. Azure managed images are refused with the reason in the CLI, API and MCP. `side-scan-capabilities` states image support per provider and that every side-scan creates and deletes temporary disks.
-
-### Changed
-- Image scans (`--image`, `--image-tar`, `--k8s`, the MCP `scan` tool, API scans) project as container image nodes keyed by digest instead of agents with MCP servers; earlier node ids are kept as aliases.
-- The packaged scanner reader role (Helm and `deploy/k8s/rbac.yaml`) grants get/list on workloads, service accounts, role bindings and admission objects so in-cluster inventories are complete; it still grants no Secrets and no mutation verbs.
-
-### Fixed
-- A GKE pod's node VM and the GCE inventory or side-scan VM are now one graph node, so an OS CVE on the node disk is an attack path through the pod.
+- GPU node pools in cloud inventory, read-only: EKS managed node groups (`eks:ListNodegroups` / `DescribeNodegroup`), GKE node pools with accelerators, GPU sharing, MIG partition and driver-install setting, AKS agent pools with GPU VM size, MIG profile and driver opt-out, GCE guest accelerators, Snowflake SPCS compute pools (`SHOW COMPUTE POOLS`, GPU model and count per `GPU_*` family) and Databricks GPU clusters (kept even without installed libraries). Connection inventory summaries report `node_summary.gpu_node_pools`.
+- GPU pools in the graph: a `gpu_node_pool` cloud resource contained by its cluster and assuming its node IAM role or service account; GPU attributes on EC2, GCE and Azure GPU instances; SPCS compute pools under their account.
+- `--gpu-scan` and the MCP `gpu_infra_scan` tool inventory Kubernetes GPU workloads with read-only `kubectl get`: node pool, service account, EKS IRSA role, privileged / hostPath / host-namespace settings, the node driver (GPU Feature Discovery labels) and Container Toolkit (GPU Operator `ClusterPolicy`). The driver and toolkit become CPE-identified packages matched like any other, and attack paths run from a vulnerable host GPU stack through the workload to its service account, IRSA role and the GPU node identity.
+- Provider-aware GPU posture checks GPU-001 to GPU-021 (SSH open on EKS GPU node groups, AKS node public IPs, GKE default compute service account, untainted EKS/AKS GPU pools, operator-managed drivers, shared GPUs and multi-tenant time-slicing, privileged / hostPath / host-namespace GPU pods, Databricks no-isolation GPU clusters, shared SPCS GPU pools) in the unified findings stream and the graph.
+- Image scans record model files found in layers and statically disassemble pickle-bearing ones (never deserialized) within the existing pickle byte cap, honouring whiteouts; findings attach to the image. See `site-docs/features/gpu-ai-infrastructure.md`.
 
 ## [0.111.0] - 2026-10-25
 

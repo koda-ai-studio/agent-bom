@@ -70,6 +70,8 @@ _AWS_COMPUTE_PERMISSIONS: tuple[str, ...] = (
     "lambda:GetFunction",
     "eks:ListClusters",
     "eks:DescribeCluster",
+    "eks:ListNodegroups",
+    "eks:DescribeNodegroup",
     "ecr:DescribeRepositories",
     "ecr:DescribeImages",
     "ecr:DescribeImageScanFindings",

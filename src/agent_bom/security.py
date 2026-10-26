@@ -7,10 +7,8 @@ import binascii
 import hashlib
 import ipaddress
 import logging
-import math
 import os
 import re
-from collections import Counter
 from typing import Any
 from urllib.parse import unquote, urlsplit, urlunsplit
 
@@ -66,8 +64,11 @@ from agent_bom.core.security_validation import (
     validate_path as validate_path,
 )
 from agent_bom.redaction.emails import _contains_email, mask_email
+from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.redaction.env_values import container_has_secret
 from agent_bom.redaction.field_policy import _REPORT_AUTH_MODES, _REPORT_COORDINATE_KEYS
+from agent_bom.redaction.text_memo import memoized_text
+from agent_bom.redaction.text_memo import sanitize_text_memo as sanitize_text_memo
 
 logger = logging.getLogger(__name__)
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -242,15 +243,6 @@ def _is_structured_coordinate(key_text: str, value: str) -> bool:
         and not _looks_sensitive_value(edge_parts[0])
         and not _looks_sensitive_value(edge_parts[2])
     )
-
-
-def _shannon_entropy(s: str) -> float:
-    """Return Shannon entropy (bits per character) of a string."""
-    if not s:
-        return 0.0
-    counts = Counter(s)
-    length = len(s)
-    return -sum((c / length) * math.log2(c / length) for c in counts.values())
 
 
 def _is_obfuscated_credential(value: str) -> bool:
@@ -471,6 +463,10 @@ _HTTP_URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 
 def sanitize_text(value: object, max_len: int = 1000) -> str:
     """Redact credential-shaped substrings, credential-bearing URLs, and emails in text."""
+    return memoized_text(value, max_len, _sanitize_text)
+
+
+def _sanitize_text(value: object, max_len: int = 1000) -> str:
     text = sanitize_log_label(value, max_len=max_len)
     # A substitution is skipped only when its pattern cannot match: URLs need
     # ``://``, a keyed value needs ``=`` or ``:``, an email needs ``@``.

@@ -75,7 +75,7 @@ def register_specialized_ai_tools(
             Field(description="Whether to probe DCGM exporter endpoints on port 9400 (unauthenticated metrics leak detection)."),
         ] = True,
     ) -> str:
-        """Discover GPU/AI compute infrastructure: containers, K8s nodes, and DCGM endpoints."""
+        """Discover GPU/AI compute infrastructure: containers, K8s GPU nodes and workloads, DCGM endpoints, and GPU posture."""
         return await execute_tool_async(
             "gpu_infra_scan",
             gpu_infra_scan_impl,

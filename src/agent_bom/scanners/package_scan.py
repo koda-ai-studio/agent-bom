@@ -558,6 +558,29 @@ def _print_vulnerability_summary(total_vulns: int, findings_count: int, *, agent
             console.print("  [green]✓ No known vulnerabilities found[/green]")
 
 
+def _package_ai_risk_context(pkg: Package, exposed_creds: list[str], exposed_tools: list, phantom_tools: list) -> str | None:
+    """AI-native risk context for a package: elevated when an AI framework has creds + tools."""
+    is_ai_framework = (
+        pkg.name.lower().replace("-", "_") in {n.replace("-", "_") for n in _AI_FRAMEWORK_PACKAGES}
+        or pkg.name.lower() in _AI_FRAMEWORK_PACKAGES
+    )
+    if not is_ai_framework:
+        return None
+    if exposed_creds and exposed_tools:
+        phantom_note = f" (+{len(phantom_tools)} registry-only tool(s) excluded from score)" if phantom_tools else ""
+        return (
+            f"AI framework '{pkg.name}' runs inside an agent with {len(exposed_creds)} "
+            f"exposed credential(s) and {len(exposed_tools)} confirmed reachable tool(s){phantom_note}. "
+            f"A compromise here gives an attacker both identity and capability."
+        )
+    if exposed_creds:
+        return (
+            f"AI framework '{pkg.name}' has access to {len(exposed_creds)} "
+            f"credential(s). Exploitation could exfiltrate secrets via LLM output."
+        )
+    return "AI framework package — vulnerability affects LLM inference/orchestration pipeline."
+
+
 async def scan_agents(
     agents: list[Agent],
     *,
@@ -705,30 +728,7 @@ async def scan_agents(
                 deduped_phantom.append(t)
         phantom_tools = deduped_phantom
 
-        # AI-native risk context: elevated when an AI framework has creds + tools
-        is_ai_framework = (
-            pkg.name.lower().replace("-", "_") in {n.replace("-", "_") for n in _AI_FRAMEWORK_PACKAGES}
-            or pkg.name.lower() in _AI_FRAMEWORK_PACKAGES
-        )
-        has_creds = bool(exposed_creds_deduped)
-        has_tools = bool(exposed_tools)
-        has_phantom_tools = bool(phantom_tools)
-        if is_ai_framework and has_creds and has_tools:
-            phantom_note = f" (+{len(phantom_tools)} registry-only tool(s) excluded from score)" if has_phantom_tools else ""
-            ai_risk_context = (
-                f"AI framework '{pkg.name}' runs inside an agent with {len(exposed_creds_deduped)} "
-                f"exposed credential(s) and {len(exposed_tools)} confirmed reachable tool(s){phantom_note}. "
-                f"A compromise here gives an attacker both identity and capability."
-            )
-        elif is_ai_framework and has_creds:
-            ai_risk_context = (
-                f"AI framework '{pkg.name}' has access to {len(exposed_creds_deduped)} "
-                f"credential(s). Exploitation could exfiltrate secrets via LLM output."
-            )
-        elif is_ai_framework:
-            ai_risk_context = "AI framework package — vulnerability affects LLM inference/orchestration pipeline."
-        else:
-            ai_risk_context = None
+        package_ai_context = _package_ai_risk_context(pkg, exposed_creds_deduped, exposed_tools, phantom_tools)
 
         for vuln in pkg.vulnerabilities:
             if not vuln.compliance_tags:
@@ -765,11 +765,7 @@ async def scan_agents(
                 severity=vuln.severity.value if vuln.severity else None,
                 is_kev=vuln.is_kev,
             )
-            if attack_summary:
-                if ai_risk_context:
-                    ai_risk_context = f"{ai_risk_context} {attack_summary}"
-                else:
-                    ai_risk_context = attack_summary
+            ai_risk_context = " ".join(part for part in (package_ai_context, attack_summary) if part) or None
 
             br = BlastRadius(
                 vulnerability=vuln,
