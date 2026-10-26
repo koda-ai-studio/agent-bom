@@ -19,7 +19,7 @@ requires:
 Vet one package before it is installed.
 
 1. Parse the request into a package, an ecosystem (npm, pypi, go, cargo, maven, nuget, …) and a version. An MCP server launched with `npx` is npm; one launched with `uvx` or `pip` is pypi.
-2. Run `uvx --from agent-bom==0.110.0 agent-bom check '<package>@<version>' --ecosystem '<ecosystem>' -q -f json -o "$OUT/check.json"`. Without a version the check is skipped (`canonical_verdict: "incomplete"`), so ask the user which version they plan to install, or look up the latest published version and say that is the one checked.
+2. Run `uvx --from agent-bom==0.110.0 agent-bom check '<package>@<version>' --ecosystem '<ecosystem>' -q -f json -o "$OUT/check.json"`. If the user named no version, run it as `'<package>'` without `@<version>`: the CLI checks the latest published version and reports `version_source: "registry_latest"` with that `version`; say that the latest published version, by number, is the one checked. If the result is `canonical_verdict: "incomplete"` instead (the latest version could not be resolved, or the pinned release predates this), ask the user which version they plan to install.
 3. Read `canonical_verdict`, `message`, `is_malicious`, `malicious_reason`, `vulnerability_count`, `completeness`, `vuln_data_freshness.stale` and, per entry in `vulnerabilities[]`, `id`, `severity`, `is_kev` and `fixed_version`.
 4. Answer in this order:
    - a verdict in one line: safe to add, upgrade first, or do not install; base it on `canonical_verdict` and quote `message`
