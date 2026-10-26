@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+from functools import partial
 from typing import Annotated, Any, cast
 
+import anyio
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 
@@ -12,12 +14,13 @@ from agent_bom.api import time_window
 from agent_bom.api.finding_snapshot_read import current_findings_snapshot
 from agent_bom.api.models import JobStatus
 from agent_bom.api.read_models import documented
-from agent_bom.api.read_models.scan import ScanLicensesResponse, ScanVexResponse
+from agent_bom.api.read_models.scan import ScanLicensesResponse, ScanResultIndexResponse, ScanResultSectionResponse, ScanVexResponse
 from agent_bom.api.remediation_view import CurrentRemediationResponse
 from agent_bom.api.scan_graph_view import _context_graph_payload as _context_graph_payload
 from agent_bom.api.scan_graph_view import _graph_export_response as _graph_export_response
 from agent_bom.api.scan_graph_view import _scan_graph_compute_call as _scan_graph_compute_call
 from agent_bom.api.scan_request_context import _load_job_for_request, _tenant_id
+from agent_bom.api.scan_result_sections import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, result_index, result_section
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.evidence.agent_bom import AgentBomDocument
 from agent_bom.evidence.scan_agent_bom import AgentSelectionError, build_scan_agent_bom
@@ -292,3 +295,43 @@ async def get_skill_audit(request: Request, job_id: str) -> dict:
             },
         ),
     )
+
+
+async def _completed_job(request: Request, job_id: str) -> Any:
+    job = await _load_job_for_request(request, job_id)
+    if job.status != JobStatus.DONE or not isinstance(job.result, dict):
+        raise HTTPException(status_code=409, detail="Scan not completed yet")
+    return job
+
+
+@router.get("/scan/{job_id}/result", **documented(ScanResultIndexResponse), tags=["scan"])
+async def get_scan_result_index(request: Request, job_id: str) -> dict:
+    """Summary of a completed scan result plus links to each large section.
+
+    A bounded alternative to ``GET /v1/scan/{job_id}``: scalar fields and the
+    small summary objects are returned inline; every other section is listed
+    with its item count and a link to ``/v1/scan/{job_id}/result/{section}``.
+    For filtered, cursor-paged findings across scans use ``GET /v1/findings``.
+    """
+    job = await _completed_job(request, job_id)
+    return cast(dict, await anyio.to_thread.run_sync(partial(result_index, job)))
+
+
+@router.get("/scan/{job_id}/result/{section}", **documented(ScanResultSectionResponse), tags=["scan"])
+async def get_scan_result_section(
+    request: Request,
+    job_id: str,
+    section: str,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
+) -> dict:
+    """One section of a completed scan result, paged by ``offset``/``limit`` when it is a list.
+
+    Items are redacted exactly as in the full result. ``next_offset`` is null on
+    the last page. Object sections are returned whole in ``value``.
+    """
+    job = await _completed_job(request, job_id)
+    try:
+        return cast(dict, await anyio.to_thread.run_sync(partial(result_section, job, section, offset, limit)))
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Scan result has no pageable section {section!r}") from None

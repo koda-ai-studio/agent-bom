@@ -7307,7 +7307,8 @@ export interface paths {
          *
          *     ``result`` is always the canonical AI-BOM JSON. When the request asked for a
          *     non-json ``format``, ``result_document`` carries that rendering and
-         *     ``result_format`` names it.
+         *     ``result_format`` names it. For bounded reads use ``GET /v1/scan/{job_id}/result``
+         *     and ``.../result/{section}``.
          */
         get: operations["get_scan_v1_scan__job_id__get"];
         put?: never;
@@ -7491,6 +7492,54 @@ export interface paths {
          *     One entry per package, with an explicit total for the client.
          */
         get: operations["get_remediation_plan_v1_scan__job_id__remediation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/scan/{job_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scan Result Index
+         * @description Summary of a completed scan result plus links to each large section.
+         *
+         *     A bounded alternative to ``GET /v1/scan/{job_id}``: scalar fields and the
+         *     small summary objects are returned inline; every other section is listed
+         *     with its item count and a link to ``/v1/scan/{job_id}/result/{section}``.
+         *     For filtered, cursor-paged findings across scans use ``GET /v1/findings``.
+         */
+        get: operations["get_scan_result_index_v1_scan__job_id__result_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/scan/{job_id}/result/{section}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scan Result Section
+         * @description One section of a completed scan result, paged by ``offset``/``limit`` when it is a list.
+         *
+         *     Items are redacted exactly as in the full result. ``next_offset`` is null on
+         *     the last page. Object sections are returned whole in ``value``.
+         */
+        get: operations["get_scan_result_section_v1_scan__job_id__result__section__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -22749,6 +22798,67 @@ export interface components {
             tf_dirs?: string[];
             /** Vex */
             vex?: string | null;
+        };
+        /** ScanResultIndexResponse */
+        ScanResultIndexResponse: {
+            /** Job Id */
+            job_id: string;
+            /** Result Format */
+            result_format: string;
+            /** Sections */
+            sections: components["schemas"]["ScanResultSectionRef"][];
+            /** Status */
+            status: string;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** ScanResultSectionRef */
+        ScanResultSectionRef: {
+            /** Count */
+            count: number | null;
+            /** Href */
+            href: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "list" | "object";
+            /** Name */
+            name: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ScanResultSectionResponse */
+        ScanResultSectionResponse: {
+            /** Items */
+            items: unknown[] | null;
+            /** Job Id */
+            job_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "list" | "object";
+            /** Limit */
+            limit: number | null;
+            /** Next Offset */
+            next_offset: number | null;
+            /** Offset */
+            offset: number;
+            /** Section */
+            section: string;
+            /** Total */
+            total: number | null;
+            /** Value */
+            value: {
+                [key: string]: unknown;
+            } | null;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * ScanRunPayload
@@ -42864,6 +42974,90 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_scan_result_index_v1_scan__job_id__result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanResultIndexResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_scan_result_section_v1_scan__job_id__result__section__get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+                section: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanResultSectionResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

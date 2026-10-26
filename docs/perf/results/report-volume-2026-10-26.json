@@ -1,0 +1,13 @@
+{
+  "command": "uv run python scripts/bench/report_volume_bench.py --src <tree> --repeat <n>",
+  "environment": {"python": "3.13.5", "machine": "arm64", "os": "macOS", "load_average": [8.74, 10.07, 9.21], "note": "shared laptop; wall times are noisy"},
+  "before_tree": "origin/main e42d0d569 (git archive of src/)",
+  "after_tree": "feat/sbom-ingest-and-compact-storage",
+  "runs": [
+    {"tree": "before", "repeat": 1, "findings": 51, "blast_radius_rows": 15, "report_bytes": 1440689, "report_gzip6_bytes": 103608, "blast_radius_bytes": 215385, "job_row_bytes": 947615, "job_row_encode_ms": 6.0, "job_row_decode_ms": 10.9, "write_json_file_peak_bytes": 1213308},
+    {"tree": "after", "repeat": 1, "findings": 51, "blast_radius_rows": 15, "report_bytes": 1363573, "report_gzip6_bytes": 97840, "blast_radius_bytes": 141347, "job_row_bytes": 77175, "job_row_encode_ms": 11.8, "job_row_decode_ms": 10.1, "write_json_file_peak_bytes": 230293},
+    {"tree": "before", "repeat": 20, "findings": 1020, "blast_radius_rows": 300, "report_bytes": 22632225, "report_gzip6_bytes": 1354297, "blast_radius_bytes": 4307662, "job_row_bytes": 14652942, "job_row_encode_ms": 69.4, "job_row_decode_ms": 205.3, "write_json_file_peak_bytes": 24044300},
+    {"tree": "after", "repeat": 20, "findings": 1020, "blast_radius_rows": 300, "report_bytes": 21089905, "report_gzip6_bytes": 1231196, "blast_radius_bytes": 2826902, "job_row_bytes": 94371, "job_row_encode_ms": 73.1, "job_row_decode_ms": 177.0, "write_json_file_peak_bytes": 230321}
+  ],
+  "cli_gzip_output": {"tree": "after", "report_json_bytes": 1363573, "report_json_gz_bytes": 92167}
+}

@@ -10,11 +10,12 @@ from typing import Any
 from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface
 from agent_bom.sbom import parse_sbom_document
 from agent_bom.sbom_formats.cyclonedx import imported_composition_complete
+from agent_bom.sbom_formats.decode import MAX_SBOM_BYTES, decode_sbom_document
 from agent_bom.security import sanitize_sensitive_payload
 
 _PREFIX = "agent-bom:cloud-inventory:"
 CLOUD_INVENTORY_PROPERTY = _PREFIX + "v1"
-_MAX_BYTES = 10 * 1024 * 1024
+_MAX_BYTES = MAX_SBOM_BYTES
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -27,9 +28,6 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def _json(text: str | bytes) -> Any:
-    prefix = text.decode("utf-8", errors="replace") if isinstance(text, bytes) else text
-    if prefix.lstrip().startswith("SPDXVersion:"):
-        raise ValueError("SPDX tag-value input is not supported; supply SPDX JSON instead.")
     try:
         return json.loads(text, object_pairs_hook=_unique_object, parse_constant=_invalid_constant)
     except (ValueError, RecursionError) as exc:
@@ -117,7 +115,7 @@ def _load_sbom_context(path: str, name: str | None = None) -> tuple[Agent, str, 
         raw = stream.read(_MAX_BYTES + 1)
     if len(raw) > _MAX_BYTES:
         raise ValueError("SBOM exceeds the 10 MiB import limit")
-    document = _json(raw)
+    document = decode_sbom_document(raw, json_loader=_json)
     if not isinstance(document, dict):
         raise ValueError("SBOM must be a JSON object")
     packages, fmt, detected = parse_sbom_document(document, source_name="uploaded SBOM")

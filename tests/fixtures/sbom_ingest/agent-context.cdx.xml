@@ -1,0 +1,149 @@
+<?xml version="1.0" ?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:c05239ff-cff7-4f45-a832-b81dd2d97571" version="1">
+  <metadata>
+    <timestamp>2026-10-26T15:59:14.621865+00:00</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <name>agent-bom</name>
+          <version>0.111.0</version>
+          <description>Security scanner for AI infrastructure — from agent to runtime</description>
+        </component>
+      </components>
+    </tools>
+    <properties>
+      <property name="agent-bom:canonical-id-schema-version">3</property>
+      <property name="agent-bom:ml-models">0</property>
+      <property name="agent-bom:scan-issue-count">0</property>
+      <property name="agent-bom:scan-outcome">complete</property>
+      <property name="agent-bom:total-agents">1</property>
+      <property name="agent-bom:total-mcp-servers">1</property>
+      <property name="agent-bom:total-vulnerabilities">1</property>
+    </properties>
+  </metadata>
+  <components>
+    <component type="application" bom-ref="agent-5a766482-06c8-535c-b904-a9ca6c77702e">
+      <name>desktop-assistant</name>
+      <version>unknown</version>
+      <description>AI Agent (claude-desktop)</description>
+      <properties>
+        <property name="agent-bom:canonical-id-schema-version">3</property>
+        <property name="agent-bom:config-path">&lt;path:app.json&gt;</property>
+        <property name="agent-bom:discovery-provenance:confidence">medium</property>
+        <property name="agent-bom:discovery-provenance:observed-via">["local_discovery"]</property>
+        <property name="agent-bom:discovery-provenance:source-type">local_discovery</property>
+        <property name="agent-bom:previous-canonical-id">0ded7922-076e-50e7-a489-b3fbc1b1e78e</property>
+        <property name="agent-bom:previous-canonical-id">f44a3ff4-9c5f-50e4-8b0b-8500105b2e98</property>
+        <property name="agent-bom:status">configured</property>
+        <property name="agent-bom:type">ai-agent</property>
+      </properties>
+    </component>
+    <component type="application" bom-ref="mcp-server-0c85c2df-99cb-5eec-bc0c-79f0bc6b6933">
+      <name>fetch-server</name>
+      <description>MCP Server (stdio)</description>
+      <properties>
+        <property name="agent-bom:command">uvx mcp-server-fetch</property>
+        <property name="agent-bom:discovery-provenance:confidence">medium</property>
+        <property name="agent-bom:discovery-provenance:observed-via">["local_discovery"]</property>
+        <property name="agent-bom:discovery-provenance:source-type">local_discovery</property>
+        <property name="agent-bom:inventory-members">["pkg-160890ae-5139-5ada-ab46-1549481536b0", "pkg-aaea4d61-bb6c-53de-abaf-6b623a6b53ce"]</property>
+        <property name="agent-bom:surface">mcp-server</property>
+        <property name="agent-bom:transport">stdio</property>
+        <property name="agent-bom:type">mcp-server</property>
+      </properties>
+    </component>
+    <component type="library" bom-ref="pkg-160890ae-5139-5ada-ab46-1549481536b0">
+      <name>requests</name>
+      <version>2.31.0</version>
+      <licenses>
+        <license>
+          <id>Apache-2.0</id>
+        </license>
+      </licenses>
+      <purl>pkg:pypi/requests@2.31.0</purl>
+      <properties>
+        <property name="agent-bom:dependency-depth">0</property>
+        <property name="agent-bom:dependency-scope">runtime</property>
+        <property name="agent-bom:discovery-provenance:confidence">medium</property>
+        <property name="agent-bom:discovery-provenance:observed-via">["local_discovery"]</property>
+        <property name="agent-bom:discovery-provenance:resolved-from-registry">false</property>
+        <property name="agent-bom:discovery-provenance:source-type">local_discovery</property>
+        <property name="agent-bom:discovery-provenance:version-provenance">{"confidence":"unknown","declared_name":"requests","legacy_version_source":"detected","pinned":true,"pinned_version":"2.31.0","resolved_from_registry":false,"resolved_version":"2.31.0","source_precedence":0,"version_source":"unknown"}</property>
+        <property name="agent-bom:discovery-provenance:version-source">detected</property>
+        <property name="agent-bom:ecosystem">pypi</property>
+        <property name="agent-bom:floating-reference">false</property>
+        <property name="agent-bom:is-direct">true</property>
+        <property name="agent-bom:reachability-evidence">runtime_dependency</property>
+        <property name="agent-bom:resolved-from-registry">false</property>
+        <property name="agent-bom:version-provenance-confidence">unknown</property>
+        <property name="agent-bom:version-provenance-source">unknown</property>
+        <property name="agent-bom:version-source">detected</property>
+      </properties>
+    </component>
+    <component type="library" bom-ref="pkg-aaea4d61-bb6c-53de-abaf-6b623a6b53ce">
+      <name>urllib3</name>
+      <version>2.0.4</version>
+      <purl>pkg:pypi/urllib3@2.0.4</purl>
+      <properties>
+        <property name="agent-bom:dependency-depth">1</property>
+        <property name="agent-bom:dependency-scope">runtime</property>
+        <property name="agent-bom:discovery-provenance:confidence">medium</property>
+        <property name="agent-bom:discovery-provenance:observed-via">["local_discovery"]</property>
+        <property name="agent-bom:discovery-provenance:resolved-from-registry">false</property>
+        <property name="agent-bom:discovery-provenance:source-type">local_discovery</property>
+        <property name="agent-bom:discovery-provenance:version-provenance">{"confidence":"unknown","declared_name":"urllib3","legacy_version_source":"detected","pinned":true,"pinned_version":"2.0.4","resolved_from_registry":false,"resolved_version":"2.0.4","source_precedence":0,"version_source":"unknown"}</property>
+        <property name="agent-bom:discovery-provenance:version-source">detected</property>
+        <property name="agent-bom:ecosystem">pypi</property>
+        <property name="agent-bom:floating-reference">false</property>
+        <property name="agent-bom:is-direct">false</property>
+        <property name="agent-bom:parent-package">requests</property>
+        <property name="agent-bom:reachability-evidence">runtime_dependency</property>
+        <property name="agent-bom:resolved-from-registry">false</property>
+        <property name="agent-bom:version-provenance-confidence">unknown</property>
+        <property name="agent-bom:version-provenance-source">unknown</property>
+        <property name="agent-bom:version-source">detected</property>
+      </properties>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="agent-5a766482-06c8-535c-b904-a9ca6c77702e">
+      <dependency ref="mcp-server-0c85c2df-99cb-5eec-bc0c-79f0bc6b6933"/>
+    </dependency>
+    <dependency ref="mcp-server-0c85c2df-99cb-5eec-bc0c-79f0bc6b6933">
+      <dependency ref="pkg-160890ae-5139-5ada-ab46-1549481536b0"/>
+    </dependency>
+    <dependency ref="pkg-160890ae-5139-5ada-ab46-1549481536b0">
+      <dependency ref="pkg-aaea4d61-bb6c-53de-abaf-6b623a6b53ce"/>
+    </dependency>
+    <dependency ref="pkg-aaea4d61-bb6c-53de-abaf-6b623a6b53ce"/>
+  </dependencies>
+  <vulnerabilities>
+    <vulnerability bom-ref="BomRef.02454366969418942.9435506113629215">
+      <id>CVE-2024-35195</id>
+      <source>
+        <name>OSV</name>
+        <url>https://osv.dev/vulnerability/CVE-2024-35195</url>
+      </source>
+      <ratings>
+        <rating>
+          <score>5.6</score>
+          <severity>medium</severity>
+          <method>CVSSv3</method>
+        </rating>
+      </ratings>
+      <description>cert verify bypass</description>
+      <recommendation>Upgrade to 2.32.0</recommendation>
+      <affects>
+        <target>
+          <ref>pkg-160890ae-5139-5ada-ab46-1549481536b0</ref>
+        </target>
+      </affects>
+      <properties>
+        <property name="agent-bom:match-evidence">{"affects_ref": "pkg-160890ae-5139-5ada-ab46-1549481536b0", "fixed_version": "2.32.0", "match_confidence_tier": null}</property>
+        <property name="agent-bom:sla_due_at">2027-01-24T15:59:14.621865+00:00</property>
+        <property name="agent-bom:sla_due_at_source">severity-kev/v1</property>
+      </properties>
+    </vulnerability>
+  </vulnerabilities>
+</bom>
+

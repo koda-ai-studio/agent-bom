@@ -26,17 +26,14 @@ def test_exact_aws_documentation_key_is_not_a_real_credential(tmp_path):
     assert any(f.severity == "critical" for f in scan_secrets(tmp_path).findings)
 
 
-def test_spdx_tag_value_reports_supported_intake_format(tmp_path):
-    import pytest
-
+def test_spdx_tag_value_is_a_supported_intake_format(tmp_path):
     from agent_bom.parsers.sbom_context import load_sbom_agent
     from agent_bom.sbom import load_sbom
 
     path = tmp_path / "bom.spdx"
     path.write_text("SPDXVersion: SPDX-2.3\nDataLicense: CC0-1.0\nSPDXID: SPDXRef-DOCUMENT\n")
-    for load in (load_sbom, load_sbom_agent):
-        with pytest.raises(ValueError, match="SPDX tag-value.*JSON"):
-            load(str(path))
+    assert load_sbom(str(path))[1] == "spdx-2"
+    assert load_sbom_agent(str(path))[1] == "spdx-2"
 
 
 def test_missing_amazon_linux_feed_is_not_labeled_end_of_life(tmp_path, monkeypatch):
