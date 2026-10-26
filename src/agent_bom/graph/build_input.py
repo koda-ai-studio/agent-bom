@@ -35,6 +35,7 @@ class GraphEvidenceSections(TypedDict, total=False):
     sast_data: Record
     iac_findings: Record
     iac_findings_data: Record
+    kubernetes_inventory: Record
     skill_audit: Record
     ai_inventory: Record
     runtime_session_graph: Record

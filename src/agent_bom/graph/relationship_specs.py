@@ -178,6 +178,10 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         extra=(
             # An agent workload runs inside its container, as a server does.
             (E.CONTAINER, E.AGENT),
+            # Kubernetes: a cluster holds namespaces; a namespace holds its workloads and service accounts.
+            (E.CLUSTER, E.RESOURCE),
+            (E.RESOURCE, E.CONTAINER),
+            (E.RESOURCE, E.SERVICE_ACCOUNT),
             # A project agent contains the framework graphs its source declares.
             (E.AGENT, E.AGENT),
             # Organization hierarchy: a parent organization nests sub-organizations.
@@ -297,6 +301,8 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         (E.CLOUD_RESOURCE, E.DATASET, E.CREDENTIAL, E.RESOURCE),
         extra=(
             *product((*_PRINCIPALS, *_WORKLOADS, E.APPLICATION, E.TOOL, E.MANAGED_IDENTITY), _ACCESSIBLE),
+            # A Kubernetes workload mounts or references a named Secret.
+            (E.CONTAINER, E.CREDENTIAL),
             # Principal-to-principal reach (impersonation, pass-role, managed-identity attach).
             *product((*_WORKLOAD_IDENTITIES, E.MANAGED_IDENTITY), (*_WORKLOAD_IDENTITIES, E.MANAGED_IDENTITY)),
         ),
@@ -404,8 +410,8 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         T.AUTHORITY,
         "identity",
         (E.USER, E.GROUP, E.ROLE, E.SERVICE_ACCOUNT, E.SERVICE_PRINCIPAL, E.MANAGED_IDENTITY),
-        # Grants scoped to a whole subscription / project / organization land on it.
-        (E.CLOUD_RESOURCE, E.DATA_STORE, E.RESOURCE, E.TOOL, E.ACCOUNT, E.ORG),
+        # Grants scoped to a whole subscription / project / organization (or a Kubernetes cluster) land on it.
+        (E.CLOUD_RESOURCE, E.DATA_STORE, E.RESOURCE, E.TOOL, E.ACCOUNT, E.ORG, E.CLUSTER),
     ),
     _spec(
         R.PROTECTS,

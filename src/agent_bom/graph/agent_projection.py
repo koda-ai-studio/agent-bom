@@ -21,6 +21,7 @@ from agent_bom.graph.credential_projection import project_credentials
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.hosting_projection import project_server_hosting
+from agent_bom.graph.image_projection import add_image_node, carrier_node_id, previous_carrier_ids
 from agent_bom.graph.mcp_server_aliases import previous_mcp_server_graph_ids
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.package_dependency_projection import project_package_dependencies
@@ -60,6 +61,7 @@ class AgentScope:
     agent_scope: str = ""
     sbom_import: bool = False
     repository_inventory: bool = False
+    image_inventory: bool = False
     static_inventory: bool = False
     data_source_tag: str = ""
     inventory_type: EntityType = EntityType.SOURCE_FILE
@@ -106,11 +108,19 @@ def _scope(agent_dict: dict[str, Any], report_data_source: str) -> AgentScope:
     agent.agent_scope = _agent_identity_scope(agent.agent_dict)
     agent.sbom_import = _is_sbom_import(agent.agent_dict)
     agent.repository_inventory = _is_repository_inventory(agent.agent_dict)
-    agent.static_inventory = agent.sbom_import or agent.repository_inventory
+    image_id = None if agent.sbom_import or agent.repository_inventory else carrier_node_id(agent.agent_dict)
+    agent.image_inventory = image_id is not None
+    agent.static_inventory = agent.sbom_import or agent.repository_inventory or agent.image_inventory
     agent.data_source_tag = str(agent.agent_dict["source"]) if agent.repository_inventory else report_data_source
-    agent.inventory_type = EntityType.DIRECTORY if agent.repository_inventory else EntityType.SOURCE_FILE
-    agent.agent_id = _inventory_node_id(agent, agent_graph_id_for(agent.agent_dict))
-    agent.previous_agent_ids = [_inventory_node_id(agent, old) for old in previous_agent_graph_ids(agent.agent_dict)]
+    agent.inventory_type = (
+        EntityType.DIRECTORY if agent.repository_inventory else EntityType.CONTAINER if agent.image_inventory else EntityType.SOURCE_FILE
+    )
+    agent.agent_id = image_id or _inventory_node_id(agent, agent_graph_id_for(agent.agent_dict))
+    agent.previous_agent_ids = (
+        previous_carrier_ids(agent.agent_dict, agent_graph_id_for(agent.agent_dict))
+        if agent.image_inventory
+        else [_inventory_node_id(agent, old) for old in previous_agent_graph_ids(agent.agent_dict)]
+    )
     agent.agent_node_key = agent.agent_id.removeprefix("agent:")
     agent.agent_type = agent.agent_dict.get("type", agent.agent_dict.get("agent_type", ""))
     agent.provider_name = str(agent.agent_dict.get("source") or "local").strip() or "local"
@@ -191,7 +201,10 @@ def _add_agent_node(graph: UnifiedGraph, agent: AgentScope) -> None:
 
 
 def _project_agent(graph: UnifiedGraph, agent: AgentScope, indexes: BuildIndexes, lineage: CloudLineageProjection) -> None:
-    _add_agent_node(graph, agent)
+    if agent.image_inventory:
+        add_image_node(graph, agent.agent_dict, agent.agent_id, agent.data_source_tag, agent.previous_agent_ids)
+    else:
+        _add_agent_node(graph, agent)
     indexes.agent_name_to_ids[agent.agent_name].append(agent.agent_id)
     config_path = str(agent.agent_dict.get("config_path", "") or "").strip()
     if config_path:
@@ -302,7 +315,7 @@ def _server_agents(graph: UnifiedGraph, srv_id: str, agent_id: str) -> list[str]
 
 def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str, Any], indexes: BuildIndexes) -> None:
     srv_name = srv_dict.get("name", "unknown")
-    srv_id = agent.agent_id if agent.sbom_import else mcp_server_graph_id_for(srv_dict, agent.agent_dict)
+    srv_id = agent.agent_id if agent.sbom_import or agent.image_inventory else mcp_server_graph_id_for(srv_dict, agent.agent_dict)
     surface = srv_dict.get("surface", "mcp-server")
     srv_id = _add_server_node(graph, agent, srv_dict, srv_id, srv_name, surface)
     if not agent.sbom_import and not agent.static_inventory:
@@ -391,7 +404,7 @@ def _project_package_nodes(graph: UnifiedGraph, agent: AgentScope, srv_dict: Map
             UnifiedEdge(
                 source=srv_id,
                 target=pkg_id,
-                relationship=RelationshipType.CONTAINS if agent.sbom_import else RelationshipType.DEPENDS_ON,
+                relationship=RelationshipType.CONTAINS if agent.sbom_import or agent.image_inventory else RelationshipType.DEPENDS_ON,
                 evidence=package_evidence,
             )
         )
