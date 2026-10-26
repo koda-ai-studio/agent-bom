@@ -11,6 +11,9 @@ import math
 import os
 import re
 from collections import Counter
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 from urllib.parse import unquote, urlsplit, urlunsplit
 
@@ -469,8 +472,47 @@ _TITLE_CASE_CONTINUATION_RE = re.compile(r"[ \t]{1,8}[A-Z][A-Za-z]{0,64}\b")
 _HTTP_URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 
 
+SANITIZE_TEXT_MEMO_LIMIT = 16_384
+SANITIZE_TEXT_MEMO_MAX_INPUT = 512
+_SANITIZE_TEXT_MEMO: ContextVar[dict[tuple[str, int], str] | None] = ContextVar("agent_bom_sanitize_text_memo", default=None)
+
+
+@contextmanager
+def sanitize_text_memo() -> Iterator[dict[tuple[str, int], str]]:
+    """Memoize :func:`sanitize_text` for one scan, releasing every input string afterwards.
+
+    Report building redacts the same package and layer strings once per
+    finding; an image with thousands of CVEs on one package otherwise repeats
+    identical regex work per finding.
+    """
+    memo = _SANITIZE_TEXT_MEMO.get()
+    if memo is not None:
+        yield memo
+        return
+    memo = {}
+    token = _SANITIZE_TEXT_MEMO.set(memo)
+    try:
+        yield memo
+    finally:
+        _SANITIZE_TEXT_MEMO.reset(token)
+        memo.clear()
+
+
 def sanitize_text(value: object, max_len: int = 1000) -> str:
     """Redact credential-shaped substrings, credential-bearing URLs, and emails in text."""
+    memo = _SANITIZE_TEXT_MEMO.get()
+    if memo is None or type(value) is not str or len(value) > SANITIZE_TEXT_MEMO_MAX_INPUT:
+        return _sanitize_text(value, max_len)
+    key = (value, max_len)
+    cached = memo.get(key)
+    if cached is None:
+        cached = _sanitize_text(value, max_len)
+        if len(memo) < SANITIZE_TEXT_MEMO_LIMIT:
+            memo[key] = cached
+    return cached
+
+
+def _sanitize_text(value: object, max_len: int = 1000) -> str:
     text = sanitize_log_label(value, max_len=max_len)
     # A substitution is skipped only when its pattern cannot match: URLs need
     # ``://``, a keyed value needs ``=`` or ``:``, an email needs ``@``.
