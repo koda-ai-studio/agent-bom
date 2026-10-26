@@ -437,3 +437,65 @@ def test_governance_payload_retains_unavailable_identity_collection(monkeypatch)
     assert not body["nodes"]
     assert body["stats"]["analysis_status"]["governance_overlay"]["status"] == "limited"
     assert body["stats"]["analysis_status"]["governance_overlay"]["reason_codes"] == ["identities_unavailable"]
+
+
+def test_overlay_times_come_from_records_never_the_read_clock(monkeypatch):
+    from agent_bom.graph import edge as edge_module
+    from agent_bom.graph import node as node_module
+
+    store = InMemoryAgentIdentityStore()
+    identity, _ = issue_identity(store, agent_id="agent-a", tenant_id="default", allowed_tools=["list_files"])
+    issue_jit_grant(
+        store,
+        identity_id=identity.identity_id,
+        agent_id="agent-a",
+        tenant_id="default",
+        tool_name="read_file",
+        ttl_seconds=300,
+        approved_by="admin",
+    )
+    create_conditional_policy(
+        store, tenant_id="default", name="prod-only", effect="require", agent_ids=["agent-a"], allowed_environments=["prod"]
+    )
+    incident = DriftIncident(
+        incident_id="inc1",
+        tenant_id="default",
+        blueprint_id="agent-a",
+        status="drift_detected",
+        drift_score=0.8,
+        violation_count=1,
+        warning_count=0,
+        top_violations=[{"tool_name": "read_file", "type": "unauthorized_tool"}],
+        first_detected_at="2026-06-01T00:00:00Z",
+        last_detected_at="2026-06-02T00:00:00Z",
+        occurrences=2,
+    )
+    graph = _base_graph()
+    graph.created_at = "2026-05-01T00:00:00+00:00"
+    read_clock = "2099-01-01T00:00:00+00:00"
+    monkeypatch.setattr(node_module, "_now_iso", lambda: read_clock)
+    monkeypatch.setattr(edge_module, "_now_iso", lambda: read_clock)
+
+    apply_governance_overlay(
+        graph,
+        tenant_id="default",
+        identity_store=store,
+        drift_store=_FakeDriftStore([incident]),
+        blueprint_store=_EmptyBlueprintStore(),
+    )
+
+    overlay_nodes = [n for n in graph.nodes.values() if "governance-overlay" in n.data_sources]
+    overlay_edges = [e for e in graph.edges if (e.provenance or {}).get("source") == "governance-overlay"]
+    assert {n.entity_type for n in overlay_nodes} >= {
+        EntityType.MANAGED_IDENTITY,
+        EntityType.ACCESS_GRANT,
+        EntityType.ACCESS_POLICY,
+        EntityType.DRIFT_INCIDENT,
+    }
+    assert overlay_edges
+    for item in [*overlay_nodes, *overlay_edges]:
+        assert read_clock not in (item.first_seen, item.last_seen), item
+    drift = graph.nodes["drift_incident:inc1"]
+    assert (drift.first_seen, drift.last_seen) == ("2026-06-01T00:00:00Z", "2026-06-02T00:00:00Z")
+    managed = next(n for n in overlay_nodes if n.entity_type == EntityType.MANAGED_IDENTITY)
+    assert managed.first_seen == identity.issued_at

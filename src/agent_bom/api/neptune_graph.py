@@ -436,12 +436,13 @@ class NeptuneGraphStore:
         )
         if snapshot_rows:
             graph.analysis_status = analysis_status_map_from_dict(_json_loads(snapshot_rows[0].get("analysis_status_json"), {}))
+            graph.created_at = str(_first(snapshot_rows[0].get("created_at"))) or graph.created_at
         node_rows = self._submit(
             "g.V().hasLabel('abom_node').has('tenant_id', tenant_id).has('scan_id', scan_id).valueMap()",
             {"tenant_id": tenant, "scan_id": scan},
         )
         for row in node_rows:
-            node = self._node_from_record(row)
+            node = self._node_from_record(row, stored_at=graph.created_at)
             entity_value = node.entity_type.value if hasattr(node.entity_type, "value") else str(node.entity_type)
             if entity_types and entity_value not in entity_types:
                 continue
@@ -452,7 +453,7 @@ class NeptuneGraphStore:
             graph.add_node(node)
         edge_rows = self._edge_rows(tenant_id=tenant, scan_id=scan)
         for row in edge_rows:
-            edge = self._edge_from_record(row)
+            edge = self._edge_from_record(row, stored_at=graph.created_at)
             if edge.source in graph.nodes and edge.target in graph.nodes:
                 graph.add_stored_edge(edge)
         # No query-side limit on this backend; cap after the load so the
@@ -583,7 +584,7 @@ class NeptuneGraphStore:
         }
 
     @staticmethod
-    def _node_from_record(row: dict[str, Any]) -> UnifiedNode:
+    def _node_from_record(row: dict[str, Any], *, stored_at: str = "") -> UnifiedNode:
         payload = _json_loads(row.get("payload_json"), {})
         if payload:
             return UnifiedNode.from_dict(payload)
@@ -591,10 +592,11 @@ class NeptuneGraphStore:
             id=str(_first(row.get("node_id"))),
             entity_type=EntityType(str(_first(row.get("entity_type")))),
             label=str(_first(row.get("label"))),
+            first_seen=stored_at,
         )
 
     @staticmethod
-    def _edge_from_record(row: dict[str, Any]) -> UnifiedEdge:
+    def _edge_from_record(row: dict[str, Any], *, stored_at: str = "") -> UnifiedEdge:
         payload = _json_loads(row.get("payload_json"), {})
         if payload:
             return UnifiedEdge.from_dict(payload)
@@ -605,6 +607,7 @@ class NeptuneGraphStore:
             traversable=_bool_value(row.get("traversable"), True),
             valid_from=str(_first(row.get("valid_from"))),
             valid_to=str(_first(row.get("valid_to"))) or None,
+            first_seen=stored_at,
         )
 
     def _unsupported(self, name: str) -> NoReturn:
