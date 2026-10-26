@@ -422,3 +422,34 @@ def blocklist_findings_for_agents(agents: list[Agent], blocklist: dict[str, Any]
                 )
                 findings.append(apply_hub_classification(finding))
     return findings
+
+
+def blocked_server_remediations(agents: list[Agent], blocklist: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Removal actions for blocklisted MCP servers, most severe first.
+
+    A blocklisted server is never unpacked, so it has no package upgrade in a
+    remediation plan; without this list the plan reads as "nothing to fix".
+    """
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for agent in agents:
+        for server in agent.mcp_servers:
+            for match in match_mcp_server(server, blocklist):
+                key = (agent.name, server.name, match.entry_id)
+                if key in seen:
+                    continue
+                seen.add(key)
+                rows.append(
+                    {
+                        "server": server.name,
+                        "agent": agent.name,
+                        "package": match.package,
+                        "ecosystem": match.ecosystem,
+                        "severity": match.severity,
+                        "title": match.title,
+                        "entry_id": match.entry_id,
+                        "action": f"Remove or disable the MCP server '{server.name}' from {agent.name}; it matches {match.title}.",
+                    }
+                )
+    rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    return sorted(rows, key=lambda row: (rank.get(str(row["severity"]).lower(), 4), row["agent"], row["server"]))

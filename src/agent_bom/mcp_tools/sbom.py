@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 
+from agent_bom.mcp_blocklist import blocked_server_remediations
 from agent_bom.mcp_errors import CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
 from agent_bom.security import sanitize_error
 
@@ -65,6 +66,7 @@ async def remediate_impl(
                     "package_fixes": [],
                     "credential_fixes": [],
                     "unfixable": [],
+                    "blocked_servers": [],
                     "message": "No agents found — nothing to remediate",
                 }
             )
@@ -106,6 +108,7 @@ async def remediate_impl(
                     ],
                     "total_unfixable": len(plan.unfixable),
                     "unfixable": plan.unfixable[:10],
+                    "blocked_servers": blocked_server_remediations(agents),
                 },
                 indent=2,
                 default=str,

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
+from agent_bom.mcp_blocklist import flag_blocklisted_mcp_servers
 from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_ECOSYSTEM,
     CODE_VALIDATION_INVALID_IMAGE_REF,
@@ -379,9 +380,12 @@ async def run_scan_pipeline(
     if not agents:
         return [], [], warnings, scan_sources
 
+    # Stamp the blocklist first so a known-malicious server is reported, not
+    # unpacked and scanned, exactly as the CLI pipeline does.
+    flag_blocklisted_mcp_servers(agents)
     for agent in agents:
         for server in agent.mcp_servers:
-            if not server.packages:
+            if not server.packages and not server.security_blocked:
                 server.packages = extract_packages(server)
             if offline:
                 for pkg in server.packages:
