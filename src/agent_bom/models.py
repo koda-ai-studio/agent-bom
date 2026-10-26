@@ -353,6 +353,7 @@ class AIBOMReport:
     # local-estate/inventory scans or the MCP scan tool — those surfaces do not run
     # the IaC scanner, so /v1/findings shows the IaC category only for repo scans.
     iac_findings_data: Optional[dict[str, Any]] = None
+    kubernetes_inventory_data: Optional[dict[str, Any]] = None  # namespace → workload → image, service accounts, RBAC
     # Graph toxic-combination findings (serialized Finding dicts; set at the graph-build call site).
     # Rehydrated into the unified Finding stream by to_findings() so they reach --fail-on-severity.
     toxic_combination_findings_data: Optional[list[Any]] = None

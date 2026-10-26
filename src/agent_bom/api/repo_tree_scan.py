@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from agent_bom.evidence.scan_run import ScanIssue
+from agent_bom.k8s_inventory_manifests import manifest_inventory_with_issues
 from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface
 from agent_bom.scanners.secret_models import secret_scan_warning as secret_scan_warning
 from agent_bom.traversal import iter_discovery_files
@@ -50,6 +51,7 @@ _MAX_WEAK_CRYPTO_FILES = 5000
 class RepoTreeScanResult:
     skill_audit_data: dict[str, Any] | None = None
     iac_findings_data: dict[str, Any] | None = None
+    kubernetes_inventory: dict[str, Any] | None = None
     ai_inventory_data: dict[str, Any] | None = None
     sast_data: dict[str, Any] | None = None
     codeowners: dict[str, str] = field(default_factory=dict)
@@ -273,6 +275,8 @@ def _scan_iac_stage(root: Path, result: RepoTreeScanResult, update_progress: Cal
     if update_progress is not None:
         update_progress("Scanning IaC and cloud config files")
     iac_result = scan_iac_with_context(root, IaCContext(deployment_mode="standalone"))
+    result.kubernetes_inventory, chart_issues = manifest_inventory_with_issues(root)
+    result.scan_issues.extend(chart_issues)
     if iac_result.findings:
         result.iac_findings_data = {
             "total": len(iac_result.findings),

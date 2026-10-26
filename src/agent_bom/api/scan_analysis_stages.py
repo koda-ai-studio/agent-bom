@@ -17,6 +17,7 @@ from agent_bom.api.scan_report_support import (
 )
 from agent_bom.core.severity import severity_at_or_above
 from agent_bom.evidence.scan_run import VULNERABILITY_SCAN_SKIPPED_MESSAGE
+from agent_bom.k8s_inventory_report import kubernetes_inventory_section
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.supplied_findings import build_supplied_findings
@@ -201,6 +202,8 @@ def attach_repo_evidence(ctx: ScanContext, report: Any) -> None:
         replace_skill_findings(report, ctx.skill_audit_data)
     if ctx.iac_findings_data is not None:
         report.iac_findings_data = ctx.iac_findings_data
+    if ctx.kubernetes_inventories:
+        report.kubernetes_inventory_data = kubernetes_inventory_section(ctx.kubernetes_inventories, report.agents)
     if ctx.repo_ai_inventory_data is not None:
         report.ai_inventory_data = ctx.repo_ai_inventory_data
         _promote_repo_dependency_inventory(report, ctx.repo_ai_inventory_data)

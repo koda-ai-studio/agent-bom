@@ -351,6 +351,21 @@ def scan_iac(run: DiscoveryRun) -> None:
     if all_iac_findings:
         print_iac_findings(run, all_iac_findings)
     run.ctx.iac_findings_data = iac_findings_data(all_iac_findings)
+    _manifest_k8s_inventory(run)
+
+
+def _manifest_k8s_inventory(run: DiscoveryRun) -> None:
+    from agent_bom.cli.agents._discovery_sources import print_k8s_inventory_summary
+    from agent_bom.k8s_inventory_manifests import k8s_inventory_from_paths
+
+    inventory, notes = k8s_inventory_from_paths(run.iac_paths)
+    for note in notes:
+        run.con.print(f"  [yellow]![/yellow] Helm chart {note}")
+    if inventory is None:
+        return
+    run.con.print("\n[bold blue]Kubernetes workloads declared in manifests[/bold blue]")
+    print_k8s_inventory_summary(run.con, inventory)
+    run.ctx.kubernetes_inventories.append(inventory)
 
 
 def consolidate_agents(run: DiscoveryRun) -> None:

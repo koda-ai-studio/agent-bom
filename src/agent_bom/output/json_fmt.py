@@ -779,29 +779,19 @@ def to_json(report: AIBOMReport) -> dict:
     if report.model_supply_chain_data:
         result["model_supply_chain"] = report.model_supply_chain_data
 
-    if report.enforcement_data:
-        result["enforcement"] = report.enforcement_data
-
-    if report.context_graph_data:
-        result["context_graph"] = report.context_graph_data
-
-    if report.license_report:
-        result["license_report"] = report.license_report
-
-    if report.vex_data:
-        result["vex"] = report.vex_data
-
-    if report.toxic_combinations:
-        result["toxic_combinations"] = report.toxic_combinations
-
-    if report.prioritized_findings:
-        result["prioritized_findings"] = report.prioritized_findings
-
-    if report.sast_data:
-        result["sast"] = report.sast_data
-
-    if report.iac_findings_data:
-        result["iac_findings"] = report.iac_findings_data
+    for key, section in (
+        ("enforcement", report.enforcement_data),
+        ("context_graph", report.context_graph_data),
+        ("license_report", report.license_report),
+        ("vex", report.vex_data),
+        ("toxic_combinations", report.toxic_combinations),
+        ("prioritized_findings", report.prioritized_findings),
+        ("sast", report.sast_data),
+        ("iac_findings", report.iac_findings_data),
+        ("kubernetes_inventory", report.kubernetes_inventory_data),
+    ):
+        if section:
+            result[key] = section
 
     if report.cloud_inventory_data is not None:
         result["cloud_inventory"] = report.cloud_inventory_data

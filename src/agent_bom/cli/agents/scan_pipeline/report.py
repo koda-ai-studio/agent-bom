@@ -24,6 +24,7 @@ from agent_bom.evidence.scan_run import (
     vulnerability_scan_skipped_issue,
 )
 from agent_bom.finding import blast_radius_to_finding
+from agent_bom.k8s_inventory_report import kubernetes_inventory_section
 from agent_bom.models import AIBOMReport
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.resolver import consume_performance_stats as consume_resolution_performance
@@ -338,6 +339,8 @@ def _attach_benchmarks(opts: ScanOptions, st: ScanState) -> None:
         st.report.gpu_infra_data = st.ctx.gpu_infra_report.risk_summary
     if st.ctx.iac_findings_data:
         st.report.iac_findings_data = st.ctx.iac_findings_data
+    if st.ctx.kubernetes_inventories:
+        st.report.kubernetes_inventory_data = kubernetes_inventory_section(st.ctx.kubernetes_inventories, st.report.agents)
 
 
 def _attach_estate_and_runtime(opts: ScanOptions, st: ScanState) -> None:

@@ -353,6 +353,8 @@ async def run_scan_pipeline(
                         name=f"image:{image}",
                         agent_type=AgentType.CUSTOM,
                         config_path="",
+                        source="image",
+                        metadata={"inventory_role": "container_image", "image_ref": image},
                         mcp_servers=[img_server],
                     )
                 )

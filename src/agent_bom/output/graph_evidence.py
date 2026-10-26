@@ -30,6 +30,7 @@ _PASSTHROUGH_SECTIONS: tuple[tuple[str, str], ...] = (
     ("toxic_combinations", "toxic_combinations"),
     ("sast", "sast_data"),
     ("iac_findings", "iac_findings_data"),
+    ("kubernetes_inventory", "kubernetes_inventory_data"),
     ("cloud_inventory", "cloud_inventory_data"),
     ("aws_organization", "aws_organization_data"),
     ("identity_discovery", "identity_discovery_data"),
