@@ -2097,7 +2097,8 @@
           "api_server_fqdn": "public-aks.hcp.eastus.azmk8s.io",
           "private_cluster": false,
           "rbac_enabled": true,
-          "internet_facing": true
+          "internet_facing": true,
+          "node_pools": []
         },
         {
           "name": "private-aks",
@@ -2110,7 +2111,8 @@
           "api_server_fqdn": "private.azmk8s.io",
           "private_cluster": true,
           "rbac_enabled": false,
-          "internet_facing": false
+          "internet_facing": false,
+          "node_pools": []
         },
         {
           "name": "noprofile",
@@ -2123,7 +2125,8 @@
           "api_server_fqdn": "",
           "private_cluster": false,
           "rbac_enabled": false,
-          "internet_facing": false
+          "internet_facing": false,
+          "node_pools": []
         }
       ],
       "security_groups": [
@@ -3924,7 +3927,8 @@
           "api_server_fqdn": "public-aks.hcp.eastus.azmk8s.io",
           "private_cluster": false,
           "rbac_enabled": true,
-          "internet_facing": true
+          "internet_facing": true,
+          "node_pools": []
         }
       ],
       "security_groups": [

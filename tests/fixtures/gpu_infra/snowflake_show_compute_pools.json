@@ -1,0 +1,8 @@
+{
+  "columns": ["name", "state", "min_nodes", "max_nodes", "instance_family", "num_services", "num_jobs", "auto_suspend_secs", "auto_resume", "active_nodes", "idle_nodes", "target_nodes", "created_on", "resumed_on", "updated_on", "owner", "comment", "is_exclusive", "application", "placement_group", "backup_instance_families"],
+  "rows": [
+    ["LLM_GPU_POOL", "ACTIVE", 1, 2, "GPU_NV_M", 3, 1, 0, "true", 1, 0, 1, "2026-09-01 10:00:00", "2026-10-20 08:00:00", "2026-10-20 08:00:00", "ML_ENGINEER", "", "false", null, null, null],
+    ["APP_CPU_POOL", "SUSPENDED", 1, 1, "CPU_X64_XS", 1, 0, 3600, "true", 0, 0, 0, "2026-09-01 10:00:00", null, "2026-09-01 10:00:00", "SYSADMIN", "", "false", null, null, null],
+    ["EMBED_GPU_POOL", "IDLE", 1, 1, "GPU_NV_S", 1, 0, 600, "true", 1, 1, 1, "2026-09-02 10:00:00", "2026-10-20 08:00:00", "2026-10-20 08:00:00", "ACCOUNTADMIN", "", "false", null, null, null]
+  ]
+}

@@ -1,0 +1,64 @@
+[
+  {
+    "name": "vision",
+    "id": "",
+    "location": "us-central1",
+    "endpoint": "203.0.113.10",
+    "self_link": "https://container.googleapis.com/v1/projects/example-ml-project/locations/us-central1/clusters/vision",
+    "current_master_version": "1.31.1-gke.1000",
+    "current_node_count": 5,
+    "private_cluster_config": {"enable_private_endpoint": false, "enable_private_nodes": true},
+    "resource_labels": {},
+    "node_pools": [
+      {
+        "name": "l4-shared",
+        "self_link": "https://container.googleapis.com/v1/projects/example-ml-project/locations/us-central1/clusters/vision/nodePools/l4-shared",
+        "initial_node_count": 1,
+        "autoscaling": {"enabled": true, "min_node_count": 0, "max_node_count": 4},
+        "config": {
+          "machine_type": "g2-standard-8",
+          "image_type": "COS_CONTAINERD",
+          "service_account": "default",
+          "labels": {},
+          "taints": [],
+          "accelerators": [
+            {
+              "accelerator_count": 1,
+              "accelerator_type": "nvidia-l4",
+              "gpu_partition_size": "",
+              "gpu_sharing_config": {"max_shared_clients_per_gpu": 4, "gpu_sharing_strategy": "TIME_SHARING"},
+              "gpu_driver_installation_config": {"gpu_driver_version": "LATEST"}
+            }
+          ]
+        }
+      },
+      {
+        "name": "a100-mig",
+        "self_link": "https://container.googleapis.com/v1/projects/example-ml-project/locations/us-central1/clusters/vision/nodePools/a100-mig",
+        "initial_node_count": 1,
+        "autoscaling": {"enabled": false},
+        "config": {
+          "machine_type": "a2-highgpu-1g",
+          "image_type": "COS_CONTAINERD",
+          "service_account": "gke-gpu-nodes@example-ml-project.iam.gserviceaccount.com",
+          "labels": {},
+          "taints": [],
+          "accelerators": [
+            {
+              "accelerator_count": 1,
+              "accelerator_type": "nvidia-tesla-a100",
+              "gpu_partition_size": "1g.5gb",
+              "gpu_driver_installation_config": {"gpu_driver_version": "INSTALLATION_DISABLED"}
+            }
+          ]
+        }
+      },
+      {
+        "name": "default-pool",
+        "self_link": "https://container.googleapis.com/v1/projects/example-ml-project/locations/us-central1/clusters/vision/nodePools/default-pool",
+        "initial_node_count": 3,
+        "config": {"machine_type": "e2-standard-4", "image_type": "COS_CONTAINERD", "service_account": "default", "accelerators": []}
+      }
+    ]
+  }
+]

@@ -31,6 +31,7 @@ from agent_bom.security import sanitize_error
 
 from .base import CloudDiscoveryError
 from .databricks_connection import resolved_workspace_host, sdk_value
+from .gpu_managed_compute import databricks_gpu_profile, databricks_node_gpu_counts
 from .normalization import build_cloud_origin, build_cloud_state, build_package_purl, normalize_cloud_lifecycle_state
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,7 @@ def discover(
         permissions_used=(
             "clusters:list",
             "clusters:get",
+            "clusters:list-node-types",
             "libraries:cluster_status:get",
             "serving-endpoints:list",
             "serving-endpoints:get",
@@ -117,15 +119,20 @@ def _discover_cluster_agents(
         warnings.append(f"Could not list Databricks clusters: {sanitize_error(exc, generic=True)}")
         clusters = []
 
+    node_gpus = databricks_node_gpu_counts(ws) if clusters else {}
     for cluster in clusters:
-        agent = _cluster_agent(ws, cluster, resolved_host, warnings)
+        agent = _cluster_agent(ws, cluster, resolved_host, warnings, node_gpus)
         if agent is not None:
             agents.append(agent)
     return agents
 
 
-def _cluster_agent(ws: Any, cluster: Any, resolved_host: str, warnings: list[str]) -> Agent | None:
-    """Build the agent for a single cluster, or ``None`` when it is skipped."""
+def _cluster_agent(ws: Any, cluster: Any, resolved_host: str, warnings: list[str], node_gpus: dict[str, int] | None = None) -> Agent | None:
+    """Build the agent for a single cluster, or ``None`` when it is skipped.
+
+    A cluster without installed libraries is skipped unless it runs on GPU
+    nodes: GPU capacity is inventory in its own right.
+    """
     cluster_id = getattr(cluster, "cluster_id", "") or ""
     cluster_name = getattr(cluster, "cluster_name", "") or cluster_id
     state = getattr(cluster, "state", None)
@@ -142,7 +149,8 @@ def _cluster_agent(ws: Any, cluster: Any, resolved_host: str, warnings: list[str
         return None
 
     packages = _get_cluster_packages(ws, cluster_id, warnings)
-    if not packages:
+    gpu = databricks_gpu_profile(cluster, node_gpus or {})
+    if not packages and gpu is None:
         return None
 
     server = MCPServer(
@@ -153,7 +161,7 @@ def _cluster_agent(ws: Any, cluster: Any, resolved_host: str, warnings: list[str
         surface=ServerSurface.AI_INVENTORY,
         packages=packages,
     )
-    return Agent(
+    agent = Agent(
         name=f"databricks-cluster:{cluster_name}",
         agent_type=AgentType.CUSTOM,
         config_path=f"{resolved_host}/#/setting/clusters/{cluster_id}/configuration",
@@ -169,6 +177,7 @@ def _cluster_agent(ws: Any, cluster: Any, resolved_host: str, warnings: list[str
                 project_id=resolved_host or None,
                 raw_identity={"cluster_id": cluster_id, "cluster_name": cluster_name, "workspace_host": resolved_host},
             ),
+            **({"gpu_compute": {**gpu, "workspace_host": resolved_host}} if gpu else {}),
             "cloud_state": build_cloud_state(
                 provider="databricks",
                 service="clusters",
@@ -179,6 +188,10 @@ def _cluster_agent(ws: Any, cluster: Any, resolved_host: str, warnings: list[str
             ),
         },
     )
+    origin = agent.metadata.get("cloud_origin")
+    if gpu is not None and isinstance(origin, dict) and isinstance(origin.get("scope"), dict):
+        origin["scope"]["gpu"] = True
+    return agent
 
 
 def _discover_serving_agents(

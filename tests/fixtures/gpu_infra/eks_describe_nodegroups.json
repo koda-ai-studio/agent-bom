@@ -1,0 +1,56 @@
+{
+  "cluster": {
+    "name": "ml-prod",
+    "arn": "arn:aws:eks:us-east-1:111122223333:cluster/ml-prod",
+    "version": "1.31",
+    "resourcesVpcConfig": {"endpointPublicAccess": true}
+  },
+  "nodegroups": [
+    {
+      "nodegroup": {
+        "nodegroupName": "gpu-a10g",
+        "nodegroupArn": "arn:aws:eks:us-east-1:111122223333:nodegroup/ml-prod/gpu-a10g/0ac9b1c2-1111-2222-3333-444455556666",
+        "clusterName": "ml-prod",
+        "version": "1.31",
+        "releaseVersion": "1.31.0-20241024",
+        "status": "ACTIVE",
+        "capacityType": "ON_DEMAND",
+        "scalingConfig": {"minSize": 1, "maxSize": 6, "desiredSize": 2},
+        "instanceTypes": ["g5.2xlarge"],
+        "amiType": "AL2023_x86_64_NVIDIA",
+        "nodeRole": "arn:aws:iam::111122223333:role/ml-prod-gpu-node",
+        "labels": {"workload": "inference"},
+        "taints": [],
+        "remoteAccess": {"ec2SshKey": "ops-key", "sourceSecurityGroups": []}
+      }
+    },
+    {
+      "nodegroup": {
+        "nodegroupName": "train-custom",
+        "nodegroupArn": "arn:aws:eks:us-east-1:111122223333:nodegroup/ml-prod/train-custom/1bd0c2d3-1111-2222-3333-444455556666",
+        "clusterName": "ml-prod",
+        "status": "ACTIVE",
+        "scalingConfig": {"minSize": 0, "maxSize": 2, "desiredSize": 0},
+        "instanceTypes": ["p4d.24xlarge"],
+        "amiType": "CUSTOM",
+        "nodeRole": "arn:aws:iam::111122223333:role/ml-prod-train-node",
+        "labels": {},
+        "taints": [{"key": "nvidia.com/gpu", "value": "true", "effect": "NO_SCHEDULE"}]
+      }
+    },
+    {
+      "nodegroup": {
+        "nodegroupName": "system",
+        "nodegroupArn": "arn:aws:eks:us-east-1:111122223333:nodegroup/ml-prod/system/2ce1d3e4-1111-2222-3333-444455556666",
+        "clusterName": "ml-prod",
+        "status": "ACTIVE",
+        "scalingConfig": {"minSize": 2, "maxSize": 4, "desiredSize": 3},
+        "instanceTypes": ["m6i.large"],
+        "amiType": "AL2023_x86_64_STANDARD",
+        "nodeRole": "arn:aws:iam::111122223333:role/ml-prod-system-node",
+        "labels": {},
+        "taints": []
+      }
+    }
+  ]
+}

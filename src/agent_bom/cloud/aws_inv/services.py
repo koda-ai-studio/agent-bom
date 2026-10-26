@@ -140,15 +140,19 @@ def _discover_eks(
             except Exception:  # noqa: BLE001
                 c = {"name": name}
             endpoint_public = bool((c.get("resourcesVpcConfig") or {}).get("endpointPublicAccess"))
+            arn = str(c.get("arn", "") or "")
+            node_pools, complete = _discover_eks_node_groups(client, name, arn, warnings=warnings, missing=missing)
             out.append(
                 {
                     "name": str(c.get("name", name) or name),
-                    "arn": str(c.get("arn", "") or ""),
+                    "arn": arn,
                     "version": str(c.get("version", "") or ""),
                     "endpoint_public": endpoint_public,
                     "internet_exposed": endpoint_public,
                     "account_id": account_id or "",
                     "location": region,
+                    "node_pools": node_pools,
+                    "node_pools_complete": complete,
                 }
             )
     except Exception as exc:  # noqa: BLE001 — one failed EKS list must not sink the scan
@@ -156,6 +160,28 @@ def _discover_eks(
             exc=exc, resource_type="EKS clusters", permission="eks:ListClusters", cloud="aws", warnings=warnings, missing=missing
         )
     return out
+
+
+def _discover_eks_node_groups(
+    client: Any, cluster_name: str, cluster_arn: str, *, warnings: list[str], missing: list[dict[str, str]] | None
+) -> tuple[list[dict[str, Any]], bool]:
+    """Managed node groups of one EKS cluster (read-only), GPU capacity flagged per group."""
+    from agent_bom.cloud.gpu_node_pools import eks_node_group_pool
+
+    pools: list[dict[str, Any]] = []
+    try:
+        names = [
+            n for page in client.get_paginator("list_nodegroups").paginate(clusterName=cluster_name) for n in page.get("nodegroups", [])
+        ]
+        for ng_name in names:
+            nodegroup = client.describe_nodegroup(clusterName=cluster_name, nodegroupName=ng_name).get("nodegroup", {})
+            pools.append(eks_node_group_pool(nodegroup, cluster_arn=cluster_arn))
+    except Exception as exc:  # noqa: BLE001 — node-group denial keeps the cluster, marks pools incomplete
+        record_discovery_failure(
+            exc=exc, resource_type="EKS node groups", permission="eks:ListNodegroups", cloud="aws", warnings=warnings, missing=missing
+        )
+        return pools, False
+    return pools, True
 
 
 def _discover_kms(
