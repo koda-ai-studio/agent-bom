@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
+from ..gpu_node_pools import aks_agent_pool
 from ..normalization import sanitize_discovery_warning
 from ._base import _clean_tags, _record_failure, _resource_group_from_id, _vm_identity, _vm_user_assigned_identity_ids
 
@@ -179,6 +180,10 @@ def _discover_aks_clusters(
                     "rbac_enabled": bool(getattr(cluster, "enable_rbac", False)),
                     # A reachable API-server FQDN on a non-private cluster is internet-facing.
                     "internet_facing": bool(fqdn) and not private_cluster,
+                    "node_pools": [
+                        aks_agent_pool(profile, cluster_id=cluster_id, cluster_name=name)
+                        for profile in getattr(cluster, "agent_pool_profiles", None) or []
+                    ],
                 }
             )
     except Exception as exc:  # noqa: BLE001 — one failed Azure AKS clusters list must not sink the scan

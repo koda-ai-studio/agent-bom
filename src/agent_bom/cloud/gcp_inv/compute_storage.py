@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..aws_inventory import record_discovery_failure
+from ..gpu_node_pools import gke_cluster_key, gke_node_pool
 from ..normalization import sanitize_discovery_warning
 from ._base import _INTERNET_RANGES, _PUBLIC_MEMBERS, _clean_labels, _leaf, _loc, _parse_port, _safe_int, _scoped_name, _segment
 from .iam import _policy_bindings
@@ -147,6 +148,10 @@ def _normalize_instance(instance: Any, *, name: str, project_id: str) -> dict[st
         "service_accounts": service_accounts,
         "labels": _clean_labels(getattr(instance, "labels", None)),
         "project_id": project_id,
+        "guest_accelerators": [
+            {"type": _leaf(getattr(acc, "accelerator_type", "")), "count": _safe_int(str(getattr(acc, "accelerator_count", "") or "")) or 0}
+            for acc in getattr(instance, "guest_accelerators", None) or []
+        ],
     }
 
 
@@ -256,6 +261,7 @@ def _discover_gke_clusters(
             private_endpoint = bool(getattr(private_cfg, "enable_private_endpoint", False)) if private_cfg else False
             location = str(getattr(cluster, "location", "") or "")
             cluster_path = _scoped_name(project_id, _loc("locations", location), "clusters", name)
+            cluster_key = gke_cluster_key(str(getattr(cluster, "self_link", "") or ""), project_id, location, name)
             clusters.append(
                 {
                     "name": name,
@@ -268,6 +274,10 @@ def _discover_gke_clusters(
                     "version": str(getattr(cluster, "current_master_version", "") or ""),
                     "labels": _clean_labels(getattr(cluster, "resource_labels", None)),
                     "project_id": project_id,
+                    "node_pools": [
+                        gke_node_pool(pool, cluster_key=cluster_key, cluster_name=name)
+                        for pool in getattr(cluster, "node_pools", None) or []
+                    ],
                 }
             )
     except Exception as exc:  # noqa: BLE001 — one failed GKE clusters list must not sink the scan

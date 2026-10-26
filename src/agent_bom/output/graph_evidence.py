@@ -53,6 +53,7 @@ _PASSTHROUGH_SECTIONS: tuple[tuple[str, str], ...] = (
     ("ai_inventory", "ai_inventory_data"),
     ("project_inventory", "project_inventory_data"),
     ("repo_trust", "repo_trust_data"),
+    ("gpu_infra", "gpu_infra_data"),
 )
 
 # (report key, AIBOMReport attribute, cloud) for fail-closed CIS bundles.

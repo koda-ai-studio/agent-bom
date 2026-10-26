@@ -10,6 +10,7 @@ from typing import Any
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 
 from .base import CloudDiscoveryError
+from .gpu_managed_compute import snowflake_compute_pool
 from .normalization import coerce_bool_or_none
 from .snowflake_common import _coerce_int_or_none, _env_or_value, _sf, _sf_truthy
 
@@ -502,15 +503,17 @@ def discover_snowflake_services(
     * Warehouses — `SHOW WAREHOUSES`: size, state, auto-suspend.
     * Databases — `SHOW DATABASES`: owner, retention (time-travel) window.
     * Schemas — `SHOW SCHEMAS IN ACCOUNT`: parent database.
+    * Compute pools — `SHOW COMPUTE POOLS`: Snowpark Container Services capacity,
+      with the GPU model and count of ``GPU_*`` instance families.
 
-    Returns ``status``, ``account``, ``warehouses``, ``databases``, ``schemas``,
+    Returns ``status``, ``account``, ``warehouses``, ``databases``, ``schemas``, ``compute_pools``,
     ``findings``, ``warnings``. Never leaks data — only object metadata.
 
     Raises:
         CloudDiscoveryError: if snowflake-connector-python is not installed.
     """
     _require_connector("service")
-    result = _estate_result(account, "warehouses", "databases", "schemas")
+    result = _estate_result(account, "warehouses", "databases", "schemas", "compute_pools")
     conn = _open_estate_connection(result, account, user, authenticator, database, schema)
     if conn is None:
         return result
@@ -519,6 +522,7 @@ def discover_snowflake_services(
         _collect_show_rows(conn, "SHOW WAREHOUSES", "warehouses", warnings, result["warehouses"], _warehouse_row)
         _collect_show_rows(conn, "SHOW DATABASES", "databases", warnings, result["databases"], _database_row)
         _collect_show_rows(conn, "SHOW SCHEMAS IN ACCOUNT", "schemas", warnings, result["schemas"], _schema_row)
+        _collect_show_rows(conn, "SHOW COMPUTE POOLS", "compute pools", warnings, result["compute_pools"], snowflake_compute_pool)
         _services_findings(result)
         result["status"] = "ok"
     finally:

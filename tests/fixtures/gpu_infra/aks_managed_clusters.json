@@ -1,0 +1,47 @@
+[
+  {
+    "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ml-rg/providers/Microsoft.ContainerService/managedClusters/aks-ml",
+    "name": "aks-ml",
+    "location": "eastus",
+    "tags": {},
+    "kubernetes_version": "1.30.5",
+    "fqdn": "aks-ml-dns.hcp.eastus.azmk8s.io",
+    "enable_rbac": true,
+    "api_server_access_profile": {"enable_private_cluster": false},
+    "agent_pool_profiles": [
+      {
+        "name": "system",
+        "vm_size": "Standard_D4s_v5",
+        "count": 3,
+        "mode": "System",
+        "os_sku": "AzureLinux",
+        "node_taints": [],
+        "node_labels": {}
+      },
+      {
+        "name": "gpunc",
+        "vm_size": "Standard_NC24ads_A100_v4",
+        "count": 2,
+        "min_count": 1,
+        "max_count": 4,
+        "enable_auto_scaling": true,
+        "mode": "User",
+        "os_sku": "Ubuntu",
+        "node_taints": [],
+        "node_labels": {"accelerator": "nvidia"},
+        "gpu_instance_profile": "MIG2g",
+        "enable_node_public_ip": true
+      },
+      {
+        "name": "gput4",
+        "vm_size": "Standard_NC4as_T4_v3",
+        "count": 1,
+        "mode": "User",
+        "os_sku": "Ubuntu",
+        "node_taints": ["sku=gpu:NoSchedule"],
+        "node_labels": {},
+        "gpu_profile": {"driver": "None"}
+      }
+    ]
+  }
+]
