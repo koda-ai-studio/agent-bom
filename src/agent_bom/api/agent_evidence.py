@@ -16,7 +16,7 @@ from __future__ import annotations
 import threading
 from collections import OrderedDict
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from agent_bom.api.agent_findings import row_reaches_agent
@@ -40,6 +40,8 @@ class AgentEvidence:
     gateway: dict[tuple[str, str], dict[str, Any]]
     blast_rows_by_agent: dict[str, list[dict[str, Any]]]
     estate_agents: list[dict[str, Any]]
+    # Completed parent jobs that reported agents, newest first, for ``/v1/inventory``.
+    inventory_jobs: list[dict[str, str]] = field(default_factory=list)
 
     def blast_rows(self, agent_id: str) -> list[dict[str, Any]]:
         return self.blast_rows_by_agent.get(agent_id, []) if agent_id else []
@@ -125,6 +127,11 @@ def build_agent_evidence(jobs: Iterable[Any]) -> AgentEvidence:
         # A newer empty successful scan retires a scope, so selection sees every job.
         blast_rows_by_agent=_current_blast_rows_by_agent(stored),
         estate_agents=scanned_estate_agents(completed),
+        inventory_jobs=[
+            {"job_id": job.job_id, "created_at": job.created_at, "completed_at": job.completed_at or ""}
+            for job in completed
+            if not job.child_job_ids and any(isinstance(item, dict) for item in (job.result or {}).get("agents", []) or [])
+        ],
     )
 
 
