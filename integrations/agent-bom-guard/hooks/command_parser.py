@@ -16,6 +16,7 @@ class InstallPlan:
         self.packages: list[Package] = []
         self.requirement_files: list[str] = []
         self.pipe_to_shell: list[str] = []
+        self.custom_indexes: list[str] = []
         self.incomplete = False
 
 
@@ -48,6 +49,15 @@ _VALUES = {
     "--abi",
     "--python-version",
 }
+_INDEX_OPTIONS = {"--registry", "--index-url", "--extra-index-url", "-i"}
+
+
+def _index_host(url: str) -> str:
+    """Host of a registry URL, without any user name or token in it."""
+    rest = url.partition("://")[2] or url
+    return rest.split("/", 1)[0].rpartition("@")[2][:253]
+
+
 _EXACT = re.compile(r"v?\d[0-9A-Za-z.+_-]*\Z")
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 _SCOPED = re.compile(r"@[A-Za-z0-9._-]+/[A-Za-z0-9._-]+\Z")
@@ -160,6 +170,12 @@ def _scan_args(args: list[str], ecosystem: str, executable: str, plan: InstallPl
         if option in {"-e", "--editable", "--path", "--git"}:
             plan.incomplete = True
             _, i = _option_value(args, i)
+            continue
+        if option in _INDEX_OPTIONS:
+            value, i = _option_value(args, i)
+            host = _index_host(value)
+            if host:
+                plan.custom_indexes.append(f"{option} {host}")
             continue
         if option in _VALUES:
             _, i = _option_value(args, i)

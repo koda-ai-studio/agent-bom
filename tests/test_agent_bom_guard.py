@@ -645,3 +645,30 @@ def test_pipe_to_shell_installs_warn_without_blocking(command):
 )
 def test_commands_that_do_not_pipe_a_download_into_a_shell_are_silent(command):
     assert _decide(command) is None, command
+
+
+@pytest.mark.parametrize(
+    ("command", "host"),
+    [
+        ("pip install --index-url https://user:s3cret@pkgs.example.invalid/simple requests", "pkgs.example.invalid"),
+        ("pip install -i https://mirror.example.invalid/simple requests", "mirror.example.invalid"),
+        ("pip install --extra-index-url=https://extra.example.invalid/simple requests", "extra.example.invalid"),
+        ("npm install --registry=https://npm.example.invalid lodash", "npm.example.invalid"),
+    ],
+)
+def test_installs_from_a_custom_registry_warn_with_the_host_only(command, host):
+    out = _decide(command, FakeOSV())
+    assert _decision(out) is None, command
+    message = out["systemMessage"]
+    assert host in message and "registry" in message, message
+    assert "s3cret" not in message and "user:" not in message
+    assert {name for _, name, _ in _pkgs(command)} & {"requests", "lodash"}
+
+
+def test_guard_description_claims_typosquat_checks_only_where_lists_exist():
+    data = json.loads((GUARD / "hooks" / "guard_data.json").read_text())
+    covered = set(data["popular"])
+    assert covered == {"npm", "pypi"}
+    description = json.loads((GUARD / ".claude-plugin" / "plugin.json").read_text())["description"]
+    assert "typosquatted npm and PyPI" in description
+    assert "typosquatted npm, PyPI, crates.io and Go" not in description
