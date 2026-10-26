@@ -9,17 +9,18 @@ const flow = vi.hoisted(() => ({
   getNodesBounds: vi.fn<(nodes?: Array<{ id: string }>) => { x: number; y: number; width: number; height: number }>(() => ({ x: 0, y: 0, width: 800, height: 1000 })),
   frame: null as HTMLElement | null,
   zoom: 0.4,
+  width: 900,
 }));
 vi.mock("@xyflow/react", () => ({
   Panel: () => null,
   useNodesInitialized: () => flow.initialized,
   useReactFlow: () => flow,
-  useStore: (select: (state: unknown) => unknown) => select({ width: 900, height: 400, domNode: flow.frame }),
+  useStore: (select: (state: unknown) => unknown) => select({ width: flow.width, height: 400, domNode: flow.frame }),
   getViewportForBounds: () => ({ x: 0, y: 0, zoom: flow.zoom }),
 }));
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 
-afterEach(() => { flow.zoom = 0.4; cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.fitView.mockResolvedValue(true); flow.initialized = true; flow.getNodes.mockReturnValue([{ id: "asset", position: { x: 0, y: 0 }, data: {} }]); flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
+afterEach(() => { flow.zoom = 0.4; flow.width = 900; cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.fitView.mockResolvedValue(true); flow.initialized = true; flow.getNodes.mockReturnValue([{ id: "asset", position: { x: 0, y: 0 }, data: {} }]); flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
 
 it("ignores snapshot notice height when a late resize measures the pinned frame", async () => {
   vi.useFakeTimers();
@@ -274,4 +275,24 @@ it("reports camera settling until the asynchronous fit and measurements finish",
   expect(flow.frame).toHaveAttribute("data-graph-camera-settled", "false");
   await act(async () => { finish(true); await vi.advanceTimersByTimeAsync(100); });
   expect(flow.frame).toHaveAttribute("data-graph-camera-settled", "true");
+});
+
+it("sizes a phone's focus frame from the anchor's layout cell, not its zoom-inflated measurement", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("innerHeight", 844);
+  flow.width = 356;
+  flow.zoom = 0.25;
+  // Before the first fit, zoom-compensated captions inflate the measured card past its layout cell.
+  flow.getNodes.mockReturnValue([{ id: "agent", position: { x: 0, y: 0 }, style: { minHeight: 360 }, measured: { width: 220, height: 640 }, data: {} }] as never);
+  flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 1450, height: 1360 });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  vi.spyOn(flow.frame, "getBoundingClientRect").mockReturnValue({ top: 514 } as DOMRect);
+  render(<GraphCanvasAutoFit enabled layoutKey="phone" anchorId="agent" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(flow.frame.style.getPropertyValue("--graph-adaptive-height")).toBe("331px");
+  expect(flow.fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: "agent" }], minZoom: 0.85 }));
 });
