@@ -61,6 +61,12 @@ def _posture_grade_badge(grade: str) -> str:
     return f"[bold {style}] {grade} [/bold {style}]"
 
 
+def _posture_headline(summary: str) -> str:
+    # The badge already shows the grade and score, so drop the summary's "(F, 37.0%)"
+    # echo; drivers follow on the "Top driver" line. limit=45 fits an 80-col panel.
+    return _compact_detail(_GRADE_ECHO.sub("", summary).split(" — ")[0], limit=45)
+
+
 def _page_window(total: int, limit: int, page: int) -> tuple[int, int, int]:
     """Return a bounded page window as (page, start, end)."""
     safe_limit = max(1, limit)
@@ -264,11 +270,7 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
         if scorecard.score < 100 or high_risk_policy_count:
             grade_line = f"  [bold]Posture grade:[/bold]  {_posture_grade_badge(scorecard.grade)} {scorecard.score:.0f}/100"
             if scorecard_summary:
-                # The badge already shows the grade and score; drop the summary's
-                # "(F, 37.0%)" echo. limit=45 keeps the line inside an 80-col panel.
-                # The drivers follow on the "Top driver" line, so only the headline is shown here.
-                headline = _GRADE_ECHO.sub("", scorecard_summary).split(" — ")[0]
-                grade_line += f"  [dim]{_compact_detail(headline, limit=45)}[/dim]"
+                grade_line += f"  [dim]{_posture_headline(scorecard_summary)}[/dim]"
             lines.append(grade_line)
             if weak_dimensions:
                 lines.append(f"  [dim]Top driver:[/dim] [yellow]{weak_dimensions[0].name}[/yellow]")

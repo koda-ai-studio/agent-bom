@@ -11,6 +11,7 @@ Entity types in the ai and agents domain and the relationships allowed between t
 
 ```mermaid
 erDiagram
+  agent }o--o{ agent : "contains"
   agent }o--o{ blueprint : "governs"
   agent }o--o{ framework : "observes, uses_framework"
   agent }o--o{ server : "uses"
@@ -56,6 +57,7 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `la
 | `belongs_to` | `structural` | yes | `server` | `application` |
 | `called` | `runtime` | yes | `agent`, `tool_call` | `server`, `tool` |
 | `can_access` | `authority` | yes | `agent`, `application`, `server`, `tool` | `agent`, `server` |
+| `contains` | `structural` | yes | `agent` | `agent` |
 | `correlates_with` | `correlation` | no | `agent`, `server` | `agent`, `server` |
 | `delegated_to` | `runtime` | yes | `agent` | `agent` |
 | `exposed_to` | `exposure` | yes | `server` | `agent` |
