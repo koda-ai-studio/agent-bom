@@ -61,7 +61,7 @@ def test_collector_installs_cloud_sdk_extras_not_hardcoded_versions() -> None:
     silently fork the lockfile contract).
     """
     text = DOCKERFILE.read_text()
-    assert "COPY --from=ghcr.io/astral-sh/uv:0.10.9@sha256:" in text
+    assert "COPY --from=ghcr.io/astral-sh/uv:0.13.5@sha256:" in text
     assert "COPY pyproject.toml uv.lock README.md LICENSE ./" in text
     assert "COPY docs/registry/PYPI_README.md ./docs/registry/" in text
     assert "uv sync --locked --no-dev --no-editable" in text
