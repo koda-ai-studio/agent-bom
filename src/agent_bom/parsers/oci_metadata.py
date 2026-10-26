@@ -6,6 +6,8 @@ import struct
 from dataclasses import dataclass
 from typing import IO, Optional
 
+from agent_bom.security import sanitize_text
+
 _MAX_LEGACY_RPMDB_BYTES = 512 * 1024 * 1024
 
 # RPM header magic (8 bytes)
@@ -97,7 +99,9 @@ def _build_layer_metadata(layer_paths: list[str], config: dict | None = None) ->
             history_cursor += 1
             if entry.get("empty_layer"):
                 continue
-            created_by = entry.get("created_by")
+            raw_created_by = entry.get("created_by")
+            # Build args and ENV values land in history verbatim; keep the step, redact the secret.
+            created_by = sanitize_text(raw_created_by, max_len=4000) if isinstance(raw_created_by, str) and raw_created_by else None
             dockerfile_instruction = _normalize_dockerfile_instruction(created_by)
             break
 

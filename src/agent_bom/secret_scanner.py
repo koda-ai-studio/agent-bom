@@ -351,6 +351,23 @@ def _scan_file(
     except OSError as exc:
         raise FileNotScannedError(f"{rel_path}: not scanned, could not be read ({exc.strerror or exc})") from exc
 
+    return scan_content(content, file_path, rel_path, detect_entropy=detect_entropy, validator=validator, aws_validator=aws_validator)
+
+
+def scan_content(
+    content: str,
+    file_path: Path,
+    rel_path: str,
+    *,
+    detect_entropy: bool = False,
+    validator: CredentialValidator | None = None,
+    aws_validator: AwsCredentialValidator | None = None,
+) -> list[SecretFinding]:
+    """Scan already-read text with the same matchers and redaction as :func:`scan_secrets`.
+
+    ``file_path`` only decides which line classes apply (PII is limited to
+    config-like files); nothing is read from it.
+    """
     if _is_agent_bom_report(content):
         return []
 
