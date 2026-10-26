@@ -483,8 +483,6 @@ def _render_vulnerability_table(run: CheckRun) -> None:
 
         vuln_count_text = _format_vulnerability_count(len(run.vulns))
         table = Table(title=f"{run.name}@{run.version} — {vuln_count_text}")
-        # Size to content so Summary keeps the width an 80-column terminal has
-        # left; the ID never wraps (it is the copy-paste key).
         table.add_column("Sev", no_wrap=True)
         table.add_column("ID", no_wrap=True)
         table.add_column("Impact", no_wrap=True, max_width=12, overflow="ellipsis")

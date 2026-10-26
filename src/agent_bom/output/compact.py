@@ -10,7 +10,6 @@ remediation plan, etc.).
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from rich.panel import Panel
@@ -20,6 +19,9 @@ from rich.table import Table
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.cis_posture import finding_free_posture
+from agent_bom.output.compact_text import GRADE_ECHO as _GRADE_ECHO
+from agent_bom.output.compact_text import clip as _clip
+from agent_bom.output.compact_text import compact_detail as _compact_detail
 from agent_bom.output.dependency_hierarchy import dependency_count_label
 from agent_bom.output.possibly_affected import print_possibly_affected
 
@@ -57,26 +59,6 @@ def _posture_grade_badge(grade: str) -> str:
     else:
         style = "white on red"
     return f"[bold {style}] {grade} [/bold {style}]"
-
-
-_GRADE_ECHO = re.compile(r"\s*\((?:[A-F]|N/A), [\d.]+%\)")
-
-
-def _clip(name: str, limit: int) -> str:
-    """Shorten a table cell to ``limit`` characters, marking the cut with an ellipsis."""
-    return name if len(name) <= limit else name[: limit - 1] + "…"
-
-
-def _compact_detail(text: str, limit: int = 88) -> str:
-    """Trim long explanatory detail so the default output stays one-screen friendly."""
-    clean = " ".join(text.split())
-    if len(clean) <= limit:
-        return clean
-    trimmed = clean[: limit - 1].rstrip()
-    # Never end on dangling connector punctuation ("… posture — …" cut right
-    # after the dash renders as a stray "—…" fragment when the line wraps).
-    trimmed = trimmed.rstrip("—·-,:;")
-    return trimmed.rstrip() + "…"
 
 
 def _page_window(total: int, limit: int, page: int) -> tuple[int, int, int]:
@@ -284,8 +266,7 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
             if scorecard_summary:
                 # The badge already shows the grade and score; drop the summary's
                 # "(F, 37.0%)" echo. limit=45 keeps the line inside an 80-col panel.
-                summary_text = _GRADE_ECHO.sub("", scorecard_summary)
-                grade_line += f"  [dim]{_compact_detail(summary_text, limit=45)}[/dim]"
+                grade_line += f"  [dim]{_compact_detail(_GRADE_ECHO.sub('', scorecard_summary), limit=45)}[/dim]"
             lines.append(grade_line)
             if weak_dimensions:
                 lines.append(f"  [dim]Top driver:[/dim] [yellow]{weak_dimensions[0].name}[/yellow]")
