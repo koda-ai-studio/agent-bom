@@ -37,7 +37,6 @@ _HOLD = frozenset({R.DEPENDS_ON.value, R.CONTAINS.value})
 _REACH = frozenset({R.CAN_ACCESS.value, R.HAS_PERMISSION.value})
 _IDENTITIES = frozenset({E.SERVICE_ACCOUNT, E.ROLE, E.SERVICE_PRINCIPAL, E.MANAGED_IDENTITY})
 _VERDICT_ORDER = ("confirmed", "likely", "unknown")
-_SEVERITY_BASE = {"critical": 70.0, "high": 55.0, "medium": 40.0, "low": 25.0}
 
 
 @dataclass
@@ -109,7 +108,8 @@ def _reach(identity_id: str, outgoing: Mapping[str, list[UnifiedEdge]]) -> list[
 
 
 def _risk(foothold: _Foothold, target: UnifiedNode | None) -> float:
-    risk = _SEVERITY_BASE.get(foothold.worst, 20.0) + (15.0 if foothold.kev else 0.0)
+    # critical 70, high 55, medium 40, low 25, otherwise 20.
+    risk = max(20.0, 15.0 * SEVERITY_RANK.get(foothold.worst, 0) - 5.0) + (15.0 if foothold.kev else 0.0)
     if target is not None and target.entity_type in {E.CREDENTIAL, E.CREDENTIAL_REF}:
         risk += 10.0
     elif target is not None and target.entity_type in {E.CLUSTER, E.ACCOUNT, E.ORG}:

@@ -61,8 +61,16 @@ def _persist_and_load(store, *, enabled: bool, tenant: str, scan: str, report: d
         reset_current_tenant(token)
 
 
-def test_sqlite_persist_byte_identical_flag_on_vs_off(tmp_path: Path, monkeypatch) -> None:
+def _recorded_report() -> dict:
+    # Both builds stamp untimed nodes and edges with the scan's recorded time; a
+    # report without one would fall back to each build's own clock.
     report = json.loads((_FIXTURES / "agent_bom_self_scan_inventory.json").read_text())
+    report.setdefault("generated_at", "2026-10-01T00:00:00+00:00")
+    return report
+
+
+def test_sqlite_persist_byte_identical_flag_on_vs_off(tmp_path: Path, monkeypatch) -> None:
+    report = _recorded_report()
 
     with monkeypatch.context() as m:
         off = SQLiteGraphStore(tmp_path / "off.db")
@@ -84,7 +92,7 @@ def test_sqlite_persist_byte_identical_flag_on_vs_off(tmp_path: Path, monkeypatc
 def test_postgres_persist_byte_identical_flag_on_vs_off(monkeypatch) -> None:
     from agent_bom.api.postgres_store import PostgresGraphStore
 
-    report = json.loads((_FIXTURES / "agent_bom_self_scan_inventory.json").read_text())
+    report = _recorded_report()
     scan = "scan-x"
     t_off = f"t-off-{uuid.uuid4().hex[:8]}"
     t_on = f"t-on-{uuid.uuid4().hex[:8]}"
