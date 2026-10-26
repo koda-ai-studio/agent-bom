@@ -201,6 +201,17 @@ GATEWAY_FAIL_MODE_MATRIX: tuple[SubsystemFailMode, ...] = (
             "Audit-sink, SIEM webhook, and OCSF interop delivery failures never block the relay; decisions are made before export."
         ),
     ),
+    SubsystemFailMode(
+        subsystem="injection_protection",
+        default_posture=FailPosture.OPEN,
+        follows_gateway_fail_mode=False,
+        control="--injection-mode / AGENT_BOM_GATEWAY_INJECTION_MODE / policy injection_mode (default: alert)",
+        on_failure=(
+            "A tool-description or tool-result injection detector error forwards the message with a detector_error alert "
+            "in the default alert profile; the enforce profile withholds the affected tool or result with the same alert "
+            "tagged blocked or stripped. An invalid hot-reloaded policy injection_mode resolves to enforce."
+        ),
+    ),
 )
 
 

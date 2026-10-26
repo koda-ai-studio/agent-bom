@@ -380,6 +380,11 @@ gateway:
   profileEnforcement: "off"
   profileEnvironment: ""
   profileIssuer: "agent-bom"
+  # Poisoned tool descriptions / injected tool results. "alert" (default)
+  # audits detections and forwards traffic unchanged; "enforce" strips
+  # poisoned tools from tools/list and withholds injected results.
+  # See docs/RUNTIME_FAIL_MODES.md.
+  injectionMode: "alert"
   # OCR-scan image responses for leaked credentials/PII.
   detectVisualLeaks: false
   # Allow startup to continue when OCR runtime support is unavailable.

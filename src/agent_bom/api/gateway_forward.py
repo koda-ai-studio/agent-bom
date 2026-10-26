@@ -22,6 +22,8 @@ from agent_bom.gateway_upstreams import UpstreamConfig
 from agent_bom.langfuse_otel import set_langfuse_runtime_attributes
 from agent_bom.proxy import extract_tool_name, is_tools_call
 from agent_bom.proxy_scanner import ScanConfig, ScanResult
+from agent_bom.runtime import injection_protection
+from agent_bom.runtime.detectors import ResponseInspector, VectorDBInjectionDetector
 from agent_bom.runtime.gateway_contracts import AuditSink, GatewayAuditDeliveryUnavailableError, UpstreamCaller
 from agent_bom.runtime.gateway_events import GatewayRuntimeEventType
 from agent_bom.runtime.gateway_relay import GatewayCircuitOpenError
@@ -68,6 +70,7 @@ class GatewayForwardContext:
     dlp_config: ScanConfig
     response_scanner: Callable[[dict, ScanConfig], tuple[dict, list[ScanResult]]]
     tracer: Any
+    injection_mode: str = injection_protection.DEFAULT_INJECTION_MODE
 
 
 @dataclass
@@ -396,6 +399,57 @@ async def _apply_response_policy(
     return upstream_response
 
 
+_INJECTION_EVENTS = {
+    "blocked": (GatewayRuntimeEventType.DLP_RESULT_BLOCKED, "deny", "injected_result_blocked"),
+    "stripped": (GatewayRuntimeEventType.DLP_RESULT_REDACTED, "allow", "poisoned_tools_stripped"),
+}
+
+
+async def _apply_injection_policy(
+    context: GatewayForwardContext, audit: CompletionAudit, upstream_response: dict[str, Any]
+) -> dict[str, Any] | JSONResponse:
+    """Audit injection detections; enforce mode strips poisoned tools or withholds the result."""
+    if not isinstance(upstream_response, dict):
+        return upstream_response
+    tool = str(extract_tool_name(context.message) or context.message.get("method", "") or "unknown")
+    # Regex inspection scales with result size; keep it off the event loop.
+    outcome = await asyncio.to_thread(
+        injection_protection.inspect_server_result,
+        upstream_response,
+        tool_name=tool,
+        tools_list=context.message.get("method") == "tools/list",
+        mode=context.injection_mode,
+        inspector=ResponseInspector(),
+        vector=VectorDBInjectionDetector(),
+    )
+    for alert in outcome.alerts:
+        event, decision, data_action = _INJECTION_EVENTS.get(alert.action or "", (None, "", ""))
+        alert_tool = str(alert.details.get("tool") or tool)
+        typed = (
+            context.runtime_event(
+                event, decision=decision, policy_source=injection_protection.POLICY_SOURCE, tool=alert_tool, data_action=data_action
+            )
+            if event
+            else {}
+        )
+        logger.warning("Gateway runtime alert (detector=%s action=%s)", alert.detector, alert.action or "alert")
+        await audit.emit(
+            {
+                "action": "gateway.injection_alert",
+                "upstream": context.upstream.name,
+                "tenant_id": context.tenant_id,
+                "source_agent": context.source_agent,
+                "tool": alert_tool,
+                "alert": alert.to_dict(),
+                **typed,
+            }
+        )
+    if outcome.blocked:
+        record_gateway_relay(context.upstream.name, "blocked")
+        return JSONResponse(outcome.message, status_code=200, headers=audit.headers(dict(context.rate_limit_headers)) or None)
+    return outcome.message
+
+
 async def forward_authorized_request(context: GatewayForwardContext) -> JSONResponse:
     """Admit before effects, then retain the outcome through response policies."""
     admission_failure = await _admit_tool_execution(context)
@@ -408,6 +462,9 @@ async def forward_authorized_request(context: GatewayForwardContext) -> JSONResp
     if visual_failure is not None:
         return visual_failure
     response = await _apply_response_policy(context, audit, upstream_response)
+    if isinstance(response, JSONResponse):
+        return response
+    response = await _apply_injection_policy(context, audit, response)
     if isinstance(response, JSONResponse):
         return response
     upstream_response = response
