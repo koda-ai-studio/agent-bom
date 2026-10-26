@@ -339,16 +339,13 @@ class _AIStackProjection:
         package_name = str(comp.get("package") or "").strip()
         ecosystem = str(comp.get("ecosystem") or "pypi").strip() or "pypi"
         if package_name:
+            pkg_ids = self._package_ids(package_name, ecosystem)
             pkg_id = stable_node_id(EntityType.PACKAGE.value, ecosystem, package_name, "latest")
-            # Prefer an existing versioned package node if present.
-            existing = [
-                n
-                for n in self.graph.nodes_by_type(EntityType.PACKAGE)
-                if str(n.attributes.get("name") or n.label).lower() == package_name.lower()
-            ]
-            if existing:
-                pkg_id = existing[0].id
-            elif not self.graph.has_node(pkg_id):
+            if pkg_ids:
+                for existing_id in pkg_ids:
+                    self._depends_on(fid, existing_id, name)
+                return
+            if not self.graph.has_node(pkg_id):
                 self.graph.add_node(
                     UnifiedNode(
                         id=pkg_id,
@@ -363,11 +360,34 @@ class _AIStackProjection:
                         data_sources=[self.data_source, "ai-inventory"],
                     )
                 )
-            self.graph.add_edge(
-                UnifiedEdge(
-                    source=fid,
-                    target=pkg_id,
-                    relationship=RelationshipType.DEPENDS_ON,
-                    evidence={"source": "ai-inventory", "framework": name},
-                )
+            self._depends_on(fid, pkg_id, name)
+
+    def _package_ids(self, package_name: str, ecosystem: str) -> list[str]:
+        """Package nodes already in the graph for ``package_name``; pinned versions win over ``latest``.
+
+        Manifest packages carry no ``name`` attribute: their label is ``name@version``.
+        """
+        wanted = package_name.lower()
+        matches: list[UnifiedNode] = []
+        for node in self.graph.nodes_by_type(EntityType.PACKAGE):
+            attrs = node.attributes
+            if str(attrs.get("ecosystem") or ecosystem).lower() != ecosystem.lower():
+                continue
+            version = str(attrs.get("version") or "")
+            name = str(attrs.get("name") or "")
+            if not name:
+                name = node.label[: -len(version) - 1] if version and node.label.endswith(f"@{version}") else node.label
+            if name.lower() == wanted:
+                matches.append(node)
+        pinned = [node.id for node in matches if str(node.attributes.get("version") or "") not in {"", "latest", "unknown"}]
+        return pinned or [node.id for node in matches]
+
+    def _depends_on(self, framework_id: str, package_id: str, framework: str) -> None:
+        self.graph.add_edge(
+            UnifiedEdge(
+                source=framework_id,
+                target=package_id,
+                relationship=RelationshipType.DEPENDS_ON,
+                evidence={"source": "ai-inventory", "framework": framework},
             )
+        )
