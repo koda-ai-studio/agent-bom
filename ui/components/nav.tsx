@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCount } from "@/lib/count-label";
 import Link from "next/link";
 import { DemoEstateLabel } from "@/components/demo-estate-label";
 import { usePathname } from "next/navigation";
@@ -721,22 +722,22 @@ export function Nav() {
                         {showVulnBadge && (
                           <span
                             role="group"
-                            aria-label={`${openIssues.critical} critical${openIssues.high > 0 ? `, ${openIssues.high} high` : ""} open findings`}
-                            title={`${openIssues.critical} critical${openIssues.high > 0 ? `, ${openIssues.high} high` : ""} open findings`}
+                            aria-label={`${formatCount(openIssues.critical)} critical${openIssues.high > 0 ? `, ${formatCount(openIssues.high)} high` : ""} open findings`}
+                            title={`${formatCount(openIssues.critical)} critical${openIssues.high > 0 ? `, ${formatCount(openIssues.high)} high` : ""} open findings`}
                             className="ml-auto flex items-center gap-1"
                           >
                             <span
                               aria-hidden="true"
                               className="text-xs font-mono font-bold text-[color:var(--severity-critical)] bg-[color:var(--severity-critical-bg)] border border-[color:var(--severity-critical-border)] dark:text-red-400 dark:bg-red-950/60 dark:border-red-800/40 rounded-full px-1.5 py-0 leading-4"
                             >
-                              {openIssues.critical}
+                              {formatCount(openIssues.critical)}
                             </span>
                             {openIssues.high > 0 && (
                               <span
                                 aria-hidden="true"
                                 className="text-xs font-mono font-bold text-[color:var(--severity-high)] bg-[color:var(--severity-high-bg)] border border-[color:var(--severity-high-border)] dark:text-orange-400 dark:bg-orange-950/60 dark:border-orange-800/40 rounded-full px-1.5 py-0 leading-4"
                               >
-                                {openIssues.high}
+                                {formatCount(openIssues.high)}
                               </span>
                             )}
                           </span>

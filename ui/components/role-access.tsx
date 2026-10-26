@@ -65,7 +65,7 @@ export function PermissionDeniedNotice({
   const roleAlreadySufficient = roleRank(roleId) >= roleRank(needed);
 
   const headline = isDemoMode
-    ? "This is a read-only public demo."
+    ? "This instance allows anonymous read-only access."
     : current && !roleAlreadySufficient
       ? `Your ${current.label} role is read-only for this action.`
       : roleAlreadySufficient

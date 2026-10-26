@@ -63,6 +63,8 @@ describe("SelfPosturePage", () => {
     render(<SelfPosturePage />);
 
     expect(screen.getByTestId("self-posture-public-demo")).toHaveTextContent(/not exposed/i);
+    expect(screen.getByRole("heading", { level: 1, name: /Operator self-posture is not exposed here/ })).toBeInTheDocument();
+    expect(screen.getByTestId("self-posture-public-demo")).not.toHaveTextContent(/public demo/i);
     expect(screen.queryByText(/AGENT_BOM_/)).not.toBeInTheDocument();
     expect(apiMock.getSelfPosture).not.toHaveBeenCalled();
   });

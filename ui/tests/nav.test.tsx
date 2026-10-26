@@ -311,11 +311,11 @@ describe('Nav', () => {
     renderExpandedNav()
 
     const badges = await screen.findByRole('group', {
-      name: /440 critical, 1337 high open findings/i,
+      name: /440 critical, 1,337 high open findings/i,
     })
-    expect(badges).toHaveAttribute('title', '440 critical, 1337 high open findings')
+    expect(badges).toHaveAttribute('title', '440 critical, 1,337 high open findings')
     expect(within(badges).getByText('440')).toBeInTheDocument()
-    expect(within(badges).getByText('1337')).toBeInTheDocument()
+    expect(within(badges).getByText('1,337')).toBeInTheDocument()
   })
 
   it('shows the same issue-group counts as the findings page, not raw occurrences', async () => {

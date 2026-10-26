@@ -434,7 +434,7 @@ export default function Dashboard() {
       {importedReport && <LocalReportEvidence report={importedReport} />}
       {!importedReport && demoSeeding && (
         <p role="status" aria-label="Demo estate seeding" className="rounded-lg border border-outline px-3 py-2 text-sm text-ink-secondary">
-          Seeding the demo estate. Findings and posture appear here when the curated scan lands, usually within a minute or two.
+          Seeding the demo estate. Findings and posture appear here when the curated scan lands, usually a few minutes on first start.
         </p>
       )}
       {!importedReport && !demoSeeding && !jobsLoading && !postureOverviewLoading && !overviewUnavailable

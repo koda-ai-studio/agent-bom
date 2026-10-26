@@ -34,6 +34,8 @@ describe("DemoSeedNotice", () => {
     await flush();
 
     expect(screen.getByRole("status", { name: "Demo estate seeding" })).toHaveTextContent(/counts are partial/i);
+    // First-start seeding takes several minutes; never promise "a minute or two".
+    expect(screen.getByRole("status", { name: "Demo estate seeding" })).toHaveTextContent(/a few minutes on first start/i);
     expect(reload).not.toHaveBeenCalled();
 
     await act(async () => {

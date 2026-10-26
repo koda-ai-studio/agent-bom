@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center h-[80vh] gap-4 text-center">
       <ShieldAlert className="w-12 h-12 text-[var(--text-tertiary)]" />
-      <h2 className="text-lg font-semibold text-[var(--foreground)]">Page not found</h2>
+      <h1 className="text-lg font-semibold text-[var(--foreground)]">Page not found</h1>
       <p className="text-sm text-[var(--text-secondary)]">The page you are looking for does not exist.</p>
       <Link
         href="/"

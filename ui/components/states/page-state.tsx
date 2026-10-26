@@ -23,6 +23,8 @@ type PageStateProps = {
   children?: ReactNode;
   /** In-panel graph states avoid reserving an empty page-sized canvas. */
   compact?: boolean;
+  /** `h1` when the state replaces the whole page, so the page keeps one top-level heading. */
+  titleAs?: "h1" | "h2" | "h3" | undefined;
   "data-testid"?: string | undefined;
 };
 
@@ -48,6 +50,7 @@ export function PageState({
   tone = "neutral",
   children,
   compact = false,
+  titleAs: TitleTag = "h3",
   "data-testid": testId,
 }: PageStateProps) {
   const resolvedActions = actions ?? (action ? [action] : []);
@@ -60,7 +63,7 @@ export function PageState({
             <Icon className="h-5 w-5 text-ink-secondary" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-foreground">{title}</h3>
+            <TitleTag className="text-base font-semibold text-foreground">{title}</TitleTag>
             <p className="mt-2 text-sm leading-6 text-ink-secondary">{detail}</p>
           </div>
         </div>
