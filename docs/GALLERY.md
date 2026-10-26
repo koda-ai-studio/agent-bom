@@ -31,7 +31,7 @@ manifest, MCP configuration, and modeled identity. The shared graph shows the
 recorded relationships and their direction. Select a node or relationship to
 inspect its source, then open the scoped findings and remediation.
 
-<img src="images/correlation-path-live.png" alt="Pillow advisory investigation with eight ordered entities, remediation action, and per-hop evidence" width="900" />
+<img src="images/correlation-path-live.png" alt="Reference-lab graph with ten recorded entities, from a pinned Pillow dependency to KEV-listed CVE-2023-4863 and a modeled data store" width="900" />
 
 This is a structural exposure supported by the lab inputs, not execution of an
 exploit. The lab observes an allowed local gateway call, then checks that graph
@@ -227,7 +227,7 @@ Follow **CVE-2023-4863 in pillow@9.0.0** through recorded relationships between 
 
 **Find a path → Explore connections → Inspect evidence → Remediate.** Keep the snapshot and selected finding in scope as you move through the workflow. Expand within a hop limit and browse relationships in bounded pages; incomplete views remain labeled. Configured permissions, observed activity and downstream effects have separate evidence requirements.
 
-[Explore the graph gallery](GALLERY.md#explore-connections-and-inspect-evidence) · [View the mobile graph](images/correlation-path-mobile-live.png) · [Run the reference lab](../examples/reference-evidence-lab/README.md)
+[Explore the graph gallery](GALLERY.md#explore-connections-and-inspect-evidence) · [View the mobile path list](images/correlation-path-mobile-live.png) · [Run the reference lab](../examples/reference-evidence-lab/README.md)
 
 
 ### Engineers and GRC: fix and verify

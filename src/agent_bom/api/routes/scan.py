@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import time
 from collections.abc import AsyncIterator
@@ -824,18 +825,15 @@ def list_inventory(
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
     """List agent and package inventory aggregated from completed scan results."""
-    from agent_bom.api.estate_agents import scanned_estate_agents
+    from agent_bom.api.agent_evidence import agent_evidence
 
     tenant_id = _tenant_id(request)
-    completed = _completed_jobs_for_tenant(tenant_id)
     # One canonical agent is one row however many scans observed it; batch
     # parents are skipped because their children already carry the agents.
-    agents = scanned_estate_agents(completed)
-    jobs: list[dict[str, str]] = [
-        {"job_id": job.job_id, "created_at": job.created_at, "completed_at": job.completed_at or ""}
-        for job in completed
-        if not job.child_job_ids and any(isinstance(item, dict) for item in (job.result or {}).get("agents", []) or [])
-    ]
+    # The projection is shared with the agent routes and reused until the job revision moves.
+    evidence = agent_evidence(_get_store(), tenant_id)
+    agents = evidence.estate_agents
+    jobs = evidence.inventory_jobs
 
     packages = _inventory_packages_from_agents(agents)
     total = len(agents)
@@ -854,7 +852,7 @@ def list_inventory(
             "estate). For live local-disk discovery of AI-client configs on this "
             "host, see /v1/agents."
         ),
-        "agents": page,
+        "agents": copy.deepcopy(page),
         "count": len(page),
         "total": total,
         "limit": limit,
@@ -862,10 +860,10 @@ def list_inventory(
         # Honest truncation across the three roll-up arrays that share this
         # offset/limit window (fleet-style list contract).
         "has_more": offset + len(page) < total or offset + len(packages_page) < package_total or offset + len(jobs_page) < job_total,
-        "packages": packages_page,
+        "packages": copy.deepcopy(packages_page),
         "package_count": len(packages_page),
         "package_total": package_total,
-        "jobs": jobs_page,
+        "jobs": copy.deepcopy(jobs_page),
         "job_count": len(jobs_page),
         "job_total": job_total,
         "warnings": [],

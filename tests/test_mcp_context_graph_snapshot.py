@@ -251,3 +251,37 @@ async def test_transitive_dependencies_reach_their_advisories_within_the_holder_
     assert not [node for node in deep["nodes"] if node["kind"] == "vulnerability"]
     assert deep["completeness"]["complete"] is False
     assert "depth" in deep["completeness"]["reason"]
+
+
+def _seed_same_name_agents(graph_store) -> None:
+    from agent_bom.graph import UnifiedEdge, UnifiedGraph, UnifiedNode
+    from agent_bom.graph.types import EntityType, RelationshipType
+
+    graph = UnifiedGraph(scan_id="estate-twins", tenant_id="default")
+    for suffix in ("laptop", "ci"):
+        agent_id, server_id = f"agent:assistant-{suffix}", f"server:github-{suffix}"
+        graph.add_node(
+            UnifiedNode(
+                id=agent_id, entity_type=EntityType.AGENT, label="assistant", attributes={"canonical_id": f"canon-assistant-{suffix}"}
+            )
+        )
+        graph.add_node(UnifiedNode(id=server_id, entity_type=EntityType.SERVER, label=f"github-{suffix}"))
+        graph.add_edge(UnifiedEdge(source=agent_id, target=server_id, relationship=RelationshipType.USES))
+    graph_store.save_graph(graph)
+
+
+@pytest.mark.asyncio
+async def test_same_name_agents_stay_distinct_and_carry_graph_ids(store, graph_store) -> None:
+    """Two agents labelled alike are two graph nodes; the context graph must not merge them."""
+    _seed_same_name_agents(graph_store)
+
+    payload = await _call(tenant_id="default")
+
+    agents = [node for node in payload["nodes"] if node["kind"] == "agent"]
+    assert sorted(node["id"] for node in agents) == ["agent:assistant-ci", "agent:assistant-laptop"]
+    assert {node["label"] for node in agents} == {"assistant"}
+    assert {node["metadata"]["canonical_id"] for node in agents} == {"canon-assistant-ci", "canon-assistant-laptop"}
+    uses = {(edge["source"], edge["target"]) for edge in payload["edges"] if edge["kind"] == "uses"}
+    servers = {node["id"]: node["label"] for node in payload["nodes"] if node["kind"] == "server"}
+    owners = {servers[target]: source for source, target in uses}
+    assert owners == {"github-laptop": "agent:assistant-laptop", "github-ci": "agent:assistant-ci"}

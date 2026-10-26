@@ -12,17 +12,21 @@ observation, never an addition.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import logging
+import threading
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any
 
 from fastapi import HTTPException, Request
 
+from agent_bom.api.agent_evidence import job_revision
 from agent_bom.api.current_graph import available_sources, graph_scan_id, refuse_unpinned_read_while_seeding
 from agent_bom.api.finding_job_metadata import scan_evidence_authority_key, scan_scope_key
 from agent_bom.api.finding_row_shapes import _scan_source_labels
-from agent_bom.api.graph_diff_read import _compute_rows, _stored_paths
+from agent_bom.api.graph_diff_read import _compute_rows, _rows_cache_key, _stored_paths
 from agent_bom.api.models import JobStatus, ScanJob
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.stores import _get_store
@@ -61,11 +65,51 @@ class _Scope:
     searched_out: bool
 
 
+# Result fields scope selection reads besides top-level scalars; inventories and findings are never needed.
+_PLAN_RESULT_OBJECTS = frozenset({"scan_run", "target_scope"})
+_CACHE_SIZE = 16
+_plan_jobs_cache: OrderedDict[tuple[Any, ...], list[Any]] = OrderedDict()
+_entry_cache: OrderedDict[tuple[Any, ...], dict[str, Any]] = OrderedDict()
+_cache_lock = threading.Lock()
+
+
+def _cache_get(cache: OrderedDict[tuple[Any, ...], Any], key: tuple[Any, ...]) -> Any:
+    with _cache_lock:
+        hit = cache.get(key)
+        if hit is not None:
+            cache.move_to_end(key)
+        return hit
+
+
+def _cache_put(cache: OrderedDict[tuple[Any, ...], Any], key: tuple[Any, ...], value: Any) -> None:
+    with _cache_lock:
+        cache[key] = value
+        while len(cache) > _CACHE_SIZE:
+            cache.popitem(last=False)
+
+
+def reset_estate_changes_caches() -> None:
+    with _cache_lock:
+        _plan_jobs_cache.clear()
+        _entry_cache.clear()
+
+
+def _slim_job(job: ScanJob) -> ScanJob:
+    """The job with only the result fields scope selection and labels read, not its multi-MB report."""
+    result = {key: value for key, value in (job.result or {}).items() if not isinstance(value, (dict, list)) or key in _PLAN_RESULT_OBJECTS}
+    return job.model_copy(update={"result": result, "result_document": None})
+
+
 def _completed_jobs(job_store: Any, tenant: str) -> list[Any]:
+    """Completed parent jobs, reused across requests until the tenant's job store revision moves."""
+    revision = job_revision(job_store, tenant)
+    key = (id(job_store), tenant, revision)
+    if revision is not None and (cached := _cache_get(_plan_jobs_cache, key)) is not None:
+        return list(cached)
     summaries = job_store.list_summary(tenant_id=tenant, status=JobStatus.DONE)
     jobs = (job_store.get(row["job_id"], tenant_id=tenant) for row in summaries if not row.get("child_job_ids"))
-    return [
-        job
+    completed = [
+        _slim_job(job) if isinstance(job, ScanJob) else job
         for job in jobs
         if job is not None
         and job.tenant_id == tenant
@@ -73,6 +117,9 @@ def _completed_jobs(job_store: Any, tenant: str) -> list[Any]:
         and isinstance(job.result, dict)
         and not job.child_job_ids
     ]
+    if revision is not None and job_revision(job_store, tenant) == revision:
+        _cache_put(_plan_jobs_cache, key, completed)
+    return list(completed)
 
 
 def _has_graph(store: Any, tenant: str, scan_id: str) -> bool:
@@ -248,6 +295,29 @@ def _empty_totals() -> dict[str, Any]:
     return {"nodes": dict(zero), "edges": dict(zero), "changed_sources": 0, "unchanged_sources": 0, "new_sources": 0}
 
 
+def _paired_entry(store: Any, tenant: str, old_id: str, new_id: str) -> dict[str, Any]:
+    """One pair's counts, highlights and per-source changes, cached by both snapshot generations."""
+    key = _rows_cache_key(store, tenant, old_id, new_id)
+    if key is not None and (cached := _cache_get(_entry_cache, key)) is not None:
+        return copy.deepcopy(cached)
+    _diff, rows = _compute_rows(store, tenant, old_id, new_id)
+    summary = diff_summary(rows)
+    if summary["total_changes"]:
+        summary["highlights"].update(_path_changes(store, tenant, old_id, new_id))
+        _label_endpoints(store, tenant, old_id, new_id, summary["highlights"])
+        attribute_highlight_vendors(store, tenant, old_id, new_id, summary["highlights"])
+    entry = {
+        "counts": summary["totals"],
+        "total_changes": summary["total_changes"],
+        "nodes_by_entity_type": summary["nodes_by_entity_type"],
+        "changes_by_source": changes_by_collected_source(store, tenant, old_id, new_id, rows),
+        "highlights": summary["highlights"],
+    }
+    if key is not None and _rows_cache_key(store, tenant, old_id, new_id) == key:
+        _cache_put(_entry_cache, key, copy.deepcopy(entry))
+    return entry
+
+
 def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     """Diff each paired scope through the shared generation-keyed rows cache."""
     sources: list[dict[str, Any]] = []
@@ -278,26 +348,17 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
             totals["new_sources"] += 1
             continue
         old_id, new_id = scope.previous.scan_id, graph_scan_id(scope.current)
-        _diff, rows = _compute_rows(store, tenant, old_id, new_id)
-        summary = diff_summary(rows)
-        if summary["total_changes"]:
-            summary["highlights"].update(_path_changes(store, tenant, old_id, new_id))
-            _label_endpoints(store, tenant, old_id, new_id, summary["highlights"])
-            attribute_highlight_vendors(store, tenant, old_id, new_id, summary["highlights"])
+        entry = _paired_entry(store, tenant, old_id, new_id)
         for kind in ("nodes", "edges"):
-            for change, count in summary["totals"][kind].items():
+            for change, count in entry["counts"][kind].items():
                 totals[kind][change] += count
-        totals["changed_sources" if summary["total_changes"] else "unchanged_sources"] += 1
+        totals["changed_sources" if entry["total_changes"] else "unchanged_sources"] += 1
         sources.append(
             {
                 **base,
                 "old": {"scan_id": scope.previous.scan_id, "job_id": scope.previous.job_id, "captured_at": scope.previous.captured_at},
                 "baseline": scope.previous.basis,
-                "counts": summary["totals"],
-                "total_changes": summary["total_changes"],
-                "nodes_by_entity_type": summary["nodes_by_entity_type"],
-                "changes_by_source": changes_by_collected_source(store, tenant, old_id, new_id, rows),
-                "highlights": summary["highlights"],
+                **entry,
                 "issue_change": _issue_change(recorded, old_id, new_id),
                 "skipped_snapshots": scope.skipped,
             }
@@ -339,4 +400,11 @@ async def graph_estate_changes_read(request: Request, *, limit: int = SOURCE_LIM
     }
 
 
-__all__ = ["PREVIOUS_SEARCH_LIMIT", "SOURCE_LIMIT_DEFAULT", "SOURCE_LIMIT_MAX", "graph_estate_changes_read", "scope_label"]
+__all__ = [
+    "PREVIOUS_SEARCH_LIMIT",
+    "SOURCE_LIMIT_DEFAULT",
+    "SOURCE_LIMIT_MAX",
+    "graph_estate_changes_read",
+    "reset_estate_changes_caches",
+    "scope_label",
+]

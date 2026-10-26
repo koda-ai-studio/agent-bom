@@ -89,6 +89,9 @@ async def get_context_graph(request: Request, job_id: str, agent: str | None = N
     )
 
 
+GRAPH_EXPORT_FORMATS = ("json", "dot", "mermaid", "graphml", "cypher")
+
+
 @router.get("/scan/{job_id}/graph-export", tags=["scan"], response_model=None)
 async def get_graph_export(
     request: Request,
@@ -113,6 +116,8 @@ async def get_graph_export(
       ?format=cypher    Neo4j Cypher import script
       ?mermaid_limit=80 Maximum nodes rendered for Mermaid; 0 renders all
     """
+    if format not in GRAPH_EXPORT_FORMATS:
+        raise HTTPException(status_code=422, detail=f"format must be one of: {', '.join(GRAPH_EXPORT_FORMATS)}")
     job = await _load_job_for_request(request, job_id)
     if job.status != JobStatus.DONE or not job.result:
         raise HTTPException(status_code=409, detail="Scan not completed yet")

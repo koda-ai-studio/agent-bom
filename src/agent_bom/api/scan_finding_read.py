@@ -80,13 +80,15 @@ def persisted_finding_evidence(
     scan_jobs = _completed_jobs_for_tenant(tenant_id)
     if scan_id:
         scan_jobs = [job for job in scan_jobs if str((job.result or {}).get("scan_id") or job.job_id) == scan_id]
-    rows = iter_tenant_scan_spine_findings(tenant_id, scan_id=scan_id, status="all")
+    wanted = cve_id.strip().upper()
+    raw_rows = iter_tenant_scan_spine_findings(tenant_id, scan_id=scan_id, status="all", sanitize=False)
     bulk_rows = _bulk_ingested_findings_for_tenant(tenant_id)
     if scan_id:
         bulk_rows = [row for row in bulk_rows if str(row.get("scan_id") or "") == scan_id]
-    from agent_bom.finding_scope import safe_finding_response_payload
+    from agent_bom import finding_scope
 
-    rows.extend(safe_finding_response_payload(row) for row in bulk_rows)
+    # Sanitizing is the expensive step; only rows that can name the advisory reach it.
+    rows = [finding_scope.safe_finding_response_payload(row) for row in [*raw_rows, *bulk_rows] if _may_name_advisory(row, wanted)]
     deduped: dict[tuple[str, str, str], dict[str, Any]] = {}
     for row in rows:
         key = (
@@ -95,7 +97,6 @@ def persisted_finding_evidence(
             str(row.get("package") or row.get("package_name") or ""),
         )
         deduped[key] = row
-    wanted = cve_id.strip().upper()
     matched = [
         row
         for row in deduped.values()
@@ -125,6 +126,11 @@ def persisted_finding_evidence(
         },
         "findings": matched,
     }
+
+
+def _may_name_advisory(row: dict[str, Any], wanted: str) -> bool:
+    """A superset of the post-sanitization match: sanitizing only removes characters from these ids."""
+    return any(wanted in str(row.get(field) or "").upper() for field in ("cve_id", "vulnerability_id", "id"))
 
 
 def _bulk_ingested_findings_for_tenant(tenant_id: str) -> list[dict[str, Any]]:
