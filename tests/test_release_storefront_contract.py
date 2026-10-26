@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -191,7 +192,7 @@ def test_release_manifest_rejects_a_future_visible_version(
     monkeypatch.setattr(check_release_consistency, "PRODUCT_SCREENSHOTS", candidate)
 
     with pytest.raises(SystemExit):
-        check_release_consistency._assert_product_screenshots_current(check_release_consistency._load_version())
+        check_release_consistency._assert_product_screenshots_current(check_release_consistency._load_version(), check_capture_inputs=False)
     assert "newer than the release" in capsys.readouterr().err
 
 
@@ -214,6 +215,35 @@ def test_release_manifest_rejects_capture_input_hash_mismatch(
     with pytest.raises(SystemExit):
         check_release_consistency._assert_product_screenshots_current(check_release_consistency._load_version())
     assert "capture inputs changed" in capsys.readouterr().err
+
+
+def test_deferred_product_proof_skips_only_the_capture_input_digest(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    manifest = json.loads((ROOT / "docs/images/product-screenshots.json").read_text(encoding="utf-8"))
+    manifest["capture_inputs_sha256"] = f"sha256:{'0' * 64}"
+    candidate = tmp_path / "product-screenshots.json"
+    candidate.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(check_release_consistency, "PRODUCT_SCREENSHOTS", candidate)
+    version = check_release_consistency._load_version()
+
+    check_release_consistency._assert_product_screenshots_current(version, check_capture_inputs=False)  # must not raise
+
+    manifest["release_version"] = "0.0.1"
+    candidate.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        check_release_consistency._assert_product_screenshots_current(version, check_capture_inputs=False)
+    assert "stale release_version" in capsys.readouterr().err
+
+
+def test_only_pr_and_main_ci_defer_the_product_proof() -> None:
+    """Screenshots are recaptured at release time, so only ci.yml may defer the capture-input digest."""
+    workflows = ROOT / ".github" / "workflows"
+    ci = (workflows / "ci.yml").read_text(encoding="utf-8")
+    top_level_env = ci.split("\njobs:", 1)[0]
+    assert 'AGENT_BOM_DEFER_PRODUCT_PROOF: "1"' in top_level_env
+    for name in ("release.yml", "refresh-latest-container.yml"):
+        assert "AGENT_BOM_DEFER_PRODUCT_PROOF" not in (workflows / name).read_text(encoding="utf-8")
 
 
 def test_capture_runbook_matches_the_local_authenticated_release_workflow() -> None:
@@ -266,9 +296,9 @@ def test_capture_input_digest_ignores_a_dev_dependency_only_package_json_bump(mi
 def test_assert_product_screenshots_current_tolerates_a_dev_dependency_only_bump(mirror: Path) -> None:
     """End-to-end repro of PR #5319: a devDependency bump must not fail the gate."""
     package_json = mirror / "ui" / "package.json"
-    version = check_release_consistency._load_version()
+    before = check_release_consistency._compute_product_screenshot_inputs_digest()
     with _mutate_repo_file(package_json, _bump_json_string_field("devDependencies", "@types/node")):
-        check_release_consistency._assert_product_screenshots_current(version)  # must not raise
+        assert check_release_consistency._compute_product_screenshot_inputs_digest() == before
 
 
 def test_capture_input_digest_still_moves_for_a_direct_dependency_bump(mirror: Path) -> None:
@@ -378,6 +408,10 @@ def test_capture_input_digest_matches_the_javascript_mirror() -> None:
     assert result.stdout.strip() == python_digest
 
 
+@pytest.mark.skipif(
+    os.environ.get("AGENT_BOM_DEFER_PRODUCT_PROOF") == "1",
+    reason="PR and main CI defer screenshot freshness; the release workflows recapture and enforce it",
+)
 def test_release_manifest_capture_inputs_digest_is_current() -> None:
     """The committed manifest's capture_inputs_sha256 must already reflect the
     narrowed input scope — regenerated via `npm run capture:inputs-digest`,
