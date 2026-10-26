@@ -32,3 +32,14 @@ def test_cloud_provider_without_its_sdk_fails_fast_with_the_install_hint(provide
     assert result.output.count("pip install") == 1
     assert "scan verdict" not in result.output
     assert "installed but not configured" not in result.output
+
+
+def test_an_already_imported_sdk_counts_as_installed(monkeypatch):
+    from types import ModuleType
+
+    from agent_bom.cli._cloud_sdk import providers_missing_sdk
+
+    stub = ModuleType("azure")
+    monkeypatch.setitem(sys.modules, "azure", stub)
+    monkeypatch.setitem(sys.modules, "azure.identity", ModuleType("azure.identity"))
+    assert providers_missing_sdk(["azure"]) == []

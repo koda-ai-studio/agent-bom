@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 
 from rich.console import Console
 from rich.markup import escape
@@ -16,6 +17,8 @@ PROVIDER_SDKS = {
 
 
 def _installed(module: str) -> bool:
+    if module in sys.modules:
+        return sys.modules[module] is not None
     try:
         return importlib.util.find_spec(module) is not None
     except (ImportError, ValueError):
