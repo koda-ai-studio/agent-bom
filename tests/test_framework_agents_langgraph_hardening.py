@@ -36,35 +36,52 @@ def _all_unresolved(agents: list[dict]) -> list[dict]:
     return [route for agent in agents for route in agent["unresolved_routes"]]
 
 
+def _best_scan_seconds(tmp_path: Path, name: str, source: str) -> tuple[float, list[dict]]:
+    root = tmp_path / name
+    root.mkdir()
+    _write(root, source)
+    timings = []
+    for _ in range(2):
+        started = time.perf_counter()
+        agents = _scan(root)
+        timings.append(time.perf_counter() - started)
+    return min(timings), agents
+
+
+# Ten times the input may cost at most ~3x a linear scan's factor of ten. A
+# quadratic scan costs a hundred times, so the ratio separates the two on a
+# loaded CI runner where an absolute wall-clock budget does not.
+_LINEAR_CEILING = 30
+
+
 # ── Hostile input: bounded time and bounded output ───────────────────────────
 
 
 def test_many_graphs_in_one_file_scan_in_linear_time(tmp_path: Path):
-    parts = ["def node(s):\n    return Command(goto='a')\n\n"]
-    parts += [f"g{i} = StateGraph(dict)\ng{i}.add_node('a', node)\ng{i}.add_edge(START, 'a')\n" for i in range(3000)]
-    root = _write(tmp_path, "".join(parts))
+    def source(count: int) -> str:
+        parts = ["def node(s):\n    return Command(goto='a')\n\n"]
+        parts += [f"g{i} = StateGraph(dict)\ng{i}.add_node('a', node)\ng{i}.add_edge(START, 'a')\n" for i in range(count)]
+        return "".join(parts)
 
-    started = time.perf_counter()
-    agents = _scan(root)
-    elapsed = time.perf_counter() - started
+    small, _ = _best_scan_seconds(tmp_path, "small", source(300))
+    large, agents = _best_scan_seconds(tmp_path, "large", source(3000))
 
-    assert elapsed < 5, f"3,000 graphs took {elapsed:.1f}s"
+    assert large < max(small, 0.05) * _LINEAR_CEILING, f"300 graphs {small:.2f}s, 3,000 graphs {large:.2f}s"
     edges = sum(len(agent["topology_edges"]) for agent in agents)
     assert edges <= MAX_EDGES_PER_FILE
     assert any(route["reason"].startswith("truncated") for route in _all_unresolved(agents))
 
 
 def test_huge_goto_list_over_a_shared_function_is_capped(tmp_path: Path):
-    names = ", ".join(f"'n{i}'" for i in range(4000))
-    source = f"def shared(s):\n    return Command(goto=[{names}])\n\ng = StateGraph(dict)\n"
-    source += "".join(f"g.add_node('n{i}', shared)\n" for i in range(4000))
-    root = _write(tmp_path, source)
+    def source(count: int) -> str:
+        names = ", ".join(f"'n{i}'" for i in range(count))
+        text = f"def shared(s):\n    return Command(goto=[{names}])\n\ng = StateGraph(dict)\n"
+        return text + "".join(f"g.add_node('n{i}', shared)\n" for i in range(count))
 
-    started = time.perf_counter()
-    agents = _scan(root)
-    elapsed = time.perf_counter() - started
+    small, _ = _best_scan_seconds(tmp_path, "small", source(400))
+    large, agents = _best_scan_seconds(tmp_path, "large", source(4000))
 
-    assert elapsed < 5, f"4,000 x 4,000 goto took {elapsed:.1f}s"
+    assert large < max(small, 0.05) * _LINEAR_CEILING, f"400 x 400 goto {small:.2f}s, 4,000 x 4,000 goto {large:.2f}s"
     edges = sum(len(agent["topology_edges"]) for agent in agents)
     assert edges <= MAX_EDGES_PER_FILE
     n0 = next(agent for agent in agents if agent["name"] == "n0")
