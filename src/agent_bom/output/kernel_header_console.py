@@ -1,4 +1,4 @@
-"""Console rendering of kernel-header CVE groups (see :mod:`agent_bom.kernel_headers`)."""
+"""Console rendering of kernel-header CVE groups (see :mod:`agent_bom.output.kernel_headers`)."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 from rich.markup import escape
 from rich.rule import Rule
 
-from agent_bom.kernel_headers import KernelHeaderGroup, kernel_header_groups
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.finding_views import package_name, package_version, sanitize_output_text
+from agent_bom.output.kernel_headers import KernelHeaderGroup, kernel_header_groups
 
 if TYPE_CHECKING:
     from agent_bom.finding import Finding

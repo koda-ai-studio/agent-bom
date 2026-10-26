@@ -14,9 +14,9 @@ from io import StringIO
 import pytest
 from rich.console import Console
 
-from agent_bom.kernel_headers import is_kernel_header_package, kernel_header_groups
 from agent_bom.models import Agent, AgentType, AIBOMReport, BlastRadius, MCPServer, Package, Severity, Vulnerability
 from agent_bom.output import print_compact_blast_radius
+from agent_bom.output.kernel_headers import is_kernel_header_package, kernel_header_groups
 
 
 def _pkg(name: str, ecosystem: str, distro: str | None, version: str = "1.0-1", distro_version: str | None = "13") -> Package:

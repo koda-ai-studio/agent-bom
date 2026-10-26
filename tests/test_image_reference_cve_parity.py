@@ -17,11 +17,11 @@ from pathlib import Path
 import pytest
 from rich.console import Console
 
-from agent_bom.kernel_headers import kernel_header_groups
 from agent_bom.models import Agent, AgentType, AIBOMReport, BlastRadius, MCPServer, Package, Severity, Vulnerability
 from agent_bom.output import print_compact_blast_radius, to_cyclonedx, to_json, to_sarif
 from agent_bom.output.finding_views import active_cve_findings
 from agent_bom.output.kernel_header_console import collapse_kernel_header_findings
+from agent_bom.output.kernel_headers import kernel_header_groups
 from tests.test_image_scan_parity import TRIVY_ALPINE_3_14_2_CVES
 
 FIXTURE = Path(__file__).parent / "fixtures" / "image_reference_php_8_3_30_cli_cves.json"
