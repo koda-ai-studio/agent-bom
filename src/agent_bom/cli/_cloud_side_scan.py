@@ -8,7 +8,7 @@ and secret type/location.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 import click
 
@@ -81,46 +81,21 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 )
 @click.option("--no-secrets", is_flag=True, help="Skip the redacted secret scan (SBOM + CVEs only).")
 @click.option("--no-sweep-orphans", is_flag=True, help="AWS only: skip the pre-run sweep of stranded snapshots.")
-def side_scan_cmd(
-    provider: str,
-    instance_id: Optional[str],
-    volume_id: Optional[str],
-    collector_instance_id: Optional[str],
-    availability_zone: Optional[str],
-    region: Optional[str],
-    account_id: Optional[str],
-    collector_resource_group: Optional[str],
-    tenant_id: Optional[str],
-    image_id: Optional[str],
-    output_format: str,
-    no_secrets: bool,
-    no_sweep_orphans: bool,
-) -> None:
+def side_scan_cmd(provider: str, image_id: Optional[str], output_format: str, **options: Any) -> None:
     """Agentless disk / machine-image side-scan — SBOM + CVEs per VM + redacted secrets.
 
-    Each provider takes a snapshot of the target disk, creates a temp disk from
-    it, attaches that to an *in-account collector* instance, mounts it read-only,
-    parses the package SBOM + secret type/location (never values, never file
-    contents), and tears everything down in a guaranteed cleanup. No disk image
-    or block data ever leaves the account. This is an opt-in mutation family
-    (temp snapshot/disk create, attach, delete) — not a read-only scan.
+    An opt-in mutation family, not a read-only scan: each provider snapshots the
+    target disk (or uses an image), creates a temp disk, attaches it to an
+    *in-account collector*, mounts it read-only, records package SBOM + CVEs +
+    secret type/location (never values or file contents), and tears everything
+    down. No block data leaves the account. Packages and CVEs are reported per
+    owning VM and carry into the graph as VM -> package -> CVE. ``--image-id``
+    scans an AWS AMI (temp volume from its root snapshot) or a GCE image; Azure
+    managed images are not supported.
 
-    Packages and CVEs are reported per owning VM (AWS volume attachment, Azure
-    disk ``managed_by``, GCE disk ``users``) and carry into the graph as
-    VM -> package -> CVE. ``--image-id`` scans an AWS AMI (temp volume from its
-    root snapshot, the AMI is never modified) or a GCE image (temp disk from the
-    image); Azure managed images are not supported.
-
-    AWS EBS, Azure Managed Disk, and GCP Persistent Disk all ship a CLI executor.
-    Credentials are never embedded — the Azure/GCP executors resolve separately
-    scoped lifecycle credentials from the provider's default chain, and no live-cloud smoke is
-    claimed yet (``credentialed_smoke=false``). Use
-    ``agent-bom cloud side-scan-capabilities`` and cloud inventory
-    ``side_scan_targets`` for the honest surface.
-
-    Requires the scoped snapshot role and an in-account collector instance. Gated
-    by ``AGENT_BOM_SIDESCAN`` — OFF by default; an unset flag prints how to enable
-    it and exits non-zero.
+    Credentials are never embedded; executors resolve separately scoped lifecycle
+    credentials from the provider default chain (``credentialed_smoke=false``).
+    Gated by ``AGENT_BOM_SIDESCAN`` (OFF by default; unset exits non-zero).
 
     \b
     Examples:
@@ -143,63 +118,12 @@ def side_scan_cmd(
     from rich.console import Console
 
     from agent_bom.cloud.base import CloudDiscoveryError
-    from agent_bom.cloud.side_scan import run_side_scan
     from agent_bom.cloud.side_scan_inventory import side_scan_record
-    from agent_bom.cloud.side_scan_lifecycle import (
-        SideScanProvider,
-        side_scan_provider_capabilities,
-    )
-    from agent_bom.cloud.side_scan_targets import AZURE_IMAGE_UNSUPPORTED, run_provider_side_scan
 
     con = Console()
-    provider_key = cast(SideScanProvider, provider.strip().lower())
-    capabilities = side_scan_provider_capabilities()
-    capability = capabilities.get(provider_key)
-    if capability is None or not capability.cli_available:
-        executor = capability.executor if capability is not None else "unknown"
-        con.print(f"\n  [yellow]side-scan executor unavailable for {provider_key}:[/yellow] executor={executor}, cli_available=false")
-        con.print("  [dim]See `agent-bom cloud side-scan-capabilities` and inventory `side_scan_targets`.[/dim]\n")
-        raise SystemExit(2)
-    if image_id and provider_key == "azure":
-        con.print(f"\n  [yellow]side-scan unavailable:[/yellow] {AZURE_IMAGE_UNSUPPORTED}\n")
-        raise SystemExit(2)
-    as_json = output_format.lower() == "json"
-
+    provider_key = _require_executor(con, provider, image_id)
     try:
-        if provider_key == "aws":
-            results = asyncio.run(
-                run_side_scan(
-                    instance_id=instance_id,
-                    volume_id=volume_id,
-                    image_id=image_id,
-                    collector_instance_id=collector_instance_id,
-                    availability_zone=availability_zone,
-                    region=region,
-                    scan_secrets_enabled=not no_secrets,
-                    sweep_orphans=not no_sweep_orphans,
-                )
-            )
-            records = [side_scan_record(result, provider="aws") for result in results]
-            if not as_json:
-                _render_side_scan_results(con, results)
-        else:
-            provider_results = asyncio.run(
-                run_provider_side_scan(
-                    provider=provider_key,
-                    target_id=image_id or volume_id or "",
-                    target_type="image" if image_id else "disk",
-                    account_id=account_id or "",
-                    location=availability_zone or "",
-                    collector_id=collector_instance_id or "",
-                    tenant_id=resolve_cli_tenant_id(tenant_id),
-                    collector_resource_group=collector_resource_group,
-                    region=region,
-                    scan_secrets_enabled=not no_secrets,
-                )
-            )
-            records = [side_scan_record(result, provider=provider_key) for result in provider_results]
-            if not as_json:
-                _render_provider_side_scan_results(con, provider_key, provider_results)
+        results = asyncio.run(_execute(provider_key, image_id, options))
     except CloudDiscoveryError as exc:
         # Actionable, user-safe opt-in / config guidance authored in the side-scan
         # module — no exception internals, safe to surface directly.
@@ -214,10 +138,63 @@ def side_scan_cmd(
             "a new scan does not resume an earlier teardown.[/dim]\n"
         )
         raise SystemExit(1) from None
-    if as_json:
+    records = [side_scan_record(result, provider=provider_key) for result in results]
+    if output_format.lower() == "json":
         click.echo(json.dumps({"side_scan_results": records}, indent=2, sort_keys=True))
         return
+    if provider_key == "aws":
+        _render_side_scan_results(con, results)
+    else:
+        _render_provider_side_scan_results(con, provider_key, results)
     _render_vulnerable_packages(con, records)
+
+
+def _require_executor(con: Console, provider: str, image_id: Optional[str]) -> str:
+    """The provider key when its executor can run this request; otherwise exit 2 with the reason."""
+    from agent_bom.cloud.side_scan_images import AZURE_IMAGE_UNSUPPORTED
+    from agent_bom.cloud.side_scan_lifecycle import SideScanProvider, side_scan_provider_capabilities
+
+    provider_key = cast(SideScanProvider, provider.strip().lower())
+    capability = side_scan_provider_capabilities().get(provider_key)
+    if capability is None or not capability.cli_available:
+        executor = capability.executor if capability is not None else "unknown"
+        con.print(f"\n  [yellow]side-scan executor unavailable for {provider_key}:[/yellow] executor={executor}, cli_available=false")
+        con.print("  [dim]See `agent-bom cloud side-scan-capabilities` and inventory `side_scan_targets`.[/dim]\n")
+        raise SystemExit(2)
+    if image_id and provider_key == "azure":
+        con.print(f"\n  [yellow]side-scan unavailable:[/yellow] {AZURE_IMAGE_UNSUPPORTED}\n")
+        raise SystemExit(2)
+    return provider_key
+
+
+async def _execute(provider_key: str, image_id: Optional[str], options: dict[str, Any]) -> list[Any]:
+    """Run the provider's executor with the CLI options mapped to its arguments."""
+    from agent_bom.cloud.side_scan import run_side_scan
+    from agent_bom.cloud.side_scan_targets import run_provider_side_scan
+
+    if provider_key == "aws":
+        return await run_side_scan(
+            instance_id=options["instance_id"],
+            volume_id=options["volume_id"],
+            image_id=image_id,
+            collector_instance_id=options["collector_instance_id"],
+            availability_zone=options["availability_zone"],
+            region=options["region"],
+            scan_secrets_enabled=not options["no_secrets"],
+            sweep_orphans=not options["no_sweep_orphans"],
+        )
+    return await run_provider_side_scan(
+        provider=cast(Any, provider_key),
+        target_id=image_id or options["volume_id"] or "",
+        target_type="image" if image_id else "disk",
+        account_id=options["account_id"] or "",
+        location=options["availability_zone"] or "",
+        collector_id=options["collector_instance_id"] or "",
+        tenant_id=resolve_cli_tenant_id(options["tenant_id"]),
+        collector_resource_group=options["collector_resource_group"],
+        region=options["region"],
+        scan_secrets_enabled=not options["no_secrets"],
+    )
 
 
 _CONSOLE_CVE_ROWS = 25

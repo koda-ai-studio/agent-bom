@@ -103,7 +103,7 @@ from .gcp_inv.network import (  # noqa: F401 - facade re-export
     _discover_vpc_networks,
 )
 from .normalization import sanitize_discovery_warning
-from .side_scan_targets import gcp_persistent_disk_targets
+from .side_scan_target_records import gcp_persistent_disk_targets
 
 logger = logging.getLogger(__name__)
 

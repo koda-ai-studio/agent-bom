@@ -712,18 +712,14 @@ async def cloud_side_scan_trigger(
     scoped lifecycle credentials from the provider's default chain
     (``credentialed_smoke=false``).
     """
+    from agent_bom.api.side_scan_report import persist_side_scan_graph_async, side_scan_request_error
     from agent_bom.cloud.side_scan import SideScanConfigError, SideScanDisabledError
     from agent_bom.cloud.side_scan_lifecycle import SideScanStateConflictError, get_side_scan_state_store, new_side_scan_execution
 
     tenant_id = _tenant(request)
     provider = body.provider
-    if provider == "azure" and body.target_type == "image":
-        raise HTTPException(status_code=400, detail="Azure managed image side-scan is not supported; scan a managed disk instead.")
-    if provider == "azure" and not str(body.collector_resource_group or "").strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Azure Managed Disk side-scan requires 'collector_resource_group' for the in-account collector VM.",
-        )
+    if rejection := side_scan_request_error(body):
+        raise HTTPException(status_code=400, detail=rejection)
 
     import uuid as _uuid
 
@@ -819,19 +815,8 @@ async def cloud_side_scan_trigger(
     if record is not None:
         payload["execution"] = record.to_dict()
         payload["evidence"] = record.to_evidence_dict()
-    payload["graph"] = await _persist_side_scan_graph(tenant_id, execution_id, provider, results, payload["status"])
+    payload["graph"] = await persist_side_scan_graph_async(tenant_id, execution_id, provider, results, payload["status"])
     return payload
-
-
-async def _persist_side_scan_graph(tenant_id: str, execution_id: str, provider: str, results: list[Any], status: str) -> dict[str, Any]:
-    """Project a completed scan's VM packages/CVEs into the tenant graph off the event loop."""
-    if status != "scan_complete":
-        return {"status": "skipped", "reason": f"execution_{status}"}
-    from agent_bom.api.side_scan_report import persist_side_scan_graph
-    from agent_bom.cloud.side_scan_inventory import side_scan_record
-
-    records = [side_scan_record(result, provider=provider) for result in results]
-    return await anyio.to_thread.run_sync(lambda: persist_side_scan_graph(tenant_id=tenant_id, execution_id=execution_id, records=records))
 
 
 @router.get("/cloud/side-scan", **documented(rt.CloudSideScanListResponse), tags=["cloud"])

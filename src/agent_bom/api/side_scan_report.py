@@ -13,6 +13,15 @@ import logging
 import uuid
 from typing import Any
 
+import anyio.to_thread
+
+from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
+from agent_bom.api.pipeline import _now, _persist_graph_snapshot
+from agent_bom.api.stores import _get_store, _jobs_put
+from agent_bom.cloud.side_scan_inventory import side_scan_record
+from agent_bom.models import AIBOMReport
+from agent_bom.output import to_json
+
 logger = logging.getLogger(__name__)
 
 _NAMESPACE = uuid.UUID("6f1d2a8e-6b3c-5b8e-9a51-2f0a9c7d4e10")
@@ -34,12 +43,6 @@ def persist_side_scan_graph(*, tenant_id: str, execution_id: str, records: list[
     if any(record.get("replayed") for record in records):
         # A replay carries counts only; re-persisting would replace real packages with none.
         return {"status": "skipped", "reason": "replayed_execution", "scan_id": side_scan_graph_scan_id(tenant_id, execution_id)}
-    from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
-    from agent_bom.api.pipeline import _now, _persist_graph_snapshot
-    from agent_bom.api.stores import _get_store, _jobs_put
-    from agent_bom.models import AIBOMReport
-    from agent_bom.output import to_json
-
     scan_id = side_scan_graph_scan_id(tenant_id, execution_id)
     report = AIBOMReport(agents=[], blast_radii=[], scan_id=scan_id)
     report.side_scan_results_data = records
@@ -68,3 +71,22 @@ def persist_side_scan_graph(*, tenant_id: str, execution_id: str, records: list[
     persisted = (job.result or {}).get("graph_persistence") if isinstance(job.result, dict) else None
     status = persisted.get("status", "persisted") if isinstance(persisted, dict) else "persisted"
     return {"status": status, "scan_id": scan_id}
+
+
+def side_scan_request_error(body: Any) -> str:
+    """Why a REST side-scan request is rejected before any cloud call, or ``""``."""
+    if body.provider == "azure" and body.target_type == "image":
+        return "Azure managed image side-scan is not supported; scan a managed disk instead."
+    if body.provider == "azure" and not str(body.collector_resource_group or "").strip():
+        return "Azure Managed Disk side-scan requires 'collector_resource_group' for the in-account collector VM."
+    return ""
+
+
+async def persist_side_scan_graph_async(
+    tenant_id: str, execution_id: str, provider: str, results: list[Any], status: str
+) -> dict[str, Any]:
+    """Project a completed scan's VM packages/CVEs into the tenant graph off the event loop."""
+    if status != "scan_complete":
+        return {"status": "skipped", "reason": f"execution_{status}"}
+    records = [side_scan_record(result, provider=provider) for result in results]
+    return await anyio.to_thread.run_sync(lambda: persist_side_scan_graph(tenant_id=tenant_id, execution_id=execution_id, records=records))

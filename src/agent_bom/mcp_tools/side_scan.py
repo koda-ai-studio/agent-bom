@@ -28,6 +28,7 @@ import asyncio
 import json
 import logging
 
+from agent_bom.cloud.side_scan_inventory import side_scan_response
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.security import sanitize_error
 
@@ -58,35 +59,14 @@ async def cloud_side_scan_impl(
     """Run one Azure/GCP agentless disk side-scan through the shared executor."""
     from agent_bom.cloud.side_scan import SideScanConfigError, SideScanDisabledError
     from agent_bom.cloud.side_scan_lifecycle import get_side_scan_state_store, new_side_scan_execution
-    from agent_bom.cloud.side_scan_targets import AZURE_IMAGE_UNSUPPORTED, run_provider_side_scan
+    from agent_bom.cloud.side_scan_targets import run_provider_side_scan
 
     resolved_tenant = resolve_mcp_tool_tenant_id(tenant_id)
     prov = provider.strip().lower()
-    if prov not in _SUPPORTED:
-        return json.dumps(
-            {
-                "status": "rejected",
-                "error": "provider must be 'azure' or 'gcp' (AWS EBS uses the CLI side-scan entrypoint).",
-            }
-        )
-    missing = [
-        label
-        for label, value in (
-            ("target_id", target_id),
-            ("account_id", account_id),
-            ("location", location),
-            ("collector_id", collector_id),
-        )
-        if not str(value).strip()
-    ]
-    if target_type not in {"disk", "image"}:
-        return json.dumps({"status": "rejected", "error": "target_type must be 'disk' or 'image'"})
-    if prov == "azure" and target_type == "image":
-        return json.dumps({"status": "rejected", "error": AZURE_IMAGE_UNSUPPORTED})
-    if prov == "azure" and not collector_resource_group.strip():
-        missing.append("collector_resource_group")
-    if missing:
-        return json.dumps({"status": "rejected", "error": f"missing required argument(s): {', '.join(missing)}"})
+    required = {"target_id": target_id, "account_id": account_id, "location": location, "collector_id": collector_id}
+    rejection = _request_error(prov, target_type, required, collector_resource_group)
+    if rejection:
+        return json.dumps({"status": "rejected", "error": rejection})
 
     import uuid as _uuid
 
@@ -158,8 +138,22 @@ async def cloud_side_scan_impl(
     return _truncate_response(json.dumps(payload, indent=2, default=str))
 
 
+def _request_error(prov: str, target_type: str, required: dict[str, str], collector_resource_group: str) -> str:
+    """Why the request is rejected before any cloud call, or ``""``."""
+    from agent_bom.cloud.side_scan_images import AZURE_IMAGE_UNSUPPORTED
+
+    if prov not in _SUPPORTED:
+        return "provider must be 'azure' or 'gcp' (AWS EBS uses the CLI side-scan entrypoint)."
+    if target_type not in {"disk", "image"}:
+        return "target_type must be 'disk' or 'image'"
+    if prov == "azure" and target_type == "image":
+        return AZURE_IMAGE_UNSUPPORTED
+    missing = [label for label, value in required.items() if not str(value).strip()]
+    if prov == "azure" and not collector_resource_group.strip():
+        missing.append("collector_resource_group")
+    return f"missing required argument(s): {', '.join(missing)}" if missing else ""
+
+
 def _result_summary(results: list) -> dict:
     """Metadata-only run summary plus the bounded package/CVE record — the API's exact shape."""
-    from agent_bom.cloud.side_scan_inventory import side_scan_response
-
     return side_scan_response(results)

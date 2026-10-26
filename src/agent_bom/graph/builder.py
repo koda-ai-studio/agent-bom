@@ -159,9 +159,7 @@ from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_organization as _add_snowflake_organization,
 )
 from agent_bom.graph.builder_snowflake_platform import _add_snowflake_pipeline as _add_snowflake_pipeline
-from agent_bom.graph.builder_snowflake_platform import (
-    _add_snowflake_pipes as _add_snowflake_pipes,
-)
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_pipes as _add_snowflake_pipes
 from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_schemas as _add_snowflake_schemas,
 )

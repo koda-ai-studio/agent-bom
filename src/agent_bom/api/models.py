@@ -661,22 +661,17 @@ class RuntimeEvidenceIngestRequest(BaseModel):
 class SideScanTriggerRequest(BaseModel):
     """Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).
 
-    The authenticated, tenant-scoped door for the shipped
-    ``run_provider_side_scan`` executor that previously ran only from the CLI.
-    An opt-in mutation (temp snapshot/disk create, attach, delete) that never
-    modifies the scanned disk or image: agent-bom mounts a temp copy on an
-    in-account collector read-only, records SBOM + CVE + secret *metadata*
-    only, and attempts cleanup of owned temporary resources. Credentials
-    are never embedded and never accepted here — the executor resolves scoped
-    lifecycle credentials from the provider's default chain. AWS EBS keeps its own CLI
-    entrypoint (its results are not persisted to the shared lifecycle store).
+    Tenant-scoped door for the shipped ``run_provider_side_scan`` executor: an
+    opt-in mutation (temp snapshot/disk create, attach, delete) that never
+    modifies the scanned disk or image, mounts a temp copy on an in-account
+    collector read-only and records SBOM + CVE + secret *metadata* only.
+    Credentials are never accepted here; the executor resolves scoped lifecycle
+    credentials from the provider chain. AWS EBS keeps its own CLI entrypoint.
     """
 
     model_config = ConfigDict(extra="forbid")
     provider: Literal["azure", "gcp"]
-    target_id: Annotated[
-        str, Field(min_length=1, max_length=1024, description="Disk resource id, or a GCE image path with target_type=image.")
-    ]
+    target_id: Annotated[str, Field(min_length=1, max_length=1024, description="Disk resource id, or GCE image path (target_type=image).")]
     target_type: Literal["disk", "image"] = "disk"
     account_id: Annotated[
         str, Field(min_length=1, max_length=256, description="Azure subscription id / GCP project id owning the disk + collector.")

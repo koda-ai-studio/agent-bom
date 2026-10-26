@@ -665,6 +665,22 @@ def _vex_fields(vuln) -> dict[str, Any]:
     }
 
 
+# Report sections copied through, in output order, only when present.
+_OPTIONAL_REPORT_SECTIONS: tuple[tuple[str, str], ...] = (
+    ("model_files", "model_files"),
+    ("model_manifests", "model_manifests"),
+    ("model_provenance", "model_provenance"),
+    ("model_hash_verification", "model_hash_verification_data"),
+    ("model_supply_chain", "model_supply_chain_data"),
+    ("enforcement", "enforcement_data"),
+    ("context_graph", "context_graph_data"),
+    ("license_report", "license_report"),
+    ("vex", "vex_data"),
+    ("toxic_combinations", "toxic_combinations"),
+    ("prioritized_findings", "prioritized_findings"),
+)
+
+
 def to_json(report: AIBOMReport) -> dict:
     """Convert report to JSON-serializable dict."""
     ai_bom_entities = _build_ai_bom_entities_snapshot(report)
@@ -764,38 +780,9 @@ def to_json(report: AIBOMReport) -> dict:
         result["prompt_scan"] = report.prompt_scan_data
     _append_side_findings(unified_findings, report)
 
-    if report.model_files:
-        result["model_files"] = report.model_files
-
-    if report.model_manifests:
-        result["model_manifests"] = report.model_manifests
-
-    if report.model_provenance:
-        result["model_provenance"] = report.model_provenance
-
-    if report.model_hash_verification_data:
-        result["model_hash_verification"] = report.model_hash_verification_data
-
-    if report.model_supply_chain_data:
-        result["model_supply_chain"] = report.model_supply_chain_data
-
-    if report.enforcement_data:
-        result["enforcement"] = report.enforcement_data
-
-    if report.context_graph_data:
-        result["context_graph"] = report.context_graph_data
-
-    if report.license_report:
-        result["license_report"] = report.license_report
-
-    if report.vex_data:
-        result["vex"] = report.vex_data
-
-    if report.toxic_combinations:
-        result["toxic_combinations"] = report.toxic_combinations
-
-    if report.prioritized_findings:
-        result["prioritized_findings"] = report.prioritized_findings
+    for key, attr in _OPTIONAL_REPORT_SECTIONS:
+        if value := getattr(report, attr):
+            result[key] = value
 
     if report.sast_data:
         result["sast"] = report.sast_data

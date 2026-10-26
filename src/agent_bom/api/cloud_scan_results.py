@@ -8,6 +8,7 @@ from agent_bom.api.cloud_response_helpers import _logger
 from agent_bom.api.models import ScanJob
 from agent_bom.canonical_ids import canonical_id
 from agent_bom.cloud.runtime_workload_evidence import RuntimeWorkloadSignal
+from agent_bom.cloud.side_scan_inventory import side_scan_response
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType
@@ -81,8 +82,6 @@ def _run_provider_side_scan_sync(**kwargs: Any) -> list[Any]:
 
 def _side_scan_result_summary(results: list[Any]) -> dict[str, Any]:
     """Metadata-only run summary plus the bounded package/CVE record (never block data or values)."""
-    from agent_bom.cloud.side_scan_inventory import side_scan_response
-
     return side_scan_response(results)
 
 

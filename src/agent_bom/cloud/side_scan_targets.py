@@ -33,6 +33,7 @@ from .side_scan import (
     is_sidescan_enabled,
     scan_workload_disk_findings,
 )
+from .side_scan_images import resolve_target_type
 from .side_scan_lifecycle import SideScanProvider
 
 # Type of the pluggable SDK-client factory: given a provider (plus subscription /
@@ -64,12 +65,6 @@ def side_scan_state_db_path() -> Path:
 
 
 CloudSideScanProvider = SideScanProvider
-
-AZURE_IMAGE_UNSUPPORTED = (
-    "Azure managed image side-scan is not supported: this executor scans managed disks only. Creating a temp "
-    "disk from a managed image (Microsoft.Compute/images) or an Azure Compute Gallery image version is not "
-    "implemented or proven; scan the managed disk of a VM built from the image instead."
-)
 
 
 @dataclass(frozen=True)
@@ -233,6 +228,11 @@ def _redacted_secret_findings(mount_point: Path) -> list[SideScanSecret]:
     ]
 
 
+def _lifecycle_owner(lifecycle: Any) -> tuple[str, str]:
+    """The VM the adapter recorded as owning the scanned disk, if any."""
+    return str(getattr(lifecycle, "owner_instance_id", "") or ""), str(getattr(lifecycle, "owner_instance_name", "") or "")
+
+
 async def _scan_packages(packages: list[Package]) -> int:
     if not packages:
         return 0
@@ -252,12 +252,9 @@ async def run_cloud_side_scan_targets(
 ) -> list[CloudSideScanExecutionResult]:
     """Run Azure/GCP snapshot side-scans through caller-supplied adapters.
 
-    The runner is opt-in, bounded, and metadata-only. Provider SDK calls stay
-    behind ``CloudSideScanLifecycle``. Concrete Azure Managed Disk and GCP
-    Persistent Disk adapters accept injected SDK clients; credentials,
-    scheduler/CLI wiring, and live cloud proof are deliberately separate.
+    Opt-in, bounded, metadata-only; SDK calls stay behind ``CloudSideScanLifecycle``
+    and credentials, scheduler/CLI wiring and live proof are separate.
     """
-
     if not is_sidescan_enabled():
         raise SideScanDisabledError(
             "Disk side-scan is opt-in and currently OFF. Set AGENT_BOM_SIDESCAN=1 and provide a scoped snapshot role."
@@ -288,10 +285,8 @@ async def run_cloud_side_scan_targets(
         mount_point: Path | None = None
         scan_disk_id = ""
         try:
-            snapshot_id = lifecycle.create_snapshot(target)
-            result.snapshot_id = snapshot_id or None
-            result.instance_id = str(getattr(lifecycle, "owner_instance_id", "") or "")
-            result.instance_name = str(getattr(lifecycle, "owner_instance_name", "") or "")
+            result.snapshot_id = (snapshot_id := lifecycle.create_snapshot(target)) or None
+            result.instance_id, result.instance_name = _lifecycle_owner(lifecycle)
             scan_disk_id = lifecycle.create_scan_disk(target, snapshot_id)
             result.scan_disk_id = scan_disk_id
             device = lifecycle.attach_scan_disk(target, scan_disk_id, collector_id)
@@ -430,17 +425,13 @@ async def run_provider_side_scan(
     mount_controller: MountController | None = None,
     sleep: Callable[[float], None] = time.sleep,
 ) -> list[CloudSideScanExecutionResult]:
-    """Run one Azure/GCP snapshot side-scan end to end from the CLI/scheduler.
+    """Run one Azure/GCP disk or GCE image side-scan end to end from the CLI/API/MCP/scheduler.
 
-    This is the shipped Azure Managed Disk + GCP Persistent Disk executor: it
-    builds the durable lifecycle record, constructs the concrete injected-SDK
-    adapter, and drives :func:`run_cloud_side_scan_targets`, which attempts
-    teardown of owned temporary resources and persists incomplete cleanup. AWS EBS
-    keeps its own entry point (:func:`agent_bom.cloud.side_scan.run_side_scan`).
-
-    Credentials are never embedded; ``client_factory`` resolves them from the
-    provider's default chain (tests inject fakes). ``credentialed_smoke`` in the
-    capability registry stays ``False`` until a real live-cloud run is proven.
+    Builds the durable lifecycle record and the injected-SDK adapter, then drives
+    :func:`run_cloud_side_scan_targets` (owned-resource teardown, incomplete
+    cleanup persisted). AWS keeps :func:`agent_bom.cloud.side_scan.run_side_scan`.
+    ``client_factory`` resolves credentials from the provider default chain
+    (tests inject fakes); ``credentialed_smoke`` stays ``False`` until proven live.
     """
     if provider not in {"azure", "gcp"}:
         raise SideScanConfigError("run_provider_side_scan handles only azure|gcp; use run_side_scan for AWS EBS")
@@ -459,10 +450,7 @@ async def run_provider_side_scan(
     missing = [label for label, value in required if not str(value).strip()]
     if missing:
         raise SideScanConfigError(f"{provider} side-scan requires: {', '.join(missing)}")
-    if target_type not in {"disk", "image"}:
-        raise SideScanConfigError("side-scan target_type must be 'disk' or 'image'")
-    if provider == "azure" and target_type == "image":
-        raise SideScanConfigError(AZURE_IMAGE_UNSUPPORTED)
+    lifecycle_type = resolve_target_type(provider, target_type)
     if provider == "azure" and not str(collector_resource_group or "").strip():
         raise SideScanConfigError("Azure Managed Disk side-scan requires --collector-resource-group for the in-account collector VM")
 
@@ -485,7 +473,7 @@ async def run_provider_side_scan(
 
     target = CloudSideScanTarget(
         provider=provider,
-        target_type="image" if target_type == "image" else "managed_disk" if provider == "azure" else "persistent_disk",
+        target_type=lifecycle_type,
         target_id=target_id,
         name=target_id.rstrip("/").rsplit("/", 1)[-1] or target_id,
         account_id=account_id,
@@ -507,7 +495,6 @@ async def run_provider_side_scan(
                 "collector_lun": collector_lun,
                 "region": str(region or "").strip(),
                 "scan_secrets_enabled": scan_secrets_enabled,
-                # Disk requests keep their original fingerprint so recorded executions still replay.
                 **({"target_type": "image"} if target_type == "image" else {}),
             },
             sort_keys=True,
@@ -612,54 +599,3 @@ async def run_provider_side_scan(
         scan_secrets_enabled=scan_secrets_enabled,
         max_targets=1,
     )
-
-
-def azure_managed_disk_targets(disks: list[dict[str, Any]], *, subscription_id: str) -> list[dict[str, Any]]:
-    """Project Azure Managed Disks into side-scan target records."""
-
-    targets: list[dict[str, Any]] = []
-    for disk in disks:
-        target_id = str(disk.get("id") or disk.get("name") or "").strip()
-        name = str(disk.get("name") or target_id).strip()
-        if not target_id or not name:
-            continue
-        size = disk.get("disk_size_gb")
-        targets.append(
-            CloudSideScanTarget(
-                provider="azure",
-                target_type="managed_disk",
-                target_id=target_id,
-                name=name,
-                account_id=subscription_id,
-                location=str(disk.get("location") or ""),
-                size_gb=size if isinstance(size, int) else None,
-                encryption=str(disk.get("encryption_type") or "unknown"),
-            ).to_dict()
-        )
-    return targets
-
-
-def gcp_persistent_disk_targets(disks: list[dict[str, Any]], *, project_id: str) -> list[dict[str, Any]]:
-    """Project GCP Persistent Disks into side-scan target records."""
-
-    targets: list[dict[str, Any]] = []
-    for disk in disks:
-        target_id = str(disk.get("id") or disk.get("name") or "").strip()
-        name = str(disk.get("name") or target_id).strip()
-        if not target_id or not name:
-            continue
-        size = disk.get("size_gb")
-        encryption = "customer-managed" if disk.get("encrypted") else "provider-managed-or-unknown"
-        targets.append(
-            CloudSideScanTarget(
-                provider="gcp",
-                target_type="persistent_disk",
-                target_id=target_id,
-                name=name,
-                account_id=project_id,
-                location=str(disk.get("location") or ""),
-                size_gb=size if isinstance(size, int) else None,
-                encryption=encryption,
-            ).to_dict()
-        )
-    return targets
