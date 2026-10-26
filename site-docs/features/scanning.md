@@ -175,6 +175,40 @@ coverage warning naming the layer and reason, and the scan run is reported as
 Temporary layer files are written to the system temporary directory (`TMPDIR`)
 and removed as soon as the layer has been read.
 
+When the `docker save` archive yields no packages, `agent-bom image` falls back
+to `docker export`. The exported root filesystem is scanned as one layer with
+the same extractors and the same bounds; a bound it crosses is recorded with
+the layer name `docker-export` and the run is reported as `partial`.
+
+### Kernel-header CVEs
+
+Kernel-header packages are versioned with the distro kernel, so they match the
+upstream kernel CVE stream: on `php:8.3.30-cli`, `linux-libc-dev` alone matched
+3,513 of 4,424 findings. Console output folds them into one group per image
+distro release, with the full severity breakdown:
+
+```text
+  Kernel-header group linux-libc-dev@6.12.74-2 (debian 13) · 3513 CVEs: 297 critical · 1495 high · 1718 medium · 3 low
+    3 KEV (CVE-2026-31431, CVE-2026-53266, CVE-2026-53362) · 297 critical (…) shown as rows · 3213 collapsed — -f json, sarif or cyclonedx lists every CVE
+```
+
+KEV and critical kernel-header CVEs are never collapsed: they are named on the
+group line and stay as their own rows. JSON, SARIF, CycloneDX and every other
+machine-readable format keep each CVE.
+
+Packages are recognised per ecosystem and per `os-release` ID family, never by
+name alone:
+
+| Distro family (`ID`) | Ecosystem | Packages |
+|---|---|---|
+| `debian`, `ubuntu` | deb | `linux-libc-dev`, `linux-headers-*` |
+| `rhel`, `centos`, `rocky`, `almalinux`, `ol`, `fedora`, `amzn` | rpm | `kernel-headers`, `kernel-devel` |
+| `sles`, `sled`, `opensuse`, `opensuse-leap`, `opensuse-tumbleweed` | rpm | `linux-glibc-devel`, `kernel-devel`, `kernel-default-devel` |
+| `alpine` | apk | `linux-headers` |
+
+A package with one of these names on another distro, in another ecosystem, or
+on an image whose distro could not be detected is shown individually.
+
 The default OS result remains precision-first and reports distro-confirmed
 advisories. To include unfixed, pending, no-DSA, and end-of-life distro
 advisories for an exhaustive review, run:

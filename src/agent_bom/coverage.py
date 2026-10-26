@@ -28,6 +28,8 @@ import sqlite3
 from dataclasses import asdict, dataclass
 from typing import Optional, Protocol, Sequence
 
+from agent_bom.os_advisory import covered_distro_labels, rpm_advisory_ecosystems
+
 
 class Package(Protocol):
     """Package coordinates this module reads; ``models.Package`` satisfies it."""
@@ -190,7 +192,6 @@ def covered_os_distros(conn: sqlite3.Connection) -> list[str]:
     derived from the data present, never an aspirational static list, so we never
     overclaim coverage the DB does not hold.
     """
-    from agent_bom.os_advisory import covered_distro_labels
 
     try:
         rows = conn.execute("SELECT DISTINCT ecosystem FROM affected").fetchall()
@@ -292,7 +293,6 @@ def _unsupported_rpm_release(pkg: "Package") -> Optional[tuple[str, str]]:
     """
     if (pkg.ecosystem or "").lower() != "rpm":
         return None
-    from agent_bom.os_advisory import rpm_advisory_ecosystems
 
     distro_name = (getattr(pkg, "distro_name", None) or "").strip().lower()
     distro_version = (getattr(pkg, "distro_version", None) or "").strip()

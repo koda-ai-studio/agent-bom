@@ -9,11 +9,20 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Console output groups kernel-header CVEs into one block per image distro release (Debian/Ubuntu `linux-libc-dev` and `linux-headers-*`, RHEL-family `kernel-headers`/`kernel-devel`, SUSE `linux-glibc-devel`/`kernel-*-devel`, Alpine `linux-headers`), with the full severity breakdown; the scan verdict says how many of the CVEs they are. KEV and critical kernel-header CVEs are named on the group line and stay as their own rows, and JSON, SARIF and CycloneDX still carry every CVE. Recognition is scoped to the ecosystem and `os-release` family, so a same-named package elsewhere is never grouped.
+- The `docker export` fallback of `agent-bom image` scans the exported filesystem with the same bounded walk and extractors as image layers: the `AGENT_BOM_OCI_*` member, size and time limits apply, and a crossed limit is a coverage gap under `docker-export` (a partial scan) rather than an unbounded read.
+- Image layers emit the canonical purl for scoped npm packages (`pkg:npm/%40scope/name@…`), matching every other scan path.
+
 ### Fixed
 - RPM packages from a distro without a supported advisory feed (Amazon Linux, Oracle Linux, SLES, Fedora, Azure Linux, any unrecognised distro, or a supported distro whose release is unknown) were matched against OSV's upstream `Linux` kernel ecosystem, so a distro `kernel` with backported fixes reported upstream CVEs and upstream fix versions. They are no longer matched against any ecosystem; every scan surface instead reports an `advisory_source_unavailable` coverage warning naming the distro release, even for a single package, so the result never reads as clean. The intel package-match API no longer routes `rpm` coordinates to `Linux` either.
 - Terraform TF-SEC-007 (hardcoded SSH key) and TF-SEC-051 (hardcoded secret) apply to every provider's resources but tagged all of them with `CIS-AWS-1.14`; the CIS AWS control is now attached only to `aws_` resources, and Azure, GCP and other resources carry the provider-neutral NIST controls.
 - TF-SEC-051 detects Azure's `administrator_login_password`, and TF-SEC-007 detects SSH keys in GCP instance `metadata` `ssh-keys`.
 - SARIF IaC rules no longer copy the first finding's message, which named one resource, into the rule `fullDescription`, or its compliance IDs into the rule: the rule carries its title and the compliance IDs shared by every result, and each result carries its own `properties.compliance`.
+- Each CVE on a package now carries only its own `ai_risk_context`. The context was extended in place across a package's CVEs, so the Nth CVE repeated the attack summaries of all before it; on `php:8.3.30-cli` that built about 0.9 GB of text for `linux-libc-dev` and dominated JSON export time.
+
+### Performance
+- `agent-bom image` on `php:8.3.30-cli` (4,424 findings) peaks at 413 MiB for console and 758 MiB for JSON output instead of about 2.5 GiB, and JSON output uses 52 s instead of 277 s of CPU, with an identical finding set (`docs/perf/image-scan-end-to-end.md`). Text redaction is memoized for the life of one scan (bounded at 8M input characters and cleared when the scan ends), and the inventory snapshot, graph-store compliance stats and typosquat check no longer do quadratic work over large package lists. A 40,000-package offline manifest scan is measured after every merge against a 1,000 MiB peak-RSS budget.
 
 ## [0.111.0] - 2026-10-25
 

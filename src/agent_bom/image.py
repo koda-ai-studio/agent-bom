@@ -29,24 +29,18 @@ import os
 import re
 import shutil
 import subprocess
-import tarfile
 import tempfile
 from pathlib import Path
 from typing import Optional
 
 from agent_bom.config import _bool
 from agent_bom.models import Package, PermissionProfile, Severity, Vulnerability
-from agent_bom.oci_parser import is_node_package_manifest_path
-from agent_bom.package_utils import package_purl, parse_debian_source_name
 from agent_bom.sbom import parse_cyclonedx
 from agent_bom.scanners.risk import cvss_to_severity, severity_from_label
 from agent_bom.security import validate_image_ref
 
 _logger = logging.getLogger(__name__)
 _PLATFORM_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*){1,2}$")
-# Legacy RPM database paths decoded by the same native header-record parser as
-# OCI layers. Kept here for the flattened ``docker export`` fallback.
-_LEGACY_RPMDB_PATHS = ("var/lib/rpm/Packages", "var/lib/rpm/Packages.db")
 
 
 class ImageScanError(Exception):
@@ -477,238 +471,15 @@ def detect_container_privileges(container_id: str) -> PermissionProfile:
     )
 
 
-def _packages_from_tar(tar_path: Path) -> list[Package]:
-    """Extract packages from a container filesystem tar archive.
+def _packages_from_tar(tar_path: Path | str) -> list[Package]:
+    """Extract packages from a ``docker export`` filesystem tar.
 
-    Scans for:
-    - Python: ``*.dist-info/METADATA`` (modern) and legacy
-      ``*.egg-info/PKG-INFO`` / ``*.egg-info/METADATA`` (setuptools/pip on
-      older base images)
-    - Node: node_modules/*/package.json (name + version)
-    - OS packages: /var/lib/dpkg/status (Debian/Ubuntu)
-    - OS packages: /var/lib/rpm/Packages (handled via sqlite3 in Python)
-
-    OS-package entries are tagged with the distribution detected from
-    ``os-release`` so downstream CVE matching pins the correct distro release.
+    The flattened filesystem goes through the same bounded walk and package
+    extractors as image layers; any limit it crosses is a recorded coverage gap.
     """
-    packages: list[Package] = []
-    os_packages: list[Package] = []
-    seen: set[tuple[str, str]] = set()
+    from agent_bom.parsers.oci_rootfs import scan_rootfs_tar
 
-    def _add(name: str, version: str, ecosystem: str, purl: Optional[str] = None, source_package: Optional[str] = None) -> None:
-        key = (name, ecosystem)
-        if key not in seen:
-            seen.add(key)
-            pkg = Package(
-                name=name,
-                version=version,
-                ecosystem=ecosystem,
-                purl=purl or package_purl(name, version, ecosystem),
-                is_direct=False,
-                resolved_from_registry=False,
-                source_package=source_package,
-            )
-            packages.append(pkg)
-            if ecosystem in ("deb", "apk", "rpm"):
-                os_packages.append(pkg)
-
-    try:
-        with tarfile.open(tar_path, "r") as tf:
-            names = tf.getnames()
-
-            # --- Python: dist-info METADATA (modern) + egg-info PKG-INFO/METADATA (legacy) ---
-            # Older base images (e.g. Debian buster) ship pip/setuptools/wheel
-            # as ``*.egg-info/PKG-INFO`` instead of ``*.dist-info/METADATA``.
-            # Both use the same RFC822 headers; ``_add`` de-dupes by name so a
-            # package present in both layouts is counted once.
-            for member_name in names:
-                if member_name.endswith(".dist-info/METADATA"):
-                    pass
-                elif member_name.endswith(".egg-info/PKG-INFO") or member_name.endswith(".egg-info/METADATA"):
-                    pass
-                else:
-                    continue
-                try:
-                    member = tf.getmember(member_name)
-                    f = tf.extractfile(member)
-                    if f is None:
-                        continue
-                    pkg_name = pkg_version = ""
-                    for raw_line in f:
-                        line = raw_line.decode("utf-8", errors="ignore").strip()
-                        if line.startswith("Name:"):
-                            pkg_name = line.split(":", 1)[1].strip()
-                        elif line.startswith("Version:"):
-                            pkg_version = line.split(":", 1)[1].strip()
-                        if pkg_name and pkg_version:
-                            break
-                    if pkg_name and pkg_version:
-                        _add(pkg_name, pkg_version, "pypi")
-                except Exception:
-                    _logger.debug("Skipped Python package metadata in %s", member_name)
-                    continue
-
-            # --- Node: node_modules/*/package.json ---
-            for member_name in names:
-                if is_node_package_manifest_path(member_name):
-                    try:
-                        member = tf.getmember(member_name)
-                        f = tf.extractfile(member)
-                        if f is None:
-                            continue
-                        data = json.loads(f.read().decode("utf-8", errors="ignore"))
-                        pkg_name = data.get("name", "")
-                        pkg_version = data.get("version", "unknown")
-                        if pkg_name:
-                            _add(pkg_name, pkg_version, "npm")
-                    except Exception:
-                        _logger.debug("Skipped Node package in %s", member_name)
-                        continue
-
-            # --- Debian/Ubuntu: dpkg status ---
-            dpkg_status = "var/lib/dpkg/status"
-            if dpkg_status in names:
-                try:
-                    member = tf.getmember(dpkg_status)
-                    f = tf.extractfile(member)
-                    if f:
-                        content = f.read().decode("utf-8", errors="ignore")
-                        pkg_name = pkg_version = pkg_source = ""
-                        for line in content.splitlines():
-                            if line.startswith("Package:"):
-                                pkg_name = line.split(":", 1)[1].strip()
-                            elif line.startswith("Source:"):
-                                # Debian/Ubuntu advisories (OSV + Security Tracker)
-                                # are keyed by source package; the dpkg DB only
-                                # ships binary names, so capture Source for
-                                # binary→source matching (e.g. libc6 → glibc).
-                                pkg_source = parse_debian_source_name(line.split(":", 1)[1].strip()) or ""
-                            elif line.startswith("Version:"):
-                                pkg_version = line.split(":", 1)[1].strip()
-                            elif line == "" and pkg_name and pkg_version:
-                                _add(
-                                    pkg_name,
-                                    pkg_version,
-                                    "deb",
-                                    f"pkg:deb/debian/{pkg_name}@{pkg_version}",
-                                    source_package=pkg_source or None,
-                                )
-                                pkg_name = pkg_version = pkg_source = ""
-                except Exception:
-                    _logger.debug("Failed to parse dpkg status from container")
-
-            # --- Alpine: apk installed ---
-            apk_installed = "lib/apk/db/installed"
-            if apk_installed in names:
-                try:
-                    member = tf.getmember(apk_installed)
-                    f = tf.extractfile(member)
-                    if f:
-                        content = f.read().decode("utf-8", errors="ignore")
-                        pkg_name = pkg_version = ""
-                        source_package: str | None = None
-                        for line in content.splitlines():
-                            if line.startswith("P:"):
-                                pkg_name = line[2:].strip()
-                            elif line.startswith("V:"):
-                                pkg_version = line[2:].strip()
-                            elif line.startswith("o:") or line.startswith("O:"):
-                                source_package = line[2:].strip() or None
-                            elif line == "" and pkg_name and pkg_version:
-                                _add(
-                                    pkg_name,
-                                    pkg_version,
-                                    "apk",
-                                    f"pkg:apk/alpine/{pkg_name}@{pkg_version}",
-                                    source_package=source_package,
-                                )
-                                pkg_name = pkg_version = ""
-                                source_package = None
-                        # Handle last entry if file doesn't end with blank line
-                        if pkg_name and pkg_version:
-                            _add(
-                                pkg_name,
-                                pkg_version,
-                                "apk",
-                                f"pkg:apk/alpine/{pkg_name}@{pkg_version}",
-                                source_package=source_package,
-                            )
-                except Exception:
-                    _logger.debug("Failed to parse Alpine apk db from container")
-
-            # --- RHEL/Fedora: legacy BerkeleyDB/NDB rpm database ---
-            legacy_rpmdb = next((p for p in _LEGACY_RPMDB_PATHS if p in names), None)
-            if legacy_rpmdb and "var/log/installed-rpms" not in names:
-                from agent_bom.oci_parser import OCIParseError, _query_legacy_rpmdb
-
-                try:
-                    decoded_rpms = _query_legacy_rpmdb(tf, legacy_rpmdb)
-                except OCIParseError:
-                    raise ImageScanError("Legacy RPM database could not be decoded safely") from None
-                for rpm_name, rpm_ver in decoded_rpms:
-                    _add(rpm_name, rpm_ver, "rpm", f"pkg:rpm/redhat/{rpm_name}@{rpm_ver}")
-
-            rpm_manifest = "var/log/installed-rpms"
-            if rpm_manifest in names:
-                try:
-                    member = tf.getmember(rpm_manifest)
-                    f = tf.extractfile(member)
-                    if f:
-                        for raw_line in f:
-                            line = raw_line.decode("utf-8", errors="ignore").strip()
-                            if not line:
-                                continue
-                            # Format: name-version-release.arch (e.g. bash-5.2.26-4.el9.x86_64)
-                            # Split from right at the second-to-last hyphen
-                            parts = line.split()
-                            nvr = parts[0] if parts else line
-                            # Find the last two hyphens to split name from version-release
-                            idx2 = nvr.rfind("-")
-                            if idx2 > 0:
-                                idx1 = nvr.rfind("-", 0, idx2)
-                                if idx1 > 0:
-                                    rpm_name = nvr[:idx1]
-                                    if rpm_name == "gpg-pubkey":
-                                        continue
-                                    rpm_ver = nvr[idx1 + 1 : idx2]
-                                    _add(rpm_name, rpm_ver, "rpm", f"pkg:rpm/redhat/{rpm_name}@{rpm_ver}")
-                except Exception:
-                    _logger.debug("Failed to parse rpm manifest from container")
-
-            # --- Distro detection (os-release) ---
-            # Tag OS packages with the distribution release so CVE matching
-            # pins the correct distro (e.g. Debian 10) instead of falling back
-            # to scanning every supported release. ``/etc/os-release`` is a
-            # symlink to ``/usr/lib/os-release`` on Debian/Ubuntu, so probe the
-            # canonical file too.
-            distro_name = distro_version = None
-            for os_release_path in ("etc/os-release", "usr/lib/os-release"):
-                if os_release_path not in names:
-                    continue
-                try:
-                    member = tf.getmember(os_release_path)
-                    f = tf.extractfile(member)
-                    if f is None:
-                        continue
-                    for raw_line in f:
-                        line = raw_line.decode("utf-8", errors="ignore").strip()
-                        if line.startswith("ID="):
-                            distro_name = line.split("=", 1)[1].strip().strip('"').strip("'").lower() or None
-                        elif line.startswith("VERSION_ID="):
-                            distro_version = line.split("=", 1)[1].strip().strip('"').strip("'") or None
-                    if distro_name or distro_version:
-                        break
-                except Exception:
-                    _logger.debug("Failed to parse os-release from container: %s", os_release_path)
-            if distro_name or distro_version:
-                for pkg in os_packages:
-                    pkg.distro_name = pkg.distro_name or distro_name
-                    pkg.distro_version = pkg.distro_version or distro_version
-
-    except tarfile.TarError as e:
-        raise ImageScanError(f"Failed to read container filesystem: {e}")
-
-    return packages
+    return scan_rootfs_tar(Path(tar_path))
 
 
 def _scan_with_docker(image_ref: str, platform: Optional[str] = None) -> list[Package]:

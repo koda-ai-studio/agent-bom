@@ -4,7 +4,6 @@ Extracted from api/server.py (Phase 4). Contains:
 - ScanPipeline: structured SSE event tracker for scan progress
 - _run_scan_sync: full scan pipeline runner (blocking, thread-safe)
 - _sync_scan_agents_to_fleet: auto-sync discovered agents to fleet registry
-- _now: UTC ISO timestamp helper
 - _executor: shared ThreadPoolExecutor for scan jobs
 """
 
@@ -109,7 +108,7 @@ from agent_bom.api.stores import (
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.config import API_SCAN_WORKER_RECYCLE_JOBS, API_SCAN_WORKERS
 from agent_bom.core.tenancy import require_explicit_tenant_id
-from agent_bom.security import sanitize_error, sanitize_text
+from agent_bom.security import sanitize_error, sanitize_text, sanitize_text_memo
 
 _logger = logging.getLogger(__name__)
 
@@ -795,6 +794,7 @@ def _finalize(ctx: ScanContext) -> None:
     _record_adoption(ctx.job, terminal_status)
 
 
+@sanitize_text_memo()
 def _run_scan_sync(job: ScanJob) -> None:
     """Run the full scan pipeline in a thread (blocking). Updates job in-place."""
     lock = _job_lock(job.job_id)
