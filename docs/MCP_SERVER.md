@@ -434,7 +434,7 @@ uses dashed lines where traversal is not established.
 
 The server exposes six MCP resources:
 
-- `registry://servers` — Browse the full 1256-entry server security metadata registry
+- `registry://servers` — Browse the full 1264-entry server security metadata registry
 - `policy://template` — Default security policy template
 - `metrics://tools` — Bounded MCP tool execution metrics
 - `schema://inventory-v1` — Canonical pushed-inventory schema contract

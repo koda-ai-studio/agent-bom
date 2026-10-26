@@ -167,7 +167,7 @@ finding_detail(finding_id="<id from findings_query>")
 ```
 
 ### registry_lookup
-Look up an MCP server in the 1256-entry server security metadata registry.
+Look up an MCP server in the 1264-entry server security metadata registry.
 ```
 registry_lookup(server_name="brave-search")
 ```
