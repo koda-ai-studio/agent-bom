@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6" serialNumber="urn:uuid:3f1c7a52-8f0e-4c2b-9d43-0a1b2c3d4e5f" version="1">
+  <metadata>
+    <timestamp>2026-01-15T10:00:00Z</timestamp>
+    <tools>
+      <components>
+        <component type="application">
+          <author>anchore</author>
+          <name>syft</name>
+          <version>1.18.1</version>
+        </component>
+      </components>
+    </tools>
+    <component bom-ref="af63bd4c8601b7f1" type="container">
+      <name>registry.example.test/team/web</name>
+      <version>sha256:0f9e8d7c6b5a</version>
+    </component>
+  </metadata>
+  <components>
+    <component bom-ref="pkg:pypi/jinja2@3.1.2?package-id=1a2b3c" type="library">
+      <author>Armin Ronacher &lt;armin.ronacher@active-4.com&gt;</author>
+      <name>Jinja2</name>
+      <version>3.1.2</version>
+      <licenses>
+        <license>
+          <id>BSD-3-Clause</id>
+        </license>
+      </licenses>
+      <cpe>cpe:2.3:a:pocoo:jinja2:3.1.2:*:*:*:*:python:*:*</cpe>
+      <purl>pkg:pypi/jinja2@3.1.2</purl>
+      <externalReferences>
+        <reference type="website">
+          <url>https://palletsprojects.com/p/jinja/</url>
+        </reference>
+      </externalReferences>
+      <properties>
+        <property name="syft:package:foundBy">python-installed-package-cataloger</property>
+        <property name="syft:package:language">python</property>
+        <property name="syft:location:0:path">/usr/lib/python3.11/site-packages/Jinja2-3.1.2.dist-info/METADATA</property>
+      </properties>
+    </component>
+    <component bom-ref="pkg:npm/lodash@4.17.20?package-id=4d5e6f" type="library">
+      <name>lodash</name>
+      <version>4.17.20</version>
+      <description>Lodash modular utilities.</description>
+      <hashes>
+        <hash alg="SHA-512">bf690311ee7b95e713ba568322e3533f2dd1cb880b189e99d4edef13592b81764daec43e2c54c61d5c558dc5cfb35ecb85b65519e74026ff17675b6f8f916f4a</hash>
+      </hashes>
+      <licenses>
+        <expression>MIT OR CC0-1.0</expression>
+      </licenses>
+      <purl>pkg:npm/lodash@4.17.20</purl>
+      <externalReferences>
+        <reference type="vcs">
+          <url>https://github.com/lodash/lodash.git</url>
+        </reference>
+        <reference type="distribution">
+          <url>https://registry.npmjs.org/lodash/-/lodash-4.17.20.tgz</url>
+        </reference>
+      </externalReferences>
+      <properties>
+        <property name="syft:package:foundBy">javascript-lock-cataloger</property>
+      </properties>
+    </component>
+    <component bom-ref="pkg:deb/debian/openssl@3.0.11-1~deb12u2?arch=amd64&amp;distro=debian-12&amp;package-id=7a8b9c" type="library">
+      <publisher>Debian OpenSSL Team &lt;pkg-openssl-devel@alioth-lists.debian.net&gt;</publisher>
+      <name>openssl</name>
+      <version>3.0.11-1~deb12u2</version>
+      <licenses>
+        <license>
+          <name>OpenSSL</name>
+        </license>
+      </licenses>
+      <purl>pkg:deb/debian/openssl@3.0.11-1~deb12u2?arch=amd64&amp;distro=debian-12</purl>
+      <properties>
+        <property name="syft:package:foundBy">dpkg-db-cataloger</property>
+        <property name="syft:package:type">deb</property>
+      </properties>
+    </component>
+    <component bom-ref="os:debian@12" type="operating-system">
+      <name>debian</name>
+      <version>12</version>
+      <description>Debian GNU/Linux 12 (bookworm)</description>
+    </component>
+  </components>
+  <dependencies>
+    <dependency ref="af63bd4c8601b7f1">
+      <dependency ref="pkg:pypi/jinja2@3.1.2?package-id=1a2b3c"/>
+      <dependency ref="pkg:npm/lodash@4.17.20?package-id=4d5e6f"/>
+      <dependency ref="pkg:deb/debian/openssl@3.0.11-1~deb12u2?arch=amd64&amp;distro=debian-12&amp;package-id=7a8b9c"/>
+    </dependency>
+  </dependencies>
+  <vulnerabilities>
+    <vulnerability bom-ref="urn:uuid:8b6f2c1e-1111-4a2b-9c3d-000000000001">
+      <id>CVE-2021-23337</id>
+      <source>
+        <name>NVD</name>
+        <url>https://nvd.nist.gov/vuln/detail/CVE-2021-23337</url>
+      </source>
+      <ratings>
+        <rating>
+          <score>7.2</score>
+          <severity>high</severity>
+          <method>CVSSv31</method>
+          <vector>CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H</vector>
+        </rating>
+      </ratings>
+      <cwes>
+        <cwe>94</cwe>
+      </cwes>
+      <description>Command injection via the template function.</description>
+      <recommendation>Upgrade to 4.17.21</recommendation>
+      <affects>
+        <target>
+          <ref>pkg:npm/lodash@4.17.20?package-id=4d5e6f</ref>
+        </target>
+      </affects>
+    </vulnerability>
+    <vulnerability bom-ref="urn:uuid:8b6f2c1e-1111-4a2b-9c3d-000000000002">
+      <id>CVE-2024-22195</id>
+      <source>
+        <name>GHSA</name>
+        <url>https://github.com/advisories/GHSA-h5c8-rqwp-cp95</url>
+      </source>
+      <ratings>
+        <rating>
+          <score>5.4</score>
+          <severity>medium</severity>
+          <method>CVSSv31</method>
+        </rating>
+      </ratings>
+      <detail>xmlattr filter accepts keys containing spaces.</detail>
+      <affects>
+        <target>
+          <ref>pkg:pypi/jinja2@3.1.2?package-id=1a2b3c</ref>
+        </target>
+      </affects>
+    </vulnerability>
+  </vulnerabilities>
+</bom>

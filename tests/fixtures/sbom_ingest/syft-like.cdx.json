@@ -1,0 +1,97 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:3f1c7a52-8f0e-4c2b-9d43-0a1b2c3d4e5f",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-01-15T10:00:00Z",
+    "tools": {
+      "components": [
+        {"type": "application", "author": "anchore", "name": "syft", "version": "1.18.1"}
+      ]
+    },
+    "component": {
+      "bom-ref": "af63bd4c8601b7f1",
+      "type": "container",
+      "name": "registry.example.test/team/web",
+      "version": "sha256:0f9e8d7c6b5a"
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "pkg:pypi/jinja2@3.1.2?package-id=1a2b3c",
+      "type": "library",
+      "author": "Armin Ronacher <armin.ronacher@active-4.com>",
+      "name": "Jinja2",
+      "version": "3.1.2",
+      "licenses": [{"license": {"id": "BSD-3-Clause"}}],
+      "cpe": "cpe:2.3:a:pocoo:jinja2:3.1.2:*:*:*:*:python:*:*",
+      "purl": "pkg:pypi/jinja2@3.1.2",
+      "externalReferences": [{"url": "https://palletsprojects.com/p/jinja/", "type": "website"}],
+      "properties": [
+        {"name": "syft:package:foundBy", "value": "python-installed-package-cataloger"},
+        {"name": "syft:package:language", "value": "python"},
+        {"name": "syft:location:0:path", "value": "/usr/lib/python3.11/site-packages/Jinja2-3.1.2.dist-info/METADATA"}
+      ]
+    },
+    {
+      "bom-ref": "pkg:npm/lodash@4.17.20?package-id=4d5e6f",
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.20",
+      "description": "Lodash modular utilities.",
+      "licenses": [{"expression": "MIT OR CC0-1.0"}],
+      "hashes": [{"alg": "SHA-512", "content": "bf690311ee7b95e713ba568322e3533f2dd1cb880b189e99d4edef13592b81764daec43e2c54c61d5c558dc5cfb35ecb85b65519e74026ff17675b6f8f916f4a"}],
+      "purl": "pkg:npm/lodash@4.17.20",
+      "externalReferences": [
+        {"url": "https://github.com/lodash/lodash.git", "type": "vcs"},
+        {"url": "https://registry.npmjs.org/lodash/-/lodash-4.17.20.tgz", "type": "distribution"}
+      ],
+      "properties": [{"name": "syft:package:foundBy", "value": "javascript-lock-cataloger"}]
+    },
+    {
+      "bom-ref": "pkg:deb/debian/openssl@3.0.11-1~deb12u2?arch=amd64&distro=debian-12&package-id=7a8b9c",
+      "type": "library",
+      "publisher": "Debian OpenSSL Team <pkg-openssl-devel@alioth-lists.debian.net>",
+      "name": "openssl",
+      "version": "3.0.11-1~deb12u2",
+      "licenses": [{"license": {"name": "OpenSSL"}}],
+      "purl": "pkg:deb/debian/openssl@3.0.11-1~deb12u2?arch=amd64&distro=debian-12",
+      "properties": [
+        {"name": "syft:package:foundBy", "value": "dpkg-db-cataloger"},
+        {"name": "syft:package:type", "value": "deb"}
+      ]
+    },
+    {
+      "bom-ref": "os:debian@12",
+      "type": "operating-system",
+      "name": "debian",
+      "version": "12",
+      "description": "Debian GNU/Linux 12 (bookworm)"
+    }
+  ],
+  "dependencies": [
+    {"ref": "af63bd4c8601b7f1", "dependsOn": ["pkg:pypi/jinja2@3.1.2?package-id=1a2b3c", "pkg:npm/lodash@4.17.20?package-id=4d5e6f", "pkg:deb/debian/openssl@3.0.11-1~deb12u2?arch=amd64&distro=debian-12&package-id=7a8b9c"]}
+  ],
+  "vulnerabilities": [
+    {
+      "bom-ref": "urn:uuid:8b6f2c1e-1111-4a2b-9c3d-000000000001",
+      "id": "CVE-2021-23337",
+      "source": {"name": "NVD", "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-23337"},
+      "ratings": [{"score": 7.2, "severity": "high", "method": "CVSSv31", "vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H"}],
+      "cwes": [94],
+      "description": "Command injection via the template function.",
+      "recommendation": "Upgrade to 4.17.21",
+      "affects": [{"ref": "pkg:npm/lodash@4.17.20?package-id=4d5e6f"}]
+    },
+    {
+      "bom-ref": "urn:uuid:8b6f2c1e-1111-4a2b-9c3d-000000000002",
+      "id": "CVE-2024-22195",
+      "source": {"name": "GHSA", "url": "https://github.com/advisories/GHSA-h5c8-rqwp-cp95"},
+      "ratings": [{"score": 5.4, "severity": "medium", "method": "CVSSv31"}],
+      "detail": "xmlattr filter accepts keys containing spaces.",
+      "affects": [{"ref": "pkg:pypi/jinja2@3.1.2?package-id=1a2b3c"}]
+    }
+  ]
+}

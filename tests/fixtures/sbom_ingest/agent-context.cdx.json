@@ -1,0 +1,372 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:c05239ff-cff7-4f45-a832-b81dd2d97571",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-26T15:59:14.621865+00:00",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "agent-bom",
+          "version": "0.111.0",
+          "description": "Security scanner for AI infrastructure \u2014 from agent to runtime"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "agent-bom:total-agents",
+        "value": "1"
+      },
+      {
+        "name": "agent-bom:canonical-id-schema-version",
+        "value": "3"
+      },
+      {
+        "name": "agent-bom:total-mcp-servers",
+        "value": "1"
+      },
+      {
+        "name": "agent-bom:total-vulnerabilities",
+        "value": "1"
+      },
+      {
+        "name": "agent-bom:ml-models",
+        "value": "0"
+      },
+      {
+        "name": "agent-bom:scan-outcome",
+        "value": "complete"
+      },
+      {
+        "name": "agent-bom:scan-issue-count",
+        "value": "0"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "application",
+      "bom-ref": "agent-5a766482-06c8-535c-b904-a9ca6c77702e",
+      "name": "desktop-assistant",
+      "version": "unknown",
+      "description": "AI Agent (claude-desktop)",
+      "properties": [
+        {
+          "name": "agent-bom:type",
+          "value": "ai-agent"
+        },
+        {
+          "name": "agent-bom:canonical-id-schema-version",
+          "value": "3"
+        },
+        {
+          "name": "agent-bom:config-path",
+          "value": "<path:app.json>"
+        },
+        {
+          "name": "agent-bom:status",
+          "value": "configured"
+        },
+        {
+          "name": "agent-bom:previous-canonical-id",
+          "value": "f44a3ff4-9c5f-50e4-8b0b-8500105b2e98"
+        },
+        {
+          "name": "agent-bom:previous-canonical-id",
+          "value": "0ded7922-076e-50e7-a489-b3fbc1b1e78e"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:confidence",
+          "value": "medium"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:observed-via",
+          "value": "[\"local_discovery\"]"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:source-type",
+          "value": "local_discovery"
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "bom-ref": "mcp-server-0c85c2df-99cb-5eec-bc0c-79f0bc6b6933",
+      "name": "fetch-server",
+      "description": "MCP Server (stdio)",
+      "properties": [
+        {
+          "name": "agent-bom:inventory-members",
+          "value": "[\"pkg-160890ae-5139-5ada-ab46-1549481536b0\", \"pkg-aaea4d61-bb6c-53de-abaf-6b623a6b53ce\"]"
+        },
+        {
+          "name": "agent-bom:type",
+          "value": "mcp-server"
+        },
+        {
+          "name": "agent-bom:surface",
+          "value": "mcp-server"
+        },
+        {
+          "name": "agent-bom:command",
+          "value": "uvx mcp-server-fetch"
+        },
+        {
+          "name": "agent-bom:transport",
+          "value": "stdio"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:confidence",
+          "value": "medium"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:observed-via",
+          "value": "[\"local_discovery\"]"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:source-type",
+          "value": "local_discovery"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg-160890ae-5139-5ada-ab46-1549481536b0",
+      "name": "requests",
+      "version": "2.31.0",
+      "properties": [
+        {
+          "name": "agent-bom:ecosystem",
+          "value": "pypi"
+        },
+        {
+          "name": "agent-bom:is-direct",
+          "value": "true"
+        },
+        {
+          "name": "agent-bom:dependency-depth",
+          "value": "0"
+        },
+        {
+          "name": "agent-bom:dependency-scope",
+          "value": "runtime"
+        },
+        {
+          "name": "agent-bom:reachability-evidence",
+          "value": "runtime_dependency"
+        },
+        {
+          "name": "agent-bom:resolved-from-registry",
+          "value": "false"
+        },
+        {
+          "name": "agent-bom:version-source",
+          "value": "detected"
+        },
+        {
+          "name": "agent-bom:version-provenance-source",
+          "value": "unknown"
+        },
+        {
+          "name": "agent-bom:version-provenance-confidence",
+          "value": "unknown"
+        },
+        {
+          "name": "agent-bom:floating-reference",
+          "value": "false"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:confidence",
+          "value": "medium"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:observed-via",
+          "value": "[\"local_discovery\"]"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:resolved-from-registry",
+          "value": "false"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:source-type",
+          "value": "local_discovery"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:version-provenance",
+          "value": "{\"confidence\":\"unknown\",\"declared_name\":\"requests\",\"legacy_version_source\":\"detected\",\"pinned\":true,\"pinned_version\":\"2.31.0\",\"resolved_from_registry\":false,\"resolved_version\":\"2.31.0\",\"source_precedence\":0,\"version_source\":\"unknown\"}"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:version-source",
+          "value": "detected"
+        }
+      ],
+      "purl": "pkg:pypi/requests@2.31.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg-aaea4d61-bb6c-53de-abaf-6b623a6b53ce",
+      "name": "urllib3",
+      "version": "2.0.4",
+      "properties": [
+        {
+          "name": "agent-bom:ecosystem",
+          "value": "pypi"
+        },
+        {
+          "name": "agent-bom:is-direct",
+          "value": "false"
+        },
+        {
+          "name": "agent-bom:dependency-depth",
+          "value": "1"
+        },
+        {
+          "name": "agent-bom:dependency-scope",
+          "value": "runtime"
+        },
+        {
+          "name": "agent-bom:reachability-evidence",
+          "value": "runtime_dependency"
+        },
+        {
+          "name": "agent-bom:resolved-from-registry",
+          "value": "false"
+        },
+        {
+          "name": "agent-bom:version-source",
+          "value": "detected"
+        },
+        {
+          "name": "agent-bom:version-provenance-source",
+          "value": "unknown"
+        },
+        {
+          "name": "agent-bom:version-provenance-confidence",
+          "value": "unknown"
+        },
+        {
+          "name": "agent-bom:floating-reference",
+          "value": "false"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:confidence",
+          "value": "medium"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:observed-via",
+          "value": "[\"local_discovery\"]"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:resolved-from-registry",
+          "value": "false"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:source-type",
+          "value": "local_discovery"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:version-provenance",
+          "value": "{\"confidence\":\"unknown\",\"declared_name\":\"urllib3\",\"legacy_version_source\":\"detected\",\"pinned\":true,\"pinned_version\":\"2.0.4\",\"resolved_from_registry\":false,\"resolved_version\":\"2.0.4\",\"source_precedence\":0,\"version_source\":\"unknown\"}"
+        },
+        {
+          "name": "agent-bom:discovery-provenance:version-source",
+          "value": "detected"
+        },
+        {
+          "name": "agent-bom:parent-package",
+          "value": "requests"
+        }
+      ],
+      "purl": "pkg:pypi/urllib3@2.0.4"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "agent-5a766482-06c8-535c-b904-a9ca6c77702e",
+      "dependsOn": [
+        "mcp-server-0c85c2df-99cb-5eec-bc0c-79f0bc6b6933"
+      ]
+    },
+    {
+      "ref": "mcp-server-0c85c2df-99cb-5eec-bc0c-79f0bc6b6933",
+      "dependsOn": [
+        "pkg-160890ae-5139-5ada-ab46-1549481536b0"
+      ]
+    },
+    {
+      "ref": "pkg-160890ae-5139-5ada-ab46-1549481536b0",
+      "dependsOn": [
+        "pkg-aaea4d61-bb6c-53de-abaf-6b623a6b53ce"
+      ]
+    }
+  ],
+  "formulation": [
+    {
+      "components": [
+        {
+          "type": "application",
+          "name": "agent-bom",
+          "version": "0.111.0"
+        }
+      ]
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-2024-35195",
+      "description": "cert verify bypass",
+      "source": {
+        "name": "OSV",
+        "url": "https://osv.dev/vulnerability/CVE-2024-35195"
+      },
+      "ratings": [
+        {
+          "score": 5.6,
+          "severity": "medium",
+          "method": "CVSSv3"
+        }
+      ],
+      "affects": [
+        {
+          "ref": "pkg-160890ae-5139-5ada-ab46-1549481536b0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "agent-bom:match-evidence",
+          "value": "{\"affects_ref\": \"pkg-160890ae-5139-5ada-ab46-1549481536b0\", \"fixed_version\": \"2.32.0\", \"match_confidence_tier\": null}"
+        },
+        {
+          "name": "agent-bom:sla_due_at",
+          "value": "2027-01-24T15:59:14.621865+00:00"
+        },
+        {
+          "name": "agent-bom:sla_due_at_source",
+          "value": "severity-kev/v1"
+        }
+      ],
+      "recommendation": "Upgrade to 2.32.0"
+    }
+  ],
+  "compositions": [
+    {
+      "aggregate": "complete",
+      "assemblies": [
+        "agent-5a766482-06c8-535c-b904-a9ca6c77702e",
+        "mcp-server-0c85c2df-99cb-5eec-bc0c-79f0bc6b6933",
+        "pkg-160890ae-5139-5ada-ab46-1549481536b0",
+        "pkg-aaea4d61-bb6c-53de-abaf-6b623a6b53ce"
+      ]
+    }
+  ]
+}

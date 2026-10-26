@@ -7,6 +7,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- SBOM import reads CycloneDX XML (1.2-1.7) and SPDX 2.x tag-value in every intake (`scan --sbom`, the API and MCP scan paths, `report diff`). The format is detected from content; both are re-shaped onto the JSON document form and read by the same parser, so each yields exactly the packages, hierarchy, vulnerabilities and cloud-inventory evidence of its JSON twin. XML goes through `defusedxml` with DTDs forbidden (no entity expansion, no external entity or DTD retrieval) and bounded nesting; every import keeps the 10 MiB cap. Previously both were rejected.
+
+### Fixed
+- SPDX 2 tag-value export now carries every field of the JSON rendering the grammar can express (`PrimaryPackagePurpose`, `PackageComment`, `PackageHomePage`, summary/description) and writes annotations as spec `Annotator`/`SPDXREF` blocks instead of repeated comment tags, so agent and server context records are no longer read back as software packages. The cloud-inventory extension moved from `DocumentComment` to a document annotation.
+
+---
+
 ## [0.111.0] - 2026-10-25
 
 ### Highlights

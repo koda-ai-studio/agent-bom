@@ -183,8 +183,17 @@ def _synthetic_report_from_packages(
 
 
 def load_report_or_sbom(path: Path) -> dict:
-    """Load either an agent-bom report or an external CycloneDX/SPDX SBOM."""
-    data = load_report(path)
+    """Load either an agent-bom report or an external CycloneDX/SPDX SBOM.
+
+    CycloneDX XML and SPDX tag-value inputs are re-shaped by the SBOM decoder;
+    JSON keeps the unbounded report reader because saved reports can exceed
+    the SBOM import limit.
+    """
+    from agent_bom.sbom_formats.decode import decode_sbom_document, sbom_serialization
+
+    with path.open("rb") as stream:
+        head = stream.read(4096)
+    data = load_report(path) if sbom_serialization(head) == "json" else decode_sbom_document(path.read_bytes())
     if "blast_radius" in data or "ai_bom_version" in data:
         return data
 
