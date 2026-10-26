@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyApiOfflineKind } from "@/lib/api-offline-kind";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DollarSign,
@@ -41,7 +42,6 @@ import {
   ApiOfflineState,
   type ApiOfflineKind,
 } from "@/components/api-offline-state";
-import { ApiAuthError, ApiForbiddenError } from "@/lib/api-errors";
 import { ChartTooltip } from "@/components/charts";
 import { PageLaneHeader } from "@/components/page-lane";
 import { ServiceStateBanner } from "@/components/service-state-chip";
@@ -53,11 +53,6 @@ import { Collapsible } from "@/components/collapsible";
 import { Drawer } from "@/components/drawer";
 import { useChartTheme } from "@/lib/theme-colors";
 
-function classifyApiErrorKind(err: unknown): ApiOfflineKind {
-  if (err instanceof ApiAuthError) return "auth";
-  if (err instanceof ApiForbiddenError) return "forbidden";
-  return "network";
-}
 
 const fmtUsd = (n: number) =>
   n >= 1
@@ -637,7 +632,7 @@ export default function CostPage() {
           setError(
             reportResult.reason?.message ?? "Failed to load cost report",
           );
-          setErrorKind(classifyApiErrorKind(reportResult.reason));
+          setErrorKind(classifyApiOfflineKind(reportResult.reason));
         }
         if (anomalyResult.status === "fulfilled")
           setAnomalies(anomalyResult.value);

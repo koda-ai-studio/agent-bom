@@ -13,7 +13,7 @@ import type { CacheOptions } from "./api-cache";
 // prefixes so a write to /v1/scan/{id} flushes /v1/scan and any nested
 // children without each call site having to remember.
 
-import { ApiNetworkError, ApiServerError, classifyApiResponse } from "./api-errors";
+import { ApiNetworkError, ApiRateLimitError, ApiServerError, classifyApiResponse, isApiStartingError } from "./api-errors";
 
 // Cache keys and invalidation prefixes must share this format.
 const getCacheKey = (path: string) => `GET ${path}`;
@@ -101,18 +101,27 @@ export function isTransientReadFailure(error: unknown): boolean {
   return [500, 502, 503, 504].includes(error.status) && !apiAnswered;
 }
 
-/** Longest Retry-After an idempotent read waits through before surfacing the 503 instead. */
+/** Longest Retry-After an idempotent read waits through before surfacing the 503/429 instead. */
 export const MAX_RETRY_AFTER_SECONDS = 5;
 
-/** The booting-API 503 the session provider polls for itself, with its own start-up state. */
-const sessionOwnedUnavailable = (error: ApiServerError) =>
-  (error.body as { error?: { code?: unknown } } | undefined)?.error?.code === "API_STARTING";
+/** Retries of a read the API shed under backpressure (429) before the page shows its busy state. */
+export const MAX_RATE_LIMIT_RETRIES = 3;
 
-/** How long to wait before the single retry, or null when the failure is an answer. */
-export function readRetryDelayMs(error: unknown): number | null {
+/**
+ * How long to wait before retry number `retriesSoFar + 1`, or null when the
+ * failure is an answer or the retry budget is spent. Transient and retryable-503
+ * failures get one retry; a 429 gets up to MAX_RATE_LIMIT_RETRIES.
+ */
+export function readRetryDelayMs(error: unknown, retriesSoFar = 0): number | null {
   const jitter = TRANSIENT_RETRY_DELAY_MS * Math.random();
+  if (error instanceof ApiRateLimitError) {
+    if (retriesSoFar >= MAX_RATE_LIMIT_RETRIES) return null;
+    const seconds = error.retryAfterSeconds ?? 2 ** retriesSoFar;
+    return seconds <= MAX_RETRY_AFTER_SECONDS ? Math.max(seconds * 1000, TRANSIENT_RETRY_DELAY_MS) + jitter : null;
+  }
+  if (retriesSoFar >= 1) return null;
   if (error instanceof ApiServerError && error.status === 503 && error.retryAfterSeconds !== undefined) {
-    if (sessionOwnedUnavailable(error)) return null;
+    if (isApiStartingError(error)) return null;
     return error.retryAfterSeconds <= MAX_RETRY_AFTER_SECONDS ? error.retryAfterSeconds * 1000 + jitter : null;
   }
   return isTransientReadFailure(error) ? TRANSIENT_RETRY_DELAY_MS + jitter : null;
@@ -129,15 +138,16 @@ export async function get<T>(path: string, options: GetOptions = {}): Promise<T>
     }, "GET");
     return res.json() as Promise<T>;
   };
-  const fetcher = async () => {
-    try {
-      return await attempt();
-    } catch (error) {
-      const delayMs = signal?.aborted ? null : readRetryDelayMs(error);
-      if (delayMs === null) throw error;
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-      if (signal?.aborted) throw error;
-      return attempt();
+  const fetcher = async (): Promise<T> => {
+    for (let retries = 0; ; retries += 1) {
+      try {
+        return await attempt();
+      } catch (error) {
+        const delayMs = signal?.aborted ? null : readRetryDelayMs(error, retries);
+        if (delayMs === null) throw error;
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        if (signal?.aborted) throw error;
+      }
     }
   };
   // A caller-owned cancellation must never abort another subscriber.

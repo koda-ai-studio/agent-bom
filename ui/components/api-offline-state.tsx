@@ -2,31 +2,39 @@
 
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
-import { AlertTriangle, FileText, PlayCircle, Server } from "lucide-react";
+import { AlertTriangle, FileText, Hourglass, PlayCircle, Server } from "lucide-react";
 
 import type { ScanResult } from "@/lib/api";
 import { userFacingApiErrorMessage } from "@/lib/api-errors";
 import { getDisplayApiUrl } from "@/lib/runtime-config";
 import { LocalReportImport } from "@/components/local-report-import";
+import { BusyRetryCountdown } from "@/components/busy-retry-countdown";
+import type { ApiOfflineKind } from "@/lib/api-offline-kind";
+
+export type { ApiOfflineKind } from "@/lib/api-offline-kind";
 
 // Distinguish "API is down" from "API rejected my request" so the splash
 // stops shouting "Cannot connect" at users running `agent-bom serve` who
 // just need to authenticate. Pages classify errors via the typed
-// ApiError subclasses in lib/api-errors.ts and pass `kind` through.
-export type ApiOfflineKind = "network" | "auth" | "forbidden";
+// ApiError subclasses (classifyApiOfflineKind) and pass `kind` through.
 
 interface ApiOfflineStateProps {
   title?: string | undefined;
   detail?: string | null | undefined;
   kind?: ApiOfflineKind | undefined;
   onImport?: ((data: ScanResult) => void) | undefined;
+  /** Re-run the page's read; a busy view calls it on its own after a countdown (default: reload). */
+  onRetry?: (() => void) | undefined;
 }
 
 const KIND_TITLES: Record<ApiOfflineKind, string> = {
   network: "Cannot connect to the agent-bom API",
   auth: "Sign in to view the dashboard",
   forbidden: "This account doesn't have access to that view",
+  busy: "The agent-bom API is busy",
 };
+
+const reloadPage = () => window.location.reload();
 
 const subscribeToDeployment = () => () => {};
 const serverEndpointLabel = () => "the configured endpoint";
@@ -36,6 +44,7 @@ export function ApiOfflineState({
   detail,
   kind = "network",
   onImport,
+  onRetry,
 }: ApiOfflineStateProps) {
   const apiUrl = useSyncExternalStore(subscribeToDeployment, getDisplayApiUrl, serverEndpointLabel);
   const resolvedTitle = title ?? KIND_TITLES[kind];
@@ -45,7 +54,9 @@ export function ApiOfflineState({
     <div className="py-10">
       <div className="mx-auto max-w-5xl rounded-3xl border border-[var(--border-subtle)] bg-[var(--background)]/70 p-6 shadow-2xl shadow-black/20 md:p-8">
         <div className="mx-auto max-w-3xl text-center">
-          <AlertTriangle className="mx-auto mb-4 h-11 w-11 text-orange-400" />
+          {kind === "busy"
+            ? <Hourglass className="mx-auto mb-4 h-11 w-11 text-[var(--text-tertiary)]" />
+            : <AlertTriangle className="mx-auto mb-4 h-11 w-11 text-orange-400" />}
           <h2 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">{resolvedTitle}</h2>
           {kind === "network" ? (
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
@@ -54,6 +65,11 @@ export function ApiOfflineState({
                 {apiUrl}
               </code>{" "}
               so the dashboard can load scan data, graph views, and compliance evidence.
+            </p>
+          ) : kind === "busy" ? (
+            <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
+              The API is running but is temporarily shedding reads to stay responsive under load.
+              Nothing needs to be started or reconfigured; this view retries on its own.
             </p>
           ) : kind === "auth" ? (
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
@@ -72,6 +88,7 @@ export function ApiOfflineState({
               Current error: <span className="font-mono text-[var(--text-secondary)]">{resolvedDetail}</span>
             </p>
           ) : null}
+          {kind === "busy" ? <BusyRetryCountdown onRetry={onRetry ?? reloadPage} /> : null}
         </div>
 
         {kind === "network" ? (
@@ -117,7 +134,7 @@ export function ApiOfflineState({
           </div>
         ) : null}
 
-        {onImport ? (
+        {kind === "busy" ? null : onImport ? (
           <LocalReportImport onImport={onImport} />
         ) : (
           <div className="mt-6 text-center">
