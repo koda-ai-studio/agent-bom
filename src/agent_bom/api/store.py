@@ -8,6 +8,7 @@ import threading
 from datetime import datetime, timezone
 from typing import Any, Protocol, cast
 
+from agent_bom.api.job_payload_codec import encode_job_payload
 from agent_bom.api.posture_counts_cache import announce_scan_evidence
 from agent_bom.api.scan_snapshot_store import discard_job_snapshot
 from agent_bom.api.storage.campaign_revisions import initialize_sqlite_campaign_evidence
@@ -455,7 +456,7 @@ class SQLiteJobStore:
 
     @staticmethod
     def _serialize(job: ScanJob) -> str:
-        return job.model_dump_json()
+        return encode_job_payload(job)
 
     @staticmethod
     def _deserialize(data: str) -> ScanJob:

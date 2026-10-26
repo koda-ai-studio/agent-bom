@@ -380,6 +380,7 @@ so they cannot regress silently, but they are not part of this reference.
 ## Scan finding snapshots (opt-in, ADR-015)
 | Env var | Type | Default | Description |
 |---|---|---|---|
+| `AGENT_BOM_JOB_RESULT_CODEC` | `str` | `'zstd'` | Stored scan-job result codec: "zstd" compresses large results; "none" keeps new rows readable by older releases. |
 | `AGENT_BOM_SCAN_SNAPSHOTS` | `bool` | `False` | — |
 | `AGENT_BOM_SCAN_SNAPSHOT_FAST_READS` | `bool` | `False` | — |
 | `AGENT_BOM_SCAN_SNAPSHOT_READS` | `bool` | `False` | — |

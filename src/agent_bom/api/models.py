@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, computed_field, 
 from agent_bom.ai_schemas import AIFindingAssessment as _CoreAIFindingAssessment
 from agent_bom.ai_schemas import AIProvenance as _CoreAIProvenance
 from agent_bom.api import policy_inputs as _policy_inputs
+from agent_bom.api.job_payload_codec import StoredResult, StoredResultDocument
 from agent_bom.api.push_models import PushEvidencePayload as _PushEvidencePayload
 from agent_bom.api.report_types import ReportFormat as ReportFormat
 from agent_bom.api.report_types import ReportJobRequest as _ReportJobRequest
@@ -320,8 +321,8 @@ class ScanJob(BaseModel):
     completed_at: str | None = None
     request: ScanRequest
     progress: list[str] = Field(default_factory=list)
-    result: dict[str, Any] | None = None
-    result_document: dict[str, Any] | str | None = None
+    result: StoredResult = None
+    result_document: StoredResultDocument = None
     """The completed result rendered in ``request.format``.
 
     ``None`` while the job is running, and for ``format=json`` — the default —

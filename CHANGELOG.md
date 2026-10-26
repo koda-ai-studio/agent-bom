@@ -9,6 +9,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Upgrade notes
+- Completed scan-job results are now stored zstd-compressed in SQLite and PostgreSQL (see `docs/STORAGE_BACKENDS.md`). Existing rows are read unchanged and nothing is rewritten, but earlier releases cannot read the new rows: during a rolling upgrade, or before a downgrade, set `AGENT_BOM_JOB_RESULT_CODEC=none` on every writer.
+
+### Changed
+- Scan-job `result` and `result_document` values of 4 KiB or more are stored zstd-compressed behind a versioned, SQL-visible header instead of as uncompressed JSON rewritten on every job update; top-level job keys and the demo-estate SQL projection keep working, and a guard test rejects any new SQL that reads deeper into a stored result. Measured on the demo estate in `docs/perf/report-volume.md`.
+
 ### Added
 - SBOM import reads CycloneDX XML (1.2-1.7) and SPDX 2.x tag-value in every intake (`scan --sbom`, the API and MCP scan paths, `report diff`). The format is detected from content; both are re-shaped onto the JSON document form and read by the same parser, so each yields exactly the packages, hierarchy, vulnerabilities and cloud-inventory evidence of its JSON twin. XML goes through `defusedxml` with DTDs forbidden (no entity expansion, no external entity or DTD retrieval) and bounded nesting; every import keeps the 10 MiB cap. Previously both were rejected.
 
