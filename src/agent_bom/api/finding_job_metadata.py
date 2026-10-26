@@ -212,6 +212,10 @@ def job_has_authoritative_scan_evidence(job: _ScanJobLike) -> bool:
     return not any(bool(raw_request.get(field)) for field in ("dry_run", "no_scan"))
 
 
+def _advisory_data_warning(issue: dict[str, Any]) -> bool:
+    return issue.get("source") == "vulnerability-data" and issue.get("code") == "scanner_warning"
+
+
 def scan_collection_incomplete_reasons(job: _ScanJobLike) -> list[str]:
     """Read explicit coverage receipts; absent legacy metadata proves nothing."""
     if isinstance(job, FindingHistoryJob):
@@ -221,7 +225,11 @@ def scan_collection_incomplete_reasons(job: _ScanJobLike) -> list[str]:
     run = raw if isinstance(raw, dict) else {}
     reasons: set[str] = set()
     outcome = run.get("outcome")
-    if outcome in ("partial", "failed"):
+    raw_issues = run.get("issues")
+    issues = [issue for issue in raw_issues if isinstance(issue, dict)] if isinstance(raw_issues, list) else []
+    inventory_issues = [issue for issue in issues if not _advisory_data_warning(issue)]
+    # Stale advisory data leaves what was collected intact, so it must not keep prior inventory current.
+    if outcome == "failed" or (outcome == "partial" and (inventory_issues or not issues)):
         reasons.add(f"scan_{outcome}")
     if any(result.get(key) is True for key in ("scan_skipped", "dry_run", "no_scan")):
         reasons.add(ReconfirmationReason.SCAN_NOT_EXECUTED.value)
@@ -232,8 +240,7 @@ def scan_collection_incomplete_reasons(job: _ScanJobLike) -> list[str]:
         status = scope.get("status")
         if isinstance(status, str) and status in {"partial", "permission_denied", "unavailable", "unsupported", "skipped"}:
             reasons.add(f"scope_{status}")
-    issues = run.get("issues")
-    if isinstance(issues, list) and any(isinstance(issue, dict) and issue.get("affects_coverage") is True for issue in issues):
+    if any(issue.get("affects_coverage") is True for issue in inventory_issues):
         reasons.add(ReconfirmationReason.COVERAGE_ISSUE.value)
     incomplete = run.get("incomplete_scope_count")
     if isinstance(incomplete, int) and not isinstance(incomplete, bool) and incomplete > 0:
