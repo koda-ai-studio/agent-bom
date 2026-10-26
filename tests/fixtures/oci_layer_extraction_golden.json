@@ -111,7 +111,7 @@
           "package_path": "app/node_modules/@types/node/package.json"
         }
       ],
-      "purl": "pkg:npm/@types/node@unknown",
+      "purl": "pkg:npm/%40types/node@unknown",
       "resolved_from_registry": false,
       "source_package": null,
       "version": "unknown"

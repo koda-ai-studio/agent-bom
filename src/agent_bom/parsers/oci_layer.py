@@ -6,6 +6,7 @@ import tarfile
 from dataclasses import dataclass
 from typing import Optional
 
+from agent_bom.core.packages import package_purl
 from agent_bom.models import Package, PackageOccurrence
 from agent_bom.parsers.oci_io import _logger, _safe_getmember
 from agent_bom.parsers.oci_metadata import LayerMetadata as LayerMetadata
@@ -33,7 +34,7 @@ def _add_package(
             name=name,
             version=version,
             ecosystem=ecosystem,
-            purl=purl or f"pkg:{ecosystem}/{name}@{version}",
+            purl=purl or package_purl(name, version, ecosystem),
             is_direct=False,
             resolved_from_registry=False,
             source_package=source_package,
@@ -47,7 +48,7 @@ def _add_package(
         # package DBs), keep the final image view aligned to the latest version.
         if version and package.version != version:
             package.version = version
-            package.purl = purl or f"pkg:{ecosystem}/{name}@{version}"
+            package.purl = purl or package_purl(name, version, ecosystem)
             package.source_package = source_package
             package.distro_name = distro_name or package.distro_name
             package.distro_version = distro_version or package.distro_version
