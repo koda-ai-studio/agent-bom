@@ -62,6 +62,7 @@ from agent_bom.output import (
     to_spdx2,
 )
 from agent_bom.output.console_kubernetes import print_kubernetes_workloads
+from agent_bom.output.json_fmt import write_redacted_json
 
 _FORMAT_OUTPUT_RULES: dict[str, tuple[str, tuple[str, ...]]] = {
     "json": ("agent-bom-report.json", (".json", ".json.gz")),
@@ -369,8 +370,7 @@ def render_output(
                 )
                 click.echo(dumps_envelope(payload), nl=False)
             else:
-                safe_json = json.dumps(to_redacted_json(report, report_json=ctx.report_json), indent=2)
-                click.echo(safe_json, nl=False)
+                write_redacted_json(report, sys.stdout, report_json=ctx.report_json, newline=False)
             sys.stdout.write("\n")
         elif _is_null_device(output) and output_format in ("console", "text", "plain"):
             # `-o /dev/null` with a terminal-only format: discard silently rather
@@ -457,8 +457,8 @@ def render_output(
             _print_text(report, blast_radii)
         elif output_format == "json":
             if output in (None, "", "-"):
-                safe_json = json.dumps(to_redacted_json(report, report_json=ctx.report_json), indent=2)
-                click.echo(safe_json)
+                write_redacted_json(report, sys.stdout, report_json=ctx.report_json)
+                sys.stdout.flush()
             else:
                 out_path = _resolve_output_path(output, output_format)
                 export_json(report, out_path, report_json=ctx.report_json)

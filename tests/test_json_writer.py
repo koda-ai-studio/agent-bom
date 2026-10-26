@@ -10,12 +10,12 @@ from agent_bom.models import AIBOMReport
 from agent_bom.output import json_fmt, json_writer
 
 
-def test_encoding_failure_preserves_existing_report(tmp_path, monkeypatch):
+def test_encoding_failure_preserves_existing_report(tmp_path):
     output = tmp_path / "report.json"
     output.write_text('{"previous": true}\n')
-    monkeypatch.setattr(json_fmt, "to_redacted_json", lambda *a, **kw: {"first": "written", "last": object()})
+    # Large enough to stream, so the failure lands after members were written.
     with pytest.raises(TypeError):
-        json_fmt.export_json(AIBOMReport(), str(output))
+        json_writer.write_json_file({"first": "written", "rows": list(range(600)), "last": object()}, str(output))
     assert output.read_text() == '{"previous": true}\n'
     assert list(tmp_path.iterdir()) == [output]
 
@@ -26,7 +26,7 @@ def test_partial_write_failure_does_not_publish_a_report(tmp_path, monkeypatch, 
     if existing:
         output.write_text("previous")
 
-    def interrupted(data, fh):
+    def interrupted(data, fh, **options):
         fh.write('{"partial":')
         raise OSError("injected disk failure")
 

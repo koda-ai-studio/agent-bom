@@ -111,3 +111,34 @@ def redact_payload(
     if isinstance(value, list | tuple | set):
         return _redact_items(value, key, max_str_len, depth + 1, string_cache, key_cache)
     return security.sanitize_text(value, max_len=max_str_len)
+
+
+class StreamingRedaction:
+    """Redact a payload subtree by subtree while it is written.
+
+    Writing ``expand`` output with :func:`agent_bom.output.json_writer.write_json_document`
+    produces exactly ``json.dumps(sanitize_sensitive_payload(value), indent=2)``
+    without ever holding a redacted copy of the whole payload: large containers
+    are walked with the same key cleaning, key collisions, depth limit and
+    caches as :func:`redact_payload`, and each small subtree is redacted just
+    before it is encoded. The context is ``(key, depth)``; start at ``(None, 0)``.
+    """
+
+    def __init__(self, max_str_len: int = 1000) -> None:
+        self._max_str_len = max_str_len
+        self._string_cache: StringCache = {}
+        self._key_cache: KeyCache = {}
+
+    def expand(self, value: object, context: tuple[object | None, int] | None) -> tuple[str, object]:
+        from agent_bom.output.json_writer import streams_container
+
+        key, depth = context or (None, 0)
+        if depth < _DEPTH_LIMIT and streams_container(value, depth):
+            if isinstance(value, dict):
+                members: dict[str, object] = {}
+                for raw_key, raw_value in value.items():
+                    members[_clean_key(raw_key, self._key_cache)] = raw_value
+                return "object", ((clean_key, child, (clean_key, depth + 1)) for clean_key, child in members.items())
+            if isinstance(value, list | tuple | set):
+                return "array", ((child, (key, depth + 1)) for child in list(value))
+        return "value", redact_payload(value, key, self._max_str_len, depth, self._string_cache, self._key_cache)
