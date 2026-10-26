@@ -2211,87 +2211,8 @@
      "exploit_likelihood": "unassessed",
      "exposed_credentials": [],
      "exposed_tools": [],
-     "exposure_path": {
-      "affectedAgents": [
-       "api-agent"
-      ],
-      "affectedServers": [
-       "api-agent-server"
-      ],
-      "dependencyContext": {
-       "dependencyDepth": 0,
-       "direct": true,
-       "ecosystem": "npm",
-       "package": "express",
-       "reachabilityEvidence": "runtime_dependency",
-       "version": "4.18.2"
-      },
-      "edgeIds": [
-       "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-       "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001"
-      ],
-      "evidence": [
-       "1 affected agent(s)",
-       "1 affected server(s)"
-      ],
-      "exposedCredentials": [],
-      "findings": [
-       "CVE-2026-0001"
-      ],
-      "fix": "No upstream fix recorded; monitor advisory source",
-      "hops": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "id": "blast:cve-2026-0001:npm:express:4.18.2",
-      "label": "express@4.18.2 -> CVE-2026-0001",
-      "nodeIds": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "nodeLabels": {
-       "agent:cfg-e12ed29252b1:api-agent": "api-agent",
-       "pkg:npm:express@4.18.2": "express@4.18.2",
-       "server:cfg-e12ed29252b1:api-agent:575e032b-5e58-539e-85c6-cd9eba4abff2": "api-agent-server",
-       "vuln:CVE-2026-0001": "CVE-2026-0001"
-      },
-      "provenance": {
-       "graphPersistence": false,
-       "source": "blast_radius_output"
-      },
-      "rank": 1,
-      "reachableTools": [],
-      "relationships": [
-       {
-        "id": "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "source": "agent:cfg-e12ed29252b1:api-agent",
-        "target": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "type": "uses"
-       },
-       {
-        "id": "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-        "source": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "target": "pkg:npm:express@4.18.2",
-        "type": "depends_on"
-       },
-       {
-        "id": "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001",
-        "source": "pkg:npm:express@4.18.2",
-        "target": "vuln:CVE-2026-0001",
-        "type": "vulnerable_to"
-       }
-      ],
-      "riskScore": 6.5,
-      "severity": "high",
-      "source": "agent:cfg-e12ed29252b1:api-agent",
-      "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
-      "target": "vuln:CVE-2026-0001"
-     },
+     "exposure_path_id": "blast:cve-2026-0001:npm:express:4.18.2",
+     "exposure_path_rank": 1,
      "fedramp_tags": [],
      "fixed_version": null,
      "framework_tags": [],
@@ -2365,7 +2286,7 @@
      "reachable_affected_symbols": [],
      "risk_score": 6.5,
      "runtime_dependency_chain": [],
-     "schema_version": "1",
+     "schema_version": "2",
      "scorecard_lookup_state": null,
      "scorecard_repo": null,
      "scorecard_score": null,
@@ -4982,87 +4903,8 @@
      "exploit_likelihood": "unassessed",
      "exposed_credentials": [],
      "exposed_tools": [],
-     "exposure_path": {
-      "affectedAgents": [
-       "api-agent"
-      ],
-      "affectedServers": [
-       "api-agent-server"
-      ],
-      "dependencyContext": {
-       "dependencyDepth": 0,
-       "direct": true,
-       "ecosystem": "npm",
-       "package": "express",
-       "reachabilityEvidence": "runtime_dependency",
-       "version": "4.18.2"
-      },
-      "edgeIds": [
-       "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-       "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001"
-      ],
-      "evidence": [
-       "1 affected agent(s)",
-       "1 affected server(s)"
-      ],
-      "exposedCredentials": [],
-      "findings": [
-       "CVE-2026-0001"
-      ],
-      "fix": "No upstream fix recorded; monitor advisory source",
-      "hops": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "id": "blast:cve-2026-0001:npm:express:4.18.2",
-      "label": "express@4.18.2 -> CVE-2026-0001",
-      "nodeIds": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "nodeLabels": {
-       "agent:cfg-e12ed29252b1:api-agent": "api-agent",
-       "pkg:npm:express@4.18.2": "express@4.18.2",
-       "server:cfg-e12ed29252b1:api-agent:575e032b-5e58-539e-85c6-cd9eba4abff2": "api-agent-server",
-       "vuln:CVE-2026-0001": "CVE-2026-0001"
-      },
-      "provenance": {
-       "graphPersistence": false,
-       "source": "blast_radius_output"
-      },
-      "rank": 1,
-      "reachableTools": [],
-      "relationships": [
-       {
-        "id": "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "source": "agent:cfg-e12ed29252b1:api-agent",
-        "target": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "type": "uses"
-       },
-       {
-        "id": "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-        "source": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "target": "pkg:npm:express@4.18.2",
-        "type": "depends_on"
-       },
-       {
-        "id": "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001",
-        "source": "pkg:npm:express@4.18.2",
-        "target": "vuln:CVE-2026-0001",
-        "type": "vulnerable_to"
-       }
-      ],
-      "riskScore": 6.5,
-      "severity": "high",
-      "source": "agent:cfg-e12ed29252b1:api-agent",
-      "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
-      "target": "vuln:CVE-2026-0001"
-     },
+     "exposure_path_id": "blast:cve-2026-0001:npm:express:4.18.2",
+     "exposure_path_rank": 1,
      "fedramp_tags": [],
      "fixed_version": null,
      "framework_tags": [],
@@ -5136,7 +4978,7 @@
      "reachable_affected_symbols": [],
      "risk_score": 6.5,
      "runtime_dependency_chain": [],
-     "schema_version": "1",
+     "schema_version": "2",
      "scorecard_lookup_state": null,
      "scorecard_repo": null,
      "scorecard_score": null,
@@ -11744,87 +11586,8 @@
      "exploit_likelihood": "unassessed",
      "exposed_credentials": [],
      "exposed_tools": [],
-     "exposure_path": {
-      "affectedAgents": [
-       "api-agent"
-      ],
-      "affectedServers": [
-       "api-agent-server"
-      ],
-      "dependencyContext": {
-       "dependencyDepth": 0,
-       "direct": true,
-       "ecosystem": "npm",
-       "package": "express",
-       "reachabilityEvidence": "runtime_dependency",
-       "version": "4.18.2"
-      },
-      "edgeIds": [
-       "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-       "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001"
-      ],
-      "evidence": [
-       "1 affected agent(s)",
-       "1 affected server(s)"
-      ],
-      "exposedCredentials": [],
-      "findings": [
-       "CVE-2026-0001"
-      ],
-      "fix": "No upstream fix recorded; monitor advisory source",
-      "hops": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "id": "blast:cve-2026-0001:npm:express:4.18.2",
-      "label": "express@4.18.2 -> CVE-2026-0001",
-      "nodeIds": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "nodeLabels": {
-       "agent:cfg-e12ed29252b1:api-agent": "api-agent",
-       "pkg:npm:express@4.18.2": "express@4.18.2",
-       "server:cfg-e12ed29252b1:api-agent:575e032b-5e58-539e-85c6-cd9eba4abff2": "api-agent-server",
-       "vuln:CVE-2026-0001": "CVE-2026-0001"
-      },
-      "provenance": {
-       "graphPersistence": false,
-       "source": "blast_radius_output"
-      },
-      "rank": 1,
-      "reachableTools": [],
-      "relationships": [
-       {
-        "id": "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "source": "agent:cfg-e12ed29252b1:api-agent",
-        "target": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "type": "uses"
-       },
-       {
-        "id": "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-        "source": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "target": "pkg:npm:express@4.18.2",
-        "type": "depends_on"
-       },
-       {
-        "id": "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001",
-        "source": "pkg:npm:express@4.18.2",
-        "target": "vuln:CVE-2026-0001",
-        "type": "vulnerable_to"
-       }
-      ],
-      "riskScore": 6.5,
-      "severity": "high",
-      "source": "agent:cfg-e12ed29252b1:api-agent",
-      "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
-      "target": "vuln:CVE-2026-0001"
-     },
+     "exposure_path_id": "blast:cve-2026-0001:npm:express:4.18.2",
+     "exposure_path_rank": 1,
      "fedramp_tags": [],
      "fixed_version": null,
      "framework_tags": [],
@@ -11898,7 +11661,7 @@
      "reachable_affected_symbols": [],
      "risk_score": 6.5,
      "runtime_dependency_chain": [],
-     "schema_version": "1",
+     "schema_version": "2",
      "scorecard_lookup_state": null,
      "scorecard_repo": null,
      "scorecard_score": null,
@@ -14381,87 +14144,8 @@
      "exploit_likelihood": "unassessed",
      "exposed_credentials": [],
      "exposed_tools": [],
-     "exposure_path": {
-      "affectedAgents": [
-       "api-agent"
-      ],
-      "affectedServers": [
-       "api-agent-server"
-      ],
-      "dependencyContext": {
-       "dependencyDepth": 0,
-       "direct": true,
-       "ecosystem": "npm",
-       "package": "express",
-       "reachabilityEvidence": "runtime_dependency",
-       "version": "4.18.2"
-      },
-      "edgeIds": [
-       "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-       "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001"
-      ],
-      "evidence": [
-       "1 affected agent(s)",
-       "1 affected server(s)"
-      ],
-      "exposedCredentials": [],
-      "findings": [
-       "CVE-2026-0001"
-      ],
-      "fix": "No upstream fix recorded; monitor advisory source",
-      "hops": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "id": "blast:cve-2026-0001:npm:express:4.18.2",
-      "label": "express@4.18.2 -> CVE-2026-0001",
-      "nodeIds": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "nodeLabels": {
-       "agent:cfg-e12ed29252b1:api-agent": "api-agent",
-       "pkg:npm:express@4.18.2": "express@4.18.2",
-       "server:cfg-e12ed29252b1:api-agent:575e032b-5e58-539e-85c6-cd9eba4abff2": "api-agent-server",
-       "vuln:CVE-2026-0001": "CVE-2026-0001"
-      },
-      "provenance": {
-       "graphPersistence": false,
-       "source": "blast_radius_output"
-      },
-      "rank": 1,
-      "reachableTools": [],
-      "relationships": [
-       {
-        "id": "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "source": "agent:cfg-e12ed29252b1:api-agent",
-        "target": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "type": "uses"
-       },
-       {
-        "id": "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-        "source": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "target": "pkg:npm:express@4.18.2",
-        "type": "depends_on"
-       },
-       {
-        "id": "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001",
-        "source": "pkg:npm:express@4.18.2",
-        "target": "vuln:CVE-2026-0001",
-        "type": "vulnerable_to"
-       }
-      ],
-      "riskScore": 6.5,
-      "severity": "high",
-      "source": "agent:cfg-e12ed29252b1:api-agent",
-      "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
-      "target": "vuln:CVE-2026-0001"
-     },
+     "exposure_path_id": "blast:cve-2026-0001:npm:express:4.18.2",
+     "exposure_path_rank": 1,
      "fedramp_tags": [],
      "fixed_version": null,
      "framework_tags": [],
@@ -14535,7 +14219,7 @@
      "reachable_affected_symbols": [],
      "risk_score": 6.5,
      "runtime_dependency_chain": [],
-     "schema_version": "1",
+     "schema_version": "2",
      "scorecard_lookup_state": null,
      "scorecard_repo": null,
      "scorecard_score": null,
@@ -18963,87 +18647,8 @@
      "exploit_likelihood": "unassessed",
      "exposed_credentials": [],
      "exposed_tools": [],
-     "exposure_path": {
-      "affectedAgents": [
-       "api-agent"
-      ],
-      "affectedServers": [
-       "api-agent-server"
-      ],
-      "dependencyContext": {
-       "dependencyDepth": 0,
-       "direct": true,
-       "ecosystem": "npm",
-       "package": "express",
-       "reachabilityEvidence": "runtime_dependency",
-       "version": "4.18.2"
-      },
-      "edgeIds": [
-       "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-       "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001"
-      ],
-      "evidence": [
-       "1 affected agent(s)",
-       "1 affected server(s)"
-      ],
-      "exposedCredentials": [],
-      "findings": [
-       "CVE-2026-0001"
-      ],
-      "fix": "No upstream fix recorded; monitor advisory source",
-      "hops": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "id": "blast:cve-2026-0001:npm:express:4.18.2",
-      "label": "express@4.18.2 -> CVE-2026-0001",
-      "nodeIds": [
-       "agent:cfg-e12ed29252b1:api-agent",
-       "server:cfg-e12ed29252b1:api-agent:<UUID>",
-       "pkg:npm:express@4.18.2",
-       "vuln:CVE-2026-0001"
-      ],
-      "nodeLabels": {
-       "agent:cfg-e12ed29252b1:api-agent": "api-agent",
-       "pkg:npm:express@4.18.2": "express@4.18.2",
-       "server:cfg-e12ed29252b1:api-agent:575e032b-5e58-539e-85c6-cd9eba4abff2": "api-agent-server",
-       "vuln:CVE-2026-0001": "CVE-2026-0001"
-      },
-      "provenance": {
-       "graphPersistence": false,
-       "source": "blast_radius_output"
-      },
-      "rank": 1,
-      "reachableTools": [],
-      "relationships": [
-       {
-        "id": "agent:cfg-e12ed29252b1:api-agent->uses->server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "source": "agent:cfg-e12ed29252b1:api-agent",
-        "target": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "type": "uses"
-       },
-       {
-        "id": "server:cfg-e12ed29252b1:api-agent:<UUID>->depends_on->pkg:npm:express@4.18.2",
-        "source": "server:cfg-e12ed29252b1:api-agent:<UUID>",
-        "target": "pkg:npm:express@4.18.2",
-        "type": "depends_on"
-       },
-       {
-        "id": "pkg:npm:express@4.18.2->vulnerable_to->vuln:CVE-2026-0001",
-        "source": "pkg:npm:express@4.18.2",
-        "target": "vuln:CVE-2026-0001",
-        "type": "vulnerable_to"
-       }
-      ],
-      "riskScore": 6.5,
-      "severity": "high",
-      "source": "agent:cfg-e12ed29252b1:api-agent",
-      "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
-      "target": "vuln:CVE-2026-0001"
-     },
+     "exposure_path_id": "blast:cve-2026-0001:npm:express:4.18.2",
+     "exposure_path_rank": 1,
      "fedramp_tags": [],
      "fixed_version": null,
      "framework_tags": [],
@@ -19117,7 +18722,7 @@
      "reachable_affected_symbols": [],
      "risk_score": 6.5,
      "runtime_dependency_chain": [],
-     "schema_version": "1",
+     "schema_version": "2",
      "scorecard_lookup_state": null,
      "scorecard_repo": null,
      "scorecard_score": null,

@@ -6,7 +6,6 @@ import hashlib
 import json
 import re
 from datetime import timezone
-from pathlib import Path
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
@@ -24,6 +23,7 @@ from agent_bom.output.finding_views import (
     package_version,
     workflow_status,
 )
+from agent_bom.output.json_writer import write_json_file
 from agent_bom.package_utils import synthesize_purl
 from agent_bom.sbom_formats.spdx3 import upstream_enrichment_statements
 from agent_bom.sbom_formats.surface_labels import server_surface_description
@@ -375,8 +375,7 @@ def _package_optional_fields(pkg: Any, supplier_ref: Any) -> dict[str, object]:
 
 def export_spdx(report: AIBOMReport, output_path: str) -> None:
     """Export report as a canonical SPDX 3.0.1 JSON-LD file."""
-    data = to_spdx(report)
-    Path(output_path).write_text(json.dumps(data, indent=2))
+    write_json_file(to_spdx(report), output_path)
 
 
 def _cvss_assessment_type(vector: str | None) -> str | None:

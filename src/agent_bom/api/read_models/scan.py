@@ -1,6 +1,6 @@
 """Documented read contracts for scan polling and scan subresources."""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import RootModel
 
@@ -91,3 +91,30 @@ class ScanLicensesResponse(RootModel[LicenseReportPayload]):
 
 class ScanVexResponse(RootModel[VexReportPayload]):
     """The same VEX payload emitted in the report envelope."""
+
+
+class ScanResultSectionRef(ReadModel):
+    name: str
+    kind: Literal["list", "object"]
+    count: int | None
+    href: str
+
+
+class ScanResultIndexResponse(ReadResponse):
+    job_id: str
+    status: str
+    result_format: str
+    summary: dict[str, Any]
+    sections: list[ScanResultSectionRef]
+
+
+class ScanResultSectionResponse(ReadResponse):
+    job_id: str
+    section: str
+    kind: Literal["list", "object"]
+    total: int | None
+    offset: int
+    limit: int | None
+    next_offset: int | None
+    items: list[Any] | None
+    value: dict[str, Any] | None

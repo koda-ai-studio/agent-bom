@@ -1,0 +1,82 @@
+SPDXVersion: SPDX-2.3
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: registry.example.test/team/api
+DocumentNamespace: https://example.test/spdxdocs/api-2f6c1b7e
+## Creation Information
+LicenseListVersion: 3.25
+Creator: Organization: Example
+Creator: Tool: syft-1.18.1
+Created: 2026-01-15T10:00:00Z
+
+##### Package: api-image
+
+PackageName: registry.example.test/team/api
+SPDXID: SPDXRef-DocumentRoot-Image-api
+PackageVersion: sha256:4a5b6c7d
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+PrimaryPackagePurpose: CONTAINER
+FilesAnalyzed: false
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+
+##### Package: requests
+
+PackageName: requests
+SPDXID: SPDXRef-Package-python-requests-11aa22
+PackageVersion: 2.31.0
+PackageSupplier: Person: Kenneth Reitz (me@kennethreitz.org)
+PackageDownloadLocation: https://files.pythonhosted.org/packages/requests-2.31.0.tar.gz
+FilesAnalyzed: false
+PackageChecksum: SHA256: 942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1
+PackageHomePage: https://requests.readthedocs.io
+PackageSourceInfo: acquired package info from installed python package manifest file: /usr/lib/python3.11/site-packages/requests-2.31.0.dist-info/METADATA
+PackageLicenseConcluded: Apache-2.0
+PackageLicenseDeclared: Apache-2.0
+PackageCopyrightText: <text>Copyright 2019 Kenneth Reitz
+All rights reserved.</text>
+PackageDescription: <text>Python HTTP for Humans.
+Supports sessions and connection pooling.</text>
+ExternalRef: SECURITY cpe23Type cpe:2.3:a:python-requests:requests:2.31.0:*:*:*:*:*:*:*
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/requests@2.31.0
+ExternalRefComment: discovered by syft
+
+##### Package: urllib3
+
+PackageName: urllib3
+SPDXID: SPDXRef-Package-python-urllib3-33bb44
+PackageVersion: 2.0.4
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicenseConcluded: MIT
+PackageLicenseDeclared: MIT
+PackageCopyrightText: NOASSERTION
+ExternalRef: PACKAGE-MANAGER purl pkg:pypi/urllib3@2.0.4
+
+##### File: requests/__init__.py
+
+FileName: /usr/lib/python3.11/site-packages/requests/__init__.py
+SPDXID: SPDXRef-File-requests-init-55cc66
+FileChecksum: SHA1: 2fd4e1c67a2d28fced849ee1bb76e7391b93eb12
+LicenseConcluded: NOASSERTION
+FileCopyrightText: NOASSERTION
+
+##### Relationships
+
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-DocumentRoot-Image-api
+Relationship: SPDXRef-DocumentRoot-Image-api CONTAINS SPDXRef-Package-python-requests-11aa22
+Relationship: SPDXRef-DocumentRoot-Image-api DEPENDS_ON SPDXRef-Package-python-requests-11aa22
+Relationship: SPDXRef-Package-python-requests-11aa22 DEPENDS_ON SPDXRef-Package-python-urllib3-33bb44
+RelationshipComment: declared in METADATA Requires-Dist
+Relationship: SPDXRef-Package-python-requests-11aa22 CONTAINS SPDXRef-File-requests-init-55cc66
+
+##### Annotations
+
+Annotator: Tool: syft-1.18.1
+AnnotationDate: 2026-01-15T10:00:00Z
+AnnotationType: OTHER
+SPDXREF: SPDXRef-Package-python-requests-11aa22
+AnnotationComment: <text>cataloged by python-installed-package-cataloger</text>

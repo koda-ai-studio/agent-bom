@@ -375,7 +375,8 @@ async def get_scan(request: Request, job_id: str) -> ScanJob:
 
     ``result`` is always the canonical AI-BOM JSON. When the request asked for a
     non-json ``format``, ``result_document`` carries that rendering and
-    ``result_format`` names it.
+    ``result_format`` names it. For bounded reads use ``GET /v1/scan/{job_id}/result``
+    and ``.../result/{section}``.
     """
     return await _job_response_payload_off_loop(await _load_job_for_request(request, job_id))
 

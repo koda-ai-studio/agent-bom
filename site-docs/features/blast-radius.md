@@ -26,6 +26,24 @@ agent-bom agents   # blast radius is included in scan output
 blast_radius(cve_id="CVE-2024-21538")
 ```
 
+## In the JSON report
+
+Each `blast_radius` row (`schema_version: "2"`) names its exposure path instead
+of embedding a copy: `exposure_path_rank` is the 1-based position of the path in
+`exposure_paths.paths`, and `exposure_path_id` is that path's `id`. Ids can repeat
+when one package version is reached through several package keys; the rank
+cannot. Schema `"1"` rows (reports from earlier releases) carry the path inline
+under `exposure_path`. Python consumers can read either form with
+`agent_bom.output.exposure_path.blast_radius_exposure_path(report, row)`; with
+`jq`:
+
+```bash
+jq '.exposure_paths.paths as $p | .blast_radius[] | {vulnerability_id, path: $p[.exposure_path_rank - 1]}' report.json
+```
+
+SARIF results keep their own embedded `properties.exposure_path`, since SARIF
+has no shared path table.
+
 ## Scoring
 
 Each CVE gets a blast radius score (0–10) factoring in:

@@ -648,7 +648,7 @@ def test_json_output_structure(sample_report):
     assert data["scan_run"]["scan_id"] == sample_report.scan_id
     assert "agents" in data
     assert "blast_radius" in data
-    assert data["blast_radius"][0]["schema_version"] == "1"
+    assert data["blast_radius"][0]["schema_version"] == "2"
     assert data["findings"][0]["schema_version"] == "1"
     assert data["inventory_snapshot"]["schema_version"] == "1"
     assert data["summary"]["total_vulnerabilities"] == 1

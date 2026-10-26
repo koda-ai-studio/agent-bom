@@ -6,6 +6,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.api.finding_read_context import read_once_shared
+from agent_bom.api.job_payload_codec import encode_job_payload
 from agent_bom.api.storage.sql import Dialect, SqlSession, load_json
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
@@ -22,7 +23,7 @@ def put_job(session: SqlSession, dialect: Dialect, job: ScanJob, *, if_absent: b
     from agent_bom.config import scan_snapshots_enabled
 
     write_history = scan_snapshots_enabled()
-    payload = job.model_dump_json()
+    payload = encode_job_payload(job)
     if write_history:
         # Freeze the exact serialized source before SQL can release the GIL.
         # A caller mutating its model cannot change the derived projection.

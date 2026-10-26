@@ -7,13 +7,16 @@ input instead of scanning lock files, enabling integration into existing pipelin
     agent-bom scan --sbom sbom.json --inventory agents.json
 
 Supported formats:
-- CycloneDX 1.x JSON (Syft, Grype, Trivy, cdxgen)
-- SPDX 2.x / 3.0 JSON (Syft, ort, spdx-tools)
+- CycloneDX 1.x JSON and XML (Syft, Grype, Trivy, cdxgen)
+- SPDX 2.x / 3.0 JSON and SPDX 2.x tag-value (Syft, ort, spdx-tools)
+
+XML and tag-value documents are re-shaped onto the JSON document form before
+parsing (``agent_bom.sbom_formats.decode``), so every serialization of the same
+BOM yields identical packages.
 """
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from agent_bom.models import Package, Severity, Vulnerability
@@ -25,6 +28,7 @@ from agent_bom.sbom_formats.cyclonedx import (
     software_components,
     vulnerability_for_component,
 )
+from agent_bom.sbom_formats.decode import decode_sbom_document
 from agent_bom.sbom_formats.spdx3 import (
     _spdx3_annotation_kv,
     _spdx3_cvss,
@@ -560,7 +564,10 @@ def parse_sbom_document(data: dict, source_name: str = "<memory>") -> tuple[list
     if "ai_bom_version" in data or "blast_radius" in data:
         raise ValueError("That looks like an agent-bom report, not an SBOM. Use 'agent-bom diff' for report comparison.")
 
-    raise ValueError(f"Unrecognised SBOM format in {source_name}. Expected CycloneDX JSON (bomFormat=CycloneDX) or SPDX 2.x/3.0 JSON.")
+    raise ValueError(
+        f"Unrecognised SBOM format in {source_name}. Expected CycloneDX JSON/XML (bomFormat=CycloneDX), "
+        "SPDX 2.x/3.0 JSON or SPDX 2.x tag-value."
+    )
 
 
 def load_sbom(path: str) -> tuple[list[Package], str, str | None]:
@@ -577,9 +584,8 @@ def load_sbom(path: str) -> tuple[list[Package], str, str | None]:
     if not p.exists():
         raise FileNotFoundError(f"SBOM file not found: {path}")
 
-    text = p.read_text()
-    if text.lstrip().startswith("SPDXVersion:"):
-        raise ValueError("SPDX tag-value input is not supported; supply SPDX JSON instead.")
-    data = json.loads(text)
+    data = decode_sbom_document(p.read_bytes())
+    if not isinstance(data, dict):
+        raise ValueError(f"SBOM must be a JSON object: {path}")
 
     return parse_sbom_document(data, source_name=path)

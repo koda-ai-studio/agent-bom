@@ -117,9 +117,9 @@ def test_spdx_tagvalue_preserves_context_without_markup_injection():
 
     report = AIBOMReport(cloud_inventory_data={"status": "partial", "warnings": ["</text>\nSPDXID: injected"]})
     text = to_spdx2_tagvalue(report)
-    comment = next(line for line in text.splitlines() if line.startswith("DocumentComment: <text>"))
+    comment = next(line for line in text.splitlines() if line.startswith("AnnotationComment: <text>"))
     assert comment.count("</text>") == 1
-    assert json.loads(comment.removeprefix("DocumentComment: <text>").removesuffix("</text>"))[KEY]["coverage"] == "not_assessed"
+    assert json.loads(comment.removeprefix("AnnotationComment: <text>").removesuffix("</text>"))[KEY]["coverage"] == "not_assessed"
 
 
 @pytest.mark.parametrize("fmt", EXPORTERS)

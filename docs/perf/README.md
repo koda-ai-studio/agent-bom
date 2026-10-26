@@ -24,6 +24,10 @@ Current evidence pages:
   php:8.3.30-cli` end to end (extraction, matching, kernel-header CVE fan-out,
   report build) and a 40,000-package offline manifest, before and after.
 
+- [`report-volume.md`](report-volume.md) — JSON report, gzip output and
+  stored scan-job row sizes on the demo estate, before and after compression
+  and blast-radius deduplication.
+
 - [`gateway-relay-latency.md`](gateway-relay-latency.md) — HTTP gateway JSON-RPC
   relay p50/p95/p99 + RSS under concurrency (Go-gate evidence for ADR-009).
 
