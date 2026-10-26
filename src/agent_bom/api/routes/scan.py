@@ -94,7 +94,7 @@ from agent_bom.api.scan_graph_view import _graph_export_response as _graph_expor
 from agent_bom.api.scan_graph_view import _scan_graph_compute_call as _scan_graph_compute_call
 from agent_bom.api.scan_job_dispatch import _repair_scan_batch
 from agent_bom.api.scan_job_submission import enqueue_scan_job
-from agent_bom.api.scan_job_views import _inventory_packages_from_agents, _job_response_payload, _job_summary_payload
+from agent_bom.api.scan_job_views import _inventory_packages_from_agents, _job_response_payload, _job_summary_payload, _render_job_response
 from agent_bom.api.scan_request_context import (
     _bulk_ingest_store_writes,
     _hub_store_call,
@@ -367,26 +367,16 @@ def list_scan_drivers(include_planned: bool = True) -> dict:
     }
 
 
-def _render_job_response(job: ScanJob) -> bytes:
-    return _job_response_payload(job).model_dump_json().encode("utf-8")
-
-
 @router.get("/scan/{job_id}", response_model=ScanJob, tags=["scan"])
 async def get_scan(request: Request, job_id: str) -> Response:
     """Fetch scan status and full results.
 
-    ``result`` is always the canonical AI-BOM JSON. When the request asked for a
-    non-json ``format``, ``result_document`` carries that rendering and
-    ``result_format`` names it. For a bounded read, use
-    ``GET /v1/scan/{job_id}/result`` (summary plus section links) and
-    ``GET /v1/scan/{job_id}/result/{section}`` (paged sections).
-
-    Redaction and JSON encoding run in a worker thread; responses of 128 KiB
-    or more are gzip-compressed in a worker thread by the GZip middleware.
+    ``result`` is the canonical AI-BOM JSON; a non-json ``format`` renders into ``result_document`` (named by
+    ``result_format``). For bounded reads use ``GET /v1/scan/{job_id}/result`` and ``.../result/{section}``.
+    Redaction and encoding run in a worker thread; bodies of 128 KiB or more are gzipped off the event loop.
     """
     job = await _load_job_for_request(request, job_id)
-    body = await anyio.to_thread.run_sync(partial(_render_job_response, job))
-    return Response(content=body, media_type="application/json")
+    return Response(content=await anyio.to_thread.run_sync(partial(_render_job_response, job)), media_type="application/json")
 
 
 @router.get("/scan/{job_id}/status", **documented(ScanStatusResponse), tags=["scan"])

@@ -8,7 +8,6 @@ import threading
 from datetime import datetime, timezone
 from typing import Any, Protocol, cast
 
-from agent_bom.api.job_payload_codec import encode_job_payload
 from agent_bom.api.posture_counts_cache import announce_scan_evidence
 from agent_bom.api.scan_snapshot_store import discard_job_snapshot
 from agent_bom.api.storage.campaign_revisions import initialize_sqlite_campaign_evidence
@@ -453,10 +452,6 @@ class SQLiteJobStore:
         """
         _require_tenant_scope(tenant_id, False, "SQLiteJobStore.overview_evidence_revision()")
         return sqlite_job_revision(self, tenant_id)
-
-    @staticmethod
-    def _serialize(job: ScanJob) -> str:
-        return encode_job_payload(job)
 
     @staticmethod
     def _deserialize(data: str) -> ScanJob:

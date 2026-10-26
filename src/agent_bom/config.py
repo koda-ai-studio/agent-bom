@@ -487,15 +487,6 @@ def scan_snapshots_enabled() -> bool:
     return _bool("AGENT_BOM_SCAN_SNAPSHOTS", False)
 
 
-# Stored scan-job result codec: "zstd" compresses large results; "none" keeps new rows readable by older releases.
-JOB_RESULT_CODEC = _str("AGENT_BOM_JOB_RESULT_CODEC", "zstd")
-
-
-def job_result_codec() -> str:
-    """The stored job-result codec, read per write so a rollout can switch it."""
-    return _str("AGENT_BOM_JOB_RESULT_CODEC", "zstd").strip().lower()
-
-
 # ── Enrichment Cache ──────────────────────────────────────────────────────
 # NVD + EPSS disk cache: 7-day TTL vs. API rate limits; 10,000 entries bounds growth.
 ENRICHMENT_TTL_SECONDS = _int("AGENT_BOM_ENRICHMENT_TTL", 604_800)

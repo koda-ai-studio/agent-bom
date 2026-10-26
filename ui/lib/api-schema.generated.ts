@@ -7305,14 +7305,9 @@ export interface paths {
          * Get Scan
          * @description Fetch scan status and full results.
          *
-         *     ``result`` is always the canonical AI-BOM JSON. When the request asked for a
-         *     non-json ``format``, ``result_document`` carries that rendering and
-         *     ``result_format`` names it. For a bounded read, use
-         *     ``GET /v1/scan/{job_id}/result`` (summary plus section links) and
-         *     ``GET /v1/scan/{job_id}/result/{section}`` (paged sections).
-         *
-         *     Redaction and JSON encoding run in a worker thread; responses of 128 KiB
-         *     or more are gzip-compressed in a worker thread by the GZip middleware.
+         *     ``result`` is the canonical AI-BOM JSON; a non-json ``format`` renders into ``result_document`` (named by
+         *     ``result_format``). For bounded reads use ``GET /v1/scan/{job_id}/result`` and ``.../result/{section}``.
+         *     Redaction and encoding run in a worker thread; bodies of 128 KiB or more are gzipped off the event loop.
          */
         get: operations["get_scan_v1_scan__job_id__get"];
         put?: never;

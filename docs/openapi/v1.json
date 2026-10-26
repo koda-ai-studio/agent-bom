@@ -81688,7 +81688,7 @@
         ]
       },
       "get": {
-        "description": "Fetch scan status and full results.\n\n``result`` is always the canonical AI-BOM JSON. When the request asked for a\nnon-json ``format``, ``result_document`` carries that rendering and\n``result_format`` names it. For a bounded read, use\n``GET /v1/scan/{job_id}/result`` (summary plus section links) and\n``GET /v1/scan/{job_id}/result/{section}`` (paged sections).\n\nRedaction and JSON encoding run in a worker thread; responses of 128 KiB\nor more are gzip-compressed in a worker thread by the GZip middleware.",
+        "description": "Fetch scan status and full results.\n\n``result`` is the canonical AI-BOM JSON; a non-json ``format`` renders into ``result_document`` (named by\n``result_format``). For bounded reads use ``GET /v1/scan/{job_id}/result`` and ``.../result/{section}``.\nRedaction and encoding run in a worker thread; bodies of 128 KiB or more are gzipped off the event loop.",
         "operationId": "get_scan_v1_scan__job_id__get",
         "parameters": [
           {

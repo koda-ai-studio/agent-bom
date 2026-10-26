@@ -18,13 +18,12 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import Annotated, Any
 
-from pydantic import BeforeValidator
+from pydantic import BaseModel, BeforeValidator
 from pydantic_core import to_json
 
-if TYPE_CHECKING:
-    from agent_bom.api.models import ScanJob
+from agent_bom.config import _str
 
 RESULT_CODEC_KEY = "__abom_codec"
 CODEC_VERSION = 1
@@ -48,9 +47,8 @@ def _list_len(value: Any) -> int:
 
 
 def compression_enabled() -> bool:
-    from agent_bom.config import job_result_codec
-
-    return job_result_codec() != "none"
+    """``AGENT_BOM_JOB_RESULT_CODEC=none`` keeps new rows readable by older releases (read per write)."""
+    return _str("AGENT_BOM_JOB_RESULT_CODEC", "zstd").strip().lower() != "none"
 
 
 def encode_result_field(value: Any) -> Any:
@@ -86,11 +84,11 @@ def decode_result_field(value: Any) -> Any:
     return json.loads(raw)
 
 
-def encode_job_payload(job: ScanJob) -> str:
-    """Serialize a job for storage with its result fields compressed."""
+def encode_job_payload(job: BaseModel) -> str:
+    """Serialize a ``ScanJob`` for storage with its result fields compressed."""
     payload = json.loads(job.model_dump_json(exclude={"result", "result_document"}))
-    payload["result"] = encode_result_field(job.result)
-    payload["result_document"] = encode_result_field(job.result_document)
+    payload["result"] = encode_result_field(getattr(job, "result", None))
+    payload["result_document"] = encode_result_field(getattr(job, "result_document", None))
     return json.dumps(payload, separators=(",", ":"))
 
 

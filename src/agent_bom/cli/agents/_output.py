@@ -62,11 +62,11 @@ from agent_bom.output import (
 )
 
 _FORMAT_OUTPUT_RULES: dict[str, tuple[str, tuple[str, ...]]] = {
-    "json": ("agent-bom-report.json", (".json",)),
-    "cyclonedx": ("agent-bom.cdx.json", (".cdx.json", ".json")),
-    "sarif": ("agent-bom.sarif", (".sarif", ".sarif.json")),
-    "spdx": ("agent-bom.spdx.json", (".spdx.json", ".json")),
-    "spdx2": ("agent-bom.spdx2.json", (".spdx2.json", ".spdx.json", ".json")),
+    "json": ("agent-bom-report.json", (".json", ".json.gz")),
+    "cyclonedx": ("agent-bom.cdx.json", (".cdx.json", ".json", ".cdx.json.gz", ".json.gz")),
+    "sarif": ("agent-bom.sarif", (".sarif", ".sarif.json", ".sarif.gz", ".sarif.json.gz")),
+    "spdx": ("agent-bom.spdx.json", (".spdx.json", ".json", ".spdx.json.gz", ".json.gz")),
+    "spdx2": ("agent-bom.spdx2.json", (".spdx2.json", ".spdx.json", ".json", ".spdx2.json.gz", ".spdx.json.gz", ".json.gz")),
     "junit": ("agent-bom-results.xml", (".xml",)),
     "csv": ("agent-bom-results.csv", (".csv",)),
     "parquet": ("agent-bom-findings.parquet", (".parquet",)),
@@ -82,10 +82,6 @@ _FORMAT_OUTPUT_RULES: dict[str, tuple[str, tuple[str, ...]]] = {
     "plain": ("agent-bom-report.txt", (".txt", ".text", ".log")),
     "text": ("agent-bom-report.txt", (".txt", ".text", ".log")),
 }
-
-
-# JSON-family formats stream through output.json_writer, which gzips a ``.gz`` path.
-_GZIP_FORMATS = frozenset({"json", "cyclonedx", "sarif", "spdx", "spdx2"})
 
 
 def _is_null_device(output: Any) -> bool:
@@ -114,8 +110,6 @@ def _resolve_output_path(output: Any, output_format: str) -> str:
     if _is_null_device(raw_path):
         return raw_path
     lower_path = raw_path.lower()
-    if output_format in _GZIP_FORMATS:
-        allowed_suffixes = (*allowed_suffixes, *(f"{suffix}.gz" for suffix in allowed_suffixes))
     if any(lower_path.endswith(suffix) for suffix in allowed_suffixes):
         return raw_path
 

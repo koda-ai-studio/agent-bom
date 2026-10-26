@@ -126,3 +126,8 @@ def _job_response_payload(job: ScanJob) -> ScanJob:
     if redacted_result is job.result:
         return job
     return job.model_copy(update={"result": redacted_result})
+
+
+def _render_job_response(job: ScanJob) -> bytes:
+    """The full ``GET /v1/scan/{job_id}`` body; callers run it in a worker thread."""
+    return _job_response_payload(job).model_dump_json().encode("utf-8")

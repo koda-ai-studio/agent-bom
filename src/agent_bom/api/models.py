@@ -325,11 +325,9 @@ class ScanJob(BaseModel):
     result_document: StoredResultDocument = None
     """The completed result rendered in ``request.format``.
 
-    ``None`` while the job is running, and for ``format=json`` — the default —
-    because ``result`` already *is* the AI-BOM JSON and a second copy would only
-    double the payload. Any other requested format renders here, so the enum
-    published on ``ScanRequest.format`` changes what the caller gets instead of
-    being silently ignored.
+    ``None`` while the job is running, and for ``format=json`` — the default — because ``result`` already
+    *is* the AI-BOM JSON and a second copy would only double the payload. Any other requested format renders
+    here, so the enum published on ``ScanRequest.format`` changes what the caller gets instead of being ignored.
     """
     error: str | None = None
 
