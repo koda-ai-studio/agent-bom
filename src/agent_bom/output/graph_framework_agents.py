@@ -33,7 +33,7 @@ class _Elements:
         self.elements = elements
         self.nodes = {str(el["data"]["id"]) for el in elements if "id" in el.get("data", {})}
         self.edges = {
-            (str(el["data"]["source"]), str(el["data"]["target"]), str(el["data"].get("type", "")))
+            (str(el["data"]["source"]), str(el["data"]["target"]), str(el["data"].get("type", ""))): el["data"]
             for el in elements
             if "source" in el.get("data", {}) and "target" in el.get("data", {})
         }
@@ -43,11 +43,18 @@ class _Elements:
             self.nodes.add(data["id"])
             self.elements.append({"data": data})
 
-    def edge(self, source: str, target: str, kind: str, **extra: Any) -> None:
-        key = (source, target, kind)
-        if key not in self.edges and source in self.nodes and target in self.nodes:
-            self.edges.add(key)
-            self.elements.append({"data": {"source": source, "target": target, "type": kind, **extra}})
+    def edge(self, source: str, target: str, relationship: str, **extra: Any) -> None:
+        """One element per (source, target, relationship); a repeat only adds its branch labels."""
+        key = (source, target, relationship)
+        existing = self.edges.get(key)
+        if existing is not None:
+            if extra.get("branches"):
+                existing["branches"] = sorted({*existing.get("branches", []), *extra["branches"]})
+            return
+        if source in self.nodes and target in self.nodes:
+            data = {"source": source, "target": target, "type": relationship, **extra}
+            self.edges[key] = data
+            self.elements.append({"data": data})
 
     def framework(self, name: str) -> str | None:
         if not name:
@@ -109,5 +116,7 @@ def append_framework_agent_elements(elements: list[dict], report: "AIBOMReport")
                 evidence=_text(edge.get("evidence"), 200),
                 line=edge.get("line_number") if isinstance(edge.get("line_number"), int) else None,
                 branch=_text(edge.get("branch"), 100),
+                branches=[_text(edge.get("branch"), 100)] if _text(edge.get("branch"), 100) else [],
                 provenance=_text(edge.get("provenance"), 50),
+                kind=_text(edge.get("kind"), 20),
             )

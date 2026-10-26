@@ -52,6 +52,10 @@ class FrameworkTopologyEdge:
     # the edge is known: "declared" means it is written in the source.
     branch: str = ""
     provenance: str = "declared"
+    # Structural role: "entry" (graph to its first node), "finish" (a node
+    # returning control to its graph), "subgraph" (a node wrapping a compiled
+    # graph); "" for a plain delegation.
+    kind: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -67,6 +71,7 @@ class FrameworkTopologyEdge:
             "confidence": self.confidence,
             "branch": self.branch,
             "provenance": self.provenance,
+            "kind": self.kind,
         }
 
 

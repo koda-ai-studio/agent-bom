@@ -15,6 +15,7 @@ from typing import Any
 
 from agent_bom.ai_components.framework_models import FrameworkAgent, FrameworkCapability, FrameworkTopologyEdge
 from agent_bom.ai_components.langgraph_topology import collect_langgraph_topology
+from agent_bom.ai_components.python_scopes import ScopeIndex
 from agent_bom.ast.source_reader import parse_python_source
 from agent_bom.ast_signal_utils import is_agent_tool_decorator
 from agent_bom.constants import is_credential_key
@@ -121,8 +122,11 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
     rel_path = str(filepath.relative_to(root)) if filepath.is_relative_to(root) else str(filepath)
     credential_refs = _extract_credential_refs(tree)
     known_tools = _collect_tools(tree)
+    aliases = _call_aliases(tree)
+    scopes = ScopeIndex(tree)
     framework_agents: list[FrameworkAgent] = []
     agent_by_binding: dict[str, FrameworkAgent] = {}
+    scoped_bindings: dict[tuple[str, str], FrameworkAgent] = {}
     agent_by_line: dict[int, FrameworkAgent] = {}
 
     for node in ast.walk(tree):
@@ -131,14 +135,15 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
         binding = _first_target_name(node.targets)
         if not binding:
             continue
-        agent = _agent_from_call(node.value, imports, rel_path, credential_refs, known_tools, fallback_name=binding)
+        agent = _agent_from_call(node.value, imports, rel_path, credential_refs, known_tools, fallback_name=binding, aliases=aliases)
         if not agent:
             continue
         framework_agents.append(agent)
         agent_by_binding[binding] = agent
+        scoped_bindings[(scopes.scope_of(node), binding)] = agent
         agent_by_line[getattr(node.value, "lineno", 1)] = agent
 
-    langgraph = collect_langgraph_topology(tree, rel_path, credential_refs, agent_by_binding)
+    langgraph = collect_langgraph_topology(tree, rel_path, credential_refs, scoped_bindings, scopes)
     framework_agents.extend(langgraph.node_agents)
 
     for node in ast.walk(tree):
@@ -146,7 +151,7 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
             continue
         if getattr(node, "lineno", 1) in agent_by_line:
             continue
-        agent = _agent_from_call(node, imports, rel_path, credential_refs, known_tools)
+        agent = _agent_from_call(node, imports, rel_path, credential_refs, known_tools, aliases=aliases)
         if agent:
             framework_agents.append(agent)
 
@@ -194,9 +199,11 @@ def _agent_from_call(
     known_tools: dict[str, FrameworkCapability],
     *,
     fallback_name: str = "",
+    aliases: dict[str, str] | None = None,
 ) -> FrameworkAgent | None:
     call_name = _call_name(node.func)
     short_name = call_name.split(".")[-1]
+    short_name = (aliases or {}).get(short_name, short_name)
     framework = _framework_for_call(imports, call_name, short_name)
     if framework is None:
         return None
@@ -211,6 +218,16 @@ def _agent_from_call(
         dynamic_edges=_has_dynamic_edges(node),
         confidence="high" if short_name in _AGENT_CALLS or "assistants.create" in call_name else "medium",
     )
+
+
+def _call_aliases(tree: ast.Module) -> dict[str, str]:
+    """``from langgraph.graph import StateGraph as SG`` maps ``SG`` back to ``StateGraph``."""
+    roots = {root for import_roots in _FRAMEWORK_IMPORTS.values() for root in import_roots}
+    aliases: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module and node.module.split(".")[0] in roots:
+            aliases.update({alias.asname: alias.name for alias in node.names if alias.asname and alias.name in _AGENT_CALLS})
+    return aliases
 
 
 def _detect_frameworks(tree: ast.Module) -> set[str]:

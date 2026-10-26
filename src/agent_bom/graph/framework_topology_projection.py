@@ -122,6 +122,7 @@ class _FrameworkTopology:
                     "line_number": item.get("line_number", 0),
                     "confidence": item.get("confidence", ""),
                     "capabilities": item.get("capabilities", []),
+                    **_nesting_attributes(item),
                 }
             )
             agent_id = self.host.id
@@ -142,6 +143,7 @@ class _FrameworkTopology:
                         "credential_refs": item.get("credential_refs", []),
                         "capabilities": item.get("capabilities", []),
                         "dynamic_edges": item.get("dynamic_edges", False),
+                        **_nesting_attributes(item),
                     },
                     dimensions=NodeDimensions(agent_type="framework-agent", surface=framework_name),
                     data_sources=[self.data_source, "source-ast"],
@@ -225,10 +227,22 @@ class _FrameworkTopology:
                         "confidence": edge.get("confidence", ""),
                         "evidence": edge.get("evidence", ""),
                         "branch": edge.get("branch", ""),
+                        "branches": [edge["branch"]] if edge.get("branch") else [],
+                        "kind": edge.get("kind", ""),
                         "provenance": edge.get("provenance", "declared"),
                     },
                 )
             )
+
+
+def _nesting_attributes(item: dict[str, Any]) -> dict[str, Any]:
+    """Parent construct id and the routes the source scan could not resolve, as node attributes."""
+    routes = [route for route in item.get("unresolved_routes", []) or [] if isinstance(route, dict)]
+    return {
+        "parent_id": str(item.get("parent_id") or ""),
+        "unresolved_route_count": len(routes),
+        "unresolved_route_reasons": sorted({str(route.get("reason") or "") for route in routes} - {""}),
+    }
 
 
 def _add_ai_stack_frameworks(graph: UnifiedGraph, ai_inventory: Any, data_source: str) -> None:
