@@ -69,11 +69,9 @@ async def registry_latest_get(
     """GET a registry-latest document within ``REGISTRY_LATEST_DEADLINE`` seconds."""
     host = urlparse(url).hostname or url
     try:
-        response = await asyncio.wait_for(
-            request(client, "GET", url, max_wait=REGISTRY_LATEST_DEADLINE),
-            timeout=REGISTRY_LATEST_DEADLINE,
-        )
-    except asyncio.TimeoutError:
+        async with asyncio.timeout(REGISTRY_LATEST_DEADLINE):
+            response = await request(client, "GET", url, max_wait=REGISTRY_LATEST_DEADLINE)
+    except TimeoutError:
         record_registry_degraded(host, f"did not answer within {REGISTRY_LATEST_DEADLINE:.0f}s", package_name)
         return None
     if response is None:
