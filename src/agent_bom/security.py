@@ -7,13 +7,8 @@ import binascii
 import hashlib
 import ipaddress
 import logging
-import math
 import os
 import re
-from collections import Counter
-from collections.abc import Iterator
-from contextlib import contextmanager
-from contextvars import ContextVar
 from typing import Any
 from urllib.parse import unquote, urlsplit, urlunsplit
 
@@ -69,8 +64,11 @@ from agent_bom.core.security_validation import (
     validate_path as validate_path,
 )
 from agent_bom.redaction.emails import _contains_email, mask_email
+from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.redaction.env_values import container_has_secret
 from agent_bom.redaction.field_policy import _REPORT_AUTH_MODES, _REPORT_COORDINATE_KEYS
+from agent_bom.redaction.text_memo import memoized_text
+from agent_bom.redaction.text_memo import sanitize_text_memo as sanitize_text_memo
 
 logger = logging.getLogger(__name__)
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -245,15 +243,6 @@ def _is_structured_coordinate(key_text: str, value: str) -> bool:
         and not _looks_sensitive_value(edge_parts[0])
         and not _looks_sensitive_value(edge_parts[2])
     )
-
-
-def _shannon_entropy(s: str) -> float:
-    """Return Shannon entropy (bits per character) of a string."""
-    if not s:
-        return 0.0
-    counts = Counter(s)
-    length = len(s)
-    return -sum((c / length) * math.log2(c / length) for c in counts.values())
 
 
 def _is_obfuscated_credential(value: str) -> bool:
@@ -472,60 +461,9 @@ _TITLE_CASE_CONTINUATION_RE = re.compile(r"[ \t]{1,8}[A-Z][A-Za-z]{0,64}\b")
 _HTTP_URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 
 
-SANITIZE_TEXT_MEMO_CHAR_BUDGET = 8_000_000
-
-
-class _TextMemo(dict[tuple[str, int], str]):
-    """Redaction results for one scan, bounded by the total characters of their inputs."""
-
-    __slots__ = ("chars",)
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.chars = 0
-
-    def remember(self, key: tuple[str, int], result: str) -> None:
-        size = len(key[0])
-        if self.chars + size <= SANITIZE_TEXT_MEMO_CHAR_BUDGET:
-            self[key] = result
-            self.chars += size
-
-
-_SANITIZE_TEXT_MEMO: ContextVar[_TextMemo | None] = ContextVar("agent_bom_sanitize_text_memo", default=None)
-
-
-@contextmanager
-def sanitize_text_memo() -> Iterator[_TextMemo]:
-    """Memoize :func:`sanitize_text` for one scan, releasing every input string afterwards.
-
-    Report building redacts the same package, layer and provenance strings
-    once per finding; an image with thousands of CVEs on one package otherwise
-    repeats identical regex work per finding.
-    """
-    memo = _SANITIZE_TEXT_MEMO.get()
-    if memo is not None:
-        yield memo
-        return
-    memo = _TextMemo()
-    token = _SANITIZE_TEXT_MEMO.set(memo)
-    try:
-        yield memo
-    finally:
-        _SANITIZE_TEXT_MEMO.reset(token)
-        memo.clear()
-
-
 def sanitize_text(value: object, max_len: int = 1000) -> str:
     """Redact credential-shaped substrings, credential-bearing URLs, and emails in text."""
-    memo = _SANITIZE_TEXT_MEMO.get()
-    if memo is None or type(value) is not str:
-        return _sanitize_text(value, max_len)
-    key = (value, max_len)
-    cached = memo.get(key)
-    if cached is None:
-        cached = _sanitize_text(value, max_len)
-        memo.remember(key, cached)
-    return cached
+    return memoized_text(value, max_len, _sanitize_text)
 
 
 def _sanitize_text(value: object, max_len: int = 1000) -> str:

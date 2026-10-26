@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from agent_bom import config
+from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.runtime.patterns import PII_PATTERNS
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator
 from agent_bom.scanners.credential_validation import CredentialValidator, ValidationStatus
@@ -238,7 +239,6 @@ def _log_aws_validation_attempt(file_path: str, line_number: int, outcome: str) 
 # secret-suggesting key — that no fixed pattern names. Opt-in (--detect-entropy)
 # because, even constrained to secret-named keys, it can surface false positives
 # (hashes, UUIDs, build IDs) that a baseline/allowlist would otherwise suppress.
-import math  # noqa: E402
 
 _ENTROPY_MIN_LEN = 20
 _ENTROPY_THRESHOLD = 3.5  # bits/char; base64-ish secrets score ~4.5-6, prose ~3
@@ -252,17 +252,6 @@ _ENTROPY_ASSIGN_RE = re.compile(
     """
     % _ENTROPY_MIN_LEN
 )
-
-
-def _shannon_entropy(value: str) -> float:
-    """Shannon entropy in bits/char — high for random tokens, low for words."""
-    if not value:
-        return 0.0
-    counts: dict[str, int] = {}
-    for ch in value:
-        counts[ch] = counts.get(ch, 0) + 1
-    n = len(value)
-    return -sum((c / n) * math.log2(c / n) for c in counts.values())
 
 
 def _entropy_findings(line: str, rel_path: str, line_num: int) -> list[SecretFinding]:

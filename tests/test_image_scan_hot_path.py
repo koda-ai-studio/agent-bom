@@ -14,6 +14,7 @@ from agent_bom import security
 from agent_bom.domain.package_model import PackageOccurrence
 from agent_bom.finding import blast_radius_to_finding
 from agent_bom.models import BlastRadius, Package, Severity, Vulnerability
+from agent_bom.redaction import text_memo
 
 
 def _kernel_package() -> Package:
@@ -64,7 +65,7 @@ def test_shared_package_evidence_is_redacted_once_per_distinct_string(monkeypatc
 
     monkeypatch.setattr(security, "_sanitize_text", counting)
 
-    with security.sanitize_text_memo():
+    with text_memo.sanitize_text_memo():
         [blast_radius_to_finding(br) for br in _blast_radii(20)]
         after_twenty = calls
         [blast_radius_to_finding(br) for br in _blast_radii(400)]
@@ -86,7 +87,7 @@ def test_memoized_sanitize_text_matches_unmemoized_redaction() -> None:
         "x" * 700,
     ]
     expected = [(security.sanitize_text(sample), security.sanitize_text(sample, max_len=20)) for sample in samples]
-    with security.sanitize_text_memo():
+    with text_memo.sanitize_text_memo():
         for _ in range(2):
             got = [(security.sanitize_text(sample), security.sanitize_text(sample, max_len=20)) for sample in samples]
             assert got == expected
@@ -103,25 +104,25 @@ def test_long_repeated_layer_commands_are_memoized(monkeypatch: pytest.MonkeyPat
 
     monkeypatch.setattr(security, "_sanitize_text", counting)
     command = "/bin/sh -c set -eux; apt-get update; " + "apt-get install -y --no-install-recommends lib$x-dev; " * 40
-    with security.sanitize_text_memo():
+    with text_memo.sanitize_text_memo():
         for _ in range(100):
             security.sanitize_text(command)
     assert calls == 1
 
 
 def test_memo_is_bounded_and_released_after_the_scan(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(security, "SANITIZE_TEXT_MEMO_CHAR_BUDGET", 10_000)
-    with security.sanitize_text_memo() as memo:
+    monkeypatch.setattr(text_memo, "SANITIZE_TEXT_MEMO_CHAR_BUDGET", 10_000)
+    with text_memo.sanitize_text_memo() as memo:
         for index in range(5_000):
             security.sanitize_text(f"value-{index:06d}")
         security.sanitize_text("y" * 20_000)
         security.sanitize_text(12345)
         assert sum(len(text) for text, _max_len in memo) <= 10_000
         assert not any(isinstance(text, str) and text.startswith("yyy") for text, _max_len in memo)
-        with security.sanitize_text_memo() as nested:
+        with text_memo.sanitize_text_memo() as nested:
             assert nested is memo
     assert memo == {}
-    assert security._SANITIZE_TEXT_MEMO.get() is None
+    assert text_memo._SANITIZE_TEXT_MEMO.get() is None
 
 
 def test_cli_scan_pipeline_runs_every_stage_under_one_memo() -> None:
@@ -131,13 +132,13 @@ def test_cli_scan_pipeline_runs_every_stage_under_one_memo() -> None:
     seen: list[object] = []
 
     def stage(_opts: object, _st: object) -> None:
-        seen.append(security._SANITIZE_TEXT_MEMO.get())
+        seen.append(text_memo._SANITIZE_TEXT_MEMO.get())
 
     run_scan(ScanOptions.__new__(ScanOptions), stages=(("a", stage), ("b", stage)))
 
     assert seen[0] is not None
     assert seen[0] is seen[1]
-    assert security._SANITIZE_TEXT_MEMO.get() is None
+    assert text_memo._SANITIZE_TEXT_MEMO.get() is None
 
 
 def test_api_scan_job_runs_every_stage_under_one_memo(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -147,7 +148,7 @@ def test_api_scan_job_runs_every_stage_under_one_memo(monkeypatch: pytest.Monkey
     seen: list[object] = []
 
     def stage(_ctx: object) -> bool:
-        seen.append(security._SANITIZE_TEXT_MEMO.get())
+        seen.append(text_memo._SANITIZE_TEXT_MEMO.get())
         return len(seen) == 2
 
     monkeypatch.setattr(pipeline, "SCAN_STAGES", (ScanStage("a", stage), ScanStage("b", stage)))
@@ -159,4 +160,4 @@ def test_api_scan_job_runs_every_stage_under_one_memo(monkeypatch: pytest.Monkey
 
     assert seen[0] is not None
     assert seen[0] is seen[1]
-    assert security._SANITIZE_TEXT_MEMO.get() is None
+    assert text_memo._SANITIZE_TEXT_MEMO.get() is None

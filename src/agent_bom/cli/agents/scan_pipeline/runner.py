@@ -23,7 +23,7 @@ from agent_bom.cli.agents.scan_pipeline import (
 )
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
-from agent_bom.security import sanitize_text_memo
+from agent_bom.redaction.text_memo import sanitize_text_memo
 
 Stage = Callable[[ScanOptions, ScanState], None]
 

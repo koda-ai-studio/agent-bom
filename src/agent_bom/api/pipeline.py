@@ -4,7 +4,6 @@ Extracted from api/server.py (Phase 4). Contains:
 - ScanPipeline: structured SSE event tracker for scan progress
 - _run_scan_sync: full scan pipeline runner (blocking, thread-safe)
 - _sync_scan_agents_to_fleet: auto-sync discovered agents to fleet registry
-- _now: UTC ISO timestamp helper
 - _executor: shared ThreadPoolExecutor for scan jobs
 """
 
