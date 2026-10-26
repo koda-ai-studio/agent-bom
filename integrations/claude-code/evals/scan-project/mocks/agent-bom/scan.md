@@ -39,9 +39,9 @@ type: fixed
   "unique_packages": 5,
   "total_vulnerabilities": 34,
   "critical_findings": 2,
-  "total_findings": 35,
+  "total_findings": 34,
   "unique_assets": 5,
-  "critical_unified_findings": 3,
+  "critical_unified_findings": 2,
   "high_unified_findings": 14,
   "coverage_warnings": []
  },
@@ -51,21 +51,19 @@ type: fixed
   "packages": 5,
   "unique_packages": 5,
   "vulnerabilities": 34,
-  "findings": 35,
+  "findings": 34,
   "findings_by_severity": {
-   "critical": 3,
+   "critical": 2,
    "high": 14,
    "medium": 17,
    "low": 1,
    "unknown": 0
   },
   "findings_by_type": {
-   "CVE": 34,
-   "MALICIOUS_PACKAGE": 1
+   "CVE": 34
   },
   "findings_by_category": {
-   "vulnerability": 34,
-   "malicious": 1
+   "vulnerability": 34
   },
   "kev": 0,
   "suppressed": 0,
@@ -77,32 +75,6 @@ type: fixed
   "summary": "Weak best-practice/config posture (D, 65.5%) \u2014 immediate attention required"
  },
  "top_findings": [
-  {
-   "id": "66158a38-3b92-5d9c-8335-09ebfc998a38",
-   "title": "Malicious package: event-stream@3.3.6",
-   "severity": "critical",
-   "finding_category": "malicious",
-   "finding_type": "MALICIOUS_PACKAGE",
-   "cve_id": "GHSA-mh6f-8j2x-4483",
-   "risk_score": 10.0,
-   "cvss_score": null,
-   "epss_score": null,
-   "is_kev": false,
-   "kev_due_date": null,
-   "fixed_version": null,
-   "remediation_guidance": "Remove event-stream from all environments immediately (Known malicious package (GHSA-mh6f-8j2x-4483)).",
-   "reachability": "unknown",
-   "is_direct": true,
-   "dependency_depth": 0,
-   "introduced_via": null,
-   "asset": "pkg:npm/event-stream@3.3.6",
-   "affected_agents": [
-    "repo-deps:root"
-   ],
-   "affected_servers": [
-    "repo-deps:root"
-   ]
-  },
   {
    "id": "e5f874a4-c57e-532b-8b4b-6986863c76d1",
    "title": "CVE-2021-44906: minimist@1.2.5",
@@ -320,6 +292,32 @@ type: fixed
    "cve_id": "CVE-2026-42035",
    "risk_score": 6.5,
    "cvss_score": 7.4,
+   "epss_score": null,
+   "is_kev": false,
+   "kev_due_date": null,
+   "fixed_version": "0.31.1",
+   "remediation_guidance": "Upgrade axios to 0.31.1.",
+   "reachability": "unknown",
+   "is_direct": true,
+   "dependency_depth": 0,
+   "introduced_via": null,
+   "asset": "pkg:npm/axios@0.21.0",
+   "affected_agents": [
+    "repo-deps:root"
+   ],
+   "affected_servers": [
+    "repo-deps:root"
+   ]
+  },
+  {
+   "id": "8766c1f9-283e-5cb7-9bb5-78a897da8a6d",
+   "title": "CVE-2026-42039: axios@0.21.0",
+   "severity": "high",
+   "finding_category": "vulnerability",
+   "finding_type": "CVE",
+   "cve_id": "CVE-2026-42039",
+   "risk_score": 6.5,
+   "cvss_score": 7.5,
    "epss_score": null,
    "is_kev": false,
    "kev_due_date": null,
