@@ -54,6 +54,11 @@ class Agent:
             self.last_seen = self.discovered_at
 
     @property
+    def is_installed_unconfigured(self) -> bool:
+        """A client found on this machine with no MCP configuration to inventory."""
+        return self.status == AgentStatus.INSTALLED_NOT_CONFIGURED and not self.mcp_servers
+
+    @property
     def stable_id(self) -> str:
         """Deterministic ID for this agent.
 

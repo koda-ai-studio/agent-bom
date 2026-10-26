@@ -381,7 +381,7 @@ def detect_installed_agents(discovered_types: set[AgentType]) -> list[Agent]:
                 Agent(
                     name=agent_type.value,
                     agent_type=agent_type,
-                    config_path=f"{binary_name} ({found})",
+                    config_path=found,
                     status=AgentStatus.INSTALLED_NOT_CONFIGURED,
                 )
             )

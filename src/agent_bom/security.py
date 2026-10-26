@@ -705,6 +705,8 @@ def sanitize_path_label(value: object) -> str:
     if re.fullmatch(r"<path:[^<>]+>", text):
         return text
     basename = re.split(r"[\\/]+", text.rstrip("/\\"))[-1] if text else ""
+    if "(" not in basename:
+        basename = basename.rstrip(")")
     basename = sanitize_text(basename or "path", max_len=80)
     if not basename or _key_looks_sensitive(basename) or _looks_sensitive_value(basename):
         basename = "path"
