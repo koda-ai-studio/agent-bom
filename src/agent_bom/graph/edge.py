@@ -17,6 +17,9 @@ from agent_bom.graph.util import _now_iso
 # Evidence lists that name every contributor; a later source adds to them
 # instead of being dropped by the non-empty-first rule.
 UNION_EVIDENCE_KEYS = ("configured_by",)
+# Label lists merged the same way but never renamed as node ids: every
+# conditional-route branch that leads along one edge.
+UNION_LABEL_KEYS = ("branches",)
 
 
 def credential_edge_admits(edge: "UnifiedEdge", agent_id: str) -> bool:
@@ -41,7 +44,7 @@ def renamed_union_evidence(evidence: dict[str, Any] | None, rename: Callable[[st
 
 def merge_union_evidence_keys(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
     changed = False
-    for key in UNION_EVIDENCE_KEYS:
+    for key in (*UNION_EVIDENCE_KEYS, *UNION_LABEL_KEYS):
         if isinstance(incoming.get(key), list):
             union = sorted({*(stored.get(key) or []), *incoming[key]})
             if stored.get(key) != union:

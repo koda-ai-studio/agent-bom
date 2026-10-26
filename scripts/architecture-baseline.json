@@ -29,13 +29,6 @@
     "ai_components/call_state.py": {
       "broad_except": 1
     },
-    "ai_components/framework_agents.py": {
-      "file_lines": 650
-    },
-    "ai_components/framework_agents.py::_scan_python_file": {
-      "complexity": 20,
-      "function_lines": 93
-    },
     "ai_components/patterns.py": {
       "file_lines": 808
     },
