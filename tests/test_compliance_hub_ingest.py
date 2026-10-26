@@ -359,6 +359,42 @@ def test_cyclonedx_vulns_become_sbom_findings(tmp_path: Path):
         assert fw in f.applicable_frameworks
 
 
+def _nested_cyclonedx(affected: list[str], *, duplicate_ref: bool = False) -> dict:
+    leaf = {"bom-ref": "pkg-lodash", "type": "library", "name": "lodash", "version": "4.17.20", "purl": "pkg:npm/lodash@4.17.20"}
+    root_child = {"bom-ref": "pkg-yaml", "type": "library", "name": "pyyaml", "version": "5.3", "purl": "pkg:pypi/pyyaml@5.3"}
+    components = [
+        {"bom-ref": "app", "type": "application", "name": "web", "components": [{"bom-ref": "mid", "name": "ui", "components": [leaf]}]}
+    ]
+    if duplicate_ref:
+        components.append({"bom-ref": "pkg-lodash", "name": "lodash-dup"})
+    return {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.6",
+        "metadata": {"component": {"bom-ref": "root", "name": "svc", "components": [root_child]}},
+        "components": components,
+        "vulnerabilities": [{"id": f"CVE-2026-{1000 + i}", "affects": [{"ref": ref}]} for i, ref in enumerate(affected)],
+    }
+
+
+def test_cyclonedx_vulns_on_nested_components_keep_their_purl(tmp_path: Path):
+    target = tmp_path / "nested.cdx.json"
+    target.write_text(json.dumps(_nested_cyclonedx(["pkg-lodash", "pkg-yaml", "app"])))
+
+    findings = ingest_cyclonedx_vulnerabilities(target)
+
+    assert [f.asset.identifier for f in findings] == ["pkg:npm/lodash@4.17.20", "pkg:pypi/pyyaml@5.3", "web"]
+    assert findings[0].title == "CVE-2026-1000: pkg:npm/lodash@4.17.20"
+
+
+def test_cyclonedx_duplicate_refs_still_resolve_top_level_components(tmp_path: Path):
+    target = tmp_path / "dup.cdx.json"
+    target.write_text(json.dumps(_nested_cyclonedx(["app"], duplicate_ref=True)))
+
+    [finding] = ingest_cyclonedx_vulnerabilities(target)
+
+    assert finding.asset.identifier == "web"
+
+
 def test_cyclonedx_missing_file_returns_empty_list(tmp_path: Path):
     assert ingest_cyclonedx_vulnerabilities(tmp_path / "no.json") == []
 
