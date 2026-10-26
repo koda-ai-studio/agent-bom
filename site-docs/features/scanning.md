@@ -126,6 +126,78 @@ agent-bom image python:3.12-slim
 ```
 
 Uses agent-bom's native image scanning pipeline to enumerate OS and language packages within container images.
+
+### Pulling without a Docker daemon
+
+`agent-bom image <ref>` fetches the image straight from its registry over the
+OCI distribution API — every request is a read-only `GET` (plus a token
+request). Credentials are looked up only when the registry asks for them:
+`--registry-user`/`--registry-pass` on `scan` (or `AGENT_BOM_REGISTRY_USER` /
+`AGENT_BOM_REGISTRY_PASS`), then `~/.docker/config.json` (`auths`,
+`credHelpers`, `credsStore`; `DOCKER_CONFIG` is honoured). Only the credential's
+source is reported, never its value. For a multi-arch image the platform comes
+from the index: `linux/amd64` unless `--platform` names another; an unknown
+platform fails with the list of available ones.
+
+Every manifest and blob is checked against its digest. Layers are downloaded
+one at a time into a temporary file and go through the same bounds as archive
+scans (table below); a layer that cannot be downloaded or read — including
+`tar+zstd` layers, which the walk does not decompress — is a named coverage gap.
+Blob redirects to a CDN are followed over HTTPS only, without the registry
+credential. Plain HTTP is accepted only for a registry on `localhost`.
+
+| `--pull-mode` | Behaviour |
+|---|---|
+| `auto` (default) | Registry first; the local Docker daemon only if the registry pull fails (the reason is printed and kept in the report). |
+| `registry` | Registry only; never the daemon. |
+| `daemon` | `docker save` through the local daemon; never the registry. |
+
+`--offline` never contacts a registry, so offline image scans use the daemon or
+`--tar`.
+
+### Signatures, attestations and base image
+
+For an image scanned by reference, agent-bom looks up its cosign signature
+(`sha256-<digest>.sig`) and the artifacts attached to its digest (OCI
+referrers API or tag schema, cosign `.att`/`.sbom` tags, BuildKit attestation
+manifests in the index):
+
+```bash
+agent-bom image ghcr.io/org/app:1.4 --cosign-key cosign.pub --require-signature
+```
+
+| Signature status | Meaning |
+|---|---|
+| `verified` | A cosign signature over this image's digest verified with `--cosign-key` (ECDSA, RSA or Ed25519 PEM public key). |
+| `invalid` | A signature exists but none verified with the key, or it names another digest. |
+| `signed` | A signature exists and was not verified: no key was given, or it is keyless (Fulcio certificate) or a Sigstore bundle. Certificate-identity and transparency-log verification are not implemented. |
+| `unsigned` | The registry has no signature or bundle for the digest. |
+| `unknown` | Not looked up (archive scans, offline scans, a local image without a registry digest) or the lookup failed. |
+
+`--require-signature` exits 1 unless the status is `signed` or `verified` —
+only `verified` when a key is given. Attestations are listed, not verified.
+
+The base image is named only from the OCI `org.opencontainers.image.base.name`
+and `org.opencontainers.image.base.digest` annotations or labels. When the
+registry is reachable, agent-bom fetches that base and, if its layers are an
+exact prefix of the image's, marks every package occurrence `layer_origin:
+base` or `app` (a package the base shipped at the same version stays `base`
+even after an app-layer `apt` rewrites the package database). A base whose
+layers do not match — rebuilt, or the tag moved — is reported as
+`layer-digest-mismatch` and nothing is attributed. No rebase target is
+suggested: that would need a scan of the candidate base.
+
+### Secrets in image layers
+
+Text files in every layer are scanned with the same patterns, skip rules and
+redaction as `agent-bom secrets`; binaries, OS package trees (`usr/share`,
+`usr/lib`, CA bundles, package databases), files larger than
+`AGENT_BOM_IMAGE_SECRET_MAX_FILE_BYTES` (1 MiB) and files past
+`AGENT_BOM_IMAGE_SECRET_MAX_FILES` (20,000 per image) are skipped and counted.
+Image config `ENV` values and build-history steps (where build args land) are
+scanned too. Each finding names the image, the layer digest and the path; a
+secret deleted or overwritten by a later layer is still reported with
+`in_final_filesystem: false`, because it remains in that layer's blob.
 The native parser reads Debian dpkg, Alpine apk, modern SQLite RPM databases,
 and legacy RPM BerkeleyDB/NDB databases without requiring a scanner binary.
 Malformed legacy RPM databases fail the scan instead of producing a clean
@@ -165,7 +237,7 @@ coverage warning naming the layer and reason, and the scan run is reported as
 | Env var | Default | Bound |
 |---|---|---|
 | `AGENT_BOM_OCI_SCAN_TIMEOUT_SECONDS` | `900` | Wall-clock budget for reading one image's layers; `0` disables it. Layers not read in time are reported with reason `oci_scan_time_budget`. |
-| `AGENT_BOM_OCI_MAX_LAYER_COMPRESSED_BYTES` | 2 GiB | Compressed size of one layer inside a `docker save` tarball. |
+| `AGENT_BOM_OCI_MAX_LAYER_COMPRESSED_BYTES` | 2 GiB | Compressed size of one layer inside a `docker save` tarball or pulled from a registry (checked before download and while streaming). |
 | `AGENT_BOM_OCI_MAX_LAYER_UNCOMPRESSED_BYTES` | 5 GiB | Uncompressed bytes of one layer (also caps temporary disk use per layer). |
 | `AGENT_BOM_OCI_MAX_DECOMPRESSION_RATIO` | `100` | Uncompressed-to-compressed ratio; decompression stops at the limit. |
 | `AGENT_BOM_OCI_MAX_LAYER_MEMBERS` | `1000000` | Tar entries walked in one layer. |

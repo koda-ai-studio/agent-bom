@@ -8,9 +8,13 @@
 agent-bom image <image:tag> --platform linux/amd64 --format json --output image-report.json
 ```
 
-The requested platform is passed to Docker pull, archive save, and the stopped
-container used by the filesystem-export fallback. Docker must support the
-`save --platform` option. Review the report's findings and coverage before
+A registry pull selects that platform's manifest from the image index (the
+default is `linux/amd64`). When the scan falls back to the Docker daemon
+(`--pull-mode daemon`, or a failed registry pull), the platform is passed to
+Docker pull, archive save, and the stopped container used by the
+filesystem-export fallback; Docker must then support `save --platform`.
+Signature, attestation, base-image and layer-secret evidence is described in
+`site-docs/features/scanning.md`. Review the report's findings and coverage before
 using its exit status as a policy gate; an extraction error is not a clean scan.
 
 ## Release policy

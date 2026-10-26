@@ -48,7 +48,8 @@ agent-bom operates in six modes:
 | Runtime proxy/gateway sessions | Semi-trusted | Only traffic routed through the proxy/gateway is enforced; direct out-of-band calls remain outside this boundary |
 | API database | Customer-controlled trusted store | SQLite/Postgres stores tenant-scoped inventory, findings, graphs, audit records, runtime evidence, and policy state |
 | Export sinks (OTLP, SIEM, object storage, data warehouse) | External sink | agent-bom redacts and shapes exports; downstream access control is owned by the sink |
-| Docker daemon socket | Privileged | Only accessed with explicit `--image` flag; user must opt in |
+| Docker daemon socket | Privileged | Only accessed for an explicit `--image` scan, and only when `--pull-mode daemon` is set or the read-only registry pull fails |
+| Container registries | Untrusted network input | Read-only GETs for an explicit `--image` scan; manifests and blobs digest-verified, HTTPS only (plain HTTP only for `localhost`), registry credentials never forwarded on CDN redirects |
 | Kubernetes API | Privileged | Only accessed with explicit `--k8s-mcp` flag; uses kubeconfig auth |
 
 ## Security assumptions

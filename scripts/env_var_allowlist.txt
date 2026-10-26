@@ -361,6 +361,10 @@ AGENT_BOM_OCI_MAX_LAYER_MEMBERS
 AGENT_BOM_OCI_MAX_LAYER_UNCOMPRESSED_BYTES
 AGENT_BOM_OCI_MAX_METADATA_MEMBER_BYTES
 AGENT_BOM_OCI_SCAN_TIMEOUT_SECONDS
+AGENT_BOM_IMAGE_PULL_MODE  # default image fetch strategy (auto|registry|daemon); read per scan_image call so API/MCP workers honour it
+AGENT_BOM_IMAGE_COSIGN_KEY  # cosign public key path for image signature verification; read per image evidence collector
+AGENT_BOM_IMAGE_SECRET_MAX_FILE_BYTES  # per-file cap for the image layer secret scan; read per layer like the AGENT_BOM_OCI_* bounds
+AGENT_BOM_IMAGE_SECRET_MAX_FILES  # per-image file cap for the image layer secret scan; read per layer like the AGENT_BOM_OCI_* bounds
 AGENT_BOM_OFFLINE
 # TTL (seconds) for the per-tenant /v1/overview payload cache; read at call time so tests can vary it. 0 disables.
 AGENT_BOM_OVERVIEW_CACHE_TTL_SECONDS
