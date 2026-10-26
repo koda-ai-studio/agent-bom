@@ -75,3 +75,59 @@ async def kspm_cluster_posture_impl(
     except Exception as exc:
         logger.exception("MCP tool error")
         return json.dumps({"error": sanitize_error(exc)})
+
+
+_INVENTORY_SCHEMA_VERSION = "kspm.workload.inventory.v1"
+
+
+def _collect_inventory(*, namespace: str, all_namespaces: bool, context: str | None) -> dict:
+    """Run the live workload inventory collection (isolated seam for testing)."""
+    from agent_bom.k8s_inventory_live import cluster_label, collect_live_k8s_inventory
+    from agent_bom.k8s_transport import select_k8s_transport
+
+    transport = select_k8s_transport(context=context)
+    try:
+        cluster = cluster_label(context, transport.name)
+        return collect_live_k8s_inventory(transport, namespace=namespace, all_namespaces=all_namespaces, cluster=cluster)
+    finally:
+        transport.close()
+
+
+def _bounded(items: list, limit: int) -> dict:
+    return {"items": items[:limit], "total": len(items), "truncated": len(items) > limit}
+
+
+async def kspm_workload_inventory_impl(
+    *,
+    namespace: str = "default",
+    all_namespaces: bool = False,
+    context: str | None = None,
+    max_items: int = 200,
+    _truncate_response,
+) -> str:
+    """Implementation of the kspm_workload_inventory tool."""
+    try:
+        limit = max(1, min(int(max_items), 1000))
+        inventory = _collect_inventory(namespace=namespace, all_namespaces=all_namespaces, context=context)
+        payload = {
+            "schema_version": _INVENTORY_SCHEMA_VERSION,
+            "resource": "workload_inventory",
+            "status": inventory["collection"]["status"],
+            "cluster": inventory["cluster"],
+            "collectors": inventory["collection"]["collectors"],
+            "summary": inventory["summary"],
+            "namespaces": _bounded(inventory["namespaces"], limit),
+            "workloads": _bounded(inventory["workloads"], limit),
+            "service_accounts": _bounded(inventory["service_accounts"], limit),
+            "rbac_grants": _bounded(inventory["rbac_grants"], limit),
+            "note": (
+                "Live, read-only workload inventory: workloads, containers and images (pinned to the running "
+                "digest when the pod recorded one), service accounts, RBAC grants and the Secret names workloads "
+                "reference. Secret values are never read. Image CVEs come from a scan (agent-bom scan --k8s, or "
+                "POST /v1/scans with k8s=true); query the resulting graph for workload attack paths."
+            ),
+        }
+        return _truncate_response(json.dumps(payload, indent=2, default=str))
+    except Exception as exc:
+        logger.exception("MCP tool error")
+        return json.dumps({"error": sanitize_error(exc)})

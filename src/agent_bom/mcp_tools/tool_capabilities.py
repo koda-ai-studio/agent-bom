@@ -45,6 +45,7 @@ _TOOL_CAPABILITY_CLASSES = {
     "analytics_query": ["READ", "ANALYTICS"],
     "cis_benchmark": ["READ", "NETWORK", "CLOUD"],
     "kspm_cluster_posture": ["READ", "NETWORK", "CLOUD"],
+    "kspm_workload_inventory": ["READ", "NETWORK", "CLOUD"],
     "fleet_scan": ["READ", "REGISTRY", "ANALYZE"],
     "runtime_correlate": ["READ", "LOCAL_FILE_READ", "RUNTIME"],
     "runtime_production_index": ["READ", "RUNTIME", "OBSERVABILITY"],

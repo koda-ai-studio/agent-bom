@@ -47,6 +47,7 @@ Full profile Tools (97):
     analytics_query     — Query vulnerability trends and runtime events from ClickHouse
     cis_benchmark       — Run CIS benchmark checks against cloud accounts
     kspm_cluster_posture — Evaluate live Kubernetes cluster posture vs CIS Kubernetes Benchmark
+    kspm_workload_inventory — Live Kubernetes workloads, images, service accounts and RBAC grants
     fleet_scan          — Batch registry lookup for fleet inventories
     runtime_correlate   — Cross-reference runtime audit logs with CVE findings
     runtime_production_index — Runtime production posture summary
