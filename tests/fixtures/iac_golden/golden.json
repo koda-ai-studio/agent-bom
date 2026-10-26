@@ -3821,6 +3821,44 @@
    "title": "Container without liveness probe"
   }
  ],
+ "kubernetes/namespace_pod_security.yaml": [
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "kubernetes",
+   "compliance": [
+    "CIS-K8s-5.2.1",
+    "NIST-CM-7"
+   ],
+   "file_path": "kubernetes/namespace_pod_security.yaml",
+   "line_number": 3,
+   "message": "Namespace 'shop' sets no pod-security.kubernetes.io/enforce label, so Pod Security Admission enforces nothing there. Label it baseline or restricted.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "K8S-037",
+   "severity": "medium",
+   "title": "Namespace has no Pod Security Admission enforce level"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "kubernetes",
+   "compliance": [
+    "CIS-K8s-5.2.1",
+    "NIST-CM-7"
+   ],
+   "file_path": "kubernetes/namespace_pod_security.yaml",
+   "line_number": 11,
+   "message": "Namespace 'legacy' enforces the privileged Pod Security level, which allows host namespaces, privileged containers and hostPath mounts. Enforce baseline or restricted.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "K8S-038",
+   "severity": "medium",
+   "title": "Namespace enforces the privileged Pod Security level"
+  }
+ ],
  "kubernetes/synthetic_all_rules.yaml": [
   {
    "atlas_techniques": [],

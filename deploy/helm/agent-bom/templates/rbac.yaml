@@ -6,18 +6,27 @@ metadata:
   labels:
     {{- include "agent-bom.labels" . | nindent 4 }}
 rules:
-  # Least-privilege, read-only (get/list) posture reader. Covers container
-  # image discovery (pods/namespaces) and the live KSPM posture collectors
-  # (workloads, NetworkPolicies, RBAC, nodes). No secrets, no mutation verbs,
-  # and no nodes/proxy — the native transport never proxies the kubelet.
+  # Least-privilege, read-only (get/list) reader for the workload inventory
+  # (workloads, pods, service accounts, RBAC) and the live KSPM posture and
+  # admission collectors. No secrets, no mutation verbs, and no nodes/proxy —
+  # the native transport never proxies the kubelet.
   - apiGroups: [""]
-    resources: ["pods", "namespaces", "nodes"]
+    resources: ["pods", "namespaces", "nodes", "serviceaccounts"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
     verbs: ["get", "list"]
   - apiGroups: ["networking.k8s.io"]
     resources: ["networkpolicies"]
     verbs: ["get", "list"]
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]
+    verbs: ["get", "list"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["validatingadmissionpolicies", "validatingadmissionpolicybindings", "validatingwebhookconfigurations"]
     verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

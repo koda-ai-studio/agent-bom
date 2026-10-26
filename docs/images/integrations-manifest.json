@@ -68,7 +68,7 @@
         {"name": "AWS", "logo": "vendor/simple-icons/amazonwebservices.svg", "implements": ["cloud_provider:aws"]},
         {"name": "Azure", "logo": "vendor/simple-icons/microsoftazure.svg", "implements": ["cloud_provider:azure"]},
         {"name": "GCP", "logo": "vendor/google-cloud-mark.svg", "implements": ["cloud_provider:gcp"]},
-        {"name": "Kubernetes", "logo": "vendor/simple-icons/kubernetes.svg", "implements": ["symbol:agent_bom.k8s:discover_images", "symbol:agent_bom.k8s:evaluate_rbac"]}
+        {"name": "Kubernetes", "logo": "vendor/simple-icons/kubernetes.svg", "implements": ["symbol:agent_bom.k8s:discover_images", "symbol:agent_bom.kubernetes.posture_checks:evaluate_rbac"]}
       ]
     },
     {

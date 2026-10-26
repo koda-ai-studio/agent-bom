@@ -162,3 +162,39 @@ def test_advertised_on_server_card_and_registered() -> None:
     assert "cloud_side_scan" in server_card_tool_names()
     assert "cloud_side_scan" in registered_mcp_tool_decorator_names()
     assert "cloud_side_scan" in _TOOL_CAPABILITY_CLASSES
+
+
+def test_result_carries_packages_and_cves_per_vm_like_the_api(state_db, monkeypatch) -> None:
+    from agent_bom.models import Package, Severity, Vulnerability
+
+    captured: dict = {}
+
+    async def _fake(**kwargs):
+        captured.update(kwargs)
+        vuln = Vulnerability(id="CVE-2099-0001", summary="synthetic", severity=Severity.HIGH)
+        return [
+            CloudSideScanExecutionResult(
+                provider=kwargs["provider"],
+                target_type="image",
+                target_id=kwargs["target_id"],
+                account_id=kwargs["account_id"],
+                location=kwargs["location"],
+                packages=[Package(name="openssl", version="3.0.2", ecosystem="deb", vulnerabilities=[vuln])],
+                cleaned_up=True,
+            )
+        ]
+
+    import agent_bom.cloud.side_scan_targets as targets
+
+    monkeypatch.setattr(targets, "run_provider_side_scan", _fake)
+    result = _run(**_valid(target_id="projects/proj/global/images/golden", target_type="image"))
+
+    assert captured["target_type"] == "image"
+    assert result["result"]["image_id"] == "projects/proj/global/images/golden"
+    assert result["result"]["packages"][0]["vulnerabilities"][0]["id"] == "CVE-2099-0001"
+
+
+def test_rejects_azure_image(state_db) -> None:
+    result = _run(**_valid(provider="azure", collector_resource_group="rg", target_type="image"))
+    assert result["status"] == "rejected"
+    assert "managed image" in result["error"]

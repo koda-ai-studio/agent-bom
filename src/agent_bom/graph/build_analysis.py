@@ -15,7 +15,7 @@ from agent_bom.graph.asset_canonicalize import canonicalize_assets
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_findings import project_credential_findings
 from agent_bom.graph.edge_freshness import stamp_edge_freshness
-from agent_bom.graph.finding_row_projection import project_finding_rows
+from agent_bom.graph.finding_row_projection import apply_finding_row_times, project_finding_rows
 from agent_bom.graph.interaction_risk_ids import bind_interaction_risk_agent_ids
 from agent_bom.graph.provider_inheritance import inherit_cloud_provider
 from agent_bom.graph.relationship_contract import audit_graph_contract
@@ -55,6 +55,8 @@ def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports
     # Edges the assessment projections added after fusion.
     _stamp_freshness(graph)
     audit_graph_contract(graph)
+    # Finding nodes keep the first observation their rows recorded.
+    apply_finding_row_times(graph, report_json.get("findings"))
 
 
 def _stamp_freshness(graph: UnifiedGraph) -> None:

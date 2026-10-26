@@ -120,6 +120,8 @@ class SideScanProviderCapability:
     executor: Literal["shipped", "contract_only"]
     cli_available: bool
     credentialed_smoke: bool
+    image_scan: Literal["ami", "image", "unsupported"] = "unsupported"
+    image_scan_note: str = ""
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -129,6 +131,10 @@ class SideScanProviderCapability:
             "executor": self.executor,
             "cli_available": self.cli_available,
             "credentialed_smoke": self.credentialed_smoke,
+            "image_scan": self.image_scan,
+            "image_scan_note": self.image_scan_note,
+            # Every executor creates, attaches and deletes temp disks: opt-in, never read-only.
+            "mutation": "opt_in_temp_disk_lifecycle",
         }
 
 
@@ -142,7 +148,13 @@ def side_scan_provider_capabilities() -> dict[SideScanProvider, SideScanProvider
     read-only provider credentials. The flag advertises real proof, not intent.
     """
     return {
-        "aws": SideScanProviderCapability("aws", True, True, "shipped", True, False),
-        "azure": SideScanProviderCapability("azure", True, True, "shipped", True, False),
-        "gcp": SideScanProviderCapability("gcp", True, True, "shipped", True, False),
+        "aws": SideScanProviderCapability(
+            "aws", True, True, "shipped", True, False, "ami", "temp volume from the AMI's root EBS snapshot; AMI never modified"
+        ),
+        "azure": SideScanProviderCapability(
+            "azure", True, True, "shipped", True, False, "unsupported", "Azure managed image / gallery image scan not implemented"
+        ),
+        "gcp": SideScanProviderCapability(
+            "gcp", True, True, "shipped", True, False, "image", "temp disk created from the image (sourceImage); image never modified"
+        ),
     }

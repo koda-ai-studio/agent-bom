@@ -298,6 +298,10 @@ def test_scan_live_cluster_posture_finds_runtime_gaps(monkeypatch):
         ("get", "clusterroles"): {"items": []},
         ("get", "roles"): {"items": []},
         ("get", "nodes"): {"items": []},
+        ("get", "namespaces"): {"items": [{"metadata": {"name": "prod", "labels": {"pod-security.kubernetes.io/enforce": "restricted"}}}]},
+        ("get", "validatingadmissionpolicies"): {"items": []},
+        ("get", "validatingadmissionpolicybindings"): {"items": []},
+        ("get", "validatingwebhookconfigurations"): {"items": []},
     }
 
     def fake_run(cmd, **kwargs):
@@ -355,6 +359,10 @@ def test_scan_live_cluster_posture_clean_cluster(monkeypatch):
         ("get", "clusterroles"): {"items": []},
         ("get", "roles"): {"items": []},
         ("get", "nodes"): {"items": []},
+        ("get", "namespaces"): {"items": [{"metadata": {"name": "prod", "labels": {"pod-security.kubernetes.io/enforce": "restricted"}}}]},
+        ("get", "validatingadmissionpolicies"): {"items": []},
+        ("get", "validatingadmissionpolicybindings"): {"items": []},
+        ("get", "validatingwebhookconfigurations"): {"items": []},
     }
 
     def fake_run(cmd, **kwargs):
@@ -393,6 +401,10 @@ def _posture_with_pod_spec(monkeypatch, pod_spec: dict):
         ("get", "clusterroles"): {"items": []},
         ("get", "roles"): {"items": []},
         ("get", "nodes"): {"items": []},
+        ("get", "namespaces"): {"items": [{"metadata": {"name": "prod", "labels": {"pod-security.kubernetes.io/enforce": "restricted"}}}]},
+        ("get", "validatingadmissionpolicies"): {"items": []},
+        ("get", "validatingadmissionpolicybindings"): {"items": []},
+        ("get", "validatingwebhookconfigurations"): {"items": []},
     }
 
     def fake_run(cmd, **kwargs):

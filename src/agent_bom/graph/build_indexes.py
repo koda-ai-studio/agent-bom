@@ -18,3 +18,6 @@ class BuildIndexes:
     server_to_tool_ids: dict[str, list[str]] = field(default_factory=lambda: defaultdict(list))
     package_id_to_servers: dict[str, list[str]] = field(default_factory=lambda: defaultdict(list))
     pending_exploitable_edges: list[tuple[str, str, str, dict[str, Any], str]] = field(default_factory=list)
+    # Agents and retired ids per shared server, written to the node once after projection.
+    server_agents: dict[str, set[str]] = field(default_factory=dict)
+    server_aliases: dict[str, set[str]] = field(default_factory=dict)

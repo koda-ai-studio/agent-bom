@@ -42,6 +42,8 @@ class ScanContext:
     model_hash_verification_data: Any = None
     model_supply_chain_data: Any = None
     iac_findings_data: Any = None
+    # Kubernetes workload inventories (live cluster and/or manifests), one per source.
+    kubernetes_inventories: list = field(default_factory=list)
     # Findings imported from --external-scan that are not package evidence
     # (code-level results, dependency results with no resolvable package).
     external_findings: list = field(default_factory=list)

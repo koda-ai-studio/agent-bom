@@ -30,8 +30,10 @@ _PASSTHROUGH_SECTIONS: tuple[tuple[str, str], ...] = (
     ("toxic_combinations", "toxic_combinations"),
     ("sast", "sast_data"),
     ("iac_findings", "iac_findings_data"),
+    ("kubernetes_inventory", "kubernetes_inventory_data"),
     ("cloud_inventory", "cloud_inventory_data"),
     ("aws_organization", "aws_organization_data"),
+    ("side_scan_results", "side_scan_results_data"),
     ("identity_discovery", "identity_discovery_data"),
     ("cloud_audit_trail", "cloud_audit_trail_data"),
     ("snowflake_object_graph", "snowflake_object_graph_data"),
@@ -79,6 +81,7 @@ def graph_evidence_sections(report: AIBOMReport) -> dict[str, Any]:
     _append_side_findings(findings, report)
     sections: dict[str, Any] = {
         "scan_id": report.scan_id,
+        "generated_at": report.generated_at.isoformat(),
         "scan_sources": report.scan_sources,
         "codeowners": dict(report.codeowners) if isinstance(report.codeowners, dict) else list(report.codeowners),
         "agents": agents_json(report),

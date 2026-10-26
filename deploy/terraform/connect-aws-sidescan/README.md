@@ -39,9 +39,11 @@ locations) — never disk images, never block data, never secret values.
 The inline policy is the **minimum** the lifecycle above requires:
 
 - **Read (account-wide, unavoidable):** `ec2:DescribeVolumes`,
-  `DescribeSnapshots`, `DescribeInstances`, `DescribeTags`,
-  `DescribeAvailabilityZones`. EC2 `Describe*` cannot be resource-scoped; these
-  are reads, no mutation.
+  `DescribeImages` (AMI scans resolve the root snapshot), `DescribeSnapshots`,
+  `DescribeInstances`, `DescribeTags`, `DescribeAvailabilityZones`. EC2
+  `Describe*` cannot be resource-scoped; these are reads, no mutation. An AMI
+  scan creates only a tagged temp volume from the AMI's root snapshot; the
+  AMI's own snapshot is never deleted (the delete statement is tag-gated).
 - **Create (tag-gated):** `ec2:CreateSnapshot`, `ec2:CreateVolume`, and
   `ec2:CreateTags` — but **only** when the request carries the
   `agent-bom-sidescan` tag (`aws:RequestTag`). The role **cannot create an

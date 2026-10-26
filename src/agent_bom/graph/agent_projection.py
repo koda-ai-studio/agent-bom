@@ -21,6 +21,7 @@ from agent_bom.graph.credential_projection import project_credentials
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.hosting_projection import project_server_hosting
+from agent_bom.graph.image_projection import add_image_node, carrier_node_id, previous_carrier_ids
 from agent_bom.graph.mcp_server_aliases import previous_mcp_server_graph_ids
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.package_dependency_projection import project_package_dependencies
@@ -60,6 +61,7 @@ class AgentScope:
     agent_scope: str = ""
     sbom_import: bool = False
     repository_inventory: bool = False
+    image_inventory: bool = False
     static_inventory: bool = False
     data_source_tag: str = ""
     inventory_type: EntityType = EntityType.SOURCE_FILE
@@ -106,11 +108,19 @@ def _scope(agent_dict: dict[str, Any], report_data_source: str) -> AgentScope:
     agent.agent_scope = _agent_identity_scope(agent.agent_dict)
     agent.sbom_import = _is_sbom_import(agent.agent_dict)
     agent.repository_inventory = _is_repository_inventory(agent.agent_dict)
-    agent.static_inventory = agent.sbom_import or agent.repository_inventory
+    image_id = None if agent.sbom_import or agent.repository_inventory else carrier_node_id(agent.agent_dict)
+    agent.image_inventory = image_id is not None
+    agent.static_inventory = agent.sbom_import or agent.repository_inventory or agent.image_inventory
     agent.data_source_tag = str(agent.agent_dict["source"]) if agent.repository_inventory else report_data_source
-    agent.inventory_type = EntityType.DIRECTORY if agent.repository_inventory else EntityType.SOURCE_FILE
-    agent.agent_id = _inventory_node_id(agent, agent_graph_id_for(agent.agent_dict))
-    agent.previous_agent_ids = [_inventory_node_id(agent, old) for old in previous_agent_graph_ids(agent.agent_dict)]
+    agent.inventory_type = (
+        EntityType.DIRECTORY if agent.repository_inventory else EntityType.CONTAINER if agent.image_inventory else EntityType.SOURCE_FILE
+    )
+    agent.agent_id = image_id or _inventory_node_id(agent, agent_graph_id_for(agent.agent_dict))
+    agent.previous_agent_ids = (
+        previous_carrier_ids(agent.agent_dict, agent_graph_id_for(agent.agent_dict))
+        if agent.image_inventory
+        else [_inventory_node_id(agent, old) for old in previous_agent_graph_ids(agent.agent_dict)]
+    )
     agent.agent_node_key = agent.agent_id.removeprefix("agent:")
     agent.agent_type = agent.agent_dict.get("type", agent.agent_dict.get("agent_type", ""))
     agent.provider_name = str(agent.agent_dict.get("source") or "local").strip() or "local"
@@ -191,7 +201,10 @@ def _add_agent_node(graph: UnifiedGraph, agent: AgentScope) -> None:
 
 
 def _project_agent(graph: UnifiedGraph, agent: AgentScope, indexes: BuildIndexes, lineage: CloudLineageProjection) -> None:
-    _add_agent_node(graph, agent)
+    if agent.image_inventory:
+        add_image_node(graph, agent.agent_dict, agent.agent_id, agent.data_source_tag, agent.previous_agent_ids)
+    else:
+        _add_agent_node(graph, agent)
     indexes.agent_name_to_ids[agent.agent_name].append(agent.agent_id)
     config_path = str(agent.agent_dict.get("config_path", "") or "").strip()
     if config_path:
@@ -266,7 +279,7 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
                     ],
                     "security_intelligence_count": len(srv_dict.get("security_intelligence", []) or []),
                     "agent": agent.agent_name,
-                    "agents": _server_agents(graph, srv_id, agent.agent_id),
+                    "agents": [agent.agent_id],
                     "environment": agent.agent_env,
                     "canonical_id": srv_dict.get("canonical_id")
                     or srv_dict.get("stable_id")
@@ -293,17 +306,36 @@ def _record_previous_server_ids(graph: UnifiedGraph, srv_id: str, previous: list
     node.attributes["identity"] = identity
 
 
-def _server_agents(graph: UnifiedGraph, srv_id: str, agent_id: str) -> list[str]:
+def _note_server_agent(graph: UnifiedGraph, indexes: BuildIndexes, srv_id: str, agent_id: str) -> None:
     """Every agent that declared this server; a shared node keeps all of them."""
-    existing = graph.nodes.get(srv_id)
-    recorded = existing.attributes.get("agents") if existing is not None else None
-    return sorted({*(recorded if isinstance(recorded, list) else []), agent_id})
+    if srv_id not in indexes.server_agents:
+        existing = graph.nodes.get(srv_id)
+        recorded = existing.attributes.get("agents") if existing is not None else None
+        indexes.server_agents[srv_id] = {agent for agent in recorded or [] if isinstance(agent, str)}
+    indexes.server_agents[srv_id].add(agent_id)
+
+
+def _note_server_aliases(indexes: BuildIndexes, srv_id: str, previous: list[str]) -> None:
+    if previous:
+        indexes.server_aliases.setdefault(srv_id, set()).update(previous)
+
+
+def _write_server_identity(graph: UnifiedGraph, indexes: BuildIndexes) -> None:
+    """Sort each shared server's agents and aliases once, not once per declaring agent."""
+    for srv_id, agents in indexes.server_agents.items():
+        node = graph.nodes.get(srv_id)
+        if node is not None:
+            node.attributes["agents"] = sorted(agents)
+    for srv_id, aliases in indexes.server_aliases.items():
+        _record_previous_server_ids(graph, srv_id, sorted(aliases))
 
 
 def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str, Any], indexes: BuildIndexes) -> None:
     srv_name = srv_dict.get("name", "unknown")
-    srv_id = agent.agent_id if agent.sbom_import else mcp_server_graph_id_for(srv_dict, agent.agent_dict)
+    srv_id = agent.agent_id if agent.sbom_import or agent.image_inventory else mcp_server_graph_id_for(srv_dict, agent.agent_dict)
     surface = srv_dict.get("surface", "mcp-server")
+    if not agent.static_inventory:
+        _note_server_agent(graph, indexes, srv_id, agent.agent_id)
     srv_id = _add_server_node(graph, agent, srv_dict, srv_id, srv_name, surface)
     if not agent.sbom_import and not agent.static_inventory:
         previous = previous_mcp_server_graph_ids(srv_dict, agent.agent_dict)
@@ -311,7 +343,7 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
             old_key = old_id.removeprefix("agent:")
             if old_key and srv_id.startswith(f"server:{agent.agent_node_key}:"):
                 previous.append(f"server:{old_key}:{srv_id.removeprefix(f'server:{agent.agent_node_key}:')}")
-        _record_previous_server_ids(graph, srv_id, previous)
+        _note_server_aliases(indexes, srv_id, previous)
     indexes.server_name_to_ids[srv_name].append(srv_id)
     if not agent.static_inventory:
         graph.add_edge(
@@ -391,7 +423,7 @@ def _project_package_nodes(graph: UnifiedGraph, agent: AgentScope, srv_dict: Map
             UnifiedEdge(
                 source=srv_id,
                 target=pkg_id,
-                relationship=RelationshipType.CONTAINS if agent.sbom_import else RelationshipType.DEPENDS_ON,
+                relationship=RelationshipType.CONTAINS if agent.sbom_import or agent.image_inventory else RelationshipType.DEPENDS_ON,
                 evidence=package_evidence,
             )
         )
@@ -470,4 +502,5 @@ def project_agents(graph: UnifiedGraph, agents: list[dict[str, Any]], data_sourc
         scope.previous_agent_ids = [alias for alias in scope.previous_agent_ids if len(targets[alias]) == 1]
         _project_agent(graph, scope, indexes, lineage)
         _record_previous_server_ids(graph, scope.agent_id, scope.previous_agent_ids)
+    _write_server_identity(graph, indexes)
     return indexes

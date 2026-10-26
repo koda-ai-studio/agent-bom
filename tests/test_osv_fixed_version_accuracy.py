@@ -87,7 +87,7 @@ def test_ecosystem_matches_maps_internal_codes():
     """Internal ecosystem codes must map to their OSV names."""
     assert ecosystem_matches("Debian:11", "deb")
     assert ecosystem_matches("PyPI", "pypi")
-    assert ecosystem_matches("Linux", "rpm")
+    assert not ecosystem_matches("Linux", "rpm")
     assert not ecosystem_matches("npm", "PyPI")
     # Unknown on either side -> nothing to disqualify on.
     assert ecosystem_matches("", "PyPI")

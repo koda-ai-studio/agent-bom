@@ -6,9 +6,11 @@ endpoint drive. No new business logic lives here — this is the headless MCP
 surface over the existing executor + durable lifecycle store.
 
 Security posture (non-negotiable):
-- Read-only toward customer targets: agent-bom snapshots the disk, mounts a temp
-  copy on an in-account collector read-only, records SBOM + CVE + secret metadata
-  only, and tears every owned temporary resource down.
+- Opt-in mutation family, never touching the scanned disk or image: agent-bom
+  creates a temp snapshot/disk, mounts it on an in-account collector read-only,
+  records SBOM + CVE (per owning VM) + secret metadata only, and tears every
+  owned temporary resource down. The graph snapshot is persisted by the REST
+  route; this tool returns the same bounded package/CVE record.
 - Credentials are never accepted here; the executor resolves separately scoped
   lifecycle credentials from the provider's default chain
   (``credentialed_smoke=False``).
@@ -26,6 +28,7 @@ import asyncio
 import json
 import logging
 
+from agent_bom.cloud.side_scan_inventory import side_scan_response
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.security import sanitize_error
 
@@ -38,6 +41,7 @@ async def cloud_side_scan_impl(
     *,
     provider: str = "",
     target_id: str = "",
+    target_type: str = "disk",
     account_id: str = "",
     location: str = "",
     collector_id: str = "",
@@ -59,27 +63,10 @@ async def cloud_side_scan_impl(
 
     resolved_tenant = resolve_mcp_tool_tenant_id(tenant_id)
     prov = provider.strip().lower()
-    if prov not in _SUPPORTED:
-        return json.dumps(
-            {
-                "status": "rejected",
-                "error": "provider must be 'azure' or 'gcp' (AWS EBS uses the CLI side-scan entrypoint).",
-            }
-        )
-    missing = [
-        label
-        for label, value in (
-            ("target_id", target_id),
-            ("account_id", account_id),
-            ("location", location),
-            ("collector_id", collector_id),
-        )
-        if not str(value).strip()
-    ]
-    if prov == "azure" and not collector_resource_group.strip():
-        missing.append("collector_resource_group")
-    if missing:
-        return json.dumps({"status": "rejected", "error": f"missing required argument(s): {', '.join(missing)}"})
+    required = {"target_id": target_id, "account_id": account_id, "location": location, "collector_id": collector_id}
+    rejection = _request_error(prov, target_type, required, collector_resource_group)
+    if rejection:
+        return json.dumps({"status": "rejected", "error": rejection})
 
     import uuid as _uuid
 
@@ -97,6 +84,7 @@ async def cloud_side_scan_impl(
         results = await run_provider_side_scan(
             provider=prov,  # type: ignore[arg-type]
             target_id=target_id.strip(),
+            target_type=target_type,
             account_id=account_id.strip(),
             location=location.strip(),
             collector_id=collector_id.strip(),
@@ -150,22 +138,22 @@ async def cloud_side_scan_impl(
     return _truncate_response(json.dumps(payload, indent=2, default=str))
 
 
+def _request_error(prov: str, target_type: str, required: dict[str, str], collector_resource_group: str) -> str:
+    """Why the request is rejected before any cloud call, or ``""``."""
+    from agent_bom.cloud.side_scan_images import AZURE_IMAGE_UNSUPPORTED
+
+    if prov not in _SUPPORTED:
+        return "provider must be 'azure' or 'gcp' (AWS EBS uses the CLI side-scan entrypoint)."
+    if target_type not in {"disk", "image"}:
+        return "target_type must be 'disk' or 'image'"
+    if prov == "azure" and target_type == "image":
+        return AZURE_IMAGE_UNSUPPORTED
+    missing = [label for label, value in required.items() if not str(value).strip()]
+    if prov == "azure" and not collector_resource_group.strip():
+        missing.append("collector_resource_group")
+    return f"missing required argument(s): {', '.join(missing)}" if missing else ""
+
+
 def _result_summary(results: list) -> dict:
-    """Metadata-only run summary (never raw block data, file contents, or values)."""
-    if not results:
-        return {}
-    res = results[0]
-    counts = getattr(res, "recorded_counts", None) or {}
-    return {
-        "target_id": getattr(res, "target_id", ""),
-        "snapshot_id": getattr(res, "snapshot_id", None),
-        "scan_disk_id": getattr(res, "scan_disk_id", None),
-        "package_count": counts.get("package_count", len(getattr(res, "packages", []) or [])),
-        "vulnerability_count": counts.get("vulnerability_count", int(getattr(res, "vulnerability_count", 0) or 0)),
-        "secret_count": counts.get("secret_count", len(getattr(res, "secrets", []) or [])),
-        "config_finding_count": counts.get("config_finding_count", len(getattr(res, "config_findings", []) or [])),
-        "ioc_finding_count": counts.get("ioc_finding_count", len(getattr(res, "ioc_findings", []) or [])),
-        "cleaned_up": bool(getattr(res, "cleaned_up", False)),
-        "replayed": bool(getattr(res, "replayed", False)),
-        "warnings": [str(w) for w in (getattr(res, "warnings", []) or [])],
-    }
+    """Metadata-only run summary plus the bounded package/CVE record — the API's exact shape."""
+    return side_scan_response(results)

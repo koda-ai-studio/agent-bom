@@ -512,3 +512,96 @@ async def test_failed_unmount_retains_aws_clone_and_reports_recovery_ids(enabled
     assert result.to_dict()["scan_volume_id"] == "vol-temp-1"
     assert result.snapshot_id == "snap-1"
     assert "collector_unmount_failed" in result.warnings
+
+
+# ── Owning account / region and AMI scans ─────────────────────────────────────
+
+
+class FakeImageEc2Client(FakeEc2Client):
+    def create_snapshot(self, **kwargs: object) -> dict:
+        response = super().create_snapshot(**kwargs)
+        return {**response, "OwnerId": "000000000000"}
+
+    def describe_images(self, **kwargs: object) -> dict:
+        self._record("describe_images", **kwargs)
+        return {
+            "Images": [
+                {
+                    "ImageId": "ami-0fedcba9876543210",
+                    "OwnerId": "000000000000",
+                    "RootDeviceName": "/dev/xvda",
+                    "BlockDeviceMappings": [
+                        {"DeviceName": "/dev/xvdb", "Ebs": {"SnapshotId": "snap-data"}},
+                        {"DeviceName": "/dev/xvda", "Ebs": {"SnapshotId": "snap-ami-root"}},
+                    ],
+                }
+            ]
+        }
+
+
+async def _skip_cves(_self: object, _pkgs: object) -> int:
+    return 0
+
+
+@pytest.mark.asyncio
+async def test_volume_scan_records_owner_account_and_region(enabled: None, debian_rootfs: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(AwsEbsSideScanner, "_scan_cves", _skip_cves)
+    scanner = AwsEbsSideScanner(
+        ec2_client=FakeImageEc2Client(),
+        collector_instance_id="i-collector",
+        availability_zone="us-east-1a",
+        mount_controller=FakeMountController(debian_rootfs),
+        region="us-east-1",
+    )
+
+    result = await scanner.scan_volume("vol-target", instance_id="i-target")
+
+    assert (result.account_id, result.region, result.instance_id) == ("000000000000", "us-east-1", "i-target")
+
+
+@pytest.mark.asyncio
+async def test_ami_scan_mounts_the_root_snapshot_and_never_deletes_it(
+    enabled: None, debian_rootfs: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(AwsEbsSideScanner, "_scan_cves", _skip_cves)
+    ec2 = FakeImageEc2Client()
+    scanner = AwsEbsSideScanner(
+        ec2_client=ec2,
+        collector_instance_id="i-collector",
+        availability_zone="us-east-1a",
+        mount_controller=FakeMountController(debian_rootfs),
+        region="us-east-1",
+    )
+
+    result = await scanner.scan_image("ami-0fedcba9876543210")
+
+    names = ec2.names()
+    assert "create_snapshot" not in names
+    assert "delete_snapshot" not in names
+    assert "deregister_image" not in names
+    create_volume = next(call for call in ec2.calls if call[0] == "create_volume")
+    assert create_volume[1]["SnapshotId"] == "snap-ami-root"
+    assert "delete_volume" in names
+    assert result.image_id == "ami-0fedcba9876543210"
+    assert result.snapshot_id == "snap-ami-root"
+    assert result.instance_id is None
+    assert result.cleaned_up is True
+    assert any(p.name == "libssl3" for p in result.packages)
+
+
+@pytest.mark.asyncio
+async def test_run_side_scan_dispatches_image_ids(enabled: None, debian_rootfs: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(AwsEbsSideScanner, "_scan_cves", _skip_cves)
+    ec2 = FakeImageEc2Client()
+
+    results = await run_side_scan(
+        ec2_client=ec2,
+        image_id="ami-0fedcba9876543210",
+        collector_instance_id="i-collector",
+        availability_zone="us-east-1a",
+        mount_controller=FakeMountController(debian_rootfs),
+        sweep_orphans=False,
+    )
+
+    assert [r.image_id for r in results] == ["ami-0fedcba9876543210"]
+    assert "describe_volumes" not in ec2.names()

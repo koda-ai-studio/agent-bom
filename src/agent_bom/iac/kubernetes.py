@@ -42,6 +42,8 @@ K8S-033  Pod with shareProcessNamespace: true
 K8S-034  GPU container with privileged mode or allowPrivilegeEscalation (GPU escape pattern)
 K8S-035  hostPath volume mounting /dev/nvidia or /proc/driver/nvidia (direct device exposure)
 K8S-036  nvidia-device-plugin ClusterRole with mutation verbs (least-privilege RBAC violation)
+K8S-037  Namespace without a pod-security.kubernetes.io/enforce level
+K8S-038  Namespace enforcing the privileged Pod Security level
 """
 
 from __future__ import annotations
@@ -80,6 +82,7 @@ _KIND_CHECKS: dict[str, _DocumentCheck] = {
     "ClusterRoleBinding": _resources.k8s_025,
     "ClusterRole": _resources.k8s_036,
     "NetworkPolicy": _resources.k8s_028,
+    "Namespace": _resources.k8s_037_038,
 }
 _POD_CHECKS: tuple[_WorkloadCheck, ...] = (
     _resources.k8s_002,

@@ -20,7 +20,7 @@ TF-SEC-003  Security group with 0.0.0.0/0 ingress on non-443/80 port (CIS 5.2)
 TF-SEC-004  IAM policy/policy document with Action * (or *:*) or Resource * (AWS SEC03, CIS 1.16)
 TF-SEC-005  RDS without encryption (AWS SEC08, CIS 2.3.1)
 TF-SEC-006  CloudWatch logging not enabled (AWS SEC04, CIS 3.1)
-TF-SEC-007  SSH key hardcoded in resource (AWS SEC02, CIS 1.14)
+TF-SEC-007  SSH key hardcoded in resource, any provider (AWS SEC02, CIS AWS 1.14 on aws_ only)
 TF-SEC-008  Retired: duplicated TF-SEC-001 on the same bucket line
 TF-SEC-009  Security group rule with 0.0.0.0/0 (CIS 5.2)
 TF-SEC-010  IAM policy with service-wide wildcard action, e.g. s3:* (AWS SEC03, CIS 1.16)
@@ -64,7 +64,7 @@ TF-SEC-047  Redshift cluster without encryption (AWS SEC08, CIS 2.7)
 TF-SEC-048  Redshift cluster publicly accessible (AWS SEC01)
 TF-SEC-049  WAF not associated with ALB/CloudFront (AWS SEC05)
 TF-SEC-050  GuardDuty not enabled (AWS SEC04, CIS 4.1)
-TF-SEC-051  Hardcoded secret in a resource argument (AWS SEC02, NIST IA-5)
+TF-SEC-051  Hardcoded secret in a resource argument, any provider (NIST IA-5; CIS AWS 1.14 on aws_ only)
 """
 
 from __future__ import annotations

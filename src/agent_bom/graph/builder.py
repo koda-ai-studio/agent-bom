@@ -35,9 +35,7 @@ from agent_bom.graph.builder_cloud_lineage import _add_lineage_resource_nodes as
 from agent_bom.graph.builder_cloud_lineage import _add_lineage_scope_edges as _add_lineage_scope_edges
 from agent_bom.graph.builder_cloud_lineage import _resolve_cloud_lineage as _resolve_cloud_lineage
 from agent_bom.graph.builder_cloud_principals import _add_access_advisor_grants
-from agent_bom.graph.builder_cloud_principals import (
-    _role_last_used_at as _role_last_used_at,
-)
+from agent_bom.graph.builder_cloud_principals import _role_last_used_at as _role_last_used_at
 from agent_bom.graph.builder_frameworks import _add_cross_env_correlation, _project_host_agent_id
 from agent_bom.graph.builder_network_edges import (
     _GCP_LB_COLLECTION as _GCP_LB_COLLECTION,
@@ -159,12 +157,8 @@ from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_organization as _add_snowflake_organization,
 )
 from agent_bom.graph.builder_snowflake_platform import _add_snowflake_pipeline as _add_snowflake_pipeline
-from agent_bom.graph.builder_snowflake_platform import (
-    _add_snowflake_pipes as _add_snowflake_pipes,
-)
-from agent_bom.graph.builder_snowflake_platform import (
-    _add_snowflake_schemas as _add_snowflake_schemas,
-)
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_pipes as _add_snowflake_pipes
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_schemas as _add_snowflake_schemas
 from agent_bom.graph.builder_snowflake_platform import _add_snowflake_services as _add_snowflake_services
 from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_streams as _add_snowflake_streams,
@@ -229,6 +223,7 @@ from agent_bom.graph.framework_topology_projection import _add_framework_topolog
 from agent_bom.graph.framework_topology_projection import _AIStackProjection as _AIStackProjection
 from agent_bom.graph.framework_topology_projection import _FrameworkTopology as _FrameworkTopology
 from agent_bom.graph.identity_nodes import identity_node_id as _identity_node_id
+from agent_bom.graph.kubernetes_projection import project_kubernetes_inventory
 from agent_bom.graph.network_entry_projection import _add_network_edge_inventory as _add_network_edge_inventory
 from agent_bom.graph.network_entry_projection import _wire_network_entry_exposure_paths as _wire_network_entry_exposure_paths
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
@@ -335,6 +330,7 @@ from agent_bom.graph.runtime_projection import (
 from agent_bom.graph.runtime_projection import (
     _runtime_identity_relationship as _runtime_identity_relationship,
 )
+from agent_bom.graph.side_scan_projection import project_side_scan_results
 from agent_bom.graph.snowflake_source_lanes import _add_snowflake_source_lanes as _add_snowflake_source_lanes
 from agent_bom.graph.snowflake_source_lanes import _project_snowflake_lanes as _project_snowflake_lanes
 from agent_bom.graph.supabase_projection import project_supabase_inventory
@@ -383,7 +379,8 @@ def build_unified_graph(
     """
     span = _GRAPH_TRACER.start_span("graph.build_unified_graph_from_report") if _GRAPH_TRACER else None
     sid = scan_id or inputs.scan_id
-    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id)
+    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id, observed_at=inputs.recorded_at)
+    graph.observed_at = graph.observed_at or inputs.recorded_at
     indexes = project_agents(graph, inputs.agents, inputs.data_source, _add_agent_cloud_lineage)
     project_package_exploits(graph, indexes, inputs.data_source)
     project_blast_radius(graph, inputs.blast_radius, indexes, inputs.data_source)
@@ -426,9 +423,11 @@ def _project_inventory_findings(
             native_projector(graph, inventory)
         else:
             _add_cloud_inventory(graph, inventory, inputs.data_source)
+    project_side_scan_results(graph, report.get("side_scan_results"))
     project_benchmarks(graph, benchmark_inputs(report), declared_assets_by_identifier(report.get("findings")))
     project_sast(graph, report.get("sast") or report.get("sast_data"))
     project_iac(graph, report.get("iac_findings") or report.get("iac_findings_data"))
+    project_kubernetes_inventory(graph, report.get("kubernetes_inventory"))
     project_skill_audit(graph, report.get("skill_audit"), indexes, report.get("findings"))
     project_scan_findings(graph, report.get("findings"))
     project_gpu_compute(graph, report, indexes, inputs.data_source)

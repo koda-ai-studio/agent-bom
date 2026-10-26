@@ -71,6 +71,38 @@ def _render(helm: str, chart_root: Path) -> tuple[str | None, str]:
     return completed.stdout, ""
 
 
+_RENDER_CACHE: dict[tuple[str, str, tuple[tuple[str, int, int], ...]], tuple[str | None, str]] = {}
+_RENDER_CACHE_MAX = 32
+
+
+def _chart_fingerprint(chart_root: Path) -> tuple[tuple[str, int, int], ...]:
+    stats = []
+    for path in sorted(p for p in chart_root.rglob("*") if p.is_file()):
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        stats.append((path.relative_to(chart_root).as_posix(), stat.st_mtime_ns, stat.st_size))
+    return tuple(stats)
+
+
+def render_chart(chart_root: Path) -> tuple[str | None, str]:
+    """``helm template`` output for a chart (default values, local only), or ``(None, reason)``.
+
+    Memoized on the chart's file fingerprint so the IaC rules and the workload
+    inventory render a chart once per scan.
+    """
+    helm = shutil.which("helm")
+    if not helm:
+        return None, "helm not on PATH"
+    key = (helm, str(chart_root.resolve()), _chart_fingerprint(chart_root))
+    if key not in _RENDER_CACHE:
+        if len(_RENDER_CACHE) >= _RENDER_CACHE_MAX:
+            _RENDER_CACHE.pop(next(iter(_RENDER_CACHE)))
+        _RENDER_CACHE[key] = _render(helm, chart_root)
+    return _RENDER_CACHE[key]
+
+
 def _template_line(template_lines: list[str], rendered_line: str) -> int:
     wanted = rendered_line.strip()
     if wanted:
@@ -145,15 +177,12 @@ def scan_chart_templates(chart_root: Path, walk_root: Path) -> ChartTemplateResu
     result = ChartTemplateResult(files=len(files))
     if not files:
         return result
-    helm = shutil.which("helm")
-    failure = "helm not on PATH"
-    if helm:
-        output, error = _render(helm, chart_root)
-        if output is not None:
-            result.findings = _scan_rendered(output, chart_root, rel_prefix)
-            result.reason = f"{rel_prefix or './'}templates rendered with helm template (default values)"
-            return result
-        failure = f"helm template failed: {error}"
+    output, error = render_chart(chart_root)
+    if output is not None:
+        result.findings = _scan_rendered(output, chart_root, rel_prefix)
+        result.reason = f"{rel_prefix or './'}templates rendered with helm template (default values)"
+        return result
+    failure = error if error == "helm not on PATH" else f"helm template failed: {error}"
     result.findings = _scan_textually(chart_root, rel_prefix)
     result.reason = f"{failure}; {rel_prefix or './'}templates scanned textually for {_TEXTUAL_KEYS} only, rendering skipped"
     return result
