@@ -53,6 +53,10 @@ class TestContinuationLines:
         assert ("DOCKER-012", 2) in found
         assert not any(line in (3, 4, 5) for _, line in found)
 
+    def test_unterminated_heredoc_does_not_swallow_the_rest_of_the_file(self, scan) -> None:
+        content = "FROM alpine:3.20\nRUN echo 'a <<EOF b'\nRUN chmod 777 /srv\nUSER app\nHEALTHCHECK CMD true\n"
+        assert ("DOCKER-012", 3) in scan(content)
+
     def test_yum_and_dnf_clean_all_count_as_cleanup(self, scan) -> None:
         for manager in ("yum", "dnf"):
             content = f"FROM rockylinux:9\nRUN {manager} install -y httpd && {manager} clean all\nUSER app\nHEALTHCHECK CMD true\n"

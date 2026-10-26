@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import NamedTuple
 
 _DIRECTIVE_RE = re.compile(r"^#\s*([A-Za-z]+)\s*=\s*(\S+)\s*$")
-_HEREDOC_RE = re.compile(r"<<-?\s*([\"']?)([A-Za-z_][A-Za-z0-9_]*)\1")
+_HEREDOC_RE = re.compile(r"<<-?([\"']?)([A-Za-z_][A-Za-z0-9_]*)\1")
 _HEREDOC_KEYWORDS = frozenset({"RUN", "COPY", "ADD"})
 _ARG_REF_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
 
@@ -102,10 +102,11 @@ def parse_instructions(content: str) -> list[Instruction]:
         if keyword in _HEREDOC_KEYWORDS:
             body: list[str] = []
             for _, delimiter in _HEREDOC_RE.findall(text):
-                while i < total and lines[i].strip() != delimiter:
-                    body.append(lines[i].strip())
-                    i += 1
-                i += 1
+                end = next((j for j in range(i, total) if lines[j].strip() == delimiter), None)
+                if end is None:
+                    break  # not a heredoc after all (e.g. "<<" inside a quoted string)
+                body.extend(line.strip() for line in lines[i:end])
+                i = end + 1
             if body:
                 text = text + "\n" + "\n".join(body)
         instructions.append(Instruction(keyword=keyword, text=text, line=start))
