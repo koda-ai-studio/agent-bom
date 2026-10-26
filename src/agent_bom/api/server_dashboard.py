@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
 
+from agent_bom.api.dashboard_not_found import DASHBOARD_CSP_META_RE
 from agent_bom.api.middleware import register_dashboard_spa_routes
 from agent_bom.api.routes.enterprise_routes._session_helpers import _maybe_attach_dev_session_cookie
 from agent_bom.core.settings import env_raw
 
-_DASHBOARD_CSP_META_RE = re.compile(
-    r"<meta\s+[^>]*(?:http-equiv|httpEquiv)=[\"']Content-Security-Policy[\"'][^>]*>",
-    re.IGNORECASE,
-)
+_DASHBOARD_CSP_META_RE = DASHBOARD_CSP_META_RE
 
 
 @dataclass(frozen=True)
