@@ -20,8 +20,8 @@ from agent_bom.api.pipeline import _now, _persist_graph_snapshot
 from agent_bom.api.stores import _get_store, _jobs_put
 from agent_bom.cloud.side_scan_inventory import side_scan_record
 from agent_bom.models import AIBOMReport
-from agent_bom.security import sanitize_error, sanitize_text
 from agent_bom.output import to_json
+from agent_bom.security import sanitize_error, sanitize_text
 
 logger = logging.getLogger(__name__)
 
