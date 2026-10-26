@@ -28306,9 +28306,22 @@ components:
         executor:
           title: Executor
           type: string
+        image_scan:
+          enum:
+          - ami
+          - image
+          - unsupported
+          title: Image Scan
+          type: string
+        image_scan_note:
+          title: Image Scan Note
+          type: string
         lifecycle_contract:
           title: Lifecycle Contract
           type: boolean
+        mutation:
+          title: Mutation
+          type: string
         provider:
           title: Provider
           type: string
@@ -28322,6 +28335,9 @@ components:
       - executor
       - cli_available
       - credentialed_smoke
+      - image_scan
+      - image_scan_note
+      - mutation
       title: SideScanProviderCapability
       type: object
     SideScanTemporaryResource:

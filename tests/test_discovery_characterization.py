@@ -304,8 +304,8 @@ def _fake_k8s_inventory(_transport: Any, **_kwargs: Any) -> dict[str, Any]:
 
 def _patch_external_surfaces(monkeypatch: pytest.MonkeyPatch) -> None:
     from agent_bom import image as image_mod
+    from agent_bom import k8s_transport
     from agent_bom.kubernetes import inventory_live as k8s_inventory_live
-    from agent_bom.kubernetes import k8s_transport
     from agent_bom.parsers import browser_extensions, os_parsers
 
     def fake_scan_image(ref: str, **_: Any) -> tuple[list[Package], str]:

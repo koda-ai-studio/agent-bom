@@ -23602,8 +23602,17 @@ export interface components {
             credentialed_smoke: boolean;
             /** Executor */
             executor: string;
+            /**
+             * Image Scan
+             * @enum {string}
+             */
+            image_scan: "ami" | "image" | "unsupported";
+            /** Image Scan Note */
+            image_scan_note: string;
             /** Lifecycle Contract */
             lifecycle_contract: boolean;
+            /** Mutation */
+            mutation: string;
             /** Provider */
             provider: string;
             /** Target Discovery */

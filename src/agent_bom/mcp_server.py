@@ -6,7 +6,7 @@ Start with:
     agent-bom mcp server --transport streamable-http
 
 Default: 8 focused tools; select a task profile with --profile.
-Full profile Tools (97):
+Full profile Tools (98):
     scan                — Full discovery → scan → output pipeline
     check               — Check a specific package for CVEs before installing
     intel_lookup        — Look up a CVE, GHSA, or OSV advisory from local threat intel
