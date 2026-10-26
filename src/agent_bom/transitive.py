@@ -167,8 +167,8 @@ def _resolve_pip_version(version_spec: str, releases: dict) -> str:
     Returns ``"unknown"`` when the specifier is unparseable or no published
     release satisfies it — a bound is never reported as the installed version.
     """
-    if not version_spec or version_spec in ("latest", "unknown"):
-        return max(releases.keys(), default="unknown") if releases else "unknown"
+    if version_spec in ("latest", "unknown"):
+        version_spec = ""
 
     from packaging.specifiers import InvalidSpecifier, SpecifierSet
     from packaging.version import InvalidVersion, Version

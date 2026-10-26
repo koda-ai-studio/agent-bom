@@ -131,6 +131,11 @@ class TestResolvePipVersion:
         result = _resolve_pip_version("unknown", releases)
         assert result == "1.0.0"
 
+    def test_empty_spec_compares_versions_not_strings_and_skips_prereleases(self):
+        releases = {"3.7": [], "3.10": [], "4.0b1": []}
+        assert _resolve_pip_version("", releases) == "3.10"
+        assert _resolve_pip_version("latest", releases) == "3.10"
+
     def test_empty_releases(self):
         result = _resolve_pip_version("", {})
         assert result == "unknown"
