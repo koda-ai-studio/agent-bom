@@ -26,6 +26,8 @@ from agent_bom.ai_components.framework_models import FrameworkAgent, FrameworkTo
 
 ORCHESTRATOR_CALLS = frozenset({"create_supervisor", "create_swarm"})
 _HANDOFF_CALL = "create_handoff_tool"
+# Source text that must appear for this pass to find anything; files without it skip the walk.
+PREBUILT_MARKERS = (*ORCHESTRATOR_CALLS, _HANDOFF_CALL)
 _MODEL_KEYWORDS = ("model", "model_name", "model_id")
 
 

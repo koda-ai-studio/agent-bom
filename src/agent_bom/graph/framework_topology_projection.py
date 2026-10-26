@@ -36,8 +36,46 @@ def _add_framework_topology(
     if projection.host is not None and projection.folded:
         projection.host.attributes["code_agents"] = projection.folded
         projection.host.data_sources = list(dict.fromkeys([*projection.host.data_sources, "source-ast"]))
+    if projection.host is not None:
+        for agent_id in contained_roots(framework_agents):
+            projection.graph.add_edge(
+                UnifiedEdge(
+                    source=projection.host.id,
+                    target=agent_id,
+                    relationship=RelationshipType.CONTAINS,
+                    evidence={"source": "source-ast", "reason": "framework graph declared in this project's source"},
+                )
+            )
     for item in framework_agents:
         projection.project_edges(item)
+
+
+def topology_participants(framework_agents: Any) -> set[str]:
+    """Agents that take part in a delegation edge; every other construct folds into the project agent."""
+    participants: set[str] = set()
+    for item in framework_agents if isinstance(framework_agents, list) else []:
+        if not isinstance(item, dict):
+            continue
+        for edge in item.get("topology_edges", []) or []:
+            if isinstance(edge, dict):
+                participants.add(str(edge.get("source_id") or "").strip())
+                participants.add(str(edge.get("target_id") or "").strip())
+    participants.discard("")
+    return participants
+
+
+def contained_roots(framework_agents: Any) -> list[str]:
+    """Participants with no enclosing graph: the project agent contains these directly."""
+    participants = topology_participants(framework_agents)
+    roots: list[str] = []
+    for item in framework_agents if isinstance(framework_agents, list) else []:
+        if not isinstance(item, dict):
+            continue
+        agent_id = str(item.get("stable_id") or "").strip()
+        parent = str(item.get("parent_id") or "").strip()
+        if agent_id in participants and parent not in participants and agent_id not in roots:
+            roots.append(agent_id)
+    return roots
 
 
 class _FrameworkTopology:
@@ -47,17 +85,10 @@ class _FrameworkTopology:
         self.graph = graph
         self.data_source = data_source
         self.known_agent_ids: set[str] = set()
-        self.topology_participants: set[str] = set()
+        self.topology_participants = topology_participants(framework_agents)
         self.host = graph.nodes.get(host_agent_id) if host_agent_id else None
         self.folded: list[dict[str, Any]] = []
         self.framework_ids: dict[str, str] = {}
-        for item in framework_agents:
-            if not isinstance(item, dict):
-                continue
-            for edge in item.get("topology_edges", []) or []:
-                if isinstance(edge, dict):
-                    self.topology_participants.add(str(edge.get("source_id") or "").strip())
-                    self.topology_participants.add(str(edge.get("target_id") or "").strip())
 
     def _framework_node_id(self, name: str) -> str:
         key = name.strip().lower() or "unknown"

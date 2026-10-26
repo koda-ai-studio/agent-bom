@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.canonical_ids import agent_graph_id_for
+from agent_bom.graph.framework_topology_projection import contained_roots, topology_participants
 from agent_bom.graph.node import stable_node_id
 from agent_bom.graph.types import EntityType
 from agent_bom.security import sanitize_text
@@ -56,6 +58,12 @@ class _Elements:
             self.edges[key] = data
             self.elements.append({"data": data})
 
+    def annotate(self, node_id: str, **data: Any) -> None:
+        for el in self.elements:
+            if el.get("data", {}).get("id") == node_id:
+                el["data"].update(data)
+                return
+
     def framework(self, name: str) -> str | None:
         if not name:
             return None
@@ -84,6 +92,17 @@ def _agent_node(item: dict[str, Any], agent_id: str) -> dict[str, Any]:
     }
 
 
+def _host_agent_id(report: "AIBOMReport", out: _Elements) -> str | None:
+    """The single project agent already drawn, matching the unified graph's host rule; ``None`` for zero or several."""
+    hosts = [
+        agent_graph_id_for(agent)
+        for agent in getattr(report, "agents", []) or []
+        if isinstance(getattr(agent, "metadata", None), dict) and agent.metadata.get("project_root")
+    ]
+    hosts = [host for host in hosts if host in out.nodes]
+    return hosts[0] if len(hosts) == 1 else None
+
+
 def append_framework_agent_elements(elements: list[dict], report: "AIBOMReport") -> None:
     """Append framework agents, their frameworks and their static topology edges."""
     inventory = report.ai_inventory_data
@@ -92,12 +111,25 @@ def append_framework_agent_elements(elements: list[dict], report: "AIBOMReport")
         return
     items = [item for item in raw[:_MAX_AGENTS] if isinstance(item, dict) and _text(item.get("stable_id"), 100)]
     out = _Elements(elements)
+    host = _host_agent_id(report, out)
+    participants = topology_participants(items)
+    folded: list[str] = []
     for item in items:
         agent_id = _text(item.get("stable_id"), 100)
-        out.node(_agent_node(item, agent_id))
+        if host is not None and agent_id not in participants:
+            # Same rule as the unified graph: a construct outside any delegation is project evidence, not an agent.
+            folded.append(_text(item.get("name")) or agent_id)
+            agent_id = host
+        else:
+            out.node(_agent_node(item, agent_id))
         fid = out.framework(_text(item.get("framework"), 100))
         if fid:
             out.edge(agent_id, fid, "uses_framework")
+    if host is not None:
+        if folded:
+            out.annotate(host, codeAgents=folded)
+        for root in contained_roots(items):
+            out.edge(host, root, "contains")
     for item in items:
         for edge in item.get("topology_edges") or []:
             if not isinstance(edge, dict):

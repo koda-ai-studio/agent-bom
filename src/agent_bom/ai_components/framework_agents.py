@@ -16,6 +16,8 @@ from typing import Any
 from agent_bom.ai_components.framework_models import FrameworkAgent, FrameworkCapability, FrameworkTopologyEdge
 from agent_bom.ai_components.langgraph_prebuilt import (
     ORCHESTRATOR_CALLS,
+    PREBUILT_MARKERS,
+    PrebuiltTopology,
     collect_prebuilt_topology,
     compiled_name,
     list_bindings,
@@ -105,14 +107,35 @@ def scan_framework_agents(*paths: str | Path) -> list[FrameworkAgent]:
     for path in paths:
         root = Path(path)
         files = [root] if root.is_file() else _iter_python_files(root)
+        scope = (root if root.is_dir() else root.parent).resolve().name
         for filepath in files:
-            for agent in _scan_python_file(filepath, root if root.is_dir() else filepath.parent):
+            for agent in _scoped(_scan_python_file(filepath, root if root.is_dir() else filepath.parent), scope):
                 key = agent.stable_id
                 if key in seen:
                     continue
                 seen.add(key)
                 agents.append(agent)
     return agents
+
+
+def _scoped(agents: list[FrameworkAgent], scope: str) -> list[FrameworkAgent]:
+    """Re-key one file's agents under the project scope, keeping their edges and nesting consistent."""
+    if not scope:
+        return agents
+    new_ids = {agent.stable_id: replace(agent, scope=scope).stable_id for agent in agents}
+    return [
+        replace(
+            agent,
+            scope=scope,
+            parent_id=new_ids.get(agent.parent_id, agent.parent_id),
+            topology_edges=[
+                replace(edge, source_id=new_ids.get(edge.source_id, edge.source_id), target_id=new_ids.get(edge.target_id, edge.target_id))
+                for edge in agent.topology_edges
+            ],
+            unresolved_routes=agent.unresolved_routes,
+        )
+        for agent in agents
+    ]
 
 
 def _iter_python_files(root: Path) -> list[Path]:
@@ -179,7 +202,9 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
             framework_agents.append(agent)
             agent_by_call_line.setdefault(getattr(node, "lineno", 1), agent)
 
-    prebuilt = collect_prebuilt_topology(tree, rel_path, framework_agents, agent_by_binding, agent_by_call_line, facts.aliases)
+    prebuilt = PrebuiltTopology()
+    if any(marker in content for marker in PREBUILT_MARKERS):
+        prebuilt = collect_prebuilt_topology(tree, rel_path, framework_agents, agent_by_binding, agent_by_call_line, facts.aliases)
     topology_edges = _collect_topology_edges(tree, rel_path, agent_by_binding, agent_by_line) + langgraph.edges + prebuilt.edges
     unresolved = {
         key: [*langgraph.unresolved_routes.get(key, []), *prebuilt.unresolved_routes.get(key, [])]
