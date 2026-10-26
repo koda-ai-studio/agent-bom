@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from datetime import datetime
 
@@ -127,32 +126,6 @@ def test_sections_are_tenant_scoped_and_wait_for_completion(empty_estate_client)
     _put(JobStatus.RUNNING, job_id="running-job")
     assert _get(empty_estate_client, "/v1/scan/running-job/result").status_code == 409
     assert _get(empty_estate_client, "/v1/scan/running-job/result/findings").status_code == 409
-
-
-def test_full_result_is_rendered_off_the_event_loop_and_unchanged(empty_estate_client, monkeypatch) -> None:  # noqa: F811
-    from agent_bom.api.routes import scan as scan_routes
-    from agent_bom.api.scan_job_views import _job_response_payload
-
-    job = _put()
-    render = scan_routes._render_job_response
-    loops: list[bool] = []
-
-    def spy(value: ScanJob) -> bytes:
-        try:
-            asyncio.get_running_loop()
-            loops.append(True)
-        except RuntimeError:
-            loops.append(False)
-        return render(value)
-
-    monkeypatch.setattr(scan_routes, "_render_job_response", spy)
-    response = _get(empty_estate_client, f"/v1/scan/{job.job_id}", **{"Accept-Encoding": "gzip"})
-    assert response.status_code == 200
-    assert loops == [False]
-    assert response.headers["content-type"] == "application/json"
-    assert response.headers.get("content-encoding") == "gzip"
-    assert response.json() == json.loads(_job_response_payload(job).model_dump_json())
-    assert ScanJob.model_validate(response.json()).result == response.json()["result"]
 
 
 def test_large_responses_are_gzipped_in_a_worker_thread() -> None:

@@ -12,6 +12,7 @@ from fastapi import HTTPException, Request
 from agent_bom.api.hub_ingest import hub_ingest_store_writes, hub_store_call
 from agent_bom.api.models import ScanJob, ScanRequest
 from agent_bom.api.scan_batches import refresh_batch_parent
+from agent_bom.api.scan_job_views import _job_response_payload
 from agent_bom.api.scan_path_jail import _api_scan_path_or_400
 from agent_bom.api.stores import _get_store, _jobs_get, _jobs_is_compacted
 from agent_bom.api.tenancy import require_request_tenant_id
@@ -121,4 +122,12 @@ async def _load_job_for_request(request: Request, job_id: str) -> ScanJob:
     return cast(
         ScanJob,
         await anyio.to_thread.run_sync(partial(_job_for_request, request, job_id)),
+    )
+
+
+async def _job_response_payload_off_loop(job: ScanJob) -> ScanJob:
+    """Sanitize a potentially large full result in the bounded worker pool."""
+    return cast(
+        ScanJob,
+        await anyio.to_thread.run_sync(partial(_job_response_payload, job)),
     )
