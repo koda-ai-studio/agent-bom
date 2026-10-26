@@ -42,9 +42,7 @@ def test_control_plane_pods_are_not_reachable_from_every_namespace(component: st
     assert policy["spec"]["policyTypes"] == ["Ingress"]
     peers = [peer for rule in policy["spec"]["ingress"] for peer in rule["from"]]
     assert {"podSelector": {}} in peers
-    assert {
-        "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "ingress-nginx"}}
-    } in peers
+    assert {"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "ingress-nginx"}}} in peers
     assert all(peer.get("namespaceSelector") != {} for peer in peers)
 
 
