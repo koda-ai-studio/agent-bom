@@ -18,6 +18,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Upgrade notes
 - **The CLI severity gate now defaults to `high`**, the same as the GitHub Action, so a repository no longer passes locally and fails in CI. A plain `agent-bom scan` with a high or critical finding exits `1`. Keep the old behaviour with `--fail-on-severity critical`, or make a run reporting-only with `--exit-zero`.
+- `agent-bom check <package>` without a version now checks the latest published version and reports `version_source` (`requested`, `registry_latest` or `registry_fallback`). When the latest version cannot be resolved, the result is incomplete and exits `2`; previously it was skipped with exit `0`.
 - `agent-bom proxy` and the gateway can now enforce, not only alert, on poisoned tool descriptions and injected tool results (`--injection-mode enforce`). The default stays alert-only in this release.
 
 ### Added
