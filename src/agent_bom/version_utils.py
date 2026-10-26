@@ -132,12 +132,6 @@ from agent_bom.core.versions.ordering import (
     _SEMVER_PRERELEASE_TAGS as _SEMVER_PRERELEASE_TAGS,
 )
 from agent_bom.core.versions.ordering import (
-    _STRICT_SEMVER as _STRICT_SEMVER,
-)
-from agent_bom.core.versions.ordering import (
-    _compare_strict_semver as _compare_strict_semver,
-)
-from agent_bom.core.versions.ordering import (
     _compare_with_local_suffix_strip as _compare_with_local_suffix_strip,
 )
 from agent_bom.core.versions.ordering import (
@@ -190,6 +184,12 @@ from agent_bom.core.versions.ruby import (
 )
 from agent_bom.core.versions.ruby import (
     _gem_canonical_segments as _gem_canonical_segments,
+)
+from agent_bom.core.versions.semver import (
+    _STRICT_SEMVER as _STRICT_SEMVER,
+)
+from agent_bom.core.versions.semver import (
+    _compare_strict_semver as _compare_strict_semver,
 )
 from agent_bom.core.versions.validation import (
     _GO_PSEUDO_RE as _GO_PSEUDO_RE,
