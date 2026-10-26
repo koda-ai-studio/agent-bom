@@ -85,15 +85,35 @@ from the CLI of the pinned release:
   found in configs are redacted; only their names and locations are reported.
 - **Sends** package names and versions, never file contents or credentials, to
   public vulnerability and package sources. `inventory`, `audit-skills` and
-  `activity` make no lookups of their own; `checkup`, `scan`, `check`,
-  `affected`, `fix`, `audit-mcp` and `bom` use:
-  - `api.osv.dev`: vulnerability lookups
+  `activity` make no network calls. `checkup`, `scan`, `check`, `affected`,
+  `fix`, `audit-mcp` and `bom` use:
+  - `api.osv.dev`: vulnerability and malicious-package lookups
   - `api.github.com`: GitHub security advisories
-  - `pypi.org` and `registry.npmjs.org`: package metadata and typosquat checks
+  - `pypi.org` and `registry.npmjs.org`: package metadata, typosquat checks and
+    the latest version of a package named without one
+  - `www.cisa.gov`: the CISA Known Exploited Vulnerabilities (KEV) catalog
 
-  `scan --repo` clones the public repository you name. A cloud BOM makes
-  read-only API calls to that provider with the credentials already configured
-  for its CLI; the skills never ask you to paste keys.
+  Some hosts are reached only in a particular situation:
+  - `files.pythonhosted.org`: uv downloads the pinned release and its
+    dependencies on first use
+  - `github.com`: uv downloads a managed Python when no Python 3.11 or later is
+    installed, and `scan --repo` clones the repository you name
+  - `api.first.org` and `epss.empiricalsecurity.com`: EPSS exploit-probability
+    scores, when enrichment is on or for an advisory lookup
+  - `services.nvd.nist.gov`: NVD CVSS data when enrichment is on, and lookups
+    of CVEs only NVD has published
+  - `api.securityscorecards.dev`: OpenSSF Scorecard results, when scorecard
+    enrichment is on
+  - `api.deps.dev`: license and project metadata a package registry does not
+    provide
+  - `proxy.golang.org` and `sum.golang.org`: Go module versions and checksums
+  - container registries, git hosts and cloud provider APIs that you name, such
+    as an image to scan or an account for a cloud BOM; a cloud BOM uses the
+    credentials already configured for that provider's CLI, and the skills never
+    ask you to paste keys
+
+  The CLI checks `pypi.org` for a newer release at most once a day, and never in
+  quiet or JSON runs, which every skill command uses.
 - **Writes** JSON results to a private temporary directory made with
   `mktemp -d`, and an AI-BOM file only when you ask for one. agent-bom keeps a
   local cache under `~/.agent-bom`, including its vulnerability database and

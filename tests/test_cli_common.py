@@ -5,6 +5,8 @@ from __future__ import annotations
 import threading
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # ---------------------------------------------------------------------------
 # _make_console
 # ---------------------------------------------------------------------------
@@ -287,3 +289,39 @@ def test_banner_is_string():
     assert isinstance(BANNER, str)
     assert "agent-bom" in BANNER
     assert "Open security scanner for AI infrastructure" in BANNER
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["agent-bom", "mcp", "inventory", "-q", "-f", "json"],
+        ["agent-bom", "mcp", "inventory", "--quiet"],
+        ["agent-bom", "--agent-mode", "scan", "-q"],
+        ["agent-bom", "activity", "--format", "json"],
+        ["agent-bom", "skills", "scan", ".", "--format=json"],
+        ["agent-bom", "mcp", "server", "--profile", "audit"],
+        ["agent-bom", "where", "--json"],
+    ],
+)
+def test_should_skip_update_check_when_notice_cannot_be_shown(monkeypatch, argv):
+    """Quiet, machine-readable and stdio-server runs never show the update
+    notice, so they must not call PyPI for it either."""
+    import sys
+
+    from agent_bom.cli._common import _should_skip_update_check
+
+    monkeypatch.delenv("AGENT_BOM_SKIP_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_BOM_OFFLINE", raising=False)
+    monkeypatch.setattr(sys, "argv", argv)
+    assert _should_skip_update_check() is True
+
+
+def test_should_not_skip_update_check_for_interactive_console_run(monkeypatch):
+    import sys
+
+    from agent_bom.cli._common import _should_skip_update_check
+
+    monkeypatch.delenv("AGENT_BOM_SKIP_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_BOM_OFFLINE", raising=False)
+    monkeypatch.setattr(sys, "argv", ["agent-bom", "mcp", "inventory"])
+    assert _should_skip_update_check() is False

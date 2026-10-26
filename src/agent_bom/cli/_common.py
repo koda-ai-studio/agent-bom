@@ -204,7 +204,26 @@ def _should_skip_update_check() -> bool:
     # ``agent-bom agents --demo --offline``.
     if "--offline" in sys.argv:
         return True
-    return False
+    return _update_notice_hidden(sys.argv[1:])
+
+
+_QUIET_FLAGS = frozenset({"-q", "--quiet", "--agent-mode", "--json"})
+
+
+def _update_notice_hidden(args: list[str]) -> bool:
+    """True when this run can never show the update notice.
+
+    Quiet runs, machine-readable output and the stdio MCP server print no
+    notice, so they make no PyPI request for one either.
+    """
+    if _QUIET_FLAGS.intersection(args):
+        return True
+    if any(arg.startswith("--format=") and arg != "--format=console" for arg in args):
+        return True
+    for flag, value in zip(args, args[1:]):
+        if flag in ("-f", "--format") and value != "console":
+            return True
+    return any(first == "mcp" and second == "server" for first, second in zip(args, args[1:]))
 
 
 def _check_for_update_bg() -> None:

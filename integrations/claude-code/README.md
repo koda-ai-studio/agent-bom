@@ -9,41 +9,21 @@ is proposed first and only applied after you confirm.
 /plugin install agent-bom@agent-bom
 ```
 
-## Two ways to install in Codex
-
-| | Repository marketplace | Public plugin directory |
-|---|---|---|
-| Package | this folder (`.codex-plugin/plugin.json`) | [`integrations/codex`](../codex/README.md), skills-only |
-| How skills run agent-bom | the two locked local MCP servers (`uv run --frozen`, `uv.lock`) | the pinned CLI from the shell (`uvx --from agent-bom==<release> agent-bom … --agent-mode` or `-f json`) |
-| Plugin name | `agent-bom-local` | `agent-bom` |
-| Install | `codex plugin marketplace add koda-ai-studio/agent-bom`, then install agent-bom-local from the Plugins Directory | install agent-bom from the public directory |
-| Needs | uv; Codex starts the MCP servers | uv; Codex runs shell commands, each shown to you first |
-
-Both carry the same ten skills with the same safety rules, rendered from
-`integrations/shared/skills.toml` by `scripts/render_plugin_skills.py`. The
-public directory lists local plugins as skills-only, which is why that package
-has no MCP server. What that costs: `affected` has no advisory lookup and matches
-only findings on this machine, and on releases up to 0.110.0 the CLI has no
-`activity` command and `mcp audit` reports no coding-agent permission
-findings. The two have different plugin names, so Codex keeps their skills apart
-(`agent-bom-local:scan` and `agent-bom:scan`), but each does the same jobs:
-install one. In Claude Code this plugin is still `agent-bom`, with
-`/agent-bom:` commands.
-
 ## Skills
 
 | Skill | What it does |
 |---|---|
 | `/agent-bom:checkup` | Start here: one screen with a verdict, totals, and the three fixes that matter most, from the inventory, a passive config audit and a scan. |
+| `agent-bom-guard` (companion plugin) | Checks package installs before Claude runs them and blocks known-malicious packages and typosquatted npm and PyPI names. Install it with `/plugin install agent-bom-guard@agent-bom`; see [its README](../agent-bom-guard/README.md). |
+| `/agent-bom:audit-skills [path]` | Audit skills and instruction files (SKILL.md, CLAUDE.md, AGENTS.md, rules files) for prompt injection, exfiltration, remote code execution and broad tool grants. |
+| `/agent-bom:activity [days] [dir]` | Review what Claude Code and Codex actually did: MCP servers and tools used, configured servers never used, risky actions (pipe-to-shell, force pushes, writes outside the project, secret-file reads) and packages installed. Local only. |
 | `/agent-bom:affected <advisory>` | Am I affected? Looks up a CVE, GHSA or OSV id (including NVD-only CVEs) and says which packages, servers and agents carry it with the version to patch to, which distro packages are possibly affected, and what was scanned. |
-| `/agent-bom:bom [target]` | Write an AI-BOM (CycloneDX or SPDX) for this machine, a project, an image, a repository, or an AWS, Azure or GCP account: agents, MCP servers, tools, models and packages, with how they connect. |
 | `/agent-bom:scan` | Discover the MCP clients on this machine and scan their servers and packages, or scan an image, SBOM or repository. |
 | `/agent-bom:check <package>[@version] [ecosystem]` | Vet a package or MCP server before adding it: CVEs, KEV, typosquats, fixed version. |
 | `/agent-bom:fix` | Ordered remediation plan: which upgrades clear the most risk, and what has no fix yet. |
 | `/agent-bom:inventory [dir]` | AI estate inventory: agents, MCP servers, tools, packages and how they connect. No CVE lookups. |
 | `/agent-bom:audit-mcp [dir]` | Passive audit of MCP configs: credentials in config, unpinned launchers, unauthenticated or non-TLS remote servers, risky packages. |
-| `/agent-bom:activity [days] [dir]` | Review what Claude Code and Codex actually did: MCP servers and tools used, configured servers never used, risky actions (pipe-to-shell, force pushes, writes outside the project, secret-file reads) and packages installed. Local only. |
-| `/agent-bom:audit-skills [path]` | Audit skills and instruction files (SKILL.md, CLAUDE.md, AGENTS.md, rules files) for prompt injection, exfiltration, remote code execution and broad tool grants. |
+| `/agent-bom:bom [target]` | Write an AI-BOM (CycloneDX or SPDX) for this machine, a project, an image, a repository, or an AWS, Azure or GCP account: agents, MCP servers, tools, models and packages, with how they connect. |
 
 ## Examples
 
@@ -83,6 +63,27 @@ profile in the release after 0.109.0; on 0.109.0 those two skills fall back to
 `scan` and `prompt_scan` and say so. `agent_activity` joins the audit profile in
 the release after 0.110.0; on earlier releases the `activity` skill says it is
 not available.
+
+## Two ways to install in Codex
+
+| | Repository marketplace | Public plugin directory |
+|---|---|---|
+| Package | this folder (`.codex-plugin/plugin.json`) | [`integrations/codex`](../codex/README.md), skills-only |
+| How skills run agent-bom | the two locked local MCP servers (`uv run --frozen`, `uv.lock`) | the pinned CLI from the shell (`uvx --from agent-bom==<release> agent-bom … --agent-mode` or `-f json`) |
+| Plugin name | `agent-bom-local` | `agent-bom` |
+| Install | `codex plugin marketplace add koda-ai-studio/agent-bom`, then install agent-bom-local from the Plugins Directory | install agent-bom from the public directory |
+| Needs | uv; Codex starts the MCP servers | uv; Codex runs shell commands, each shown to you first |
+
+Both carry the same ten skills with the same safety rules, rendered from
+`integrations/shared/skills.toml` by `scripts/render_plugin_skills.py`. The
+public directory lists local plugins as skills-only, which is why that package
+has no MCP server. What that costs: `affected` has no advisory lookup and matches
+only findings on this machine, and on releases up to 0.110.0 the CLI has no
+`activity` command and `mcp audit` reports no coding-agent permission
+findings. The two have different plugin names, so Codex keeps their skills apart
+(`agent-bom-local:scan` and `agent-bom:scan`), but each does the same jobs:
+install one. In Claude Code this plugin is still `agent-bom`, with
+`/agent-bom:` commands.
 
 ## Projects outside your home directory
 
@@ -157,11 +158,34 @@ Prompts, responses, file contents and credential values are never sent.
   values found in configs are redacted in results; only their names and locations
   are reported.
 - **Sends** package names and versions, never file contents or credentials, to
-  public vulnerability and package sources. `inventory`, `activity` and `audit-skills`
-  make no network calls and send nothing; `audit-mcp`, `checkup`, `affected`, `scan`, `check` and `fix` use:
-  - `api.osv.dev`: vulnerability lookups
+  public vulnerability and package sources. `inventory`, `activity` and
+  `audit-skills` make no network calls and send nothing. `audit-mcp`, `checkup`,
+  `affected`, `scan`, `check`, `fix` and `bom` use:
+  - `api.osv.dev`: vulnerability and malicious-package lookups
   - `api.github.com`: GitHub security advisories
-  - `pypi.org` and `registry.npmjs.org`: package metadata and typosquat checks
+  - `pypi.org` and `registry.npmjs.org`: package metadata, typosquat checks and
+    the latest version of a package named without one
+  - `www.cisa.gov`: the CISA Known Exploited Vulnerabilities (KEV) catalog
+
+  Some hosts are reached only in a particular situation:
+  - `files.pythonhosted.org`: uv downloads the pinned release and the
+    dependencies locked in `uv.lock` on first use
+  - `github.com`: uv downloads a managed Python when no Python 3.11 or later is
+    installed, and a repository scan clones the repository you name
+  - `api.first.org` and `epss.empiricalsecurity.com`: EPSS exploit-probability
+    scores, when enrichment is on or for an advisory lookup
+  - `services.nvd.nist.gov`: NVD CVSS data when enrichment is on, and lookups
+    of CVEs only NVD has published
+  - `api.securityscorecards.dev`: OpenSSF Scorecard results, when scorecard
+    enrichment is on
+  - `api.deps.dev`: license and project metadata a package registry does not
+    provide
+  - `proxy.golang.org` and `sum.golang.org`: Go module versions and checksums
+  - container registries, git hosts and cloud provider APIs that you name, such
+    as an image to scan or an account for a cloud AI-BOM
+
+  The MCP servers make no update check; the CLI checks `pypi.org` for a newer
+  release at most once a day, and never in quiet or JSON runs.
 - **Writes** only when you ask for an AI-BOM: `bom` runs the same pinned release
   from your shell to write the file you name. For a cloud BOM it uses the
   credentials already configured for that provider's CLI, makes read-only API
