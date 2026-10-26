@@ -205,3 +205,14 @@ def test_skills_grant_least_privilege_tools(skill):
         assert shell and all(tool.startswith("Bash(uvx --from agent-bom==") and tool.endswith(":*)") for tool in shell), shell
     else:
         assert not shell, f"{skill} must not run shell commands"
+
+
+def test_audit_mcp_skill_states_bypass_severity_as_the_product_reports_it():
+    from agent_bom.discovery.agent_permissions import _claude_mode_findings
+
+    text = (PLUGIN / "skills" / "audit-mcp" / "SKILL.md").read_text()
+    user = _claude_mode_findings({"defaultMode": "bypassPermissions"}, "user", False)[0]["severity"]
+    project = _claude_mode_findings({"defaultMode": "bypassPermissions"}, "project", False)[0]["severity"]
+    assert (user, project) == ("HIGH", "MEDIUM")
+    assert "`bypassPermissions` as the default mode in user or managed settings" in text
+    assert "`bypassPermissions` in project or local settings is medium" in text
