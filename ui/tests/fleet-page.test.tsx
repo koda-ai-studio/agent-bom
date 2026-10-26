@@ -85,4 +85,16 @@ describe("FleetPage protected actions", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Pending Review" })).toBeDisabled());
     expect(screen.getByTestId("fleet-quarantine-deny")).toBeDisabled();
   });
+
+  it("explains why the list total is below the fleet total when quarantined agents are hidden", async () => {
+    apiMock.listFleet.mockResolvedValue({ agents: [AGENT], total: 43 });
+    apiMock.getFleetStats.mockResolvedValue({
+      total: 48,
+      by_state: { approved: 43, quarantined: 5 },
+      low_trust_count: 1,
+      avg_trust_score: 42,
+    });
+    render(<FleetPage />);
+    expect(await screen.findByText(/5 quarantined hidden/)).toBeInTheDocument();
+  });
 });

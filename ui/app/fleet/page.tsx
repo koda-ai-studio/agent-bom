@@ -354,6 +354,7 @@ export default function FleetPage() {
             <span>
               Showing <span className="font-mono text-[var(--text-secondary)]">{pageStart}-{pageEnd}</span> of{" "}
               <span className="font-mono text-[var(--text-secondary)]">{fleetTotal}</span> agents
+              {stateFilter === "all" && (stats?.by_state.quarantined ?? 0) > 0 ? ` · ${stats?.by_state.quarantined} quarantined hidden` : null}
             </span>
           ) : (
             <span>No matching agents</span>
