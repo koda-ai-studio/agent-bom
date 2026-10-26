@@ -21,6 +21,10 @@ Current evidence pages:
 - [`image-layer-streaming.md`](image-layer-streaming.md) — native image
   parser peak memory and wall time on synthetic 256 MiB / 1 GiB images.
 
+- [`report-volume.md`](report-volume.md) — JSON report, gzip output and
+  stored scan-job row sizes on the demo estate, before and after compression
+  and blast-radius deduplication.
+
 - [`gateway-relay-latency.md`](gateway-relay-latency.md) — HTTP gateway JSON-RPC
   relay p50/p95/p99 + RSS under concurrency (Go-gate evidence for ADR-009).
 

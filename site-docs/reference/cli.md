@@ -271,7 +271,7 @@ list, is encoded separately, so encoding holds one finding at a time rather than
 a second copy of the whole document (the report object itself is still built in
 memory). The file is published by atomic same-directory replacement. A `.gz`
 suffix writes a deterministic gzip stream (no name or timestamp in the header);
-the demo report shrinks about 15x. `report diff`, `--sbom` and the other report
+the demo report shrinks about 15x (see `docs/perf/report-volume.md`). `report diff`, `--sbom` and the other report
 readers detect gzip from the content. SBOM imports inflate at most 10 MiB.
 
 ## Common flags
