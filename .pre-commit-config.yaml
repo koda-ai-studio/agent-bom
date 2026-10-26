@@ -1,3 +1,5 @@
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -120,3 +122,15 @@ repos:
         language: system
         pass_filenames: false
         files: ^(docs/release/release-evidence-matrix\.json|docs/RELEASE_VERIFICATION\.md|\.github/workflows/(ci|release|demo-deploy-cloudrun)\.yml|action\.yml|Dockerfile|ui/Dockerfile|deploy/helm/agent-bom/|deploy/docker/Dockerfile\.collector|integrations/(mcp-registry|glama|smithery)|scripts/(check_release_evidence_matrix|check_surface_freshness|verify_release_wheel)\.py)
+
+  # Blocks a push that would fail CI's lint, version-check or smoke jobs.
+  # Run `make ci-local` (all gating jobs, full test shards) before requesting review.
+  - repo: local
+    hooks:
+      - id: ci-smoke
+        name: CI smoke (make ci-smoke)
+        entry: make ci-smoke
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

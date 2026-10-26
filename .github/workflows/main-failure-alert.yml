@@ -32,7 +32,7 @@ jobs:
   resolve:
     # A cancelled run is not evidence either way, but it can be the newest run
     # on main; reconciling on it keeps a green predecessor from being stranded.
-    if: ${{ contains(fromJSON('["success","cancelled"]'), github.event.workflow_run.conclusion) && github.event.workflow_run.head_branch == 'main' }}
+    if: ${{ contains(fromJSON('["success","cancelled"]'), github.event.workflow_run.conclusion) && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -56,7 +56,7 @@ jobs:
             // Completion events can arrive after a newer run has started or finished.
             const run = context.payload.workflow_run;
             const {data} = await github.rest.actions.listWorkflowRuns({
-              owner, repo, workflow_id: run.workflow_id, branch: "main", per_page: 20,
+              owner, repo, workflow_id: run.workflow_id, branch: "main", event: "push", per_page: 20,
             });
             const latest = data.workflow_runs[0];
             if (!latest || latest.id !== run.id || latest.run_attempt !== run.run_attempt) return;
@@ -113,7 +113,7 @@ jobs:
             });
 
   alert:
-    if: ${{ contains(fromJSON('["failure","timed_out","startup_failure"]'), github.event.workflow_run.conclusion) && github.event.workflow_run.head_branch == 'main' }}
+    if: ${{ contains(fromJSON('["failure","timed_out","startup_failure"]'), github.event.workflow_run.conclusion) && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -149,7 +149,7 @@ jobs:
             // Completion events can arrive after a newer run has started or finished.
             const run = context.payload.workflow_run;
             const {data} = await github.rest.actions.listWorkflowRuns({
-              owner, repo, workflow_id: run.workflow_id, branch: "main", per_page: 20,
+              owner, repo, workflow_id: run.workflow_id, branch: "main", event: "push", per_page: 20,
             });
             const latest = data.workflow_runs[0];
             if (!latest || latest.id !== run.id || latest.run_attempt !== run.run_attempt) return;

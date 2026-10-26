@@ -52,9 +52,15 @@ scan tools. Use `--profile full` for the complete 90-tool catalog.
 ### scan
 Scoped discovery + vulnerability scan pipeline. Auto-discovers MCP clients,
 extracts servers and packages, scans for CVEs, computes blast radius, or scans
-a direct MCP launch package when no local config is available.
+a direct MCP launch package when no local config is available. To scan the
+project an agent is working in, pass `project_path`: it must resolve (symlinks
+followed) to an existing directory inside HOME or `AGENT_BOM_MCP_WORKSPACE_ROOTS`,
+and anything else returns `AGENTBOM_MCP_VALIDATION_INVALID_PATH`. Page the
+result with `result_id` + `section`.
 ```
 scan(package="npx @modelcontextprotocol/server-filesystem@2025.1.14")
+scan(project_path="/workspaces/my-repo", no_discover=True)
+scan(result_id="<from the summary>", section="findings", offset=0, limit=25)
 ```
 
 ### check

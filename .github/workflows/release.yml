@@ -375,6 +375,7 @@ jobs:
   docker-publish:
     name: Publish to Docker Hub
     needs: [build, self-scan-gate, container-gate]
+    environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -505,6 +506,7 @@ jobs:
   docker-publish-collector:
     name: Publish cloud-SDK collector image
     needs: [build, self-scan-gate, container-gate]
+    environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -579,6 +581,7 @@ jobs:
   docker-publish-ui:
     name: Publish UI image
     needs: [build, self-scan-gate, container-gate]
+    environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import logging
 import re
@@ -77,6 +78,7 @@ def normalize_check_package_spec(package: str, version: str | None = None) -> tu
 
 async def scan_impl(
     *,
+    project_path: str | None = None,
     config_path: str | None = None,
     no_discover: bool = False,
     repo_url: str | None = None,
@@ -140,13 +142,12 @@ async def scan_impl(
             max_chars=max_chars,
             _truncate_response=_truncate_response,
         )
-    if section is not None and str(section).strip():
-        raise ToolError("section requires result_id from a previous scan response")
+    _run_scan_pipeline = _target_pipeline(
+        _run_scan_pipeline, section=section, project_path=project_path, config_path=config_path, repo_url=repo_url
+    )
 
     async with AsyncExitStack() as _repo_cleanup:
         if repo_url is not None and str(repo_url).strip():
-            if config_path is not None and str(config_path).strip():
-                raise ToolError("Provide either repo_url or config_path, not both")
             from agent_bom.repo_scan import RepoScanError, clone_repository_async
 
             try:
@@ -187,6 +188,20 @@ async def scan_impl(
             _result_store=store,
         )
     raise ToolError("scan failed before producing a result")
+
+
+def _target_pipeline(pipeline, *, section, project_path, config_path, repo_url):
+    """Validate the scan target arguments and bind ``project_path`` into the pipeline call."""
+    if section is not None and str(section).strip():
+        raise ToolError("section requires result_id from a previous scan response")
+    targets = [value for value in (project_path, config_path, repo_url) if value is not None and str(value).strip()]
+    if len(targets) > 1:
+        raise ToolError("Provide only one of project_path, config_path, or repo_url")
+    if project_path is None:
+        return pipeline
+    if not str(project_path).strip():
+        raise ToolError("project_path must not be empty")
+    return functools.partial(pipeline, project_path=str(project_path).strip())
 
 
 def _stored_result_view(

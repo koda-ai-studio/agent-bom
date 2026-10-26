@@ -181,7 +181,7 @@ output = "{profile_output}"
     )
     monkeypatch.setenv("AGENT_BOM_CONFIG", str(profile_config))
 
-    result = CliRunner().invoke(main, ["iac", str(tmp_path), "-f", "sarif", "-o", str(output), "--quiet"])
+    result = CliRunner().invoke(main, ["iac", str(tmp_path), "-f", "sarif", "-o", str(output), "--quiet", "--fail-on-severity", "critical"])
 
     assert result.exit_code == 0, result.output
     assert not profile_output.exists()

@@ -22,6 +22,7 @@ from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.cli._runtime_status import emit_runtime_status_strip
 from agent_bom.cli._server import _is_loopback_host
 from agent_bom.cli._tenant import resolve_cli_tenant_id_strict
+from agent_bom.runtime.injection_protection import INJECTION_MODE_HELP, INJECTION_MODES
 
 logger = logging.getLogger(__name__)
 
@@ -99,12 +100,7 @@ def gateway_group() -> None:
     show_default=True,
     help="Render for local `gateway serve --policy` or for control-plane policy import.",
 )
-@click.option(
-    "--tenant-id",
-    default="default",
-    show_default=True,
-    help="Tenant id embedded in control-plane policy output.",
-)
+@click.option("--tenant-id", default="default", show_default=True, help="Tenant id embedded in control-plane policy output.")
 def init_policy_cmd(template_name: str, output_path: Path, mode: str, output_format: str, tenant_id: str) -> None:
     """Render the bundled secure-by-default gateway baseline policy."""
     from agent_bom.gateway_policy_templates import (
@@ -434,6 +430,7 @@ def init_policy_cmd(template_name: str, output_path: Path, mode: str, output_for
     show_default=True,
     help="How DLP handles PII matches in enforce mode.",
 )
+@click.option("--injection-mode", type=click.Choice(INJECTION_MODES), envvar="AGENT_BOM_GATEWAY_INJECTION_MODE", help=INJECTION_MODE_HELP)
 @click.option(
     "--allow-visual-leak-best-effort",
     is_flag=True,
@@ -441,10 +438,7 @@ def init_policy_cmd(template_name: str, output_path: Path, mode: str, output_for
     help="Continue startup if visual leak detection is enabled but OCR runtime support is unavailable.",
 )
 @click.option(
-    "--log-level",
-    type=click.Choice(["debug", "info", "warning", "error"], case_sensitive=False),
-    default="info",
-    show_default=True,
+    "--log-level", type=click.Choice(["debug", "info", "warning", "error"], case_sensitive=False), default="info", show_default=True
 )
 def serve_cmd(
     upstreams_path: Path | None,
@@ -484,6 +478,7 @@ def serve_cmd(
     enable_dlp: bool,
     dlp_mode: str,
     dlp_pii_action: str,
+    injection_mode: str | None,
     allow_visual_leak_best_effort: bool,
     log_level: str,
 ) -> None:
@@ -503,10 +498,7 @@ def serve_cmd(
         )
 
     if upstreams_path is None and control_plane_url is None:
-        click.echo(
-            "error: pass --upstreams or --from-control-plane (or both). See `agent-bom gateway serve --help`.",
-            err=True,
-        )
+        click.echo("error: pass --upstreams or --from-control-plane (or both). See `agent-bom gateway serve --help`.", err=True)
         sys.exit(2)
 
     try:
@@ -704,6 +696,7 @@ def serve_cmd(
         dlp_enabled=enable_dlp,
         dlp_mode=dlp_mode,
         dlp_pii_action=dlp_pii_action,
+        injection_mode=injection_mode or "alert",
     )
     app = create_gateway_app(settings)
     policy_summary = summarize_policy_bundle(policy)

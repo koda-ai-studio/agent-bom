@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Awaitable, Callable
 
+from agent_bom.runtime import injection_protection
 from agent_bom.runtime.mcp_protocol import MAX_TOOL_CATALOG_PAGES
 
 if TYPE_CHECKING:
@@ -53,6 +54,7 @@ class ServerMessage:
     msg: dict
     line: bytes
     trace_meta: dict[str, str] | None = field(default=None)
+    injection: injection_protection.InjectionOutcome | None = field(default=None)
 
 
 ClientCallStage = Callable[["ProxySession", ToolCall], Awaitable[bool]]
@@ -99,6 +101,15 @@ async def check_declared_tool(session: ProxySession, call: ToolCall) -> bool:
         return False
     session.metrics.record_blocked("undeclared")
     return _reject(session, call, reason)
+
+
+async def check_withheld_tool(session: ProxySession, call: ToolCall) -> bool:
+    """Enforce mode: a tool stripped for a poisoned description stays uncallable."""
+    if call.tool_name not in session.withheld_tools:
+        return False
+    await session.handle_alerts([injection_protection.withheld_tool_call_alert(call.tool_name)], session.log_file)
+    session.metrics.record_blocked(injection_protection.POLICY_SOURCE)
+    return _reject(session, call, injection_protection.WITHHELD_TOOL_REASON)
 
 
 async def check_local_policy(session: ProxySession, call: ToolCall) -> bool:
@@ -227,6 +238,7 @@ CLIENT_CALL_STAGES: tuple[ClientCallStage, ...] = (
     check_agent_identity,
     check_replay,
     check_declared_tool,
+    check_withheld_tool,
     check_local_policy,
     check_gateway_policy,
     check_firewall,
@@ -372,16 +384,19 @@ async def redact_leaked_credentials(session: ProxySession, resp: ServerMessage) 
 
 
 async def inspect_response_content(session: ProxySession, resp: ServerMessage) -> None:
-    """Cloaking/SVG/invisible-char/injection checks; vector and RAG tools add cache-poison detection."""
-    msg = resp.msg
-    if "result" not in msg:
-        return
-    ri_text = json.dumps(msg.get("result", ""))
-    ri_tool = session.pending_tool(msg)
-    await session.handle_alerts(session.detectors.response.check(ri_tool or "unknown", ri_text), session.log_file)
-    vector_detector = session.detectors.vector
-    if vector_detector.is_vector_tool(ri_tool or ""):
-        await session.handle_alerts(vector_detector.check(ri_tool or "unknown", ri_text), session.log_file)
+    """Cloaking/SVG/invisible-char/injection checks; vector and RAG tools add cache-poison detection.
+
+    The outcome is applied after signing so the HMAC pins what the server sent.
+    """
+    resp.injection = injection_protection.inspect_server_result(
+        resp.msg,
+        tool_name=session.pending_tool(resp.msg) or "unknown",
+        tools_list=session.host.is_tools_list_response(resp.msg),
+        mode=session.options.injection_mode,
+        inspector=session.detectors.response,
+        vector=session.detectors.vector,
+    )
+    await session.handle_alerts(resp.injection.alerts, session.log_file)
 
 
 async def sign_response(session: ProxySession, resp: ServerMessage) -> None:
@@ -403,6 +418,22 @@ async def sign_response(session: ProxySession, resp: ServerMessage) -> None:
         "hmac_sha256": sig,
     }
     session.host.write_audit_record(session.log_file, sig_entry)
+
+
+async def apply_injection_protection(session: ProxySession, resp: ServerMessage) -> None:
+    """Enforce mode: forward the stripped catalog or the blocked-result error instead."""
+    outcome = resp.injection
+    if outcome is None:
+        return
+    session.withheld_tools.difference_update(outcome.clean_tools)
+    session.withheld_tools.update(outcome.withheld_tools)
+    session.declared_tools.difference_update(outcome.withheld_tools)
+    if outcome.message is resp.msg:
+        return
+    if outcome.blocked:
+        session.metrics.record_blocked(injection_protection.POLICY_SOURCE)
+    resp.msg = outcome.message
+    resp.line = (json.dumps(resp.msg) + "\n").encode()
 
 
 async def redact_visual_leaks(session: ProxySession, resp: ServerMessage) -> None:
@@ -466,6 +497,7 @@ SERVER_MESSAGE_STAGES: tuple[ServerMessageStage, ...] = (
     redact_leaked_credentials,
     inspect_response_content,
     sign_response,
+    apply_injection_protection,
     redact_visual_leaks,
     scan_response_content,
     complete_pending_call,

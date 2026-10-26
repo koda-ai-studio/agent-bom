@@ -105,6 +105,7 @@ class TestFormatDedup:
             [
                 "scan",
                 "--demo",
+                "--exit-zero",
                 "--no-scan",
                 "--offline",
                 "--no-auto-update-db",
@@ -148,7 +149,7 @@ class TestInventoryFlagAlias:
         assert "--no-discover" in _run(["scan", "--help"]).output
 
     def test_inventory_only_alias_still_accepted(self):
-        result = _run(["scan", "--inventory-only", "--demo", "--no-scan", "--offline", "--no-auto-update-db"])
+        result = _run(["scan", "--inventory-only", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"])
         assert result.exit_code == 0, result.output
 
     def test_no_scan_still_distinct(self):

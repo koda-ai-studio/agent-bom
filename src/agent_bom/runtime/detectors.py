@@ -57,9 +57,11 @@ class Alert:
     message: str
     details: dict = field(default_factory=dict)
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # Set only when enforcement acted on this detection: "blocked" or "stripped".
+    action: str | None = None
 
     def to_dict(self) -> dict:
-        return {
+        record = {
             "type": "runtime_alert",
             "ts": self.timestamp,
             "detector": sanitize_text(self.detector, max_len=100),
@@ -67,6 +69,9 @@ class Alert:
             "message": sanitize_text(self.message, max_len=500),
             "details": sanitize_sensitive_payload(self.details),
         }
+        if self.action:
+            record["action"] = self.action
+        return record
 
 
 # ─── Detector Telemetry ───────────────────────────────────────────────────

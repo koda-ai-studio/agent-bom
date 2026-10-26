@@ -24,7 +24,7 @@ def test_main_docker_pulls_authenticate_before_setup_and_build() -> None:
     assert login["with"] == {
         "registry": "docker.io",
         "username": "${{ secrets.DOCKERHUB_USERNAME }}",
-        "password": "${{ secrets.DOCKERHUB_TOKEN }}",
+        "password": "${{ secrets.DOCKERHUB_READ_TOKEN || secrets.DOCKERHUB_TOKEN }}",
     }
     assert "if" not in login
     assert not login.get("continue-on-error", False)
@@ -61,9 +61,9 @@ def test_postgres_registry_credentials_exclude_forks_and_dependabot() -> None:
     expression = " ".join(credentials.split())
     assert expression.startswith("${{ fromJSON(")
     assert trusted in expression
-    assert "&& secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_TOKEN &&" in expression
+    assert "&& secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_READ_TOKEN &&" in expression
     assert "toJSON(secrets.DOCKERHUB_USERNAME)" in expression
-    assert "toJSON(secrets.DOCKERHUB_TOKEN)" in expression
+    assert "toJSON(secrets.DOCKERHUB_READ_TOKEN)" in expression
     assert 'format(\'{{"username":{0},"password":{1}}}\',' in expression
     assert expression.endswith("|| '{}') }}")
 
@@ -72,11 +72,12 @@ def test_native_image_registry_login_excludes_forks_and_dependabot() -> None:
     steps = _ci()["jobs"]["native-image"]["steps"]
     login = next(step for step in steps if step.get("uses", "").startswith("docker/login-action@"))
     assert " ".join(login["if"].split()) == (
+        "env.DOCKERHUB_PULL_AUTH == 'true' && "
         "github.actor != 'dependabot[bot]' && "
         "(github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)"
     )
     assert login["with"]["username"] == "${{ secrets.DOCKERHUB_USERNAME }}"
-    assert login["with"]["password"] == "${{ secrets.DOCKERHUB_TOKEN }}"
+    assert login["with"]["password"] == "${{ secrets.DOCKERHUB_READ_TOKEN }}"
     assert not login.get("continue-on-error", False)
     for step in steps:
         if step.get("uses", "").startswith("docker/setup-buildx-action@") or "docker buildx build" in step.get("run", ""):
