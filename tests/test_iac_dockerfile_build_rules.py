@@ -123,6 +123,7 @@ def test_package_install_pattern_keeps_apt_option_tokens_and_rejects_colon_runs(
     assert _PKG_INSTALL_RE.search("apt-get -y -o Dpkg::Options::=--force-confold install curl")
     assert _PKG_INSTALL_RE.search("apk --no-cache add bash")
     assert not _PKG_INSTALL_RE.search("apt-get ::: install")
+    assert _PKG_INSTALL_RE.search("apt-get -::x install curl")
 
 
 def test_package_install_pattern_scales_linearly_on_hostile_colon_runs() -> None:
@@ -130,8 +131,8 @@ def test_package_install_pattern_scales_linearly_on_hostile_colon_runs() -> None
 
     from agent_bom.iac.dockerfile_rules import _PKG_INSTALL_RE
 
-    def seconds(repeats: int) -> float:
-        text = "apt-get " + ":::\t" * repeats + "x"
+    def seconds(repeats: int, token: str) -> float:
+        text = "apt-get " + token * repeats + "x"
         best = float("inf")
         for _ in range(3):
             started = time.perf_counter()
@@ -139,6 +140,7 @@ def test_package_install_pattern_scales_linearly_on_hostile_colon_runs() -> None
             best = min(best, time.perf_counter() - started)
         return best
 
-    small, large = seconds(2_000), seconds(20_000)
-    # Ten times the input costs about ten times as long; exponential backtracking never finishes.
-    assert large < max(small, 0.001) * 30
+    for token in (":::\t", "-::\t", "-:::\t"):
+        small, large = seconds(2_000, token), seconds(20_000, token)
+        # Ten times the input costs about ten times as long; exponential backtracking never finishes.
+        assert large < max(small, 0.001) * 30, token
