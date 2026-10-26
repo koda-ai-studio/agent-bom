@@ -613,10 +613,8 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
     comp_id = 0
     bom_ref_map = {}
     ml_component_refs: list[str] = []  # Track ML components for top-level deps
-    # Bom-refs must be unique across the document. A package reachable via
-    # multiple servers is otherwise emitted as duplicate components sharing one
-    # bom-ref (invalid CycloneDX), so emit each component once and keep only the
-    # dependency edges from every referencing server.
+    # Bom-refs are unique: a package reachable via several servers is emitted
+    # once; every referencing server keeps its dependency edge.
     seen_component_refs: set[str] = set()
 
     for agent in report.agents:
@@ -625,6 +623,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
         agent_provenance = agent_discovery_provenance(agent)
         agent_properties = [
             {"name": "agent-bom:type", "value": "ai-agent"},
+            {"name": "agent-bom:canonical-id", "value": agent.canonical_id},
             {"name": "agent-bom:canonical-id-schema-version", "value": CANONICAL_ID_SCHEMA_VERSION},
             {"name": "agent-bom:config-path", "value": sanitize_path_label(agent.config_path) if agent.config_path else ""},
             {"name": "agent-bom:status", "value": agent.status.value},
@@ -660,6 +659,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
                     "value": json.dumps(sorted(_sanitize_bom_ref(f"pkg-{p.stable_id}") for p in server.packages)),
                 },
                 {"name": "agent-bom:type", "value": "mcp-server" if server.counts_as_mcp_server else "dependency-surface"},
+                {"name": "agent-bom:canonical-id", "value": server.canonical_id},
                 {"name": "agent-bom:surface", "value": server.surface.value},
                 {"name": "agent-bom:command", "value": sanitize_launch_command(server.command, server.args)},
                 {"name": "agent-bom:transport", "value": server.transport.value},
@@ -684,9 +684,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
                 "properties": server_props,
             }
             components.append(server_component)
-            # MCP tool capabilities belong in the top-level CycloneDX 1.7
-            # ``services`` array — ``services`` is not a valid property of a
-            # component, so nesting it here fails strict 1.7 validation.
+            # MCP tools go in top-level ``services``: nesting them in a component fails strict 1.7 validation.
             for tool in server.tools:
                 service_entry: dict = {
                     "bom-ref": _sanitize_bom_ref(f"service-{server_ref}-{tool.name}"),
@@ -727,6 +725,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
 
                 pkg_properties = [
                     {"name": "agent-bom:ecosystem", "value": pkg.ecosystem},
+                    {"name": "agent-bom:canonical-id", "value": pkg.canonical_id},
                     {"name": "agent-bom:is-direct", "value": "unknown" if pkg.is_direct is None else str(pkg.is_direct).lower()},
                     {"name": "agent-bom:dependency-depth", "value": str(pkg.dependency_depth)},
                     {"name": "agent-bom:dependency-scope", "value": pkg.dependency_scope},
