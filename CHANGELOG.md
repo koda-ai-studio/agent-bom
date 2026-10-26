@@ -11,6 +11,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Upgrade notes
 - Completed scan-job results are now stored zstd-compressed in SQLite and PostgreSQL (see `docs/STORAGE_BACKENDS.md`). Existing rows are read unchanged and nothing is rewritten, but earlier releases cannot read the new rows: during a rolling upgrade, or before a downgrade, set `AGENT_BOM_JOB_RESULT_CODEC=none` on every writer.
+- JSON report `blast_radius` rows move to `schema_version: "2"`: the embedded `exposure_path` object, an exact copy of the matching `exposure_paths.paths` entry, is replaced by `exposure_path_rank` (1-based index into `exposure_paths.paths`) and `exposure_path_id`. Read the path with `.exposure_paths.paths[.exposure_path_rank - 1]` or `agent_bom.output.exposure_path.blast_radius_exposure_path(report, row)`, which also reads schema `"1"` rows. SARIF results still embed their path.
 
 ### Changed
 - Scan-job `result` and `result_document` values of 4 KiB or more are stored zstd-compressed behind a versioned, SQL-visible header instead of as uncompressed JSON rewritten on every job update; top-level job keys and the demo-estate SQL projection keep working, and a guard test rejects any new SQL that reads deeper into a stored result. Measured on the demo estate in `docs/perf/report-volume.md`.

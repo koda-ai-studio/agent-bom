@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.canonical_ids import agent_graph_id, mcp_server_graph_id
@@ -325,6 +326,26 @@ def _ordered_unique(values: list[str]) -> list[str]:
         seen.add(value)
         ordered.append(value)
     return ordered
+
+
+def blast_radius_exposure_path(report: Mapping[str, Any], row: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Return a JSON-report ``blast_radius`` row's exposure path.
+
+    Schema ``1`` rows inline the path; schema ``2`` rows reference
+    ``exposure_paths.paths`` by 1-based ``exposure_path_rank``, checked against
+    ``exposure_path_id`` (ids can repeat when one package version appears
+    under several package keys, the rank cannot).
+    """
+    inline = row.get("exposure_path")
+    if isinstance(inline, dict):
+        return inline
+    section = report.get("exposure_paths")
+    paths = section.get("paths") if isinstance(section, Mapping) else None
+    rank = row.get("exposure_path_rank")
+    if not isinstance(paths, list) or not isinstance(rank, int) or not 1 <= rank <= len(paths):
+        return None
+    path = paths[rank - 1]
+    return path if isinstance(path, dict) and path.get("id") == row.get("exposure_path_id") else None
 
 
 def _slug(value: str) -> str:

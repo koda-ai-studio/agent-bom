@@ -25,7 +25,7 @@ from agent_bom.models import (
     Vulnerability,
 )
 from agent_bom.output import to_badge, to_csv, to_json, to_junit, to_markdown, to_spdx
-from agent_bom.output.exposure_path import exposure_path_for_blast_radius
+from agent_bom.output.exposure_path import blast_radius_exposure_path, exposure_path_for_blast_radius
 from agent_bom.output.html import to_html
 from agent_bom.output.prometheus import to_prometheus
 from agent_bom.output.sarif import to_sarif
@@ -809,7 +809,10 @@ def test_exposure_path_is_embedded_in_json_report():
 
     assert payload["exposure_paths"]["schema_version"] == "1"
     assert payload["exposure_paths"]["path_count"] == 1
-    assert payload["blast_radius"][0]["exposure_path"] == exposure_path
+    row = payload["blast_radius"][0]
+    assert "exposure_path" not in row
+    assert (row["exposure_path_id"], row["exposure_path_rank"]) == (exposure_path["id"], 1)
+    assert blast_radius_exposure_path(payload, row) == exposure_path
     assert exposure_path["label"] == "lodash@4.17.20 -> CVE-2024-0001"
     assert exposure_path["affectedAgents"] == ["prod-agent"]
     assert exposure_path["affectedServers"] == ["prod-mcp"]

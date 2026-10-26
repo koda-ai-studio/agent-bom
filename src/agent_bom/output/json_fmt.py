@@ -89,7 +89,7 @@ from agent_bom.vex import is_vex_suppressed
 
 SCAN_REPORT_SCHEMA_VERSION = "1.0"
 SCAN_RUN_SCHEMA_VERSION = "1"
-BLAST_RADIUS_SCHEMA_VERSION = "1"
+BLAST_RADIUS_SCHEMA_VERSION = "2"
 _FINDING_SEVERITIES = ("critical", "high", "medium", "low", "unknown")
 
 
@@ -537,7 +537,8 @@ def _blast_radius_json_entry(
             "region": asset.region,
             "environment": asset.environment,
         },
-        "exposure_path": exposure_path,
+        "exposure_path_id": exposure_path["id"],
+        "exposure_path_rank": rank,
         **({"package_name": br.package.name, "package_version": br.package.version, "package_stable_id": br.package.stable_id}),
         "package_canonical_id": br.package.canonical_id,
         **blast_radius_output_tags(br, finding),

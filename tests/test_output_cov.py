@@ -42,6 +42,7 @@ from agent_bom.output import (
     to_sarif,
     to_spdx,
 )
+from agent_bom.output.exposure_path import blast_radius_exposure_path
 from agent_bom.output.ocsf import alert_to_ocsf
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -973,7 +974,7 @@ def test_to_json_blast_radius_uses_finding_stream():
     finding = blast_radius_to_finding(br)
 
     assert row["vulnerability_id"] == finding.cve_id
-    assert row["exposure_path"]["label"] == result["exposure_paths"]["paths"][0]["label"]
+    assert blast_radius_exposure_path(result, row)["label"] == result["exposure_paths"]["paths"][0]["label"]
     assert row["graph_reachable"] is True
     assert row["symbol_reachability"] == "confirmed"
     assert row["risk_score"] == 8.2
