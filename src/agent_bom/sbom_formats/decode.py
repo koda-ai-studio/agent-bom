@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import gzip
+import io
 import json
 from collections.abc import Callable
 from typing import Any
@@ -10,6 +12,7 @@ from agent_bom.sbom_formats.cyclonedx_xml import cyclonedx_xml_to_document
 from agent_bom.sbom_formats.spdx_tagvalue import is_spdx_tagvalue, spdx_tagvalue_to_document
 
 MAX_SBOM_BYTES = 10 * 1024 * 1024
+GZIP_MAGIC = b"\x1f\x8b"
 
 
 def _text(raw: bytes | str) -> str:
@@ -37,12 +40,27 @@ def sbom_serialization(raw: bytes | str) -> str:
     return "json"
 
 
+def gunzip_bounded(raw: bytes, limit: int = MAX_SBOM_BYTES) -> bytes:
+    """Inflate a gzip member, refusing output above ``limit`` bytes."""
+    try:
+        with gzip.GzipFile(fileobj=io.BytesIO(raw)) as stream:
+            inflated = stream.read(limit + 1)
+    except (OSError, EOFError) as exc:
+        raise ValueError("SBOM is not a valid gzip stream") from exc
+    if len(inflated) > limit:
+        raise ValueError("SBOM exceeds the 10 MiB import limit once decompressed")
+    return inflated
+
+
 def decode_sbom_document(raw: bytes | str, json_loader: Callable[[str], Any] = json.loads) -> Any:
     """Decode CycloneDX JSON/XML or SPDX JSON/tag-value into one JSON shape.
 
-    Inputs above ``MAX_SBOM_BYTES`` are refused before parsing. JSON goes
-    through ``json_loader`` so callers keep their strictness rules.
+    Inputs above ``MAX_SBOM_BYTES`` are refused before parsing, and gzip input
+    is inflated only up to that limit. JSON goes through ``json_loader`` so
+    callers keep their strictness rules.
     """
+    if isinstance(raw, bytes) and raw[:2] == GZIP_MAGIC:
+        raw = gunzip_bounded(raw)
     size = len(raw.encode("utf-8") if isinstance(raw, str) else raw)
     if size > MAX_SBOM_BYTES:
         raise ValueError("SBOM exceeds the 10 MiB import limit")

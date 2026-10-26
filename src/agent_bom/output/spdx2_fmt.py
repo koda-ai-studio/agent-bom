@@ -15,7 +15,6 @@ consume SPDX 2.x. This module emits the classic document shape:
 from __future__ import annotations
 
 import hashlib
-import json
 from datetime import timezone
 from pathlib import Path
 from typing import Any
@@ -25,6 +24,7 @@ from agent_bom.checksums import integrity_verdict, integrity_verdict_statements,
 from agent_bom.models import AIBOMReport
 from agent_bom.output.cloud_context import attach_cloud_context
 from agent_bom.output.dependency_hierarchy import add_spdx2_package_relationships
+from agent_bom.output.json_writer import write_json_file
 from agent_bom.output.package_attributes import spdx2_external_refs
 from agent_bom.sbom_formats.surface_labels import server_surface_description
 
@@ -231,8 +231,7 @@ def to_spdx2(report: AIBOMReport, version: str = "2.3") -> dict:
 
 def export_spdx2(report: AIBOMReport, output_path: str, version: str = "2.3") -> None:
     """Export report as an SPDX 2.x JSON file."""
-    data = to_spdx2(report, version=version)
-    Path(output_path).write_text(json.dumps(data, indent=2))
+    write_json_file(to_spdx2(report, version=version), output_path)
 
 
 def _tv_line(value: object) -> str:

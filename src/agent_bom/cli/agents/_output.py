@@ -84,6 +84,10 @@ _FORMAT_OUTPUT_RULES: dict[str, tuple[str, tuple[str, ...]]] = {
 }
 
 
+# JSON-family formats stream through output.json_writer, which gzips a ``.gz`` path.
+_GZIP_FORMATS = frozenset({"json", "cyclonedx", "sarif", "spdx", "spdx2"})
+
+
 def _is_null_device(output: Any) -> bool:
     """Return True when ``output`` points at the platform null device."""
     import os
@@ -110,6 +114,8 @@ def _resolve_output_path(output: Any, output_format: str) -> str:
     if _is_null_device(raw_path):
         return raw_path
     lower_path = raw_path.lower()
+    if output_format in _GZIP_FORMATS:
+        allowed_suffixes = (*allowed_suffixes, *(f"{suffix}.gz" for suffix in allowed_suffixes))
     if any(lower_path.endswith(suffix) for suffix in allowed_suffixes):
         return raw_path
 

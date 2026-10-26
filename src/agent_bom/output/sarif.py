@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
-import json
 import re
 from pathlib import Path
 from typing import Any, Optional
@@ -32,6 +31,7 @@ from agent_bom.output.finding_views import (
     package_name,
     package_version,
 )
+from agent_bom.output.json_writer import write_json_file
 from agent_bom.output.possibly_affected import add_sarif_results as add_possibly_affected_sarif
 from agent_bom.output.sarif_taxonomy import (
     _FRAMEWORK_TAXONOMY_META,  # noqa: F401
@@ -1203,4 +1203,4 @@ def to_sarif(
 def export_sarif(report: AIBOMReport, output_path: str, *, exclude_unfixable: bool = False) -> None:
     """Export report as SARIF 2.1.0 JSON file."""
     data = to_sarif(report, exclude_unfixable=exclude_unfixable)
-    Path(output_path).write_text(json.dumps(data, separators=(",", ":")), encoding="utf-8")
+    write_json_file(data, output_path, compact=True)

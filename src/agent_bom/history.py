@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import BinaryIO, Optional, cast
 
 from agent_bom.models import Package
 from agent_bom.package_utils import canonical_package_key, vulnerability_occurrence_key
@@ -120,9 +121,20 @@ def list_reports() -> list[Path]:
     return sorted(history_dir().glob("*.json"), reverse=True)
 
 
+def _open_report(path: Path) -> BinaryIO:
+    """Open a report for reading, transparently inflating gzip (``-o report.json.gz``)."""
+    stream = path.open("rb")
+    if stream.read(2) == b"\x1f\x8b":
+        stream.seek(0)
+        return cast(BinaryIO, gzip.GzipFile(fileobj=stream))
+    stream.seek(0)
+    return stream
+
+
 def load_report(path: Path) -> dict:
-    """Load a saved report JSON file."""
-    return json.loads(path.read_text())
+    """Load a saved report JSON file, plain or gzip-compressed."""
+    with _open_report(path) as stream:
+        return json.load(stream)
 
 
 def _synthetic_report_from_packages(
@@ -191,7 +203,7 @@ def load_report_or_sbom(path: Path) -> dict:
     """
     from agent_bom.sbom_formats.decode import decode_sbom_document, sbom_serialization
 
-    with path.open("rb") as stream:
+    with _open_report(path) as stream:
         head = stream.read(4096)
     data = load_report(path) if sbom_serialization(head) == "json" else decode_sbom_document(path.read_bytes())
     if "blast_radius" in data or "ai_bom_version" in data:

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import re
-from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -41,6 +40,7 @@ from agent_bom.output.finding_views import (
     package_version,
     workflow_status,
 )
+from agent_bom.output.json_writer import write_json_file
 from agent_bom.output.package_attributes import cyclonedx_identifiers
 from agent_bom.output.possibly_affected import cyclonedx_vulnerabilities as undecided_cdx
 from agent_bom.output.technique_evidence import scoped_vulnerability_properties
@@ -918,4 +918,4 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
 
 def export_cyclonedx(report: AIBOMReport, output_path: str) -> None:
     """Export report as CycloneDX 1.7 JSON file."""
-    Path(output_path).write_text(json.dumps(to_cyclonedx(report), indent=2))
+    write_json_file(to_cyclonedx(report), output_path)

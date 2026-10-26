@@ -263,6 +263,17 @@ Remote HTTP endpoints still require HTTPS (or
 before invoking the CLI to suppress the background PyPI version check (it starts
 before subcommand flags are parsed).
 
+## Large reports
+
+JSON-family outputs (`json`, `sarif`, `cyclonedx`, `spdx`, `spdx2`) are written
+by one streaming writer: each top-level section, and each item of a top-level
+list, is encoded separately, so encoding holds one finding at a time rather than
+a second copy of the whole document (the report object itself is still built in
+memory). The file is published by atomic same-directory replacement. A `.gz`
+suffix writes a deterministic gzip stream (no name or timestamp in the header);
+the demo report shrinks about 15x. `report diff`, `--sbom` and the other report
+readers detect gzip from the content. SBOM imports inflate at most 10 MiB.
+
 ## Common flags
 
 ```bash
@@ -274,6 +285,12 @@ agent-bom agents -o report.json
 agent-bom check requests@2.33.0 -e pypi -f json -o check.json
 agent-bom report diff before.json after.json -f json -o diff.json
 agent-bom report pipeline-events scan-job.json -o pipeline-events.jsonl
+
+# gzip: a .gz suffix on a json, sarif, cyclonedx, spdx or spdx2 output writes gzip
+agent-bom agents -f json -o report.json.gz
+agent-bom agents -f sarif -o report.sarif.gz
+agent-bom agents -f cyclonedx -o bom.cdx.json.gz
+agent-bom report diff before.json.gz after.json        # report diff and --sbom read gzip input
 agent-bom report query "SELECT severity, COUNT(*) AS count FROM scan_findings GROUP BY severity" --format json
 
 # Outdated local vuln data fails closed (check exits 2, scan exits 1); air-gap opt-out and strict gate
