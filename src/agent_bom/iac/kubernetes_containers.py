@@ -72,7 +72,7 @@ def _pod_sec_ctx(c: K8sContainer) -> dict:
 
 
 def _set_at(c: K8sContainer, key: str) -> str:
-    return "" if c.sec_ctx.get(key) is not None else " (inherited from the pod securityContext)"
+    return "" if c.sec_ctx.get(key) is not None else ", inherited from the pod securityContext"
 
 
 def k8s_001(c: K8sContainer) -> list[IaCFinding]:
