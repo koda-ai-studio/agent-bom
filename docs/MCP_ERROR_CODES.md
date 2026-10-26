@@ -59,6 +59,7 @@ defined in `agent_bom.mcp_errors.mcp_error_payload`:
 | `AGENTBOM_MCP_UNSUPPORTED_BACKEND` | unsupported | Tool requires a backend that is not configured (analytics, ClickHouse, etc.). |
 | `AGENTBOM_MCP_UNSUPPORTED_QUERY_TYPE` | unsupported | The supplied `query_type` is not in the allowed enum. |
 | `AGENTBOM_MCP_CONFLICT_STALE_CURSOR` | conflict | The snapshot generation a cursor or `current-estate:` id pinned was replaced or retired (REST `409`); restart from the first page or the current estate. |
+| `AGENTBOM_MCP_CONFLICT_STATE` | conflict | A REST-backed read answered `409`: the addressed resource is in a conflicting state (a stale cursor or retired snapshot generation, or a scan that has not completed). |
 | `AGENTBOM_MCP_INTERNAL_UNEXPECTED` | internal | Unhandled server-side error; treat as a bug. |
 
 ## Client branching pattern

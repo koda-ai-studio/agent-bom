@@ -26,7 +26,13 @@ from agent_bom.graph.edge_lookup import _build_edge_lookup
 from agent_bom.graph.exposure import _exposure_path_for_attack_path
 from agent_bom.graph.exposure_cursor import decode_exposure_cursor
 from agent_bom.graph.node_alias_resolution import resolve_snapshot_node_ids
-from agent_bom.mcp_errors import CODE_NOT_FOUND_RESOURCE, CODE_UNSUPPORTED_BACKEND, CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
+from agent_bom.mcp_errors import (
+    CODE_CONFLICT_STALE_CURSOR,
+    CODE_NOT_FOUND_RESOURCE,
+    CODE_UNSUPPORTED_BACKEND,
+    CODE_VALIDATION_INVALID_ARGUMENT,
+    mcp_error_json,
+)
 
 VIEWS = ("summary", "full")
 RISK_SCALE = {
@@ -364,7 +370,7 @@ def _search_covers_snapshot(page: QueuePage, query: PathQuery) -> bool:
 def _snapshot_replaced() -> str:
     """A well-formed continuation whose snapshot was replaced: restart (HTTP 409), not a bad argument."""
     return mcp_error_json(
-        CODE_VALIDATION_INVALID_ARGUMENT,
+        CODE_CONFLICT_STALE_CURSOR,
         "Exposure snapshot changed; restart the query.",
         details={"argument": "cursor", "http_status": 409},
     )
