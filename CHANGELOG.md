@@ -7,6 +7,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- RPM packages from a distro without a supported advisory feed (Amazon Linux, Oracle Linux, SLES, Fedora, Azure Linux, any unrecognised distro, or a supported distro whose release is unknown) were matched against OSV's upstream `Linux` kernel ecosystem, so a distro `kernel` with backported fixes reported upstream CVEs and upstream fix versions. They are no longer matched against any ecosystem; every scan surface instead reports an `advisory_source_unavailable` coverage warning naming the distro release, even for a single package, so the result never reads as clean. The intel package-match API no longer routes `rpm` coordinates to `Linux` either.
+- Terraform TF-SEC-007 (hardcoded SSH key) and TF-SEC-051 (hardcoded secret) apply to every provider's resources but tagged all of them with `CIS-AWS-1.14`; the CIS AWS control is now attached only to `aws_` resources, and Azure, GCP and other resources carry the provider-neutral NIST controls.
+- TF-SEC-051 detects Azure's `administrator_login_password`, and TF-SEC-007 detects SSH keys in GCP instance `metadata` `ssh-keys`.
+- SARIF IaC rules no longer copy the first finding's message, which named one resource, into the rule `fullDescription`, or its compliance IDs into the rule: the rule carries its title and the compliance IDs shared by every result, and each result carries its own `properties.compliance`.
+
 ## [0.111.0] - 2026-10-25
 
 ### Highlights
