@@ -19,6 +19,7 @@ AGENT_BOM_EXPERIMENTAL
 AGENT_BOM_AGENT_MODE
 # Literal Snowflake object names emitted by the onboarding SQL template; not process environment variables.
 AGENT_BOM_NVD_TIME_BUDGET_SECONDS  # read per db update run (tests and operators change it between runs), not at import
+AGENT_BOM_PYPI_RESOLUTION_BUDGET_SECONDS
 AGENT_BOM_READONLY
 AGENT_BOM_SVC
 AGENT_BOM_WH

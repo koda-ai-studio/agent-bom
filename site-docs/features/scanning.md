@@ -89,6 +89,9 @@ Python dependencies are resolved by the first source that applies:
    not a coverage gap. Requirements that cannot be resolved (not on PyPI, no
    satisfying release, registry error, sdist-only release without metadata, or
    the resolution budget) are named in a coverage gap, and the run is partial.
+   All unlocked projects in one scan share one resolution budget,
+   `AGENT_BOM_PYPI_RESOLUTION_BUDGET_SECONDS` (default `15`), so registry
+   lookups never stretch a scan or an MCP tool call.
 4. `--offline` with neither a lockfile nor a virtualenv records the gap
    "transitive dependencies not resolved offline". The run is partial.
 

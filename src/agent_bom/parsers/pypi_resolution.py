@@ -24,7 +24,9 @@ from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.utils import canonicalize_name
 from packaging.version import Version
 
+from agent_bom.core.settings import env_float
 from agent_bom.http_client import OfflineModeError, create_sync_client, sync_request_with_retry
+from agent_bom.scanners.state import scan_scoped_deadline
 from agent_bom.transitive import PYPI_API, _resolve_pip_version
 
 TARGET_ENVIRONMENT: dict[str, str] = {
@@ -48,11 +50,17 @@ _MAX_ROUNDS = 3
 class ResolutionBudget:
     max_packages: int = 500
     max_depth: int = 15
-    max_seconds: float = 90.0
+    max_seconds: float = 15.0
     workers: int = 8
 
 
 DEFAULT_BUDGET = ResolutionBudget()
+
+
+def scan_resolution_deadline() -> float:
+    """The deadline every unlocked manifest in this scan shares (``AGENT_BOM_PYPI_RESOLUTION_BUDGET_SECONDS``)."""
+    seconds = env_float("AGENT_BOM_PYPI_RESOLUTION_BUDGET_SECONDS", DEFAULT_BUDGET.max_seconds)
+    return scan_scoped_deadline(seconds, time.monotonic())
 
 
 class PyPIUnavailableError(RuntimeError):
@@ -290,7 +298,7 @@ def resolve_requirements(roots: list[Requirement], budget: ResolutionBudget | No
     """Resolve *roots* and their runtime dependencies for :data:`TARGET_ENVIRONMENT`."""
     budget = budget or DEFAULT_BUDGET
     index = _Index()
-    deadline = time.monotonic() + budget.max_seconds
+    deadline = min(time.monotonic() + budget.max_seconds, scan_resolution_deadline())
     pinned: dict[str, SpecifierSet] = {}
     result = ResolutionResult()
     conflicts: dict[str, SpecifierSet] = {}
