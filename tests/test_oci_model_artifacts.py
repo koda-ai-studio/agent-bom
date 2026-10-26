@@ -140,5 +140,7 @@ def test_findings_are_bound_to_the_image_in_the_stream_and_graph(tmp_path: Path)
     graph = build_unified_graph_from_report(to_json(report))
     (node,) = [n for n in graph.nodes.values() if n.attributes.get("finding_id") == malicious.id or n.id.endswith(malicious.id)]
     holders = [graph.nodes[e.source] for e in graph.reverse_adjacency[node.id] if e.relationship == RelationshipType.VULNERABLE_TO]
-    assert [h.entity_type for h in holders] == [EntityType.AGENT]
-    assert holders[0].label == "image-tar:image.tar"
+    # The image carrier projects as the image node, which keeps the carrier's ids as aliases.
+    assert [h.entity_type for h in holders] == [EntityType.CONTAINER]
+    assert holders[0].label == "image: image.tar"
+    assert agent.stable_id in holders[0].attributes["identity"]["aliases"]

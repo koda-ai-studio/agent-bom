@@ -150,22 +150,39 @@ def _parse_json_object(body: str | bytes | bytearray, *, source: str) -> dict[st
     return payload
 
 
+# Read-only list allowlist. Secrets are deliberately absent: a list response
+# carries secret values, so no collector may ever request one.
+NAMESPACED_RESOURCES: dict[str, tuple[str, str]] = {
+    "pods": ("/api/v1", "pods"),
+    "serviceaccounts": ("/api/v1", "serviceaccounts"),
+    "networkpolicies": ("/apis/networking.k8s.io/v1", "networkpolicies"),
+    "roles": ("/apis/rbac.authorization.k8s.io/v1", "roles"),
+    "rolebindings": ("/apis/rbac.authorization.k8s.io/v1", "rolebindings"),
+    "deployments": ("/apis/apps/v1", "deployments"),
+    "statefulsets": ("/apis/apps/v1", "statefulsets"),
+    "daemonsets": ("/apis/apps/v1", "daemonsets"),
+    "replicasets": ("/apis/apps/v1", "replicasets"),
+    "jobs": ("/apis/batch/v1", "jobs"),
+    "cronjobs": ("/apis/batch/v1", "cronjobs"),
+}
+CLUSTER_RESOURCES: dict[str, str] = {
+    "clusterrolebindings": "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings",
+    "clusterroles": "/apis/rbac.authorization.k8s.io/v1/clusterroles",
+    "nodes": "/api/v1/nodes",
+    "namespaces": "/api/v1/namespaces",
+    "validatingadmissionpolicies": "/apis/admissionregistration.k8s.io/v1/validatingadmissionpolicies",
+    "validatingadmissionpolicybindings": "/apis/admissionregistration.k8s.io/v1/validatingadmissionpolicybindings",
+    "validatingwebhookconfigurations": "/apis/admissionregistration.k8s.io/v1/validatingwebhookconfigurations",
+    "mutatingwebhookconfigurations": "/apis/admissionregistration.k8s.io/v1/mutatingwebhookconfigurations",
+}
+
+
 def _resource_path(resource: str, namespace: str | None, all_namespaces: bool) -> str:
-    namespaced = {
-        "pods": ("/api/v1", "pods"),
-        "networkpolicies": ("/apis/networking.k8s.io/v1", "networkpolicies"),
-        "roles": ("/apis/rbac.authorization.k8s.io/v1", "roles"),
-    }
-    cluster_scoped = {
-        "clusterrolebindings": "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings",
-        "clusterroles": "/apis/rbac.authorization.k8s.io/v1/clusterroles",
-        "nodes": "/api/v1/nodes",
-    }
-    if resource in cluster_scoped:
-        return cluster_scoped[resource]
-    if resource not in namespaced:
+    if resource in CLUSTER_RESOURCES:
+        return CLUSTER_RESOURCES[resource]
+    if resource not in NAMESPACED_RESOURCES:
         raise K8sTransportError("Unsupported Kubernetes resource", reason="invalid_resource")
-    prefix, plural = namespaced[resource]
+    prefix, plural = NAMESPACED_RESOURCES[resource]
     if all_namespaces:
         return f"{prefix}/{plural}"
     if not namespace:
@@ -444,7 +461,7 @@ class KubectlK8sTransport:
         # Validate the resource against the same allowlist as the native path.
         _resource_path(resource, namespace, all_namespaces)
         args = ["get", resource, "-o", "json", f"--chunk-size={self._page_size}"]
-        if resource in {"pods", "networkpolicies", "roles"}:
+        if resource in NAMESPACED_RESOURCES:
             if all_namespaces:
                 args.append("-A")
             elif namespace:

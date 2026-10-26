@@ -283,9 +283,29 @@ def _scenarios() -> dict[str, tuple[dict[str, Any], str]]:
     }
 
 
+class _FakeK8sTransport:
+    name = "kubectl"
+
+    def close(self) -> None:
+        return None
+
+
+def _fake_k8s_inventory(_transport: Any, **_kwargs: Any) -> dict[str, Any]:
+    from agent_bom.kubernetes.inventory import build_k8s_inventory
+
+    pods = [
+        {"kind": "Pod", "metadata": {"name": name, "namespace": "default"}, "spec": {"containers": [{"name": "c", "image": image}]}}
+        for name, image in (("p1", "seed:1"), ("p2", "k8s:2"))
+    ]
+    inventory = build_k8s_inventory(pods, source="live", cluster="current-context")
+    inventory["collection"] = {"status": "complete", "transport": "kubectl", "namespace_scope": "default", "collectors": []}
+    return inventory
+
+
 def _patch_external_surfaces(monkeypatch: pytest.MonkeyPatch) -> None:
     from agent_bom import image as image_mod
-    from agent_bom import k8s as k8s_mod
+    from agent_bom import k8s_transport
+    from agent_bom.kubernetes import inventory_live as k8s_inventory_live
     from agent_bom.parsers import browser_extensions, os_parsers
 
     def fake_scan_image(ref: str, **_: Any) -> tuple[list[Package], str]:
@@ -294,7 +314,8 @@ def _patch_external_surfaces(monkeypatch: pytest.MonkeyPatch) -> None:
         return [Package(name="openssl", version="3.0.0", ecosystem="deb")], "fake"
 
     monkeypatch.setattr(image_mod, "scan_image", fake_scan_image)
-    monkeypatch.setattr(k8s_mod, "discover_images", lambda **_: [("seed:1", "p", "c"), ("k8s:2", "p", "c")])
+    monkeypatch.setattr(k8s_transport, "select_k8s_transport", lambda **_: _FakeK8sTransport())
+    monkeypatch.setattr(k8s_inventory_live, "collect_live_k8s_inventory", _fake_k8s_inventory)
     monkeypatch.setattr(os_parsers, "scan_os_packages", lambda _root: [])
     monkeypatch.setattr(browser_extensions, "discover_browser_extensions", lambda **_: [])
 

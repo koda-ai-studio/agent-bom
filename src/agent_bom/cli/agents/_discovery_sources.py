@@ -151,30 +151,77 @@ def ingest_external_scan(run: DiscoveryRun) -> None:
 
 
 def discover_k8s_images(run: DiscoveryRun) -> None:
-    """Step 1c: discover container images running in Kubernetes (--k8s)."""
+    """Step 1c: read the workload inventory and its images from Kubernetes (--k8s)."""
     if run.skill_only or not run.k8s:
         return
-    from agent_bom.k8s import K8sDiscoveryError, discover_images
+    from agent_bom.k8s_transport import K8sTransportError, select_k8s_transport
+    from agent_bom.kubernetes.inventory_live import cluster_label, collect_live_k8s_inventory, scan_targets
 
     con = run.con
     ns_label = "all namespaces" if run.all_namespaces else f"namespace '{run.namespace}'"
-    con.print(f"\n[bold blue]Discovering container images from Kubernetes ({ns_label})...[/bold blue]\n")
+    con.print(f"\n[bold blue]Discovering Kubernetes workloads ({ns_label})...[/bold blue]\n")
     try:
-        k8s_records = discover_images(
-            namespace=run.namespace,
-            all_namespaces=run.all_namespaces,
-            context=run.k8s_context,
-        )
-        if k8s_records:
-            con.print(f"  [green]✓[/green] Found {len(k8s_records)} unique image(s) across pods")
-            extra_images = list(run.images) + [img for img, _pod, _ctr in k8s_records]
-            run.images = tuple(dict.fromkeys(extra_images))  # deduplicate, preserve order
-            run.extra["_images_updated"] = run.images
-        else:
-            con.print(f"  [dim]  No running pods found in {ns_label}[/dim]")
-    except K8sDiscoveryError as e:
+        transport = select_k8s_transport(context=run.k8s_context)
+    except K8sTransportError as e:
         con.print(f"\n  [red]K8s discovery error: {e}[/red]")
         sys.exit(1)
+    try:
+        inventory = collect_live_k8s_inventory(
+            transport,
+            namespace=run.namespace,
+            all_namespaces=run.all_namespaces,
+            cluster=cluster_label(run.k8s_context, transport.name),
+        )
+    finally:
+        transport.close()
+    if inventory["collection"]["status"] == "failed":
+        con.print("\n  [red]K8s discovery error: pods could not be read; see collector evidence[/red]")
+        sys.exit(1)
+    run.ctx.kubernetes_inventories.append(inventory)
+    print_k8s_inventory_summary(con, inventory)
+    targets = scan_targets(inventory)
+    if not targets:
+        con.print(f"  [dim]  No workload images found in {ns_label}[/dim]")
+        return
+    run.extra.setdefault("_image_meta", {}).update(
+        {t["ref"]: {"image_digest": t["image_digest"], "source": "kubernetes-image"} for t in targets}
+    )
+    run.images = tuple(dict.fromkeys([*run.images, *(t["ref"] for t in targets)]))
+    run.extra["_images_updated"] = run.images
+
+
+def print_k8s_inventory_summary(con: Any, inventory: dict[str, Any]) -> None:
+    summary = inventory["summary"]
+    con.print(
+        f"  [green]✓[/green] {summary['workloads']} workload(s) in {summary['namespaces']} namespace(s): "
+        f"{summary['images']} image(s) ({summary['images_with_digest']} pinned to a running digest), "
+        f"{summary['service_accounts']} service account(s), {summary['rbac_grants']} RBAC grant(s), "
+        f"{summary['secret_refs']} referenced secret(s)"
+    )
+    for collector in (inventory.get("collection") or {}).get("collectors") or []:
+        if collector["state"] != "executed" or collector["truncated"]:
+            state = "truncated" if collector["state"] == "executed" else collector["state"]
+            con.print(f"  [yellow]![/yellow] {collector['collector_id']}: {state} — {collector['message'] or 'not read'}")
+
+
+def _image_carrier(image_ref: str, packages: list, meta: dict[str, str]) -> Agent:
+    server = MCPServer(
+        name=image_ref,
+        command="docker",
+        args=["run", image_ref],
+        transport=TransportType.STDIO,
+        packages=packages,
+        surface=ServerSurface.CONTAINER_IMAGE,
+    )
+    agent = Agent(
+        name=f"image:{image_ref}",
+        agent_type=AgentType.CUSTOM,
+        config_path=f"docker://{image_ref}",
+        source=meta.get("source") or "image",
+        mcp_servers=[server],
+    )
+    agent.metadata = {"inventory_role": "container_image", "image_ref": image_ref, "image_digest": meta.get("image_digest", "")}
+    return agent
 
 
 def _report_image_evidence(run: DiscoveryRun, evidence: ImageEvidence) -> None:
@@ -195,6 +242,7 @@ def scan_container_images(run: DiscoveryRun) -> None:
 
     con = run.con
     con.print(f"\n[bold blue]Scanning {len(run.images)} container image(s)...[/bold blue]\n")
+    image_meta: dict[str, dict[str, str]] = run.extra.get("_image_meta") or {}
     image_successes = 0
     for image_ref in run.images:
         try:
@@ -211,23 +259,9 @@ def scan_container_images(run: DiscoveryRun) -> None:
                 )
             con.print(f"  [green]✓[/green] {image_ref}: {len(img_packages)} package(s) [dim](via {strategy})[/dim]")
             _report_image_evidence(run, evidence)
-            server = MCPServer(
-                name=image_ref,
-                command="docker",
-                args=["run", image_ref],
-                transport=TransportType.STDIO,
-                packages=img_packages,
-                surface=ServerSurface.CONTAINER_IMAGE,
-            )
-            image_agent = Agent(
-                name=f"image:{image_ref}",
-                agent_type=AgentType.CUSTOM,
-                config_path=f"docker://{image_ref}",
-                source="image",
-                mcp_servers=[server],
-                metadata={**image_agent_metadata(evidence), **model_artifact_metadata(model_artifacts)},
-            )
-            run.ctx.agents.append(image_agent)
+            carrier = _image_carrier(image_ref, img_packages, image_meta.get(image_ref, {}))
+            carrier.metadata.update({**image_agent_metadata(evidence), **model_artifact_metadata(model_artifacts)})
+            run.ctx.agents.append(carrier)
             image_successes += 1
         except ImageScanError as e:
             con.print(f"  [yellow]⚠[/yellow] {image_ref}: {e}")
@@ -268,8 +302,13 @@ def scan_image_tarballs(run: DiscoveryRun) -> None:
                 agent_type=AgentType.CUSTOM,
                 config_path=f"oci-tar://{tar_path}",
                 source="image-tar",
+                metadata={
+                    "inventory_role": "container_image",
+                    "image_ref": tar_label,
+                    **image_agent_metadata(evidence),
+                    **model_artifact_metadata(model_artifacts),
+                },
                 mcp_servers=[server],
-                metadata={**image_agent_metadata(evidence), **model_artifact_metadata(model_artifacts)},
             )
             run.ctx.agents.append(tar_agent)
         except ImageScanError as e:

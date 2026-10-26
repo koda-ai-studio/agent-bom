@@ -67,3 +67,9 @@ def cloud_resource_node_id(provider: str, kind: str, record: Mapping[str, Any], 
             parts = [part.casefold() for part in parts]
         key = "scoped/" + "/".join(quote(part, safe="") for part in parts)
     return f"cloud_resource:{provider}:{kind}:{key}"
+
+
+def gce_instance_self_link(project: object, zone: object, name: object) -> str:
+    """``projects/<p>/zones/<z>/instances/<name>``: a GCE instance name is unique per project and zone."""
+    parts = [str(value or "").strip() for value in (project, zone, name)]
+    return f"projects/{parts[0]}/zones/{parts[1]}/instances/{parts[2]}" if all(parts) else ""

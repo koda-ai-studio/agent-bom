@@ -2900,7 +2900,7 @@
         },
         {
           "family": "K8S",
-          "rule_count": 32
+          "rule_count": 34
         },
         {
           "family": "TF-AI",

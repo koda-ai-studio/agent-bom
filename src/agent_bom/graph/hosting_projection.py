@@ -13,7 +13,7 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from agent_bom.core.cloud_identity import cloud_resource_node_id
+from agent_bom.core.cloud_identity import cloud_resource_node_id, gce_instance_self_link
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
@@ -42,7 +42,7 @@ def provider_id_host(provider_id: str, *, account_id: str = "") -> UnifiedNode |
         return _host(f"cloud_resource:azure:compute:virtual_machine:{arm.casefold()}", arm.rsplit("/", 1)[-1], "azure", attrs)
     gce = _GCE_PROVIDER_ID.match(provider_id)
     if gce:
-        link = f"projects/{gce.group('project')}/zones/{gce.group('zone')}/instances/{gce.group('name')}"
+        link = gce_instance_self_link(gce.group("project"), gce.group("zone"), gce.group("name"))
         attrs = {"self_link": link, "project_id": gce.group("project"), "location": gce.group("zone"), "cloud_provider": "gcp"}
         return _host(f"cloud_resource:gcp:compute:instance:{link}", gce.group("name"), "gcp", attrs)
     return None

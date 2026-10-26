@@ -854,6 +854,7 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "cluster",
       "fleet",
       "directory",
+      "resource",
       "agent",
       "org",
       "data_store",
@@ -884,6 +885,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "source_file",
       "config_file",
       "agent",
+      "resource",
+      "service_account",
       "org",
       "data_store",
       "code_module",
@@ -895,7 +898,6 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "cluster",
       "model",
       "role",
-      "service_account",
       "service_principal",
       "dataset",
       "tool",
@@ -1107,7 +1109,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "resource",
       "tool",
       "account",
-      "org"
+      "org",
+      "cluster"
     ],
     "traversable": true,
     "traversal_class": "authority"

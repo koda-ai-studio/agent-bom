@@ -65,6 +65,7 @@ def capture_operator_implementations() -> Mapping[str, Callable[..., Any]]:
             "identity_revoke_jit_impl": identity.identity_revoke_jit_impl,
             "identity_rotate_impl": identity.identity_rotate_impl,
             "kspm_cluster_posture_impl": kspm.kspm_cluster_posture_impl,
+            "kspm_workload_inventory_impl": kspm.kspm_workload_inventory_impl,
             "list_exceptions_impl": exceptions.list_exceptions_impl,
             "marketplace_check_impl": registry.marketplace_check_impl,
             "nhi_discover_impl": posture.nhi_discover_impl,

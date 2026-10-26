@@ -37,6 +37,7 @@ class GraphEvidenceSections(TypedDict, total=False):
     sast_data: Record
     iac_findings: Record
     iac_findings_data: Record
+    kubernetes_inventory: Record
     skill_audit: Record
     ai_inventory: Record
     runtime_session_graph: Record
@@ -49,6 +50,7 @@ class GraphEvidenceSections(TypedDict, total=False):
     runtime_activity_events: Record
     toxic_combinations: Record | list[Record]
     aws_organization: Record
+    side_scan_results: list[Record]
     cloud_audit_trail: Record | list[Record]
     snowflake_object_graph: Record
     snowflake_exfil_graph: Record

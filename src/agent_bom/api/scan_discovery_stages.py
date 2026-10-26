@@ -78,6 +78,8 @@ def _clone_and_scan_repository(ctx: ScanContext) -> None:
     )
     ctx.skill_audit_data = repo_tree_result.skill_audit_data
     ctx.iac_findings_data = repo_tree_result.iac_findings_data
+    if repo_tree_result.kubernetes_inventory is not None:
+        ctx.kubernetes_inventories.append(repo_tree_result.kubernetes_inventory)
     ctx.repo_ai_inventory_data = repo_tree_result.ai_inventory_data
     ctx.repo_sast_data = repo_tree_result.sast_data
     ctx.repo_codeowners = repo_tree_result.codeowners
@@ -141,7 +143,7 @@ def _discover_inventory(ctx: ScanContext) -> None:
     ctx.agents.extend(build_agents_from_inventory(inv_data, inventory))
 
 
-def _image_agent(image_ref: str, *, source: str) -> Any:
+def _image_agent(image_ref: str, *, source: str, image_digest: str = "") -> Any:
     from agent_bom.image import scan_image
     from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface, TransportType
 
@@ -152,7 +154,13 @@ def _image_agent(image_ref: str, *, source: str) -> Any:
         agent_type=AgentType.CUSTOM,
         config_path=f"docker://{image_ref}",
         source=source,
-        metadata={**image_agent_metadata(evidence), **model_artifact_metadata(model_artifacts)},
+        metadata={
+            "inventory_role": "container_image",
+            "image_ref": image_ref,
+            "image_digest": image_digest,
+            **image_agent_metadata(evidence),
+            **model_artifact_metadata(model_artifacts),
+        },
         mcp_servers=[
             MCPServer(
                 name=image_ref,
@@ -178,15 +186,32 @@ def _discover_images(ctx: ScanContext) -> None:
 def _discover_kubernetes(ctx: ScanContext) -> None:
     if not ctx.req.k8s:
         return
-    ctx.pipeline.update_step("discovery", "Scanning Kubernetes pods...")
-    from agent_bom.k8s import discover_images
+    ctx.pipeline.update_step("discovery", "Reading Kubernetes workloads...")
+    from agent_bom.k8s_transport import K8sTransportError, select_k8s_transport
+    from agent_bom.kubernetes.inventory_live import cluster_label, collect_live_k8s_inventory, scan_targets
 
-    k8s_records = discover_images(namespace=ctx.req.k8s_namespace or "default")
-    for img, _pod, _ctr in k8s_records:
+    try:
+        transport = select_k8s_transport()
+    except K8sTransportError as exc:
+        ctx.record_coverage_warning(f"Kubernetes discovery unavailable: {sanitize_error(exc)}")
+        return
+    try:
+        inventory = collect_live_k8s_inventory(
+            transport, namespace=ctx.req.k8s_namespace or "default", cluster=cluster_label(None, transport.name)
+        )
+    finally:
+        transport.close()
+    for collector in inventory["collection"]["collectors"]:
+        if collector["state"] != "executed":
+            ctx.record_coverage_warning(f"Kubernetes {collector['collector_id']} {collector['state']}: {collector['message']}")
+    if inventory["collection"]["status"] == "failed":
+        return
+    ctx.kubernetes_inventories.append(inventory)
+    for target in scan_targets(inventory):
         try:
-            ctx.agents.append(_image_agent(img, source="kubernetes-image"))
+            ctx.agents.append(_image_agent(target["ref"], source="kubernetes-image", image_digest=target["image_digest"]))
         except Exception as img_exc:  # noqa: BLE001
-            ctx.record_coverage_warning(f"Kubernetes image scan error for {img}: {sanitize_error(img_exc)}")
+            ctx.record_coverage_warning(f"Kubernetes image scan error for {target['ref']}: {sanitize_error(img_exc)}")
 
 
 def _discover_iac_and_projects(ctx: ScanContext) -> None:

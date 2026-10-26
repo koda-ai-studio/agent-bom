@@ -494,7 +494,7 @@ requires-dist = [
     { name = "huggingface-hub", marker = "extra == 'huggingface'", specifier = ">=0.20" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "jsonschema", specifier = ">=4.0" },
-    { name = "litellm", marker = "extra == 'ai-enrich'", specifier = ">=1.96.2" },
+    { name = "litellm", marker = "extra == 'ai-enrich'", specifier = ">=1.96.2,!=1.107.0" },
     { name = "mcp", specifier = ">=2.3,<3" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.24" },

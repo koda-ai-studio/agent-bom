@@ -33,6 +33,7 @@ standard library.
 | A vulnerability source or matcher | `scanners/` | `scanners/registry.py` |
 | An IaC misconfiguration rule | `iac/` | `iac/dockerfile_rules.py`, `iac/cloudformation_rules.py`, `iac/terraform_security_*.py` |
 | A cloud inventory or CIS benchmark check | `cloud/` | `cloud/aws_cis/` (one module per control family), `cloud/azure_cis/`, `cloud/gcp_cis/` |
+| Kubernetes workload inventory, RBAC, admission or pod-security posture | `kubernetes/` | `kubernetes/inventory_live.py`, `kubernetes/inventory_manifests.py`, `kubernetes/admission_checks.py` |
 | Non-human identity discovery (Okta, Entra) | `identity/` | `identity/__init__.py` |
 | A new MCP client or agent config location | `discovery/` | `discovery/platform_config.py` (`CONFIG_LOCATIONS`), `discovery/local_sources.py` |
 | A graph node, edge, projection or traversal | `graph/` | `graph/container.py`, `graph/types.py`, `graph/builder.py` |

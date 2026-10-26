@@ -712,16 +712,14 @@ async def cloud_side_scan_trigger(
     scoped lifecycle credentials from the provider's default chain
     (``credentialed_smoke=false``).
     """
+    from agent_bom.api.side_scan_report import persist_side_scan_graph_async, side_scan_request_error
     from agent_bom.cloud.side_scan import SideScanConfigError, SideScanDisabledError
     from agent_bom.cloud.side_scan_lifecycle import SideScanStateConflictError, get_side_scan_state_store, new_side_scan_execution
 
     tenant_id = _tenant(request)
     provider = body.provider
-    if provider == "azure" and not str(body.collector_resource_group or "").strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Azure Managed Disk side-scan requires 'collector_resource_group' for the in-account collector VM.",
-        )
+    if rejection := side_scan_request_error(body):
+        raise HTTPException(status_code=400, detail=rejection)
 
     import uuid as _uuid
 
@@ -748,6 +746,7 @@ async def cloud_side_scan_trigger(
         collector_resource_group=body.collector_resource_group,
         region=body.region,
         scan_secrets_enabled=body.scan_secrets_enabled,
+        target_type=body.target_type,
     )
 
     try:
@@ -816,6 +815,7 @@ async def cloud_side_scan_trigger(
     if record is not None:
         payload["execution"] = record.to_dict()
         payload["evidence"] = record.to_evidence_dict()
+    payload["graph"] = await persist_side_scan_graph_async(tenant_id, execution_id, provider, results, payload["status"])
     return payload
 
 

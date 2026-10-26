@@ -178,7 +178,9 @@ def test_release_manifest_carries_reproducible_sanitized_provenance() -> None:
         "graph-relationship-dark-live.png",
         "graph-relationship-light-live.png",
     ):
-        assert entries[path]["evidence_sha256"] == lab_digest
+        # PR and main CI defer screenshot freshness; the release recapture rebinds these.
+        if os.environ.get("AGENT_BOM_DEFER_PRODUCT_PROOF") != "1":
+            assert entries[path]["evidence_sha256"] == lab_digest
         assert entries[path]["correlation_manifest_sha256"].startswith("sha256:")
 
 
@@ -234,6 +236,25 @@ def test_deferred_product_proof_skips_only_the_capture_input_digest(
     with pytest.raises(SystemExit):
         check_release_consistency._assert_product_screenshots_current(version, check_capture_inputs=False)
     assert "stale release_version" in capsys.readouterr().err
+
+
+def test_deferred_product_proof_skips_the_reference_lab_binding(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    manifest = json.loads((ROOT / "docs/images/product-screenshots.json").read_text(encoding="utf-8"))
+    for entry in manifest["screenshots"]:
+        if entry.get("path") in {"correlation-receipts-live.png", "correlation-path-live.png"}:
+            entry["evidence_sha256"] = f"sha256:{'0' * 64}"
+    candidate = tmp_path / "product-screenshots.json"
+    candidate.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(check_release_consistency, "PRODUCT_SCREENSHOTS", candidate)
+    version = check_release_consistency._load_version()
+
+    check_release_consistency._assert_product_screenshots_current(version, check_capture_inputs=False)  # must not raise
+    monkeypatch.setattr(check_release_consistency, "_compute_product_screenshot_inputs_digest", lambda: manifest["capture_inputs_sha256"])
+    with pytest.raises(SystemExit):
+        check_release_consistency._assert_product_screenshots_current(version)
+    assert "not bound to the current reference lab artifact" in capsys.readouterr().err
 
 
 def test_only_pr_and_main_ci_defer_the_product_proof() -> None:

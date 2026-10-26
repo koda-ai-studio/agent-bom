@@ -74,7 +74,7 @@ Benchmarks:
 | Device posture connectors | 3 | crowdstrike; generic; intune |
 | Identity / NHI discovery | 2 | entra; okta |
 | Advisory sources | 8 | osv (primary); ghsa (primary); nvidia_csaf (primary); amd_psirt (primary); intel_psirt (primary); nvd (enrichment); epss (enrichment); cisa_kev (enrichment) |
-| IaC rule families | 11 | CFN (19); COMPOSE (11); DBT-SEC (18); DOCKER (25); DOCKERD (8); GHA (4); HELM (15); IAM (3); K8S (32); TF-AI (10); TF-SEC (50) |
+| IaC rule families | 11 | CFN (19); COMPOSE (11); DBT-SEC (18); DOCKER (25); DOCKERD (8); GHA (4); HELM (15); IAM (3); K8S (34); TF-AI (10); TF-SEC (50) |
 | Agent / MCP clients | 29 | config_paths: 27; dynamic_or_workspace: 2 (full list in JSON) |
 
 Notes:

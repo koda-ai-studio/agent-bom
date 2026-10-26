@@ -247,3 +247,94 @@ def test_side_scan_capabilities_json():
     normalized = result.output.replace("False", "false").replace("True", "true")
     assert normalized.count('"cli_available": true') == 3
     assert normalized.count('"credentialed_smoke": false') == 3
+
+
+# ── Packages and CVEs per VM, JSON output, machine images ──────────────────────
+
+
+def _vulnerable_result(**kwargs):
+    from agent_bom.models import Package, Severity, Vulnerability
+
+    pkg = Package(
+        name="openssl",
+        version="3.0.2",
+        ecosystem="deb",
+        vulnerabilities=[Vulnerability(id="CVE-2099-0001", summary="synthetic", severity=Severity.HIGH)],
+    )
+    return SideScanResult(
+        instance_id="i-target", volume_id="vol-target", account_id="000000000000", region="us-east-1", packages=[pkg], **kwargs
+    )
+
+
+def test_side_scan_console_lists_vulnerable_packages_per_vm(monkeypatch):
+    async def fake_run_side_scan(**kwargs):
+        return [_vulnerable_result(cleaned_up=True)]
+
+    monkeypatch.setattr("agent_bom.cloud.side_scan.run_side_scan", fake_run_side_scan)
+    result = CliRunner().invoke(cg.side_scan_cmd, ["--volume-id", "vol-target"], env={"COLUMNS": "200"})
+
+    assert result.exit_code == 0, result.output
+    assert "CVE-2099-0001" in result.output
+    assert "openssl" in result.output
+
+
+def test_side_scan_json_matches_the_report_record(monkeypatch):
+    import json
+
+    from agent_bom.cloud.side_scan_inventory import side_scan_record
+
+    async def fake_run_side_scan(**kwargs):
+        return [_vulnerable_result(cleaned_up=True)]
+
+    monkeypatch.setattr("agent_bom.cloud.side_scan.run_side_scan", fake_run_side_scan)
+    result = CliRunner().invoke(cg.side_scan_cmd, ["--volume-id", "vol-target", "-f", "json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["side_scan_results"] == [side_scan_record(_vulnerable_result(cleaned_up=True), provider="aws")]
+    assert payload["side_scan_results"][0]["packages"][0]["vulnerabilities"][0]["id"] == "CVE-2099-0001"
+
+
+def test_side_scan_image_id_dispatches_ami_and_gcp_image(monkeypatch):
+    captured: dict = {}
+
+    async def fake_run_side_scan(**kwargs):
+        captured["aws"] = kwargs
+        return []
+
+    async def fake_run_provider_side_scan(**kwargs):
+        captured["gcp"] = kwargs
+        return []
+
+    monkeypatch.setattr("agent_bom.cloud.side_scan.run_side_scan", fake_run_side_scan)
+    monkeypatch.setattr("agent_bom.cloud.side_scan_targets.run_provider_side_scan", fake_run_provider_side_scan)
+
+    aws = CliRunner().invoke(cg.side_scan_cmd, ["--image-id", "ami-0fedcba9876543210"])
+    gcp = CliRunner().invoke(
+        cg.side_scan_cmd,
+        [
+            "--provider",
+            "gcp",
+            "--image-id",
+            "projects/p/global/images/golden",
+            "--account-id",
+            "p",
+            "--collector-instance-id",
+            "c",
+            "--availability-zone",
+            "z",
+        ],
+    )
+
+    assert aws.exit_code == 0 and gcp.exit_code == 0, aws.output + gcp.output
+    assert captured["aws"]["image_id"] == "ami-0fedcba9876543210"
+    assert captured["gcp"]["target_type"] == "image"
+    assert captured["gcp"]["target_id"] == "projects/p/global/images/golden"
+
+
+def test_side_scan_azure_image_is_refused_with_reason(monkeypatch):
+    result = CliRunner().invoke(cg.side_scan_cmd, ["--provider", "azure", "--image-id", "/subscriptions/s/images/golden"])
+
+    assert result.exit_code == 2
+    assert "managed image" in result.output.lower()
+    assert "not supported" in result.output.lower()
