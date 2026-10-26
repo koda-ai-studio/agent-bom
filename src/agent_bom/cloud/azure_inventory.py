@@ -119,7 +119,7 @@ from .azure_inv.network import (  # noqa: F401 - facade re-export
 )
 from .azure_rbac_evidence import normalize_azure_rbac_inventory
 from .normalization import sanitize_discovery_warning
-from .side_scan_targets import azure_managed_disk_targets
+from .side_scan_target_records import azure_managed_disk_targets
 
 logger = logging.getLogger(__name__)
 

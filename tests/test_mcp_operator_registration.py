@@ -25,6 +25,7 @@ CONTRACTS = [
     ("analytics_query", "read_only", None, False),
     ("cis_benchmark", "read_only", None, False),
     ("kspm_cluster_posture", "read_only", None, False),
+    ("kspm_workload_inventory", "read_only", None, False),
     ("fleet_scan", "read_only", None, False),
     ("runtime_correlate", "read_only", None, False),
     ("runtime_production_index", "read_only", None, False),

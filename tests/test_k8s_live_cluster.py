@@ -354,6 +354,10 @@ def test_scan_live_cluster_does_not_request_configz_by_default(monkeypatch):
         ("get", "clusterroles"): {"items": []},
         ("get", "roles"): {"items": []},
         ("get", "nodes"): {"items": [{"metadata": {"name": "node-1"}}]},
+        ("get", "namespaces"): {"items": [{"metadata": {"name": "prod", "labels": {"pod-security.kubernetes.io/enforce": "restricted"}}}]},
+        ("get", "validatingadmissionpolicies"): {"items": []},
+        ("get", "validatingadmissionpolicybindings"): {"items": []},
+        ("get", "validatingwebhookconfigurations"): {"items": []},
     }
 
     def fake_run(cmd, **kwargs):
@@ -595,7 +599,18 @@ def test_kubelet_configz_honors_overall_deadline(monkeypatch: pytest.MonkeyPatch
 def test_posture_evidence_records_failed_collectors_without_raising() -> None:
     errors = {
         resource: K8sTransportError("connection failed")
-        for resource in ("pods", "networkpolicies", "clusterrolebindings", "clusterroles", "roles", "nodes")
+        for resource in (
+            "pods",
+            "networkpolicies",
+            "clusterrolebindings",
+            "clusterroles",
+            "roles",
+            "nodes",
+            "namespaces",
+            "validatingadmissionpolicies",
+            "validatingadmissionpolicybindings",
+            "validatingwebhookconfigurations",
+        )
     }
 
     result = scan_live_cluster_posture_with_evidence(transport=_FixtureTransport({}, errors=errors))

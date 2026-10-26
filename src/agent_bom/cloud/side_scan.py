@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import subprocess
 import tempfile
 import uuid
@@ -42,6 +41,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
+from agent_bom.cloud.side_scan_disk_findings import SideScanDiskFinding, scan_workload_disk_findings
 from agent_bom.filesystem import scan_disk_path_native
 from agent_bom.models import Package
 from agent_bom.secret_scanner import SecretScanResult, scan_secrets
@@ -109,26 +109,6 @@ class SideScanSecret:
 
 
 @dataclass
-class SideScanDiskFinding:
-    """Metadata-only workload disk finding from mounted side-scan content."""
-
-    finding_type: str
-    file_path: str
-    severity: str
-    category: str
-    evidence: str
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "type": self.finding_type,
-            "file": self.file_path,
-            "severity": self.severity,
-            "category": self.category,
-            "evidence": self.evidence,
-        }
-
-
-@dataclass
 class SideScanResult:
     """Metadata-only result of an EBS side-scan for a single target volume.
 
@@ -140,6 +120,9 @@ class SideScanResult:
     instance_id: Optional[str] = None
     volume_id: Optional[str] = None
     snapshot_id: Optional[str] = None
+    account_id: str = ""
+    region: str = ""
+    image_id: Optional[str] = None
     packages: list[Package] = field(default_factory=list)
     secrets: list[SideScanSecret] = field(default_factory=list)
     config_findings: list[SideScanDiskFinding] = field(default_factory=list)
@@ -153,7 +136,10 @@ class SideScanResult:
         return {
             "instance_id": self.instance_id,
             "volume_id": self.volume_id,
+            "image_id": self.image_id,
             "snapshot_id": self.snapshot_id,
+            "account_id": self.account_id,
+            "region": self.region,
             "scan_volume_id": self.scan_volume_id,
             "package_count": len(self.packages),
             "vulnerability_count": self.vulnerability_count,
@@ -240,6 +226,8 @@ class _LifecycleState:
     volume_id: Optional[str] = None
     attached_device: Optional[str] = None
     mount_point: Optional[Path] = None
+    # A machine image's own snapshot is read, never deleted.
+    owns_snapshot: bool = True
 
 
 class AwsEbsSideScanner:
@@ -287,6 +275,7 @@ class AwsEbsSideScanner:
         self._device = device
         self._mount_controller: MountController = mount_controller or CollectorMountController()
         self._ec2 = ec2_client if ec2_client is not None else self._build_ec2_client(region)
+        self._account_id = ""
 
     @staticmethod
     def _build_ec2_client(region: str | None) -> Any:
@@ -349,11 +338,32 @@ class AwsEbsSideScanner:
         """
         result = SideScanResult(instance_id=instance_id, volume_id=volume_id)
         state = _LifecycleState()
-        try:
+
+        def _snapshot() -> None:
             state.snapshot_id = self._create_snapshot(volume_id)
-            result.snapshot_id = state.snapshot_id
             self._wait_for_snapshot(state.snapshot_id)
 
+        return await self._scan(result, state, _snapshot, scan_secrets_enabled)
+
+    async def scan_image(self, image_id: str, *, scan_secrets_enabled: bool = True) -> SideScanResult:
+        """Scan an AMI by mounting a temp volume made from its root EBS snapshot.
+
+        The AMI and its snapshot are only read (``DescribeImages``, ``CreateVolume``
+        from the snapshot); cleanup deletes the temp volume and never the AMI's
+        snapshot or the AMI itself.
+        """
+        result = SideScanResult(image_id=image_id)
+        state = _LifecycleState(owns_snapshot=False)
+
+        def _snapshot() -> None:
+            state.snapshot_id = self._image_root_snapshot(image_id)
+
+        return await self._scan(result, state, _snapshot, scan_secrets_enabled)
+
+    async def _scan(self, result: SideScanResult, state: _LifecycleState, snapshot: Any, scan_secrets_enabled: bool) -> SideScanResult:
+        try:
+            snapshot()
+            result.snapshot_id = state.snapshot_id
             mount_point = self._provision_and_mount(state)
 
             packages = self._parse_packages(mount_point)
@@ -369,7 +379,22 @@ class AwsEbsSideScanner:
             cleanup_warnings = self._cleanup(state)
             result.warnings.extend(cleanup_warnings)
             result.cleaned_up = not cleanup_warnings
+            result.account_id = self._account_id
+            result.region = self._region_name()
         return result
+
+    def _region_name(self) -> str:
+        return str(self._region or getattr(getattr(self._ec2, "meta", None), "region_name", "") or "")
+
+    def _image_root_snapshot(self, image_id: str) -> str:
+        images = self._ec2.describe_images(ImageIds=[image_id]).get("Images", [])
+        image = images[0] if images else {}
+        root = image.get("RootDeviceName", "")
+        for mapping in image.get("BlockDeviceMappings", []) or []:
+            snapshot_id = (mapping.get("Ebs") or {}).get("SnapshotId", "")
+            if mapping.get("DeviceName") == root and snapshot_id:
+                return str(snapshot_id)
+        raise SideScanConfigError(f"AMI {image_id} has no EBS-backed root snapshot (instance-store AMIs cannot be side-scanned)")
 
     # ── Lifecycle steps ───────────────────────────────────────────────────
 
@@ -385,6 +410,7 @@ class AwsEbsSideScanner:
             ],
         )
         snapshot_id = resp.get("SnapshotId", "")
+        self._account_id = self._account_id or str(resp.get("OwnerId", "") or "")
         if not snapshot_id:
             raise CloudDiscoveryError(f"CreateSnapshot returned no SnapshotId for volume {volume_id}")
         logger.info("side-scan: created snapshot %s from volume %s", snapshot_id, volume_id)
@@ -519,7 +545,7 @@ class AwsEbsSideScanner:
             except Exception as exc:  # noqa: BLE001
                 warnings.append(f"delete volume {state.volume_id} failed: {exc}")
 
-        if state.snapshot_id:
+        if state.snapshot_id and state.owns_snapshot:
             try:
                 self._ec2.delete_snapshot(SnapshotId=state.snapshot_id)
                 logger.info("side-scan: deleted snapshot %s", state.snapshot_id)
@@ -565,124 +591,6 @@ class AwsEbsSideScanner:
         return deleted
 
 
-_DISK_SCAN_MAX_FILES = 500
-_DISK_SCAN_MAX_BYTES_PER_FILE = 256 * 1024
-
-_INTERESTING_RELATIVE_PATHS = (
-    "etc/crontab",
-    "etc/cron.d",
-    "etc/cron.daily",
-    "etc/cron.hourly",
-    "etc/ssh/sshd_config",
-    "etc/systemd/system",
-    "lib/systemd/system",
-    "usr/lib/systemd/system",
-    "root/.bashrc",
-    "root/.profile",
-)
-
-_IOC_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
-    (
-        re.compile(r"\b(xmrig|kinsing|kdevtmpfsi|masscan)\b", re.IGNORECASE),
-        "known_malware_or_scanner_marker",
-        "critical",
-    ),
-    (re.compile(r"(/dev/tcp/|nc\s+-e\b|bash\s+-i\b)", re.IGNORECASE), "reverse_shell_pattern", "high"),
-    (
-        re.compile(r"\b(curl|wget)\b[^\n|;&]*(\||;|&&)\s*(sh|bash)\b", re.IGNORECASE),
-        "download_execute_startup",
-        "high",
-    ),
-)
-
-_CONFIG_PATTERNS: tuple[tuple[re.Pattern[str], str, str], ...] = (
-    (re.compile(r"^\s*PermitRootLogin\s+yes\b", re.IGNORECASE | re.MULTILINE), "ssh_root_login_enabled", "medium"),
-    (re.compile(r"^\s*PasswordAuthentication\s+yes\b", re.IGNORECASE | re.MULTILINE), "ssh_password_auth_enabled", "medium"),
-)
-
-
-def _iter_interesting_disk_files(mount_point: Path) -> list[Path]:
-    files: list[Path] = []
-    for relative in _INTERESTING_RELATIVE_PATHS:
-        candidate = mount_point / relative
-        try:
-            if candidate.is_file():
-                files.append(candidate)
-            elif candidate.is_dir():
-                files.extend(path for path in candidate.rglob("*") if path.is_file())
-        except OSError:
-            continue
-        if len(files) >= _DISK_SCAN_MAX_FILES:
-            break
-    return files[:_DISK_SCAN_MAX_FILES]
-
-
-def _relative_disk_path(mount_point: Path, path: Path) -> str:
-    try:
-        return str(path.relative_to(mount_point))
-    except ValueError:
-        return path.name
-
-
-def _read_bounded_text(path: Path) -> str:
-    try:
-        if path.stat().st_size > _DISK_SCAN_MAX_BYTES_PER_FILE:
-            return ""
-        return path.read_text(encoding="utf-8", errors="ignore")
-    except OSError:
-        return ""
-
-
-def scan_workload_disk_findings(mount_point: Path) -> tuple[list[SideScanDiskFinding], list[SideScanDiskFinding]]:
-    """Scan mounted workload config/startup files for metadata-only risk signals.
-
-    The output deliberately records finding type, path, severity, and a stable
-    evidence label only. It never returns matched file contents.
-    """
-
-    config_findings: list[SideScanDiskFinding] = []
-    ioc_findings: list[SideScanDiskFinding] = []
-    seen: set[tuple[str, str]] = set()
-    for path in _iter_interesting_disk_files(mount_point):
-        text = _read_bounded_text(path)
-        if not text:
-            continue
-        relative_path = _relative_disk_path(mount_point, path)
-        for pattern, finding_type, severity in _IOC_PATTERNS:
-            if not pattern.search(text):
-                continue
-            key = (relative_path, finding_type)
-            if key in seen:
-                continue
-            seen.add(key)
-            ioc_findings.append(
-                SideScanDiskFinding(
-                    finding_type=finding_type,
-                    file_path=relative_path,
-                    severity=severity,
-                    category="ioc",
-                    evidence=f"{finding_type}_matched",
-                )
-            )
-        for pattern, finding_type, severity in _CONFIG_PATTERNS:
-            if not pattern.search(text):
-                continue
-            key = (relative_path, finding_type)
-            if key in seen:
-                continue
-            seen.add(key)
-            config_findings.append(
-                SideScanDiskFinding(
-                    finding_type=finding_type,
-                    file_path=relative_path,
-                    severity=severity,
-                    category="configuration",
-                    evidence=f"{finding_type}_matched",
-                )
-            )
-    return config_findings, ioc_findings
-
-
 # ---------------------------------------------------------------------------
 # Thin opt-in entry point — callable from the cloud scan path.
 # ---------------------------------------------------------------------------
@@ -692,6 +600,7 @@ async def run_side_scan(
     *,
     instance_id: str | None = None,
     volume_id: str | None = None,
+    image_id: str | None = None,
     collector_instance_id: str | None = None,
     availability_zone: str | None = None,
     region: str | None = None,
@@ -722,6 +631,8 @@ async def run_side_scan(
     if sweep_orphans:
         scanner.sweep_orphan_snapshots()
 
+    if image_id:
+        return [await scanner.scan_image(image_id, scan_secrets_enabled=scan_secrets_enabled)]
     targets = scanner.enumerate_target_volumes(instance_id=instance_id, volume_id=volume_id)
     results: list[SideScanResult] = []
     for target in targets:

@@ -41885,9 +41885,26 @@
             "title": "Executor",
             "type": "string"
           },
+          "image_scan": {
+            "enum": [
+              "ami",
+              "image",
+              "unsupported"
+            ],
+            "title": "Image Scan",
+            "type": "string"
+          },
+          "image_scan_note": {
+            "title": "Image Scan Note",
+            "type": "string"
+          },
           "lifecycle_contract": {
             "title": "Lifecycle Contract",
             "type": "boolean"
+          },
+          "mutation": {
+            "title": "Mutation",
+            "type": "string"
           },
           "provider": {
             "title": "Provider",
@@ -41904,7 +41921,10 @@
           "lifecycle_contract",
           "executor",
           "cli_available",
-          "credentialed_smoke"
+          "credentialed_smoke",
+          "image_scan",
+          "image_scan_note",
+          "mutation"
         ],
         "title": "SideScanProviderCapability",
         "type": "object"
@@ -41943,7 +41963,7 @@
       },
       "SideScanTriggerRequest": {
         "additionalProperties": false,
-        "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nThe authenticated, tenant-scoped door for the shipped\n``run_provider_side_scan`` executor that previously ran only from the CLI.\nRead-only toward customer targets: agent-bom snapshots the disk, mounts a\ntemp copy on an in-account collector read-only, records SBOM + CVE + secret\n*metadata* only, and attempts cleanup of owned temporary resources. Credentials\nare never embedded and never accepted here \u2014 the executor resolves scoped\nlifecycle credentials from the provider's default chain. AWS EBS keeps its own CLI\nentrypoint (its results are not persisted to the shared lifecycle store).",
+        "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nTenant-scoped door for the shipped ``run_provider_side_scan`` executor: an\nopt-in mutation (temp snapshot/disk create, attach, delete) that never\nmodifies the scanned disk or image, mounts a temp copy on an in-account\ncollector read-only and records SBOM + CVE + secret *metadata* only.\nCredentials are never accepted here; the executor resolves scoped lifecycle\ncredentials from the provider chain. AWS EBS keeps its own CLI entrypoint.",
         "properties": {
           "account_id": {
             "description": "Azure subscription id / GCP project id owning the disk + collector.",
@@ -42019,10 +42039,19 @@
             "type": "boolean"
           },
           "target_id": {
-            "description": "Managed/persistent disk resource id to scan.",
+            "description": "Disk resource id, or GCE image path (target_type=image).",
             "maxLength": 1024,
             "minLength": 1,
             "title": "Target Id",
+            "type": "string"
+          },
+          "target_type": {
+            "default": "disk",
+            "enum": [
+              "disk",
+              "image"
+            ],
+            "title": "Target Type",
             "type": "string"
           }
         },

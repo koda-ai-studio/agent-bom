@@ -23,6 +23,8 @@ from .side_scan_lifecycle import (
     SideScanTemporaryResource,
     TemporaryResourceStatus,
 )
+from .side_scan_owners import azure_disk_owner, gcp_disk_owner
+from .side_scan_provider_ids import _azure_disk_dict, _azure_group_and_name, _azure_resource_group, _gcp_zone, _labels, _tags
 from .side_scan_targets import CloudSideScanTarget
 
 
@@ -71,6 +73,8 @@ class _PersistedLifecycleAdapter:
         self._store = state_store
         self._wait_policy = _WaitPolicy(max_wait_attempts, wait_interval_seconds, sleep)
         self.last_operation: Any | None = None
+        self.owner_instance_id = ""
+        self.owner_instance_name = ""
 
     def _validate_target(self, target: CloudSideScanTarget) -> None:
         if (
@@ -306,6 +310,7 @@ class AzureManagedDiskLifecycleAdapter(_PersistedLifecycleAdapter):
         self._validate_target(target)
         self._ensure_running("snapshot")
         resource_group = _azure_resource_group(target.target_id)
+        self.owner_instance_id, self.owner_instance_name = azure_disk_owner(self._disks, *_azure_group_and_name(target.target_id))
         name = _resource_name(self.execution.cleanup_ownership.owner_id, "snapshot")
         try:
             existing = self._azure_get(self._snapshots, resource_group, name)
@@ -499,6 +504,16 @@ class GcpPersistentDiskLifecycleAdapter(_PersistedLifecycleAdapter):
     def create_snapshot(self, target: CloudSideScanTarget) -> str:
         self._validate_target(target)
         self._ensure_running("snapshot")
+        if target.target_type == "image":
+            # The temp disk is built straight from the image; nothing to snapshot.
+            return ""
+        self.owner_instance_id, self.owner_instance_name = gcp_disk_owner(
+            self._disks,
+            self._instances,
+            project=self._project,
+            zone=_gcp_zone(target.target_id) or target.location,
+            disk_name=target.target_id.rstrip("/").rsplit("/", 1)[-1],
+        )
         name = _resource_name(self.execution.cleanup_ownership.owner_id, "snapshot")
         try:
             existing = self._gcp_get(self._snapshots, {"project": self._project, "snapshot": name})
@@ -546,7 +561,7 @@ class GcpPersistentDiskLifecycleAdapter(_PersistedLifecycleAdapter):
                         "zone": target.location,
                         "disk_resource": {
                             "name": name,
-                            "source_snapshot": snapshot_id,
+                            **({"source_image": target.target_id} if target.target_type == "image" else {"source_snapshot": snapshot_id}),
                             "labels": self.execution.cleanup_ownership.required_tags(),
                         },
                     }
@@ -686,49 +701,6 @@ def _resource_id(resource: Any) -> str:
     if not result:
         raise RuntimeError("provider operation returned no resource id")
     return result
-
-
-def _tags(resource: Any) -> dict[str, str]:
-    raw = resource.get("tags") if isinstance(resource, Mapping) else getattr(resource, "tags", None)
-    return {str(key): str(value) for key, value in raw.items()} if isinstance(raw, Mapping) else {}
-
-
-def _labels(resource: Any) -> dict[str, str]:
-    raw = resource.get("labels") if isinstance(resource, Mapping) else getattr(resource, "labels", None)
-    return {str(key): str(value) for key, value in raw.items()} if isinstance(raw, Mapping) else {}
-
-
-def _azure_resource_group(resource_id: str) -> str:
-    parts = [part for part in resource_id.split("/") if part]
-    try:
-        return parts[parts.index("resourceGroups") + 1]
-    except (ValueError, IndexError) as exc:
-        raise ValueError("Azure target id is missing a resource group") from exc
-
-
-def _azure_group_and_name(resource_id: str) -> tuple[str, str]:
-    return _azure_resource_group(resource_id), resource_id.rstrip("/").rsplit("/", 1)[-1]
-
-
-def _azure_disk_dict(item: Any) -> dict[str, Any]:
-    if isinstance(item, Mapping):
-        return dict(item)
-    managed = getattr(item, "managed_disk", None)
-    managed_id = managed.get("id") if isinstance(managed, Mapping) else getattr(managed, "id", None)
-    return {
-        "lun": getattr(item, "lun", None),
-        "name": getattr(item, "name", ""),
-        "create_option": getattr(item, "create_option", "Attach"),
-        "managed_disk": {"id": str(managed_id or "")},
-    }
-
-
-def _gcp_zone(resource_id: str) -> str:
-    parts = [part for part in resource_id.split("/") if part]
-    try:
-        return parts[parts.index("zones") + 1]
-    except (ValueError, IndexError):
-        return ""
 
 
 def _target_for_execution(execution: SideScanExecutionRecord) -> CloudSideScanTarget:

@@ -119,6 +119,48 @@ def register_kspm_cluster_posture(bindings: OperatorToolBindings) -> None:
         )
 
 
+def register_kspm_workload_inventory(bindings: OperatorToolBindings) -> None:
+
+    mcp = bindings.mcp
+
+    @mcp.tool(annotations=bindings.read_only, title="KSPM Workload Inventory")
+    async def kspm_workload_inventory(
+        namespace: Annotated[
+            str,
+            Field(description="Kubernetes namespace to inventory (ignored when all_namespaces=True). Defaults to 'default'."),
+        ] = "default",
+        all_namespaces: Annotated[bool, Field(description="Inventory every namespace instead of a single one.")] = False,
+        context: Annotated[
+            str | None,
+            Field(description="kubectl context to use (workstation fallback path only). Omit to use the in-cluster SA token."),
+        ] = None,
+        max_items: Annotated[int, Field(description="Maximum entries per list (1-1000); totals and truncation are reported.")] = 200,
+    ) -> str:
+        """Read the live Kubernetes workload inventory (read-only).
+
+        Workloads (Deployment/StatefulSet/DaemonSet/Job/CronJob/Pod) with their
+        containers and images, pinned to the running digest when the pod
+        recorded one; service accounts with token mounting; service-account RBAC
+        grants with their scope and Secret access; and the Secret names each
+        workload references. Secret values are never read.
+
+        Each collector carries executed / unevaluable / failed state, so a denied
+        RBAC read is reported 'partial', never as a workload without permissions.
+        The same inventory feeds the scan report's kubernetes_inventory section
+        and the graph's workload → image → CVE and workload → service account →
+        RBAC paths.
+        """
+        return await bindings.execute_tool_async(
+            "kspm_workload_inventory",
+            bindings.implementations["kspm_workload_inventory_impl"],
+            namespace=namespace,
+            all_namespaces=all_namespaces,
+            context=context,
+            max_items=max_items,
+            _truncate_response=bindings.truncate_response,
+        )
+
+
 def register_fleet_scan(bindings: OperatorToolBindings) -> None:
 
     mcp = bindings.mcp
@@ -158,5 +200,6 @@ def register_fleet_scan(bindings: OperatorToolBindings) -> None:
 REGISTRATIONS = (
     register_cis_benchmark,
     register_kspm_cluster_posture,
+    register_kspm_workload_inventory,
     register_fleet_scan,
 )

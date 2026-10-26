@@ -13,6 +13,7 @@ resource "google_project_iam_custom_role" "sidescan" {
     "compute.disks.get",
     "compute.disks.list",
     "compute.disks.use",
+    "compute.images.useReadOnly",
     "compute.instances.attachDisk",
     "compute.instances.detachDisk",
     "compute.instances.get",

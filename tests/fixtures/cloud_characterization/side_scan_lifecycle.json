@@ -61,7 +61,10 @@
           "cli_available": true,
           "credentialed_smoke": false,
           "executor": "shipped",
+          "image_scan": "ami",
+          "image_scan_note": "temp volume from the AMI's root EBS snapshot; AMI never modified",
           "lifecycle_contract": true,
+          "mutation": "opt_in_temp_disk_lifecycle",
           "provider": "aws",
           "target_discovery": true
         },
@@ -69,7 +72,10 @@
           "cli_available": true,
           "credentialed_smoke": false,
           "executor": "shipped",
+          "image_scan": "unsupported",
+          "image_scan_note": "Azure managed image / gallery image scan not implemented",
           "lifecycle_contract": true,
+          "mutation": "opt_in_temp_disk_lifecycle",
           "provider": "azure",
           "target_discovery": true
         },
@@ -77,7 +83,10 @@
           "cli_available": true,
           "credentialed_smoke": false,
           "executor": "shipped",
+          "image_scan": "image",
+          "image_scan_note": "temp disk created from the image (sourceImage); image never modified",
           "lifecycle_contract": true,
+          "mutation": "opt_in_temp_disk_lifecycle",
           "provider": "gcp",
           "target_discovery": true
         }

@@ -5,12 +5,8 @@ from pathlib import Path
 import pytest
 
 from agent_bom.cloud.side_scan import SideScanDisabledError
-from agent_bom.cloud.side_scan_targets import (
-    CloudSideScanTarget,
-    azure_managed_disk_targets,
-    gcp_persistent_disk_targets,
-    run_cloud_side_scan_targets,
-)
+from agent_bom.cloud.side_scan_target_records import azure_managed_disk_targets, gcp_persistent_disk_targets
+from agent_bom.cloud.side_scan_targets import CloudSideScanTarget, run_cloud_side_scan_targets
 
 
 class FakeLifecycle:

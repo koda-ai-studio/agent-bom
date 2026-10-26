@@ -1,7 +1,7 @@
 # MCP Server — Connect agent-bom to AI Assistants
 
 agent-bom starts with 8 focused MCP tools. Select a task profile for graph, cloud, runtime or audit work;
-`--profile full` explicitly exposes the complete compatibility catalog of 97 MCP tools. Clients that negotiate the
+`--profile full` explicitly exposes the complete compatibility catalog of 98 MCP tools. Clients that negotiate the
 MCP SDK's legacy `2025-11-25` handshake can connect over stdio or
 Streamable HTTP. The `2026-07-28` protocol also supports stateless requests,
 `server/discover`, per-request capabilities, required HTTP headers, and private
@@ -231,7 +231,7 @@ For prerequisite checks and bounded identity paths, use [`consequence_assessment
 
 For scoped historical permission receipts, use [`compromise_assessment`](MCP_SERVER.md#assess-an-assumed-compromise) in the graph profile.
 
-## Tool Categories (97 tools)
+## Tool Categories (98 tools)
 
 These categories describe `--profile full`, not the default startup catalog.
 The [profile guide](#choose-a-profile-for-other-work) lists the smaller task surfaces.
@@ -251,7 +251,7 @@ The [profile guide](#choose-a-profile-for-other-work) lists the smaller task sur
 | **AI supply chain** | `dataset_card_scan`, `training_pipeline_scan`, `browser_extension_scan`, `model_provenance_scan`, `prompt_scan`, `model_file_scan`, `ingest_external_scan`, `runtime_evidence_ingest` | Scan AI artifacts, prompts, model files, and browser extensions; import tool-agnostic SARIF/SBOM/scanner evidence without executing its producer; merge CWPP runtime signals |
 
 <details>
-<summary>Complete current catalog (97 tools)</summary>
+<summary>Complete current catalog (98 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `affected_assets`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
@@ -260,7 +260,7 @@ The [profile guide](#choose-a-profile-for-other-work) lists the smaller task sur
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
 `inventory`, `agent_activity`, `diff`, `marketplace_check`, `code_scan`, `context_graph`,
-`graph_export`, `analytics_query`, `cis_benchmark`, `kspm_cluster_posture`,
+`graph_export`, `analytics_query`, `cis_benchmark`, `kspm_cluster_posture`, `kspm_workload_inventory`,
 `fleet_scan`, `runtime_correlate`, `runtime_production_index`,
 `runtime_blueprints`, `runtime_blueprint_drift`, `cost_report`, `anomaly_scan`,
 `drift_incidents`, `proxy_status`, `proxy_alerts`, `gateway_status`,
@@ -674,7 +674,7 @@ cannot be invoked. Profiles are not permissions: graph writes still require the
 existing authenticated role, tenant scope and audit reason.
 
 Existing clients that require the complete catalog can explicitly use
-`agent-bom mcp server --profile full`. It retains all 97 tools. The previous
+`agent-bom mcp server --profile full`. It retains all 98 tools. The previous
 28-tool `--profile guided` option remains available for compatibility with all
 eight workflow prompts. Neither is the recommended first-run configuration.
 Third-party tool plugins remain separately opt-in and are exposed only by `full`.

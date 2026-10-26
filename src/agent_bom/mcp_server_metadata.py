@@ -243,6 +243,11 @@ _SERVER_CARD_TOOLS = [
         "annotations": {"readOnlyHint": True},
     },
     {
+        "name": "kspm_workload_inventory",
+        "description": "Read the live Kubernetes workload inventory: workloads, images by digest, service accounts and RBAC grants",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
         "name": "fleet_scan",
         "description": "Batch registry lookup for multiple MCP servers — returns risk levels, tool counts, and trust signals for each",
         "annotations": {"readOnlyHint": True},

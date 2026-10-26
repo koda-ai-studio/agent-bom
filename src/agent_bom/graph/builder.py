@@ -157,12 +157,8 @@ from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_organization as _add_snowflake_organization,
 )
 from agent_bom.graph.builder_snowflake_platform import _add_snowflake_pipeline as _add_snowflake_pipeline
-from agent_bom.graph.builder_snowflake_platform import (
-    _add_snowflake_pipes as _add_snowflake_pipes,
-)
-from agent_bom.graph.builder_snowflake_platform import (
-    _add_snowflake_schemas as _add_snowflake_schemas,
-)
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_pipes as _add_snowflake_pipes
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_schemas as _add_snowflake_schemas
 from agent_bom.graph.builder_snowflake_platform import _add_snowflake_services as _add_snowflake_services
 from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_streams as _add_snowflake_streams,
@@ -227,6 +223,7 @@ from agent_bom.graph.framework_topology_projection import _add_framework_topolog
 from agent_bom.graph.framework_topology_projection import _AIStackProjection as _AIStackProjection
 from agent_bom.graph.framework_topology_projection import _FrameworkTopology as _FrameworkTopology
 from agent_bom.graph.identity_nodes import identity_node_id as _identity_node_id
+from agent_bom.graph.kubernetes_projection import project_kubernetes_inventory
 from agent_bom.graph.network_entry_projection import _add_network_edge_inventory as _add_network_edge_inventory
 from agent_bom.graph.network_entry_projection import _wire_network_entry_exposure_paths as _wire_network_entry_exposure_paths
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
@@ -333,6 +330,7 @@ from agent_bom.graph.runtime_projection import (
 from agent_bom.graph.runtime_projection import (
     _runtime_identity_relationship as _runtime_identity_relationship,
 )
+from agent_bom.graph.side_scan_projection import project_side_scan_results
 from agent_bom.graph.snowflake_source_lanes import _add_snowflake_source_lanes as _add_snowflake_source_lanes
 from agent_bom.graph.snowflake_source_lanes import _project_snowflake_lanes as _project_snowflake_lanes
 from agent_bom.graph.supabase_projection import project_supabase_inventory
@@ -425,9 +423,11 @@ def _project_inventory_findings(
             native_projector(graph, inventory)
         else:
             _add_cloud_inventory(graph, inventory, inputs.data_source)
+    project_side_scan_results(graph, report.get("side_scan_results"))
     project_benchmarks(graph, benchmark_inputs(report), declared_assets_by_identifier(report.get("findings")))
     project_sast(graph, report.get("sast") or report.get("sast_data"))
     project_iac(graph, report.get("iac_findings") or report.get("iac_findings_data"))
+    project_kubernetes_inventory(graph, report.get("kubernetes_inventory"))
     project_skill_audit(graph, report.get("skill_audit"), indexes, report.get("findings"))
     project_scan_findings(graph, report.get("findings"))
     project_gpu_compute(graph, report, indexes, inputs.data_source)

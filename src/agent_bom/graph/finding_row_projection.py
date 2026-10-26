@@ -83,6 +83,10 @@ class _AssetIndex:
                 value = node.attributes.get(key)
                 if isinstance(value, str) and value:
                     self.by_identity[value].add(node.id)
+            # Ids a node absorbed (an image carrier's former agent id) still address it.
+            for alias in (node.attributes.get("identity") or {}).get("aliases") or []:
+                if isinstance(alias, str) and alias:
+                    self.by_identity[alias].add(node.id)
             self.by_label[(node.entity_type, node.label)].add(node.id)
         self.aliases = _build_cloud_resource_alias_index(graph)
 
@@ -106,7 +110,7 @@ class _AssetIndex:
                 return resolved
         # The asset identifier is often the inventory entity's canonical id, not its graph id
         # (a config-scoped agent is ``agent:cfg-…:<name>``, its identifier the agent's stable id).
-        for key in (identifier, asset.get("canonical_id"), asset.get("stable_id")):
+        for key in (identifier, prefixed, asset.get("canonical_id"), asset.get("stable_id")):
             matches = self.by_identity.get(key) if isinstance(key, str) else None
             if matches and len(matches) == 1:
                 return next(iter(matches))

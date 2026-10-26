@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from agent_bom.api.read_models._base import Num, ReadModel, ReadResponse
 
@@ -213,6 +213,9 @@ class SideScanProviderCapability(ReadModel):
     executor: str
     cli_available: bool
     credentialed_smoke: bool
+    image_scan: Literal["ami", "image", "unsupported"]
+    image_scan_note: str
+    mutation: str
 
 
 class CloudSideScanListResponse(ReadResponse):
