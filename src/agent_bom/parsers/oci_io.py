@@ -36,6 +36,9 @@ _MAX_LAYER_COMPRESSED_BYTES = 2 * 1024 * 1024 * 1024
 _MAX_LAYER_MEMBERS = 1_000_000
 
 
+_MAX_METADATA_MEMBER_BYTES = 512 * 1024 * 1024
+
+
 _DEFAULT_SCAN_TIMEOUT_SECONDS = 900.0
 
 
@@ -62,6 +65,10 @@ def _max_decompression_ratio() -> int:
 
 def _max_layer_compressed_bytes() -> int:
     return _env_int("AGENT_BOM_OCI_MAX_LAYER_COMPRESSED_BYTES", _MAX_LAYER_COMPRESSED_BYTES)
+
+
+def _max_metadata_member_bytes() -> int:
+    return _env_int("AGENT_BOM_OCI_MAX_METADATA_MEMBER_BYTES", _MAX_METADATA_MEMBER_BYTES)
 
 
 def _max_layer_members() -> int:
@@ -169,11 +176,15 @@ def _safe_extractfile(tf: tarfile.TarFile, name: str) -> IO[bytes] | None:
     """Open a tar member by name, but only if it is safe (see ``_safe_getmember``).
 
     Returns ``None`` if the member is missing, a symlink / hardlink, has an
-    unsafe name, or can't be opened as a stream. Callers can treat ``None``
-    uniformly as "skip this member" without distinguishing the cause.
+    unsafe name, exceeds the package-metadata size bound (callers read whole
+    metadata files into memory), or can't be opened as a stream. Callers
+    record ``None`` as a package-metadata coverage gap.
     """
     member = _safe_getmember(tf, name)
     if member is None:
+        return None
+    if member.size > _max_metadata_member_bytes():
+        _logger.debug("Skipping oversized package metadata member %s (%d bytes)", name, member.size)
         return None
     try:
         return tf.extractfile(member)

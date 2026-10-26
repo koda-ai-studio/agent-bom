@@ -144,6 +144,7 @@ coverage warning naming the layer and reason, and the scan run is reported as
 | `AGENT_BOM_OCI_MAX_LAYER_UNCOMPRESSED_BYTES` | 5 GiB | Uncompressed bytes of one layer (also caps temporary disk use per layer). |
 | `AGENT_BOM_OCI_MAX_DECOMPRESSION_RATIO` | `100` | Uncompressed-to-compressed ratio; decompression stops at the limit. |
 | `AGENT_BOM_OCI_MAX_LAYER_MEMBERS` | `1000000` | Tar entries walked in one layer. |
+| `AGENT_BOM_OCI_MAX_METADATA_MEMBER_BYTES` | 512 MiB | One package-metadata file (dpkg status, RPM database, lockfile, manifest) read into memory. |
 | `AGENT_BOM_OCI_MAX_JAR_UNCOMPRESSED_BYTES` | 512 MiB | Uncompressed size of one Java archive inspected for Maven metadata. |
 
 Temporary layer files are written to the system temporary directory (`TMPDIR`)

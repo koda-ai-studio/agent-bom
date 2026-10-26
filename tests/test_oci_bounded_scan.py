@@ -308,3 +308,19 @@ def test_truncated_gzip_layer_is_a_parse_error_gap(tmp_path: Path) -> None:
 
     assert _names(result.packages) == {"bash"}
     assert [warning.reason for warning in result.coverage_warnings] == ["oci_layer_parse_error"]
+
+
+def test_oversized_package_metadata_member_is_a_gap_not_a_buffer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_BOM_OCI_MAX_METADATA_MEMBER_BYTES", str(_MIB))
+    layer = tmp_path / "layer.tar"
+    entry = _status("openssl")
+    _write_layer(layer, gz=False, status=entry * (8 * _MIB // len(entry) + 1))
+    image = _docker_save(tmp_path, [layer])
+
+    result, peak = _measure(lambda: parse_oci_tarball(image))
+
+    assert result.packages == []
+    assert [(warning.path, warning.reason) for warning in result.coverage_warnings] == [
+        ("var/lib/dpkg/status", "package_metadata_parse_error")
+    ]
+    assert peak < 4 * _MIB
