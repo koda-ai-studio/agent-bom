@@ -472,24 +472,41 @@ _TITLE_CASE_CONTINUATION_RE = re.compile(r"[ \t]{1,8}[A-Z][A-Za-z]{0,64}\b")
 _HTTP_URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 
 
-SANITIZE_TEXT_MEMO_LIMIT = 16_384
-SANITIZE_TEXT_MEMO_MAX_INPUT = 512
-_SANITIZE_TEXT_MEMO: ContextVar[dict[tuple[str, int], str] | None] = ContextVar("agent_bom_sanitize_text_memo", default=None)
+SANITIZE_TEXT_MEMO_CHAR_BUDGET = 8_000_000
+
+
+class _TextMemo(dict[tuple[str, int], str]):
+    """Redaction results for one scan, bounded by the total characters of their inputs."""
+
+    __slots__ = ("chars",)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.chars = 0
+
+    def remember(self, key: tuple[str, int], result: str) -> None:
+        size = len(key[0])
+        if self.chars + size <= SANITIZE_TEXT_MEMO_CHAR_BUDGET:
+            self[key] = result
+            self.chars += size
+
+
+_SANITIZE_TEXT_MEMO: ContextVar[_TextMemo | None] = ContextVar("agent_bom_sanitize_text_memo", default=None)
 
 
 @contextmanager
-def sanitize_text_memo() -> Iterator[dict[tuple[str, int], str]]:
+def sanitize_text_memo() -> Iterator[_TextMemo]:
     """Memoize :func:`sanitize_text` for one scan, releasing every input string afterwards.
 
-    Report building redacts the same package and layer strings once per
-    finding; an image with thousands of CVEs on one package otherwise repeats
-    identical regex work per finding.
+    Report building redacts the same package, layer and provenance strings
+    once per finding; an image with thousands of CVEs on one package otherwise
+    repeats identical regex work per finding.
     """
     memo = _SANITIZE_TEXT_MEMO.get()
     if memo is not None:
         yield memo
         return
-    memo = {}
+    memo = _TextMemo()
     token = _SANITIZE_TEXT_MEMO.set(memo)
     try:
         yield memo
@@ -501,14 +518,13 @@ def sanitize_text_memo() -> Iterator[dict[tuple[str, int], str]]:
 def sanitize_text(value: object, max_len: int = 1000) -> str:
     """Redact credential-shaped substrings, credential-bearing URLs, and emails in text."""
     memo = _SANITIZE_TEXT_MEMO.get()
-    if memo is None or type(value) is not str or len(value) > SANITIZE_TEXT_MEMO_MAX_INPUT:
+    if memo is None or type(value) is not str:
         return _sanitize_text(value, max_len)
     key = (value, max_len)
     cached = memo.get(key)
     if cached is None:
         cached = _sanitize_text(value, max_len)
-        if len(memo) < SANITIZE_TEXT_MEMO_LIMIT:
-            memo[key] = cached
+        memo.remember(key, cached)
     return cached
 
 

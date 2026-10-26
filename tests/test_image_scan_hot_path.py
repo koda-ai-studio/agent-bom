@@ -92,13 +92,32 @@ def test_memoized_sanitize_text_matches_unmemoized_redaction() -> None:
             assert got == expected
 
 
-def test_memo_is_bounded_and_released_after_the_scan() -> None:
+def test_long_repeated_layer_commands_are_memoized(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+    real = security._sanitize_text
+
+    def counting(value: object, max_len: int = 1000) -> str:
+        nonlocal calls
+        calls += 1
+        return real(value, max_len)
+
+    monkeypatch.setattr(security, "_sanitize_text", counting)
+    command = "/bin/sh -c set -eux; apt-get update; " + "apt-get install -y --no-install-recommends lib$x-dev; " * 40
+    with security.sanitize_text_memo():
+        for _ in range(100):
+            security.sanitize_text(command)
+    assert calls == 1
+
+
+def test_memo_is_bounded_and_released_after_the_scan(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(security, "SANITIZE_TEXT_MEMO_CHAR_BUDGET", 10_000)
     with security.sanitize_text_memo() as memo:
-        for index in range(security.SANITIZE_TEXT_MEMO_LIMIT + 50):
-            security.sanitize_text(f"value-{index}")
-        security.sanitize_text("y" * (security.SANITIZE_TEXT_MEMO_MAX_INPUT + 1))
+        for index in range(5_000):
+            security.sanitize_text(f"value-{index:06d}")
+        security.sanitize_text("y" * 20_000)
         security.sanitize_text(12345)
-        assert len(memo) == security.SANITIZE_TEXT_MEMO_LIMIT
+        assert sum(len(text) for text, _max_len in memo) <= 10_000
+        assert not any(isinstance(text, str) and text.startswith("yyy") for text, _max_len in memo)
         with security.sanitize_text_memo() as nested:
             assert nested is memo
     assert memo == {}
