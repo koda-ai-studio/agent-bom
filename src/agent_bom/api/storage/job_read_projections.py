@@ -1,4 +1,8 @@
-"""Existence queries that never materialize persisted scan reports."""
+"""Existence queries that never materialize persisted scan reports.
+
+Compressed results (``agent_bom.api.job_payload_codec``) expose only their
+header keys to SQL, so each predicate reads the plain array or its count.
+"""
 
 from typing import Any
 
@@ -18,7 +22,9 @@ def sqlite_demo_exists(self: Any, tenant_id: str) -> bool:
                 SELECT 1 FROM json_each(data, '$.result.scan_sources')
                 WHERE LOWER(CAST(value AS TEXT)) LIKE '%demo%'))
             AND (COALESCE(json_array_length(data, '$.result.findings'), 0) > 0
-                OR COALESCE(json_array_length(data, '$.result.vulnerabilities'), 0) > 0)
+                OR COALESCE(json_array_length(data, '$.result.vulnerabilities'), 0) > 0
+                OR COALESCE(json_extract(data, '$.result.findings_count'), 0) > 0
+                OR COALESCE(json_extract(data, '$.result.vulnerabilities_count'), 0) > 0)
             LIMIT 1""",
                 (tenant_id, DEMO_ESTATE_TRIGGERED_BY),
             ).fetchone()
@@ -43,7 +49,11 @@ def postgres_demo_exists(self: Any, tenant_id: str) -> bool:
             AND (jsonb_array_length(CASE WHEN jsonb_typeof(data->'result'->'findings') = 'array'
                     THEN data->'result'->'findings' ELSE '[]'::jsonb END) > 0
                 OR jsonb_array_length(CASE WHEN jsonb_typeof(data->'result'->'vulnerabilities') = 'array'
-                    THEN data->'result'->'vulnerabilities' ELSE '[]'::jsonb END) > 0)
+                    THEN data->'result'->'vulnerabilities' ELSE '[]'::jsonb END) > 0
+                OR (CASE WHEN jsonb_typeof(data->'result'->'findings_count') = 'number'
+                    THEN (data->'result'->>'findings_count')::bigint ELSE 0 END) > 0
+                OR (CASE WHEN jsonb_typeof(data->'result'->'vulnerabilities_count') = 'number'
+                    THEN (data->'result'->>'vulnerabilities_count')::bigint ELSE 0 END) > 0)
             LIMIT 1""",
                 (tenant_id,),
             ).fetchone()

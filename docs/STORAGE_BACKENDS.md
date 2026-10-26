@@ -213,6 +213,36 @@ contract applies to SQLite, PostgreSQL and the in-memory job store. The retained
 Snowflake adapter has not been qualified for tenant-colliding job IDs or PostgreSQL
 dispatch leases; this upgrade makes no such claim for it.
 
+## Compressed scan-job results
+
+SQLite and PostgreSQL store a job's `result` and `result_document` zstd-compressed
+when their JSON is 4 KiB or larger. The row stays valid JSON / JSONB: the value is
+replaced by an envelope
+
+```json
+{"__abom_codec": {"codec": "zstd", "encoding": "base64", "v": 1, "raw_bytes": 721334},
+ "scan_sources": ["..."], "findings_count": 51, "vulnerabilities_count": 0,
+ "data": "<base64 zstd>"}
+```
+
+Every reader decodes it transparently (`agent_bom.api.job_payload_codec`), and
+rows written before this release, small results and pending jobs remain plain JSON
+and read unchanged, so no data migration runs. Top-level job keys such as
+`source_id` and `request` stay uncompressed, so `data->>'source_id'` search and the
+summary columns are unaffected. SQL that reads inside a stored result may use only
+the envelope keys `scan_sources`, `findings_count` and `vulnerabilities_count` (or
+the plain arrays on uncompressed rows); `tests/test_job_result_codec.py` fails if a
+query reaches any other key. An unknown codec version fails the read rather than
+returning an envelope as data. Measured sizes are in
+[`docs/perf/report-volume.md`](perf/report-volume.md).
+
+Releases before this one read a compressed result as the envelope itself. During
+a rolling upgrade, or before a downgrade, set `AGENT_BOM_JOB_RESULT_CODEC=none` on
+every writer so new rows stay readable by the older version; rows already
+compressed are only readable by this release or later, so a downgrade past it
+needs the pre-upgrade backup. The retained Snowflake adapter writes plain JSON and
+reads both forms.
+
 Postgres schema migrations for the control plane run automatically on Helm
 `pre-install` / `pre-upgrade` when `controlPlane.migrations.enabled` is true
 (the default). Operators do not run Alembic manually before routine chart

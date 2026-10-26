@@ -26615,6 +26615,119 @@ components:
           title: Vex
       title: ScanRequest
       type: object
+    ScanResultIndexResponse:
+      additionalProperties: true
+      properties:
+        job_id:
+          title: Job Id
+          type: string
+        result_format:
+          title: Result Format
+          type: string
+        sections:
+          items:
+            $ref: '#/components/schemas/ScanResultSectionRef'
+          title: Sections
+          type: array
+        status:
+          title: Status
+          type: string
+        summary:
+          additionalProperties: true
+          title: Summary
+          type: object
+      required:
+      - job_id
+      - status
+      - result_format
+      - summary
+      - sections
+      title: ScanResultIndexResponse
+      type: object
+    ScanResultSectionRef:
+      additionalProperties: true
+      properties:
+        count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Count
+        href:
+          title: Href
+          type: string
+        kind:
+          enum:
+          - list
+          - object
+          title: Kind
+          type: string
+        name:
+          title: Name
+          type: string
+      required:
+      - name
+      - kind
+      - count
+      - href
+      title: ScanResultSectionRef
+      type: object
+    ScanResultSectionResponse:
+      additionalProperties: true
+      properties:
+        items:
+          anyOf:
+          - items: {}
+            type: array
+          - type: 'null'
+          title: Items
+        job_id:
+          title: Job Id
+          type: string
+        kind:
+          enum:
+          - list
+          - object
+          title: Kind
+          type: string
+        limit:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Limit
+        next_offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Next Offset
+        offset:
+          title: Offset
+          type: integer
+        section:
+          title: Section
+          type: string
+        total:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Total
+        value:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Value
+      required:
+      - job_id
+      - section
+      - kind
+      - total
+      - offset
+      - limit
+      - next_offset
+      - items
+      - value
+      title: ScanResultSectionResponse
+      type: object
     ScanRunPayload:
       additionalProperties: true
       description: Canonical evidence-quality contract, separate from job lifecycle.
@@ -54920,7 +55033,9 @@ paths:
 
         non-json ``format``, ``result_document`` carries that rendering and
 
-        ``result_format`` names it.'
+        ``result_format`` names it. For bounded reads use ``GET /v1/scan/{job_id}/result``
+
+        and ``.../result/{section}``.'
       operationId: get_scan_v1_scan__job_id__get
       parameters:
       - in: path
@@ -55338,6 +55453,117 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
       summary: Get Remediation Plan
+      tags:
+      - scan
+  /v1/scan/{job_id}/result:
+    get:
+      description: 'Summary of a completed scan result plus links to each large section.
+
+
+        A bounded alternative to ``GET /v1/scan/{job_id}``: scalar fields and the
+
+        small summary objects are returned inline; every other section is listed
+
+        with its item count and a link to ``/v1/scan/{job_id}/result/{section}``.
+
+        For filtered, cursor-paged findings across scans use ``GET /v1/findings``.'
+      operationId: get_scan_result_index_v1_scan__job_id__result_get
+      parameters:
+      - in: path
+        name: job_id
+        required: true
+        schema:
+          title: Job Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResultIndexResponse'
+          description: Successful Response
+        4XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: 'Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED,
+            403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413
+            PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429
+            RATE_LIMITED'
+        5XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
+      summary: Get Scan Result Index
+      tags:
+      - scan
+  /v1/scan/{job_id}/result/{section}:
+    get:
+      description: 'One section of a completed scan result, paged by ``offset``/``limit``
+        when it is a list.
+
+
+        Items are redacted exactly as in the full result. ``next_offset`` is null
+        on
+
+        the last page. Object sections are returned whole in ``value``.'
+      operationId: get_scan_result_section_v1_scan__job_id__result__section__get
+      parameters:
+      - in: path
+        name: job_id
+        required: true
+        schema:
+          title: Job Id
+          type: string
+      - in: path
+        name: section
+        required: true
+        schema:
+          title: Section
+          type: string
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 1000
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResultSectionResponse'
+          description: Successful Response
+        4XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: 'Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED,
+            403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413
+            PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429
+            RATE_LIMITED'
+        5XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
+      summary: Get Scan Result Section
       tags:
       - scan
   /v1/scan/{job_id}/skill-audit:

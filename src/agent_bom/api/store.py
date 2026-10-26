@@ -454,10 +454,6 @@ class SQLiteJobStore:
         return sqlite_job_revision(self, tenant_id)
 
     @staticmethod
-    def _serialize(job: ScanJob) -> str:
-        return job.model_dump_json()
-
-    @staticmethod
     def _deserialize(data: str) -> ScanJob:
         return parse_job_payload(data)
 

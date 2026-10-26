@@ -22,7 +22,7 @@ agent-bom reads only what you explicitly ask it to scan:
 | Kubernetes | `--k8s` | get/list on namespaces, pods, workloads (Deployment, StatefulSet, DaemonSet, ReplicaSet, Job, CronJob), service accounts and RBAC objects, via `kubectl` or the in-cluster API (read-only; Secrets are never listed) |
 | Terraform | `--tf-dir` | `.tf` source files (no state files, no `.tfvars`) |
 | GitHub Actions | `--gha` | `.github/workflows/*.yml` files; reports AI/credential use plus unpinned remote actions, `pull_request_target`, and missing top-level `permissions:` policies |
-| SBOM files | `--sbom` | CycloneDX/SPDX JSON you provide |
+| SBOM files | `--sbom` | CycloneDX JSON/XML or SPDX JSON/tag-value you provide |
 
 Run `agent-bom agents --gha . --offline` to inspect workflow files without
 network access. Pipeline-hardening gaps appear as scan warnings; pin remote

@@ -15,7 +15,6 @@ consume SPDX 2.x. This module emits the classic document shape:
 from __future__ import annotations
 
 import hashlib
-import json
 from datetime import timezone
 from pathlib import Path
 from typing import Any
@@ -25,6 +24,7 @@ from agent_bom.checksums import integrity_verdict, integrity_verdict_statements,
 from agent_bom.models import AIBOMReport
 from agent_bom.output.cloud_context import attach_cloud_context
 from agent_bom.output.dependency_hierarchy import add_spdx2_package_relationships
+from agent_bom.output.json_writer import write_json_file
 from agent_bom.output.package_attributes import spdx2_external_refs
 from agent_bom.sbom_formats.surface_labels import server_surface_description
 
@@ -231,48 +231,97 @@ def to_spdx2(report: AIBOMReport, version: str = "2.3") -> dict:
 
 def export_spdx2(report: AIBOMReport, output_path: str, version: str = "2.3") -> None:
     """Export report as an SPDX 2.x JSON file."""
-    data = to_spdx2(report, version=version)
-    Path(output_path).write_text(json.dumps(data, indent=2))
+    write_json_file(to_spdx2(report, version=version), output_path)
+
+
+def _tv_line(value: object) -> str:
+    """Single-line tag values cannot carry a newline without forging a new tag."""
+    return str(value).replace("\r", " ").replace("\n", " ")
+
+
+def _tv_text(value: object) -> str:
+    """Wrap free text in the spec's ``<text>`` block; a literal close tag is neutralised."""
+    return "<text>" + str(value).replace("</text>", "<\\/text>") + "</text>"
+
+
+def _tv_annotations(subject: str, annotations: list[dict[str, Any]]) -> list[str]:
+    lines: list[str] = []
+    for annotation in annotations:
+        lines += [
+            "",
+            f"Annotator: {_tv_line(annotation['annotator'])}",
+            f"AnnotationDate: {_tv_line(annotation['annotationDate'])}",
+            f"AnnotationType: {_tv_line(annotation['annotationType'])}",
+            f"SPDXREF: {_tv_line(subject)}",
+            f"AnnotationComment: {_tv_text(annotation['comment'])}",
+        ]
+    return lines
+
+
+# (tag, JSON key, default, free text)
+_TV_PACKAGE_FIELDS: tuple[tuple[str, str, str | None, bool], ...] = (
+    ("PackageSupplier", "supplier", None, False),
+    ("PackageHomePage", "homepage", None, False),
+    ("PrimaryPackagePurpose", "primaryPackagePurpose", None, False),
+    ("PackageLicenseConcluded", "licenseConcluded", _NOASSERTION, False),
+    ("PackageLicenseDeclared", "licenseDeclared", _NOASSERTION, False),
+    ("PackageCopyrightText", "copyrightText", _NOASSERTION, True),
+    ("PackageSummary", "summary", None, True),
+    ("PackageDescription", "description", None, True),
+    ("PackageComment", "comment", None, True),
+)
+
+
+def _tv_package(pkg: dict[str, Any]) -> list[str]:
+    lines = [
+        f"PackageName: {_tv_line(pkg['name'])}",
+        f"SPDXID: {pkg['SPDXID']}",
+        f"PackageVersion: {_tv_line(pkg.get('versionInfo', _NOASSERTION))}",
+        f"PackageDownloadLocation: {_tv_line(pkg.get('downloadLocation', _NOASSERTION))}",
+        f"FilesAnalyzed: {'true' if pkg.get('filesAnalyzed') else 'false'}",
+    ]
+    for tag, key, default, free_text in _TV_PACKAGE_FIELDS:
+        value = pkg.get(key) or default
+        if value:
+            lines.append(f"{tag}: {_tv_text(value) if free_text and value != _NOASSERTION else _tv_line(value)}")
+    for checksum in pkg.get("checksums", []):
+        lines.append(f"PackageChecksum: {checksum['algorithm']}: {checksum['checksumValue']}")
+    for ext in pkg.get("externalRefs", []):
+        lines.append(f"ExternalRef: {ext['referenceCategory']} {ext['referenceType']} {_tv_line(ext['referenceLocator'])}")
+    return lines
 
 
 def to_spdx2_tagvalue(report: AIBOMReport, version: str = "2.3") -> str:
-    """Render an SPDX 2.x document in tag-value (``.spdx``) format."""
+    """Render an SPDX 2.x document in tag-value (``.spdx``) format.
+
+    Every field of the JSON rendering that the tag-value grammar can express is
+    emitted, so both renderings read back into the same packages. Annotations
+    use the spec's Annotator/SPDXREF block rather than comment fields.
+    """
     doc = to_spdx2(report, version=version)
     lines: list[str] = [
         f"SPDXVersion: {doc['spdxVersion']}",
         f"DataLicense: {doc['dataLicense']}",
         f"SPDXID: {doc['SPDXID']}",
-        f"DocumentName: {doc['name']}",
+        f"DocumentName: {_tv_line(doc['name'])}",
         f"DocumentNamespace: {doc['documentNamespace']}",
         f"Created: {doc['creationInfo']['created']}",
     ]
     for creator in doc["creationInfo"]["creators"]:
-        lines.append(f"Creator: {creator}")
-    for annotation in doc.get("annotations", []):
-        lines.append(f"DocumentComment: <text>{annotation['comment']}</text>")
+        lines.append(f"Creator: {_tv_line(creator)}")
+    if doc.get("comment"):
+        lines.append(f"DocumentComment: {_tv_text(doc['comment'])}")
     lines.append("")
 
     for pkg in doc["packages"]:
-        lines.append(f"PackageName: {pkg['name']}")
-        lines.append(f"SPDXID: {pkg['SPDXID']}")
-        lines.append(f"PackageVersion: {pkg.get('versionInfo', _NOASSERTION)}")
-        lines.append(f"PackageDownloadLocation: {pkg.get('downloadLocation', _NOASSERTION)}")
-        lines.append(f"FilesAnalyzed: {'true' if pkg.get('filesAnalyzed') else 'false'}")
-        if pkg.get("supplier"):
-            lines.append(f"PackageSupplier: {pkg['supplier']}")
-        lines.append(f"PackageLicenseConcluded: {pkg.get('licenseConcluded', _NOASSERTION)}")
-        lines.append(f"PackageLicenseDeclared: {pkg.get('licenseDeclared', _NOASSERTION)}")
-        lines.append(f"PackageCopyrightText: {pkg.get('copyrightText', _NOASSERTION)}")
-        for checksum in pkg.get("checksums", []):
-            lines.append(f"PackageChecksum: {checksum['algorithm']}: {checksum['checksumValue']}")
-        for ext in pkg.get("externalRefs", []):
-            lines.append(f"ExternalRef: {ext['referenceCategory']} {ext['referenceType']} {ext['referenceLocator']}")
-        for annotation in pkg.get("annotations", []):
-            lines.append(f"PackageComment: {annotation['comment']}")
+        lines += _tv_package(pkg)
         lines.append("")
 
     for rel in doc["relationships"]:
         lines.append(f"Relationship: {rel['spdxElementId']} {rel['relationshipType']} {rel['relatedSpdxElement']}")
+    lines += _tv_annotations(doc["SPDXID"], doc.get("annotations", []))
+    for pkg in doc["packages"]:
+        lines += _tv_annotations(pkg["SPDXID"], pkg.get("annotations", []))
 
     return "\n".join(lines) + "\n"
 

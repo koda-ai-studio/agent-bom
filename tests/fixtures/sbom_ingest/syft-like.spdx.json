@@ -1,0 +1,78 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "registry.example.test/team/api",
+  "documentNamespace": "https://example.test/spdxdocs/api-2f6c1b7e",
+  "creationInfo": {
+    "licenseListVersion": "3.25",
+    "creators": ["Organization: Example", "Tool: syft-1.18.1"],
+    "created": "2026-01-15T10:00:00Z"
+  },
+  "packages": [
+    {
+      "name": "registry.example.test/team/api",
+      "SPDXID": "SPDXRef-DocumentRoot-Image-api",
+      "versionInfo": "sha256:4a5b6c7d",
+      "supplier": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "primaryPackagePurpose": "CONTAINER",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "name": "requests",
+      "SPDXID": "SPDXRef-Package-python-requests-11aa22",
+      "versionInfo": "2.31.0",
+      "supplier": "Person: Kenneth Reitz (me@kennethreitz.org)",
+      "downloadLocation": "https://files.pythonhosted.org/packages/requests-2.31.0.tar.gz",
+      "filesAnalyzed": false,
+      "checksums": [{"algorithm": "SHA256", "checksumValue": "942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1"}],
+      "homepage": "https://requests.readthedocs.io",
+      "sourceInfo": "acquired package info from installed python package manifest file: /usr/lib/python3.11/site-packages/requests-2.31.0.dist-info/METADATA",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright 2019 Kenneth Reitz\nAll rights reserved.",
+      "description": "Python HTTP for Humans.\nSupports sessions and connection pooling.",
+      "externalRefs": [
+        {"referenceCategory": "SECURITY", "referenceType": "cpe23Type", "referenceLocator": "cpe:2.3:a:python-requests:requests:2.31.0:*:*:*:*:*:*:*"},
+        {"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/requests@2.31.0", "comment": "discovered by syft"}
+      ],
+      "annotations": [
+        {"annotator": "Tool: syft-1.18.1", "annotationDate": "2026-01-15T10:00:00Z", "annotationType": "OTHER", "comment": "cataloged by python-installed-package-cataloger"}
+      ]
+    },
+    {
+      "name": "urllib3",
+      "SPDXID": "SPDXRef-Package-python-urllib3-33bb44",
+      "versionInfo": "2.0.4",
+      "supplier": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/urllib3@2.0.4"}
+      ]
+    }
+  ],
+  "files": [
+    {
+      "fileName": "/usr/lib/python3.11/site-packages/requests/__init__.py",
+      "SPDXID": "SPDXRef-File-requests-init-55cc66",
+      "checksums": [{"algorithm": "SHA1", "checksumValue": "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12"}],
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "NOASSERTION"
+    }
+  ],
+  "relationships": [
+    {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-DocumentRoot-Image-api"},
+    {"spdxElementId": "SPDXRef-DocumentRoot-Image-api", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-python-requests-11aa22"},
+    {"spdxElementId": "SPDXRef-DocumentRoot-Image-api", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-python-requests-11aa22"},
+    {"spdxElementId": "SPDXRef-Package-python-requests-11aa22", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-python-urllib3-33bb44", "comment": "declared in METADATA Requires-Dist"},
+    {"spdxElementId": "SPDXRef-Package-python-requests-11aa22", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-File-requests-init-55cc66"}
+  ]
+}
