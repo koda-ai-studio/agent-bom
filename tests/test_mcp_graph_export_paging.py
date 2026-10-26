@@ -106,3 +106,27 @@ def test_a_page_that_exceeds_the_response_budget_shrinks_instead_of_lying(paged,
     assert body["completeness"]["complete"] is False
     assert body["completeness"]["returned"] == len(_owned(body)) < NODES
     assert body["pagination"]["next_cursor"]
+
+
+def test_pages_report_stored_times_never_the_read_clock(export, monkeypatch):  # noqa: F811 - fixture
+    from agent_bom.graph import container as container_module
+    from agent_bom.graph import edge as edge_module
+    from agent_bom.graph import node as node_module
+
+    store, call = export
+    graph = _chain()
+    graph.created_at = "2026-05-01T00:00:00+00:00"
+    for node in graph.nodes.values():
+        node.first_seen = node.last_seen = "2026-05-01T00:00:00+00:00"
+    store.save_graph(graph)
+    monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", TENANT)
+    read_clock = "2099-01-01T00:00:00+00:00"
+    for module in (node_module, edge_module, container_module):
+        monkeypatch.setattr(module, "_now_iso", lambda: read_clock)
+
+    body, _scans = call({"limit": 10}, scan=_no_host_scan)
+
+    assert any((node.get("attributes") or {}).get("page_reference") for node in body["nodes"])
+    for node in body["nodes"]:
+        assert read_clock not in (node.get("first_seen"), node.get("last_seen")), node
+    assert read_clock not in json.dumps(body)

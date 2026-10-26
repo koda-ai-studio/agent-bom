@@ -44,7 +44,7 @@ def _label_index(graph: UnifiedGraph, entity_type: EntityType) -> dict[str, list
     return index
 
 
-def _gnode(node_id: str, entity_type: EntityType, label: str, **kw: Any) -> UnifiedNode:
+def _gnode(node_id: str, entity_type: EntityType, label: str, *, seen: tuple[str, str], **kw: Any) -> UnifiedNode:
     attributes = kw.pop("attributes", {})
     # Governance context nodes carry an "info" severity so they survive default
     # graph queries (severity_id 0 / unknown is dropped by some filters) while
@@ -56,12 +56,22 @@ def _gnode(node_id: str, entity_type: EntityType, label: str, **kw: Any) -> Unif
         label=label,
         data_sources=[_OVERLAY_SOURCE],
         attributes=attributes,
+        first_seen=seen[0],
+        last_seen=seen[1],
         **kw,
     )
 
 
-def _gedge(source: str, target: str, rel: RelationshipType, **kw: Any) -> UnifiedEdge:
-    return UnifiedEdge(source=source, target=target, relationship=rel, provenance={"source": _OVERLAY_SOURCE}, **kw)
+def _gedge(source: str, target: str, rel: RelationshipType, *, seen: tuple[str, str], **kw: Any) -> UnifiedEdge:
+    return UnifiedEdge(
+        source=source,
+        target=target,
+        relationship=rel,
+        provenance={"source": _OVERLAY_SOURCE},
+        first_seen=seen[0],
+        last_seen=seen[1],
+        **kw,
+    )
 
 
 def apply_governance_overlay(
@@ -106,6 +116,11 @@ def apply_governance_overlay(
     except Exception:  # noqa: BLE001
         policies = []
         reasons.add("conditional_policies_unavailable")
+
+    def seen(record: Any, first_field: str, last_field: str) -> tuple[str, str]:
+        # A projection reports when its record was written, never when it was read.
+        first = getattr(record, first_field, "") or graph.created_at
+        return first, getattr(record, last_field, "") or first
 
     def add_node(node: UnifiedNode) -> None:
         nonlocal added_nodes
@@ -177,11 +192,13 @@ def apply_governance_overlay(
             reasons.add("invalid_identity_validity")
         if live:
             live_identities[identity.identity_id] = identity
+        identity_seen = seen(identity, "issued_at", "last_used_at")
         add_node(
             _gnode(
                 nid,
                 EntityType.MANAGED_IDENTITY,
                 identity.agent_id or identity.identity_id,
+                seen=identity_seen,
                 status=NodeStatus.ACTIVE if live else NodeStatus.INACTIVE,
                 attributes={
                     "identity_id": identity.identity_id,
@@ -214,6 +231,7 @@ def apply_governance_overlay(
                     matches[0],
                     nid,
                     RelationshipType.AUTHENTICATES_AS,
+                    seen=identity_seen,
                     valid_from=identity.issued_at,
                     valid_to=identity.expires_at or None,
                     evidence={
@@ -226,7 +244,15 @@ def apply_governance_overlay(
             reasons.add("ambiguous_agent_identity")
         for tool_name in identity.allowed_tools:
             if tool_name != "*":
-                scoped_tool(nid, tool_name, identity, weight=3.0, valid_from=identity.issued_at, valid_to=identity.expires_at or None)
+                scoped_tool(
+                    nid,
+                    tool_name,
+                    identity,
+                    seen=identity_seen,
+                    weight=3.0,
+                    valid_from=identity.issued_at,
+                    valid_to=identity.expires_at or None,
+                )
 
     # ── JIT grants (time-bound access to a tool) ──
     try:
@@ -240,11 +266,13 @@ def apply_governance_overlay(
         if grant.status != "active":
             continue
         gid = f"access_grant:{grant.grant_id}"
+        grant_seen = seen(grant, "requested_at", "approved_at")
         add_node(
             _gnode(
                 gid,
                 EntityType.ACCESS_GRANT,
                 f"JIT {grant.tool_name}",
+                seen=grant_seen,
                 status=NodeStatus.ACTIVE,
                 attributes={
                     "grant_id": grant.grant_id,
@@ -259,7 +287,11 @@ def apply_governance_overlay(
         identity_node = identity_node_by_id.get(grant.identity_id)
         identity = live_identities.get(grant.identity_id)
         if identity_node and identity:
-            add_edge(_gedge(identity_node, gid, RelationshipType.ATTACHED, valid_from=grant.starts_at, valid_to=grant.expires_at))
+            add_edge(
+                _gedge(
+                    identity_node, gid, RelationshipType.ATTACHED, seen=grant_seen, valid_from=grant.starts_at, valid_to=grant.expires_at
+                )
+            )
         else:
             reasons.add("jit_identity_unavailable")
             continue
@@ -267,6 +299,7 @@ def apply_governance_overlay(
             gid,
             grant.tool_name,
             identity,
+            seen=grant_seen,
             weight=4.0,
             valid_from=grant.starts_at,
             valid_to=grant.expires_at,
@@ -276,11 +309,13 @@ def apply_governance_overlay(
     # ── Conditional-access policies ──
     for policy in policies:
         pid = f"access_policy:{policy.policy_id}"
+        policy_seen = seen(policy, "created_at", "updated_at")
         add_node(
             _gnode(
                 pid,
                 EntityType.ACCESS_POLICY,
                 policy.name,
+                seen=policy_seen,
                 attributes={
                     "policy_id": policy.policy_id,
                     "effect": policy.effect,
@@ -292,14 +327,14 @@ def apply_governance_overlay(
         )
         for agent_name in policy.agent_ids:
             for agent_id in agents_by_label.get(agent_name.strip().lower(), []):
-                add_edge(_gedge(pid, agent_id, RelationshipType.GOVERNS))
+                add_edge(_gedge(pid, agent_id, RelationshipType.GOVERNS, seen=policy_seen))
         for identity_id in policy.identity_ids:
             node = identity_node_by_id.get(identity_id)
             if node:
-                add_edge(_gedge(pid, node, RelationshipType.GOVERNS))
+                add_edge(_gedge(pid, node, RelationshipType.GOVERNS, seen=policy_seen))
         for tool_name in policy.tools:
             if tool_name != "*":
-                link_tool(pid, tool_name, RelationshipType.GOVERNS)
+                link_tool(pid, tool_name, RelationshipType.GOVERNS, seen=policy_seen)
 
     # ── Persisted AI-system blueprints ──
     # Emit the stored, approved blueprints so the snapshot references a durable
@@ -321,11 +356,13 @@ def apply_governance_overlay(
         blueprint_node_by_id[blueprint.blueprint_id] = bnid
         if blueprint.seeded_from:
             blueprint_node_by_seed[blueprint.seeded_from] = bnid
+        blueprint_seen = seen(blueprint, "created_at", "updated_at")
         add_node(
             _gnode(
                 bnid,
                 EntityType.BLUEPRINT,
                 blueprint.name or blueprint.blueprint_id,
+                seen=blueprint_seen,
                 attributes={
                     "blueprint_id": blueprint.blueprint_id,
                     "owner": blueprint.owner,
@@ -338,7 +375,7 @@ def apply_governance_overlay(
         )
         for owner_name in {blueprint.owner}:
             for agent_id in agents_by_label.get(owner_name.strip().lower(), []):
-                add_edge(_gedge(bnid, agent_id, RelationshipType.GOVERNS))
+                add_edge(_gedge(bnid, agent_id, RelationshipType.GOVERNS, seen=blueprint_seen))
 
     # ── Drift incidents (open) ──
     try:
@@ -348,11 +385,13 @@ def apply_governance_overlay(
     for incident in incidents:
         did = f"drift_incident:{incident.incident_id}"
         score = float(getattr(incident, "drift_score", 0.0) or 0.0)
+        incident_seen = seen(incident, "first_detected_at", "last_detected_at")
         add_node(
             _gnode(
                 did,
                 EntityType.DRIFT_INCIDENT,
                 f"drift: {incident.blueprint_id}",
+                seen=incident_seen,
                 status=NodeStatus.VULNERABLE,
                 risk_score=round(min(10.0, score * 10.0), 2),
                 severity=drift_incident_severity(score),
@@ -367,17 +406,17 @@ def apply_governance_overlay(
             )
         )
         for agent_id in agents_by_label.get((incident.blueprint_id or "").strip().lower(), []):
-            add_edge(_gedge(agent_id, did, RelationshipType.EXHIBITS_DRIFT, direction="bidirectional", weight=5.0))
+            add_edge(_gedge(agent_id, did, RelationshipType.EXHIBITS_DRIFT, seen=incident_seen, direction="bidirectional", weight=5.0))
         # Tie the incident to the persisted blueprint it drifted from (matched by
         # the archetype the blueprint was seeded from, else a direct id match) so
         # the graph references the stored blueprint, not just the code constant.
         blueprint_node = blueprint_node_by_seed.get(incident.blueprint_id) or blueprint_node_by_id.get(incident.blueprint_id)
         if blueprint_node:
-            add_edge(_gedge(blueprint_node, did, RelationshipType.GOVERNS, weight=5.0))
+            add_edge(_gedge(blueprint_node, did, RelationshipType.GOVERNS, seen=incident_seen, weight=5.0))
         for violation in getattr(incident, "top_violations", []) or []:
             tool_name = str(violation.get("tool_name", "")) if isinstance(violation, dict) else ""
             if tool_name:
-                link_tool(did, tool_name, RelationshipType.SCOPED_TO, weight=4.0, evidence={"kind": "drift_violation"})
+                link_tool(did, tool_name, RelationshipType.SCOPED_TO, seen=incident_seen, weight=4.0, evidence={"kind": "drift_violation"})
 
     graph.analysis_status["governance_overlay"] = GraphAnalysisStatus(
         status=GraphAnalysisState.LIMITED if reasons else GraphAnalysisState.COMPLETE,
