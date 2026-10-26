@@ -262,7 +262,8 @@ def iac_cmd(
 ) -> None:
     """Scan infrastructure-as-code files for misconfigurations.
 
-    Supports: Dockerfile, Kubernetes YAML, Terraform (.tf), CloudFormation (.json/.yaml),
+    Supports: Dockerfile/Containerfile, Docker Compose, Docker daemon.json,
+    Kubernetes YAML, Terraform (.tf), CloudFormation (.json/.yaml),
     and standalone AWS IAM policies (.json).
 
     \b

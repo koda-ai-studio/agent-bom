@@ -34,7 +34,7 @@ Inventory, package, image, IaC, cloud, and skills scanning entry points.
 | `skills` | Scan skills / instruction files for packages, servers, trust, findings. |
 | `image` | Scan a container image. |
 | `fs` | Scan a filesystem / disk image. |
-| `iac` | Scan IaC: Dockerfile, Terraform, CloudFormation, Helm, Kubernetes. |
+| `iac` | Scan IaC: Dockerfile, Compose, Docker daemon.json, Terraform, CloudFormation, Helm, Kubernetes. |
 | `sbom` | Ingest an existing SBOM (CycloneDX / SPDX) and scan its components. |
 | `ingest` | Ingest operator-provided evidence (e.g. `ingest hardware` firmware attestation) into the graph. |
 | `cloud` | Cloud posture + estate inventory for AWS/Azure/GCP, CIS benchmarks, and cloud registry sweeps. Group: `scan` (all configured clouds), `aws`/`azure`/`gcp` aliases, `inventory`, `registry-scan` (ECR/ACR/GAR sweep), `resilience`, `side-scan` (AWS EBS + Azure Managed Disk + GCP Persistent Disk CLI executors), `side-scan-capabilities` (honest per-provider surface; no live credentialed smoke claimed), and CWPP `runtime-evidence-ingest`. |

@@ -74,7 +74,7 @@ Benchmarks:
 | Device posture connectors | 3 | crowdstrike; generic; intune |
 | Identity / NHI discovery | 2 | entra; okta |
 | Advisory sources | 8 | osv (primary); ghsa (primary); nvidia_csaf (primary); amd_psirt (primary); intel_psirt (primary); nvd (enrichment); epss (enrichment); cisa_kev (enrichment) |
-| IaC rule families | 8 | CFN (19); DBT-SEC (18); DOCKER (21); HELM (15); IAM (3); K8S (32); TF-AI (10); TF-SEC (50) |
+| IaC rule families | 11 | CFN (19); COMPOSE (11); DBT-SEC (18); DOCKER (25); DOCKERD (8); GHA (4); HELM (15); IAM (3); K8S (32); TF-AI (10); TF-SEC (50) |
 | Agent / MCP clients | 29 | config_paths: 27; dynamic_or_workspace: 2 (full list in JSON) |
 
 Notes:
@@ -168,5 +168,5 @@ Integration categories:
 - Device posture connectors: `src/agent_bom/device_posture.py` `_CONNECTORS`
 - Identity / NHI discovery: `src/agent_bom/cli/_identity_group.py` `discover_cmd --provider click.Choice`
 - Advisory sources: `src/agent_bom/advisory_sources.py` `PRIMARY_ADVISORY_SOURCES`, `src/agent_bom/advisory_sources.py` `ENRICHMENT_ADVISORY_SOURCES`
-- IaC rule families: `src/agent_bom/iac/**/*.py` `rule_id="PREFIX-NNN" / "rule_id": "PREFIX-NNN" literals`
+- IaC rule families: `src/agent_bom/iac/**/*.py` `rule_id="PREFIX-NNN" / "rule_id": "PREFIX-NNN" / positional "PREFIX-NNN" literals`
 - Agent / MCP clients: `src/agent_bom/domain/inventory_types.py` `AgentType`, `src/agent_bom/discovery/platform_config.py` `CONFIG_LOCATIONS`, `src/agent_bom/discovery/coverage.py` `supported_clients`

@@ -442,6 +442,9 @@ def _iac_rule_families() -> dict[str, int]:
     for path in _glob(f"{PKG}/iac/**/*.py"):
         for node in ast.walk(_module(path)):
             if isinstance(node, ast.Call):
+                first = node.args[0] if node.args else None
+                if isinstance(first, ast.Constant) and isinstance(first.value, str) and _RULE_ID.match(first.value):
+                    ids.add(first.value)  # finding helpers that take the rule id positionally
                 for kw in node.keywords:
                     if kw.arg == "rule_id" and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
                         ids.add(kw.value.value)
@@ -547,7 +550,7 @@ def build_integrations() -> list[dict[str, Any]]:
         "iac_rule_families",
         "IaC rule families",
         [{"family": k, "rule_count": v} for k, v in families.items()],
-        [_src(f"{PKG}/iac/**/*.py", 'rule_id="PREFIX-NNN" / "rule_id": "PREFIX-NNN" literals', "ast-scan")],
+        [_src(f"{PKG}/iac/**/*.py", 'rule_id="PREFIX-NNN" / "rule_id": "PREFIX-NNN" / positional "PREFIX-NNN" literals', "ast-scan")],
         "Distinct rule-id literals per prefix.",
     )
     clients = _agent_clients()

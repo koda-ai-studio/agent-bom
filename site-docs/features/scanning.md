@@ -364,7 +364,8 @@ in the JSON report before treating a scan as complete. This static check does
 not resolve CloudFormation references or establish deployed cloud posture.
 
 Use `agent-bom iac` as the pre-cloud gate for Terraform, CloudFormation,
-Kubernetes, Helm-rendered manifests, and Dockerfiles. Use `agent-bom
+Kubernetes, Helm-rendered manifests, Dockerfiles, Compose files and Docker
+daemon configuration. Use `agent-bom
 cis-benchmark` as the runtime posture check for deployed cloud state. The
 combined workflow catches proposed misconfiguration before apply and drift
 after deployment.

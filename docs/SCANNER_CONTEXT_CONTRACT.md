@@ -68,7 +68,7 @@ Each `ScannerVerdict`:
 
 | Field | Type | Description |
 |---|---|---|
-| `scanner_id` | `str` | `"helm"`, `"dockerfile"`, `"terraform"`, `"dcm"`, `"kubernetes"`, `"cloudformation"` |
+| `scanner_id` | `str` | `"helm"`, `"github-actions"`, `"compose"`, `"dockerfile"`, `"docker-daemon"`, `"terraform"`, `"dcm"`, `"dbt"`, `"kubernetes"`, `"cloudformation"`, `"iam-policy"` |
 | `status` | `str` | `"ran"` \| `"not-applicable"` \| `"disabled"` |
 | `files_scanned` | `int` | > 0 only when status is `"ran"` |
 | `reason` | `str` | Human-readable; set for `"not-applicable"` and `"disabled"` |

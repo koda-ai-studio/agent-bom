@@ -43,7 +43,26 @@ Supported pre-cloud inputs include:
 - Terraform
 - CloudFormation
 - Kubernetes manifests and Helm-rendered output
-- Dockerfiles
+- Dockerfiles and Containerfiles (`Dockerfile*`, `*.dockerfile`, `Containerfile*`)
+- Docker Compose files (`compose.yaml`, `docker-compose*.yml`)
+- Docker daemon configuration (`daemon.json`)
+
+### Docker rules
+
+| Family | Checks |
+|---|---|
+| `DOCKER-001`..`026` | Final-stage user is root or unset; `:latest`/untagged or digest-less base; secrets in `ENV`/`ARG`; credential files (`.env`, SSH keys, `.npmrc`, keystores, `.aws/credentials`) copied into a layer; `ADD` of local archives or remote URLs; `curl \| sh`; `sudo`; `chmod 777` and `COPY --chmod=777`; `COPY --chown=0`; `EXPOSE 22` and port ranges; `RUN --network=host`; package installs without cache cleanup, without `--no-install-recommends`, or without apt/apk version pins; `pip install` without `--no-cache-dir`; relative `WORKDIR`; `SHELL` override; a `CMD`/`ENTRYPOINT` overridden later in its stage; no `HEALTHCHECK`; `COPY . .` without `.dockerignore`. |
+| `COMPOSE-001`..`011` | `privileged`; Docker socket mount; host network, PID, IPC, UTS or user namespace; `ALL`/`SYS_ADMIN`/other escape capabilities; seccomp/AppArmor `unconfined` or `label:disable`; sensitive host paths (`/`, `/etc`, `/proc`, `/sys`, `/root`, `/var/lib/docker`, `.ssh`, ...) bind-mounted; `user: root`; no `no-new-privileges`; literal secrets in `environment`. |
+| `DOCKERD-001`..`008` | TCP API without `tlsverify`; non-loopback `insecure-registries`; `icc` not disabled; no `userns-remap` (not required for rootless); `live-restore` off; `no-new-privileges` off; `experimental` on; `log-driver: none`. Missing keys take dockerd's default. |
+
+Dockerfiles are read as BuildKit reads them: continuation lines are joined and
+reported at the instruction's first line, heredoc bodies stay with their
+`RUN`, and runtime checks look only at the final build stage (following
+`FROM <stage>`). `RUN --mount=type=secret` and `--mount=type=cache` are the
+safe patterns and are not flagged. A `daemon.json` is scanned when it sits in
+a `docker/` directory (`/etc/docker`, `~/.config/docker`) or when you name it
+directly (`agent-bom iac path/to/daemon.json`); other tools' `daemon.json`
+files are left alone.
 
 ## Runtime posture lane
 

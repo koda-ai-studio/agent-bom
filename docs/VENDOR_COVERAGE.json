@@ -2871,12 +2871,24 @@
           "rule_count": 19
         },
         {
+          "family": "COMPOSE",
+          "rule_count": 11
+        },
+        {
           "family": "DBT-SEC",
           "rule_count": 18
         },
         {
           "family": "DOCKER",
-          "rule_count": 21
+          "rule_count": 25
+        },
+        {
+          "family": "DOCKERD",
+          "rule_count": 8
+        },
+        {
+          "family": "GHA",
+          "rule_count": 4
         },
         {
           "family": "HELM",
@@ -2904,7 +2916,7 @@
         {
           "method": "ast-scan",
           "path": "src/agent_bom/iac/**/*.py",
-          "symbol": "rule_id=\"PREFIX-NNN\" / \"rule_id\": \"PREFIX-NNN\" literals"
+          "symbol": "rule_id=\"PREFIX-NNN\" / \"rule_id\": \"PREFIX-NNN\" / positional \"PREFIX-NNN\" literals"
         }
       ],
       "title": "IaC rule families"

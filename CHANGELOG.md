@@ -9,12 +9,22 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `agent-bom iac` scans Docker daemon configuration (`daemon.json` in a `docker/` directory, or any `daemon.json` named on the command line) with eight `DOCKERD-*` rules: TCP API without `tlsverify`, non-loopback insecure registries, `icc` not disabled, no `userns-remap` (not required for rootless), `live-restore` off, `no-new-privileges` off, `experimental` on and `log-driver: none`. Missing keys take dockerd's default.
+- Compose rules `COMPOSE-007`..`011`: seccomp/AppArmor `unconfined` or `label:disable`, host IPC/UTS/user namespace, sensitive host paths bind-mounted (`/`, `/etc`, `/proc`, `/sys`, `/var/lib/docker`, `.ssh`, ... but not `/etc/localtime` or app directories), `user: root`, and services without `no-new-privileges`. `COMPOSE-005` also covers `SYS_MODULE`, `SYS_PTRACE`, `SYS_RAWIO`, `DAC_READ_SEARCH`, `SYS_BOOT` and `BPF`.
+- Dockerfile rules `DOCKER-023`..`026`: `apt install` without `--no-install-recommends`, apt/apk packages without a version pin, a `CMD`/`ENTRYPOINT` overridden later in its stage, and credential files (`.env`, SSH private keys, `.npmrc`/`.pypirc`/`.netrc`, keystores, `.aws/credentials`, `.docker/config.json`) copied into an image layer.
+- `*.dockerfile`, `*.containerfile` and `Containerfile*` are scanned as Dockerfiles.
+
 ### Changed
 - Console output groups kernel-header CVEs into one block per image distro release (Debian/Ubuntu `linux-libc-dev` and `linux-headers-*`, RHEL-family `kernel-headers`/`kernel-devel`, SUSE `linux-glibc-devel`/`kernel-*-devel`, Alpine `linux-headers`), with the full severity breakdown; the scan verdict says how many of the CVEs they are. KEV and critical kernel-header CVEs are named on the group line and stay as their own rows, and JSON, SARIF and CycloneDX still carry every CVE. Recognition is scoped to the ecosystem and `os-release` family, so a same-named package elsewhere is never grouped.
 - The `docker export` fallback of `agent-bom image` scans the exported filesystem with the same bounded walk and extractors as image layers: the `AGENT_BOM_OCI_*` member, size and time limits apply, and a crossed limit is a coverage gap under `docker-export` (a partial scan) rather than an unbounded read.
 - Image layers emit the canonical purl for scoped npm packages (`pkg:npm/%40scope/name@…`), matching every other scan path.
 
 ### Fixed
+- Dockerfile rules evaluate whole instructions: continuation lines (including a `# escape=` character) are joined and reported at the first line, and heredoc bodies stay with their `RUN`. A package install, `curl | sh` or `chmod 777` on a continuation line was missed, and cache cleanup on a later continuation line was ignored. `yum`/`dnf`/`microdnf`/`zypper` installs and their `clean` commands and BuildKit cache mounts are recognised.
+- `DOCKER-002` judges the final build stage: a root builder stage, or `USER root` followed by a non-root `USER`, is no longer flagged; a final stage without `USER` is flagged even when an earlier stage set one (`FROM <stage>` inheritance is followed, `:nonroot` base tags are honoured). `FROM --platform=...`, stage-alias references and `ARG`-defaulted base images no longer produce wrong `DOCKER-001`/`DOCKER-010` findings, and an unresolvable `FROM $VAR` is not guessed.
+- `DOCKER-003` checks every `KEY=VALUE` pair on an `ENV` line and no longer flags `*_FILE`, absolute-path or `${VAR}` values; `WORKDIR $HOME/app` is not reported as relative. `Dockerfile.md`/`Dockerfile.txt` and other look-alike docs are not parsed as Dockerfiles, and a file without `FROM` gets no findings.
+- Dockerfile ATT&CK tags match what each rule detects (for example `DOCKER-001` was tagged Escape to Host and `DOCKER-006` Exploit Public-Facing Application); Compose and daemon rules are now tagged.
 - Each CVE on a package now carries only its own `ai_risk_context`. The context was extended in place across a package's CVEs, so the Nth CVE repeated the attack summaries of all before it; on `php:8.3.30-cli` that built about 0.9 GB of text for `linux-libc-dev` and dominated JSON export time.
 
 ### Performance
