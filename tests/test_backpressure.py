@@ -192,3 +192,53 @@ def test_overview_cold_posture_read_does_not_reject_subsequent_browsing() -> Non
         controller.try_enter()
     for _ in range(controller.max_concurrency):
         controller.exit(20.0)
+
+
+def _graph_controller(**overrides) -> BackpressureController:
+    settings = {"path": "graph", "max_concurrency": 4, "p99_threshold_ms": 12_000, "cooldown_seconds": 10, "min_samples": 20}
+    settings.update(overrides)
+    return BackpressureController(**settings)
+
+
+def test_single_cold_start_outlier_does_not_open_the_breaker() -> None:
+    """One slow first read (cold cache after seeding) is not sustained overload.
+
+    With fewer than ~50 samples the nearest-rank p99 is simply the maximum, so a
+    single 27.8 s cold read used to open the graph breaker for every reader.
+    """
+    controller = _graph_controller()
+    controller.try_enter()
+    controller.exit(27_800)
+    for _ in range(40):
+        controller.try_enter()
+        controller.exit(150)
+
+    assert controller.open_until_monotonic == 0.0
+    controller.try_enter()
+    controller.exit(150)
+
+
+def test_repeated_slow_reads_still_open_the_breaker() -> None:
+    controller = _graph_controller()
+    for latency in [27_800, 150, 150, 26_000] + [150] * 20:
+        if controller.open_until_monotonic:
+            break
+        controller.try_enter()
+        controller.exit(latency)
+
+    assert controller.open_until_monotonic > 0
+    assert controller.last_trigger_reason == "p99_latency_threshold"
+    with pytest.raises(BackpressureRejectedError):
+        controller.try_enter()
+
+
+def test_slow_sample_tolerance_scales_with_the_window() -> None:
+    controller = _graph_controller(window_size=500, min_samples=20)
+    for latency in [150] * 400 + [30_000] * 4:
+        controller.try_enter()
+        controller.exit(latency)
+
+    assert controller.open_until_monotonic == 0.0, "4 slow of 404 is within the 1% tail p99 allows"
+    controller.try_enter()
+    controller.exit(30_000)
+    assert controller.open_until_monotonic > 0

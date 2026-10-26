@@ -18,6 +18,7 @@ import logging
 from typing import Any, Callable, Optional
 
 from agent_bom.mcp_errors import (
+    CODE_CONFLICT_STALE_CURSOR,
     CODE_INTERNAL_UNEXPECTED,
     CODE_NOT_FOUND_RESOURCE,
     CODE_VALIDATION_INVALID_ARGUMENT,
@@ -104,7 +105,8 @@ async def inventory_summary_impl(
 
 def _inventory_error(exc: Any) -> str:
     """The shared service's HTTP status, as the MCP error code the route's status maps to."""
-    code = CODE_NOT_FOUND_RESOURCE if exc.status_code == 404 else CODE_VALIDATION_INVALID_ARGUMENT
+    codes = {404: CODE_NOT_FOUND_RESOURCE, 409: CODE_CONFLICT_STALE_CURSOR}
+    code = codes.get(exc.status_code, CODE_VALIDATION_INVALID_ARGUMENT)
     return mcp_error_json(code, exc.detail, details={"http_status": exc.status_code})
 
 
