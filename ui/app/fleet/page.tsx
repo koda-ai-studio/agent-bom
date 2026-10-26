@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PaginationBar } from "@/components/pagination-bar";
+import { hiddenQuarantinedCount } from "@/lib/fleet-caption";
 import {
   api,
   type FleetAgent,
@@ -226,6 +227,7 @@ export default function FleetPage() {
   const pageEnd = fleetTotal > 0 ? Math.min(fleetOffset + agents.length, fleetTotal) : 0;
   const pageNumber = Math.floor(fleetOffset / FLEET_PAGE_SIZE) + 1;
   const totalPages = Math.max(1, Math.ceil(fleetTotal / FLEET_PAGE_SIZE));
+  const hiddenQuarantined = hiddenQuarantinedCount(stateFilter, search, stats?.by_state.quarantined ?? 0, stats?.total ?? 0, fleetTotal);
 
   return (
     <div className="space-y-6">
@@ -354,7 +356,7 @@ export default function FleetPage() {
             <span>
               Showing <span className="font-mono text-[var(--text-secondary)]">{pageStart}-{pageEnd}</span> of{" "}
               <span className="font-mono text-[var(--text-secondary)]">{fleetTotal}</span> agents
-              {stateFilter === "all" && (stats?.by_state.quarantined ?? 0) > 0 ? ` · ${stats?.by_state.quarantined} quarantined hidden` : null}
+              {hiddenQuarantined > 0 ? ` · ${hiddenQuarantined} quarantined hidden` : null}
             </span>
           ) : (
             <span>No matching agents</span>

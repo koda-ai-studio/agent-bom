@@ -266,7 +266,9 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
             if scorecard_summary:
                 # The badge already shows the grade and score; drop the summary's
                 # "(F, 37.0%)" echo. limit=45 keeps the line inside an 80-col panel.
-                grade_line += f"  [dim]{_compact_detail(_GRADE_ECHO.sub('', scorecard_summary), limit=45)}[/dim]"
+                # The drivers follow on the "Top driver" line, so only the headline is shown here.
+                headline = _GRADE_ECHO.sub("", scorecard_summary).split(" — ")[0]
+                grade_line += f"  [dim]{_compact_detail(headline, limit=45)}[/dim]"
             lines.append(grade_line)
             if weak_dimensions:
                 lines.append(f"  [dim]Top driver:[/dim] [yellow]{weak_dimensions[0].name}[/yellow]")
