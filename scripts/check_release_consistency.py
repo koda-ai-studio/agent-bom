@@ -373,7 +373,7 @@ def _compute_product_screenshot_inputs_digest() -> str:
     return f"sha256:{digest.hexdigest()}"
 
 
-def _assert_product_screenshots_current(expected_version: str) -> None:
+def _assert_product_screenshots_current(expected_version: str, *, check_capture_inputs: bool = True) -> None:
     if not PRODUCT_SCREENSHOTS.exists():
         _fail("docs/images/product-screenshots.json is missing from release surface")
     try:
@@ -387,8 +387,7 @@ def _assert_product_screenshots_current(expected_version: str) -> None:
     source_commit = manifest.get("source_commit")
     if not isinstance(source_commit, str) or re.fullmatch(r"[0-9a-f]{40}", source_commit) is None:
         _fail("docs/images/product-screenshots.json source_commit must be a full lowercase Git SHA")
-    expected_input_digest = _compute_product_screenshot_inputs_digest()
-    if manifest.get("capture_inputs_sha256") != expected_input_digest:
+    if check_capture_inputs and manifest.get("capture_inputs_sha256") != _compute_product_screenshot_inputs_digest():
         _fail("docs/images/product-screenshots.json capture inputs changed after the recorded product proof")
 
     required = {
@@ -562,7 +561,9 @@ def main() -> int:
         _fail("docs/demo.tape must render to docs/images/demo-latest.gif")
     if not DEMO_LATEST.exists():
         _fail("docs/images/demo-latest.gif is missing")
-    _assert_product_screenshots_current(version)
+    # PR and main CI defer the capture-input digest: screenshots are recaptured
+    # once at release time, and the release workflows always enforce it.
+    _assert_product_screenshots_current(version, check_capture_inputs=os.environ.get("AGENT_BOM_DEFER_PRODUCT_PROOF") != "1")
     stale_path_markers = [
         "npx @mcp/server-filesystem /tmp",
         "npx -y @modelcontextprotocol/server-filesystem /tmp",
