@@ -61,3 +61,10 @@ def test_the_smoke_tier_runs_its_tests() -> None:
     ci_local = _ci_local()
     smoke = [step for step in ci_local.plan(workflow, ci_local.SMOKE_JOBS) if step.job == "test-smoke" and "pytest" in step.command]
     assert smoke and all(step.action == "run" for step in smoke), [step.reason for step in smoke]
+
+
+def test_rendered_commands_run_on_the_bash_that_ships_with_macos() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+    ci_local = _ci_local()
+    rendered = [step.command for step in ci_local.plan(workflow, (*ci_local.GATING_JOBS, *ci_local.SMOKE_JOBS)) if step.action == "run"]
+    assert not [command for command in rendered if "mapfile" in command]

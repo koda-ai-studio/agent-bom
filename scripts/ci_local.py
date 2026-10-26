@@ -40,7 +40,7 @@ SKIP_RULES: tuple[tuple[str, str], ...] = (
 )
 
 _EXPR = re.compile(r"\$\{\{\s*([^}]+?)\s*\}\}")
-_MAPFILE = re.compile(r"mapfile -t (\w+) < <\((.+)\)")
+_MAPFILE = re.compile(r"mapfile -t (\w+) (<<<|<) (.+)")
 
 
 @dataclass
@@ -83,7 +83,9 @@ def _render(command: str, matrix: str) -> tuple[str, str]:
         return command, f"needs GitHub context: {', '.join(unknown)}"
     rendered = _EXPR.sub(lambda match: known[match.group(1)], command)
     # macOS ships bash 3.2, which has no mapfile.
-    rendered = _MAPFILE.sub(lambda m: f'{m.group(1)}=(); while IFS= read -r _l; do {m.group(1)}+=("$_l"); done < <({m.group(2)})', rendered)
+    rendered = _MAPFILE.sub(
+        lambda m: f'{m.group(1)}=(); while IFS= read -r _l; do {m.group(1)}+=("$_l"); done {m.group(2)} {m.group(3)}', rendered
+    )
     return rendered, ""
 
 
@@ -125,6 +127,9 @@ def _environment(job: str) -> dict[str, str]:
         ARCHITECTURE_BASE="origin/main",
         BASE_SHA=_git("merge-base", "origin/main", "HEAD"),
         WAIVED="false",
+        GITHUB_SHA=_git("rev-parse", "HEAD"),
+        GITHUB_EVENT_NAME="pull_request",
+        GITHUB_BASE_REF="main",
         CI="true",
     )
     return env
