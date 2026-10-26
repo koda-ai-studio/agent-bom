@@ -358,6 +358,10 @@ class UnifiedGraph:
     scan_id: str = ""
     tenant_id: str = ""
     created_at: str = ""
+    # When the evidence was observed (the scan's time). Defaulted node and edge
+    # times resolve to it; created_at stays the build/storage time that
+    # retention and latest-snapshot selection read.
+    observed_at: str = ""
     completeness: "GraphCompleteness" = field(default_factory=lambda: GraphCompleteness())
 
     def __post_init__(self) -> None:
@@ -368,7 +372,7 @@ class UnifiedGraph:
 
     def add_node(self, node: UnifiedNode) -> None:
         """Add or merge a node.  Cross-source metadata is unioned."""
-        stamp_node(node, self.created_at)
+        stamp_node(node, self.observed_at or self.created_at)
         existing = self.nodes.get(node.id)
         if existing:
             merge_node(existing, node)
@@ -394,7 +398,7 @@ class UnifiedGraph:
         builder adds one logical edge from several paths, e.g. package-path then
         blast-radius). New edges pass the relationship contract first.
         """
-        stamp_edge(edge, self.created_at)
+        stamp_edge(edge, self.observed_at or self.created_at)
         rel = edge.relationship.value if isinstance(edge.relationship, RelationshipType) else str(edge.relationship)
         key = (edge.source, edge.target, rel)
         if key in self._edge_keys:

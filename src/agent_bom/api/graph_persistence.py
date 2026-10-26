@@ -210,14 +210,12 @@ def _with_cost_records(report_json: dict[str, Any], tenant_id: str) -> dict[str,
     return report_json
 
 
-def _build_container(
-    *, store_backed: bool, tenant_id: str, scan_id: str, created_at: str = ""
-) -> contextlib.AbstractContextManager[UnifiedGraph | None]:
+def _build_container(*, store_backed: bool, tenant_id: str, scan_id: str) -> contextlib.AbstractContextManager[UnifiedGraph | None]:
     if store_backed:
         from agent_bom.graph.store_backed import open_store_backed_unified_graph
 
         # Private per-build SQLite even when the destination is PostgreSQL.
-        return open_store_backed_unified_graph(tenant_id=tenant_id, scan_id=scan_id, created_at=created_at, backend="sqlite")
+        return open_store_backed_unified_graph(tenant_id=tenant_id, scan_id=scan_id, backend="sqlite")
     return contextlib.nullcontext(None)
 
 
@@ -362,7 +360,6 @@ def persist_graph_snapshot(
     """
     from agent_bom.api.tenant_worker import tenant_bound_context
     from agent_bom.core.tenancy import require_explicit_tenant_id
-    from agent_bom.graph.build_input import GraphBuildInput
     from agent_bom.graph.builder import build_unified_graph_from_report
 
     tenant_id = require_explicit_tenant_id(job.tenant_id)
@@ -370,8 +367,7 @@ def persist_graph_snapshot(
         scan_id = report_json.get("scan_id") or job.job_id
         graph_input = with_trace_events(_with_cost_records(_overlaid(report_json, tenant_id), tenant_id), tenant_id)
         store_backed = _graph_store_backed_build_enabled(report_json)
-        recorded_at = GraphBuildInput.from_report(graph_input).recorded_at
-        with _build_container(store_backed=store_backed, tenant_id=tenant_id, scan_id=scan_id, created_at=recorded_at) as container:
+        with _build_container(store_backed=store_backed, tenant_id=tenant_id, scan_id=scan_id) as container:
             graph = build_unified_graph_from_report(graph_input, scan_id=scan_id, tenant_id=tenant_id, container=container)
             _enrich_before_persist(report_json, graph, tenant_id)
             counts, prior_digest = _write_snapshot(

@@ -28,7 +28,7 @@ def _clock_constructions() -> list[str]:
             name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
             if name not in _CONSTRUCTORS or id(node) in returned:
                 continue
-            if any(keyword.arg in {"created_at", None} for keyword in node.keywords):
+            if any(keyword.arg in {"created_at", "observed_at", None} for keyword in node.keywords):
                 continue
             found.append(f"{path.relative_to(SRC).as_posix()}:{node.lineno}")
     return found
@@ -40,4 +40,4 @@ def test_every_graph_container_names_its_recorded_time() -> None:
     Returning an empty container directly is fine: it holds nothing to stamp.
     """
     offenders = [site for site in _clock_constructions() if site.rsplit(":", 1)[0] not in _CLOCK_ALLOWED]
-    assert not offenders, f"pass created_at= (the scan/snapshot time) to: {offenders}"
+    assert not offenders, f"pass observed_at= (the scan time) or created_at= (the snapshot time) to: {offenders}"

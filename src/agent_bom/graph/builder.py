@@ -382,7 +382,8 @@ def build_unified_graph(
     """
     span = _GRAPH_TRACER.start_span("graph.build_unified_graph_from_report") if _GRAPH_TRACER else None
     sid = scan_id or inputs.scan_id
-    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id, created_at=inputs.recorded_at)
+    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id, observed_at=inputs.recorded_at)
+    graph.observed_at = graph.observed_at or inputs.recorded_at
     indexes = project_agents(graph, inputs.agents, inputs.data_source, _add_agent_cloud_lineage)
     project_package_exploits(graph, indexes, inputs.data_source)
     project_blast_radius(graph, inputs.blast_radius, indexes, inputs.data_source)

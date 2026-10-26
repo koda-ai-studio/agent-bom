@@ -78,8 +78,10 @@ def _sentinel_paths(value: Any, path: str = "$") -> Iterator[str]:
 
 
 def _assert_deterministic(build: Callable[[], UnifiedGraph]) -> None:
-    first = _build_payload(build, SENTINEL_A)
-    second = _build_payload(build, SENTINEL_B)
+    # The graph's own created_at is its build/storage time (retention and
+    # latest-snapshot selection read it); every node and edge time is recorded.
+    first = {key: value for key, value in _build_payload(build, SENTINEL_A).items() if key != "created_at"}
+    second = {key: value for key, value in _build_payload(build, SENTINEL_B).items() if key != "created_at"}
     leaked = [*_sentinel_paths(first), *_sentinel_paths(second)]
     assert not leaked, f"{len(leaked)} wall-clock times leaked, e.g. {leaked[:10]}"
     differences = list(_differences(first, second))
@@ -160,7 +162,7 @@ def test_report_graph_is_identical_across_builds(demo_report: dict[str, Any]) ->
     _assert_deterministic(build)
     graph = build()
     assert len(graph.nodes) > 20 and graph.edges
-    assert graph.created_at == normalize_recorded_time(demo_report["generated_at"])
+    assert graph.observed_at == normalize_recorded_time(demo_report["generated_at"])
 
 
 def test_demo_estate_graph_is_identical_across_builds() -> None:

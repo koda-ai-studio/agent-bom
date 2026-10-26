@@ -252,6 +252,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         self.scan_id = scan_id
         self.tenant_id = tenant_id
         self.created_at = created_at or _now_iso()
+        self.observed_at = ""
         # Mirrored like every other graph-level field: this subclass skips the
         # dataclass __init__, so a default the base class declares only exists
         # here if it is repeated. `stats()` and the view derivations read it.
@@ -388,7 +389,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
     # ── Mutation (store-backed overrides) ────────────────────────────────────
 
     def add_node(self, node: UnifiedNode) -> None:
-        stamp_node(node, self.created_at)
+        stamp_node(node, self.observed_at or self.created_at)
         existing = self._resolve_node(node.id)
         if existing is not None:
             merge_node(existing, node)
@@ -413,7 +414,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
     def add_edge(self, edge: UnifiedEdge) -> None:
         # Entity-pair checks need endpoint types, which cost a store read per
         # edge here; ``audit_graph_contract`` checks pairs once after the build.
-        stamp_edge(edge, self.created_at)
+        stamp_edge(edge, self.observed_at or self.created_at)
         normalize_edge_evidence(edge.evidence, edge.provenance)
         key = _edge_key(edge)
         existing_payload = self._backend.get_edge_payload(self._tenant, key)
