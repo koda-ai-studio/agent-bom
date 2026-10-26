@@ -2,6 +2,7 @@
 name: inventory
 description: List the AI agents, MCP clients and MCP servers configured on this machine or in a named project or directory with agent-bom - the servers each client launches, the tools they expose, the packages behind them and how they connect. Use when the user asks what MCP servers, agents or tools are configured, installed or set up ("What MCP servers and agents are configured in X?"), or for an agent inventory.
 argument-hint: "[config directory]"
+allowed-tools: mcp__plugin_agent-bom_agent-bom-audit__inventory, mcp__plugin_agent-bom_agent-bom__scan, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/inventory
 license: Apache-2.0

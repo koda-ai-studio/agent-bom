@@ -2,6 +2,7 @@
 name: checkup
 description: One-step security checkup of this machine's AI setup with agent-bom - what is risky in the configured agents and MCP servers, which packages carry CVEs or are malicious, and the three fixes that matter most. Use when the user asks to check, review or secure their AI or agent setup, or asks "is my setup safe?" without naming a specific skill. To only list what is configured, use inventory.
 argument-hint: "[config directory]"
+allowed-tools: mcp__plugin_agent-bom_agent-bom-audit__inventory, mcp__plugin_agent-bom_agent-bom-audit__tool_risk_assessment, mcp__plugin_agent-bom_agent-bom__scan, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/checkup
 license: Apache-2.0

@@ -2,6 +2,7 @@
 name: check
 description: Check a package or MCP server with agent-bom before installing or adding it - known CVEs, malicious or typosquatted names, and the fixed version. Use when the user is about to add an MCP server, install a dependency, or asks whether a package is safe.
 argument-hint: "<package>[@version] [ecosystem]"
+allowed-tools: mcp__plugin_agent-bom_agent-bom__check, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/check
 license: Apache-2.0

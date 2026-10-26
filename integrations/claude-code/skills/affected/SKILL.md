@@ -2,6 +2,7 @@
 name: affected
 description: Answer "am I affected by this CVE?" with agent-bom - look up a CVE, GHSA or OSV advisory (including CVEs only NVD has published) and report which agents, MCP servers, images or packages carry it with the version to patch to, which distro packages are possibly affected, and what was scanned. Use when the user names an advisory id or a vulnerability in the news and asks whether they are exposed.
 argument-hint: "<CVE-…|GHSA-…|PYSEC-…>"
+allowed-tools: mcp__plugin_agent-bom_agent-bom__intel_lookup, mcp__plugin_agent-bom_agent-bom__scan, mcp__plugin_agent-bom_agent-bom__exposure_paths, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/affected
 license: Apache-2.0

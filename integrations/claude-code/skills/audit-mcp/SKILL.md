@@ -2,6 +2,7 @@
 name: audit-mcp
 description: Audit MCP server configurations with agent-bom for risky setups - credentials written into config, unpinned launchers, remote servers without authentication or TLS, broad filesystem or shell access, vulnerable or typosquatted packages, and coding-agent settings that run tools with no prompts or no sandbox. Use when the user asks whether their MCP servers are safe, to review an .mcp.json or client config, or to audit MCP exposure.
 argument-hint: "[config directory]"
+allowed-tools: mcp__plugin_agent-bom_agent-bom-audit__tool_risk_assessment, mcp__plugin_agent-bom_agent-bom-audit__inventory, mcp__plugin_agent-bom_agent-bom__scan, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/audit-mcp
 license: Apache-2.0

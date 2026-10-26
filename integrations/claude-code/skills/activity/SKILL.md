@@ -2,6 +2,7 @@
 name: activity
 description: Review what the user's coding agents actually did with agent-bom - which MCP servers and tools Claude Code and Codex called, configured MCP servers that were never used, risky actions such as pipe-to-shell installs, force pushes, writes outside the project or reads of secret files, and packages the agents installed. Use when the user asks what their agents have been doing, which MCP servers are unused, or what risky commands their agents ran.
 argument-hint: "[days] [project directory]"
+allowed-tools: mcp__plugin_agent-bom_agent-bom-audit__agent_activity, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/activity
 license: Apache-2.0

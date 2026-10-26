@@ -2,6 +2,7 @@
 name: audit-skills
 description: Audit Claude skills, plugins and agent instruction files (SKILL.md, CLAUDE.md, AGENTS.md, rules files) with agent-bom for prompt injection, credential exfiltration, remote code execution, dangerous tool grants and embedded secrets. Use when the user asks whether a skill or plugin is safe, before installing one, or to review agent instructions.
 argument-hint: "[path to a skill, plugin or project]"
+allowed-tools: mcp__plugin_agent-bom_agent-bom-audit__skill_scan, mcp__plugin_agent-bom_agent-bom-audit__skill_trust, mcp__plugin_agent-bom_agent-bom-audit__prompt_scan, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/audit-skills
 license: Apache-2.0
