@@ -98,7 +98,6 @@ from agent_bom.api.scan_job_views import _inventory_packages_from_agents, _job_r
 from agent_bom.api.scan_request_context import (
     _bulk_ingest_store_writes,
     _hub_store_call,
-    _job_response_payload_off_loop,
     _load_job_for_request,
     _logger,
     _request_header,
@@ -368,15 +367,26 @@ def list_scan_drivers(include_planned: bool = True) -> dict:
     }
 
 
+def _render_job_response(job: ScanJob) -> bytes:
+    return _job_response_payload(job).model_dump_json().encode("utf-8")
+
+
 @router.get("/scan/{job_id}", response_model=ScanJob, tags=["scan"])
-async def get_scan(request: Request, job_id: str) -> ScanJob:
+async def get_scan(request: Request, job_id: str) -> Response:
     """Fetch scan status and full results.
 
     ``result`` is always the canonical AI-BOM JSON. When the request asked for a
     non-json ``format``, ``result_document`` carries that rendering and
-    ``result_format`` names it.
+    ``result_format`` names it. For a bounded read, use
+    ``GET /v1/scan/{job_id}/result`` (summary plus section links) and
+    ``GET /v1/scan/{job_id}/result/{section}`` (paged sections).
+
+    Redaction and JSON encoding run in a worker thread; responses of 128 KiB
+    or more are gzip-compressed in a worker thread by the GZip middleware.
     """
-    return await _job_response_payload_off_loop(await _load_job_for_request(request, job_id))
+    job = await _load_job_for_request(request, job_id)
+    body = await anyio.to_thread.run_sync(partial(_render_job_response, job))
+    return Response(content=body, media_type="application/json")
 
 
 @router.get("/scan/{job_id}/status", **documented(ScanStatusResponse), tags=["scan"])
