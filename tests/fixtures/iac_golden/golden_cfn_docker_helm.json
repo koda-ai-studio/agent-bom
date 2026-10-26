@@ -1844,6 +1844,43 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
+    "CIS-Docker-4.3",
+    "NIST-CM-7"
+   ],
+   "file_path": "dockerfile/harvested_6fa512445136b920.Dockerfile",
+   "line_number": 2,
+   "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
+   "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-023",
+   "severity": "low",
+   "title": "apt install without --no-install-recommends"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-CM-2",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_6fa512445136b920.Dockerfile",
+   "line_number": 2,
+   "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-024",
+   "severity": "low",
+   "title": "OS packages installed without a version pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
     "CIS-Docker-4.9",
     "NIST-CM-7"
    ],
@@ -2516,6 +2553,25 @@
    "rule_id": "DOCKER-010",
    "severity": "medium",
    "title": "FROM without digest pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-CM-2",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_e1e66462e3d28785.Dockerfile",
+   "line_number": 2,
+   "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-024",
+   "severity": "low",
+   "title": "OS packages installed without a version pin"
   }
  ],
  "dockerfile/harvested_e38e038427c04b66.Dockerfile": [
@@ -2630,6 +2686,43 @@
    "rule_id": "DOCKER-007",
    "severity": "high",
    "title": "Package install without cache cleanup"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.3",
+    "NIST-CM-7"
+   ],
+   "file_path": "dockerfile/harvested_fc367aacb329bc38.Dockerfile",
+   "line_number": 2,
+   "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
+   "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-023",
+   "severity": "low",
+   "title": "apt install without --no-install-recommends"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-CM-2",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/harvested_fc367aacb329bc38.Dockerfile",
+   "line_number": 2,
+   "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-024",
+   "severity": "low",
+   "title": "OS packages installed without a version pin"
   }
  ],
  "dockerfile/harvested_feacd24c6fed37eb.Dockerfile": [
@@ -2915,6 +3008,43 @@
     "NIST-CM-7"
    ],
    "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
+   "line_number": 21,
+   "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
+   "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-023",
+   "severity": "low",
+   "title": "apt install without --no-install-recommends"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-CM-2",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
+   "line_number": 21,
+   "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-024",
+   "severity": "low",
+   "title": "OS packages installed without a version pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.3",
+    "NIST-CM-7"
+   ],
+   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
    "line_number": 22,
    "message": "Package manager install without --no-cache or cache removal increases image size and attack surface. Add --no-cache or '&& rm -rf /var/cache/*' after install.",
    "remediation": "",
@@ -2923,6 +3053,62 @@
    "rule_id": "DOCKER-007",
    "severity": "high",
    "title": "Package install without cache cleanup"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-CM-2",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
+   "line_number": 22,
+   "message": "Packages installed without a version: git. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-024",
+   "severity": "low",
+   "title": "OS packages installed without a version pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.3",
+    "NIST-CM-7"
+   ],
+   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
+   "line_number": 24,
+   "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
+   "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-023",
+   "severity": "low",
+   "title": "apt install without --no-install-recommends"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-CM-2",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
+   "line_number": 24,
+   "message": "Packages installed without a version: jq. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-024",
+   "severity": "low",
+   "title": "OS packages installed without a version pin"
   },
   {
    "atlas_techniques": [],
@@ -3196,6 +3382,100 @@
  ],
  "dockerfile/synthetic_all_rules_good.Dockerfile": [],
  "dockerfile/synthetic_bare_directives.Dockerfile": [],
+ "dockerfile/synthetic_build_hygiene.Dockerfile": [
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.3",
+    "NIST-CM-7"
+   ],
+   "file_path": "dockerfile/synthetic_build_hygiene.Dockerfile",
+   "line_number": 3,
+   "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
+   "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-023",
+   "severity": "low",
+   "title": "apt install without --no-install-recommends"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-CM-2",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/synthetic_build_hygiene.Dockerfile",
+   "line_number": 3,
+   "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-024",
+   "severity": "low",
+   "title": "OS packages installed without a version pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.10",
+    "NIST-IA-5",
+    "NIST-SC-28"
+   ],
+   "file_path": "dockerfile/synthetic_build_hygiene.Dockerfile",
+   "line_number": 6,
+   "message": "COPY puts .env into an image layer, where anyone who can pull the image can read it, even if a later layer deletes it. Mount it at build time with RUN --mount=type=secret or inject it at runtime.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-026",
+   "severity": "high",
+   "title": "Credential file copied into the image"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.7",
+    "NIST-CM-2",
+    "NIST-SI-7"
+   ],
+   "file_path": "dockerfile/synthetic_build_hygiene.Dockerfile",
+   "line_number": 12,
+   "message": "Packages installed without a version: nodejs. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-024",
+   "severity": "low",
+   "title": "OS packages installed without a version pin"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "NIST-CM-6"
+   ],
+   "file_path": "dockerfile/synthetic_build_hygiene.Dockerfile",
+   "line_number": 8,
+   "message": "Only the last CMD in a build stage takes effect; this one is silently ignored. Keep a single CMD per stage so the image runs what the file appears to say.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-025",
+   "severity": "low",
+   "title": "CMD overridden later in the same stage"
+  }
+ ],
  "dockerfile/synthetic_empty.Dockerfile": [],
  "dockerfile_dockerignore/harvested_bdf9981dd168e171.Dockerfile": [
   {

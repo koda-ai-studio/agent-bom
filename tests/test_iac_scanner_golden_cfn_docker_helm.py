@@ -94,7 +94,7 @@ def test_cfn_docker_helm_corpus_fires_every_rule() -> None:
     docker_rules = _declared_rule_ids("dockerfile", r'rule_id="(DOCKER-\d+)"')
     helm_rules = _declared_rule_ids("helm", r'rule_id="(HELM-\d+)"') - {"HELM-001", "HELM-002"}
     assert len(cfn_rules) == 19  # CFN-013 retired as a duplicate of CFN-003
-    assert len(docker_rules) == 21  # DOCKER-016 is documented but never emitted
+    assert len(docker_rules) == 25  # DOCKER-016 is documented but never emitted
     assert len(helm_rules) == 13
     assert cfn_rules | docker_rules | helm_rules <= fired
     assert all(isinstance(v, list) for v in expected.values())

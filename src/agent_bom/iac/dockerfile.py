@@ -27,6 +27,10 @@ DOCKER-019  SHELL instruction overrides default shell
 DOCKER-020  RUN with net=host (container shares host network during build)
 DOCKER-021  COPY --chmod grants world-writable permissions
 DOCKER-022  ADD fetches remote URL
+DOCKER-023  apt install without --no-install-recommends
+DOCKER-024  apt/apk packages installed without a version pin
+DOCKER-025  CMD/ENTRYPOINT overridden later in the same stage
+DOCKER-026  Credential file (.env, SSH key, .npmrc, keystore...) copied into the image
 
 Instructions are evaluated as logical lines (continuations joined, heredoc
 bodies attached; see ``dockerfile_parse``) and reported at their first line.
@@ -40,6 +44,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
+from agent_bom.iac.dockerfile_build_rules import docker_023, docker_024, docker_025, docker_026
 from agent_bom.iac.dockerfile_parse import Stage, parse_arg, parse_from, parse_instructions, resolve_args
 from agent_bom.iac.dockerfile_rules import (
     _CACHE_CLEANUP_RE,
@@ -107,6 +112,10 @@ DOCKER_LINE_RULES: tuple[tuple[str, DockerCheck], ...] = (
     ("WORKDIR ", docker_018),
     ("SHELL ", docker_019),
     ("RUN ", docker_020),
+    ("RUN ", docker_023),
+    ("RUN ", docker_024),
+    ("COPY ", docker_026),
+    ("ADD ", docker_026),
 )
 
 
@@ -197,9 +206,16 @@ def scan_dockerfile(file_path: str | Path) -> list[IaCFinding]:
             stages[-1].user_line = instruction.line
         elif prefix == "HEALTHCHECK ":
             has_healthcheck = True
+        elif prefix == "CMD " and stages:
+            stages[-1].cmd_lines.append(instruction.line)
+        elif prefix == "ENTRYPOINT " and stages:
+            stages[-1].entrypoint_lines.append(instruction.line)
         for check in _CHECKS_BY_PREFIX.get(prefix, ()):
             findings.extend(check(ln))
 
+    for stage in stages:
+        findings.extend(docker_025("CMD", line, rel_path) for line in stage.cmd_lines[:-1])
+        findings.extend(docker_025("ENTRYPOINT", line, rel_path) for line in stage.entrypoint_lines[:-1])
     if stages:
         findings.extend(_final_stage_user_findings(stages[-1], rel_path))
     # DOCKER-006: No HEALTHCHECK (a file without FROM is not a buildable Dockerfile)
