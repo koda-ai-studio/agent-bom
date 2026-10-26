@@ -18,10 +18,9 @@ names its pool node id (or its workload agent's stable id) as the asset.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agent_bom.cloud.gpu_accelerators import aws_instance_accelerator, azure_vm_accelerator, gcp_machine_accelerator
-from agent_bom.cloud.gpu_k8s_workloads import GpuWorkload
 from agent_bom.cloud.gpu_node_pools import gpu_pool_node_id
 from agent_bom.cloud.gpu_posture import CLUSTER_COLLECTIONS, spcs_pool_node_id
 from agent_bom.core.cloud_identity import cloud_resource_node_id
@@ -33,6 +32,9 @@ from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.projection_support import _add_rel_edge
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import clean_graph_part
+
+if TYPE_CHECKING:
+    from agent_bom.cloud.gpu_k8s_workloads import GpuWorkload
 
 _SERVICE = {"aws": "eks", "gcp": "gke", "azure": "aks"}
 _CLUSTER_KIND = {"aws": "eks:container_cluster", "gcp": "gke:container_cluster", "azure": "container_cluster"}
@@ -191,6 +193,9 @@ def _irsa_role(graph: UnifiedGraph, role_arn: str, sources: list[str]) -> str:
 
 
 def _workload_from(raw: dict[str, Any]) -> GpuWorkload:
+    # cloud.gpu_k8s_workloads reaches parsers; keep it off the graph schema import path.
+    from agent_bom.cloud.gpu_k8s_workloads import GpuWorkload
+
     fields = {key: raw[key] for key in GpuWorkload.__dataclass_fields__ if key in raw}
     return GpuWorkload(**fields)
 
