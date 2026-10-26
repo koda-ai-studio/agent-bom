@@ -101,5 +101,5 @@ def test_k8s_scan_console_shows_the_workload_table(k8s_cli: list[str]) -> None:
     assert result.exit_code in {0, 1}, result.output
     assert "1 workload(s) in 1 namespace(s)" in result.output
     assert "Kubernetes workloads" in result.output
-    assert "Deployment/web" in result.output
+    assert "shop/deployment/web" in result.output
     assert "reads secrets" in result.output

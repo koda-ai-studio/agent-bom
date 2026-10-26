@@ -20,7 +20,7 @@ def _grants_by_account(inventory: dict[str, Any]) -> dict[tuple[str, str], list[
 
 def _rbac_label(grants: list[dict[str, Any]]) -> str:
     if not grants:
-        return "-"
+        return "no bindings"
     parts = []
     if any(g["wildcard"] for g in grants):
         parts.append("wildcard")
@@ -31,6 +31,16 @@ def _rbac_label(grants: list[dict[str, Any]]) -> str:
     return ", ".join(parts) or f"{len(grants)} binding(s)"
 
 
+def _cve_label(scans: list[dict[str, Any]]) -> str:
+    scanned = [scan for scan in scans if scan.get("scanned")]
+    if not scanned:
+        return "not scanned"
+    vulns = sum(int(scan.get("vulnerabilities") or 0) for scan in scanned)
+    critical = sum(int(scan.get("critical") or 0) for scan in scanned)
+    partial = f", {len(scanned)}/{len(scans)} images" if len(scanned) < len(scans) else ""
+    return f"{vulns} ({critical} crit{partial})"
+
+
 def _rows(section: dict[str, Any]) -> list[tuple[int, list[str]]]:
     rows = []
     for inventory in section.get("inventories") or []:
@@ -38,25 +48,20 @@ def _rows(section: dict[str, Any]) -> list[tuple[int, list[str]]]:
         for workload in inventory.get("workloads") or []:
             scans = [c.get("scan") or {} for c in workload.get("containers") or []]
             vulns = sum(int(s.get("vulnerabilities") or 0) for s in scans)
-            critical = sum(int(s.get("critical") or 0) for s in scans)
-            scanned = sum(1 for s in scans if s.get("scanned"))
             account = (workload["namespace"], workload["service_account"])
-            token = "" if workload.get("token_mounted") else " (no token)"
+            token = "" if workload.get("token_mounted") else ", no token"
             rows.append(
                 (
                     vulns,
                     [
-                        f"{workload['kind']}/{workload['name']}",
-                        workload["namespace"],
-                        f"{scanned}/{len(scans)} scanned",
-                        f"{vulns} ({critical} critical)" if scanned else "not scanned",
-                        f"{workload['service_account']}{token}",
-                        _rbac_label(grants.get(account, [])),
+                        f"{workload['namespace']}/{workload['kind'].lower()}/{workload['name']}",
+                        _cve_label(scans),
+                        f"{workload['service_account']} ({_rbac_label(grants.get(account, []))}{token})",
                         str(len(workload.get("secret_refs") or [])),
                     ],
                 )
             )
-    return sorted(rows, key=lambda row: (-row[0], row[1][1], row[1][0]))
+    return sorted(rows, key=lambda row: (-row[0], row[1][0]))
 
 
 def print_kubernetes_workloads(con: Console, section: dict[str, Any] | None) -> None:
@@ -72,8 +77,10 @@ def print_kubernetes_workloads(con: Console, section: dict[str, Any] | None) -> 
     if not rows:
         return
     table = Table(show_edge=False, pad_edge=False, box=None)
-    for column in ("Workload", "Namespace", "Images", "CVEs", "Service account", "RBAC", "Secrets"):
-        table.add_column(column)
+    table.add_column("Workload", overflow="fold")
+    table.add_column("CVEs", no_wrap=True)
+    table.add_column("Runs as", overflow="fold")
+    table.add_column("Secrets", justify="right")
     for _vulns, cells in rows[:_ROWS]:
         table.add_row(*cells)
     con.print(table)
