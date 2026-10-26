@@ -423,3 +423,21 @@ def test_mcp_audit_without_path_covers_machine_wide_clients(tmp_path, monkeypatc
     data = json.loads(target.read_text())
     assert data["summary"]["total_mcp_servers"] >= 1
     assert any(f["asset"]["name"] == "notes" for f in data["findings"])
+
+
+def test_authentication_findings_name_their_server_and_agent(tmp_path, monkeypatch):
+    import json
+
+    import agent_bom.discovery as discovery
+    from agent_bom.mcp_tools.runtime import tool_risk_assessment_impl
+    from agent_bom.models import MCPServer, TransportType
+
+    server = MCPServer(name="remote-notes", url="http://notes.example.invalid/mcp", transport=TransportType.STREAMABLE_HTTP)
+    monkeypatch.setattr(discovery, "discover_all", lambda **kwargs: [agent(server)])
+    data = json.loads(
+        tool_risk_assessment_impl(config_path=str(tmp_path), live=False, _safe_path=lambda x: x, _truncate_response=lambda x: x)
+    )
+    rows = data["authentication_findings"]
+    assert rows
+    assert {row["server_name"] for row in rows} == {"remote-notes"}
+    assert {row["agent_name"] for row in rows} == {agent(server).name}

@@ -25,6 +25,16 @@ def _live_introspection_allowed() -> bool:
     return value is None or value.strip().lower() in TRUTHY
 
 
+def _named_auth_findings(agents, auth_findings) -> list[dict]:
+    """Serialize auth findings with the server and agent they were found on."""
+    owners = {server.canonical_id: (agent.name, server.name) for agent in agents for server in agent.mcp_servers}
+    rows = []
+    for finding in auth_findings:
+        agent_name, server_name = owners.get(finding.asset.identifier, (None, finding.asset.name))
+        rows.append({**finding.to_dict(), "server_name": server_name, "agent_name": agent_name})
+    return rows
+
+
 def tool_risk_assessment_impl(
     *,
     config_path: str | None = None,
@@ -88,7 +98,7 @@ def tool_risk_assessment_impl(
                         "servers": results,
                         "warnings": [*gate_warnings, *report.warnings],
                         "audit": audit_payload,
-                        "authentication_findings": [f.to_dict() for f in auth_findings],
+                        "authentication_findings": _named_auth_findings(agents, auth_findings),
                         "agent_permission_findings": permission_findings,
                     }
                 ),
