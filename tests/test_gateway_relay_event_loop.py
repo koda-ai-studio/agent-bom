@@ -14,7 +14,7 @@ worst event-loop stall 3.8 s across 20 concurrent calls.
 from __future__ import annotations
 
 import asyncio
-import time
+import threading
 
 import httpx
 import pytest
@@ -24,13 +24,25 @@ from agent_bom.api.stores import set_fleet_store
 from agent_bom.gateway_server import GatewaySettings, create_gateway_app
 from agent_bom.gateway_upstreams import UpstreamConfig, UpstreamRegistry
 
-# Each store read is made to cost this much wall-clock. Long enough that a
-# blocking call is unmistakable, short enough to keep the test quick.
-STORE_LATENCY = 0.25
+# Store reads made on the event-loop thread, by method name. A read run in a
+# worker thread has no running loop; one called from ``async def relay`` does.
+ON_LOOP_READS: list[str] = []
+READS: list[str] = []
+
+
+def _record_read(name: str) -> None:
+    READS.append(name)
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    ON_LOOP_READS.append(name)
 
 
 @pytest.fixture(autouse=True)
 def _reset():
+    ON_LOOP_READS.clear()
+    READS.clear()
     yield
     set_fleet_store(None)
     from agent_bom.api.agent_identity_store import set_agent_identity_store
@@ -39,14 +51,18 @@ def _reset():
 
 
 class _SlowFleetStore(InMemoryFleetStore):
-    """Stands in for a large roster: every read costs real wall-clock time."""
+    """Stands in for a large roster whose reads must never run on the loop."""
+
+    meet: threading.Barrier | None = None
 
     def list_by_tenant(self, tenant_id: str):
-        time.sleep(STORE_LATENCY)
+        _record_read("fleet.list_by_tenant")
         return super().list_by_tenant(tenant_id)
 
     def get(self, agent_id: str, *, tenant_id: str):
-        time.sleep(STORE_LATENCY)
+        _record_read("fleet.get")
+        if self.meet is not None:
+            self.meet.wait()
         return super().get(agent_id, tenant_id=tenant_id)
 
 
@@ -55,11 +71,11 @@ def _slow_identity_store():
 
     class _SlowIdentityStore(InMemoryAgentIdentityStore):
         def list(self, *a, **k):
-            time.sleep(STORE_LATENCY)
+            _record_read("identity.list")
             return super().list(*a, **k)
 
         def list_by_agent(self, *a, **k):
-            time.sleep(STORE_LATENCY)
+            _record_read("identity.list_by_agent")
             return super().list_by_agent(*a, **k)
 
     return _SlowIdentityStore()
@@ -79,7 +95,7 @@ def _app():
     )
 
 
-def _seed() -> None:
+def _seed() -> _SlowFleetStore:
     fleet = _SlowFleetStore()
     fleet.put(
         FleetAgent(
@@ -95,6 +111,7 @@ def _seed() -> None:
     from agent_bom.api.agent_identity_store import set_agent_identity_store
 
     set_agent_identity_store(_slow_identity_store())
+    return fleet
 
 
 _CALL = {
@@ -105,35 +122,6 @@ _CALL = {
 }
 
 
-async def _worst_stall_while(work, *, tick: float = 0.005) -> tuple[object, float]:
-    """Run *work*, sampling the longest the loop ever went without a tick."""
-    worst = 0.0
-    stop = False
-
-    async def _heartbeat() -> None:
-        nonlocal worst
-        last = time.perf_counter()
-        while not stop:
-            await asyncio.sleep(tick)
-            now = time.perf_counter()
-            worst = max(worst, now - last)
-            last = now
-
-    beat = asyncio.create_task(_heartbeat())
-    # Let the heartbeat actually start. Without this it is merely scheduled,
-    # never runs, and a fully blocking call measures as zero stall — the
-    # instrument would exonerate the bug.
-    for _ in range(5):
-        await asyncio.sleep(tick)
-    try:
-        result = await work
-    finally:
-        stop = True
-        await asyncio.sleep(0)
-        beat.cancel()
-    return result, worst
-
-
 def test_relay_does_not_block_the_event_loop_on_store_reads():
     _seed()
     app = _app()
@@ -141,24 +129,19 @@ def test_relay_does_not_block_the_event_loop_on_store_reads():
     async def _drive():
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://gw") as client:
-            await client.post("/mcp/filesystem", json=_CALL)  # warm caches
+            return await client.post("/mcp/filesystem", json=_CALL)
 
-            async def _one():
-                return await client.post("/mcp/filesystem", json=_CALL)
-
-            return await _worst_stall_while(_one())
-
-    resp, worst_stall = asyncio.run(_drive())
+    resp = asyncio.run(_drive())
 
     assert resp.status_code == 200 and resp.json().get("result") == {"ok": True}
-    # Both store reads happen off-loop, so the loop keeps servicing ticks while
-    # they run. Blocking calls parked it for at least STORE_LATENCY.
-    assert worst_stall < STORE_LATENCY, f"event loop stalled {worst_stall * 1000:.0f} ms on one relay call"
+    # The fleet and identity reads ran, and none of them on the event loop.
+    assert {"fleet.get"} <= set(READS)
+    assert ON_LOOP_READS == [], f"store reads ran on the event loop: {ON_LOOP_READS}"
 
 
 def test_concurrent_relays_do_not_serialize_on_the_loop():
     """The user-visible symptom: one slow tenant freezing every other caller."""
-    _seed()
+    fleet = _seed()
     app = _app()
     calls = 8
 
@@ -166,13 +149,13 @@ def test_concurrent_relays_do_not_serialize_on_the_loop():
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://gw") as client:
             await client.post("/mcp/filesystem", json=_CALL)
-            started = time.perf_counter()
-            responses = await asyncio.gather(*[client.post("/mcp/filesystem", json=_CALL) for _ in range(calls)])
-            return responses, time.perf_counter() - started
+            # Each fleet read now waits for a second relay's read to arrive. A
+            # serialized relay never has two in flight and breaks the barrier.
+            fleet.meet = threading.Barrier(2, timeout=10)
+            return await asyncio.gather(*[client.post("/mcp/filesystem", json=_CALL) for _ in range(calls)])
 
-    responses, elapsed = asyncio.run(_drive())
+    responses = asyncio.run(_drive())
 
+    assert fleet.meet is not None and not fleet.meet.broken, "concurrent relays serialized on the loop"
     assert all(r.status_code == 200 for r in responses)
-    # Serialized on the loop this is calls * 2 * STORE_LATENCY (4.0 s at these
-    # settings). Off-loop the reads overlap in the worker pool.
-    assert elapsed < calls * STORE_LATENCY, f"{calls} concurrent relays took {elapsed:.2f}s — they serialized"
+    assert ON_LOOP_READS == []

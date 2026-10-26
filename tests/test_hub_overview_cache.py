@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import multiprocessing
 import os
-import time
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
@@ -464,15 +463,13 @@ def test_overview_severity_cache_hit_bounded_and_exact():
         hub_overview_cache.reset_hub_overview_cache()
         hub_overview_cache.set_cached_severity(monkey_tenant, truth)
 
-        start = time.perf_counter()
-        for _ in range(50):
-            cached = hub_overview_cache.get_cached_severity(monkey_tenant)
-        warm_ms = (time.perf_counter() - start) / 50 * 1000
-
+        # A warm read is a copy of the cached counts, independent of row count
+        # (the cache takes no store), and callers cannot corrupt the shared entry.
+        cached = hub_overview_cache.get_cached_severity(monkey_tenant)
         assert cached == truth  # identical to SQL truth
-        # A cache hit is a dict copy — sub-millisecond regardless of row count,
-        # versus a ~360ms GROUP BY at this scale.
-        assert warm_ms < 5.0, f"cache-hit read {warm_ms:.3f} ms is not O(1)"
+        assert cached is not None
+        cached["critical"] = -1
+        assert hub_overview_cache.get_cached_severity(monkey_tenant) == truth
     finally:
         reset_current_tenant(tok)
         postgres_common.reset_pool()

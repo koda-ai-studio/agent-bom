@@ -712,7 +712,6 @@ async def test_drain_continuous_events_parallel_under_semaphore(
 ) -> None:
     """Multiple continuous connections drain via concurrent to_thread, not a serial loop."""
     import threading
-    import time
 
     os.environ["AGENT_BOM_CONNECTIONS_SCHEDULER"] = "1"
     os.environ["AGENT_BOM_AWS_EVENT_QUEUE_URL"] = "https://sqs.example/queue"
@@ -721,6 +720,9 @@ async def test_drain_continuous_events_parallel_under_semaphore(
     in_flight = 0
     max_in_flight = 0
     wait_kwargs: list[int | None] = []
+    # Every consume blocks until all four are in flight at once: a serial drain
+    # can never release the barrier and fails on its timeout instead of a clock.
+    all_in_flight = threading.Barrier(4, timeout=10)
 
     def _fake_consume(record: CloudConnectionRecord, **kwargs: Any) -> dict[str, Any]:
         nonlocal in_flight, max_in_flight
@@ -728,7 +730,10 @@ async def test_drain_continuous_events_parallel_under_semaphore(
         with lock:
             in_flight += 1
             max_in_flight = max(max_in_flight, in_flight)
-        time.sleep(0.08)
+        try:
+            all_in_flight.wait()
+        except threading.BrokenBarrierError:
+            return {"status": "error", "processed": 0}
         with lock:
             in_flight -= 1
         return {"status": "ok", "processed": 0}
@@ -740,14 +745,11 @@ async def test_drain_continuous_events_parallel_under_semaphore(
     for _ in range(4):
         store.put(_record(scan_mode=SCAN_MODE_CONTINUOUS, last_scan_at=_now().isoformat()))
 
-    started = time.monotonic()
     count = await drain_continuous_events(store, max_concurrency=4)
-    elapsed = time.monotonic() - started
 
+    assert not all_in_flight.broken, "drain looked serial: the four consumes never overlapped"
     assert count == 4
-    assert max_in_flight >= 2, f"expected overlapping consumes, max_in_flight={max_in_flight}"
-    # Serial 4×0.08s ≈ 0.32s; parallel under concurrency 4 should finish closer to one sleep.
-    assert elapsed < 0.28, f"drain looked serial (elapsed={elapsed:.3f}s)"
+    assert max_in_flight == 4
     assert wait_kwargs == [0, 0, 0, 0], "scheduler path must shorten SQS WaitTimeSeconds"
 
 
@@ -756,7 +758,6 @@ async def test_drain_continuous_events_respects_max_concurrency(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import threading
-    import time
 
     os.environ["AGENT_BOM_CONNECTIONS_SCHEDULER"] = "1"
     os.environ["AGENT_BOM_AWS_EVENT_QUEUE_URL"] = "https://sqs.example/queue"
@@ -764,13 +765,15 @@ async def test_drain_continuous_events_respects_max_concurrency(
     lock = threading.Lock()
     in_flight = 0
     max_in_flight = 0
+    # Consumes meet in pairs, so the cap is reached without relying on a sleep window.
+    pair = threading.Barrier(2, timeout=10)
 
     def _fake_consume(record: CloudConnectionRecord, **kwargs: Any) -> dict[str, Any]:
         nonlocal in_flight, max_in_flight
         with lock:
             in_flight += 1
             max_in_flight = max(max_in_flight, in_flight)
-        time.sleep(0.05)
+        pair.wait()
         with lock:
             in_flight -= 1
         return {"status": "ok"}

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import time
 from uuid import uuid4
 
 import pytest
@@ -25,6 +24,7 @@ from starlette.testclient import TestClient
 from agent_bom.api import compliance_hub_store as hub_store_mod
 from agent_bom.api import hub_ingest as hub_ingest_mod
 from agent_bom.api.server import app
+from tests._loop_offload import BlockingCall, assert_runs_off_loop
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
 
@@ -151,30 +151,14 @@ async def test_hub_store_call_keeps_event_loop_responsive() -> None:
     write does not pin the loop. Run directly on the loop, the trivial coroutine
     below could not complete until the full block elapsed.
     """
-    block_seconds = 0.5
+    call = BlockingCall()
 
     def _slow_blocking_write() -> str:
-        time.sleep(block_seconds)
+        call.block()
         return "written"
 
-    loop = asyncio.get_running_loop()
     write_task = asyncio.create_task(hub_ingest_mod.hub_store_call(_slow_blocking_write))
-    # Let the offload hand the blocking call to a worker thread.
-    await asyncio.sleep(0.05)
-    assert not write_task.done(), "blocking write should still be in flight"
-
-    async def _trivial() -> str:
-        return "responsive"
-
-    started = loop.time()
-    result = await asyncio.wait_for(_trivial(), timeout=0.15)
-    elapsed = loop.time() - started
-
-    assert result == "responsive"
-    assert elapsed < block_seconds / 2, (
-        f"event loop was blocked for {elapsed:.3f}s while a store write was in flight — offload is not effective"
-    )
-    assert await write_task == "written"
+    assert await assert_runs_off_loop(write_task, call, "a store write") == "written"
 
 
 @pytest.mark.parametrize("content", [b'{"content":"secret-marker",', b"\xff", b"[]"])

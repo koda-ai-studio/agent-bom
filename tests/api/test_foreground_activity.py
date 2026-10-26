@@ -17,10 +17,13 @@ def _reset(monkeypatch):
     monkeypatch.setattr(fg, "_last_activity", time.monotonic() - 3600)
 
 
-def test_idle_process_does_not_defer():
-    started = time.monotonic()
+def test_idle_process_does_not_defer(monkeypatch):
+    class _NoWait(threading.Condition):
+        def wait(self, timeout=None):
+            raise AssertionError("an idle process waited before running background work")
+
+    monkeypatch.setattr(fg, "_cond", _NoWait())
     assert fg.defer_until_idle(quiet=0.2, max_wait=5) is True
-    assert time.monotonic() - started < 0.1
 
 
 def test_waits_for_in_flight_request_and_then_a_quiet_window():
@@ -43,7 +46,9 @@ def test_constant_traffic_cannot_starve_background_work():
     try:
         started = time.monotonic()
         assert fg.defer_until_idle(quiet=0.1, max_wait=0.3) is False
-        assert 0.25 <= time.monotonic() - started < 2
+        # The lower bound is the deadline itself; the upper one only proves the
+        # wait ended instead of starving forever behind the in-flight request.
+        assert 0.25 <= time.monotonic() - started < 10
     finally:
         fg._leave()
 
