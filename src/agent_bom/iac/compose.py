@@ -6,8 +6,13 @@ COMPOSE-001  Service runs privileged (critical)
 COMPOSE-002  Service mounts the Docker socket (critical)
 COMPOSE-003  Service shares the host network namespace (high)
 COMPOSE-004  Service shares the host PID namespace (high)
-COMPOSE-005  Service adds ALL or SYS_ADMIN capabilities (high)
+COMPOSE-005  Service adds ALL, SYS_ADMIN or another container-escape capability (high)
 COMPOSE-006  Hardcoded secret in service environment (critical)
+COMPOSE-007  security_opt disables seccomp, AppArmor or SELinux (high)
+COMPOSE-008  Service shares the host IPC / user namespace (high) or UTS namespace (medium)
+COMPOSE-009  Service bind-mounts a sensitive host path (high)
+COMPOSE-010  Service runs as root via user: (high)
+COMPOSE-011  Service does not set no-new-privileges (low)
 
 Severities mirror the equivalent Kubernetes and Dockerfile rules. Secret
 findings name the variable only; the value is never copied into a finding.
@@ -21,13 +26,15 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from agent_bom.iac.compose_hardening import hardening_findings
 from agent_bom.iac.dockerfile_rules import is_hardcoded_secret
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.yaml_lines import item_line, key_line, safe_load_with_lines
 
 _COMPOSE_NAME_RE = re.compile(r"^(?:docker-)?compose(?:[.-][A-Za-z0-9_.-]+)?\.ya?ml$", re.IGNORECASE)
 _DOCKER_SOCKET_RE = re.compile(r"(?:^|[:/])(?:var/)?run/docker\.sock(?::|$)")
-_DANGEROUS_CAPS = frozenset({"ALL", "SYS_ADMIN", "CAP_SYS_ADMIN", "CAP_ALL"})
+_ESCAPE_CAPS = ("ALL", "SYS_ADMIN", "SYS_MODULE", "SYS_PTRACE", "SYS_RAWIO", "DAC_READ_SEARCH", "SYS_BOOT", "BPF")
+_DANGEROUS_CAPS = frozenset(_ESCAPE_CAPS + tuple(f"CAP_{cap}" for cap in _ESCAPE_CAPS))
 
 
 def is_compose_file(path: Path) -> bool:
@@ -81,7 +88,7 @@ def _capability_and_secret_findings(name: str, service: dict[str, Any], rel_path
                         "COMPOSE-005",
                         "high",
                         f"Compose service adds {str(cap).strip().upper()} capability",
-                        f"Service '{name}' adds {str(cap).strip().upper()}, which is close to running privileged. "
+                        f"Service '{name}' adds {str(cap).strip().upper()}, a capability that enables container escape. "
                         "Add only the specific capabilities required.",
                         rel_path,
                         item_line(caps, index, key_line(service, "cap_add")),
@@ -106,7 +113,7 @@ def _capability_and_secret_findings(name: str, service: dict[str, Any], rel_path
     return findings
 
 
-def _scan_service(name: str, service: dict[str, Any], rel_path: str) -> list[IaCFinding]:
+def _scan_service(name: str, service: dict[str, Any], rel_path: str, service_line: int) -> list[IaCFinding]:
     findings: list[IaCFinding] = []
     if service.get("privileged") is True:
         findings.append(
@@ -162,6 +169,7 @@ def _scan_service(name: str, service: dict[str, Any], rel_path: str) -> list[IaC
             )
         )
     findings.extend(_capability_and_secret_findings(name, service, rel_path))
+    findings.extend(hardening_findings(name, service, rel_path, service_line))
     return findings
 
 
@@ -182,5 +190,5 @@ def scan_compose(file_path: str | Path) -> list[IaCFinding]:
     findings: list[IaCFinding] = []
     for name, service in services.items():
         if isinstance(service, dict):
-            findings.extend(_scan_service(str(name), service, str(path)))
+            findings.extend(_scan_service(str(name), service, str(path), key_line(services, name)))
     return findings
