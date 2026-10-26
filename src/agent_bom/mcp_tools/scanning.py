@@ -587,6 +587,7 @@ async def check_impl(
         version = pkg.version
         result_warnings: list[str] = []
         evidence: list = []
+        version_source = ["requested"]
 
         def service_result(
             verdict: str,
@@ -611,6 +612,7 @@ async def check_impl(
                 source_context=source_context or {},
                 vuln_data_freshness=evidence[0].freshness if evidence else None,
                 completeness=evidence[0].completeness() if evidence else None,
+                version_source=version_source[0],
             )
             return _truncate_response(json.dumps(result.service_payload(), indent=2, default=str))
 
@@ -644,6 +646,7 @@ async def check_impl(
             if not resolved:
                 return _unresolved_result(pkg, name, eco, reason, service_result)
             version = pkg.version
+            version_source[0] = "registry_fallback" if pkg.version_source == "registry_fallback" else "registry_latest"
 
         try:
             coverage_warnings, data_evidence = await scan_checked_package(pkg, offline=offline, warnings=result_warnings)

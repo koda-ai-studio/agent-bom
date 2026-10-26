@@ -570,11 +570,13 @@ def test_check_output_requires_json_format(monkeypatch):
 
 
 def test_check_without_version_exits_nonzero(monkeypatch):
-    """`check <pkg>` with no @version scans nothing, so it must not exit 0 —
-    a CI pre-install gate must never treat an unscanned package as clean."""
+    """Offline, `check <pkg>` with no @version cannot look up the latest
+    version and scans nothing, so it must not exit 0 — a CI pre-install gate
+    must never treat an unscanned package as clean. (Online, the latest
+    published version is checked: tests/test_cli_check_latest_version.py.)"""
     _patch_check_scan(monkeypatch, [])
 
-    result = CliRunner().invoke(main, ["check", "somepkg", "--ecosystem", "pypi"])
+    result = CliRunner().invoke(main, ["check", "somepkg", "--ecosystem", "pypi", "--offline"])
 
     assert result.exit_code != 0
     assert result.exit_code == 2
@@ -585,7 +587,7 @@ def test_check_without_version_json_reports_nonzero(monkeypatch):
     """Structured output for the no-version skip must also carry exit_code=2."""
     _patch_check_scan(monkeypatch, [])
 
-    result = CliRunner().invoke(main, ["check", "somepkg", "--ecosystem", "pypi", "--format", "json"])
+    result = CliRunner().invoke(main, ["check", "somepkg", "--ecosystem", "pypi", "--offline", "--format", "json"])
 
     assert result.exit_code == 2
     payload = json.loads(result.output)

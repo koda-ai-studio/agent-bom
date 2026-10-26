@@ -371,6 +371,7 @@ def _check_result_payload(
     malicious_reason: str | None = None,
     vuln_data_freshness: dict | None = None,
     completeness: dict | None = None,
+    version_source: str = "requested",
 ) -> dict:
     """Build machine-readable check output."""
     from agent_bom.scanners.package_check_result import PackageCheckResult, serialize_vulnerability
@@ -389,6 +390,7 @@ def _check_result_payload(
         exit_code=exit_code,
         vuln_data_freshness=vuln_data_freshness,
         completeness=completeness,
+        version_source=version_source,
     )
     return result.cli_payload(
         legacy_verdict=verdict,
