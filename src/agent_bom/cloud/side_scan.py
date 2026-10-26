@@ -140,6 +140,9 @@ class SideScanResult:
     instance_id: Optional[str] = None
     volume_id: Optional[str] = None
     snapshot_id: Optional[str] = None
+    account_id: str = ""
+    region: str = ""
+    image_id: Optional[str] = None
     packages: list[Package] = field(default_factory=list)
     secrets: list[SideScanSecret] = field(default_factory=list)
     config_findings: list[SideScanDiskFinding] = field(default_factory=list)
@@ -153,7 +156,10 @@ class SideScanResult:
         return {
             "instance_id": self.instance_id,
             "volume_id": self.volume_id,
+            "image_id": self.image_id,
             "snapshot_id": self.snapshot_id,
+            "account_id": self.account_id,
+            "region": self.region,
             "scan_volume_id": self.scan_volume_id,
             "package_count": len(self.packages),
             "vulnerability_count": self.vulnerability_count,

@@ -112,6 +112,8 @@ class CloudSideScanExecutionResult:
     account_id: str
     location: str
     execution_id: str = ""
+    instance_id: str = ""
+    instance_name: str = ""
     execution_status: str = ""
     cleanup_status: str = ""
     snapshot_id: str | None = None
@@ -142,6 +144,8 @@ class CloudSideScanExecutionResult:
             "account_id": self.account_id,
             "location": self.location,
             "execution_id": self.execution_id,
+            "instance_id": self.instance_id,
+            "instance_name": self.instance_name,
             "execution_status": self.execution_status,
             "cleanup_status": self.cleanup_status,
             "snapshot_id": self.snapshot_id,

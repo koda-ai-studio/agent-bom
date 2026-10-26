@@ -335,6 +335,7 @@ from agent_bom.graph.runtime_projection import (
 from agent_bom.graph.runtime_projection import (
     _runtime_identity_relationship as _runtime_identity_relationship,
 )
+from agent_bom.graph.side_scan_projection import project_side_scan_results
 from agent_bom.graph.snowflake_source_lanes import _add_snowflake_source_lanes as _add_snowflake_source_lanes
 from agent_bom.graph.snowflake_source_lanes import _project_snowflake_lanes as _project_snowflake_lanes
 from agent_bom.graph.supabase_projection import project_supabase_inventory
@@ -426,6 +427,7 @@ def _project_inventory_findings(
             native_projector(graph, inventory)
         else:
             _add_cloud_inventory(graph, inventory, inputs.data_source)
+    project_side_scan_results(graph, report.get("side_scan_results"))
     project_benchmarks(graph, benchmark_inputs(report), declared_assets_by_identifier(report.get("findings")))
     project_sast(graph, report.get("sast") or report.get("sast_data"))
     project_iac(graph, report.get("iac_findings") or report.get("iac_findings_data"))

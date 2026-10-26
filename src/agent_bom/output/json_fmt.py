@@ -808,6 +808,8 @@ def to_json(report: AIBOMReport) -> dict:
 
     if report.aws_organization_data:
         result["aws_organization"] = report.aws_organization_data
+    if report.side_scan_results_data:
+        result["side_scan_results"] = report.side_scan_results_data
 
     if report.identity_discovery_data:
         result["identity_discovery"] = report.identity_discovery_data

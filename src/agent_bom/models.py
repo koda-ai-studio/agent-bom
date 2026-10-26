@@ -322,6 +322,7 @@ class AIBOMReport:
     prioritized_findings: Optional[list[Any]] = None  # Priority-ordered findings
     sast_data: Optional[dict[str, Any]] = None  # Serialized SAST scan results (Semgrep)
     aws_organization_data: Optional[dict[str, Any]] = None  # AWS Organizations: org/OUs/accounts/SCPs hierarchy
+    side_scan_results_data: Optional[list[dict[str, Any]]] = None  # Disk/image side-scan packages + CVEs per VM
     cis_benchmark_data: Optional[BenchmarkPayload] = None  # Serialized CIS AWS Benchmark results
     snowflake_cis_benchmark_data: Optional[BenchmarkPayload] = None  # Serialized CIS Snowflake Benchmark results
     snowflake_object_graph_data: Optional[dict[str, Any]] = None  # Snowflake tables/views + OBJECT_DEPENDENCIES lineage

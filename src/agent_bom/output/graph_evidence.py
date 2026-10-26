@@ -32,6 +32,7 @@ _PASSTHROUGH_SECTIONS: tuple[tuple[str, str], ...] = (
     ("iac_findings", "iac_findings_data"),
     ("cloud_inventory", "cloud_inventory_data"),
     ("aws_organization", "aws_organization_data"),
+    ("side_scan_results", "side_scan_results_data"),
     ("identity_discovery", "identity_discovery_data"),
     ("cloud_audit_trail", "cloud_audit_trail_data"),
     ("snowflake_object_graph", "snowflake_object_graph_data"),
