@@ -148,7 +148,12 @@ AGENT_BOM_SIDESCAN=1 agent-bom cloud side-scan \
 ```
 
 Use `--instance-id i-...` instead of `--volume-id` to scan every EBS volume
-attached to an instance. `--no-secrets` returns SBOM + CVEs only;
+attached to an instance, or `--image-id ami-...` to scan an AMI (a tagged temp
+volume is created from the AMI's root EBS snapshot; the AMI and its snapshot are
+never modified or deleted; encrypted AMI snapshots also need KMS use on their
+key). Packages and CVEs are reported per owning instance and project onto the
+EC2 instance node in the graph; `-f json` emits the `side_scan_results` records
+(see [CLOUD_CONNECT.md](../CLOUD_CONNECT.md#side-scan-coverage-packages-and-cves-per-vm-and-machine-images)). `--no-secrets` returns SBOM + CVEs only;
 `--no-sweep-orphans` skips the pre-run stranded-snapshot sweep. With the flag
 unset the command prints how to enable it and exits non-zero — it never starts a
 snapshot implicitly.

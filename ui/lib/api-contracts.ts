@@ -172,6 +172,8 @@ export interface SideScanExecutionResponse {
 export interface SideScanTriggerRequest {
   provider: "azure" | "gcp";
   target_id: string;
+  /** "image" scans a GCE image; Azure managed images are not supported. */
+  target_type?: "disk" | "image";
   account_id: string;
   location: string;
   collector_id: string;

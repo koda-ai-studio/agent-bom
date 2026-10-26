@@ -7,6 +7,7 @@ from typing import Any
 from agent_bom.iac.kubernetes_common import K8sDocument, K8sWorkload, pod_spec_line
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.yaml_lines import item_line, key_line, node_line
+from agent_bom.k8s_pod_security import PSA_ENFORCE_LABEL, psa_enforce_issue
 
 
 def k8s_024(d: K8sDocument) -> list[IaCFinding]:
@@ -34,8 +35,6 @@ def k8s_024(d: K8sDocument) -> list[IaCFinding]:
 
 def k8s_037_038(d: K8sDocument) -> list[IaCFinding]:
     """K8S-037: Namespace without a Pod Security enforce level; K8S-038: enforces privileged."""
-    from agent_bom.k8s_admission_checks import PSA_ENFORCE_LABEL, psa_enforce_issue
-
     metadata = d.doc.get("metadata", {}) or {}
     labels = metadata.get("labels", {}) or {}
     labels = labels if isinstance(labels, dict) else {}

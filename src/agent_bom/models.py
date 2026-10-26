@@ -322,6 +322,7 @@ class AIBOMReport:
     prioritized_findings: Optional[list[Any]] = None  # Priority-ordered findings
     sast_data: Optional[dict[str, Any]] = None  # Serialized SAST scan results (Semgrep)
     aws_organization_data: Optional[dict[str, Any]] = None  # AWS Organizations: org/OUs/accounts/SCPs hierarchy
+    side_scan_results_data: Optional[list[dict[str, Any]]] = None  # Disk/image side-scan packages + CVEs per VM
     cis_benchmark_data: Optional[BenchmarkPayload] = None  # Serialized CIS AWS Benchmark results
     snowflake_cis_benchmark_data: Optional[BenchmarkPayload] = None  # Serialized CIS Snowflake Benchmark results
     snowflake_object_graph_data: Optional[dict[str, Any]] = None  # Snowflake tables/views + OBJECT_DEPENDENCIES lineage
@@ -374,9 +375,7 @@ class AIBOMReport:
     runtime_correlation: Optional[RuntimeCorrelationPayload] = None  # Runtime ↔ scan correlation (proxy audit vs CVE findings)
     delta_data: Optional[dict[str, Any]] = None  # Baseline/delta comparison metadata for CI gate outputs
     scan_performance_data: Optional[dict[str, Any]] = None  # Cache coverage / scan latency metadata
-    vuln_data_freshness: Optional[VulnerabilityFreshnessPayload] = (
-        None  # Vuln-data source/age/staleness snapshot (set by CLI; surfaced to API/MCP)
-    )
+    vuln_data_freshness: Optional[VulnerabilityFreshnessPayload] = None  # Vuln-data age/staleness (CLI-set; API/MCP-surfaced)
     training_pipelines: Optional[dict[str, Any]] = None  # Serialized TrainingPipelineScanResult
     dataset_cards: Optional[dict[str, Any]] = None  # Serialized DatasetScanResult
     serving_configs: Optional[list[Any]] = None  # Serialized ServingConfig list

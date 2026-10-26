@@ -18,11 +18,9 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from agent_bom.iac.models import IaCFinding
+from agent_bom.k8s_pod_security import ENFORCING_LEVELS, PSA_ENFORCE_LABEL, SYSTEM_NAMESPACES, psa_enforce_issue
 
-PSA_ENFORCE_LABEL = "pod-security.kubernetes.io/enforce"
 ADMISSION_RESOURCES = ("namespaces", "validatingadmissionpolicies", "validatingadmissionpolicybindings", "validatingwebhookconfigurations")
-SYSTEM_NAMESPACES = frozenset({"kube-system", "kube-public", "kube-node-lease"})
-_ENFORCING_LEVELS = frozenset({"baseline", "restricted"})
 _CIS_POLICY = ["CIS-K8s-5.2.1", "NIST-CM-7"]
 
 
@@ -46,24 +44,6 @@ def _items(payload: Mapping[str, Any] | None) -> list[Mapping[str, Any]]:
 
 def _name(obj: Mapping[str, Any]) -> str:
     return str((obj.get("metadata") or {}).get("name") or "unknown")
-
-
-def psa_enforce_issue(name: str, labels: Mapping[str, Any]) -> tuple[str, str] | None:
-    """``("missing" | "privileged", message)`` for a non-system namespace, else ``None``."""
-    if name in SYSTEM_NAMESPACES:
-        return None
-    level = str(labels.get(PSA_ENFORCE_LABEL) or "").strip().lower()
-    if not level:
-        return "missing", (
-            f"Namespace '{name}' runs workloads but sets no {PSA_ENFORCE_LABEL} label, so Pod Security Admission "
-            "enforces nothing there. Label it baseline or restricted."
-        )
-    if level == "privileged":
-        return "privileged", (
-            f"Namespace '{name}' enforces the privileged Pod Security level, which allows host namespaces, "
-            "privileged containers and hostPath mounts. Enforce baseline or restricted."
-        )
-    return None
 
 
 def _namespace_findings(namespaces: Iterable[Mapping[str, Any]], workload_namespaces: set[str]) -> list[IaCFinding]:
@@ -146,7 +126,7 @@ def _webhook_findings(configurations: list[Mapping[str, Any]]) -> list[IaCFindin
 
 def _has_mechanism(namespaces: list[Mapping[str, Any]], bindings: list[Mapping[str, Any]], webhooks: list[Mapping[str, Any]]) -> bool:
     enforcing = any(
-        str(((ns.get("metadata") or {}).get("labels") or {}).get(PSA_ENFORCE_LABEL) or "").lower() in _ENFORCING_LEVELS for ns in namespaces
+        str(((ns.get("metadata") or {}).get("labels") or {}).get(PSA_ENFORCE_LABEL) or "").lower() in ENFORCING_LEVELS for ns in namespaces
     )
     return enforcing or any(_denying(binding) for binding in bindings) or bool(webhooks)
 

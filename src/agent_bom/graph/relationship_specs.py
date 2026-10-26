@@ -194,6 +194,8 @@ _SPECS: tuple[RelationshipSpec, ...] = (
             (E.ACCOUNT, E.APPLICATION),
             (E.CLOUD_RESOURCE, E.CLOUD_RESOURCE),
             (E.SOURCE_FILE, E.PACKAGE),
+            # A side-scanned VM disk or machine image holds the OS packages read from it.
+            (E.CLOUD_RESOURCE, E.PACKAGE),
             *((E.ACCOUNT, target) for target in _CLOUD_ASSETS),
             *((E.ENVIRONMENT, target) for target in _ASSETS),
             # Roll-up containment: a posture finding sits under the asset it names.

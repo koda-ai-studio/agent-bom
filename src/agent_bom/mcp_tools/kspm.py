@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 import logging
 
+from agent_bom.k8s_inventory_live import cluster_label, collect_live_k8s_inventory
+from agent_bom.k8s_transport import select_k8s_transport
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -82,9 +84,6 @@ _INVENTORY_SCHEMA_VERSION = "kspm.workload.inventory.v1"
 
 def _collect_inventory(*, namespace: str, all_namespaces: bool, context: str | None) -> dict:
     """Run the live workload inventory collection (isolated seam for testing)."""
-    from agent_bom.k8s_inventory_live import cluster_label, collect_live_k8s_inventory
-    from agent_bom.k8s_transport import select_k8s_transport
-
     transport = select_k8s_transport(context=context)
     try:
         cluster = cluster_label(context, transport.name)

@@ -16,7 +16,12 @@ def register_cloud_side_scan(bindings: OperatorToolBindings) -> None:
     @mcp.tool(annotations=bindings.write_action, title="Cloud Side-Scan (Azure/GCP)")
     async def cloud_side_scan(
         provider: Annotated[str, Field(description="Cloud provider: 'azure' or 'gcp' (AWS EBS uses the CLI side-scan entrypoint).")] = "",
-        target_id: Annotated[str, Field(description="Managed/persistent disk resource id to scan.")] = "",
+        target_id: Annotated[
+            str, Field(description="Managed/persistent disk resource id, or a GCE image path with target_type=image.")
+        ] = "",
+        target_type: Annotated[
+            str, Field(description="'disk' (default) or 'image' (GCP images; Azure managed images unsupported).")
+        ] = "disk",
         account_id: Annotated[str, Field(description="Azure subscription id / GCP project id owning the disk + collector.")] = "",
         location: Annotated[str, Field(description="Azure location / GCP zone of the temp disk (must match the collector).")] = "",
         collector_id: Annotated[str, Field(description="In-account collector VM/instance the temp disk attaches to.")] = "",
@@ -34,11 +39,12 @@ def register_cloud_side_scan(bindings: OperatorToolBindings) -> None:
         """Trigger one agentless Azure/GCP disk side-scan and read back honest state.
 
         Runs the same executor as ``agent-bom cloud side-scan`` and the REST
-        ``POST /v1/cloud/side-scan``: snapshot the disk, mount a temp copy on an
-        in-account collector read-only, record SBOM + CVE + secret *metadata* only,
-        and tear every owned temporary resource down. Requires an admin operator +
-        ``cloud:write`` scope. Credentials are never accepted here — the
-        executor resolves read-only credentials from the provider's default chain
+        ``POST /v1/cloud/side-scan``: an opt-in temp snapshot/disk lifecycle that
+        mounts a copy on an in-account collector read-only, returns SBOM + CVEs per
+        owning VM + secret *metadata* only, and tears every owned temporary
+        resource down. Requires an admin operator + ``cloud:write`` scope.
+        Credentials are never accepted here — the executor resolves scoped
+        lifecycle credentials from the provider's default chain
         (``credentialed_smoke=false``). Fail-closed and honest: OFF → ``disabled``;
         missing extra/credentials → ``unavailable``; never a clean-workload claim.
         """
@@ -49,6 +55,7 @@ def register_cloud_side_scan(bindings: OperatorToolBindings) -> None:
             required_scope="cloud:write",
             provider=provider,
             target_id=target_id,
+            target_type=target_type,
             account_id=account_id,
             location=location,
             collector_id=collector_id,
