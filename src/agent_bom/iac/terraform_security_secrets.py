@@ -5,13 +5,14 @@ from __future__ import annotations
 import re
 
 from agent_bom.iac.models import IaCFinding
-from agent_bom.iac.terraform_security_common import TfResource, line_number
+from agent_bom.iac.terraform_security_common import TfResource, line_number, provider_compliance
 
 _SECRET_ARGS = frozenset(
     {
         "password",
         "master_password",
         "admin_password",
+        "administrator_login_password",
         "root_password",
         "secret",
         "secret_key",
@@ -62,7 +63,7 @@ def tf_sec_051(res: TfResource) -> list[IaCFinding]:
                 file_path=res.rel_path,
                 line_number=line_number(res.content, res.block_offset + m.start(1)),
                 category="terraform",
-                compliance=["CIS-AWS-1.14", "NIST-IA-5", "NIST-SC-28"],
+                compliance=provider_compliance(res.rtype, aws=("CIS-AWS-1.14",), neutral=("NIST-IA-5", "NIST-SC-28")),
             )
         )
     return findings

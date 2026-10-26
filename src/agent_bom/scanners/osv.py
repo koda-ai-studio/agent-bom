@@ -75,8 +75,8 @@ def ecosystem_matches(osv_ecosystem: str, query_ecosystem: str) -> bool:
     # Product/release selection is enforced before range and fix evaluation.
     if OS_DISTRO_COMPARATOR_FAMILIES.get(osv_base) == query_base:
         return True
-    # The queried ecosystem is often the internal code ("deb", "rpm", "conda")
-    # while OSV uses its own name ("Debian:11", "Linux", "PyPI"). Map the query
+    # The queried ecosystem is often the internal code ("deb", "conda") while
+    # OSV uses its own name ("Debian:11", "PyPI"). Map the query
     # code to its OSV ecosystem and compare on that base too.
     from agent_bom.scanners import ECOSYSTEM_MAP  # lazy: avoids import cycle
 
@@ -313,6 +313,13 @@ def _log_non_osv_package(pkg: Package, eco_key: str, non_osv_ecosystems: Any) ->
             pkg.ecosystem,
             pkg.name,
             pkg.cpe,
+        )
+    elif eco_key == "rpm":
+        _logger.debug(
+            "Not querying OSV for %s/%s: no supported advisory feed for distro %r (reported as a coverage gap)",
+            pkg.ecosystem,
+            pkg.name,
+            getattr(pkg, "distro_name", None) or "unknown",
         )
     elif eco_key == "generic":
         _logger.warning(

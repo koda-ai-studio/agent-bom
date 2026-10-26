@@ -190,8 +190,11 @@ def test_unified_finding_rule_falls_back_to_its_title(rules: dict[str, dict]) ->
     assert _SECRET_DESCRIPTION not in json.dumps(rule)
 
 
-def test_iac_rule_full_description_is_the_message(rules: dict[str, dict]) -> None:
-    assert rules["iac/DKR-001"]["fullDescription"]["text"] == _IAC_MESSAGE
+def test_iac_rule_full_description_is_instance_independent(rules: dict[str, dict]) -> None:
+    """The rule is shared by every result, so it carries the rule title; the
+    per-instance message stays on the result."""
+    assert rules["iac/DKR-001"]["fullDescription"]["text"] == "Container runs as root"
+    assert _IAC_MESSAGE not in json.dumps(rules["iac/DKR-001"])
 
 
 def test_ai_inventory_rule_full_description_is_the_description(rules: dict[str, dict]) -> None:

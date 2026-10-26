@@ -21,8 +21,8 @@ class TestEcosystemMap:
     def test_apk_maps_to_alpine(self):
         assert ECOSYSTEM_MAP["apk"] == "Alpine"
 
-    def test_rpm_maps_to_linux(self):
-        assert ECOSYSTEM_MAP["rpm"] == "Linux"
+    def test_rpm_has_no_flat_upstream_linux_mapping(self):
+        assert "rpm" not in ECOSYSTEM_MAP
 
     def test_existing_ecosystems_unchanged(self):
         """Ensure adding OS ecosystems didn't break existing mappings."""
@@ -128,12 +128,11 @@ class TestOSPackagesNotSkipped:
         assert osv_eco is not None, "apk packages should not be skipped by scanner"
         assert osv_eco == "Alpine"
 
-    def test_rpm_package_has_osv_ecosystem(self):
-        pkg = Package(name="openssl-libs", version="3.0.7-24.el9", ecosystem="rpm")
-        eco_key = pkg.ecosystem.lower()
-        osv_eco = ECOSYSTEM_MAP.get(eco_key)
-        assert osv_eco is not None, "rpm packages should not be skipped by scanner"
-        assert osv_eco == "Linux"
+    def test_rpm_package_resolves_through_its_distro(self):
+        from agent_bom.scanners.package_matching import _resolve_osv_ecosystems
+
+        pkg = Package(name="openssl-libs", version="3.0.7-24.el9", ecosystem="rpm", distro_name="rhel", distro_version="9.3")
+        assert _resolve_osv_ecosystems(pkg, for_local_db=False) == ["Red Hat"]
 
 
 # ── Unknown ecosystem warning (no silent failures) ──────────────────────────

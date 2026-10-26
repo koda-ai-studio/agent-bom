@@ -16,8 +16,8 @@
  "rich": {
   "html": "0e34cfe560ed76dbace139484ea67ab8c48c9725db2208967f1b606f6c45988e",
   "html_offline": "7b1558902a812ad908030a1e534a1fc977cdc5a80ae06eff103f4dbc64ce0212",
-  "sarif_exclude_unfixable": "32ca1566ea67b0c8561eec02eb0ea65d6890a233cffaac01c514e57768d1c6fe",
-  "sarif_file": "cc5606ecfd3b37f9667783bef5b47c7232308e214725fd3f7097ebaeb6d84c08",
-  "sarif_stdout": "1ad5634bf0463a26af4ac1047075a0270c8429aa27d35e47afcfa54b847d9105"
+  "sarif_exclude_unfixable": "b7ab771913a6f7fceac0bdc044025d8e88e7889dda86dd453086f8d10319cd43",
+  "sarif_file": "5621d184ae7ad15116b98f5925631a4a995a220e9604fab4a446fce22e01fc03",
+  "sarif_stdout": "123a971bd0d71897d2b3d9314bfe824869231fc817b7e96a325504d99032c9fc"
  }
 }
