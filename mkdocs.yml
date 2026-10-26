@@ -93,6 +93,7 @@ nav:
       - Runtime Proxy: features/runtime-proxy.md
       - SBOM Generation: features/sbom.md
       - Hardware/Firmware Evidence Ingest: features/hardware-evidence.md
+      - GPU and AI Infrastructure: features/gpu-ai-infrastructure.md
       - Policy Engine: features/policy.md
   - Deployment:
       - Overview: deployment/overview.md

@@ -9,12 +9,20 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- GPU node pools in cloud inventory, read-only: EKS managed node groups (`eks:ListNodegroups` / `DescribeNodegroup`), GKE node pools with accelerators, GPU sharing, MIG partition and driver-install setting, AKS agent pools with GPU VM size, MIG profile and driver opt-out, GCE guest accelerators, Snowflake SPCS compute pools (`SHOW COMPUTE POOLS`, GPU model and count per `GPU_*` family) and Databricks GPU clusters (kept even without installed libraries). Connection inventory summaries report `node_summary.gpu_node_pools`.
+- GPU pools in the graph: a `gpu_node_pool` cloud resource contained by its cluster and assuming its node IAM role or service account; GPU attributes on EC2, GCE and Azure GPU instances; SPCS compute pools under their account.
+- `--gpu-scan` and the MCP `gpu_infra_scan` tool inventory Kubernetes GPU workloads with read-only `kubectl get`: node pool, service account, EKS IRSA role, privileged / hostPath / host-namespace settings, the node driver (GPU Feature Discovery labels) and Container Toolkit (GPU Operator `ClusterPolicy`). The driver and toolkit become CPE-identified packages matched like any other, and attack paths run from a vulnerable host GPU stack through the workload to its service account, IRSA role and the GPU node identity.
+- Provider-aware GPU posture checks GPU-001 to GPU-021 (SSH open on EKS GPU node groups, AKS node public IPs, GKE default compute service account, untainted EKS/AKS GPU pools, operator-managed drivers, shared GPUs and multi-tenant time-slicing, privileged / hostPath / host-namespace GPU pods, Databricks no-isolation GPU clusters, shared SPCS GPU pools) in the unified findings stream and the graph.
+- Image scans record model files found in layers and statically disassemble pickle-bearing ones (never deserialized) within the existing pickle byte cap, honouring whiteouts; findings attach to the image. See `site-docs/features/gpu-ai-infrastructure.md`.
+
 ### Changed
 - Console output groups kernel-header CVEs into one block per image distro release (Debian/Ubuntu `linux-libc-dev` and `linux-headers-*`, RHEL-family `kernel-headers`/`kernel-devel`, SUSE `linux-glibc-devel`/`kernel-*-devel`, Alpine `linux-headers`), with the full severity breakdown; the scan verdict says how many of the CVEs they are. KEV and critical kernel-header CVEs are named on the group line and stay as their own rows, and JSON, SARIF and CycloneDX still carry every CVE. Recognition is scoped to the ecosystem and `os-release` family, so a same-named package elsewhere is never grouped.
 - The `docker export` fallback of `agent-bom image` scans the exported filesystem with the same bounded walk and extractors as image layers: the `AGENT_BOM_OCI_*` member, size and time limits apply, and a crossed limit is a coverage gap under `docker-export` (a partial scan) rather than an unbounded read.
 - Image layers emit the canonical purl for scoped npm packages (`pkg:npm/%40scope/name@…`), matching every other scan path.
 
 ### Fixed
+- Kubernetes GPU nodes read the full driver version from GPU Feature Discovery's `nvidia.com/cuda.driver-version.full` label instead of a `major.minor` prefix.
 - Each CVE on a package now carries only its own `ai_risk_context`. The context was extended in place across a package's CVEs, so the Nth CVE repeated the attack summaries of all before it; on `php:8.3.30-cli` that built about 0.9 GB of text for `linux-libc-dev` and dominated JSON export time.
 
 ### Performance

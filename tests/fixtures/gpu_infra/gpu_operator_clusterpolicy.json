@@ -1,0 +1,17 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "nvidia.com/v1",
+      "kind": "ClusterPolicy",
+      "metadata": {"name": "cluster-policy"},
+      "spec": {
+        "driver": {"enabled": true, "repository": "nvcr.io/nvidia", "image": "driver", "version": "535.104.05"},
+        "toolkit": {"enabled": true, "repository": "nvcr.io/nvidia/k8s", "image": "container-toolkit", "version": "v1.16.1-ubuntu20.04"},
+        "devicePlugin": {"enabled": true, "version": "v0.16.2"},
+        "mig": {"strategy": "single"}
+      }
+    }
+  ]
+}

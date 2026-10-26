@@ -209,7 +209,7 @@ from agent_bom.graph.cloud_context import (
     _stamp_owning_account as _stamp_owning_account,
 )
 from agent_bom.graph.cloud_rbac import add_cloud_role_assignments as _add_cloud_role_assignments
-from agent_bom.graph.cloud_service_projection import project_aws_services, project_gcp_services
+from agent_bom.graph.cloud_service_projection import project_aws_services, project_gcp_services, project_gpu_compute
 from agent_bom.graph.cloud_storage_projection import project_buckets, project_databases, project_side_scan_targets
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_bindings import project_credential_bindings
@@ -431,6 +431,7 @@ def _project_inventory_findings(
     project_iac(graph, report.get("iac_findings") or report.get("iac_findings_data"))
     project_skill_audit(graph, report.get("skill_audit"), indexes, report.get("findings"))
     project_scan_findings(graph, report.get("findings"))
+    project_gpu_compute(graph, report, indexes, inputs.data_source)
     return inventories
 
 
