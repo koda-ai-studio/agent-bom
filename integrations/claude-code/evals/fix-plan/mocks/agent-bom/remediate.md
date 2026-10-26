@@ -10,6 +10,8 @@ type: fixed
    "ecosystem": "npm",
    "current_version": "1.2.5",
    "fixed_version": "1.2.6",
+   "max_severity": "critical",
+   "has_kev": false,
    "command": "npm install minimist@1.2.6",
    "vulns": [
     "CVE-2021-44906"
@@ -33,6 +35,8 @@ type: fixed
    "ecosystem": "npm",
    "current_version": "0.21.0",
    "fixed_version": "0.33.0",
+   "max_severity": "high",
+   "has_kev": false,
    "command": "npm install axios@0.33.0",
    "vulns": [
     "CVE-2020-28168",
@@ -65,6 +69,8 @@ type: fixed
    "ecosystem": "npm",
    "current_version": "4.17.20",
    "fixed_version": "4.18.0",
+   "max_severity": "high",
+   "has_kev": true,
    "command": "npm install lodash@4.18.0",
    "vulns": [
     "CVE-2020-28500",
@@ -97,6 +103,8 @@ type: fixed
    "ecosystem": "npm",
    "current_version": "4.17.1",
    "fixed_version": "4.20.0",
+   "max_severity": "medium",
+   "has_kev": false,
    "command": "npm install express@4.20.0",
    "vulns": [
     "CVE-2024-29041",
@@ -138,7 +146,9 @@ type: fixed
     "https://github.com/advisories/GHSA-mh6f-8j2x-4483",
     "https://github.com/dominictarr/event-stream",
     "https://github.com/dominictarr/event-stream/issues/116"
-   ]
+   ],
+   "max_severity": "critical",
+   "has_kev": false
   }
  ]
 }

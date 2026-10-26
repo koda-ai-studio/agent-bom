@@ -82,6 +82,8 @@ async def remediate_impl(
                             "ecosystem": f.ecosystem,
                             "current_version": f.current_version,
                             "fixed_version": f.fixed_version,
+                            "max_severity": f.max_severity,
+                            "has_kev": f.has_kev,
                             "command": f.command,
                             "vulns": f.vulns[:5],
                             "total_vulns": len(f.vulns),

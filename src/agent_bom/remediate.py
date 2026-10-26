@@ -40,6 +40,8 @@ class PackageFix:
     vulns: list[str] = field(default_factory=list)
     agents: list[str] = field(default_factory=list)
     references: list[str] = field(default_factory=list)  # Advisory links for trust/validation
+    max_severity: str = ""
+    has_kev: bool = False
 
 
 @dataclass
@@ -71,6 +73,11 @@ class RemediationPlan:
 # ─── Package fix generation ──────────────────────────────────────────────────
 
 
+def _priority_fields(item: dict) -> dict:
+    severity = item.get("max_severity")
+    return {"max_severity": str(getattr(severity, "value", severity) or "").lower(), "has_kev": bool(item.get("has_kev"))}
+
+
 def generate_package_fixes(plan_items: list[dict]) -> tuple[list[PackageFix], list[dict]]:
     """Generate upgrade commands for vulnerable packages.
 
@@ -90,6 +97,7 @@ def generate_package_fixes(plan_items: list[dict]) -> tuple[list[PackageFix], li
                     "vulns": item["vulns"],
                     "agents": item["agents"],
                     "references": item.get("references", []),
+                    **_priority_fields(item),
                 }
             )
             continue
@@ -123,6 +131,7 @@ def generate_package_fixes(plan_items: list[dict]) -> tuple[list[PackageFix], li
                 vulns=item["vulns"],
                 agents=item["agents"],
                 references=item.get("references", []),
+                **_priority_fields(item),
             )
         )
 

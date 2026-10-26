@@ -18,9 +18,9 @@ capabilities:
 Use the agent-bom `remediate` MCP tool to plan fixes.
 
 1. Call `remediate` (pass `image` or `config_path` if the user named one; otherwise it covers the discovered agents and MCP servers).
-2. Present the plan as a short ordered list. Group by the change to make (one package upgrade often clears several CVEs), and for each step give:
+2. Present the plan as a short ordered list: fixes with `has_kev: true` (known-exploited) first, then by `max_severity`. Group by the change to make (one package upgrade often clears several CVEs), and for each step give:
    - the exact change, such as `upgrade lodash 4.17.20 -> 4.17.21` and where it is declared
-   - what it clears: count, worst severity, and any KEV findings
+   - what it clears: `total_vulns`, worst severity (`max_severity`), and whether any is known-exploited (`has_kev`)
    - the agents, servers or credentials it protects, when agent-bom reports them
 3. List findings with no available fix separately, with the mitigation agent-bom suggests.
 4. For larger estates, `exposure_paths` ranks attack paths; offer it when the user asks "what is actually exploitable".
