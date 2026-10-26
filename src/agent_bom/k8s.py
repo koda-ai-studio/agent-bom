@@ -24,7 +24,13 @@ from typing import Optional
 from agent_bom.iac.models import IaCFinding
 from agent_bom.k8s_transport import K8sReadTransport, K8sTransportError, select_k8s_transport, validate_kubelet_endpoint
 from agent_bom.kubernetes.admission_checks import ADMISSION_RESOURCES, evaluate_admission_posture
-from agent_bom.kubernetes.posture_checks import evaluate_kubelet_config, evaluate_pod_security, evaluate_rbac
+from agent_bom.kubernetes.posture_checks import (
+    evaluate_kubelet_config,
+    evaluate_live_pod_health,
+    evaluate_network_policy_coverage,
+    evaluate_pod_security,
+    evaluate_rbac,
+)
 from agent_bom.kubernetes.posture_models import CollectorState, K8sCollectorEvidence, K8sPostureResult, K8sPostureStatus
 
 __all__ = [
@@ -216,19 +222,6 @@ def _posture_status(collectors: list[K8sCollectorEvidence]) -> K8sPostureStatus:
     return K8sPostureStatus.COMPLETE
 
 
-def _live_finding(rule_id: str, severity: str, title: str, message: str, file_path: str, compliance: list[str]) -> IaCFinding:
-    return IaCFinding(
-        rule_id=rule_id,
-        severity=severity,
-        title=title,
-        message=message,
-        file_path=file_path,
-        line_number=1,
-        category="kubernetes-live",
-        compliance=compliance,
-    )
-
-
 def _transport_unavailable_result(exc: K8sTransportError) -> K8sPostureResult:
     """Stage 1 failure: no read transport, so every collector is recorded as not run."""
     collectors = [
@@ -280,61 +273,6 @@ def _collect_posture_resources(
     return payloads
 
 
-def _live_pod_findings(pod_ns: str, pod_name: str, spec: dict, status: dict) -> list[IaCFinding]:
-    """Stage 3a: runtime health and service-account token checks for one live pod."""
-    findings: list[IaCFinding] = []
-    pod_ref = f"k8s://{pod_ns}/{pod_name}"
-    phase = status.get("phase", "Unknown")
-    if phase != "Running":
-        message = (
-            f"Pod '{pod_ns}/{pod_name}' is currently in phase '{phase}'. "
-            "Investigate runtime drift, crash loops, or image/config rollout health."
-        )
-        findings.append(_live_finding("K8S-LIVE-001", "medium", "Live pod not running", message, pod_ref, ["CIS-K8s-5.7.4", "NIST-SI-4"]))
-
-    container_statuses = status.get("containerStatuses", []) or []
-    for container_status in container_statuses:
-        waiting = (container_status.get("state", {}) or {}).get("waiting", {}) or {}
-        if waiting.get("reason") == "CrashLoopBackOff":
-            message = (
-                f"Pod '{pod_ns}/{pod_name}' container "
-                f"'{container_status.get('name', 'unknown')}' is in CrashLoopBackOff. "
-                "Runtime drift or bad rollout is already impacting availability."
-            )
-            findings.append(
-                _live_finding("K8S-LIVE-002", "high", "Live pod is crash looping", message, pod_ref, ["CIS-K8s-5.7.4", "NIST-SI-4"])
-            )
-        if not container_status.get("ready", False):
-            message = (
-                f"Pod '{pod_ns}/{pod_name}' container "
-                f"'{container_status.get('name', 'unknown')}' is not ready. "
-                "Live readiness drift may bypass assumptions in static manifests."
-            )
-            findings.append(
-                _live_finding("K8S-LIVE-003", "medium", "Live pod container not ready", message, pod_ref, ["CIS-K8s-5.7.4", "NIST-SI-4"])
-            )
-
-    automount = spec.get("automountServiceAccountToken")
-    if automount is not False:
-        explicit = automount is True
-        detail = (
-            "service-account token auto-mount explicitly enabled."
-            if explicit
-            else "service-account token auto-mount left at the Kubernetes default (enabled)."
-        )
-        message = (
-            f"Pod '{pod_ns}/{pod_name}' is running with {detail} "
-            "Set automountServiceAccountToken: false unless the workload needs Kubernetes API access."
-        )
-        severity = "medium" if explicit else "low"
-        findings.append(
-            _live_finding(
-                "K8S-LIVE-004", severity, "Live pod mounts service-account token", message, pod_ref, ["CIS-K8s-5.1.6", "NIST-AC-6"]
-            )
-        )
-    return findings
-
-
 def _evaluate_live_pods(pods: dict, namespace: str, findings: list[IaCFinding]) -> set[str]:
     """Stage 3b: evaluate every live pod and return the namespaces that run pods."""
     namespaces_with_pods: set[str] = set()
@@ -345,23 +283,9 @@ def _evaluate_live_pods(pods: dict, namespace: str, findings: list[IaCFinding]) 
         pod_name = metadata.get("name", "unknown")
         pod_ns = metadata.get("namespace", namespace)
         namespaces_with_pods.add(pod_ns)
-        findings.extend(_live_pod_findings(pod_ns, pod_name, pod.get("spec", {}) or {}, pod.get("status", {}) or {}))
+        findings.extend(evaluate_live_pod_health(pod_ns, pod_name, pod.get("spec", {}) or {}, pod.get("status", {}) or {}))
     findings.extend(evaluate_pod_security(pods, default_namespace=namespace))
     return namespaces_with_pods
-
-
-def _network_policy_gaps(namespaces_with_pods: set[str], policy_namespaces: set[str]) -> list[IaCFinding]:
-    """Stage 3c: namespaces running pods without any live NetworkPolicy object."""
-    findings: list[IaCFinding] = []
-    for ns in sorted(namespaces_with_pods):
-        if ns not in policy_namespaces:
-            message = (
-                f"Namespace '{ns}' has running pods but no live NetworkPolicy objects. "
-                "This is a runtime posture gap even if manifests exist elsewhere in Git."
-            )
-            title = "Namespace lacks live NetworkPolicy coverage"
-            findings.append(_live_finding("K8S-LIVE-005", "high", title, message, f"k8s://namespace/{ns}", ["CIS-K8s-5.3.2", "NIST-SC-7"]))
-    return findings
 
 
 def _read_node_configz(transport: K8sReadTransport, node: dict, remaining_seconds: float) -> dict:
@@ -498,7 +422,7 @@ def scan_live_cluster_posture_with_evidence(
             namespaces_with_pods = _evaluate_live_pods(payloads["pods"], namespace, findings)
         # NetworkPolicy absence is only evaluable when both inputs completed.
         if "pods" in payloads and "networkpolicies" in payloads:
-            findings.extend(_network_policy_gaps(namespaces_with_pods, policy_namespaces))
+            findings.extend(evaluate_network_policy_coverage(namespaces_with_pods, policy_namespaces))
         # Each RBAC input remains independently useful when another read is denied.
         findings.extend(
             evaluate_rbac(

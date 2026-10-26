@@ -9,6 +9,15 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from agent_bom.iac.models import IaCFinding
+from agent_bom.kubernetes.pod_security import (
+    PRIVILEGE_ESCALATION,
+    PRIVILEGED,
+    RUNS_AS_ROOT,
+    SecurityContextRule,
+    allows_privilege_escalation,
+    is_privileged,
+    root_settings,
+)
 
 # Capabilities whose runtime presence materially widens the host attack surface.
 _DANGEROUS_CAPABILITIES = frozenset({"NET_RAW", "NET_ADMIN", "SYS_ADMIN", "SYS_PTRACE", "SYS_MODULE", "ALL"})
@@ -37,6 +46,10 @@ def _finding(
         compliance=compliance,
         attack_techniques=list(attack_techniques or []),
     )
+
+
+def _rule_finding(rule_id: str, rule: SecurityContextRule, title: str, message: str, file_path: str) -> IaCFinding:
+    return _finding(rule_id, rule.severity, title, message, file_path, list(rule.compliance), list(rule.attack_techniques))
 
 
 def _pod_containers(spec: dict) -> list[dict]:
@@ -97,44 +110,35 @@ def _container_findings(container: dict, pod_sec_ctx: dict, ns: str, name: str, 
     cname = container.get("name", "unnamed")
     sec_ctx = container.get("securityContext", {}) or {}
     where = f"Container '{cname}' in pod '{ns}/{name}'"
-    if sec_ctx.get("privileged") is True:
+    if is_privileged(sec_ctx):
         findings.append(
-            _finding(
+            _rule_finding(
                 "K8S-LIVE-007",
-                "critical",
+                PRIVILEGED,
                 "Running privileged container",
                 f"{where} is running in privileged mode, granting full host access. Remove privileged: true from the workload.",
                 pod_ref,
-                ["CIS-K8s-5.2.1", "NIST-AC-6"],
-                ["T1611"],
             )
         )
-    # Kubernetes resolves runAsUser / runAsNonRoot at the container level,
-    # falling back to the pod-level securityContext when the container does not
-    # set them, so a pod-level root setting is inherited into the container.
-    effective_run_as_user = sec_ctx.get("runAsUser", pod_sec_ctx.get("runAsUser"))
-    effective_run_as_non_root = sec_ctx.get("runAsNonRoot", pod_sec_ctx.get("runAsNonRoot"))
-    if effective_run_as_user == 0 or effective_run_as_non_root is False:
+    if root_settings(sec_ctx, pod_sec_ctx):
         findings.append(
-            _finding(
+            _rule_finding(
                 "K8S-LIVE-011",
-                "high",
+                RUNS_AS_ROOT,
                 "Running container executes as root",
                 f"{where} is running as root (runAsUser: 0 or runAsNonRoot: false, at the container or inherited "
                 "pod level). Run as a non-root user to limit exploit impact.",
                 pod_ref,
-                ["CIS-K8s-5.2.6", "NIST-AC-6"],
             )
         )
-    if sec_ctx.get("allowPrivilegeEscalation") is True:
+    if allows_privilege_escalation(sec_ctx):
         findings.append(
-            _finding(
+            _rule_finding(
                 "K8S-LIVE-012",
-                "high",
+                PRIVILEGE_ESCALATION,
                 "Running container allows privilege escalation",
                 f"{where} allows privilege escalation. Set allowPrivilegeEscalation: false to block setuid-based escalation.",
                 pod_ref,
-                ["CIS-K8s-5.2.5", "NIST-AC-6"],
             )
         )
     add_caps = (sec_ctx.get("capabilities", {}) or {}).get("add", []) or []
@@ -175,6 +179,71 @@ def _running_pod_findings(pod: dict, default_namespace: str) -> list[IaCFinding]
                 ["CIS-K8s-5.2.6", "NIST-AC-6"],
             )
         )
+    return findings
+
+
+def evaluate_live_pod_health(pod_ns: str, pod_name: str, spec: dict, status: dict) -> list[IaCFinding]:
+    """Runtime health and service-account token checks (K8S-LIVE-001..004) for one live pod."""
+    findings: list[IaCFinding] = []
+    pod_ref = f"k8s://{pod_ns}/{pod_name}"
+    phase = status.get("phase", "Unknown")
+    if phase != "Running":
+        message = (
+            f"Pod '{pod_ns}/{pod_name}' is currently in phase '{phase}'. "
+            "Investigate runtime drift, crash loops, or image/config rollout health."
+        )
+        findings.append(_finding("K8S-LIVE-001", "medium", "Live pod not running", message, pod_ref, ["CIS-K8s-5.7.4", "NIST-SI-4"]))
+
+    container_statuses = status.get("containerStatuses", []) or []
+    for container_status in container_statuses:
+        waiting = (container_status.get("state", {}) or {}).get("waiting", {}) or {}
+        if waiting.get("reason") == "CrashLoopBackOff":
+            message = (
+                f"Pod '{pod_ns}/{pod_name}' container "
+                f"'{container_status.get('name', 'unknown')}' is in CrashLoopBackOff. "
+                "Runtime drift or bad rollout is already impacting availability."
+            )
+            findings.append(_finding("K8S-LIVE-002", "high", "Live pod is crash looping", message, pod_ref, ["CIS-K8s-5.7.4", "NIST-SI-4"]))
+        if not container_status.get("ready", False):
+            message = (
+                f"Pod '{pod_ns}/{pod_name}' container "
+                f"'{container_status.get('name', 'unknown')}' is not ready. "
+                "Live readiness drift may bypass assumptions in static manifests."
+            )
+            findings.append(
+                _finding("K8S-LIVE-003", "medium", "Live pod container not ready", message, pod_ref, ["CIS-K8s-5.7.4", "NIST-SI-4"])
+            )
+
+    automount = spec.get("automountServiceAccountToken")
+    if automount is not False:
+        explicit = automount is True
+        detail = (
+            "service-account token auto-mount explicitly enabled."
+            if explicit
+            else "service-account token auto-mount left at the Kubernetes default (enabled)."
+        )
+        message = (
+            f"Pod '{pod_ns}/{pod_name}' is running with {detail} "
+            "Set automountServiceAccountToken: false unless the workload needs Kubernetes API access."
+        )
+        severity = "medium" if explicit else "low"
+        findings.append(
+            _finding("K8S-LIVE-004", severity, "Live pod mounts service-account token", message, pod_ref, ["CIS-K8s-5.1.6", "NIST-AC-6"])
+        )
+    return findings
+
+
+def evaluate_network_policy_coverage(namespaces_with_pods: set[str], policy_namespaces: set[str]) -> list[IaCFinding]:
+    """K8S-LIVE-005: namespaces running pods without any live NetworkPolicy object."""
+    findings: list[IaCFinding] = []
+    for ns in sorted(namespaces_with_pods):
+        if ns not in policy_namespaces:
+            message = (
+                f"Namespace '{ns}' has running pods but no live NetworkPolicy objects. "
+                "This is a runtime posture gap even if manifests exist elsewhere in Git."
+            )
+            title = "Namespace lacks live NetworkPolicy coverage"
+            findings.append(_finding("K8S-LIVE-005", "high", title, message, f"k8s://namespace/{ns}", ["CIS-K8s-5.3.2", "NIST-SC-7"]))
     return findings
 
 
