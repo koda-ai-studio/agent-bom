@@ -67,6 +67,17 @@ The recording uses labeled sample data and bundled advisories. Credential
 references are names, not secret values. Recorded relationships do not prove
 exploitation or successful data access.
 
+## What it covers
+
+| Area | What you get |
+|---|---|
+| Dependencies | Lockfiles and manifests across Python, JavaScript, Go, Java, .NET, Rust and more, matched against OSV, GitHub advisories and NVD with KEV and EPSS. Ask "am I affected by CVE-X" across every stored scan. |
+| Code | Findings from Semgrep or any SARIF tool, plus native analysis of AI code (prompt-injection sinks, guardrails, tool exposure) and whether your code reaches the vulnerable function. |
+| Containers and IaC | Images scanned in bounded memory and time; Dockerfile, Terraform, Kubernetes, Helm and compose risks with exact lines in SARIF. |
+| AI agents and MCP | Agents, MCP servers, tools and credentials from local configs and agent frameworks, linked to what they can reach. |
+| Cloud | Read-only collection from AWS, Azure, GCP, Databricks, Snowflake and more, with CIS and best-practice checks in the same graph. |
+| Runtime | An MCP proxy and gateway that alert on poisoned tools and injected results, or block them with `--injection-mode enforce`. |
+
 ## Use it from Claude Code or Codex
 
 Ask your coding agent instead of reading a report. In Claude Code:

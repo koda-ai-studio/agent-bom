@@ -9,6 +9,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [0.111.0] - 2026-10-25
 
+### Highlights
+- **"Am I affected by CVE-X?"** answered across every stored scan, from the CLI, API, MCP, UI, skills and Action, using every alias record of a vulnerability.
+- **More accurate dependency scans on real repositories:** Gradle variables, `setup.cfg`/`setup.py`, full requirement ranges, lockfile-owned workspaces and Maven parent POMs, measured against public Temporal and Snowflake repositories.
+- **Runtime protection you can switch on:** `--injection-mode enforce` removes poisoned MCP tools and blocks injected tool results; the default stays alert-only.
+- **A sturdier self-hosted control plane:** probes survive a database outage, operator API keys stop expiring, SQLite deployments keep their keys, and large images scan in bounded memory.
+- **One severity gate:** the CLI now fails on high or critical findings, the same as the GitHub Action (see Upgrade notes).
+
 ### Upgrade notes
 - **The CLI severity gate now defaults to `high`**, the same as the GitHub Action, so a repository no longer passes locally and fails in CI. A plain `agent-bom scan` with a high or critical finding exits `1`. Keep the old behaviour with `--fail-on-severity critical`, or make a run reporting-only with `--exit-zero`.
 - `agent-bom proxy` and the gateway can now enforce, not only alert, on poisoned tool descriptions and injected tool results (`--injection-mode enforce`). The default stays alert-only in this release.
