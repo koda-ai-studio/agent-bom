@@ -11,7 +11,7 @@ from agent_bom.api.inventory_service import asset_row
 from agent_bom.api.server import app
 from agent_bom.graph import EntityType, UnifiedGraph, UnifiedNode
 from agent_bom.graph.delta_digest import digest_from_graph
-from agent_bom.graph.store_backed import _merge_node
+from agent_bom.graph.node_merge import merge_node
 from agent_bom.mcp_tools.graph import _node_ref
 
 UNKNOWN = {"status": "not_assessed", "basis": None, "scope": None}
@@ -90,7 +90,7 @@ def test_merge_preserves_score_provenance_pair(
         graph.add_node(old)
         graph.add_node(incoming)
     else:
-        _merge_node(old, incoming)
+        merge_node(old, incoming)
     assert old.risk_score == expected_score
     assert old.risk_assessment["basis"] == expected_basis
     assert old.risk_assessment["status"] == ("assessed" if expected_basis else "not_assessed")

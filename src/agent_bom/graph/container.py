@@ -18,6 +18,8 @@ from agent_bom.graph.legend import ENTITY_LEGEND as ENTITY_LEGEND
 from agent_bom.graph.legend import RELATIONSHIP_LEGEND as RELATIONSHIP_LEGEND
 from agent_bom.graph.legend import LegendEntry as LegendEntry
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.node_merge import merge_node
+from agent_bom.graph.recorded_time import stamp_edge, stamp_node
 from agent_bom.graph.rekey import rekey_in_memory
 from agent_bom.graph.relationship_contract import ContractRejections, admit_edge, merge_edge_provenance
 from agent_bom.graph.severity_floor import FINDING_ENTITY_TYPES, counts_as_finding
@@ -366,28 +368,10 @@ class UnifiedGraph:
 
     def add_node(self, node: UnifiedNode) -> None:
         """Add or merge a node.  Cross-source metadata is unioned."""
+        stamp_node(node, self.created_at)
         existing = self.nodes.get(node.id)
         if existing:
-            existing.last_seen = node.last_seen or _now_iso()
-            existing.merge_attributes_and_risk(node)
-            # Severity: higher wins
-            if SEVERITY_RANK.get(node.severity, 0) > SEVERITY_RANK.get(existing.severity, 0):
-                existing.severity = node.severity
-                existing.severity_id = node.severity_id
-            # Union data_sources
-            existing_sources = set(existing.data_sources)
-            for ds in node.data_sources:
-                if ds not in existing_sources:
-                    existing.data_sources.append(ds)
-                    existing_sources.add(ds)
-            # Union compliance_tags
-            existing_tags = set(existing.compliance_tags)
-            for tag in node.compliance_tags:
-                if tag not in existing_tags:
-                    existing.compliance_tags.append(tag)
-                    existing_tags.add(tag)
-            # Merge dimensions (non-empty wins)
-            existing.dimensions = existing.dimensions.merge(node.dimensions)
+            merge_node(existing, node)
             return
         self.nodes[node.id] = node
 
@@ -410,6 +394,7 @@ class UnifiedGraph:
         builder adds one logical edge from several paths, e.g. package-path then
         blast-radius). New edges pass the relationship contract first.
         """
+        stamp_edge(edge, self.created_at)
         rel = edge.relationship.value if isinstance(edge.relationship, RelationshipType) else str(edge.relationship)
         key = (edge.source, edge.target, rel)
         if key in self._edge_keys:

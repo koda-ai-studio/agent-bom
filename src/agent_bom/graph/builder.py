@@ -224,6 +224,7 @@ from agent_bom.graph.finding_projection import (
     project_skill_audit,
     project_toxic_combinations,
 )
+from agent_bom.graph.finding_row_projection import apply_finding_row_times
 from agent_bom.graph.framework_topology_projection import _add_ai_stack_frameworks as _add_ai_stack_frameworks
 from agent_bom.graph.framework_topology_projection import _add_framework_topology as _add_framework_topology
 from agent_bom.graph.framework_topology_projection import _AIStackProjection as _AIStackProjection
@@ -383,7 +384,7 @@ def build_unified_graph(
     """
     span = _GRAPH_TRACER.start_span("graph.build_unified_graph_from_report") if _GRAPH_TRACER else None
     sid = scan_id or inputs.scan_id
-    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id)
+    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id, created_at=inputs.recorded_at)
     indexes = project_agents(graph, inputs.agents, inputs.data_source, _add_agent_cloud_lineage)
     project_package_exploits(graph, indexes, inputs.data_source)
     project_blast_radius(graph, inputs.blast_radius, indexes, inputs.data_source)
@@ -397,6 +398,7 @@ def build_unified_graph(
     project_credential_bindings(graph, inputs.agents, inputs.data_source)
     canonicalize_assets(graph)
     apply_build_analysis(graph, report, _analysis_ports())
+    apply_finding_row_times(graph, report.get("findings"))
     if span is not None:
         span.set_attribute("agent_bom.graph.scan_id", sid)
         span.set_attribute("agent_bom.graph.tenant_id", tenant_id or "default")
