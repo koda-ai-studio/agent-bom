@@ -1,4 +1,4 @@
-import { assetKindLabel, assetSubtypeLabel } from "@/lib/asset-icon-registry";
+import { assetKind, assetKindLabel, assetSubtypeLabel } from "@/lib/asset-icon-registry";
 import { EntityType, RelationshipType, type AttackPath, type UnifiedNode } from "./graph-schema";
 import type { GraphAttackPath, UnifiedGraphResponse } from "./api-types";
 import {
@@ -393,6 +393,7 @@ function exposureRefFromUnifiedNode(node: UnifiedNode): ExposureEntityRef {
     entityType: String(node.entity_type),
     subtitle: display.subtitle,
     kindLabel,
+    assetKind: assetKind({ entityType: String(node.entity_type), attributes }),
     role,
     severity: node.severity,
     riskScore: node.risk_score,

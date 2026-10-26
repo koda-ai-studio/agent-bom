@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, type ComponentType, type ReactNode } from "react";
 import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/react";
-import { Bug, FolderGit2, KeyRound, Package, Wrench } from "lucide-react";
+import { Bug, FolderGit2, KeyRound, Wrench } from "lucide-react";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
 import { GraphProviderMark } from "@/components/graph-provider-mark";
 import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { entitySource } from "@/lib/agent-source";
 import { NodeBadgeRow } from "@/components/graph-node-badges";
-import { assetKindLabel } from "@/lib/asset-icon-registry";
+import { ASSET_KINDS, assetKindLabel } from "@/lib/asset-icon-registry";
 import { findingSeverity, graphNodeTooltip } from "@/lib/graph-node-tooltip";
 import { showsEnvironmentChip, showsProviderMark, type ScopeContext } from "@/lib/graph-scope-context";
 import { GraphScopeNode } from "@/components/graph-scope-node";
@@ -24,6 +24,8 @@ import {
   type EntityIcon,
   type LineageNodeType,
 } from "@/lib/entity-icons";
+
+const PackageGlyph = ASSET_KINDS.package.icon;
 
 // ENTITY_ICONS / entityIcon / LineageNodeType / EntityIcon now live in
 // `@/lib/entity-icons` (the shared source of truth). Re-exported here so the
@@ -467,7 +469,7 @@ function ServerNode({ data }: { data: LineageNodeData }) {
           )}
           {data.packageCount !== undefined && data.packageCount > 0 && (
             <span className="flex items-center gap-0.5 text-xs text-ink-secondary">
-              <Package className="w-2.5 h-2.5" /> {data.packageCount}
+              <PackageGlyph className="w-2.5 h-2.5" /> {data.packageCount}
             </span>
           )}
         </div>
@@ -683,7 +685,7 @@ function SharedServerNode({ data }: { data: LineageNodeData }) {
           )}
           {data.packageCount !== undefined && data.packageCount > 0 && (
             <span className="flex items-center gap-0.5 text-xs text-ink-secondary">
-              <Package className="w-2.5 h-2.5" /> {data.packageCount}
+              <PackageGlyph className="w-2.5 h-2.5" /> {data.packageCount}
             </span>
           )}
         </div>

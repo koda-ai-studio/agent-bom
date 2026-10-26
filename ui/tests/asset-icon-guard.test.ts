@@ -40,6 +40,7 @@ export function directEntityIconMaps(file: string, source: string): string[] {
   const glyph = [...icons].join("|");
   const patterns = [
     new RegExp(String.raw`(?:^|[\s{,])"?([A-Za-z_]+)"?\s*:\s*(?:\{\s*icon\s*:\s*)?(${glyph})\b`, "gm"),
+    new RegExp(String.raw`(?:^|[\s{,])"?([A-Za-z_]+)"?\s*:\s*\{[^{}\n]*?\bicon\s*:\s*(${glyph})\b`, "gm"),
     new RegExp(String.raw`type\s*:\s*"([A-Za-z_]+)"[^\n]*?icon\s*:\s*(${glyph})\b`, "g"),
     new RegExp(String.raw`===\s*"([A-Za-z_]+)"\s*\?\s*(${glyph})\b`, "g"),
   ];
@@ -49,7 +50,7 @@ export function directEntityIconMaps(file: string, source: string): string[] {
       if (ENTITY_KEYS.has(match[1]!)) hits.push(`${file}: ${match[1]} → ${match[2]}`);
     }
   }
-  return hits;
+  return [...new Set(hits)];
 }
 
 describe("asset icon guard", () => {
@@ -59,14 +60,22 @@ describe("asset icon guard", () => {
     expect(hits).toEqual([]);
   });
 
+  it("draws packages in shared components only with the registry package glyph", () => {
+    const files = ["components", "lib", "hooks"].flatMap((dir) => sourceFiles(dir)).filter((file) => file !== REGISTRY);
+    const importers = files.filter((file) => lucideImports(readFileSync(path.join(UI_ROOT, file), "utf8")).has("Package"));
+    expect(importers).toEqual([]);
+  });
+
   it("catches each direct-map shape it guards against", () => {
     const source = `import { Bug, Bot, Database } from "lucide-react";
 const A = { vulnerability: Bug };
 const B = { cve: { icon: Bug, tint: "" } };
 const C = [{ type: "agent", label: "Agents", icon: Bot }];
-const D = kind === "data_store" ? Database : Bot;`;
+const D = kind === "data_store" ? Database : Bot;
+const E = { server: { label: "Server", icon: Database, tint: "" } };`;
     expect(directEntityIconMaps("x.tsx", source)).toEqual([
-      "x.tsx: vulnerability → Bug", "x.tsx: cve → Bug", "x.tsx: agent → Bot", "x.tsx: data_store → Database",
+      "x.tsx: vulnerability → Bug", "x.tsx: cve → Bug", "x.tsx: server → Database", "x.tsx: agent → Bot",
+      "x.tsx: data_store → Database",
     ]);
   });
 });

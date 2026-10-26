@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CircleDashed } from "lucide-react";
+import { Box, Boxes, CircleDashed, Container, Package, Package2, PackageOpen } from "lucide-react";
 
 import {
   ASSET_KINDS,
@@ -177,6 +177,33 @@ describe("asset icon registry", () => {
     expect([...owners.values()].filter((kinds) => kinds.length > 1)).toEqual([]);
     expect(ALL_KINDS.filter((kind) => ASSET_KINDS[kind].icon === CircleDashed)).toEqual(["unknown"]);
     for (const kind of ALL_KINDS) expect(ASSET_KINDS[kind].label.trim()).not.toBe("");
+  });
+
+  it("draws only the container as an isometric box, so a package never reads as a container", () => {
+    const boxGlyphs = new Set<unknown>([Box, Boxes, Container, Package, Package2, PackageOpen]);
+    expect(ALL_KINDS.filter((kind) => boxGlyphs.has(ASSET_KINDS[kind].icon))).toEqual(["workload"]);
+  });
+
+  it("gives a container image, a running container, a registry, a package and a server distinct glyphs", () => {
+    const glyphs = (["image", "workload", "registry", "package", "mcp_server", "vm"] as AssetKind[]).map((kind) => ASSET_KINDS[kind].icon);
+    expect(new Set(glyphs).size).toBe(glyphs.length);
+    expect(assetIcon({ entityType: "container" })).not.toBe(assetIcon({ entityType: "package" }));
+    expect(assetIcon({ entityType: "container", attributes: { container_kind: "image" } })).not.toBe(assetIcon({ entityType: "package" }));
+    expect(assetIcon({ entityType: "container" })).not.toBe(assetIcon({ entityType: "server" }));
+  });
+
+  it("maps distinct backend entity types to distinct glyphs except declared aliases", () => {
+    const aliases: Record<string, string> = { external_import: "package", credential_ref: "credential", resource: "cloud_resource" };
+    const owners = new Map<unknown, string[]>();
+    for (const entityType of Object.values(EntityType) as string[]) {
+      if (Object.hasOwn(aliases, entityType)) {
+        expect(assetIcon({ entityType })).toBe(assetIcon({ entityType: aliases[entityType] }));
+        continue;
+      }
+      const icon = assetIcon({ entityType });
+      owners.set(icon, [...(owners.get(icon) ?? []), entityType]);
+    }
+    expect([...owners.values()].filter((types) => types.length > 1)).toEqual([]);
   });
 
   it.each(VENDOR_CASES)("maps %s %s %s to the %s kind", (vendor, entityType, resourceType, kind) => {
