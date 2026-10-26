@@ -9,11 +9,19 @@ from __future__ import annotations
 
 import ast
 import os
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 from agent_bom.ai_components.framework_models import FrameworkAgent, FrameworkCapability, FrameworkTopologyEdge
+from agent_bom.ai_components.langgraph_prebuilt import (
+    ORCHESTRATOR_CALLS,
+    collect_prebuilt_topology,
+    compiled_name,
+    list_bindings,
+    model_bindings,
+    unwrap_compile,
+)
 from agent_bom.ai_components.langgraph_topology import collect_langgraph_topology
 from agent_bom.ai_components.python_scopes import ScopeIndex
 from agent_bom.ast.source_reader import parse_python_source
@@ -45,7 +53,7 @@ _MAX_FILE_SIZE = 512 * 1024
 
 _FRAMEWORK_IMPORTS: dict[str, tuple[str, ...]] = {
     "langchain": ("langchain", "langchain_core", "langchain_community"),
-    "langgraph": ("langgraph",),
+    "langgraph": ("langgraph", "langgraph_supervisor", "langgraph_swarm"),
     "autogen": ("autogen", "autogen_agentchat"),
     "crewai": ("crewai",),
     "openai-agents": ("agents",),
@@ -72,9 +80,22 @@ _AGENT_CALLS = {
     "StateGraph",
     "create_react_agent",
     "create_openai_functions_agent",
+    "create_agent",
+    *ORCHESTRATOR_CALLS,
 }
+_AGENT_TOOLS_ARG = {"create_react_agent", "create_agent"}
 _TOOL_CALLS = {"Tool", "StructuredTool", "FunctionTool", "tool", "from_function"}
 _TOOL_REGISTRATION_CALLS = {"register_function", "register_for_llm", "register_for_execution", "add_node", "add_tool"}
+
+
+@dataclass(frozen=True)
+class _SourceFacts:
+    """Per-file lookups agent calls resolve names through."""
+
+    tools: dict[str, FrameworkCapability]
+    models: dict[str, str]
+    lists: dict[str, ast.List | ast.Tuple]
+    aliases: dict[str, str]
 
 
 def scan_framework_agents(*paths: str | Path) -> list[FrameworkAgent]:
@@ -121,8 +142,7 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
 
     rel_path = str(filepath.relative_to(root)) if filepath.is_relative_to(root) else str(filepath)
     credential_refs = _extract_credential_refs(tree)
-    known_tools = _collect_tools(tree)
-    aliases = _call_aliases(tree)
+    facts = _SourceFacts(_collect_tools(tree), model_bindings(tree), list_bindings(tree), _call_aliases(tree))
     scopes = ScopeIndex(tree)
     framework_agents: list[FrameworkAgent] = []
     agent_by_binding: dict[str, FrameworkAgent] = {}
@@ -135,28 +155,38 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
         binding = _first_target_name(node.targets)
         if not binding:
             continue
-        agent = _agent_from_call(node.value, imports, rel_path, credential_refs, known_tools, fallback_name=binding, aliases=aliases)
+        call = unwrap_compile(node.value)
+        fallback = compiled_name(node.value) or _string_keyword(call, "supervisor_name") or binding
+        agent = _agent_from_call(call, imports, rel_path, credential_refs, facts, fallback_name=fallback)
         if not agent:
             continue
         framework_agents.append(agent)
         agent_by_binding[binding] = agent
         scoped_bindings[(scopes.scope_of(node), binding)] = agent
-        agent_by_line[getattr(node.value, "lineno", 1)] = agent
+        agent_by_line[getattr(call, "lineno", 1)] = agent
 
     langgraph = collect_langgraph_topology(tree, rel_path, credential_refs, scoped_bindings, scopes)
     framework_agents.extend(langgraph.node_agents)
 
+    agent_by_call_line = dict(agent_by_line)
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
         if getattr(node, "lineno", 1) in agent_by_line:
             continue
-        agent = _agent_from_call(node, imports, rel_path, credential_refs, known_tools, aliases=aliases)
+        agent = _agent_from_call(node, imports, rel_path, credential_refs, facts)
         if agent:
             framework_agents.append(agent)
+            agent_by_call_line.setdefault(getattr(node, "lineno", 1), agent)
 
-    topology_edges = _collect_topology_edges(tree, rel_path, agent_by_binding, agent_by_line) + langgraph.edges
-    return _attach_topology(framework_agents, topology_edges, langgraph.parent_ids, langgraph.unresolved_routes)
+    prebuilt = collect_prebuilt_topology(tree, rel_path, framework_agents, agent_by_binding, agent_by_call_line, facts.aliases)
+    topology_edges = _collect_topology_edges(tree, rel_path, agent_by_binding, agent_by_line) + langgraph.edges + prebuilt.edges
+    unresolved = {
+        key: [*langgraph.unresolved_routes.get(key, []), *prebuilt.unresolved_routes.get(key, [])]
+        for key in {*langgraph.unresolved_routes, *prebuilt.unresolved_routes}
+    }
+    node_tools = {agent_id: _capabilities_from_expr(expr, facts) for agent_id, expr in langgraph.node_tools.items()}
+    return _attach_topology(framework_agents, topology_edges, {**langgraph.parent_ids, **prebuilt.parent_ids}, unresolved, node_tools)
 
 
 def _attach_topology(
@@ -164,9 +194,10 @@ def _attach_topology(
     topology_edges: list[FrameworkTopologyEdge],
     parent_ids: dict[str, str],
     unresolved_routes: dict[str, list[dict[str, Any]]],
+    node_tools: dict[str, list[FrameworkCapability]],
 ) -> list[FrameworkAgent]:
-    """Rebuild the frozen agents with their outgoing edges, nesting and unresolved routes."""
-    if not topology_edges and not parent_ids and not unresolved_routes:
+    """Rebuild the frozen agents with their outgoing edges, nesting, unresolved routes and ToolNode tools."""
+    if not topology_edges and not parent_ids and not unresolved_routes and not node_tools:
         return agents
     by_source: dict[str, list[FrameworkTopologyEdge]] = {}
     seen: set[tuple[str, str, str, str, str]] = set()
@@ -183,6 +214,7 @@ def _attach_topology(
             replace(
                 agent,
                 topology_edges=by_source.get(agent.stable_id, []),
+                capabilities=_dedupe_capabilities([*agent.capabilities, *node_tools.get(agent.stable_id, [])]),
                 parent_id=parent_ids.get(agent.stable_id, agent.parent_id),
                 unresolved_routes=unresolved,
                 dynamic_edges=agent.dynamic_edges or bool(unresolved),
@@ -196,14 +228,13 @@ def _agent_from_call(
     imports: set[str],
     rel_path: str,
     credential_refs: list[str],
-    known_tools: dict[str, FrameworkCapability],
+    facts: _SourceFacts,
     *,
     fallback_name: str = "",
-    aliases: dict[str, str] | None = None,
 ) -> FrameworkAgent | None:
     call_name = _call_name(node.func)
     short_name = call_name.split(".")[-1]
-    short_name = (aliases or {}).get(short_name, short_name)
+    short_name = facts.aliases.get(short_name, short_name)
     framework = _framework_for_call(imports, call_name, short_name)
     if framework is None:
         return None
@@ -212,8 +243,8 @@ def _agent_from_call(
         name=_agent_name(node, rel_path, framework, fallback_name=fallback_name),
         file_path=rel_path,
         line_number=getattr(node, "lineno", 1),
-        capabilities=_dedupe_capabilities(_extract_capabilities(node, known_tools)),
-        model_refs=_dedupe_strings(_extract_model_refs(node)),
+        capabilities=_dedupe_capabilities(_extract_capabilities(node, short_name, facts)),
+        model_refs=_dedupe_strings(_extract_model_refs(node, short_name, facts)),
         credential_refs=credential_refs,
         dynamic_edges=_has_dynamic_edges(node),
         confidence="high" if short_name in _AGENT_CALLS or "assistants.create" in call_name else "medium",
@@ -249,7 +280,7 @@ def _framework_for_call(imports: set[str], call_name: str, short_name: str) -> s
         return None
     if "assistants.create" in call_name and "openai-assistants" in imports:
         return "openai-assistants"
-    if short_name == "StateGraph" and "langgraph" in imports:
+    if (short_name == "StateGraph" or short_name in ORCHESTRATOR_CALLS) and "langgraph" in imports:
         return "langgraph"
     if short_name in {"AssistantAgent", "UserProxyAgent", "ConversableAgent"} and "autogen" in imports:
         return "autogen"
@@ -257,7 +288,7 @@ def _framework_for_call(imports: set[str], call_name: str, short_name: str) -> s
         return "autogen"
     if short_name in {"Crew", "Agent"} and "crewai" in imports:
         return "crewai"
-    if short_name in {"Agent", "create_react_agent", "create_openai_functions_agent", "AgentExecutor"}:
+    if short_name in {"Agent", "create_react_agent", "create_agent", "create_openai_functions_agent", "AgentExecutor"}:
         for framework in _FRAMEWORK_PRIORITY:
             if framework in imports:
                 return framework
@@ -292,28 +323,30 @@ def _collect_tools(tree: ast.Module) -> dict[str, FrameworkCapability]:
     return tools
 
 
-def _extract_capabilities(node: ast.Call, known_tools: dict[str, FrameworkCapability]) -> list[FrameworkCapability]:
+def _extract_capabilities(node: ast.Call, short_name: str, facts: _SourceFacts) -> list[FrameworkCapability]:
     capabilities: list[FrameworkCapability] = []
     tools_node = _keyword_value(node, "tools")
-    if tools_node is None and _call_name(node.func).split(".")[-1] == "create_react_agent" and len(node.args) >= 2:
+    if tools_node is None and short_name in _AGENT_TOOLS_ARG and len(node.args) >= 2:
         tools_node = node.args[1]
-    capabilities.extend(_capabilities_from_expr(tools_node, known_tools))
-    if _call_name(node.func).split(".")[-1] == "StateGraph":
+    capabilities.extend(_capabilities_from_expr(tools_node, facts))
+    if short_name == "StateGraph":
         capabilities.append(FrameworkCapability("state-graph", "graph-constructor", getattr(node, "lineno", 1), "medium", True))
     return capabilities
 
 
-def _capabilities_from_expr(node: ast.AST | None, known_tools: dict[str, FrameworkCapability]) -> list[FrameworkCapability]:
+def _capabilities_from_expr(node: ast.AST | None, facts: _SourceFacts, *, _expanded: bool = False) -> list[FrameworkCapability]:
     if node is None:
         return []
     if isinstance(node, ast.Name):
-        return [known_tools.get(node.id, FrameworkCapability(node.id, "name-reference", getattr(node, "lineno", 1), "low"))]
+        if not _expanded and node.id in facts.lists:
+            return _capabilities_from_expr(facts.lists[node.id], facts, _expanded=True)
+        return [facts.tools.get(node.id, FrameworkCapability(node.id, "name-reference", getattr(node, "lineno", 1), "low"))]
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return [FrameworkCapability(node.value, "literal-tool-name", getattr(node, "lineno", 1), "medium")]
     if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
         capabilities: list[FrameworkCapability] = []
         for item in node.elts:
-            capabilities.extend(_capabilities_from_expr(item, known_tools))
+            capabilities.extend(_capabilities_from_expr(item, facts, _expanded=_expanded))
         return capabilities
     if isinstance(node, ast.Dict):
         tool_type = _dict_value(node, "type")
@@ -339,16 +372,16 @@ def _tool_from_expr(node: ast.AST, line_number: int) -> FrameworkCapability | No
     return FrameworkCapability(name or short_name, "tool-constructor", line_number, "medium")
 
 
-def _extract_model_refs(node: ast.Call) -> list[str]:
+def _extract_model_refs(node: ast.Call, short_name: str, facts: _SourceFacts) -> list[str]:
+    """Literal model names, or a module-level chat-model binding passed by name."""
+    values = [_keyword_value(node, keyword) for keyword in ("model", "model_name", "llm")]
+    if short_name in _AGENT_TOOLS_ARG and node.args:
+        values.append(node.args[0])
     refs = []
-    for keyword in ("model", "model_name", "llm"):
-        value = _string_keyword(node, keyword)
-        if value:
-            refs.append(value)
-    if _call_name(node.func).split(".")[-1] == "create_react_agent" and node.args:
-        value = _string_literal(node.args[0])
-        if value:
-            refs.append(value)
+    for value in values:
+        ref = _string_literal(value) or (facts.models.get(value.id, "") if isinstance(value, ast.Name) else "")
+        if ref:
+            refs.append(ref)
     return refs
 
 
@@ -369,7 +402,7 @@ def _extract_credential_refs(tree: ast.Module) -> list[str]:
 
 
 def _agent_name(node: ast.Call, rel_path: str, framework: str, *, fallback_name: str = "") -> str:
-    for keyword in ("name", "role"):
+    for keyword in ("name", "role") if fallback_name else ("name", "role", "supervisor_name"):
         value = _string_keyword(node, keyword)
         if value:
             return value
