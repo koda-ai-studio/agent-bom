@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from agent_bom.canonical_ids import canonical_graph_node_id, source_ids
-from agent_bom.core.cloud_identity import cloud_resource_node_id
+from agent_bom.core.cloud_identity import cloud_resource_node_id, gce_instance_self_link
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
@@ -49,6 +49,8 @@ def _holder(record: Mapping[str, Any]) -> tuple[str, dict[str, Any], str]:
     if _text(record, "instance_id") and target_type not in _IMAGE_TYPES:
         name = _text(record, "instance_name") or _text(record, "instance_id").rstrip("/").rsplit("/", 1)[-1]
         attrs = {**base, "resource_id": _text(record, "instance_id"), "resource_name": name, "resource_type": "instance"}
+        if provider == "gcp" and (link := gce_instance_self_link(base["account_id"], base["location"], _text(record, "instance_name"))):
+            attrs["self_link"] = link
         return _instance_node_id(record), attrs, f"vm: {name}"
     image = target_type in _IMAGE_TYPES
     name = target_id.rstrip("/").rsplit("/", 1)[-1] or target_id
