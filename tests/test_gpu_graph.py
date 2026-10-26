@@ -9,6 +9,7 @@ import pytest
 from agent_bom.cloud.gpu_infra import GpuInfraReport, gpu_infra_to_agents
 from agent_bom.cloud.gpu_k8s_inventory import collect_k8s_gpu_inventory
 from agent_bom.cloud.gpu_node_pools import gpu_pool_node_id
+from agent_bom.cloud.gpu_posture import attach_gpu_posture_findings
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.gpu_paths import gpu_host_escape_paths
@@ -123,12 +124,14 @@ def _workload_report(*, with_inventory: bool) -> AIBOMReport:
         exposed_tools=[],
     )
     blast.calculate_risk_score()
-    return AIBOMReport(
+    report = AIBOMReport(
         agents=agents,
         blast_radii=[blast],
         gpu_infra_data=gpu.report_data,
         cloud_inventory_data=[_eks_inventory()] if with_inventory else None,
     )
+    attach_gpu_posture_findings(report)
+    return report
 
 
 @pytest.fixture(scope="module")

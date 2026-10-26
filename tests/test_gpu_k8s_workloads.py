@@ -10,6 +10,8 @@ import pytest
 
 from agent_bom.cloud.gpu_k8s_inventory import collect_k8s_gpu_inventory, workload_agent
 from agent_bom.cloud.gpu_k8s_workloads import cluster_identity, node_contexts
+from tests.test_gpu_advisory_matching import _nvd_conn
+from tests.test_gpu_advisory_matching import csaf_feed as csaf_feed  # pytest fixture, re-exported for this module
 
 FIXTURES = Path(__file__).parent / "fixtures" / "gpu_infra"
 EKS_ARN = "arn:aws:eks:us-east-1:111122223333:cluster/ml-prod"
@@ -107,3 +109,25 @@ def test_cluster_identity_only_matches_provable_cloud_keys(cluster: str, expecte
 def test_no_kubectl_degrades_to_a_warning() -> None:
     inv = collect_k8s_gpu_inventory(lambda *_a, **_k: None)
     assert inv.workloads == [] and inv.warnings
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("csaf_feed")
+async def test_workload_gpu_stack_packages_match_nvidia_csaf_and_nvd(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_bom import config
+    from agent_bom.scanners import package_coverage
+    from agent_bom.scanners.local_advisories import _scan_packages_db_conn
+
+    inv = collect_k8s_gpu_inventory(recorded_kubectl())
+    llm = next(w for w in inv.workloads if w.pod == "llm-inference-7d9f")
+    packages = workload_agent(llm, inv.stack).mcp_servers[0].packages
+    await package_coverage._scan_supplemental_advisories(packages, offline=False)
+    csaf = {(p.name, v.id, v.fixed_version) for p in packages for v in p.vulnerabilities}
+    assert ("nvidia-container-toolkit", "CVE-2024-0132", "1.16.2") in csaf
+
+    for package in packages:
+        package.vulnerabilities = []
+    monkeypatch.setattr(config, "ENABLE_CPE_MATCH", False)
+    _scan_packages_db_conn(_nvd_conn(), packages, set())
+    # The fixture's CVE-2024-0090 range covers only the 550 driver branch, so 535.104.05 stays clean.
+    assert {(p.name, v.id) for p in packages for v in p.vulnerabilities} == {("nvidia-container-toolkit", "CVE-2024-0132")}

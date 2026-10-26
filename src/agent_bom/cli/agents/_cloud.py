@@ -641,8 +641,6 @@ def run_benchmarks(
                     f"{len(ctx.gpu_infra_report.gpu_nodes)} K8s GPU node(s)"
                 )
                 print_gpu_workload_summary(con, ctx.gpu_infra_report)
-                if ctx.gpu_infra_report.unique_cuda_versions:
-                    con.print(f"  CUDA versions: {', '.join(ctx.gpu_infra_report.unique_cuda_versions)}")
                 if ctx.gpu_infra_report.unauthenticated_dcgm_count:
                     con.print(
                         f"  [red]⚠ {ctx.gpu_infra_report.unauthenticated_dcgm_count} unauthenticated DCGM exporter(s) — metrics leak[/red]"

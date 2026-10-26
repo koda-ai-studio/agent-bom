@@ -400,3 +400,30 @@ def gpu_posture_from_report(report: dict[str, Any]) -> list[dict[str, Any]]:
             findings.extend(managed_compute_findings(record, account_id=str(record.get("workspace_host") or "")))
     unique = {f["id"]: f for f in findings}
     return [unique[key] for key in sorted(unique)]
+
+
+def _report_sections(report: Any) -> dict[str, Any]:
+    return {
+        "cloud_inventory": getattr(report, "cloud_inventory_data", None),
+        "gpu_infra": getattr(report, "gpu_infra_data", None),
+        "snowflake_services": getattr(report, "snowflake_services_data", None),
+        "agents": [{"name": a.name, "stable_id": a.stable_id, "metadata": a.metadata} for a in getattr(report, "agents", [])],
+    }
+
+
+def attach_gpu_posture_findings(report: Any) -> int:
+    """Append GPU posture findings to ``report.findings`` once; returns how many were added.
+
+    Every report finalization path (the shared scan surface and brokered
+    connection scans) calls this before the graph is built, so the findings
+    stream, the graph and every export carry the same rows.
+    """
+    existing = {finding.id for finding in report.findings}
+    added = 0
+    for raw in gpu_posture_from_report(_report_sections(report)):
+        finding = gpu_posture_finding_to_finding(raw)
+        if finding.id not in existing:
+            report.findings.append(finding)
+            existing.add(finding.id)
+            added += 1
+    return added

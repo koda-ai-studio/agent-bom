@@ -161,3 +161,20 @@ def model_artifact_findings(image: str, agent_stable_id: str, artifacts: list[di
         finding.asset.location = image
         finding.evidence.update(image=image, image_path=artifact.get("image_path"), layer_index=artifact.get("layer_index"))
     return findings
+
+
+def attach_image_model_findings(report: Any) -> int:
+    """Append model findings for every image agent that recorded layer artifacts; returns how many were added."""
+    existing = {finding.id for finding in report.findings}
+    added = 0
+    for agent in report.agents:
+        artifacts = agent.metadata.get("model_artifacts") if isinstance(agent.metadata, dict) else None
+        if not isinstance(artifacts, list) or not artifacts:
+            continue
+        image = str(artifacts[0].get("image") or agent.name)
+        for finding in model_artifact_findings(image, agent.stable_id, artifacts):
+            if finding.id not in existing:
+                report.findings.append(finding)
+                existing.add(finding.id)
+                added += 1
+    return added

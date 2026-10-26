@@ -209,7 +209,7 @@ from agent_bom.graph.cloud_context import (
     _stamp_owning_account as _stamp_owning_account,
 )
 from agent_bom.graph.cloud_rbac import add_cloud_role_assignments as _add_cloud_role_assignments
-from agent_bom.graph.cloud_service_projection import project_aws_services, project_gcp_services
+from agent_bom.graph.cloud_service_projection import project_aws_services, project_gcp_services, project_gpu_compute
 from agent_bom.graph.cloud_storage_projection import project_buckets, project_databases, project_side_scan_targets
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_bindings import project_credential_bindings
@@ -228,7 +228,6 @@ from agent_bom.graph.framework_topology_projection import _add_ai_stack_framewor
 from agent_bom.graph.framework_topology_projection import _add_framework_topology as _add_framework_topology
 from agent_bom.graph.framework_topology_projection import _AIStackProjection as _AIStackProjection
 from agent_bom.graph.framework_topology_projection import _FrameworkTopology as _FrameworkTopology
-from agent_bom.graph.gpu_projection import project_gpu_compute
 from agent_bom.graph.identity_nodes import identity_node_id as _identity_node_id
 from agent_bom.graph.network_entry_projection import _add_network_edge_inventory as _add_network_edge_inventory
 from agent_bom.graph.network_entry_projection import _wire_network_entry_exposure_paths as _wire_network_entry_exposure_paths

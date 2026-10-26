@@ -7,6 +7,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- GPU node pools in cloud inventory, read-only: EKS managed node groups (`eks:ListNodegroups` / `DescribeNodegroup`), GKE node pools with accelerators, GPU sharing, MIG partition and driver-install setting, AKS agent pools with GPU VM size, MIG profile and driver opt-out, GCE guest accelerators, Snowflake SPCS compute pools (`SHOW COMPUTE POOLS`, GPU model and count per `GPU_*` family) and Databricks GPU clusters (kept even without installed libraries). Connection inventory summaries report `node_summary.gpu_node_pools`.
+- GPU pools in the graph: a `gpu_node_pool` cloud resource contained by its cluster and assuming its node IAM role or service account; GPU attributes on EC2, GCE and Azure GPU instances; SPCS compute pools under their account.
+- `--gpu-scan` and the MCP `gpu_infra_scan` tool inventory Kubernetes GPU workloads with read-only `kubectl get`: node pool, service account, EKS IRSA role, privileged / hostPath / host-namespace settings, the node driver (GPU Feature Discovery labels) and Container Toolkit (GPU Operator `ClusterPolicy`). The driver and toolkit become CPE-identified packages matched like any other, and attack paths run from a vulnerable host GPU stack through the workload to its service account, IRSA role and the GPU node identity.
+- Provider-aware GPU posture checks GPU-001 to GPU-021 (SSH open on EKS GPU node groups, AKS node public IPs, GKE default compute service account, untainted EKS/AKS GPU pools, operator-managed drivers, shared GPUs and multi-tenant time-slicing, privileged / hostPath / host-namespace GPU pods, Databricks no-isolation GPU clusters, shared SPCS GPU pools) in the unified findings stream and the graph.
+- Image scans record model files found in layers and statically disassemble pickle-bearing ones (never deserialized) within the existing pickle byte cap, honouring whiteouts; findings attach to the image. See `site-docs/features/gpu-ai-infrastructure.md`.
+
+### Fixed
+- Kubernetes GPU nodes read the full driver version from GPU Feature Discovery's `nvidia.com/cuda.driver-version.full` label instead of a `major.minor` prefix.
+
 ## [0.111.0] - 2026-10-25
 
 ### Highlights

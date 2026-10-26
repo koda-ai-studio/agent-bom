@@ -8,6 +8,7 @@ from agent_bom.core.cloud_identity import cloud_resource_node_id
 from agent_bom.core.cloud_scope import cloud_scope_attributes
 from agent_bom.graph.cloud_context import _add_account_resource_hierarchy, _recorded_exposure_attributes, _resource_environment
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.gpu_projection import project_gpu_compute as project_gpu_compute
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType
 from agent_bom.graph.util import clean_graph_part as _clean_graph_part

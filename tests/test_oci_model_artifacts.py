@@ -21,7 +21,12 @@ from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.image import scan_image_tar
 from agent_bom.models import Agent, AgentType, AIBOMReport, MCPServer, ServerSurface, TransportType
 from agent_bom.output.json_fmt import to_json
-from agent_bom.parsers.oci_model_artifacts import MAX_ARTIFACTS_PER_IMAGE, collect_model_artifacts, model_artifact_metadata
+from agent_bom.parsers.oci_model_artifacts import (
+    MAX_ARTIFACTS_PER_IMAGE,
+    attach_image_model_findings,
+    collect_model_artifacts,
+    model_artifact_metadata,
+)
 
 
 class _Implant:
@@ -125,6 +130,8 @@ def test_findings_are_bound_to_the_image_in_the_stream_and_graph(tmp_path: Path)
         metadata=metadata,
     )
     report = AIBOMReport(agents=[agent])
+    assert attach_image_model_findings(report) == 1
+    assert attach_image_model_findings(report) == 0  # idempotent
     findings = [f for f in report.to_findings() if f.evidence.get("image")]
     assert {f.finding_type for f in findings} == {FindingType.MALICIOUS_MODEL}
     (malicious,) = findings

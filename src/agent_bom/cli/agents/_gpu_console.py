@@ -10,7 +10,9 @@ _MAX_LISTED = 6
 
 
 def print_gpu_workload_summary(con: Any, report: Any) -> None:
-    """Workloads per pool, the declared/observed GPU stack and posture findings, most severe first."""
+    """CUDA versions, workloads per pool, the declared/observed GPU stack and posture findings, most severe first."""
+    if report.unique_cuda_versions:
+        con.print(f"  CUDA versions: {', '.join(report.unique_cuda_versions)}")
     k8s = getattr(report, "k8s", None)
     if k8s is None or not k8s.workloads:
         return
