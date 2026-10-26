@@ -202,7 +202,9 @@ def test_cloud_audit_edges_carry_the_aggregate_observation_time() -> None:
             "status": "ok",
             "provider": "aws",
             "account": "111122223333",
-            "behavioral_edges": [{"principal": "operator", "resource": "bucket-a", "action": "GetObject", "count": 2, "last_seen": observed}],
+            "behavioral_edges": [
+                {"principal": "operator", "resource": "bucket-a", "action": "GetObject", "count": 2, "last_seen": observed}
+            ],
         },
     }
     with _clock(SENTINEL_B):
