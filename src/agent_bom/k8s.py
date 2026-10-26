@@ -17,168 +17,34 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-from dataclasses import dataclass, field
-from enum import Enum
 from math import ceil
 from time import monotonic
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Optional
 
-from agent_bom.cloud.benchmark_provenance import BenchmarkProvenance, kubernetes_benchmark_provenance
-
-if TYPE_CHECKING:
-    from agent_bom.evidence.scan_run import ScanRun
 from agent_bom.iac.models import IaCFinding
 from agent_bom.k8s_transport import K8sReadTransport, K8sTransportError, select_k8s_transport, validate_kubelet_endpoint
+from agent_bom.kubernetes.admission_checks import ADMISSION_RESOURCES, evaluate_admission_posture
+from agent_bom.kubernetes.posture_checks import evaluate_kubelet_config, evaluate_pod_security, evaluate_rbac
+from agent_bom.kubernetes.posture_models import CollectorState, K8sCollectorEvidence, K8sPostureResult, K8sPostureStatus
+
+__all__ = [
+    "CollectorState",
+    "K8sCollectorEvidence",
+    "K8sDiscoveryError",
+    "K8sPostureResult",
+    "K8sPostureStatus",
+    "discover_images",
+    "evaluate_kubelet_config",
+    "evaluate_pod_security",
+    "evaluate_rbac",
+    "list_namespaces",
+    "scan_live_cluster_posture",
+    "scan_live_cluster_posture_with_evidence",
+]
 
 
 class K8sDiscoveryError(Exception):
     """Raised when kubectl discovery fails."""
-
-
-class CollectorState(str, Enum):
-    """Execution state for one live Kubernetes evidence collector."""
-
-    EXECUTED = "executed"
-    SKIPPED = "skipped"
-    UNEVALUABLE = "unevaluable"
-    FAILED = "failed"
-
-
-class K8sPostureStatus(str, Enum):
-    """Aggregate completeness of a live Kubernetes posture run."""
-
-    COMPLETE = "complete"
-    PARTIAL = "partial"
-    FAILED = "failed"
-
-
-@dataclass(frozen=True)
-class K8sCollectorEvidence:
-    """Auditable execution evidence for one read-only collector."""
-
-    collector_id: str
-    state: CollectorState
-    object_count: int = 0
-    pages: int = 0
-    truncated: bool = False
-    message: str = ""
-    transport: str = ""
-
-
-@dataclass
-class K8sPostureResult:
-    """Findings plus explicit collection completeness for a posture run."""
-
-    findings: list[IaCFinding] = field(default_factory=list)
-    collectors: list[K8sCollectorEvidence] = field(default_factory=list)
-    status: K8sPostureStatus = K8sPostureStatus.FAILED
-    transport: str = ""
-    benchmark: BenchmarkProvenance = field(default_factory=kubernetes_benchmark_provenance)
-
-    def severity_summary(self) -> dict[str, int]:
-        """Return the finding count per severity bucket (one source of truth).
-
-        Shared verbatim by the REST route and the MCP tool so the API, MCP, and
-        CLI evidence dict reconcile 1:1 on the same numbers.
-        """
-        summary: dict[str, int] = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-        for finding in self.findings:
-            bucket = str(getattr(finding, "severity", "") or "").strip().lower()
-            if bucket in summary:
-                summary[bucket] += 1
-        return summary
-
-    def to_scan_run(self) -> "ScanRun":
-        """Project collection completeness onto the canonical ``ScanRun`` contract.
-
-        The aggregate posture status maps to the execution outcome
-        (COMPLETE/PARTIAL/FAILED) and every collector that could not be fully
-        evaluated emits one coverage-affecting :class:`ScanIssue`:
-
-        * ``UNEVALUABLE`` (a denied/absent read, e.g. 403) → a ``warning``
-          coded ``k8s_collector_unevaluable``;
-        * ``FAILED`` (a transport/read error) → an ``error`` coded
-          ``k8s_collector_failed``;
-        * a ``truncated`` read that hit its configured bound → a ``warning``
-          coded ``k8s_collector_truncated``.
-
-        Because each issue sets ``affects_coverage=True``, a run that would
-        otherwise read COMPLETE is derived down to PARTIAL by ``ScanRun`` — a
-        denied or partial collector can never surface as a clean pass.
-        ``SKIPPED`` (opt-in, deliberately not run) is not a coverage gap and
-        emits no issue.
-        """
-        from agent_bom.evidence.scan_run import ScanIssue, ScanOutcome, ScanRun
-
-        outcome = {
-            K8sPostureStatus.COMPLETE: ScanOutcome.COMPLETE,
-            K8sPostureStatus.PARTIAL: ScanOutcome.PARTIAL,
-            K8sPostureStatus.FAILED: ScanOutcome.FAILED,
-        }[self.status]
-
-        issues: list[ScanIssue] = []
-        for collector in self.collectors:
-            if collector.state is CollectorState.FAILED:
-                issues.append(
-                    ScanIssue(
-                        code="k8s_collector_failed",
-                        stage="kubernetes-posture",
-                        source=collector.collector_id,
-                        message=collector.message or "collector failed",
-                        severity="error",
-                        affects_coverage=True,
-                    )
-                )
-            elif collector.state is CollectorState.UNEVALUABLE:
-                issues.append(
-                    ScanIssue(
-                        code="k8s_collector_unevaluable",
-                        stage="kubernetes-posture",
-                        source=collector.collector_id,
-                        message=collector.message or "collector could not be evaluated",
-                        severity="warning",
-                        affects_coverage=True,
-                    )
-                )
-            elif collector.state is CollectorState.EXECUTED and collector.truncated:
-                issues.append(
-                    ScanIssue(
-                        code="k8s_collector_truncated",
-                        stage="kubernetes-posture",
-                        source=collector.collector_id,
-                        message=collector.message or "collection reached its configured bound",
-                        severity="warning",
-                        affects_coverage=True,
-                    )
-                )
-
-        return ScanRun(outcome=outcome, issues=issues)
-
-    def to_evidence_dict(self) -> dict[str, Any]:
-        """Render the machine-readable posture evidence envelope.
-
-        Carries the pinned benchmark provenance alongside every collector's
-        explicit execution state so a denied/partial/timeout read is visible as
-        ``unevaluable``/``failed`` and can never be read as a clean ``PASS``.
-        """
-        return {
-            "status": self.status.value,
-            "transport": self.transport,
-            "finding_count": len(self.findings),
-            "benchmark": self.benchmark.to_dict(),
-            "collectors": [
-                {
-                    "collector_id": collector.collector_id,
-                    "state": collector.state.value,
-                    "object_count": collector.object_count,
-                    "pages": collector.pages,
-                    "truncated": collector.truncated,
-                    "message": collector.message,
-                    "transport": collector.transport,
-                }
-                for collector in self.collectors
-            ],
-        }
 
 
 def _kubectl_available() -> bool:
@@ -302,445 +168,6 @@ def list_namespaces(context: Optional[str] = None) -> list[str]:
         return []
 
 
-# Capabilities whose runtime presence materially widens the host attack surface.
-_DANGEROUS_CAPABILITIES = frozenset({"NET_RAW", "NET_ADMIN", "SYS_ADMIN", "SYS_PTRACE", "SYS_MODULE", "ALL"})
-
-# Durations that mean "no idle timeout" for the kubelet streaming connection.
-_ZERO_DURATIONS = frozenset({"0", "0s", "0m", "0h", "0m0s", "0h0m0s"})
-
-
-def _pod_containers(spec: dict) -> list[dict]:
-    """Return all container specs (containers + initContainers) from a pod spec."""
-    containers = spec.get("containers", []) or []
-    init_containers = spec.get("initContainers", []) or []
-    return [c for c in list(containers) + list(init_containers) if isinstance(c, dict)]
-
-
-def evaluate_pod_security(pods: dict, default_namespace: str = "default") -> list[IaCFinding]:
-    """Evaluate PodSecurity posture across *running* workloads.
-
-    Operates on a parsed ``kubectl get pods -o json`` payload. Only pods in the
-    ``Running`` phase are evaluated — this is a runtime posture check, not a
-    manifest lint, so pending/terminated pods are ignored. Findings mirror the
-    severities and CIS/NIST mappings of the static manifest scanner
-    (:mod:`agent_bom.iac.kubernetes`).
-    """
-    findings: list[IaCFinding] = []
-    for pod in pods.get("items", []) or []:
-        if not isinstance(pod, dict):
-            continue
-        if (pod.get("status", {}) or {}).get("phase") != "Running":
-            continue
-        metadata = pod.get("metadata", {}) or {}
-        name = metadata.get("name", "unknown")
-        ns = metadata.get("namespace", default_namespace)
-        pod_ref = f"k8s://{ns}/{name}"
-        spec = pod.get("spec", {}) or {}
-
-        if spec.get("hostNetwork") is True:
-            findings.append(
-                IaCFinding(
-                    rule_id="K8S-LIVE-008",
-                    severity="high",
-                    title="Running pod uses host network",
-                    message=(
-                        f"Pod '{ns}/{name}' is running with hostNetwork: true. It shares the node's "
-                        "network namespace, allowing traffic sniffing and NetworkPolicy bypass."
-                    ),
-                    file_path=pod_ref,
-                    line_number=1,
-                    category="kubernetes-live",
-                    compliance=["CIS-K8s-5.2.4", "NIST-CM-7"],
-                )
-            )
-        if spec.get("hostPID") is True or spec.get("hostIPC") is True:
-            shared = ", ".join(k for k in ("hostPID", "hostIPC") if spec.get(k) is True)
-            findings.append(
-                IaCFinding(
-                    rule_id="K8S-LIVE-009",
-                    severity="high",
-                    title="Running pod shares host process/IPC namespace",
-                    message=(
-                        f"Pod '{ns}/{name}' is running with {shared}: true. Sharing the host PID/IPC "
-                        "namespace enables container escape and cross-process attacks."
-                    ),
-                    file_path=pod_ref,
-                    line_number=1,
-                    category="kubernetes-live",
-                    compliance=["CIS-K8s-5.2.2", "NIST-CM-7"],
-                )
-            )
-        for vol in spec.get("volumes", []) or []:
-            if isinstance(vol, dict) and vol.get("hostPath"):
-                host_path = (vol.get("hostPath") or {}).get("path", "unknown")
-                findings.append(
-                    IaCFinding(
-                        rule_id="K8S-LIVE-010",
-                        severity="high",
-                        title="Running pod mounts a host path",
-                        message=(
-                            f"Pod '{ns}/{name}' mounts host path '{host_path}' via volume "
-                            f"'{vol.get('name', 'unknown')}'. hostPath mounts break container isolation "
-                            "and can expose or tamper with node files."
-                        ),
-                        file_path=pod_ref,
-                        line_number=1,
-                        category="kubernetes-live",
-                        compliance=["CIS-K8s-5.2.12", "NIST-SC-7"],
-                    )
-                )
-                break
-
-        pod_sec_ctx = spec.get("securityContext", {}) or {}
-        for container in _pod_containers(spec):
-            cname = container.get("name", "unnamed")
-            sec_ctx = container.get("securityContext", {}) or {}
-
-            if sec_ctx.get("privileged") is True:
-                findings.append(
-                    IaCFinding(
-                        rule_id="K8S-LIVE-007",
-                        severity="critical",
-                        title="Running privileged container",
-                        message=(
-                            f"Container '{cname}' in pod '{ns}/{name}' is running in privileged mode, "
-                            "granting full host access. Remove privileged: true from the workload."
-                        ),
-                        file_path=pod_ref,
-                        line_number=1,
-                        category="kubernetes-live",
-                        compliance=["CIS-K8s-5.2.1", "NIST-AC-6"],
-                        attack_techniques=["T1611"],
-                    )
-                )
-            # Kubernetes resolves runAsUser / runAsNonRoot at the container
-            # level, falling back to the pod-level securityContext when the
-            # container does not set them. Evaluating only the container view
-            # misses a pod that sets root at the pod level and inherits it into
-            # a container that carries an unrelated securityContext.
-            effective_run_as_user = sec_ctx.get("runAsUser", pod_sec_ctx.get("runAsUser"))
-            effective_run_as_non_root = sec_ctx.get("runAsNonRoot", pod_sec_ctx.get("runAsNonRoot"))
-            if effective_run_as_user == 0 or effective_run_as_non_root is False:
-                findings.append(
-                    IaCFinding(
-                        rule_id="K8S-LIVE-011",
-                        severity="high",
-                        title="Running container executes as root",
-                        message=(
-                            f"Container '{cname}' in pod '{ns}/{name}' is running as root "
-                            "(runAsUser: 0 or runAsNonRoot: false, at the container or inherited "
-                            "pod level). Run as a non-root user to limit exploit impact."
-                        ),
-                        file_path=pod_ref,
-                        line_number=1,
-                        category="kubernetes-live",
-                        compliance=["CIS-K8s-5.2.6", "NIST-AC-6"],
-                    )
-                )
-            if sec_ctx.get("allowPrivilegeEscalation") is True:
-                findings.append(
-                    IaCFinding(
-                        rule_id="K8S-LIVE-012",
-                        severity="high",
-                        title="Running container allows privilege escalation",
-                        message=(
-                            f"Container '{cname}' in pod '{ns}/{name}' allows privilege escalation. "
-                            "Set allowPrivilegeEscalation: false to block setuid-based escalation."
-                        ),
-                        file_path=pod_ref,
-                        line_number=1,
-                        category="kubernetes-live",
-                        compliance=["CIS-K8s-5.2.5", "NIST-AC-6"],
-                    )
-                )
-            add_caps = (sec_ctx.get("capabilities", {}) or {}).get("add", []) or []
-            dangerous = sorted({c.upper() for c in add_caps if isinstance(c, str)} & _DANGEROUS_CAPABILITIES)
-            if dangerous:
-                findings.append(
-                    IaCFinding(
-                        rule_id="K8S-LIVE-013",
-                        severity="critical",
-                        title="Running container adds dangerous capabilities",
-                        message=(
-                            f"Container '{cname}' in pod '{ns}/{name}' adds capabilities {dangerous}. "
-                            "Drop ALL capabilities and add back only what the workload needs."
-                        ),
-                        file_path=pod_ref,
-                        line_number=1,
-                        category="kubernetes-live",
-                        compliance=["CIS-K8s-5.2.8", "NIST-AC-6"],
-                    )
-                )
-
-        if not spec.get("securityContext"):
-            findings.append(
-                IaCFinding(
-                    rule_id="K8S-LIVE-014",
-                    severity="medium",
-                    title="Running pod has no securityContext",
-                    message=(
-                        f"Pod '{ns}/{name}' is running without a pod-level securityContext. Set "
-                        "runAsNonRoot, fsGroup, and seccompProfile to enforce a hardened baseline."
-                    ),
-                    file_path=pod_ref,
-                    line_number=1,
-                    category="kubernetes-live",
-                    compliance=["CIS-K8s-5.2.6", "NIST-AC-6"],
-                )
-            )
-
-    return findings
-
-
-def _rule_has_wildcard(rule: dict) -> bool:
-    """Return True if an RBAC policy rule grants wildcard verbs or resources."""
-    verbs = rule.get("verbs", []) or []
-    resources = rule.get("resources", []) or []
-    return "*" in verbs or "*" in resources
-
-
-def _is_builtin_role(name: str) -> bool:
-    """Built-in roles (cluster-admin, system:*) are expected wildcards."""
-    return name == "cluster-admin" or name == "admin" or name.startswith("system:")
-
-
-def evaluate_rbac(
-    cluster_roles: dict,
-    roles: dict,
-    cluster_role_bindings: dict,
-    default_namespace: str = "default",
-) -> list[IaCFinding]:
-    """Audit live RBAC for over-broad grants.
-
-    Flags ClusterRoleBindings to ``cluster-admin`` and user-defined
-    Cluster/Roles that grant wildcard verbs or resources. Built-in
-    ``cluster-admin`` and ``system:*`` roles are intentionally skipped — their
-    wildcards are expected and cannot be tightened.
-    """
-    findings: list[IaCFinding] = []
-
-    for binding in cluster_role_bindings.get("items", []) or []:
-        if not isinstance(binding, dict):
-            continue
-        role_ref = binding.get("roleRef", {}) or {}
-        if role_ref.get("name") != "cluster-admin":
-            continue
-        metadata = binding.get("metadata", {}) or {}
-        subjects = binding.get("subjects", []) or []
-        subject_names = (
-            ", ".join(
-                f"{s.get('kind', 'Subject')}:{s.get('namespace', '')}/{s.get('name', 'unknown')}".strip("/")
-                for s in subjects
-                if isinstance(s, dict)
-            )
-            or "unknown subject"
-        )
-        binding_name = metadata.get("name", "unknown")
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-LIVE-006",
-                severity="critical",
-                title="Live cluster-admin RBAC binding detected",
-                message=(
-                    f"ClusterRoleBinding '{binding_name}' grants cluster-admin to {subject_names}. "
-                    "Review live RBAC drift and replace with least-privilege bindings."
-                ),
-                file_path=f"k8s://clusterrolebinding/{binding_name}",
-                line_number=1,
-                category="kubernetes-live",
-                compliance=["CIS-K8s-5.1.1", "NIST-AC-6"],
-            )
-        )
-
-    for role in cluster_roles.get("items", []) or []:
-        if not isinstance(role, dict):
-            continue
-        name = (role.get("metadata", {}) or {}).get("name", "unknown")
-        if _is_builtin_role(name):
-            continue
-        if any(_rule_has_wildcard(r) for r in (role.get("rules", []) or []) if isinstance(r, dict)):
-            findings.append(
-                IaCFinding(
-                    rule_id="K8S-LIVE-015",
-                    severity="high",
-                    title="ClusterRole grants wildcard permissions",
-                    message=(
-                        f"ClusterRole '{name}' grants wildcard (*) verbs or resources. Wildcard grants "
-                        "violate least-privilege — enumerate the specific verbs/resources required."
-                    ),
-                    file_path=f"k8s://clusterrole/{name}",
-                    line_number=1,
-                    category="kubernetes-live",
-                    compliance=["CIS-K8s-5.1.3", "NIST-AC-6"],
-                )
-            )
-
-    for role in roles.get("items", []) or []:
-        if not isinstance(role, dict):
-            continue
-        metadata = role.get("metadata", {}) or {}
-        name = metadata.get("name", "unknown")
-        ns = metadata.get("namespace", default_namespace)
-        if name.startswith("system:"):
-            continue
-        if any(_rule_has_wildcard(r) for r in (role.get("rules", []) or []) if isinstance(r, dict)):
-            findings.append(
-                IaCFinding(
-                    rule_id="K8S-LIVE-016",
-                    severity="high",
-                    title="Role grants wildcard permissions",
-                    message=(
-                        f"Role '{ns}/{name}' grants wildcard (*) verbs or resources. Wildcard grants "
-                        "violate least-privilege — enumerate the specific verbs/resources required."
-                    ),
-                    file_path=f"k8s://role/{ns}/{name}",
-                    line_number=1,
-                    category="kubernetes-live",
-                    compliance=["CIS-K8s-5.1.3", "NIST-AC-6"],
-                )
-            )
-
-    return findings
-
-
-def evaluate_kubelet_config(node_name: str, kubelet_config: dict) -> list[IaCFinding]:
-    """Evaluate a node's kubelet configuration against CIS Benchmark section 4.2.
-
-    ``kubelet_config`` is the resolved KubeletConfiguration (v1beta1) returned
-    by the fine-grained ``/api/v1/nodes/<node>/configz`` subresource. Only
-    fields present in the resolved config are evaluated; absent optional fields
-    are not fabricated into a pass or fail.
-    """
-    findings: list[IaCFinding] = []
-    node_ref = f"k8s://node/{node_name}"
-
-    anonymous = (kubelet_config.get("authentication", {}) or {}).get("anonymous", {}) or {}
-    if anonymous.get("enabled") is True:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-LIVE-020",
-                severity="critical",
-                title="Kubelet allows anonymous authentication",
-                message=(
-                    f"Kubelet on node '{node_name}' has authentication.anonymous.enabled: true. "
-                    "Anonymous requests to the kubelet API can read pod data and exec into containers. "
-                    "Set --anonymous-auth=false."
-                ),
-                file_path=node_ref,
-                line_number=1,
-                category="kubernetes-live",
-                compliance=["CIS-K8s-4.2.1", "NIST-AC-6"],
-            )
-        )
-
-    if (kubelet_config.get("authorization", {}) or {}).get("mode") == "AlwaysAllow":
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-LIVE-021",
-                severity="critical",
-                title="Kubelet authorization mode is AlwaysAllow",
-                message=(
-                    f"Kubelet on node '{node_name}' uses authorization.mode: AlwaysAllow, which grants "
-                    "every authenticated request. Set --authorization-mode=Webhook."
-                ),
-                file_path=node_ref,
-                line_number=1,
-                category="kubernetes-live",
-                compliance=["CIS-K8s-4.2.2", "NIST-AC-6"],
-            )
-        )
-
-    read_only_port = kubelet_config.get("readOnlyPort")
-    if isinstance(read_only_port, int) and read_only_port != 0:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-LIVE-022",
-                severity="high",
-                title="Kubelet read-only port is enabled",
-                message=(
-                    f"Kubelet on node '{node_name}' exposes readOnlyPort {read_only_port}. This "
-                    "unauthenticated port leaks pod and node metadata. Set --read-only-port=0."
-                ),
-                file_path=node_ref,
-                line_number=1,
-                category="kubernetes-live",
-                compliance=["CIS-K8s-4.2.4", "NIST-AC-6"],
-            )
-        )
-
-    idle_timeout = str(kubelet_config.get("streamingConnectionIdleTimeout", "")).strip().lower()
-    if idle_timeout in _ZERO_DURATIONS:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-LIVE-023",
-                severity="medium",
-                title="Kubelet streaming connections never time out",
-                message=(
-                    f"Kubelet on node '{node_name}' sets streamingConnectionIdleTimeout to 0 (disabled). "
-                    "Idle exec/attach/port-forward streams are held open indefinitely. Set a non-zero "
-                    "timeout (e.g. 4h)."
-                ),
-                file_path=node_ref,
-                line_number=1,
-                category="kubernetes-live",
-                compliance=["CIS-K8s-4.2.5", "NIST-AC-12"],
-            )
-        )
-
-    if kubelet_config.get("protectKernelDefaults") is False:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-LIVE-024",
-                severity="medium",
-                title="Kubelet does not protect kernel defaults",
-                message=(
-                    f"Kubelet on node '{node_name}' has protectKernelDefaults: false, so it may overwrite "
-                    "hardened kernel sysctls. Set --protect-kernel-defaults=true."
-                ),
-                file_path=node_ref,
-                line_number=1,
-                category="kubernetes-live",
-                compliance=["CIS-K8s-4.2.6", "NIST-CM-6"],
-            )
-        )
-
-    if kubelet_config.get("makeIPTablesUtilChains") is False:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-LIVE-025",
-                severity="low",
-                title="Kubelet does not manage iptables util chains",
-                message=(
-                    f"Kubelet on node '{node_name}' has makeIPTablesUtilChains: false. Enable it so the "
-                    "kubelet maintains the iptables rules that back NetworkPolicy enforcement."
-                ),
-                file_path=node_ref,
-                line_number=1,
-                category="kubernetes-live",
-                compliance=["CIS-K8s-4.2.7", "NIST-SC-7"],
-            )
-        )
-
-    if kubelet_config.get("rotateCertificates") is False:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-LIVE-026",
-                severity="medium",
-                title="Kubelet client certificate rotation is disabled",
-                message=(
-                    f"Kubelet on node '{node_name}' has rotateCertificates: false. Long-lived client "
-                    "certificates widen the credential-theft window. Set --rotate-certificates=true."
-                ),
-                file_path=node_ref,
-                line_number=1,
-                category="kubernetes-live",
-                compliance=["CIS-K8s-4.2.10", "NIST-IA-5"],
-            )
-        )
-
-    return findings
-
-
 _POSTURE_RESOURCES = (
     "pods",
     "networkpolicies",
@@ -818,11 +245,16 @@ def _transport_unavailable_result(exc: K8sTransportError) -> K8sPostureResult:
 
 
 def _collect_posture_resources(
-    transport: K8sReadTransport, transport_name: str, namespace: str, all_namespaces: bool, collectors: list[K8sCollectorEvidence]
+    transport: K8sReadTransport,
+    transport_name: str,
+    namespace: str,
+    all_namespaces: bool,
+    collectors: list[K8sCollectorEvidence],
+    resources: tuple[str, ...] = _POSTURE_RESOURCES,
 ) -> dict[str, dict]:
     """Stage 2: GET each posture resource kind, recording per-kind collector evidence."""
     payloads: dict[str, dict] = {}
-    for resource in _POSTURE_RESOURCES:
+    for resource in resources:
         resource_namespace = namespace if resource in {"pods", "networkpolicies", "roles"} else None
         try:
             read = transport.list_resource(resource, namespace=resource_namespace, all_namespaces=all_namespaces)
@@ -1074,6 +506,17 @@ def scan_live_cluster_posture_with_evidence(
                 payloads.get("roles", {"items": []}),
                 payloads.get("clusterrolebindings", {"items": []}),
                 default_namespace=namespace,
+            )
+        )
+        admission = _collect_posture_resources(transport, transport_name, namespace, all_namespaces, collectors, ADMISSION_RESOURCES)
+        findings.extend(
+            evaluate_admission_posture(
+                namespaces=admission.get("namespaces"),
+                workload_namespaces=namespaces_with_pods,
+                validating_policies=admission.get("validatingadmissionpolicies"),
+                validating_policy_bindings=admission.get("validatingadmissionpolicybindings"),
+                validating_webhooks=admission.get("validatingwebhookconfigurations"),
+                admission_evaluated="pods" in payloads and all(resource in admission for resource in ADMISSION_RESOURCES),
             )
         )
         collectors.append(_kubelet_configz_collector(transport, transport_name, payloads, enable_nodes_configz, findings))

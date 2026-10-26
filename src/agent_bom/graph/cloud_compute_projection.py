@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.cloud.normalization import coerce_truthy
-from agent_bom.core.cloud_identity import cloud_resource_node_id
+from agent_bom.core.cloud_identity import cloud_resource_node_id, gce_instance_self_link
 from agent_bom.core.cloud_scope import cloud_scope_attributes
 from agent_bom.graph.builder_network_exposure import _add_exposure_path_edge
 from agent_bom.graph.cloud_context import _recorded_exposure_attributes, _resource_environment
@@ -113,6 +113,7 @@ def project_instances(
         node_id = cloud_resource_node_id(provider, f"{inst_service}:instance", {**instance, "id": instance_id}, account_id, region)
         public_ip = _clean_graph_part(instance.get("public_ip"))
         instance_env = _resource_environment(instance)
+        link = gce_instance_self_link(instance.get("project_id") or account_id, instance.get("zone"), instance.get("name"))
         graph.add_node(
             UnifiedNode(
                 id=node_id,
@@ -142,6 +143,7 @@ def project_instances(
                     "service_accounts": list(instance.get("service_accounts", []) or []),
                     "account_id": account_id,
                     "environment": instance_env,
+                    **({"self_link": link} if provider == "gcp" and link else {}),
                     **cloud_scope_attributes(provider, instance, account_id),
                 },
                 data_sources=data_sources,

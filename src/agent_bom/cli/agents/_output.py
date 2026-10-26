@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 import click
+from rich.panel import Panel
 
 from agent_bom.cli._agent_mode import dumps_envelope, success_envelope
 from agent_bom.cli._terminal_sections import print_scan_next_steps, print_section_divider
@@ -60,6 +61,7 @@ from agent_bom.output import (
     to_spdx,
     to_spdx2,
 )
+from agent_bom.output.console_kubernetes import print_kubernetes_workloads
 
 _FORMAT_OUTPUT_RULES: dict[str, tuple[str, tuple[str, ...]]] = {
     "json": ("agent-bom-report.json", (".json", ".json.gz")),
@@ -386,6 +388,7 @@ def render_output(
                 print_posture_summary(report)
                 if not no_tree:
                     print_agent_tree(report)
+                print_kubernetes_workloads(con, report.kubernetes_inventory_data)
                 print_severity_chart(report)
                 print_blast_radius(report, fixable_only=fixable_only)
                 print_compact_graph_findings(report, limit=100)
@@ -397,25 +400,20 @@ def render_output(
                 print_section_divider(con, "Summary")
                 print_compact_summary(report, verbose=verbose)
                 print_compact_agents(report)
+                print_kubernetes_workloads(con, report.kubernetes_inventory_data)
                 print_compact_blast_radius(report, fixable_only=fixable_only, page=compact_page)
                 print_compact_graph_findings(report)
 
             # AI enrichment output (both modes)
             if report.executive_summary:
-                from rich.panel import Panel
-
                 con.print("\n[bold]Executive Summary (AI-Generated)[/bold]")
                 con.print(Panel.fit(report.executive_summary, border_style="cyan"))
             if report.ai_threat_chains:
-                from rich.panel import Panel
-
                 con.print("\n[bold]Threat Chain Analysis (AI-Generated)[/bold]")
                 for chain in report.ai_threat_chains:
                     con.print(Panel(chain, border_style="red dim"))
             # AI skill analysis output (if enriched)
             if _skill_audit_obj and _skill_audit_obj.ai_skill_summary:
-                from rich.panel import Panel
-
                 sev_colors = {"critical": "red bold", "high": "red", "medium": "yellow", "low": "dim", "safe": "green"}
                 risk = _skill_audit_obj.ai_overall_risk_level or "unknown"
                 risk_style = sev_colors.get(risk, "white")

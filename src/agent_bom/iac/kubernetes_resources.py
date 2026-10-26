@@ -7,6 +7,7 @@ from typing import Any
 from agent_bom.iac.kubernetes_common import K8sDocument, K8sWorkload, pod_spec_line
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.yaml_lines import item_line, key_line, node_line
+from agent_bom.kubernetes.pod_security import PSA_ENFORCE_LABEL, psa_enforce_issue
 
 
 def k8s_024(d: K8sDocument) -> list[IaCFinding]:
@@ -30,6 +31,44 @@ def k8s_024(d: K8sDocument) -> list[IaCFinding]:
             )
         )
     return findings
+
+
+def k8s_037_038(d: K8sDocument) -> list[IaCFinding]:
+    """K8S-037: Namespace without a Pod Security enforce level; K8S-038: enforces privileged."""
+    metadata = d.doc.get("metadata", {}) or {}
+    labels = metadata.get("labels", {}) or {}
+    labels = labels if isinstance(labels, dict) else {}
+    issue = psa_enforce_issue(str(d.name), labels)
+    if issue is None:
+        return []
+    kind, message = issue
+    message = message.replace(" runs workloads but", "")
+    compliance = ["CIS-K8s-5.2.1", "NIST-CM-7"]
+    if kind == "missing":
+        return [
+            IaCFinding(
+                rule_id="K8S-037",
+                severity="medium",
+                title="Namespace has no Pod Security Admission enforce level",
+                message=message,
+                file_path=d.rel_path,
+                line_number=key_line(d.doc, "metadata", 1),
+                category="kubernetes",
+                compliance=compliance,
+            )
+        ]
+    return [
+        IaCFinding(
+            rule_id="K8S-038",
+            severity="medium",
+            title="Namespace enforces the privileged Pod Security level",
+            message=message,
+            file_path=d.rel_path,
+            line_number=key_line(labels, PSA_ENFORCE_LABEL, key_line(d.doc, "metadata", 1)),
+            category="kubernetes",
+            compliance=compliance,
+        )
+    ]
 
 
 def k8s_025(d: K8sDocument) -> list[IaCFinding]:

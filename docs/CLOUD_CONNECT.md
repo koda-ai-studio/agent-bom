@@ -500,8 +500,50 @@ retained for operator recovery. No detach or delete is attempted on that path. I
 execution's owned resources and warning codes before operator recovery; there is
 no automatic acknowledgement of a failed local unmount. Zero findings apply only
 to completed scan stages, never to a clean workload. The durable side-scan
-artifact contains lifecycle metadata and counts; it does not create a canonical
-package/CVE finding graph.
+lifecycle record itself holds metadata and counts only; packages and CVEs reach
+the graph through the scan record described next.
+
+### Side-scan coverage: packages and CVEs per VM, and machine images
+
+**Not read-only.** Every side-scan executor creates, attaches and deletes
+temporary snapshots/disks in the target account. It is opt-in
+(`AGENT_BOM_SIDESCAN=1`), needs the separate lifecycle role above, and never
+modifies the scanned disk or image. Image scanning reuses this same opt-in
+mechanism; it is not a read-only scan either.
+
+What a completed side-scan produces (identical across CLI `-f json`, REST, MCP
+and the scan report's `side_scan_results` section):
+
+- **Owning VM.** Read from the provider, never inferred from names: the AWS
+  volume attachment (plus the account from the snapshot's `OwnerId` and the
+  scan region), the Azure disk's `managed_by` VM, and the GCE disk's `users`
+  link resolved to the numeric instance id with a read-only `instances.get`.
+  A failed or empty lookup records no owner; packages then stay on the disk node.
+- **Packages and CVEs**, vulnerable packages first, capped at 500 packages per
+  disk with `packages_truncated` / `packages_omitted` stated explicitly. A
+  replayed execution carries durable counts only and is reported as truncated,
+  never as an empty disk.
+- **Graph.** The VM node is keyed exactly as cloud inventory keys it (EC2
+  instance, Azure VM ARM id, GCE instance), so `VM -> package -> CVE` lands on
+  the inventory node and component attack paths end at the CVE through the VM.
+  `POST /v1/cloud/side-scan` persists a completed scan as a tenant-scoped scan
+  job and graph snapshot (`graph.scan_id` in the response); each scanned disk or
+  image is its own replacement scope, so a rescan replaces that target only.
+  The MCP tool and CLI return the same record but do not write the API graph
+  store.
+
+| Provider | Disk | Machine image |
+|----------|------|---------------|
+| AWS | EBS volume (by volume or instance id) | AMI: temp volume from the AMI's root EBS snapshot; the AMI and its snapshot are never deleted or deregistered. Instance-store AMIs are refused. |
+| Azure | Managed Disk | **Not supported.** Creating a temp disk from a managed image (`Microsoft.Compute/images`) or a Compute Gallery image version is not implemented or proven; the CLI, API and MCP refuse it with that reason. Scan the managed disk of a VM built from the image. |
+| GCP | Persistent Disk | Image: temp disk created from `sourceImage` (no snapshot); the image is never modified. |
+
+An image record becomes an image node; instances that cloud inventory recorded
+as launched from that image (`image_id`) depend on it, so the image's CVEs
+reach those VMs' attack paths. Limits: AWS executes through the CLI only (the
+REST/MCP surfaces are Azure/GCP), one target per Azure/GCP execution, and no
+credentialed live smoke has run for any provider (`credentialed_smoke=false`).
+`agent-bom cloud side-scan-capabilities` reports `image_scan` per provider.
 
 ---
 

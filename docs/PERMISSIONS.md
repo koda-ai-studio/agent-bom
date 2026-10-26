@@ -19,7 +19,7 @@ agent-bom reads only what you explicitly ask it to scan:
 | Inventory | `--inventory` | Your inventory JSON file |
 | Lock files | inferred from project | `package-lock.json`, `requirements.txt`, `Cargo.lock`, etc. |
 | Docker images | `--image` | Image filesystem layers (via container inspection subprocess) |
-| Kubernetes | `--k8s` | Pod specs via `kubectl get pods -o json` (read-only) |
+| Kubernetes | `--k8s` | get/list on namespaces, pods, workloads (Deployment, StatefulSet, DaemonSet, ReplicaSet, Job, CronJob), service accounts and RBAC objects, via `kubectl` or the in-cluster API (read-only; Secrets are never listed) |
 | Terraform | `--tf-dir` | `.tf` source files (no state files, no `.tfvars`) |
 | GitHub Actions | `--gha` | `.github/workflows/*.yml` files; reports AI/credential use plus unpinned remote actions, `pull_request_target`, and missing top-level `permissions:` policies |
 | SBOM files | `--sbom` | CycloneDX JSON/XML or SPDX JSON/tag-value you provide |
