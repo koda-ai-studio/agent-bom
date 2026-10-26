@@ -1,7 +1,6 @@
 """Tests for the auto-discovery module — risk inference, justification, and enrichment filtering."""
 
 import asyncio
-import time
 
 from agent_bom.autodiscover import (
     enrich_unknown_packages,
@@ -185,7 +184,8 @@ def test_enrich_unknown_packages_global_timeout(monkeypatch):
     """Metadata enrichment should return promptly when the whole batch times out."""
 
     async def _slow_autodiscover(*_args, **_kwargs):
-        await asyncio.sleep(0.1)
+        # Never completes on its own: only the global timeout can end the batch.
+        await asyncio.Event().wait()
         return {"auto_risk_level": "low", "auto_risk_justification": "slow"}
 
     monkeypatch.setattr("agent_bom.autodiscover.autodiscover_package", _slow_autodiscover)
@@ -199,14 +199,12 @@ def test_enrich_unknown_packages_global_timeout(monkeypatch):
         for idx in range(3)
     ]
 
-    started = time.monotonic()
-    enriched = asyncio.run(enrich_unknown_packages(packages, global_timeout=0.01))
-    elapsed = time.monotonic() - started
+    async def _bounded() -> int:
+        # The outer bound only stops a regression from hanging the suite; reaching
+        # it means the 10 ms global timeout never fired.
+        return await asyncio.wait_for(enrich_unknown_packages(packages, global_timeout=0.01), timeout=30)
 
-    # Timeout correctness is proven by the behavioral asserts: if the 10ms
-    # global_timeout had NOT fired, the 0.1s autodiscover would have completed and
-    # enriched all 3 packages. The wall-clock check is only a generous hang-guard
-    # (not a latency SLA) so it can't flake under asyncio-cleanup load on slow CI.
+    enriched = asyncio.run(_bounded())
+
     assert enriched == 0
-    assert elapsed < 2.0
     assert all(pkg.auto_risk_level is None for pkg in packages)

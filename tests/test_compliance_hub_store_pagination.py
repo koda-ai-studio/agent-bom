@@ -307,31 +307,44 @@ def test_sqlite_effective_reach_sort_uses_index(tmp_path) -> None:
 
 
 _SCALE_ROWS = 10_000
-_SCALE_LIMIT1_BUDGET_S = 0.25
+
+
+def _limit1_vm_steps(tmp_path, rows: int) -> tuple[int, SQLiteComplianceHubStore, str]:
+    """SQLite VM instructions spent on one ``limit=1`` page read: a work count, not a clock."""
+    store = SQLiteComplianceHubStore(str(tmp_path / f"scale-{rows}.db"))
+    tenant = f"tenant-scale-{rows}"
+    chunk = 2000
+    for start in range(0, rows, chunk):
+        store.add(tenant, [_finding(i) for i in range(start, min(start + chunk, rows))])
+    steps = 0
+
+    def count() -> int:
+        nonlocal steps
+        steps += 1
+        return 0
+
+    store._conn.set_progress_handler(count, 1)  # noqa: SLF001 - counting the read's VM work in-test
+    try:
+        rows_read, total = store.list_page(tenant, limit=1, offset=0, sort="effective_reach", include_total=False)
+    finally:
+        store._conn.set_progress_handler(None, 0)  # noqa: SLF001
+    assert len(rows_read) == 1
+    assert total is None
+    return steps, store, tenant
 
 
 def test_sqlite_list_page_limit1_stays_fast_at_10k(tmp_path) -> None:
-    """Regression: limit=1 must not scan/sort the full tenant (#3511)."""
-    import time
+    """Regression: limit=1 must not scan/sort the full tenant (#3511).
 
-    store = SQLiteComplianceHubStore(str(tmp_path / "scale.db"))
-    tenant = "tenant-scale-10k"
-    chunk = 2000
-    for start in range(0, _SCALE_ROWS, chunk):
-        store.add(tenant, [_finding(i) for i in range(start, min(start + chunk, _SCALE_ROWS))])
+    An index-backed read does the same work at 10k rows as at 1.25k; a scan or
+    a temp-tree sort grows with the table.
+    """
+    small_steps, _small, _tenant = _limit1_vm_steps(tmp_path, _SCALE_ROWS // 8)
+    large_steps, store, tenant = _limit1_vm_steps(tmp_path, _SCALE_ROWS)
 
-    # The index-backed plan is asserted deterministically by the EXPLAIN test
-    # above; here we time only the page read (no O(table) COUNT) with a generous
-    # ceiling so it can't flake under parallel CI load.
-    started = time.perf_counter()
-    rows, total = store.list_page(tenant, limit=1, offset=0, sort="effective_reach", include_total=False)
-    elapsed = time.perf_counter() - started
-
-    assert len(rows) == 1
-    assert total is None
     _, exact_total = store.list_page(tenant, limit=1, offset=0, sort="effective_reach")
     assert exact_total == _SCALE_ROWS
-    assert elapsed < _SCALE_LIMIT1_BUDGET_S, f"limit=1 index read took {elapsed:.3f}s at {_SCALE_ROWS} rows"
+    assert 0 < large_steps <= 2 * small_steps, f"limit=1 read took {large_steps} VM steps at {_SCALE_ROWS} rows vs {small_steps}"
 
 
 @pytest.mark.slow

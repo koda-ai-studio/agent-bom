@@ -81,6 +81,7 @@ def graph_evidence_sections(report: AIBOMReport) -> dict[str, Any]:
     _append_side_findings(findings, report)
     sections: dict[str, Any] = {
         "scan_id": report.scan_id,
+        "generated_at": report.generated_at.isoformat(),
         "scan_sources": report.scan_sources,
         "codeowners": dict(report.codeowners) if isinstance(report.codeowners, dict) else list(report.codeowners),
         "agents": agents_json(report),

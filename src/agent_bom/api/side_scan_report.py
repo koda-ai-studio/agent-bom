@@ -20,6 +20,7 @@ from agent_bom.api.pipeline import _now, _persist_graph_snapshot
 from agent_bom.api.stores import _get_store, _jobs_put
 from agent_bom.cloud.side_scan_inventory import side_scan_record
 from agent_bom.models import AIBOMReport
+from agent_bom.security import sanitize_error, sanitize_text
 from agent_bom.output import to_json
 
 logger = logging.getLogger(__name__)
@@ -65,8 +66,8 @@ def persist_side_scan_graph(*, tenant_id: str, execution_id: str, records: list[
         _get_store().put(job)
         _jobs_put(job.job_id, job, compact_terminal=True)
         _persist_graph_snapshot(job, report_json)
-    except Exception:  # noqa: BLE001 — the scan result stays readable; the graph gap is reported
-        logger.exception("side-scan graph persistence failed")
+    except Exception as exc:  # noqa: BLE001 — the scan result stays readable; the graph gap is reported
+        logger.error("side-scan graph persistence failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
         return {"status": "failed", "scan_id": scan_id}
     persisted = (job.result or {}).get("graph_persistence") if isinstance(job.result, dict) else None
     status = persisted.get("status", "persisted") if isinstance(persisted, dict) else "persisted"

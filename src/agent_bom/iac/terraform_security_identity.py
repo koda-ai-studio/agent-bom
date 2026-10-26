@@ -5,15 +5,16 @@ from __future__ import annotations
 import re
 
 from agent_bom.iac.models import IaCFinding
-from agent_bom.iac.terraform_security_common import TfResource
+from agent_bom.iac.terraform_security_common import TfResource, provider_compliance
 
 _CLOUDWATCH_LOG_RE = re.compile(
     r"(?:enabled_cloudwatch_logs_exports|logging\s*\{|aws_cloudwatch_log_group)",
     re.IGNORECASE,
 )
+# GCP ``metadata`` carries keys as ``ssh-keys = "user:ssh-rsa ..."``.
 _SSH_KEY_INLINE_RE = re.compile(
-    r"(?:public_key|private_key|ssh_key|key_material)\s*=\s*"
-    r'"(ssh-rsa\s|ssh-ed25519\s|-----BEGIN)',
+    r'(?:public_key|private_key|ssh_key|key_material|(?<![\w-])"?ssh-keys"?)\s*=\s*'
+    r'"(?:[\w.-]+:)?(ssh-rsa\s|ssh-ed25519\s|-----BEGIN)',
     re.IGNORECASE,
 )
 
@@ -184,7 +185,7 @@ def tf_sec_007(res: TfResource) -> list[IaCFinding]:
                 file_path=rel_path,
                 line_number=block_start_line,
                 category="terraform",
-                compliance=["CIS-AWS-1.14", "NIST-IA-5"],
+                compliance=provider_compliance(rtype, aws=("CIS-AWS-1.14",), neutral=("NIST-IA-5",)),
             )
         )
     return findings

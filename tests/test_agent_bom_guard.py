@@ -7,7 +7,6 @@ import json
 import shutil
 import subprocess
 import sys
-import time
 import urllib.request
 from pathlib import Path
 
@@ -458,44 +457,75 @@ def test_plugin_folder_has_no_launchers_or_installs_in_the_hook_scripts():
             assert forbidden not in text, (path.name, forbidden)
 
 
-def test_decide_offline_is_fast():
+def test_decide_offline_does_bounded_local_work(monkeypatch):
+    """Offline decisions never reach OSV or the network, and the typosquat scan prunes.
+
+    The expensive full similarity ratio runs only on candidates that survive the
+    cheap length and quick-ratio filters, not across the whole popular list.
+    """
+
+    def no_network(*_args, **_kwargs):
+        raise AssertionError("offline decision opened a network connection")
+
+    monkeypatch.setattr(urllib.request, "urlopen", no_network)
+    full_ratios = 0
+
+    class CountingMatcher(guard.SequenceMatcher):
+        def ratio(self):
+            nonlocal full_ratios
+            full_ratios += 1
+            return super().ratio()
+
+    monkeypatch.setattr(guard, "SequenceMatcher", CountingMatcher)
+    osv = FakeOSV()
     commands = ["pip install reqeusts", "cd web && npm install axios@1.7.2 lodash", "ls -la"]
-    for command in commands:
-        _decide(command, osv_lookup="false")
-    started = time.perf_counter()
-    for _ in range(20):
-        for command in commands:
-            _decide(command, osv_lookup="false")
-    assert (time.perf_counter() - started) / (20 * len(commands)) < 0.15
+    decisions = [_decision(_decide(command, osv=osv, osv_lookup="false")) for command in commands]
+
+    assert decisions == ["deny", None, None]
+    assert osv.queries == []
+    assert full_ratios <= 3
 
 
-def _run(command, **env):
-    event = json.dumps(_event(command))
-    started = time.monotonic()
+# Runs the hook as __main__ and reports, on stderr, any socket audit event and
+# whether the network stack was imported (the hook defers it to OSV lookups).
+_OFFLINE_PROBE = """
+import json, runpy, sys
+events = []
+sys.addaudithook(lambda event, _args: events.append(event) if event.startswith("socket.") else None)
+try:
+    runpy.run_path(sys.argv[1], run_name="__main__")
+except SystemExit:
+    pass
+heavy = [name for name in ("urllib.request", "http.client", "ssl") if name in sys.modules]
+sys.stderr.write(json.dumps({"network": sorted(set(events)), "heavy": heavy}))
+"""
+
+
+def _run_offline_probe(command, **env):
     proc = subprocess.run(
-        [_HOOK_PYTHON, "-I", str(SCRIPT)],
-        input=event,
+        [_HOOK_PYTHON, "-I", "-c", _OFFLINE_PROBE, str(SCRIPT)],
+        input=json.dumps(_event(command)),
         capture_output=True,
         text=True,
         env={"PATH": "/usr/bin:/bin", **env},
         timeout=20,
     )
-    return proc, time.monotonic() - started
+    return proc, json.loads(proc.stderr)
 
 
-def test_script_end_to_end_is_fast_offline():
-    proc, elapsed = _run("ls -la")
+def test_script_end_to_end_offline_stays_off_the_network():
+    proc, probe = _run_offline_probe("ls -la")
     assert proc.returncode == 0 and proc.stdout == ""
-    assert elapsed < 1.5
-    proc, elapsed = _run("pip install reqeusts", CLAUDE_PLUGIN_OPTION_OSV_LOOKUP="false")
-    assert proc.returncode == 0, proc.stderr
+    assert probe == {"network": [], "heavy": []}
+    proc, probe = _run_offline_probe("pip install reqeusts", CLAUDE_PLUGIN_OPTION_OSV_LOOKUP="false")
+    assert proc.returncode == 0
     assert json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
-    assert elapsed < 1.5
+    assert probe == {"network": [], "heavy": []}
 
 
 def test_script_runs_on_the_system_python3():
     # /usr/bin/python3 is what the hook's bare `python3` resolves to on a stock Mac (3.9).
-    proc, _ = _run("npm install expres", CLAUDE_PLUGIN_OPTION_OSV_LOOKUP="false")
+    proc, _probe = _run_offline_probe("npm install expres", CLAUDE_PLUGIN_OPTION_OSV_LOOKUP="false")
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
 

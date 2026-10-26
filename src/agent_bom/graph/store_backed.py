@@ -49,7 +49,6 @@ from collections import OrderedDict
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, Optional
 
-from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.graph.analysis import GraphAnalysisStatus
 from agent_bom.graph.build_workspace import (
     WorkspaceBackend,
@@ -64,6 +63,8 @@ from agent_bom.graph.container import GraphCompleteness, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
 from agent_bom.graph.edge_evidence import merge_edge_provenance, normalize_edge_evidence
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.node_merge import merge_node
+from agent_bom.graph.recorded_time import stamp_edge, stamp_node
 from agent_bom.graph.rekey import normalized_rekey_mapping, rekey_path_references
 from agent_bom.graph.relationship_contract import ContractRejections
 from agent_bom.graph.types import EntityType
@@ -251,6 +252,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         self.scan_id = scan_id
         self.tenant_id = tenant_id
         self.created_at = created_at or _now_iso()
+        self.observed_at = ""
         # Mirrored like every other graph-level field: this subclass skips the
         # dataclass __init__, so a default the base class declares only exists
         # here if it is repeated. `stats()` and the view derivations read it.
@@ -387,9 +389,10 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
     # ── Mutation (store-backed overrides) ────────────────────────────────────
 
     def add_node(self, node: UnifiedNode) -> None:
+        stamp_node(node, self.observed_at or self.created_at)
         existing = self._resolve_node(node.id)
         if existing is not None:
-            _merge_node(existing, node)
+            merge_node(existing, node)
             self._mark_dirty(node.id)
             return
         # New node: insert immediately so ``seq`` fixes insertion order (matching
@@ -411,6 +414,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
     def add_edge(self, edge: UnifiedEdge) -> None:
         # Entity-pair checks need endpoint types, which cost a store read per
         # edge here; ``audit_graph_contract`` checks pairs once after the build.
+        stamp_edge(edge, self.observed_at or self.created_at)
         normalize_edge_evidence(edge.evidence, edge.provenance)
         key = _edge_key(edge)
         existing_payload = self._backend.get_edge_payload(self._tenant, key)
@@ -507,26 +511,6 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
 
     __eq__ = object.__eq__
     __hash__ = object.__hash__
-
-
-def _merge_node(existing: UnifiedNode, incoming: UnifiedNode) -> None:
-    """In-place merge-union mirroring :meth:`UnifiedGraph.add_node` exactly."""
-    existing.last_seen = incoming.last_seen or _now_iso()
-    existing.merge_attributes_and_risk(incoming)
-    if SEVERITY_RANK.get(incoming.severity, 0) > SEVERITY_RANK.get(existing.severity, 0):
-        existing.severity = incoming.severity
-        existing.severity_id = incoming.severity_id
-    existing_sources = set(existing.data_sources)
-    for ds in incoming.data_sources:
-        if ds not in existing_sources:
-            existing.data_sources.append(ds)
-            existing_sources.add(ds)
-    existing_tags = set(existing.compliance_tags)
-    for tag in incoming.compliance_tags:
-        if tag not in existing_tags:
-            existing.compliance_tags.append(tag)
-            existing_tags.add(tag)
-    existing.dimensions = existing.dimensions.merge(incoming.dimensions)
 
 
 def open_store_backed_unified_graph(

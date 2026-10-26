@@ -131,6 +131,8 @@ class UnifiedNode:
     _recorded_canonical_id: str = field(default="", repr=False, compare=False)
     # Inputs of a stored row's legacy id, hashed only if the id is read.
     _legacy_identity: tuple[str, ...] = field(default=(), repr=False, compare=False)
+    # Time fields filled from the clock; a graph resolves them to its recorded time.
+    _clock_defaulted: tuple[str, ...] = field(default=(), repr=False, compare=False)
 
     def __post_init__(self) -> None:
         et_val = self.entity_type.value if isinstance(self.entity_type, EntityType) else self.entity_type
@@ -143,8 +145,11 @@ class UnifiedNode:
             self.type_uid = self.class_uid * 100 + 1
         if self.severity and self.severity_id == OCSFSeverity.UNKNOWN:
             self.severity_id = SEVERITY_TO_OCSF.get(self.severity.lower(), OCSFSeverity.UNKNOWN)
-        if not self.first_seen:
+        if not self.first_seen and self.last_seen:
+            self.first_seen = self.last_seen
+        elif not self.first_seen:
             self.first_seen = _now_iso()
+            self._clock_defaulted = ("first_seen", "last_seen")
         if not self.last_seen:
             self.last_seen = self.first_seen
         assessment = self.attributes.get("risk_assessment")

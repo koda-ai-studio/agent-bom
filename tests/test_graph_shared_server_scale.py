@@ -57,21 +57,33 @@ def test_single_agent_server_has_no_share_attributes() -> None:
     assert "shared_agent_count" not in _shared_server(graph).attributes
 
 
+def _timed_build(agent_count: int, runs: int):
+    samples = []
+    for _ in range(runs):
+        report = _report(agent_count)
+        started = time.perf_counter()
+        graph = build_unified_graph_from_report(report, scan_id="s", tenant_id="default")
+        samples.append(time.perf_counter() - started)
+    return graph, min(samples)
+
+
 def test_large_share_group_is_linear_and_counted_on_server() -> None:
     k = 2_000
-    started = time.perf_counter()
-    graph = build_unified_graph_from_report(_report(k), scan_id="s", tenant_id="default")
-    elapsed = time.perf_counter() - started
+    _small, small_elapsed = _timed_build(k // 16, runs=3)
+    graph, elapsed = _timed_build(k, runs=2)
 
     assert _shares(graph) == []
     server = _shared_server(graph)
     assert server.attributes["shared_agent_count"] == k
     assert server.attributes["shares_server_pairwise"] is False
+    assert len(server.attributes["agents"]) == k
     uses = [e for e in graph.edges if e.relationship == RelationshipType.USES and e.target == server.id]
     assert len(uses) == k
     # O(k): a handful of edges per agent (uses, tool, ...), never k^2/2 (~2M).
     assert len(graph.edges) <= 10 * k
-    assert elapsed < 20.0
+    # 16x the agents must cost about 16x the time. A per-agent pass over every
+    # agent already sharing the server is k^2 and measured about 42x here.
+    assert elapsed / small_elapsed < 28, f"16x agents took {elapsed / small_elapsed:.1f}x as long"
 
 
 def test_cap_boundary() -> None:

@@ -52,11 +52,10 @@ ECOSYSTEM_MAP = {
     # OS package ecosystems are distro-versioned in OSV, so query_osv_batch
     # resolves them dynamically from package distro metadata rather than using
     # these flat placeholders directly.
+    # RPM has no flat placeholder: OSV "Linux" is the upstream kernel feed, not
+    # a cross-distro RPM ecosystem, so rpm resolves only through its distro.
     "deb": "Debian",
     "apk": "Alpine",
-    # RPM covers RHEL, CentOS, Fedora, Rocky, Alma — OSV "Linux" is the
-    # cross-distro ecosystem that matches all RPM-based advisories.
-    "rpm": "Linux",
 }
 
 _DEBIAN_OSV_FALLBACKS = ("Debian:11", "Debian:12", "Debian:13", "Debian:14")
@@ -99,12 +98,9 @@ def _resolve_osv_ecosystems(pkg: Package, *, for_local_db: bool) -> list[str]:
         return list(_ALPINE_OSV_FALLBACKS)
 
     if eco_key == "rpm":
-        # RHEL/CentOS, Rocky, AlmaLinux and openSUSE Leap advisories are carried
-        # by the OSV bulk export under distro-specific ecosystems. Fall back to
-        # the cross-distro "Linux" ecosystem only when the distro is unresolved.
-        distro = rpm_advisory_ecosystems(pkg.distro_name, pkg.distro_version, for_local_db=for_local_db)
-        if distro:
-            return distro
+        # Only distros with a supported feed resolve; anything else matches
+        # nothing and is reported by the coverage check as source-unavailable.
+        return rpm_advisory_ecosystems(pkg.distro_name, pkg.distro_version, for_local_db=for_local_db)
 
     osv_ecosystem = ECOSYSTEM_MAP.get(eco_key)
     return [osv_ecosystem] if osv_ecosystem else []

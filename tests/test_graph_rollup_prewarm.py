@@ -110,24 +110,25 @@ def test_prewarm_entries_outlive_the_request_cache_window(store, monkeypatch) ->
 
 
 def test_scheduling_returns_at_once_and_coalesces_while_a_warm_up_runs(monkeypatch) -> None:
-    started, release = threading.Event(), threading.Event()
+    started, release, finished = threading.Event(), threading.Event(), threading.Event()
     runs: list[str] = []
 
     def slow_prewarm(_store, *, tenant_id: str) -> int:
         runs.append(tenant_id)
         started.set()
         release.wait(5)
+        finished.set()
         return 0
 
     monkeypatch.setattr(graph_rollup_prewarm, "prewarm_rollup", slow_prewarm)
     monkeypatch.delenv("AGENT_BOM_GRAPH_ROLLUP_PREWARM", raising=False)
 
-    begin = time.monotonic()
     graph_rollup_prewarm.schedule_rollup_prewarm(lambda: object(), tenant_id="tenant-a")
     assert started.wait(5)
     for _ in range(5):
         graph_rollup_prewarm.schedule_rollup_prewarm(lambda: object(), tenant_id="tenant-a")
-    assert time.monotonic() - begin < 1.0
+    # Scheduling returned while the warm-up is still held open: it never waited on it.
+    assert not finished.is_set()
     release.set()
     assert graph_rollup_prewarm.wait_idle(5)
     # The first run plus at most one coalesced re-run for the repeat commits.

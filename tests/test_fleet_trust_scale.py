@@ -23,6 +23,9 @@ def seeded_fleet(monkeypatch: pytest.MonkeyPatch, tmp_path):
     from agent_bom.demo_estate.showcase_graph import SHOWCASE_TENANT, seed_showcase_fleet_and_runtime
 
     api_stores._store = None
+    # The fleet store is process-global: start from an empty one so agents an
+    # earlier test left in the demo tenant are not counted as seeded.
+    monkeypatch.setattr(api_stores, "_fleet_store", None)
     seed_showcase_fleet_and_runtime(tenant_id=SHOWCASE_TENANT)
     return _get_fleet_store().list_by_tenant(SHOWCASE_TENANT)
 
