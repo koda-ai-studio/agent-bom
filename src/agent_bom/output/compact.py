@@ -725,9 +725,12 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
     for finding, occurrence_count, assets in grouped[:limit]:
         category = finding.finding_type.value
         occurrences = f" [dim]× {occurrence_count} occurrences[/dim]" if occurrence_count > 1 else ""
-        console.print(
-            f"  {_finding_sev_badge(finding)} [dim]{escape(category)}[/dim] [bold]{escape(finding.title or '')}[/bold]{occurrences}"
-        )
+        # The line below carries the route, so the title drops it and is cut to one row.
+        route = str((finding.evidence or {}).get("route") or "")
+        title = (finding.title or "").removesuffix(f": {route}") if route else finding.title or ""
+        title_room = max(24, console.width - len(category) - 14 - (len(occurrences) - 11 if occurrences else 0))
+        shown_title = _compact_detail(title, limit=title_room)
+        console.print(f"  {_finding_sev_badge(finding)} [dim]{escape(category)}[/dim] [bold]{escape(shown_title)}[/bold]{occurrences}")
         chain_parts: list[str] = []
         if occurrence_count > 1:
             shown_assets = ", ".join(assets[:3])
@@ -740,7 +743,8 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
             chain_parts.append(escape(", ".join(finding.affected_servers[:3])))
         if finding.exposed_credentials:
             chain_parts.append(f"[yellow]{escape(', '.join(finding.exposed_credentials[:3]))}[/yellow]")
-        evidence_line = " → ".join(chain_parts) or escape(_compact_detail(finding.description or "", limit=110))
+        detail = route or _compact_detail(finding.description or "", limit=max(40, console.width - 8))
+        evidence_line = " → ".join(chain_parts) or escape(detail)
         if evidence_line:
             console.print(f"      [dim]{evidence_line}[/dim]")
     if len(grouped) > limit:

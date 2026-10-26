@@ -15,6 +15,7 @@ from importlib import resources
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from agent_bom.core.severity import severity_worst_first_rank
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
 from agent_bom.models import Agent, MCPServer
 from agent_bom.security import sanitize_command_args, sanitize_sensitive_payload, sanitize_text
@@ -451,5 +452,4 @@ def blocked_server_remediations(agents: list[Agent], blocklist: dict[str, Any] |
                         "action": f"Remove or disable the MCP server '{server.name}' from {agent.name}; it matches {match.title}.",
                     }
                 )
-    rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    return sorted(rows, key=lambda row: (rank.get(str(row["severity"]).lower(), 4), row["agent"], row["server"]))
+    return sorted(rows, key=lambda row: (severity_worst_first_rank(str(row["severity"])), row["agent"], row["server"]))

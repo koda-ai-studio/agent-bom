@@ -41,4 +41,35 @@ def test_credential_reach_title_counts_additional_routes() -> None:
     )
     title = _reach_findings(report)[0].title
     assert title.startswith("AI agent can reach a credential or privileged tool: cursor → github → GITHUB_TOKEN")
-    assert title.endswith("(+ slack → SLACK_BOT_TOKEN)")
+    assert title.endswith(" (+1 more)")
+
+
+def test_compact_console_keeps_long_finding_titles_on_one_line() -> None:
+    from io import StringIO
+
+    from rich.console import Console
+
+    import agent_bom.output as output
+    from agent_bom.output import compact
+
+    report = _report()
+    for name in ("slack", "jira", "linear"):
+        report.agents[0].mcp_servers.append(
+            MCPServer(name=f"{name}-server-with-a-long-name", command="npx", args=["-y", name], env={f"{name.upper()}_TOKEN": "x"})
+        )
+    _reach_findings(report)
+    buf = StringIO()
+    console = Console(file=buf, width=80, force_terminal=False)
+    original = output.console
+    output.console = console
+    try:
+        compact.print_compact_graph_findings(report)
+    finally:
+        output.console = original
+    lines = buf.getvalue().splitlines()
+    title_rows = [i for i, line in enumerate(lines) if "COMBINATION" in line]
+    assert title_rows, buf.getvalue()
+    # A wrapped title spills onto an unindented line; the evidence line under it is indented.
+    assert all(lines[i + 1].startswith("      ") for i in title_rows), buf.getvalue()
+    # The route the title had to cut is the line under it.
+    assert any("cursor → github → GITHUB_TOKEN" in lines[i + 1] for i in title_rows), buf.getvalue()

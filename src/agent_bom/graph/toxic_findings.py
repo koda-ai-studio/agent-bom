@@ -613,6 +613,7 @@ def _finding_from_match(graph: UnifiedGraph, rule: ToxicRule, match: ToxicMatch)
         "mitre_attack": list(rule.mitre),
         "detail": match.detail or rule.description,
         "source": _GRAPH_SOURCE,
+        **({"route": match.subject} if match.subject else {}),
     }
     entry = match.entry
     entry_type = _entity_type_of(graph, entry.id)

@@ -113,15 +113,14 @@ def test_mcp_inventory_demo_shows_bundled_inventory() -> None:
     assert {"cursor", "claude-desktop"} <= names
 
 
-def test_check_no_version_warns_loudly_on_stderr() -> None:
-    """A version-less `check` must surface a loud NOT-scanned warning, not a
-    silent skip on stdout that reads like a clean result."""
+def test_check_no_version_never_reads_as_clean() -> None:
+    """A version-less `check` that cannot pick a trustworthy target fails loudly
+    on stderr instead of printing a result that reads as clean."""
     result = CliRunner().invoke(main, ["check", "requests"])
     assert result.exit_code == 2
-    # Click 8.2+ captures stderr separately; the warning must be there.
+    # Click 8.2+ captures stderr separately; the explanation must be there.
     assert result.stdout == ""
-    assert "WARNING" in result.stderr
-    assert "NOT scanned" in result.stderr
+    assert "--ecosystem" in result.stderr
 
 
 def test_resolve_output_path_accepts_short_form_extensions(capsys) -> None:

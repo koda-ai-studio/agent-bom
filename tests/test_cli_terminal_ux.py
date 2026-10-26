@@ -11,7 +11,7 @@ from rich.console import Console
 from agent_bom.cli._terminal_sections import print_collapsed_warnings, print_scan_next_steps
 from agent_bom.cli.agents._cloud import run_cloud_discovery
 from agent_bom.cli.agents._context import ScanContext
-from agent_bom.models import AIBOMReport
+from agent_bom.models import Agent, AgentType, AIBOMReport
 
 
 def test_collapsed_warnings_default_shows_count_hint():
@@ -89,10 +89,14 @@ def test_quiet_discovery_suppresses_success_lines(monkeypatch):
     assert buf.getvalue() == ""
 
 
+def _configured_agent(name: str) -> Agent:
+    return Agent(name=name, agent_type=AgentType.CUSTOM, config_path=f"{name}.json")
+
+
 def test_scan_next_steps_footer():
     buf = StringIO()
     con = Console(file=buf, force_terminal=False, width=120)
-    report = AIBOMReport(agents=[object(), object()])  # type: ignore[list-item]
+    report = AIBOMReport(agents=[_configured_agent("a"), _configured_agent("b")])
     report.cis_benchmark_data = {"checks": [{"check_id": "1.1", "status": "fail"}]}
     print_scan_next_steps(con, report, quiet=False)
     out = buf.getvalue()
@@ -109,7 +113,7 @@ def test_scan_next_steps_echo_the_scan_target():
     """After `scan --demo --offline`, the hints rerun the demo, not `scan .` over the working directory."""
     buf = StringIO()
     con = Console(file=buf, force_terminal=False, width=120)
-    report = AIBOMReport(agents=[object()])  # type: ignore[list-item]
+    report = AIBOMReport(agents=[_configured_agent("a")])
     print_scan_next_steps(con, report, quiet=False, target="--demo --offline")
     out = buf.getvalue()
     assert "agent-bom scan --demo --offline -f graph-html -o agent-bom-graph.html" in out

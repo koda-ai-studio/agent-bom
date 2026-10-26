@@ -9,7 +9,8 @@ This matrix walks every Next.js page that imports `ApiOfflineState` and
 asserts:
 
 1. The page imports `ApiAuthError` and/or `ApiForbiddenError` from
-   `@/lib/api-errors` so it can classify thrown errors.
+   `@/lib/api-errors`, or the shared `classifyApiOfflineKind` from
+   `@/lib/api-offline-kind`, so it can classify thrown errors.
 2. The page passes `kind={...}` to `ApiOfflineState` (not just `title` /
    `detail`), so the splash gets the right copy on 401/403.
 
@@ -32,7 +33,9 @@ UI_APP = ROOT / "ui" / "app"
 
 _OFFLINE_STATE_IMPORT = re.compile(r"from\s+['\"]@/components/api-offline-state['\"]")
 _KIND_PROP = re.compile(r"<ApiOfflineState[^/>]*\bkind\s*=", re.DOTALL)
-_API_ERRORS_IMPORT = re.compile(r"from\s+['\"]@/lib/api-errors['\"]")
+_API_ERRORS_IMPORT = re.compile(
+    r"from\s+['\"]@/lib/api-errors['\"]|import\s*\{[^}]*\bclassifyApiOfflineKind\b[^}]*\}\s*from\s+['\"]@/lib/api-offline-kind['\"]"
+)
 
 
 def _ui_pages_using_offline_state() -> list[Path]:
@@ -68,7 +71,8 @@ def test_every_page_using_offline_state_classifies_error_kind() -> None:
         if not _API_ERRORS_IMPORT.search(text):
             failures.append(
                 f"{rel}: imports `ApiOfflineState` but not `ApiAuthError` / "
-                "`ApiForbiddenError` from `@/lib/api-errors`. Pages that mount "
+                "`ApiForbiddenError` from `@/lib/api-errors` (or `classifyApiOfflineKind` "
+                "from `@/lib/api-offline-kind`). Pages that mount "
                 "the splash must classify thrown errors so 401/403 doesn't "
                 "show as 'Cannot connect to the agent-bom API'."
             )

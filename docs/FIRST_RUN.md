@@ -93,7 +93,8 @@ ANALYZE | Critical Details
   Fix: upgrade to ≥ 0.0.247
   Blast: langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY, OPENAI_API_KEY
 ANALYZE | Graph & Policy Findings (36 occurrences)
-   CRIT  COMBINATION AI agent can reach a credential or privileged tool: langchain-service
+   CRIT  COMBINATION AI agent can reach a credential or privileged tool
+      langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY (+3 more)
    HIGH  PROMPT_SECURITY No verified agent identity observed in MCP configuration
    MED   PROMPT_SECURITY Long-lived static credential on MCP server
 ```
