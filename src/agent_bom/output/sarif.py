@@ -33,6 +33,7 @@ from agent_bom.output.finding_views import (
 )
 from agent_bom.output.json_writer import write_json_file
 from agent_bom.output.possibly_affected import add_sarif_results as add_possibly_affected_sarif
+from agent_bom.output.sarif_iac import iac_rule, iac_rule_id, iac_shared_compliance
 from agent_bom.output.sarif_taxonomy import (
     _FRAMEWORK_TAXONOMY_META,  # noqa: F401
     _attach_cwe_taxonomy,
@@ -888,45 +889,21 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
         catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence))
 
 
-def _iac_rule(iac_finding: dict[str, Any], rule_id: str, level: str, security_severity: str) -> dict[str, Any]:
-    description = sanitize_advisory_text(
-        "description",
-        iac_finding.get("message"),
-        fallback=sanitize_advisory_text("title", iac_finding.get("title", rule_id), fallback=rule_id),
-    )
-    iac_rule: dict[str, Any] = {
-        "id": rule_id,
-        "shortDescription": {"text": sanitize_advisory_text("title", iac_finding.get("title", rule_id), fallback=rule_id)},
-        "fullDescription": {"text": description},
-        "defaultConfiguration": {"level": level},
-        "properties": {
-            "security-severity": security_severity,
-            "category": iac_finding.get("category", "iac"),
-            "compliance": iac_finding.get("compliance", []),
-        },
-    }
-    help_body = advisory_help(
-        description,
-        remediation=sanitize_advisory_text("recommendation", iac_finding.get("remediation")),
-    )
-    if help_body:
-        iac_rule["help"] = help_body
-    return iac_rule
-
-
 def _add_iac_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
     """IaC misconfiguration findings (Dockerfile, K8s, Terraform, CloudFormation)."""
     iac_data = getattr(report, "iac_findings_data", None)
     if not iac_data:
         return
-    for iac_finding in iac_data.get("findings", []):
+    findings = iac_data.get("findings", [])
+    shared_compliance = iac_shared_compliance(findings)
+    for iac_finding in findings:
         sev = iac_finding.get("severity", "medium").lower()
-        rule_id = f"iac/{iac_finding.get('rule_id', 'unknown')}"
+        rule_id = iac_rule_id(iac_finding)
         level, security_severity = _sarif_severity(sev)
         file_path = _to_relative_path(iac_finding.get("file_path", "unknown") or "unknown")
         line_num = iac_finding.get("line_number") or 1
         if catalog.claim_rule(rule_id):
-            catalog.rules.append(_iac_rule(iac_finding, rule_id, level, security_severity))
+            catalog.rules.append(iac_rule(iac_finding, rule_id, level, security_severity, shared_compliance[rule_id]))
 
         fp_input = f"{rule_id}:{file_path}:{line_num}"
         catalog.results.append(
@@ -943,6 +920,7 @@ def _add_iac_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
                 },
                 **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=file_path, start_line=line_num),
                 "locations": [_sarif_location(file_path, line_num)],
+                "properties": {"compliance": list(iac_finding.get("compliance") or [])},
             }
         )
 

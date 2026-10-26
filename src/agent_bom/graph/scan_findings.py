@@ -23,10 +23,12 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.cloud.gpu_posture import attach_gpu_posture_findings
 from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.coverage import GRAPH_GAP_REASON
 from agent_bom.graph.analysis import GraphAnalysisState
 from agent_bom.graph.credential_findings import project_credential_findings
+from agent_bom.parsers.oci_model_artifacts import attach_image_model_findings
 
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
@@ -242,8 +244,12 @@ def surface_graph_derived_findings(
     :func:`agent_bom.output.graph_evidence.graph_evidence_sections`), not the
     full serialized report. The input and graph are released when this returns;
     ``None`` when the graph build fails.
-    Best-effort: failures are logged and swallowed.
+    Best-effort: failures are logged and swallowed. GPU posture and image
+    model findings are inventory-derived, so they are attached first and reach
+    the graph as finding rows.
     """
+    attach_gpu_posture_findings(report)
+    attach_image_model_findings(report)
     try:
         from agent_bom.graph.builder import build_unified_graph_from_report
         from agent_bom.output.graph_evidence import graph_evidence_sections

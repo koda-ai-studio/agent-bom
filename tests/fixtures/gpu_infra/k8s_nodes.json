@@ -1,0 +1,30 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "metadata": {
+        "name": "ip-10-0-1-20.ec2.internal",
+        "labels": {
+          "eks.amazonaws.com/nodegroup": "gpu-a10g",
+          "node.kubernetes.io/instance-type": "g5.2xlarge",
+          "nvidia.com/gpu.product": "NVIDIA-A10G-SHARED",
+          "nvidia.com/gpu.count": "1",
+          "nvidia.com/gpu.replicas": "4",
+          "nvidia.com/cuda.driver-version.full": "535.104.05",
+          "nvidia.com/cuda.runtime-version.full": "12.2"
+        }
+      },
+      "spec": {"providerID": "aws:///us-east-1a/i-0123456789abcdef0"},
+      "status": {"capacity": {"nvidia.com/gpu": "4", "cpu": "8"}, "allocatable": {"nvidia.com/gpu": "4", "cpu": "8"}}
+    },
+    {
+      "metadata": {
+        "name": "ip-10-0-2-30.ec2.internal",
+        "labels": {"eks.amazonaws.com/nodegroup": "system", "node.kubernetes.io/instance-type": "m6i.large"}
+      },
+      "spec": {"providerID": "aws:///us-east-1b/i-0fedcba9876543210"},
+      "status": {"capacity": {"cpu": "2"}, "allocatable": {"cpu": "2"}}
+    }
+  ]
+}

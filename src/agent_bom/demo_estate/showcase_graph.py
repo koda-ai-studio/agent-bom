@@ -99,7 +99,8 @@ def build_showcase_graph(
     identity_store: InMemoryAgentIdentityStore | None = None,
 ) -> tuple[UnifiedGraph, InMemoryAgentIdentityStore, _DriftStore]:
     is_baseline = profile == "baseline"
-    g = UnifiedGraph(scan_id=scan_id, tenant_id=tenant_id)
+    recorded_at = SHOWCASE_BASELINE_CREATED_AT if is_baseline else SHOWCASE_CURRENT_CREATED_AT
+    g = UnifiedGraph(scan_id=scan_id, tenant_id=tenant_id, created_at=recorded_at)
 
     def node(i: str, t: EntityType, label: str, **attrs) -> str:
         severity = attrs.pop("severity", "")
@@ -367,6 +368,30 @@ def finalize_showcase_snapshot(graph: UnifiedGraph, *, profile: ShowcaseProfile)
         blocked_tool.attributes["evidence_tier"] = "runtime_blocked"
 
 
+def build_showcase_snapshot(
+    *,
+    tenant_id: str = SHOWCASE_TENANT,
+    profile: ShowcaseProfile = "current",
+    identity_records: InMemoryAgentIdentityStore | None = None,
+    scan_report: Callable[[], dict[str, Any]] | None = None,
+) -> UnifiedGraph:
+    """One finished showcase snapshot, stamped with its profile's recorded time."""
+    scan_id = SHOWCASE_BASELINE_SCAN_ID if profile == "baseline" else SHOWCASE_SCAN_ID
+    graph, identity_store, drift_store = build_showcase_graph(
+        tenant_id=tenant_id,
+        scan_id=scan_id,
+        profile=profile,
+        identity_store=identity_records,
+    )
+    apply_showcase_overlays(graph, tenant_id=tenant_id, identity_store=identity_store, drift_store=drift_store)
+    finalize_showcase_snapshot(graph, profile=profile)
+    _annotate_demo_identity_risk(graph)
+    project_estate_onto_showcase(graph, tenant_id=tenant_id, profile=profile, scan_report=scan_report)
+    if _materialize_showcase_attack_paths(graph):
+        _record_showcase_attack_path_analysis(graph)
+    return graph
+
+
 def _existing_snapshots(graph_store: GraphStoreProtocol, tenant_id: str) -> list[dict[str, Any]]:
     """Return the tenant's snapshots (scan_id + created_at) for staleness checks.
 
@@ -464,45 +489,10 @@ def seed_showcase_graph_if_empty(
     # MANAGED_IDENTITY node ids match the live identity store the API re-projects.
     identity_records = build_demo_identity_store(tenant_id)
 
-    baseline_graph, baseline_identity, baseline_drift = build_showcase_graph(
-        tenant_id=tenant_id,
-        scan_id=SHOWCASE_BASELINE_SCAN_ID,
-        profile="baseline",
-        identity_store=identity_records,
+    baseline_graph = build_showcase_snapshot(tenant_id=tenant_id, profile="baseline", identity_records=identity_records)
+    current_graph = build_showcase_snapshot(
+        tenant_id=tenant_id, profile="current", identity_records=identity_records, scan_report=scan_report
     )
-    baseline_graph.created_at = SHOWCASE_BASELINE_CREATED_AT
-    apply_showcase_overlays(
-        baseline_graph,
-        tenant_id=tenant_id,
-        identity_store=baseline_identity,
-        drift_store=baseline_drift,
-    )
-    finalize_showcase_snapshot(baseline_graph, profile="baseline")
-    _annotate_demo_identity_risk(baseline_graph)
-    project_estate_onto_showcase(baseline_graph, tenant_id=tenant_id, profile="baseline")
-    baseline_analysis_complete = _materialize_showcase_attack_paths(baseline_graph)
-    if baseline_analysis_complete:
-        _record_showcase_attack_path_analysis(baseline_graph)
-
-    current_graph, identity_store, drift_store = build_showcase_graph(
-        tenant_id=tenant_id,
-        scan_id=SHOWCASE_SCAN_ID,
-        profile="current",
-        identity_store=identity_records,
-    )
-    current_graph.created_at = SHOWCASE_CURRENT_CREATED_AT
-    apply_showcase_overlays(
-        current_graph,
-        tenant_id=tenant_id,
-        identity_store=identity_store,
-        drift_store=drift_store,
-    )
-    finalize_showcase_snapshot(current_graph, profile="current")
-    _annotate_demo_identity_risk(current_graph)
-    project_estate_onto_showcase(current_graph, tenant_id=tenant_id, profile="current", scan_report=scan_report)
-    current_analysis_complete = _materialize_showcase_attack_paths(current_graph)
-    if current_analysis_complete:
-        _record_showcase_attack_path_analysis(current_graph)
     graph_store.save_graph(current_graph)
     graph_store.save_graph(baseline_graph)
     return True

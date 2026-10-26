@@ -1523,18 +1523,35 @@ def test_prohibition_cue_regex_linear_time_on_pathological_input():
     The prohibition-cue alternation previously used an unbounded ``(?:…)*`` with
     overlapping ``an?\\s+`` / ``a\\s+`` branches, so "without " + "a " * N + "x"
     triggered exponential backtracking (CodeQL: inefficient regular expression).
-    A bounded, de-overlapped group makes matching linear; this input completed in
-    ~150 ms at N=20 before the fix and in well under a millisecond after it.
+    A bounded, de-overlapped group makes matching linear in the input.
+
+    Matching runs in a child process so a regression fails on the timeout
+    instead of hanging the suite. Growing the hostile input 8x must grow the
+    best-of-several match time by far less than the 64x a quadratic engine path
+    would take; no absolute duration is asserted.
     """
-    import time
+    import subprocess
+    import sys
 
-    from agent_bom.parsers.skill_audit_context import _PROHIBITION_CUE_RE
+    probe = """
+import time
+from agent_bom.parsers.skill_audit_context import _PROHIBITION_CUE_RE
 
-    pathological = "without " + "a " * 50 + "x"
-    start = time.perf_counter()
-    _PROHIBITION_CUE_RE.search(pathological)
-    elapsed = time.perf_counter() - start
-    assert elapsed < 0.1, f"prohibition-cue regex took {elapsed * 1000:.1f} ms (possible ReDoS)"
+def best(n):
+    text = "without " + "a " * n + "x"
+    samples = []
+    for _ in range(7):
+        start = time.perf_counter()
+        for _ in range(20):
+            _PROHIBITION_CUE_RE.search(text)
+        samples.append(time.perf_counter() - start)
+    return min(samples)
+
+print(best(4000) / best(500))
+"""
+    result = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, timeout=120, check=True)
+    ratio = float(result.stdout.strip())
+    assert ratio < 32, f"8x input took {ratio:.1f}x as long (possible ReDoS)"
 
 
 def test_prohibition_cue_regex_still_matches_real_cues():

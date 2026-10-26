@@ -139,6 +139,10 @@ def _print_scan_verdict(opts: ScanOptions, st: ScanState, input_vulnerability_co
         # only. Graph-derived findings surface after graph analysis
         # below, and the all-categories totals line reconciles both.
         st.con.print(f"  [red]⚠[/red] {completion} — package CVEs: {_sev_str}")
+        from agent_bom.output.kernel_header_console import kernel_header_summary_lines
+
+        for line in kernel_header_summary_lines(st.blast_radii):
+            st.con.print(line)
     elif input_vulnerability_count:
         st.con.print(
             f"  [yellow]⚠[/yellow] {completion} — retained "

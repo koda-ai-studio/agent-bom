@@ -21,6 +21,7 @@ REQUIRED_FILES = (
     PERF_DIR / "ingest-throughput.md",
     PERF_DIR / "fleet-reconciliation.md",
     PERF_DIR / "image-layer-streaming.md",
+    PERF_DIR / "image-scan-end-to-end.md",
 )
 
 REQUIRED_MARKERS = (

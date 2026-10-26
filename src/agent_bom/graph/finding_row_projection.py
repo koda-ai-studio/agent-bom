@@ -26,6 +26,7 @@ from agent_bom.graph.declared_assets import declared_asset
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import SOURCE_TIERS, edge_evidence
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.recorded_time import earlier, later
 from agent_bom.graph.relationship_specs import relationship_spec
 from agent_bom.graph.resource_aliases import _build_cloud_resource_alias_index, _resolve_cloud_resource_node_id
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -352,3 +353,16 @@ __all__ = [
     "stamp_finding_node_ids",
     "vulnerability_signal_attributes",
 ]
+
+
+def apply_finding_row_times(graph: UnifiedGraph, findings: Any) -> None:
+    """A finding node spans its rows' recorded observations, whichever projection drew it."""
+    for row in findings if isinstance(findings, list) else []:
+        if not isinstance(row, dict):
+            continue
+        first, last = _text(row.get("first_seen")), _text(row.get("last_seen"))
+        node_id = finding_row_node_id(row) if first or last else None
+        node = graph.nodes.get(node_id) if node_id else None
+        if node is not None:
+            node.first_seen = earlier(node.first_seen, first or last)
+            node.last_seen = later(node.last_seen, last)

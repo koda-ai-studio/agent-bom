@@ -266,7 +266,7 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
                     ],
                     "security_intelligence_count": len(srv_dict.get("security_intelligence", []) or []),
                     "agent": agent.agent_name,
-                    "agents": _server_agents(graph, srv_id, agent.agent_id),
+                    "agents": [agent.agent_id],
                     "environment": agent.agent_env,
                     "canonical_id": srv_dict.get("canonical_id")
                     or srv_dict.get("stable_id")
@@ -293,17 +293,36 @@ def _record_previous_server_ids(graph: UnifiedGraph, srv_id: str, previous: list
     node.attributes["identity"] = identity
 
 
-def _server_agents(graph: UnifiedGraph, srv_id: str, agent_id: str) -> list[str]:
+def _note_server_agent(graph: UnifiedGraph, indexes: BuildIndexes, srv_id: str, agent_id: str) -> None:
     """Every agent that declared this server; a shared node keeps all of them."""
-    existing = graph.nodes.get(srv_id)
-    recorded = existing.attributes.get("agents") if existing is not None else None
-    return sorted({*(recorded if isinstance(recorded, list) else []), agent_id})
+    if srv_id not in indexes.server_agents:
+        existing = graph.nodes.get(srv_id)
+        recorded = existing.attributes.get("agents") if existing is not None else None
+        indexes.server_agents[srv_id] = {agent for agent in recorded or [] if isinstance(agent, str)}
+    indexes.server_agents[srv_id].add(agent_id)
+
+
+def _note_server_aliases(indexes: BuildIndexes, srv_id: str, previous: list[str]) -> None:
+    if previous:
+        indexes.server_aliases.setdefault(srv_id, set()).update(previous)
+
+
+def _write_server_identity(graph: UnifiedGraph, indexes: BuildIndexes) -> None:
+    """Sort each shared server's agents and aliases once, not once per declaring agent."""
+    for srv_id, agents in indexes.server_agents.items():
+        node = graph.nodes.get(srv_id)
+        if node is not None:
+            node.attributes["agents"] = sorted(agents)
+    for srv_id, aliases in indexes.server_aliases.items():
+        _record_previous_server_ids(graph, srv_id, sorted(aliases))
 
 
 def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str, Any], indexes: BuildIndexes) -> None:
     srv_name = srv_dict.get("name", "unknown")
     srv_id = agent.agent_id if agent.sbom_import else mcp_server_graph_id_for(srv_dict, agent.agent_dict)
     surface = srv_dict.get("surface", "mcp-server")
+    if not agent.static_inventory:
+        _note_server_agent(graph, indexes, srv_id, agent.agent_id)
     srv_id = _add_server_node(graph, agent, srv_dict, srv_id, srv_name, surface)
     if not agent.sbom_import and not agent.static_inventory:
         previous = previous_mcp_server_graph_ids(srv_dict, agent.agent_dict)
@@ -311,7 +330,7 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
             old_key = old_id.removeprefix("agent:")
             if old_key and srv_id.startswith(f"server:{agent.agent_node_key}:"):
                 previous.append(f"server:{old_key}:{srv_id.removeprefix(f'server:{agent.agent_node_key}:')}")
-        _record_previous_server_ids(graph, srv_id, previous)
+        _note_server_aliases(indexes, srv_id, previous)
     indexes.server_name_to_ids[srv_name].append(srv_id)
     if not agent.static_inventory:
         graph.add_edge(
@@ -470,4 +489,5 @@ def project_agents(graph: UnifiedGraph, agents: list[dict[str, Any]], data_sourc
         scope.previous_agent_ids = [alias for alias in scope.previous_agent_ids if len(targets[alias]) == 1]
         _project_agent(graph, scope, indexes, lineage)
         _record_previous_server_ids(graph, scope.agent_id, scope.previous_agent_ids)
+    _write_server_identity(graph, indexes)
     return indexes

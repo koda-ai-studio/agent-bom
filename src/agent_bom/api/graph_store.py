@@ -415,7 +415,7 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                     "by_severity": defaultdict(int),
                     "by_entity_type": defaultdict(int),
                     "tags": set(),
-                    "node_ids": [],
+                    "node_ids": {},
                 }
             )
 
@@ -432,8 +432,7 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                     stats["by_severity"][row["severity"] or "unknown"] += 1
                     stats["by_entity_type"][row["entity_type"]] += 1
                     stats["tags"].add(tag)
-                    if row["id"] not in stats["node_ids"]:
-                        stats["node_ids"].append(row["id"])
+                    stats["node_ids"][row["id"]] = None
 
             frameworks: dict[str, Any] = {}
             for name, stats in sorted(framework_stats.items()):
@@ -443,7 +442,7 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                     "by_entity_type": dict(stats["by_entity_type"]),
                     "tags": sorted(stats["tags"]),
                     "node_count": len(stats["node_ids"]),
-                    "node_ids": stats["node_ids"][:100],
+                    "node_ids": list(stats["node_ids"])[:100],
                 }
 
             return {

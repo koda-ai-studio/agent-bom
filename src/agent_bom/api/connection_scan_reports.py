@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from agent_bom.api.connection_request_validation import _now
 from agent_bom.api.connection_store import CloudConnectionRecord, get_connection_store
+from agent_bom.cloud.gpu_posture import attach_gpu_posture_findings
 
 _MAX_STATUS_DETAIL = 300
 
@@ -130,6 +131,7 @@ def _persist_connection_report(
 
     if queued_job is not None:
         report.scan_id = queued_job.job_id
+    attach_gpu_posture_findings(report)
     report_json = to_json(report)
     _annotate_inventory_counts(report_json.get("cloud_inventory"))
     now = _now()

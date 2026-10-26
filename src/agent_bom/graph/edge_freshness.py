@@ -78,7 +78,7 @@ def stamp_edge_freshness(graph: UnifiedGraph, *, window_hours: int | None = None
     """
     counts = {FRESH: 0, STALE: 0, "unknown": 0, "recorded": 0}
     cache: dict[str, datetime | None] = {}
-    reference = _parse(graph.created_at, cache)
+    reference = _parse(getattr(graph, "observed_at", "") or graph.created_at, cache)
     hours = config.GRAPH_EDGE_FRESHNESS_HOURS if window_hours is None else window_hours
     window = timedelta(hours=max(0, int(hours)))
     store_backed = _is_store_backed(graph)

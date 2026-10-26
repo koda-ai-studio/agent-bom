@@ -36,11 +36,14 @@ def _add_rel_edge(
     target_id: str,
     relationship: RelationshipType,
     evidence: dict[str, Any] | None = None,
+    *,
+    observed_at: str = "",
 ) -> None:
     """Add a relationship edge; thin wrapper over ``graph.add_edge(UnifiedEdge(...))``.
 
     ``evidence=None`` is normalized to ``{}`` to match the ``UnifiedEdge``
-    default, so routed call sites stay byte-identical.
+    default, so routed call sites stay byte-identical. ``observed_at`` is the
+    record's own observation time; without it the edge takes the graph's time.
     """
     graph.add_edge(
         UnifiedEdge(
@@ -48,6 +51,7 @@ def _add_rel_edge(
             target=target_id,
             relationship=relationship,
             evidence=evidence if evidence is not None else {},
+            last_seen=observed_at,
         )
     )
 

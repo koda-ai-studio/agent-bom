@@ -22,13 +22,13 @@ from __future__ import annotations
 
 import ast
 import asyncio
-import time
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 import agent_bom.api.routes as routes_pkg
+from tests._loop_offload import BlockingCall, assert_runs_off_loop
 
 ROUTES_DIR = Path(routes_pkg.__file__).resolve().parent
 
@@ -173,10 +173,6 @@ async def handler():
     assert finder.violations == [(5, "agent_bom.intel_lookup.list_intel_sources")]
 
 
-async def _trivial() -> str:
-    return "responsive"
-
-
 @pytest.mark.asyncio
 async def test_slow_siem_health_check_keeps_event_loop_responsive(monkeypatch):
     """A hung SIEM probe must not pin the loop — the offload proves it."""
@@ -187,26 +183,18 @@ async def test_slow_siem_health_check_keeps_event_loop_responsive(monkeypatch):
     monkeypatch.setattr("agent_bom.api.routes.enterprise_routes.governance.require_request_tenant_id", lambda request: "t-siem")
     monkeypatch.setattr(audit_log, "log_action", lambda *args, **kwargs: None)
 
-    block_seconds = 0.5
+    call = BlockingCall()
 
     class _SlowConnector:
         def health_check(self) -> bool:
-            time.sleep(block_seconds)
+            call.block()
             return True
 
     monkeypatch.setattr(siem_mod, "create_connector", lambda *args, **kwargs: _SlowConnector())
 
     request = SimpleNamespace(state=SimpleNamespace(api_key_name="tester"))
-    loop = asyncio.get_running_loop()
     task = asyncio.create_task(enterprise.test_siem_connection(request=request, siem_type="splunk", url="", token=""))
-    await asyncio.sleep(0.05)
-    assert not task.done(), "probe should still be in flight"
-
-    started = loop.time()
-    assert await asyncio.wait_for(_trivial(), timeout=0.15) == "responsive"
-    assert loop.time() - started < block_seconds / 2, "event loop was blocked during the SIEM probe — offload ineffective"
-
-    result = await task
+    result = await assert_runs_off_loop(task, call, "the SIEM probe")
     assert result == {"siem_type": "splunk", "healthy": True}
 
 
@@ -214,44 +202,32 @@ async def test_slow_siem_health_check_keeps_event_loop_responsive(monkeypatch):
 async def test_slow_intel_source_listing_keeps_event_loop_responsive(monkeypatch):
     from agent_bom.api.routes import intel
 
-    block_seconds = 0.5
+    call = BlockingCall()
 
     def _slow_sources() -> dict[str, object]:
-        time.sleep(block_seconds)
+        call.block()
         return {"sources": []}
 
     monkeypatch.setattr(intel, "list_intel_sources", _slow_sources)
     task = asyncio.create_task(intel.get_intel_sources())
-    await asyncio.sleep(0.05)
-    assert not task.done(), "source listing should still be in flight"
-
-    started = asyncio.get_running_loop().time()
-    assert await asyncio.wait_for(_trivial(), timeout=0.15) == "responsive"
-    assert asyncio.get_running_loop().time() - started < block_seconds / 2
-    assert await task == {"sources": []}
+    assert await assert_runs_off_loop(task, call, "the source listing") == {"sources": []}
 
 
 @pytest.mark.asyncio
 async def test_slow_agent_discovery_keeps_event_loop_responsive(monkeypatch):
     from agent_bom.api.routes import discovery
 
-    block_seconds = 0.5
+    call = BlockingCall()
 
     def _slow_agents(_tenant_id: str) -> dict[str, object]:
-        time.sleep(block_seconds)
+        call.block()
         return {"agents": [], "count": 0}
 
     discovery._clear_agents_response_cache_for_tests()
     monkeypatch.setattr(discovery, "_tenant_id", lambda _request: "tenant-agents")
     monkeypatch.setattr(discovery, "_build_agents_response", _slow_agents)
     task = asyncio.create_task(discovery.list_agents(SimpleNamespace(), refresh=True))
-    await asyncio.sleep(0.05)
-    assert not task.done(), "agent discovery should still be in flight"
-
-    started = asyncio.get_running_loop().time()
-    assert await asyncio.wait_for(_trivial(), timeout=0.15) == "responsive"
-    assert asyncio.get_running_loop().time() - started < block_seconds / 2
-    assert await task == {"agents": [], "count": 0}
+    assert await assert_runs_off_loop(task, call, "agent discovery") == {"agents": [], "count": 0}
 
 
 def _own_nodes(fn: ast.AST):
@@ -398,7 +374,7 @@ async def test_sync_store_route_runs_off_the_event_loop_and_rejects_unbounded_li
     import agent_bom.asset_tracker as asset_tracker_mod
     from agent_bom.api.routes import assets
 
-    block_seconds = 0.5
+    call = BlockingCall()
     seen_limits: list[int] = []
 
     class _SlowTracker:
@@ -413,7 +389,7 @@ async def test_sync_store_route_runs_off_the_event_loop_and_rejects_unbounded_li
 
         def list_assets(self, *, status=None, severity=None, limit=500):
             seen_limits.append(limit)
-            time.sleep(block_seconds)
+            call.block()
             return []
 
         def stats(self) -> dict:
@@ -429,12 +405,7 @@ async def test_sync_store_route_runs_off_the_event_loop_and_rejects_unbounded_li
 
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         task = asyncio.create_task(client.get("/assets"))
-        await asyncio.sleep(0.05)
-        assert not task.done(), "asset listing should still be in flight"
-        started = asyncio.get_running_loop().time()
-        assert await asyncio.wait_for(_trivial(), timeout=0.15) == "responsive"
-        assert asyncio.get_running_loop().time() - started < block_seconds / 2, "store read ran on the event loop"
-        response = await task
+        response = await assert_runs_off_loop(task, call, "the asset store read")
         assert response.status_code == 200
         assert response.json()["count"] == 0
 

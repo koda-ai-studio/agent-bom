@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.cloud.gpu_posture import cloud_gpu_pools
+
 _INVENTORY_RESOURCE_KEYS = ("buckets", "instances", "security_groups", "dspm_databases")
 _INVENTORY_IDENTITY_KEYS = ("roles", "users")
 _PUBLIC_INVENTORY_STATUSES = {
@@ -50,6 +52,7 @@ def _summarize_inventory_payload(provider: str, payload: dict[str, Any]) -> dict
             "security_groups": len(normalized.get("security_groups") or []),
             "roles": len(normalized.get("roles") or []),
             "users": len(normalized.get("users") or []),
+            "gpu_node_pools": len(cloud_gpu_pools(payload)),
         },
         "warnings": public_warnings,
     }

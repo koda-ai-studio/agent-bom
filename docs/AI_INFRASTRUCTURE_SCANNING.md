@@ -128,6 +128,12 @@ agent-bom agents --image ghcr.io/huggingface/text-generation-inference:latest
 
 ## GPU fleet scanning patterns
 
+GPU node pools (EKS, GKE, AKS, Snowflake SPCS, Databricks), Kubernetes GPU
+workloads and their identities, the node driver / Container Toolkit, GPU
+posture checks and model files inside images are covered in
+[GPU and AI infrastructure coverage](../site-docs/features/gpu-ai-infrastructure.md),
+including what is not covered.
+
 ### Kubernetes GPU operator
 
 ```bash
