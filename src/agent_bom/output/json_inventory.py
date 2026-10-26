@@ -75,10 +75,10 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport, *, vulnerabilities_scan
                     "transport": server.transport.value,
                     "command": sanitize_text(server.command),
                     "url": sanitize_url(server.url),
-                    "tool_ids": [],
-                    "resource_ids": [],
-                    "prompt_ids": [],
-                    "package_ids": [],
+                    "tool_ids": {},
+                    "resource_ids": {},
+                    "prompt_ids": {},
+                    "package_ids": {},
                     "discovery_provenance": sanitize_discovery_provenance(
                         getattr(server, "discovery_provenance", None),
                         defaults=agent_provenance,
@@ -90,6 +90,8 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport, *, vulnerabilities_scan
 
             _append_package_entities(server, server_id, servers, packages, relationships, agent_provenance, scanned=scanned)
 
+    for server_row in servers.values():
+        server_row.update({key: list(server_row[key]) for key in ("tool_ids", "resource_ids", "prompt_ids", "package_ids")})
     return _snapshot_payload(agents, relationships, servers=servers, tools=tools, resources=resources, prompts=prompts, packages=packages)
 
 
@@ -127,8 +129,7 @@ def _append_package_entities(
                 "vulnerability_count": len(pkg.vulnerabilities) if scanned else None,
                 "vulnerability_status": "scanned" if scanned else "not_scanned",
             }
-        if pkg.stable_id not in servers[server_id]["package_ids"]:
-            servers[server_id]["package_ids"].append(pkg.stable_id)
+        servers[server_id]["package_ids"][pkg.stable_id] = None
         relationships.append({"from": server_id, "to": pkg.stable_id, "type": "depends_on"})
 
 
@@ -157,8 +158,7 @@ def _append_mcp_entities(
                 "schema_rule_findings": tool.schema_rule_findings,
                 "risk_score": tool.risk_score,
             }
-        if tool_id not in servers[server_id]["tool_ids"]:
-            servers[server_id]["tool_ids"].append(tool_id)
+        servers[server_id]["tool_ids"][tool_id] = None
         relationships.append({"from": server_id, "to": tool_id, "type": "exposes_tool"})
 
     for resource in server.resources:
@@ -174,8 +174,7 @@ def _append_mcp_entities(
                 "content_findings": resource.content_findings,
                 "risk_score": resource.risk_score,
             }
-        if resource_id not in servers[server_id]["resource_ids"]:
-            servers[server_id]["resource_ids"].append(resource_id)
+        servers[server_id]["resource_ids"][resource_id] = None
         relationships.append({"from": server_id, "to": resource_id, "type": "exposes_resource"})
 
     for prompt in server.prompts:
@@ -191,8 +190,7 @@ def _append_mcp_entities(
                 "content_findings": prompt.content_findings,
                 "risk_score": prompt.risk_score,
             }
-        if prompt_id not in servers[server_id]["prompt_ids"]:
-            servers[server_id]["prompt_ids"].append(prompt_id)
+        servers[server_id]["prompt_ids"][prompt_id] = None
         relationships.append({"from": server_id, "to": prompt_id, "type": "exposes_prompt"})
 
 

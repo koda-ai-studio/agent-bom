@@ -796,6 +796,25 @@ def test_output_scale_budgets_run_in_a_dedicated_uninstrumented_lane() -> None:
     assert "pytest.mark.output_performance" in scale_test
 
 
+def test_scan_scale_budgets_run_in_the_measured_post_merge_lane() -> None:
+    """The 40k-package and reference-image scale checks run uninstrumented, after merge."""
+
+    jobs = _ci()["jobs"]
+    scale_job = jobs["output-scale-performance"]
+    run = next(step["run"] for step in scale_job["steps"] if step.get("name") == "Run measured scan scale assertions")
+
+    assert "tests/test_scan_scale_contract.py" in run
+    assert "tests/test_image_reference_cve_parity.py" in run
+    assert "-m scan_performance" in run
+    assert "--cov" not in run
+    assert " -n " not in run
+    assert scale_job["timeout-minutes"] >= 20
+    for name in ("test_scan_scale_contract.py", "test_image_reference_cve_parity.py"):
+        source = (ROOT / "tests" / name).read_text(encoding="utf-8")
+        assert "pytest.mark.slow" in source
+        assert "pytest.mark.scan_performance" in source
+
+
 def test_security_reuses_typescript_install_for_build() -> None:
     text = CI_WORKFLOW.read_text(encoding="utf-8")
     security = text.split("  # 2. Linting + Type Checking", 1)[0]
