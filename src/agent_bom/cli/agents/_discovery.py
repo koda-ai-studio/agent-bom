@@ -356,7 +356,7 @@ def scan_iac(run: DiscoveryRun) -> None:
 
 def _manifest_k8s_inventory(run: DiscoveryRun) -> None:
     from agent_bom.cli.agents._discovery_sources import print_k8s_inventory_summary
-    from agent_bom.k8s_inventory_manifests import k8s_inventory_from_paths
+    from agent_bom.kubernetes.inventory_manifests import k8s_inventory_from_paths
 
     inventory, notes = k8s_inventory_from_paths(run.iac_paths)
     for note in notes:

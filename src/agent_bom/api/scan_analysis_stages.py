@@ -17,7 +17,7 @@ from agent_bom.api.scan_report_support import (
 )
 from agent_bom.core.severity import severity_at_or_above
 from agent_bom.evidence.scan_run import VULNERABILITY_SCAN_SKIPPED_MESSAGE
-from agent_bom.k8s_inventory_report import kubernetes_inventory_section
+from agent_bom.kubernetes.inventory_report import kubernetes_inventory_section
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.supplied_findings import build_supplied_findings

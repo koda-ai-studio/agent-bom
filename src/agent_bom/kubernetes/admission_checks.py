@@ -18,7 +18,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from agent_bom.iac.models import IaCFinding
-from agent_bom.k8s_pod_security import ENFORCING_LEVELS, PSA_ENFORCE_LABEL, SYSTEM_NAMESPACES, psa_enforce_issue
+from agent_bom.kubernetes.pod_security import ENFORCING_LEVELS, PSA_ENFORCE_LABEL, SYSTEM_NAMESPACES, psa_enforce_issue
 
 ADMISSION_RESOURCES = ("namespaces", "validatingadmissionpolicies", "validatingadmissionpolicybindings", "validatingwebhookconfigurations")
 _CIS_POLICY = ["CIS-K8s-5.2.1", "NIST-CM-7"]

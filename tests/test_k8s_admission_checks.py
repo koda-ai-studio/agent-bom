@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_bom.k8s_admission_checks import evaluate_admission_posture
+from agent_bom.kubernetes.admission_checks import evaluate_admission_posture
 
 _PSA = "pod-security.kubernetes.io/enforce"
 

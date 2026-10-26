@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_bom.k8s_inventory import build_k8s_inventory, image_digest_from_status
+from agent_bom.kubernetes.inventory import build_k8s_inventory, image_digest_from_status
 
 _DIGEST = "sha256:" + "a" * 64
 

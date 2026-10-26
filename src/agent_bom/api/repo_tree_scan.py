@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from agent_bom.evidence.scan_run import ScanIssue
-from agent_bom.k8s_inventory_manifests import manifest_inventory_with_issues
+from agent_bom.kubernetes.inventory_manifests import manifest_inventory_with_issues
 from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface
 from agent_bom.scanners.secret_models import secret_scan_warning as secret_scan_warning
 from agent_bom.traversal import iter_discovery_files

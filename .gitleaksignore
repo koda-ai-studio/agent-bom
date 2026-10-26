@@ -83,5 +83,6 @@ cc3d86f9b6cca9ed3ee186f287ded454fd573207:tests/test_helm_replica_safety.py:gener
 # History-only synthetic credential in the IaC path-redaction regression.
 # Replaced by a constructed fixture; no credential was provisioned.
 c64637d9a918d14df8240f8ac5c8f1050878b7ff:tests/test_iac_redacted_graph_roundtrip.py:github-pat:21
-# Docstring prose ("credentials, scheduler/CLI wiring") matched generic-api-key; no secret.
+# Side-scan docstring prose matched generic-api-key; no secret.
+3f98a7e090c4fb3e6798b4c030482eae1c4f4f4e:.gitleaksignore:generic-api-key:86
 6c67cca43f53a704055281b877354b899017414f:src/agent_bom/cloud/side_scan_targets.py:generic-api-key:256

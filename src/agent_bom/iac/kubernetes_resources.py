@@ -7,7 +7,7 @@ from typing import Any
 from agent_bom.iac.kubernetes_common import K8sDocument, K8sWorkload, pod_spec_line
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.yaml_lines import item_line, key_line, node_line
-from agent_bom.k8s_pod_security import PSA_ENFORCE_LABEL, psa_enforce_issue
+from agent_bom.kubernetes.pod_security import PSA_ENFORCE_LABEL, psa_enforce_issue
 
 
 def k8s_024(d: K8sDocument) -> list[IaCFinding]:

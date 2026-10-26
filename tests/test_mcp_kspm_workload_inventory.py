@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 
 import agent_bom.mcp_tools.kspm as kspm_tool
-from agent_bom.k8s_inventory import build_k8s_inventory
+from agent_bom.kubernetes.inventory import build_k8s_inventory
 
 
 def _inventory(workloads: int) -> dict[str, Any]:

@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from agent_bom.k8s_inventory_live import INVENTORY_RESOURCES, collect_live_k8s_inventory, scan_targets
 from agent_bom.k8s_transport import K8sReadResult, K8sTransportError, _resource_path
+from agent_bom.kubernetes.inventory_live import INVENTORY_RESOURCES, collect_live_k8s_inventory, scan_targets
 
 _DIGEST = "sha256:" + "d" * 64
 

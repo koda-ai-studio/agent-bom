@@ -152,8 +152,8 @@ def discover_k8s_images(run: DiscoveryRun) -> None:
     """Step 1c: read the workload inventory and its images from Kubernetes (--k8s)."""
     if run.skill_only or not run.k8s:
         return
-    from agent_bom.k8s_inventory_live import cluster_label, collect_live_k8s_inventory, scan_targets
     from agent_bom.k8s_transport import K8sTransportError, select_k8s_transport
+    from agent_bom.kubernetes.inventory_live import cluster_label, collect_live_k8s_inventory, scan_targets
 
     con = run.con
     ns_label = "all namespaces" if run.all_namespaces else f"namespace '{run.namespace}'"

@@ -184,8 +184,8 @@ def _discover_kubernetes(ctx: ScanContext) -> None:
     if not ctx.req.k8s:
         return
     ctx.pipeline.update_step("discovery", "Reading Kubernetes workloads...")
-    from agent_bom.k8s_inventory_live import cluster_label, collect_live_k8s_inventory, scan_targets
     from agent_bom.k8s_transport import K8sTransportError, select_k8s_transport
+    from agent_bom.kubernetes.inventory_live import cluster_label, collect_live_k8s_inventory, scan_targets
 
     try:
         transport = select_k8s_transport()

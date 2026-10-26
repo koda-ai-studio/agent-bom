@@ -17,7 +17,7 @@ import yaml  # type: ignore[import-untyped]
 
 from agent_bom.evidence.scan_run import ScanIssue
 from agent_bom.iac import helm_templates
-from agent_bom.k8s_inventory import build_k8s_inventory
+from agent_bom.kubernetes.inventory import build_k8s_inventory
 from agent_bom.traversal import iter_discovery_files
 
 _MAX_MANIFEST_BYTES = 2 * 1024 * 1024

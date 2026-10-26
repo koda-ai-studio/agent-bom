@@ -1,7 +1,7 @@
 """Kubernetes workload inventory → graph: namespace → workload → image, service account → RBAC.
 
 Projects the ``kubernetes_inventory`` report section (see
-:mod:`agent_bom.k8s_inventory`). Live-cluster and manifest inventories produce
+:mod:`agent_bom.kubernetes.inventory`). Live-cluster and manifest inventories produce
 the same node and edge shapes; only the evidence tier differs (``recorded``
 for API reads, ``static_scan`` for manifests).
 

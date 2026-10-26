@@ -10,7 +10,7 @@ from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.path_derivation import _derived_attack_paths
 from agent_bom.graph.types import EntityType, RelationshipType
-from agent_bom.k8s_inventory import build_k8s_inventory
+from agent_bom.kubernetes.inventory import build_k8s_inventory
 
 _DIGEST = "sha256:" + "c" * 64
 _IMAGE = "registry.example.test/shop/web:1.4"

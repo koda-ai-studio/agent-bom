@@ -15,9 +15,9 @@ import pytest
 import yaml  # type: ignore[import-untyped]
 
 from agent_bom.k8s import _POSTURE_RESOURCES
-from agent_bom.k8s_admission_checks import ADMISSION_RESOURCES
-from agent_bom.k8s_inventory_live import INVENTORY_RESOURCES
 from agent_bom.k8s_transport import CLUSTER_RESOURCES, NAMESPACED_RESOURCES
+from agent_bom.kubernetes.admission_checks import ADMISSION_RESOURCES
+from agent_bom.kubernetes.inventory_live import INVENTORY_RESOURCES
 
 ROOT = Path(__file__).resolve().parents[1]
 _READ = {"get", "list"}

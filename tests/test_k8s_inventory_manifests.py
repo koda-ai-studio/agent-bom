@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_bom.k8s_inventory_manifests import k8s_inventory_from_paths
+from agent_bom.kubernetes.inventory_manifests import k8s_inventory_from_paths
 
 _MANIFEST = """\
 apiVersion: v1

@@ -18,7 +18,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from agent_bom.core.image_ref import DIGEST_PREFIX, digest_in_ref
-from agent_bom.k8s_inventory_rbac import binding_record, resolve_grants, role_record
+from agent_bom.kubernetes.inventory_rbac import binding_record, resolve_grants, role_record
 
 WORKLOAD_KINDS = ("Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job", "CronJob", "Pod")
 _PSA_LABEL_PREFIX = "pod-security.kubernetes.io/"

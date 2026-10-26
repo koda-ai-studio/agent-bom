@@ -24,7 +24,7 @@ from agent_bom.evidence.scan_run import (
     vulnerability_scan_skipped_issue,
 )
 from agent_bom.finding import blast_radius_to_finding
-from agent_bom.k8s_inventory_report import kubernetes_inventory_section
+from agent_bom.kubernetes.inventory_report import kubernetes_inventory_section
 from agent_bom.models import AIBOMReport
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.resolver import consume_performance_stats as consume_resolution_performance

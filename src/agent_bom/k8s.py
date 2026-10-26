@@ -22,10 +22,10 @@ from time import monotonic
 from typing import Optional
 
 from agent_bom.iac.models import IaCFinding
-from agent_bom.k8s_admission_checks import ADMISSION_RESOURCES, evaluate_admission_posture
-from agent_bom.k8s_posture_checks import evaluate_kubelet_config, evaluate_pod_security, evaluate_rbac
-from agent_bom.k8s_posture_models import CollectorState, K8sCollectorEvidence, K8sPostureResult, K8sPostureStatus
 from agent_bom.k8s_transport import K8sReadTransport, K8sTransportError, select_k8s_transport, validate_kubelet_endpoint
+from agent_bom.kubernetes.admission_checks import ADMISSION_RESOURCES, evaluate_admission_posture
+from agent_bom.kubernetes.posture_checks import evaluate_kubelet_config, evaluate_pod_security, evaluate_rbac
+from agent_bom.kubernetes.posture_models import CollectorState, K8sCollectorEvidence, K8sPostureResult, K8sPostureStatus
 
 __all__ = [
     "CollectorState",

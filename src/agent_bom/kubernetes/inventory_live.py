@@ -12,9 +12,9 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.core.image_ref import image_key
-from agent_bom.k8s_inventory import build_k8s_inventory
-from agent_bom.k8s_posture_models import CollectorState, K8sCollectorEvidence
 from agent_bom.k8s_transport import CLUSTER_RESOURCES, K8sReadTransport, K8sTransportError
+from agent_bom.kubernetes.inventory import build_k8s_inventory
+from agent_bom.kubernetes.posture_models import CollectorState, K8sCollectorEvidence
 
 INVENTORY_RESOURCES: dict[str, str] = {
     "namespaces": "Namespace",
