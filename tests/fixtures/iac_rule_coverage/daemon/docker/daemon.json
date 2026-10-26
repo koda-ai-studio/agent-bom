@@ -1,0 +1,8 @@
+{
+  "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"],
+  "insecure-registries": ["registry.example.invalid:5000"],
+  "icc": true,
+  "live-restore": false,
+  "experimental": true,
+  "log-driver": "none"
+}
