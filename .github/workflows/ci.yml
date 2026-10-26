@@ -23,6 +23,8 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Product screenshots are recaptured at release time; release workflows enforce freshness.
+  AGENT_BOM_DEFER_PRODUCT_PROOF: "1"
   # A presence flag only: the pull token itself is read by the login steps.
   DOCKERHUB_PULL_AUTH: ${{ secrets.DOCKERHUB_READ_TOKEN != '' }}
 
@@ -325,7 +327,7 @@ jobs:
           PYPROJECT_VER=$(python -c "import re, pathlib; text = pathlib.Path('pyproject.toml').read_text(); print(re.search(r'^version\\s*=\\s*\"([^\"]+)\"', text, re.M).group(1))")
           python scripts/bump-version.py "$PYPROJECT_VER" --check
           python scripts/check_version_alignment.py
-          AGENT_BOM_DEFER_PRODUCT_PROOF=1 python scripts/check_release_consistency.py
+          python scripts/check_release_consistency.py
           python scripts/check_release_evidence_matrix.py
           python scripts/generate_agent_capability_manifest.py --check
           python scripts/check-counts.py
@@ -2016,8 +2018,6 @@ jobs:
         run: python scripts/check_version_alignment.py
 
       - name: Verify README/docs consistency
-        env:
-          AGENT_BOM_DEFER_PRODUCT_PROOF: "1"
         run: python scripts/check_release_consistency.py
 
       - name: Verify agent capability manifest
