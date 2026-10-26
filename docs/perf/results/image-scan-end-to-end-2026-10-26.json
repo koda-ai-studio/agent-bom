@@ -1,0 +1,91 @@
+{
+  "schema": "agent-bom/perf-result/v1",
+  "claim": "agent-bom image php:8.3.30-cli end-to-end wall time and peak memory, before and after #5991 hotspot fixes",
+  "date": "2026-10-26",
+  "environment": {
+    "os": "macOS arm64 (shared workstation)",
+    "python": "3.13.5",
+    "docker": "29.8.0"
+  },
+  "baseline_commit": "e42d0d569 (origin/main)",
+  "inputs": {
+    "image": "php:8.3.30-cli",
+    "image_tar_bytes": 179998208,
+    "vulnerability_data": "local DB last synced 2026-08-19 (offline runs); OSV online for e2e runs"
+  },
+  "runs": {
+    "main:off_console": {
+      "wall_seconds": 95.58,
+      "max_rss_mib": 2015.2,
+      "peak_footprint_mib": 2509.6,
+      "load_average_1m_at_start": 21.52,
+      "findings": 4424,
+      "cpu_seconds": 70.7
+    },
+    "main:off_json": {
+      "wall_seconds": 544.95,
+      "max_rss_mib": 1887.2,
+      "peak_footprint_mib": 2515.5,
+      "load_average_1m_at_start": 15.57,
+      "findings": 4424,
+      "cpu_seconds": 276.8
+    },
+    "main:e2e_console": {
+      "wall_seconds": 386.05,
+      "max_rss_mib": 457.7,
+      "peak_footprint_mib": 2534.9,
+      "load_average_1m_at_start": 33.82,
+      "findings": 4506,
+      "cpu_seconds": 105.6
+    },
+    "branch:off_console": {
+      "wall_seconds": 162.98,
+      "max_rss_mib": 280.5,
+      "peak_footprint_mib": 413.3,
+      "load_average_1m_at_start": 12.94,
+      "findings": 4424,
+      "cpu_seconds": 41.8
+    },
+    "branch:off_json": {
+      "wall_seconds": 248.02,
+      "max_rss_mib": 369.6,
+      "peak_footprint_mib": 757.8,
+      "load_average_1m_at_start": 20.22,
+      "findings": 4424,
+      "cpu_seconds": 52.0
+    },
+    "branch:e2e_console": {
+      "wall_seconds": 2050.02,
+      "max_rss_mib": 411.8,
+      "peak_footprint_mib": 351.5,
+      "load_average_1m_at_start": 13.85,
+      "findings": 4506,
+      "cpu_seconds": 45.1
+    }
+  },
+  "scale_40k_offline_manifest": {
+    "scenario": "npm package-lock.json with 40,000 packages, offline, seeded local DB with 200 advisories, --format json (tests/test_scan_scale_contract.py)",
+    "main": {
+      "wall_seconds": 251.3,
+      "peak_rss_mib": 1413,
+      "cve_findings": 200,
+      "total_packages": 40000,
+      "load_average_1m": 21.7
+    },
+    "branch": {
+      "wall_seconds": 130.4,
+      "peak_rss_mib": 684,
+      "cve_findings": 200,
+      "total_packages": 40000,
+      "load_average_1m": 22.3
+    },
+    "budgets": {
+      "wall_seconds": 300,
+      "peak_rss_mib": 1000
+    }
+  },
+  "notes": [
+    "The machine ran other jobs (load 13-34); wall time is not comparable across runs. The branch online run was suspended mid-run when all agents were paused, so its wall time is meaningless. Compare cpu_seconds and peak_footprint_mib.",
+    "Quiet-period branch runs earlier the same day: offline console 28.5 s wall / 416 MiB footprint; offline JSON 46.0 s wall / 777 MiB footprint (before the docker-export and quadratic-work commits)."
+  ]
+}
