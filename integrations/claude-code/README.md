@@ -139,7 +139,10 @@ Prompts, responses, file contents and credential values are never sent.
   which runs from the plugin folder because Codex expands no `${CLAUDE_PLUGIN_ROOT}`. No hooks, no background jobs, and nothing
   runs outside a skill or tool call. The skills never launch or connect to the MCP
   servers they audit: `audit-mcp` always calls `tool_risk_assessment` with
-  `live: false`.
+  `live: false`, and both servers start with `AGENT_BOM_MCP_LIVE_INTROSPECTION=0`,
+  which refuses live connections and server launches even when a call asks for
+  them. To allow live introspection, add your own server entry without that
+  setting, as shown in [Projects outside your home directory](#projects-outside-your-home-directory).
 - **Reads** MCP client configuration files on this machine (Claude Code, Claude
   Desktop, Cursor and other supported clients) to find agents, servers and the
   packages they launch, skill and instruction files under a path you name, plus

@@ -22,12 +22,14 @@
     "agent-bom": {
       "command": "uv",
       "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server"],
-      "cwd": "."
+      "cwd": ".",
+      "env": { "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0" }
     },
     "agent-bom-audit": {
       "command": "uv",
       "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server", "--profile", "audit"],
-      "cwd": "."
+      "cwd": ".",
+      "env": { "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0" }
     }
   },
   "interface": {

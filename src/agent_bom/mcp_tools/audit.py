@@ -6,6 +6,7 @@ import json
 import logging
 
 from agent_bom import discovery, mcp_introspect
+from agent_bom.core.settings import TRUTHY, env_opt
 from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
 from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
 from agent_bom.mcp_tools.dispatch import resolve_tool_path
@@ -15,13 +16,21 @@ from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 
 logger = logging.getLogger(__name__)
 
+LIVE_INTROSPECTION_ENV = "AGENT_BOM_MCP_LIVE_INTROSPECTION"
+
+
+def _live_introspection_allowed() -> bool:
+    """Unset allows live mode; any value other than an explicit yes refuses it."""
+    value = env_opt(LIVE_INTROSPECTION_ENV)
+    return value is None or value.strip().lower() in TRUTHY
+
 
 def tool_risk_assessment_impl(
     *,
     config_path: str | None = None,
     timeout: float = 10.0,
     allow_command_execution: bool = False,
-    live: bool = True,
+    live: bool = False,
     expected_capabilities: list[str] | None = None,
     _authenticated_actor: str = "",
     _safe_path,
@@ -31,6 +40,13 @@ def tool_risk_assessment_impl(
     resolved_config_path = str(resolve_tool_path(_safe_path, config_path, argument="config_path")) if config_path else None
     if resolved_config_path is None:
         ensure_host_local_allowed()
+    gate_warnings: list[str] = []
+    if (live or allow_command_execution) and not _live_introspection_allowed():
+        live, allow_command_execution = False, False
+        gate_warnings.append(
+            f"Live introspection is disabled for this server ({LIVE_INTROSPECTION_ENV}=0); audited configuration only, "
+            "no server was contacted or launched."
+        )
     try:
         agents = discovery.discover_all(project_dir=resolved_config_path)
         servers = [s for a in agents for s in a.mcp_servers if s.is_mcp_surface]
@@ -70,7 +86,7 @@ def tool_risk_assessment_impl(
                     {
                         "summary": summary,
                         "servers": results,
-                        "warnings": report.warnings,
+                        "warnings": [*gate_warnings, *report.warnings],
                         "audit": audit_payload,
                         "authentication_findings": [f.to_dict() for f in auth_findings],
                         "agent_permission_findings": permission_findings,

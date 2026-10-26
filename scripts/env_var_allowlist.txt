@@ -321,6 +321,7 @@ AGENT_BOM_MCP_OPERATOR_TOKEN
 AGENT_BOM_MCP_OPERATOR_TOKEN_EXPIRES_AT
 # Opt-in remote clone bind escape hatch for MCP repo scans; default stays loopback/SSRF-safe.
 AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS  # read per MCP call in mcp_tools/host_local.py; documented in docs/MCP_SERVER.md
+AGENT_BOM_MCP_LIVE_INTROSPECTION  # read per tool_risk_assessment call in mcp_tools/audit.py; the plugins set it to 0; documented in docs/MCP_SERVER.md
 AGENT_BOM_MCP_REMOTE_BIND
 AGENT_BOM_MCP_SANDBOX
 AGENT_BOM_MCP_SANDBOX_CPUS
