@@ -216,6 +216,34 @@ def test_release_manifest_rejects_capture_input_hash_mismatch(
     assert "capture inputs changed" in capsys.readouterr().err
 
 
+def test_deferred_product_proof_skips_only_the_capture_input_digest(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    manifest = json.loads((ROOT / "docs/images/product-screenshots.json").read_text(encoding="utf-8"))
+    manifest["capture_inputs_sha256"] = f"sha256:{'0' * 64}"
+    candidate = tmp_path / "product-screenshots.json"
+    candidate.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(check_release_consistency, "PRODUCT_SCREENSHOTS", candidate)
+    version = check_release_consistency._load_version()
+
+    check_release_consistency._assert_product_screenshots_current(version, check_capture_inputs=False)  # must not raise
+
+    manifest["release_version"] = "0.0.1"
+    candidate.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        check_release_consistency._assert_product_screenshots_current(version, check_capture_inputs=False)
+    assert "stale release_version" in capsys.readouterr().err
+
+
+def test_only_pr_and_main_ci_defer_the_product_proof() -> None:
+    """Screenshots are recaptured at release time, so only ci.yml may defer the capture-input digest."""
+    workflows = ROOT / ".github" / "workflows"
+    ci = (workflows / "ci.yml").read_text(encoding="utf-8")
+    assert ci.count("AGENT_BOM_DEFER_PRODUCT_PROOF") == ci.count("python scripts/check_release_consistency.py") >= 2
+    for name in ("release.yml", "refresh-latest-container.yml"):
+        assert "AGENT_BOM_DEFER_PRODUCT_PROOF" not in (workflows / name).read_text(encoding="utf-8")
+
+
 def test_capture_runbook_matches_the_local_authenticated_release_workflow() -> None:
     """The published runbook must stay executable as auth and capture contracts evolve."""
     runbook = (ROOT / "docs/CAPTURE.md").read_text(encoding="utf-8")

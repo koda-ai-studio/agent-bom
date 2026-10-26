@@ -325,7 +325,7 @@ jobs:
           PYPROJECT_VER=$(python -c "import re, pathlib; text = pathlib.Path('pyproject.toml').read_text(); print(re.search(r'^version\\s*=\\s*\"([^\"]+)\"', text, re.M).group(1))")
           python scripts/bump-version.py "$PYPROJECT_VER" --check
           python scripts/check_version_alignment.py
-          python scripts/check_release_consistency.py
+          AGENT_BOM_DEFER_PRODUCT_PROOF=1 python scripts/check_release_consistency.py
           python scripts/check_release_evidence_matrix.py
           python scripts/generate_agent_capability_manifest.py --check
           python scripts/check-counts.py
@@ -2016,6 +2016,8 @@ jobs:
         run: python scripts/check_version_alignment.py
 
       - name: Verify README/docs consistency
+        env:
+          AGENT_BOM_DEFER_PRODUCT_PROOF: "1"
         run: python scripts/check_release_consistency.py
 
       - name: Verify agent capability manifest
