@@ -7,15 +7,31 @@ stuck, a workflow fails unexpectedly, or you need to retrigger checks.
 
 ## CI lanes
 
-PR CI tests GitHub's merge result with changed-domain tests and shared contract
-smoke. Full correctness is split into 4 parallel shards when dependency,
-shared test infrastructure, security/identity foundations, or unmapped source
-inputs change; those shards then replace the smoke jobs, because they run
+PR CI tests GitHub's merge result with the **affected tests** and shared
+contract smoke, partitioned across three `Python affected tests (shard N/3)`
+jobs with a 15-minute bound. A pull request never runs the full suite.
+`scripts/pytest_ci_affected.py` selects:
+
+- the changed-domain map from `scripts/pytest_ci_plan.py targeted`;
+- every test module that directly imports, loads or names a changed source or
+  script module (package `__init__.py` included, deleted modules included);
+- every module below a changed `conftest.py`, the importers of a changed test
+  helper, and the tests that reference a changed fixture file or fixture
+  directory.
+
+Shared or unmapped inputs (`full_python=true` from
+`scripts/classify_ci_changes.py`) used to select the full suite; they now run
+the affected selection plus smoke, and the full suite proves them after merge.
+Only direct references count: a transitive or dependency-version regression
+can pass the PR and fail the post-merge run, which then freezes merges (see
+below). The job log prints the 50 slowest tests (`--durations=50`).
+
+Full correctness is split into 4 parallel shards on Python 3.13 only for a
+merge group (not enabled, see "Merge-queue configuration"); those shards run
 every test module (with the same `otel` extra) plus the graph-fixture and DCM
-guards on shard 0. A smoke job that does run must still pass. `scripts/classify_ci_changes.py` checks each source independently
-against `scripts/pytest_ci_plan.py`; a mapped sibling cannot hide an unmapped
-input. Missing/deleted source, unknown paths and failed classification require
-the full suite. Direct test edits run through the changed-domain selector.
+guards on shard 0. `tests/test_ci_pr_fast_path.py` fails if any classifier
+outcome lets a `pull_request` event start the full shards, the four-version
+matrix, the full musl suite or every browser shard.
 
 Postgres runs for its writer/migration inputs, shared model, API, storage,
 authorization and dependency changes. UI browser checks build the standalone
@@ -23,7 +39,7 @@ app; the additional Docker build runs only for container, dependency or build
 configuration changes on PRs. Main and nightly runs retain the full four-version
 suite, coverage floor, Postgres, container, deployment and performance checks.
 This is selective PR regression coverage, not a claim that every PR runs every
-test. Full foundational and main runs can still exceed twenty minutes.
+test. Main runs still exceed twenty minutes; that is the post-merge budget.
 
 All lanes live in `ci.yml` unless noted. Python correctness jobs have a
 45-minute safety bound; it is not a target duration. A timeout remains a failed
@@ -42,7 +58,8 @@ The planner balances measured per-module seconds from `tests/.ci-durations.json`
 (longest module first, onto the least-loaded shard); modules without a
 measurement are estimated from their size at the measured seconds per byte.
 Refresh the file when shards drift apart, from the four `Full correctness
-shard` job logs of one run (their `-v` output carries per-line timestamps):
+(Python 3.13, shard N)` job logs of one main run (their `-v` output carries
+per-line timestamps):
 
 ```bash
 for job in JOB_ID_0 JOB_ID_1 JOB_ID_2 JOB_ID_3; do
@@ -88,14 +105,16 @@ cannot satisfy the release gate.
 | UI Validate (lint, vitest, schema drift) + UI export build | when UI inputs change | every main push | yes |
 | Docs Strict, Helm, Compose, Endpoint packaging | when their inputs change | when their inputs change | yes |
 | Native App image and persistence | when its inputs change | yes | yes |
-| Changed-domain and cross-surface contract smoke | yes, unless the full shards run (required through aggregation) | yes | yes |
-| Full correctness suite, Python 3.13 in 4 shards | shared, dependency, security or unmapped inputs (required when selected) | no | no |
+| Python affected tests (shard N/3): affected selection + contract smoke | always (required through aggregation) | yes | yes |
+| Full correctness suite, Python 3.13 in 4 shards | never (merge group only) | no | no |
 | Full correctness suite, Python 3.11/3.12/3.13/3.14 in 4 shards each (combined 3.11 coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
 | Postgres Integration Contract (live RLS, migrations, schema parity) | relevant inputs (required when selected) | yes | yes |
-| Test (Alpine/musl, shard N) | subset on relevant changes; full in 4 shards on dependencies | subset; full in 4 shards on dependency changes | full in 4 shards nightly, subset manual |
+| Test (Alpine/musl, shard N) | subset only, on dependency/build inputs or `ci.yml` changes | subset on Python changes; full in 4 shards on dependency changes | full in 4 shards nightly, subset manual |
 | Docker (multi-arch) + image scans | no | yes | nightly only |
-| UI E2E (Playwright in 4 shards, bundle budget); container smoke | UI inputs; container/build inputs for Docker | every main push | yes |
+| UI E2E smoke (every packaged route + accessibility, bundle budget) | `ui/`, UI toolchain or `ci.yml` changes | no | no |
+| UI E2E (Playwright in 4 shards, bundle budget) | no | every main push | yes |
+| UI container smoke | container/build inputs | every main push | yes |
 | Dogfood GitHub Action | no | when action inputs change | yes |
 | ClusterFuzzLite (`cflite-pr.yml`) | no | short batch on parser changes | weekly long batch |
 | Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | every main push | manual |
@@ -117,14 +136,20 @@ audits still run every extras group. To roll back routing, revert the workflow
 and classifier changes together and obtain fresh main CI proof before release.
 
 The required `Test (Python 3.13)` context also requires Alpine and UI E2E
-when their path filters select them. Failed classification runs both lanes;
+when their path filters select them (on a PR: the musl subset and the
+`UI E2E smoke` job). Failed classification runs both lanes;
 a missing, failed, or cancelled selected lane fails that context.
 
-UI E2E runs as four `UI E2E shard (N/4)` jobs (`playwright test --shard=N/4`),
-each building its own standalone server, plus one `UI container smoke` job.
-The `UI E2E and container smoke` job, which the release gate requires by name,
-passes only when every shard passed and the container smoke passed (or was
-not selected). Each shard uploads its own failure traces and screenshots as
+After merge, UI E2E runs as four `UI E2E shard (N/4)` jobs
+(`playwright test --shard=N/4`), each building its own standalone server, plus
+one `UI container smoke` job. A pull request instead runs one `UI E2E smoke`
+job (`e2e/route-catalog-smoke.spec.ts` and
+`e2e/route-catalog-accessibility.spec.ts`) when `ui/`, the UI toolchain or
+`ci.yml` changes; API and graph contract changes reach the UI through
+`UI Validate`. The `UI E2E and container smoke` job, which the release gate
+requires by name, passes only when every lane the event requires passed (all
+shards after merge, the smoke on a selected PR) and the container smoke
+passed (or was not selected). Each shard uploads its own failure traces and screenshots as
 `ui-failure-diagnostics-<run>-<attempt>-shard-N`. Specs run file-serial unless
 they opt into `test.describe.configure({ mode: "parallel" })`; the largest
 spec does, so no shard carries it as one indivisible group.
@@ -138,6 +163,39 @@ Branch protection stays strict (PR branches must be up to date with `main`),
 so selected tests always run on the merge result that lands. If a shard
 becomes the long pole, raise the shard matrix and `--total` together; the
 contract tests tie them and check that the shards still partition the suite.
+
+### Required checks
+
+Proposed branch-protection contexts for `main`, exactly as GitHub reports
+them. The owner applies these; nothing in this repository changes settings.
+
+1. `Lint and Type Check`
+2. `Build Package`
+3. `Security Scan`
+4. `Test (Python 3.13)`
+5. `Version Alignment`
+6. `CodeQL`
+7. `Dependency Review`
+8. `UI Validate`
+
+`Test (Python 3.13)` is the affected-tests gate: it requires every
+`Python affected tests (shard N/3)` job on a PR (through `Python correctness
+aggregation`), the Postgres contract, musl subset and UI E2E smoke when
+selected, and on main the four-version suite and Docker image. Do not add the
+shard jobs themselves: matrix names change with the shard count, and the
+aggregation already fails on a failed, cancelled or missing lane. Path-gated
+contexts (`Version Alignment` on docs-only changes, `UI Validate` without UI
+inputs) report as skipped, which satisfies a required check. Gitleaks,
+PR Security Gate (pip-audit, self-scan) and Extras Dependency Audit still run
+on every applicable PR without being required. When the list changes, update
+`REQUIRED_CHECKS` in `scripts/dispatch_required_ci.sh`,
+`scripts/retrigger_stranded_pr.sh` and `.github/workflows/auto-retrigger-stranded.yml`
+in the same change.
+
+Expected PR wall time for a graph-touching change is about 8-10 minutes:
+the affected shards (about 2 minutes of setup plus 3-6 minutes of tests for a
+60-file graph change), `UI Validate` (about 5 minutes) and, when selected,
+`Postgres Integration Contract` (7-10 minutes, the long pole) run in parallel.
 
 Why a release is still safe: `release.yml` runs
 `scripts/check_release_main_ci.py`, which accepts a tag only when the exact
@@ -355,11 +413,23 @@ Operator-side troubleshooting if a strand persists past ~10 minutes:
 
 ### Merge-queue configuration
 
-No merge queue is enabled. GitHub offers merge queues for public repositories
-owned by an organization, and this repository is owned by a personal account.
-The three required-check workflows (`ci.yml`, `codeql.yml`,
-`pr-security-gate.yml`) still declare `merge_group: types: [checks_requested]`
-and every required context reports on that event, but no lane depends on it.
+No merge queue is enabled. The repository is now owned by the
+`koda-ai-studio` organization and is public, which is the case GitHub
+documents merge queues for; confirm availability in the repository settings
+before relying on it. `ci.yml`, `codeql.yml` and `pr-security-gate.yml`
+declare `merge_group: types: [checks_requested]`. In `ci.yml` a merge group
+skips the path classifier, so every path-gated lane runs, and it runs the
+full 3.13 shards instead of the affected tests plus the post-merge
+performance lanes. `Lint and Type Check`, `Build Package`, `Security Scan`,
+`Test (Python 3.13)`, `Version Alignment`, `UI Validate` and `CodeQL`
+therefore report on a merge group.
+
+`Dependency Review` (`dependency-review.yml`) runs on `pull_request` only. A
+required check that never reports on `merge_group` makes every queued merge
+fail, so before enabling a queue with the proposed list either add a
+`merge_group` trigger that passes without a PR diff or leave it out of the
+required contexts. To enable: Settings, Branches, edit the `main` rule, turn on
+"Require merge queue" and keep the required contexts above.
 
 Keep strict up-to-date protection: it is what makes the PR's sharded suite run
 on the commit that lands. Use `scripts/enable_merge_queue.sh --check` for
