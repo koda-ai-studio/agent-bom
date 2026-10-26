@@ -65,6 +65,12 @@ def side_scan_state_db_path() -> Path:
 
 CloudSideScanProvider = SideScanProvider
 
+AZURE_IMAGE_UNSUPPORTED = (
+    "Azure managed image side-scan is not supported: this executor scans managed disks only. Creating a temp "
+    "disk from a managed image (Microsoft.Compute/images) or an Azure Compute Gallery image version is not "
+    "implemented or proven; scan the managed disk of a VM built from the image instead."
+)
+
 
 @dataclass(frozen=True)
 class CloudSideScanTarget:
@@ -282,8 +288,11 @@ async def run_cloud_side_scan_targets(
         mount_point: Path | None = None
         scan_disk_id = ""
         try:
-            result.snapshot_id = lifecycle.create_snapshot(target)
-            scan_disk_id = lifecycle.create_scan_disk(target, result.snapshot_id)
+            snapshot_id = lifecycle.create_snapshot(target)
+            result.snapshot_id = snapshot_id or None
+            result.instance_id = str(getattr(lifecycle, "owner_instance_id", "") or "")
+            result.instance_name = str(getattr(lifecycle, "owner_instance_name", "") or "")
+            scan_disk_id = lifecycle.create_scan_disk(target, snapshot_id)
             result.scan_disk_id = scan_disk_id
             device = lifecycle.attach_scan_disk(target, scan_disk_id, collector_id)
             mount_point = mount_controller.attach_and_mount(scan_disk_id, device)
@@ -410,6 +419,7 @@ async def run_provider_side_scan(
     location: str,
     collector_id: str,
     tenant_id: str,
+    target_type: str = "disk",
     idempotency_key: str | None = None,
     state_db_path: str | Path | None = None,
     collector_resource_group: str | None = None,
@@ -449,6 +459,10 @@ async def run_provider_side_scan(
     missing = [label for label, value in required if not str(value).strip()]
     if missing:
         raise SideScanConfigError(f"{provider} side-scan requires: {', '.join(missing)}")
+    if target_type not in {"disk", "image"}:
+        raise SideScanConfigError("side-scan target_type must be 'disk' or 'image'")
+    if provider == "azure" and target_type == "image":
+        raise SideScanConfigError(AZURE_IMAGE_UNSUPPORTED)
     if provider == "azure" and not str(collector_resource_group or "").strip():
         raise SideScanConfigError("Azure Managed Disk side-scan requires --collector-resource-group for the in-account collector VM")
 
@@ -471,7 +485,7 @@ async def run_provider_side_scan(
 
     target = CloudSideScanTarget(
         provider=provider,
-        target_type="managed_disk" if provider == "azure" else "persistent_disk",
+        target_type="image" if target_type == "image" else "managed_disk" if provider == "azure" else "persistent_disk",
         target_id=target_id,
         name=target_id.rstrip("/").rsplit("/", 1)[-1] or target_id,
         account_id=account_id,
@@ -493,6 +507,8 @@ async def run_provider_side_scan(
                 "collector_lun": collector_lun,
                 "region": str(region or "").strip(),
                 "scan_secrets_enabled": scan_secrets_enabled,
+                # Disk requests keep their original fingerprint so recorded executions still replay.
+                **({"target_type": "image"} if target_type == "image" else {}),
             },
             sort_keys=True,
             separators=(",", ":"),

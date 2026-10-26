@@ -246,6 +246,8 @@ class _LifecycleState:
     volume_id: Optional[str] = None
     attached_device: Optional[str] = None
     mount_point: Optional[Path] = None
+    # A machine image's own snapshot is read, never deleted.
+    owns_snapshot: bool = True
 
 
 class AwsEbsSideScanner:
@@ -293,6 +295,7 @@ class AwsEbsSideScanner:
         self._device = device
         self._mount_controller: MountController = mount_controller or CollectorMountController()
         self._ec2 = ec2_client if ec2_client is not None else self._build_ec2_client(region)
+        self._account_id = ""
 
     @staticmethod
     def _build_ec2_client(region: str | None) -> Any:
@@ -355,11 +358,32 @@ class AwsEbsSideScanner:
         """
         result = SideScanResult(instance_id=instance_id, volume_id=volume_id)
         state = _LifecycleState()
-        try:
+
+        def _snapshot() -> None:
             state.snapshot_id = self._create_snapshot(volume_id)
-            result.snapshot_id = state.snapshot_id
             self._wait_for_snapshot(state.snapshot_id)
 
+        return await self._scan(result, state, _snapshot, scan_secrets_enabled)
+
+    async def scan_image(self, image_id: str, *, scan_secrets_enabled: bool = True) -> SideScanResult:
+        """Scan an AMI by mounting a temp volume made from its root EBS snapshot.
+
+        The AMI and its snapshot are only read (``DescribeImages``, ``CreateVolume``
+        from the snapshot); cleanup deletes the temp volume and never the AMI's
+        snapshot or the AMI itself.
+        """
+        result = SideScanResult(image_id=image_id)
+        state = _LifecycleState(owns_snapshot=False)
+
+        def _snapshot() -> None:
+            state.snapshot_id = self._image_root_snapshot(image_id)
+
+        return await self._scan(result, state, _snapshot, scan_secrets_enabled)
+
+    async def _scan(self, result: SideScanResult, state: _LifecycleState, snapshot: Any, scan_secrets_enabled: bool) -> SideScanResult:
+        try:
+            snapshot()
+            result.snapshot_id = state.snapshot_id
             mount_point = self._provision_and_mount(state)
 
             packages = self._parse_packages(mount_point)
@@ -375,7 +399,22 @@ class AwsEbsSideScanner:
             cleanup_warnings = self._cleanup(state)
             result.warnings.extend(cleanup_warnings)
             result.cleaned_up = not cleanup_warnings
+            result.account_id = self._account_id
+            result.region = self._region_name()
         return result
+
+    def _region_name(self) -> str:
+        return str(self._region or getattr(getattr(self._ec2, "meta", None), "region_name", "") or "")
+
+    def _image_root_snapshot(self, image_id: str) -> str:
+        images = self._ec2.describe_images(ImageIds=[image_id]).get("Images", [])
+        image = images[0] if images else {}
+        root = image.get("RootDeviceName", "")
+        for mapping in image.get("BlockDeviceMappings", []) or []:
+            snapshot_id = (mapping.get("Ebs") or {}).get("SnapshotId", "")
+            if mapping.get("DeviceName") == root and snapshot_id:
+                return str(snapshot_id)
+        raise SideScanConfigError(f"AMI {image_id} has no EBS-backed root snapshot (instance-store AMIs cannot be side-scanned)")
 
     # ── Lifecycle steps ───────────────────────────────────────────────────
 
@@ -391,6 +430,7 @@ class AwsEbsSideScanner:
             ],
         )
         snapshot_id = resp.get("SnapshotId", "")
+        self._account_id = self._account_id or str(resp.get("OwnerId", "") or "")
         if not snapshot_id:
             raise CloudDiscoveryError(f"CreateSnapshot returned no SnapshotId for volume {volume_id}")
         logger.info("side-scan: created snapshot %s from volume %s", snapshot_id, volume_id)
@@ -525,7 +565,7 @@ class AwsEbsSideScanner:
             except Exception as exc:  # noqa: BLE001
                 warnings.append(f"delete volume {state.volume_id} failed: {exc}")
 
-        if state.snapshot_id:
+        if state.snapshot_id and state.owns_snapshot:
             try:
                 self._ec2.delete_snapshot(SnapshotId=state.snapshot_id)
                 logger.info("side-scan: deleted snapshot %s", state.snapshot_id)
@@ -698,6 +738,7 @@ async def run_side_scan(
     *,
     instance_id: str | None = None,
     volume_id: str | None = None,
+    image_id: str | None = None,
     collector_instance_id: str | None = None,
     availability_zone: str | None = None,
     region: str | None = None,
@@ -728,6 +769,8 @@ async def run_side_scan(
     if sweep_orphans:
         scanner.sweep_orphan_snapshots()
 
+    if image_id:
+        return [await scanner.scan_image(image_id, scan_secrets_enabled=scan_secrets_enabled)]
     targets = scanner.enumerate_target_volumes(instance_id=instance_id, volume_id=volume_id)
     results: list[SideScanResult] = []
     for target in targets:

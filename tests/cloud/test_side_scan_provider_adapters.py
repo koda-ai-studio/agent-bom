@@ -848,3 +848,119 @@ async def test_partial_cleanup_retry_retains_recorded_resource_ids_without_sdk_c
     unchanged = store.get(tenant_id="tenant-a", execution_id=first.execution_id)
     assert unchanged is not None and unchanged.to_dict() == ambiguous.to_dict()
     assert not instances.detach_calls and not snapshots.delete_calls and not disks.delete_calls
+
+
+# ── Owning VM and machine images ──────────────────────────────────────────────
+
+
+_GCP_INSTANCE_LINK = "https://www.googleapis.com/compute/v1/projects/proj-1/zones/us-central1-a/instances/api-1"
+
+
+class FakeGcpOwnerInstances(FakeGcpInstances):
+    def __init__(self) -> None:
+        super().__init__()
+        self.get_calls: list[dict[str, Any]] = []
+
+    def get(self, *, project: str, zone: str, instance: str) -> Any:
+        self.get_calls.append({"project": project, "zone": zone, "instance": instance})
+        return SimpleNamespace(id=1234567890123, name=instance)
+
+
+def _gcp_factory(snapshots: Any, disks: Any, instances: Any):
+    def factory(provider: str, *, account_id: str, region: str | None) -> dict[str, Any]:
+        return {"snapshots_client": snapshots, "disks_client": disks, "instances_client": instances}
+
+    return factory
+
+
+async def _no_cve_scan(_packages: object) -> int:
+    return 0
+
+
+@pytest.mark.asyncio
+async def test_gcp_disk_scan_records_the_owning_instance_numeric_id(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_BOM_SIDESCAN", "1")
+    monkeypatch.setattr("agent_bom.cloud.side_scan_targets._scan_packages", _no_cve_scan)
+    snapshots, disks, instances = FakeGcpCollection("snapshots"), FakeGcpCollection("disks"), FakeGcpOwnerInstances()
+    disks.resources["os-disk"] = {"name": "os-disk", "users": [_GCP_INSTANCE_LINK], "labels": {}}
+    (tmp_path / "mount").mkdir()
+
+    results = await run_provider_side_scan(
+        provider="gcp",
+        target_id=_GCP_DISK_ID,
+        account_id="proj-1",
+        location="us-central1-a",
+        collector_id="collector-1",
+        tenant_id="tenant-a",
+        state_db_path=tmp_path / "state.db",
+        client_factory=_gcp_factory(snapshots, disks, instances),
+        mount_controller=FakeMount(tmp_path / "mount"),
+        sleep=lambda _seconds: None,
+    )
+
+    assert results[0].instance_id == "1234567890123"
+    assert results[0].instance_name == "api-1"
+    assert instances.get_calls == [{"project": "proj-1", "zone": "us-central1-a", "instance": "api-1"}]
+    assert disks.resources.get("os-disk") is not None, "the scanned source disk is never touched"
+
+
+@pytest.mark.asyncio
+async def test_gcp_image_scan_builds_the_temp_disk_from_the_image_without_a_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AGENT_BOM_SIDESCAN", "1")
+    monkeypatch.setattr("agent_bom.cloud.side_scan_targets._scan_packages", _no_cve_scan)
+    snapshots, disks, instances = FakeGcpCollection("snapshots"), FakeGcpCollection("disks"), FakeGcpInstances()
+    (tmp_path / "mount").mkdir()
+    image = "projects/proj-1/global/images/golden-2026"
+
+    results = await run_provider_side_scan(
+        provider="gcp",
+        target_id=image,
+        target_type="image",
+        account_id="proj-1",
+        location="us-central1-a",
+        collector_id="collector-1",
+        tenant_id="tenant-a",
+        state_db_path=tmp_path / "state.db",
+        client_factory=_gcp_factory(snapshots, disks, instances),
+        mount_controller=FakeMount(tmp_path / "mount"),
+        sleep=lambda _seconds: None,
+    )
+
+    assert snapshots.insert_calls == []
+    assert disks.insert_calls[0]["disk_resource"]["source_image"] == image
+    assert "source_snapshot" not in disks.insert_calls[0]["disk_resource"]
+    assert results[0].target_type == "image"
+    assert results[0].snapshot_id is None
+    assert results[0].cleaned_up is True
+    assert disks.resources == {}
+
+
+@pytest.mark.asyncio
+async def test_azure_image_scan_is_refused_explicitly(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_BOM_SIDESCAN", "1")
+
+    with pytest.raises(SideScanConfigError, match="Azure managed image"):
+        await run_provider_side_scan(
+            provider="azure",
+            target_id="/subscriptions/sub-1/resourceGroups/rg/providers/Microsoft.Compute/images/golden",
+            target_type="image",
+            account_id="sub-1",
+            location="eastus",
+            collector_id="collector-1",
+            collector_resource_group="collectors",
+            tenant_id="tenant-a",
+            state_db_path=tmp_path / "state.db",
+        )
+
+
+def test_azure_snapshot_records_the_disk_owner_vm(tmp_path: Path) -> None:
+    adapter, _store, _snapshots, disks, _vms = _azure_adapter(tmp_path)
+    vm = "/subscriptions/sub-1/resourceGroups/workloads/providers/Microsoft.Compute/virtualMachines/app-1"
+    disks.resources["workloads/os-disk"] = SimpleNamespace(id=_target("azure").target_id, managed_by=vm, tags={})
+
+    adapter.create_snapshot(_target("azure"))
+
+    assert adapter.owner_instance_id == vm
+    assert adapter.owner_instance_name == "app-1"

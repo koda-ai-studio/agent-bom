@@ -23,6 +23,7 @@ from .side_scan_lifecycle import (
     SideScanTemporaryResource,
     TemporaryResourceStatus,
 )
+from .side_scan_owners import azure_disk_owner, gcp_disk_owner
 from .side_scan_targets import CloudSideScanTarget
 
 
@@ -71,6 +72,8 @@ class _PersistedLifecycleAdapter:
         self._store = state_store
         self._wait_policy = _WaitPolicy(max_wait_attempts, wait_interval_seconds, sleep)
         self.last_operation: Any | None = None
+        self.owner_instance_id = ""
+        self.owner_instance_name = ""
 
     def _validate_target(self, target: CloudSideScanTarget) -> None:
         if (
@@ -306,6 +309,7 @@ class AzureManagedDiskLifecycleAdapter(_PersistedLifecycleAdapter):
         self._validate_target(target)
         self._ensure_running("snapshot")
         resource_group = _azure_resource_group(target.target_id)
+        self.owner_instance_id, self.owner_instance_name = azure_disk_owner(self._disks, *_azure_group_and_name(target.target_id))
         name = _resource_name(self.execution.cleanup_ownership.owner_id, "snapshot")
         try:
             existing = self._azure_get(self._snapshots, resource_group, name)
@@ -499,6 +503,16 @@ class GcpPersistentDiskLifecycleAdapter(_PersistedLifecycleAdapter):
     def create_snapshot(self, target: CloudSideScanTarget) -> str:
         self._validate_target(target)
         self._ensure_running("snapshot")
+        if target.target_type == "image":
+            # The temp disk is built straight from the image; nothing to snapshot.
+            return ""
+        self.owner_instance_id, self.owner_instance_name = gcp_disk_owner(
+            self._disks,
+            self._instances,
+            project=self._project,
+            zone=_gcp_zone(target.target_id) or target.location,
+            disk_name=target.target_id.rstrip("/").rsplit("/", 1)[-1],
+        )
         name = _resource_name(self.execution.cleanup_ownership.owner_id, "snapshot")
         try:
             existing = self._gcp_get(self._snapshots, {"project": self._project, "snapshot": name})
@@ -546,7 +560,7 @@ class GcpPersistentDiskLifecycleAdapter(_PersistedLifecycleAdapter):
                         "zone": target.location,
                         "disk_resource": {
                             "name": name,
-                            "source_snapshot": snapshot_id,
+                            **({"source_image": target.target_id} if target.target_type == "image" else {"source_snapshot": snapshot_id}),
                             "labels": self.execution.cleanup_ownership.required_tags(),
                         },
                     }
