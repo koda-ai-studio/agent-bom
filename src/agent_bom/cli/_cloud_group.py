@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Optional, cast
 
 import click
 
+from agent_bom.cli._cloud_sdk import exit_if_sdk_missing
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.cli._tenant import resolve_cli_tenant_id
 from agent_bom.evidence.cloud_scan import inventory_artifact
@@ -133,7 +134,7 @@ def _run_cloud_scan(
 
     from agent_bom.cli.agents import scan
 
-    providers = [p for p in _PROVIDER_ORDER if p in providers]
+    providers = exit_if_sdk_missing([p for p in _PROVIDER_ORDER if p in providers])
 
     # Per-provider status: say exactly what was detected and why, so the operator
     # (or a collector) knows which clouds are scanning and how their credentials
@@ -181,10 +182,8 @@ def _run_cloud_scan(
         aws=aws_on,
         aws_region=aws_region,
         aws_profile=aws_profile,
-        # The target ``scan`` command exposes lambda discovery as the negative
-        # flag ``no_aws_lambda`` (--no-aws-lambda), not ``aws_include_lambda`` —
-        # passing the wrong keyword raised TypeError and broke every
-        # ``cloud scan/aws/azure/gcp`` invocation.
+        # ``scan`` exposes lambda discovery only as the negative flag --no-aws-lambda;
+        # an ``aws_include_lambda`` keyword raises TypeError there.
         no_aws_lambda=not aws_include_lambda,
         aws_include_eks=aws_include_eks,
         aws_include_ec2=aws_include_ec2,

@@ -84,6 +84,9 @@ def _packages(rows: list[dict], direct: set[str], lock_file: Path) -> list[Packa
     parents, depths = _parents(rows, direct)
     packages = []
     for row in rows:
+        source = row.get("source")
+        if isinstance(source, dict) and ("virtual" in source or "editable" in source):
+            continue
         name, version = row.get("name"), row.get("version")
         if not isinstance(name, str) or not name or not isinstance(version, str) or not version:
             record_manifest_parse_warning(ecosystem="pypi", path=str(lock_file), detail="uv lock contains an invalid package identity")

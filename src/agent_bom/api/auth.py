@@ -6,129 +6,23 @@ for enterprise deployments.
 
 from __future__ import annotations
 
-import hashlib
-import hmac
 import os
 import secrets
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Protocol
 
+from agent_bom.api.api_key_record import OPERATOR_KEY_ID_PREFIX as OPERATOR_KEY_ID_PREFIX
+from agent_bom.api.api_key_record import ApiKey as ApiKey
+from agent_bom.api.api_key_record import _derive_key
+from agent_bom.api.api_key_record import register_operator_key_ids as register_operator_key_ids
+from agent_bom.api.api_key_record import verify_api_key as verify_api_key
+from agent_bom.api.sqlite_key_store import SQLiteKeyStore
 from agent_bom.api.storage_schema import postgres_deployment_configured
 from agent_bom.core.permission_scopes import scopes_allow as scopes_allow
 from agent_bom.core.settings import env_str
 from agent_bom.rbac import Role, role_rank
-
-
-@dataclass
-class ApiKey:
-    """Stored API key metadata (the raw key is never stored)."""
-
-    key_id: str
-    key_hash: str  # scrypt KDF of the raw key
-    key_salt: str  # hex-encoded salt for scrypt
-    key_prefix: str  # First 8 chars for identification
-    name: str
-    role: Role
-    created_at: str = ""
-    expires_at: str | None = None
-    scopes: list[str] = field(default_factory=list)
-    tenant_id: str = "default"
-    revoked_at: str | None = None
-    rotation_overlap_until: str | None = None
-    replacement_key_id: str | None = None
-    scim_subject_id: str | None = None
-    # Stable identifier of the user this key was issued on behalf of (SCIM
-    # user_id / user_name / external_id). Lets deprovisioning revoke free-form
-    # CI keys whose ``name`` doesn't match the departing user.
-    owner: str | None = None
-    # Canonical stable principal id this key is bound to. Set at creation
-    # (explicit → scim_subject_id → owner). Deprovisioning a subject revokes
-    # every key keyed to its principal_id, independent of the display ``name``.
-    principal_id: str | None = None
-
-    def __post_init__(self) -> None:
-        if not self.created_at:
-            self.created_at = datetime.now(timezone.utc).isoformat()
-
-    @staticmethod
-    def _parse_timestamp(value: str | None) -> datetime | None:
-        if not value:
-            return None
-        parsed = datetime.fromisoformat(value)
-        if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=timezone.utc)
-        return parsed
-
-    def is_expired(self, *, now: datetime | None = None) -> bool:
-        if not self.expires_at:
-            return False
-        current = now or datetime.now(timezone.utc)
-        expires_at = self._parse_timestamp(self.expires_at)
-        return bool(expires_at and current > expires_at)
-
-    def is_revoked(self) -> bool:
-        return bool(self.revoked_at)
-
-    def is_within_rotation_overlap(self, *, now: datetime | None = None) -> bool:
-        if not self.replacement_key_id or not self.rotation_overlap_until:
-            return False
-        current = now or datetime.now(timezone.utc)
-        overlap_until = self._parse_timestamp(self.rotation_overlap_until)
-        return bool(overlap_until and current <= overlap_until)
-
-    def is_usable(self, *, now: datetime | None = None) -> bool:
-        if self.is_revoked():
-            return False
-        if self.is_expired(now=now):
-            return False
-        if self.replacement_key_id:
-            return self.is_within_rotation_overlap(now=now)
-        return True
-
-    def lifecycle_state(self, *, now: datetime | None = None) -> str:
-        if self.is_revoked():
-            return "revoked"
-        if self.is_expired(now=now):
-            return "expired"
-        if self.replacement_key_id:
-            return "rotation_overlap" if self.is_within_rotation_overlap(now=now) else "rotated"
-        return "active"
-
-    def has_role(self, required: Role) -> bool:
-        """Check if this key's role meets or exceeds the required role."""
-        return role_rank(self.role) >= role_rank(required)
-
-    def has_scope(self, required_scope: str | None) -> bool:
-        """Check whether this key's scopes allow the requested action."""
-        return scopes_allow(self.scopes, required_scope)
-
-    def to_dict(self) -> dict:
-        current = datetime.now(timezone.utc)
-        overlap_remaining_seconds = None
-        if self.rotation_overlap_until:
-            overlap_until = self._parse_timestamp(self.rotation_overlap_until)
-            if overlap_until is not None:
-                overlap_remaining_seconds = max(0, int((overlap_until - current).total_seconds()))
-        return {
-            "key_id": self.key_id,
-            "key_prefix": self.key_prefix,
-            "name": self.name,
-            "role": self.role.value,
-            "created_at": self.created_at,
-            "expires_at": self.expires_at,
-            "scopes": self.scopes,
-            "tenant_id": self.tenant_id,
-            "revoked_at": self.revoked_at,
-            "rotation_overlap_until": self.rotation_overlap_until,
-            "replacement_key_id": self.replacement_key_id,
-            "scim_subject_id": self.scim_subject_id,
-            "owner": self.owner,
-            "principal_id": self.principal_id,
-            "state": self.lifecycle_state(now=current),
-            "overlap_seconds_remaining": overlap_remaining_seconds,
-        }
 
 
 @dataclass(frozen=True)
@@ -344,19 +238,6 @@ def normalize_rotation_overlap_seconds(
     return candidate
 
 
-def _derive_key(raw_key: str, salt: bytes) -> str:
-    """Derive key hash using scrypt KDF (CodeQL-safe, brute-force resistant)."""
-    derived = hashlib.scrypt(
-        raw_key.encode(),
-        salt=salt,
-        n=16384,  # CPU/memory cost (2^14)
-        r=8,  # block size
-        p=1,  # parallelization
-        dklen=32,
-    )
-    return derived.hex()
-
-
 def create_api_key(
     name: str,
     role: Role,
@@ -396,11 +277,18 @@ def create_api_key_record(
     scim_subject_id: str | None = None,
     owner: str | None = None,
     principal_id: str | None = None,
+    *,
+    key_id: str | None = None,
+    never_expires: bool = False,
 ) -> ApiKey:
-    """Create a stored API key record for an operator-supplied raw key."""
+    """Create a stored API key record for an operator-supplied raw key.
+
+    ``never_expires`` is for keys whose lifetime is owned by operator
+    configuration: they rotate by changing that configuration, not by TTL.
+    """
     salt = os.urandom(16)
     key_hash = _derive_key(raw_key, salt)
-    normalized_expiry = normalize_api_key_expiry(expires_at)
+    normalized_expiry = None if never_expires else normalize_api_key_expiry(expires_at)
     owner_normalized = owner.strip() if isinstance(owner, str) and owner.strip() else None
     scim_subject_normalized = scim_subject_id.strip() if isinstance(scim_subject_id, str) and scim_subject_id.strip() else scim_subject_id
     # The canonical stable binding: an explicit principal id wins; otherwise fall
@@ -409,7 +297,7 @@ def create_api_key_record(
     principal_normalized = principal_id.strip() if isinstance(principal_id, str) and principal_id.strip() else None
     resolved_principal = principal_normalized or scim_subject_normalized or owner_normalized
     return ApiKey(
-        key_id=secrets.token_hex(8),
+        key_id=key_id or secrets.token_hex(8),
         key_hash=key_hash,
         key_salt=salt.hex(),
         key_prefix=raw_key[:12],
@@ -422,24 +310,6 @@ def create_api_key_record(
         owner=owner_normalized,
         principal_id=resolved_principal,
     )
-
-
-def verify_api_key(raw_key: str, stored_keys: list[ApiKey]) -> ApiKey | None:
-    """Verify a raw API key against stored keys.
-
-    Uses scrypt KDF with per-key salt and constant-time comparison.
-    Returns the matching ApiKey if found and not expired, else None.
-    """
-    key_prefix = raw_key[:12]
-    candidates = [stored for stored in stored_keys if stored.key_prefix == key_prefix]
-    for stored in candidates:
-        salt = bytes.fromhex(stored.key_salt)
-        candidate = _derive_key(raw_key, salt)
-        if hmac.compare_digest(stored.key_hash, candidate):
-            if not stored.is_usable():
-                return None
-            return stored
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -456,6 +326,7 @@ class KeyStore:
 
     def add(self, key: ApiKey) -> None:
         with self._lock:
+            self._keys = [existing for existing in self._keys if existing.key_id != key.key_id]
             self._keys.append(key)
 
     def provision_tenant_key(self, key: ApiKey, *, team_name: str) -> None:
@@ -567,13 +438,34 @@ def get_key_store() -> KeyStoreProtocol:
     if _key_store is None:
         with _store_lock:
             if _key_store is None:
+                db_path = env_str("AGENT_BOM_DB")
                 if postgres_deployment_configured():
                     from agent_bom.api.postgres_access import PostgresKeyStore
 
                     _key_store = PostgresKeyStore()
+                elif db_path and db_path != ":memory:":
+                    _key_store = SQLiteKeyStore(db_path)
                 else:
                     _key_store = KeyStore()
     return _key_store
+
+
+def key_store_is_durable(store: KeyStoreProtocol | None = None) -> bool:
+    """Whether minted keys survive an API restart (False for the process-local store)."""
+    return not isinstance(store if store is not None else get_key_store(), KeyStore)
+
+
+NON_DURABLE_KEY_WARNING = (
+    "This key is held in API process memory only and stops working when the API restarts. "
+    "Run the API with a database (agent-bom serve --persist, AGENT_BOM_DB or AGENT_BOM_POSTGRES_URL) for durable keys."
+)
+
+
+def key_durability_fields(store: KeyStoreProtocol | None = None) -> dict[str, object]:
+    """Response fields telling the caller whether a minted key survives a restart."""
+    if key_store_is_durable(store):
+        return {"durable": True}
+    return {"durable": False, "warning": NON_DURABLE_KEY_WARNING}
 
 
 def set_key_store(store: KeyStoreProtocol) -> None:

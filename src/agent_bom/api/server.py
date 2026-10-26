@@ -24,7 +24,7 @@ from agent_bom import config as _config
 from agent_bom.api import host_guard as _host_guard
 from agent_bom.api import stores as _stores
 from agent_bom.api.audit_log import warn_if_ephemeral_hmac_key
-from agent_bom.api.auth import Role, create_api_key_record, get_key_store
+from agent_bom.api.auth import Role, get_key_store
 from agent_bom.api.dev_auth_state import get_dev_api_key as get_dev_api_key
 from agent_bom.api.dev_auth_state import get_dev_api_role as get_dev_api_role
 from agent_bom.api.dev_auth_state import set_dev_api_key as set_dev_api_key
@@ -57,6 +57,7 @@ from agent_bom.api.models import (  # noqa: F401 — legacy model imports
     TracingHealth,
     VersionInfo,
 )
+from agent_bom.api.operator_keys import parse_env_api_keys, seed_operator_keys
 from agent_bom.api.route_warmup import start_route_warmup
 from agent_bom.api.routes.enterprise_routes._session_helpers import _maybe_attach_dev_session_cookie as _maybe_attach_dev_session_cookie
 from agent_bom.api.scan_snapshot_store import expire_jobs_and_snapshots
@@ -417,22 +418,9 @@ def _seed_api_key_store_from_env() -> bool:
     if _env_api_keys_seeded:
         return get_key_store().has_keys()
 
-    store = get_key_store()
-    for idx, item in enumerate(configured.split(","), start=1):
-        raw_item = item.strip()
-        if not raw_item:
-            continue
-        raw_key, sep, role_value = raw_item.partition(":")
-        if not sep or not raw_key.strip() or not role_value.strip():
-            raise RuntimeError("AGENT_BOM_API_KEYS entries must use '<raw-key>:<admin|analyst|viewer>' format")
-        try:
-            role = Role(role_value.strip().lower())
-        except ValueError as exc:
-            raise RuntimeError(f"Invalid AGENT_BOM_API_KEYS role {role_value!r}; expected admin, analyst, or viewer") from exc
-        store.add(create_api_key_record(raw_key.strip(), f"env:{role.value}:{idx}", role))
-
+    seed_operator_keys("env", parse_env_api_keys(configured))
     _env_api_keys_seeded = True
-    return store.has_keys()
+    return get_key_store().has_keys()
 
 
 def _seed_runtime_api_key(raw_key: str | None) -> bool:
@@ -446,7 +434,7 @@ def _seed_runtime_api_key(raw_key: str | None) -> bool:
         return get_key_store().has_keys()
 
     role = get_dev_api_role() if value == get_dev_api_key() else Role.ADMIN
-    get_key_store().add(create_api_key_record(value, f"runtime:{role.value}", role))
+    seed_operator_keys("runtime", [(value, f"runtime:{role.value}", role)])
     _runtime_api_key_seeded = True
     return True
 

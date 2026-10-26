@@ -55,7 +55,7 @@ _FORK_GUARD_INDEX_CANON = "createuniqueindexifnotexistsaudit_log_team_prevsig_un
 
 # The newest migration. One place to update when a revision lands, so the
 # single-head property and the head's identity do not drift apart.
-ALEMBIC_HEAD = "20261024_02"
+ALEMBIC_HEAD = "20261025_01"
 
 
 def _canonical_sql(text: str) -> str:
@@ -1121,3 +1121,16 @@ def test_live_attack_path_identity_upgrade_keys_legacy_rows_and_keeps_distinct_r
             ("tb", 70.0),
         ]
         conn.rollback()  # fixture-only schema and rows never persist
+
+
+def test_rate_limit_prune_index_migration_is_chained_concurrent_and_in_bootstrap() -> None:
+    """The limiter's table-wide prune filters on ``hit_at`` alone; it needs its own index."""
+    migration = VERSIONS_DIR / "20261025_01_rate_limit_hit_at_index.py"
+    source = migration.read_text()
+    assert re.search(r'revision\s*=\s*"20261025_01"', source)
+    assert re.search(r'down_revision\s*=\s*"20261024_02"', source)
+    assert "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_api_rate_limit_hits_hit_at ON public.api_rate_limit_hits (hit_at)" in source
+    assert "DROP INDEX CONCURRENTLY IF EXISTS public.idx_api_rate_limit_hits_hit_at" in source
+    assert "to_regclass('public.api_rate_limit_hits')" in source
+    bootstrap = (ALEMBIC_DIR.parent / "init.sql").read_text()
+    assert "idx_api_rate_limit_hits_hit_at" in bootstrap

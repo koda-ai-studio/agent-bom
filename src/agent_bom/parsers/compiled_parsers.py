@@ -19,12 +19,30 @@ from agent_bom.parsers.go_resolution import _UNRESOLVED_VERSIONS as _UNRESOLVED_
 from agent_bom.parsers.go_resolution import logger as logger
 from agent_bom.parsers.go_resolution import resolve_go_version as resolve_go_version
 from agent_bom.parsers.go_resolution import verify_go_checksums as verify_go_checksums
+from agent_bom.parsers.gradle_packages import parse_gradle_packages as parse_gradle_packages
 
 # Versions that need resolution via the Go module proxy
 
 # Versions that require Maven Central resolution
 
 # Versions that require crates.io resolution
+
+
+_GO_REPLACE_BLOCK_RE = re.compile(r"^replace[ \t]*\(([^)]*)\)", re.MULTILINE)
+_GO_REPLACE_SINGLE_RE = re.compile(r"^replace[ \t]+([^(\s][^\n]*)$", re.MULTILINE)
+_GO_REPLACE_SPEC_RE = re.compile(r"^(\S+)(?:[ \t]+\S+)?[ \t]+=>[ \t]+(\S+)(?:[ \t]+(\S+))?$")
+
+
+def _go_replace_directives(content: str) -> dict[str, tuple[str, str]]:
+    """``old -> (new, version)``; a local-path replacement has an empty version."""
+    specs = [line for block in _GO_REPLACE_BLOCK_RE.finditer(content) for line in block.group(1).splitlines()]
+    specs.extend(match.group(1) for match in _GO_REPLACE_SINGLE_RE.finditer(content))
+    replacements: dict[str, tuple[str, str]] = {}
+    for spec in specs:
+        match = _GO_REPLACE_SPEC_RE.match(spec.split("//", 1)[0].strip())
+        if match:
+            replacements[match.group(1)] = (match.group(2), match.group(3) or "")
+    return replacements
 
 
 def _parse_go_mod_requires(
@@ -62,7 +80,6 @@ def _parse_go_mod_requires(
     # that, offline, was treated as DB-uncovered and silently dropped the whole
     # report. ``[ \t]+`` keeps the match on one line and skips the block opener.
     single_re = re.compile(r"^require[ \t]+(\S+)[ \t]+(\S+)([^\n]*)$", re.MULTILINE)
-    replace_re = re.compile(r"^replace\s+(\S+)(?:\s+\S+)?\s+=>\s+(\S+)\s+(\S+)", re.MULTILINE)
 
     # Block-style: require ( ... )
     for block in block_re.finditer(content):
@@ -82,10 +99,7 @@ def _parse_go_mod_requires(
         mod, ver, rest = m.group(1), m.group(2), m.group(3)
         (indirect if "indirect" in rest else direct)[mod] = ver
 
-    # Replace directives: replace old => new version
-    for m in replace_re.finditer(content):
-        old_mod, new_mod, new_ver = m.group(1), m.group(2), m.group(3)
-        replace_map[old_mod] = (new_mod, new_ver)
+    replace_map.update(_go_replace_directives(content))
 
     return direct, indirect, replace_map
 
@@ -204,11 +218,9 @@ def parse_go_packages(
     all_mods: dict[str, tuple[str, bool]] = {}
     for source_map, is_direct in ((direct, True), (indirect_mods, False)):
         for mod, ver in source_map.items():
-            if mod in replace_map:
-                new_mod, new_ver = replace_map[mod]
-                all_mods[new_mod] = (new_ver, is_direct)
-            else:
-                all_mods[mod] = (ver, is_direct)
+            target, target_ver = replace_map.get(mod, (mod, ver))
+            if target_ver:
+                all_mods[target] = (target_ver, is_direct)
 
     if all_mods:
         packages = []
@@ -297,241 +309,6 @@ def parse_go_packages(
                 detail="go.sum contains malformed or truncated entries; Go dependency coverage is partial",
             )
     return packages
-
-
-def parse_gradle_packages(directory: Path) -> list[Package]:
-    """Parse packages from Gradle build files.
-
-    Supports four file formats, checked in priority order:
-
-    1. ``gradle/libs.versions.toml`` — Gradle 7+ version catalog (most accurate,
-       resolves ``version.ref`` aliases).
-    2. ``gradle.lockfile`` — resolved dependency lock file (exact versions,
-       used when present alongside build scripts).
-    3. ``build.gradle.kts`` — Kotlin DSL (double-quoted strings).
-    4. ``build.gradle`` — Groovy DSL (single- or double-quoted strings).
-
-    When a ``gradle.lockfile`` is found it supersedes any packages collected
-    from the DSL build scripts because it contains resolved, exact versions.
-
-    All dependencies use ``ecosystem="maven"`` because Gradle resolves
-    packages through Maven Central / Maven repositories.  PURL format is
-    ``pkg:maven/{groupId}/{artifactId}@{version}``.
-
-    ``testImplementation`` and ``testRuntimeOnly`` configurations are marked
-    ``is_direct=False``; all other configurations are ``is_direct=True``.
-
-    Args:
-        directory: Project directory to search for Gradle build files.
-
-    Returns:
-        List of :class:`~agent_bom.models.Package` objects.  Empty list when
-        no Gradle files are found.
-    """
-    _test_configs = frozenset({"testimplementation", "testruntimeonly", "testcompileonly"})
-
-    def _make_package(group_id: str, artifact_id: str, version: str, config: str = "") -> Package:
-        name = f"{group_id}:{artifact_id}"
-        is_direct = config.lower() not in _test_configs
-        return Package(
-            name=name,
-            version=version,
-            ecosystem="maven",
-            purl=f"pkg:maven/{group_id}/{artifact_id}@{version}",
-            is_direct=is_direct,
-        )
-
-    # ── 1. gradle/libs.versions.toml ─────────────────────────────────────────
-    def _parse_version_catalog(path: Path) -> list[Package]:
-        if not path.exists():
-            return []
-        packages: list[Package] = []
-        try:
-            content = path.read_text(encoding="utf-8", errors="replace")
-        except OSError as exc:
-            logger.debug("Could not read Gradle version catalog at %s: %s", path, exc)
-            record_manifest_parse_warning(
-                ecosystem="maven",
-                path=str(path),
-                detail="libs.versions.toml could not be read; Gradle catalog dependencies were not scanned",
-            )
-            return []
-
-        # Parse [versions] section — simple key = "value" pairs
-        versions: dict[str, str] = {}
-        in_versions = False
-        in_libraries = False
-        library_lines: list[str] = []
-
-        for line in content.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("["):
-                in_versions = stripped.startswith("[versions]")
-                in_libraries = stripped.startswith("[libraries]")
-                continue
-            if in_versions and "=" in stripped and not stripped.startswith("#"):
-                k, _, v = stripped.partition("=")
-                versions[k.strip()] = v.strip().strip('"').strip("'")
-            if in_libraries and stripped and not stripped.startswith("#"):
-                library_lines.append(stripped)
-
-        # Parse library entries in [libraries]
-        # Formats:
-        #   alias = { module = "group:artifact", version.ref = "alias" }
-        #   alias = { group = "g", name = "a", version.ref = "alias" }
-        #   alias = { module = "group:artifact", version = "1.0" }
-        for line in library_lines:
-            if "=" not in line:
-                continue
-            _, _, rest = line.partition("=")
-            rest = rest.strip()
-
-            # Extract module or group+name
-            module_m = re.search(r'module\s*=\s*["\']([^"\']+)["\']', rest)
-            group_m = re.search(r'group\s*=\s*["\']([^"\']+)["\']', rest)
-            name_m = re.search(r'\bname\s*=\s*["\']([^"\']+)["\']', rest)
-
-            if module_m:
-                parts = module_m.group(1).split(":")
-                if len(parts) != 2:
-                    continue
-                group_id, artifact_id = parts[0].strip(), parts[1].strip()
-            elif group_m and name_m:
-                group_id = group_m.group(1).strip()
-                artifact_id = name_m.group(1).strip()
-            else:
-                continue
-
-            if not group_id or not artifact_id:
-                continue
-
-            # Resolve version
-            version_ref_m = re.search(r'version\.ref\s*=\s*["\']([^"\']+)["\']', rest)
-            version_lit_m = re.search(r'\bversion\s*=\s*["\']([^"\']+)["\']', rest)
-
-            if version_ref_m:
-                ref = version_ref_m.group(1).strip()
-                version = versions.get(ref, "")
-            elif version_lit_m:
-                version = version_lit_m.group(1).strip()
-            else:
-                version = ""
-
-            if not version:
-                continue
-
-            packages.append(_make_package(group_id, artifact_id, version))
-
-        return packages
-
-    # ── 2. gradle.lockfile ────────────────────────────────────────────────────
-    def _parse_lockfile(path: Path) -> list[Package]:
-        if not path.exists():
-            return []
-        packages: list[Package] = []
-        try:
-            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-        except OSError as exc:
-            logger.debug("Could not read Gradle lockfile at %s: %s", path, exc)
-            record_manifest_parse_warning(
-                ecosystem="maven",
-                path=str(path),
-                detail="gradle.lockfile could not be read; Gradle dependencies were not scanned",
-            )
-            return []
-        for line in lines:
-            line = line.strip()
-            if not line or line.startswith("#") or line.startswith("empty="):
-                continue
-            # Format: groupId:artifactId:version=configurations
-            dep_part = line.split("=")[0].strip()
-            parts = dep_part.split(":")
-            if len(parts) >= 3:
-                group_id, artifact_id, version = parts[0], parts[1], parts[2]
-                if group_id and artifact_id and version:
-                    packages.append(_make_package(group_id, artifact_id, version))
-        return packages
-
-    # ── 3 & 4. build.gradle / build.gradle.kts ───────────────────────────────
-    def _parse_build_gradle(path: Path) -> list[Package]:
-        if not path.exists():
-            return []
-        packages: list[Package] = []
-        try:
-            content = path.read_text(encoding="utf-8", errors="replace")
-        except OSError as exc:
-            logger.debug("Could not read Gradle build file at %s: %s", path, exc)
-            record_manifest_parse_warning(
-                ecosystem="maven",
-                path=str(path),
-                detail=f"{path.name} could not be read; Gradle dependencies were not scanned",
-            )
-            return []
-
-        # Match Kotlin DSL: configName("group:artifact:version")
-        # and Groovy DSL:   configName 'group:artifact:version'
-        #                   configName "group:artifact:version"
-        _config_pat = (
-            r"implementation|api|runtimeOnly|compileOnly|testImplementation|"
-            r"testRuntimeOnly|testCompileOnly|annotationProcessor|kapt|"
-            r"androidTestImplementation|debugImplementation|releaseImplementation"
-        )
-        _coord_pat = r"([\w][\w.\-]*):([\w][\w.\-]*):([\w][\w.\-]*)"
-        # Kotlin DSL: configName("g:a:v") or configName( "g:a:v" )
-        kotlin_re = re.compile(
-            r"\b(" + _config_pat + r')\s*\(\s*["\']' + _coord_pat + r'["\']',
-            re.IGNORECASE,
-        )
-        # Groovy DSL: configName 'g:a:v' or configName "g:a:v"
-        groovy_re = re.compile(
-            r"\b(" + _config_pat + r')\s+["\']' + _coord_pat + r'["\']',
-            re.IGNORECASE,
-        )
-        seen_coords: set[tuple[str, str, str]] = set()
-        for pattern in (kotlin_re, groovy_re):
-            for m in pattern.finditer(content):
-                config = m.group(1)
-                group_id = m.group(2)
-                artifact_id = m.group(3)
-                version = m.group(4)
-                coord = (group_id, artifact_id, version)
-                if group_id and artifact_id and version and coord not in seen_coords:
-                    seen_coords.add(coord)
-                    packages.append(_make_package(group_id, artifact_id, version, config))
-        return packages
-
-    # ── Dispatch ──────────────────────────────────────────────────────────────
-    catalog_path = directory / "gradle" / "libs.versions.toml"
-    lockfile_path = directory / "gradle.lockfile"
-    kts_path = directory / "build.gradle.kts"
-    groovy_path = directory / "build.gradle"
-
-    catalog_pkgs = _parse_version_catalog(catalog_path)
-    lockfile_pkgs = _parse_lockfile(lockfile_path)
-    kts_pkgs = _parse_build_gradle(kts_path)
-    groovy_pkgs = _parse_build_gradle(groovy_path)
-
-    # Merge: lockfile supersedes DSL scripts (more accurate resolved versions)
-    # Catalog is supplemental (may declare deps not in lockfile for non-locked configs)
-    if lockfile_pkgs:
-        # Use lockfile as canonical; augment with catalog extras
-        seen: set[tuple[str, str]] = {(p.name, p.version) for p in lockfile_pkgs}
-        merged = list(lockfile_pkgs)
-        for p in catalog_pkgs:
-            if (p.name, p.version) not in seen:
-                seen.add((p.name, p.version))
-                merged.append(p)
-        return merged
-
-    # No lockfile: combine DSL + catalog, deduplicate
-    all_pkgs = kts_pkgs + groovy_pkgs + catalog_pkgs
-    seen_names: set[str] = set()
-    unique: list[Package] = []
-    for p in all_pkgs:
-        if p.name not in seen_names:
-            seen_names.add(p.name)
-            unique.append(p)
-    return unique
 
 
 def parse_conda_packages(directory: Path) -> list[Package]:

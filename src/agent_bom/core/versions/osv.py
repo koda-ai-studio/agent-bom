@@ -166,7 +166,16 @@ def _cached_version_match_state(
     ecosystem: str = "",
     limit_version: str | None = "",
 ) -> str:
+    if introduced and introduced == last_affected and not fixed and not limit_version:
+        return _exact_pin_state(version, introduced, ecosystem)
     return range_match_state(version, introduced, fixed, last_affected, ecosystem, limit_version)
+
+
+def _exact_pin_state(version: str, pinned: str, ecosystem: str) -> str:
+    """An enumerated OSV version (often a raw git tag) matches only itself; it is never ambiguous."""
+    if version.strip() == pinned.strip():
+        return "affected"
+    return "affected" if compare_version_order(version, pinned, ecosystem) == 0 else "unaffected"
 
 
 def version_match_state(

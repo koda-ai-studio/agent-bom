@@ -167,7 +167,7 @@ class TestVerifyApiKey:
         _, key2 = create_api_key("key2", Role.VIEWER)
         calls: list[str] = []
 
-        from agent_bom.api import auth as auth_module
+        from agent_bom.api import api_key_record as auth_module
 
         original = auth_module._derive_key
 

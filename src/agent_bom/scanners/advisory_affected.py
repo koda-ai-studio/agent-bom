@@ -29,6 +29,7 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
 
+from agent_bom.core.severity import normalize_severity, severity_rank
 from agent_bom.scanners.advisory_graph_ids import occurrence_graph_ids
 from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn
 from agent_bom.scanners.operator_advisory import (
@@ -202,17 +203,46 @@ def page_answer(
 # --- feed records (OSV/GHSA/distro rows and NVD CPE ranges) from the local DB ----------------
 
 
-def _vuln_row(conn: sqlite3.Connection, advisory_id: str) -> sqlite3.Row | tuple | None:
-    wanted = advisory_id.strip().upper()
-    columns = "id, summary, severity, aliases, published"
-    row = conn.execute(f"SELECT {columns} FROM vulns WHERE id = ?", (wanted,)).fetchone()  # nosec B608 - fixed projection
-    if row is not None:
-        return row
-    # Aliases are stored comma-joined; a single bounded lookup by alias.
-    return conn.execute(
-        f"SELECT {columns} FROM vulns WHERE ',' || upper(aliases) || ',' LIKE ? ORDER BY id LIMIT 1",  # nosec B608 - fixed projection
-        (f"%,{wanted},%",),
-    ).fetchone()
+_VULN_COLUMNS = "id, summary, severity, aliases, published"
+_MAX_ALIAS_RECORDS = 32
+
+
+def _id_spellings(advisory_id: str) -> list[str]:
+    """Stored spellings of one id: OSV keeps a GHSA body lowercase, every other scheme upper."""
+    upper = advisory_id.strip().upper()
+    spellings = [upper]
+    if upper.startswith("GHSA-"):
+        spellings.append("GHSA-" + upper[5:].lower())
+    return spellings
+
+
+def _split_aliases(value: Any) -> list[str]:
+    return [alias.strip() for alias in str(value or "").split(",") if alias.strip()]
+
+
+def _alias_records(conn: sqlite3.Connection, advisory_id: str) -> list[sqlite3.Row | tuple]:
+    """Every feed record for one vulnerability: the id's own row, its aliases' rows and rows naming it.
+
+    OSV splits one vulnerability across records (a CVE row with distro ranges,
+    a GHSA row with the PyPI range), so no single row is the whole advisory.
+    The requested id's own row comes first.
+    """
+    spellings = _id_spellings(advisory_id)
+    marks = ",".join("?" * len(spellings))
+    own = conn.execute(f"SELECT {_VULN_COLUMNS} FROM vulns WHERE id IN ({marks})", spellings).fetchall()  # nosec B608 - fixed projection
+    naming = conn.execute(
+        f"SELECT {_VULN_COLUMNS} FROM vulns WHERE ',' || upper(aliases) || ',' LIKE ? ORDER BY id LIMIT ?",  # nosec B608 - fixed projection
+        (f"%,{spellings[0]},%", _MAX_ALIAS_RECORDS),
+    ).fetchall()
+    records = {str(row[0]): row for row in [*own, *naming]}
+    named = {alias for row in records.values() for alias in _split_aliases(row[3])}
+    missing = sorted(spelling for alias in named for spelling in _id_spellings(alias) if spelling not in records)[:_MAX_ALIAS_RECORDS]
+    if missing:
+        marks = ",".join("?" * len(missing))
+        for row in conn.execute(f"SELECT {_VULN_COLUMNS} FROM vulns WHERE id IN ({marks})", missing).fetchall():  # nosec B608
+            records.setdefault(str(row[0]), row)
+    ordered = [*own, *sorted((row for key, row in records.items() if row not in own), key=lambda row: str(row[0]))]
+    return ordered
 
 
 def _cpe_products(conn: sqlite3.Connection, cve_id: str) -> list[AffectedProduct]:
@@ -273,21 +303,50 @@ def _parse_published(value: Any) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
+def _merged_products(products: Iterable[AffectedProduct]) -> list[AffectedProduct]:
+    """One product per package identity, with each distinct range once, whichever record carried it."""
+    merged: dict[tuple, AffectedProduct] = {}
+    for product in products:
+        key = (product.ecosystem, product.name, product.cpe_product)
+        entry = merged.setdefault(
+            key,
+            AffectedProduct.model_construct(
+                ecosystem=product.ecosystem, name=product.name, cpe_product=product.cpe_product, ranges=[], versions=[]
+            ),
+        )
+        for item in product.ranges:
+            if item not in entry.ranges:
+                entry.ranges.append(item)
+        entry.versions.extend(version for version in product.versions if version not in entry.versions)
+    return list(merged.values())
+
+
 def feed_advisory_from_db(conn: sqlite3.Connection, advisory_id: str) -> OperatorAdvisory | None:
-    """The local feed record for an id or alias in the matcher's shape; ``None`` when the DB has none."""
-    row = _vuln_row(conn, advisory_id)
-    if row is None:
+    """The local feed record for an id or alias in the matcher's shape; ``None`` when the DB has none.
+
+    The advisory is the union of every alias record, so a CVE row that carries
+    only distribution ranges still answers for the PyPI range on its GHSA row.
+    """
+    records = _alias_records(conn, advisory_id)
+    if not records:
         return None
-    vuln_id, summary, severity, aliases, published = row[0], row[1], row[2], row[3], row[4]
-    products = [*_package_products(conn, vuln_id), *_cpe_products(conn, vuln_id)]
+    products: list[AffectedProduct] = []
+    for record in records:
+        products.extend(_package_products(conn, str(record[0])))
+        products.extend(_cpe_products(conn, str(record[0])))
     if not products:
         return None
+    primary = records[0]
+    vuln_id, summary, published = str(primary[0]), primary[1], primary[4]
+    severity = max((normalize_severity(record[2]) for record in records), key=severity_rank)
+    identities = [str(record[0]) for record in records] + [alias for record in records for alias in _split_aliases(record[3])]
+    aliases = list(dict.fromkeys(identity for identity in identities if identity != vuln_id))
     return OperatorAdvisory.model_construct(
-        id=str(vuln_id),
-        aliases=[alias.strip() for alias in str(aliases or "").split(",") if alias.strip() and alias.strip() != vuln_id],
+        id=vuln_id,
+        aliases=aliases,
         summary=str(summary or "No description available"),
-        severity=str(severity or "unknown").lower(),
+        severity=severity,
         published_at=_parse_published(published),
         references=[],
-        affected=products,
+        affected=_merged_products(products),
     )

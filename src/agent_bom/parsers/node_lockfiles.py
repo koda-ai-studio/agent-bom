@@ -5,13 +5,15 @@ from __future__ import annotations
 import json
 import re
 from collections import deque
+from fnmatch import fnmatchcase
+from functools import lru_cache
 from pathlib import Path
 
 from agent_bom.checksums import parse_sri
 from agent_bom.core.packages import synthesize_purl
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
-from agent_bom.parsers.file_limits import read_text_limited
+from agent_bom.parsers.file_limits import read_json_limited, read_text_limited
 from agent_bom.parsers.npm_semver import npm_exact_version
 
 _SECTIONS = (("dependencies", "runtime"), ("optionalDependencies", "optional"), ("devDependencies", "dev"))
@@ -71,12 +73,67 @@ def _bun_source(directory: Path) -> tuple[Path, dict, str | None] | None:
     return None
 
 
+_MAX_LOCK_ANCESTORS = 16
+_PNPM_IMPORTER_RE = re.compile(r"^  (?!\s)(?P<key>[^:#][^#]*?):\s*(?:\{\})?\s*$")
+
+
+@lru_cache(maxsize=64)
+def _pnpm_importers(lock: str, _mtime: float) -> frozenset[str]:
+    importers: set[str] = set()
+    inside = False
+    for line in read_text_limited(Path(lock)).splitlines():
+        if line and not line[0].isspace():
+            inside = line.rstrip() == "importers:"
+            continue
+        match = _PNPM_IMPORTER_RE.match(line) if inside else None
+        if match:
+            importers.add(match["key"].strip().strip("'\""))
+    return frozenset(importers)
+
+
+@lru_cache(maxsize=64)
+def _package_lock_members(lock: str, _mtime: float) -> frozenset[str]:
+    entries = read_json_limited(Path(lock)).get("packages")
+    if not isinstance(entries, dict):
+        return frozenset()
+    return frozenset(key for key in entries if key and not key.startswith("node_modules/") and "/node_modules/" not in key)
+
+
+def _yarn_workspace_member(root: Path, relative: str) -> bool:
+    workspaces = read_json_limited(root / "package.json").get("workspaces")
+    if isinstance(workspaces, dict):
+        workspaces = workspaces.get("packages")
+    if not isinstance(workspaces, list):
+        return False
+    patterns = [str(item).strip().rstrip("/") for item in workspaces if item]
+    if any(pattern.startswith("!") and fnmatchcase(relative, pattern[1:]) for pattern in patterns):
+        return False
+    return any(not pattern.startswith("!") and fnmatchcase(relative, pattern) for pattern in patterns)
+
+
+def _ancestor_lock_owns(directory: Path) -> bool:
+    """True when an ancestor lockfile explicitly resolves *directory* as a workspace member."""
+    for depth, parent in enumerate(directory.parents):
+        if depth >= _MAX_LOCK_ANCESTORS:
+            return False
+        relative = directory.relative_to(parent).as_posix()
+        pnpm = parent / "pnpm-lock.yaml"
+        if pnpm.is_file() and relative in _pnpm_importers(str(pnpm), pnpm.stat().st_mtime):
+            return True
+        npm = parent / "package-lock.json"
+        if npm.is_file() and relative in _package_lock_members(str(npm), npm.stat().st_mtime):
+            return True
+        if (parent / "yarn.lock").is_file() and (parent / "package.json").is_file() and _yarn_workspace_member(parent, relative):
+            return True
+    return False
+
+
 def has_node_lock(directory: Path) -> bool:
     if any((directory / name).exists() for name in ("yarn.lock", "pnpm-lock.yaml", "bun.lock", "bun.lockb")):
         return True
     try:
-        return _bun_source(directory) is not None
-    except (OSError, ValueError, UnicodeError):
+        return _bun_source(directory) is not None or _ancestor_lock_owns(directory)
+    except (OSError, ValueError, UnicodeError, AttributeError):
         return False
 
 
