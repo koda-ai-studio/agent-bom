@@ -6,10 +6,27 @@ import tomllib
 from collections import defaultdict
 from pathlib import Path
 
+from agent_bom.checksums import add_checksum, crates_io_download_url
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
 from agent_bom.parsers.file_limits import read_text_limited
 from agent_bom.parsers.lockfile_topology import apply_topology
+
+
+def _locked_crate(row: dict) -> Package:
+    name, version = row["name"], row["version"]
+    checksums: dict[str, str] = {}
+    checksum = row.get("checksum")
+    add_checksum(checksums, "sha256", checksum if isinstance(checksum, str) else "")
+    return Package(
+        name=name,
+        version=version,
+        ecosystem="cargo",
+        purl=f"pkg:cargo/{name}@{version}",
+        is_direct=None,
+        checksums=checksums,
+        download_url=crates_io_download_url(name, version, row.get("source")) if checksums else None,
+    )
 
 
 def parse_cargo_lock(directory: Path) -> list[Package]:
@@ -39,9 +56,7 @@ def parse_cargo_lock(directory: Path) -> list[Package]:
     root_package = root_package if isinstance(root_package, dict) else {}
     root_key = (root_package.get("name"), root_package.get("version"))
     packages = [
-        Package(
-            name=row["name"], version=row["version"], ecosystem="cargo", purl=f"pkg:cargo/{row['name']}@{row['version']}", is_direct=None
-        )
+        _locked_crate(row)
         for row in rows
         if isinstance(row, dict)
         and isinstance(row.get("name"), str)

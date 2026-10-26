@@ -16,6 +16,8 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from agent_bom.checksums import locked_from_public_registry
+
 if TYPE_CHECKING:
     from agent_bom.models import Package, Vulnerability
 
@@ -368,6 +370,11 @@ def check_dependency_confusion(package: "Package") -> str | None:
 
     # If the package has vulnerability data, it's a known public package
     if package.vulnerabilities:
+        return None
+
+    # A digest-pinned artifact from the ecosystem's public registry is a public
+    # package; an internal-looking name alone is not confusion evidence.
+    if locked_from_public_registry(package):
         return None
 
     # If version was resolved from a registry, it's a known public package

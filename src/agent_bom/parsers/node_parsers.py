@@ -16,7 +16,7 @@ from itertools import islice
 from pathlib import Path
 from urllib.parse import quote
 
-from agent_bom.checksums import parse_sri
+from agent_bom.checksums import parse_sri, public_registry_download_url
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import MCPServer, Package
 from agent_bom.parsers.file_limits import read_json_limited, read_text_limited
@@ -385,7 +385,6 @@ def parse_npm_packages(directory: Path) -> list[Package]:
                     continue
 
                 clean_name, version = npm_alias(str(info.get("name") or clean_name), str(info.get("version", "unknown")))
-                checksums = parse_sri(str(info.get("integrity") or ""))
                 depth, parent_package, scope = introduced_by.get(name, (0, None, "runtime"))
                 packages.append(
                     Package(
@@ -397,7 +396,8 @@ def parse_npm_packages(directory: Path) -> list[Package]:
                         parent_package=parent_package,
                         dependency_depth=depth,
                         dependency_scope=scope,
-                        checksums=checksums,
+                        checksums=parse_sri(str(info.get("integrity") or "")),
+                        download_url=public_registry_download_url(info.get("resolved"), "npm"),
                         version_evidence=[
                             {"type": "lockfile", "source_file": str(lock_file), "installed_name": _npm_lock_entry_name(name)}
                         ],

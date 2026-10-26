@@ -15,6 +15,7 @@ import base64
 import binascii
 import re
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 # Expected lowercase-hex digest length per algorithm (used to reject garbage).
 _HEX_LEN_BY_ALG = {
@@ -185,3 +186,39 @@ def integrity_verdict_statements(verdict: dict[str, Any] | None) -> list[str]:
         # when there is no boolean (why there is none).
         statements.append(f"agent-bom:provenance-status={verdict['provenance_status']}")
     return statements
+
+
+# Artifact hosts of each ecosystem's default public registry. A lockfile entry
+# downloaded from one of these with a recorded digest is a public package.
+_PUBLIC_REGISTRY_HOSTS: dict[str, frozenset[str]] = {
+    "cargo": frozenset({"static.crates.io", "crates.io"}),
+    "npm": frozenset({"registry.npmjs.org", "registry.yarnpkg.com"}),
+    "pypi": frozenset({"files.pythonhosted.org", "pypi.org"}),
+}
+_CRATES_IO_SOURCES = frozenset({"registry+https://github.com/rust-lang/crates.io-index", "sparse+https://index.crates.io/"})
+
+
+def public_registry_download_url(url: object, ecosystem: str) -> str | None:
+    """Return ``url`` without query/fragment when it is an https artifact on the public registry."""
+    if not isinstance(url, str):
+        return None
+    parts = urlsplit(url.strip())
+    if parts.scheme != "https" or parts.username or parts.password:
+        return None
+    if (parts.hostname or "") not in _PUBLIC_REGISTRY_HOSTS.get(ecosystem.lower(), frozenset()):
+        return None
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+
+
+def crates_io_download_url(name: str, version: str, source: object) -> str | None:
+    """Return the crates.io artifact URL for a Cargo.lock row sourced from crates.io."""
+    if source not in _CRATES_IO_SOURCES:
+        return None
+    return f"https://static.crates.io/crates/{name}/{name}-{version}.crate"
+
+
+def locked_from_public_registry(package: Any) -> bool:
+    """True when a digest-pinned artifact was resolved from the ecosystem's public registry."""
+    checksums = getattr(package, "checksums", None) or {}
+    url = getattr(package, "download_url", None)
+    return bool(checksums) and public_registry_download_url(url, str(getattr(package, "ecosystem", ""))) is not None
