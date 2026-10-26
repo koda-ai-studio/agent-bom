@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "purpose": "Single source of truth for the integrations named on the README banner and in the generated integration lists. Every entry names the code that implements it; tests/test_integrations_manifest.py fails when an entry has no implementation or a registered provider, connector or MCP client is missing.",
+  "trademark_note": "Product names and logos are trademarks of their owners, used only to identify supported evidence sources. Their use does not imply endorsement or partnership.",
+  "groups": [
+    {
+      "id": "ai_clients",
+      "title": "AI clients + IDEs",
+      "integrations": [
+        {"name": "Claude", "logo": "vendor/claude-icon-rounded.svg", "implements": ["agent_type:claude-desktop", "agent_type:claude-code"]},
+        {"name": "Codex", "logo": "vendor/openai-blossom-white.svg", "implements": ["agent_type:codex-cli"]},
+        {"name": "Cursor", "logo": "vendor/simple-icons/cursor.svg", "implements": ["agent_type:cursor"]},
+        {"name": "GitHub Copilot", "logo": "vendor/simple-icons/githubcopilot.svg", "implements": ["agent_type:vscode-copilot", "agent_type:copilot-cli"]},
+        {"name": "Windsurf", "logo": "vendor/simple-icons/windsurf.svg", "implements": ["agent_type:windsurf"]},
+        {"name": "Cortex Code", "implements": ["agent_type:cortex-code"]},
+        {"name": "Gemini CLI", "implements": ["agent_type:gemini-cli"]},
+        {"name": "JetBrains AI", "implements": ["agent_type:jetbrains-ai"]},
+        {"name": "Junie", "implements": ["agent_type:junie"]},
+        {"name": "Amazon Q", "implements": ["agent_type:amazon-q"]},
+        {"name": "Cline", "implements": ["agent_type:cline"]},
+        {"name": "Roo Code", "implements": ["agent_type:roo-code"]},
+        {"name": "Continue", "implements": ["agent_type:continue"]},
+        {"name": "Zed", "implements": ["agent_type:zed"]},
+        {"name": "Goose", "implements": ["agent_type:goose"]},
+        {"name": "Snowflake CLI", "implements": ["agent_type:snowflake-cli"]},
+        {"name": "Docker MCP Toolkit", "implements": ["agent_type:docker-mcp", "symbol:agent_bom.discovery.local_sources:discover_docker_mcp"]},
+        {"name": "Tabnine", "implements": ["agent_type:tabnine"]},
+        {"name": "Sourcegraph Cody", "implements": ["agent_type:sourcegraph-cody"]},
+        {"name": "Aider", "implements": ["agent_type:aider"]},
+        {"name": "Void", "implements": ["agent_type:void"]},
+        {"name": "Aide", "implements": ["agent_type:aide"]},
+        {"name": "Trae", "implements": ["agent_type:trae"]},
+        {"name": "Pieces", "implements": ["agent_type:pieces"]},
+        {"name": "OpenClaw", "implements": ["agent_type:openclaw"]},
+        {"name": "mcp-cli", "implements": ["agent_type:mcp-cli"]}
+      ]
+    },
+    {
+      "id": "ai_platforms",
+      "title": "AI platforms + model hubs",
+      "integrations": [
+        {"name": "OpenAI", "logo": "vendor/openai-blossom-white.svg", "implements": ["cloud_provider:openai"]},
+        {"name": "Hugging Face", "logo": "vendor/simple-icons/huggingface.svg", "implements": ["cloud_provider:huggingface"]},
+        {"name": "Ollama", "logo": "vendor/simple-icons/ollama.svg", "implements": ["cloud_provider:ollama"]},
+        {"name": "MLflow", "logo": "vendor/simple-icons/mlflow.svg", "implements": ["cloud_provider:mlflow"]},
+        {"name": "W&B", "logo": "vendor/simple-icons/weightsandbiases.svg", "implements": ["cloud_provider:wandb"]},
+        {"name": "Langfuse", "implements": ["trace_connector:langfuse"]},
+        {"name": "LangSmith", "implements": ["trace_connector:langsmith"]}
+      ]
+    },
+    {
+      "id": "gpu_clouds",
+      "title": "GPU + neo clouds",
+      "integrations": [
+        {"name": "CoreWeave", "implements": ["cloud_provider:coreweave"]},
+        {"name": "Nebius", "implements": ["cloud_provider:nebius"]},
+        {"name": "Lambda", "implements": ["cloud_provider:lambda"]},
+        {"name": "RunPod", "implements": ["cloud_provider:runpod"]},
+        {"name": "Vast.ai", "implements": ["cloud_provider:vastai"]},
+        {"name": "Crusoe", "implements": ["cloud_provider:crusoe"]},
+        {"name": "GPU containers + K8s GPU nodes", "implements": ["symbol:agent_bom.cloud.gpu_infra:scan_gpu_infra"]}
+      ]
+    },
+    {
+      "id": "hyperscalers",
+      "title": "Hyperscalers + Kubernetes",
+      "integrations": [
+        {"name": "AWS", "logo": "vendor/simple-icons/amazonwebservices.svg", "implements": ["cloud_provider:aws"]},
+        {"name": "Azure", "logo": "vendor/simple-icons/microsoftazure.svg", "implements": ["cloud_provider:azure"]},
+        {"name": "GCP", "logo": "vendor/google-cloud-mark.svg", "implements": ["cloud_provider:gcp"]},
+        {"name": "Kubernetes", "logo": "vendor/simple-icons/kubernetes.svg", "implements": ["symbol:agent_bom.k8s:discover_images", "symbol:agent_bom.k8s:evaluate_rbac"]}
+      ]
+    },
+    {
+      "id": "data_platforms",
+      "title": "Data + vector stores",
+      "integrations": [
+        {"name": "Snowflake", "logo": "vendor/simple-icons/snowflake.svg", "implements": ["cloud_provider:snowflake"]},
+        {"name": "Databricks", "logo": "vendor/simple-icons/databricks.svg", "implements": ["cloud_provider:databricks"]},
+        {"name": "Supabase", "logo": "vendor/simple-icons/supabase.svg", "implements": ["symbol:agent_bom.cloud.supabase_inventory:collect_report"]},
+        {"name": "Pinecone", "implements": ["symbol:agent_bom.cloud.vector_db:discover_pinecone"]},
+        {"name": "Qdrant", "implements": ["vector_db:qdrant"]},
+        {"name": "Weaviate", "implements": ["vector_db:weaviate"]},
+        {"name": "Chroma", "implements": ["vector_db:chroma"]},
+        {"name": "Milvus", "implements": ["vector_db:milvus"]}
+      ]
+    },
+    {
+      "id": "identity_saas",
+      "title": "Identity + SaaS + dev",
+      "integrations": [
+        {"name": "Okta", "logo": "vendor/simple-icons/okta.svg", "implements": ["symbol:agent_bom.identity.okta_nhi:discover_okta_non_human_identities"]},
+        {"name": "GitHub Actions", "logo": "vendor/simple-icons/github.svg", "implements": ["symbol:agent_bom.github_actions:scan_github_actions"]},
+        {"name": "Vercel", "logo": "vendor/simple-icons/vercel.svg", "implements": ["symbol:agent_bom.cloud.vercel_inventory:collect_report"]},
+        {"name": "Microsoft Entra ID", "implements": ["symbol:agent_bom.identity.entra_nhi:discover_entra_non_human_identities"]},
+        {"name": "Jira", "implements": ["connector:jira"]},
+        {"name": "ServiceNow", "implements": ["connector:servicenow"]},
+        {"name": "Slack", "implements": ["connector:slack"]},
+        {"name": "Jamf", "implements": ["endpoint_provider:jamf", "symbol:agent_bom.connectors.endpoints.providers:jamf_page"]}
+      ]
+    }
+  ],
+  "evidence_out": {
+    "title": "Evidence out",
+    "integrations": [
+      {"name": "ClickHouse", "implements": ["export_kind:clickhouse", "symbol:agent_bom.api.clickhouse_store:ClickHouseAnalyticsStore"]},
+      {"name": "BigQuery", "implements": ["export_kind:bigquery"]},
+      {"name": "S3", "implements": ["export_kind:s3"]},
+      {"name": "GCS", "implements": ["export_kind:gcs"]},
+      {"name": "Azure Blob", "implements": ["export_kind:azure-blob"]},
+      {"name": "Jira tickets", "implements": ["symbol:agent_bom.integrations.jira:create_jira_ticket"]},
+      {"name": "Slack alerts", "implements": ["symbol:agent_bom.integrations.slack:send_slack_alert"]},
+      {"name": "Vanta", "implements": ["symbol:agent_bom.integrations.vanta:upload_evidence"]},
+      {"name": "Drata", "implements": ["symbol:agent_bom.integrations.drata:upload_evidence"]},
+      {"name": "OCSF syslog", "implements": ["symbol:agent_bom.siem.ocsf:SyslogConnector"]}
+    ]
+  },
+  "hidden": {
+    "agent_type:custom": "Catch-all for user-declared agents; not a product.",
+    "agent_type:replit-agent": "Enum value only: no config path and no workspace parser discover it yet.",
+    "export_kind:snowflake": "Shown as a scanned data platform; export is a secondary capability.",
+    "export_kind:databricks": "Shown as a scanned data platform; export is a secondary capability.",
+    "endpoint_provider:crowdstrike": "Endpoint posture signal source; kept off the banner to avoid naming security vendors in public artifacts."
+  }
+}
