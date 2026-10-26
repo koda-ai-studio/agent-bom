@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from click.testing import CliRunner
 
 import agent_bom.cli._cloud_group as cg
@@ -25,6 +26,12 @@ from agent_bom.cli._cloud_group import (
     _resolve_scan_providers,
     cloud_group,
 )
+
+
+@pytest.fixture(autouse=True)
+def _provider_sdks_installed(monkeypatch):
+    """These tests mock discovery, so the provider SDKs themselves need not be installed."""
+    monkeypatch.setattr("agent_bom.cli._cloud_sdk.providers_missing_sdk", lambda providers: [])
 
 
 def _capture_scan(monkeypatch):

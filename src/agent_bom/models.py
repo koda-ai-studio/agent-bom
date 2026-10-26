@@ -808,6 +808,8 @@ class AIBOMReport:
             for check in data.get("checks", []) or []:
                 if isinstance(check, dict) and str(check.get("status", "")).upper() in {"FAIL", "ERROR"}:
                     check_with_version = {**check, "benchmark_version": data.get("benchmark_version")}
+                    if provider == "databricks" and not check.get("account_id"):
+                        check_with_version["account_id"] = data.get("workspace_host") or ""
                     findings.append(cloud_cis_check_to_finding(check_with_version, provider))
         return findings
 

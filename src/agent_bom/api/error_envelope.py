@@ -232,6 +232,22 @@ def with_middleware_error_envelope(
 
     @wraps(dispatch)
     async def wrapped(self: Any, request: StarletteRequest, call_next: RequestResponseEndpoint) -> Response:
-        return _with_middleware_error_envelope(request, await dispatch(self, request, call_next))
+        try:
+            response = await dispatch(self, request, call_next)
+        except Exception as exc:
+            if not _is_backend_unavailable(exc):
+                raise
+            response = JSONResponse(status_code=503, content={"detail": "Service temporarily unavailable"})
+        return _with_middleware_error_envelope(request, response)
 
     return wrapped
+
+
+def _is_backend_unavailable(exc: BaseException) -> bool:
+    """True for storage connectivity failures, which are retryable 503s rather than 500s."""
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+    return any(
+        cls.__module__.split(".")[0] in {"psycopg", "psycopg_pool"} and cls.__name__ in {"OperationalError", "PoolTimeout"}
+        for cls in type(exc).__mro__
+    )

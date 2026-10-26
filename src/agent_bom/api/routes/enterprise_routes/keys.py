@@ -164,7 +164,7 @@ def delete_browser_session(request: Request, response: Response) -> Response:
 def create_key(request: Request, req: CreateKeyRequest) -> dict:
     """Create a new API key. Returns the raw key once — store it securely."""
     from agent_bom.api.audit_log import log_action
-    from agent_bom.api.auth import Role, create_api_key, get_key_store, resolve_scim_subject_binding, scopes_allow
+    from agent_bom.api.auth import Role, create_api_key, get_key_store, key_durability_fields, resolve_scim_subject_binding, scopes_allow
     from agent_bom.rbac import role_rank
 
     tenant_id = require_request_tenant_id(request)
@@ -227,6 +227,7 @@ def create_key(request: Request, req: CreateKeyRequest) -> dict:
         "owner": api_key.owner,
         "principal_id": api_key.principal_id,
         "message": "Store the raw_key securely — it will not be shown again.",
+        **key_durability_fields(),
     }
 
 
@@ -243,7 +244,13 @@ def rotate_key(
     (inherit name from the current key, no expiry change, default overlap).
     """
     from agent_bom.api.audit_log import log_action
-    from agent_bom.api.auth import create_api_key, get_api_key_policy, get_key_store, normalize_rotation_overlap_seconds
+    from agent_bom.api.auth import (
+        create_api_key,
+        get_api_key_policy,
+        get_key_store,
+        key_durability_fields,
+        normalize_rotation_overlap_seconds,
+    )
 
     if req is None:
         req = RotateKeyRequest()
@@ -303,6 +310,7 @@ def rotate_key(
         "message": (
             "Store the raw_key securely — it will not be shown again. The previous key remains valid until the overlap window ends."
         ),
+        **key_durability_fields(store),
     }
 
 

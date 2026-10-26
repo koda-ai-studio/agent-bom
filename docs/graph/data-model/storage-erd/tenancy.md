@@ -189,7 +189,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `agent_conditional_access_policies` | Postgres, SQLite | 6 |  | persistent |
 | `agent_identities` | Postgres, SQLite | 7 |  | persistent |
 | `agent_identity_jit_grants` | Postgres, SQLite | 8 |  | persistent |
-| `api_keys` | Postgres | 19 |  | persistent |
+| `api_keys` | Postgres, SQLite | 20 |  | persistent |
 | `api_rate_limit_hits` | Postgres | 2 |  | persistent |
 | `api_rate_limits` | Postgres | 4 |  | persistent |
 | `auth_session_attempts` | Postgres | 2 |  | persistent |

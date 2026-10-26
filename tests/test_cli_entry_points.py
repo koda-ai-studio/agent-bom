@@ -219,6 +219,8 @@ class TestAgentCloud:
     def test_cloud_provider_wrappers_do_not_block_on_db_refresh(self, monkeypatch):
         from agent_bom.cli.cloud import cloud
 
+        monkeypatch.setattr("agent_bom.cli._cloud_sdk.providers_missing_sdk", lambda providers: [])
+
         seen = []
 
         def fake_scan(**kwargs):

@@ -619,9 +619,7 @@ PUSH_GZIP = _bool("AGENT_BOM_PUSH_GZIP", False)
 # ── PostgreSQL Control Plane Tuning ──────────────────────────────────────
 # Operator hint only; never changes the PostgreSQL contract or implies certification.
 POSTGRES_PROVIDER = _str("AGENT_BOM_POSTGRES_PROVIDER", "auto")
-# Used by api/postgres_store.py and shared Postgres-backed control-plane
-# services such as the distributed rate limiter. Defaults target multi-replica
-# self-hosted control planes rather than a single local developer process.
+# Shared Postgres pool sizing; defaults target multi-replica control planes, not one dev process.
 POSTGRES_POOL_MIN_SIZE = _int("AGENT_BOM_POSTGRES_POOL_MIN_SIZE", 5)
 POSTGRES_POOL_MAX_SIZE = _int("AGENT_BOM_POSTGRES_POOL_MAX_SIZE", 20)
 # Route handlers offload synchronous store reads to worker threads. AnyIO's
@@ -631,6 +629,8 @@ POSTGRES_POOL_MAX_SIZE = _int("AGENT_BOM_POSTGRES_POOL_MAX_SIZE", 20)
 # explicitly only when offloaded work is not database-bound.
 WORKER_THREAD_LIMIT = _int("AGENT_BOM_WORKER_THREAD_LIMIT", POSTGRES_POOL_MAX_SIZE)
 POSTGRES_CONNECT_TIMEOUT_SECONDS = _int("AGENT_BOM_POSTGRES_CONNECT_TIMEOUT_SECONDS", 5)
+# Seconds a request waits for a pooled connection before a 503 (psycopg_pool's default is 30).
+POSTGRES_POOL_TIMEOUT_SECONDS = _float("AGENT_BOM_POSTGRES_POOL_TIMEOUT_SECONDS", 10.0)
 POSTGRES_STATEMENT_TIMEOUT_MS = _int("AGENT_BOM_POSTGRES_STATEMENT_TIMEOUT_MS", 15_000)
 POSTGRES_GRAPH_SEARCH_TIMEOUT_MS = _int("AGENT_BOM_POSTGRES_GRAPH_SEARCH_TIMEOUT_MS", 3_000)
 

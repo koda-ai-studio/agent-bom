@@ -362,6 +362,7 @@ def _check_4_1(ws: Any) -> CISCheckResult:
     )
     try:
         if not hasattr(ws, "log_delivery"):
+            result.status = CheckStatus.NO_DATA
             result.evidence = "Audit log delivery requires account-level evidence; the workspace client does not expose this API."
             return result
         log_configs = list(ws.log_delivery.list() or [])

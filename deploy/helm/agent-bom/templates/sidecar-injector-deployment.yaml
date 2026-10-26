@@ -92,11 +92,15 @@ spec:
               scheme: HTTPS
               path: /healthz
               port: https
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               scheme: HTTPS
               path: /healthz
               port: https
+            timeoutSeconds: 5
+            failureThreshold: 3
       volumes:
         - name: tls
           secret:

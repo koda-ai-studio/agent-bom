@@ -233,7 +233,7 @@ def create_invitation(request: Request, req: InvitationRequest) -> dict:
     audited in both tenants before provisioning; failed audit writes fail closed.
     The raw key is returned once and is never included in audit evidence.
     """
-    from agent_bom.api.auth import Role, create_api_key
+    from agent_bom.api.auth import Role, create_api_key, key_durability_fields
     from agent_bom.api.invitation_provisioning import provision_invited_key, require_invitation_delegation
     from agent_bom.api.tenant_quota import default_tenant_quotas
 
@@ -270,6 +270,7 @@ def create_invitation(request: Request, req: InvitationRequest) -> dict:
         "quota": quota,
         "invite_url": _hosted_invite_url(tenant_id),
         "message": ("Store the raw_key securely and deliver it to the invited admin over a trusted channel — it will not be shown again."),
+        **key_durability_fields(),
     }
 
 

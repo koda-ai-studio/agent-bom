@@ -7,11 +7,13 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
 import httpx
 
+from agent_bom import http_client
 from agent_bom.coverage import record_manifest_parse_warning
 
 logger = logging.getLogger(__name__)
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 _GOPROXY_URL = "https://proxy.golang.org"
 
 _CHECKSUM_DB_URL = "https://sum.golang.org"
+_SUMDB_WORKERS = 8
 
 _UNRESOLVED_VERSIONS = frozenset({"latest", "(devel)", "", "unknown"})
 
@@ -59,6 +62,31 @@ def _read_go_sum(go_sum: Path) -> dict[str, str] | None:
     return sum_entries
 
 
+def escape_module_path(value: str) -> str:
+    """Go module case-encoding: every uppercase letter becomes ``!`` plus its lowercase form."""
+    return "".join(f"!{char.lower()}" if char.isupper() else char for char in value)
+
+
+def _record_hash(body: str, module: str, version: str) -> Optional[str]:
+    """Zip hash from a sumdb lookup record: ``<module> <version> h1:<hash>`` after the record id."""
+    for line in body.splitlines():
+        fields = line.split()
+        if len(fields) == 3 and fields[0] == module and fields[1] == version and fields[2].startswith("h1:"):
+            return fields[2]
+    return None
+
+
+def _sumdb_lookup(checksum_db_url: str, module: str, version: str, timeout: int) -> tuple[Optional[str], Optional[str]]:
+    """Return ``(hash, failure)`` for one module; never raises."""
+    lookup_url = f"{checksum_db_url}/lookup/{escape_module_path(module)}@{escape_module_path(version)}"
+    try:
+        body = http_client.fetch_bytes(lookup_url, timeout=timeout).decode("utf-8", errors="replace")
+    except (OSError, ValueError, ConnectionError, RuntimeError, httpx.HTTPError) as exc:
+        return None, f"checksum DB unreachable: {exc}"
+    db_hash = _record_hash(body, module, version)
+    return db_hash, None if db_hash else "unexpected checksum DB response format"
+
+
 def verify_go_checksums(
     go_sum: Path,
     modules: list[tuple[str, str]],
@@ -67,10 +95,9 @@ def verify_go_checksums(
 ) -> dict[str, str]:
     """Check module ZIP hashes in go.sum against the HTTPS checksum database.
 
-    Return module@version -> ok, mismatch or missing. Skip /go.mod entries
-    and omit network failures after warning; mismatches indicate changed bytes.
-    Public checksum queries need no credentials. Only the supplied modules
-    are checked, with the caller-provided timeout.
+    Return module@version -> ok, mismatch or missing. Lookups run on a small
+    bounded pool; modules whose lookup fails are omitted and summarised in a
+    single warning. Public checksum queries need no credentials.
     """
     _validate_https_url(checksum_db_url, "checksum_db_url")
 
@@ -79,48 +106,27 @@ def verify_go_checksums(
         return {}
 
     results: dict[str, str] = {}
+    pending: list[tuple[str, str]] = []
     for mod, ver in modules:
-        # Ensure version has the v prefix for the lookup key
         ver_key = ver if ver.startswith("v") else f"v{ver}"
+        if f"{mod}@{ver_key}" in sum_entries:
+            pending.append((mod, ver_key))
+        else:
+            results[f"{mod}@{ver_key}"] = "missing"
+    if not pending:
+        return results
+
+    with ThreadPoolExecutor(max_workers=min(_SUMDB_WORKERS, len(pending))) as pool:
+        lookups = list(pool.map(lambda item: _sumdb_lookup(checksum_db_url, item[0], item[1], timeout), pending))
+    failures: list[str] = []
+    for (mod, ver_key), (db_hash, failure) in zip(pending, lookups):
         key = f"{mod}@{ver_key}"
-
-        if key not in sum_entries:
-            results[key] = "missing"
-            continue
-
-        local_hash = sum_entries[key]
-
-        # Fetch expected hash from the checksum database
-        lookup_url = f"{checksum_db_url}/lookup/{mod}@{ver_key}"
-        try:
-            from agent_bom.http_client import fetch_bytes
-
-            body = fetch_bytes(lookup_url, timeout=timeout).decode("utf-8", errors="replace")
-        except (OSError, ValueError, ConnectionError, RuntimeError, httpx.HTTPError) as exc:
-            logger.warning(
-                "go.sum verification skipped for %s — checksum DB unreachable: %s",
-                key,
-                exc,
-            )
-            continue
-
-        # The lookup response format (tile protocol):
-        # Line 0: tree size
-        # Line 1: hash (h1:BASE64=)
-        # Line 2+: signed tree head
-        db_hash: Optional[str] = None
-        for line in body.splitlines():
-            line = line.strip()
-            if line.startswith("h1:"):
-                db_hash = line
-                break
-
         if db_hash is None:
-            logger.warning("Unexpected checksum DB response format for %s", key)
+            failures.append(f"{key} ({failure})")
             continue
-
-        results[key] = "ok" if local_hash == db_hash else "mismatch"
-
+        results[key] = "ok" if sum_entries[key] == db_hash else "mismatch"
+    if failures:
+        logger.warning("go.sum verification skipped for %d module(s), e.g. %s", len(failures), "; ".join(failures[:3]))
     return results
 
 
