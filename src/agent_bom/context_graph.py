@@ -190,7 +190,7 @@ def _context_vulnerability_hosts(row: dict, inventory: dict[str, tuple[str, str,
     """Narrow real owners; never invent ownership from two independent lists."""
     from agent_bom.package_utils import canonical_package_identity
 
-    agents = set(row.get("affected_agents") or [])
+    agents = set(row.get("affected_agent_graph_ids") or ()) or {f"agent:{name}" for name in row.get("affected_agents") or []}
     servers = set(row.get("affected_servers") or [])
     candidates = {
         server_id: packages
@@ -224,11 +224,9 @@ def build_context_graph(
     """Build a context graph from raw JSON scan data.
 
     Args:
-        agents_data: The ``agents`` list from ``to_json()`` output.
+        agents_data: The ``agents`` list from ``to_json()`` output; an estate agent's ``graph_id`` keys its node.
         blast_data: The ``blast_radius`` list from ``to_json()`` output.
-
-    Returns:
-        A populated ``ContextGraph`` with nodes, edges, and adjacency map.
+    Returns: A populated ``ContextGraph`` with nodes, edges, and adjacency map.
     """
     from agent_bom.graph.builder import _is_repository_inventory, _is_sbom_import
 
@@ -240,7 +238,7 @@ def build_context_graph(
     static_names = {agent.get("name") for agent in static_agents}
     runtime_names = {agent.get("name") for agent in agents_data}
     static_inventory = {
-        f"static:{index}:{server_index}": (agent.get("name", ""), server.get("name", ""), server.get("packages") or [])
+        f"static:{index}:{server_index}": (f"agent:{agent.get('name', '')}", server.get("name", ""), server.get("packages") or [])
         for index, agent in enumerate(static_agents)
         for server_index, server in enumerate(agent.get("mcp_servers", []))
     }
@@ -253,13 +251,14 @@ def build_context_graph(
     # ── Build agent → server → credential / tool nodes & edges ────────
     for agent_dict in agents_data:
         agent_name = agent_dict.get("name", "unknown")
-        agent_id = f"agent:{agent_name}"
+        agent_id = str(agent_dict.get("graph_id") or f"agent:{agent_name}")
         graph.add_node(
             GraphNode(
                 id=agent_id,
                 kind=NodeKind.AGENT,
                 label=agent_name,
                 metadata={
+                    **({"canonical_id": agent_dict.get("canonical_id", "")} if agent_dict.get("graph_id") else {}),
                     "agent_type": agent_dict.get("type", ""),
                     "status": agent_dict.get("status", ""),
                     "server_count": len(agent_dict.get("mcp_servers", [])),
@@ -299,8 +298,8 @@ def build_context_graph(
 
         for srv_dict in agent_dict.get("mcp_servers", []):
             srv_name = srv_dict.get("name", "unknown")
-            srv_id = f"server:{agent_name}:{srv_name}"
-            server_inventory[srv_id] = (agent_name, srv_name, srv_dict.get("packages") or [])
+            srv_id = f"server:{agent_id.removeprefix('agent:')}:{srv_name}"
+            server_inventory[srv_id] = (agent_id, srv_name, srv_dict.get("packages") or [])
             graph.add_node(
                 GraphNode(
                     id=srv_id,
@@ -319,7 +318,7 @@ def build_context_graph(
             # Equal labels/commands do not prove common runtime ownership.
             shared_identity = _configured_endpoint_identity(srv_dict)
             if shared_identity:
-                server_to_agents[shared_identity].append(agent_name)
+                server_to_agents[shared_identity].append(agent_id)
                 shared_server_labels.setdefault(shared_identity, srv_name)
                 graph.nodes[srv_id].metadata["shared_identity_key"] = shared_identity
                 graph.nodes[srv_id].metadata["identity_basis"] = "configured_endpoint"
@@ -475,14 +474,14 @@ def build_context_graph(
                             "identity_basis": "configured_endpoint",
                             "shared_identity_key": identity_key,
                             "shared_agent_count": len(unique),
-                            "shared_agents": unique,
+                            "shared_agents": [graph.nodes[member].label for member in unique],
                         },
                     )
                 )
                 for agent_name in unique:
                     graph.add_edge(
                         GraphEdge(
-                            source=f"agent:{agent_name}",
+                            source=agent_name,
                             target=hub_id,
                             kind=EdgeKind.SHARES_SERVER,
                             weight=3.0,
@@ -500,8 +499,8 @@ def build_context_graph(
                     for a2 in unique[i + 1 :]:
                         graph.add_edge(
                             GraphEdge(
-                                source=f"agent:{a1}",
-                                target=f"agent:{a2}",
+                                source=a1,
+                                target=a2,
                                 kind=EdgeKind.SHARES_SERVER,
                                 weight=3.0,
                                 metadata={
@@ -797,8 +796,8 @@ def compute_interaction_risks(graph: ContextGraph) -> list[InteractionRisk]:
             elif edge.metadata.get("shared_group"):
                 continue
             elif edge.source.startswith("agent:") and edge.target.startswith("agent:"):
-                a1 = edge.source.removeprefix("agent:")
-                a2 = edge.target.removeprefix("agent:")
+                a1 = graph.nodes[edge.source].label if edge.source in graph.nodes else edge.source.removeprefix("agent:")
+                a2 = graph.nodes[edge.target].label if edge.target in graph.nodes else edge.target.removeprefix("agent:")
                 shared_servers[srv_name].extend([a1, a2])
         elif edge.kind == EdgeKind.SHARES_CREDENTIAL:
             cred_name = edge.metadata.get("credential", "")
@@ -808,8 +807,8 @@ def compute_interaction_risks(graph: ContextGraph) -> list[InteractionRisk]:
             elif edge.metadata.get("shared_group"):
                 continue
             elif edge.source.startswith("agent:") and edge.target.startswith("agent:"):
-                a1 = edge.source.removeprefix("agent:")
-                a2 = edge.target.removeprefix("agent:")
+                a1 = graph.nodes[edge.source].label if edge.source in graph.nodes else edge.source.removeprefix("agent:")
+                a2 = graph.nodes[edge.target].label if edge.target in graph.nodes else edge.target.removeprefix("agent:")
                 shared_creds[cred_name].extend([a1, a2])
 
     # ── Pattern: shared credential ────────────────────────────────────
