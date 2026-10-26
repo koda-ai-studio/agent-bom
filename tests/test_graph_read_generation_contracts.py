@@ -149,6 +149,7 @@ async def test_mcp_inventory_list_cursor_refuses_a_rotated_snapshot(client):
     _rotate(store)
     stale = await page(cursor=cursor)
     assert stale["error"]["details"]["http_status"] == 409, stale
+    assert (stale["error"]["code"], stale["error"]["category"]) == ("AGENTBOM_MCP_CONFLICT_STALE_CURSOR", "conflict"), stale
     malformed = await page(cursor="g1.NQ")
     assert malformed["error"]["details"]["http_status"] == 422, malformed
 

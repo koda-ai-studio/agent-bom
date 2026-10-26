@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Panel, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions } from "@xyflow/react";
-import { GRAPH_FIT_MAX_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
+import { GRAPH_FIT_MAX_ZOOM, GRAPH_PHONE_FOCUS_MIN_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
 import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
@@ -62,9 +62,11 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const frameElement = canvas?.closest<HTMLElement>("[data-graph-adaptive-frame]");
     if (!frameElement) return;
     const nodes = getNodes();
+    const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
     const frameSize = graphAdaptiveFrame({
       bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length,
       availableHeight: windowHeight - spaceAbove - 24,
+      focusHeight: focusCardHeight(anchor), focusPadding: padding,
     });
     onLayoutAspect(frameSize.layoutAspect);
     frameElement.style.setProperty("--graph-adaptive-height", `${frameSize.height}px`);
@@ -84,13 +86,12 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     // capped zoom keeps small graphs from opening as two giant cards. A graph
     // too dense to read whole opens on the anchor's neighbourhood, never a
     // lone card. The zoom controls sit bottom-left.
-    const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
     // A phone's overview is its Paths list; its Graph view keeps a dense graph's
     // anchor at full-card zoom, since summary pills below zoom 1 are unreadable there.
     const phone = width < 640;
     const focus = !frameSize.fitAll && anchor ? (phone ? [{ id: anchor.id }] : neighbourhood(anchor.id, nodes.map(node => node.id), getEdges())) : null;
     const options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: phone ? padding : "72px" }, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM,
-      ...(focus ? phone ? { nodes: focus, minZoom: 0.85, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width) } : {}) };
+      ...(focus ? phone ? { nodes: focus, minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width) } : {}) };
     const fitIds = focus ? new Set(focus.map(node => node.id)) : null;
     // Convergence must measure exactly the nodes passed to fitView.
     const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => fitIds.has(node.id)) : getNodes());
@@ -139,7 +140,7 @@ function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?:
   const target = ordered[index];
   if (ordered.length < 2 || !target) return null;
   const focus = async (node: Node) => {
-    const fitted = await fitView({ nodes: [{ id: node.id }], minZoom: 0.85, maxZoom: 1, padding: 0.15, duration: 200 });
+    const fitted = await fitView({ nodes: [{ id: node.id }], minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1, padding: 0.15, duration: 200 });
     if (fitted) setTargetId(node.id);
   };
   return <div className="mb-2 rounded-lg border border-outline bg-surface p-2">
@@ -160,6 +161,13 @@ function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?:
         onClick={() => void focus(ordered[index + 1]!)}>Next</button>
     </div>
   </div>;
+}
+
+/** Zoom-compensated captions inflate a card measured before its focus fit;
+ * its layout cell is the box the focused camera actually frames. */
+function focusCardHeight(node: Node | undefined): number {
+  const cell = node?.style?.minHeight;
+  return typeof cell === "number" ? cell : node?.measured?.height ?? 0;
 }
 
 /** The anchor and up to six of its direct neighbours, so a dense graph still opens on context. */

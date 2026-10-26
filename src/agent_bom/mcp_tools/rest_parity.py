@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.mcp_errors import (
+    CODE_CONFLICT_STATE,
     CODE_INTERNAL_UNEXPECTED,
     CODE_NOT_FOUND_RESOURCE,
     CODE_UNSUPPORTED_BACKEND,
@@ -67,6 +68,8 @@ def _error_for_status(exc: Any) -> str:
     message = detail if isinstance(detail, str) else "The request was rejected."
     if status == 404:
         return mcp_error_json(CODE_NOT_FOUND_RESOURCE, message)
+    if status == 409:
+        return mcp_error_json(CODE_CONFLICT_STATE, message)
     if status in {429, 503}:
         return mcp_error_json(CODE_UPSTREAM_UNAVAILABLE, "The control plane is busy; retry the request.")
     if 400 <= status < 500:
