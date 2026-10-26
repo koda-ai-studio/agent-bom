@@ -105,6 +105,18 @@ def test_scan_next_steps_footer():
     assert "agent-bom report -f html" not in out
 
 
+def test_scan_next_steps_echo_the_scan_target():
+    """After `scan --demo --offline`, the hints rerun the demo, not `scan .` over the working directory."""
+    buf = StringIO()
+    con = Console(file=buf, force_terminal=False, width=120)
+    report = AIBOMReport(agents=[object()])  # type: ignore[list-item]
+    print_scan_next_steps(con, report, quiet=False, target="--demo --offline")
+    out = buf.getvalue()
+    assert "agent-bom scan --demo --offline -f graph-html -o agent-bom-graph.html" in out
+    assert "agent-bom scan --demo --offline -f html -o agent-bom-report.html" in out
+    assert "scan . " not in out
+
+
 def test_run_benchmarks_does_not_render_cis_inline(monkeypatch):
     """CIS grouped plan renders at report time only, not during benchmarks."""
     from agent_bom.cli.agents._cloud import run_benchmarks

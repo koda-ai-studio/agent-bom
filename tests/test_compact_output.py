@@ -483,9 +483,8 @@ def test_compact_remediation_command_prefix_and_spacing():
 
     # Install command is prefixed with "$ " to signal a copy-this line.
     assert "$ pip install 'pkg-0>=9.9.9'" in plain
-    # Verify command is also "$ "-prefixed and annotated as verify.
+    # Verify command is also "$ "-prefixed; its "Verify:" label already names it.
     assert "$ agent-bom check pkg-0@9.9.9 --ecosystem pypi" in plain
-    assert "(verify)" in plain
 
     # Numbered items are separated by a blank line (breathing room).
     # Strip leading/trailing blank lines, then look for the pattern of a
@@ -684,3 +683,64 @@ def test_empty_inventory_is_not_a_clean_security_assessment():
     output = _capture(print_compact_summary, report)
     assert "CLEAN" not in output
     assert "NO ASSESSMENT EVIDENCE" in output
+
+
+# ── Release polish: honest overflow labels, readable cells ──────────────────
+
+
+def test_compact_agents_table_names_the_column_cve_hits():
+    vuln = _vuln()
+    pkg = Package(name="lodash", version="4.17.20", ecosystem="npm", vulnerabilities=[vuln])
+    agent = _make_agent(servers=[_make_server(packages=[pkg])])
+    plain = _plain(_capture(print_compact_agents, AIBOMReport(agents=[agent])))
+    assert "CVE hits" in plain
+    assert "Vulns" not in plain
+
+
+def test_compact_blast_radius_overflow_does_not_claim_critical_high():
+    """The prioritized list mixes severities (direct medium CVEs are actionable), so the overflow is just 'more'."""
+    server = _make_server()
+    agent = _make_agent(servers=[server])
+    radii = []
+    for i in range(12):
+        severity = Severity.CRITICAL if i < 6 else Severity.MEDIUM
+        v = _vuln(vid=f"CVE-2024-{i:04d}", severity=severity, fixed="9.9.9")
+        p = Package(name=f"pkg-{i}", version="1.0.0", ecosystem="npm", vulnerabilities=[v])
+        radii.append(_blast(v, p, [agent], [server]))
+    plain = _plain(_capture(print_compact_blast_radius, AIBOMReport(agents=[agent], blast_radii=radii), limit=10))
+    assert "+ 2 more" in plain
+    assert "critical/high" not in plain
+
+
+def test_compact_blast_radius_marks_clipped_names_with_an_ellipsis():
+    server = _make_server(name="shell-runner-server-production")
+    agent = _make_agent(name="langchain-service-orchestrator", servers=[server])
+    v = _vuln(severity=Severity.CRITICAL, fixed="9.9.9")
+    p = Package(name="pkg", version="1.0.0", ecosystem="npm", vulnerabilities=[v])
+    br = _blast(v, p, [agent], [server], creds=["GCS_SERVICE_ACCOUNT_KEY_JSON"])
+    plain = _plain(_capture_width(print_compact_blast_radius, AIBOMReport(agents=[agent], blast_radii=[br]), width=200))
+    assert "langchain-servi…" in plain
+    assert "shell-runner-se…" in plain
+    assert "GCS_SERVICE_ACCOUNT…" in plain
+
+
+def test_compact_remediation_verify_line_has_no_redundant_suffix():
+    server = _make_server(env={"GITHUB_TOKEN": "x"})
+    agent = _make_agent(servers=[server])
+    v = _vuln(severity=Severity.HIGH, fixed="9.9.9")
+    p = Package(name="pkg-a", version="1.0.0", ecosystem="pypi", vulnerabilities=[v])
+    plain = _plain(_capture(print_compact_remediation, AIBOMReport(agents=[agent], blast_radii=[_blast(v, p, [agent], [server])])))
+    assert "Verify: $ agent-bom check pkg-a@9.9.9 --ecosystem pypi\n" in plain
+    assert "(verify)" not in plain
+
+
+def test_compact_posture_grade_is_not_repeated_in_its_summary():
+    vuln = _vuln(severity=Severity.HIGH, fixed="9.9.9")
+    pkg = Package(name="pkg", version="1.0.0", ecosystem="npm", vulnerabilities=[vuln])
+    server = _make_server(packages=[pkg], env={"AWS_SECRET_ACCESS_KEY": "x"})
+    agent = _make_agent(servers=[server])
+    br = _blast(vuln, pkg, [agent], [server], creds=["AWS_SECRET_ACCESS_KEY"])
+    plain = _plain(_capture(print_compact_summary, AIBOMReport(agents=[agent], blast_radii=[br])))
+    grade_line = next(line for line in plain.splitlines() if "Posture grade:" in line)
+    assert "/100" in grade_line
+    assert not re.search(r"\((?:[A-F]|N/A), [\d.]+%\)", grade_line), grade_line

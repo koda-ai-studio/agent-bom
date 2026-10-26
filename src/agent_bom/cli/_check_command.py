@@ -483,11 +483,13 @@ def _render_vulnerability_table(run: CheckRun) -> None:
 
         vuln_count_text = _format_vulnerability_count(len(run.vulns))
         table = Table(title=f"{run.name}@{run.version} — {vuln_count_text}")
-        table.add_column("Sev", width=10, no_wrap=True)
-        table.add_column("ID", width=20, no_wrap=True)
-        table.add_column("Impact", width=14, no_wrap=True)
-        table.add_column("Fix", width=10)
-        table.add_column("Summary", max_width=38)
+        # Size to content so Summary keeps the width an 80-column terminal has
+        # left; the ID never wraps (it is the copy-paste key).
+        table.add_column("Sev", no_wrap=True)
+        table.add_column("ID", no_wrap=True)
+        table.add_column("Impact", no_wrap=True, max_width=12, overflow="ellipsis")
+        table.add_column("Fix", max_width=10, overflow="fold")
+        table.add_column("Summary", min_width=20, max_width=48)
 
         for v in run.vulns:
             table.add_row(*_vulnerability_row(v, classify_cwe_impact))

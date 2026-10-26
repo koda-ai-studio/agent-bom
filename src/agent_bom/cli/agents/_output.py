@@ -454,7 +454,7 @@ def render_output(
                 print_compact_cis_posture(report)
                 print_compact_compliance_status(report)
                 print_compact_export_hint(report)
-            print_scan_next_steps(con, report, quiet=quiet)
+            print_scan_next_steps(con, report, quiet=quiet, target=str(kwargs.get("next_steps_target") or "."))
         elif output_format in ("text", "plain") and not output:
             _print_text(report, blast_radii)
         elif output_format == "json":

@@ -183,7 +183,7 @@ def test_missing_dashboard_explains_bundle_gap_without_opening_api(tmp_path, mon
         response = client.get(path)
         assert response.status_code == 503
         assert "Dashboard not bundled" in response.text
-        assert "pip install" in response.text
+        assert "pip install 'agent-bom[ui]'" in response.text
         assert client.get("/v1/graph").status_code == 401
         assert not APIKeyMiddleware._is_dashboard_public_request("/v1/graph", "GET")
         assert not APIKeyMiddleware._is_dashboard_public_request(path, "POST")

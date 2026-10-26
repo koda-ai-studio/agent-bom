@@ -10,6 +10,7 @@ remediation plan, etc.).
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from rich.panel import Panel
@@ -56,6 +57,14 @@ def _posture_grade_badge(grade: str) -> str:
     else:
         style = "white on red"
     return f"[bold {style}] {grade} [/bold {style}]"
+
+
+_GRADE_ECHO = re.compile(r"\s*\((?:[A-F]|N/A), [\d.]+%\)")
+
+
+def _clip(name: str, limit: int) -> str:
+    """Shorten a table cell to ``limit`` characters, marking the cut with an ellipsis."""
+    return name if len(name) <= limit else name[: limit - 1] + "…"
 
 
 def _compact_detail(text: str, limit: int = 88) -> str:
@@ -273,9 +282,10 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
         if scorecard.score < 100 or high_risk_policy_count:
             grade_line = f"  [bold]Posture grade:[/bold]  {_posture_grade_badge(scorecard.grade)} {scorecard.score:.0f}/100"
             if scorecard_summary:
-                # limit=45 keeps the grade line inside an 80-col panel (no
-                # wrapped "—…" fragment on the default terminal width).
-                grade_line += f"  [dim]{_compact_detail(scorecard_summary, limit=45)}[/dim]"
+                # The badge already shows the grade and score; drop the summary's
+                # "(F, 37.0%)" echo. limit=45 keeps the line inside an 80-col panel.
+                summary_text = _GRADE_ECHO.sub("", scorecard_summary)
+                grade_line += f"  [dim]{_compact_detail(summary_text, limit=45)}[/dim]"
             lines.append(grade_line)
             if weak_dimensions:
                 lines.append(f"  [dim]Top driver:[/dim] [yellow]{weak_dimensions[0].name}[/yellow]")
@@ -370,7 +380,7 @@ def print_compact_agents(report: AIBOMReport) -> None:
     table.add_column("Servers", justify="right")
     table.add_column("Pkgs", justify="right")
     table.add_column("Creds", justify="right")
-    table.add_column("Vulns", justify="right")
+    table.add_column("CVE hits", justify="right")
 
     for a in configured:
         n_servers = a.total_mcp_servers
@@ -499,15 +509,15 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
             server_names = [safe(value) for value in finding.affected_servers]
             chain_parts: list[str] = []
             if agent_names:
-                name = agent_names[0][:16]
+                name = _clip(agent_names[0], 16)
                 chain_parts.append(f"[bold]{name}[/bold]")
                 if len(agent_names) > 1:
                     chain_parts[-1] += f"+{len(agent_names) - 1}"
             if server_names:
-                name = server_names[0][:16]
+                name = _clip(server_names[0], 16)
                 chain_parts.append(f"{name}")
             if cred_names:
-                name = cred_names[0][:20]
+                name = _clip(cred_names[0], 20)
                 chain_parts.append(f"[yellow]{name}[/yellow]")
                 if len(cred_names) > 1:
                     chain_parts[-1] += f"+{len(cred_names) - 1}"
@@ -538,9 +548,9 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
         if hidden_before > 0:
             parts.append(f"{hidden_before} earlier hidden")
         if overflow > 0:
-            parts.append(f"{overflow} more critical/high")
+            parts.append(f"{overflow} more")
         if rest_count > 0:
-            parts.append(f"{rest_count} medium/low hidden")
+            parts.append(f"{rest_count} lower-priority hidden")
         nav_hints = []
         if page < total_pages:
             nav_hints.append(f"--page {page + 1} next")
@@ -659,9 +669,7 @@ def print_compact_remediation(report: AIBOMReport, limit: int = 5, page: int = 1
         if item.get("command"):
             console.print(f"     [bold cyan]Install:[/bold cyan] [cyan]$ {item['command']}[/cyan]")
         if item.get("verify_command"):
-            console.print(
-                f"     [bold dim cyan]Verify:[/bold dim cyan] [dim cyan]$ {item['verify_command']}[/dim cyan] [dim](verify)[/dim]"
-            )
+            console.print(f"     [bold dim cyan]Verify:[/bold dim cyan] [dim cyan]$ {item['verify_command']}[/dim cyan]")
         if row_number < end:
             console.print()
 

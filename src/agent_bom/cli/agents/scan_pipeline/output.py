@@ -122,6 +122,13 @@ def _print_totals_and_record(opts: ScanOptions, st: ScanState) -> None:
             logger.debug("Local analytics persistence failed: %s", exc, exc_info=True)
 
 
+def _next_steps_target(opts: ScanOptions) -> str:
+    """The scan target the footer's follow-up commands rerun: the demo stays the demo."""
+    if opts.demo:
+        return "--demo --offline" if opts.offline else "--demo"
+    return "."
+
+
 def _render(opts: ScanOptions, st: ScanState) -> None:
     import agent_bom.output as _out
     import agent_bom.output.console_render as _console_render
@@ -157,6 +164,7 @@ def _render(opts: ScanOptions, st: ScanState) -> None:
                 agent_token_budget=opts.agent_token_budget,
                 agent_mode_full=opts.agent_mode_full,
                 page=opts.page,
+                next_steps_target=_next_steps_target(opts),
             )
         finally:
             st.ctx.con = st.con
