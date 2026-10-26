@@ -12,7 +12,7 @@ from typing import Optional
 
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
-from agent_bom.parsers.cargo_lockfile import parse_cargo_lock
+from agent_bom.parsers.cargo_lockfile import ancestor_cargo_lock_owner, parse_cargo_lock
 from agent_bom.parsers.go_resolution import _validate_https_url, logger
 
 _CRATES_IO_URL = "https://crates.io"
@@ -196,6 +196,10 @@ def parse_cargo_packages(directory: Path, *, resolve_versions: bool = False) -> 
 
     if cargo_lock.exists():
         cargo_packages = parse_cargo_lock(directory)
+    elif (directory / "Cargo.toml").exists() and (owner := ancestor_cargo_lock_owner(directory)):
+        # A workspace member is resolved by the workspace lock; its manifest
+        # holds requirements ("1.0"), not versions.
+        cargo_packages = parse_cargo_lock(owner[0], member=owner[1])
     elif (directory / "Cargo.toml").exists():
         # Manifest-only project (no lockfile): parse declared deps so the whole
         # cargo ecosystem isn't silently missed.
