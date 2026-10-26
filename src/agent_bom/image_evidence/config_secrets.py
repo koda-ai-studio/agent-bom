@@ -17,6 +17,7 @@ from typing import Any
 from agent_bom.constants import is_credential_key
 from agent_bom.image_evidence.model import as_list
 from agent_bom.scanners.secret_lines import is_placeholder_value
+from agent_bom.secret_scanner import scan_content
 from agent_bom.security import sanitize_text
 
 _CONFIG_PATH = Path("image-config")
@@ -45,8 +46,6 @@ def _record(kind: str, location: str, secret_type: str, severity: str, category:
 
 
 def _scan_entry(kind: str, location: str, text: str, assignments: list[tuple[str, str]]) -> list[dict[str, Any]]:
-    from agent_bom.secret_scanner import scan_content
-
     found = [
         {**finding.to_dict(), "file": location, "line": None, "location_kind": kind}
         for finding in scan_content(text, _CONFIG_PATH, location, detect_entropy=True)

@@ -499,17 +499,17 @@ class AIBOMReport:
         return [br for br in active_blast_radii(self.blast_radii) if br.vulnerability.severity == Severity.CRITICAL]
 
     def _secret_findings(self) -> "list[Finding]":
-        """Hardcoded-secret findings, lifted from ``ai_inventory_data['secrets']``.
+        """Hardcoded-secret findings from ``ai_inventory_data['secrets']`` and each image's layers/config.
 
-        The secret scanner stores its results in a side block; surface them in the
-        unified stream so they reach JSON/SARIF/CSV — redacted, never the value.
+        Both scanners keep results in side blocks; surface them in the unified
+        stream so they reach JSON/SARIF/CSV — redacted, never the value.
         """
         block = (self.ai_inventory_data or {}).get("secrets") if self.ai_inventory_data else None
-        if not isinstance(block, dict):
-            return []
-        from agent_bom.finding import secret_dict_to_finding
+        from agent_bom.image_evidence.findings import image_secret_findings, secret_dict_to_finding
 
-        return [secret_dict_to_finding(s) for s in block.get("findings", []) if isinstance(s, dict)]
+        rows = block.get("findings", []) if isinstance(block, dict) else []
+        side = [secret_dict_to_finding(s) for s in rows if isinstance(s, dict)]
+        return side + [finding for agent in self.agents for finding in image_secret_findings(agent)]
 
     def _ast_flow_findings(self) -> "list[Finding]":
         """Native AST flow risks promoted from the source-analysis side block."""

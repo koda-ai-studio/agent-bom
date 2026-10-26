@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import io
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -101,8 +102,6 @@ def fetch_cosign_signatures(client: RegistryClient, digest: str) -> list[CosignS
     manifest = client.get_manifest(signature_tag(digest), missing_ok=True)
     if manifest is None:
         return []
-    import io
-
     found: list[CosignSignature] = []
     for layer in manifest.document.get("layers") or []:
         if not isinstance(layer, dict) or layer.get("mediaType") != COSIGN_SIMPLESIGNING:

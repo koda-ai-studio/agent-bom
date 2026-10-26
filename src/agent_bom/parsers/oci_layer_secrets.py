@@ -22,6 +22,7 @@ from pathlib import Path, PurePosixPath
 from agent_bom.image_evidence.model import ImageEvidence, active_image_evidence
 from agent_bom.parsers.oci_io import _env_int, _safe_getmember
 from agent_bom.parsers.oci_layer import _layer_whiteouts, _LayerScan
+from agent_bom.secret_scanner import _should_scan, scan_content
 
 _DEFAULT_MAX_FILE_BYTES = 1024 * 1024
 _DEFAULT_MAX_FILES = 20_000
@@ -58,8 +59,6 @@ _SKIP_PREFIXES = (
 
 
 def _candidate(path: str) -> bool:
-    from agent_bom.secret_scanner import _should_scan
-
     if path.startswith(_SKIP_PREFIXES) or PurePosixPath(path).name.startswith(".wh."):
         return False
     return _should_scan(Path(path))
@@ -104,8 +103,6 @@ def extract_layer_secrets(scan: _LayerScan) -> None:
     evidence = active_image_evidence()
     if evidence is None:
         return
-    from agent_bom.secret_scanner import scan_content
-
     present = {name.removeprefix("./") for name in scan.names}
     _mark_superseded(evidence, scan, present)
     max_bytes = _env_int("AGENT_BOM_IMAGE_SECRET_MAX_FILE_BYTES", _DEFAULT_MAX_FILE_BYTES)

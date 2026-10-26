@@ -12,25 +12,19 @@ import tempfile
 from typing import Any
 
 from agent_bom.coverage import record_scan_input_warning
-from agent_bom.image_evidence.model import ImageEvidence, active_image_evidence, bounded_string_map
+from agent_bom.image_evidence.model import ImageEvidence, active_image_evidence
 from agent_bom.image_evidence.record import record_image_config
 from agent_bom.models import Package
-from agent_bom.oci_registry.auth import resolve_credential
-from agent_bom.oci_registry.client import FetchedManifest, RegistryClient, RegistryError
-from agent_bom.oci_registry.media_types import INDEX_TYPES, MANIFEST_TYPES, READABLE_LAYER_TYPES, ZSTD_LAYER_TYPES
-from agent_bom.oci_registry.platforms import PlatformNotFoundError, select_platform
-from agent_bom.oci_registry.reference import ImageReference, parse_reference
+from agent_bom.oci_parser import _ImageWalk
+from agent_bom.oci_registry.client import RegistryClient, RegistryError
+from agent_bom.oci_registry.manifests import index_annotations, open_client, resolve_image_manifest
+from agent_bom.oci_registry.media_types import MANIFEST_TYPES, READABLE_LAYER_TYPES, ZSTD_LAYER_TYPES
+from agent_bom.oci_registry.platforms import PlatformNotFoundError
+from agent_bom.oci_registry.reference import parse_reference
+from agent_bom.oci_registry.supply_chain import discover_supply_chain
 from agent_bom.parsers.oci_io import _max_json_member_bytes, _max_layer_compressed_bytes
 from agent_bom.parsers.oci_metadata import _build_layer_metadata
 from agent_bom.parsers.oci_stream import LayerLimitError
-
-
-def open_client(ref: ImageReference, registry_user: str | None = None, registry_pass: str | None = None) -> RegistryClient:
-    return RegistryClient(ref, credential_resolver=lambda: resolve_credential(ref, registry_user, registry_pass))
-
-
-def _is_index(manifest: FetchedManifest) -> bool:
-    return manifest.media_type in INDEX_TYPES or ("manifests" in manifest.document and "layers" not in manifest.document)
 
 
 def _config_platform(config: dict[str, Any]) -> str | None:
@@ -41,32 +35,7 @@ def _config_platform(config: dict[str, Any]) -> str | None:
     return f"{os_name}/{arch}/{variant}" if variant else f"{os_name}/{arch}"
 
 
-def _index_annotations(index: dict[str, Any], manifest_digest: str) -> dict[str, str]:
-    """Index-level annotations plus the chosen platform descriptor's own."""
-    merged = bounded_string_map(index.get("annotations"))
-    for descriptor in index.get("manifests") or []:
-        if isinstance(descriptor, dict) and descriptor.get("digest") == manifest_digest:
-            merged.update(bounded_string_map(descriptor.get("annotations")))
-    return merged
-
-
-def resolve_image_manifest(
-    client: RegistryClient, ref: ImageReference, platform: str | None
-) -> tuple[FetchedManifest, FetchedManifest | None, str | None, list[str]]:
-    """Return ``(manifest, index, platform, available_platforms)`` for ``ref``."""
-    top = client.get_manifest(ref.manifest_ref)
-    assert top is not None
-    if not _is_index(top):
-        return top, None, None, []
-    descriptor, chosen, available = select_platform(top.document, platform)
-    manifest = client.get_manifest(str(descriptor.get("digest") or ""))
-    assert manifest is not None
-    return manifest, top, chosen, available
-
-
 def _scan_layers(client: RegistryClient, manifest: dict[str, Any], config: dict[str, Any], evidence: ImageEvidence | None) -> list[Package]:
-    from agent_bom.oci_parser import _ImageWalk
-
     descriptors = [d for d in manifest.get("layers", []) if isinstance(d, dict)]
     layer_paths = [f"blobs/sha256/{str(d.get('digest', '')).removeprefix('sha256:')}" for d in descriptors]
     record_image_config(config, layer_paths, manifest=manifest, config_ref=str(manifest.get("config", {}).get("digest") or ""))
@@ -138,11 +107,12 @@ def scan_registry_image(
             evidence.platform, evidence.available_platforms = actual, available
             evidence.config_digest = config_digest
             if index is not None:
-                evidence.annotations = {**evidence.annotations, **_index_annotations(index.document, manifest.digest)}
+                evidence.annotations = {**evidence.annotations, **index_annotations(index.document, manifest.digest)}
         packages = _scan_layers(client, manifest.document, config, evidence)
         if evidence is not None:
             evidence.credential_source = client.credential_source
-            from agent_bom.oci_registry.supply_chain import discover_supply_chain
-
             discover_supply_chain(client, evidence, index.document if index else None)
     return packages
+
+
+__all__ = ["open_client", "resolve_image_manifest", "scan_registry_image"]

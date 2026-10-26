@@ -9,6 +9,7 @@ and the ``Authorization`` header is dropped as soon as the host changes.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -233,8 +234,6 @@ class RegistryClient:
         return written
 
     def fetch_json_blob(self, digest: str, max_bytes: int = MAX_MANIFEST_BYTES) -> dict[str, Any]:
-        import io
-
         buffer = io.BytesIO()
         self.fetch_blob(digest, buffer, max_bytes)
         try:

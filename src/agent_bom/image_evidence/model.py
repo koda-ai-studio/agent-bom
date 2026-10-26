@@ -15,6 +15,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
+from agent_bom.core.settings import env_raw
 from agent_bom.security import sanitize_text
 
 SIGNATURE_STATUSES = ("verified", "invalid", "signed", "unsigned", "unknown")
@@ -120,7 +121,9 @@ class ImageEvidence:
 
 @contextmanager
 def collect_image_evidence(reference: str, *, cosign_key_path: str | None = None) -> Iterator[ImageEvidence]:
-    evidence = ImageEvidence(reference=reference, cosign_key_path=cosign_key_path)
+    """Collect evidence for one image scan; the cosign key defaults to ``AGENT_BOM_IMAGE_COSIGN_KEY``."""
+    key = cosign_key_path or env_raw("AGENT_BOM_IMAGE_COSIGN_KEY") or None
+    evidence = ImageEvidence(reference=reference, cosign_key_path=key)
     token = _ACTIVE.set(evidence)
     try:
         yield evidence

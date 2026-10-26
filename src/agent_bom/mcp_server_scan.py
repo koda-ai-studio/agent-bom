@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Optional
 
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
+from agent_bom.image_evidence import collect_image_evidence
+from agent_bom.image_evidence.surfaces import image_agent_metadata
 from agent_bom.mcp_blocklist import flag_blocklisted_mcp_servers
 from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_ECOSYSTEM,
@@ -337,7 +339,8 @@ async def run_scan_pipeline(
             from agent_bom.image import scan_image as _scan_image
             from agent_bom.models import ServerSurface
 
-            img_packages, _strategy = _scan_image(image)
+            with collect_image_evidence(image) as image_evidence:
+                img_packages, _strategy = _scan_image(image)
             if img_packages:
                 img_server = MCPServer(
                     name=f"image:{image}",
@@ -354,6 +357,7 @@ async def run_scan_pipeline(
                         agent_type=AgentType.CUSTOM,
                         config_path="",
                         mcp_servers=[img_server],
+                        metadata=image_agent_metadata(image_evidence),
                     )
                 )
                 scan_sources.append("image")

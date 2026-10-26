@@ -51,7 +51,7 @@ def run_integrations(
 
             policy_result = evaluate_policy(policy_data, blast_radii, report=ctx.report)
             print_policy_results(policy_result)
-            ctx.policy_passed = policy_result["passed"]
+            ctx.policy_passed = ctx.policy_passed and bool(policy_result["passed"])
 
             jira_viol = policy_result.get("jira_violations", [])
             if jira_viol and jira_url and jira_token and jira_project:

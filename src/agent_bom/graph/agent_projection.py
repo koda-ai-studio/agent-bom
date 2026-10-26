@@ -40,6 +40,7 @@ from agent_bom.graph.projection_support import (
     _repository_manifest_directory,
 )
 from agent_bom.graph.types import EntityType, RelationshipType
+from agent_bom.image_evidence.surfaces import image_node_attributes
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.package_utils import normalize_package_name
 from agent_bom.security import sanitize_security_warnings, sanitize_text, sanitize_url
@@ -274,6 +275,7 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
                     "source_ids": source_ids(stable_id=srv_dict.get("stable_id"), registry_id=srv_dict.get("registry_id")),
                     "stable_id": srv_dict.get("stable_id", ""),
                     "fingerprint": srv_dict.get("fingerprint", ""),
+                    **image_node_attributes(agent.agent_metadata, surface),
                 },
                 dimensions=NodeDimensions(surface=surface, environment=agent.agent_env),
                 data_sources=[agent.data_source_tag],

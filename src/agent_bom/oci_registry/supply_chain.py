@@ -7,6 +7,7 @@ from typing import Any
 from agent_bom.image_evidence.base_image import match_base_layers
 from agent_bom.image_evidence.model import ImageEvidence
 from agent_bom.oci_registry.client import RegistryClient, RegistryError
+from agent_bom.oci_registry.manifests import resolve_image_manifest
 from agent_bom.oci_registry.platforms import PlatformNotFoundError
 from agent_bom.oci_registry.reference import ReferenceError, parse_reference
 from agent_bom.oci_registry.referrers import discover_referrers
@@ -62,8 +63,6 @@ def resolve_base_layers(evidence: ImageEvidence, open_client: Any) -> None:
     except ReferenceError:
         base["attribution"] = "unresolved"
         return
-    from agent_bom.oci_registry.pull import resolve_image_manifest
-
     try:
         with open_client(ref) as client:
             manifest, _index, _platform, _available = resolve_image_manifest(client, ref, evidence.platform)

@@ -316,6 +316,19 @@ def _is_agent_bom_report(content: str) -> bool:
     return head.startswith("cve_id,package,version,ecosystem,severity") or head.startswith("﻿cve_id,package,version,ecosystem,severity")
 
 
+def _read_scannable(file_path: Path, rel_path: str) -> str:
+    try:
+        size = file_path.stat().st_size
+    except OSError as exc:
+        raise FileNotScannedError(f"{rel_path}: could not stat ({exc.strerror or exc})") from exc
+    if size > _MAX_FILE_SIZE:
+        raise FileNotScannedError(f"{rel_path}: not scanned, {size:,} bytes exceeds the {_MAX_FILE_SIZE:,}-byte ceiling")
+    try:
+        return file_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        raise FileNotScannedError(f"{rel_path}: not scanned, could not be read ({exc.strerror or exc})") from exc
+
+
 class FileNotScannedError(Exception):
     """A file the scanner could not read. Never the same as a clean file.
 
@@ -325,6 +338,15 @@ class FileNotScannedError(Exception):
     """
 
 
+def scan_content(content: str, file_path: Path, rel_path: str, *, detect_entropy: bool = False) -> list[SecretFinding]:
+    """Scan already-read text with the same matchers and redaction as :func:`scan_secrets`.
+
+    ``file_path`` only decides which line classes apply (PII is limited to
+    config-like files); nothing is read from it.
+    """
+    return _scan_file(file_path, rel_path, detect_entropy=detect_entropy, content=content)
+
+
 def _scan_file(
     file_path: Path,
     rel_path: str,
@@ -332,42 +354,15 @@ def _scan_file(
     detect_entropy: bool = False,
     validator: CredentialValidator | None = None,
     aws_validator: AwsCredentialValidator | None = None,
+    content: str | None = None,
 ) -> list[SecretFinding]:
-    """Scan a single file for secrets.
+    """Scan a single file (or its already-read ``content``) for secrets.
 
     Raises:
         FileNotScannedError: the file was not read, and no claim is made about it.
     """
-    try:
-        size = file_path.stat().st_size
-    except OSError as exc:
-        raise FileNotScannedError(f"{rel_path}: could not stat ({exc.strerror or exc})") from exc
-
-    if size > _MAX_FILE_SIZE:
-        raise FileNotScannedError(f"{rel_path}: not scanned, {size:,} bytes exceeds the {_MAX_FILE_SIZE:,}-byte ceiling")
-
-    try:
-        content = file_path.read_text(encoding="utf-8", errors="replace")
-    except OSError as exc:
-        raise FileNotScannedError(f"{rel_path}: not scanned, could not be read ({exc.strerror or exc})") from exc
-
-    return scan_content(content, file_path, rel_path, detect_entropy=detect_entropy, validator=validator, aws_validator=aws_validator)
-
-
-def scan_content(
-    content: str,
-    file_path: Path,
-    rel_path: str,
-    *,
-    detect_entropy: bool = False,
-    validator: CredentialValidator | None = None,
-    aws_validator: AwsCredentialValidator | None = None,
-) -> list[SecretFinding]:
-    """Scan already-read text with the same matchers and redaction as :func:`scan_secrets`.
-
-    ``file_path`` only decides which line classes apply (PII is limited to
-    config-like files); nothing is read from it.
-    """
+    if content is None:
+        content = _read_scannable(file_path, rel_path)
     if _is_agent_bom_report(content):
         return []
 

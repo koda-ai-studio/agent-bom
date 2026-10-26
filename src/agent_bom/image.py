@@ -34,7 +34,17 @@ from pathlib import Path
 from typing import Optional
 
 from agent_bom.config import _bool
+from agent_bom.core.settings import env_raw
+from agent_bom.http_client import is_offline
+from agent_bom.image_evidence.base_image import attribute_packages
+from agent_bom.image_evidence.model import active_image_evidence
 from agent_bom.models import Package, PermissionProfile, Severity, Vulnerability
+from agent_bom.oci_registry.client import RegistryError
+from agent_bom.oci_registry.manifests import open_client
+from agent_bom.oci_registry.platforms import PlatformNotFoundError
+from agent_bom.oci_registry.pull import scan_registry_image
+from agent_bom.oci_registry.reference import ReferenceError, parse_reference
+from agent_bom.oci_registry.supply_chain import discover_supply_chain, resolve_base_layers
 from agent_bom.sbom import parse_cyclonedx
 from agent_bom.scanners.risk import cvss_to_severity, severity_from_label
 from agent_bom.security import validate_image_ref
@@ -484,8 +494,6 @@ def _packages_from_tar(tar_path: Path | str) -> list[Package]:
 
 def _record_daemon_inspect(data: object) -> None:
     """Registry digest and platform of a daemon image, for signature lookup and evidence."""
-    from agent_bom.image_evidence.model import active_image_evidence
-
     evidence = active_image_evidence()
     if evidence is None or not isinstance(data, dict):
         return
@@ -632,7 +640,7 @@ PULL_MODES = ("auto", "registry", "daemon")
 
 
 def _pull_mode(pull_mode: Optional[str]) -> str:
-    mode = (pull_mode or os.environ.get("AGENT_BOM_IMAGE_PULL_MODE") or "auto").strip().lower()
+    mode = (pull_mode or env_raw("AGENT_BOM_IMAGE_PULL_MODE") or "auto").strip().lower()
     if mode not in PULL_MODES:
         raise ImageScanError(f"Unknown image pull mode {mode!r}; expected one of {', '.join(PULL_MODES)}")
     return mode
@@ -641,8 +649,6 @@ def _pull_mode(pull_mode: Optional[str]) -> str:
 def _scan_from_registry(
     image_ref: str, registry_user: Optional[str], registry_pass: Optional[str], platform: Optional[str]
 ) -> list[Package]:
-    from agent_bom.oci_registry.pull import scan_registry_image
-
     packages = scan_registry_image(image_ref, platform=platform, registry_user=registry_user, registry_pass=registry_pass)
     if not packages:
         raise ImageScanError(
@@ -653,13 +659,6 @@ def _scan_from_registry(
 
 def _daemon_supply_chain(image_ref: str, registry_user: Optional[str], registry_pass: Optional[str]) -> None:
     """Look up signatures/referrers for a daemon-scanned image by its registry digest (online only)."""
-    from agent_bom.http_client import is_offline
-    from agent_bom.image_evidence.model import active_image_evidence
-    from agent_bom.oci_registry.client import RegistryError
-    from agent_bom.oci_registry.pull import open_client
-    from agent_bom.oci_registry.reference import ReferenceError, parse_reference
-    from agent_bom.oci_registry.supply_chain import discover_supply_chain
-
     evidence = active_image_evidence()
     if evidence is None:
         return
@@ -678,12 +677,6 @@ def _daemon_supply_chain(image_ref: str, registry_user: Optional[str], registry_
 
 
 def _attribute_base_image(packages: list[Package], registry_user: Optional[str], registry_pass: Optional[str]) -> None:
-    from agent_bom.http_client import is_offline
-    from agent_bom.image_evidence.base_image import attribute_packages
-    from agent_bom.image_evidence.model import active_image_evidence
-    from agent_bom.oci_registry.pull import open_client
-    from agent_bom.oci_registry.supply_chain import resolve_base_layers
-
     evidence = active_image_evidence()
     if evidence is None or evidence.base_image is None:
         return
@@ -712,18 +705,11 @@ def scan_image(
     Raises:
         ImageScanError: If neither path can produce a package inventory.
     """
-    from agent_bom.http_client import is_offline
-    from agent_bom.image_evidence.model import active_image_evidence
-
     validate_image_ref(image_ref)
     _validate_platform(platform)
     mode = _pull_mode(pull_mode)
     registry_failure: str | None = None
     if mode != "daemon" and not is_offline():
-        from agent_bom.oci_registry.client import RegistryError
-        from agent_bom.oci_registry.platforms import PlatformNotFoundError
-        from agent_bom.oci_registry.reference import ReferenceError
-
         try:
             packages = _scan_from_registry(image_ref, registry_user, registry_pass, platform)
         except (RegistryError, ReferenceError, PlatformNotFoundError, ImageScanError, OSError) as exc:

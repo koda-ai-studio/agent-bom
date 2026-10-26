@@ -13,7 +13,6 @@ import base64
 import binascii
 import ipaddress
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -21,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
+from agent_bom.core.settings import env_raw
 from agent_bom.image_evidence.model import as_dict
 from agent_bom.oci_registry.reference import ImageReference
 
@@ -69,7 +69,7 @@ def parse_challenge(header: str | None) -> Challenge | None:
 
 
 def docker_config_path() -> Path:
-    base = os.environ.get("DOCKER_CONFIG")
+    base = env_raw("DOCKER_CONFIG")
     return (Path(base) if base else Path.home() / ".docker") / "config.json"
 
 
@@ -164,7 +164,7 @@ def resolve_credential(ref: ImageReference, username: str | None = None, passwor
     """Return the first credential that applies to ``ref`` (anonymous when none does)."""
     if username and password:
         return RegistryCredential(source="explicit", username=username, password=password)
-    env_user, env_pass = os.environ.get("AGENT_BOM_REGISTRY_USER"), os.environ.get("AGENT_BOM_REGISTRY_PASS")
+    env_user, env_pass = env_raw("AGENT_BOM_REGISTRY_USER"), env_raw("AGENT_BOM_REGISTRY_PASS")
     if env_user and env_pass:
         return RegistryCredential(source="environment", username=env_user, password=env_pass)
     return _from_docker_config(ref) or ANONYMOUS

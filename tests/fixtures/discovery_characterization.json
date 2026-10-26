@@ -1131,7 +1131,9 @@
    "Scanning 2 container image(s)...",
    "",
    "  ✓ seed:1: 1 package(s) (via fake)",
-   "  ✓ k8s:2: 1 package(s) (via fake)"
+   "    signature: unknown Signature lookup was not performed.",
+   "  ✓ k8s:2: 1 package(s) (via fake)",
+   "    signature: unknown Signature lookup was not performed."
   ],
   "context": {
    "_browser_ext_results": null,

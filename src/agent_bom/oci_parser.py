@@ -371,10 +371,7 @@ def parse_oci_tarball(path: Path) -> OCIParseResult:
         # Detect format
         if "manifest.json" in names or "./manifest.json" in names:
             # Docker save format
-            try:
-                manifests = _parse_docker_save_manifest(outer_tf)
-            except OCIParseError:
-                raise
+            manifests = _parse_docker_save_manifest(outer_tf)
             if not manifests:
                 return OCIParseResult(
                     packages=[],
@@ -406,10 +403,7 @@ def parse_oci_tarball(path: Path) -> OCIParseResult:
 
         elif "index.json" in names or "./index.json" in names:
             # OCI image layout format
-            try:
-                _manifest, layer_paths, config = _parse_oci_layout_manifest_from_tar(outer_tf)
-            except OCIParseError:
-                raise
+            _manifest, layer_paths, config = _parse_oci_layout_manifest_from_tar(outer_tf)
             record_image_config(config, layer_paths, manifest=_manifest, config_ref=_config_ref(_manifest), source="archive")
             layer_metadata = _build_layer_metadata(layer_paths, config)
             packages, warnings, coverage_warnings = _parse_layers_from_tarball(outer_tf, layer_paths, layer_metadata, config)
