@@ -13,7 +13,6 @@ _CLOCK_ALLOWED = {
     "graph/lifecycle.py": "single-agent view of a live or stored agent record that carries no time",
     "api/graph_presentation.py": "scratch proof graph used only to re-derive techniques; its times are never read",
     "api/neptune_graph.py": "the load path restores the stored snapshot time after construction",
-    "graph/consequence/eligibility.py": "scoped copy of a loaded graph",
 }
 _CONSTRUCTORS = {"UnifiedGraph", "StoreBackedUnifiedGraph", "open_store_backed_unified_graph"}
 

@@ -3994,9 +3994,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-ff00fe84bc01:cursor:managed_identity:demo-nhi-cursor",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4022,9 +4022,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-ff00fe84bc01:cursor:051d774e-8b0f-50dd-99f1-20a8f97b1a5f:run_shell",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4050,9 +4050,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-ff00fe84bc01:cursor:051d774e-8b0f-50dd-99f1-20a8f97b1a5f:exec_command",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4078,9 +4078,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-ff00fe84bc01:cursor:1e41851a-3bc3-566b-8908-a00ab2cc3f18:read_file",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4106,9 +4106,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-ff00fe84bc01:cursor:051d774e-8b0f-50dd-99f1-20a8f97b1a5f:read_file",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4134,9 +4134,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-b5c905af77f2:data-pipeline:b99ac27b-f484-5d7c-99e9-df0097c6a814:execute_sql",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4162,9 +4162,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-a598d2b8e8dc:langchain-service:62bb30e7-c884-5a1e-b296-1d0fa11493bc:query_vectors",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4191,9 +4191,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-969bf9f86941:support-copilot:managed_identity:demo-nhi-support-copilot",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4219,9 +4219,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-support-copilot:tool:server:cfg-969bf9f86941:support-copilot:dac34850-215e-5631-b2c5-6cad5bf107d8:send_email",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4247,9 +4247,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-support-copilot:tool:server:cfg-969bf9f86941:support-copilot:fbb1066a-b3ca-549b-89aa-188d031a9b65:create_ticket",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4275,9 +4275,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-support-copilot:tool:server:cfg-969bf9f86941:support-copilot:fbb1066a-b3ca-549b-89aa-188d031a9b65:search_tickets",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4304,9 +4304,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-b5c905af77f2:data-pipeline:managed_identity:demo-nhi-data-pipeline",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-17T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4333,9 +4333,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-a598d2b8e8dc:langchain-service:managed_identity:demo-nhi-langchain-service",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-16T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -4362,9 +4362,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-8642530c7237:claude-desktop:managed_identity:demo-nhi-claude-desktop",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -9167,8 +9167,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-12T02:00:00+00:00",
-          "last_seen": "2026-10-12T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-10-18T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -9177,10 +9177,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-cursor",
         "label": "Cursor",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
@@ -9221,8 +9221,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-12T02:00:00+00:00",
-          "last_seen": "2026-10-12T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-06-21T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -9231,10 +9231,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-support-copilot",
         "label": "Support Copilot",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
@@ -9271,8 +9271,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-12T02:00:00+00:00",
-          "last_seen": "2026-10-12T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-10-17T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -9281,10 +9281,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-data-pipeline",
         "label": "Data Pipeline",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-17T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
@@ -9321,8 +9321,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-12T02:00:00+00:00",
-          "last_seen": "2026-10-12T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-10-16T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -9331,10 +9331,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-langchain-service",
         "label": "LangChain Service",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-10-16T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
@@ -9371,8 +9371,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-12T02:00:00+00:00",
-          "last_seen": "2026-10-12T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-06-21T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -9381,10 +9381,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-12T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-claude-desktop",
         "label": "Claude Desktop",
-        "last_seen": "2026-10-12T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
@@ -13830,9 +13830,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-ff00fe84bc01:cursor:managed_identity:demo-nhi-cursor",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -13858,9 +13858,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-ff00fe84bc01:cursor:051d774e-8b0f-50dd-99f1-20a8f97b1a5f:run_shell",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -13886,9 +13886,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-ff00fe84bc01:cursor:051d774e-8b0f-50dd-99f1-20a8f97b1a5f:exec_command",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -13914,9 +13914,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-ff00fe84bc01:cursor:1e41851a-3bc3-566b-8908-a00ab2cc3f18:read_file",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -13942,9 +13942,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-ff00fe84bc01:cursor:051d774e-8b0f-50dd-99f1-20a8f97b1a5f:read_file",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -13970,9 +13970,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-b5c905af77f2:data-pipeline:b99ac27b-f484-5d7c-99e9-df0097c6a814:execute_sql",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -13998,9 +13998,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-cursor:tool:server:cfg-a598d2b8e8dc:langchain-service:62bb30e7-c884-5a1e-b296-1d0fa11493bc:query_vectors",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -14027,9 +14027,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-969bf9f86941:support-copilot:managed_identity:demo-nhi-support-copilot",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -14055,9 +14055,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-support-copilot:tool:server:cfg-969bf9f86941:support-copilot:dac34850-215e-5631-b2c5-6cad5bf107d8:send_email",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -14083,9 +14083,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-support-copilot:tool:server:cfg-969bf9f86941:support-copilot:fbb1066a-b3ca-549b-89aa-188d031a9b65:create_ticket",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -14111,9 +14111,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "scoped_to:managed_identity:demo-nhi-support-copilot:tool:server:cfg-969bf9f86941:support-copilot:fbb1066a-b3ca-549b-89aa-188d031a9b65:search_tickets",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -14140,9 +14140,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-b5c905af77f2:data-pipeline:managed_identity:demo-nhi-data-pipeline",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-17T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -14169,9 +14169,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-a598d2b8e8dc:langchain-service:managed_identity:demo-nhi-langchain-service",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-16T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -14198,9 +14198,9 @@
           "source": "governance-overlay",
           "tier": "recorded"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "authenticates_as:agent:cfg-8642530c7237:claude-desktop:managed_identity:demo-nhi-claude-desktop",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "provenance": {
           "source": "governance-overlay"
         },
@@ -19070,8 +19070,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-19T02:00:00+00:00",
-          "last_seen": "2026-10-19T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-10-18T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -19080,10 +19080,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-cursor",
         "label": "Cursor",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-18T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
@@ -19124,8 +19124,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-19T02:00:00+00:00",
-          "last_seen": "2026-10-19T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-06-21T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -19134,10 +19134,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-support-copilot",
         "label": "Support Copilot",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
@@ -19174,8 +19174,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-19T02:00:00+00:00",
-          "last_seen": "2026-10-19T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-10-17T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -19184,10 +19184,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-data-pipeline",
         "label": "Data Pipeline",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-17T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
@@ -19224,8 +19224,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-19T02:00:00+00:00",
-          "last_seen": "2026-10-19T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-10-16T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -19234,10 +19234,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-langchain-service",
         "label": "LangChain Service",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-10-16T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
@@ -19274,8 +19274,8 @@
         "entity_type": "managed_identity",
         "evidence_provenance": {
           "execution": "not_established",
-          "first_seen": "2026-10-19T02:00:00+00:00",
-          "last_seen": "2026-10-19T02:00:00+00:00",
+          "first_seen": "2026-06-21T12:00:00+00:00",
+          "last_seen": "2026-06-21T12:00:00+00:00",
           "schema_version": "agent-bom.graph-evidence/v1",
           "source_snapshot_ids": [],
           "sources": [
@@ -19284,10 +19284,10 @@
           "tier": "unspecified",
           "time_basis": "recorded_observation"
         },
-        "first_seen": "2026-10-19T02:00:00+00:00",
+        "first_seen": "2026-06-21T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-claude-desktop",
         "label": "Claude Desktop",
-        "last_seen": "2026-10-19T02:00:00+00:00",
+        "last_seen": "2026-06-21T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
