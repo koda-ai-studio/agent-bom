@@ -23,7 +23,15 @@ from agent_bom.http_client import (
 from agent_bom.models import Package
 from agent_bom.package_utils import package_purl
 from agent_bom.parsers.npm_semver import classify_npm_spec
-from agent_bom.parsers.npm_semver import satisfies as npm_satisfies
+from agent_bom.resolvers.registry_budget import (
+    REGISTRY_LATEST_DEADLINE,
+    RESOLVE_ALL_TIMEOUT,
+    record_registry_degraded,
+    record_registry_timeout,
+    registry_latest_get,
+    reset_registry_degradation,
+)
+from agent_bom.resolvers.version_constraints import _constraint_admits, _declared_constraint
 
 console = Console(stderr=True)
 _logger = logging.getLogger(__name__)
@@ -75,6 +83,7 @@ def reset_performance_stats() -> None:
         _PERF_STATS.update(_PERF_TEMPLATE)
         _NPM_RATE_LIMIT_UNTIL = 0.0
         _NPM_RATE_LIMIT_HITS = 0
+    reset_registry_degradation()
     # Start each scan with a fresh registry rate-limit breaker.
     reset_rate_limit_breaker()
 
@@ -240,6 +249,7 @@ async def _get_npm_latest_doc(package_name: str, client: httpx.AsyncClient) -> d
         # avoids constructing the request/future at all.
         if time.monotonic() < _NPM_RATE_LIMIT_UNTIL or registry_breaker_tripped(NPM_REGISTRY):
             _PERF_STATS["npm_rate_limit_short_circuits"] = int(_PERF_STATS.get("npm_rate_limit_short_circuits", 0)) + 1
+            record_registry_degraded("registry.npmjs.org", "rate-limited the lookup (HTTP 429)", package_name)
             return None
         inflight = _NPM_LATEST_INFLIGHT.get(cache_key)
         if inflight is None:
@@ -254,11 +264,7 @@ async def _get_npm_latest_doc(package_name: str, client: httpx.AsyncClient) -> d
     encoded_name = package_name.replace("/", "%2F")
     inflight = _NPM_LATEST_INFLIGHT[cache_key]
     try:
-        response = await request_with_retry(
-            client,
-            "GET",
-            f"{NPM_REGISTRY}/{encoded_name}/latest",
-        )
+        response = await registry_latest_get(client, f"{NPM_REGISTRY}/{encoded_name}/latest", package_name, request_with_retry)
         data: dict | None = None
         if response and response.status_code == 429:
             _record_npm_rate_limit(response)
@@ -310,11 +316,7 @@ async def _get_pypi_info_doc(package_name: str, client: httpx.AsyncClient) -> di
 
     inflight = _PYPI_INFO_INFLIGHT[cache_key]
     try:
-        response = await request_with_retry(
-            client,
-            "GET",
-            f"{PYPI_API}/{package_name}/json",
-        )
+        response = await registry_latest_get(client, f"{PYPI_API}/{package_name}/json", package_name, request_with_retry)
         info: dict | None = None
         if response and response.status_code == 200:
             try:
@@ -441,52 +443,6 @@ async def resolve_pypi_supply_chain(
         _logger.debug("Failed to parse PyPI supply chain metadata for %s: %s", pkg.name, exc)
 
 
-_CONSTRAINT_CHARS = frozenset("^~<>=*|, ")
-
-
-def _declared_constraint(pkg: Package) -> Optional[str]:
-    """Return the declared range/tag that bounds *pkg*'s version, if any.
-
-    ``None`` means the package declares no constraint (or only ``latest``), so
-    the ``latest`` lookup is the honest answer. A returned constraint must be
-    honoured: resolving it to ``latest`` can report a version the declaration
-    excludes and match that version's advisories.
-    """
-    declared = pkg.declared_version
-    if declared is None:
-        return None
-    declared = declared.strip()
-    if declared == "latest":
-        return None
-    ecosystem = pkg.ecosystem.lower()
-    if ecosystem == "npm":
-        return None if classify_npm_spec(declared) == "exact" else declared
-    if ecosystem == "pypi":
-        from packaging.specifiers import InvalidSpecifier, SpecifierSet
-
-        try:
-            return declared if declared and str(SpecifierSet(declared)) else None
-        except InvalidSpecifier:
-            return None
-    if pkg.floating_reference and declared and any(ch in _CONSTRAINT_CHARS for ch in declared):
-        return declared
-    return None
-
-
-def _constraint_admits(ecosystem: str, version: str, constraint: str) -> bool:
-    if ecosystem == "npm":
-        return npm_satisfies(version, constraint)
-    if ecosystem == "pypi":
-        from packaging.specifiers import InvalidSpecifier, SpecifierSet
-        from packaging.version import InvalidVersion, Version
-
-        try:
-            return SpecifierSet(constraint).contains(Version(version))
-        except (InvalidSpecifier, InvalidVersion):
-            return False
-    return False
-
-
 async def _resolve_declared_constraint(pkg: Package, constraint: str, client: httpx.AsyncClient) -> bool:
     """Resolve a declared range to the version a fresh install selects; never to ``latest``."""
     from agent_bom import transitive
@@ -511,33 +467,46 @@ async def _resolve_declared_constraint(pkg: Package, constraint: str, client: ht
     return False
 
 
+async def _latest_metadata(pkg: Package, client: httpx.AsyncClient) -> tuple[Optional[str], Optional[str]]:
+    """Return (latest version, license) from the package's registry."""
+    if pkg.ecosystem == "npm":
+        return await resolve_npm_metadata(pkg.name, client)
+    if pkg.ecosystem == "pypi":
+        return await resolve_pypi_metadata(pkg.name, client)
+    if pkg.ecosystem == "go":
+        from agent_bom.version_utils import resolve_go_metadata
+
+        return await resolve_go_metadata(pkg.name, client)
+    if pkg.ecosystem == "cargo":
+        from agent_bom.version_utils import resolve_cargo_metadata
+
+        return await resolve_cargo_metadata(pkg.name, client)
+    if pkg.ecosystem == "conda":
+        # Conda packages often have PyPI equivalents — try PyPI resolution
+        return await resolve_pypi_metadata(pkg.name, client)
+    if pkg.ecosystem == "maven" and ":" in pkg.name:
+        from agent_bom.version_utils import resolve_maven_metadata
+
+        group, artifact = pkg.name.split(":", 1)
+        return await resolve_maven_metadata(group, artifact, client)
+    return None, None
+
+
 async def resolve_package_version(pkg: Package, client: httpx.AsyncClient) -> bool:
     if pkg.version not in _INVALID_VERSIONS - {"{{VERSION}}"}:
         return False
     constraint = _declared_constraint(pkg)
     if constraint is not None:
-        return await _resolve_declared_constraint(pkg, constraint, client)
-    version, lic = None, None
-    if pkg.ecosystem == "npm":
-        version, lic = await resolve_npm_metadata(pkg.name, client)
-    elif pkg.ecosystem == "pypi":
-        version, lic = await resolve_pypi_metadata(pkg.name, client)
-    elif pkg.ecosystem == "go":
-        from agent_bom.version_utils import resolve_go_metadata
-
-        version, lic = await resolve_go_metadata(pkg.name, client)
-    elif pkg.ecosystem == "cargo":
-        from agent_bom.version_utils import resolve_cargo_metadata
-
-        version, lic = await resolve_cargo_metadata(pkg.name, client)
-    elif pkg.ecosystem == "conda":
-        # Conda packages often have PyPI equivalents — try PyPI resolution
-        version, lic = await resolve_pypi_metadata(pkg.name, client)
-    elif pkg.ecosystem == "maven" and ":" in pkg.name:
-        from agent_bom.version_utils import resolve_maven_metadata
-
-        group, artifact = pkg.name.split(":", 1)
-        version, lic = await resolve_maven_metadata(group, artifact, client)
+        try:
+            return await asyncio.wait_for(_resolve_declared_constraint(pkg, constraint, client), timeout=REGISTRY_LATEST_DEADLINE + 0.5)
+        except asyncio.TimeoutError:
+            record_registry_timeout(pkg.ecosystem, pkg.name, REGISTRY_LATEST_DEADLINE)
+            return False
+    try:
+        version, lic = await asyncio.wait_for(_latest_metadata(pkg, client), timeout=REGISTRY_LATEST_DEADLINE + 0.5)
+    except asyncio.TimeoutError:
+        record_registry_timeout(pkg.ecosystem, pkg.name, REGISTRY_LATEST_DEADLINE)
+        version, lic = None, None
     if version:
         apply_registry_latest(pkg, version)
         if lic and not pkg.license:
@@ -698,7 +667,7 @@ async def resolve_all_versions(
     packages: list[Package],
     *,
     quiet: bool = False,
-    global_timeout: float = 30.0,
+    global_timeout: float = RESOLVE_ALL_TIMEOUT,
     enrich_license_metadata: bool = True,
 ) -> int:
     """Resolve unresolved package versions from registries.
@@ -779,6 +748,7 @@ async def resolve_all_versions(
                 pkg = tasks[task]
                 peers = groups[_resolution_key(pkg)]
                 task.cancel()
+                record_registry_timeout(pkg.ecosystem, pkg.name, global_timeout)
                 group_fallbacks = 0
                 if _apply_registry_version_fallback(pkg):
                     group_fallbacks += 1
@@ -801,7 +771,6 @@ async def resolve_all_versions(
                         )
             if pending:
                 await asyncio.gather(*pending, return_exceptions=True)
-
             # License metadata is optional and can require one registry lookup
             # per already-versioned package. Keep it behind the caller's
             # explicit enrichment boundary so version resolution stays bounded.

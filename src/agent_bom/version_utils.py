@@ -224,7 +224,7 @@ from agent_bom.core.versions.validation import (
 from agent_bom.core.versions.validation import (
     validate_version as validate_version,
 )
-from agent_bom.http_client import request_with_retry
+from agent_bom.http_client import REGISTRY_LOOKUP_MAX_WAIT, request_with_retry
 
 _logger = logging.getLogger(__name__)
 
@@ -301,7 +301,7 @@ async def resolve_go_metadata(
     # and forward slashes are kept as literal path separators.
     encoded = _go_encode_module(module)
     url = f"https://proxy.golang.org/{encoded}/@latest"
-    response = await request_with_retry(client, "GET", url)  # type: ignore[arg-type]
+    response = await request_with_retry(client, "GET", url, max_wait=REGISTRY_LOOKUP_MAX_WAIT)  # type: ignore[arg-type]
     if response and response.status_code == 200:
         try:
             data = response.json()
@@ -322,7 +322,7 @@ async def resolve_cargo_metadata(
     """
 
     url = f"https://crates.io/api/v1/crates/{_url_quote(crate_name, safe='')}"
-    response = await request_with_retry(client, "GET", url)  # type: ignore[arg-type]
+    response = await request_with_retry(client, "GET", url, max_wait=REGISTRY_LOOKUP_MAX_WAIT)  # type: ignore[arg-type]
     if response and response.status_code == 200:
         try:
             data = response.json()
@@ -348,7 +348,7 @@ async def resolve_maven_metadata(
     g = _url_quote(group_id, safe="")
     a = _url_quote(artifact_id, safe="")
     url = f"https://search.maven.org/solrsearch/select?q=g:{g}+AND+a:{a}&rows=1&wt=json"
-    response = await request_with_retry(client, "GET", url)  # type: ignore[arg-type]
+    response = await request_with_retry(client, "GET", url, max_wait=REGISTRY_LOOKUP_MAX_WAIT)  # type: ignore[arg-type]
     if response and response.status_code == 200:
         try:
             data = response.json()

@@ -30,6 +30,9 @@ from agent_bom.config import (
 logger = logging.getLogger(__name__)
 
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+# Cap for a lookup that only refines a scan (latest version, ecosystem
+# detection): it must fit inside a 30 s MCP tool call.
+REGISTRY_LOOKUP_MAX_WAIT = 3.0
 
 
 # ── Registry rate-limit circuit breaker ────────────────────────────────────
@@ -202,6 +205,22 @@ def _jittered_wait(wait: float) -> float:
     return min(wait + random.uniform(0.0, wait * 0.1), MAX_BACKOFF)
 
 
+def _retry_after_wait(response: httpx.Response, backoff: float) -> float:
+    retry_after = response.headers.get("Retry-After")
+    try:
+        return min(float(retry_after), MAX_BACKOFF) if retry_after else backoff
+    except ValueError:
+        return backoff
+
+
+async def _sleep_within(wait: float, deadline: float | None) -> bool:
+    """Sleep unless the wait would pass *deadline*; False means stop retrying now."""
+    if deadline is not None and time.monotonic() + wait > deadline:
+        return False
+    await asyncio.sleep(wait)
+    return True
+
+
 def _should_retry_status(status_code: int, url: str) -> bool:
     """Return whether an HTTP status should enter the shared retry loop."""
     if status_code not in RETRYABLE_STATUS_CODES:
@@ -266,6 +285,7 @@ async def request_with_retry(
     method: str,
     url: str,
     max_retries: int = MAX_RETRIES,
+    max_wait: float | None = None,
     **kwargs: Any,
 ) -> Optional[httpx.Response]:
     """Make an HTTP request with exponential backoff on retryable errors.
@@ -274,6 +294,9 @@ async def request_with_retry(
     - 429 Too Many Requests (respects Retry-After header)
     - 5xx server errors
     - Connection timeouts and network errors
+
+    ``max_wait`` caps the time spent waiting between attempts: a retry whose
+    wait (such as a long ``Retry-After``) would pass it is not attempted.
 
     Returns:
         httpx.Response on success, None on exhausted retries.
@@ -296,6 +319,7 @@ async def request_with_retry(
     log_url = _safe_url(safe_url)
     host = _host_of(safe_url)
     backoff = INITIAL_BACKOFF
+    deadline = None if max_wait is None else time.monotonic() + max_wait
 
     # Breaker already open for this host: skip the network entirely so the
     # caller falls through to cached/bundled data without backoff or warnings.
@@ -317,70 +341,25 @@ async def request_with_retry(
                 logger.debug("Rate-limit breaker tripped for %s on HTTP 429 — short-circuiting %s", host, log_url)
                 return response
 
-            # Retryable status — check Retry-After header
-            retry_after = response.headers.get("Retry-After")
-            if retry_after:
-                try:
-                    wait = min(float(retry_after), MAX_BACKOFF)
-                except ValueError:
-                    wait = backoff
-            else:
-                wait = backoff
-            wait = _jittered_wait(wait)
-
-            if attempt < max_retries:
-                logger.info(
-                    "HTTP %d from %s — retry %d/%d in %.1fs",
-                    response.status_code,
-                    log_url,
-                    attempt + 1,
-                    max_retries,
-                    wait,
-                )
-                await asyncio.sleep(wait)
-                backoff = min(backoff * 2, MAX_BACKOFF)
-            else:
-                logger.warning(
-                    "HTTP %d from %s — exhausted %d retries",
-                    response.status_code,
-                    log_url,
-                    max_retries,
-                )
+            if attempt >= max_retries:
+                logger.warning("HTTP %d from %s — exhausted %d retries", response.status_code, log_url, max_retries)
                 return response
-
-        except httpx.TimeoutException:
-            if attempt < max_retries:
-                wait = _jittered_wait(backoff)
-                logger.info(
-                    "Timeout on %s — retry %d/%d in %.1fs",
-                    log_url,
-                    attempt + 1,
-                    max_retries,
-                    wait,
-                )
-                await asyncio.sleep(wait)
-                backoff = min(backoff * 2, MAX_BACKOFF)
-            else:
-                logger.warning("Timeout on %s — exhausted %d retries", log_url, max_retries)
-                return None
+            wait = _jittered_wait(_retry_after_wait(response, backoff))
+            logger.info("HTTP %d from %s — retry %d/%d in %.1fs", response.status_code, log_url, attempt + 1, max_retries, wait)
+            if not await _sleep_within(wait, deadline):
+                return response
+            backoff = min(backoff * 2, MAX_BACKOFF)
 
         except httpx.HTTPError as e:
-            safe_err = _sanitize_for_log(e)
-            if attempt < max_retries:
-                wait = _jittered_wait(backoff)
-                logger.info(
-                    "HTTP error on %s: %s — retry %d/%d in %.1fs",
-                    log_url,
-                    safe_err,
-                    attempt + 1,
-                    max_retries,
-                    wait,
-                )
-                await asyncio.sleep(wait)
-                backoff = min(backoff * 2, MAX_BACKOFF)
-            else:
-                logger.warning("HTTP error on %s: %s — exhausted %d retries", log_url, safe_err, max_retries)
+            problem = "Timeout" if isinstance(e, httpx.TimeoutException) else f"HTTP error ({_sanitize_for_log(e)})"
+            if attempt >= max_retries:
+                logger.warning("%s on %s — exhausted %d retries", problem, log_url, max_retries)
                 return None
+            wait = _jittered_wait(backoff)
+            logger.info("%s on %s — retry %d/%d in %.1fs", problem, log_url, attempt + 1, max_retries, wait)
+            if not await _sleep_within(wait, deadline):
+                return None
+            backoff = min(backoff * 2, MAX_BACKOFF)
 
     return None
 
@@ -440,14 +419,7 @@ def sync_request_with_retry(
                 logger.debug("Rate-limit breaker tripped for %s on HTTP 429 — short-circuiting %s", host, log_url)
                 return response
 
-            retry_after = response.headers.get("Retry-After")
-            if retry_after:
-                try:
-                    wait = min(float(retry_after), MAX_BACKOFF)
-                except ValueError:
-                    wait = backoff
-            else:
-                wait = backoff
+            wait = _retry_after_wait(response, backoff)
 
             if attempt < max_retries:
                 jittered_wait = _jittered_wait(wait)
@@ -512,11 +484,12 @@ def sync_get(
     timeout: float | None = None,
     headers: dict | None = None,
     params: dict | None = None,
+    max_retries: int = MAX_RETRIES,
 ) -> httpx.Response | None:
     """Convenience: single GET request with retry. Manages its own client."""
     with create_sync_client(timeout=timeout) as client:
         # None preserves an embedded provider cursor/filter; {} explicitly clears it.
-        return sync_request_with_retry(client, "GET", url, headers=headers or {}, params=params)
+        return sync_request_with_retry(client, "GET", url, max_retries=max_retries, headers=headers or {}, params=params)
 
 
 def fetch_bytes(url: str, *, timeout: float = 30, headers: dict | None = None) -> bytes:

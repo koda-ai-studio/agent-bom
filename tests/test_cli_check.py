@@ -293,7 +293,7 @@ class _DummyResponse:
 def test_check_uses_version_aware_ecosystem_resolution(monkeypatch):
     seen_ecosystems = []
 
-    def _fake_sync_get(url, timeout=3):  # noqa: ARG001
+    def _fake_sync_get(url, timeout=3, **_kwargs):  # noqa: ARG001
         host = urlparse(url).hostname or ""
         if host == "pypi.org":
             return _DummyResponse(200, {"releases": {"2.33.0": [{}]}})
@@ -317,7 +317,7 @@ def test_check_uses_version_aware_ecosystem_resolution(monkeypatch):
 
 
 def test_check_requires_explicit_ecosystem_when_name_stays_ambiguous(monkeypatch):
-    def _fake_sync_get(url, timeout=3):  # noqa: ARG001
+    def _fake_sync_get(url, timeout=3, **_kwargs):  # noqa: ARG001
         host = urlparse(url).hostname or ""
         if host == "pypi.org":
             return _DummyResponse(200, {"releases": {"1.0.0": [{}]}})

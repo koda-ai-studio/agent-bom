@@ -103,7 +103,7 @@ async def marketplace_check_impl(
         download_count = 0
         license_info = None
 
-        async with create_client(timeout=15.0) as client:
+        async with create_client(timeout=5.0) as client:
             if eco == "npm":
                 try:
                     resp = await client.get(f"https://registry.npmjs.org/{name}")
