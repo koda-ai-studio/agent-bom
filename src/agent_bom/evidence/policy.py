@@ -225,6 +225,9 @@ TIER_A_FIELDS: frozenset[str] = frozenset(
         "title",
         "category",
         "detector",
+        # Runtime enforcement verdict ("blocked" / "stripped") and exception class name only.
+        "action",
+        "error_type",
         "asset_type",
         "finding_type",
         "cve_id",

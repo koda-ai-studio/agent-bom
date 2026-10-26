@@ -122,6 +122,8 @@ spec:
             - --profile-issuer
             - {{ .Values.gateway.profileIssuer | default "agent-bom" | quote }}
             {{- end }}
+            - --injection-mode
+            - {{ .Values.gateway.injectionMode | default "alert" | quote }}
             {{- if .Values.gateway.detectVisualLeaks }}
             - --detect-visual-leaks
             {{- end }}

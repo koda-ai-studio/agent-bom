@@ -18,6 +18,9 @@ Current evidence pages:
 - [`fleet-reconciliation.md`](fleet-reconciliation.md) — fleet and Kubernetes
   reconciliation latency.
 
+- [`image-layer-streaming.md`](image-layer-streaming.md) — native image
+  parser peak memory and wall time on synthetic 256 MiB / 1 GiB images.
+
 - [`gateway-relay-latency.md`](gateway-relay-latency.md) — HTTP gateway JSON-RPC
   relay p50/p95/p99 + RSS under concurrency (Go-gate evidence for ADR-009).
 

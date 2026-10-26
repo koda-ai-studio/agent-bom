@@ -128,6 +128,28 @@ attestation, application exploitability, or proof that every upstream advisory
 has been published. Review remaining findings and coverage warnings before
 using the image in a deployment.
 
+### Large images
+
+Image layers are streamed rather than held in memory: an uncompressed layer is
+read in place and a compressed one is inflated in 1 MiB chunks to a temporary
+file, so peak memory does not grow with layer size. Each bound below is checked
+while the layer is read. A layer that crosses one is skipped, recorded as a
+coverage warning naming the layer and reason, and the scan run is reported as
+`partial`, never clean.
+
+| Env var | Default | Bound |
+|---|---|---|
+| `AGENT_BOM_OCI_SCAN_TIMEOUT_SECONDS` | `900` | Wall-clock budget for reading one image's layers; `0` disables it. Layers not read in time are reported with reason `oci_scan_time_budget`. |
+| `AGENT_BOM_OCI_MAX_LAYER_COMPRESSED_BYTES` | 2 GiB | Compressed size of one layer inside a `docker save` tarball. |
+| `AGENT_BOM_OCI_MAX_LAYER_UNCOMPRESSED_BYTES` | 5 GiB | Uncompressed bytes of one layer (also caps temporary disk use per layer). |
+| `AGENT_BOM_OCI_MAX_DECOMPRESSION_RATIO` | `100` | Uncompressed-to-compressed ratio; decompression stops at the limit. |
+| `AGENT_BOM_OCI_MAX_LAYER_MEMBERS` | `1000000` | Tar entries walked in one layer. |
+| `AGENT_BOM_OCI_MAX_METADATA_MEMBER_BYTES` | 512 MiB | One package-metadata file (dpkg status, RPM database, lockfile, manifest) read into memory. |
+| `AGENT_BOM_OCI_MAX_JAR_UNCOMPRESSED_BYTES` | 512 MiB | Uncompressed size of one Java archive inspected for Maven metadata. |
+
+Temporary layer files are written to the system temporary directory (`TMPDIR`)
+and removed as soon as the layer has been read.
+
 The default OS result remains precision-first and reports distro-confirmed
 advisories. To include unfixed, pending, no-DSA, and end-of-life distro
 advisories for an exhaustive review, run:

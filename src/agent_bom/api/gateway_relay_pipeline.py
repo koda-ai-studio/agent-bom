@@ -43,6 +43,7 @@ from agent_bom.api.gateway_relay_identity import (
 )
 from agent_bom.api.gateway_relay_profile import apply_runtime_profile
 from agent_bom.api.gateway_relay_tool_policy import evaluate_tool_call
+from agent_bom.runtime.injection_protection import gateway_injection_mode
 
 RelayStage = Callable[[RelayRuntime, RelayContext], Awaitable[JSONResponse | None]]
 
@@ -85,6 +86,7 @@ def forward_context(runtime: RelayRuntime, ctx: RelayContext) -> GatewayForwardC
         dlp_config=runtime.dlp_config,
         response_scanner=runtime.response_scanner,
         tracer=runtime.tracer,
+        injection_mode=gateway_injection_mode(settings.injection_mode, runtime.policy_reload.state.policy),
     )
 
 

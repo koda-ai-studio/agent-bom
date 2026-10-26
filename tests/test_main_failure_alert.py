@@ -44,3 +44,14 @@ execute(github, context).then(() => {
         [node, "-e", "const SCRIPT = " + json.dumps(script) + ";\n" + harness], capture_output=True, text=True, timeout=10
     )
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("job", ["alert", "resolve"])
+def test_only_main_pushes_from_this_repository_drive_alerts(job: str) -> None:
+    """A fork or pull-request run whose head branch is named main must not open or close the blocker."""
+    workflow = yaml.safe_load((ROOT / ".github/workflows/main-failure-alert.yml").read_text())
+    condition = workflow["jobs"][job]["if"]
+    assert "github.event.workflow_run.event == 'push'" in condition
+    assert "github.event.workflow_run.head_repository.full_name == github.repository" in condition
+    script = workflow["jobs"][job]["steps"][0]["with"]["script"]
+    assert 'branch: "main", event: "push"' in script

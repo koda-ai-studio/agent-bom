@@ -20,6 +20,7 @@ REQUIRED_FILES = (
     PERF_DIR / "graph-api-postgres-benchmark.md",
     PERF_DIR / "ingest-throughput.md",
     PERF_DIR / "fleet-reconciliation.md",
+    PERF_DIR / "image-layer-streaming.md",
 )
 
 REQUIRED_MARKERS = (

@@ -252,5 +252,10 @@ describe("product proof capture contract", () => {
   it("explains why a finding cannot be verified", () => {
     expect(findingsQueue).not.toContain('"Verify unavailable"');
     expect(findingsQueue).toContain("No scanner-provided verification command");
+    expect(findingsQueue).toContain("{verifyCommand || vuln.fixed_version ? (");
+  });
+
+  it("leaves remediation cells blank instead of printing filler for unknown status", () => {
+    expect(findingsQueue).not.toContain('"Status unavailable"');
   });
 });

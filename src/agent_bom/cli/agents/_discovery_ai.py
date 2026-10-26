@@ -80,13 +80,16 @@ def _print_actionable_table(run: DiscoveryRun, ai_report: Any, actionable: list[
 
 
 def _print_all_safe(run: DiscoveryRun, ai_report: Any) -> None:
+    if not ai_report.files_scanned:
+        run.con.print("  [yellow]No source files were analysed for AI components[/yellow] [dim](nothing matched the scanned paths)[/dim]")
+        return
     sdks = sorted(ai_report.unique_sdks)
     models = sorted(ai_report.unique_models)
     sdk_str = ", ".join(sdks[:5]) + (f" +{len(sdks) - 5}" if len(sdks) > 5 else "") if sdks else "none"
     model_str = ", ".join(models[:4]) + (f" +{len(models) - 4}" if len(models) > 4 else "") if models else "none"
     run.con.print(
         f"  [green]✓[/green] {ai_report.files_scanned} files scanned — "
-        f"[bold]{ai_report.total}[/bold] components, [green]all safe[/green]\n"
+        f"[bold]{ai_report.total}[/bold] components, no high-risk AI component findings\n"
         f"    SDKs: [cyan]{sdk_str}[/cyan]\n"
         f"    Models: [cyan]{model_str}[/cyan]"
     )

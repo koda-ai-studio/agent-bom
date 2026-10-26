@@ -154,6 +154,11 @@ class GatewaySettings:
     dlp_mode: str = "audit"  # "audit" | "enforce"
     dlp_pii_action: str = "redact"  # "redact" | "block"
     dlp_scanners: list[str] = field(default_factory=lambda: ["injection", "pii", "secrets", "payload_vuln"])
+    # Poisoned tool descriptions and injected tool results. "alert" (default)
+    # audits detections and forwards unchanged; "enforce" strips poisoned tools
+    # from tools/list and withholds injected results. A policy-file
+    # ``injection_mode: enforce`` also selects enforce (strictest wins).
+    injection_mode: str = "alert"
 
 
 def validate_gateway_security_settings(settings: GatewaySettings) -> None:
@@ -176,6 +181,7 @@ def validate_gateway_security_settings(settings: GatewaySettings) -> None:
         "graph_reachability_failure_mode": {"allow", "deny"},
         "dlp_mode": {"audit", "enforce"},
         "dlp_pii_action": {"redact", "block"},
+        "injection_mode": {"alert", "enforce"},
     }
     for name, allowed in modes.items():
         value = getattr(settings, name)

@@ -32,12 +32,14 @@ CLI usage::
 
 from __future__ import annotations
 
-import io
 import json
+import lzma
 import tarfile
+import zlib
+from dataclasses import dataclass, field
 from importlib import import_module
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from agent_bom.coverage import record_scan_input_warning
 from agent_bom.models import Package
@@ -45,14 +47,12 @@ from agent_bom.parsers.gpu_stack import finalize_gpu_stack
 from agent_bom.parsers.image_runtimes import finalize_image_runtimes, seed_image_runtimes
 from agent_bom.parsers.oci_extractors import _LAYER_PACKAGE_STAGES
 from agent_bom.parsers.oci_io import (
-    _decompression_ratio_exceeded,
     _max_json_member_bytes,
-    _max_layer_uncompressed_bytes,
+    _max_layer_compressed_bytes,
     _read_json_member_from_tar,
     _read_json_path_limited,
     _resolve_tar_member,
     _safe_tar_names,
-    _tar_uncompressed_regular_size,
 )
 from agent_bom.parsers.oci_layer import _apply_detected_distro, _layer_whiteouts, _LayerScan, _read_os_release_from_layer
 from agent_bom.parsers.oci_metadata import _MAX_LEGACY_RPMDB_BYTES as _MAX_LEGACY_RPMDB_BYTES
@@ -71,6 +71,7 @@ from agent_bom.parsers.oci_metadata import _parse_legacy_rpmdb_bytes as _parse_l
 from agent_bom.parsers.oci_metadata import _parse_rfc822_name_version as _parse_rfc822_name_version
 from agent_bom.parsers.oci_metadata import _parse_rpm_header_blob as _parse_rpm_header_blob
 from agent_bom.parsers.oci_metadata import is_node_package_manifest_path as is_node_package_manifest_path
+from agent_bom.parsers.oci_stream import LayerLimitError, ScanBudget, open_bounded_layer
 from agent_bom.parsers.oci_types import OCIInputWarning, OCIManifest, OCIParseError, OCIParseResult, _append_oci_warning
 
 
@@ -82,6 +83,8 @@ def _extract_packages_from_layer(
     layer: LayerMetadata,
     warnings: list[str] | None = None,
     coverage_warnings: list[OCIInputWarning] | None = None,
+    *,
+    budget: ScanBudget | None = None,
 ) -> set[str]:
     """Extract packages from an open layer TarFile.
 
@@ -93,6 +96,7 @@ def _extract_packages_from_layer(
         layer: Layer provenance metadata for this concrete tar blob.
         warnings: Optional mutable list for non-fatal parser diagnostics.
         coverage_warnings: Optional structured diagnostics for incomplete inputs.
+        budget: Optional scan budget, checked between extraction stages.
 
     Returns:
         Set of paths marked as whiteout in THIS layer (for caller to accumulate).
@@ -102,6 +106,8 @@ def _extract_packages_from_layer(
     whiteouts = _layer_whiteouts(names)
     scan = _LayerScan(layer_tf, names, deleted_paths, layer, packages_by_key, packages, warnings, coverage_warnings)
     for stage in _LAYER_PACKAGE_STAGES:
+        if budget is not None:
+            budget.check()
         stage(scan)
     return whiteouts
 
@@ -163,7 +169,7 @@ def _parse_docker_save_manifest(tf: tarfile.TarFile) -> list[OCIManifest]:
         f = tf.extractfile(member)
         if f is None:
             raise OCIParseError("manifest.json is not a regular file")
-        data = f.read(_max_json_member_bytes() + 1)
+        data = f.read(member.size + 1)
         if len(data) > _max_json_member_bytes():
             raise OCIParseError("manifest.json exceeds parser size limit")
         raw = json.loads(data.decode("utf-8"))
@@ -184,130 +190,100 @@ def _parse_docker_save_manifest(tf: tarfile.TarFile) -> list[OCIManifest]:
     return manifests
 
 
+@dataclass
+class _ImageWalk:
+    """Accumulates one image's packages across layers under a shared scan budget."""
+
+    config: dict | None
+    budget: ScanBudget = field(default_factory=ScanBudget.from_env)
+    packages_by_key: dict[tuple[str, str], Package] = field(default_factory=dict)
+    packages: list[Package] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    coverage_warnings: list[OCIInputWarning] = field(default_factory=list)
+    whiteouts_by_index: dict[int, set[str]] = field(default_factory=dict)
+    distro_name: str | None = None
+    distro_version: str | None = None
+
+    def __post_init__(self) -> None:
+        seed_image_runtimes(self.config, self.packages_by_key, self.packages)
+
+    def gap(self, layer_path: str, reason: str, detail: str) -> None:
+        _append_oci_warning(
+            self.warnings,
+            self.coverage_warnings,
+            path=layer_path,
+            reason=reason,
+            detail=detail,
+            message=f"Layer {layer_path} skipped: {detail}",
+        )
+
+    def scan(self, layer_path: str, layer: LayerMetadata, source: IO[bytes], compressed_size: int, outer: object | None = None) -> None:
+        """Extract packages from one layer; every bound it crosses becomes a coverage gap."""
+        try:
+            with open_bounded_layer(source, compressed_size, self.budget, outer=outer) as layer_tf:
+                distro_name, distro_version = _read_os_release_from_layer(layer_tf, set())
+                self.distro_name = distro_name or self.distro_name
+                self.distro_version = distro_version or self.distro_version
+                whiteouts = _extract_packages_from_layer(
+                    layer_tf,
+                    self.packages_by_key,
+                    self.packages,
+                    set(),
+                    layer,
+                    self.warnings,
+                    self.coverage_warnings,
+                    budget=self.budget,
+                )
+                if whiteouts:
+                    self.whiteouts_by_index.setdefault(layer.layer_index, set()).update(whiteouts)
+        except LayerLimitError as exc:
+            self.gap(layer_path, exc.reason, exc.detail)
+        except (tarfile.TarError, OSError, EOFError, zlib.error, lzma.LZMAError):
+            self.gap(layer_path, "oci_layer_parse_error", "Container layer archive could not be parsed; image inventory is incomplete.")
+
+    def finish(self) -> list[Package]:
+        packages = _drop_whiteout_deleted_packages(self.packages, self.whiteouts_by_index)
+        packages = finalize_gpu_stack(finalize_image_runtimes(packages), "image_scan")
+        _apply_detected_distro(packages, self.distro_name, self.distro_version)
+        return packages
+
+
 def _parse_layers_from_tarball(
     outer_tf: tarfile.TarFile,
     layer_paths: list[str],
     layer_metadata: list[LayerMetadata] | None = None,
     config: dict | None = None,
 ) -> tuple[list[Package], list[str], list[OCIInputWarning]]:
-    """Open each layer tarball from the outer tarball and extract packages.
+    """Stream each layer out of the outer tarball and extract packages.
 
-    Layers are processed in order (base → top). Whiteout files in later
-    layers are accumulated to suppress packages deleted from earlier layers.
+    Layers are processed in order (base → top). Whiteouts are applied as a
+    post-filter scoped to strictly-higher layers (see
+    ``_drop_whiteout_deleted_packages``), so a file re-created in a higher
+    layer is not wrongly suppressed by a lower-layer whiteout.
 
     Returns:
         (packages, warnings, coverage_warnings)
     """
-    packages_by_key: dict[tuple[str, str], Package] = {}
-    packages: list[Package] = []
-    warnings: list[str] = []
-    coverage_warnings: list[OCIInputWarning] = []
-    detected_distro_name: str | None = None
-    detected_distro_version: str | None = None
+    walk = _ImageWalk(config)
     layer_metadata = layer_metadata or _build_layer_metadata(layer_paths)
-    seed_image_runtimes(config, packages_by_key, packages)
-
-    # Whiteouts are applied as a post-filter (see _drop_whiteout_deleted_packages)
-    # scoped to strictly-higher layers, so a file re-created in a higher layer is
-    # not wrongly suppressed by a lower-layer whiteout for the same path (the bug
-    # that silently dropped pip/setuptools dist-info on Debian-based images).
-    whiteouts_by_index: dict[int, set[str]] = {}
-
     for layer_path, layer in zip(layer_paths, layer_metadata, strict=False):
         member = _resolve_tar_member(outer_tf, layer_path)
-
         if member is None:
-            _append_oci_warning(
-                warnings,
-                coverage_warnings,
-                path=layer_path,
-                reason="oci_layer_missing",
-                detail="Container layer was not present; image inventory is incomplete.",
-                message=f"Layer not found in tarball: {layer_path}",
+            walk.gap(layer_path, "oci_layer_missing", "Container layer was not present; image inventory is incomplete.")
+            continue
+        if member.size > _max_layer_compressed_bytes():
+            walk.gap(
+                layer_path,
+                "oci_layer_size_limit",
+                "Container layer exceeds the compressed-size safety limit; image inventory is incomplete.",
             )
             continue
-
         layer_fobj = outer_tf.extractfile(member)
         if layer_fobj is None:
-            _append_oci_warning(
-                warnings,
-                coverage_warnings,
-                path=layer_path,
-                reason="oci_layer_unreadable",
-                detail="Container layer could not be read safely; image inventory is incomplete.",
-                message=f"Layer is not a regular file: {layer_path}",
-            )
+            walk.gap(layer_path, "oci_layer_unreadable", "Container layer could not be read safely; image inventory is incomplete.")
             continue
-
-        # Read into memory to allow tarfile to seek.
-        # Cap at 2 GB to prevent OOM on very large image layers (e.g. ML model weights).
-        max_layer_bytes = 2 * 1024 * 1024 * 1024  # 2 GB
-        layer_bytes = layer_fobj.read(max_layer_bytes + 1)
-        if len(layer_bytes) > max_layer_bytes:
-            _append_oci_warning(
-                warnings,
-                coverage_warnings,
-                path=layer_path,
-                reason="oci_layer_size_limit",
-                detail="Container layer exceeds the 2 GiB compressed safety limit; image inventory is incomplete.",
-                message=f"Layer {layer_path} exceeds 2 GB — skipped to avoid OOM",
-            )
-            continue
-        try:
-            with tarfile.open(fileobj=io.BytesIO(layer_bytes), mode="r:*") as layer_tf:
-                uncompressed_bytes = _tar_uncompressed_regular_size(layer_tf)
-                if uncompressed_bytes > _max_layer_uncompressed_bytes():
-                    _append_oci_warning(
-                        warnings,
-                        coverage_warnings,
-                        path=layer_path,
-                        reason="oci_layer_size_limit",
-                        detail="Container layer exceeds the uncompressed safety limit; image inventory is incomplete.",
-                        message=f"Layer {layer_path} exceeds uncompressed extraction limit — skipped",
-                    )
-                    continue
-                if _decompression_ratio_exceeded(uncompressed_bytes, member.size):
-                    _append_oci_warning(
-                        warnings,
-                        coverage_warnings,
-                        path=layer_path,
-                        reason="oci_layer_decompression_limit",
-                        detail="Container layer exceeds the decompression-ratio safety limit; image inventory is incomplete.",
-                        message=f"Layer {layer_path} exceeds decompression ratio limit — skipped",
-                    )
-                    continue
-                layer_distro_name, layer_distro_version = _read_os_release_from_layer(layer_tf, set())
-                if layer_distro_name:
-                    detected_distro_name = layer_distro_name
-                if layer_distro_version:
-                    detected_distro_version = layer_distro_version
-                whiteouts = _extract_packages_from_layer(
-                    layer_tf,
-                    packages_by_key,
-                    packages,
-                    set(),
-                    layer,
-                    warnings,
-                    coverage_warnings,
-                )
-                if whiteouts:
-                    whiteouts_by_index.setdefault(layer.layer_index, set()).update(whiteouts)
-        except tarfile.TarError:
-            _append_oci_warning(
-                warnings,
-                coverage_warnings,
-                path=layer_path,
-                reason="oci_layer_parse_error",
-                detail="Container layer archive could not be parsed; image inventory is incomplete.",
-                message=f"Failed to read layer {layer_path}",
-            )
-            continue
-
-    packages = finalize_gpu_stack(finalize_image_runtimes(_drop_whiteout_deleted_packages(packages, whiteouts_by_index)), "image_scan")
-
-    _apply_detected_distro(packages, detected_distro_name, detected_distro_version)
-
-    return packages, warnings, coverage_warnings
+        walk.scan(layer_path, layer, layer_fobj, member.size, outer=outer_tf.fileobj)
+    return walk.finish(), walk.warnings, walk.coverage_warnings
 
 
 def _parse_oci_layout_manifest_from_tar(tf: tarfile.TarFile) -> tuple[dict, list[str], dict | None]:
@@ -321,7 +297,7 @@ def _parse_oci_layout_manifest_from_tar(tf: tarfile.TarFile) -> tuple[dict, list
         f = tf.extractfile(member)
         if f is None:
             raise OCIParseError("index.json is not a regular file")
-        data = f.read(_max_json_member_bytes() + 1)
+        data = f.read(member.size + 1)
         if len(data) > _max_json_member_bytes():
             raise OCIParseError("index.json exceeds parser size limit")
         index = json.loads(data.decode("utf-8"))
@@ -492,84 +468,16 @@ def parse_oci_layout_dir(path: Path) -> OCIParseResult:
             config = maybe_config if isinstance(maybe_config, dict) else None
     layer_metadata = _build_layer_metadata(layer_paths, config)
 
-    packages_by_key: dict[tuple[str, str], Package] = {}
-    packages: list[Package] = []
-    warnings: list[str] = []
-    coverage_warnings: list[OCIInputWarning] = []
-    detected_distro_name: str | None = None
-    detected_distro_version: str | None = None
-    whiteouts_by_index: dict[int, set[str]] = {}
-    seed_image_runtimes(config, packages_by_key, packages)
-
+    walk = _ImageWalk(config)
     for layer_hash, layer in zip(layer_digests, layer_metadata, strict=False):
+        layer_path = f"blobs/sha256/{layer_hash}"
         blob_path = path / "blobs" / "sha256" / layer_hash
-        if not blob_path.exists():
-            layer_path = f"blobs/sha256/{layer_hash}"
-            _append_oci_warning(
-                warnings,
-                coverage_warnings,
-                path=layer_path,
-                reason="oci_layer_missing",
-                detail="Container layer was not present; image inventory is incomplete.",
-                message=f"Layer blob not found: {layer_path}",
-            )
+        if not blob_path.is_file():
+            walk.gap(layer_path, "oci_layer_missing", "Container layer was not present; image inventory is incomplete.")
             continue
-        try:
-            with tarfile.open(str(blob_path), mode="r:*") as layer_tf:
-                uncompressed_bytes = _tar_uncompressed_regular_size(layer_tf)
-                if uncompressed_bytes > _max_layer_uncompressed_bytes():
-                    layer_path = f"blobs/sha256/{layer_hash}"
-                    _append_oci_warning(
-                        warnings,
-                        coverage_warnings,
-                        path=layer_path,
-                        reason="oci_layer_size_limit",
-                        detail="Container layer exceeds the uncompressed safety limit; image inventory is incomplete.",
-                        message=f"Layer {layer_hash[:12]} exceeds uncompressed extraction limit — skipped",
-                    )
-                    continue
-                compressed_bytes = blob_path.stat().st_size
-                if _decompression_ratio_exceeded(uncompressed_bytes, compressed_bytes):
-                    layer_path = f"blobs/sha256/{layer_hash}"
-                    _append_oci_warning(
-                        warnings,
-                        coverage_warnings,
-                        path=layer_path,
-                        reason="oci_layer_decompression_limit",
-                        detail="Container layer exceeds the decompression-ratio safety limit; image inventory is incomplete.",
-                        message=f"Layer {layer_hash[:12]} exceeds decompression ratio limit — skipped",
-                    )
-                    continue
-                layer_distro_name, layer_distro_version = _read_os_release_from_layer(layer_tf, set())
-                if layer_distro_name:
-                    detected_distro_name = layer_distro_name
-                if layer_distro_version:
-                    detected_distro_version = layer_distro_version
-                whiteouts = _extract_packages_from_layer(
-                    layer_tf,
-                    packages_by_key,
-                    packages,
-                    set(),
-                    layer,
-                    warnings,
-                    coverage_warnings,
-                )
-                if whiteouts:
-                    whiteouts_by_index.setdefault(layer.layer_index, set()).update(whiteouts)
-        except tarfile.TarError:
-            layer_path = f"blobs/sha256/{layer_hash}"
-            _append_oci_warning(
-                warnings,
-                coverage_warnings,
-                path=layer_path,
-                reason="oci_layer_parse_error",
-                detail="Container layer archive could not be parsed; image inventory is incomplete.",
-                message=f"Failed to read layer blob {layer_hash[:12]}",
-            )
-
-    packages = finalize_gpu_stack(finalize_image_runtimes(_drop_whiteout_deleted_packages(packages, whiteouts_by_index)), "image_scan")
-
-    _apply_detected_distro(packages, detected_distro_name, detected_distro_version)
+        with blob_path.open("rb") as blob:
+            walk.scan(layer_path, layer, blob, blob_path.stat().st_size)
+    packages, warnings, coverage_warnings = walk.finish(), walk.warnings, walk.coverage_warnings
 
     return OCIParseResult(
         packages=packages,
@@ -616,6 +524,8 @@ _EXPORTS = {
     "_env_int": "agent_bom.parsers.oci_io",
     "_max_jar_uncompressed_bytes": "agent_bom.parsers.oci_io",
     "_max_decompression_ratio": "agent_bom.parsers.oci_io",
+    "_decompression_ratio_exceeded": "agent_bom.parsers.oci_io",
+    "_max_layer_uncompressed_bytes": "agent_bom.parsers.oci_io",
     "_is_safe_tar_member_name": "agent_bom.parsers.oci_io",
     "_safe_getmember": "agent_bom.parsers.oci_io",
     "_safe_extractfile": "agent_bom.parsers.oci_io",

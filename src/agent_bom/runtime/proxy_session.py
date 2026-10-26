@@ -51,6 +51,7 @@ class RelayOptions:
     alert_webhook: str | None
     response_signing_key: str | None
     policy_refresh_seconds: int
+    injection_mode: str = "alert"
 
 
 @dataclass
@@ -91,6 +92,7 @@ class ProxySession:
     audit_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     runtime_alerts: list[dict] = field(default_factory=list)
     declared_tools: set[str] = field(default_factory=set)
+    withheld_tools: set[str] = field(default_factory=set)
     tools_list_request_ids: set[int | str] = field(default_factory=set)
     tool_catalog: ToolCatalogPages = field(default_factory=ToolCatalogPages)
     pending_calls: dict[int | str, tuple[str, float, dict[str, str]]] = field(default_factory=dict)

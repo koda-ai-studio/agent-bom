@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 from typing import IO
 
-from agent_bom.core.settings import env_int
+from agent_bom.core.settings import env_float, env_int
 from agent_bom.parsers.oci_metadata import _MAX_LEGACY_RPMDB_BYTES as _MAX_LEGACY_RPMDB_BYTES
 from agent_bom.parsers.oci_metadata import _parse_legacy_rpmdb_bytes as _parse_legacy_rpmdb_bytes
 from agent_bom.parsers.oci_types import OCIParseError
@@ -28,6 +28,18 @@ _MAX_JAR_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
 
 
 _MAX_DECOMPRESSION_RATIO = 100
+
+
+_MAX_LAYER_COMPRESSED_BYTES = 2 * 1024 * 1024 * 1024
+
+
+_MAX_LAYER_MEMBERS = 1_000_000
+
+
+_MAX_METADATA_MEMBER_BYTES = 512 * 1024 * 1024
+
+
+_DEFAULT_SCAN_TIMEOUT_SECONDS = 900.0
 
 
 def _env_int(name: str, default: int) -> int:
@@ -49,6 +61,24 @@ def _max_jar_uncompressed_bytes() -> int:
 
 def _max_decompression_ratio() -> int:
     return _env_int("AGENT_BOM_OCI_MAX_DECOMPRESSION_RATIO", _MAX_DECOMPRESSION_RATIO)
+
+
+def _max_layer_compressed_bytes() -> int:
+    return _env_int("AGENT_BOM_OCI_MAX_LAYER_COMPRESSED_BYTES", _MAX_LAYER_COMPRESSED_BYTES)
+
+
+def _max_metadata_member_bytes() -> int:
+    return _env_int("AGENT_BOM_OCI_MAX_METADATA_MEMBER_BYTES", _MAX_METADATA_MEMBER_BYTES)
+
+
+def _max_layer_members() -> int:
+    return _env_int("AGENT_BOM_OCI_MAX_LAYER_MEMBERS", _MAX_LAYER_MEMBERS)
+
+
+def _scan_timeout_seconds() -> float | None:
+    """Wall-clock budget for one image's layer walk; ``0`` disables it."""
+    seconds = env_float("AGENT_BOM_OCI_SCAN_TIMEOUT_SECONDS", _DEFAULT_SCAN_TIMEOUT_SECONDS, minimum=0.0, on_invalid="default")
+    return seconds or None
 
 
 def _decompression_ratio_exceeded(uncompressed_bytes: int, compressed_bytes: int) -> bool:
@@ -146,11 +176,15 @@ def _safe_extractfile(tf: tarfile.TarFile, name: str) -> IO[bytes] | None:
     """Open a tar member by name, but only if it is safe (see ``_safe_getmember``).
 
     Returns ``None`` if the member is missing, a symlink / hardlink, has an
-    unsafe name, or can't be opened as a stream. Callers can treat ``None``
-    uniformly as "skip this member" without distinguishing the cause.
+    unsafe name, exceeds the package-metadata size bound (callers read whole
+    metadata files into memory), or can't be opened as a stream. Callers
+    record ``None`` as a package-metadata coverage gap.
     """
     member = _safe_getmember(tf, name)
     if member is None:
+        return None
+    if member.size > _max_metadata_member_bytes():
+        _logger.debug("Skipping oversized package metadata member %s (%d bytes)", name, member.size)
         return None
     try:
         return tf.extractfile(member)
@@ -182,7 +216,7 @@ def _read_json_member_from_tar(tf: tarfile.TarFile, member_path: str) -> dict | 
     if fileobj is None:
         return None
     try:
-        data = fileobj.read(_max_json_member_bytes() + 1)
+        data = fileobj.read(member.size + 1)
         if len(data) > _max_json_member_bytes():
             return None
         return json.loads(data.decode("utf-8"))
@@ -198,16 +232,6 @@ def _read_json_path_limited(path: Path) -> dict | list | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
         return None
-
-
-def _tar_uncompressed_regular_size(tf: tarfile.TarFile) -> int:
-    total = 0
-    for member in tf.getmembers():
-        if member.isfile() and _is_safe_tar_member_name(member.name):
-            total += max(0, int(member.size))
-            if total > _max_layer_uncompressed_bytes():
-                break
-    return total
 
 
 def _zip_uncompressed_size(zf: zipfile.ZipFile) -> int:

@@ -339,6 +339,21 @@ def _update_remediation_fix(g: dict, finding: Finding, ecosystem: str, current: 
                 g["fix"] = fv
 
 
+def priority_tier(g: dict) -> tuple[str, str]:
+    """``(P1-P4, why)`` for one remediation group; the reason is printed beside the tier."""
+    if g["has_kev"]:
+        return "P1", "known exploited (KEV)"
+    if g["critical_count"] >= 3:
+        return "P1", f"{g['critical_count']} critical vulnerabilities"
+    if g["critical_count"] > 0:
+        return "P2", "critical severity"
+    if g["high_count"] > 0 and g["creds"]:
+        return "P2", "high severity with credential reach"
+    if g["high_count"] > 0:
+        return "P3", "high severity; not known exploited, no credential reach"
+    return "P4", "medium or lower severity"
+
+
 def _finish_remediation_group(g: dict) -> dict:
     g["vulns"] = sorted(set(g["vulns"]))
     g["agents"] = sorted(g["agents"])
@@ -361,14 +376,7 @@ def _finish_remediation_group(g: dict) -> dict:
     # anchored to the canonical vulnerability risk model instead of a
     # separate package-level heuristic.
     g["impact"] = round(g["max_risk_score"], 1)
-    if g["has_kev"] or g["critical_count"] >= 3:
-        g["priority"] = "P1"
-    elif g["critical_count"] > 0 or (g["high_count"] > 0 and g["creds"]):
-        g["priority"] = "P2"
-    elif g["high_count"] > 0:
-        g["priority"] = "P3"
-    else:
-        g["priority"] = "P4"
+    g["priority"], g["priority_reason"] = priority_tier(g)
 
     action = _remediation_action(g)
     g["credential_count"] = len(g["creds"])

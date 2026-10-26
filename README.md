@@ -9,7 +9,7 @@
   <a href="https://hub.docker.com/r/agentbom/agent-bom"><img src="https://img.shields.io/docker/pulls/agentbom/agent-bom?style=flat&label=Docker%20pulls" alt="Docker pulls"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat" alt="Apache-2.0 license"></a>
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom"><img src="https://img.shields.io/ossf-scorecard/github.com/koda-ai-studio/agent-bom?style=flat&label=OpenSSF%20scorecard" alt="OpenSSF Scorecard"></a>
-  <a href="https://glama.ai/mcp/servers/msaad00/agent-bom"><img src="https://img.shields.io/badge/MCP-Glama-7c3aed?style=flat" alt="Glama MCP server"></a>
+  <a href="https://glama.ai/mcp/servers/koda-ai-studio/agent-bom"><img src="https://img.shields.io/badge/MCP-Glama-7c3aed?style=flat" alt="Glama MCP server"></a>
   <a href="https://smithery.ai/servers/agentbom/agent-bom"><img src="https://img.shields.io/badge/MCP-Smithery-1f6feb?style=flat" alt="Smithery MCP server"></a>
 </p>
 <!-- mcp-name: io.github.koda-ai-studio/agent-bom -->
@@ -43,6 +43,18 @@ Read the inventory, findings, coverage gaps, and remediation guidance in the ter
 Save a report with `agent-bom scan . -f sarif -o findings.sarif`, then
 [upload it and gate CI](docs/FIRST_RUN.md#5-gate-ci-on-the-result).
 Run `agent-bom doctor` if setup fails. See the [first-run guide](docs/FIRST_RUN.md).
+
+In GitHub Actions, the same scan uploads SARIF to code scanning and fails on new
+high or critical findings, the same default gate as the CLI:
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+steps:
+  - uses: actions/checkout@v4
+  - uses: koda-ai-studio/agent-bom@v0
+```
 
 No project handy? Run `agent-bom scan --demo --offline` for a bundled sample.
 Exit `1` is expected: the sample trips the security gate. A non-zero exit

@@ -238,16 +238,16 @@ class SQLiteAgentIdentityStore:
         self._conn.commit()
 
     def _backfill_agent_ids(self) -> None:
-        rows = self._conn.execute("SELECT identity_id, data FROM agent_identities WHERE agent_id = ''").fetchall()
-        for identity_id, data in rows:
+        rows = self._conn.execute("SELECT tenant_id, identity_id, data FROM agent_identities WHERE agent_id = ''").fetchall()
+        for tenant_id, identity_id, data in rows:
             try:
                 agent_id = str(json.loads(data).get("agent_id") or "").strip()
             except (json.JSONDecodeError, AttributeError):
                 continue
             if agent_id:
                 self._conn.execute(
-                    "UPDATE agent_identities SET agent_id = ? WHERE identity_id = ? AND agent_id = ''",
-                    (agent_id, identity_id),
+                    "UPDATE agent_identities SET agent_id = ? WHERE tenant_id = ? AND identity_id = ? AND agent_id = ''",
+                    (agent_id, tenant_id, identity_id),
                 )
 
     def put(self, identity: AgentIdentity) -> None:

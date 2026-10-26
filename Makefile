@@ -1,4 +1,4 @@
-.PHONY: help install test lint lint-ruff lint-mypy format format-check preflight preflight-fix docker-build docker-run scan clean build-ui release-build publish-test publish analytics dev check-dupes clean-dupes secrets platform-up fullstack-up
+.PHONY: help install test lint lint-ruff lint-mypy format format-check preflight preflight-fix ci-local ci-smoke docker-build docker-run scan clean build-ui release-build publish-test publish analytics dev check-dupes clean-dupes secrets platform-up fullstack-up
 
 help:  ## Show this help message
 	@echo 'Usage: make [target]'
@@ -77,6 +77,12 @@ preflight:  ## Run the drift gates that CI's "Version Alignment" job runs — do
 	@echo "→ documentation SVGs";                    python scripts/generate_doc_architecture_svgs.py --check
 	@echo "→ blast-radius SVGs";                     python scripts/generate_blast_radius_svgs.py --check
 	@echo "✓ preflight passed — CI's Version Alignment gate will be green (run 'make lint' separately for ruff/mypy)"
+
+ci-local:  ## Run every gating CI job locally, step for step from ci.yml (lint, security, version-check, ui, 4 test shards)
+	uv run --no-sync python scripts/ci_local.py
+
+ci-smoke:  ## Fast pre-push tier: CI's lint, version-check and changed-domain smoke jobs
+	uv run --no-sync python scripts/ci_local.py --jobs lint,version-check,test-smoke
 
 preflight-fix:  ## Regenerate every drift artifact so you never push stale OpenAPI/schemas/patterns; then review + commit
 	python scripts/export_openapi.py

@@ -539,7 +539,7 @@ def summarize_runtime_alerts(alerts: list[dict]) -> dict[str, object]:
         severity_counts[severity] += 1
         detector_counts[detector] += 1
         details = alert.get("details", {})
-        if isinstance(details, dict) and details.get("action") == "blocked":
+        if alert.get("action") == "blocked" or (isinstance(details, dict) and details.get("action") == "blocked"):
             blocked_alerts += 1
 
     latest_ts = ""
