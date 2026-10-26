@@ -13,6 +13,7 @@ from urllib.parse import quote
 
 from rich.console import Console
 
+from agent_bom.core.image_ref import parse_image_ref
 from agent_bom.extensions import ExtensionCapabilities, iter_entry_point_registrations
 from agent_bom.models import MCPServer, Package, ServerSurface
 from agent_bom.package_utils import package_purl
@@ -359,15 +360,8 @@ _CONTAINER_RUN_VALUE_FLAGS = {
 
 
 def _split_container_image_ref(image_ref: str) -> tuple[str, str]:
-    image = image_ref.strip()
-    if "@sha256:" in image:
-        name, digest = image.split("@", 1)
-        return name, digest
-    last_segment = image.rsplit("/", 1)[-1]
-    if ":" in last_segment:
-        name, version = image.rsplit(":", 1)
-        return name, version
-    return image, "latest"
+    parsed = parse_image_ref(image_ref)
+    return parsed.name, parsed.version
 
 
 def _docker_purl(name: str, version: str) -> str:

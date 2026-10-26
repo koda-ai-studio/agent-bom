@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from agent_bom.core.image_ref import parse_image_ref
+
 FLOATING_TAGS = frozenset(
     {
         "latest",
@@ -74,14 +76,13 @@ def classify_image_reference(reference: str | None) -> FloatingReferenceFinding 
     ref = reference.strip()
     if not ref:
         return None
-    if "@sha256:" in ref:
+    parsed = parse_image_ref(ref)
+    if parsed.digest:
         return None
-
-    tail = ref.rsplit("/", 1)[-1]
-    if ":" not in tail:
+    if not parsed.tag:
         return FloatingReferenceFinding(ref, "image", "implicit latest tag")
 
-    tag = tail.rsplit(":", 1)[1].strip().lower()
+    tag = parsed.tag.strip().lower()
     if tag in FLOATING_TAGS:
         return FloatingReferenceFinding(ref, "image", f"moving tag '{tag}'")
     return None

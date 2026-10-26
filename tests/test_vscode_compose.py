@@ -224,7 +224,7 @@ def test_compose_creates_docker_packages(tmp_path):
 
 
 def test_compose_handles_sha_digest(tmp_path):
-    """Docker Compose image with sha256 digest extracts short digest as version."""
+    """A digest-pinned Compose image is versioned by its full digest, like every other image producer."""
     from agent_bom.discovery import discover_compose_mcp_servers
 
     compose = {
@@ -240,7 +240,7 @@ def test_compose_handles_sha_digest(tmp_path):
     assert agent is not None
     pkg = agent.mcp_servers[0].packages[0]
     assert pkg.name == "mcp/playwright"
-    assert pkg.version == "4e403fabcdef"  # First 12 chars
+    assert pkg.version == "sha256:4e403fabcdef1234567890"
     assert pkg.floating_reference is False
 
 

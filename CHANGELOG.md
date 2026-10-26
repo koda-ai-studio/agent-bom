@@ -51,6 +51,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Image layers emit the canonical purl for scoped npm packages (`pkg:npm/%40scope/name@…`), matching every other scan path.
 
 ### Fixed
+- Image references with both a tag and a digest (`ghcr.io/org/app:1.2@sha256:…`) are split the same way everywhere: the container image SBOM no longer reads the repository as `app:1.2@sha256` and the digest as the tag, and cloud (AWS, GCP, Kubernetes GPU), `docker run` MCP and Docker Compose packages name the image without its tag. Compose images pinned by digest now carry the full digest as their version instead of its first 12 characters, and `localhost/<name>` is read as a local registry.
 - Image layer provenance (`created_by` on package occurrences) redacts credentials passed as build args or `ENV` values instead of copying them into reports.
 - A `--policy` result no longer clears an earlier failed gate (image signature or model provenance policy) in the scan exit code.
 - Dockerfile rules evaluate whole instructions: continuation lines (including a `# escape=` character) are joined and reported at the first line, and heredoc bodies stay with their `RUN`. A package install, `curl | sh` or `chmod 777` on a continuation line was missed, and cache cleanup on a later continuation line was ignored. `yum`/`dnf`/`microdnf`/`zypper` installs and their `clean` commands and BuildKit cache mounts are recognised.

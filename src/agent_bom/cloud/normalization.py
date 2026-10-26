@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
+from agent_bom.core.image_ref import parse_image_ref
 from agent_bom.package_utils import normalize_package_ecosystem
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload, sanitize_text
 
@@ -116,23 +117,9 @@ def build_package_purl(*, ecosystem: str, name: str, version: str | None) -> str
 
 
 def parse_container_image_package(image_ref: str) -> tuple[str, str] | None:
-    """Return ``(repository, tag_or_digest_or_latest)`` from an image reference."""
-    image = (image_ref or "").strip()
-    if not image:
-        return None
-    if "@sha256:" in image:
-        name, digest = image.split("@", 1)
-        return (name, digest) if name and digest else None
-    leaf = image.rsplit("/", 1)[-1]
-    if not leaf:
-        return None
-    if ":" in leaf:
-        name, version = image.rsplit(":", 1)
-    else:
-        name, version = image, "latest"
-    if not name:
-        return None
-    return name, version
+    """Return ``(repository, digest_or_tag_or_latest)`` from an image reference."""
+    parsed = parse_image_ref(image_ref or "")
+    return (parsed.name, parsed.version) if parsed.name else None
 
 
 def normalize_cloud_lifecycle_state(
