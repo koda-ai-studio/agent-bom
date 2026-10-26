@@ -10,6 +10,7 @@ from copy import deepcopy
 from typing import Any
 
 from agent_bom.core.severity import severity_policy_rank
+from agent_bom.evidence.asset_display import readable_asset_name, readable_asset_names
 
 # Keys whose value is credential material and must never appear in the
 # machine-readable envelope, which automation callers routinely capture and log.
@@ -222,15 +223,15 @@ def _compact_exposure(item: dict[str, Any]) -> dict[str, Any]:
         "triage_priority": item.get("triage_priority"),
         "fixed_version": item.get("fixed_version"),
         "graph_reachable": item.get("graph_reachable"),
-        "affected_agents": affected if isinstance(affected, list) else None,
+        "affected_agents": readable_asset_names(affected) if isinstance(affected, list) else None,
     }
 
 
 def _compact_agent(item: dict[str, Any]) -> dict[str, Any]:
     servers = item.get("mcp_servers")
-    server_names = [s.get("name") for s in servers if isinstance(s, dict)] if isinstance(servers, list) else []
+    server_names = [readable_asset_name(s.get("name")) for s in servers if isinstance(s, dict)] if isinstance(servers, list) else []
     return {
-        "name": item.get("name"),
+        "name": readable_asset_name(item.get("name")),
         "type": item.get("type"),
         "agent_type": item.get("agent_type"),
         "status": item.get("status"),

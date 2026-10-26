@@ -15,6 +15,7 @@ from collections import Counter
 from typing import Any
 
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, normalize_severity, severity_band_rank
+from agent_bom.evidence.asset_display import readable_asset_name, readable_asset_names
 from agent_bom.mcp_server_runtime import ToolErrorPayload
 from agent_bom.mcp_tools.result_store import DurableScanResultStore
 
@@ -142,7 +143,7 @@ def _compact_finding(finding: dict[str, Any]) -> dict[str, Any]:
         row["asset"] = asset.get("identifier") or (f"{name}@{version}" if version else str(name))
     for key in ("affected_agents", "affected_servers"):
         if key in finding:
-            row[key] = _sample(finding.get(key))
+            row[key] = readable_asset_names(_sample(finding.get(key)))
     return row
 
 
@@ -150,7 +151,7 @@ def _compact_path(path: dict[str, Any]) -> dict[str, Any]:
     row = {key: path.get(key) for key in _PATH_FIELDS if key in path}
     for key in ("affectedAgents", "affectedServers", "exposedCredentials", "reachableTools"):
         if path.get(key):
-            row[key] = _sample(path.get(key))
+            row[key] = readable_asset_names(_sample(path.get(key)))
     return row
 
 
@@ -219,7 +220,7 @@ def _compact_agents(result: dict[str, Any], top_n: int) -> list[dict[str, Any]]:
         servers = _as_list(agent.get("mcp_servers"))
         rows.append(
             {
-                "name": agent.get("name"),
+                "name": readable_asset_name(agent.get("name")),
                 "agent_type": agent.get("agent_type") or agent.get("type"),
                 "mcp_servers": len(servers),
                 "packages": sum(len(_as_list(s.get("packages"))) for s in servers if isinstance(s, dict)),
