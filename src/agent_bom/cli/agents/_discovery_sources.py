@@ -15,6 +15,7 @@ from agent_bom.image_evidence import ImageEvidence, collect_image_evidence
 from agent_bom.image_evidence.surfaces import console_lines, image_agent_metadata, signature_policy_violation
 from agent_bom.inventory import build_agents_from_inventory
 from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface, TransportType
+from agent_bom.parsers.oci_model_artifacts import collect_model_artifacts, model_artifact_metadata
 
 
 def _inventory_label(inventory: str) -> str:
@@ -197,7 +198,10 @@ def scan_container_images(run: DiscoveryRun) -> None:
     image_successes = 0
     for image_ref in run.images:
         try:
-            with collect_image_evidence(image_ref, cosign_key_path=run.extra.get("image_cosign_key")) as evidence:
+            with (
+                collect_image_evidence(image_ref, cosign_key_path=run.extra.get("image_cosign_key")) as evidence,
+                collect_model_artifacts(image_ref) as model_artifacts,
+            ):
                 img_packages, strategy = scan_image(
                     image_ref,
                     registry_user=run.registry_user,
@@ -221,7 +225,7 @@ def scan_container_images(run: DiscoveryRun) -> None:
                 config_path=f"docker://{image_ref}",
                 source="image",
                 mcp_servers=[server],
-                metadata=image_agent_metadata(evidence),
+                metadata={**image_agent_metadata(evidence), **model_artifact_metadata(model_artifacts)},
             )
             run.ctx.agents.append(image_agent)
             image_successes += 1
@@ -243,7 +247,7 @@ def scan_image_tarballs(run: DiscoveryRun) -> None:
     for tar_path in run.image_tars:
         try:
             tar_label = Path(tar_path).name
-            with collect_image_evidence(tar_label) as evidence:
+            with collect_image_evidence(tar_label) as evidence, collect_model_artifacts(tar_label) as model_artifacts:
                 tar_packages, tar_strategy = scan_image_tar(tar_path)
             evidence.signature = {
                 "status": "unknown",
@@ -265,7 +269,7 @@ def scan_image_tarballs(run: DiscoveryRun) -> None:
                 config_path=f"oci-tar://{tar_path}",
                 source="image-tar",
                 mcp_servers=[server],
-                metadata=image_agent_metadata(evidence),
+                metadata={**image_agent_metadata(evidence), **model_artifact_metadata(model_artifacts)},
             )
             run.ctx.agents.append(tar_agent)
         except ImageScanError as e:

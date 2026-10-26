@@ -120,6 +120,8 @@ async def gpu_infra_scan_impl(
             ],
             "driver_findings": report.driver_findings,
             "firmware_findings": report.firmware_findings,
+            "k8s": report.k8s.to_dict() if report.k8s else None,
+            "gpu_posture_findings": report.posture_findings,
             "warnings": report.warnings,
         }
         return _truncate_response(json.dumps(result, indent=2, default=str))

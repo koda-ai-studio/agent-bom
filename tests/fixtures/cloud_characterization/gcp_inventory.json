@@ -5970,6 +5970,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "proj-1",
             "version": "1.29"
@@ -5982,6 +5983,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -5994,6 +5996,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -6071,6 +6074,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -6095,6 +6099,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
@@ -7372,6 +7377,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "proj-1",
             "version": "1.29"
@@ -7384,6 +7390,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -7396,6 +7403,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -7473,6 +7481,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -7497,6 +7506,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
@@ -8783,6 +8793,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "proj-1",
             "version": "1.29"
@@ -8795,6 +8806,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -8807,6 +8819,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -8884,6 +8897,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -8908,6 +8922,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
@@ -10134,6 +10149,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "proj-1",
             "version": "1.29"
@@ -10146,6 +10162,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -10158,6 +10175,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -10229,6 +10247,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -10253,6 +10272,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
@@ -12655,6 +12675,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "adc-proj",
             "version": "1.29"
@@ -12667,6 +12688,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "adc-proj",
             "version": ""
@@ -12679,6 +12701,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "adc-proj",
             "version": ""
@@ -12690,6 +12713,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -12714,6 +12738,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/adc-proj/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
@@ -13779,6 +13804,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "env-proj",
             "version": "1.29"
@@ -13791,6 +13817,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "env-proj",
             "version": ""
@@ -13803,6 +13830,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "env-proj",
             "version": ""
@@ -13814,6 +13842,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -13838,6 +13867,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/env-proj/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
@@ -14945,6 +14975,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "proj-1",
             "version": "1.29"
@@ -14957,6 +14988,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -14969,6 +15001,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -14980,6 +15013,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -15004,6 +15038,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
@@ -16069,6 +16104,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "proj-1",
             "version": "1.29"
@@ -16081,6 +16117,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -16093,6 +16130,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -16104,6 +16142,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -16128,6 +16167,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
@@ -17137,6 +17177,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "proj-1",
             "version": "1.29"
@@ -17149,6 +17190,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -17161,6 +17203,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -17172,6 +17215,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -17196,6 +17240,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},
@@ -18297,6 +18342,7 @@
             "location": "us-central1",
             "name": "public-gke",
             "node_count": 3,
+            "node_pools": [],
             "private_cluster": false,
             "project_id": "proj-1",
             "version": "1.29"
@@ -18309,6 +18355,7 @@
             "location": "europe-west1-b",
             "name": "private-gke",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -18321,6 +18368,7 @@
             "location": "",
             "name": "nodes-only",
             "node_count": 0,
+            "node_pools": [],
             "private_cluster": true,
             "project_id": "proj-1",
             "version": ""
@@ -18398,6 +18446,7 @@
         "iam_sources": [],
         "instances": [
           {
+            "guest_accelerators": [],
             "instance_id": "123",
             "instance_type": "e2-medium",
             "labels": {
@@ -18422,6 +18471,7 @@
             "zone": "us-central1-a"
           },
           {
+            "guest_accelerators": [],
             "instance_id": "projects/proj-1/zones/us-east1-b/instances/static-ip-vm",
             "instance_type": "",
             "labels": {},

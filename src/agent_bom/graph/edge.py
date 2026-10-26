@@ -233,10 +233,17 @@ class UnifiedEdge:
     _recorded_canonical_id: str = field(default="", repr=False, compare=False)
     # Inputs of a stored row's legacy id, hashed only if the id is read.
     _legacy_identity: tuple[str, ...] = field(default=(), repr=False, compare=False)
+    # Time fields filled from the clock; a graph resolves them to its recorded time.
+    _clock_defaulted: tuple[str, ...] = field(default=(), repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        if not self.first_seen:
+        if not self.first_seen and self.last_seen:
+            self.first_seen = self.last_seen
+        elif not self.first_seen:
             self.first_seen = _now_iso()
+            self._clock_defaulted = tuple(
+                name for name, value in (("first_seen", ""), ("last_seen", self.last_seen), ("valid_from", self.valid_from)) if not value
+            )
         if not self.last_seen:
             self.last_seen = self.first_seen
         if not self.valid_from:

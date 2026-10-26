@@ -16,10 +16,9 @@ data-source-agnostic and threshold-based — it fires for any
 (near-)zero advisory rows in the local DB, *while the feed clearly carries the
 distro family at other releases*. That last gate keeps it quiet when the local
 DB is empty (e.g. a default online scan that resolves against the remote API),
-where every release legitimately has zero local rows. Known parsed RPM
-families without a supported advisory source are the exception: they emit an
-explicit source-unavailable warning even with an empty DB, because remote OSV
-cannot turn that missing feed into complete evidence.
+where every release legitimately has zero local rows. RPM packages whose distro
+has no supported advisory source are the exception: they are not matched at
+all, so they emit an explicit source-unavailable warning even with an empty DB.
 """
 
 from __future__ import annotations
@@ -28,6 +27,8 @@ import logging
 import sqlite3
 from dataclasses import asdict, dataclass
 from typing import Optional, Protocol, Sequence
+
+from agent_bom.os_advisory import covered_distro_labels, rpm_advisory_ecosystems
 
 
 class Package(Protocol):
@@ -75,11 +76,24 @@ _MAX_ROWS_FOR_UNCOVERED = 5
 # local rows and the remote API is the live source.
 _MIN_FAMILY_ROWS = 50
 
-# These distro families are parsed, but their advisory sources are not present
-# in the supported OSV/local-DB routes. Keep their evidence explicitly partial
-# until dedicated, version-verified feeds land; never turn an empty lookup into
-# a clean result.
-_UNSUPPORTED_RPM_FAMILIES = frozenset({"amazon-linux", "oracle-linux", "sles"})
+# Display families for RPM distros that have no supported advisory feed. Any
+# other unresolved RPM distro is labelled by its os-release ID, and one with no
+# ID at all by ``_UNKNOWN_RPM_FAMILY``.
+_UNSUPPORTED_RPM_FAMILY_ALIASES = {
+    "amzn": "amazon-linux",
+    "amazon": "amazon-linux",
+    "amazon linux": "amazon-linux",
+    "ol": "oracle-linux",
+    "oracle": "oracle-linux",
+    "oracle linux": "oracle-linux",
+    "sles": "sles",
+    "sled": "sles",
+    "suse": "sles",
+    "redhat": "rhel",
+    "red hat": "rhel",
+    "red hat enterprise linux": "rhel",
+}
+_UNKNOWN_RPM_FAMILY = "rpm-unknown-distro"
 
 
 @dataclass(frozen=True)
@@ -178,7 +192,6 @@ def covered_os_distros(conn: sqlite3.Connection) -> list[str]:
     derived from the data present, never an aspirational static list, so we never
     overclaim coverage the DB does not hold.
     """
-    from agent_bom.os_advisory import covered_distro_labels
 
     try:
         rows = conn.execute("SELECT DISTINCT ecosystem FROM affected").fetchall()
@@ -237,15 +250,6 @@ def _release_key(pkg: "Package") -> Optional[tuple[str, str]]:
             "alma": ("almalinux", f"almalinux:{major}"),
             "rocky": ("rocky", f"rocky linux:{major}"),
             "rocky linux": ("rocky", f"rocky linux:{major}"),
-            "amzn": ("amazon-linux", f"amazon-linux:{major}"),
-            "amazon": ("amazon-linux", f"amazon-linux:{major}"),
-            "amazon linux": ("amazon-linux", f"amazon-linux:{major}"),
-            "ol": ("oracle-linux", f"oracle-linux:{major}"),
-            "oracle": ("oracle-linux", f"oracle-linux:{major}"),
-            "oracle linux": ("oracle-linux", f"oracle-linux:{major}"),
-            "sles": ("sles", f"sles:{major}"),
-            "sled": ("sles", f"sles:{major}"),
-            "suse": ("sles", f"sles:{major}"),
         }
         return rpm_families.get(distro_name)
     return None
@@ -280,6 +284,43 @@ def _count_release_rows(conn: sqlite3.Connection, release_key: str) -> int:
     return int(row[0]) if row else 0
 
 
+def _unsupported_rpm_release(pkg: "Package") -> Optional[tuple[str, str]]:
+    """Return ``(family, release)`` for an RPM package no supported feed covers.
+
+    Mirrors the matcher exactly: an RPM package matches only when
+    ``rpm_advisory_ecosystems`` resolves its distro, so every package it does
+    not resolve is unscanned and must be reported, never counted as clean.
+    """
+    if (pkg.ecosystem or "").lower() != "rpm":
+        return None
+
+    distro_name = (getattr(pkg, "distro_name", None) or "").strip().lower()
+    distro_version = (getattr(pkg, "distro_version", None) or "").strip()
+    if rpm_advisory_ecosystems(distro_name, distro_version, for_local_db=True):
+        return None
+    family = _UNSUPPORTED_RPM_FAMILY_ALIASES.get(distro_name, distro_name) or _UNKNOWN_RPM_FAMILY
+    major = distro_version.split(".", 1)[0].strip() or "unknown"
+    return family, f"{family}:{major}"
+
+
+def _source_unavailable_warning(family: str, release: str, pkg_count: int) -> dict:
+    subject = "an unidentified RPM distro" if family == _UNKNOWN_RPM_FAMILY else release
+    return CoverageWarning(
+        ecosystem=family,
+        release=release,
+        reason="advisory_source_unavailable",
+        detail=(
+            f"Vulnerability coverage for {subject} is unavailable: Agent-Bom inventoried "
+            f"{pkg_count} RPM package(s), but no supported, version-verified advisory feed "
+            "is configured for this distro release, so they were not matched against any "
+            "advisories. Findings may under-report and a low or zero vulnerability count is "
+            "not a clean bill of health."
+        ),
+        package_count=pkg_count,
+        advisory_rows=0,
+    ).to_dict()
+
+
 def detect_release_coverage_gaps(
     packages: Sequence["Package"],
     *,
@@ -298,38 +339,19 @@ def detect_release_coverage_gaps(
         complete or the local DB has no data for the relevant distro families.
     """
     groups: dict[tuple[str, str], int] = {}
+    unsupported: dict[tuple[str, str], int] = {}
     for pkg in packages:
+        source_gap = _unsupported_rpm_release(pkg)
+        if source_gap is not None:
+            unsupported[source_gap] = unsupported.get(source_gap, 0) + 1
+            continue
         key = _release_key(pkg)
         if key is None:
             continue
         groups[key] = groups.get(key, 0) + 1
 
-    candidates = {key: count for key, count in groups.items() if count >= _MIN_PACKAGES_FOR_RELEASE}
-    if not candidates:
-        return []
-
-    warnings: list[dict] = []
-    supported_candidates: dict[tuple[str, str], int] = {}
-    for (family, release_key), pkg_count in sorted(candidates.items()):
-        if family not in _UNSUPPORTED_RPM_FAMILIES:
-            supported_candidates[(family, release_key)] = pkg_count
-            continue
-        warnings.append(
-            CoverageWarning(
-                ecosystem=family,
-                release=release_key,
-                reason="advisory_source_unavailable",
-                detail=(
-                    f"Vulnerability coverage for {release_key} is unavailable: Agent-Bom can "
-                    "inventory these RPM packages, but no supported, version-verified advisory "
-                    "feed is configured for this distro family. Findings may under-report and a "
-                    "low or zero vulnerability count is not a clean bill of health."
-                ),
-                package_count=pkg_count,
-                advisory_rows=0,
-            ).to_dict()
-        )
-
+    warnings = [_source_unavailable_warning(family, release, count) for (family, release), count in sorted(unsupported.items())]
+    supported_candidates = {key: count for key, count in groups.items() if count >= _MIN_PACKAGES_FOR_RELEASE}
     if not supported_candidates:
         return warnings
 

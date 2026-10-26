@@ -149,4 +149,5 @@ def add_cloud_audit_behavioral(graph: UnifiedGraph, payload: Any, data_source: s
                 "failure_count": int(rec.get("failure_count") or 0),
                 "is_sensitive_resource": bool(rec.get("is_sensitive_resource")),
             },
+            observed_at=_clean_graph_part(rec.get("last_seen")),
         )

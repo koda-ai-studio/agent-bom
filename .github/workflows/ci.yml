@@ -23,6 +23,8 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Product screenshots are recaptured at release time; release workflows enforce freshness.
+  AGENT_BOM_DEFER_PRODUCT_PROOF: "1"
   # A presence flag only: the pull token itself is read by the login steps.
   DOCKERHUB_PULL_AUTH: ${{ secrets.DOCKERHUB_READ_TOKEN != '' }}
 

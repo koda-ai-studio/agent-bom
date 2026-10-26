@@ -27,6 +27,15 @@ class TfResource:
 TfCheck = Callable[[TfResource], list[IaCFinding]]
 
 
+def provider_compliance(rtype: str, *, aws: tuple[str, ...], neutral: tuple[str, ...]) -> list[str]:
+    """Compliance IDs for a rule that applies to every provider's resources.
+
+    Provider benchmark controls only describe that provider's resources, so
+    they are attached only when the resource type belongs to it.
+    """
+    return [*aws, *neutral] if rtype.startswith("aws_") else list(neutral)
+
+
 def extract_block(content: str, start: int) -> str:
     """Extract the body of a brace-delimited block starting at ``start`` (after ``{``)."""
     depth = 1

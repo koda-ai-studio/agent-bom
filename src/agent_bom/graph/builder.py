@@ -35,9 +35,7 @@ from agent_bom.graph.builder_cloud_lineage import _add_lineage_resource_nodes as
 from agent_bom.graph.builder_cloud_lineage import _add_lineage_scope_edges as _add_lineage_scope_edges
 from agent_bom.graph.builder_cloud_lineage import _resolve_cloud_lineage as _resolve_cloud_lineage
 from agent_bom.graph.builder_cloud_principals import _add_access_advisor_grants
-from agent_bom.graph.builder_cloud_principals import (
-    _role_last_used_at as _role_last_used_at,
-)
+from agent_bom.graph.builder_cloud_principals import _role_last_used_at as _role_last_used_at
 from agent_bom.graph.builder_frameworks import _add_cross_env_correlation, _project_host_agent_id
 from agent_bom.graph.builder_network_edges import (
     _GCP_LB_COLLECTION as _GCP_LB_COLLECTION,
@@ -209,7 +207,7 @@ from agent_bom.graph.cloud_context import (
     _stamp_owning_account as _stamp_owning_account,
 )
 from agent_bom.graph.cloud_rbac import add_cloud_role_assignments as _add_cloud_role_assignments
-from agent_bom.graph.cloud_service_projection import project_aws_services, project_gcp_services
+from agent_bom.graph.cloud_service_projection import project_aws_services, project_gcp_services, project_gpu_compute
 from agent_bom.graph.cloud_storage_projection import project_buckets, project_databases, project_side_scan_targets
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_bindings import project_credential_bindings
@@ -383,7 +381,8 @@ def build_unified_graph(
     """
     span = _GRAPH_TRACER.start_span("graph.build_unified_graph_from_report") if _GRAPH_TRACER else None
     sid = scan_id or inputs.scan_id
-    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id)
+    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id, observed_at=inputs.recorded_at)
+    graph.observed_at = graph.observed_at or inputs.recorded_at
     indexes = project_agents(graph, inputs.agents, inputs.data_source, _add_agent_cloud_lineage)
     project_package_exploits(graph, indexes, inputs.data_source)
     project_blast_radius(graph, inputs.blast_radius, indexes, inputs.data_source)
@@ -431,6 +430,7 @@ def _project_inventory_findings(
     project_iac(graph, report.get("iac_findings") or report.get("iac_findings_data"))
     project_skill_audit(graph, report.get("skill_audit"), indexes, report.get("findings"))
     project_scan_findings(graph, report.get("findings"))
+    project_gpu_compute(graph, report, indexes, inputs.data_source)
     return inventories
 
 

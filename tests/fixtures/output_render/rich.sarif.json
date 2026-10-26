@@ -258,7 +258,7 @@
                 "text": "Container runs as root"
               },
               "fullDescription": {
-                "text": "No USER directive; container runs as root."
+                "text": "Container runs as root"
               },
               "defaultConfiguration": {
                 "level": "error"
@@ -266,13 +266,11 @@
               "properties": {
                 "security-severity": "7.5",
                 "category": "iac",
-                "compliance": [
-                  "CIS-Docker-4.1"
-                ]
+                "compliance": []
               },
               "help": {
-                "text": "No USER directive; container runs as root. Remediation: Add a non-root USER directive.",
-                "markdown": "No USER directive; container runs as root. **Remediation:** Add a non-root USER directive."
+                "text": "Container runs as root. Remediation: Add a non-root USER directive.",
+                "markdown": "Container runs as root. **Remediation:** Add a non-root USER directive."
               }
             },
             {
@@ -292,8 +290,8 @@
                 "compliance": []
               },
               "help": {
-                "text": "Pod lacks resource limits",
-                "markdown": "Pod lacks resource limits"
+                "text": "Pod lacks resource limits.",
+                "markdown": "Pod lacks resource limits."
               }
             },
             {
@@ -1478,7 +1476,12 @@
                 }
               }
             }
-          ]
+          ],
+          "properties": {
+            "compliance": [
+              "CIS-Docker-4.1"
+            ]
+          }
         },
         {
           "ruleId": "iac/DKR-001",
@@ -1506,7 +1509,10 @@
                 }
               }
             }
-          ]
+          ],
+          "properties": {
+            "compliance": []
+          }
         },
         {
           "ruleId": "iac/K8S-010",
@@ -1534,7 +1540,10 @@
                 }
               }
             }
-          ]
+          ],
+          "properties": {
+            "compliance": []
+          }
         },
         {
           "ruleId": "ai-inventory/deprecated_model/text-davinci-003",

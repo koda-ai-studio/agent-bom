@@ -118,6 +118,13 @@ The primary graph truth remains:
 
 ## Persistence vs on-demand derivation
 
+`first_seen` / `last_seen` are recorded times. A graph node or edge takes them
+from its own evidence (a finding's first observation, an audit aggregate's
+`last_seen`, an agent's `discovered_at`) and otherwise from the scan that
+recorded it (the report's `generated_at`, or the stored snapshot's time), never
+from the clock when the graph is built or read. Building the same report twice
+produces the same graph.
+
 The product should **persist truth** and **derive views**.
 
 Persist:

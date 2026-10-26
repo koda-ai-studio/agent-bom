@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import time
 from types import SimpleNamespace
 
 import anyio.to_thread
@@ -18,6 +17,7 @@ import pytest
 
 from agent_bom.api.routes import cloud_connections
 from agent_bom.backpressure import BackpressureRejectedError
+from tests._loop_offload import BlockingCall, assert_runs_off_loop
 
 
 def _record(provider: str = "aws") -> SimpleNamespace:
@@ -299,26 +299,14 @@ def test_create_connection_scan_on_create_dispatch_failure_is_sanitized(monkeypa
 async def test_slow_connection_test_keeps_event_loop_responsive(monkeypatch, wired):
     """A hung broker endpoint must not pin the loop — the offload proves it."""
     record, offloaded = wired
-    block_seconds = 0.5
+    call = BlockingCall()
 
     def _slow_broker(record):
-        time.sleep(block_seconds)
+        call.block()
         return SimpleNamespace(capabilities=("bedrock:list-agents",))
 
     monkeypatch.setattr(cloud_connections, "_test_connection_broker", _slow_broker)
 
-    loop = asyncio.get_running_loop()
     test_task = asyncio.create_task(cloud_connections.test_connection(request=object(), connection_id="conn-1"))
-    await asyncio.sleep(0.05)  # let the offload hand the blocking body to a worker thread
-    assert not test_task.done(), "connection test should still be in flight"
-
-    started = loop.time()
-    assert await asyncio.wait_for(_trivial(), timeout=0.15) == "responsive"
-    assert loop.time() - started < block_seconds / 2, "event loop was blocked during the broker test — offload ineffective"
-
-    result = await test_task
+    result = await assert_runs_off_loop(test_task, call, "the broker test")
     assert result["status"] == "ok"
-
-
-async def _trivial() -> str:
-    return "responsive"

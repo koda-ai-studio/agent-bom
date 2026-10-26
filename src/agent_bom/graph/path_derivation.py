@@ -20,6 +20,7 @@ from agent_bom.graph.edge_lookup import _build_edge_lookup as _build_edge_lookup
 from agent_bom.graph.edge_lookup import _edge_relationships_for_hops as _edge_relationships_for_hops
 from agent_bom.graph.edge_lookup import _EdgeLookup as _EdgeLookup
 from agent_bom.graph.edge_lookup import _rel_value as _rel_value
+from agent_bom.graph.gpu_paths import gpu_host_escape_paths
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_evidence import rank_unique_paths, tag_path_kinds
 from agent_bom.graph.path_evidence import with_technique_mappings as _with_technique_mappings
@@ -514,10 +515,11 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
 
     existing_keys = {path_key(path) for path in combined}
     credential_paths = credential_finding_paths(graph)
-    for derived_path in [*credential_paths, *paths]:
+    gpu_paths = gpu_host_escape_paths(graph)
+    for derived_path in [*credential_paths, *gpu_paths, *paths]:
         derived_path_key = path_key(derived_path)
         if derived_path_key not in existing_keys:
             combined.append(derived_path)
             existing_keys.add(derived_path_key)
-    tag_path_kinds(kinds, fusion=materialized, governance=governance_paths, credential=credential_paths)
+    tag_path_kinds(kinds, fusion=materialized, governance=governance_paths, credential=credential_paths, gpu_host_escape=gpu_paths)
     return _with_technique_mappings(rank_unique_paths([path for path in combined if leads_somewhere(path)]), graph)
