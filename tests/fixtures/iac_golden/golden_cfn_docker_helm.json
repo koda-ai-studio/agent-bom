@@ -1356,24 +1356,6 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
-    "CIS-Docker-4.1",
-    "NIST-AC-6"
-   ],
-   "file_path": "dockerfile/harvested_10d27fc7b23a2f0d.Dockerfile",
-   "line_number": 2,
-   "message": "USER is set to root. Containers should run as a non-root user to limit blast radius of exploits.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-002",
-   "severity": "high",
-   "title": "Container runs as root"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
     "CIS-Docker-4.9",
     "NIST-SI-7",
     "NIST-CM-7"
@@ -1405,6 +1387,24 @@
    "rule_id": "DOCKER-005",
    "severity": "medium",
    "title": "Pipe install detected (curl|sh)"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "dockerfile",
+   "compliance": [
+    "CIS-Docker-4.1",
+    "NIST-AC-6"
+   ],
+   "file_path": "dockerfile/harvested_10d27fc7b23a2f0d.Dockerfile",
+   "line_number": 2,
+   "message": "USER is set to root. Containers should run as a non-root user to limit blast radius of exploits.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "DOCKER-002",
+   "severity": "high",
+   "title": "Container runs as root"
   },
   {
    "atlas_techniques": [],
@@ -1454,7 +1454,7 @@
    ],
    "file_path": "dockerfile/harvested_214aba46448c20e2.Dockerfile",
    "line_number": 1,
-   "message": "No USER directive found. The container will run as root by default. Add a USER directive to run as a non-root user.",
+   "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
@@ -1683,7 +1683,7 @@
    ],
    "file_path": "dockerfile/harvested_5d2ad98194f39534.Dockerfile",
    "line_number": 1,
-   "message": "No USER directive found. The container will run as root by default. Add a USER directive to run as a non-root user.",
+   "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
@@ -1757,7 +1757,7 @@
    ],
    "file_path": "dockerfile/harvested_5d3b6802f9acaee8.Dockerfile",
    "line_number": 1,
-   "message": "No USER directive found. The container will run as root by default. Add a USER directive to run as a non-root user.",
+   "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
@@ -1885,7 +1885,7 @@
    ],
    "file_path": "dockerfile/harvested_6fa512445136b920.Dockerfile",
    "line_number": 1,
-   "message": "No USER directive found. The container will run as root by default. Add a USER directive to run as a non-root user.",
+   "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
@@ -2109,7 +2109,7 @@
    ],
    "file_path": "dockerfile/harvested_9d361887fa68fac1.Dockerfile",
    "line_number": 1,
-   "message": "No USER directive found. The container will run as root by default. Add a USER directive to run as a non-root user.",
+   "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
@@ -2356,7 +2356,7 @@
    ],
    "file_path": "dockerfile/harvested_c14f90dad8bc7eb1.Dockerfile",
    "line_number": 1,
-   "message": "No USER directive found. The container will run as root by default. Add a USER directive to run as a non-root user.",
+   "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
@@ -2394,7 +2394,7 @@
    ],
    "file_path": "dockerfile/harvested_d3010d1152646ad5.Dockerfile",
    "line_number": 1,
-   "message": "No USER directive found. The container will run as root by default. Add a USER directive to run as a non-root user.",
+   "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
    "resource_type": null,
@@ -2778,42 +2778,6 @@
    "rule_id": "DOCKER-010",
    "severity": "medium",
    "title": "FROM without digest pin"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.1",
-    "NIST-AC-6"
-   ],
-   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
-   "line_number": 9,
-   "message": "USER is set to root. Containers should run as a non-root user to limit blast radius of exploits.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-002",
-   "severity": "high",
-   "title": "Container runs as root"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.1",
-    "NIST-AC-6"
-   ],
-   "file_path": "dockerfile/synthetic_all_rules_bad.Dockerfile",
-   "line_number": 10,
-   "message": "USER is set to root. Containers should run as a non-root user to limit blast radius of exploits.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-002",
-   "severity": "high",
-   "title": "Container runs as root"
   },
   {
    "atlas_techniques": [],
@@ -3237,24 +3201,6 @@
    "attack_techniques": [],
    "category": "dockerfile",
    "compliance": [
-    "CIS-Docker-4.1",
-    "NIST-AC-6"
-   ],
-   "file_path": "dockerfile/synthetic_bare_directives.Dockerfile",
-   "line_number": 1,
-   "message": "No USER directive found. The container will run as root by default. Add a USER directive to run as a non-root user.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-002",
-   "severity": "high",
-   "title": "No USER directive (runs as root)"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
     "CIS-Docker-4.6",
     "NIST-SI-4"
    ],
@@ -3270,24 +3216,6 @@
   }
  ],
  "dockerfile/synthetic_empty.Dockerfile": [
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.1",
-    "NIST-AC-6"
-   ],
-   "file_path": "dockerfile/synthetic_empty.Dockerfile",
-   "line_number": 1,
-   "message": "No USER directive found. The container will run as root by default. Add a USER directive to run as a non-root user.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-002",
-   "severity": "high",
-   "title": "No USER directive (runs as root)"
-  },
   {
    "atlas_techniques": [],
    "attack_techniques": [],

@@ -21,14 +21,13 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-from agent_bom.iac.dockerfile_rules import SECRET_ENV_NAME_RE
+from agent_bom.iac.dockerfile_rules import is_hardcoded_secret
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.yaml_lines import item_line, key_line, safe_load_with_lines
 
 _COMPOSE_NAME_RE = re.compile(r"^(?:docker-)?compose(?:[.-][A-Za-z0-9_.-]+)?\.ya?ml$", re.IGNORECASE)
 _DOCKER_SOCKET_RE = re.compile(r"(?:^|[:/])(?:var/)?run/docker\.sock(?::|$)")
 _DANGEROUS_CAPS = frozenset({"ALL", "SYS_ADMIN", "CAP_SYS_ADMIN", "CAP_ALL"})
-_INTERPOLATED_RE = re.compile(r"^\$\{?[A-Za-z_][A-Za-z0-9_]*(?:[:?-][^}]*)?\}?$")
 
 
 def is_compose_file(path: Path) -> bool:
@@ -71,23 +70,6 @@ def _environment_entries(environment: Any) -> list[tuple[str, str, int]]:
     return entries
 
 
-_NON_SECRET_VALUES = frozenset({"true", "false", "yes", "no", "on", "off", "none", "null"})
-
-
-def _is_hardcoded_secret(name: str, value: str) -> bool:
-    """A secret-named variable holding a literal secret value.
-
-    ``*_FILE`` variables and absolute paths point at a mounted secret file
-    (the recommended pattern); booleans and numbers are settings, not secrets.
-    """
-    value = value.strip().strip("'\"")
-    if not SECRET_ENV_NAME_RE.search(name) or not value or name.upper().endswith("_FILE"):
-        return False
-    if _INTERPOLATED_RE.match(value) or value.startswith("/") or value.lower() in _NON_SECRET_VALUES:
-        return False
-    return not value.isdigit()
-
-
 def _capability_and_secret_findings(name: str, service: dict[str, Any], rel_path: str) -> list[IaCFinding]:
     findings: list[IaCFinding] = []
     caps = service.get("cap_add")
@@ -108,7 +90,7 @@ def _capability_and_secret_findings(name: str, service: dict[str, Any], rel_path
                 )
     environment = service.get("environment")
     for env_name, env_value, line in _environment_entries(environment):
-        if _is_hardcoded_secret(env_name, env_value):
+        if is_hardcoded_secret(env_name, env_value):
             findings.append(
                 _finding(
                     "COMPOSE-006",
