@@ -26,7 +26,6 @@ def _finding(
     compliance: list[str],
     attack_techniques: list[str] | None = None,
 ) -> IaCFinding:
-    extra = {"attack_techniques": attack_techniques} if attack_techniques else {}
     return IaCFinding(
         rule_id=rule_id,
         severity=severity,
@@ -36,7 +35,7 @@ def _finding(
         line_number=1,
         category="kubernetes-live",
         compliance=compliance,
-        **extra,
+        attack_techniques=list(attack_techniques or []),
     )
 
 
