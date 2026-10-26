@@ -7,6 +7,21 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- Kubernetes workload graph from live clusters (`scan --k8s`) and manifests/Helm charts (`--iac`, API repository scans): `cluster → namespace → workload → image → package → CVE`, with each workload's service account, its RBAC grants (scope and Secret access) and the Secrets it references. Live pods collapse into their owning controller and images are scanned at the running digest. A new attack-path family follows a vulnerable workload through the service account it runs as to the Secrets and scopes it can reach; a pod with no mounted token never starts one. The report carries a `kubernetes_inventory` section (each container with its image's scan result), the console prints a most-vulnerable-first workload table, and the new read-only `kspm_workload_inventory` MCP tool returns the same inventory. Secrets are never listed.
+- Read-only admission posture in live KSPM: namespaces running workloads without a `baseline`/`restricted` Pod Security enforce level, audit-only ValidatingAdmissionPolicy bindings, fail-open policies and webhooks, and a cluster with no policy control mechanism (CIS Kubernetes 5.2.1). Manifest rules `K8S-037`/`K8S-038` cover Namespace documents.
+- Disk side-scan packages and CVEs project onto the VM's own inventory node (EC2 instance, Azure VM, GCE instance) and reach attack paths; `POST /v1/cloud/side-scan` returns per-package/CVE detail and stores it in the tenant graph, and `agent-bom cloud side-scan -f json` and the MCP tool return the same records. A `side_scan_results` report section carries them.
+- Machine-image side-scan: AWS AMIs (from the AMI's root snapshot, never modified or deleted) and GCE images. Azure managed images are refused with the reason in the CLI, API and MCP. `side-scan-capabilities` states image support per provider and that every side-scan creates and deletes temporary disks.
+
+### Changed
+- Image scans (`--image`, `--image-tar`, `--k8s`, the MCP `scan` tool, API scans) project as container image nodes keyed by digest instead of agents with MCP servers; earlier node ids are kept as aliases.
+- The packaged scanner reader role (Helm and `deploy/k8s/rbac.yaml`) grants get/list on workloads, service accounts, role bindings and admission objects so in-cluster inventories are complete; it still grants no Secrets and no mutation verbs.
+
+### Fixed
+- A GKE pod's node VM and the GCE inventory or side-scan VM are now one graph node, so an OS CVE on the node disk is an attack path through the pod.
+
 ## [0.111.0] - 2026-10-25
 
 ### Highlights

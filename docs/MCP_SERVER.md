@@ -1,7 +1,7 @@
 # MCP Server — Connect agent-bom to AI Assistants
 
 agent-bom starts with 8 focused MCP tools. Select a task profile for graph, cloud, runtime or audit work;
-`--profile full` explicitly exposes the complete compatibility catalog of 97 MCP tools. Clients that negotiate the
+`--profile full` explicitly exposes the complete compatibility catalog of 98 MCP tools. Clients that negotiate the
 MCP SDK's legacy `2025-11-25` handshake can connect over stdio or
 Streamable HTTP. The `2026-07-28` protocol also supports stateless requests,
 `server/discover`, per-request capabilities, required HTTP headers, and private
@@ -260,7 +260,7 @@ The [profile guide](#choose-a-profile-for-other-work) lists the smaller task sur
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
 `inventory`, `agent_activity`, `diff`, `marketplace_check`, `code_scan`, `context_graph`,
-`graph_export`, `analytics_query`, `cis_benchmark`, `kspm_cluster_posture`,
+`graph_export`, `analytics_query`, `cis_benchmark`, `kspm_cluster_posture`, `kspm_workload_inventory`,
 `fleet_scan`, `runtime_correlate`, `runtime_production_index`,
 `runtime_blueprints`, `runtime_blueprint_drift`, `cost_report`, `anomaly_scan`,
 `drift_incidents`, `proxy_status`, `proxy_alerts`, `gateway_status`,

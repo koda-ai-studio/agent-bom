@@ -79,7 +79,7 @@ Emitted by: `graph/finding_row_projection.py`, `graph/repo_structure_overlay.py`
 
 ## `container`
 
-Emitted by: `api/graph_page_stack.py`, `graph/finding_row_projection.py`, `graph/hosting_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/finding_row_projection.py`, `graph/hosting_projection.py`, `graph/image_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 Id formats:
 

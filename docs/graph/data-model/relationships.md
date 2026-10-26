@@ -105,14 +105,14 @@ Emitted by: `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fix
 
 ## `can_access`
 
-Class `authority` · directed · traversable · required evidence `source`, `tier` · 183 pairs
+Class `authority` · directed · traversable · required evidence `source`, `tier` · 184 pairs
 
 - `account` → `cloud_resource`, `credential`, `dataset`, `resource`
 - `agent` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
 - `application` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
 - `cloud_resource` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
 - `cluster` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
-- `container` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `container` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `model`, `resource`, `server`
 - `federated_identity` → `cloud_resource`, `credential`, `dataset`, `resource`
 - `group` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `model`, `resource`, `server`
 - `managed_identity` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `managed_identity`, `model`, `resource`, `role`, `server`, `service_account`, `service_principal`
@@ -136,7 +136,7 @@ Emitted by: `graph/ci_graph_overlay.py`
 
 ## `contains`
 
-Class `structural` · directed · traversable · required evidence `source`, `tier` · 95 pairs
+Class `structural` · directed · traversable · required evidence `source`, `tier` · 98 pairs
 
 - `access_policy` → `misconfiguration`, `vulnerability`
 - `account` → `api_gateway`, `application`, `cloud_resource`, `data_store`, `environment`
@@ -145,7 +145,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `application` → `misconfiguration`, `vulnerability`
 - `ci_job` → `misconfiguration`, `vulnerability`
 - `cloud_resource` → `cloud_resource`, `misconfiguration`, `package`, `vulnerability`
-- `cluster` → `config_file`, `container`, `directory`, `misconfiguration`, `package`, `server`, `source_file`, `vulnerability`
+- `cluster` → `config_file`, `container`, `directory`, `misconfiguration`, `package`, `resource`, `server`, `source_file`, `vulnerability`
 - `config_file` → `misconfiguration`, `vulnerability`
 - `container` → `agent`, `config_file`, `container`, `directory`, `misconfiguration`, `package`, `server`, `source_file`, `vulnerability`
 - `data_store` → `data_store`, `misconfiguration`, `vulnerability`
@@ -157,6 +157,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `model` → `misconfiguration`, `vulnerability`
 - `org` → `account`, `org`
 - `package` → `misconfiguration`, `vulnerability`
+- `resource` → `container`, `service_account`
 - `role` → `misconfiguration`, `vulnerability`
 - `server` → `misconfiguration`, `vulnerability`
 - `service_account` → `misconfiguration`, `vulnerability`
@@ -269,14 +270,14 @@ Emitted by: `graph/governance_overlay.py`, `graph/organization_aws.py`, `graph/o
 
 ## `has_permission`
 
-Class `authority` · directed · traversable · required evidence `source`, `tier` · 36 pairs
+Class `authority` · directed · traversable · required evidence `source`, `tier` · 42 pairs
 
-- `group` → `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool`
-- `managed_identity` → `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool`
-- `role` → `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool`
-- `service_account` → `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool`
-- `service_principal` → `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool`
-- `user` → `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool`
+- `group` → `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource`, `tool`
+- `managed_identity` → `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource`, `tool`
+- `role` → `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource`, `tool`
+- `service_account` → `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource`, `tool`
+- `service_principal` → `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource`, `tool`
+- `user` → `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource`, `tool`
 
 Emitted by: `graph/builder_cloud_principals.py`, `graph/builder_snowflake_objects.py`, `graph/cloud_rbac.py`, `graph/effective_permissions.py`, `graph/organization_gcp.py`
 

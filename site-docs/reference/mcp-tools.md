@@ -28,7 +28,7 @@ scan tools. Use `--profile full` for the complete 90-tool catalog.
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
 `inventory`, `agent_activity`, `diff`, `marketplace_check`, `code_scan`, `context_graph`,
-`graph_export`, `analytics_query`, `cis_benchmark`, `kspm_cluster_posture`,
+`graph_export`, `analytics_query`, `cis_benchmark`, `kspm_cluster_posture`, `kspm_workload_inventory`,
 `fleet_scan`, `runtime_correlate`, `runtime_production_index`,
 `runtime_blueprints`, `runtime_blueprint_drift`, `cost_report`, `anomaly_scan`,
 `drift_incidents`, `proxy_status`, `proxy_alerts`, `gateway_status`,

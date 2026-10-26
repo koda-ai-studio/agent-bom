@@ -280,7 +280,10 @@
    "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
    "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯"
+   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯",
+   "",
+   "Kubernetes workloads declared in manifests",
+   "  ✓ 1 workload(s) in 1 namespace(s): 1 image(s) (0 pinned to a running digest), 1 service account(s), 0 RBAC grant(s), 0 referenced secret(s)"
   ],
   "context": {
    "_browser_ext_results": null,
@@ -1091,7 +1094,7 @@
       "tools": []
      }
     ],
-    "source": "image",
+    "source": "kubernetes-image",
     "type": "custom"
    },
    {
@@ -1117,16 +1120,16 @@
       "tools": []
      }
     ],
-    "source": "image",
+    "source": "kubernetes-image",
     "type": "custom"
    }
   ],
   "console": [
    "────────────────────────────────────────────────────────────────────────── Discovery ───────────────────────────────────────────────────────────────────────────",
    "",
-   "Discovering container images from Kubernetes (namespace 'default')...",
+   "Discovering Kubernetes workloads (namespace 'default')...",
    "",
-   "  ✓ Found 2 unique image(s) across pods",
+   "  ✓ 2 workload(s) in 1 namespace(s): 2 image(s) (0 pinned to a running digest), 1 service account(s), 0 RBAC grant(s), 0 referenced secret(s)",
    "",
    "Scanning 2 container image(s)...",
    "",
@@ -1776,7 +1779,10 @@
    "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
    "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯"
+   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯",
+   "",
+   "Kubernetes workloads declared in manifests",
+   "  ✓ 1 workload(s) in 1 namespace(s): 1 image(s) (0 pinned to a running digest), 1 service account(s), 0 RBAC grant(s), 0 referenced secret(s)"
   ],
   "context": {
    "_browser_ext_results": null,
