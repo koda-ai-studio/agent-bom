@@ -118,6 +118,14 @@ def test_project_path_outside_root_is_refused_with_typed_error(workspace: Path, 
     discover.assert_not_called()
 
 
+def test_refused_project_path_is_a_typed_error_without_a_logged_traceback(workspace: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("DEBUG")
+    result = _call({"project_path": "/etc", "offline": True, "no_discover": True})
+    assert result.is_error is True and INVALID_PATH in _text(result)
+    assert not [record for record in caplog.records if record.exc_info], "a refused input is not a server fault"
+    assert "Traceback" not in caplog.text
+
+
 def test_symlink_escaping_root_is_refused(workspace: Path) -> None:
     (workspace / "proj" / "escape").symlink_to(workspace.parent / "outside", target_is_directory=True)
     with patch("agent_bom.discovery.discover_all") as discover:

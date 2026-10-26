@@ -7,13 +7,14 @@ without an import cycle; ``mcp_server_runtime`` re-exports the public names.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 from agent_bom.mcp_errors import CODE_VALIDATION_INVALID_PATH
 from agent_bom.mcp_server_scan import McpScanValidationError
-from agent_bom.security import sanitize_log_label
+from agent_bom.security import sanitize_error, sanitize_log_label
 
 
 class ToolErrorPayload(str):
@@ -46,6 +47,15 @@ def resolve_tool_path(safe_path_fn: Callable[[str], Path], value: str, *, argume
         if _TOOL_ERROR_TYPES:
             raise _TOOL_ERROR_TYPES[0](str(error)) from exc
         raise error from exc
+
+
+def raise_scan_tool_failure(exc: Exception, log: logging.Logger) -> NoReturn:
+    """Raise a failed scan as a tool error: a refused input is the caller's error and logs no traceback."""
+    error_type: type[BaseException] = _TOOL_ERROR_TYPES[0] if _TOOL_ERROR_TYPES else RuntimeError
+    if isinstance(exc, McpScanValidationError):
+        raise error_type(str(exc)) from None
+    log.exception("MCP tool error")
+    raise error_type(sanitize_error(exc)) from exc
 
 
 _ERROR_SNIFF_MAX_CHARS = 256 * 1024
