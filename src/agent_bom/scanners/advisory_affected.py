@@ -29,8 +29,10 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
 
+from agent_bom.advisory_ids import derive_cve_from_advisory_id
 from agent_bom.core.severity import normalize_severity, severity_rank
 from agent_bom.scanners.advisory_graph_ids import occurrence_graph_ids
+from agent_bom.scanners.advisory_merge import self_consistent_aliases
 from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn
 from agent_bom.scanners.operator_advisory import (
     DISTRO_BACKPORT_UNVERIFIED,
@@ -220,6 +222,12 @@ def _split_aliases(value: Any) -> list[str]:
     return [alias.strip() for alias in str(value or "").split(",") if alias.strip()]
 
 
+def _names_only(row: sqlite3.Row | tuple, cve: str | None) -> bool:
+    """Whether a record names no CVE other than ``cve`` (any record is fine when ``cve`` is unknown)."""
+    named = {found for value in [str(row[0]), *_split_aliases(row[3])] if (found := derive_cve_from_advisory_id(value))}
+    return cve is None or named <= {cve}
+
+
 def _alias_records(conn: sqlite3.Connection, advisory_id: str) -> list[sqlite3.Row | tuple]:
     """Every feed record for one vulnerability: the id's own row, its aliases' rows and rows naming it.
 
@@ -234,13 +242,17 @@ def _alias_records(conn: sqlite3.Connection, advisory_id: str) -> list[sqlite3.R
         f"SELECT {_VULN_COLUMNS} FROM vulns WHERE ',' || upper(aliases) || ',' LIKE ? ORDER BY id LIMIT ?",  # nosec B608 - fixed projection
         (f"%,{spellings[0]},%", _MAX_ALIAS_RECORDS),
     ).fetchall()
+    wanted_cve = derive_cve_from_advisory_id(advisory_id)
+    # A stale record aliasing several CVEs (a fused upstream group) keeps its own ranges but is
+    # never followed to another CVE's records, as in the scanner (self_consistent_aliases).
     records = {str(row[0]): row for row in [*own, *naming]}
-    named = {alias for row in records.values() for alias in _split_aliases(row[3])}
+    named = {alias for row in records.values() for alias in self_consistent_aliases(str(row[0]), _split_aliases(row[3]))}
     missing = sorted(spelling for alias in named for spelling in _id_spellings(alias) if spelling not in records)[:_MAX_ALIAS_RECORDS]
     if missing:
         marks = ",".join("?" * len(missing))
         for row in conn.execute(f"SELECT {_VULN_COLUMNS} FROM vulns WHERE id IN ({marks})", missing).fetchall():  # nosec B608
-            records.setdefault(str(row[0]), row)
+            if _names_only(row, wanted_cve):
+                records.setdefault(str(row[0]), row)
     ordered = [*own, *sorted((row for key, row in records.items() if row not in own), key=lambda row: str(row[0]))]
     return ordered
 
@@ -339,7 +351,9 @@ def feed_advisory_from_db(conn: sqlite3.Connection, advisory_id: str) -> Operato
     primary = records[0]
     vuln_id, summary, published = str(primary[0]), primary[1], primary[4]
     severity = max((normalize_severity(record[2]) for record in records), key=severity_rank)
-    identities = [str(record[0]) for record in records] + [alias for record in records for alias in _split_aliases(record[3])]
+    identities = [str(record[0]) for record in records] + [
+        alias for record in records for alias in self_consistent_aliases(str(record[0]), _split_aliases(record[3]))
+    ]
     aliases = list(dict.fromkeys(identity for identity in identities if identity != vuln_id))
     return OperatorAdvisory.model_construct(
         id=vuln_id,
