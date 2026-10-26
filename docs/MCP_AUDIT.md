@@ -12,6 +12,10 @@ It does not invoke tools, activate policies or test authorization bypass.
 Default mode does not connect to or launch discovered servers. It uses the
 configuration and descriptors available through project discovery.
 
+With a directory (`.` above), only that project's configuration is audited.
+Without one, `agent-bom mcp audit` audits every supported MCP client
+configuration on this machine, the same set `agent-bom mcp inventory` lists.
+
 Inspect `enforcement.coverage` before interpreting an empty finding list.
 A configuration without tool descriptors has no tool-content assessment.
 Unknown agent types require an explicit expected-capability profile before

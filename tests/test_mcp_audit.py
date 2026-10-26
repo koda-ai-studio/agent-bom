@@ -397,3 +397,29 @@ def test_tool_risk_audit_fails_when_a_remote_server_has_no_authentication(tmp_pa
     )
     assert data["authentication_findings"][0]["severity"] == "high"
     assert data["audit"]["passed"] is False
+
+
+def test_mcp_audit_without_path_covers_machine_wide_clients(tmp_path, monkeypatch):
+    import json
+
+    from click.testing import CliRunner
+
+    from agent_bom.cli import main
+
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / ".claude.json").write_text(
+        json.dumps({"mcpServers": {"notes": {"type": "http", "url": "http://notes.example.invalid/mcp"}}}), encoding="utf-8"
+    )
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(elsewhere)
+    target = tmp_path / "audit.json"
+
+    result = CliRunner().invoke(main, ["mcp", "audit", "--format", "json", "--output", str(target)])
+
+    assert result.exit_code in (0, 1), result.output
+    data = json.loads(target.read_text())
+    assert data["summary"]["total_mcp_servers"] >= 1
+    assert any(f["asset"]["name"] == "notes" for f in data["findings"])
