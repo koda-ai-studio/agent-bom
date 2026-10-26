@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import asdict
 from typing import Annotated, Any
 
@@ -80,6 +81,40 @@ def register_context_graph(bindings: OperatorToolBindings) -> None:
         )
 
 
+def _render_export(bindings: OperatorToolBindings, graph: Any, metadata: dict[str, Any], fmt: str, mermaid_limit: int) -> str:
+    renderers = {
+        "graphml": lambda: bindings.implementations["_to_graphml"](graph),
+        "cypher": lambda: bindings.implementations["_to_cypher"](graph),
+        "dot": lambda: bindings.implementations["_to_dot"](graph),
+        "mermaid": lambda: (
+            bindings.implementations["_to_mermaid"](graph, max_nodes=None, max_edges=None)
+            if mermaid_limit == 0
+            else bindings.implementations["_to_mermaid"](graph, max_nodes=mermaid_limit)
+        ),
+    }
+    if fmt in renderers:
+        return str(renderers[fmt]())
+    document = {**bindings.implementations["_graph_to_json"](graph), **metadata}
+    # Persisted pages are sized against the response budget, so they are rendered compactly.
+    return json.dumps(document, separators=(",", ":")) if metadata else json.dumps(document, indent=2)
+
+
+async def _persisted_export(
+    bindings: OperatorToolBindings, render: Callable[[Any, dict[str, Any]], str], limit: int, cursor: str | None
+) -> str:
+    """One persisted page; a page the transport would trim is re-read smaller, so completeness and the cursor stay true."""
+    page_size = limit
+    while True:
+        exported = await persisted_export_graph(limit=page_size, cursor=cursor)
+        if isinstance(exported, str):
+            return str(bindings.truncate_response(exported))
+        rendered = render(*exported)
+        bounded = str(bindings.truncate_response(rendered))
+        if bounded == rendered or page_size == 1:
+            return bounded
+        page_size = max(1, min(page_size - 1, int(page_size * len(bounded) / len(rendered) * 0.9)))
+
+
 def register_graph_export(bindings: OperatorToolBindings) -> None:
     mcp = bindings.mcp
 
@@ -141,38 +176,12 @@ def register_graph_export(bindings: OperatorToolBindings) -> None:
             agents, _blast_radii, _warnings, _sources = scan_result
             return bindings.build_dep_graph_from_agents([asdict(agent) for agent in agents]), {}
 
-        def _render(graph: Any, metadata: dict[str, Any]) -> str:
-            _fmt = format.lower()
-            if _fmt == "graphml":
-                return str(bindings.implementations["_to_graphml"](graph))
-            if _fmt == "cypher":
-                return str(bindings.implementations["_to_cypher"](graph))
-            if _fmt == "dot":
-                return str(bindings.implementations["_to_dot"](graph))
-            if _fmt == "mermaid":
-                if mermaid_limit == 0:
-                    return str(bindings.implementations["_to_mermaid"](graph, max_nodes=None, max_edges=None))
-                return str(bindings.implementations["_to_mermaid"](graph, max_nodes=mermaid_limit))
-            document = {**bindings.implementations["_graph_to_json"](graph), **metadata}
-            # Persisted pages are sized against the response budget, so they are rendered compactly.
-            return json.dumps(document, separators=(",", ":")) if metadata else json.dumps(document, indent=2)
-
-        async def _persisted() -> str:
-            page_size = limit
-            while True:
-                exported = await persisted_export_graph(limit=page_size, cursor=cursor)
-                if isinstance(exported, str):
-                    return bindings.truncate_response(exported)
-                rendered = _render(*exported)
-                # A page the transport would trim is re-read smaller, so completeness and the cursor stay true.
-                bounded = bindings.truncate_response(rendered)
-                if bounded == rendered or page_size == 1:
-                    return bounded
-                page_size = max(1, min(page_size - 1, int(page_size * len(bounded) / len(rendered) * 0.9)))
-
         async def _impl() -> str:
+            def render(graph: Any, metadata: dict[str, Any]) -> str:
+                return _render_export(bindings, graph, metadata, format.lower(), mermaid_limit)
+
             if config_path is None and persisted_export_mode():
-                return await _persisted()
+                return await _persisted_export(bindings, render, limit, cursor)
             if cursor:
                 return mcp_error_json(
                     CODE_VALIDATION_INVALID_ARGUMENT, "cursor applies only to persisted exports", details={"argument": "cursor"}
@@ -180,7 +189,7 @@ def register_graph_export(bindings: OperatorToolBindings) -> None:
             exported = await _host_graph()
             if isinstance(exported, str):
                 return bindings.truncate_response(exported)
-            return bindings.truncate_response(_render(*exported))
+            return bindings.truncate_response(render(*exported))
 
         return await bindings.execute_tool_async("graph_export", _impl)
 
