@@ -3195,46 +3195,8 @@
   }
  ],
  "dockerfile/synthetic_all_rules_good.Dockerfile": [],
- "dockerfile/synthetic_bare_directives.Dockerfile": [
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.6",
-    "NIST-SI-4"
-   ],
-   "file_path": "dockerfile/synthetic_bare_directives.Dockerfile",
-   "line_number": 1,
-   "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-006",
-   "severity": "low",
-   "title": "No HEALTHCHECK directive"
-  }
- ],
- "dockerfile/synthetic_empty.Dockerfile": [
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "dockerfile",
-   "compliance": [
-    "CIS-Docker-4.6",
-    "NIST-SI-4"
-   ],
-   "file_path": "dockerfile/synthetic_empty.Dockerfile",
-   "line_number": 1,
-   "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource_type": null,
-   "rule_id": "DOCKER-006",
-   "severity": "low",
-   "title": "No HEALTHCHECK directive"
-  }
- ],
+ "dockerfile/synthetic_bare_directives.Dockerfile": [],
+ "dockerfile/synthetic_empty.Dockerfile": [],
  "dockerfile_dockerignore/harvested_bdf9981dd168e171.Dockerfile": [
   {
    "atlas_techniques": [],

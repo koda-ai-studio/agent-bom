@@ -106,13 +106,17 @@ def _is_values_yaml(path: Path) -> bool:
     return bool(_VALUES_YAML_RE.match(path.name))
 
 
+_CONTAINERFILE_PREFIXES = ("Dockerfile", "Containerfile")
+_CONTAINERFILE_SUFFIXES = (".dockerfile", ".containerfile")
+# ``Dockerfile.md`` / ``Dockerfile.txt`` and friends are documentation or data, not build files.
+_NON_DOCKERFILE_SUFFIXES = frozenset({".md", ".txt", ".rst", ".adoc", ".json", ".yaml", ".yml", ".toml", ".py", ".sh", ".bak", ".orig"})
+
+
 def _is_dockerfile(path: Path) -> bool:
     name = path.name
-    if name in _DOCKERFILE_NAMES:
+    if name in _DOCKERFILE_NAMES or name.lower() in ("dockerfile", "containerfile") or name.lower().endswith(_CONTAINERFILE_SUFFIXES):
         return True
-    if name.startswith("Dockerfile"):
-        return True
-    return False
+    return name.startswith(_CONTAINERFILE_PREFIXES) and path.suffix.lower() not in _NON_DOCKERFILE_SUFFIXES
 
 
 def _is_k8s_manifest(path: Path) -> bool:

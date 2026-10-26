@@ -202,8 +202,8 @@ def scan_dockerfile(file_path: str | Path) -> list[IaCFinding]:
 
     if stages:
         findings.extend(_final_stage_user_findings(stages[-1], rel_path))
-    # DOCKER-006: No HEALTHCHECK
-    if not has_healthcheck:
+    # DOCKER-006: No HEALTHCHECK (a file without FROM is not a buildable Dockerfile)
+    if stages and not has_healthcheck:
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-006",
