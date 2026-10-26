@@ -68,3 +68,59 @@ def test_declared_langgraph_edges_are_not_runtime_observed(report: dict) -> None
     observed = UnifiedEdge(source=search, target=writer, relationship=RelationshipType.DELEGATED_TO, evidence={"source": "runtime-trace"})
     graph.add_edge(observed)
     assert "runtime_observed" in {kind for kind, *_ in _fusion_signals_for_path(graph, [search])}
+
+
+def _plain(lines: list[str]) -> list[str]:
+    from rich.text import Text
+
+    return [Text.from_markup(line).plain.rstrip() for line in "\n".join(lines).splitlines()]
+
+
+def test_console_topology_reads_as_flows_grouped_by_graph(report: dict) -> None:
+    from agent_bom.cli.agents._framework_topology_view import topology_lines
+
+    plain = _plain(topology_lines(report["ai_inventory"]["framework_agents"]))
+
+    assert plain[0] == "  Agent graphs (2 graph(s) · 6 node(s) · 11 route(s) · 1 unresolved)"
+    assert plain[1:] == [
+        "",
+        "    research_builder langgraph · app.py:29 · subgraph of research",
+        "      START → search",
+        "      search → summarize",
+        "      summarize → END",
+        "",
+        "    builder langgraph · app.py:49",
+        "      START → supervisor",
+        "      supervisor → research, writer, END",
+        "      research → subgraph research_builder, supervisor",
+        "      writer → END",
+        "      review → writer (goto)",
+        "        ? unresolved line 57: no path map; targets decided at runtime",
+    ]
+
+
+def test_console_supervisor_reads_as_delegation_not_entry(tmp_path: Path) -> None:
+    from agent_bom.ai_components.framework_agents import scan_framework_agents
+    from agent_bom.cli.agents._framework_topology_view import topology_lines
+
+    (tmp_path / "app.py").write_text(
+        "from langgraph.prebuilt import create_react_agent\n"
+        "from langgraph_supervisor import create_supervisor\n"
+        "a = create_react_agent('openai:gpt-4o', [], name='a')\n"
+        "b = create_react_agent('openai:gpt-4o', [], name='b')\n"
+        "team = create_supervisor([a, b], model='openai:gpt-4o')\n",
+        encoding="utf-8",
+    )
+    plain = _plain(topology_lines([agent.to_dict() for agent in scan_framework_agents(tmp_path)]))
+
+    assert "      team → a, b" in plain
+    assert not [line for line in plain if line.strip().startswith("START")]
+    assert "      a → team" in plain
+
+
+def test_console_topology_is_printed_by_the_scan(project: Path) -> None:
+    args = ["scan", "-p", str(project), "--ai-inventory", str(project), "--offline", "-f", "console"]
+    output = CliRunner().invoke(main, args, terminal_width=200).output
+
+    assert "Agent graphs (2 graph(s)" in output
+    assert "supervisor → research, writer, END" in output
