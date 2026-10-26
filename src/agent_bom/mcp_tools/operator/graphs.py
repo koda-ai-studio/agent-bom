@@ -8,7 +8,13 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
-from agent_bom.mcp_tools.graph_export_persisted import persisted_export_graph, persisted_export_mode
+from agent_bom.mcp_errors import CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
+from agent_bom.mcp_tools.graph_export_persisted import (
+    EXPORT_PAGE_DEFAULT,
+    EXPORT_PAGE_MAX,
+    persisted_export_graph,
+    persisted_export_mode,
+)
 
 from .bindings import OperatorToolBindings
 
@@ -95,13 +101,27 @@ def register_graph_export(bindings: OperatorToolBindings) -> None:
                 description="Maximum nodes rendered for Mermaid output; 0 renders the full graph.",
             ),
         ] = 80,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=EXPORT_PAGE_MAX,
+                description="Persisted export: nodes per page (default 1000); a page too large for the response shrinks.",
+            ),
+        ] = EXPORT_PAGE_DEFAULT,
+        cursor: Annotated[
+            str | None,
+            Field(description="Persisted export: pagination.next_cursor from the previous JSON page; pinned to that snapshot generation."),
+        ] = None,
     ) -> str:
         """Export the agent dependency graph in graph-native formats.
 
         A tenant-bound (or Postgres-backed) server exports the tenant's
-        persisted current-estate graph, bounded and labelled with
-        ``source``/``scope``/``completeness`` in JSON, and never scans this
-        host; ``config_path`` exports that directory's agents instead.
+        persisted current-estate graph one page at a time (``limit``/``cursor``),
+        labelled with ``source``/``scope``/``completeness``/``pagination`` in
+        JSON; each page owns its nodes and their outgoing edges, and an edge's
+        target on another page appears as a ``page_reference`` stub. It never
+        scans this host; ``config_path`` exports that directory's agents instead.
 
         Formats:
         - **graphml** — yEd, Gephi, NetworkX compatible with AIBOM-typed attributes
@@ -121,24 +141,46 @@ def register_graph_export(bindings: OperatorToolBindings) -> None:
             agents, _blast_radii, _warnings, _sources = scan_result
             return bindings.build_dep_graph_from_agents([asdict(agent) for agent in agents]), {}
 
-        async def _impl() -> str:
-            exported = await (persisted_export_graph() if config_path is None and persisted_export_mode() else _host_graph())
-            if isinstance(exported, str):
-                return bindings.truncate_response(exported)
-            graph, metadata = exported
-
+        def _render(graph: Any, metadata: dict[str, Any]) -> str:
             _fmt = format.lower()
             if _fmt == "graphml":
-                return bindings.truncate_response(bindings.implementations["_to_graphml"](graph))
+                return str(bindings.implementations["_to_graphml"](graph))
             if _fmt == "cypher":
-                return bindings.truncate_response(bindings.implementations["_to_cypher"](graph))
+                return str(bindings.implementations["_to_cypher"](graph))
             if _fmt == "dot":
-                return bindings.truncate_response(bindings.implementations["_to_dot"](graph))
+                return str(bindings.implementations["_to_dot"](graph))
             if _fmt == "mermaid":
                 if mermaid_limit == 0:
-                    return bindings.truncate_response(bindings.implementations["_to_mermaid"](graph, max_nodes=None, max_edges=None))
-                return bindings.truncate_response(bindings.implementations["_to_mermaid"](graph, max_nodes=mermaid_limit))
-            return bindings.truncate_response(json.dumps({**bindings.implementations["_graph_to_json"](graph), **metadata}, indent=2))
+                    return str(bindings.implementations["_to_mermaid"](graph, max_nodes=None, max_edges=None))
+                return str(bindings.implementations["_to_mermaid"](graph, max_nodes=mermaid_limit))
+            document = {**bindings.implementations["_graph_to_json"](graph), **metadata}
+            # Persisted pages are sized against the response budget, so they are rendered compactly.
+            return json.dumps(document, separators=(",", ":")) if metadata else json.dumps(document, indent=2)
+
+        async def _persisted() -> str:
+            page_size = limit
+            while True:
+                exported = await persisted_export_graph(limit=page_size, cursor=cursor)
+                if isinstance(exported, str):
+                    return bindings.truncate_response(exported)
+                rendered = _render(*exported)
+                # A page the transport would trim is re-read smaller, so completeness and the cursor stay true.
+                bounded = bindings.truncate_response(rendered)
+                if bounded == rendered or page_size == 1:
+                    return bounded
+                page_size = max(1, min(page_size - 1, int(page_size * len(bounded) / len(rendered) * 0.9)))
+
+        async def _impl() -> str:
+            if config_path is None and persisted_export_mode():
+                return await _persisted()
+            if cursor:
+                return mcp_error_json(
+                    CODE_VALIDATION_INVALID_ARGUMENT, "cursor applies only to persisted exports", details={"argument": "cursor"}
+                )
+            exported = await _host_graph()
+            if isinstance(exported, str):
+                return bindings.truncate_response(exported)
+            return bindings.truncate_response(_render(*exported))
 
         return await bindings.execute_tool_async("graph_export", _impl)
 

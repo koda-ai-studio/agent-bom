@@ -21,7 +21,7 @@ The envelope shape is:
   protocol-level errors. Codes are versioned by the MCP_ERROR_VERSION
   constant; clients can pin against ``error.code`` directly.
 - ``category`` lets clients build catch-all branches (auth, validation,
-  timeout, upstream, rate_limited, not_found, unsupported, internal)
+  timeout, upstream, rate_limited, not_found, unsupported, conflict, internal)
   without enumerating every code.
 - ``message`` carries the operator-readable text; it has already been run
   through ``agent_bom.security.sanitize_error`` so it's safe to log.
@@ -49,6 +49,7 @@ CATEGORY_UPSTREAM: Final = "upstream"
 CATEGORY_RATE_LIMITED: Final = "rate_limited"
 CATEGORY_NOT_FOUND: Final = "not_found"
 CATEGORY_UNSUPPORTED: Final = "unsupported"
+CATEGORY_CONFLICT: Final = "conflict"
 CATEGORY_INTERNAL: Final = "internal"
 
 _VALID_CATEGORIES: frozenset[str] = frozenset(
@@ -60,6 +61,7 @@ _VALID_CATEGORIES: frozenset[str] = frozenset(
         CATEGORY_RATE_LIMITED,
         CATEGORY_NOT_FOUND,
         CATEGORY_UNSUPPORTED,
+        CATEGORY_CONFLICT,
         CATEGORY_INTERNAL,
     }
 )
@@ -90,6 +92,8 @@ CODE_NOT_FOUND_AGENTS: Final = "AGENTBOM_MCP_NOT_FOUND_AGENTS"
 # Unsupported request shape (analytics backend not configured, etc.).
 CODE_UNSUPPORTED_BACKEND: Final = "AGENTBOM_MCP_UNSUPPORTED_BACKEND"
 CODE_UNSUPPORTED_QUERY_TYPE: Final = "AGENTBOM_MCP_UNSUPPORTED_QUERY_TYPE"
+# Conflict — the addressed snapshot generation changed or was retired (REST 409).
+CODE_CONFLICT_STALE_CURSOR: Final = "AGENTBOM_MCP_CONFLICT_STALE_CURSOR"
 # Internal — server bug, unhandled error path.
 CODE_INTERNAL_UNEXPECTED: Final = "AGENTBOM_MCP_INTERNAL_UNEXPECTED"
 
@@ -114,6 +118,7 @@ _CODE_CATEGORY: Final[dict[str, str]] = {
     CODE_NOT_FOUND_AGENTS: CATEGORY_NOT_FOUND,
     CODE_UNSUPPORTED_BACKEND: CATEGORY_UNSUPPORTED,
     CODE_UNSUPPORTED_QUERY_TYPE: CATEGORY_UNSUPPORTED,
+    CODE_CONFLICT_STALE_CURSOR: CATEGORY_CONFLICT,
     CODE_INTERNAL_UNEXPECTED: CATEGORY_INTERNAL,
 }
 
