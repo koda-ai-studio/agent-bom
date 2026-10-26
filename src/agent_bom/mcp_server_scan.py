@@ -20,6 +20,7 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_IMAGE_REF,
     CODE_VALIDATION_INVALID_PATH,
 )
+from agent_bom.parsers.oci_model_artifacts import collect_model_artifacts, model_artifact_metadata
 from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings, restore_scan_warnings
 from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstream importers
 
@@ -337,7 +338,8 @@ async def run_scan_pipeline(
             from agent_bom.image import scan_image as _scan_image
             from agent_bom.models import ServerSurface
 
-            img_packages, _strategy = _scan_image(image)
+            with collect_model_artifacts(image) as model_artifacts:
+                img_packages, _strategy = _scan_image(image)
             if img_packages:
                 img_server = MCPServer(
                     name=f"image:{image}",
@@ -354,6 +356,7 @@ async def run_scan_pipeline(
                         agent_type=AgentType.CUSTOM,
                         config_path="",
                         mcp_servers=[img_server],
+                        metadata=model_artifact_metadata(model_artifacts),
                     )
                 )
                 scan_sources.append("image")

@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
+from ..gpu_node_pools import eks_node_group_pool
 from ._base import _iso, record_discovery_failure
 
 _FACADE = "agent_bom.cloud.aws_inventory"
@@ -166,8 +167,6 @@ def _discover_eks_node_groups(
     client: Any, cluster_name: str, cluster_arn: str, *, warnings: list[str], missing: list[dict[str, str]] | None
 ) -> tuple[list[dict[str, Any]], bool]:
     """Managed node groups of one EKS cluster (read-only), GPU capacity flagged per group."""
-    from agent_bom.cloud.gpu_node_pools import eks_node_group_pool
-
     pools: list[dict[str, Any]] = []
     try:
         names = [

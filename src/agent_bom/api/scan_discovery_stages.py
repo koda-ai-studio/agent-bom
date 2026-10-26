@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from agent_bom.api.scan_context import ScanContext
+from agent_bom.parsers.oci_model_artifacts import collect_model_artifacts, model_artifact_metadata
 from agent_bom.security import sanitize_error, sanitize_text
 
 _logger = logging.getLogger("agent_bom.api.pipeline")
@@ -142,7 +143,8 @@ def _image_agent(image_ref: str, *, source: str) -> Any:
     from agent_bom.image import scan_image
     from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface, TransportType
 
-    img_packages, _strategy = scan_image(image_ref)
+    with collect_model_artifacts(image_ref) as model_artifacts:
+        img_packages, _strategy = scan_image(image_ref)
     return Agent(
         name=f"image:{image_ref}",
         agent_type=AgentType.CUSTOM,
@@ -158,6 +160,7 @@ def _image_agent(image_ref: str, *, source: str) -> Any:
                 surface=ServerSurface.CONTAINER_IMAGE,
             )
         ],
+        metadata=model_artifact_metadata(model_artifacts),
     )
 
 

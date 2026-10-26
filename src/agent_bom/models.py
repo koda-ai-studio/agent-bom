@@ -682,6 +682,10 @@ class AIBOMReport:
         base.extend(finding for finding in self._cloud_org_architecture_findings() if finding.id not in org_existing)
         malicious_existing = {getattr(f, "id", None) for f in base}
         base.extend(finding for finding in self._malicious_package_findings() if finding.id not in malicious_existing)
+        image_model_existing = {getattr(f, "id", None) for f in base}
+        base.extend(finding for finding in self._image_model_findings() if finding.id not in image_model_existing)
+        gpu_existing = {getattr(f, "id", None) for f in base}
+        base.extend(finding for finding in self._gpu_posture_findings() if finding.id not in gpu_existing)
         from agent_bom.domain.finding_merge import merge_external_code_findings
 
         base = merge_external_code_findings(base)
@@ -762,6 +766,30 @@ class AIBOMReport:
                 if isinstance(raw, dict):
                     findings.append(cloud_org_architecture_finding_to_finding(raw, provider=provider, org_id=org_id))
         return findings
+
+    def _image_model_findings(self) -> "list[Finding]":
+        """Model artifacts found in container image layers, bound to the image's agent."""
+        from agent_bom.parsers.oci_model_artifacts import model_artifact_findings
+
+        findings: list[Finding] = []
+        for agent in self.agents:
+            artifacts = agent.metadata.get("model_artifacts") if isinstance(agent.metadata, dict) else None
+            if isinstance(artifacts, list) and artifacts:
+                image = str(artifacts[0].get("image") or agent.name)
+                findings.extend(model_artifact_findings(image, agent.stable_id, artifacts))
+        return findings
+
+    def _gpu_posture_findings(self) -> "list[Finding]":
+        """GPU node-pool, workload and managed GPU compute posture (one judgement shared with the graph)."""
+        from agent_bom.cloud.gpu_posture import gpu_posture_finding_to_finding, gpu_posture_from_report
+
+        report = {
+            "cloud_inventory": self.cloud_inventory_data,
+            "gpu_infra": self.gpu_infra_data,
+            "snowflake_services": self.snowflake_services_data,
+            "agents": [{"name": agent.name, "stable_id": agent.stable_id, "metadata": agent.metadata} for agent in self.agents],
+        }
+        return [gpu_posture_finding_to_finding(raw) for raw in gpu_posture_from_report(report)]
 
     def _iac_findings(self) -> "list[Finding]":
         """IaC misconfiguration findings lifted into the unified stream.

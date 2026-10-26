@@ -30,6 +30,9 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import Any
 
+from agent_bom.cloud.gpu_k8s_inventory import K8sGpuInventory, collect_k8s_gpu_inventory, workload_agent
+from agent_bom.cloud.gpu_k8s_workloads import gfd_driver_version
+from agent_bom.cloud.gpu_posture import gpu_posture_from_report
 from agent_bom.cloud.normalization import build_package_purl
 from agent_bom.http_client import create_client, request_with_retry
 from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
@@ -156,6 +159,7 @@ class GpuInfraReport:
     warnings: list[str]
     driver_findings: list[dict] = field(default_factory=list)
     firmware_findings: list[dict] = field(default_factory=list)
+    k8s: K8sGpuInventory | None = None
 
     @property
     def total_gpu_containers(self) -> int:
@@ -194,7 +198,18 @@ class GpuInfraReport:
             "gpu_k8s_nodes": len(self.gpu_nodes),
             "driver_cve_count": len(self.driver_findings),
             "firmware_cve_count": len(self.firmware_findings),
+            "gpu_k8s_workloads": len(self.k8s.workloads) if self.k8s else 0,
         }
+
+    @property
+    def posture_findings(self) -> list[dict[str, Any]]:
+        """GPU posture for the discovered Kubernetes workloads (the report-wide judgement, scoped here)."""
+        return gpu_posture_from_report({"gpu_infra": self.report_data})
+
+    @property
+    def report_data(self) -> dict[str, Any]:
+        """``gpu_infra`` report block: the risk summary plus the Kubernetes GPU workload inventory."""
+        return {**self.risk_summary, **({"k8s": self.k8s.to_dict()} if self.k8s else {})}
 
 
 # ─── Docker discovery ─────────────────────────────────────────────────────────
@@ -675,13 +690,8 @@ def discover_k8s_gpu_nodes(
             if gpu_cap == 0:
                 continue  # not a GPU node
 
-            # CUDA driver version from labels (NVIDIA-specific)
-            cuda_driver = labels.get("nvidia.com/cuda.driver.major")
-            cuda_minor = labels.get("nvidia.com/cuda.driver.minor")
-            if cuda_driver and cuda_minor:
-                cuda_driver = f"{cuda_driver}.{cuda_minor}"
-            else:
-                cuda_driver = labels.get("nvidia.com/cuda.driver-version")
+            # NVIDIA driver version from GPU Feature Discovery labels
+            cuda_driver: str | None = gfd_driver_version(labels) or None
 
             # If label-based version is unavailable, attempt runtime query via nvidia-smi / rocm-smi / i915
             if not cuda_driver and gpu_vendor == "nvidia":
@@ -834,6 +844,9 @@ async def scan_gpu_infra(
     # Firmware/BMC advisory scan — matches GPU model labels against CVE seed
     all_firmware_findings = [f.to_dict() for f in check_firmware_advisories(k8s_nodes)]
 
+    k8s_inventory = collect_k8s_gpu_inventory(_run_kubectl, k8s_context)
+    all_warnings.extend(w for w in k8s_inventory.warnings if not w.startswith("kubectl not available"))
+
     return GpuInfraReport(
         gpu_containers=docker_containers,
         dcgm_endpoints=dcgm_endpoints,
@@ -841,6 +854,7 @@ async def scan_gpu_infra(
         warnings=all_warnings,
         driver_findings=all_driver_findings,
         firmware_findings=all_firmware_findings,
+        k8s=k8s_inventory if k8s_inventory.cluster_key else None,
     )
 
 
@@ -932,5 +946,7 @@ def gpu_infra_to_agents(report: GpuInfraReport) -> list[Agent]:
     # one per GPU node — node-level facts live in the scope envelope.
     if report.gpu_nodes:
         agents.append(_k8s_gpu_cluster_agent(report))
+    if report.k8s is not None:
+        agents.extend(workload_agent(w, report.k8s.stack) for w in report.k8s.workloads)
 
     return agents

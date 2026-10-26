@@ -31,6 +31,7 @@ from agent_bom.parsers.oci_layer import _LayerScan
 from agent_bom.parsers.oci_metadata import _parse_rfc822_name_version as _parse_rfc822_name_version
 from agent_bom.parsers.oci_metadata import _parse_rpm_header_blob as _parse_rpm_header_blob
 from agent_bom.parsers.oci_metadata import is_node_package_manifest_path as is_node_package_manifest_path
+from agent_bom.parsers.oci_model_artifacts import extract_model_artifacts_layer
 from agent_bom.parsers.oci_types import (
     _GEMSPEC_NAME_RE,
     _GEMSPEC_PATH_RE,
@@ -509,6 +510,10 @@ def _extract_gpu_stack(scan: _LayerScan) -> None:
     extract_gpu_stack_layer(scan, _safe_extractfile)
 
 
+def _extract_model_artifacts(scan: _LayerScan) -> None:
+    extract_model_artifacts_layer(scan)
+
+
 _LAYER_PACKAGE_STAGES: tuple[Callable[[_LayerScan], None], ...] = (
     _extract_python_metadata,
     _extract_node_manifests,
@@ -526,4 +531,5 @@ _LAYER_PACKAGE_STAGES: tuple[Callable[[_LayerScan], None], ...] = (
     _extract_swift_resolved,
     _extract_runtime_binaries,
     _extract_gpu_stack,
+    _extract_model_artifacts,
 )

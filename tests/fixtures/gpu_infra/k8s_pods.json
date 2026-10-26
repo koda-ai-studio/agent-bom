@@ -1,0 +1,79 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "metadata": {"name": "llm-inference-7d9f", "namespace": "ml"},
+      "spec": {
+        "nodeName": "ip-10-0-1-20.ec2.internal",
+        "serviceAccountName": "llm-serving",
+        "containers": [
+          {
+            "name": "triton",
+            "image": "nvcr.io/nvidia/tritonserver:24.08-py3",
+            "resources": {"limits": {"nvidia.com/gpu": "1"}, "requests": {"nvidia.com/gpu": "1"}},
+            "env": [
+              {"name": "AWS_ROLE_ARN", "value": "arn:aws:iam::111122223333:role/llm-model-reader"},
+              {"name": "AWS_WEB_IDENTITY_TOKEN_FILE", "value": "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"},
+              {"name": "HF_TOKEN", "valueFrom": {"secretKeyRef": {"name": "hf", "key": "token"}}},
+              {"name": "LOG_LEVEL", "value": "info"}
+            ]
+          }
+        ],
+        "tolerations": [{"key": "nvidia.com/gpu", "operator": "Exists", "effect": "NoSchedule"}]
+      },
+      "status": {"phase": "Running"}
+    },
+    {
+      "metadata": {"name": "notebook-0", "namespace": "research"},
+      "spec": {
+        "nodeName": "ip-10-0-1-20.ec2.internal",
+        "serviceAccountName": "default",
+        "hostIPC": true,
+        "containers": [
+          {
+            "name": "jupyter",
+            "image": "quay.io/jupyter/pytorch-notebook:cuda12-2024-10-07",
+            "securityContext": {"privileged": true},
+            "resources": {"limits": {"nvidia.com/gpu": "1"}},
+            "volumeMounts": [{"name": "plugins", "mountPath": "/var/lib/kubelet/device-plugins"}]
+          }
+        ],
+        "volumes": [{"name": "plugins", "hostPath": {"path": "/var/lib/kubelet/device-plugins", "type": "Directory"}}]
+      },
+      "status": {"phase": "Running"}
+    },
+    {
+      "metadata": {"name": "train-job-x2k", "namespace": "ml"},
+      "spec": {
+        "serviceAccountName": "trainer",
+        "nodeSelector": {"eks.amazonaws.com/nodegroup": "train-custom"},
+        "containers": [
+          {"name": "trainer", "image": "nvcr.io/nvidia/pytorch:24.09-py3", "resources": {"limits": {"nvidia.com/gpu": "8"}}}
+        ]
+      },
+      "status": {"phase": "Pending"}
+    },
+    {
+      "metadata": {"name": "nvidia-device-plugin-daemonset-abcde", "namespace": "kube-system"},
+      "spec": {
+        "nodeName": "ip-10-0-1-20.ec2.internal",
+        "containers": [
+          {
+            "name": "nvidia-device-plugin-ctr",
+            "image": "nvcr.io/nvidia/k8s-device-plugin:v0.16.2",
+            "securityContext": {"privileged": true},
+            "volumeMounts": [{"name": "device-plugin", "mountPath": "/var/lib/kubelet/device-plugins"}]
+          }
+        ],
+        "volumes": [{"name": "device-plugin", "hostPath": {"path": "/var/lib/kubelet/device-plugins"}}]
+      },
+      "status": {"phase": "Running"}
+    },
+    {
+      "metadata": {"name": "web-5c6d", "namespace": "default"},
+      "spec": {"nodeName": "ip-10-0-2-30.ec2.internal", "containers": [{"name": "web", "image": "nginx:1.27"}]},
+      "status": {"phase": "Running"}
+    }
+  ]
+}
