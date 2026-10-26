@@ -87,20 +87,37 @@ def normalize_version(version: str, ecosystem: str) -> str:
 
     # Normalize PyPI pre-release tags
     if ecosystem == "pypi":
-        version = re.sub(r"\.?(alpha|a)(\d+)?", r"a\2", version, flags=re.IGNORECASE)
-        version = re.sub(r"\.?(beta|b)(\d+)?", r"b\2", version, flags=re.IGNORECASE)
-        version = re.sub(r"\.?(preview|rc)(\d+)?", r"rc\2", version, flags=re.IGNORECASE)
-        # Legacy single-letter ``c`` spelling of ``rc`` (PEP 440 ``1.0c1`` ->
-        # ``1.0rc1``). Require a trailing digit and refuse the ``c`` that sits
-        # inside an already-normalized ``rc`` so we never double it into ``rrc``.
-        version = re.sub(r"(?<![a-z])c(\d+)", r"rc\1", version, flags=re.IGNORECASE)
-        # Post-release tags. The single-letter ``r`` spelling (PEP 440 ``1.0r5``
-        # -> ``1.0.post5``) MUST require a trailing digit; otherwise it swallows
-        # the ``r`` inside an ``rc`` pre-release (``1.0rc1`` -> ``1.0.postc1``),
-        # corrupting normalization and comparison for every release candidate.
-        version = re.sub(r"\.?(post|rev)(\d+)?", r".post\2", version, flags=re.IGNORECASE)
-        version = re.sub(r"\.?r(\d+)", r".post\1", version, flags=re.IGNORECASE)
-        version = re.sub(r"\.?(dev)(\d+)?", r".dev\2", version, flags=re.IGNORECASE)
+        # The local label (``+cu124``, ``+r1``) is opaque to PEP 440 and must
+        # not be rewritten by the tag normalisation below; split it off first.
+        version, plus, local_label = version.partition("+")
+        version = _normalize_pypi_public_version(version)
+        version = f"{version}{plus}{local_label}"
+
+    return version
+
+
+def _normalize_pypi_public_version(version: str) -> str:
+    """Rewrite the PEP 440 spellings of pre/post/dev tags to their canonical forms.
+
+    PEP 440 allows ``.``, ``-`` or ``_`` before ``post``/``dev`` (``1.0-dev1``
+    == ``1.0.dev1``). Consuming only an optional ``.`` left ``1.0-.dev1``
+    behind, which does not parse, so dash-spelled dev and post releases fell
+    into the local-suffix fallback and sorted *above* the bare release.
+    """
+    version = re.sub(r"\.?(alpha|a)(\d+)?", r"a\2", version, flags=re.IGNORECASE)
+    version = re.sub(r"\.?(beta|b)(\d+)?", r"b\2", version, flags=re.IGNORECASE)
+    version = re.sub(r"\.?(preview|rc)(\d+)?", r"rc\2", version, flags=re.IGNORECASE)
+    # Legacy single-letter ``c`` spelling of ``rc`` (PEP 440 ``1.0c1`` ->
+    # ``1.0rc1``). Require a trailing digit and refuse the ``c`` that sits
+    # inside an already-normalized ``rc`` so we never double it into ``rrc``.
+    version = re.sub(r"(?<![a-z])c(\d+)", r"rc\1", version, flags=re.IGNORECASE)
+    # Post-release tags. The single-letter ``r`` spelling (PEP 440 ``1.0r5``
+    # -> ``1.0.post5``) MUST require a trailing digit; otherwise it swallows
+    # the ``r`` inside an ``rc`` pre-release (``1.0rc1`` -> ``1.0.postc1``),
+    # corrupting normalization and comparison for every release candidate.
+    version = re.sub(r"[.\-_]?(post|rev)(\d+)?", r".post\2", version, flags=re.IGNORECASE)
+    version = re.sub(r"[.\-_]?r(\d+)", r".post\1", version, flags=re.IGNORECASE)
+    version = re.sub(r"[.\-_]?(dev)(\d+)?", r".dev\2", version, flags=re.IGNORECASE)
 
     return version
 

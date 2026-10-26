@@ -179,12 +179,39 @@ def _split_epoch(version: str) -> tuple[int, str]:
         return 0, version
 
 
+def _split_rpm_release(evr: str) -> tuple[str, str]:
+    """Split ``version-release`` at the last ``-``; a bare version has an empty release."""
+    version, separator, release = evr.rpartition("-")
+    if not separator:
+        return evr, ""
+    return version, release
+
+
 def _compare_rpm_versions(left: str, right: str) -> int:
+    """Order two RPM ``[epoch:]version[-release]`` strings as ``rpmvercmp`` does.
+
+    Epoch decides first, then the version, and the release only breaks a
+    version tie. Running one segment comparison across the whole
+    ``version-release`` string (with ``-`` as an ordinary separator) ranked
+    ``2.4-12.el8`` above the fix ``2.4.1-1.el8`` because ``12`` beat ``1``
+    before the version was fully compared, so the CVE read as fixed. On a
+    version tie a bare upstream version sorts below a packaged one. rpm's own
+    EVR compare skips the release when either side lacks one; ordering the bare
+    side lower is a deliberate, conservative choice for ``fixed`` bounds, which
+    always carry a release, so a bare installed version is never read as patched.
+    """
     left_epoch, left_rest = _split_epoch(left)
     right_epoch, right_rest = _split_epoch(right)
     if left_epoch != right_epoch:
         return (left_epoch > right_epoch) - (left_epoch < right_epoch)
-    return _compare_rpm_like(left_rest, right_rest)
+    left_version, left_release = _split_rpm_release(left_rest)
+    right_version, right_release = _split_rpm_release(right_rest)
+    version_order = _compare_rpm_like(left_version, right_version)
+    if version_order:
+        return version_order
+    if not left_release or not right_release:
+        return (bool(left_release) > bool(right_release)) - (bool(left_release) < bool(right_release))
+    return _compare_rpm_like(left_release, right_release)
 
 
 _APK_PRE_SUFFIXES = ("alpha", "beta", "pre", "rc")

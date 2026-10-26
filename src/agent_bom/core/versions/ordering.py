@@ -12,6 +12,7 @@ from agent_bom.core.versions.maven import _compare_maven_versions
 from agent_bom.core.versions.nuget import _compare_nuget_versions
 from agent_bom.core.versions.php import _compare_composer_versions, _compare_php_versions
 from agent_bom.core.versions.ruby import _compare_gem_versions
+from agent_bom.core.versions.semver import _compare_strict_semver
 from agent_bom.core.versions.validation import _looks_like_commit_sha, normalize_version
 
 if TYPE_CHECKING:
@@ -110,19 +111,48 @@ def compare_version_order(left: str, right: str, ecosystem: str) -> int | None:
     if comparator is not None:
         return comparator(left, right)
 
-    # npm-style ecosystems use SemVer precedence, including arbitrary
+    # SemVer 2.0 ecosystems use SemVer precedence, including arbitrary
     # prerelease identifiers (not only the common canary/beta/rc tags).  The
     # packaging library intentionally interprets ``1.0.0-foo`` as a PEP 440
     # post-release, which reverses the SemVer ordering and can suppress a
-    # vulnerability bounded at ``1.0.0``.  Handle strict SemVer before the
+    # vulnerability bounded at ``1.0.0``; its tag-strip fallback also drops
+    # the counter in ``canary.1`` vs ``canary.2`` so a version just below a
+    # fix reads as equal to it.  Handle strict SemVer before the
     # Python-version fallback; Python/PyPI local versions retain their PEP 440
     # behavior below.
-    if eco in {"npm", "npmjs", "yarn", "pnpm", "node", "javascript", "js"}:
+    if eco in _SEMVER_ECOSYSTEMS:
         semver_cmp = _compare_strict_semver(left, right)
         if semver_cmp is not None:
             return semver_cmp
 
     return _compare_packaging_versions(left, right, eco)
+
+
+# Ecosystems whose registries order releases by SemVer 2.0 precedence. The npm
+# family is joined by crates.io (Cargo), Pub (Dart), Hex (Erlang/Elixir) and
+# Swift packages, all of which OSV publishes with SemVer bounds.
+_SEMVER_ECOSYSTEMS = frozenset(
+    {
+        "npm",
+        "npmjs",
+        "yarn",
+        "pnpm",
+        "node",
+        "javascript",
+        "js",
+        "crates.io",
+        "crates",
+        "cargo",
+        "rust",
+        "pub",
+        "dart",
+        "hex",
+        "erlang",
+        "elixir",
+        "swifturl",
+        "swift",
+    }
+)
 
 
 def _compare_packaging_versions(left: str, right: str, eco: str) -> int | None:
@@ -194,40 +224,6 @@ _SEMVER_PRERELEASE_TAGS = frozenset(
         "preview",
     }
 )
-
-
-_STRICT_SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$")
-
-
-def _compare_strict_semver(left: str, right: str) -> int | None:
-    """Compare strict SemVer strings, including arbitrary prerelease tags."""
-    left_match = _STRICT_SEMVER.fullmatch(left.strip())
-    right_match = _STRICT_SEMVER.fullmatch(right.strip())
-    if left_match is None or right_match is None:
-        return None
-    left_base = tuple(int(left_match.group(index)) for index in (1, 2, 3))
-    right_base = tuple(int(right_match.group(index)) for index in (1, 2, 3))
-    if left_base != right_base:
-        return (left_base > right_base) - (left_base < right_base)
-    left_pre = left_match.group(4)
-    right_pre = right_match.group(4)
-    if left_pre is None or right_pre is None:
-        if left_pre == right_pre:
-            return 0
-        return -1 if left_pre is not None else 1
-    left_parts = left_pre.split(".")
-    right_parts = right_pre.split(".")
-    for left_part, right_part in zip(left_parts, right_parts):
-        if left_part == right_part:
-            continue
-        left_numeric = left_part.isdigit()
-        right_numeric = right_part.isdigit()
-        if left_numeric and right_numeric:
-            return (int(left_part) > int(right_part)) - (int(left_part) < int(right_part))
-        if left_numeric != right_numeric:
-            return -1 if left_numeric else 1
-        return (left_part > right_part) - (left_part < right_part)
-    return (len(left_parts) > len(right_parts)) - (len(left_parts) < len(right_parts))
 
 
 def _strip_semver_prerelease_tag(version: str) -> str:
