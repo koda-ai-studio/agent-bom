@@ -455,8 +455,7 @@ class SQLiteFleetStore:
             self._conn.execute("ALTER TABLE fleet_agents ADD COLUMN canonical_id TEXT NOT NULL DEFAULT ''")
         if "device_fingerprint" not in _table_columns(self._conn, "fleet_agents"):
             self._conn.execute("ALTER TABLE fleet_agents ADD COLUMN device_fingerprint TEXT NOT NULL DEFAULT ''")
-        # Re-key first: the backfills below are tenant-scoped and need the tenant column.
-        self._migrate_to_tenant_scoped_key()
+        self._migrate_to_tenant_scoped_key()  # first: the backfills below are tenant-scoped
         self._backfill_canonical_ids()
         self._backfill_device_fingerprints()
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_fleet_name ON fleet_agents(name)")
