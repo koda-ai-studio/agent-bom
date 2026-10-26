@@ -120,6 +120,11 @@ def set_offline(value: bool) -> None:
     _OFFLINE = value
 
 
+def is_offline() -> bool:
+    """Whether global offline mode is active."""
+    return _OFFLINE
+
+
 def check_offline() -> None:
     """Raise OfflineModeError if offline mode is active."""
     if _OFFLINE:

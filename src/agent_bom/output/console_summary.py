@@ -22,7 +22,7 @@ from agent_bom.output.finding_views import (
     package_name,
     package_version,
 )
-from agent_bom.output.graph_coverage_panel import print_graph_coverage_gaps
+from agent_bom.output.graph_coverage_panel import print_graph_coverage_gaps, print_scan_notes
 
 
 def print_summary(report: AIBOMReport) -> None:
@@ -274,7 +274,9 @@ def _add_lookup_summary(table: Table, report: AIBOMReport) -> None:
 
 
 def _print_coverage_warnings(report: AIBOMReport) -> None:
-    coverage_warnings = print_graph_coverage_gaps(_console(), getattr(report, "coverage_warnings", None) or [])
+    coverage_warnings = print_scan_notes(
+        _console(), print_graph_coverage_gaps(_console(), getattr(report, "coverage_warnings", None) or [])
+    )
     if coverage_warnings:
 
         def _coverage_line(w: dict) -> str:

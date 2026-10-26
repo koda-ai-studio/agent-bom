@@ -15,6 +15,7 @@ from pathlib import Path
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
 from agent_bom.parsers.file_limits import read_json_limited, read_text_limited
+from agent_bom.parsers.python_ladder import complete_unlocked_python
 from agent_bom.parsers.python_requirements import (
     bare_name_package,
     clean_requirement_line,
@@ -235,12 +236,7 @@ def parse_pip_packages(directory: Path) -> list[Package]:
         packages.extend(setup_declared_packages(directory))
         unlocked_source = next((directory / name for name in ("setup.cfg", "setup.py") if (directory / name).is_file()), None)
     if packages and unlocked_source is not None:
-        record_manifest_parse_warning(
-            ecosystem="pypi",
-            path=str(unlocked_source),
-            detail=f"{unlocked_source.name}: transitive dependencies were not resolved (no lockfile); add uv.lock, poetry.lock, "
-            "Pipfile.lock or hash-pinned requirements for complete coverage; Python dependency coverage is partial",
-        )
+        packages = complete_unlocked_python(directory, unlocked_source, packages)
     return packages
 
 

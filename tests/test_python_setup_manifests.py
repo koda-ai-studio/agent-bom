@@ -74,8 +74,8 @@ def test_static_setup_py_literal_lists_are_parsed_without_execution(tmp_path):
     assert pkgs["urllib3"].version == "2.2.1"
     assert SpecifierSet(pkgs["requests"].declared_version) == SpecifierSet(">=2.31,<3")
     assert "pytest" in pkgs
-    # Only the unlocked-manifest gap: no parse or dynamic-declaration gaps.
-    assert [w for w in warnings if "transitive dependencies were not resolved" not in str(w["detail"])] == []
+    # Only the ladder gap (registry disabled in the suite): no parse or dynamic-declaration gaps.
+    assert [w for w in warnings if "transitive dependencies not resolved" not in str(w["detail"])] == []
 
 
 def test_dynamic_setup_py_records_coverage_gap(tmp_path):
@@ -110,5 +110,5 @@ def test_pyproject_dynamic_dependencies_resolved_from_setup_cfg(tmp_path):
         pkgs = _names(parse_pip_packages(tmp_path))
 
     assert "cryptography" in pkgs
-    # Only the unlocked-manifest gap: no parse or dynamic-declaration gaps.
-    assert [w for w in warnings if "transitive dependencies were not resolved" not in str(w["detail"])] == []
+    # Only the ladder gap (registry disabled in the suite): no parse or dynamic-declaration gaps.
+    assert [w for w in warnings if "transitive dependencies not resolved" not in str(w["detail"])] == []

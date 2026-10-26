@@ -97,6 +97,37 @@ class CoverageWarning:
         return asdict(self)
 
 
+def _surface(warning: dict) -> None:
+    try:
+        from agent_bom.scanners.state import record_coverage_warning
+
+        record_coverage_warning(warning)
+    except Exception:  # noqa: BLE001 - warning surfacing must never break a scan
+        pass
+
+
+SCAN_NOTE_KIND = "scan_note"
+
+
+def is_scan_note(warning: object) -> bool:
+    """An informational run note: shown on every surface, never a coverage gap."""
+    return isinstance(warning, dict) and warning.get("kind") == SCAN_NOTE_KIND
+
+
+def record_scan_note(*, ecosystem: str, path: str, reason: str, detail: str) -> None:
+    """Record a scan-run note about how evidence was obtained (deduped per path)."""
+    note = CoverageWarning(
+        ecosystem=ecosystem,
+        release=f"{ecosystem}-note:{path}",
+        reason=reason,
+        detail=detail,
+        package_count=0,
+        advisory_rows=0,
+    ).to_dict()
+    _logger.info("Scan note (%s): %s", path, detail)
+    _surface({**note, "kind": SCAN_NOTE_KIND})
+
+
 def record_manifest_parse_warning(*, ecosystem: str, path: str, detail: str) -> None:
     """Record a coverage warning for a manifest that failed to parse.
 
@@ -115,12 +146,7 @@ def record_manifest_parse_warning(*, ecosystem: str, path: str, detail: str) -> 
         advisory_rows=0,
     )
     _logger.warning("Manifest not scanned (%s): %s", path, detail)
-    try:
-        from agent_bom.scanners.state import record_coverage_warning
-
-        record_coverage_warning(warning.to_dict())
-    except Exception:  # noqa: BLE001 - warning surfacing must never break a scan
-        pass
+    _surface(warning.to_dict())
 
 
 def record_scan_input_warning(*, scanner: str, path: str, reason: str, detail: str) -> None:
@@ -140,12 +166,7 @@ def record_scan_input_warning(*, scanner: str, path: str, reason: str, detail: s
         advisory_rows=0,
     )
     _logger.warning("Input not scanned (%s/%s): %s", scanner, path, detail)
-    try:
-        from agent_bom.scanners.state import record_coverage_warning
-
-        record_coverage_warning(warning.to_dict())
-    except Exception:  # noqa: BLE001 - warning surfacing must never break a scan
-        pass
+    _surface(warning.to_dict())
 
 
 def covered_os_distros(conn: sqlite3.Connection) -> list[str]:

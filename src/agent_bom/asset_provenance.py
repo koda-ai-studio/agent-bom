@@ -13,9 +13,11 @@ PACKAGE_VERSION_SOURCES = frozenset(
         "runtime_process",
         "image_sbom",
         "installed_package",
+        "installed_environment",
         "tool_cache",
         "lockfile",
         "command_pin",
+        "resolved_at_scan",
         "registry_latest",
         "unknown",
     }
@@ -41,16 +43,18 @@ _VERSION_SOURCE_CONFIDENCE = {
     "runtime_process": "exact",
     "image_sbom": "exact",
     "installed_package": "exact",
+    "installed_environment": "exact",
     "tool_cache": "high",
     "lockfile": "exact",
     "command_pin": "exact",
+    "resolved_at_scan": "medium",
     "registry_latest": "low",
     "unknown": "unknown",
 }
 # Version sources where the reported version came from the running/installed
 # host rather than the declared reference — a git ref pinned here is a
 # coincidence, not an exact match.
-_HOST_RESOLVED_VERSION_SOURCES = frozenset({"installed_package", "runtime_process", "image_sbom", "tool_cache"})
+_HOST_RESOLVED_VERSION_SOURCES = frozenset({"installed_package", "installed_environment", "runtime_process", "image_sbom", "tool_cache"})
 _GIT_SHA_RE = re.compile(r"^[0-9a-f]{7,40}$")
 
 
@@ -69,9 +73,11 @@ _VERSION_SOURCE_PRECEDENCE = {
     "runtime_process": 80,
     "image_sbom": 70,
     "installed_package": 60,
+    "installed_environment": 60,
     "tool_cache": 50,
     "lockfile": 40,
     "command_pin": 30,
+    "resolved_at_scan": 25,
     "registry_latest": 20,
     "unknown": 0,
 }

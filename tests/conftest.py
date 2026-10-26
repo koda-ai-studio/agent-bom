@@ -229,6 +229,29 @@ def _no_vuln_db_download(request):
         db_sync.sync_db = original
 
 
+@pytest.fixture(autouse=True)
+def _no_pypi_resolution():
+    """Keep unlocked-Python resolution off the network.
+
+    An online scan of a project with no lockfile and no virtualenv resolves its
+    declared ranges against PyPI. In the suite every such lookup fails as if the
+    registry were unreachable (a named coverage gap); tests that exercise the
+    resolver patch ``fetch_pypi_json`` with an in-memory index. Restored by hand
+    for the same fixture-ordering reason as ``_no_vuln_db_download``.
+    """
+    from agent_bom.parsers import pypi_resolution
+
+    def _unreachable(url: str):
+        raise pypi_resolution.PyPIUnavailableError("network disabled in the test suite")
+
+    original = pypi_resolution.fetch_pypi_json
+    pypi_resolution.fetch_pypi_json = _unreachable
+    try:
+        yield
+    finally:
+        pypi_resolution.fetch_pypi_json = original
+
+
 def _reset_runtime_state() -> None:
     # MCP budgets are process-global: calls made by one test must not throttle
     # another test on the same worker. Do not import the optional MCP server.

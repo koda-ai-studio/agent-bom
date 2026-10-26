@@ -55,9 +55,13 @@ free-form string:
 - `runtime_process`
 - `image_sbom`
 - `installed_package`
+- `installed_environment` — read from the scanned project's own virtualenv
+  (`*.dist-info/METADATA`) when the project has no lockfile; exact
 - `tool_cache`
 - `lockfile`
 - `command_pin`
+- `resolved_at_scan` — an unlocked declaration (and its transitive
+  dependencies) resolved from registry metadata during the scan; never pinned
 - `registry_latest`
 - `unknown`
 
@@ -76,8 +80,9 @@ itself because dist-tags, yanked releases, mirrors, and caches can diverge.
 When multiple sources resolve the same package, use deterministic precedence:
 
 ```text
-runtime_process > image_sbom > installed_package > tool_cache > lockfile >
-command_pin > registry_latest > unknown
+runtime_process > image_sbom > installed_package = installed_environment >
+tool_cache > lockfile > command_pin > resolved_at_scan > registry_latest >
+unknown
 ```
 
 Runtime and SBOM evidence win over intended state. Installed package metadata
