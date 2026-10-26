@@ -289,7 +289,7 @@
     "findings": [
      {
       "attack_techniques": [
-       "T1525"
+       "T1611"
       ],
       "category": "dockerfile",
       "compliance": [
@@ -322,9 +322,7 @@
       "title": "FROM without digest pin"
      },
      {
-      "attack_techniques": [
-       "T1190"
-      ],
+      "attack_techniques": [],
       "category": "dockerfile",
       "compliance": [
        "CIS-Docker-4.6",
@@ -1859,7 +1857,7 @@
     "findings": [
      {
       "attack_techniques": [
-       "T1525"
+       "T1611"
       ],
       "category": "dockerfile",
       "compliance": [
@@ -1892,9 +1890,7 @@
       "title": "FROM without digest pin"
      },
      {
-      "attack_techniques": [
-       "T1190"
-      ],
+      "attack_techniques": [],
       "category": "dockerfile",
       "compliance": [
        "CIS-Docker-4.6",

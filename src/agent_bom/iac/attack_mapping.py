@@ -71,16 +71,37 @@ IAC_ATTACK_MAP: dict[str, list[str]] = {
     "TF-SEC-045": ["T1610"],  # Lambda no VPC
     "TF-SEC-015": ["T1530"],  # EKS no envelope encryption
     # ── Dockerfile ──────────────────────────────────────────────────────────
-    "DOCKER-001": ["T1611"],  # Running as root → Escape to Host
-    "DOCKER-002": ["T1525"],  # Unpinned base image → Implant Internal Image
-    "DOCKER-003": ["T1552.001"],  # Secrets in ENV → Credentials In Files
-    "DOCKER-004": ["T1552.001"],  # Secrets in COPY/ADD
-    "DOCKER-005": ["T1611"],  # Privileged mode
-    "DOCKER-006": ["T1190"],  # Exposed ports without need
-    "DOCKER-007": ["T1525"],  # ADD from URL (supply chain)
-    "DOCKER-008": ["T1059"],  # Shell form CMD → Command Execution
-    "DOCKER-009": ["T1562.001"],  # HEALTHCHECK missing → Disable or Modify Tools
-    "DOCKER-010": ["T1525"],  # latest tag used
+    "DOCKER-001": ["T1525"],  # :latest / untagged base → Implant Internal Image
+    "DOCKER-002": ["T1611"],  # Runs as root → Escape to Host
+    "DOCKER-003": ["T1552.001"],  # Secret in ENV → Credentials In Files
+    "DOCKER-005": ["T1105"],  # curl | sh → Ingress Tool Transfer
+    "DOCKER-008": ["T1021.004"],  # SSH exposed → Remote Services: SSH
+    "DOCKER-009": ["T1552.001"],  # COPY . . without .dockerignore
+    "DOCKER-010": ["T1525"],  # Base not pinned by digest
+    "DOCKER-011": ["T1611"],  # Root-owned copied files
+    "DOCKER-012": ["T1222.002"],  # chmod 777 → Linux Permissions Modification
+    "DOCKER-014": ["T1548.003"],  # sudo → Sudo and Sudo Caching
+    "DOCKER-015": ["T1552.001"],  # Secret in ARG (image history)
+    "DOCKER-021": ["T1222.002"],  # COPY --chmod=777
+    "DOCKER-022": ["T1105"],  # ADD <url> → Ingress Tool Transfer
+    "DOCKER-026": ["T1552.001", "T1552.004"],  # Credential / private key copied into image
+    # ── Docker Compose ──────────────────────────────────────────────────────
+    "COMPOSE-001": ["T1611"],  # privileged
+    "COMPOSE-002": ["T1611", "T1610"],  # docker.sock → Escape to Host + Deploy Container
+    "COMPOSE-003": ["T1611"],  # host network
+    "COMPOSE-004": ["T1611"],  # host PID
+    "COMPOSE-005": ["T1611"],  # escape capabilities
+    "COMPOSE-006": ["T1552.001"],  # literal secret in environment
+    "COMPOSE-007": ["T1611"],  # seccomp/AppArmor/SELinux disabled
+    "COMPOSE-008": ["T1611"],  # host IPC/UTS/user namespace
+    "COMPOSE-009": ["T1611", "T1552.001"],  # sensitive host path mounted
+    "COMPOSE-010": ["T1611"],  # user: root
+    "COMPOSE-011": ["T1548.001"],  # setuid escalation allowed → Setuid and Setgid
+    # ── Docker daemon ───────────────────────────────────────────────────────
+    "DOCKERD-001": ["T1133", "T1610"],  # Unauthenticated TCP API → External Remote Services + Deploy Container
+    "DOCKERD-002": ["T1557"],  # Insecure registry → Adversary-in-the-Middle
+    "DOCKERD-004": ["T1611"],  # No userns remap → container root is host root
+    "DOCKERD-006": ["T1548.001"],  # setuid escalation allowed by default
     # ── Kubernetes ──────────────────────────────────────────────────────────
     "K8S-001": ["T1611"],  # Container running as root
     "K8S-002": ["T1611"],  # Privileged container
