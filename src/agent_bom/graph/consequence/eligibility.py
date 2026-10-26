@@ -86,7 +86,7 @@ def _receipt_scope(graph: UnifiedGraph, edge: UnifiedEdge) -> UnifiedGraph:
     principals = {r["principal_id"] for r in mapped}
     if len(mapped) != len(rows) or len(principals) != 1:
         return graph
-    scoped = UnifiedGraph(scan_id=graph.scan_id, tenant_id=graph.tenant_id)
+    scoped = UnifiedGraph(scan_id=graph.scan_id, tenant_id=graph.tenant_id, created_at=graph.created_at)
     scoped.add_node(replace(source, attributes={**source.attributes, "principal_id": next(iter(principals))}))
     target = graph.nodes.get(edge.target)
     if target is not None:
