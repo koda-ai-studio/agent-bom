@@ -3054,7 +3054,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     {
       path: "correlation-path-mobile-live.png",
       page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
-      scope: "Reference evidence lab readable focused graph context at a 390 by 844 viewport; pan to inspect adjacent recorded relationships",
+      scope: "Reference evidence lab recorded relationships as readable sequential hops at a 390 by 844 viewport; each hop opens its evidence, and Graph shows the canvas",
       presentation: "dark mobile",
       evidence_artifact: path.relative(REPO_ROOT, REFERENCE_LAB_PROOF_PATH),
       evidence_sha256: referenceLabActualDigest,
@@ -3312,22 +3312,18 @@ async function main() {
       viewportSelectors: ["#demo-estate-watermark", '[data-testid="graph-correlation-decision"]'],
     };
     const prepareCorrelationPath = async (proofPage) => {
-      if (proofPage.viewportSize().width < 768) {
-        // Phones open on the ranked paths list; this proof is the canvas.
-        const views = proofPage.getByRole("group", { name: "Investigation view" });
-        await views.waitFor({ state: "visible" });
-        await views.getByRole("button", { name: "Graph", exact: true }).click();
-      }
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
-      if (proofPage.viewportSize().width < 768) {
-        // Preserve the readable initial anchor. Fitting the entire reference
-        // estate on a phone deliberately sacrifices text size for overview.
-        await proofPage.waitForTimeout(500);
-        await scrollTo(proofPage, 0);
-      } else {
-        await fitReactFlow(proofPage);
-        await scrollTo(proofPage, 0);
-      }
+      await fitReactFlow(proofPage);
+      await scrollTo(proofPage, 0);
+    };
+    // A phone opens on the ranked hop list, its readable sequential path view.
+    const prepareCorrelationPathList = async (proofPage) => {
+      const views = proofPage.getByRole("group", { name: "Investigation view" });
+      await views.waitFor({ state: "visible" });
+      await expect(views.getByRole("button", { name: "Paths", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await proofPage.getByTestId("graph-path-list").waitFor({ state: "visible" });
+      const viewsTop = await views.evaluate((element) => element.getBoundingClientRect().top + window.scrollY);
+      await scrollTo(proofPage, Math.max(0, viewsTop - 72));
     };
     const correlationPathAssertions = {
       expectedText: ["CVE-2023-4863", "Modeled customer records"],
@@ -3968,17 +3964,13 @@ async function main() {
       mobilePage,
       `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       "correlation-path-mobile-live.png",
-      prepareCorrelationPath,
+      prepareCorrelationPathList,
       {
-        ...correlationPathAssertions,
-        expectedText: ["Reference Evidence Workload", "Graph", "Fit all"],
-        minGraphNodes: 1,
-        maxGraphNodes: referenceGraph.nodes.length,
-        minGraphEdges: 0,
-        readySelector: ".react-flow__node",
-        minGraphNodeFontPx: 12,
-        viewportSelectors: ["#demo-estate-watermark"],
-        readmeTextContract: undefined,
+        expectedText: [`${referenceGraph.nodes.length} nodes`, "Reference Evidence Workload", "Modeled customer records", "pillow@9.0.0", "CVE-2023-4863"],
+        rejectedText: ["Exploitable Via"],
+        expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
+        readySelector: '[data-testid="graph-path-list"]',
+        viewportSelectors: ["#demo-estate-watermark", '[role="group"][aria-label="Investigation view"]'],
         assertNoHorizontalOverflow: true,
       },
     );

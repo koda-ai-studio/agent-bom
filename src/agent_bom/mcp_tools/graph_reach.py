@@ -19,6 +19,7 @@ from agent_bom.graph.node_alias_resolution import resolve_snapshot_node_id
 from agent_bom.graph.reach_view import reach_interpretation
 from agent_bom.graph.types import EntityType
 from agent_bom.mcp_errors import (
+    CODE_CONFLICT_STALE_CURSOR,
     CODE_NOT_FOUND_RESOURCE,
     CODE_UNSUPPORTED_BACKEND,
     CODE_VALIDATION_INVALID_ARGUMENT,
@@ -39,6 +40,10 @@ def _type_value(node: Any) -> str:
 
 def _invalid(message: str, argument: str) -> str:
     return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, message, details={"argument": argument})
+
+
+def _stale(message: str) -> str:
+    return mcp_error_json(CODE_CONFLICT_STALE_CURSOR, message, details={"argument": "cursor", "http_status": 409})
 
 
 def _validate(node_id: str, direction: str, max_depth: int, limit: int, entity_types: list[str]) -> str | None:
@@ -138,7 +143,7 @@ async def _graph_reach(store: Any, query: _ReachQuery, truncate: Any) -> str:
         )
     pinned_scan_id, generation = identity
     if query.generation is not None and query.generation != generation:
-        return _invalid("Graph snapshot changed; restart the query from its first page.", "cursor")
+        return _stale("Graph snapshot changed; restart the query from its first page.")
     node_id, resolved_from = await asyncio.to_thread(
         resolve_snapshot_node_id, store, tenant_id=query.tenant_id, scan_id=pinned_scan_id, node_id=query.node_id
     )
@@ -157,7 +162,7 @@ async def _graph_reach(store: Any, query: _ReachQuery, truncate: Any) -> str:
     page_ids = affected[query.offset : query.offset + query.limit]
     rows = await asyncio.to_thread(store.nodes_by_ids, tenant_id=query.tenant_id, scan_id=pinned_scan_id, node_ids=set(page_ids))
     if await asyncio.to_thread(store.snapshot_identity, tenant_id=query.tenant_id, scan_id=pinned_scan_id, for_paging=True) != identity:
-        return _invalid("Graph snapshot changed during the read; restart the query.", "cursor")
+        return _stale("Graph snapshot changed during the read; restart the query.")
     has_more = query.offset + len(page_ids) < len(affected)
     next_cursor = _encode_cursor(query.scope, pinned_scan_id, generation, query.offset + len(page_ids)) if has_more else None
     payload = {

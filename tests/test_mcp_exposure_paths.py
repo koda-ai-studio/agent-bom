@@ -429,7 +429,7 @@ async def test_exposure_cursor_rejects_replacement_with_same_time_and_count(topo
     second = json.loads(
         await exposure_paths_impl(limit=1, cursor=first["pagination"]["next_cursor"], _get_graph_store=lambda: topology_store)
     )
-    assert second["error"]["code"] == "AGENTBOM_MCP_VALIDATION_INVALID_ARGUMENT"
+    assert second["error"]["code"] == "AGENTBOM_MCP_CONFLICT_STALE_CURSOR"
 
 
 @pytest.mark.asyncio
@@ -445,7 +445,7 @@ async def test_exposure_page_rejects_replacement_during_hydration(topology_store
 
     monkeypatch.setattr(topology_store, "nodes_by_ids", replace_after_nodes)
     payload = json.loads(await exposure_paths_impl(limit=1, _get_graph_store=lambda: topology_store))
-    assert payload["error"]["code"] == "AGENTBOM_MCP_VALIDATION_INVALID_ARGUMENT"
+    assert payload["error"]["code"] == "AGENTBOM_MCP_CONFLICT_STALE_CURSOR"
 
 
 @pytest.mark.asyncio

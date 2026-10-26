@@ -165,6 +165,26 @@ describe("product proof capture contract", () => {
     expect(source).toContain("minFontPx: 12");
   });
 
+  it("proves the phone correlation path as the readable hop list it opens on", () => {
+    const start = source.indexOf('"correlation-path-mobile-live.png",\n      prepare');
+    const block = source.slice(start, source.indexOf("await capture(", start));
+    expect(block).toContain("prepareCorrelationPathList");
+    expect(block).toContain('readySelector: \'[data-testid="graph-path-list"]\'');
+    expect(block).toContain('"CVE-2023-4863"');
+    const prepare = source.slice(source.indexOf("const prepareCorrelationPathList"), source.indexOf("};", source.indexOf("const prepareCorrelationPathList")));
+    expect(prepare).not.toContain('name: "Graph"');
+  });
+
+  it("documents the route each reference-lab path proof actually captures", () => {
+    const capture = fs.readFileSync(path.join(process.cwd(), "..", "docs", "CAPTURE.md"), "utf8");
+    for (const image of ["correlation-path-live.png", "correlation-path-light-live.png", "correlation-path-mobile-live.png"]) {
+      const entry = source.slice(source.indexOf(`path: "${image}"`));
+      const page = /page: `([^`]+)`/.exec(entry)![1]!.replace("${REFERENCE_CORRELATION_ID}", "reference-evidence-correlation-v1");
+      const row = capture.split("\n").find(line => line.startsWith(`| \`${image}\` |`));
+      expect(row, image).toContain(`| \`${page}\` |`);
+    }
+  });
+
   it("keeps the base graph fixture from swallowing graph subroutes", () => {
     expect(source).toContain('page.route((url) => url.pathname === "/v1/graph"');
     expect(source).not.toContain('page.route("**/v1/graph?**"');
