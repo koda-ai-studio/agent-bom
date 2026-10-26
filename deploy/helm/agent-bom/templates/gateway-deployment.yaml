@@ -138,12 +138,16 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /readyz
               port: http
             initialDelaySeconds: 2
             periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 3
           env:
             - name: AGENT_BOM_GATEWAY_REPLICAS
               value: {{ $gatewayRuntimeReplicas | quote }}

@@ -22,6 +22,9 @@ import {
 } from "lucide-react";
 import { api, type RegistryServer } from "@/lib/api";
 import { CatalogBanner, PageLaneHeader } from "@/components/page-lane";
+import { PaginationBar } from "@/components/pagination-bar";
+
+const REGISTRY_PAGE_SIZE = 25;
 
 /* ------------------------------------------------------------------ */
 /*  Shared helpers                                                     */
@@ -307,6 +310,7 @@ function RegistryList() {
   const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<RegistryView>("table");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     api
@@ -338,6 +342,11 @@ function RegistryList() {
     const matchesCat = categoryFilter === "all" || s.category === categoryFilter;
     return matchesSearch && matchesRisk && matchesCat;
   });
+
+  useEffect(() => setPage(1), [search, riskFilter, categoryFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / REGISTRY_PAGE_SIZE));
+  const visible = filtered.slice((page - 1) * REGISTRY_PAGE_SIZE, page * REGISTRY_PAGE_SIZE);
 
   const riskCounts = {
     all: servers.length,
@@ -477,7 +486,7 @@ function RegistryList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[color:var(--border-subtle)]">
-              {filtered.map((server) => (
+              {visible.map((server) => (
                 <tr
                   key={server.id}
                   className="cursor-pointer hover:bg-[color:var(--surface-muted)]/70"
@@ -504,7 +513,7 @@ function RegistryList() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered?.map((server) => (
+          {visible.map((server) => (
             <div
               key={server.id}
               className="rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)]/50 p-4 hover:border-[color:var(--border-strong)] transition-colors cursor-pointer group"
@@ -566,6 +575,17 @@ function RegistryList() {
           ))}
         </div>
       )}
+
+      {filtered.length > 0 ? (
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          itemLabel="servers"
+          onPrevious={() => setPage((current) => Math.max(1, current - 1))}
+          onNext={() => setPage((current) => Math.min(totalPages, current + 1))}
+        />
+      ) : null}
 
       {filtered.length === 0 && (
         <div className="text-center py-12 text-[color:var(--text-tertiary)] text-sm">

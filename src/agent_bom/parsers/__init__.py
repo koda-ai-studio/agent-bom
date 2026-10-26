@@ -72,12 +72,13 @@ from agent_bom.traversal import _coverage_recorder, is_nested_worktree_root
 _ENTRY_POINT_GROUP = "agent_bom.inventory_parsers"
 
 
+_PIP_MANIFESTS = ("requirements.txt", "pyproject.toml", "poetry.lock", "uv.lock", "setup.cfg", "setup.py")
 _BUILTIN_INVENTORY_PARSERS: dict[str, tuple[str, str, tuple[str, ...]]] = {
     "npm": ("agent_bom.parsers.node_parsers", "parse_npm_packages", ("package.json", "package-lock.json")),
     "yarn": ("agent_bom.parsers.node_parsers", "parse_yarn_lock", ("yarn.lock",)),
     "pnpm": ("agent_bom.parsers.node_parsers", "parse_pnpm_lock", ("pnpm-lock.yaml",)),
     "bun": ("agent_bom.parsers.node_parsers", "parse_bun_packages", ("bun.lockb", "bun.lock")),
-    "pip": ("agent_bom.parsers.python_parsers", "parse_pip_packages", ("requirements.txt", "pyproject.toml", "poetry.lock", "uv.lock")),
+    "pip": ("agent_bom.parsers.python_parsers", "parse_pip_packages", _PIP_MANIFESTS),
     "pip_compile": ("agent_bom.parsers.python_parsers", "parse_pip_compile_inputs", ("requirements.in",)),
     "conda_environment": ("agent_bom.parsers.python_parsers", "parse_conda_environment", ("environment.yml", "environment.yaml")),
     "conda": ("agent_bom.parsers.compiled_parsers", "parse_conda_packages", ("conda-meta",)),
@@ -665,13 +666,10 @@ _MANIFEST_FILES = frozenset(
         "pnpm-lock.yaml",
         "bun.lock",
         "bun.lockb",
-        "requirements.txt",
+        *_PIP_MANIFESTS,
         "requirements.in",
         "constraints.txt",
         "Pipfile.lock",
-        "pyproject.toml",
-        "poetry.lock",
-        "uv.lock",
         "environment.yml",
         "environment.yaml",
         "conda-lock.yml",

@@ -26,7 +26,7 @@ import re
 from typing import Any, Optional
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
-from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
+from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface, TransportType
 from agent_bom.security import sanitize_error
 
 from .base import CloudDiscoveryError
@@ -150,6 +150,7 @@ def _cluster_agent(ws: Any, cluster: Any, resolved_host: str, warnings: list[str
         command="spark",
         args=[cluster_id],
         transport=TransportType.UNKNOWN,
+        surface=ServerSurface.AI_INVENTORY,
         packages=packages,
     )
     return Agent(
@@ -224,6 +225,7 @@ def _serving_endpoint_agent(ep: Any, resolved_host: str) -> Agent | None:
         name=f"serving:{ep_name}",
         command="model-serving",
         transport=TransportType.STREAMABLE_HTTP,
+        surface=ServerSurface.AI_INVENTORY,
     )
     return Agent(
         name=f"databricks-serving:{ep_name}",

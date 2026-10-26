@@ -88,6 +88,9 @@ def test_admin_invitation_mints_scoped_key_for_new_tenant(invite_ctx):
     assert body["quota"] == default_tenant_quotas()
     # One-time raw key material lives only in this body.
     assert "not be shown again" in body["message"].lower()
+    # The fixture's process-local store cannot survive a restart; say so.
+    assert body["durable"] is False
+    assert "restart" in body["warning"]
 
 
 def test_two_invitations_get_distinct_non_colliding_tenants(invite_ctx):

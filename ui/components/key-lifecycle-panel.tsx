@@ -574,12 +574,12 @@ export function KeyLifecyclePanel({
       ) : error ? (
         <div className="rounded-2xl border border-[color:var(--severity-medium-border)] bg-[color:var(--severity-medium-bg)] p-4">
           <div className="flex items-start gap-3">
-            <ShieldAlert className="mt-0.5 h-5 w-5 text-amber-300" />
+            <ShieldAlert className="mt-0.5 h-5 w-5 text-amber-700 dark:text-amber-300" />
             <div>
-              <p className="text-sm font-semibold text-amber-200">Admin access is required for key lifecycle operations</p>
-              <p className="mt-1 text-sm text-amber-100/80">{error}</p>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Admin access is required for key lifecycle operations</p>
+              <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-100/80">{error}</p>
               {roleLabel ? (
-                <p className="mt-2 text-xs text-amber-100/70">
+                <p className="mt-2 text-xs text-amber-900/70 dark:text-amber-100/70">
                   Current role: {roleLabel}. Contributors and viewers can review audit state, but only admins can manage service keys.
                 </p>
               ) : null}
@@ -884,7 +884,7 @@ export function KeyLifecyclePanel({
           <SsoSetupPresets />
 
           <section className="rounded-2xl border border-[color:var(--severity-medium-border)] bg-[color:var(--severity-medium-bg)] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-amber-200/70">Revocation boundaries</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-amber-800/80 dark:text-amber-200/70">Revocation boundaries</p>
             <div className="mt-3 grid gap-3 lg:grid-cols-3">
               <BoundaryCard
                 title="Service keys"
@@ -1031,13 +1031,13 @@ function BoundaryCard({
     accent === "teal"
       ? {
           border: "border-teal-900/30",
-          title: "text-teal-100",
-          detail: "text-teal-200/70",
+          title: "text-teal-950 dark:text-teal-100",
+          detail: "text-teal-800/80 dark:text-teal-200/70",
         }
       : {
           border: "border-amber-900/30",
-          title: "text-amber-100",
-          detail: "text-amber-200/70",
+          title: "text-amber-950 dark:text-amber-100",
+          detail: "text-amber-800/80 dark:text-amber-200/70",
         };
   return (
     <div className={`min-w-0 rounded-xl border bg-[var(--background)]/50 p-3 ${tone.border}`}>

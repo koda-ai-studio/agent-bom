@@ -920,6 +920,9 @@ CREATE TABLE IF NOT EXISTS api_rate_limit_hits (
 CREATE INDEX IF NOT EXISTS idx_api_rate_limit_hits_bucket_hit_at
     ON api_rate_limit_hits (bucket_key, hit_at);
 
+CREATE INDEX IF NOT EXISTS idx_api_rate_limit_hits_hit_at
+    ON api_rate_limit_hits (hit_at);
+
 -- ══════════════════════════════════════════════════════════════════════════════
 -- TENANT RLS HELPERS + POLICIES
 -- ══════════════════════════════════════════════════════════════════════════════

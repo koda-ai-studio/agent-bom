@@ -56,7 +56,7 @@ CONTROL_PLANE_SCHEMA_COMPONENTS: tuple[StorageSchemaComponent, ...] = (
         version=4,
     ),
     StorageSchemaComponent("report_jobs", "sqlite/postgres", ("report_jobs",)),
-    StorageSchemaComponent("api_keys", "postgres", ("api_keys",)),
+    StorageSchemaComponent("api_keys", "sqlite/postgres", ("api_keys",)),
     StorageSchemaComponent("managed_trial_invitations", "postgres", ("managed_trial_invitations",)),
     StorageSchemaComponent("managed_trial_tenants", "postgres", ("managed_trial_tenants",)),
     StorageSchemaComponent("audit_log", "sqlite/postgres", ("audit_log",)),

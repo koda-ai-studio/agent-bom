@@ -242,6 +242,16 @@ That SQLite path keeps scan history, findings, compliance posture, and graph
 inventory available after the local process restarts. A bare `agent-bom serve`
 remains available for an intentionally ephemeral session.
 
+API keys minted through `POST /v1/auth/keys` or `POST /v1/auth/invitations`
+are stored in the same SQLite file (only the scrypt hash and salt are kept), so
+they keep authenticating after a restart or upgrade. Without `--persist`,
+`AGENT_BOM_DB` or `AGENT_BOM_POSTGRES_URL` the keys live in process memory
+only: the mint response then carries `"durable": false` and a `warning`, and
+the key stops working when the API restarts. Keys configured through
+`AGENT_BOM_API_KEYS` or `--api-key` do not expire; rotate them by changing the
+configuration, and a key removed from the configuration stops working at the
+next start.
+
 Standalone Skills scans also use this SQLite file (or `AGENT_BOM_DB` when
 starting the API directly). The latest result is isolated by authenticated tenant
 and survives a process restart. Workers must share the same local database file;
