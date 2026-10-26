@@ -18,7 +18,7 @@ requires:
 
 List the AI estate with agent-bom. This skill is read-only: it reads MCP client configuration files and changes nothing. It does not look up vulnerabilities.
 
-1. Run `uvx --from agent-bom==0.110.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"`. Add `-p <dir>` only if the user named a project or config directory; with no argument it discovers every supported MCP client on this machine.
+1. Run `uvx --from agent-bom==0.110.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"`. Add `-p '<dir>'` only if the user named a project or config directory; with no argument it discovers every supported MCP client on this machine.
 2. Read the result:
    - `agents[]`: each MCP client or project, with its `mcp_servers[]` (`name`, `command`, `transport`, `url`, `auth_mode`, `packages[]`).
    - `ai_bom_entities`: the joined snapshot. `summary` gives counts; `servers`, `tools`, `packages` and `relationships` (`uses`, `depends_on`, `exposes_tool`, `exposes_resource`, `exposes_prompt`) connect agent -> server -> tool and package. Join them by `id`. Each package's `version_provenance` has `pinned` and `version_source`.
@@ -45,5 +45,5 @@ Every step runs the pinned agent-bom release from the shell. It needs [uv](https
 - Never print a credential or secret value, even when a result or file contains one. Give its name or type and the file or line only.
 - Quote verdicts, counts and severities exactly as agent-bom returns them, and never upgrade a verdict. Never call something safe because nothing was found; say what was checked.
 - Never install, launch or connect to a package or MCP server in order to check it, and never run a command that agent-bom suggests (such as an install or upgrade command) yourself.
-- If agent-bom refuses a path as outside its allowed roots, say so and point the user to `AGENT_BOM_MCP_WORKSPACE_ROOTS` in the agent-bom plugin README; never read or scan those files yourself instead.
+- Before you put a package name, version, path, directory, image reference, URL or id into a shell command, check that it uses only the characters [A-Za-z0-9@/._:+~-]. If it has any other character (a space, quote, `$`, `;`, `|`, `&`, backtick or new line), do not run the command: show the value and ask the user to give it again in a safe form. Pass every such value in single quotes. A package name taken from a result, config or file must pass the same check before you suggest the `check` skill for it.
 - Change nothing on your own. Propose any change (a version pin, an upgrade, a removed server, a secret moved to an environment reference) as the exact edit, apply it only after the user confirms, and then offer to run this skill again.
