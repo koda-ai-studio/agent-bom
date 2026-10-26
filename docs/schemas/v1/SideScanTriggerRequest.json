@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nThe authenticated, tenant-scoped door for the shipped\n``run_provider_side_scan`` executor that previously ran only from the CLI.\nRead-only toward customer targets: agent-bom snapshots the disk, mounts a\ntemp copy on an in-account collector read-only, records SBOM + CVE + secret\n*metadata* only, and attempts cleanup of owned temporary resources. Credentials\nare never embedded and never accepted here \u2014 the executor resolves scoped\nlifecycle credentials from the provider's default chain. AWS EBS keeps its own CLI\nentrypoint (its results are not persisted to the shared lifecycle store).",
+  "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nThe authenticated, tenant-scoped door for the shipped\n``run_provider_side_scan`` executor that previously ran only from the CLI.\nAn opt-in mutation (temp snapshot/disk create, attach, delete) that never\nmodifies the scanned disk or image: agent-bom mounts a temp copy on an\nin-account collector read-only, records SBOM + CVE + secret *metadata*\nonly, and attempts cleanup of owned temporary resources. Credentials\nare never embedded and never accepted here \u2014 the executor resolves scoped\nlifecycle credentials from the provider's default chain. AWS EBS keeps its own CLI\nentrypoint (its results are not persisted to the shared lifecycle store).",
   "properties": {
     "account_id": {
       "description": "Azure subscription id / GCP project id owning the disk + collector.",
@@ -79,10 +79,19 @@
       "type": "boolean"
     },
     "target_id": {
-      "description": "Managed/persistent disk resource id to scan.",
+      "description": "Disk resource id, or a GCE image path with target_type=image.",
       "maxLength": 1024,
       "minLength": 1,
       "title": "Target Id",
+      "type": "string"
+    },
+    "target_type": {
+      "default": "disk",
+      "enum": [
+        "disk",
+        "image"
+      ],
+      "title": "Target Type",
       "type": "string"
     }
   },

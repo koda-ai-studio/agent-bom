@@ -114,3 +114,19 @@ def side_scan_record(result: Any, *, provider: str, limit: int = MAX_SIDE_SCAN_P
     record["secret_count"] = len(getattr(result, "secrets", None) or [])
     record["warnings"] = [str(warning) for warning in getattr(result, "warnings", None) or []]
     return record
+
+
+def side_scan_response(results: list[Any], *, provider: str = "") -> dict[str, Any]:
+    """API / MCP summary of the first result: lifecycle metadata plus its bounded package record."""
+    if not results:
+        return {}
+    res = results[0]
+    counts = getattr(res, "recorded_counts", None) or {}
+    record = side_scan_record(res, provider=provider or str(getattr(res, "provider", "") or "aws"))
+    return {
+        **record,
+        "scan_disk_id": getattr(res, "scan_disk_id", None),
+        "secret_count": counts.get("secret_count", record["secret_count"]),
+        "config_finding_count": counts.get("config_finding_count", len(getattr(res, "config_findings", []) or [])),
+        "ioc_finding_count": counts.get("ioc_finding_count", len(getattr(res, "ioc_findings", []) or [])),
+    }

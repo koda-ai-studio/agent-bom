@@ -6,9 +6,11 @@ endpoint drive. No new business logic lives here — this is the headless MCP
 surface over the existing executor + durable lifecycle store.
 
 Security posture (non-negotiable):
-- Read-only toward customer targets: agent-bom snapshots the disk, mounts a temp
-  copy on an in-account collector read-only, records SBOM + CVE + secret metadata
-  only, and tears every owned temporary resource down.
+- Opt-in mutation family, never touching the scanned disk or image: agent-bom
+  creates a temp snapshot/disk, mounts it on an in-account collector read-only,
+  records SBOM + CVE (per owning VM) + secret metadata only, and tears every
+  owned temporary resource down. The graph snapshot is persisted by the REST
+  route; this tool returns the same bounded package/CVE record.
 - Credentials are never accepted here; the executor resolves separately scoped
   lifecycle credentials from the provider's default chain
   (``credentialed_smoke=False``).
@@ -38,6 +40,7 @@ async def cloud_side_scan_impl(
     *,
     provider: str = "",
     target_id: str = "",
+    target_type: str = "disk",
     account_id: str = "",
     location: str = "",
     collector_id: str = "",
@@ -55,7 +58,7 @@ async def cloud_side_scan_impl(
     """Run one Azure/GCP agentless disk side-scan through the shared executor."""
     from agent_bom.cloud.side_scan import SideScanConfigError, SideScanDisabledError
     from agent_bom.cloud.side_scan_lifecycle import get_side_scan_state_store, new_side_scan_execution
-    from agent_bom.cloud.side_scan_targets import run_provider_side_scan
+    from agent_bom.cloud.side_scan_targets import AZURE_IMAGE_UNSUPPORTED, run_provider_side_scan
 
     resolved_tenant = resolve_mcp_tool_tenant_id(tenant_id)
     prov = provider.strip().lower()
@@ -76,6 +79,10 @@ async def cloud_side_scan_impl(
         )
         if not str(value).strip()
     ]
+    if target_type not in {"disk", "image"}:
+        return json.dumps({"status": "rejected", "error": "target_type must be 'disk' or 'image'"})
+    if prov == "azure" and target_type == "image":
+        return json.dumps({"status": "rejected", "error": AZURE_IMAGE_UNSUPPORTED})
     if prov == "azure" and not collector_resource_group.strip():
         missing.append("collector_resource_group")
     if missing:
@@ -97,6 +104,7 @@ async def cloud_side_scan_impl(
         results = await run_provider_side_scan(
             provider=prov,  # type: ignore[arg-type]
             target_id=target_id.strip(),
+            target_type=target_type,
             account_id=account_id.strip(),
             location=location.strip(),
             collector_id=collector_id.strip(),
@@ -151,21 +159,7 @@ async def cloud_side_scan_impl(
 
 
 def _result_summary(results: list) -> dict:
-    """Metadata-only run summary (never raw block data, file contents, or values)."""
-    if not results:
-        return {}
-    res = results[0]
-    counts = getattr(res, "recorded_counts", None) or {}
-    return {
-        "target_id": getattr(res, "target_id", ""),
-        "snapshot_id": getattr(res, "snapshot_id", None),
-        "scan_disk_id": getattr(res, "scan_disk_id", None),
-        "package_count": counts.get("package_count", len(getattr(res, "packages", []) or [])),
-        "vulnerability_count": counts.get("vulnerability_count", int(getattr(res, "vulnerability_count", 0) or 0)),
-        "secret_count": counts.get("secret_count", len(getattr(res, "secrets", []) or [])),
-        "config_finding_count": counts.get("config_finding_count", len(getattr(res, "config_findings", []) or [])),
-        "ioc_finding_count": counts.get("ioc_finding_count", len(getattr(res, "ioc_findings", []) or [])),
-        "cleaned_up": bool(getattr(res, "cleaned_up", False)),
-        "replayed": bool(getattr(res, "replayed", False)),
-        "warnings": [str(w) for w in (getattr(res, "warnings", []) or [])],
-    }
+    """Metadata-only run summary plus the bounded package/CVE record — the API's exact shape."""
+    from agent_bom.cloud.side_scan_inventory import side_scan_response
+
+    return side_scan_response(results)

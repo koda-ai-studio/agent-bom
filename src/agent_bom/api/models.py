@@ -663,9 +663,10 @@ class SideScanTriggerRequest(BaseModel):
 
     The authenticated, tenant-scoped door for the shipped
     ``run_provider_side_scan`` executor that previously ran only from the CLI.
-    Read-only toward customer targets: agent-bom snapshots the disk, mounts a
-    temp copy on an in-account collector read-only, records SBOM + CVE + secret
-    *metadata* only, and attempts cleanup of owned temporary resources. Credentials
+    An opt-in mutation (temp snapshot/disk create, attach, delete) that never
+    modifies the scanned disk or image: agent-bom mounts a temp copy on an
+    in-account collector read-only, records SBOM + CVE + secret *metadata*
+    only, and attempts cleanup of owned temporary resources. Credentials
     are never embedded and never accepted here — the executor resolves scoped
     lifecycle credentials from the provider's default chain. AWS EBS keeps its own CLI
     entrypoint (its results are not persisted to the shared lifecycle store).
@@ -673,7 +674,10 @@ class SideScanTriggerRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     provider: Literal["azure", "gcp"]
-    target_id: Annotated[str, Field(min_length=1, max_length=1024, description="Managed/persistent disk resource id to scan.")]
+    target_id: Annotated[
+        str, Field(min_length=1, max_length=1024, description="Disk resource id, or a GCE image path with target_type=image.")
+    ]
+    target_type: Literal["disk", "image"] = "disk"
     account_id: Annotated[
         str, Field(min_length=1, max_length=256, description="Azure subscription id / GCP project id owning the disk + collector.")
     ]

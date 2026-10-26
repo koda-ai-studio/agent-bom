@@ -80,24 +80,10 @@ def _run_provider_side_scan_sync(**kwargs: Any) -> list[Any]:
 
 
 def _side_scan_result_summary(results: list[Any]) -> dict[str, Any]:
-    """Metadata-only run summary (never raw block data, file contents, or values)."""
-    if not results:
-        return {}
-    res = results[0]
-    counts = getattr(res, "recorded_counts", None) or {}
-    return {
-        "target_id": getattr(res, "target_id", ""),
-        "snapshot_id": getattr(res, "snapshot_id", None),
-        "scan_disk_id": getattr(res, "scan_disk_id", None),
-        "package_count": counts.get("package_count", len(getattr(res, "packages", []) or [])),
-        "vulnerability_count": counts.get("vulnerability_count", int(getattr(res, "vulnerability_count", 0) or 0)),
-        "secret_count": counts.get("secret_count", len(getattr(res, "secrets", []) or [])),
-        "config_finding_count": counts.get("config_finding_count", len(getattr(res, "config_findings", []) or [])),
-        "ioc_finding_count": counts.get("ioc_finding_count", len(getattr(res, "ioc_findings", []) or [])),
-        "cleaned_up": bool(getattr(res, "cleaned_up", False)),
-        "replayed": bool(getattr(res, "replayed", False)),
-        "warnings": [str(w) for w in (getattr(res, "warnings", []) or [])],
-    }
+    """Metadata-only run summary plus the bounded package/CVE record (never block data or values)."""
+    from agent_bom.cloud.side_scan_inventory import side_scan_response
+
+    return side_scan_response(results)
 
 
 def _run_cis_benchmark(
