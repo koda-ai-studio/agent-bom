@@ -68,6 +68,9 @@ def _expressions(matrix: str) -> dict[str, str]:
         "matrix.shard": matrix,
         "github.event_name": "pull_request",
         "github.event.pull_request.base.sha": base,
+        "github.event.pull_request.head.sha": _git("rev-parse", "HEAD"),
+        "github.event.before": base,
+        "github.sha": _git("rev-parse", "HEAD"),
         "github.base_ref": "main",
         "github.workspace": str(ROOT),
     }

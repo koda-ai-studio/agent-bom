@@ -54,3 +54,10 @@ def test_make_targets_and_pre_push_hook_run_the_parity_script() -> None:
     (smoke,) = [hook for hook in hooks if hook.get("id") == "ci-smoke"]
     assert smoke["entry"] == "make ci-smoke"
     assert smoke["stages"] == ["pre-push"]
+
+
+def test_the_smoke_tier_runs_its_tests() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+    ci_local = _ci_local()
+    smoke = [step for step in ci_local.plan(workflow, ci_local.SMOKE_JOBS) if step.job == "test-smoke" and "pytest" in step.command]
+    assert smoke and all(step.action == "run" for step in smoke), [step.reason for step in smoke]
