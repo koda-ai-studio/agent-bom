@@ -7,6 +7,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Changed
+- Console output groups kernel-header CVEs into one block per image distro release (Debian/Ubuntu `linux-libc-dev` and `linux-headers-*`, RHEL-family `kernel-headers`/`kernel-devel`, SUSE `linux-glibc-devel`/`kernel-*-devel`, Alpine `linux-headers`), with the full severity breakdown; the scan verdict says how many of the CVEs they are. KEV and critical kernel-header CVEs are named on the group line and stay as their own rows, and JSON, SARIF and CycloneDX still carry every CVE. Recognition is scoped to the ecosystem and `os-release` family, so a same-named package elsewhere is never grouped.
+- The `docker export` fallback of `agent-bom image` scans the exported filesystem with the same bounded walk and extractors as image layers: the `AGENT_BOM_OCI_*` member, size and time limits apply, and a crossed limit is a coverage gap under `docker-export` (a partial scan) rather than an unbounded read.
+- Image layers emit the canonical purl for scoped npm packages (`pkg:npm/%40scope/name@…`), matching every other scan path.
+
+### Fixed
+- Each CVE on a package now carries only its own `ai_risk_context`. The context was extended in place across a package's CVEs, so the Nth CVE repeated the attack summaries of all before it; on `php:8.3.30-cli` that built about 0.9 GB of text for `linux-libc-dev` and dominated JSON export time.
+
+### Performance
+- `agent-bom image` on `php:8.3.30-cli` (4,424 findings) peaks at 413 MiB for console and 758 MiB for JSON output instead of about 2.5 GiB, and JSON output uses 52 s instead of 277 s of CPU, with an identical finding set (`docs/perf/image-scan-end-to-end.md`). Text redaction is memoized for the life of one scan (bounded at 8M input characters and cleared when the scan ends), and the inventory snapshot, graph-store compliance stats and typosquat check no longer do quadratic work over large package lists. A 40,000-package offline manifest scan is measured after every merge against a 1,000 MiB peak-RSS budget.
+
 ## [0.111.0] - 2026-10-25
 
 ### Highlights

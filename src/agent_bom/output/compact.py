@@ -23,6 +23,7 @@ from agent_bom.output.compact_text import GRADE_ECHO as _GRADE_ECHO
 from agent_bom.output.compact_text import clip as _clip
 from agent_bom.output.compact_text import compact_detail as _compact_detail
 from agent_bom.output.dependency_hierarchy import dependency_count_label
+from agent_bom.output.kernel_header_console import collapse_kernel_header_findings, print_findings_heading, print_kernel_groups_only
 from agent_bom.output.possibly_affected import print_possibly_affected
 
 # The cross-cutting helpers (`console`, `_sev_badge`, `build_remediation_plan`)
@@ -411,9 +412,9 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
     def safe(value: object) -> str:
         return escape(sanitize_output_text(value))
 
-    active_findings = active_cve_findings(report)
+    active_findings, kernel_groups = collapse_kernel_header_findings(report, active_cve_findings(report))
     if not active_findings:
-        return
+        return print_kernel_groups_only(kernel_groups)
 
     priority = [finding for finding in active_findings if is_actionable_finding(finding)]
     rest_count = len(active_findings) - len(priority)
@@ -448,7 +449,7 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
         title = f"Findings ({shown_n} of {total_active} shown · {total_active - shown_n} hidden)"
     else:
         title = f"Findings ({shown_n})"
-    console.print(Rule(lane_title("analyze", title), style="dim"))
+    print_findings_heading(title, kernel_groups)
 
     # Context-aware table layout. The vulnerability ID column has no ratio so
     # it sizes to content and never truncates — the ID is the one cell that

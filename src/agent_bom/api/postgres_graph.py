@@ -717,7 +717,7 @@ class PostgresGraphStore(
                 "by_severity": defaultdict(int),
                 "by_entity_type": defaultdict(int),
                 "tags": set(),
-                "node_ids": [],
+                "node_ids": {},
             }
         )
 
@@ -735,8 +735,7 @@ class PostgresGraphStore(
                 stats["by_severity"][row[2] or "unknown"] += 1
                 stats["by_entity_type"][str(row[1])] += 1
                 stats["tags"].add(tag)
-                if row[0] not in stats["node_ids"]:
-                    stats["node_ids"].append(row[0])
+                stats["node_ids"][row[0]] = None
 
         frameworks: dict[str, Any] = {}
         for name, stats in sorted(framework_stats.items()):
@@ -746,7 +745,7 @@ class PostgresGraphStore(
                 "by_entity_type": dict(stats["by_entity_type"]),
                 "tags": sorted(stats["tags"]),
                 "node_count": len(stats["node_ids"]),
-                "node_ids": stats["node_ids"][:100],
+                "node_ids": list(stats["node_ids"])[:100],
             }
 
         return {
