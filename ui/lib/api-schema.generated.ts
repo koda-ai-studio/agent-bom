@@ -21337,6 +21337,8 @@ export interface components {
         };
         /** ProxyAlertRow */
         ProxyAlertRow: {
+            /** Action */
+            action?: string | null;
             /** Agent Name */
             agent_name?: string | null;
             /** Decision */

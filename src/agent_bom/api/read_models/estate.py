@@ -521,6 +521,8 @@ class ProxyAlertRow(ReadModel):
     event_type: str | None = None
     severity: str
     decision: str | None = None
+    # Enforcement outcome when the runtime blocked or stripped the payload.
+    action: str | None = None
     reason_code: str | None = None
     producer_assurance: str | None = None
     timestamp: str | None = None
