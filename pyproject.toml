@@ -171,8 +171,9 @@ wandb = ["wandb>=0.16"]
 openai = ["openai>=1.12"]
 ai-enrich = [
     # 1.96.2 is clear of every litellm advisory on OSV as of 2026-10-24, including
-    # CVE-2026-84377 (SSRF and provider-credential exfiltration).
-    "litellm>=1.96.2",
+    # CVE-2026-84377 (SSRF and provider-credential exfiltration). 1.107.0 wheels
+    # were a compromised release (credential stealer, 2026-10-21) and are excluded.
+    "litellm>=1.96.2,!=1.107.0",
     # Security floors mirrored from [tool.uv].override-dependencies so pip installs
     # cannot land vulnerable litellm transitives (Closes #3684).
     "python-dotenv>=1.2.2",

@@ -9,6 +9,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- The `ai-enrich` extra excludes litellm 1.107.0, whose wheels were a compromised release (startup-hook credential stealer, 2026-10-21), so installs without the lockfile cannot resolve it. The lockfile already pinned 1.100.1. A guard test fails if any dependency range or the lockfile admits a known-compromised release, and `agent-bom check litellm@1.107.0` reports it as malicious (MAL-2026-2144).
+
 ### Added
 ### Changed
 - `agent-bom image <ref>` and `scan --image` now contact the image's registry first (read-only GETs, plus a token request) instead of the local Docker daemon. A tag that exists only locally still scans through the daemon after the registry pull fails; use `--pull-mode daemon` to never contact the registry. `--offline` never contacts a registry.
