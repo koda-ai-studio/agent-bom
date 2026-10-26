@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 
-from agent_bom.models import Severity
+from agent_bom.models import Agent, AgentType, Severity
 from agent_bom.remediate import generate_package_fixes
 
 
@@ -39,7 +39,7 @@ def test_mcp_remediate_reports_severity_and_kev(monkeypatch):
     monkeypatch.setattr(remediate, "generate_remediation", lambda *a, **k: plan)
 
     async def _pipeline(config_path, image):
-        return [object()], [], [], ["project"]
+        return [Agent(name="shop-api", agent_type=AgentType.CUSTOM, config_path="/x", mcp_servers=[])], [], [], ["project"]
 
     monkeypatch.setattr("agent_bom.models.AIBOMReport", lambda **kwargs: None)
     data = json.loads(asyncio.run(remediate_impl(config_path="/x", _run_scan_pipeline=_pipeline, _truncate_response=lambda s: s)))
