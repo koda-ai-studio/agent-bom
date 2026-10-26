@@ -1,4 +1,5 @@
 import { ApiConflictError, ApiError, ApiNotFoundError, ApiServerError, ApiValidationError } from "./api-errors";
+import { findingsApi } from "./api-findings";
 import { get } from "./api-transport";
 
 export type AffectedVerdict = "affected" | "possibly_affected" | "not_affected";
@@ -41,12 +42,15 @@ export interface AdvisoryAffectedResponse {
     aliases: string[];
     summary: string;
     severity: string;
-    source: "operator_advisory" | "feed";
+    /** `scan`: no declaration or feed record knows the id; answered from the stored findings that name it. */
+    source: AffectedProvenance;
     published_at: string | null;
     fixed_versions: string[];
   };
   summary: AdvisoryAffectedSummary;
   complete: boolean;
+  /** Why `complete` is false when the cause is the source itself (e.g. answered from stored findings). */
+  incomplete_reason?: string | undefined;
   generation: string;
   rows: AdvisoryAffectedRow[];
   count: number;
@@ -79,6 +83,13 @@ export function advisoryAffectedPath(advisoryId: string, query: AdvisoryAffected
 
 export function getAdvisoryAffected(advisoryId: string, query: AdvisoryAffectedQuery = {}, signal?: AbortSignal) {
   return get<AdvisoryAffectedResponse>(advisoryAffectedPath(advisoryId, query), { ttlMs: 0, ...(signal ? { signal } : {}) });
+}
+
+/** How many findings (`/v1/findings?q=`) name an advisory id the affected route does not know. */
+export async function countFindingsReferencing(advisoryId: string, signal?: AbortSignal): Promise<number> {
+  if (signal?.aborted) return 0;
+  const page = await findingsApi.listFindings({ query: advisoryId, limit: 1 });
+  return typeof page.total === "number" && Number.isFinite(page.total) ? page.total : 0;
 }
 
 export type AffectedLoadFailure =

@@ -203,3 +203,31 @@ def test_declaring_an_invalid_advisory_is_422_with_a_clear_message(estate, patch
     response = client.post("/v1/intel/operator-advisories", json={**ADVISORY, "id": "CVE-2026-777777", **patch})
     assert response.status_code == 422
     assert message in response.text
+
+
+def test_unknown_to_feed_but_referenced_by_stored_findings_answers_from_them(estate) -> None:
+    client, jobs, _ = estate
+    report = json.loads(json.dumps(REPORTS[0]))
+    report["scan_id"] = "scan-webp"
+    report["agents"][0]["mcp_servers"][0]["name"] = "etl-server"
+    report["agents"][0]["mcp_servers"][0]["packages"] = [
+        {
+            "name": "pillow",
+            "version": "9.0.0",
+            "ecosystem": "pypi",
+            "vulnerabilities": [{"id": "CVE-2023-4863", "severity": "high", "fixed_version": "10.0.1"}],
+        }
+    ]
+    jobs.put(_job("default", report))
+
+    response = client.get(ROUTE.format("CVE-2023-4863"))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["advisory"]["source"] == "scan" and body["complete"] is False
+    assert body["incomplete_reason"] == "no advisory feed record; answered from stored findings"
+    assert [(r["asset_label"], r["package"]["name"], r["fixed_version"], r["verdict"], r["provenance"]) for r in body["rows"]] == [
+        ("etl-server", "pillow", "10.0.1", "affected", "scan")
+    ]
+    # Another tenant's stored findings never answer for this one.
+    assert tenant_affected_answer("other-tenant", "CVE-2023-4863") is None
+    assert client.get(ROUTE.format("CVE-2099-0001")).status_code == 404

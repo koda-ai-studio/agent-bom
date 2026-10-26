@@ -109,14 +109,16 @@ _VERDICT_LABELS = {
 )
 @click.option("--format", "fmt", type=click.Choice(["table", "json"]), default="table", show_default=True)
 def advisory_affected(advisory_id: str, reports: tuple[Path, ...], fmt: str) -> None:
-    """Which scanned assets an advisory (declared, or a local feed record) affects."""
+    """Which scanned assets an advisory (declared, a local feed record, or named by saved findings) affects."""
 
     # Deferred: the answer carries graph node ids, and the CLI must not import the graph package at startup.
     from agent_bom.db.advisory_affected_local import local_affected_body
 
     body = local_affected_body(advisory_id, list(reports))
     if body is None:
-        raise click.ClickException(f"{advisory_id} is neither declared locally nor in the local vulnerability DB")
+        raise click.ClickException(
+            f"{advisory_id} is not declared locally, not in the local vulnerability DB and not named by any saved scan finding"
+        )
     if fmt == "json":
         click.echo(json.dumps(body, indent=2))
     else:
@@ -136,7 +138,9 @@ def _print_affected(body: dict) -> None:
         f"{summary['clean_scanned']} of {summary['assets_examined']} scanned asset(s) not found affected in what was scanned"
     )
     if not body["complete"]:
-        reason = "no saved scan found" if not summary["reports_examined"] else "some versions could not be ordered"
+        reason = body.get("incomplete_reason") or (
+            "no saved scan found" if not summary["reports_examined"] else "some versions could not be ordered"
+        )
         click.echo(f"INCOMPLETE: {reason}; this is not a clean result.", err=True)
 
 

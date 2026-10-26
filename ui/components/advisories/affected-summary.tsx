@@ -15,7 +15,7 @@ export function AdvisoryHeader({ advisory }: { advisory: AdvisoryAffectedRespons
         <h2 className="font-mono text-base font-semibold text-foreground">{advisory.id}</h2>
         <SeverityBadge severity={advisory.severity} />
         <span data-testid="advisory-source" className="rounded-full border border-outline bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-ink-secondary">
-          {advisory.source === "operator_advisory" ? "Operator advisory" : "Feed advisory"}
+          {advisory.source === "operator_advisory" ? "Operator advisory" : advisory.source === "scan" ? "From stored findings" : "Feed advisory"}
         </span>
         {advisory.aliases.length ? <span className="text-xs text-ink-tertiary">Also {advisory.aliases.join(", ")}</span> : null}
       </div>
@@ -54,9 +54,13 @@ export function AffectedNotices({ answer }: { answer: AdvisoryAffectedResponse }
         <div role="status" className="flex items-start gap-2 rounded-xl border border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] p-3 text-sm">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--status-warn)]" aria-hidden />
           <div className="min-w-0">
-            <p className="font-medium text-foreground">Incomplete — some packages could not be decided</p>
+            <p className="font-medium text-foreground">
+              {answer.advisory.source === "scan" ? "Incomplete — answered from stored findings" : "Incomplete — some packages could not be decided"}
+            </p>
             <p className="mt-0.5 text-xs text-ink-secondary">
-              {nothingScanned ? "No scan reports were available to match." : "Counts cover only the packages that could be decided. Re-check after the next scan or feed sync."}
+              {answer.incomplete_reason
+                ? `${answer.incomplete_reason[0]!.toUpperCase()}${answer.incomplete_reason.slice(1)}: only the package versions a finding names are listed; other versions are not judged.`
+                : nothingScanned ? "No scan reports were available to match." : "Counts cover only the packages that could be decided. Re-check after the next scan or feed sync."}
             </p>
           </div>
         </div>

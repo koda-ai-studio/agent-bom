@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdvisoryAffectedView } from "@/components/advisories/advisory-affected-view";
-import { getAdvisoryAffected, type AdvisoryAffectedResponse } from "@/lib/advisory-affected";
+import { countFindingsReferencing, getAdvisoryAffected, type AdvisoryAffectedResponse } from "@/lib/advisory-affected";
 import { ApiConflictError, ApiNotFoundError, ApiServerError } from "@/lib/api-errors";
 import fixture from "./fixtures/php2shell-affected.json";
 
@@ -16,10 +16,11 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/advisory-affected", async () => {
   const actual = await vi.importActual<typeof import("@/lib/advisory-affected")>("@/lib/advisory-affected");
-  return { ...actual, getAdvisoryAffected: vi.fn() };
+  return { ...actual, getAdvisoryAffected: vi.fn(), countFindingsReferencing: vi.fn() };
 });
 
 const fetchAffected = vi.mocked(getAdvisoryAffected);
+const countReferencing = vi.mocked(countFindingsReferencing);
 const php2shell = fixture as AdvisoryAffectedResponse;
 const clone = (patch: Partial<AdvisoryAffectedResponse> = {}): AdvisoryAffectedResponse => ({ ...structuredClone(php2shell), ...patch });
 
@@ -27,6 +28,8 @@ beforeEach(() => {
   navState.search = "id=CVE-2026-109618";
   replaceMock.mockReset();
   fetchAffected.mockReset();
+  countReferencing.mockReset();
+  countReferencing.mockResolvedValue(0);
 });
 
 function rowFor(label: string) {
@@ -134,6 +137,26 @@ describe("advisory affected assets", () => {
     render(<AdvisoryAffectedView />);
     expect(await screen.findByText("Control plane is still loading inventory")).toBeInTheDocument();
     expect(screen.getByText(/Retry in about 30 seconds/)).toBeInTheDocument();
+  });
+
+  it("links an unknown advisory to the stored findings that reference it", async () => {
+    navState.search = "id=CVE-2023-4863";
+    countReferencing.mockResolvedValue(50);
+    fetchAffected.mockRejectedValueOnce(new ApiNotFoundError("Advisory not found", { status: 404, statusText: "Not Found", url: "", method: "GET" }));
+    render(<AdvisoryAffectedView />);
+    expect(await screen.findByText("50 findings reference CVE-2023-4863")).toBeInTheDocument();
+    expect(countReferencing).toHaveBeenCalledWith("CVE-2023-4863", expect.any(AbortSignal));
+    expect(screen.getByRole("link", { name: "View in Findings" })).toHaveAttribute("href", "/findings?q=CVE-2023-4863");
+  });
+
+  it("labels an answer built from stored findings and says why it is incomplete", async () => {
+    const response = clone({ complete: false, warnings: [], incomplete_reason: "no advisory feed record; answered from stored findings" });
+    response.advisory = { ...response.advisory, source: "scan" };
+    fetchAffected.mockResolvedValue(response);
+    render(<AdvisoryAffectedView />);
+    expect(await screen.findByText("From stored findings", { selector: "[data-testid=advisory-source]" })).toBeInTheDocument();
+    expect(screen.getByText("Incomplete — answered from stored findings")).toBeInTheDocument();
+    expect(screen.getByText(/no advisory feed record; answered from stored findings/i)).toBeInTheDocument();
   });
 
   it("asks for an advisory id when none is selected", async () => {

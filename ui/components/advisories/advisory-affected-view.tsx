@@ -8,6 +8,7 @@ import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/s
 import {
   AFFECTED_PAGE_LIMIT,
   classifyAffectedFailure,
+  countFindingsReferencing,
   getAdvisoryAffected,
   isAffectedVerdictFilter,
   type AdvisoryAffectedResponse,
@@ -43,6 +44,28 @@ function AdvisoryPicker({ onPick }: { onPick: (id: string) => void }) {
   );
 }
 
+/** Not a declaration or feed record, but findings may still name it: point there rather than at a dead end. */
+function AdvisoryNotFound({ advisoryId }: { advisoryId: string }) {
+  const [referencing, setReferencing] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    countFindingsReferencing(advisoryId, controller.signal)
+      .then(count => { if (!controller.signal.aborted) setReferencing(count); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [advisoryId]);
+  const declare = { label: "Declare an emergency advisory", href: "/advisories?tab=declare" };
+  if (referencing > 0) {
+    return (
+      <PageEmptyState compact icon={SearchX}
+        title={`${referencing.toLocaleString()} ${referencing === 1 ? "finding references" : "findings reference"} ${advisoryId}`}
+        detail={`No emergency advisory or feed record matches ${advisoryId}, so affected assets cannot be matched by version range here. The findings that name it are listed in Findings.`}
+        actions={[{ label: "View in Findings", href: `/findings?${new URLSearchParams({ q: advisoryId })}` }, declare]} />
+    );
+  }
+  return <PageEmptyState compact icon={SearchX} title="Advisory not found" detail={`No emergency advisory, feed record or stored finding matches ${advisoryId}. Declare it as an emergency advisory to match it against stored scans.`} action={declare} />;
+}
+
 function FailureState({ failure, advisoryId, onFirstPage, onRetry }: { failure: AffectedLoadFailure; advisoryId: string; onFirstPage: () => void; onRetry: () => void }) {
   switch (failure.kind) {
     case "snapshot_changed":
@@ -56,7 +79,7 @@ function FailureState({ failure, advisoryId, onFirstPage, onRetry }: { failure: 
         </div>
       );
     case "not_found":
-      return <PageEmptyState compact icon={SearchX} title="Advisory not found" detail={`No emergency advisory or feed record matches ${advisoryId}. Declare it as an emergency advisory to match it against stored scans.`} action={{ label: "Declare an emergency advisory", href: "/advisories?tab=declare" }} />;
+      return <AdvisoryNotFound advisoryId={advisoryId} />;
     case "seeding":
       return <PageEmptyState compact title="Control plane is still loading inventory" detail={failure.retryAfterSeconds ? `Retry in about ${failure.retryAfterSeconds} seconds.` : "Retry shortly."} action={{ label: "Retry now", onClick: onRetry }} />;
     case "invalid":

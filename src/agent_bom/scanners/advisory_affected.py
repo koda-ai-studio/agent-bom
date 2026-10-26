@@ -36,6 +36,7 @@ from agent_bom.scanners.advisory_merge import self_consistent_aliases
 from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn
 from agent_bom.scanners.operator_advisory import (
     DISTRO_BACKPORT_UNVERIFIED,
+    OPERATOR_ADVISORY_PROVENANCE,
     AffectedProduct,
     FeedAffectedRange,
     OperatorAdvisory,
@@ -98,7 +99,7 @@ def affected_answer(
     distro_verdict: DistroVerdictFn | None = None,
 ) -> dict[str, Any]:
     """The whole answer for one advisory over the newest stored scans; ``rows`` are unpaged."""
-    provenance = "feed" if source == "feed" else "operator_advisory"
+    provenance = {"feed": "feed", "scan": "scan"}.get(source, "operator_advisory")
     result = match_advisories_against_reports([advisory], reports, provenance=provenance, distro_verdict=distro_verdict)
     rows = sorted((_with_graph_ids(row) for row in result.rows), key=_row_order)
     counts = {verdict: sum(1 for row in rows if row["verdict"] == verdict) for verdict in VERDICTS}
@@ -118,6 +119,81 @@ def affected_answer(
             "reports_examined": result.reports_examined,
         },
         "complete": result.reports_examined > 0 and not retryable,
+        "generation": _generation(advisory.id, rows),
+        "rows": rows,
+    }
+
+
+STORED_FINDINGS_REASON = "no advisory feed record; answered from stored findings"
+
+
+def _referencing_findings(wanted: str, reports: list[dict[str, Any]]) -> Iterable[tuple[dict[str, Any], dict[str, Any], set[str]]]:
+    """``(package, vuln, ids)`` for every stored scan finding whose id or alias is ``wanted``."""
+    for report in reports:
+        for agent in report.get("agents") or []:
+            for server in (agent.get("mcp_servers") or []) if isinstance(agent, dict) else []:
+                for package in (server.get("packages") or []) if isinstance(server, dict) else []:
+                    if not isinstance(package, dict) or not (package.get("name") and package.get("version")):
+                        continue
+                    for vuln in package.get("vulnerabilities") or []:
+                        if not isinstance(vuln, dict) or vuln.get("provenance") == OPERATOR_ADVISORY_PROVENANCE:
+                            continue
+                        ids = {str(vuln.get("id") or ""), *(str(alias) for alias in vuln.get("aliases") or [])} - {""}
+                        if wanted in {identifier.upper() for identifier in ids}:
+                            yield package, vuln, ids
+
+
+def stored_findings_answer(
+    advisory_id: str, reports: Iterable[dict[str, Any]], *, distro_verdict: DistroVerdictFn | None = None
+) -> dict[str, Any] | None:
+    """The answer from the stored scans' own findings when no declaration or feed record knows the id.
+
+    Each package version a stored finding names is ``affected`` with the
+    finding's fix as the patch target. With no range record nothing can be
+    called ``not_affected``, so the answer is never complete. ``None`` when no
+    stored finding references the id.
+    """
+    report_list = list(reports)
+    wanted = advisory_id.strip().upper()
+    products: dict[tuple[str, str], AffectedProduct] = {}
+    spellings: set[str] = set()
+    severities: list[str] = []
+    fixed: set[str] = set()
+    summary = ""
+    for package, vuln, ids in _referencing_findings(wanted, report_list):
+        spellings |= ids
+        severities.append(normalize_severity(vuln.get("severity")))
+        if vuln.get("fixed_version"):
+            fixed.add(str(vuln["fixed_version"]))
+        summary = summary or str(vuln.get("summary") or vuln.get("description") or "")
+        key = (str(package.get("ecosystem") or ""), str(package["name"]))
+        product = products.setdefault(
+            key, AffectedProduct.model_construct(ecosystem=key[0], name=key[1], cpe_product=None, ranges=[], versions=[])
+        )
+        if str(package["version"]) not in product.versions:
+            product.versions.append(str(package["version"]))
+    if not products:
+        return None
+    canonical = next((spelling for spelling in sorted(spellings) if spelling.upper() == wanted), advisory_id.strip())
+    advisory = OperatorAdvisory.model_construct(
+        id=canonical,
+        aliases=sorted(spellings - {canonical}),
+        summary=summary or f"{canonical}, as recorded by the stored scan findings",
+        severity=max(severities, key=severity_rank),
+        published_at=None,
+        references=[],
+        affected=list(products.values()),
+    )
+    answer = affected_answer(advisory, report_list, source="scan", distro_verdict=distro_verdict)
+    rows = [row for row in answer["rows"] if row["verdict"] != "not_affected"]
+    counts = {verdict: sum(1 for row in rows if row["verdict"] == verdict) for verdict in VERDICTS}
+    return {
+        **answer,
+        "advisory": {**answer["advisory"], "fixed_versions": sorted(fixed, key=_version_key)},
+        "summary": {**answer["summary"], **counts},
+        "complete": False,
+        "incomplete_reason": STORED_FINDINGS_REASON,
+        "warnings": [STORED_FINDINGS_REASON],
         "generation": _generation(advisory.id, rows),
         "rows": rows,
     }
@@ -198,7 +274,7 @@ def page_answer(
         "limit": limit,
         "has_more": has_more,
         "next_cursor": _encode_cursor(tenant_id, answer["generation"], end, filters) if has_more else None,
-        "warnings": [],
+        "warnings": list(answer.get("warnings") or []),
     }
 
 
