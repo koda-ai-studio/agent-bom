@@ -22,6 +22,7 @@ from time import monotonic
 from typing import Optional
 
 from agent_bom.iac.models import IaCFinding
+from agent_bom.k8s_admission_checks import ADMISSION_RESOURCES, evaluate_admission_posture
 from agent_bom.k8s_posture_checks import evaluate_kubelet_config, evaluate_pod_security, evaluate_rbac
 from agent_bom.k8s_posture_models import CollectorState, K8sCollectorEvidence, K8sPostureResult, K8sPostureStatus
 from agent_bom.k8s_transport import K8sReadTransport, K8sTransportError, select_k8s_transport, validate_kubelet_endpoint
@@ -244,11 +245,16 @@ def _transport_unavailable_result(exc: K8sTransportError) -> K8sPostureResult:
 
 
 def _collect_posture_resources(
-    transport: K8sReadTransport, transport_name: str, namespace: str, all_namespaces: bool, collectors: list[K8sCollectorEvidence]
+    transport: K8sReadTransport,
+    transport_name: str,
+    namespace: str,
+    all_namespaces: bool,
+    collectors: list[K8sCollectorEvidence],
+    resources: tuple[str, ...] = _POSTURE_RESOURCES,
 ) -> dict[str, dict]:
     """Stage 2: GET each posture resource kind, recording per-kind collector evidence."""
     payloads: dict[str, dict] = {}
-    for resource in _POSTURE_RESOURCES:
+    for resource in resources:
         resource_namespace = namespace if resource in {"pods", "networkpolicies", "roles"} else None
         try:
             read = transport.list_resource(resource, namespace=resource_namespace, all_namespaces=all_namespaces)
@@ -500,6 +506,17 @@ def scan_live_cluster_posture_with_evidence(
                 payloads.get("roles", {"items": []}),
                 payloads.get("clusterrolebindings", {"items": []}),
                 default_namespace=namespace,
+            )
+        )
+        admission = _collect_posture_resources(transport, transport_name, namespace, all_namespaces, collectors, ADMISSION_RESOURCES)
+        findings.extend(
+            evaluate_admission_posture(
+                namespaces=admission.get("namespaces"),
+                workload_namespaces=namespaces_with_pods,
+                validating_policies=admission.get("validatingadmissionpolicies"),
+                validating_policy_bindings=admission.get("validatingadmissionpolicybindings"),
+                validating_webhooks=admission.get("validatingwebhookconfigurations"),
+                admission_evaluated="pods" in payloads and all(resource in admission for resource in ADMISSION_RESOURCES),
             )
         )
         collectors.append(_kubelet_configz_collector(transport, transport_name, payloads, enable_nodes_configz, findings))
