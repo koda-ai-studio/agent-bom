@@ -1,9 +1,5 @@
-"""Remediation automation — generate actionable fix commands for vulnerabilities and credentials.
-
-Produces executable upgrade commands per ecosystem, credential scope-reduction
-guides, exportable remediation.md / remediation.sh files, and auto-apply of
-package version fixes to dependency files (package.json, requirements.txt).
-"""
+"""Remediation automation: upgrade commands per ecosystem, credential scope-reduction guides,
+remediation.md / remediation.sh exports, and auto-apply of version fixes to dependency files."""
 
 from __future__ import annotations
 
@@ -21,11 +17,10 @@ from packaging.utils import canonicalize_name
 
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output import build_remediation_plan
+from agent_bom.output.console_remediation import remediation_priority_fields
 from agent_bom.remediation_commands import build_fix_command, has_shell_metachar
 
 logger = logging.getLogger(__name__)
-
-# ─── Data structures ─────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -73,11 +68,6 @@ class RemediationPlan:
 # ─── Package fix generation ──────────────────────────────────────────────────
 
 
-def _priority_fields(item: dict) -> dict:
-    severity = item.get("max_severity")
-    return {"max_severity": str(getattr(severity, "value", severity) or "").lower(), "has_kev": bool(item.get("has_kev"))}
-
-
 def generate_package_fixes(plan_items: list[dict]) -> tuple[list[PackageFix], list[dict]]:
     """Generate upgrade commands for vulnerable packages.
 
@@ -97,7 +87,7 @@ def generate_package_fixes(plan_items: list[dict]) -> tuple[list[PackageFix], li
                     "vulns": item["vulns"],
                     "agents": item["agents"],
                     "references": item.get("references", []),
-                    **_priority_fields(item),
+                    **remediation_priority_fields(item),
                 }
             )
             continue
@@ -131,7 +121,7 @@ def generate_package_fixes(plan_items: list[dict]) -> tuple[list[PackageFix], li
                 vulns=item["vulns"],
                 agents=item["agents"],
                 references=item.get("references", []),
-                **_priority_fields(item),
+                **remediation_priority_fields(item),
             )
         )
 
