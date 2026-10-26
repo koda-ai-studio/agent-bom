@@ -69,7 +69,11 @@ def _remote_tcp_hosts(hosts: Any) -> list[str]:
     remote: list[str] = []
     for host in hosts:
         value = str(host).strip()
-        if value.lower().startswith("tcp://") and not _is_loopback(urlsplit(value).hostname or "0.0.0.0"):
+        if not value.lower().startswith("tcp://"):
+            continue
+        hostname = urlsplit(value).hostname
+        # A TCP endpoint without a host listens on every interface.
+        if hostname is None or not _is_loopback(hostname):
             remote.append(value)
     return remote
 

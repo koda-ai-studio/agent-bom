@@ -115,3 +115,30 @@ class TestCredentialFilesCopied:
         compose.write_text("services:\n  a:\n    image: x:1\n    command: apt-get install curl\n")
         ids = {f.rule_id for f in scan_iac_with_context(compose).findings}
         assert not {"DOCKER-023", "DOCKER-024", "DOCKER-025", "DOCKER-026"} & ids
+
+
+def test_package_install_pattern_keeps_apt_option_tokens_and_rejects_colon_runs() -> None:
+    from agent_bom.iac.dockerfile_rules import _PKG_INSTALL_RE
+
+    assert _PKG_INSTALL_RE.search("apt-get -y -o Dpkg::Options::=--force-confold install curl")
+    assert _PKG_INSTALL_RE.search("apk --no-cache add bash")
+    assert not _PKG_INSTALL_RE.search("apt-get ::: install")
+
+
+def test_package_install_pattern_scales_linearly_on_hostile_colon_runs() -> None:
+    import time
+
+    from agent_bom.iac.dockerfile_rules import _PKG_INSTALL_RE
+
+    def seconds(repeats: int) -> float:
+        text = "apt-get " + ":::\t" * repeats + "x"
+        best = float("inf")
+        for _ in range(3):
+            started = time.perf_counter()
+            _PKG_INSTALL_RE.search(text)
+            best = min(best, time.perf_counter() - started)
+        return best
+
+    small, large = seconds(2_000), seconds(20_000)
+    # Ten times the input costs about ten times as long; exponential backtracking never finishes.
+    assert large < max(small, 0.001) * 30

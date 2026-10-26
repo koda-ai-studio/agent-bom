@@ -39,7 +39,9 @@ _PIPE_INSTALL_RE = re.compile(
 
 # Package manager install without cache cleanup
 _PKG_INSTALL_RE = re.compile(
-    r"\b(?:apt-get|apt|apk|yum|dnf|microdnf|zypper)\s+(?:(?:-\S*|\S*::\S*)\s+)*(?:install|add)\b",
+    # Each option token has exactly one parse (``-flag`` or ``Word::Word``), so a run of
+    # colon-only tokens cannot backtrack exponentially.
+    r"\b(?:apt-get|apt|apk|yum|dnf|microdnf|zypper)\s+(?:(?:-\S*|[^\s:]*(?:::[^\s:]*)+)\s+)*(?:install|add)\b",
     re.IGNORECASE,
 )
 
