@@ -35,9 +35,7 @@ from agent_bom.graph.builder_cloud_lineage import _add_lineage_resource_nodes as
 from agent_bom.graph.builder_cloud_lineage import _add_lineage_scope_edges as _add_lineage_scope_edges
 from agent_bom.graph.builder_cloud_lineage import _resolve_cloud_lineage as _resolve_cloud_lineage
 from agent_bom.graph.builder_cloud_principals import _add_access_advisor_grants
-from agent_bom.graph.builder_cloud_principals import (
-    _role_last_used_at as _role_last_used_at,
-)
+from agent_bom.graph.builder_cloud_principals import _role_last_used_at as _role_last_used_at
 from agent_bom.graph.builder_frameworks import _add_cross_env_correlation, _project_host_agent_id
 from agent_bom.graph.builder_network_edges import (
     _GCP_LB_COLLECTION as _GCP_LB_COLLECTION,
