@@ -165,6 +165,22 @@ def test_attack_paths_run_cve_to_workload_and_workload_through_service_account_t
     assert "act as service account: shop/web-sa" in pivot[0].summary
 
 
+def test_pivot_analysis_status_is_recorded_and_a_hit_cap_is_labelled(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_bom.graph import workload_pivot_paths
+
+    graph = _graph()
+    _derived_attack_paths(graph)
+    status = graph.analysis_status["workload_pivot_paths"]
+    assert status.status.value == "complete" and status.observed["paths"] >= 1
+
+    monkeypatch.setattr(workload_pivot_paths, "MAX_PATHS", 1)
+    capped = _graph()
+    _derived_attack_paths(capped)
+    limited = capped.analysis_status["workload_pivot_paths"]
+    assert limited.status.value == "limited"
+    assert "path_cap_reached" in limited.reason_codes
+
+
 def test_unmounted_token_does_not_start_an_identity_pivot() -> None:
     graph = _graph(automount=False)
     assumes = [e for e in graph.edges if e.source == _WORKLOAD and e.relationship == RelationshipType.ASSUMES]

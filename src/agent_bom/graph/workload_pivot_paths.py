@@ -20,6 +20,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from agent_bom.core.severity import SEVERITY_RANK
+from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.applicability import edge_applicability
 from agent_bom.graph.asset_identity import is_compute_instance
 from agent_bom.graph.container import AttackPath, UnifiedGraph
@@ -30,6 +31,7 @@ from agent_bom.graph.types import EntityType, RelationshipType
 
 E, R = EntityType, RelationshipType
 MAX_TARGETS_PER_IDENTITY = 25
+ANALYZER = "workload_pivot_paths"
 MAX_PATHS = 500
 _HOLD = frozenset({R.DEPENDS_ON.value, R.CONTAINS.value})
 _REACH = frozenset({R.CAN_ACCESS.value, R.HAS_PERMISSION.value})
@@ -136,24 +138,41 @@ def _path(graph: UnifiedGraph, workload: UnifiedNode, identity: str, tail: tuple
     )
 
 
-def workload_pivot_paths(graph: UnifiedGraph, outgoing: Mapping[str, list[UnifiedEdge]]) -> list[AttackPath]:
-    paths: list[AttackPath] = []
-    for workload in sorted((n for n in graph.nodes.values() if is_workload(n)), key=lambda n: n.id):
-        identities = [
+def _identities(graph: UnifiedGraph, workload: UnifiedNode, outgoing: Mapping[str, list[UnifiedEdge]]) -> list[str]:
+    return sorted(
+        {
             edge.target
             for edge in outgoing.get(workload.id, [])
             if _rel_value(edge) == R.ASSUMES.value
             and edge.traversable
             and getattr(graph.nodes.get(edge.target), "entity_type", None) in _IDENTITIES
-        ]
-        if not identities:
+        }
+    )
+
+
+def _record_status(graph: UnifiedGraph, paths: int, footholds: int, capped: bool) -> None:
+    graph.analysis_status[ANALYZER] = GraphAnalysisStatus(
+        status=GraphAnalysisState.LIMITED if capped else GraphAnalysisState.COMPLETE,
+        reason_codes=("path_cap_reached",) if capped else (),
+        limits={"max_paths": MAX_PATHS, "max_targets_per_identity": MAX_TARGETS_PER_IDENTITY},
+        observed={"paths": paths, "vulnerable_workloads_with_identity": footholds},
+    )
+
+
+def workload_pivot_paths(graph: UnifiedGraph, outgoing: Mapping[str, list[UnifiedEdge]]) -> list[AttackPath]:
+    paths: list[AttackPath] = []
+    footholds = 0
+    for workload in sorted((n for n in graph.nodes.values() if is_workload(n)), key=lambda n: n.id):
+        identities = _identities(graph, workload, outgoing)
+        foothold = _foothold(graph, workload.id, outgoing) if identities else None
+        if foothold is None or not foothold.vuln_ids:
             continue
-        foothold = _foothold(graph, workload.id, outgoing)
-        if not foothold.vuln_ids:
-            continue
-        for identity in sorted(set(identities)):
+        footholds += 1
+        for identity in identities:
             for tail in _reach(identity, outgoing) or [([], [])]:
-                paths.append(_path(graph, workload, identity, tail, foothold))
                 if len(paths) >= MAX_PATHS:
+                    _record_status(graph, len(paths), footholds, capped=True)
                     return paths
+                paths.append(_path(graph, workload, identity, tail, foothold))
+    _record_status(graph, len(paths), footholds, capped=False)
     return paths
