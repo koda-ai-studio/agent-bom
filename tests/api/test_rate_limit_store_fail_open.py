@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from unittest.mock import patch
 
@@ -27,10 +28,15 @@ class _RaisingStore:
 class _HangingStore:
     def __init__(self) -> None:
         self.calls = 0
+        self.release = threading.Event()
+        self.returned = threading.Event()
 
     def hit(self, key: str, now: float) -> tuple[int, int]:
         self.calls += 1
-        time.sleep(3)
+        # Hangs until the test releases it, so a response can only come back
+        # first through the store timeout.
+        self.release.wait(30)
+        self.returned.set()
         return 1, int(now) + 60
 
 
@@ -84,11 +90,13 @@ def test_hanging_store_is_bounded_by_a_short_timeout(middleware, kwargs):
     store = _HangingStore()
     client = _app(middleware, store, **kwargs).state.client
 
-    started = time.monotonic()
-    assert client.get("/v1/jobs").status_code == 200
-    assert client.get("/v1/jobs").status_code == 200
-    assert time.monotonic() - started < 2.5
-    assert store.calls == 1
+    try:
+        assert client.get("/v1/jobs").status_code == 200
+        assert client.get("/v1/jobs").status_code == 200
+        assert not store.returned.is_set()
+        assert store.calls == 1
+    finally:
+        store.release.set()
 
 
 @pytest.mark.parametrize("path", ["/health", "/healthz", "/livez", "/readyz", "/ping"])
@@ -222,23 +230,32 @@ def test_postgres_hot_path_prune_is_bucket_scoped_and_global_prune_is_periodic()
 def test_readiness_reports_not_ready_instead_of_hanging(monkeypatch):
     import asyncio
     import json
+    import threading
 
     from agent_bom.api import readiness
 
+    release = threading.Event()
+    check_finished = threading.Event()
+
     def _stalled():
-        time.sleep(2)
+        # Stalls until the test releases it, so the response can only arrive first
+        # through the readiness deadline.
+        release.wait(30)
+        check_finished.set()
         return readiness.ReadinessStatus(ready=True)
 
     monkeypatch.setattr(readiness, "evaluate_control_plane_readiness", _stalled)
     monkeypatch.setattr(readiness, "READINESS_TIMEOUT_SECONDS", 0.2)
 
     async def _probe():
-        started = time.monotonic()
-        result = await readiness.control_plane_readiness_response(lambda: False)
-        return result, time.monotonic() - started
+        try:
+            result = await readiness.control_plane_readiness_response(lambda: False)
+            return result, check_finished.is_set()
+        finally:
+            release.set()
 
-    response, elapsed = asyncio.run(_probe())
-    assert elapsed < 1.0
+    response, waited_for_check = asyncio.run(_probe())
+    assert waited_for_check is False
     assert response.status_code == 503
     assert json.loads(response.body) == {"status": "not_ready", "reason": "readiness_timeout"}
 

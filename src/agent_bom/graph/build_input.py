@@ -7,12 +7,14 @@ from dataclasses import dataclass
 from typing import Any, TypedDict, cast
 
 from agent_bom.graph.projection_support import _is_repository_inventory, _is_sbom_import
+from agent_bom.graph.recorded_time import normalize_recorded_time
 
 Record = dict[str, Any]
 
 
 class GraphEvidenceSections(TypedDict, total=False):
     scan_id: str
+    generated_at: str
     agents: list[Record]
     blast_radius: list[Record]
     blast_radii: list[Record]
@@ -92,6 +94,15 @@ class GraphBuildInput:
         if agents and all(_is_repository_inventory(agent) for agent in agents):
             inferred = str(agents[0]["source"])
         return cls(evidence.get("scan_id", ""), agents, blast, sources[0] if sources else inferred, evidence)
+
+    @property
+    def recorded_at(self) -> str:
+        """When the report's evidence was recorded; ``""`` when it carries no time."""
+        for key in ("generated_at", "scan_timestamp", "observed_at"):
+            stamp = normalize_recorded_time(self.evidence.get(key))
+            if stamp:
+                return stamp
+        return ""
 
     def report_sections(self) -> dict[str, Any]:
         """Compatibility view for overlays as they adopt section-specific inputs."""

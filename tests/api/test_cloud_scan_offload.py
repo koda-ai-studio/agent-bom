@@ -21,6 +21,7 @@ import anyio.to_thread
 import pytest
 
 from agent_bom.api.routes import cloud
+from tests._loop_offload import BlockingCall, assert_runs_off_loop
 
 
 @pytest.mark.asyncio
@@ -141,24 +142,16 @@ async def test_slow_inventory_scan_keeps_event_loop_responsive(monkeypatch):
     duration.
     """
     monkeypatch.setattr(cloud, "_tenant", lambda request: "t-slow")
-    block_seconds = 0.5
+    call = BlockingCall()
 
     def _slow_build(tenant_id, selected, scoped_region):
-        time.sleep(block_seconds)
+        call.block()
         return {"schema_version": "cloud.inventory.summary.v1", "tenant_id": tenant_id, "status": "disabled"}
 
     monkeypatch.setattr(cloud, "_build_inventory_payload", _slow_build)
 
-    loop = asyncio.get_running_loop()
     scan_task = asyncio.create_task(cloud.cloud_inventory(request=object(), provider="aws", region=""))
-    await asyncio.sleep(0.05)  # let the offload hand the blocking body to a worker thread
-    assert not scan_task.done(), "scan should still be in flight"
-
-    started = loop.time()
-    assert await asyncio.wait_for(_trivial(), timeout=0.15) == "responsive"
-    assert loop.time() - started < block_seconds / 2, "event loop was blocked during the scan — offload ineffective"
-
-    result = await scan_task
+    result = await assert_runs_off_loop(scan_task, call, "the scan")
     assert result["status"] == "disabled"
 
 
@@ -264,7 +257,3 @@ def test_rest_cis_recursively_sanitizes_provider_failure_artifact(monkeypatch):
 
     assert "secret-token" not in str(result)
     assert result["checks"][0]["details"]["endpoint"] == "https://example.invalid"
-
-
-async def _trivial() -> str:
-    return "responsive"

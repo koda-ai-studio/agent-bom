@@ -35,9 +35,7 @@ from agent_bom.graph.builder_cloud_lineage import _add_lineage_resource_nodes as
 from agent_bom.graph.builder_cloud_lineage import _add_lineage_scope_edges as _add_lineage_scope_edges
 from agent_bom.graph.builder_cloud_lineage import _resolve_cloud_lineage as _resolve_cloud_lineage
 from agent_bom.graph.builder_cloud_principals import _add_access_advisor_grants
-from agent_bom.graph.builder_cloud_principals import (
-    _role_last_used_at as _role_last_used_at,
-)
+from agent_bom.graph.builder_cloud_principals import _role_last_used_at as _role_last_used_at
 from agent_bom.graph.builder_frameworks import _add_cross_env_correlation, _project_host_agent_id
 from agent_bom.graph.builder_network_edges import (
     _GCP_LB_COLLECTION as _GCP_LB_COLLECTION,
@@ -383,7 +381,8 @@ def build_unified_graph(
     """
     span = _GRAPH_TRACER.start_span("graph.build_unified_graph_from_report") if _GRAPH_TRACER else None
     sid = scan_id or inputs.scan_id
-    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id)
+    graph = container if container is not None else UnifiedGraph(scan_id=sid, tenant_id=tenant_id, observed_at=inputs.recorded_at)
+    graph.observed_at = graph.observed_at or inputs.recorded_at
     indexes = project_agents(graph, inputs.agents, inputs.data_source, _add_agent_cloud_lineage)
     project_package_exploits(graph, indexes, inputs.data_source)
     project_blast_radius(graph, inputs.blast_radius, indexes, inputs.data_source)

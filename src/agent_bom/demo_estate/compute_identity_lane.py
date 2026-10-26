@@ -238,7 +238,12 @@ def compute_lane_report(*, vms: int = DEMO_COMPUTE_VMS, decoys: int = DEMO_HOSTN
 
 def project_compute_lane(graph: UnifiedGraph, *, tenant_id: str, evidence: bool, org_node_id: str = "") -> None:
     """Build the lane through the real graph builder and add it to a showcase snapshot."""
-    lane = build_unified_graph_from_report(compute_lane_report(evidence=evidence), scan_id=graph.scan_id, tenant_id=tenant_id)
+    lane = build_unified_graph_from_report(
+        compute_lane_report(evidence=evidence),
+        scan_id=graph.scan_id,
+        tenant_id=tenant_id,
+        container=UnifiedGraph(scan_id=graph.scan_id, tenant_id=tenant_id, created_at=graph.created_at),
+    )
     for node in lane.nodes.values():
         graph.add_node(node)
     for edge in lane.edges:

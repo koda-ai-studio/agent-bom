@@ -91,7 +91,7 @@ def _read_page(store: Any, tenant_id: str, after: _Continuation | None, limit: i
     if not generation:
         return None
     read = {"tenant_id": tenant_id, "scan_id": scan_id}
-    _scan, _created, nodes, total, next_store = store.page_nodes(**read, cursor=after.store_cursor if after else None, limit=limit)
+    _scan, created_at, nodes, total, next_store = store.page_nodes(**read, cursor=after.store_cursor if after else None, limit=limit)
     if not nodes and after is None:
         return None
     owned = {node.id for node in nodes}
@@ -101,7 +101,7 @@ def _read_page(store: Any, tenant_id: str, after: _Continuation | None, limit: i
     references = store.nodes_by_ids(**read, node_ids=foreign) if foreign else []
     if tuple(store.snapshot_identity(tenant_id=tenant_id, scan_id="", for_paging=True)) != identity:
         return _stale()
-    graph = UnifiedGraph(scan_id=scan_id, tenant_id=tenant_id)
+    graph = UnifiedGraph(scan_id=scan_id, tenant_id=tenant_id, created_at=created_at)
     for node in nodes:
         graph.add_node(node)
     for node in references:
