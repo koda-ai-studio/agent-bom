@@ -64,7 +64,8 @@ def test_rpm_orders_version_before_release(lower: str, higher: str, ecosystem: s
 
 def test_rpm_release_only_compared_when_both_sides_carry_one() -> None:
     # A bare upstream version against a packaged one: same version, so the
-    # packaged release counts as newer, mirroring rpmvercmp with a missing release.
+    # packaged release counts as newer. rpm itself would skip the missing release;
+    # sorting the bare side lower keeps a bare installed version from reading as fixed.
     _assert_ascending("2.4.1", "2.4.1-1.el8", "rpm")
     _assert_equal("2.4.1-1.el8", "2.4.1-1.el8", "rpm")
 

@@ -11,7 +11,11 @@ _STRICT_SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A
 
 
 def _compare_strict_semver(left: str, right: str) -> int | None:
-    """Compare strict SemVer strings, including arbitrary prerelease tags."""
+    """Compare strict SemVer strings, including arbitrary prerelease tags.
+
+    Build metadata never affects precedence (SemVer 2.0 and OSV ``SEMVER`` ranges),
+    even for Pub, whose own tooling orders build numbers.
+    """
     left_match = _STRICT_SEMVER.fullmatch(left.strip())
     right_match = _STRICT_SEMVER.fullmatch(right.strip())
     if left_match is None or right_match is None:

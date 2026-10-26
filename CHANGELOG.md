@@ -7,11 +7,6 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
-
-### Fixed
-- Version ordering no longer reports installed versions as past a fix they have not reached, which hid real CVE matches in four ecosystems. RPM compares `[epoch:]version` before the release as `rpmvercmp` does, so `2.4-12.el8` is affected by a `2.4.1-1.el8` fix (RHEL, Rocky, Alma, SUSE). crates.io/Cargo, Pub, Hex and Swift packages use SemVer 2.0 precedence instead of PEP 440, so `1.0.0-test.1 < 1.0.0` and `canary.1 < canary.2`. Go ignores `+incompatible` as build metadata (`v2.0.0+incompatible` equals `v2.0.0`) and orders pseudo-versions as the pre-releases they are (`v1.5.0-0.<ts>-<sha> < v1.5.0-rc.1`). PyPI dash-spelled `-dev1` / `-post1` releases normalise as PEP 440 requires (`4.2.0-dev1 < 4.2.0`), and local labels such as `+r1` are left untouched.
-
 ## [0.111.0] - 2026-10-25
 
 ### Added
@@ -47,6 +42,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Migration `20261023_02` revokes writes on `alembic_version` from the application and RLS-maintenance roles; migrations run as the admin role.
 
 ### Fixed
+- Version ordering no longer reports installed versions as past a fix they have not reached, which hid real CVE matches in four ecosystems. RPM compares `[epoch:]version` before the release as `rpmvercmp` does, so `2.4-12.el8` is affected by a `2.4.1-1.el8` fix (RHEL, Rocky, Alma, SUSE). crates.io/Cargo, Pub, Hex and Swift packages use SemVer 2.0 precedence instead of PEP 440, so `1.0.0-test.1 < 1.0.0` and `canary.1 < canary.2`. Go ignores `+incompatible` as build metadata (`v2.0.0+incompatible` equals `v2.0.0`) and orders pseudo-versions as the pre-releases they are (`v1.5.0-0.<ts>-<sha> < v1.5.0-rc.1`). PyPI dash-spelled `-dev1` / `-post1` releases normalise as PEP 440 requires (`4.2.0-dev1 < 4.2.0`), and local labels such as `+r1` are left untouched.
 - "Am I affected by CVE-X" answers from every alias record of a vulnerability. A CVE row that carries only distribution ranges no longer hides the PyPI, npm or Maven range on its GHSA alias, GHSA ids match regardless of case, and the advisory takes the worst severity across its records. Packages the scan itself flags (urllib3 for CVE-2023-43804, django for CVE-2022-34265, pillow for CVE-2023-4863) are now reported affected instead of clean.
 - Dependency accuracy on real repositories: Gradle versions given as `$var`/`${var}` resolve from `gradle.properties` and `ext` blocks, and builds without a lockfile report partial coverage; `setup.cfg` and static `setup.py` dependencies are read (setup.py is parsed, never executed); requirement specifiers keep the whole range and environment markers; members of a lockfile-owned pnpm/npm/yarn workspace are no longer re-resolved to invented versions; Maven modules inherit local parent POM dependencies and managed versions; go.sum checksum verification reads the checksum database format and case-encodes module paths; go.mod `replace` blocks parse correctly; OSV records that enumerate git-tag versions no longer produce unverified matches.
 - Health probes stay up when Postgres is down or stalled: probes bypass the shared rate limiter, the limiter falls back to memory when its store errors or is slow, database outages return a JSON 503, `/readyz` gives up after 3 s, and every chart probe sets `timeoutSeconds`. A request waits at most `AGENT_BOM_POSTGRES_POOL_TIMEOUT_SECONDS` (default 10) for a pooled connection instead of psycopg_pool's 30 s per attempt.

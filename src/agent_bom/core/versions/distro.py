@@ -194,10 +194,11 @@ def _compare_rpm_versions(left: str, right: str) -> int:
     version tie. Running one segment comparison across the whole
     ``version-release`` string (with ``-`` as an ordinary separator) ranked
     ``2.4-12.el8`` above the fix ``2.4.1-1.el8`` because ``12`` beat ``1``
-    before the version was fully compared, so the CVE read as fixed. A bare
-    upstream version against a packaged one sorts below it on a version tie;
-    an advisory bound always carries a release, and reading the bare version
-    as already patched would hide the finding.
+    before the version was fully compared, so the CVE read as fixed. On a
+    version tie a bare upstream version sorts below a packaged one. rpm's own
+    EVR compare skips the release when either side lacks one; ordering the bare
+    side lower is a deliberate, conservative choice for ``fixed`` bounds, which
+    always carry a release, so a bare installed version is never read as patched.
     """
     left_epoch, left_rest = _split_epoch(left)
     right_epoch, right_rest = _split_epoch(right)
