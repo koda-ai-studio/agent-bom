@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyApiOfflineKind } from "@/lib/api-offline-kind";
 import { useEffect, useState } from "react";
 import {
   Radar,
@@ -18,13 +19,7 @@ import {
   ApiOfflineState,
   type ApiOfflineKind,
 } from "@/components/api-offline-state";
-import { ApiAuthError, ApiForbiddenError } from "@/lib/api-errors";
 
-function classifyApiErrorKind(err: unknown): ApiOfflineKind {
-  if (err instanceof ApiAuthError) return "auth";
-  if (err instanceof ApiForbiddenError) return "forbidden";
-  return "network";
-}
 
 function StatCard({
   icon: Icon,
@@ -186,7 +181,7 @@ export default function DriftPage() {
       })
       .catch((e) => {
         setError(e?.message ?? "Failed to load drift incidents");
-        setErrorKind(classifyApiErrorKind(e));
+        setErrorKind(classifyApiOfflineKind(e));
       })
       .finally(() => setLoading(false));
   };

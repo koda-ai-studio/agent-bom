@@ -23,7 +23,7 @@ and prioritize fixes by blast radius and reachability evidence. Local scans need
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
-  <a href="#use-it-from-claude-code-or-codex">Claude Code and Codex</a> ·
+  <a href="#integrations">Integrations</a> ·
   <a href="#open-the-sample-graph">Sample graph</a> ·
   <a href="#self-host-in-your-environment">Self-host</a> ·
   <a href="docs/GALLERY.md">Product tour</a> ·
@@ -67,31 +67,16 @@ The recording uses labeled sample data and bundled advisories. Credential
 references are names, not secret values. Recorded relationships do not prove
 exploitation or successful data access.
 
-## Use it from Claude Code or Codex
+## What it covers
 
-Ask your coding agent instead of reading a report. In Claude Code:
-
-```text
-/plugin marketplace add koda-ai-studio/agent-bom
-/plugin install agent-bom@agent-bom
-```
-
-In Codex, run `codex plugin marketplace add koda-ai-studio/agent-bom`, then
-install **agent-bom-local** from the Plugins Directory. Both plugins run the
-pinned agent-bom release locally and send nothing to an agent-bom service.
-
-| Ask | Skill |
+| Area | What you get |
 |---|---|
-| "Is this project safe to ship?" | `checkup`: one verdict and the three fixes that matter most |
-| "Am I affected by CVE-2025-29927?" | `affected`: affected or not found in what was scanned, never "safe" |
-| "What have my agents been doing?" | `activity`: MCP usage, unused servers, risky commands from local session history |
-| "Are my agent settings too permissive?" | `audit-mcp` and `audit-skills` |
-| "Give me an AI-BOM" | `bom`: CycloneDX or SPDX for this machine, a project, an image or a cloud account |
-
-Add `/plugin install agent-bom-guard@agent-bom` to block malicious and
-typosquatted package installs before Claude runs them.
-[All skills and their permissions](integrations/claude-code/README.md) ·
-[Guard details](integrations/agent-bom-guard/README.md)
+| Dependencies | Lockfiles and manifests across Python, JavaScript, Go, Java, .NET, Rust and more, matched against OSV, GitHub advisories and NVD with KEV and EPSS. Ask "am I affected by CVE-X" across every stored scan. |
+| Code | Findings from Semgrep or any SARIF tool, plus native analysis of AI code (prompt-injection sinks, guardrails, tool exposure) and whether your code reaches the vulnerable function. |
+| Containers and IaC | Images scanned in bounded memory and time; Dockerfile, Terraform, Kubernetes, Helm and compose risks with exact lines in SARIF. |
+| AI agents and MCP | Agents, MCP servers, tools and credentials from local configs and agent frameworks, linked to what they can reach. |
+| Cloud | Read-only collection from AWS, Azure, GCP, Databricks, Snowflake and more, with CIS and best-practice checks in the same graph. |
+| Runtime | An MCP proxy and gateway that alert on poisoned tools and injected results, or block them with `--injection-mode enforce`. |
 
 ## Investigate context and exposure
 
@@ -202,6 +187,37 @@ with `uvx agent-bom check requests@2.33.0 --ecosystem pypi`. Add
 [pre-commit and CI setup](docs/FIRST_RUN.md#pre-commit-hook) for repeated checks.
 
 [Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Integration capability matrix](docs/CLOUD_CONNECT.md) · [MCP client setup](docs/MCP_SERVER.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
+
+</details>
+
+## Integrations
+
+<details>
+<summary><b>Claude Code and Codex plugins</b>: ask your coding agent instead of reading a report</summary>
+
+Ask your coding agent instead of reading a report. In Claude Code:
+
+```text
+/plugin marketplace add koda-ai-studio/agent-bom
+/plugin install agent-bom@agent-bom
+```
+
+In Codex, run `codex plugin marketplace add koda-ai-studio/agent-bom`, then
+install **agent-bom-local** from the Plugins Directory. Both plugins run the
+pinned agent-bom release locally and send nothing to an agent-bom service.
+
+| Ask | Skill |
+|---|---|
+| "Is this project safe to ship?" | `checkup`: one verdict and the three fixes that matter most |
+| "Am I affected by CVE-2025-29927?" | `affected`: affected or not found in what was scanned, never "safe" |
+| "What have my agents been doing?" | `activity`: MCP usage, unused servers, risky commands from local session history |
+| "Are my agent settings too permissive?" | `audit-mcp` and `audit-skills` |
+| "Give me an AI-BOM" | `bom`: CycloneDX or SPDX for this machine, a project, an image or a cloud account |
+
+Add `/plugin install agent-bom-guard@agent-bom` to block malicious and
+typosquatted package installs before Claude runs them.
+[All skills and their permissions](integrations/claude-code/README.md) ·
+[Guard details](integrations/agent-bom-guard/README.md)
 
 </details>
 

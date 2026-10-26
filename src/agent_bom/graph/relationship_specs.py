@@ -178,6 +178,8 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         extra=(
             # An agent workload runs inside its container, as a server does.
             (E.CONTAINER, E.AGENT),
+            # A project agent contains the framework graphs its source declares.
+            (E.AGENT, E.AGENT),
             # Organization hierarchy: a parent organization nests sub-organizations.
             (E.ORG, E.ORG),
             # Warehouse hierarchy (database -> schema) and a directory's code modules.

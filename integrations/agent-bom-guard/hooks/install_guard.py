@@ -349,6 +349,11 @@ def decide(event: Any, env: Mapping[str, str], osv: Any) -> dict[str, Any] | Non
             f"{pipe}: this pipes a downloaded script into a shell, so it runs unread and unpinned; "
             "download it to a file, read it, then run it"
         )
+    for index in dict.fromkeys(plan.custom_indexes):
+        warnings.append(
+            f"{index}: this installs from a registry other than the public npm or PyPI one; the malicious and "
+            "typosquat checks describe the public registries, so confirm this source is the one you intend"
+        )
     notes: list[str] = []
     if options["osv_lookup"] and plan.packages:
         osv_blocks, osv_warnings, notes = _osv_findings(plan.packages, osv)

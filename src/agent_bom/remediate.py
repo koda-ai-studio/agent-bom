@@ -1,9 +1,5 @@
-"""Remediation automation — generate actionable fix commands for vulnerabilities and credentials.
-
-Produces executable upgrade commands per ecosystem, credential scope-reduction
-guides, exportable remediation.md / remediation.sh files, and auto-apply of
-package version fixes to dependency files (package.json, requirements.txt).
-"""
+"""Remediation automation: upgrade commands per ecosystem, credential scope-reduction guides,
+remediation.md / remediation.sh exports, and auto-apply of version fixes to dependency files."""
 
 from __future__ import annotations
 
@@ -21,11 +17,10 @@ from packaging.utils import canonicalize_name
 
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output import build_remediation_plan
+from agent_bom.output.console_remediation import remediation_priority_fields
 from agent_bom.remediation_commands import build_fix_command, has_shell_metachar
 
 logger = logging.getLogger(__name__)
-
-# ─── Data structures ─────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -40,6 +35,8 @@ class PackageFix:
     vulns: list[str] = field(default_factory=list)
     agents: list[str] = field(default_factory=list)
     references: list[str] = field(default_factory=list)  # Advisory links for trust/validation
+    max_severity: str = ""
+    has_kev: bool = False
 
 
 @dataclass
@@ -90,6 +87,7 @@ def generate_package_fixes(plan_items: list[dict]) -> tuple[list[PackageFix], li
                     "vulns": item["vulns"],
                     "agents": item["agents"],
                     "references": item.get("references", []),
+                    **remediation_priority_fields(item),
                 }
             )
             continue
@@ -123,6 +121,7 @@ def generate_package_fixes(plan_items: list[dict]) -> tuple[list[PackageFix], li
                 vulns=item["vulns"],
                 agents=item["agents"],
                 references=item.get("references", []),
+                **remediation_priority_fields(item),
             )
         )
 

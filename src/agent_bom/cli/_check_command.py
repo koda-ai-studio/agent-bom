@@ -58,6 +58,7 @@ class CheckRun:
     result_payload: Callable[..., dict] = _check_result_payload
     name: str = ""
     version: str = ""
+    version_source: str = "requested"
     detected_eco: str = ""
     ecosystems: list[str] = field(default_factory=list)
     pkgs: list[Any] = field(default_factory=list)
@@ -75,6 +76,7 @@ class CheckRun:
 
 def _emit(run: CheckRun, *, ecosystems: list[str], verdict: str, message: str, exit_code: int, **extra: Any) -> None:
     """Write the machine-readable verdict for ``--format json|sarif`` or agent mode."""
+    extra.setdefault("version_source", run.version_source)
     if run.data_evidence is not None:
         extra.setdefault("vuln_data_freshness", run.data_evidence.freshness)
         extra.setdefault("completeness", run.data_evidence.completeness())
@@ -130,6 +132,10 @@ def _reject_invalid_spec(run: CheckRun) -> None:
 
 
 def _reject_missing_version(run: CheckRun) -> None:
+    if run.version == "unknown" and not run.offline and run.detected_eco not in {"deb", "apk", "rpm"}:
+        # Like the MCP check tool: no version means the latest published one.
+        run.version = "latest"
+        return
     if run.version == "unknown":
         # Without a version we cannot query OSV, so NOTHING was actually
         # checked. This is an incomplete scan, not a clean pass — exit
@@ -165,41 +171,31 @@ def _build_packages(run: CheckRun) -> None:
 
 
 def _resolve_latest(run: CheckRun) -> None:
-    # Resolve "latest" / empty version from registry
+    """Check the latest published version when none was given; never guess one."""
     if run.version not in ("latest", ""):
         return
-    from agent_bom.http_client import create_client
-    from agent_bom.resolver import resolve_package_version
-
-    pkgs = run.pkgs
-
-    async def _resolve() -> bool:
-        async with create_client(timeout=15.0) as client:
-            for p in pkgs:
-                if await resolve_package_version(p, client):
-                    return True
-            return False
-
-    if run.quiet:
-        resolved = asyncio.run(_resolve())
-    else:
-        with run.console.status("[bold]Resolving version from registry...[/bold]", spinner="dots"):
-            resolved = asyncio.run(_resolve())
-    if resolved:
-        run.version = next((p.version for p in pkgs if p.version not in ("unknown", "latest", "")), run.version)
-        for p in pkgs:
+    status = nullcontext() if run.quiet else run.console.status("[bold]Resolving version from registry...[/bold]", spinner="dots")
+    with status:
+        resolved, malicious_reason = _check_published.resolve_latest(run.pkgs)
+    if resolved is not None:
+        run.version = resolved.version
+        run.version_source = "registry_fallback" if resolved.version_source == "registry_fallback" else "registry_latest"
+        for p in run.pkgs:
             p.version = run.version
         if not run.quiet and not run.structured_output:
-            run.console.print(f"  [green]✓ Resolved @latest → {run.version}[/green]")
+            run.console.print(f"  [green]✓ No version given; checking the latest published version, {run.version}[/green]")
+        return
+    eco_str = "/".join(run.ecosystems)
+    if malicious_reason:
+        run.pkgs[0].is_malicious, run.pkgs[0].malicious_reason = True, malicious_reason
+        _gate_malicious(run)
+    message = f"Could not resolve the latest published version of {run.name} ({eco_str}); nothing was checked. Provide an explicit version."
+    if run.structured_output:
+        _emit(run, ecosystems=run.ecosystems, verdict="incomplete", message=message, exit_code=2)
     else:
-        eco_str = "/".join(run.ecosystems)
-        message = f"Could not resolve latest version for {run.name} ({eco_str})."
-        if run.structured_output:
-            _emit(run, ecosystems=run.ecosystems, verdict="skipped", message=message, exit_code=0)
-        else:
-            run.console.print(f"[yellow]⚠ Could not resolve latest version for {run.name} ({eco_str})[/yellow]")
-            run.console.print("  Provide an explicit version: agent-bom check name@1.2.3 -e ecosystem")
-        sys.exit(0)
+        run.console.print(f"[yellow]⚠ {message}[/yellow]")
+        run.console.print("  For example: agent-bom check name@1.2.3 -e ecosystem")
+    sys.exit(2)
 
 
 def _scan(run: CheckRun) -> None:
@@ -483,11 +479,11 @@ def _render_vulnerability_table(run: CheckRun) -> None:
 
         vuln_count_text = _format_vulnerability_count(len(run.vulns))
         table = Table(title=f"{run.name}@{run.version} — {vuln_count_text}")
-        table.add_column("Sev", width=10, no_wrap=True)
-        table.add_column("ID", width=20, no_wrap=True)
-        table.add_column("Impact", width=14, no_wrap=True)
-        table.add_column("Fix", width=10)
-        table.add_column("Summary", max_width=38)
+        table.add_column("Sev", no_wrap=True)
+        table.add_column("ID", no_wrap=True)
+        table.add_column("Impact", no_wrap=True, max_width=12, overflow="ellipsis")
+        table.add_column("Fix", max_width=10, overflow="fold")
+        table.add_column("Summary", min_width=20, max_width=48)
 
         for v in run.vulns:
             table.add_row(*_vulnerability_row(v, classify_cwe_impact))

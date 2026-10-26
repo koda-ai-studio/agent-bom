@@ -9,6 +9,7 @@ static relationship between two of them read from source, and
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Any
 
 from agent_bom.finding import stable_id
@@ -95,10 +96,14 @@ class FrameworkAgent:
     # Routes the parser saw but could not resolve statically; each entry names
     # the construct, its line and why. Never silently dropped.
     unresolved_routes: list[dict[str, Any]] = field(default_factory=list)
+    # The project the source belongs to (the scanned root's name, as the
+    # project agent is named), so same-layout projects keep distinct agents.
+    scope: str = ""
 
-    @property
+    @cached_property
     def stable_id(self) -> str:
-        return stable_id("framework_agent", self.framework, self.name, self.file_path, str(self.line_number))
+        parts = ("framework_agent", self.framework, self.name, self.file_path, str(self.line_number))
+        return stable_id(*parts, self.scope) if self.scope else stable_id(*parts)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -115,6 +120,7 @@ class FrameworkAgent:
             "topology_edges": [edge.to_dict() for edge in self.topology_edges],
             "dynamic_edges": self.dynamic_edges,
             "parent_id": self.parent_id,
+            "scope": self.scope,
             "unresolved_routes": [dict(route) for route in self.unresolved_routes],
             "provenance": {
                 "source": "source-ast",

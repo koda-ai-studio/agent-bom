@@ -7,6 +7,7 @@ from typing import Any
 
 from agent_bom.models import Package
 from agent_bom.package_utils import canonical_package_identity, normalize_package_name, package_purl
+from agent_bom.resolvers.registry_budget import consume_registry_warnings
 from agent_bom.scanners import cpython_advisory as runtime_cve
 from agent_bom.scanners.package_matching import _emit_scan_warning as _emit_scan_warning
 from agent_bom.scanners.package_matching import _scanners_patchable
@@ -205,6 +206,8 @@ async def _resolve_registry_versions(packages: list[Package], offline: bool) -> 
             from agent_bom.resolver import resolve_all_versions
 
             resolved_count = await resolve_all_versions(still_unresolved)
+            for warning in consume_registry_warnings():
+                _emit_scan_warning(warning)
             if resolved_count:
                 # Mark these as registry-resolved so output shows confidence
                 for pkg in still_unresolved:

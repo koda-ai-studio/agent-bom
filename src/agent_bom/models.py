@@ -475,7 +475,7 @@ class AIBOMReport:
 
     @property
     def total_agents(self) -> int:
-        return len(self.agents)
+        return sum(1 for agent in self.agents if not agent.is_installed_unconfigured)
 
     @property
     def total_servers(self) -> int:

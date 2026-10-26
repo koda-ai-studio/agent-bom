@@ -152,3 +152,12 @@ def _credential_leading_edges(graph: UnifiedGraph) -> dict[str, list[UnifiedEdge
         if edge.target in useful:
             outgoing.setdefault(edge.source, []).append(edge)
     return outgoing
+
+
+def route_subject(graph: UnifiedGraph, routes: list[list[str]]) -> str:
+    """``agent → server → CREDENTIAL (+N more)`` for a finding title; the evidence lists every route."""
+    labels = [[graph.nodes[nid].label if nid in graph.nodes else nid for nid in hops] for hops in routes if hops]
+    chains = sorted(" → ".join(chain) for chain in labels)
+    if not chains:
+        return ""
+    return f"{chains[0]} (+{len(chains) - 1} more)" if len(chains) > 1 else chains[0]

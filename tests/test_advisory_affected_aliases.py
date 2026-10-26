@@ -120,3 +120,32 @@ def test_every_id_the_matcher_reports_answers_affected_for_that_package(alias_db
             assert verdicts.get(name) == "affected", (requested, verdicts)
     finally:
         conn.close()
+
+
+def test_a_fused_alias_group_never_pulls_in_another_cves_ranges(tmp_path: Path) -> None:
+    """A stale record aliasing two CVEs must not make a fixed version answer affected."""
+    path = tmp_path / "fused.db"
+    conn = init_db(path)
+    _vuln(conn, "GHSA-35jh-r3h4-6jhm", "CVE-2021-23337,CVE-2026-4800", source="ghsa", severity="high")
+    _range(conn, "GHSA-35jh-r3h4-6jhm", "npm", "lodash", "4.17.21")
+    _vuln(conn, "CVE-2026-4800", "GHSA-new-lodash-0001", severity="high")
+    _range(conn, "CVE-2026-4800", "npm", "lodash", "4.18.0")
+    conn.commit()
+    conn.close()
+    report = {
+        "ai_bom_version": "1",
+        "scan_id": "scan-js",
+        "scan_completed_at": "2026-10-25T00:00:00+00:00",
+        "agents": [
+            {
+                "name": "app",
+                "mcp_servers": [{"name": "package.json", "packages": [{"name": "lodash", "version": "4.17.21", "ecosystem": "npm"}]}],
+            }
+        ],
+    }
+    advisory = _lookup(path, "CVE-2021-23337")
+    assert advisory is not None
+    assert {(p.ecosystem, p.name) for p in advisory.affected} == {("npm", "lodash")}
+    assert "CVE-2026-4800" not in advisory.aliases
+    verdicts = [r["verdict"] for r in affected_answer(advisory, [report], source="feed")["rows"]]
+    assert verdicts == ["not_affected"]

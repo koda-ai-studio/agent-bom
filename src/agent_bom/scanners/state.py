@@ -80,6 +80,16 @@ def reset_scan_warnings() -> None:
     """Reset all scan warning channels at a command/request boundary."""
     _scan_state_local.warnings = []
     _scan_state_local.coverage_warnings = []
+    _scan_state_local.resolution_deadline = None
+
+
+def scan_scoped_deadline(seconds: float, now: float) -> float:
+    """One deadline per scan, created on first use and cleared by :func:`reset_scan_warnings`."""
+    deadline = getattr(_scan_state_local, "resolution_deadline", None)
+    if deadline is None:
+        deadline = now + seconds
+        _scan_state_local.resolution_deadline = deadline
+    return deadline
 
 
 def reset_scan_warnings_only() -> None:

@@ -426,6 +426,7 @@ uses dashed lines where traversal is not established.
   scope (`cloud:write`, `findings:write`, `identity:write`, `scan:write`, `shield:write`,
   `connectors:write`, or `ticketing:write`), and an audit reason; stdio cannot invoke them.
 - Host-local reads (`agent_activity`, `browser_extension_scan`, `where`, and host auto-discovery in any tool called without `config_path`, such as `scan` or `inventory`) are stdio-only unless `AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS=1`; see [SSE Transport](#sse-transport-remote--multi-client).
+- `tool_risk_assessment` is passive by default (`live: false`): it audits discovered configuration and contacts no server. `live: true` connects to remote servers, and launching stdio servers also needs `allow_command_execution: true`. Starting the server with `AGENT_BOM_MCP_LIVE_INTROSPECTION=0` refuses both for every call; the Claude Code and Codex plugins set it.
 - Credentials belong in the operator secret environment. Remote calls authenticate through the configured transport; do not put secrets in prompts or tool arguments.
 - Scans and explicit integrations use their documented egress and storage boundaries; see [permissions](PERMISSIONS.md). MCP server mode does not itself deploy endpoint agents.
 

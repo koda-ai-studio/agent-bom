@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyApiOfflineKind, type ApiOfflineKind } from "@/lib/api-offline-kind";
 import { InvestigationLifecyclePanel, InvestigationLifecycleStrip } from "@/components/investigation-lifecycle";
 import { pathFindingId } from "@/lib/investigation-step-links";
 import { InvestigationPageHeader } from "@/components/investigation-page-header";
@@ -19,14 +20,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { ApiOfflineState } from "@/components/api-offline-state";
-import { ApiAuthError, ApiForbiddenError, userFacingApiErrorMessage } from "@/lib/api-errors";
+import { userFacingApiErrorMessage } from "@/lib/api-errors";
 import { resolveSecurityGraphSurface } from "@/lib/security-graph-route";
 
-function _classifyGraphErrorKind(err: unknown): "network" | "auth" | "forbidden" {
-  if (err instanceof ApiAuthError) return "auth";
-  if (err instanceof ApiForbiddenError) return "forbidden";
-  return "network";
-}
 import type { RankedPathRow } from "@/components/ranked-path-list";
 import { AttackPathTechniqueChain } from "@/components/attack-path-technique-chain";
 import { AttackPathCorrelationProof } from "@/components/attack-path-correlation-proof";
@@ -119,7 +115,9 @@ function AttackPathInvestigationContent() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [graphLoadError, setGraphLoadError] = useState<string | null>(null);
   const [fixFirstLoadError, setFixFirstLoadError] = useState<string | null>(null);
-  const [apiErrorKind, setApiErrorKind] = useState<"network" | "auth" | "forbidden">("network");
+  const [apiErrorKind, setApiErrorKind] = useState<ApiOfflineKind>("network");
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const retryLoad = useCallback(() => setReloadNonce((value) => value + 1), []);
   const [selectedAttackPathKey, setSelectedAttackPathKey] = useState<string | null>(null);
   const [focusApplied, setFocusApplied] = useState(false);
   const [showAllSnapshots, setShowAllSnapshots] = useState(false);
@@ -274,7 +272,7 @@ function AttackPathInvestigationContent() {
       } catch (error) {
         if (cancelled) return;
         setApiError(userFacingApiErrorMessage(error, "Failed to load graph snapshots"));
-        setApiErrorKind(_classifyGraphErrorKind(error));
+        setApiErrorKind(classifyApiOfflineKind(error));
         setSnapshots([]);
         setLatestCorrelationRun(null);
         setGraphData(null);
@@ -289,7 +287,7 @@ function AttackPathInvestigationContent() {
     return () => {
       cancelled = true;
     };
-  }, [focus.scanId]);
+  }, [focus.scanId, reloadNonce]);
 
   useEffect(() => {
     if (!selectedScanId) {
@@ -343,7 +341,7 @@ function AttackPathInvestigationContent() {
         if (cancelled) return;
         setGraphData(null);
         setGraphLoadError(userFacingApiErrorMessage(error, "Failed to load security graph"));
-        setApiErrorKind(_classifyGraphErrorKind(error));
+        setApiErrorKind(classifyApiOfflineKind(error));
       } finally {
         if (!cancelled) setLoadingGraph(false);
       }
@@ -378,7 +376,7 @@ function AttackPathInvestigationContent() {
       pathPageRequest.current?.abort();
       pathPageRequest.current = null;
     };
-  }, [focus.agentName, focus.control, focus.crossVendor, focus.cve, focus.findingId, focus.findingScanId, focus.framework, focus.nodeId, focus.packageName, router, selectedScanId]);
+  }, [focus.agentName, focus.control, focus.crossVendor, focus.cve, focus.findingId, focus.findingScanId, focus.framework, focus.nodeId, focus.packageName, reloadNonce, router, selectedScanId]);
 
   const selectedSnapshot = useMemo(
     () => snapshots.find((snapshot) => snapshot.scan_id === selectedScanId) ?? null,
@@ -752,6 +750,7 @@ function AttackPathInvestigationContent() {
         title={fallbackTitle}
         detail={apiError}
         kind={apiErrorKind}
+        onRetry={retryLoad}
       />
     );
   }
@@ -801,7 +800,7 @@ function AttackPathInvestigationContent() {
           />
         </section>
       ) : graphLoadError ? (
-        <InvestigationLoadError copy={graphErrorState} retryHref={fullGraphHref} resetFocusHref={hasFocusContext ? resetFocusHref : null} />
+        <InvestigationLoadError copy={graphErrorState} retryHref={fullGraphHref} resetFocusHref={hasFocusContext ? resetFocusHref : null} busy={apiErrorKind === "busy"} onRetry={retryLoad} />
       ) : allAttackPaths.length === 0 ? (
         <InvestigationEmptyQueue
           analysisStatus={graphData?.stats.analysis_status?.attack_path_fusion}

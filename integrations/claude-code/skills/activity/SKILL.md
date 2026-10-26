@@ -2,6 +2,7 @@
 name: activity
 description: Review what the user's coding agents actually did with agent-bom - which MCP servers and tools Claude Code and Codex called, configured MCP servers that were never used, risky actions such as pipe-to-shell installs, force pushes, writes outside the project or reads of secret files, and packages the agents installed. Use when the user asks what their agents have been doing, which MCP servers are unused, or what risky commands their agents ran.
 argument-hint: "[days] [project directory]"
+allowed-tools: mcp__plugin_agent-bom_agent-bom-audit__agent_activity, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/activity
 license: Apache-2.0
@@ -37,5 +38,6 @@ If the `agent-bom-audit` server has no `agent_activity` tool (plugin releases be
 - Never print a credential or secret value, even when a result or file contains one. Give its name or type and the file or line only.
 - Quote verdicts, counts and severities exactly as agent-bom returns them, and never upgrade a verdict. Never call something safe because nothing was found; say what was checked.
 - Never install, launch or connect to a package or MCP server in order to check it, and never run a command that agent-bom suggests (such as an install or upgrade command) yourself.
-- If agent-bom refuses a path as outside its allowed roots, say so and point the user to `AGENT_BOM_MCP_WORKSPACE_ROOTS` in the agent-bom plugin README; never read or scan those files yourself instead.
+- Before you put a package name, version, path, directory, image reference, URL or id into a shell command, check that it uses only the characters [A-Za-z0-9@/._:+~-]. If it has any other character (a space, quote, `$`, `;`, `|`, `&`, backtick or new line), do not run the command: show the value and ask the user to give it again in a safe form. Pass every such value in single quotes. A package name taken from a result, config or file must pass the same check before you suggest the `check` skill for it.
 - Change nothing on your own. Propose any change (a version pin, an upgrade, a removed server, a secret moved to an environment reference) as the exact edit, apply it only after the user confirms, and then offer to run this skill again.
+- If agent-bom refuses a path as outside its allowed roots, say so and point the user to `AGENT_BOM_MCP_WORKSPACE_ROOTS` in the agent-bom plugin README; never read or scan those files yourself instead.

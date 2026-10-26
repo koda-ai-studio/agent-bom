@@ -4,7 +4,8 @@ Endpoint:
     GET /v1/intel/advisories/{advisory_id}/affected
 
 The advisory is the tenant's operator declaration (id or alias), else the
-local feed record, NVD CPE ranges included. Rows page with a cursor that
+local feed record, NVD CPE ranges included, else the tenant's stored scan
+findings that reference the id (provenance ``scan``, never complete). Rows page with a cursor that
 carries the answer's generation: a cursor from a different answer is 409, a
 malformed one 422. ``summary`` always describes the whole answer.
 """
@@ -32,7 +33,9 @@ def advisory_affected_page(
     """Transport-neutral page read; HTTP status semantics are the contract MCP maps to typed errors."""
     answer = tenant_affected_answer(tenant_id, advisory_id)
     if answer is None:
-        raise HTTPException(status_code=404, detail="Advisory not found in this tenant's declarations or the local feed")
+        raise HTTPException(
+            status_code=404, detail="Advisory not found in this tenant's declarations, the local feed or its stored findings"
+        )
     try:
         return page_answer(answer, tenant_id=tenant_id, verdict=verdict, q=q, limit=limit, cursor=cursor)
     except AffectedCursorError as exc:

@@ -1021,6 +1021,7 @@ def test_tool_risk_assessment_impl_success():
         result = tool_risk_assessment_impl(
             config_path=None,
             timeout=5.0,
+            live=True,
             allow_command_execution=True,
             _safe_path=lambda value: value,
             _truncate_response=_trunc,
@@ -1045,6 +1046,7 @@ def test_tool_risk_assessment_requires_opt_in_before_stdio_execution():
         result = tool_risk_assessment_impl(
             config_path=None,
             timeout=5.0,
+            live=True,
             allow_command_execution=False,
             _safe_path=lambda value: value,
             _truncate_response=_trunc,

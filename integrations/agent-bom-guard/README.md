@@ -2,10 +2,10 @@
 
 A Claude Code plugin with one `PreToolUse` hook on the Bash tool. Before Claude
 runs a command, the hook reads the command text, finds the named registry
-packages it would install, and checks them. It blocks known-malicious and
-typosquatted packages, warns about known advisories for an exact pinned version
-and about pipe-to-shell installs, and prints nothing for clean installs or for
-commands that install nothing.
+packages it would install, and checks them. It blocks known-malicious
+packages and typosquatted npm and PyPI names, warns about known advisories for
+an exact pinned version, pipe-to-shell installs and custom registries, and
+prints nothing for clean installs or for commands that install nothing.
 
 ```text
 /plugin marketplace add koda-ai-studio/agent-bom
@@ -20,7 +20,7 @@ already installed; the guard covers the moment a new package arrives.
 | Result | When |
 |---|---|
 | Block (`deny`, Claude is told why) | The package is a confirmed-malicious entry in agent-bom's bundled blocklist and the version is in the affected range (or unpinned); OSV reports it as malware (an OpenSSF `MAL-` report, or a GitHub advisory tagged CWE-506 such as `crossenv` or `event-stream@3.3.6`) and the install is pinned to an affected version or no clean release exists; or the name looks like a typosquat of a popular package, for example `reqeusts` imitating `requests`. The reason names the package it imitates. |
-| Warn (the command runs) | An exact pinned version, such as `lodash@4.17.20` or `requests==2.19.0`, has known advisories on OSV; the message lists the IDs by severity. Also used for requirement files (`pip install -r`), which this hook does not open, for a malicious-listed name pinned outside the affected range, for an unpinned install of a package that once shipped a malicious release but has clean ones (`npm install event-stream`), when api.osv.dev cannot be reached, and when a download is piped straight into a shell or interpreter (`curl … \| sh`, `wget -qO- … \| sudo bash`), which runs a script nobody read and no version pins. |
+| Warn (the command runs) | An exact pinned version, such as `lodash@4.17.20` or `requests==2.19.0`, has known advisories on OSV; the message lists the IDs by severity. Also used for requirement files (`pip install -r`), which this hook does not open, for a malicious-listed name pinned outside the affected range, for an unpinned install of a package that once shipped a malicious release but has clean ones (`npm install event-stream`), when api.osv.dev cannot be reached, and when a download is piped straight into a shell or interpreter (`curl … \| sh`, `wget -qO- … \| sudo bash`), which runs a script nobody read and no version pins. Also when an install names a custom registry (`--index-url`, `-i`, `--extra-index-url`, `--registry`); the message gives the registry host only, never a user name or token in the URL. |
 | Silent | Clean installs, and every command that does not install a named registry package: `npm test`, `npm install` with no names, `pip install -e .`, `echo "pip install x"`, local paths, URLs and git sources. |
 
 Ordinary advisories never block on their own, and an unpinned install ignores them,

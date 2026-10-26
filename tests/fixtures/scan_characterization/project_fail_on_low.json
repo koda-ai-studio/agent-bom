@@ -1,11 +1,12 @@
 {
  "document": {
-  "sha256": "749d3ded48fb67bbbb093e994748a8f2143d4a64a9d721cd434044b4990ef15c",
+  "sha256": "213a08cdbf7583ca7eca05ced8f38aa740a43efb8fbe1fd17a6474dbad04aa68",
   "summary": {
    "coverage_warnings": [],
    "critical_findings": 0,
    "critical_unified_findings": 0,
    "high_unified_findings": 0,
+   "installed_unconfigured_agents": 0,
    "total_agents": 1,
    "total_findings": 0,
    "total_mcp_servers": 1,

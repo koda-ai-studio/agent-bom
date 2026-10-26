@@ -7,6 +7,7 @@ import tomllib
 from collections import Counter, defaultdict, deque
 from pathlib import Path
 
+from agent_bom.checksums import add_checksum, public_registry_download_url
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
 from agent_bom.package_utils import normalize_package_name
@@ -80,6 +81,20 @@ def _parents(rows: list[dict], direct: set[str]) -> tuple[dict[str, str], dict[s
     return parents, depths
 
 
+def _public_artifact(row: dict) -> tuple[dict[str, str], str | None]:
+    """Digest and URL of the first locked artifact served by the public index."""
+    wheels = row.get("wheels")
+    for artifact in [row.get("sdist"), *(wheels if isinstance(wheels, list) else [])]:
+        if not isinstance(artifact, dict) or not (url := public_registry_download_url(artifact.get("url"), "pypi")):
+            continue
+        algorithm, _, digest = str(artifact.get("hash") or "").partition(":")
+        checksums: dict[str, str] = {}
+        add_checksum(checksums, algorithm, digest)
+        if checksums:
+            return checksums, url
+    return {}, None
+
+
 def _packages(rows: list[dict], direct: set[str], lock_file: Path) -> list[Package]:
     parents, depths = _parents(rows, direct)
     packages = []
@@ -92,6 +107,7 @@ def _packages(rows: list[dict], direct: set[str], lock_file: Path) -> list[Packa
             record_manifest_parse_warning(ecosystem="pypi", path=str(lock_file), detail="uv lock contains an invalid package identity")
             continue
         normalized = _name(name)
+        checksums, download_url = _public_artifact(row)
         packages.append(
             Package(
                 name=name,
@@ -105,6 +121,8 @@ def _packages(rows: list[dict], direct: set[str], lock_file: Path) -> list[Packa
                 reachability_evidence="lockfile",
                 version_source="lockfile",
                 version_evidence=[{"type": "lockfile", "source_file": str(lock_file)}],
+                checksums=checksums,
+                download_url=download_url,
             )
         )
     return packages

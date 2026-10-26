@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyApiOfflineKind, type ApiOfflineKind } from "@/lib/api-offline-kind";
 import { useQueueTopRisks } from "@/hooks/use-queue-top-risks";
 import { AdvisoryFreshness } from "@/components/advisory-freshness";
 
@@ -29,7 +30,6 @@ import {
   type PostureScoreFormat,
 } from "@/components/overview-cockpit";
 import { ApiOfflineState } from "@/components/api-offline-state";
-import { ApiAuthError, ApiForbiddenError } from "@/lib/api-errors";
 import { useDeploymentContext } from "@/hooks/use-deployment-context";
 import { openIssueSeverity } from "@/lib/open-issue-counts";
 import { deploymentModeLabel, hasDeploymentSignals } from "@/lib/deployment-context";
@@ -47,11 +47,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-function _classifyApiErrorKind(err: unknown): "network" | "auth" | "forbidden" {
-  if (err instanceof ApiAuthError) return "auth";
-  if (err instanceof ApiForbiddenError) return "forbidden";
-  return "network";
-}
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
@@ -63,7 +58,7 @@ export default function Dashboard() {
   const [apiError, setApiError] = useState(false);
   // Differentiate "API down" from "API rejected my request" (#2196 audit fix).
   // 401 -> "auth", 403 -> "forbidden", network/5xx -> "network".
-  const [apiErrorKind, setApiErrorKind] = useState<"network" | "auth" | "forbidden">("network");
+  const [apiErrorKind, setApiErrorKind] = useState<ApiOfflineKind>("network");
   const [apiErrorDetail, setApiErrorDetail] = useState<string | null>(null);
   const [importedReport, setImportedReport] = useState<ScanResult | null>(null);
   const [posture, setPosture] = useState<PostureResponse | null>(null);
@@ -183,7 +178,7 @@ export default function Dashboard() {
       } catch (err) {
         if (cancelled) return;
         setApiError(true);
-        setApiErrorKind(_classifyApiErrorKind(err));
+        setApiErrorKind(classifyApiOfflineKind(err));
         setApiErrorDetail(err instanceof Error ? err.message : null);
         setJobs([]);
         setDetailJobs([]);
@@ -439,7 +434,7 @@ export default function Dashboard() {
       {importedReport && <LocalReportEvidence report={importedReport} />}
       {!importedReport && demoSeeding && (
         <p role="status" aria-label="Demo estate seeding" className="rounded-lg border border-outline px-3 py-2 text-sm text-ink-secondary">
-          Seeding the demo estate. Findings and posture appear here when the curated scan lands, usually within a minute or two.
+          Seeding the demo estate. Findings and posture appear here when the curated scan lands, usually a few minutes on first start.
         </p>
       )}
       {!importedReport && !demoSeeding && !jobsLoading && !postureOverviewLoading && !overviewUnavailable

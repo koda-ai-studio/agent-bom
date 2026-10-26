@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import asyncio
 
+from agent_bom import http_client, resolver
 from agent_bom.http_client import create_client
 from agent_bom.mcp_tools import check_lookup
 from agent_bom.mcp_tools.check_lookup import version_published
+from agent_bom.models import Package
 
 REGISTRY_ECOSYSTEMS = frozenset({"npm", "pypi"})
 
@@ -37,3 +39,27 @@ def unpublished_pin(name: str, version: str, ecosystems: list[str]) -> tuple[str
         if not published:
             return ecosystem, reason
     return None
+
+
+async def _resolve_latest(pkgs: list[Package]) -> tuple[Package | None, str | None]:
+    async with http_client.create_client(timeout=http_client.REGISTRY_LOOKUP_MAX_WAIT) as client:
+        for pkg in pkgs:
+            if await resolver.resolve_package_version(pkg, client):
+                return pkg, None
+        for pkg in pkgs:
+            reason = await check_lookup.resolution_malware_reason(False, pkg.name, pkg.ecosystem, client)
+            if reason:
+                return None, reason
+    return None, None
+
+
+def resolve_latest(pkgs: list[Package]) -> tuple[Package | None, str | None]:
+    """Resolve the latest published version, as the MCP ``check`` tool does.
+
+    Returns ``(package, None)`` for the first package that resolved, or
+    ``(None, malware_reason)`` when none did; the reason is set only when the
+    unresolvable name is a known-malicious package. The lookup is bounded by
+    the registry-latest time budget, so a rate-limited registry yields an
+    unresolved result instead of a long wait.
+    """
+    return asyncio.run(_resolve_latest(pkgs))

@@ -15,8 +15,9 @@ def register_audit_tool(mcp, *, runtime_introspection, execute_tool_sync_async, 
     async def tool_risk_assessment(
         config_path: Annotated[str | None, Field(description="Path to MCP client config directory. Auto-discovers all if omitted.")] = None,
         live: Annotated[
-            bool, Field(description="Connect for live descriptors; false audits discovered configuration without connections.")
-        ] = True,
+            bool,
+            Field(description="Connect to remote servers for live descriptors. Off by default: audits configuration without connections."),
+        ] = False,
         expected_capabilities: Annotated[
             list[Literal["read", "write", "delete", "execute", "network", "auth", "admin"]] | None,
             Field(description="Operator-defined expected capabilities; omitted uses agent-type heuristics, empty allows none."),
@@ -33,11 +34,13 @@ def register_audit_tool(mcp, *, runtime_introspection, execute_tool_sync_async, 
         Codex config that let a coding agent act with no prompts or no sandbox.
 
         Returns descriptor coverage and heuristic findings; does not test auth
-        bypass, general resource bodies or rendered prompts. Set live=false
-        for passive discovery; live mode retains its stdio execution gate.
+        bypass, general resource bodies or rendered prompts. Passive by
+        default; live=true connects to remote servers, keeps the stdio
+        execution gate, and is refused when the server was started with
+        ``AGENT_BOM_MCP_LIVE_INTROSPECTION=0``.
 
-        Discovers configured MCP clients, connects to their servers, calls
-        ``tools/list``, and classifies every exposed tool by capability
+        Discovers configured MCP clients and, in live mode, connects to their
+        servers, calls ``tools/list``, and classifies every exposed tool by capability
         (filesystem, network, code execution, credential access) to produce a
         per-tool and per-server risk score from what the servers actually
         advertise at runtime.

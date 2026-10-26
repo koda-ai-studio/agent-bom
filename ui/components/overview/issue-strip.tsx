@@ -1,6 +1,7 @@
 "use client";
 
 import { Collapsible } from "@/components/collapsible";
+import { formatCount } from "@/lib/count-label";
 import type { SeverityCounts } from "@/lib/dashboard-data";
 import {
   ISSUE_TYPE_SHORT,
@@ -214,7 +215,7 @@ export function SeverityIssueStrip({
               {band.label}
             </p>
             <p className={`font-mono text-xl font-semibold ${band.tone}`}>
-              {summaryReady ? band.value : "—"}
+              {summaryReady ? formatCount(band.value) : "—"}
             </p>
             {hasTyped && summaryReady ? (
               <div className="col-span-2 mt-2 space-y-1">

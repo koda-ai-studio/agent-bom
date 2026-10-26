@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCount } from "@/lib/count-label";
 import Link from "next/link";
 import type { ElementType, ReactNode } from "react";
 
@@ -98,7 +99,7 @@ function StatCell({ item }: { item: StatStripItem }) {
         <span className="min-w-0 break-words">{label}</span>
       </div>
       <div className={`mt-1 font-mono text-2xl font-semibold tabular-figures ${valueClass}`}>
-        {value}
+        {formatCount(value)}
       </div>
       {hint ? (
         <div className="mt-0.5 break-words text-xs leading-snug text-[color:var(--text-tertiary)]">{hint}</div>

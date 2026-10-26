@@ -61,6 +61,8 @@ class LangGraphTopology:
     edges: list[FrameworkTopologyEdge] = field(default_factory=list)
     parent_ids: dict[str, str] = field(default_factory=dict)
     unresolved_routes: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    # ``add_node("tools", ToolNode(TOOLS))``: the tools expression per node id.
+    node_tools: dict[str, ast.AST] = field(default_factory=dict)
     truncated: bool = False
     _unresolved_count: int = 0
 
@@ -313,6 +315,11 @@ def _record_action(
             topology.parent_ids[child.graph.stable_id] = node_agent.stable_id
         edge = _edge(node_agent, child.graph, _SUBGRAPH_EVIDENCE, call.lineno, module.rel_path, "high", kind="subgraph")
         topology.emit(edge, node_agent, _SUBGRAPH_EVIDENCE, call.lineno)
+        return
+    if isinstance(action, ast.Call) and _call_name(action.func).split(".")[-1] == "ToolNode":
+        tools = _arg(action, 0, "tools")
+        if tools is not None:
+            topology.node_tools[node_agent.stable_id] = tools
         return
     qualname = module.index.resolve_function(action, call_scope)
     if qualname:

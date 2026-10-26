@@ -35,7 +35,7 @@ from agent_bom.db import schema
 from agent_bom.db.operator_advisories import distro_verdicts
 from agent_bom.db.schema import open_existing_db_readonly
 from agent_bom.evidence.finding_response_fields import POSSIBLY_AFFECTED_STATUS
-from agent_bom.scanners.advisory_affected import affected_answer, feed_advisory_from_db
+from agent_bom.scanners.advisory_affected import affected_answer, feed_advisory_from_db, stored_findings_answer
 from agent_bom.scanners.operator_advisory import OperatorAdvisory
 
 _PERSISTED_VERDICTS = ("affected", "possibly_affected")
@@ -81,13 +81,18 @@ def resolve_advisory(tenant_id: str, advisory_id: str) -> tuple[OperatorAdvisory
 
 
 def tenant_affected_answer(tenant_id: str, advisory_id: str) -> dict[str, Any] | None:
-    """The whole answer for one advisory over the tenant's stored scans; ``None`` when the id is unknown."""
+    """The whole answer for one advisory over the tenant's stored scans; ``None`` when the id is unknown.
+
+    An id no declaration or feed record knows is answered from the tenant's
+    stored findings that reference it (``stored_findings_answer``).
+    """
     resolved = resolve_advisory(tenant_id, advisory_id)
-    if resolved is None:
-        return None
-    advisory, source = resolved
+    reports = tenant_reports(tenant_id)
     with distro_verdicts() as verdict:
-        return affected_answer(advisory, tenant_reports(tenant_id), source=source, distro_verdict=verdict)
+        if resolved is None:
+            return stored_findings_answer(advisory_id, reports, distro_verdict=verdict)
+        advisory, source = resolved
+        return affected_answer(advisory, reports, source=source, distro_verdict=verdict)
 
 
 def _finding_payload(row: dict[str, Any], advisory: dict[str, Any]) -> dict[str, Any]:

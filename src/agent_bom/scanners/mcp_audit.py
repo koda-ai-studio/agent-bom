@@ -11,7 +11,9 @@ from copy import copy
 from dataclasses import asdict
 from typing import Any, cast
 
+from agent_bom.a2a_auth_posture import evaluate_a2a_auth_posture
 from agent_bom.core.severity import severity_at_or_above
+from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
 from agent_bom.discovery.identity import server_identity_key
 from agent_bom.enforcement import (
     EnforcementFinding,
@@ -20,7 +22,9 @@ from agent_bom.enforcement import (
     expected_mcp_capabilities,
     scan_description_surfaces,
 )
+from agent_bom.finding import Finding
 from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
+from agent_bom.mcp_blocklist import blocklist_findings_for_agents
 from agent_bom.mcp_introspect import IntrospectionReport, ServerIntrospection
 from agent_bom.mcp_tool_rules import evaluate_tool
 from agent_bom.models import Agent, AIBOMReport, MCPServer
@@ -162,14 +166,27 @@ def audit_mcp_agents(
     return report
 
 
+def config_posture_findings(agents: list[Agent]) -> list[Finding]:
+    """Configuration-derived findings every scan surface emits for the same agents.
+
+    Blocklisted (malicious) MCP servers, A2A and MCP authentication posture, and
+    coding-agent permission posture. CLI, API and MCP scans all call this so a
+    malicious server cannot be critical on one surface and absent on another.
+    """
+    return [
+        *blocklist_findings_for_agents(agents),
+        *evaluate_a2a_auth_posture(agents),
+        *evaluate_mcp_auth_posture(agents),
+        *evaluate_agent_permission_posture(agents),
+    ]
+
+
 def attach_passive_mcp_audit(report: AIBOMReport) -> None:
-    """Attach one passive evaluation and auth evidence before graph/export work."""
+    """Attach one passive evaluation and configuration findings before graph/export work."""
     if report.enforcement_data is None:
         report.enforcement_data = audit_mcp_agents(report.agents).to_dict()
     existing = {finding.id for finding in report.findings}
-    from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
-
-    for finding in [*evaluate_mcp_auth_posture(report.agents), *evaluate_agent_permission_posture(report.agents)]:
+    for finding in config_posture_findings(report.agents):
         if finding.id not in existing:
             report.findings.append(finding)
             existing.add(finding.id)

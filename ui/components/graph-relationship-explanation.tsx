@@ -27,16 +27,37 @@ const fields = [
   ["ecosystem", "Ecosystem"], ["purl", "Package URL"],
 ] as const;
 
+// Structural role of a route in an agent graph read from source.
+const routeRoles: Record<string, string> = { entry: "Entry point", finish: "Returns to its graph (finish)", subgraph: "Runs a nested subgraph" };
+
+type EvidenceRow = { key: string; label: string; value: string };
+
+function routeRows(evidence: Record<string, unknown>): EvidenceRow[] {
+  const rows: EvidenceRow[] = [];
+  if (evidence.provenance !== "declared") return rows;
+  for (const [key, label] of [["evidence", "Declared by"], ["branch", "Branch"]] as const) {
+    const value = evidence[key];
+    if (typeof value === "string" && value.trim()) rows.push({ key, label, value: value.trim() });
+  }
+  const role = typeof evidence.kind === "string" ? routeRoles[evidence.kind] : undefined;
+  if (role) rows.push({ key: "kind", label: "Route role", value: role });
+  if (typeof evidence.file_path === "string" && evidence.file_path.trim()) {
+    const line = typeof evidence.line_number === "number" && evidence.line_number > 0 ? `:${evidence.line_number}` : "";
+    rows.push({ key: "declared_at", label: "Declared at", value: `${evidence.file_path.trim()}${line}` });
+  }
+  return rows;
+}
+
 export function GraphRelationshipExplanation({ edge }: { edge: RecordedLink }) {
   const evidence = edge.evidence ?? {};
   const conservativeImpact = edge.relationship === "exploitable_via" && evidence.mapping_method === "server_scope_conservative";
   const explanation = conservativeImpact
     ? "This tool shares a server with the affected package. The mapping is conservative: an exact package-to-tool call path is not established."
     : (Object.hasOwn(explanations, edge.relationship) ? explanations[edge.relationship] : undefined) ?? "This link records a relationship between the two endpoints. Review its source evidence before drawing a security conclusion.";
-  const rows = fields.flatMap(([key, label]) => {
+  const rows = fields.flatMap(([key, label]): EvidenceRow[] => {
     const value = evidence[key];
     return typeof value === "string" && value.trim() ? [{ key, label, value: value.trim() }] : [];
-  });
+  }).concat(routeRows(evidence));
   return <div className="space-y-2 text-xs text-ink-secondary [overflow-wrap:anywhere]">
     <p>{explanation}</p>
     {!Object.keys(evidence).length && <p>Source evidence not recorded for this link.</p>}

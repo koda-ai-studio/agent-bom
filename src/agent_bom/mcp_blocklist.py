@@ -15,6 +15,7 @@ from importlib import resources
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from agent_bom.core.severity import severity_worst_first_rank
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
 from agent_bom.models import Agent, MCPServer
 from agent_bom.security import sanitize_command_args, sanitize_sensitive_payload, sanitize_text
@@ -422,3 +423,33 @@ def blocklist_findings_for_agents(agents: list[Agent], blocklist: dict[str, Any]
                 )
                 findings.append(apply_hub_classification(finding))
     return findings
+
+
+def blocked_server_remediations(agents: list[Agent], blocklist: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Removal actions for blocklisted MCP servers, most severe first.
+
+    A blocklisted server is never unpacked, so it has no package upgrade in a
+    remediation plan; without this list the plan reads as "nothing to fix".
+    """
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for agent in agents:
+        for server in agent.mcp_servers:
+            for match in match_mcp_server(server, blocklist):
+                key = (agent.name, server.name, match.entry_id)
+                if key in seen:
+                    continue
+                seen.add(key)
+                rows.append(
+                    {
+                        "server": server.name,
+                        "agent": agent.name,
+                        "package": match.package,
+                        "ecosystem": match.ecosystem,
+                        "severity": match.severity,
+                        "title": match.title,
+                        "entry_id": match.entry_id,
+                        "action": f"Remove or disable the MCP server '{server.name}' from {agent.name}; it matches {match.title}.",
+                    }
+                )
+    return sorted(rows, key=lambda row: (severity_worst_first_rank(str(row["severity"])), row["agent"], row["server"]))

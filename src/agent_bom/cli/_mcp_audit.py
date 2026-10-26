@@ -11,7 +11,7 @@ import click
 
 
 @click.command("audit")
-@click.argument("path", type=click.Path(exists=True, file_okay=False), default=".")
+@click.argument("path", type=click.Path(exists=True, file_okay=False), required=False, default=None)
 @click.option("--live", is_flag=True, help="Connect to configured HTTP/SSE servers and list live descriptors.")
 @click.option("--allow-command-execution", is_flag=True, help="With --live, also launch configured stdio server commands.")
 @click.option(
@@ -24,7 +24,7 @@ import click
 @click.option("--format", "output_format", type=click.Choice(["console", "json", "sarif"]), default="console")
 @click.option("--output", "output_path", type=click.Path(dir_okay=False), default=None)
 def mcp_audit_cmd(
-    path: str,
+    path: str | None,
     live: bool,
     allow_command_execution: bool,
     expected_capability: tuple[str, ...],
@@ -32,7 +32,10 @@ def mcp_audit_cmd(
     output_format: str,
     output_path: str | None,
 ) -> None:
-    """Audit MCP descriptors, auth and agent permission settings in PATH.
+    """Audit MCP descriptors, auth and agent permission settings.
+
+    Without PATH, audits every supported MCP client configuration on this
+    machine; with PATH, only the project or config directory named.
 
     No tools are invoked. Live mode uses existing MCP discovery (including
     bounded linked Apps metadata reads). Resource-body injection, rendered

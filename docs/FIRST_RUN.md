@@ -85,7 +85,7 @@ private repo. Current source output includes these excerpts (installed-release o
   Security posture:   CRIT  7   HIGH  11   MED   7   LOW   26 · all finding categories
   5 agents · 10 servers · 23 packages
 DISCOVER | Agents
-  Agent                Type              Servers    Pkgs    Creds    Vulns
+  Agent                Type              Servers    Pkgs    Creds    CVE hits
   langchain-service    custom                  2       4        4        4
   claude-desktop       claude-desktop          2       6        3        5
 ANALYZE | Critical Details
@@ -93,7 +93,8 @@ ANALYZE | Critical Details
   Fix: upgrade to ≥ 0.0.247
   Blast: langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY, OPENAI_API_KEY
 ANALYZE | Graph & Policy Findings (36 occurrences)
-   CRIT  COMBINATION AI agent can reach a credential or privileged tool: langchain-service
+   CRIT  COMBINATION AI agent can reach a credential or privileged tool
+      langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY (+3 more)
    HIGH  PROMPT_SECURITY No verified agent identity observed in MCP configuration
    MED   PROMPT_SECURITY Long-lived static credential on MCP server
 ```

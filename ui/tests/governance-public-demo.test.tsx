@@ -36,7 +36,9 @@ describe("GovernancePage public demo", () => {
   it("does not request or expose backend setup diagnostics", () => {
     render(<GovernancePage />);
 
-    expect(screen.getByTestId("governance-public-demo")).toHaveTextContent(/not configured on this public demo/i);
+    expect(screen.getByRole("heading", { level: 1, name: /Cloud governance telemetry is not shown/i })).toBeInTheDocument();
+    // A local `serve --demo-estate` install is anonymous read-only too: never call it "public".
+    expect(screen.getByTestId("governance-public-demo")).not.toHaveTextContent(/public demo/i);
     expect(screen.queryByText(/pip install/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/SNOWFLAKE_ACCOUNT/i)).not.toBeInTheDocument();
     expect(apiMock.getGovernance).not.toHaveBeenCalled();

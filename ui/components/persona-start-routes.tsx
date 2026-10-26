@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { version } from "../package.json";
+import packageJson from "../package.json";
+
+const { version } = packageJson;
 
 type PersonaStart = {
   label: string;

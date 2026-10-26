@@ -140,11 +140,39 @@ export function userFacingApiErrorMessage(err: unknown, fallback: string): strin
   return message;
 }
 
-/** Delay-seconds form of Retry-After; an HTTP-date or garbage value is ignored. */
-function retryAfterSeconds(res: Response): number | undefined {
-  const headerValue = res.headers?.get?.("retry-after") ?? null;
-  const seconds = headerValue ? Number(headerValue) : Number.NaN;
+const validSeconds = (value: unknown): number | undefined => {
+  const seconds = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
+};
+
+/**
+ * Delay-seconds form of Retry-After (an HTTP-date or garbage value is ignored),
+ * falling back to the API body's `retry_after_seconds` when a proxy stripped the header.
+ */
+function retryAfterSeconds(res: Response, body: unknown): number | undefined {
+  const fromHeader = validSeconds(res.headers?.get?.("retry-after") ?? undefined);
+  if (fromHeader !== undefined || !body || typeof body !== "object") return fromHeader;
+  const record = body as Record<string, unknown>;
+  const nested = [record, record.detail, record.error].find(
+    (candidate) => candidate && typeof candidate === "object" && "retry_after_seconds" in candidate,
+  ) as Record<string, unknown> | undefined;
+  return validSeconds(nested?.retry_after_seconds);
+}
+
+/** The booting-API 503 the session provider polls for itself, with its own start-up state. */
+export function isApiStartingError(err: unknown): boolean {
+  return err instanceof ApiServerError
+    && (err.body as { error?: { code?: unknown } } | undefined)?.error?.code === "API_STARTING";
+}
+
+/**
+ * The API is running but shedding load (429 backpressure, or a 503 it marked
+ * retryable). Pages show a non-fatal "busy, retrying" state for these, never
+ * the offline / start-a-server guidance.
+ */
+export function isApiBusyError(err: unknown): err is ApiRateLimitError | ApiServerError {
+  if (err instanceof ApiRateLimitError) return true;
+  return err instanceof ApiServerError && err.status === 503 && err.retryAfterSeconds !== undefined && !isApiStartingError(err);
 }
 
 export function classifyApiResponse(
@@ -191,8 +219,8 @@ export function classifyApiResponse(
   if (res.status === 403) return new ApiForbiddenError(message, ctx);
   if (res.status === 404) return new ApiNotFoundError(message, ctx);
   if (res.status === 409) return new ApiConflictError(message, ctx);
-  if (res.status === 429) return new ApiRateLimitError(message, ctx, retryAfterSeconds(res));
-  if (res.status === 503) return new ApiServerError(message, ctx, retryAfterSeconds(res));
+  if (res.status === 429) return new ApiRateLimitError(message, ctx, retryAfterSeconds(res, parsedBody));
+  if (res.status === 503) return new ApiServerError(message, ctx, retryAfterSeconds(res, parsedBody));
   if (res.status >= 500) return new ApiServerError(message, ctx);
   return new ApiError(message, ctx);
 }

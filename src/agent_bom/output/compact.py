@@ -19,6 +19,9 @@ from rich.table import Table
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.cis_posture import finding_free_posture
+from agent_bom.output.compact_text import GRADE_ECHO as _GRADE_ECHO
+from agent_bom.output.compact_text import clip as _clip
+from agent_bom.output.compact_text import compact_detail as _compact_detail
 from agent_bom.output.dependency_hierarchy import dependency_count_label
 from agent_bom.output.possibly_affected import print_possibly_affected
 
@@ -58,16 +61,10 @@ def _posture_grade_badge(grade: str) -> str:
     return f"[bold {style}] {grade} [/bold {style}]"
 
 
-def _compact_detail(text: str, limit: int = 88) -> str:
-    """Trim long explanatory detail so the default output stays one-screen friendly."""
-    clean = " ".join(text.split())
-    if len(clean) <= limit:
-        return clean
-    trimmed = clean[: limit - 1].rstrip()
-    # Never end on dangling connector punctuation ("… posture — …" cut right
-    # after the dash renders as a stray "—…" fragment when the line wraps).
-    trimmed = trimmed.rstrip("—·-,:;")
-    return trimmed.rstrip() + "…"
+def _posture_headline(summary: str) -> str:
+    # The badge already shows the grade and score, so drop the summary's "(F, 37.0%)"
+    # echo; drivers follow on the "Top driver" line. limit=45 fits an 80-col panel.
+    return _compact_detail(_GRADE_ECHO.sub("", summary).split(" — ")[0], limit=45)
 
 
 def _page_window(total: int, limit: int, page: int) -> tuple[int, int, int]:
@@ -273,9 +270,7 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
         if scorecard.score < 100 or high_risk_policy_count:
             grade_line = f"  [bold]Posture grade:[/bold]  {_posture_grade_badge(scorecard.grade)} {scorecard.score:.0f}/100"
             if scorecard_summary:
-                # limit=45 keeps the grade line inside an 80-col panel (no
-                # wrapped "—…" fragment on the default terminal width).
-                grade_line += f"  [dim]{_compact_detail(scorecard_summary, limit=45)}[/dim]"
+                grade_line += f"  [dim]{_posture_headline(scorecard_summary)}[/dim]"
             lines.append(grade_line)
             if weak_dimensions:
                 lines.append(f"  [dim]Top driver:[/dim] [yellow]{weak_dimensions[0].name}[/yellow]")
@@ -370,7 +365,7 @@ def print_compact_agents(report: AIBOMReport) -> None:
     table.add_column("Servers", justify="right")
     table.add_column("Pkgs", justify="right")
     table.add_column("Creds", justify="right")
-    table.add_column("Vulns", justify="right")
+    table.add_column("CVE hits", justify="right")
 
     for a in configured:
         n_servers = a.total_mcp_servers
@@ -499,15 +494,15 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
             server_names = [safe(value) for value in finding.affected_servers]
             chain_parts: list[str] = []
             if agent_names:
-                name = agent_names[0][:16]
+                name = _clip(agent_names[0], 16)
                 chain_parts.append(f"[bold]{name}[/bold]")
                 if len(agent_names) > 1:
                     chain_parts[-1] += f"+{len(agent_names) - 1}"
             if server_names:
-                name = server_names[0][:16]
+                name = _clip(server_names[0], 16)
                 chain_parts.append(f"{name}")
             if cred_names:
-                name = cred_names[0][:20]
+                name = _clip(cred_names[0], 20)
                 chain_parts.append(f"[yellow]{name}[/yellow]")
                 if len(cred_names) > 1:
                     chain_parts[-1] += f"+{len(cred_names) - 1}"
@@ -538,9 +533,9 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
         if hidden_before > 0:
             parts.append(f"{hidden_before} earlier hidden")
         if overflow > 0:
-            parts.append(f"{overflow} more critical/high")
+            parts.append(f"{overflow} more")
         if rest_count > 0:
-            parts.append(f"{rest_count} medium/low hidden")
+            parts.append(f"{rest_count} lower-priority hidden")
         nav_hints = []
         if page < total_pages:
             nav_hints.append(f"--page {page + 1} next")
@@ -659,9 +654,7 @@ def print_compact_remediation(report: AIBOMReport, limit: int = 5, page: int = 1
         if item.get("command"):
             console.print(f"     [bold cyan]Install:[/bold cyan] [cyan]$ {item['command']}[/cyan]")
         if item.get("verify_command"):
-            console.print(
-                f"     [bold dim cyan]Verify:[/bold dim cyan] [dim cyan]$ {item['verify_command']}[/dim cyan] [dim](verify)[/dim]"
-            )
+            console.print(f"     [bold dim cyan]Verify:[/bold dim cyan] [dim cyan]$ {item['verify_command']}[/dim cyan]")
         if row_number < end:
             console.print()
 
@@ -732,9 +725,12 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
     for finding, occurrence_count, assets in grouped[:limit]:
         category = finding.finding_type.value
         occurrences = f" [dim]× {occurrence_count} occurrences[/dim]" if occurrence_count > 1 else ""
-        console.print(
-            f"  {_finding_sev_badge(finding)} [dim]{escape(category)}[/dim] [bold]{escape(finding.title or '')}[/bold]{occurrences}"
-        )
+        # The line below carries the route, so the title drops it and is cut to one row.
+        route = str((finding.evidence or {}).get("route") or "")
+        title = (finding.title or "").removesuffix(f": {route}") if route else finding.title or ""
+        title_room = max(24, console.width - len(category) - 14 - (len(occurrences) - 11 if occurrences else 0))
+        shown_title = _compact_detail(title, limit=title_room)
+        console.print(f"  {_finding_sev_badge(finding)} [dim]{escape(category)}[/dim] [bold]{escape(shown_title)}[/bold]{occurrences}")
         chain_parts: list[str] = []
         if occurrence_count > 1:
             shown_assets = ", ".join(assets[:3])
@@ -747,7 +743,8 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
             chain_parts.append(escape(", ".join(finding.affected_servers[:3])))
         if finding.exposed_credentials:
             chain_parts.append(f"[yellow]{escape(', '.join(finding.exposed_credentials[:3]))}[/yellow]")
-        evidence_line = " → ".join(chain_parts) or escape(_compact_detail(finding.description or "", limit=110))
+        detail = route or _compact_detail(finding.description or "", limit=max(40, console.width - 8))
+        evidence_line = " → ".join(chain_parts) or escape(detail)
         if evidence_line:
             console.print(f"      [dim]{evidence_line}[/dim]")
     if len(grouped) > limit:

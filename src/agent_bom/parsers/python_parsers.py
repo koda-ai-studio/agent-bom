@@ -15,6 +15,7 @@ from pathlib import Path
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
 from agent_bom.parsers.file_limits import read_json_limited, read_text_limited
+from agent_bom.parsers.python_ladder import complete_unlocked_python
 from agent_bom.parsers.python_requirements import (
     bare_name_package,
     clean_requirement_line,
@@ -164,10 +165,13 @@ def parse_pip_packages(directory: Path) -> list[Package]:
         return parse_uv_lock(directory)
 
     packages = []
+    unlocked_source: Path | None = None
 
     req_file = directory / "requirements.txt"
     if req_file.exists():
         packages.extend(requirements_file_packages(req_file))
+        if any(_unpinned(pkg) for pkg in packages):
+            unlocked_source = req_file
 
     # Try Pipfile.lock
     pipfile_lock = directory / "Pipfile.lock"
@@ -219,6 +223,7 @@ def parse_pip_packages(directory: Path) -> list[Package]:
                     parsed = bare_name_package(str(dep), is_direct=True)
                 if isinstance(parsed, Package):
                     packages.append(parsed)
+            unlocked_source = pyproject if packages else None
         except Exception as e:
             logger.debug(f"Failed to parse pyproject.toml at {pyproject}: {e}")
             record_manifest_parse_warning(
@@ -229,7 +234,14 @@ def parse_pip_packages(directory: Path) -> list[Package]:
 
     if not packages:
         packages.extend(setup_declared_packages(directory))
+        unlocked_source = next((directory / name for name in ("setup.cfg", "setup.py") if (directory / name).is_file()), None)
+    if packages and unlocked_source is not None:
+        packages = complete_unlocked_python(directory, unlocked_source, packages)
     return packages
+
+
+def _unpinned(package: Package) -> bool:
+    return package.version in ("", "unknown", "latest") or package.floating_reference
 
 
 def _parse_requirements_lines(lines: list[str], is_direct: bool = True) -> list[Package]:

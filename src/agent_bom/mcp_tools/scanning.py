@@ -26,7 +26,7 @@ from agent_bom.mcp_tools.check_lookup import (
     unresolved_result as _unresolved_result,
 )
 from agent_bom.mcp_tools.check_lookup import version_published as _version_published
-from agent_bom.mcp_tools.dispatch import resolve_tool_path
+from agent_bom.mcp_tools.dispatch import raise_scan_tool_failure, resolve_tool_path
 from agent_bom.mcp_tools.result_store import ResultStore
 from agent_bom.mcp_tools.scan_response import (
     MAX_PAGE_LIMIT,
@@ -325,8 +325,7 @@ async def _scan_impl_inner(
         incomplete = _incomplete_scan_response(exc, offline, _truncate_response)
         if incomplete is not None:
             return incomplete
-        logger.exception("MCP tool error")
-        raise ToolError(sanitize_error(exc)) from exc
+        raise_scan_tool_failure(exc, logger)
 
 
 async def _post_scan_enrichment(agents, scan_warnings: list[str], *, verify_integrity: bool, scorecard: bool) -> None:
@@ -588,6 +587,7 @@ async def check_impl(
         version = pkg.version
         result_warnings: list[str] = []
         evidence: list = []
+        version_source = ["requested"]
 
         def service_result(
             verdict: str,
@@ -612,6 +612,7 @@ async def check_impl(
                 source_context=source_context or {},
                 vuln_data_freshness=evidence[0].freshness if evidence else None,
                 completeness=evidence[0].completeness() if evidence else None,
+                version_source=version_source[0],
             )
             return _truncate_response(json.dumps(result.service_payload(), indent=2, default=str))
 
@@ -645,6 +646,7 @@ async def check_impl(
             if not resolved:
                 return _unresolved_result(pkg, name, eco, reason, service_result)
             version = pkg.version
+            version_source[0] = "registry_fallback" if pkg.version_source == "registry_fallback" else "registry_latest"
 
         try:
             coverage_warnings, data_evidence = await scan_checked_package(pkg, offline=offline, warnings=result_warnings)

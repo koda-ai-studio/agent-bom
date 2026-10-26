@@ -115,18 +115,16 @@ def print_benchmark_line(
     )
 
 
-def print_scan_next_steps(con: Console, report: AIBOMReport, *, quiet: bool = False) -> None:
-    """Footer with graph / report / drill-down commands."""
+def print_scan_next_steps(con: Console, report: AIBOMReport, *, quiet: bool = False, target: str = ".") -> None:
+    """Footer with graph / report / drill-down commands for the same scan ``target`` (e.g. ``--demo``)."""
     if quiet:
         return
 
+    scan = f"agent-bom scan {target or '.'}"
     steps: list[str] = []
     if getattr(report, "total_agents", 0):
-        steps.append("agent-bom scan . -f graph-html -o agent-bom-graph.html")
-    if getattr(report, "total_vulnerabilities", 0) or getattr(report, "critical_vulns", None):
-        steps.append("agent-bom scan . -f html -o agent-bom-report.html")
-    else:
-        steps.append("agent-bom scan . -f html -o agent-bom-report.html")
+        steps.append(f"{scan} -f graph-html -o agent-bom-graph.html")
+    steps.append(f"{scan} -f html -o agent-bom-report.html")
 
     cis_attrs = (
         "cis_benchmark_data",

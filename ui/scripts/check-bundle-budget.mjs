@@ -146,7 +146,12 @@ const BUDGETS = {
   // dependency; code splitting cannot lower this total-of-all-chunks figure.
   // The build measures 4297.8 KiB; keep 18.2 KiB of bounded headroom at
   // 4316 KiB. Shared-runtime and largest-chunk limits stay fixed.
-  totalClientJsBytes: 4_419_584,
+  // Release polish adds the busy/auto-retry state for backpressure 429s, the
+  // shared offline-kind classifier, the advisory "findings reference" state and
+  // the runtime snapshot/unattributed-block labels: our own code, no new
+  // dependency. The clean build measures 4316.7 KiB; keep 15.3 KiB of bounded
+  // headroom at 4332 KiB. Shared-runtime and largest-chunk limits stay fixed.
+  totalClientJsBytes: 4_435_968,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.

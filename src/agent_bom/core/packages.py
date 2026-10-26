@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import unquote, urlparse
 
 _NORMALIZE_RE = re.compile(r"[-_.]+")
@@ -422,3 +422,25 @@ def encode_go_module_path(module: str) -> str:
         else:
             parts.append(ch)
     return "".join(parts)
+
+
+_UNPINNED_REASON = "no exact version declared; reported version is the registry's current release"
+
+
+def apply_registry_latest(package: Any, version: str) -> None:
+    """Record a registry-observed version for a declaration that fixed none: an observation, not a pin."""
+    package.version = version
+    package.purl = package_purl(package.name, version, package.ecosystem)
+    package.resolved_from_registry = True
+    if not package.floating_reference:
+        package.floating_reference = True
+        package.floating_reference_reason = _UNPINNED_REASON
+
+
+def copy_registry_observation(source: Any, target: Any) -> None:
+    """Carry registry-observation flags onto a deduplicated peer."""
+    if source.resolved_from_registry:
+        target.resolved_from_registry = True
+    if source.floating_reference and not target.floating_reference:
+        target.floating_reference = True
+        target.floating_reference_reason = source.floating_reference_reason

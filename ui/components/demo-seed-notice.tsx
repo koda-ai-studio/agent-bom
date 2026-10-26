@@ -63,7 +63,7 @@ export function DemoSeedNotice({ reload = reloadPage }: { reload?: () => void })
       aria-label="Demo estate seeding"
       className="mb-4 rounded-lg border border-outline px-3 py-2 text-sm text-ink-secondary"
     >
-      Seeding the demo estate. Counts are partial until it finishes; this page reloads when it lands, usually within a minute or two.
+      Seeding the demo estate. Counts are partial until it finishes; this page reloads when it lands, usually a few minutes on first start.
     </p>
   );
 }

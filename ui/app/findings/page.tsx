@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyApiOfflineKind, type ApiOfflineKind } from "@/lib/api-offline-kind";
 import { Suspense, useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -49,11 +50,6 @@ type TriageFilter = "" | FindingTriageDecision | "untriaged";
 const REACHABILITY_FILTERS: ReachabilityFilter[] = ["", "reachable", "unreachable", "unassessed"];
 const TRIAGE_FILTERS: TriageFilter[] = ["", "not_affected", "affected", "under_investigation", "untriaged"];
 
-function _classifyApiErrorKind(err: unknown): "network" | "auth" | "forbidden" {
-  if (err instanceof ApiAuthError) return "auth";
-  if (err instanceof ApiForbiddenError) return "forbidden";
-  return "network";
-}
 
 function downloadJson(data: unknown, filename: string) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -151,7 +147,7 @@ function FindingsPage() {
   const [error, setError] = useState("");
   // Per #2199 splash-kind sweep: track auth/forbidden/network so the splash
   // matches the actual cause instead of always reading as a connect failure.
-  const [errorKind, setErrorKind] = useState<"network" | "auth" | "forbidden">("network");
+  const [errorKind, setErrorKind] = useState<ApiOfflineKind>("network");
   // A first dropped read is an interruption, not an offline API: offer a
   // retry in place. A second consecutive failure shows the full state.
   const [softRetry, setSoftRetry] = useState(false);
@@ -559,7 +555,7 @@ function FindingsPage() {
         consecutiveReadFailures.current += 1;
         setSoftRetry(isTransientReadFailure(e) && consecutiveReadFailures.current === 1);
         setError(e instanceof Error ? e.message : "Failed to load");
-        setErrorKind(_classifyApiErrorKind(e));
+        setErrorKind(classifyApiOfflineKind(e));
       } finally {
         if (!cancelled) { setLoading(false); setDetailLoading(false); }
       }

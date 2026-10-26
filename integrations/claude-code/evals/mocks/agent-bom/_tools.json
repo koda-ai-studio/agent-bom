@@ -440,6 +440,261 @@
     "idempotentHint": true,
     "openWorldHint": true
    }
+  },
+  {
+   "name": "generate_sbom",
+   "title": "Generate SBOM",
+   "description": "Generate a Software Bill of Materials (SBOM) for your AI agent setup.\n\nDiscovers AI agents and MCP servers, extracts all package dependencies,\nand generates a standards-compliant SBOM.\n\nArgs:\n    format: SBOM format \u2014 \"cyclonedx\" (CycloneDX 1.7) or \"spdx\" (SPDX 3.0).\n    config_path: Path to a specific MCP config directory.\n                 If not provided, auto-discovers all local agent configs.\n\nReturns:\n    JSON string containing the SBOM in the requested format.\n",
+   "inputSchema": {
+    "properties": {
+     "format": {
+      "default": "cyclonedx",
+      "description": "SBOM format: 'cyclonedx' (CycloneDX 1.7) or 'spdx' (SPDX 3.0).",
+      "title": "Format",
+      "type": "string"
+     },
+     "config_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Path to MCP client config directory. Auto-discovers all if omitted.",
+      "title": "Config Path"
+     }
+    },
+    "title": "generate_sbomArguments",
+    "type": "object",
+    "additionalProperties": false
+   },
+   "outputSchema": {
+    "properties": {
+     "result": {
+      "title": "Result",
+      "type": "string"
+     }
+    },
+    "required": [
+     "result"
+    ],
+    "title": "generate_sbomOutput",
+    "type": "object"
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+   }
+  },
+  {
+   "name": "exposure_paths",
+   "title": "Exposure Paths",
+   "description": "Return the attack-path queue in the dashboard's order, with why each path ranks where it does.\n\nRanking is ``ranking.order`` (evidence tier, KEV, severity, evidence confidence,\ncomposite risk, credential count); every path carries ``rank``, ``evidenceTier``,\n``isKev``, ``severity``, ``evidenceConfidence`` and ``rankingFactors``. Totals,\nfilters and cursor pages match ``/v1/graph/attack-paths``.\n",
+   "inputSchema": {
+    "properties": {
+     "tenant_id": {
+      "default": "default",
+      "description": "Tenant scope. Defaults to 'default'.",
+      "title": "Tenant Id",
+      "type": "string"
+     },
+     "scan_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Optional historical scan ID. Omit for the current tenant estate.",
+      "title": "Scan Id"
+     },
+     "limit": {
+      "default": 5,
+      "description": "Maximum ranked exposure paths to return.",
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+     },
+     "view": {
+      "default": "summary",
+      "description": "summary (default): rank, risk, KEV, evidence tier, endpoints, finding/credential ids. full adds hops, relationships, nodes and edges.",
+      "enum": [
+       "summary",
+       "full"
+      ],
+      "title": "View",
+      "type": "string"
+     },
+     "min_risk": {
+      "default": 0.0,
+      "description": "Minimum composite path risk (0-100).",
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Min Risk",
+      "type": "number"
+     },
+     "min_severity": {
+      "anyOf": [
+       {
+        "enum": [
+         "critical",
+         "high",
+         "medium",
+         "low"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Worst on-path finding at least this severe.",
+      "title": "Min Severity"
+     },
+     "kev": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Only paths through a known-exploited finding (true) or none (false).",
+      "title": "Kev"
+     },
+     "has_credential": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Only paths that do (true) or do not (false) expose a credential.",
+      "title": "Has Credential"
+     },
+     "source_type": {
+      "anyOf": [
+       {
+        "maxLength": 64,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Entrypoint entity type, e.g. 'agent'.",
+      "title": "Source Type"
+     },
+     "target_id": {
+      "anyOf": [
+       {
+        "maxLength": 512,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Only paths ending at this graph node id.",
+      "title": "Target Id"
+     },
+     "finding_id": {
+      "anyOf": [
+       {
+        "maxLength": 512,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "CVE, advisory or finding node id on the path.",
+      "title": "Finding Id"
+     },
+     "credential_id": {
+      "anyOf": [
+       {
+        "maxLength": 512,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Credential name or node id exposed on the path.",
+      "title": "Credential Id"
+     },
+     "node_id": {
+      "anyOf": [
+       {
+        "maxLength": 512,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Any graph node the path passes through.",
+      "title": "Node Id"
+     },
+     "cursor": {
+      "anyOf": [
+       {
+        "maxLength": 4096,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "pagination.next_cursor; keep the filters unchanged.",
+      "title": "Cursor"
+     }
+    },
+    "title": "exposure_pathsArguments",
+    "type": "object",
+    "additionalProperties": false
+   },
+   "outputSchema": {
+    "properties": {
+     "result": {
+      "title": "Result",
+      "type": "string"
+     }
+    },
+    "required": [
+     "result"
+    ],
+    "title": "exposure_pathsOutput",
+    "type": "object"
+   },
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+   }
   }
  ]
 }

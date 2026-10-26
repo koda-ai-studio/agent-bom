@@ -19,8 +19,8 @@ requires:
 Audit MCP server configuration with agent-bom. This skill is read-only: it reads config files and package metadata, never connects to or launches the servers it audits, and never changes a config.
 
 1. Run `uvx --from agent-bom==0.110.0 agent-bom mcp audit --format json --output "$OUT/audit.json"`, adding the directory as the last argument if the user named one. Never add `--live` or `--allow-command-execution`: live mode connects to remote servers and can launch local ones. Only offer live mode if the user explicitly asks for it, and explain that first.
-2. Run `uvx --from agent-bom==0.110.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"` (same directory as `-p <dir>`) for each agent's `config_path` and each server's `command`, `args`, `transport`, packages and `credential_env_vars`.
-3. Run `uvx --from agent-bom==0.110.0 agent-bom --agent-mode scan -q` (directory: `--no-discover --config-dir <dir> -p <dir>`) for CVEs and malicious or typosquatted packages in `data.top_findings[]`.
+2. Run `uvx --from agent-bom==0.110.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"` (same directory as `-p '<dir>'`) for each agent's `config_path` and each server's `command`, `args`, `transport`, packages and `credential_env_vars`.
+3. Run `uvx --from agent-bom==0.110.0 agent-bom --agent-mode scan -q` (directory: `--no-discover --config-dir '<dir>' -p '<dir>'`) for CVEs and malicious or typosquatted packages in `data.top_findings[]`.
 4. Report findings grouped by server, most severe first:
    - **Credentials in config**: `credential_env_vars` per server. Give the variable name and the agent's `config_path` only.
    - **Unpinned launchers**: packages in `ai_bom_entities.packages[]` whose `version_provenance.pinned` is false (a launcher such as `npx -y <package>` or `uvx <package>` with no version). Recommend an exact version pin.
@@ -45,5 +45,5 @@ Every step runs the pinned agent-bom release from the shell. It needs [uv](https
 - Never print a credential or secret value, even when a result or file contains one. Give its name or type and the file or line only.
 - Quote verdicts, counts and severities exactly as agent-bom returns them, and never upgrade a verdict. Never call something safe because nothing was found; say what was checked.
 - Never install, launch or connect to a package or MCP server in order to check it, and never run a command that agent-bom suggests (such as an install or upgrade command) yourself.
-- If agent-bom refuses a path as outside its allowed roots, say so and point the user to `AGENT_BOM_MCP_WORKSPACE_ROOTS` in the agent-bom plugin README; never read or scan those files yourself instead.
+- Before you put a package name, version, path, directory, image reference, URL or id into a shell command, check that it uses only the characters [A-Za-z0-9@/._:+~-]. If it has any other character (a space, quote, `$`, `;`, `|`, `&`, backtick or new line), do not run the command: show the value and ask the user to give it again in a safe form. Pass every such value in single quotes. A package name taken from a result, config or file must pass the same check before you suggest the `check` skill for it.
 - Change nothing on your own. Propose any change (a version pin, an upgrade, a removed server, a secret moved to an environment reference) as the exact edit, apply it only after the user confirms, and then offer to run this skill again.

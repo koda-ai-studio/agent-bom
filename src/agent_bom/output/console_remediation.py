@@ -523,3 +523,9 @@ def _print_fixable(fixable: list[dict], total_agents: int, total_creds: int, tot
                 reach = "widens the attack surface on this dependency"
             _console().print(f"     [dim red]⚠ if not fixed:[/dim red] [dim]attacker exploiting {item['vulns'][0]} {reach}[/dim]")
             _console().print()
+
+
+def remediation_priority_fields(item: dict) -> dict:
+    """Worst severity and KEV flag of a remediation plan item, as plain JSON values."""
+    severity = item.get("max_severity")
+    return {"max_severity": str(getattr(severity, "value", severity) or "").lower(), "has_kev": bool(item.get("has_kev"))}

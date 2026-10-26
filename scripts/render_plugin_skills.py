@@ -51,8 +51,9 @@ def _fill(text: str, release: str) -> str:
     return text.replace("{ab}", f"uvx --from agent-bom=={release} agent-bom").replace("{release}", release)
 
 
-def rules_section(spec: dict[str, Any]) -> str:
-    bullets = "\n".join(f"- {rule}" for rule in spec["rules"].values())
+def rules_section(spec: dict[str, Any], *, mcp: bool = False) -> str:
+    rules = {**spec["rules"], **(spec.get("mcp_rules", {}) if mcp else {})}
+    bullets = "\n".join(f"- {rule}" for rule in rules.values())
     return f"{RULES_HEADING}\n\n{bullets}\n"
 
 
@@ -95,7 +96,7 @@ def render_codex_skill(job: str, spec: dict[str, Any], release: str) -> str:
 
 def render_claude_skill(current: str, spec: dict[str, Any]) -> str:
     head = current.split(f"\n{RULES_HEADING}\n", 1)[0].rstrip()
-    return f"{head}\n\n{rules_section(spec)}"
+    return f"{head}\n\n{rules_section(spec, mcp=True)}"
 
 
 def render_overlay(root_manifest: dict[str, Any]) -> str:

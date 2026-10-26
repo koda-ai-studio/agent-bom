@@ -404,7 +404,7 @@
     {
       "name": "tool_risk_assessment",
       "title": "Tool Capability Risk",
-      "description": "Audit MCP descriptors, permission scope and authentication configuration.\n\nAlso reports ``agent_permission_findings``: Claude Code settings and\nCodex config that let a coding agent act with no prompts or no sandbox.\n\nReturns descriptor coverage and heuristic findings; does not test auth\nbypass, general resource bodies or rendered prompts. Set live=false\nfor passive discovery; live mode retains its stdio execution gate.\n\nDiscovers configured MCP clients, connects to their servers, calls\n``tools/list``, and classifies every exposed tool by capability\n(filesystem, network, code execution, credential access) to produce a\nper-tool and per-server risk score from what the servers actually\nadvertise at runtime.\n\nArgs:\n    config_path: MCP client config directory to read; auto-discovers all\n        supported clients when omitted.\n    timeout: Per-server introspection timeout in seconds.\n    allow_command_execution: Explicit opt-in required before launching\n        discovered stdio server commands.\n\nReturns:\n    JSON with per-server tool inventories, per-tool capability classes\n    and risk levels, and an aggregate server risk rating.\n\nUse this to assess the blast radius of MCP servers an agent can reach\nbefore granting or trusting their tools.\n",
+      "description": "Audit MCP descriptors, permission scope and authentication configuration.\n\nAlso reports ``agent_permission_findings``: Claude Code settings and\nCodex config that let a coding agent act with no prompts or no sandbox.\n\nReturns descriptor coverage and heuristic findings; does not test auth\nbypass, general resource bodies or rendered prompts. Passive by\ndefault; live=true connects to remote servers, keeps the stdio\nexecution gate, and is refused when the server was started with\n``AGENT_BOM_MCP_LIVE_INTROSPECTION=0``.\n\nDiscovers configured MCP clients and, in live mode, connects to their\nservers, calls ``tools/list``, and classifies every exposed tool by capability\n(filesystem, network, code execution, credential access) to produce a\nper-tool and per-server risk score from what the servers actually\nadvertise at runtime.\n\nArgs:\n    config_path: MCP client config directory to read; auto-discovers all\n        supported clients when omitted.\n    timeout: Per-server introspection timeout in seconds.\n    allow_command_execution: Explicit opt-in required before launching\n        discovered stdio server commands.\n\nReturns:\n    JSON with per-server tool inventories, per-tool capability classes\n    and risk levels, and an aggregate server risk rating.\n\nUse this to assess the blast radius of MCP servers an agent can reach\nbefore granting or trusting their tools.\n",
       "inputSchema": {
         "properties": {
           "config_path": {
@@ -421,8 +421,8 @@
             "title": "Config Path"
           },
           "live": {
-            "default": true,
-            "description": "Connect for live descriptors; false audits discovered configuration without connections.",
+            "default": false,
+            "description": "Connect to remote servers for live descriptors. Off by default: audits configuration without connections.",
             "title": "Live",
             "type": "boolean"
           },

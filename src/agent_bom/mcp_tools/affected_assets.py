@@ -3,7 +3,8 @@
 With a control plane (tenant advisory store or stored scans) the tool runs the
 ``GET /v1/intel/advisories/{id}/affected`` read function for the MCP tenant, so
 REST and MCP cannot drift. Standalone, it answers from the CLI-local advisory
-file (or the local feed record) against the most recent saved scan.
+file (else the local feed record, else the saved scan's own findings) against
+the most recent saved scan.
 """
 
 from __future__ import annotations
@@ -41,7 +42,9 @@ def _control_plane(reads: Any, tenant_id: str) -> bool:
 def _local_page(advisory_id: str, verdict: str, limit: int, cursor: str | None) -> Any:
     answer = local_affected_answer(advisory_id)
     if answer is None:
-        return mcp_error_json(CODE_NOT_FOUND_RESOURCE, "Advisory not found in local declarations or the local feed")
+        return mcp_error_json(
+            CODE_NOT_FOUND_RESOURCE, "Advisory not found in local declarations, the local feed or the saved scan's findings"
+        )
     try:
         return page_answer(answer, tenant_id=LOCAL_TENANT, verdict=verdict, limit=limit, cursor=cursor)
     except AffectedCursorError as exc:

@@ -28,18 +28,20 @@ jobs:
           python-version: '3.11'
 
       - name: Upgrade all locked dependencies
-        run: uv lock --upgrade
+        run: |
+          uv lock --upgrade
+          uv lock --upgrade --project sdks/python
 
       - name: Check for changes
         shell: bash
         id: diff
         run: |
-          if git diff --quiet uv.lock; then
+          if git diff --quiet uv.lock sdks/python/uv.lock; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "### Changed packages" >> "$GITHUB_STEP_SUMMARY"
-            git diff uv.lock | grep '^[+-].*version' | grep -v '^---\|^+++' | head -50 >> "$GITHUB_STEP_SUMMARY" || true
+            git diff uv.lock sdks/python/uv.lock | grep '^[+-].*version' | grep -v '^---\|^+++' | head -50 >> "$GITHUB_STEP_SUMMARY" || true
           fi
 
       - name: Configure signed automation commits
@@ -80,7 +82,7 @@ jobs:
         run: |
           BRANCH="chore/uv-lock-upgrade-$(date +%Y%m%d)"
           git switch -C "$BRANCH" origin/main
-          git add uv.lock
+          git add uv.lock sdks/python/uv.lock
           git commit -S -m "chore(deps): refresh uv.lock"
           git push --force-with-lease origin "$BRANCH"
           BODY=$(cat <<'PREOF'

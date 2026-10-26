@@ -136,11 +136,11 @@ Emitted by: `graph/ci_graph_overlay.py`
 
 ## `contains`
 
-Class `structural` · directed · traversable · required evidence `source`, `tier` · 93 pairs
+Class `structural` · directed · traversable · required evidence `source`, `tier` · 94 pairs
 
 - `access_policy` → `misconfiguration`, `vulnerability`
 - `account` → `api_gateway`, `application`, `cloud_resource`, `data_store`, `environment`
-- `agent` → `misconfiguration`, `vulnerability`
+- `agent` → `agent`, `misconfiguration`, `vulnerability`
 - `api_gateway` → `misconfiguration`, `vulnerability`
 - `application` → `misconfiguration`, `vulnerability`
 - `ci_job` → `misconfiguration`, `vulnerability`
@@ -164,7 +164,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `source_file` → `package`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/repo_structure_overlay.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_finding_nodes.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/framework_topology_projection.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/repo_structure_overlay.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_finding_nodes.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `correlates_with`
 

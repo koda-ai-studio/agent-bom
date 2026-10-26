@@ -18,6 +18,7 @@ from agent_bom import __version__
 from agent_bom.cli._common import _make_console, _sync_runtime_consoles, logger
 from agent_bom.cli._scan_runner import ScanConfig, run_default_scan
 from agent_bom.core.risk_display import assessed_risk_score
+from agent_bom.mcp_blocklist import blocked_server_remediations
 from agent_bom.remediation_apply import RemediationApplyError, apply_remediation_plan
 
 # ---------------------------------------------------------------------------
@@ -107,7 +108,7 @@ def _render_markdown(plan_items: list[dict], blast_radii) -> str:
     return "\n".join(lines)
 
 
-def _plan_to_json(plan_items: list[dict]) -> dict:
+def _plan_to_json(plan_items: list[dict], blocked_servers: list[dict] | None = None) -> dict:
     """Build JSON-serialisable output following the json_fmt.py pattern."""
     from agent_bom.models import Severity
 
@@ -157,8 +158,10 @@ def _plan_to_json(plan_items: list[dict]) -> dict:
         "version": __version__,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "remediation_plan": items_out,
+        "blocked_servers": list(blocked_servers or []),
         "summary": {
             "total_items": len(items_out),
+            "blocked_servers": len(blocked_servers or []),
             "fixable": sum(1 for i in items_out if i["fixed_version"]),
             "unfixable": sum(1 for i in items_out if not i["fixed_version"]),
             "p1_count": sum(1 for i in items_out if i["priority"] == "P1"),
@@ -167,6 +170,22 @@ def _plan_to_json(plan_items: list[dict]) -> dict:
             "p4_count": sum(1 for i in items_out if i["priority"] == "P4"),
         },
     }
+
+
+def _emit_json(payload: dict, output_path: Optional[str]) -> None:
+    text = json.dumps(payload, indent=2)
+    if output_path:
+        Path(output_path).write_text(text)
+    else:
+        click.echo(text)
+
+
+def _print_blocked_servers(output_console, blocked: list[dict]) -> None:
+    output_console.print("\n[bold red]Remove first: blocklisted MCP servers[/bold red]")
+    for row in blocked:
+        output_console.print(f"  [{row['severity']}] {row['agent']} -> {row['server']}: {row['title']}")
+        output_console.print(f"    {row['action']}")
+    output_console.print()
 
 
 def _print_apply_outcome(output_console, outcome) -> None:
@@ -290,6 +309,7 @@ def remediate_cmd(
             con=runtime_console,
         )
         blast_radii, report = result.blast_radii, result.report
+        blocked = blocked_server_remediations(report.agents) if report is not None else []
     except SystemExit:
         raise
     except Exception as exc:
@@ -298,12 +318,10 @@ def remediate_cmd(
 
     if not blast_radii:
         if output_format == "json":
-            empty_plan = _plan_to_json([])
-            _out_str = json.dumps(empty_plan, indent=2)
-            if output_path:
-                Path(output_path).write_text(_out_str)
-            else:
-                click.echo(_out_str)
+            _emit_json(_plan_to_json([], blocked), output_path)
+            return
+        if blocked:
+            _print_blocked_servers(output_console, blocked)
             return
         output_console.print("\n[green]No vulnerabilities found — no remediation needed.[/green]\n")
         return
@@ -325,12 +343,7 @@ def remediate_cmd(
 
     if not plan:
         if output_format == "json":
-            empty_plan = _plan_to_json([])
-            _out_str = json.dumps(empty_plan, indent=2)
-            if output_path:
-                Path(output_path).write_text(_out_str)
-            else:
-                click.echo(_out_str)
+            _emit_json(_plan_to_json([], blocked), output_path)
             return
         output_console.print("\n[dim]No remediation items match the current filters.[/dim]\n")
         return
@@ -385,30 +398,28 @@ def remediate_cmd(
             # Use the existing print_remediation_plan for default console view
             assert report is not None  # guaranteed after successful scan
             output_mod.print_remediation_plan(report)
+        if blocked:
+            _print_blocked_servers(output_console, blocked)
 
     elif output_format == "json":
         if server_group:
             groups = _group_by_server(plan, blast_radii)
-            json_out = _plan_to_json(plan)
+            json_out = _plan_to_json(plan, blocked)
             json_out["server_groups"] = {srv: [item["package"] for item in items] for srv, items in groups.items()}
         else:
-            json_out = _plan_to_json(plan)
+            json_out = _plan_to_json(plan, blocked)
         if apply_outcome is not None:
             json_out["apply_result"] = apply_outcome.to_json()
-        _out_str = json.dumps(json_out, indent=2)
-        if output_path:
-            Path(output_path).write_text(_out_str)
-            if not quiet:
-                output_console.print(f"[green]Remediation plan written[/green] -> {output_path}")
-        else:
-            click.echo(_out_str)
+        _emit_json(json_out, output_path)
+        if output_path and not quiet:
+            output_console.print(f"[green]Remediation plan written[/green] -> {output_path}", soft_wrap=True)
 
     elif output_format == "markdown":
         md = _render_markdown(plan, blast_radii)
         if output_path:
             Path(output_path).write_text(md)
             if not quiet:
-                output_console.print(f"[green]Remediation report written[/green] -> {output_path}")
+                output_console.print(f"[green]Remediation report written[/green] -> {output_path}", soft_wrap=True)
         else:
             click.echo(md)
 

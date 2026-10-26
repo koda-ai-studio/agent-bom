@@ -198,8 +198,9 @@ export default function SelfPosturePage() {
     return (
       <PageEmptyState
         data-testid="self-posture-public-demo"
+        titleAs="h1"
         title="Operator self-posture is not exposed here"
-        detail="This public demo is intentionally read-only and does not disclose its deployment configuration. Self-hosted operators can evaluate their own instance from the dashboard, CLI, or authenticated API."
+        detail="This instance allows anonymous read-only access and does not disclose its deployment configuration. Operators can evaluate their own instance from the dashboard when signed in, or from the CLI or authenticated API."
         command={HEADLESS_CLI}
         action={{ label: "Explore findings", href: "/findings" }}
       />

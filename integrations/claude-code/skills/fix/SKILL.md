@@ -2,6 +2,7 @@
 name: fix
 description: Build a prioritized remediation plan with agent-bom - which upgrades remove the most risk, in what order, and which findings have no fix yet. Use when the user asks how to fix agent-bom findings, what to upgrade first, or for a remediation plan.
 argument-hint: "[image <ref>]"
+allowed-tools: mcp__plugin_agent-bom_agent-bom__remediate, mcp__plugin_agent-bom_agent-bom__scan, mcp__plugin_agent-bom_agent-bom__exposure_paths, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
 source: https://github.com/koda-ai-studio/agent-bom/tree/main/integrations/claude-code/skills/fix
 license: Apache-2.0
@@ -17,9 +18,9 @@ capabilities:
 Use the agent-bom `remediate` MCP tool to plan fixes.
 
 1. Call `remediate` (pass `image` or `config_path` if the user named one; otherwise it covers the discovered agents and MCP servers).
-2. Present the plan as a short ordered list. Group by the change to make (one package upgrade often clears several CVEs), and for each step give:
+2. Present the plan as a short ordered list: fixes with `has_kev: true` (known-exploited) first, then by `max_severity`. Group by the change to make (one package upgrade often clears several CVEs), and for each step give:
    - the exact change, such as `upgrade lodash 4.17.20 -> 4.17.21` and where it is declared
-   - what it clears: count, worst severity, and any KEV findings
+   - what it clears: `total_vulns`, worst severity (`max_severity`), and whether any is known-exploited (`has_kev`)
    - the agents, servers or credentials it protects, when agent-bom reports them
 3. List findings with no available fix separately, with the mitigation agent-bom suggests.
 4. For larger estates, `exposure_paths` ranks attack paths; offer it when the user asks "what is actually exploitable".
@@ -32,5 +33,6 @@ After a confirmed change, re-run the `scan` skill (Claude Code: `/agent-bom:scan
 - Never print a credential or secret value, even when a result or file contains one. Give its name or type and the file or line only.
 - Quote verdicts, counts and severities exactly as agent-bom returns them, and never upgrade a verdict. Never call something safe because nothing was found; say what was checked.
 - Never install, launch or connect to a package or MCP server in order to check it, and never run a command that agent-bom suggests (such as an install or upgrade command) yourself.
-- If agent-bom refuses a path as outside its allowed roots, say so and point the user to `AGENT_BOM_MCP_WORKSPACE_ROOTS` in the agent-bom plugin README; never read or scan those files yourself instead.
+- Before you put a package name, version, path, directory, image reference, URL or id into a shell command, check that it uses only the characters [A-Za-z0-9@/._:+~-]. If it has any other character (a space, quote, `$`, `;`, `|`, `&`, backtick or new line), do not run the command: show the value and ask the user to give it again in a safe form. Pass every such value in single quotes. A package name taken from a result, config or file must pass the same check before you suggest the `check` skill for it.
 - Change nothing on your own. Propose any change (a version pin, an upgrade, a removed server, a secret moved to an environment reference) as the exact edit, apply it only after the user confirms, and then offer to run this skill again.
+- If agent-bom refuses a path as outside its allowed roots, say so and point the user to `AGENT_BOM_MCP_WORKSPACE_ROOTS` in the agent-bom plugin README; never read or scan those files yourself instead.

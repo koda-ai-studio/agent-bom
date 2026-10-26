@@ -162,3 +162,57 @@ def test_listing_questions_route_to_inventory_not_checkup():
     assert "What MCP servers and agents are configured in X?" in inventory
     assert "what agents and MCP servers are configured" not in checkup
     assert "use inventory" in checkup
+
+
+SKILL_TOOLS = {
+    "activity": {"agent-bom-audit": {"agent_activity"}},
+    "affected": {"agent-bom": {"intel_lookup", "scan", "exposure_paths"}},
+    "audit-mcp": {"agent-bom-audit": {"tool_risk_assessment", "inventory"}, "agent-bom": {"scan"}},
+    "audit-skills": {"agent-bom-audit": {"skill_scan", "skill_trust", "prompt_scan"}},
+    "bom": {"agent-bom": {"generate_sbom"}},
+    "check": {"agent-bom": {"check"}},
+    "checkup": {"agent-bom-audit": {"inventory", "tool_risk_assessment"}, "agent-bom": {"scan"}},
+    "fix": {"agent-bom": {"remediate", "scan", "exposure_paths"}},
+    "inventory": {"agent-bom-audit": {"inventory"}, "agent-bom": {"scan"}},
+    "scan": {"agent-bom": {"scan"}},
+}
+
+
+def _allowed_tools(skill: str) -> list[str]:
+    text = (PLUGIN / "skills" / skill / "SKILL.md").read_text()
+    front = text.split("\n---\n", 1)[0]
+    line = next((ln for ln in front.splitlines() if ln.startswith("allowed-tools:")), None)
+    assert line is not None, f"{skill} declares no allowed-tools"
+    return [tool.strip() for tool in line.split(":", 1)[1].split(",") if tool.strip()]
+
+
+@pytest.mark.parametrize("skill", sorted(SKILL_TOOLS))
+def test_skills_grant_least_privilege_tools(skill):
+    profiles = _server_profiles()
+    granted = _allowed_tools(skill)
+    mcp = {}
+    for tool in granted:
+        match = TOOL_REF.fullmatch(tool)
+        if match:
+            server, name = match.groups()
+            assert name in get_profile(profiles[server]).tools, tool
+            mcp.setdefault(server, set()).add(name)
+    assert mcp == SKILL_TOOLS[skill]
+    others = [tool for tool in granted if not TOOL_REF.fullmatch(tool)]
+    shell = [tool for tool in others if tool.startswith("Bash(")]
+    assert set(others) - set(shell) == {"Read"}, others
+    if skill == "bom":
+        assert shell and all(tool.startswith("Bash(uvx --from agent-bom==") and tool.endswith(":*)") for tool in shell), shell
+    else:
+        assert not shell, f"{skill} must not run shell commands"
+
+
+def test_audit_mcp_skill_states_bypass_severity_as_the_product_reports_it():
+    from agent_bom.discovery.agent_permissions import _claude_mode_findings
+
+    text = (PLUGIN / "skills" / "audit-mcp" / "SKILL.md").read_text()
+    user = _claude_mode_findings({"defaultMode": "bypassPermissions"}, "user", False)[0]["severity"]
+    project = _claude_mode_findings({"defaultMode": "bypassPermissions"}, "project", False)[0]["severity"]
+    assert (user, project) == ("HIGH", "MEDIUM")
+    assert "`bypassPermissions` as the default mode in user or managed settings" in text
+    assert "`bypassPermissions` in project or local settings is medium" in text

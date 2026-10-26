@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyApiOfflineKind, type ApiOfflineKind } from "@/lib/api-offline-kind";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRequestedControl } from "@/hooks/use-requested-control";
 import Link from "next/link";
@@ -60,18 +61,12 @@ import {
 } from "@/lib/compliance-frameworks";
 import { ApiOfflineState } from "@/components/api-offline-state";
 import { PageEmptyState, PageLoadingState } from "@/components/states/page-state";
-import { ApiAuthError, ApiForbiddenError } from "@/lib/api-errors";
 import { FIRST_EVIDENCE_ACTIONS } from "@/lib/empty-state-actions";
 import { StatStrip, type StatStripItem, type StatAccent } from "@/components/stat-strip";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { SplitLayout } from "@/components/split-layout";
 import { Collapsible } from "@/components/collapsible";
 
-function _classifyApiErrorKind(err: unknown): "network" | "auth" | "forbidden" {
-  if (err instanceof ApiAuthError) return "auth";
-  if (err instanceof ApiForbiddenError) return "forbidden";
-  return "network";
-}
 
 function downloadBlobToFile(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -147,7 +142,7 @@ function CompliancePageContent() {
   // Per #2199 splash-kind sweep: classify API errors so the splash matches
   // the actual cause (auth/forbidden/network) instead of always reading as
   // "Cannot connect to the agent-bom API".
-  const [errorKind, setErrorKind] = useState<"network" | "auth" | "forbidden">("network");
+  const [errorKind, setErrorKind] = useState<ApiOfflineKind>("network");
   const [viewMode, setViewMode] = useState<"detail" | "heatmap" | "matrix">("detail");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [controlQuery, setControlQuery] = useState(queryParam);
@@ -366,7 +361,7 @@ function CompliancePageContent() {
         } else {
           const reason = complianceResult.reason;
           setError(reason?.message ?? "Failed to load compliance view");
-          setErrorKind(_classifyApiErrorKind(reason));
+          setErrorKind(classifyApiOfflineKind(reason));
         }
         if (catalogResult.status === "fulfilled") {
           setMitreCatalog(catalogResult.value.frameworks?.mitre_attack ?? null);

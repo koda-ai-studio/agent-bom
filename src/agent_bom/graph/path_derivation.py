@@ -123,10 +123,12 @@ def _fusion_signals_for_path(graph: UnifiedGraph, hops: list[str]) -> list[tuple
             reach_detail = f", reachable by {reach} identity/tool path(s)" if isinstance(reach, int) and reach > 0 else ""
             add("sensitive_data", "Sensitive data", f"{node.label} holds sensitive (PII/PHI/secret) data{reach_detail}.", 8.0)
         # Activity at one hop is useful context, not proof of end-to-end
-        # reachability. Blocked attempts must not become observed execution.
+        # reachability. Blocked attempts must not become observed execution,
+        # and a delegation declared in source (LangGraph wiring) is not activity.
         hop_edges = graph.adjacency.get(hop_id, []) + graph.reverse_adjacency.get(hop_id, [])
         if any(
             _rel_value(e) in _RUNTIME_OBSERVED_RELS
+            and e.evidence.get("provenance") != "declared"
             and not e.evidence.get("blocked")
             and e.evidence.get("decision") != "blocked"
             and (e.evidence.get("runtime_observed_state") or e.provenance.get("runtime_observed_state")) not in {"blocked", "not_observed"}

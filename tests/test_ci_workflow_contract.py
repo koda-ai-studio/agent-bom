@@ -1449,3 +1449,11 @@ def test_playwright_shards_partition_the_browser_suite_evenly() -> None:
     """The largest spec runs in parallel mode, so no shard holds one giant group."""
     spec = (ROOT / "ui" / "e2e" / "security-graph-cockpit.spec.ts").read_text(encoding="utf-8")
     assert 'test.describe.configure({ mode: "parallel" });' in spec
+
+
+def test_lock_refresh_covers_the_python_sdk_lock() -> None:
+    assert (ROOT / "sdks" / "python" / "uv.lock").is_file()
+    lock_refresh = yaml.safe_load((ROOT / ".github" / "workflows" / "uv-lock-upgrade.yml").read_text())
+    runs = "\n".join(step.get("run", "") for step in lock_refresh["jobs"]["upgrade"]["steps"])
+    assert "uv lock --upgrade --project sdks/python" in runs
+    assert "git add uv.lock sdks/python/uv.lock" in runs

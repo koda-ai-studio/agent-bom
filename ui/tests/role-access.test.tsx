@@ -124,7 +124,8 @@ describe("PermissionDeniedNotice", () => {
     expect(screen.queryByText(/AGENT_BOM_NO_AUTH_ROLE/)).toBeNull();
     expect(screen.queryByText(/AGENT_BOM_DEMO_ESTATE/)).toBeNull();
     // A concise, neutral read-only line replaces them.
-    expect(screen.getByText(/read-only public demo/i)).toBeInTheDocument();
+    expect(screen.getByText(/anonymous read-only access/i)).toBeInTheDocument();
+    expect(screen.queryByText(/public demo/i)).toBeNull();
   });
 
   it("renders as a collapsible details notice, not an always-open band", () => {

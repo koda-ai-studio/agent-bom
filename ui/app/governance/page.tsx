@@ -69,8 +69,9 @@ export default function GovernancePage() {
     return (
       <PageEmptyState
         data-testid="governance-public-demo"
-        title="Cloud governance telemetry is not configured on this public demo"
-        detail="The showcase remains read-only and does not disclose operator integration details. Self-hosted deployments can connect their own telemetry source and keep credentials inside their boundary."
+        titleAs="h1"
+        title="Cloud governance telemetry is not shown to anonymous viewers"
+        detail="This instance allows anonymous read-only access, so it does not disclose operator integration details. Signed-in operators of a self-hosted deployment can connect their own telemetry source and keep credentials inside their boundary."
         action={{ label: "Explore compliance evidence", href: "/compliance" }}
       />
     );

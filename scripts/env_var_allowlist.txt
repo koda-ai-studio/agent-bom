@@ -19,6 +19,7 @@ AGENT_BOM_EXPERIMENTAL
 AGENT_BOM_AGENT_MODE
 # Literal Snowflake object names emitted by the onboarding SQL template; not process environment variables.
 AGENT_BOM_NVD_TIME_BUDGET_SECONDS  # read per db update run (tests and operators change it between runs), not at import
+AGENT_BOM_PYPI_RESOLUTION_BUDGET_SECONDS
 AGENT_BOM_READONLY
 AGENT_BOM_SVC
 AGENT_BOM_WH
@@ -320,6 +321,7 @@ AGENT_BOM_MCP_OPERATOR_TOKEN
 AGENT_BOM_MCP_OPERATOR_TOKEN_EXPIRES_AT
 # Opt-in remote clone bind escape hatch for MCP repo scans; default stays loopback/SSRF-safe.
 AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS  # read per MCP call in mcp_tools/host_local.py; documented in docs/MCP_SERVER.md
+AGENT_BOM_MCP_LIVE_INTROSPECTION  # read per tool_risk_assessment call in mcp_tools/audit.py; the plugins set it to 0; documented in docs/MCP_SERVER.md
 AGENT_BOM_MCP_REMOTE_BIND
 AGENT_BOM_MCP_SANDBOX
 AGENT_BOM_MCP_SANDBOX_CPUS

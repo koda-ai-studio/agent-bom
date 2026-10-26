@@ -11,7 +11,7 @@ runs:
   steps:
     - uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098 # v7.3.1
       with:
-        version: "0.11.10"
+        version: "0.13.5"
         python-version: ${{ inputs.python-version }}
         enable-cache: true
         # The path-conditional test job skips dependency install on

@@ -4,8 +4,9 @@
 `make ci-local` runs every ``run:`` step of the gating jobs exactly as CI writes
 it, with each job's own dependency install into a private per-job environment
 (so test shards run without the cloud extras, like CI). Steps that need GitHub
-itself (secrets, the runner, registry downloads) are skipped with a printed
+itself (secrets, the runner, binary downloads) are skipped with a printed
 reason; tests/test_ci_local_parity.py fails if a step is ever dropped silently.
+Node comes from ``CI_LOCAL_NODE_BIN`` or a Homebrew node@22/@24 (CI pins 22).
 
     python scripts/ci_local.py                  # lint, security, version-check, ui (when ui/ changed), 4 test shards
     python scripts/ci_local.py --jobs lint,test-smoke   # the pre-push smoke tier
@@ -33,15 +34,13 @@ SMOKE_JOBS = ("lint", "version-check", "test-smoke")
 SKIP_RULES: tuple[tuple[str, str], ...] = (
     (r"No Python, generated contract, or dependency path changed", "documentation-only notice"),
     (r"curl -fsSL", "downloads a pinned scanner binary on the runner"),
-    (r"npm (audit|config set fetch)", "queries the npm registry advisory API"),
-    (r"check_npm_advisories\.py", "queries the npm registry advisory API"),
     (r"snow app bundle", "needs the Snowflake CLI download"),
     (r"uvicorn agent_bom\.api\.server:app", "binds CI's fixed port 8422; covered by the OpenAPI drift gate"),
     (r"smoke-dev-startup\.mjs", "starts a dev server on a fixed port"),
 )
 
 _EXPR = re.compile(r"\$\{\{\s*([^}]+?)\s*\}\}")
-_MAPFILE = re.compile(r"mapfile -t (\w+) < <\((.+)\)")
+_MAPFILE = re.compile(r"mapfile -t (\w+) (<<<|<) (.+)")
 
 
 @dataclass
@@ -69,6 +68,9 @@ def _expressions(matrix: str) -> dict[str, str]:
         "matrix.shard": matrix,
         "github.event_name": "pull_request",
         "github.event.pull_request.base.sha": base,
+        "github.event.pull_request.head.sha": _git("rev-parse", "HEAD"),
+        "github.event.before": base,
+        "github.sha": _git("rev-parse", "HEAD"),
         "github.base_ref": "main",
         "github.workspace": str(ROOT),
     }
@@ -81,7 +83,9 @@ def _render(command: str, matrix: str) -> tuple[str, str]:
         return command, f"needs GitHub context: {', '.join(unknown)}"
     rendered = _EXPR.sub(lambda match: known[match.group(1)], command)
     # macOS ships bash 3.2, which has no mapfile.
-    rendered = _MAPFILE.sub(lambda m: f'{m.group(1)}=(); while IFS= read -r _l; do {m.group(1)}+=("$_l"); done < <({m.group(2)})', rendered)
+    rendered = _MAPFILE.sub(
+        lambda m: f'{m.group(1)}=(); while IFS= read -r _l; do {m.group(1)}+=("$_l"); done {m.group(2)} {m.group(3)}', rendered
+    )
     return rendered, ""
 
 
@@ -104,15 +108,28 @@ def _ui_changed() -> bool:
     return any(path.startswith("ui/") for path in _git("diff", "--name-only", "origin/main...HEAD").splitlines())
 
 
+# CI pins Node with actions/setup-node; the UI refuses runtimes outside its engines range.
+NODE_BIN_CANDIDATES = ("/opt/homebrew/opt/node@22/bin", "/usr/local/opt/node@22/bin", "/opt/homebrew/opt/node@24/bin")
+
+
+def _node_bin() -> str:
+    preferred = os.environ.get("CI_LOCAL_NODE_BIN", "")
+    return next((path for path in (preferred, *NODE_BIN_CANDIDATES) if path and Path(path, "node").exists()), "")
+
+
 def _environment(job: str) -> dict[str, str]:
     venv = ROOT / ".ci-local" / job
     env = {k: v for k, v in os.environ.items() if not k.startswith(("VIRTUAL_ENV", "UV_PROJECT_ENVIRONMENT"))}
+    node = _node_bin()
     env.update(
         UV_PROJECT_ENVIRONMENT=str(venv),
-        PATH=f"{venv / 'bin'}:{env.get('PATH', '')}",
+        PATH=":".join(part for part in (str(venv / "bin"), node, env.get("PATH", "")) if part),
         ARCHITECTURE_BASE="origin/main",
         BASE_SHA=_git("merge-base", "origin/main", "HEAD"),
         WAIVED="false",
+        GITHUB_SHA=_git("rev-parse", "HEAD"),
+        GITHUB_EVENT_NAME="pull_request",
+        GITHUB_BASE_REF="main",
         CI="true",
     )
     return env

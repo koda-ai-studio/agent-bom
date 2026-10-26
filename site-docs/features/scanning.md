@@ -70,6 +70,31 @@ unreachable, or the scan is `--offline`, the version stays `unknown`, has no
 purl, and no advisory is matched against the range's lower bound. Git, URL,
 file, alias, and workspace specs are never resolved to a registry version.
 
+### Python projects without a lockfile
+
+Python dependencies are resolved by the first source that applies:
+
+1. A lockfile (`uv.lock`, `poetry.lock`, `Pipfile.lock`, or fully pinned
+   `requirements.txt`) — exact versions.
+2. The project's own virtualenv — a child directory holding `pyvenv.cfg`
+   (`.venv`, `venv`, `env`, …) or `$VIRTUAL_ENV` when it is inside the project.
+   Installed `*.dist-info/METADATA` headers give exact versions, transitives
+   included, with `version_source: installed_environment`. Nothing is
+   executed, and links that leave the project are skipped.
+3. Online, declared ranges are resolved transitively from PyPI JSON
+   metadata (`requires_dist`) with `version_source: resolved_at_scan`. Each
+   name gets the newest non-yanked, non-pre-release release satisfying every
+   constraint. Environment markers are evaluated for CPython 3.12 on Linux
+   x86_64. Distributions are never downloaded or built. The run records a note,
+   not a coverage gap. Requirements that cannot be resolved (not on PyPI, no
+   satisfying release, registry error, sdist-only release without metadata, or
+   the resolution budget) are named in a coverage gap, and the run is partial.
+   All unlocked projects in one scan share one resolution budget,
+   `AGENT_BOM_PYPI_RESOLUTION_BUDGET_SECONDS` (default `15`), so registry
+   lookups never stretch a scan or an MCP tool call.
+4. `--offline` with neither a lockfile nor a virtualenv records the gap
+   "transitive dependencies not resolved offline". The run is partial.
+
 ### Reproducible matching evidence
 
 The committed, mutation-tested range benchmark currently covers 207 comparable

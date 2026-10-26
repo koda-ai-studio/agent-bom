@@ -221,6 +221,27 @@ _HIGH_ENTROPY_MIN_LEN = 24
 _HIGH_ENTROPY_SHORT_THRESHOLD = 5.0  # stricter for shorter strings (24-39 chars)
 
 _STRUCTURED_EDGE_ID_RE = re.compile(r"^[^\s>]+->[A-Za-z][A-Za-z0-9_.:-]*->[^\s>]+$")
+# Directory-traversal coverage receipt (``traversal.py``): a root digest and a reason code.
+_COVERAGE_RECEIPT_RE = re.compile(r"^filesystem-discovery:[0-9a-f]{16}:[a-z_]{1,64}$")
+
+
+def _is_structured_coordinate(key_text: str, value: str) -> bool:
+    """A deterministic identifier whose punctuation and length would trip the entropy detector.
+
+    Deliberately narrow: a coverage receipt in ``release``, or an ``id`` /
+    ``canonical_id`` in the canonical ``source->relation->target`` edge shape
+    whose endpoints match no credential pattern.
+    """
+    if key_text == "release":
+        return _COVERAGE_RECEIPT_RE.fullmatch(value) is not None
+    edge_parts = value.split("->")
+    return (
+        key_text in {"id", "canonical_id"}
+        and _STRUCTURED_EDGE_ID_RE.fullmatch(value) is not None
+        and len(edge_parts) == 3
+        and not _looks_sensitive_value(edge_parts[0])
+        and not _looks_sensitive_value(edge_parts[2])
+    )
 
 
 def _shannon_entropy(s: str) -> float:
@@ -684,6 +705,8 @@ def sanitize_path_label(value: object) -> str:
     if re.fullmatch(r"<path:[^<>]+>", text):
         return text
     basename = re.split(r"[\\/]+", text.rstrip("/\\"))[-1] if text else ""
+    if "(" not in basename:
+        basename = basename.rstrip(")")
     basename = sanitize_text(basename or "path", max_len=80)
     if not basename or _key_looks_sensitive(basename) or _looks_sensitive_value(basename):
         basename = "path"
@@ -733,19 +756,8 @@ def _sanitize_sensitive_string(value: str, *, key: object | None, max_str_len: i
         if _looks_sensitive_value(value):
             return "***REDACTED***"
         return sanitize_text(value, max_len=max_str_len)
-    # Graph edge identifiers are deterministic relationship coordinates,
-    # not opaque credentials.  Their punctuation and length can otherwise
-    # trip the entropy detector.  Keep the exception deliberately narrow:
-    # only ID fields with the canonical ``source->relation->target`` shape,
-    # and never values matching a known credential pattern.
-    edge_parts = value.split("->")
-    if (
-        key_text in {"id", "canonical_id"}
-        and _STRUCTURED_EDGE_ID_RE.fullmatch(value)
-        and len(edge_parts) == 3
-        and not _looks_sensitive_value(edge_parts[0])
-        and not _looks_sensitive_value(edge_parts[2])
-    ):
+    # Graph edge ids and coverage receipts are coordinates, not opaque credentials.
+    if _is_structured_coordinate(key_text, value):
         return sanitize_text(value, max_len=max_str_len)
     if "://" in value:
         return sanitize_text(value, max_len=max_str_len)

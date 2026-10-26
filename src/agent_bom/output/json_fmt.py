@@ -711,6 +711,7 @@ def to_json(report: AIBOMReport) -> dict:
         "packages": ai_bom_entities.get("packages", []),
         "summary": {
             "total_agents": report.total_agents,
+            "installed_unconfigured_agents": len(report.agents) - report.total_agents,
             "total_mcp_servers": report.total_servers,
             "total_packages": report.total_packages,
             "unique_packages": len(ai_bom_entities.get("packages", [])),

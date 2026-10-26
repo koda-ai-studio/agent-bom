@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from agent_bom.a2a_auth_posture import evaluate_a2a_auth_posture
 from agent_bom.cli.agents.scan_pipeline.context_evidence import attach_context_evidence
 from agent_bom.cli.agents.scan_pipeline.helpers import (
     _benchmark_scan_issues,
@@ -15,7 +14,6 @@ from agent_bom.cli.agents.scan_pipeline.helpers import (
 )
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
-from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
 from agent_bom.evidence.scan_run import (
     ScanIssue,
     ScanOutcome,
@@ -26,12 +24,11 @@ from agent_bom.evidence.scan_run import (
     vulnerability_scan_skipped_issue,
 )
 from agent_bom.finding import blast_radius_to_finding
-from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
-from agent_bom.mcp_blocklist import blocklist_findings_for_agents
 from agent_bom.models import AIBOMReport
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.resolver import consume_performance_stats as consume_resolution_performance
 from agent_bom.scanners import consume_coverage_warnings, consume_scan_performance
+from agent_bom.scanners.mcp_audit import config_posture_findings
 
 
 def _collect_scan_sources(opts: ScanOptions, st: ScanState) -> None:
@@ -83,10 +80,7 @@ def _collect_surface_sources(opts: ScanOptions, st: ScanState) -> None:
 
 def _seed_findings_and_scan_id(opts: ScanOptions, st: ScanState) -> None:
     st.findings = [blast_radius_to_finding(br) for br in st.blast_radii]
-    st.findings.extend(blocklist_findings_for_agents(st.agents))
-    st.findings.extend(evaluate_a2a_auth_posture(st.agents))
-    st.findings.extend(evaluate_mcp_auth_posture(st.agents))
-    st.findings.extend(evaluate_agent_permission_posture(st.agents))
+    st.findings.extend(config_posture_findings(st.agents))
 
     st.endpoint_inventory_data = None
     if opts.preset == "workstation":

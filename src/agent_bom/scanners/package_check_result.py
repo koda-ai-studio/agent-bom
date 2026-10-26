@@ -35,6 +35,9 @@ class PackageCheckResult:
     # whether that data was sufficient; ``None`` when no lookup ran.
     vuln_data_freshness: dict[str, Any] | None = None
     completeness: dict[str, str] | None = None
+    # "requested" when the caller named the version; "registry_latest" (or
+    # "registry_fallback") when none was given and the latest was checked.
+    version_source: str = "requested"
 
     @property
     def canonical_verdict(self) -> str:
@@ -51,6 +54,7 @@ class PackageCheckResult:
         return {
             "package": self.package,
             "version": self.version,
+            "version_source": self.version_source,
             "ecosystem": ecosystem,
             "ecosystems": list(self.ecosystems),
             "package_canonical_id": self.package_canonical_id,

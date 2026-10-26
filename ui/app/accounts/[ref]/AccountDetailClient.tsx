@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyApiOfflineKind } from "@/lib/api-offline-kind";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -18,14 +19,8 @@ import type { AccountSummaryDomain, AccountSummaryResponse } from "@/lib/api-typ
 import { PageLaneHeader } from "@/components/page-lane";
 import { PageLoadingState, PageEmptyState } from "@/components/states/page-state";
 import { ApiOfflineState, type ApiOfflineKind } from "@/components/api-offline-state";
-import { ApiAuthError, ApiForbiddenError } from "@/lib/api-errors";
 import { providerDisplayName } from "@/lib/scan-scope";
 
-function classifyApiErrorKind(err: unknown): ApiOfflineKind {
-  if (err instanceof ApiAuthError) return "auth";
-  if (err instanceof ApiForbiddenError) return "forbidden";
-  return "network";
-}
 
 // Severity bands shown in a lane's strip, in descending order, plus ``unrated``
 // for findings whose severity is unknown/unscored (issue #3946). Colors come
@@ -238,7 +233,7 @@ export default function AccountDetailClient() {
       .catch((err) => {
         if (!mounted) return;
         setError(err?.message ?? "Failed to load account summary");
-        setErrorKind(classifyApiErrorKind(err));
+        setErrorKind(classifyApiOfflineKind(err));
       })
       .finally(() => {
         if (mounted) setLoading(false);

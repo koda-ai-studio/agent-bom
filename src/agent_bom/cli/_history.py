@@ -595,7 +595,7 @@ def rescan_command(baseline: str, output: Optional[str], md: Optional[str], enri
 
     if output:
         Path(output).write_text(_json.dumps(verification, indent=2))
-        con.print(f"\n  [green]✓[/green] Verification report: {output}")
+        con.print(f"\n  [green]✓[/green] Verification report: {output}", soft_wrap=True)
 
     if md:
         lines = [
@@ -788,6 +788,6 @@ def compliance_narrative_cmd(scan_file: str, framework: Optional[str], output_fo
 
     if output:
         Path(output).write_text(rendered)
-        console.print(f"[green]✓[/green] Compliance narrative: {output}")
+        console.print(f"[green]✓[/green] Compliance narrative: {output}", soft_wrap=True)
     else:
         click.echo(rendered)

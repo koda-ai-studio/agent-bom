@@ -170,6 +170,8 @@ def parse_requirement(text: str, *, is_direct: bool = True) -> Package | None | 
     package = _package_for(requirement, is_direct=is_direct)
     if requirement.marker is not None:
         package.version_evidence.append({"type": "environment_marker", "marker": str(requirement.marker)})
+    if requirement.extras:
+        package.version_evidence.append({"type": "requirement_extras", "extras": ",".join(sorted(requirement.extras))})
     return package
 
 

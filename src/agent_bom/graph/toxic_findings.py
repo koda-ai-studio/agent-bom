@@ -117,6 +117,7 @@ class ToxicMatch:
     path: tuple[str, ...]
     severities: tuple[str, ...]
     detail: str = ""
+    subject: str = ""
 
     @property
     def dedupe_key(self) -> tuple[str, ...]:
@@ -359,7 +360,7 @@ def _match_overpermissioned_to_sensitive(graph: UnifiedGraph) -> list[ToxicMatch
 def _match_agent_reaches_privileged(graph: UnifiedGraph) -> list[ToxicMatch]:
     """An AGENT that reaches a credential / privileged tool — the agentic-AI moat."""
     matches: list[ToxicMatch] = []
-    from agent_bom.graph.credential_reach import credential_routes
+    from agent_bom.graph.credential_reach import credential_routes, route_subject
 
     routes = credential_routes(graph, (a.id for a in graph.nodes_by_type(EntityType.AGENT)), analyzer="credential_reach")
     for owner, credentials in routes.items():
@@ -376,6 +377,7 @@ def _match_agent_reaches_privileged(graph: UnifiedGraph) -> list[ToxicMatch]:
                 node_ids=node_ids,
                 path=(RelationshipType.USES.value, RelationshipType.EXPOSES_CRED.value, RelationshipType.REACHES_TOOL.value),
                 severities=sevs,
+                subject=route_subject(graph, [credentials[c][0] for c in ranked]),
                 detail=(
                     f"Agent {agent.label} can reach {len(ranked)} credential/privileged tool node(s) along its "
                     "tool-use chain (agentic credential-harvest exposure)."
@@ -548,14 +550,11 @@ TOXIC_RULES: tuple[ToxicRule, ...] = (
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
-# The four "public, internet-exposed + vulnerable" rules overlap: a single KEV
-# vuln is also "a known vulnerability" (VULNERABLE), a network-exploitable RCE
-# KEV satisfies all four. Left un-subsumed, one exposure is counted 2-4x in the
-# severity totals and the fail-on-severity gate. They are listed in TOXIC_RULES
-# highest-specificity/severity first (KEV > RCE > NETWORK_EXPLOITABLE >
-# VULNERABLE), so the first family rule to match an exposed entry node subsumes
-# the rest for that node: one exposure yields one finding at its highest
-# applicable severity.
+# The four "public, internet-exposed + vulnerable" rules overlap (a network-exploitable
+# RCE KEV satisfies all four), so un-subsumed, one exposure counts 2-4x in severity
+# totals and the fail-on-severity gate. TOXIC_RULES lists them most specific first
+# (KEV > RCE > NETWORK_EXPLOITABLE > VULNERABLE); the first family rule to match an
+# exposed entry node subsumes the rest: one finding at its highest applicable severity.
 _EXPOSED_VULN_FAMILY: frozenset[str] = frozenset(
     {
         "PUBLIC_EXPOSED_KEV",
@@ -614,6 +613,7 @@ def _finding_from_match(graph: UnifiedGraph, rule: ToxicRule, match: ToxicMatch)
         "mitre_attack": list(rule.mitre),
         "detail": match.detail or rule.description,
         "source": _GRAPH_SOURCE,
+        **({"route": match.subject} if match.subject else {}),
     }
     entry = match.entry
     entry_type = _entity_type_of(graph, entry.id)
@@ -635,7 +635,7 @@ def _finding_from_match(graph: UnifiedGraph, rule: ToxicRule, match: ToxicMatch)
         finding_node_id=finding_node_id,
         entity_type=entry_type or None,
         severity=severity,
-        title=f"{rule.title}: {entry.label}",
+        title=f"{rule.title}: {match.subject or entry.label}",
         description=f"{rule.description} {match.detail}".strip(),
         remediation_guidance=rule.remediation,
         attack_tags=list(rule.mitre),

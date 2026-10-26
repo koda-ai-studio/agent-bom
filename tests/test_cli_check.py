@@ -293,7 +293,7 @@ class _DummyResponse:
 def test_check_uses_version_aware_ecosystem_resolution(monkeypatch):
     seen_ecosystems = []
 
-    def _fake_sync_get(url, timeout=3):  # noqa: ARG001
+    def _fake_sync_get(url, timeout=3, **_kwargs):  # noqa: ARG001
         host = urlparse(url).hostname or ""
         if host == "pypi.org":
             return _DummyResponse(200, {"releases": {"2.33.0": [{}]}})
@@ -317,7 +317,7 @@ def test_check_uses_version_aware_ecosystem_resolution(monkeypatch):
 
 
 def test_check_requires_explicit_ecosystem_when_name_stays_ambiguous(monkeypatch):
-    def _fake_sync_get(url, timeout=3):  # noqa: ARG001
+    def _fake_sync_get(url, timeout=3, **_kwargs):  # noqa: ARG001
         host = urlparse(url).hostname or ""
         if host == "pypi.org":
             return _DummyResponse(200, {"releases": {"1.0.0": [{}]}})
@@ -570,11 +570,13 @@ def test_check_output_requires_json_format(monkeypatch):
 
 
 def test_check_without_version_exits_nonzero(monkeypatch):
-    """`check <pkg>` with no @version scans nothing, so it must not exit 0 —
-    a CI pre-install gate must never treat an unscanned package as clean."""
+    """Offline, `check <pkg>` with no @version cannot look up the latest
+    version and scans nothing, so it must not exit 0 — a CI pre-install gate
+    must never treat an unscanned package as clean. (Online, the latest
+    published version is checked: tests/test_cli_check_latest_version.py.)"""
     _patch_check_scan(monkeypatch, [])
 
-    result = CliRunner().invoke(main, ["check", "somepkg", "--ecosystem", "pypi"])
+    result = CliRunner().invoke(main, ["check", "somepkg", "--ecosystem", "pypi", "--offline"])
 
     assert result.exit_code != 0
     assert result.exit_code == 2
@@ -585,7 +587,7 @@ def test_check_without_version_json_reports_nonzero(monkeypatch):
     """Structured output for the no-version skip must also carry exit_code=2."""
     _patch_check_scan(monkeypatch, [])
 
-    result = CliRunner().invoke(main, ["check", "somepkg", "--ecosystem", "pypi", "--format", "json"])
+    result = CliRunner().invoke(main, ["check", "somepkg", "--ecosystem", "pypi", "--offline", "--format", "json"])
 
     assert result.exit_code == 2
     payload = json.loads(result.output)

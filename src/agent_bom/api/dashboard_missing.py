@@ -14,7 +14,7 @@ a{color:LinkText}</style></head><body>
 <main><h1>Dashboard not bundled</h1>
 <p>This installation has the API but does not contain the built dashboard assets.</p>
 <p>In a fresh virtual environment, install the published package:</p>
-<pre>python -m pip install 'agent-bom[api]'
+<pre>python -m pip install 'agent-bom[ui]'
 agent-bom serve</pre>
 <p>For a source checkout, follow the dashboard build instructions in the
 <a href="https://github.com/koda-ai-studio/agent-bom/blob/main/ui/README.md">dashboard development guide</a>.</p>

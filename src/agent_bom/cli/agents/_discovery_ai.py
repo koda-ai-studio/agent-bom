@@ -8,6 +8,7 @@ from rich.panel import Panel as AiPanel
 from rich.table import Table as AiTable
 
 from agent_bom.cli.agents._discovery_state import DiscoveryRun
+from agent_bom.cli.agents._framework_topology_view import print_framework_topology
 from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface
 
 _SEV_COLORS = {"critical": "red bold", "high": "red", "medium": "yellow", "low": "dim", "info": "dim"}
@@ -166,5 +167,6 @@ def scan_ai_inventory(run: DiscoveryRun) -> None:
         _print_actionable_table(run, ai_report, actionable)
     else:
         _print_all_safe(run, ai_report)
+    print_framework_topology(run.con, ai_report.framework_agents)
     _attach_sdk_packages(run, ai_report, ai_inventory_paths[0])
     run.ctx.ai_inventory_data = _inventory_data(ai_report)

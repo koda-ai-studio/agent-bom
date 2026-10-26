@@ -549,6 +549,8 @@ def test_cargo_lockfile_preferred_over_manifest(tmp_path):
     from agent_bom.parsers.compiled_parsers import parse_cargo_packages
 
     (tmp_path / "Cargo.toml").write_text('[dependencies]\ntime = "0.1.42"\n')
-    (tmp_path / "Cargo.lock").write_text('[[package]]\nname = "time"\nversion = "0.1.45"\n')
+    (tmp_path / "Cargo.lock").write_text(
+        '[[package]]\nname = "time"\nversion = "0.1.45"\nsource = "registry+https://github.com/rust-lang/crates.io-index"\n'
+    )
     pkgs = parse_cargo_packages(tmp_path)
     assert len(pkgs) == 1 and pkgs[0].version == "0.1.45"  # exact lockfile pin wins

@@ -1,5 +1,6 @@
 "use client";
 
+import { blockedBreakdown, proxyConnectionLabel } from "@/lib/proxy-runtime-labels";
 import { useEffect, useRef, useState } from "react";
 import {
   api,
@@ -206,9 +207,7 @@ export default function ProxyDashboard() {
 
   // Blocked breakdown for pie chart
   const blockedMap = live?.blocked ?? status?.blocked_by_reason ?? {};
-  const blockedPieData = Object.entries(blockedMap)
-    .filter(([, v]) => v > 0)
-    .map(([reason, count]) => ({ name: reason, value: count }));
+  const blockedPieData = blockedBreakdown(blockedMap, totalBlocked);
 
   // Filtered alerts
   const filteredAlerts = severityFilter
@@ -237,7 +236,9 @@ export default function ProxyDashboard() {
             ) : (
               <>
                 <WifiOff className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-                <span className="text-[var(--text-tertiary)]">Disconnected</span>
+                <span className="text-[var(--text-tertiary)]">
+                  {proxyConnectionLabel({ connected: false, liveTransport, hasSnapshot: Boolean(live || status) })}
+                </span>
               </>
             )}
           </div>

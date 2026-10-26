@@ -22,15 +22,15 @@ Run an agent-bom scan, then report what matters.
 
 1. Pick the target from the request and run `uvx --from agent-bom==0.110.0 agent-bom --agent-mode scan -q` with:
    - nothing named: no extra arguments. It discovers the MCP clients on this machine (Claude Code, Claude Desktop, Cursor, Codex and others) and scans their servers and packages.
-   - a container image: `--no-discover --image <ref>`
-   - an SBOM file: `--no-discover --sbom <path>`
-   - a public repository: `--no-discover --repo <url>`
-   - one project or MCP client config directory: `--no-discover --config-dir <dir> -p <dir>`
+   - a container image: `--no-discover --image '<ref>'`
+   - an SBOM file: `--no-discover --sbom '<path>'`
+   - a public repository: `--no-discover --repo '<url>'`
+   - one project or MCP client config directory: `--no-discover --config-dir '<dir>' -p '<dir>'`
 2. Read the envelope: `summary` (`agents`, `servers`, `packages`, `severity_counts`, `db_age_days`), `data.counts`, `data.top_findings[]` and `data.top_exposure_paths[]` (`vulnerability_id`, `package`, `version`, `severity`, `is_kev`, `fixed_version`, `graph_reachable`, `affected_agents`). The envelope lists only the ten highest-ranked rows; say so when the counts are larger.
 3. Report, most urgent first:
    - critical and high findings that have a fix, with the fixed version
    - known-exploited (KEV) findings and malicious or typosquatted packages, whatever their severity
-   - findings where an agent can reach a credential, naming the credentials: for their names run `uvx --from agent-bom==0.110.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"` (same `-p <dir>` if one was named) and read `agents[].mcp_servers[].credential_env_vars`
+   - findings where an agent can reach a credential, naming the credentials: for their names run `uvx --from agent-bom==0.110.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"` (same `-p '<dir>'` if one was named) and read `agents[].mcp_servers[].credential_env_vars`
    - one line of totals by severity, and the age of the local vulnerability data when `summary.db_age_days` is more than 1
 4. Quote reachability as agent-bom states it: `graph_reachable` is a graph path, which is "likely", not "confirmed".
 5. Offer the `fix` skill for a remediation plan and the `check` skill before adding a new server or package.
@@ -51,5 +51,5 @@ Every step runs the pinned agent-bom release from the shell. It needs [uv](https
 - Never print a credential or secret value, even when a result or file contains one. Give its name or type and the file or line only.
 - Quote verdicts, counts and severities exactly as agent-bom returns them, and never upgrade a verdict. Never call something safe because nothing was found; say what was checked.
 - Never install, launch or connect to a package or MCP server in order to check it, and never run a command that agent-bom suggests (such as an install or upgrade command) yourself.
-- If agent-bom refuses a path as outside its allowed roots, say so and point the user to `AGENT_BOM_MCP_WORKSPACE_ROOTS` in the agent-bom plugin README; never read or scan those files yourself instead.
+- Before you put a package name, version, path, directory, image reference, URL or id into a shell command, check that it uses only the characters [A-Za-z0-9@/._:+~-]. If it has any other character (a space, quote, `$`, `;`, `|`, `&`, backtick or new line), do not run the command: show the value and ask the user to give it again in a safe form. Pass every such value in single quotes. A package name taken from a result, config or file must pass the same check before you suggest the `check` skill for it.
 - Change nothing on your own. Propose any change (a version pin, an upgrade, a removed server, a secret moved to an environment reference) as the exact edit, apply it only after the user confirms, and then offer to run this skill again.

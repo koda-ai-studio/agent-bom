@@ -36,8 +36,46 @@ def _add_framework_topology(
     if projection.host is not None and projection.folded:
         projection.host.attributes["code_agents"] = projection.folded
         projection.host.data_sources = list(dict.fromkeys([*projection.host.data_sources, "source-ast"]))
+    if projection.host is not None:
+        for agent_id in contained_roots(framework_agents):
+            projection.graph.add_edge(
+                UnifiedEdge(
+                    source=projection.host.id,
+                    target=agent_id,
+                    relationship=RelationshipType.CONTAINS,
+                    evidence={"source": "source-ast", "reason": "framework graph declared in this project's source"},
+                )
+            )
     for item in framework_agents:
         projection.project_edges(item)
+
+
+def topology_participants(framework_agents: Any) -> set[str]:
+    """Agents that take part in a delegation edge; every other construct folds into the project agent."""
+    participants: set[str] = set()
+    for item in framework_agents if isinstance(framework_agents, list) else []:
+        if not isinstance(item, dict):
+            continue
+        for edge in item.get("topology_edges", []) or []:
+            if isinstance(edge, dict):
+                participants.add(str(edge.get("source_id") or "").strip())
+                participants.add(str(edge.get("target_id") or "").strip())
+    participants.discard("")
+    return participants
+
+
+def contained_roots(framework_agents: Any) -> list[str]:
+    """Participants with no enclosing graph: the project agent contains these directly."""
+    participants = topology_participants(framework_agents)
+    roots: list[str] = []
+    for item in framework_agents if isinstance(framework_agents, list) else []:
+        if not isinstance(item, dict):
+            continue
+        agent_id = str(item.get("stable_id") or "").strip()
+        parent = str(item.get("parent_id") or "").strip()
+        if agent_id in participants and parent not in participants and agent_id not in roots:
+            roots.append(agent_id)
+    return roots
 
 
 class _FrameworkTopology:
@@ -47,17 +85,10 @@ class _FrameworkTopology:
         self.graph = graph
         self.data_source = data_source
         self.known_agent_ids: set[str] = set()
-        self.topology_participants: set[str] = set()
+        self.topology_participants = topology_participants(framework_agents)
         self.host = graph.nodes.get(host_agent_id) if host_agent_id else None
         self.folded: list[dict[str, Any]] = []
         self.framework_ids: dict[str, str] = {}
-        for item in framework_agents:
-            if not isinstance(item, dict):
-                continue
-            for edge in item.get("topology_edges", []) or []:
-                if isinstance(edge, dict):
-                    self.topology_participants.add(str(edge.get("source_id") or "").strip())
-                    self.topology_participants.add(str(edge.get("target_id") or "").strip())
 
     def _framework_node_id(self, name: str) -> str:
         key = name.strip().lower() or "unknown"
@@ -339,16 +370,13 @@ class _AIStackProjection:
         package_name = str(comp.get("package") or "").strip()
         ecosystem = str(comp.get("ecosystem") or "pypi").strip() or "pypi"
         if package_name:
+            pkg_ids = self._package_ids(package_name, ecosystem)
             pkg_id = stable_node_id(EntityType.PACKAGE.value, ecosystem, package_name, "latest")
-            # Prefer an existing versioned package node if present.
-            existing = [
-                n
-                for n in self.graph.nodes_by_type(EntityType.PACKAGE)
-                if str(n.attributes.get("name") or n.label).lower() == package_name.lower()
-            ]
-            if existing:
-                pkg_id = existing[0].id
-            elif not self.graph.has_node(pkg_id):
+            if pkg_ids:
+                for existing_id in pkg_ids:
+                    self._depends_on(fid, existing_id, name)
+                return
+            if not self.graph.has_node(pkg_id):
                 self.graph.add_node(
                     UnifiedNode(
                         id=pkg_id,
@@ -363,11 +391,34 @@ class _AIStackProjection:
                         data_sources=[self.data_source, "ai-inventory"],
                     )
                 )
-            self.graph.add_edge(
-                UnifiedEdge(
-                    source=fid,
-                    target=pkg_id,
-                    relationship=RelationshipType.DEPENDS_ON,
-                    evidence={"source": "ai-inventory", "framework": name},
-                )
+            self._depends_on(fid, pkg_id, name)
+
+    def _package_ids(self, package_name: str, ecosystem: str) -> list[str]:
+        """Package nodes already in the graph for ``package_name``; pinned versions win over ``latest``.
+
+        Manifest packages carry no ``name`` attribute: their label is ``name@version``.
+        """
+        wanted = package_name.lower()
+        matches: list[UnifiedNode] = []
+        for node in self.graph.nodes_by_type(EntityType.PACKAGE):
+            attrs = node.attributes
+            if str(attrs.get("ecosystem") or ecosystem).lower() != ecosystem.lower():
+                continue
+            version = str(attrs.get("version") or "")
+            name = str(attrs.get("name") or "")
+            if not name:
+                name = node.label[: -len(version) - 1] if version and node.label.endswith(f"@{version}") else node.label
+            if name.lower() == wanted:
+                matches.append(node)
+        pinned = [node.id for node in matches if str(node.attributes.get("version") or "") not in {"", "latest", "unknown"}]
+        return pinned or [node.id for node in matches]
+
+    def _depends_on(self, framework_id: str, package_id: str, framework: str) -> None:
+        self.graph.add_edge(
+            UnifiedEdge(
+                source=framework_id,
+                target=package_id,
+                relationship=RelationshipType.DEPENDS_ON,
+                evidence={"source": "ai-inventory", "framework": framework},
             )
+        )

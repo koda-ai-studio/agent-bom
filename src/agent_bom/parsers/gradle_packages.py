@@ -21,12 +21,37 @@ from agent_bom.models import Package
 logger = logging.getLogger(__name__)
 
 _TEST_CONFIGS = frozenset({"testimplementation", "testruntimeonly", "testcompileonly"})
-_CONFIG_PAT = (
-    r"implementation|api|runtimeOnly|compileOnly|testImplementation|"
-    r"testRuntimeOnly|testCompileOnly|annotationProcessor|kapt|"
-    r"androidTestImplementation|debugImplementation|releaseImplementation"
+_KNOWN_CONFIGS = frozenset(
+    {
+        "implementation", "api", "runtimeonly", "compileonly", "testimplementation", "testruntimeonly", "testcompileonly",
+        "annotationprocessor", "kapt", "androidtestimplementation", "debugimplementation", "releaseimplementation",
+    }
+)  # fmt: skip
+# Calls that take a ``group:name[:version]``-shaped string but declare no
+# dependency of the project: plugins, BOM/platform imports, buildscript
+# classpath, constraint/substitution DSL and plain output.
+_NON_DEPENDENCY_CALLS = frozenset(
+    {
+        "id", "plugin", "apply", "kotlin", "platform", "enforcedplatform", "mavenbom", "dependency", "classpath",
+        "module", "exclude", "force", "substitute", "using", "because", "strictly", "require", "prefer", "reject",
+        "url", "uri", "maven", "ivy", "file", "files", "from", "into", "include", "includebuild", "project",
+        "println", "print", "logger", "version", "group", "name", "description", "property", "findproperty",
+    }
+)  # fmt: skip
+_CALL = r"(?:[\"'](?P<qconfig>[A-Za-z_]\w*)[\"']|\b(?P<config>[A-Za-z_]\w*))\s*\(?\s*"
+_DEPENDENCY_RE = re.compile(_CALL + r"(?P<q>[\"'])(?P<raw>(?:\$\{[^}\n]*\}|[^\"'\n])+)(?P=q)")
+_MAP_VALUE = r"(?:[\"'](?P<{0}>[^\"'\n]+)[\"']|(?P<{0}_var>[A-Za-z_]\w*))"
+_MAP_RE = re.compile(
+    _CALL
+    + r"group\s*[:=]\s*"
+    + _MAP_VALUE.format("group")
+    + r"\s*,\s*name\s*[:=]\s*"
+    + _MAP_VALUE.format("name")
+    + r"(?:\s*,\s*version\s*[:=]\s*"
+    + _MAP_VALUE.format("version")
+    + r")?"
 )
-_DEPENDENCY_RE = re.compile(r"\b(" + _CONFIG_PAT + r")\s*\(?\s*([\"'])((?:\$\{[^}\n]*\}|[^\"'\n])+)\2", re.IGNORECASE)
+_UNRESOLVED_SHAPE_RE = re.compile(r"[\w.\-]+:[\w.\-]+(?::\S*)?")
 _NAME = r"[\w][\w.\-]*"
 _COORD_RE = re.compile(rf"^({_NAME}):({_NAME})(?::([^:@\s]+))?(?::[^@\s]*)?(?:@\w+)?$")
 _VAR_RE = re.compile(
@@ -205,20 +230,47 @@ def _is_concrete(version: str) -> bool:
     return bool(version) and "$" not in version and "+" not in version and not version.startswith(("latest.", "[", "("))
 
 
+def _map_part(match: re.Match[str], key: str) -> str | None:
+    if match.group(key) is not None:
+        return match.group(key).strip()
+    variable = match.group(f"{key}_var")
+    return f"${{{variable}}}" if variable else None
+
+
+def _declarations(content: str) -> list[tuple[str, str]]:
+    """``(configuration, coordinate)`` pairs from string and map notation, in source order."""
+    found: list[tuple[int, str, str]] = []
+    for match in _DEPENDENCY_RE.finditer(content):
+        found.append((match.start(), match.group("qconfig") or match.group("config"), match.group("raw").strip()))
+    for match in _MAP_RE.finditer(content):
+        group_id, artifact_id, version = _map_part(match, "group"), _map_part(match, "name"), _map_part(match, "version")
+        raw = f"{group_id}:{artifact_id}" + (f":{version}" if version else "")
+        found.append((match.start(), match.group("qconfig") or match.group("config"), raw))
+    return [(config, raw) for _, config, raw in sorted(found)]
+
+
+def _is_unresolved_coordinate(config: str, raw: str) -> bool:
+    if config.lower() in _KNOWN_CONFIGS:
+        return raw.count(":") >= 1 and not raw.startswith((":", "/"))
+    return _UNRESOLVED_SHAPE_RE.fullmatch(re.sub(r"\$\{[^}]*\}", "$v", raw)) is not None
+
+
 def _parse_build_script(path: Path, content: str, variables: dict[str, str]) -> tuple[list[Package], list[str]]:
     packages: list[Package] = []
     unresolved: list[str] = []
     seen: set[tuple[str, str, str]] = set()
-    for match in _DEPENDENCY_RE.finditer(content):
-        config, raw = match.group(1), match.group(3).strip()
+    for config, raw in _declarations(content):
+        if config.lower() in _NON_DEPENDENCY_CALLS:
+            continue
         coord = _COORD_RE.match(_substitute(raw, variables))
         if not coord:
-            if raw.count(":") >= 1 and not raw.startswith((":", "/")):
+            if _is_unresolved_coordinate(config, raw):
                 unresolved.append(raw)
             continue
         group_id, artifact_id, version = coord.group(1), coord.group(2), coord.group(3) or ""
         if not _is_concrete(version):
-            unresolved.append(raw)
+            if config.lower() in _KNOWN_CONFIGS or "$" in raw:
+                unresolved.append(raw)
             continue
         if (group_id, artifact_id, version) not in seen:
             seen.add((group_id, artifact_id, version))

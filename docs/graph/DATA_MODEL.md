@@ -13,7 +13,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 
 | Domain | Entity types | Relationships inside | To other domains | Detail |
 |---|---|---|---|---|
-| AI and agents | `agent`, `application`, `blueprint`, `framework`, `server`, `tool`, `tool_call` | 21 | 33 | [ERD and relationships](data-model/domains/ai.md) |
+| AI and agents | `agent`, `application`, `blueprint`, `framework`, `server`, `tool`, `tool_call` | 22 | 33 | [ERD and relationships](data-model/domains/ai.md) |
 | Code and supply chain | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `package`, `source_file` | 6 | 13 | [ERD and relationships](data-model/domains/supply.md) |
 | Findings | `drift_incident`, `misconfiguration`, `vulnerability` | 1 | 9 | [ERD and relationships](data-model/domains/findings.md) |
 | Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 13 | 21 | [ERD and relationships](data-model/domains/cloud.md) |
@@ -86,7 +86,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `called` | `runtime` | runtime | directed | yes | `agent`, `tool_call` | `server`, `tool` | 4 | CR, RT | 2 (+1 demo) |
 | `can_access` | `authority` | identity | directed | yes | `account`, `agent`, `application`, `cloud_resource`, `cluster`, `container` (+10 more) | `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container` (+10 more) | 183 | FU, LT, MT | 5 (+2 demo) |
 | `configures` | `structural` | code_topology | directed | yes | `config_file` | `agent`, `ci_job`, `server`, `tool` | 4 | — | 1 |
-| `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+19 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+21 more) | 93 | FU, BR | 10 (+4 demo) |
+| `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+19 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+21 more) | 94 | FU, BR | 11 (+4 demo) |
 | `correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `server` | `agent`, `server` | 4 | — | 1 |
 | `cross_account_trust` | `authority` | identity | directed | yes | `account`, `federated_identity`, `role`, `service_principal` | `account`, `federated_identity`, `role`, `service_principal` | 16 | — | 2 |
 | `defines` | `structural` | code_topology | directed | yes | `source_file` | `ci_job`, `code_module`, `tool` | 3 | — | 2 |
