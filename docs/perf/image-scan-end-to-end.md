@@ -12,7 +12,7 @@ for console output and 758 MiB for JSON output, down from about 2.5 GiB on
 `main` for both, and uses 42 s instead of 71 s of CPU for console output and
 52 s instead of 277 s for JSON output, with the identical set of (CVE,
 package, version) findings. A 40,000-package offline manifest scan peaks at
-about 700 MiB on macOS (the Linux CI job measured 1,714 MiB before this
+about 730 MiB on macOS (the Linux CI job measured 1,714 MiB before this
 change) now that the JSON report is encoded and redacted section by section
 (see the 40,000-package table).
 
@@ -102,7 +102,7 @@ wall time is not meaningful. CPU time and memory are unaffected.
 | Before | 251.3 s | 1,413 MiB | 200 |
 | After | 130.4 s | 684 MiB | 200 |
 | Linux CI after merge (1df29ba70 to 54b68749a) | — | 1,714–1,716 MiB | 200 |
-| Streaming JSON export (macOS, same input; was 1,695 MiB) | 90 s | 700 MiB | 200 |
+| Streaming JSON export (macOS, same input, 80 s CPU either way; main 2fcd02c98: 1,939 MiB) | 82 s | 726 MiB | 200 |
 | CI budget | 300 s | 1,000 MiB | exactly 200 |
 
 The 684 MiB row was measured on a workstation before the change met every
