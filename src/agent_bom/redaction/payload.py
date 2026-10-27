@@ -9,6 +9,7 @@ same field-sensitive rules in ``security`` and the same per-traversal cache.
 from __future__ import annotations
 
 from agent_bom import security
+from agent_bom.output.json_writer import streams_container
 from agent_bom.redaction.cloud_coordinates import sanitize_cloud_coordinate
 from agent_bom.redaction.filesystem_coordinates import sanitize_filesystem_coordinate, sanitize_progress_path
 from agent_bom.redaction.provenance import PROVENANCE_KEYS, sanitize_provenance_marker
@@ -130,8 +131,6 @@ class StreamingRedaction:
         self._key_cache: KeyCache = {}
 
     def expand(self, value: object, context: tuple[object | None, int] | None) -> tuple[str, object]:
-        from agent_bom.output.json_writer import streams_container
-
         key, depth = context or (None, 0)
         if depth < _DEPTH_LIMIT and streams_container(value, depth):
             if isinstance(value, dict):
