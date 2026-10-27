@@ -24,6 +24,13 @@ agent-bom reads only what you explicitly ask it to scan:
 | GitHub Actions | `--gha` | `.github/workflows/*.yml` files; reports AI/credential use plus unpinned remote actions, `pull_request_target`, and missing top-level `permissions:` policies |
 | SBOM files | `--sbom` | CycloneDX JSON/XML or SPDX JSON/tag-value you provide |
 
+The MCP tools `kspm_cluster_posture` and `kspm_workload_inventory` require
+`live=true` on each call before using Kubernetes credentials or contacting a
+cluster. Set `AGENT_BOM_MCP_LIVE_INTROSPECTION=0` on the server to refuse these
+reads even when a caller opts in. Refused calls return `status=not_collected`,
+not an empty posture result. When enabled, the response records collector
+coverage; use its findings and graph inventory to choose the next scan.
+
 Run `agent-bom agents --gha . --offline` to inspect workflow files without
 network access. Pipeline-hardening gaps appear as scan warnings; pin remote
 actions and reusable workflows to full commit SHAs, avoid executing untrusted

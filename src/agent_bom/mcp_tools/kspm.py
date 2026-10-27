@@ -15,6 +15,7 @@ import logging
 
 from agent_bom.k8s_transport import select_k8s_transport
 from agent_bom.kubernetes.inventory_live import cluster_label, collect_live_k8s_inventory
+from agent_bom.mcp_tools.live import live_collection_denial
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -46,9 +47,12 @@ async def kspm_cluster_posture_impl(
     all_namespaces: bool = False,
     context: str | None = None,
     enable_nodes_configz: bool = False,
+    live: bool = False,
     _truncate_response,
 ) -> str:
     """Implementation of the kspm_cluster_posture tool."""
+    if denied := live_collection_denial(live):
+        return json.dumps(denied)
     try:
         result = _collect_posture(
             namespace=namespace,
@@ -102,9 +106,12 @@ async def kspm_workload_inventory_impl(
     all_namespaces: bool = False,
     context: str | None = None,
     max_items: int = 200,
+    live: bool = False,
     _truncate_response,
 ) -> str:
     """Implementation of the kspm_workload_inventory tool."""
+    if denied := live_collection_denial(live):
+        return json.dumps(denied)
     try:
         limit = max(1, min(int(max_items), 1000))
         inventory = _collect_inventory(namespace=namespace, all_namespaces=all_namespaces, context=context)

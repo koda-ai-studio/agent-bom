@@ -73,6 +73,9 @@ def register_kspm_cluster_posture(bindings: OperatorToolBindings) -> None:
 
     @mcp.tool(annotations=bindings.read_only, title="KSPM Cluster Posture")
     async def kspm_cluster_posture(
+        live: Annotated[
+            bool, Field(description="Opt in to live Kubernetes reads; the server live-introspection setting must also allow them.")
+        ] = False,
         namespace: Annotated[
             str,
             Field(description="Kubernetes namespace to inspect (ignored when all_namespaces=True). Defaults to 'default'."),
@@ -94,6 +97,7 @@ def register_kspm_cluster_posture(bindings: OperatorToolBindings) -> None:
 
         Read-only inspection of running workloads, RBAC, NetworkPolicy coverage,
         and (opt-in) kubelet config against the pinned CIS Kubernetes Benchmark.
+        Requires live=true and an allowing AGENT_BOM_MCP_LIVE_INTROSPECTION setting.
         Distinct from image discovery: this returns SECURITY POSTURE, not a
         container-image inventory.
 
@@ -111,6 +115,7 @@ def register_kspm_cluster_posture(bindings: OperatorToolBindings) -> None:
         return await bindings.execute_tool_async(
             "kspm_cluster_posture",
             bindings.implementations["kspm_cluster_posture_impl"],
+            live=live,
             namespace=namespace,
             all_namespaces=all_namespaces,
             context=context,
@@ -125,6 +130,9 @@ def register_kspm_workload_inventory(bindings: OperatorToolBindings) -> None:
 
     @mcp.tool(annotations=bindings.read_only, title="KSPM Workload Inventory")
     async def kspm_workload_inventory(
+        live: Annotated[
+            bool, Field(description="Opt in to live Kubernetes reads; the server live-introspection setting must also allow them.")
+        ] = False,
         namespace: Annotated[
             str,
             Field(description="Kubernetes namespace to inventory (ignored when all_namespaces=True). Defaults to 'default'."),
@@ -137,6 +145,8 @@ def register_kspm_workload_inventory(bindings: OperatorToolBindings) -> None:
         max_items: Annotated[int, Field(description="Maximum entries per list (1-1000); totals and truncation are reported.")] = 200,
     ) -> str:
         """Read the live Kubernetes workload inventory (read-only).
+
+        Requires live=true and an allowing AGENT_BOM_MCP_LIVE_INTROSPECTION setting.
 
         Workloads (Deployment/StatefulSet/DaemonSet/Job/CronJob/Pod) with their
         containers and images, pinned to the running digest when the pod
@@ -153,6 +163,7 @@ def register_kspm_workload_inventory(bindings: OperatorToolBindings) -> None:
         return await bindings.execute_tool_async(
             "kspm_workload_inventory",
             bindings.implementations["kspm_workload_inventory_impl"],
+            live=live,
             namespace=namespace,
             all_namespaces=all_namespaces,
             context=context,

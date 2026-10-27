@@ -64,7 +64,7 @@ def _partial_result() -> K8sPostureResult:
 def test_tool_returns_evidence_envelope_with_honest_states(monkeypatch) -> None:
     monkeypatch.setattr(kspm_tool, "_collect_posture", lambda **_kw: _partial_result())
 
-    data = _run(kspm_tool.kspm_cluster_posture_impl(namespace="prod", _truncate_response=_trunc))
+    data = _run(kspm_tool.kspm_cluster_posture_impl(namespace="prod", live=True, _truncate_response=_trunc))
 
     assert data["schema_version"] == "kspm.cluster.posture.v1"
     assert data["resource"] == "cluster_posture"
@@ -86,7 +86,7 @@ def test_tool_reconciles_1to1_with_evidence_dict_and_scan_run(monkeypatch) -> No
     result = _partial_result()
     monkeypatch.setattr(kspm_tool, "_collect_posture", lambda **_kw: result)
 
-    data = _run(kspm_tool.kspm_cluster_posture_impl(namespace="prod", _truncate_response=_trunc))
+    data = _run(kspm_tool.kspm_cluster_posture_impl(namespace="prod", live=True, _truncate_response=_trunc))
 
     # Same numbers as the canonical result methods (one source of truth).
     assert data["finding_count"] == len(result.findings)
@@ -100,7 +100,7 @@ def test_tool_never_leaks_stack_on_failure(monkeypatch) -> None:
         raise RuntimeError("kubeconfig read failed at /home/user/.kube/secret-token")
 
     monkeypatch.setattr(kspm_tool, "_collect_posture", _boom)
-    data = _run(kspm_tool.kspm_cluster_posture_impl(namespace="prod", _truncate_response=_trunc))
+    data = _run(kspm_tool.kspm_cluster_posture_impl(namespace="prod", live=True, _truncate_response=_trunc))
     assert "error" in data
     # Absolute filesystem paths (which can carry secret material) are stripped.
     assert "/home/user/.kube" not in json.dumps(data)
