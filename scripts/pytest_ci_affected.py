@@ -24,6 +24,7 @@ else:
 
 
 SMOKE_TESTS = (
+    "tests/test_ci_local_parity.py",
     "tests/test_ci_workflow_contract.py",
     "tests/test_runtime_child_span_redaction.py",
     "tests/test_doc_architecture_svgs.py",
