@@ -97,3 +97,41 @@ async def test_relay_failure_isolated_by_tenant_and_success_resets_circuit(monke
         await relay(a, message, {})
     assert len(attempts) == 4
     await relay.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("timeout,cooldown", [(0.001, 0.0), (0.25, 0.5)])
+async def test_relay_preserves_validated_boundary_values(monkeypatch, timeout, cooldown):
+    from agent_bom.runtime import egress_transport
+    from agent_bom.runtime.gateway_settings import validate_gateway_security_settings
+
+    options = {}
+
+    def build_client(**kwargs):
+        options.update(kwargs)
+        return AsyncMock()
+
+    monkeypatch.setattr(egress_transport, "build_pinned_async_client", build_client)
+    settings = gateway.GatewaySettings(
+        registry=UpstreamRegistry([]),
+        policy={},
+        upstream_http_timeout_seconds=timeout,
+        upstream_http_max_keepalive_connections=0,
+        upstream_failure_threshold=1,
+        upstream_circuit_cooldown_seconds=cooldown,
+    )
+    validate_gateway_security_settings(settings)
+    relay = gateway.GatewayUpstreamRelay(settings)
+    await relay._client_for_call(allow_private_networks=False)
+    assert options["timeout"].read == timeout
+    assert options["limits"].max_keepalive_connections == 0
+    assert relay._breaker.cooldown_seconds == cooldown
+    await relay.aclose()
+
+
+@pytest.mark.asyncio
+async def test_zero_cooldown_allows_immediate_retry(monkeypatch):
+    monkeypatch.setattr(gateway_relay, "time", SimpleNamespace(monotonic=lambda: 100.0))
+    breaker = gateway_relay.GatewayCircuitBreaker(failure_threshold=1, cooldown_seconds=0)
+    await breaker.record_failure("tenant/upstream")
+    await breaker.before_call("tenant/upstream", "upstream")

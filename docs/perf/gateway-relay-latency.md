@@ -189,3 +189,7 @@ Render the chart with `helm template agent-bom deploy/helm/agent-bom -f values.y
 before deploying, then check `/healthz` for the effective pool and circuit settings.
 These controls do not enable multi-replica gateway persistence; the chart retains
 its existing replica and durable-audit restrictions.
+
+Valid boundary values are preserved by the relay: sub-second timeouts remain
+sub-second, zero keepalive connections disables idle connection retention, and
+a zero circuit cooldown permits an immediate retry.
