@@ -212,3 +212,31 @@ def test_local_manifest_dedups_and_unions_duplicate_rows() -> None:
     # The single deduped server id is the one referenced by the agent.
     assert server_row["id"] == canonical_id("mcp_server_occurrence", mcp_server_graph_id_for(shared, agent))
     assert server_row["id"] in payload["agents"][0]["mcp_server_ids"]
+
+
+def _observation(observation_id: str, *, transport: str, updated_at: str) -> MCPObservation:
+    return MCPObservation(
+        tenant_id="default",
+        observation_id=observation_id,
+        server_stable_id="srv-fs",
+        server_name="filesystem",
+        transport=transport,
+        updated_at=updated_at,
+    )
+
+
+def test_manifest_never_reports_a_blank_transport() -> None:
+    """An endpoint sync that omits the transport is ``unknown``, not an empty cell."""
+    manifest = build_control_plane_agent_manifest(
+        [], [_observation("obs-1", transport="", updated_at="2026-10-01T00:00:00Z")], tenant_id="default"
+    )
+    assert [server["transport"] for server in manifest["mcp_servers"]] == ["unknown"]
+
+
+def test_manifest_keeps_a_known_transport_over_a_later_sync_without_one() -> None:
+    observations = [
+        _observation("obs-old", transport="stdio", updated_at="2026-10-01T00:00:00Z"),
+        _observation("obs-new", transport="", updated_at="2026-10-02T00:00:00Z"),
+    ]
+    manifest = build_control_plane_agent_manifest([], observations, tenant_id="default")
+    assert [server["transport"] for server in manifest["mcp_servers"]] == ["stdio"]

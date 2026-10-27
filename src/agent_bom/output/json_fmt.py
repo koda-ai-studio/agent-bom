@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TextIO
 
 from agent_bom.advisory_ids import vulnerability_enrichment_metadata
 from agent_bom.asset_provenance import (
@@ -78,9 +78,10 @@ from agent_bom.output.json_inventory import (
     _snapshot_payload as _snapshot_payload,
 )
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
-from agent_bom.output.json_writer import write_json_file
+from agent_bom.output.json_writer import write_json_document, write_json_file
 from agent_bom.output.possibly_affected import json_section as possibly_affected_json
 from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
+from agent_bom.redaction.payload import StreamingRedaction
 from agent_bom.redaction.report_paths import prepare_iac_path_redaction
 from agent_bom.security import (
     sanitize_sensitive_payload,
@@ -960,6 +961,18 @@ def export_json(
     *,
     report_json: dict[str, Any] | None = None,
 ) -> None:
-    """Export report as JSON file."""
-    data = to_redacted_json(report, report_json=report_json)
-    write_json_file(data, output_path)
+    """Export report as redacted JSON, redacting each part as it is written.
+
+    Byte-identical to dumping :func:`to_redacted_json` with ``indent=2``, without
+    holding a redacted copy of the whole report beside the original.
+    """
+    write_json_file(_redaction_source(report, report_json), output_path, expand=StreamingRedaction().expand, context=(None, 0))
+
+
+def write_redacted_json(report: AIBOMReport, fh: TextIO, *, report_json: dict[str, Any] | None = None, newline: bool = True) -> None:
+    """Stream the redacted report to ``fh``; the bytes equal ``json.dumps(to_redacted_json(...), indent=2)``."""
+    write_json_document(_redaction_source(report, report_json), fh, expand=StreamingRedaction().expand, context=(None, 0), newline=newline)
+
+
+def _redaction_source(report: AIBOMReport, report_json: dict[str, Any] | None) -> dict[str, Any]:
+    return prepare_iac_path_redaction(report_json if report_json is not None else to_json(report))

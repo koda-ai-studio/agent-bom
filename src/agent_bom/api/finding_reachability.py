@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import threading
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
 
 from agent_bom.core.reachability import (
@@ -211,11 +211,21 @@ def project_persisted_graph_reachability(
 
 
 @dataclass(frozen=True, slots=True)
+class _PathKeys:
+    """A path's normalized join keys, derived once when the index is built."""
+
+    finding_ids: frozenset[str]
+    vulnerability_ids: frozenset[str]
+    nodes: frozenset[str]
+
+
+@dataclass(frozen=True, slots=True)
 class _PathIndex:
     scan_id: str
     by_finding: dict[str, list[AttackPath]]
     by_vulnerability: dict[str, list[AttackPath]]
     truncated: bool = False
+    keys: dict[int, _PathKeys] = field(default_factory=dict)
 
 
 _INDEX_CACHE: OrderedDict[tuple[str, str, str, int, int], _PathIndex] = OrderedDict()
@@ -266,14 +276,19 @@ def clear_reachability_index_cache() -> None:
 def _build_index(paths: Iterable[AttackPath], *, scan_id: str = "", truncated: bool = False) -> _PathIndex:
     by_finding: dict[str, list[AttackPath]] = {}
     by_vulnerability: dict[str, list[AttackPath]] = {}
+    keys: dict[int, _PathKeys] = {}
     for path in paths:
         if not _path_has_reachability_evidence(path):
             continue
-        for finding_id in set(path.finding_ids):
+        path_keys = _PathKeys(
+            frozenset(path.finding_ids), frozenset(_path_vulnerability_ids(path)), frozenset((path.source, path.target, *path.hops))
+        )
+        keys[id(path)] = path_keys
+        for finding_id in path_keys.finding_ids:
             by_finding.setdefault(finding_id, []).append(path)
-        for vulnerability_id in _path_vulnerability_ids(path):
+        for vulnerability_id in path_keys.vulnerability_ids:
             by_vulnerability.setdefault(vulnerability_id, []).append(path)
-    return _PathIndex(scan_id, by_finding, by_vulnerability, truncated)
+    return _PathIndex(scan_id, by_finding, by_vulnerability, truncated, keys)
 
 
 def _snapshot_index(graph_store: GraphStoreProtocol, *, tenant_id: str, scan_id: str, path_limit: int) -> _PathIndex:
@@ -327,17 +342,30 @@ def project_attack_path_reachability(
     return _stamp_rows(rows, _build_index(paths), scan_id=scan_id)
 
 
+def _keys_match_row(keys: _PathKeys, finding_ids: set[str], vulnerability_ids: set[str], nodes: set[str]) -> bool:
+    """:func:`_path_matches_row` over keys derived once per path and once per row."""
+    if not finding_ids.isdisjoint(keys.finding_ids):
+        return True
+    if keys.finding_ids and finding_ids:
+        return False
+    if vulnerability_ids.isdisjoint(keys.vulnerability_ids):
+        return False
+    return bool(nodes) and not nodes.isdisjoint(keys.nodes)
+
+
 def _row_evidence(row: dict[str, Any], path_index: _PathIndex) -> _ReachabilityEvidence | None:
+    finding_ids = _row_finding_ids(row)
+    vulnerability_ids = _row_vulnerability_ids(row)
     candidates: dict[int, AttackPath] = {}
-    for finding_id in _row_finding_ids(row):
+    for finding_id in finding_ids:
         candidates.update((id(path), path) for path in path_index.by_finding.get(finding_id, ()))
-    for vulnerability_id in _row_vulnerability_ids(row):
+    for vulnerability_id in vulnerability_ids:
         candidates.update((id(path), path) for path in path_index.by_vulnerability.get(vulnerability_id, ()))
     evidence: _ReachabilityEvidence | None = None
     holders = _row_node_ids(row)
-    for path in candidates.values():
+    for path_id, path in candidates.items():
         # A path that starts at the finding's own holder is the occurrence, not inbound reach.
-        if path.source in holders or not _path_matches_row(path, row):
+        if path.source in holders or not _keys_match_row(path_index.keys[path_id], finding_ids, vulnerability_ids, holders):
             continue
         distance = _path_hop_distance(path, row)
         if evidence is None:

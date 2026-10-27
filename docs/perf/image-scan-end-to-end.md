@@ -12,7 +12,9 @@ for console output and 758 MiB for JSON output, down from about 2.5 GiB on
 `main` for both, and uses 42 s instead of 71 s of CPU for console output and
 52 s instead of 277 s for JSON output, with the identical set of (CVE,
 package, version) findings. A 40,000-package offline manifest scan peaks at
-684 MiB (main: 1,413 MiB).
+718.5 MiB on macOS (the Linux CI job measured 1,714 MiB before this
+change) now that the JSON report is encoded and redacted section by section
+(see the 40,000-package table).
 
 Package extraction and vulnerability matching were never the bottleneck: on
 `main` they took about 12 s of the run. The time and memory went to building
@@ -99,7 +101,22 @@ wall time is not meaningful. CPU time and memory are unaffected.
 |---|---|---|---|
 | Before | 251.3 s | 1,413 MiB | 200 |
 | After | 130.4 s | 684 MiB | 200 |
+| Linux CI after merge (1df29ba70 to 54b68749a) | — | 1,714–1,716 MiB | 200 |
+| Streaming JSON export (macOS, Python 3.13, `3606e64c2`, isolated run) | 77.9 s | 718.5 MiB | 200 |
 | CI budget | 300 s | 1,000 MiB | exactly 200 |
+
+The isolated streaming measurement ran `tests/test_scan_scale_contract.py` with no other heavy local tests running. It verified all 40,000 packages and all 200 seeded advisories. It is a workstation result; merged-main Linux CI remains a separate gate.
+
+The 684 MiB row was measured on a workstation before the change met every
+section of the merged report; the post-merge Linux job never stayed under the
+budget. The remaining peak was the JSON write itself: `redact_json_payload`
+built a redacted copy of the whole report (about +450 MiB), and
+`json.dumps(section, indent=2)` collects every encoded chunk of a section in a
+list before joining it (about +600 MiB for the 97 MB `agents` section, which
+repeats all 40,000 packages). `export_json` and `--format json` on stdout now
+walk large containers member by member, redact each small subtree just before
+encoding it with the same key cleaning, depth limit and caches, and write the
+same bytes (`tests/test_json_streaming_export.py`).
 
 Finding-set parity: the before and after offline JSON reports contain the
 same 4,424 (CVE, package, version) triples, and the same summary counts (344
