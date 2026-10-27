@@ -33,6 +33,7 @@ from agent_bom.ai_components.patterns import (
     SDK_PATTERNS_BY_LANGUAGE,
 )
 from agent_bom.core import regex_prefilter
+from agent_bom.scanners.secret_lines import is_placeholder_value
 from agent_bom.traversal import is_nested_worktree_root
 
 logger = logging.getLogger(__name__)
@@ -247,29 +248,7 @@ def _scan_file(
             )
             report.components.append(comp)
 
-    # 4. API key detection (all languages)
-    for key_pat in API_KEY_PATTERNS:
-        for match in regex_prefilter.finditer(key_pat.regex, view):
-            key_value = match.group(1)
-            line_num = content[: match.start()].count("\n") + 1
-            # Mask the key for safe display
-            masked = key_value[:8] + "..." + key_value[-4:] if len(key_value) > 12 else key_value[:4] + "..."
-            dedup_key = f"{rel_path}:{line_num}:apikey:{key_pat.provider}"
-            if dedup_key in seen_keys:
-                continue
-            seen_keys.add(dedup_key)
-
-            comp = AIComponent(
-                component_type=AIComponentType.API_KEY,
-                name=masked,
-                language=language,
-                file_path=rel_path,
-                line_number=line_num,
-                matched_text=masked,  # never store full key
-                severity=key_pat.severity,
-                description=key_pat.description,
-            )
-            report.components.append(comp)
+    _scan_api_keys(content, view, language, rel_path, report, seen_keys)
 
     # 5. Invisible Unicode detection (GlassWorm / supply-chain attack vectors)
     for unicode_pat in INVISIBLE_UNICODE_PATTERNS:
@@ -289,6 +268,40 @@ def _scan_file(
                 matched_text=f"<{unicode_pat.name}>",  # don't store invisible chars
                 severity=unicode_pat.severity,
                 description=unicode_pat.description,
+            )
+            report.components.append(comp)
+
+
+def _scan_api_keys(
+    content: str,
+    view: regex_prefilter.ContentView,
+    language: str,
+    rel_path: str,
+    report: AIComponentReport,
+    seen_keys: set[str],
+) -> None:
+    for key_pat in API_KEY_PATTERNS:
+        for match in regex_prefilter.finditer(key_pat.regex, view):
+            key_value = match.group(1)
+            if is_placeholder_value(key_value):
+                continue
+            line_num = content[: match.start()].count("\n") + 1
+            # Mask the key for safe display
+            masked = key_value[:8] + "..." + key_value[-4:] if len(key_value) > 12 else key_value[:4] + "..."
+            dedup_key = f"{rel_path}:{line_num}:apikey:{key_pat.provider}"
+            if dedup_key in seen_keys:
+                continue
+            seen_keys.add(dedup_key)
+
+            comp = AIComponent(
+                component_type=AIComponentType.API_KEY,
+                name=masked,
+                language=language,
+                file_path=rel_path,
+                line_number=line_num,
+                matched_text=masked,  # never store full key
+                severity=key_pat.severity,
+                description=key_pat.description,
             )
             report.components.append(comp)
 
