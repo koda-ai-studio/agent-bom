@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import sys
 import types
@@ -57,7 +58,7 @@ def snowflake_services(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setitem(
         sys.modules, "snowflake.connector", sys.modules.get("snowflake.connector") or types.ModuleType("snowflake.connector")
     )
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.setattr(sf, "_get_connection", lambda *a, **k: _Conn(_load("snowflake_show_compute_pools.json")))
     monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "acct1")
@@ -73,6 +74,22 @@ def test_spcs_compute_pools_are_inventoried_with_gpu_family(snowflake_services: 
     assert llm["owner"] == "ML_ENGINEER" and llm["auto_suspend_secs"] == 0
     assert llm["gpu_driver"] == {"management": "provider-managed", "setting": "snowflake-managed"}
     assert pools["APP_CPU_POOL"]["gpu"] is False
+
+
+def test_snowflake_fixture_patches_canonical_facade(monkeypatch: pytest.MonkeyPatch) -> None:
+    import agent_bom.cloud as cloud
+
+    canonical = importlib.import_module("agent_bom.cloud.snowflake")
+    stale = types.ModuleType(canonical.__name__)
+    stale.__dict__.update(canonical.__dict__)
+    # patch.dict(sys.modules) can restore the registry while leaving an older
+    # facade on its parent package. Discovery resolves the registry at call time.
+    monkeypatch.setattr(cloud, "snowflake", stale)
+    monkeypatch.setattr(canonical, "_get_connection", lambda *a, **k: None)
+    result = snowflake_services.__wrapped__(monkeypatch)
+    assert result["status"] == "ok"
+    assert result["warnings"] == []
+    test_spcs_compute_pools_are_inventoried_with_gpu_family(result)
 
 
 # ── Databricks ───────────────────────────────────────────────────────────────
