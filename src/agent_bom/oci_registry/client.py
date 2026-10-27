@@ -21,6 +21,7 @@ from urllib.parse import urlencode, urljoin, urlparse
 import httpcore
 import httpx
 
+from agent_bom.core.image_ref import is_image_digest
 from agent_bom.http_client import check_offline
 from agent_bom.oci_registry.auth import (
     ANONYMOUS,
@@ -33,12 +34,12 @@ from agent_bom.oci_registry.auth import (
 from agent_bom.oci_registry.media_types import MANIFEST_ACCEPT, OCI_INDEX
 from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.reference import ImageReference
+from agent_bom.oci_registry.validation import validate_manifest
 from agent_bom.runtime.egress_transport import PinnedDNSSyncTransport, UnsafeDestinationError
 
 MAX_MANIFEST_BYTES = 8 * 1024 * 1024
 MAX_TOKEN_BYTES = 64 * 1024
 _MAX_REDIRECTS = 5
-_CHUNK = 1024 * 1024
 _TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 _USER_AGENT = "agent-bom-registry-client"
 _TRANSPORT_ERRORS = (
@@ -115,6 +116,8 @@ def _digest_hasher(digest: str) -> Any:
     algorithm = digest.split(":", 1)[0]
     if algorithm not in {"sha256", "sha512"}:
         raise RegistryError(f"Unsupported digest algorithm: {algorithm}")
+    if not is_image_digest(digest):
+        raise RegistryError("Invalid content digest")
     return hashlib.new(algorithm)
 
 
@@ -316,6 +319,10 @@ class RegistryClient:
             raise RegistryError("Manifest is not valid JSON") from exc
         if not isinstance(document, dict):
             raise RegistryError("Manifest is not a JSON object")
+        try:
+            validate_manifest(document)
+        except ValueError as exc:
+            raise RegistryError("Registry manifest contains invalid metadata") from exc
         media_type = str(document.get("mediaType") or response.headers.get("content-type", "").split(";")[0].strip())
         return FetchedManifest(media_type=media_type, digest=digest, raw=raw, document=document)
 
@@ -327,7 +334,7 @@ class RegistryClient:
         try:
             if response.status_code != 200:
                 raise RegistryError(f"Blob {digest[:19]} could not be fetched{self._status(response.status_code)}", response.status_code)
-            for chunk in response.iter_bytes(_CHUNK):
+            for chunk in response.iter_bytes():
                 self._consume_evidence(len(chunk))
                 written += len(chunk)
                 if written > max_bytes:
@@ -365,7 +372,13 @@ class RegistryClient:
             raise RegistryError(f"Referrers query failed{self._status(response.status_code)}", response.status_code)
         try:
             document = json.loads(_read_bounded(response, MAX_MANIFEST_BYTES, "Referrers index", self._consume_evidence))
-        except ValueError:
-            return None
+        except ValueError as exc:
+            raise RegistryError("Referrers index is not valid JSON") from exc
         manifests = document.get("manifests") if isinstance(document, dict) else None
-        return [m for m in manifests if isinstance(m, dict)] if isinstance(manifests, list) else []
+        if not isinstance(manifests, list) or any(not isinstance(m, dict) for m in manifests):
+            raise RegistryError("Referrers index has an invalid manifests list")
+        try:
+            validate_manifest(document)
+        except ValueError as exc:
+            raise RegistryError("Referrers index contains invalid metadata") from exc
+        return manifests

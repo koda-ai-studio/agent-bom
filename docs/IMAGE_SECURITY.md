@@ -49,6 +49,9 @@ is unsigned, and `--require-signature` fails closed. MCP image scans preserve
 these warnings across their worker-thread boundary. Registry scans retain the
 verified manifest digest, including SHA-512, for evidence lookup and image
 identity; changing a tag cannot overwrite an earlier digest's identity.
+Malformed registry manifests, descriptors and image configs are rejected before
+interpretation. Invalid child digests cannot become tag or cross-repository
+lookups. Malformed optional evidence remains `unknown` with a coverage warning.
 
 ## Release policy
 

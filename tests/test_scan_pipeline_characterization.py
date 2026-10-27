@@ -189,6 +189,7 @@ def _install(monkeypatch: pytest.MonkeyPatch, trace: _Trace, scenario: dict[str,
     monkeypatch.setattr("agent_bom.suppression_rules.apply_tenant_suppression_rules", _suppress)
     monkeypatch.setattr("agent_bom.db.sync.sync_db", lambda **_k: trace.add("sync_db"))
     monkeypatch.setattr("agent_bom.db.schema.db_freshness_days", lambda: None)
+
     def _image_failure(_ref: str, *, server_context: bool):
         assert server_context is True
         raise RuntimeError("registry token=secret")

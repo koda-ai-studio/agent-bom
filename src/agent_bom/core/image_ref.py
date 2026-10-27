@@ -9,6 +9,7 @@ path is an official ``library/`` image.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 DIGEST_PREFIX = "sha256:"
@@ -60,7 +61,13 @@ def digest_in_ref(ref: str) -> str:
     return parse_image_ref(ref).digest
 
 
+def is_image_digest(digest: str) -> bool:
+    """Whether a digest uses a supported algorithm and its complete hexadecimal encoding."""
+    return re.fullmatch(r"(?:sha256:[0-9a-f]{64}|sha512:[0-9a-f]{128})", digest) is not None
+
+
 def image_key(ref: str, digest: str = "") -> str:
     """``repo@digest`` when a digest is known, else the reference as written."""
-    digest = digest if digest.startswith(DIGEST_PREFIX) else digest_in_ref(ref)
+    digest = digest if is_image_digest(digest) else digest_in_ref(ref)
+    digest = digest if is_image_digest(digest) else ""
     return f"{image_repository(ref)}@{digest}" if digest else ref.strip()

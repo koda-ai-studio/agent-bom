@@ -103,6 +103,8 @@ def fetch_cosign_signatures(client: RegistryClient, digest: str) -> list[CosignS
     manifest = client.get_manifest(signature_tag(digest), missing_ok=True)
     if manifest is None:
         return []
+    if "layers" not in manifest.document:
+        raise RegistryError("Signature manifest has no payload layers")
     found: list[CosignSignature] = []
     seen: set[tuple[str, str]] = set()
     payloads: dict[str, bytes] = {}

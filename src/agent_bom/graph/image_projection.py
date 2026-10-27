@@ -17,7 +17,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from agent_bom.canonical_ids import mcp_server_graph_id_for
-from agent_bom.core.image_ref import DIGEST_PREFIX, image_key, image_repository
+from agent_bom.core.image_ref import image_key, image_repository, is_image_digest
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType
@@ -89,7 +89,7 @@ def add_image_node(
                 "resource_type": "container_image",
                 "image_ref": ref,
                 "image_repository": image_repository(ref),
-                "image_digest": digest if digest.startswith(DIGEST_PREFIX) else "",
+                "image_digest": digest if is_image_digest(digest) else "",
                 "image_source": str(agent.get("source") or ""),
                 "identity": {"basis": "image_reference", "aliases": sorted({*known, *(a for a in aliases if a != node_id)})},
                 **(evidence or {}),

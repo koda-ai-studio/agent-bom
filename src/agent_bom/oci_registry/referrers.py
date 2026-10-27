@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.image_evidence.model import as_dict
-from agent_bom.oci_registry.client import RegistryClient, RegistryLimitError
+from agent_bom.oci_registry.client import RegistryClient, RegistryError, RegistryLimitError
 from agent_bom.oci_registry.media_types import (
     COSIGN_SIMPLESIGNING,
     CYCLONEDX_TYPES,
@@ -60,6 +60,8 @@ def _tag_entries(client: RegistryClient, digest: str, suffix: str, source: str) 
     manifest = client.get_manifest(digest.replace(":", "-", 1) + suffix, missing_ok=True)
     if manifest is None:
         return []
+    if "layers" not in manifest.document and "manifests" not in manifest.document:
+        raise RegistryError("Attachment manifest has no descriptor list")
     layers = manifest.document.get("layers") or manifest.document.get("manifests") or []
     return _bounded_entries(layers, source, digest)
 
@@ -102,7 +104,9 @@ def _buildkit_attestations(
             raise RegistryLimitError("BuildKit attestation count limit reached")
         seen.add(manifest_digest)
         manifest = client.get_manifest(manifest_digest, missing_ok=True)
-        layers = manifest.document.get("layers") if manifest is not None else []
+        if manifest is None or "layers" not in manifest.document:
+            raise RegistryError("Attestation manifest is missing or has no layers")
+        layers = manifest.document["layers"]
         found.extend(_bounded_entries(layers or [], "buildkit-attestation-manifest", digest))
         if len(found) > limit:
             raise RegistryLimitError("Referrer count limit reached")

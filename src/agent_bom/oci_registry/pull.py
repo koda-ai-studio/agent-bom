@@ -23,6 +23,7 @@ from agent_bom.oci_registry.platforms import PlatformNotFoundError
 from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.reference import parse_reference
 from agent_bom.oci_registry.supply_chain import discover_supply_chain
+from agent_bom.oci_registry.validation import validate_image_config
 from agent_bom.parsers.oci_io import _max_json_member_bytes, _max_layer_compressed_bytes
 from agent_bom.parsers.oci_metadata import _build_layer_metadata
 from agent_bom.parsers.oci_stream import LayerLimitError
@@ -104,8 +105,14 @@ def scan_registry_image(
         manifest, index, chosen, available = resolve_image_manifest(client, ref, platform)
         if manifest.media_type not in MANIFEST_TYPES and "layers" not in manifest.document:
             raise RegistryError(f"Unsupported manifest media type: {manifest.media_type or 'unknown'}")
-        config_digest = str(manifest.document.get("config", {}).get("digest") or "")
+        if "config" not in manifest.document or "layers" not in manifest.document:
+            raise RegistryError("Image manifest has invalid or missing config/layers")
+        config_digest = str(manifest.document["config"]["digest"])
         config = client.fetch_json_blob(config_digest, _max_json_member_bytes())
+        try:
+            validate_image_config(config)
+        except ValueError as exc:
+            raise RegistryError("Image config contains invalid metadata") from exc
         actual = chosen or _config_platform(config)
         if index is None and platform and actual and not actual.startswith(platform):
             raise PlatformNotFoundError(platform, [actual])

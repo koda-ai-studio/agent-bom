@@ -113,3 +113,26 @@ def test_tag_aliases_share_verified_digest_identity_and_replaced_tags_do_not(reg
     replacement = build_image([{"var/lib/dpkg/status": dpkg_status(("bash", "5.3"))}])
     registry.push_image("team/api", replacement, "2.0")
     assert _identity(scan_image_carrier(REF).carrier)["image_node"] != first["image_node"]
+
+
+def test_sha512_carrier_projects_immutable_digest_and_graph_attribute(monkeypatch):
+    from agent_bom.discovery.carriers import scan_image_carrier
+    from agent_bom.graph.container import UnifiedGraph
+    from agent_bom.graph.image_projection import add_image_node, carrier_node_id
+    from agent_bom.image_evidence.model import active_image_evidence
+    from agent_bom.models import AIBOMReport, Package
+    from agent_bom.output.json_fmt import to_json
+
+    digest = "sha512:" + "ab" * 64
+
+    def scan(_ref, **kwargs):
+        active_image_evidence().digest = digest
+        return [Package(name="bash", version="5.2", ecosystem="deb")], "registry"
+
+    monkeypatch.setattr("agent_bom.image.scan_image", scan)
+    carrier = to_json(AIBOMReport(agents=[scan_image_carrier(REF).carrier], blast_radii=[]))["agents"][0]
+    node_id = carrier_node_id(carrier)
+    assert node_id == f"container:image:{REGISTRY}/team/api@{digest}"
+    graph = UnifiedGraph()
+    add_image_node(graph, carrier, node_id, "image", [])
+    assert graph.nodes[node_id].attributes["image_digest"] == digest

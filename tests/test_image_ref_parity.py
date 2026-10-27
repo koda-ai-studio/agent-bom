@@ -107,3 +107,21 @@ def test_floating_image_classifier_uses_core_split(ref: str, floating: bool) -> 
     from agent_bom.floating_refs import classify_image_reference
 
     assert (classify_image_reference(ref) is not None) is floating
+
+
+@pytest.mark.parametrize("digest", ["sha256:" + "a" * 64, "sha512:" + "b" * 128])
+def test_supported_digest_identity_and_kubernetes_status_agree(digest):
+    from agent_bom.core.image_ref import image_key
+    from agent_bom.kubernetes.inventory import image_digest_from_status
+
+    assert image_key("registry.example/app:tag", digest) == f"registry.example/app@{digest}"
+    assert image_digest_from_status(f"docker-pullable://registry.example/app@{digest}") == digest
+
+
+@pytest.mark.parametrize("digest", ["sha512:short", "sha256:short", "sha512:" + "z" * 128, "md5:" + "a" * 32])
+def test_malformed_digest_is_not_promoted_to_verified_identity(digest):
+    from agent_bom.core.image_ref import image_key
+    from agent_bom.kubernetes.inventory import image_digest_from_status
+
+    assert image_key("registry.example/app:tag", digest) == "registry.example/app:tag"
+    assert image_digest_from_status(f"docker-pullable://registry.example/app@{digest}") == ""

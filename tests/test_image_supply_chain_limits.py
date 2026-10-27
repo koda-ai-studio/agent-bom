@@ -166,3 +166,97 @@ def test_sha512_identity_drives_signatures_referrers_and_descriptor_annotations(
     assert any(path.endswith("/manifests/" + digest.replace(":", "-", 1) + ".sig") for path in paths)
     assert index_annotations(index, evidence.digest) == {"fixture.platform": "selected"}
     assert evidence.signature["status"] == "unsigned"
+
+
+def test_slow_fragmented_blob_stops_at_deadline_without_coalescing(monkeypatch):
+    import io
+
+    now = [0.0]
+    monkeypatch.setattr(client_module, "time", SimpleNamespace(monotonic=lambda: now[0]))
+
+    class SlowStream(httpx.SyncByteStream):
+        received = 0
+        closed = False
+
+        def __iter__(self):
+            for _ in range(100):
+                self.received += 1
+                now[0] += 1
+                yield b"x" * 1024
+
+        def close(self):
+            self.closed = True
+
+    stream = SlowStream()
+    with _client(lambda request: httpx.Response(200, stream=stream)) as client, client.bounded_evidence(seconds=3):
+        with pytest.raises(RegistryError, match="time limit"):
+            client.fetch_blob(SUBJECT, io.BytesIO(), 256 * 1024)
+    assert stream.received <= 3
+    assert stream.closed
+
+
+@pytest.mark.parametrize("body", [b"not-json", b"[]", b"{}", b'{"manifests":{}}', b'{"manifests":[null]}'])
+def test_malformed_referrers_never_establish_unsigned(body):
+    def handler(request):
+        return httpx.Response(200, content=body) if "/referrers/" in request.url.path else httpx.Response(404)
+
+    evidence = ImageEvidence("registry.example.test/team/app:1", digest=SUBJECT)
+    with _client(handler) as client:
+        discover_supply_chain(client, evidence, None)
+    assert evidence.signature["status"] == "unknown"
+    assert any(w["reason"] == "image_supply_chain_incomplete" for w in consume_coverage_warnings())
+
+
+@pytest.mark.parametrize(
+    "document",
+    [
+        {},
+        {"layers": 7},
+        {"layers": None},
+        {"layers": [None]},
+        {"layers": [{"digest": "sha256:short"}]},
+        {"layers": [{"digest": SUBJECT, "size": "bad"}]},
+        {"layers": [{"digest": SUBJECT, "annotations": []}]},
+    ],
+)
+def test_malformed_signature_manifest_is_unknown(document):
+    def handler(request):
+        return httpx.Response(200, json=document) if request.url.path.endswith(".sig") else httpx.Response(404)
+
+    evidence = ImageEvidence("registry.example.test/team/app:1", digest=SUBJECT)
+    with _client(handler) as client:
+        discover_supply_chain(client, evidence, None)
+    assert evidence.signature["status"] == "unknown"
+    assert any(w["reason"] == "image_supply_chain_incomplete" for w in consume_coverage_warnings())
+
+
+def test_invalid_child_digest_cannot_become_cross_repository_lookup():
+    from agent_bom.oci_registry.manifests import resolve_image_manifest
+
+    paths = []
+
+    def handler(request):
+        paths.append(request.url.path)
+        return httpx.Response(
+            200, json={"manifests": [{"digest": "../../../other/manifests/latest", "platform": {"os": "linux", "architecture": "amd64"}}]}
+        )
+
+    with _client(handler) as client:
+        with pytest.raises(RegistryError, match="invalid metadata"):
+            resolve_image_manifest(client, client.ref, "linux/amd64")
+    assert paths == ["/v2/team/app/manifests/1"]
+
+
+def test_malformed_blob_digest_is_rejected_before_network():
+    import io
+
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(404)
+
+    with _client(handler) as client:
+        with pytest.raises(RegistryError, match="digest"):
+            client.fetch_blob("sha256:../../../other/blobs/latest", io.BytesIO(), 1024)
+    assert requests == []

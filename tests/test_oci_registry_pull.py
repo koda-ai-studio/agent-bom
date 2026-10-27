@@ -190,3 +190,34 @@ def _pkg():
     from agent_bom.models import Package
 
     return Package(name="local", version="1", ecosystem="deb")
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [("layers", 7), ("layers", [None]), ("config", []), ("layers", [{"digest": "sha256:" + "a" * 64, "size": "not-a-number"}])],
+)
+def test_malformed_manifest_fails_with_typed_scan_error(registry, field, value):
+    image = _image(("bash", "5.2"))
+    registry.push_image("team/app", image, "1.0")
+    import json
+
+    document = dict(image.manifest)
+    document[field] = value
+    registry.add_manifest("team/app", json.dumps(document).encode(), "application/vnd.oci.image.manifest.v1+json", "1.0")
+    with pytest.raises(ImageScanError, match="invalid"):
+        scan_image(REF, pull_mode="registry")
+
+
+@pytest.mark.parametrize("history", [["bad"], 7, [{"created_by": []}], [{"empty_layer": "false"}]])
+def test_malformed_config_history_fails_with_typed_scan_error(registry, history):
+    import json
+
+    image = _image(("bash", "5.2"))
+    registry.push_image("team/app", image, "1.0")
+    config = {**image.config, "history": history}
+    raw_config = json.dumps(config).encode()
+    digest = registry.add_blob(raw_config)
+    manifest = {**image.manifest, "config": {**image.manifest["config"], "digest": digest, "size": len(raw_config)}}
+    registry.add_manifest("team/app", json.dumps(manifest).encode(), "application/vnd.oci.image.manifest.v1+json", "1.0")
+    with pytest.raises(ImageScanError, match="invalid metadata"):
+        scan_image(REF, pull_mode="registry")
