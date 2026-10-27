@@ -16,6 +16,7 @@ from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.runtime.tool_catalog_pages import ToolCatalogPages
+from agent_bom.runtime.tool_catalog_refresh import ToolCatalogRefresh
 from agent_bom.security import sanitize_text
 
 if TYPE_CHECKING:
@@ -95,6 +96,7 @@ class ProxySession:
     withheld_tools: set[str] = field(default_factory=set)
     tools_list_request_ids: set[int | str] = field(default_factory=set)
     tool_catalog: ToolCatalogPages = field(default_factory=ToolCatalogPages)
+    catalog_refresh: ToolCatalogRefresh = field(default_factory=ToolCatalogRefresh)
     pending_calls: dict[int | str, tuple[str, float, dict[str, str]]] = field(default_factory=dict)
     pending_call_ttl: float = PENDING_CALL_TTL_SECONDS
     process: asyncio.subprocess.Process | None = None

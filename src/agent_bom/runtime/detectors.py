@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 
-from agent_bom.runtime.drift_baseline import baseline_path, persist_baseline, restore_baseline
+from agent_bom.runtime.drift_baseline import ToolFingerprints, baseline_path, definition_drift_details, persist_baseline, restore_baseline
 from agent_bom.runtime.patterns import (
     CREDENTIAL_PATTERNS,
     DANGEROUS_ARG_PATTERNS,
@@ -169,7 +169,7 @@ def is_detector_enabled(detector_name: str) -> bool:
 
 
 class ToolDriftDetector:
-    """Detect new tools appearing after initial tools/list (rug pull detection).
+    """Detect changed tool names and definitions after initial tools/list.
 
     Compares the initial tools/list snapshot against subsequent ones.
     New tools that weren't in the initial set trigger HIGH alerts.
@@ -179,6 +179,7 @@ class ToolDriftDetector:
 
     def __init__(self, *, restore: bool = False, server_id: str | None = None) -> None:
         self._baseline: set[str] | None = None
+        self._definitions: ToolFingerprints | None = None
         self._path = baseline_path(server_id)
         if restore:
             self._baseline = restore_baseline(self._path)
@@ -188,8 +189,9 @@ class ToolDriftDetector:
         self._baseline = set(tools)
         persist_baseline(self._path, self._baseline)
 
-    def check(self, current_tools: list[str], *, complete: bool = True) -> list[Alert]:
+    def check(self, current_tools: list[str], *, complete: bool = True, fingerprints: ToolFingerprints | None = None) -> list[Alert]:
         """Compare against baseline; an incomplete catalog never sets the baseline nor reports removals."""
+        definition_alerts = self._check_definitions(fingerprints, complete)
         if self._baseline is None:
             if complete:
                 self.set_baseline(current_tools)
@@ -198,7 +200,7 @@ class ToolDriftDetector:
         new_tools = set(current_tools) - self._baseline
         removed_tools = self._baseline - set(current_tools) if complete else set()
 
-        alerts: list[Alert] = []
+        alerts: list[Alert] = definition_alerts
         if new_tools:
             alerts.append(
                 Alert(
@@ -218,6 +220,21 @@ class ToolDriftDetector:
                 )
             )
         return alerts
+
+    def _check_definitions(self, fingerprints: ToolFingerprints | None, complete: bool) -> list[Alert]:
+        if self._definitions is None or fingerprints is None:
+            if complete and fingerprints is not None:
+                self._definitions = {name: dict(fields) for name, fields in fingerprints.items()}
+            return []
+        return [
+            Alert(
+                detector="tool_drift",
+                severity=AlertSeverity.HIGH,
+                message="Tool definitions changed after startup",
+                details={**details, "catalog_complete": complete},
+            )
+            for details in definition_drift_details(self._definitions, fingerprints)
+        ]
 
     @property
     def baseline(self) -> set[str] | None:
