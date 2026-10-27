@@ -16,7 +16,6 @@ rather than guessed.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
 
 from packageurl import PackageURL
 
@@ -90,11 +89,12 @@ def purl_distro(purl: str | None) -> tuple[str | None, str | None]:
     return name, release
 
 
-def apply_purl_distro(packages: Iterable[Package]) -> None:
-    """Stamp purl-derived distro context onto OS packages that lack their own."""
+def apply_purl_distro(packages: list[Package]) -> list[Package]:
+    """Stamp purl-derived distro context onto OS packages that lack their own; returns ``packages``."""
     for package in packages:
         if package.ecosystem not in _OS_PURL_TYPES or (package.distro_name and package.distro_version):
             continue
         name, release = purl_distro(package.purl)
         package.distro_name = package.distro_name or name
         package.distro_version = package.distro_version or release
+    return packages
