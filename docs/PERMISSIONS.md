@@ -11,6 +11,13 @@ remediation, ticket filing, outbound destinations) is opt-in and is scoped in
 
 ## What We Read
 
+Keyless image verification uses offline cached/bundled Sigstore trust material
+and performs no trust-service network requests. The separately invoked trust
+refresh command in `docs/IMAGE_SECURITY.md` contacts
+`https://tuf-repo-cdn.sigstore.dev` for signed public trust metadata. It sends no
+image contents, credentials or scan report. Bundle downloads use the same
+bounded registry connection as image evidence discovery.
+
 agent-bom reads only what you explicitly ask it to scan:
 
 | Target | How specified | What is read |

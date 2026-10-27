@@ -1616,8 +1616,8 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Install cloud extras
-        run: uv sync --frozen --extra dev --extra aws --extra azure --extra gcp
+      - name: Install cloud and signature verification extras
+        run: uv sync --frozen --extra dev --extra aws --extra azure --extra gcp --extra sigstore
 
       - name: Run extra-gated SDK import smoke
         # Extras this job does not install (databricks/snowflake/mcp/…) are
@@ -1626,6 +1626,11 @@ jobs:
         # symbol fails here instead of on a fresh customer install.
         run: |
           uv run pytest tests/test_extra_gated_sdk_imports.py tests/test_gcp_sdk_coverage.py -q
+
+      - name: Verify real Sigstore bundle offline
+        run: |
+          uv run python -c "import sigstore"
+          uv run pytest tests/test_image_keyless_verification.py -q
 
   postgres-integration:
     name: Postgres Integration Contract

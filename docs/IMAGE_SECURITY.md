@@ -19,8 +19,8 @@ server-side registry policy, are described in `site-docs/features/scanning.md`.
 ## Trust boundaries for image scans
 
 - `--require-signature` passes only for a signature `verified` with a cosign
-  public key (`--cosign-key` / `AGENT_BOM_IMAGE_COSIGN_KEY`); without a key it
-  fails with "a cosign public key is required to enforce signatures". A
+  public key (`--cosign-key` / `AGENT_BOM_IMAGE_COSIGN_KEY`) or an exact keyless
+  signer policy. Without either trust policy the gate fails closed. A
   signature artifact that was found but not verified is `present-unverified`
   and is never treated as trusted.
 - API scan jobs and the MCP `scan` tool pull anonymously over HTTPS only, refuse
@@ -43,6 +43,9 @@ most 50 unique referrers and 16 cosign signatures per subject digest, with each
 signature payload capped at 256 KiB. Duplicate signature payloads are fetched
 once per digest lookup.
 
+Keyless verification reads at most 16 unique Sigstore bundle payloads, each
+at most 1 MiB, within the same aggregate discovery budget.
+
 A crossed limit or failed evidence download records an incomplete-coverage
 warning and an `unknown` signature verdict. It does not establish that the image
 is unsigned, and `--require-signature` fails closed. MCP image scans preserve
@@ -52,6 +55,37 @@ identity; changing a tag cannot overwrite an earlier digest's identity.
 Malformed registry manifests, descriptors and image configs are rejected before
 interpretation. Invalid child digests cannot become tag or cross-repository
 lookups. Malformed optional evidence remains `unknown` with a coverage warning.
+
+## Verify a keyless image signature
+
+Install `agent-bom[sigstore]`, then select the expected certificate identity and
+OIDC issuer from the publisher's documented signing policy:
+
+```bash
+AGENT_BOM_IMAGE_SIGNER_IDENTITY='https://github.com/example/project/.github/workflows/release.yml@refs/tags/v1.0' \
+AGENT_BOM_IMAGE_SIGNER_ISSUER='https://token.actions.githubusercontent.com' \
+  agent-bom image ghcr.io/example/project:1.0 --require-signature --format json --output image-report.json
+```
+
+Review `metadata.image.signature` in the report. A verified result binds the
+exact identity and issuer, certificate chain, transparency inclusion proof and
+signed time to a Cosign image-signature DSSE statement naming the image digest.
+General provenance statements do not satisfy the image-signature gate. Legacy
+certificate annotations without a supported bundle remain unverified. Do not
+configure a public key and keyless policy together.
+
+Verification is offline against Sigstore's local trust cache or bundled trust
+material; it does not refresh roots or query Rekor. Operators must keep this
+material current. An explicit refresh outside a scan can be run with:
+
+```bash
+python -c 'from sigstore.models import ClientTrustConfig; ClientTrustConfig.production()'
+```
+
+That operator command contacts Sigstore's TUF metadata service. Missing optional
+dependencies, unavailable trust material and incomplete discovery produce an
+`unknown` verdict and fail the signature gate. API/MCP servers use only their
+operator-configured signer policy; request data cannot change it.
 
 ## Release policy
 

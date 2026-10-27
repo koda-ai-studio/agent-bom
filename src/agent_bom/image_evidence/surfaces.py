@@ -57,11 +57,11 @@ def signature_policy_violation(evidence: ImageEvidence, require: bool) -> str | 
     if not require:
         return None
     status = str(evidence.signature.get("status") or "unknown")
-    if not evidence.cosign_key_path:
+    if not evidence.cosign_key_path and not (evidence.signer_identity and evidence.signer_issuer):
         return f"image signature is {status}; a cosign public key is required to enforce signatures (pass --image-cosign-key)"
     if status == "verified":
         return None
-    return f"image signature is {status} (a verified signature is required with --image-cosign-key)"
+    return f"image signature is {status} (a verified signature matching the configured key or signer policy is required)"
 
 
 def console_lines(evidence: ImageEvidence) -> list[str]:

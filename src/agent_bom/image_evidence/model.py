@@ -68,10 +68,18 @@ class ImageEvidence:
     notes: list[str] = field(default_factory=list)
     credential_source: str | None = None
     cosign_key_path: str | None = field(default=None, repr=False)
+    signer_identity: str | None = field(default=None, repr=False)
+    signer_issuer: str | None = field(default=None, repr=False)
 
     def restart(self) -> None:
         """Drop what a failed attempt recorded before another strategy scans the image (notes stay)."""
-        fresh = ImageEvidence(reference=self.reference, cosign_key_path=self.cosign_key_path, notes=self.notes)
+        fresh = ImageEvidence(
+            reference=self.reference,
+            cosign_key_path=self.cosign_key_path,
+            notes=self.notes,
+            signer_identity=self.signer_identity,
+            signer_issuer=self.signer_issuer,
+        )
         self.__dict__.update(fresh.__dict__)
 
     def layer_digest(self, layer_index: int) -> str | None:
@@ -123,7 +131,12 @@ class ImageEvidence:
 def collect_image_evidence(reference: str, *, cosign_key_path: str | None = None) -> Iterator[ImageEvidence]:
     """Collect evidence for one image scan; the cosign key defaults to ``AGENT_BOM_IMAGE_COSIGN_KEY``."""
     key = cosign_key_path or env_raw("AGENT_BOM_IMAGE_COSIGN_KEY") or None
-    evidence = ImageEvidence(reference=reference, cosign_key_path=key)
+    evidence = ImageEvidence(
+        reference=reference,
+        cosign_key_path=key,
+        signer_identity=env_raw("AGENT_BOM_IMAGE_SIGNER_IDENTITY") or None,
+        signer_issuer=env_raw("AGENT_BOM_IMAGE_SIGNER_ISSUER") or None,
+    )
     token = _ACTIVE.set(evidence)
     try:
         yield evidence

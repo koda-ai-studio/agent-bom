@@ -206,6 +206,7 @@ visual = [
 ]
 # MCP ships in the base install; retain the extra for install-command compatibility.
 mcp-server = []
+sigstore = ["sigstore>=4.5.1,<5"]  # Optional offline keyless image-signature verification.
 lake = [
     "pyarrow>=15.0",
     "pyiceberg>=0.11.1",
