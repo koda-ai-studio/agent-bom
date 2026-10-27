@@ -319,6 +319,8 @@ def _is_agent_bom_report(content: str) -> bool:
 
 
 def _read_scannable(file_path: Path, rel_path: str) -> str:
+    if file_path.is_symlink():
+        raise FileNotScannedError(f"{rel_path}: not scanned, file symlink")
     try:
         size = file_path.stat().st_size
     except OSError as exc:
@@ -565,8 +567,7 @@ def scan_secrets(
 
     def note_pruned(_path: Path, _reason: str) -> None:
         nonlocal unsafe_pruned
-        result.pruned_directories += 1
-        unsafe_pruned += int(_reason == "directory_symlink")
+        unsafe_pruned += result.record_pruned_path(_reason)
 
     def traversal_limit(limit: int) -> None:
         result.warnings.append(f"Directory traversal stopped at {limit} discovered files")

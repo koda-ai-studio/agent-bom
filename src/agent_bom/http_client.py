@@ -492,16 +492,39 @@ def sync_get(
         return sync_request_with_retry(client, "GET", url, max_retries=max_retries, headers=headers or {}, params=params)
 
 
-def fetch_bytes(url: str, *, timeout: float = 30, headers: dict | None = None) -> bytes:
+def fetch_bytes(url: str, *, timeout: float = 30, headers: dict | None = None, max_bytes: int | None = None) -> bytes:
     """Download URL content as bytes, with retries. Raises on failure.
 
     Drop-in replacement for ``urllib.request.urlopen(url, timeout=X).read()``.
     """
+    if max_bytes is not None:
+        return _fetch_bounded_bytes(url, timeout=timeout, headers=headers, max_bytes=max_bytes)
     resp = sync_get(url, timeout=timeout, headers=headers)
     if resp is None:
         raise ConnectionError(f"Failed to fetch {_safe_url(url)} after retries")
     resp.raise_for_status()
     return resp.content
+
+
+def _fetch_bounded_bytes(url: str, *, timeout: float, headers: dict | None, max_bytes: int) -> bytes:
+    """Stream identity-encoded bytes and refuse a limit breach without retrying."""
+    if max_bytes <= 0:
+        raise ValueError("Download byte limit must be positive")
+    request_headers = {**(headers or {}), "Accept-Encoding": "identity"}
+    with create_sync_client(timeout=timeout) as client:
+        with client.stream("GET", url, headers=request_headers) as response:
+            response.raise_for_status()
+            if response.headers.get("content-encoding", "identity").lower() != "identity":
+                raise ValueError("Encoded archive response cannot be inspected within byte limit")
+            length = response.headers.get("content-length", "")
+            if length.isdigit() and int(length) > max_bytes:
+                raise ValueError("Download exceeds byte limit")
+            data = bytearray()
+            for chunk in response.iter_raw():
+                if len(data) + len(chunk) > max_bytes:
+                    raise ValueError("Download exceeds byte limit")
+                data.extend(chunk)
+            return bytes(data)
 
 
 def download_to_file(

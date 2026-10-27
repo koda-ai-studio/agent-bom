@@ -46,13 +46,27 @@ def _get(tenant: str = TENANT) -> dict:
     return response.json()
 
 
-def test_repeat_inventory_read_does_not_reparse_jobs(jobs, monkeypatch):
+@pytest.mark.parametrize("background_read", [False, True])
+def test_repeat_inventory_read_does_not_reparse_jobs(jobs, monkeypatch, background_read):
     jobs.put(_scan(8, "alpha"))
-    first = _get()
     calls = []
     original = SQLiteJobStore.list_all
-    monkeypatch.setattr(SQLiteJobStore, "list_all", lambda self, *a, **k: calls.append(1) or original(self, *a, **k))
 
+    def count_inventory_reads(self, *args, **kwargs):
+        # Lifespan workers also query this class, across all tenants. Only the
+        # request's store and tenant measure this projection's cache behavior.
+        if self is jobs and kwargs.get("tenant_id") == TENANT:
+            calls.append(1)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(SQLiteJobStore, "list_all", count_inventory_reads)
+    first = _get()
+    assert calls, "the cold projection must exercise the instrumented read"
+    calls.clear()
+
+    if background_read:
+        # A lifecycle worker can read the store while this request is served.
+        jobs.list_all(all_tenants=True)
     second = _get()
 
     assert second == first

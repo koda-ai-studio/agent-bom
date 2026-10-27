@@ -71,6 +71,16 @@ class SecretScanResult:
             "complete": not self.warnings,
         }
 
+    def record_pruned_path(self, reason: str) -> int:
+        """Record a refused file without counting it as a directory subtree."""
+        if reason == "file_symlink":
+            warning = "Skipped file symlinks; their contents were not inspected."
+            if warning not in self.warnings:
+                self.warnings.append(warning)
+            return 0
+        self.pruned_directories += 1
+        return int(reason == "directory_symlink")
+
     def record_exclusions(self, ignored_paths: int, unsafe_pruned: int) -> None:
         """Expose scope boundaries separately from failures inside that scope."""
         self.ignored_paths = ignored_paths

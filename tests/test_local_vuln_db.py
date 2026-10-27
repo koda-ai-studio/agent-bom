@@ -547,9 +547,23 @@ def test_readonly_conn_sets_busy_timeout(tmp_path):
         conn.close()
 
 
-def test_sync_db_runs_wal_checkpoint(tmp_path, monkeypatch):
+@pytest.mark.parametrize("shadow_sync_module", [False, True])
+def test_sync_db_runs_wal_checkpoint(tmp_path, monkeypatch, shadow_sync_module):
     """sync_db must checkpoint the WAL before closing so readers don't race a big -wal."""
+    import importlib
+    import types
+
+    import agent_bom.db as db_package
     import agent_bom.db.schema as schema_mod
+
+    unexpected_calls = []
+    if shadow_sync_module:
+        # Reproduce the stale package attribute left by module-isolation tests.
+        shadow = types.ModuleType("agent_bom.db.sync")
+        shadow.__dict__.update(importlib.import_module("agent_bom.db.sync").__dict__)
+        monkeypatch.setattr(db_package, "sync", shadow)
+        for source in ("sync_osv", "sync_alpine_secdb", "sync_debian_tracker", "sync_epss", "sync_kev"):
+            monkeypatch.setitem(sync_db.__globals__, source, lambda *a, **k: unexpected_calls.append(True) or 0)
 
     class _ConnProxy:
         def __init__(self, real):
@@ -577,15 +591,16 @@ def test_sync_db_runs_wal_checkpoint(tmp_path, monkeypatch):
         return proxy
 
     monkeypatch.setattr(schema_mod, "init_db", fake_init)
-    monkeypatch.setattr("agent_bom.db.sync.sync_osv", lambda *args, **kwargs: 0)
-    monkeypatch.setattr("agent_bom.db.sync.sync_alpine_secdb", lambda *args, **kwargs: 0)
-    monkeypatch.setattr("agent_bom.db.sync.sync_debian_tracker", lambda *args, **kwargs: 0)
-    monkeypatch.setattr("agent_bom.db.sync.sync_epss", lambda *args, **kwargs: 0)
-    monkeypatch.setattr("agent_bom.db.sync.sync_kev", lambda *args, **kwargs: 0)
-    sync_db(path=tmp_path / "ckpt.db", sources=[])
+    # Import-isolation tests can replace sys.modules after this file imports
+    # sync_db. Patch the dependencies of the exact callable under test, so a
+    # stale module reference cannot accidentally download live advisory feeds.
+    for source in ("sync_osv", "sync_alpine_secdb", "sync_debian_tracker", "sync_epss", "sync_kev"):
+        monkeypatch.setitem(sync_db.__globals__, source, lambda *args, **kwargs: 0)
+    sync_db(path=tmp_path / "ckpt.db", sources=["osv", "alpine", "debian", "epss", "kev"])
 
     assert proxies
     assert any("wal_checkpoint" in sql.lower() for sql in proxies[0].executed)
+    assert unexpected_calls == []
 
 
 def test_sync_osv_streams_to_disk(tmp_db, monkeypatch):

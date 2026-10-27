@@ -45,6 +45,7 @@ from agent_bom.config import (
     REPO_SCAN_MAX_FILES,
     REPO_SCAN_MAX_SIZE_BYTES,
 )
+from agent_bom.scanners.repo_clone import run_bounded_clone
 
 logger = logging.getLogger(__name__)
 
@@ -163,10 +164,8 @@ def _directory_within_bounds(root: Path) -> None:
     total_files = 0
     total_bytes = 0
     for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
-        # Skip the .git metadata directory from the user-facing caps; it is a
-        # clone artifact, not repository content.
-        if ".git" in dirnames:
-            dirnames.remove(".git")
+        if any((Path(dirpath) / name).is_symlink() for name in dirnames):
+            raise RepoScanError("repository contains directory symlinks; scan coverage is incomplete")
         for name in filenames:
             total_files += 1
             if total_files > REPO_SCAN_MAX_FILES:
@@ -174,8 +173,8 @@ def _directory_within_bounds(root: Path) -> None:
             fp = Path(dirpath) / name
             try:
                 if fp.is_symlink():
-                    continue
-                total_bytes += fp.stat().st_size
+                    raise RepoScanError("repository contains file symlinks; scan coverage is incomplete")
+                total_bytes += fp.lstat().st_size
             except OSError:
                 continue
             if total_bytes > REPO_SCAN_MAX_SIZE_BYTES:
@@ -257,13 +256,11 @@ def _clone_into_tempdir(
             env["GIT_CONFIG_VALUE_0"] = f"Authorization: Bearer {token}"
 
         try:
-            result = subprocess.run(  # noqa: S603 — fixed argv, no shell, runs git only
+            result = run_bounded_clone(
                 cmd,
-                capture_output=True,
-                text=True,
-                timeout=REPO_SCAN_CLONE_TIMEOUT_SECONDS,
                 env=env,
-                check=False,
+                timeout=REPO_SCAN_CLONE_TIMEOUT_SECONDS,
+                check_bounds=lambda: _directory_within_bounds(Path(temp_dir)),
             )
         except FileNotFoundError as exc:
             raise RepoScanError("git is not installed or not on PATH") from exc
