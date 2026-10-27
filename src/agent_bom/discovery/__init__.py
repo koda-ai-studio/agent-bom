@@ -219,6 +219,7 @@ def discover_compose_mcp_servers(project_dir: Optional[str] = None) -> Optional[
     Scans ``docker-compose.yml`` / ``compose.yml`` for services whose images
     match known MCP server patterns (e.g. ``mcp/playwright``, ``mcp/fetch``).
     """
+    from agent_bom.core.image_ref import parse_image_ref
     from agent_bom.models import Package
 
     search_dir = Path(project_dir) if project_dir else Path.cwd()
@@ -259,16 +260,8 @@ def discover_compose_mcp_servers(project_dir: Optional[str] = None) -> Optional[
         if not is_mcp:
             continue
 
-        # Extract version from image tag
-        pkg_version = "latest"
-        pkg_name = image
-        if "@sha256:" in image:
-            pkg_name = image.split("@")[0]
-            pkg_version = image.split("@sha256:")[1][:12]
-        elif ":" in image and not image.startswith("ghcr.io:"):
-            parts = image.rsplit(":", 1)
-            pkg_name = parts[0]
-            pkg_version = parts[1]
+        parsed_image = parse_image_ref(image)
+        pkg_name, pkg_version = parsed_image.name, parsed_image.version
 
         # Extract env vars (list or dict format)
         raw_env = svc_def.get("environment", {})

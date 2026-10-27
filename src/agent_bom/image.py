@@ -34,7 +34,18 @@ from pathlib import Path
 from typing import Optional
 
 from agent_bom.config import _bool
+from agent_bom.core.settings import env_raw
+from agent_bom.http_client import is_offline
+from agent_bom.image_evidence.base_image import attribute_packages
+from agent_bom.image_evidence.model import active_image_evidence
 from agent_bom.models import Package, PermissionProfile, Severity, Vulnerability
+from agent_bom.oci_registry.client import RegistryError
+from agent_bom.oci_registry.manifests import open_client
+from agent_bom.oci_registry.platforms import PlatformNotFoundError
+from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
+from agent_bom.oci_registry.pull import scan_registry_image
+from agent_bom.oci_registry.reference import ReferenceError, parse_reference
+from agent_bom.oci_registry.supply_chain import discover_supply_chain, resolve_base_layers
 from agent_bom.sbom import parse_cyclonedx
 from agent_bom.scanners.risk import cvss_to_severity, severity_from_label
 from agent_bom.security import validate_image_ref
@@ -482,6 +493,19 @@ def _packages_from_tar(tar_path: Path | str) -> list[Package]:
     return scan_rootfs_tar(Path(tar_path))
 
 
+def _record_daemon_inspect(data: object) -> None:
+    """Registry digest and platform of a daemon image, for signature lookup and evidence."""
+    evidence = active_image_evidence()
+    if evidence is None or not isinstance(data, dict):
+        return
+    repo_digests = [d for d in data.get("RepoDigests") or [] if isinstance(d, str) and "@sha256:" in d]
+    if repo_digests:
+        evidence.digest = repo_digests[0].split("@", 1)[1]
+    os_name, arch = data.get("Os"), data.get("Architecture")
+    if os_name and arch:
+        evidence.platform = f"{os_name}/{arch}" + (f"/{data['Variant']}" if data.get("Variant") else "")
+
+
 def _scan_with_docker(image_ref: str, platform: Optional[str] = None) -> list[Package]:
     """Scan a Docker image natively and fail if no packages can be extracted."""
     from agent_bom.oci_parser import OCIParseError, scan_oci
@@ -490,7 +514,7 @@ def _scan_with_docker(image_ref: str, platform: Optional[str] = None) -> list[Pa
     platform = _validate_platform(platform)
     platform_args = ["--platform", platform] if platform else []
 
-    _docker_inspect(image_ref, platform=platform)
+    _record_daemon_inspect(_docker_inspect(image_ref, platform=platform))
 
     with tempfile.TemporaryDirectory() as tmpdir:
         oci_tar_path = Path(tmpdir) / "image.tar"
@@ -613,42 +637,155 @@ def detect_multi_arch(image_ref: str) -> list[str]:
     return platforms
 
 
+PULL_MODES = ("auto", "registry", "daemon")
+
+
+def _pull_mode(pull_mode: Optional[str], server_context: bool = False) -> str:
+    mode = (pull_mode or env_raw("AGENT_BOM_IMAGE_PULL_MODE") or "auto").strip().lower()
+    if mode not in PULL_MODES:
+        raise ImageScanError(f"Unknown image pull mode {mode!r}; expected one of {', '.join(PULL_MODES)}")
+    # A server-side scan never reaches the Docker daemon unless the operator chose daemon mode:
+    # the daemon pulls with the host's ambient credentials and network and holds other tenants' images.
+    return "registry" if server_context and mode == "auto" else mode
+
+
+def _names_registry_host(image_ref: str) -> bool:
+    """Whether the reference's first path component is a registry host (distribution reference grammar)."""
+    first, sep, _rest = image_ref.split("@", 1)[0].partition("/")
+    return bool(sep) and ("." in first or ":" in first or first == "localhost")
+
+
+def _local_daemon_has_image(image_ref: str) -> bool:
+    """Whether the local Docker image store already holds ``image_ref`` (never pulls)."""
+    if not _docker_available():
+        return False
+    try:
+        result = subprocess.run(
+            ["docker", "image", "inspect", "--format", "{{.Id}}", image_ref],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def _prefers_local_image(image_ref: str, mode: str, server_context: bool) -> bool:
+    """Auto mode scans a local image named by a host-less reference instead of resolving it to Docker Hub."""
+    return mode == "auto" and not server_context and not _names_registry_host(image_ref) and _local_daemon_has_image(image_ref)
+
+
+def _scan_from_registry(
+    image_ref: str, registry_user: Optional[str], registry_pass: Optional[str], platform: Optional[str], policy: RegistryPolicy
+) -> list[Package]:
+    packages = scan_registry_image(image_ref, platform=platform, registry_user=registry_user, registry_pass=registry_pass, policy=policy)
+    if not packages:
+        raise ImageScanError(
+            f"Native image scan extracted 0 packages from {image_ref}. This is likely an extraction or parser failure, not a clean scan."
+        )
+    return packages
+
+
+def _daemon_supply_chain(image_ref: str, registry_user: Optional[str], registry_pass: Optional[str]) -> None:
+    """Look up signatures/referrers for a daemon-scanned image by its registry digest (online only)."""
+    evidence = active_image_evidence()
+    if evidence is None:
+        return
+    if is_offline():
+        evidence.signature = {"status": "unknown", "detail": "Offline scan: the registry was not queried for signatures."}
+        return
+    if not evidence.digest:
+        evidence.signature = {"status": "unknown", "detail": "The local image has no registry digest (never pushed or pulled)."}
+        return
+    try:
+        ref = parse_reference(image_ref)
+        with open_client(ref, registry_user, registry_pass) as client:
+            discover_supply_chain(client, evidence, None)
+    except (ReferenceError, RegistryError) as exc:
+        evidence.signature = {"status": "unknown", "detail": f"Signature lookup failed: {exc}"}
+
+
+def _attribute_base_image(
+    packages: list[Package], registry_user: Optional[str], registry_pass: Optional[str], policy: RegistryPolicy = LOCAL_POLICY
+) -> None:
+    evidence = active_image_evidence()
+    if evidence is None or evidence.base_image is None:
+        return
+    if not is_offline():
+        resolve_base_layers(evidence, lambda ref: open_client(ref, registry_user, registry_pass, policy=policy), policy)
+    attribute_packages(evidence, packages)
+
+
 def scan_image(
     image_ref: str,
     registry_user: Optional[str] = None,
     registry_pass: Optional[str] = None,
     platform: Optional[str] = None,
+    pull_mode: Optional[str] = None,
+    server_context: bool = False,
 ) -> tuple[list[Package], str]:
-    """Scan a Docker image and return (packages, strategy_used).
+    """Scan a container image and return (packages, strategy_used).
 
-    Strategy order:
-    1. Docker save → native OCI parser
-    2. Docker export → native filesystem parser
+    Strategy order (``pull_mode="auto"``, the default):
+    0. A reference without a registry host (``acme/app:dev``) that the local
+       Docker daemon already holds is scanned from the daemon: it would
+       otherwise resolve to a same-named, possibly squatted Docker Hub image.
+    1. Registry pull over the OCI distribution API — no Docker daemon needed
+       (strategy ``"registry"``).
+    2. Only if that fails: Docker save → native OCI parser, then Docker export
+       (strategy ``"native"``). ``pull_mode="daemon"`` skips the registry and
+       ``pull_mode="registry"`` never touches the daemon. ``--offline`` scans
+       never contact a registry.
 
-    Args:
-        image_ref: Docker image reference, e.g. ``myapp:latest``,
-                   ``ghcr.io/org/image:sha256-abc``, ``nginx:1.25``
-        registry_user: Username for private registry authentication.
-        registry_pass: Password for private registry authentication.
-        platform: Target platform for multi-arch images (e.g. ``linux/amd64``).
-
-    Returns:
-        A tuple ``(packages, strategy)`` where strategy is ``"native"``.
+    ``server_context=True`` (API scan jobs, the MCP server) applies the
+    server-side registry policy (see :mod:`agent_bom.oci_registry.policy`) and
+    never uses the Docker daemon unless the operator set daemon mode.
 
     Raises:
-        ImageScanError: If Docker is unavailable, the image cannot be found/pulled,
-                        or native package extraction fails.
+        ImageScanError: If neither path can produce a package inventory.
     """
     validate_image_ref(image_ref)
     _validate_platform(platform)
+    mode = _pull_mode(pull_mode, server_context)
+    policy = RegistryPolicy.for_server() if server_context else LOCAL_POLICY
+    registry_failure: str | None = None
+    local_first = _prefers_local_image(image_ref, mode, server_context)
+    if mode != "daemon" and not is_offline() and not local_first:
+        try:
+            packages = _scan_from_registry(image_ref, registry_user, registry_pass, platform, policy)
+        except (RegistryError, ReferenceError, PlatformNotFoundError, ImageScanError, OSError) as exc:
+            registry_failure = str(exc)
+            if mode == "registry":
+                raise ImageScanError(f"Registry pull failed for {image_ref}: {registry_failure}") from exc
+        else:
+            _attribute_base_image(packages, registry_user, registry_pass, policy)
+            return packages, "registry"
+    elif mode == "registry":
+        raise ImageScanError("Registry pull mode needs network access; --offline scans can only use the Docker daemon or --image-tar.")
 
+    prefix = f"Registry pull failed ({registry_failure}). " if registry_failure else ""
     if not _docker_available():
         raise ImageScanError(
-            "Docker is not available. Install Docker to enable native image scanning, "
+            f"{prefix}Docker is not available. Install Docker to enable native image scanning, "
             "or use 'docker save <image> -o image.tar' and pass the tarball with --image-tar."
         )
-
+    evidence = active_image_evidence()
+    if registry_failure:
+        _logger.warning("Registry pull failed for %s; falling back to the local Docker daemon: %s", image_ref, registry_failure)
+        if evidence is not None:
+            evidence.note(f"Registry pull failed ({registry_failure}); scanned through the local Docker daemon instead.")
+    if evidence is not None:
+        evidence.restart()
+        evidence.source = "daemon"
+        if local_first:
+            evidence.note(
+                f"{image_ref} has no registry host and exists as a local Docker image; scanned the local Docker image, "
+                "not a same-named Docker Hub image."
+            )
     packages = _scan_with_docker(image_ref, platform)
+    _daemon_supply_chain(image_ref, registry_user, registry_pass)
+    _attribute_base_image(packages, registry_user, registry_pass)
     return packages, "native"
 
 

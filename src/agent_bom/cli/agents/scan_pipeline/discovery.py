@@ -270,6 +270,9 @@ def _discover_local(opts: ScanOptions, st: ScanState) -> None:
         extra_sbom_names=opts.extra_sbom_names,
         extra_external_scan_paths=opts.extra_external_scan_paths,
         _image_only=opts._image_only,
+        image_pull_mode=opts.image_pull_mode,
+        image_cosign_key=opts.image_cosign_key,
+        require_image_signature=opts.require_image_signature,
         _any_cloud=st.any_cloud,
         _discover_all=_agents_patchable("discover_all"),  # tests patch agent_bom.cli.agents.discover_all
     )

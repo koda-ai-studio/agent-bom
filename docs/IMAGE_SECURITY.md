@@ -8,10 +8,50 @@
 agent-bom image <image:tag> --platform linux/amd64 --format json --output image-report.json
 ```
 
-The requested platform is passed to Docker pull, archive save, and the stopped
-container used by the filesystem-export fallback. Docker must support the
-`save --platform` option. Review the report's findings and coverage before
+A registry pull selects that platform's manifest from the image index (the
+default is `linux/amd64`). When the scan falls back to the Docker daemon
+(`--pull-mode daemon`, or a failed registry pull), the platform is passed to
+Docker pull, archive save, and the stopped container used by the
+filesystem-export fallback; Docker must then support `save --platform`.
+Signature, attestation, base-image and layer-secret evidence, and the
+server-side registry policy, are described in `site-docs/features/scanning.md`.
+
+## Trust boundaries for image scans
+
+- `--require-signature` passes only for a signature `verified` with a cosign
+  public key (`--cosign-key` / `AGENT_BOM_IMAGE_COSIGN_KEY`); without a key it
+  fails with "a cosign public key is required to enforce signatures". A
+  signature artifact that was found but not verified is `present-unverified`
+  and is never treated as trusted.
+- API scan jobs and the MCP `scan` tool pull anonymously over HTTPS only, refuse
+  loopback, private, link-local, CGNAT and metadata registries, honour
+  `AGENT_BOM_REGISTRY_ALLOWLIST`, and do not use the Docker daemon unless the
+  operator sets `AGENT_BOM_IMAGE_PULL_MODE=daemon`.
+- In `auto` mode a reference without a registry host that the local daemon
+  holds is scanned locally rather than resolved to Docker Hub.
+- Image labels, annotations and history are author-controlled: secrets in them
+  are redacted and reported, and MCP results mark them untrusted. Review the report's findings and coverage before
 using its exit status as a policy gate; an extraction error is not a clean scan.
+
+## Supply-chain lookup limits
+
+Signature and referrer discovery share a 30-second elapsed budget, at most 64
+HTTP requests and 16 MiB of response data. Each network operation is limited by
+the remaining time; checks between streamed chunks stop a response that crosses
+the budget. Authentication responses are capped at 64 KiB. Discovery retains at
+most 50 unique referrers and 16 cosign signatures per subject digest, with each
+signature payload capped at 256 KiB. Duplicate signature payloads are fetched
+once per digest lookup.
+
+A crossed limit or failed evidence download records an incomplete-coverage
+warning and an `unknown` signature verdict. It does not establish that the image
+is unsigned, and `--require-signature` fails closed. MCP image scans preserve
+these warnings across their worker-thread boundary. Registry scans retain the
+verified manifest digest, including SHA-512, for evidence lookup and image
+identity; changing a tag cannot overwrite an earlier digest's identity.
+Malformed registry manifests, descriptors and image configs are rejected before
+interpretation. Invalid child digests cannot become tag or cross-repository
+lookups. Malformed optional evidence remains `unknown` with a coverage warning.
 
 ## Release policy
 

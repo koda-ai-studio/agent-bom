@@ -17,7 +17,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from agent_bom.canonical_ids import mcp_server_graph_id_for
-from agent_bom.core.image_ref import DIGEST_PREFIX, image_key, image_repository
+from agent_bom.core.image_ref import image_key, image_repository, is_image_digest
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType
@@ -62,12 +62,19 @@ def carrier_node_id(agent: Mapping[str, Any]) -> str | None:
 def previous_carrier_ids(agent: Mapping[str, Any], agent_graph_id: str) -> list[str]:
     """The agent and server ids earlier builds gave this carrier, kept as aliases."""
     servers = [srv for srv in agent.get("mcp_servers") or [] if isinstance(srv, Mapping)]
-    # The carrier agent's own identity too, so findings naming it bind to the image.
-    identities = {str(agent.get(key) or "") for key in ("stable_id", "canonical_id")} - {""}
+    # The carrier agent's and servers' own identities too, so findings naming them bind to the image.
+    identities = {str(item.get(key) or "") for item in (agent, *servers) for key in ("stable_id", "canonical_id")} - {""}
     return sorted({agent_graph_id, *identities, *(mcp_server_graph_id_for(srv, dict(agent)) for srv in servers)})
 
 
-def add_image_node(graph: UnifiedGraph, agent: Mapping[str, Any], node_id: str, data_source: str, aliases: list[str]) -> None:
+def add_image_node(
+    graph: UnifiedGraph,
+    agent: Mapping[str, Any],
+    node_id: str,
+    data_source: str,
+    aliases: list[str],
+    evidence: Mapping[str, Any] | None = None,
+) -> None:
     ref, _recorded = carrier_image(agent)
     digest = node_id.rsplit("@", 1)[1] if "@" in node_id.removeprefix("container:image:") else ""
     existing = graph.nodes.get(node_id)
@@ -82,9 +89,10 @@ def add_image_node(graph: UnifiedGraph, agent: Mapping[str, Any], node_id: str, 
                 "resource_type": "container_image",
                 "image_ref": ref,
                 "image_repository": image_repository(ref),
-                "image_digest": digest if digest.startswith(DIGEST_PREFIX) else "",
+                "image_digest": digest if is_image_digest(digest) else "",
                 "image_source": str(agent.get("source") or ""),
                 "identity": {"basis": "image_reference", "aliases": sorted({*known, *(a for a in aliases if a != node_id)})},
+                **(evidence or {}),
             },
             data_sources=[data_source or "image"],
             dimensions=NodeDimensions(surface="container-image"),

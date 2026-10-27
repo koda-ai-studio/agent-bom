@@ -531,10 +531,11 @@ def _apply_policy_and_severity_gates(result: dict, active_findings, policy, fail
 
 async def _store_and_render_json(result: dict, store: ResultStore, owner: str, offline: bool, detail: str, _truncate_response) -> str:
     """Redact and store the JSON report, then render the requested detail level."""
+    from agent_bom.image_evidence.surfaces import untrusted_image_notice
     from agent_bom.output.json_fmt import redact_json_payload
 
     def _render_json_result() -> str:
-        redacted = redact_json_payload(result)
+        redacted = {**redact_json_payload(result), **untrusted_image_notice(result)}
         try:
             result_id = store.put(owner, {"report": redacted, "offline": offline})
         except Exception as exc:
@@ -543,7 +544,7 @@ async def _store_and_render_json(result: dict, store: ResultStore, owner: str, o
             full = {"result_id": result_id, **redacted}
             return _truncate_response(json.dumps(full, indent=2, default=str))
         summary = build_scan_summary(redacted, result_id=result_id, ttl_seconds=store.ttl_seconds, offline=offline)
-        return _truncate_response(json.dumps(summary, indent=2, default=str))
+        return _truncate_response(json.dumps({**summary, **untrusted_image_notice(result)}, indent=2, default=str))
 
     # Multi-MB reports: serialize, store, and bound off the event loop.
     return await asyncio.to_thread(_render_json_result)

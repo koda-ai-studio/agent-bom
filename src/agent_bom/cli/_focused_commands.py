@@ -24,6 +24,7 @@ import click
 
 from agent_bom.cli._param_source import invoke_forwarding
 from agent_bom.cli._scan_help import AliasedChoice
+from agent_bom.cli.options_image import image_supply_chain_options
 from agent_bom.cli.options_sources import SCAN_OUTPUT_FORMAT_ALIASES, SCAN_OUTPUT_FORMATS
 from agent_bom.core.severity import severity_at_or_above
 
@@ -62,6 +63,12 @@ def _focused_default_output(output_format: str, output_path: Optional[str]) -> O
     return output_path
 
 
+def _image_supply_chain_options(fn):
+    for option in reversed(image_supply_chain_options(short_aliases=True)):
+        fn = option(fn)
+    return fn
+
+
 def _has_finding_at_or_above(findings, threshold: str = "high") -> bool:
     """Return True when focused findings should fail CI by default."""
     return any(severity_at_or_above(str(getattr(finding, "severity", "unknown")), threshold) for finding in findings)
@@ -76,12 +83,13 @@ def _has_finding_at_or_above(findings, threshold: str = "high") -> bool:
     type=click.Path(dir_okay=False, file_okay=True, path_type=str),
     help="Scan a docker save / OCI image tarball without a Docker daemon.",
 )
-@click.option("--platform", help="Target platform (e.g. linux/amd64)")
+@click.option("--platform", help="Target platform for multi-arch images (default linux/amd64), e.g. linux/arm64")
+@_image_supply_chain_options
 @_scan_format_option()
 @click.option("-o", "--output", "output_path", help="Output file path")
 @click.option("--fail-on-severity", type=click.Choice(["critical", "high", "medium", "low"]))
 @click.option("--enrich", is_flag=True, help="Add NVD CVSS + EPSS + KEV enrichment")
-@click.option("--offline", is_flag=True, help="Scan against local DB only")
+@click.option("--offline", is_flag=True, help="Scan against local DB only (no registry pull; images come from the Docker daemon)")
 @click.option("--quiet", "-q", is_flag=True, help="Minimal output")
 @click.option("--fixable-only", "fixable_only", is_flag=True, default=False, help="Show only vulnerabilities with available fixes.")
 @click.option(
@@ -104,6 +112,9 @@ def image_cmd(
     image_ref: str | None,
     image_tar: str | None,
     platform: Optional[str],
+    image_pull_mode: str,
+    image_cosign_key: Optional[str],
+    require_image_signature: bool,
     output_format: str,
     output_path: Optional[str],
     fail_on_severity: Optional[str],
@@ -116,11 +127,18 @@ def image_cmd(
 ) -> None:
     """Scan a container image for vulnerabilities.
 
+    Images are pulled straight from their registry (no Docker daemon needed;
+    credentials come from ~/.docker/config.json or --registry-user/--registry-pass
+    on `scan`). The daemon is used only with --pull-mode daemon or when the
+    registry pull fails.
+
     \b
     Examples:
       agent-bom image nginx:latest
       agent-bom image --tar image.tar
       agent-bom image myapp:v2.1 --enrich --fail-on-severity high
+      agent-bom image ghcr.io/org/app:1.4 --platform linux/arm64
+      agent-bom image ghcr.io/org/app:1.4 --cosign-key cosign.pub --require-signature
       agent-bom image ghcr.io/org/app:sha256-abc -f sarif -o results.sarif
     """
     from agent_bom.cli.agents import scan
@@ -140,6 +158,9 @@ def image_cmd(
         _image_only=True,
         no_skill=True,
         image_platform=platform,
+        image_pull_mode=image_pull_mode,
+        image_cosign_key=image_cosign_key,
+        require_image_signature=require_image_signature,
         output_format=output_format,
         output=output_path,
         fail_on_severity=fail_on_severity,
@@ -245,7 +266,8 @@ def iac_cmd(
 ) -> None:
     """Scan infrastructure-as-code files for misconfigurations.
 
-    Supports: Dockerfile, Kubernetes YAML, Terraform (.tf), CloudFormation (.json/.yaml),
+    Supports: Dockerfile/Containerfile, Docker Compose, Docker daemon.json,
+    Kubernetes YAML, Terraform (.tf), CloudFormation (.json/.yaml),
     and standalone AWS IAM policies (.json).
 
     \b

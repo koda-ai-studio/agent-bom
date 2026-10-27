@@ -41,6 +41,7 @@ from agent_bom.graph.projection_support import (
     _repository_manifest_directory,
 )
 from agent_bom.graph.types import EntityType, RelationshipType
+from agent_bom.image_evidence.surfaces import image_node_attributes
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.package_utils import normalize_package_name
 from agent_bom.security import sanitize_security_warnings, sanitize_text, sanitize_url
@@ -202,7 +203,8 @@ def _add_agent_node(graph: UnifiedGraph, agent: AgentScope) -> None:
 
 def _project_agent(graph: UnifiedGraph, agent: AgentScope, indexes: BuildIndexes, lineage: CloudLineageProjection) -> None:
     if agent.image_inventory:
-        add_image_node(graph, agent.agent_dict, agent.agent_id, agent.data_source_tag, agent.previous_agent_ids)
+        evidence = image_node_attributes(agent.agent_metadata, "container-image")
+        add_image_node(graph, agent.agent_dict, agent.agent_id, agent.data_source_tag, agent.previous_agent_ids, evidence)
     else:
         _add_agent_node(graph, agent)
     indexes.agent_name_to_ids[agent.agent_name].append(agent.agent_id)
@@ -287,6 +289,7 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
                     "source_ids": source_ids(stable_id=srv_dict.get("stable_id"), registry_id=srv_dict.get("registry_id")),
                     "stable_id": srv_dict.get("stable_id", ""),
                     "fingerprint": srv_dict.get("fingerprint", ""),
+                    **image_node_attributes(agent.agent_metadata, surface),
                 },
                 dimensions=NodeDimensions(surface=surface, environment=agent.agent_env),
                 data_sources=[agent.data_source_tag],

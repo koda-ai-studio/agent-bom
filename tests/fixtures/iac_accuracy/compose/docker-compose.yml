@@ -23,7 +23,20 @@ services:
       - NET_BIND_SERVICE
     volumes:
       - ./data:/data
+      - /etc/localtime:/etc/localtime:ro
     environment:
       DB_PASSWORD_FILE: /run/secrets/db_password
       REQUIRE_TOKEN: "true"
       TOKEN_TTL_SECONDS: 3600
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+  agent:
+    image: busybox:1.36
+    user: root
+    ipc: host
+    security_opt:
+      - seccomp:unconfined
+      - no-new-privileges:true
+    volumes:
+      - /:/host:ro

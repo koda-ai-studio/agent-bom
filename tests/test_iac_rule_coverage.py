@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 IAC_SRC = ROOT / "src" / "agent_bom" / "iac"
 FIXTURES = ROOT / "tests" / "fixtures"
 CORPUS_DIRS = ("iac", "iac_accuracy", "iac_golden", "iac_rule_coverage")
-_RULE_ID_RE = re.compile(r'"((?:DOCKER|K8S|TF-SEC|TF-AI|CFN|HELM|COMPOSE|GHA|IAM|DBT-SEC|DCM)-\d{3})"')
+_RULE_ID_RE = re.compile(r'"((?:DOCKERD|DOCKER|K8S|TF-SEC|TF-AI|CFN|HELM|COMPOSE|GHA|IAM|DBT-SEC|DCM)-\d{3})"')
 
 RETIRED = {"TF-SEC-008", "CFN-013"}
 

@@ -17,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from agent_bom.core.image_ref import DIGEST_PREFIX, digest_in_ref
+from agent_bom.core.image_ref import digest_in_ref, is_image_digest
 from agent_bom.kubernetes.inventory_rbac import binding_record, resolve_grants, role_record
 
 WORKLOAD_KINDS = ("Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job", "CronJob", "Pod")
@@ -32,7 +32,7 @@ def image_digest_from_status(image_id: str) -> str:
     if "@" not in value:
         return ""
     digest = value.rsplit("@", 1)[1]
-    return digest if digest.startswith(DIGEST_PREFIX) else ""
+    return digest if is_image_digest(digest) else ""
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:

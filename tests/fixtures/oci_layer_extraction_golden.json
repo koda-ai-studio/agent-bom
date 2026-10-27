@@ -8,18 +8,22 @@
       "name": "pip",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "usr/lib/python3/dist-packages/pip-18.1.egg-info/PKG-INFO"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "usr/lib/python3/dist-packages/pip-18.1.egg-info/PKG-INFO"
         }
@@ -37,18 +41,22 @@
       "name": "wheel",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "usr/lib/python3/dist-packages/wheel-0.32.egg-info/METADATA"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "usr/lib/python3/dist-packages/wheel-0.32.egg-info/METADATA"
         }
@@ -66,10 +74,12 @@
       "name": "requests",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 6",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000006",
           "layer_index": 6,
+          "layer_origin": null,
           "layer_path": "blobs/6",
           "package_path": "usr/lib/python3/site-packages/requests-2.32.0.dist-info/METADATA"
         }
@@ -87,26 +97,32 @@
       "name": "@types/node",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "app/node_modules/@types/node/package.json"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "app/node_modules/@types/node/package.json"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "app/node_modules/@types/node/package.json"
         }
@@ -124,10 +140,12 @@
       "name": "express",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "app/node_modules/express/package.json"
         }
@@ -145,18 +163,22 @@
       "name": "libc6",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "var/lib/dpkg/status"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "var/lib/dpkg/status"
         }
@@ -174,18 +196,22 @@
       "name": "bash",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "var/lib/dpkg/status"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "var/lib/dpkg/status"
         }
@@ -203,18 +229,22 @@
       "name": "zlib1g",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "var/lib/dpkg/status"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "var/lib/dpkg/status"
         }
@@ -232,26 +262,32 @@
       "name": "musl",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "lib/apk/db/installed"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "lib/apk/db/installed"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "lib/apk/db/installed"
         }
@@ -269,26 +305,32 @@
       "name": "busybox",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "lib/apk/db/installed"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "lib/apk/db/installed"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "lib/apk/db/installed"
         }
@@ -306,26 +348,32 @@
       "name": "bash",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "var/log/installed-rpms"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "var/log/installed-rpms"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "var/log/installed-rpms"
         }
@@ -343,26 +391,32 @@
       "name": "openssl",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "var/log/installed-rpms"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "var/log/installed-rpms"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "var/log/installed-rpms"
         }
@@ -380,26 +434,32 @@
       "name": "glibc",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "var/lib/rpm/rpmdb.sqlite"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "var/lib/rpm/rpmdb.sqlite"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "var/lib/rpm/rpmdb.sqlite"
         }
@@ -417,26 +477,32 @@
       "name": "bundle-lib",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "opt/app/lib/manifest-only.jar"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "opt/app/lib/manifest-only.jar"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "opt/app/lib/manifest-only.jar"
         }
@@ -454,26 +520,32 @@
       "name": "lib-pom",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "usr/share/java/lib-pom.jar"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "usr/share/java/lib-pom.jar"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "usr/share/java/lib-pom.jar"
         }
@@ -491,26 +563,32 @@
       "name": "solo",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "usr/share/java/lib-pom.jar"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "usr/share/java/lib-pom.jar"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "usr/share/java/lib-pom.jar"
         }
@@ -528,18 +606,22 @@
       "name": "github.com/gorilla/mux",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "usr/local/bin/server"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "usr/local/bin/server"
         }
@@ -557,18 +639,22 @@
       "name": "golang.org/x/net",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "usr/local/bin/server"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "usr/local/bin/server"
         }
@@ -586,26 +672,32 @@
       "name": "json",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "usr/lib/ruby/gems/3.2.0/specifications/json-2.7.gemspec"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "usr/lib/ruby/gems/3.2.0/specifications/json-2.7.gemspec"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "usr/lib/ruby/gems/3.2.0/specifications/json-2.7.gemspec"
         }
@@ -623,26 +715,32 @@
       "name": "rack",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "usr/lib/ruby/gems/3.2.0/specifications/rack-2.2.8.gemspec"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "usr/lib/ruby/gems/3.2.0/specifications/rack-2.2.8.gemspec"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "usr/lib/ruby/gems/3.2.0/specifications/rack-2.2.8.gemspec"
         }
@@ -660,26 +758,32 @@
       "name": "Newtonsoft.Json",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "app/web.deps.json"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "app/web.deps.json"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "app/web.deps.json"
         }
@@ -697,26 +801,32 @@
       "name": "monolog/monolog",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "app/composer.lock"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "app/composer.lock"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "app/composer.lock"
         }
@@ -734,26 +844,32 @@
       "name": "phpunit/phpunit",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "app/composer.lock"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "app/composer.lock"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "app/composer.lock"
         }
@@ -771,18 +887,22 @@
       "name": "serde",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "app/Cargo.lock"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "app/Cargo.lock"
         }
@@ -800,18 +920,22 @@
       "name": "tokio",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "app/Cargo.lock"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "app/Cargo.lock"
         }
@@ -829,26 +953,32 @@
       "name": "swift-nio",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "app/Package.resolved"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "app/Package.resolved"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "app/Package.resolved"
         }
@@ -866,26 +996,32 @@
       "name": "vapor",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "app/Package.resolved"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "app/Package.resolved"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "app/Package.resolved"
         }
@@ -903,26 +1039,32 @@
       "name": "swift-case-paths",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 0",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
           "layer_index": 0,
+          "layer_origin": null,
           "layer_path": "blobs/0",
           "package_path": "./Package.resolved"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 1",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000001",
           "layer_index": 1,
+          "layer_origin": null,
           "layer_path": "blobs/1",
           "package_path": "./Package.resolved"
         },
         {
+          "base_image": null,
           "created_by": "RUN step 2",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000002",
           "layer_index": 2,
+          "layer_origin": null,
           "layer_path": "blobs/2",
           "package_path": "./Package.resolved"
         }
@@ -940,10 +1082,12 @@
       "name": "coreutils",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 3",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000003",
           "layer_index": 3,
+          "layer_origin": null,
           "layer_path": "blobs/3",
           "package_path": "var/lib/rpm/Packages"
         }
@@ -961,10 +1105,12 @@
       "name": "wget",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 6",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000006",
           "layer_index": 6,
+          "layer_origin": null,
           "layer_path": "blobs/6",
           "package_path": "var/lib/dpkg/status"
         }
@@ -982,10 +1128,12 @@
       "name": "zlib",
       "occurrences": [
         {
+          "base_image": null,
           "created_by": "RUN step 6",
           "dockerfile_instruction": null,
           "layer_id": "sha256:0000000000000000000000000000000000000000000000000000000000000006",
           "layer_index": 6,
+          "layer_origin": null,
           "layer_path": "blobs/6",
           "package_path": "./lib/apk/db/installed"
         }

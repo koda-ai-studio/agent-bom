@@ -1,4 +1,4 @@
-"""IaC misconfiguration scanning — Dockerfile, Compose, Kubernetes, Terraform, CloudFormation, IAM, Helm, DCM, dbt.
+"""IaC misconfiguration scanning — Dockerfile, Compose, Docker daemon.json, Kubernetes, Terraform, CloudFormation, IAM, Helm, DCM, dbt.
 
 Coordinator module that discovers and scans IaC files across all supported
 formats.  Each scanner is regex/YAML-based with zero external dependencies.
@@ -34,6 +34,7 @@ from agent_bom.iac.cloudformation import _is_cloudformation, scan_cloudformation
 from agent_bom.iac.compose import is_compose_file, scan_compose
 from agent_bom.iac.dbt_security import is_dbt_file, scan_dbt_file
 from agent_bom.iac.dcm import is_dcm_migration, scan_dcm_migration
+from agent_bom.iac.docker_daemon import is_docker_daemon_config, scan_docker_daemon
 from agent_bom.iac.dockerfile import scan_dockerfile
 from agent_bom.iac.github_actions_rules import is_workflow_file, scan_github_workflow
 from agent_bom.iac.helm import scan_chart_yaml, scan_values_yaml
@@ -68,6 +69,7 @@ _SCANNER_IDS: tuple[str, ...] = (
     "github-actions",
     "compose",
     "dockerfile",
+    "docker-daemon",
     "terraform",
     "dcm",
     "dbt",
@@ -106,13 +108,17 @@ def _is_values_yaml(path: Path) -> bool:
     return bool(_VALUES_YAML_RE.match(path.name))
 
 
+_CONTAINERFILE_PREFIXES = ("Dockerfile", "Containerfile")
+_CONTAINERFILE_SUFFIXES = (".dockerfile", ".containerfile")
+# ``Dockerfile.md`` / ``Dockerfile.txt`` and friends are documentation or data, not build files.
+_NON_DOCKERFILE_SUFFIXES = frozenset({".md", ".txt", ".rst", ".adoc", ".json", ".yaml", ".yml", ".toml", ".py", ".sh", ".bak", ".orig"})
+
+
 def _is_dockerfile(path: Path) -> bool:
     name = path.name
-    if name in _DOCKERFILE_NAMES:
+    if name in _DOCKERFILE_NAMES or name.lower() in ("dockerfile", "containerfile") or name.lower().endswith(_CONTAINERFILE_SUFFIXES):
         return True
-    if name.startswith("Dockerfile"):
-        return True
-    return False
+    return name.startswith(_CONTAINERFILE_PREFIXES) and path.suffix.lower() not in _NON_DOCKERFILE_SUFFIXES
 
 
 def _is_k8s_manifest(path: Path) -> bool:
@@ -142,7 +148,7 @@ def is_iac_file(path: Path, root: Path | None = None) -> bool:
     """
     if _is_chart_yaml(path) or _is_values_yaml(path):
         return True
-    if _is_dockerfile(path) or is_compose_file(path) or is_workflow_file(path):
+    if _is_dockerfile(path) or is_compose_file(path) or is_workflow_file(path) or is_docker_daemon_config(path):
         return True
     if path.suffix == ".tf":
         return True
@@ -185,6 +191,7 @@ _DISPATCH: tuple[tuple[str, Callable[[Path, Path], bool], Callable[[Path, Path],
     ),
     ("compose", lambda p, _r: is_compose_file(p), lambda p, _r: scan_compose(p)),
     ("dockerfile", lambda p, _r: _is_dockerfile(p), lambda p, _r: scan_dockerfile(p)),
+    ("docker-daemon", is_docker_daemon_config, lambda p, _r: scan_docker_daemon(p)),
     ("terraform", lambda p, _r: p.suffix == ".tf", lambda p, _r: _scan_terraform(p)),
     ("dcm", lambda p, _r: is_dcm_migration(p), lambda p, _r: scan_dcm_migration(p)),
     ("dbt", is_dbt_file, scan_dbt_file),

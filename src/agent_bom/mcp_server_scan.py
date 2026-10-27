@@ -20,7 +20,7 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_IMAGE_REF,
     CODE_VALIDATION_INVALID_PATH,
 )
-from agent_bom.parsers.oci_model_artifacts import collect_model_artifacts, model_artifact_metadata
+from agent_bom.models import ServerSurface
 from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings, restore_scan_warnings
 from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstream importers
 
@@ -252,6 +252,19 @@ def _resolve_scan_dir(safe_path, value: str, *, argument: str) -> str:
     return str(resolved)
 
 
+def _scan_image_in_thread(image: str):
+    """Drain image-worker warning channels even when collection raises."""
+    from agent_bom.discovery.carriers import scan_image_carrier
+
+    reset_scan_warnings()
+    scanned, error = None, None
+    try:
+        scanned = scan_image_carrier(image, server_context=True)
+    except Exception as exc:
+        error = exc
+    return scanned, error, consume_scan_warnings(), consume_coverage_warnings()
+
+
 def _host_discovery_refused(config_path: str | None, explicit_target: bool, warnings: list[str]) -> bool:
     """A path-less scan over HTTP or SSE must not read the server host's agent configs."""
     from agent_bom.mcp_tools.host_local import host_discovery_allowed  # dispatch imports this module
@@ -275,7 +288,6 @@ async def run_scan_pipeline(
 ):
     """Run discovery -> extraction -> scanning and return agents + findings."""
     from agent_bom.discovery import discover_all
-    from agent_bom.models import Agent, AgentType, MCPServer, TransportType
     from agent_bom.parsers import extract_packages
     from agent_bom.scanners import ScanOptions, scan_agents, scan_agents_with_enrichment
 
@@ -335,32 +347,13 @@ async def run_scan_pipeline(
 
     if image:
         try:
-            from agent_bom.image import scan_image as _scan_image
-            from agent_bom.models import ServerSurface
-
-            with collect_model_artifacts(image) as model_artifacts:
-                img_packages, _strategy = _scan_image(image)
-            if img_packages:
-                img_server = MCPServer(
-                    name=f"image:{image}",
-                    command="",
-                    args=[],
-                    env={},
-                    transport=TransportType.UNKNOWN,
-                    packages=img_packages,
-                    surface=ServerSurface.CONTAINER_IMAGE,
-                )
-                agents.append(
-                    Agent(
-                        name=f"image:{image}",
-                        agent_type=AgentType.CUSTOM,
-                        config_path="",
-                        source="image",
-                        metadata={"inventory_role": "container_image", "image_ref": image, **model_artifact_metadata(model_artifacts)},
-                        mcp_servers=[img_server],
-                    )
-                )
-                scan_sources.append("image")
+            scanned, error, thread_warnings, thread_coverage = await asyncio.to_thread(_scan_image_in_thread, image)
+            restore_scan_warnings(thread_warnings, thread_coverage)
+            if error is not None:
+                raise error
+            assert scanned is not None
+            agents.append(scanned.carrier)
+            scan_sources.append("image")
         except Exception as exc:
             msg = f"Image scan failed for {image}: {sanitize_error(exc)}"
             logger.warning(msg)
@@ -389,7 +382,11 @@ async def run_scan_pipeline(
     flag_blocklisted_mcp_servers(agents)
     for agent in agents:
         for server in agent.mcp_servers:
-            if not server.packages and not server.security_blocked:
+            if (
+                not server.packages
+                and not server.security_blocked
+                and server.surface not in {ServerSurface.CONTAINER_IMAGE, ServerSurface.OCI_TARBALL}
+            ):
                 server.packages = extract_packages(server)
             if offline:
                 for pkg in server.packages:

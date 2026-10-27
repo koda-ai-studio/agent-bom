@@ -108,8 +108,13 @@ class TestCompose:
             8: "COMPOSE-005",
             10: "COMPOSE-002",
             12: "COMPOSE-006",
+            14: "COMPOSE-011",
             16: "COMPOSE-005",
             18: "COMPOSE-006",
+            36: "COMPOSE-010",
+            37: "COMPOSE-008",
+            39: "COMPOSE-007",
+            42: "COMPOSE-009",
         }
         assert all(f.file_path == "docker-compose.yml" and f.category == "compose" for f in findings)
 

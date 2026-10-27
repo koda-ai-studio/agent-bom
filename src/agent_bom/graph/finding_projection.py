@@ -45,6 +45,10 @@ def project_secret_findings(graph: UnifiedGraph, findings: Any) -> None:
             "file_path": sanitize_text(path, max_len=500) if isinstance(path, str) else "",
             "line": evidence.get("line") if isinstance(evidence.get("line"), int) else None,
         }
+        if evidence.get("image"):
+            # A path inside a container image is not a repository file.
+            attributes["image_path"] = attributes.pop("file_path")
+            attributes["layer_digest"] = evidence.get("layer_digest")
         graph.add_node(
             UnifiedNode(
                 id=f"misconfig:secret_scan:{finding_id}",

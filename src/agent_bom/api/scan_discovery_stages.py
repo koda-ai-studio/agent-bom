@@ -6,7 +6,6 @@ import logging
 from typing import Any
 
 from agent_bom.api.scan_context import ScanContext
-from agent_bom.parsers.oci_model_artifacts import collect_model_artifacts, model_artifact_metadata
 from agent_bom.security import sanitize_error, sanitize_text
 
 _logger = logging.getLogger("agent_bom.api.pipeline")
@@ -142,33 +141,9 @@ def _discover_inventory(ctx: ScanContext) -> None:
 
 
 def _image_agent(image_ref: str, *, source: str, image_digest: str = "") -> Any:
-    from agent_bom.image import scan_image
-    from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface, TransportType
+    from agent_bom.discovery.carriers import scan_image_carrier
 
-    with collect_model_artifacts(image_ref) as model_artifacts:
-        img_packages, _strategy = scan_image(image_ref)
-    return Agent(
-        name=f"image:{image_ref}",
-        agent_type=AgentType.CUSTOM,
-        config_path=f"docker://{image_ref}",
-        source=source,
-        metadata={
-            "inventory_role": "container_image",
-            "image_ref": image_ref,
-            "image_digest": image_digest,
-            **model_artifact_metadata(model_artifacts),
-        },
-        mcp_servers=[
-            MCPServer(
-                name=image_ref,
-                command="docker",
-                args=["run", image_ref],
-                transport=TransportType.STDIO,
-                packages=img_packages,
-                surface=ServerSurface.CONTAINER_IMAGE,
-            )
-        ],
-    )
+    return scan_image_carrier(image_ref, source=source, digest=image_digest, server_context=True).carrier
 
 
 def _discover_images(ctx: ScanContext) -> None:
@@ -293,23 +268,12 @@ def _discover_filesystems(ctx: ScanContext) -> None:
     for fs_path in ctx.req.filesystem_paths:
         ctx.pipeline.update_step("discovery", f"Scanning filesystem: {fs_path}")
         try:
+            from agent_bom.discovery.carriers import build_filesystem_carrier
             from agent_bom.filesystem import scan_filesystem
-            from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface
 
-            fs_pkgs, fs_strat = scan_filesystem(fs_path)
+            fs_pkgs, _strategy = scan_filesystem(fs_path)
             if fs_pkgs:
-                from pathlib import Path as _Path
-
-                fs_server = MCPServer(name=f"fs:{fs_path}", surface=ServerSurface.FILESYSTEM)
-                fs_server.packages = fs_pkgs
-                fs_agent = Agent(
-                    name=f"filesystem:{_Path(fs_path).name}",
-                    agent_type=AgentType.CUSTOM,
-                    config_path=fs_path,
-                    source="filesystem",
-                    mcp_servers=[fs_server],
-                )
-                ctx.agents.append(fs_agent)
+                ctx.agents.append(build_filesystem_carrier(fs_path, fs_pkgs))
         except Exception as fs_exc:  # noqa: BLE001
             ctx.record_coverage_warning(f"Filesystem scan error: {sanitize_error(fs_exc, generic=True)}")
 

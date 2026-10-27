@@ -204,10 +204,19 @@ def _page(client: TestClient, params: dict) -> dict:
 
 
 def test_repeated_first_pages_fold_once_and_match_uncached_reads(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_bom.api import finding_facets
+
+    # Compare complete semantic results, not two load-dependent lower bounds.
+    # Deadline truncation is covered by test_findings_facets_export_contract;
+    # replacing only this module's clock leaves cache expiry and API clocks real.
+    monkeypatch.setattr(finding_facets, "time", SimpleNamespace(monotonic=lambda: 0.0))
     folds = _count_folds(monkeypatch)
     monkeypatch.setenv("AGENT_BOM_FINDING_WALK_CACHE", "0")
     uncached = [_page(demo_estate_client, params) for params in _PAGES]
     assert len(folds) >= len(_PAGES)
+    facet_pages = [page for page in uncached if "facets_approximate" in page]
+    assert facet_pages
+    assert all(page["facets_approximate"] is False for page in facet_pages)
 
     monkeypatch.setenv("AGENT_BOM_FINDING_WALK_CACHE", "1")
     finding_walk_cache.clear()

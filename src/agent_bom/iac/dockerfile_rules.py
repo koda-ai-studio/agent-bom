@@ -8,6 +8,7 @@ registered for its instruction (see ``DOCKER_LINE_RULES``).
 from __future__ import annotations
 
 import re
+import shlex
 from typing import NamedTuple
 
 from agent_bom.iac.models import IaCFinding
@@ -27,6 +28,8 @@ SECRET_ENV_NAME_RE = re.compile(
     re.IGNORECASE,
 )
 _SECRET_ENV_RE = SECRET_ENV_NAME_RE
+_INTERPOLATED_RE = re.compile(r"^\$\{?[A-Za-z_][A-Za-z0-9_]*(?:[:?-][^}]*)?\}?$")
+_NON_SECRET_VALUES = frozenset({"true", "false", "yes", "no", "on", "off", "none", "null"})
 
 # Pipe install patterns: curl ... | sh, wget ... | bash, etc.
 _PIPE_INSTALL_RE = re.compile(
@@ -34,14 +37,20 @@ _PIPE_INSTALL_RE = re.compile(
     re.IGNORECASE,
 )
 
+# One package-manager option token with exactly one parse: ``-flag``, or ``Word::Word`` that never
+# starts with ``-``, so runs of colon or dash-colon tokens cannot backtrack exponentially.
+PKG_OPTION_TOKEN = r"(?:-\S*|(?:[^\s:-][^\s:]*)?(?:::[^\s:]*)+)"
+
 # Package manager install without cache cleanup
 _PKG_INSTALL_RE = re.compile(
-    r"(?:apt-get\s+install|apk\s+add|yum\s+install)",
+    r"\b(?:apt-get|apt|apk|yum|dnf|microdnf|zypper)\s+(?:" + PKG_OPTION_TOKEN + r"\s+)*(?:install|add)\b",
     re.IGNORECASE,
 )
 
+# Cleanup in the same RUN, or a BuildKit cache mount that keeps the cache out of the layer.
 _CACHE_CLEANUP_RE = re.compile(
-    r"(?:--no-cache|rm\s+-rf\s+/var/(?:cache|lib/apt)|&&\s*apt-get\s+clean)",
+    r"(?:--no-cache\b|rm\s+-(?:rf|fr)\s+/var/(?:cache|lib/apt)|\bapt(?:-get)?\s+clean|"
+    r"\b(?:yum|dnf|microdnf|zypper)\s+clean\b|--mount=type=cache)",
     re.IGNORECASE,
 )
 
@@ -56,13 +65,11 @@ class DockerLine(NamedTuple):
     dockerignore_exists: bool
 
 
-def docker_001_010(ln: DockerLine) -> list[IaCFinding]:
-    """DOCKER-001 (FROM uses :latest or no tag) and DOCKER-010 (no digest pin)."""
+def docker_001_010(ln: DockerLine, image: str) -> list[IaCFinding]:
+    """DOCKER-001 (FROM uses :latest or no tag) and DOCKER-010 (no digest pin) for a resolved base image."""
     findings: list[IaCFinding] = []
-    image = ln.stripped.split()[1] if len(ln.stripped.split()) > 1 else ""
-    # Skip scratch and build stage aliases
     if image.lower() != "scratch" and "@" not in image:
-        if ":" not in image:
+        if ":" not in image.rsplit("/", 1)[-1]:
             findings.append(
                 IaCFinding(
                     rule_id="DOCKER-001",
@@ -107,12 +114,16 @@ def docker_001_010(ln: DockerLine) -> list[IaCFinding]:
     return findings
 
 
+def is_root_user(user: str) -> bool:
+    """``root`` / ``0`` with or without a group."""
+    return user.split(":", 1)[0].strip().strip("'\"") in ("root", "0")
+
+
 def docker_002(ln: DockerLine) -> list[IaCFinding]:
-    """DOCKER-002: USER root."""
+    """DOCKER-002: the final stage's last USER is root."""
     findings: list[IaCFinding] = []
     user_val = ln.stripped.split(maxsplit=1)[1].strip() if len(ln.stripped.split()) > 1 else ""
-    user_identity = user_val.split(":", 1)[0].strip()
-    if user_identity in ("root", "0"):
+    if is_root_user(user_val):
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-002",
@@ -128,20 +139,38 @@ def docker_002(ln: DockerLine) -> list[IaCFinding]:
     return findings
 
 
-def docker_003(ln: DockerLine) -> list[IaCFinding]:
-    """DOCKER-003: Hardcoded secrets in ENV."""
-    findings: list[IaCFinding] = []
-    env_rest = ln.stripped[4:].strip()
-    # ENV KEY=VALUE or ENV KEY VALUE
-    if "=" in env_rest:
-        key = env_rest.split("=", 1)[0].strip()
-        value = env_rest.split("=", 1)[1].strip().strip('"').strip("'")
-    else:
-        parts = env_rest.split(maxsplit=1)
-        key = parts[0] if parts else ""
-        value = parts[1].strip().strip('"').strip("'") if len(parts) > 1 else ""
+def env_pairs(body: str) -> list[tuple[str, str]]:
+    """``KEY=VALUE ...`` pairs (or the legacy single ``KEY VALUE`` form) of an ENV instruction."""
+    try:
+        tokens = shlex.split(body)
+    except ValueError:
+        tokens = body.split()
+    if tokens and "=" not in tokens[0]:
+        return [(tokens[0], " ".join(tokens[1:]))]
+    return [(key.strip(), value.strip()) for key, sep, value in (token.partition("=") for token in tokens) if sep]
 
-    if SECRET_ENV_NAME_RE.search(key) and value and len(value) >= 8:
+
+def is_hardcoded_secret(name: str, value: str) -> bool:
+    """A secret-named variable holding a literal secret value.
+
+    ``*_FILE`` variables and absolute paths point at a mounted secret file
+    (the recommended pattern); interpolations, booleans and numbers are not
+    literal secrets.
+    """
+    value = value.strip().strip("'\"")
+    if not SECRET_ENV_NAME_RE.search(name) or not value or name.upper().endswith(("_FILE", "_PATH", "_DIR")):
+        return False
+    if _INTERPOLATED_RE.match(value) or value.startswith("/") or value.lower() in _NON_SECRET_VALUES:
+        return False
+    return not value.isdigit()
+
+
+def docker_003(ln: DockerLine) -> list[IaCFinding]:
+    """DOCKER-003: Hardcoded secrets in ENV (every pair on the line)."""
+    findings: list[IaCFinding] = []
+    for key, value in env_pairs(ln.stripped[4:].strip()):
+        if not is_hardcoded_secret(key, value) or len(value.strip("'\"")) < 8:
+            continue
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-003",
@@ -423,7 +452,8 @@ def docker_017(ln: DockerLine) -> list[IaCFinding]:
 def docker_018(ln: DockerLine) -> list[IaCFinding]:
     """DOCKER-018: WORKDIR uses relative path."""
     findings: list[IaCFinding] = []
-    if not ln.stripped.split(None, 1)[-1].startswith("/"):
+    target = ln.stripped.split(None, 1)[-1].strip().strip("'\"")
+    if not target.startswith(("/", "$")) and not re.match(r"^[A-Za-z]:[\\/]", target):
         findings.append(
             IaCFinding(
                 rule_id="DOCKER-018",

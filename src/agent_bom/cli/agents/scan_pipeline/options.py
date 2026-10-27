@@ -240,6 +240,9 @@ class ScanOptions:
     _iac_only: bool = False
     allow_stale_db: bool = False
     _image_only: bool = False
+    image_pull_mode: str = "auto"
+    image_cosign_key: Optional[str] = None
+    require_image_signature: bool = False
     _apply_profile_defaults: bool = True
     k8s_live: bool = False
     k8s_live_namespace: str = "default"

@@ -25,6 +25,8 @@ class PackageOccurrence:
     layer_path: Optional[str] = None
     created_by: Optional[str] = None
     dockerfile_instruction: Optional[str] = None
+    layer_origin: Optional[str] = None  # "base" | "app" once the base image's layers were matched
+    base_image: Optional[str] = None
 
     def to_dict(self) -> dict[str, object]:
         """Return a JSON-serializable representation."""
@@ -35,6 +37,8 @@ class PackageOccurrence:
             "package_path": self.package_path,
             "created_by": self.created_by,
             "dockerfile_instruction": self.dockerfile_instruction,
+            **({"layer_origin": self.layer_origin} if self.layer_origin else {}),
+            **({"base_image": self.base_image} if self.base_image else {}),
         }
 
 

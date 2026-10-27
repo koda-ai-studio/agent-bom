@@ -42,6 +42,7 @@ from pathlib import Path
 from typing import IO, Any
 
 from agent_bom.coverage import record_scan_input_warning
+from agent_bom.image_evidence.record import record_image_config
 from agent_bom.models import Package
 from agent_bom.parsers.gpu_stack import finalize_gpu_stack
 from agent_bom.parsers.image_runtimes import finalize_image_runtimes, seed_image_runtimes
@@ -55,6 +56,7 @@ from agent_bom.parsers.oci_io import (
     _safe_tar_names,
 )
 from agent_bom.parsers.oci_layer import _apply_detected_distro, _layer_whiteouts, _LayerScan, _read_os_release_from_layer
+from agent_bom.parsers.oci_layer_secrets import extract_layer_secrets
 from agent_bom.parsers.oci_metadata import _MAX_LEGACY_RPMDB_BYTES as _MAX_LEGACY_RPMDB_BYTES
 from agent_bom.parsers.oci_metadata import _RPM_HDR_MAGIC as _RPM_HDR_MAGIC
 from agent_bom.parsers.oci_metadata import _RPM_TYPE_INT32 as _RPM_TYPE_INT32
@@ -73,6 +75,14 @@ from agent_bom.parsers.oci_metadata import _parse_rpm_header_blob as _parse_rpm_
 from agent_bom.parsers.oci_metadata import is_node_package_manifest_path as is_node_package_manifest_path
 from agent_bom.parsers.oci_stream import LayerLimitError, ScanBudget, open_bounded_layer
 from agent_bom.parsers.oci_types import OCIInputWarning, OCIManifest, OCIParseError, OCIParseResult, _append_oci_warning
+
+# Layer stages that record image evidence (not packages); each is a no-op without an active collector.
+_LAYER_EVIDENCE_STAGES = (extract_layer_secrets,)
+
+
+def _config_ref(manifest: dict) -> str:
+    config = manifest.get("config") if isinstance(manifest, dict) else None
+    return str(config.get("digest") or "") if isinstance(config, dict) else ""
 
 
 def _extract_packages_from_layer(
@@ -105,7 +115,7 @@ def _extract_packages_from_layer(
     names = _safe_tar_names(layer_tf)
     whiteouts = _layer_whiteouts(names)
     scan = _LayerScan(layer_tf, names, deleted_paths, layer, packages_by_key, packages, warnings, coverage_warnings)
-    for stage in _LAYER_PACKAGE_STAGES:
+    for stage in (*_LAYER_PACKAGE_STAGES, *_LAYER_EVIDENCE_STAGES):
         if budget is not None:
             budget.check()
         stage(scan)
@@ -361,10 +371,7 @@ def parse_oci_tarball(path: Path) -> OCIParseResult:
         # Detect format
         if "manifest.json" in names or "./manifest.json" in names:
             # Docker save format
-            try:
-                manifests = _parse_docker_save_manifest(outer_tf)
-            except OCIParseError:
-                raise
+            manifests = _parse_docker_save_manifest(outer_tf)
             if not manifests:
                 return OCIParseResult(
                     packages=[],
@@ -382,6 +389,7 @@ def parse_oci_tarball(path: Path) -> OCIParseResult:
             # Use first image (most users save one image)
             manifest = manifests[0]
             config = _read_json_member_from_tar(outer_tf, manifest.config_digest)
+            record_image_config(config, manifest.layer_paths, config_ref=manifest.config_digest, source="archive")
             layer_metadata = _build_layer_metadata(manifest.layer_paths, config)
             packages, warnings, coverage_warnings = _parse_layers_from_tarball(outer_tf, manifest.layer_paths, layer_metadata, config)
             return OCIParseResult(
@@ -395,10 +403,8 @@ def parse_oci_tarball(path: Path) -> OCIParseResult:
 
         elif "index.json" in names or "./index.json" in names:
             # OCI image layout format
-            try:
-                _manifest, layer_paths, config = _parse_oci_layout_manifest_from_tar(outer_tf)
-            except OCIParseError:
-                raise
+            _manifest, layer_paths, config = _parse_oci_layout_manifest_from_tar(outer_tf)
+            record_image_config(config, layer_paths, manifest=_manifest, config_ref=_config_ref(_manifest), source="archive")
             layer_metadata = _build_layer_metadata(layer_paths, config)
             packages, warnings, coverage_warnings = _parse_layers_from_tarball(outer_tf, layer_paths, layer_metadata, config)
             return OCIParseResult(
@@ -466,6 +472,7 @@ def parse_oci_layout_dir(path: Path) -> OCIParseResult:
         if config_blob.exists():
             maybe_config = _read_json_path_limited(config_blob)
             config = maybe_config if isinstance(maybe_config, dict) else None
+    record_image_config(config, layer_paths, manifest=manifest, config_ref=_config_ref(manifest), source="archive")
     layer_metadata = _build_layer_metadata(layer_paths, config)
 
     walk = _ImageWalk(config)

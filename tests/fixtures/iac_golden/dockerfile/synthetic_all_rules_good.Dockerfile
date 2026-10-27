@@ -2,7 +2,7 @@ FROM python:3.12-slim@sha256:111111111111111111111111111111111111111111111111111
 WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
-RUN apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y --no-install-recommends curl=7.88.1-10+deb12u8 && rm -rf /var/lib/apt/lists/*
 COPY --chown=10001:10001 src/ /app/src/
 EXPOSE 8080
 USER 10001

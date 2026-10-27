@@ -1587,7 +1587,7 @@ def test_cli_image_output_json_extension_writes_report(monkeypatch, tmp_path):
 
     monkeypatch.setattr(
         "agent_bom.image.scan_image",
-        lambda image_ref, registry_user=None, registry_pass=None, platform=None: (
+        lambda image_ref, registry_user=None, registry_pass=None, platform=None, pull_mode=None: (
             [Package(name="openssl", version="3.0.16", ecosystem="deb")],
             "native",
         ),

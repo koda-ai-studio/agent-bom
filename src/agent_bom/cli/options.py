@@ -6,6 +6,7 @@ groups live in smaller helper modules by concern.
 
 from __future__ import annotations
 
+from agent_bom.cli.options_image import image_supply_chain_option_group
 from agent_bom.cli.options_sources import (
     enrichment_options,
     input_options,
@@ -43,6 +44,7 @@ _ALL_GROUPS = [
     discovery_options,
     runtime_options,
     kubernetes_options,
+    image_supply_chain_option_group,
     cloud_options,
     ml_platform_options,
     iac_sast_options,

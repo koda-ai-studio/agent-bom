@@ -292,7 +292,7 @@
     "findings": [
      {
       "attack_techniques": [
-       "T1525"
+       "T1611"
       ],
       "category": "dockerfile",
       "compliance": [
@@ -325,9 +325,7 @@
       "title": "FROM without digest pin"
      },
      {
-      "attack_techniques": [
-       "T1190"
-      ],
+      "attack_techniques": [],
       "category": "dockerfile",
       "compliance": [
        "CIS-Docker-4.6",
@@ -1134,7 +1132,9 @@
    "Scanning 2 container image(s)...",
    "",
    "  ✓ seed:1: 1 package(s) (via fake)",
-   "  ✓ k8s:2: 1 package(s) (via fake)"
+   "    signature: unknown Signature lookup was not performed.",
+   "  ✓ k8s:2: 1 package(s) (via fake)",
+   "    signature: unknown Signature lookup was not performed."
   ],
   "context": {
    "_browser_ext_results": null,
@@ -1671,6 +1671,7 @@
    "  —  github-actions     no targets",
    "  —  compose            no targets",
    "  ✓  dockerfile         1 file(s)",
+   "  —  docker-daemon      no targets",
    "  —  terraform          no targets",
    "  —  dcm                no targets",
    "  —  dbt                no targets",
@@ -1681,6 +1682,7 @@
    "  ✓  github-actions     1 file(s)",
    "  —  compose            no targets",
    "  —  dockerfile         no targets",
+   "  —  docker-daemon      no targets",
    "  —  terraform          no targets",
    "  —  dcm                no targets",
    "  —  dbt                no targets",
@@ -1691,6 +1693,7 @@
    "  —  github-actions     no targets",
    "  —  compose            no targets",
    "  —  dockerfile         no targets",
+   "  —  docker-daemon      no targets",
    "  ✓  terraform          1 file(s)",
    "  —  dcm                no targets",
    "  —  dbt                no targets",
@@ -1701,6 +1704,7 @@
    "  —  github-actions     no targets",
    "  —  compose            no targets",
    "  —  dockerfile         no targets",
+   "  —  docker-daemon      no targets",
    "  —  terraform          no targets",
    "  —  dcm                no targets",
    "  —  dbt                no targets",
@@ -1859,7 +1863,7 @@
     "findings": [
      {
       "attack_techniques": [
-       "T1525"
+       "T1611"
       ],
       "category": "dockerfile",
       "compliance": [
@@ -1892,9 +1896,7 @@
       "title": "FROM without digest pin"
      },
      {
-      "attack_techniques": [
-       "T1190"
-      ],
+      "attack_techniques": [],
       "category": "dockerfile",
       "compliance": [
        "CIS-Docker-4.6",

@@ -238,6 +238,25 @@ def _cyclonedx_affected_purl(vuln: dict, components: dict[str, dict]) -> str | N
     return None
 
 
+def _cyclonedx_components_by_ref(sbom: dict) -> dict[str, dict]:
+    """``bom-ref`` -> component across nested components and the metadata component.
+
+    A document the shared walker rejects (duplicate refs, malformed nesting)
+    still resolves its top-level components.
+    """
+    from agent_bom.sbom_formats.cyclonedx import software_components
+
+    try:
+        components = software_components(sbom)
+    except ValueError:
+        components = [c for c in sbom.get("components") or [] if isinstance(c, dict)]
+    metadata = sbom.get("metadata")
+    root = metadata.get("component") if isinstance(metadata, dict) else None
+    if isinstance(root, dict):
+        components = [root, *components]
+    return {str(c["bom-ref"]): c for c in components if c.get("bom-ref")}
+
+
 def ingest_cyclonedx_vulnerabilities(path: str | Path) -> list[Finding]:
     """Parse CycloneDX vulnerabilities[] into hub-classified Finding objects.
 
@@ -257,12 +276,7 @@ def ingest_cyclonedx_vulnerabilities(path: str | Path) -> list[Finding]:
     if not isinstance(sbom, dict):
         return []
 
-    components_by_ref: dict[str, dict] = {}
-    for comp in sbom.get("components") or []:
-        if isinstance(comp, dict):
-            ref = comp.get("bom-ref")
-            if ref:
-                components_by_ref[str(ref)] = comp
+    components_by_ref = _cyclonedx_components_by_ref(sbom)
 
     findings: list[Finding] = []
     for vuln in sbom.get("vulnerabilities") or []:

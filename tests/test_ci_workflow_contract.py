@@ -287,9 +287,11 @@ def test_test_job_timeout_leaves_margin_over_observed_worst_case() -> None:
     assert _ci()["jobs"]["test-main"]["timeout-minutes"] == 45
 
 
-def test_changed_domain_timeout_covers_broad_selections() -> None:
-    """The broadest measured selection is about five minutes per shard; keep the PR bound tight."""
-    assert _ci()["jobs"]["test-smoke"]["timeout-minutes"] == 15
+def test_changed_domain_timeout_stays_bounded_with_duration_sized_shards() -> None:
+    """Broad selections get more shards instead of increasing the per-job timeout."""
+    job = _ci()["jobs"]["test-smoke"]
+    assert job["timeout-minutes"] == 15
+    assert "fromJSON(needs.changes.outputs.affected_shards" in job["strategy"]["matrix"]["shard"]
 
 
 def test_full_correctness_matrix_covers_every_supported_python_minor() -> None:

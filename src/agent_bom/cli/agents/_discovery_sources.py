@@ -11,8 +11,15 @@ import click
 from rich.rule import Rule
 
 from agent_bom.cli.agents._discovery_state import DiscoveryRun
+from agent_bom.discovery.carriers import (
+    build_filesystem_carrier,
+    build_image_tar_carrier,
+    build_os_packages_carrier,
+    scan_image_carrier,
+)
+from agent_bom.image_evidence import ImageEvidence, collect_image_evidence
+from agent_bom.image_evidence.surfaces import console_lines, image_agent_metadata, signature_policy_violation
 from agent_bom.inventory import build_agents_from_inventory
-from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface, TransportType
 from agent_bom.parsers.oci_model_artifacts import collect_model_artifacts, model_artifact_metadata
 
 
@@ -202,49 +209,42 @@ def print_k8s_inventory_summary(con: Any, inventory: dict[str, Any]) -> None:
             con.print(f"  [yellow]![/yellow] {collector['collector_id']}: {state} — {collector['message'] or 'not read'}")
 
 
-def _image_carrier(image_ref: str, packages: list, meta: dict[str, str]) -> Agent:
-    server = MCPServer(
-        name=image_ref,
-        command="docker",
-        args=["run", image_ref],
-        transport=TransportType.STDIO,
-        packages=packages,
-        surface=ServerSurface.CONTAINER_IMAGE,
-    )
-    agent = Agent(
-        name=f"image:{image_ref}",
-        agent_type=AgentType.CUSTOM,
-        config_path=f"docker://{image_ref}",
-        source=meta.get("source") or "image",
-        mcp_servers=[server],
-    )
-    agent.metadata = {"inventory_role": "container_image", "image_ref": image_ref, "image_digest": meta.get("image_digest", "")}
-    return agent
+def _report_image_evidence(run: DiscoveryRun, evidence: ImageEvidence) -> None:
+    """Print the image's signature/base/secret evidence and apply ``--require-image-signature``."""
+    for line in console_lines(evidence):
+        run.con.print(line)
+    violation = signature_policy_violation(evidence, bool(run.extra.get("require_image_signature")))
+    if violation is not None:
+        run.con.print(f"  [red]✗[/red] Image policy: {evidence.reference}: {violation}")
+        run.ctx.policy_passed = False
 
 
 def scan_container_images(run: DiscoveryRun) -> None:
     """Step 1d: scan container images (--image)."""
     if run.skill_only or not run.images:
         return
-    from agent_bom.image import ImageScanError, scan_image
+    from agent_bom.image import ImageScanError
 
     con = run.con
     con.print(f"\n[bold blue]Scanning {len(run.images)} container image(s)...[/bold blue]\n")
     image_meta: dict[str, dict[str, str]] = run.extra.get("_image_meta") or {}
     image_successes = 0
     for image_ref in run.images:
+        meta = image_meta.get(image_ref, {})
         try:
-            with collect_model_artifacts(image_ref) as model_artifacts:
-                img_packages, strategy = scan_image(
-                    image_ref,
-                    registry_user=run.registry_user,
-                    registry_pass=run.registry_pass,
-                    platform=run.image_platform,
-                )
-            con.print(f"  [green]✓[/green] {image_ref}: {len(img_packages)} package(s) [dim](via {strategy})[/dim]")
-            carrier = _image_carrier(image_ref, img_packages, image_meta.get(image_ref, {}))
-            carrier.metadata.update(model_artifact_metadata(model_artifacts))
-            run.ctx.agents.append(carrier)
+            scanned = scan_image_carrier(
+                image_ref,
+                source=meta.get("source") or "image",
+                digest=meta.get("image_digest", ""),
+                cosign_key_path=run.extra.get("image_cosign_key"),
+                registry_user=run.registry_user,
+                registry_pass=run.registry_pass,
+                platform=run.image_platform,
+                pull_mode=run.extra.get("image_pull_mode"),
+            )
+            con.print(f"  [green]✓[/green] {image_ref}: {len(scanned.packages)} package(s) [dim](via {scanned.strategy})[/dim]")
+            _report_image_evidence(run, scanned.evidence)
+            run.ctx.agents.append(scanned.carrier)
             image_successes += 1
         except ImageScanError as e:
             con.print(f"  [yellow]⚠[/yellow] {image_ref}: {e}")
@@ -264,26 +264,16 @@ def scan_image_tarballs(run: DiscoveryRun) -> None:
     for tar_path in run.image_tars:
         try:
             tar_label = Path(tar_path).name
-            with collect_model_artifacts(tar_label) as model_artifacts:
+            with collect_image_evidence(tar_label) as evidence, collect_model_artifacts(tar_label) as model_artifacts:
                 tar_packages, tar_strategy = scan_image_tar(tar_path)
+            evidence.signature = {
+                "status": "unknown",
+                "detail": "Image archives carry no registry signature; scan the image by reference to check it.",
+            }
             con.print(f"  [green]✓[/green] {tar_label}: {len(tar_packages)} package(s) [dim](via {tar_strategy})[/dim]")
-            server = MCPServer(
-                name=tar_label,
-                command="",
-                args=[],
-                transport=TransportType.STDIO,
-                packages=tar_packages,
-                surface=ServerSurface.OCI_TARBALL,
-            )
-            tar_agent = Agent(
-                name=f"image-tar:{tar_label}",
-                agent_type=AgentType.CUSTOM,
-                config_path=f"oci-tar://{tar_path}",
-                source="image-tar",
-                metadata={"inventory_role": "container_image", "image_ref": tar_label, **model_artifact_metadata(model_artifacts)},
-                mcp_servers=[server],
-            )
-            run.ctx.agents.append(tar_agent)
+            _report_image_evidence(run, evidence)
+            metadata = {**image_agent_metadata(evidence), **model_artifact_metadata(model_artifacts)}
+            run.ctx.agents.append(build_image_tar_carrier(tar_path, tar_packages, metadata=metadata))
         except ImageScanError as e:
             con.print(f"  [yellow]⚠[/yellow] {tar_path}: {e}")
 
@@ -312,16 +302,7 @@ def scan_filesystems(run: DiscoveryRun) -> None:
         try:
             fs_packages, fs_strategy = scan_filesystem(fs_path)
             con.print(f"  [green]✓[/green] {fs_path}: {len(fs_packages)} package(s) [dim](via {fs_strategy})[/dim]")
-            server = MCPServer(name=f"fs:{fs_path}", surface=ServerSurface.FILESYSTEM)
-            server.packages = fs_packages
-            fs_agent = Agent(
-                name=f"filesystem:{Path(fs_path).name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=fs_path,
-                source="filesystem",
-                mcp_servers=[server],
-            )
-            run.ctx.agents.append(fs_agent)
+            run.ctx.agents.append(build_filesystem_carrier(fs_path, fs_packages))
         except FilesystemScanError as e:
             con.print(f"  [yellow]![/yellow] {fs_path}: {e}")
         _discover_filesystem_mcps(run, fs_path)
@@ -339,16 +320,7 @@ def scan_host_os_packages(run: DiscoveryRun) -> None:
     os_level_pkgs = scan_os_packages(Path("/"))
     if os_level_pkgs:
         con.print(f"  [green]✓[/green] Found {len(os_level_pkgs)} OS package(s)")
-        server = MCPServer(name="os-packages", surface=ServerSurface.OS_PACKAGES)
-        server.packages = os_level_pkgs
-        os_agent = Agent(
-            name="os-packages",
-            agent_type=AgentType.CUSTOM,
-            config_path="/",
-            source="os-packages",
-            mcp_servers=[server],
-        )
-        run.ctx.agents.append(os_agent)
+        run.ctx.agents.append(build_os_packages_carrier(os_level_pkgs))
     else:
         con.print("  [dim]  No OS packages found (dpkg/rpm/apk)[/dim]")
 

@@ -252,6 +252,30 @@ def _no_pypi_resolution():
         pypi_resolution.fetch_pypi_json = original
 
 
+@pytest.fixture(autouse=True)
+def _no_live_registry_pulls():
+    """Keep daemonless image pulls off the network.
+
+    ``scan_image`` tries the image's registry before the Docker daemon. In the
+    suite every registry request fails as if the registry were unreachable, so
+    daemon-path tests keep exercising the daemon; registry tests swap in the
+    in-memory registry from ``tests/_oci_registry_fake.py``.
+    """
+    import httpx
+
+    from agent_bom.oci_registry import client as registry_client
+
+    def _unreachable(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("network disabled in the test suite", request=request)
+
+    original = registry_client._default_transport
+    registry_client._default_transport = lambda: httpx.MockTransport(_unreachable)
+    try:
+        yield
+    finally:
+        registry_client._default_transport = original
+
+
 def _reset_runtime_state() -> None:
     # MCP budgets are process-global: calls made by one test must not throttle
     # another test on the same worker. Do not import the optional MCP server.
