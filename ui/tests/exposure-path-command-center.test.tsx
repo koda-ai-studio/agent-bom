@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExposurePathCommandCenter } from "@/components/exposure-path-command-center";
 import type { ExposurePath } from "@/lib/exposure-path";
+import { ASSET_KINDS, type AssetKind } from "@/lib/asset-icon-registry";
 
 beforeEach(() => { HTMLElement.prototype.scrollIntoView = vi.fn(); });
 
@@ -478,4 +479,38 @@ it("does not scroll the page when the graph view is the initial view", () => {
   } finally {
     HTMLElement.prototype.scrollIntoView = original;
   }
+});
+
+describe("path step glyphs", () => {
+  function glyphClass(element: Element | null): string {
+    return [...(element?.querySelector("svg")?.classList ?? [])].filter((name) => name.startsWith("lucide-")).sort().join(" ");
+  }
+
+  function registryClass(kind: AssetKind): string {
+    const Icon = ASSET_KINDS[kind].icon;
+    const { container, unmount } = render(<Icon />);
+    const value = glyphClass(container);
+    unmount();
+    return value;
+  }
+
+  it("draws each hop with its entity's registry glyph, not the coarse path role", () => {
+    const hops: ExposurePath["hops"] = [
+      { id: "agent:analyst", label: "analyst-agent", role: "agent", entityType: "agent" },
+      { id: "container:api", label: "api", role: "server", entityType: "container", assetKind: "workload", kindLabel: "Workload" },
+      { id: "container:img", label: "registry.local/api", role: "server", entityType: "container", assetKind: "image", kindLabel: "Image" },
+      { id: "server:database", label: "database", role: "server", entityType: "server" },
+      { id: "pkg:werkzeug", label: "werkzeug@2.2.2", role: "package", entityType: "package" },
+      { id: "user:ops", label: "ops", role: "agent", entityType: "user" },
+      { id: "env:prod", label: "prod", role: "environment" },
+      { id: "cluster:prod", label: "prod", role: "cluster" },
+    ];
+    render(<ExposurePathCommandCenter path={{ ...basePath, hops }} />);
+    const steps = within(screen.getAllByTestId("exposure-path-sequence")[0]!).getAllByRole("listitem");
+    const drawn = steps.map((step) => glyphClass(step.querySelector(".ep-sequence-icon")));
+    expect(drawn).toEqual(
+      (["agent", "workload", "image", "mcp_server", "package", "user", "environment", "cluster"] as AssetKind[]).map(registryClass),
+    );
+    expect(new Set(drawn).size).toBe(drawn.length);
+  });
 });

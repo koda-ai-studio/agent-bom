@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Lock, Package, Server, ShieldAlert, Users, Wrench } from "lucide-react";
+import { Lock, Server, ShieldAlert, Users, Wrench } from "lucide-react";
+import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 
 import { AgentSourceMark } from "@/components/agent-source-mark";
 import { agentSource } from "@/lib/agent-source";
@@ -15,6 +16,8 @@ import {
   topologyAgentDisplayName,
   topologyAgentTypeLabel,
 } from "@/lib/agent-topology-graph";
+
+const PackageGlyph = ASSET_KINDS.package.icon;
 
 type MCPServer = NonNullable<Agent["mcp_servers"]>[number];
 type DetailTab = "overview" | "services" | "actions";
@@ -91,7 +94,7 @@ export function TopologyDetailDrawer({
         <div className="topology-detail-header">
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Metric label="Servers" value={serverMatches.length} icon={Server} tone="blue" />
-            <Metric label="Packages" value={totalPackages} icon={Package} tone="violet" />
+            <Metric label="Packages" value={totalPackages} icon={PackageGlyph} tone="violet" />
             <Metric label="Tools" value={totalTools} icon={Wrench} tone="cyan" />
             <Metric label="CVEs" value={totalVulns} icon={ShieldAlert} tone={totalVulns > 0 ? "danger" : "neutral"} />
           </div>

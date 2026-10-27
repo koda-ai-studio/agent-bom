@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ExposurePathNeighborExplorer } from "@/components/exposure-path-neighbor-explorer";
 import type { GraphNodeNeighborsResponse } from "@/lib/api";
 import type { ExposurePath } from "@/lib/exposure-path";
+import { ASSET_KINDS, type AssetKind } from "@/lib/asset-icon-registry";
 import type { UnifiedEdge, UnifiedNode } from "@/lib/graph-schema";
 
 const { apiMock } = vi.hoisted(() => ({
@@ -232,4 +233,24 @@ it("bounds loaded hop rows and pages remaining evidence without prefetching", ()
   expect(screen.getByRole("button", {name: "Expand neighbors of Hop 100"})).toBeInTheDocument();
   expect(screen.queryByRole("button", {name: "Expand neighbors of Hop 0"})).not.toBeInTheDocument();
   expect(apiMock.getGraphNodeNeighbors).not.toHaveBeenCalled();
+});
+
+it("draws each hop row with its entity's registry glyph, so a workload or image never reads as a server", () => {
+  const glyph = (element: Element | null) => [...(element?.querySelector("svg")?.classList ?? [])].filter((name) => name.startsWith("lucide-")).sort().join(" ");
+  const registryGlyph = (kind: AssetKind) => {
+    const Icon = ASSET_KINDS[kind].icon;
+    const { container, unmount } = render(<Icon />);
+    const value = glyph(container);
+    unmount();
+    return value;
+  };
+  const hops: ExposurePath["hops"] = [
+    { id: "server:provider", label: "Provider Directory MCP", role: "server", entityType: "server" },
+    { id: "container:gw", label: "pharmacy-gateway", role: "server", entityType: "container", assetKind: "workload", kindLabel: "Workload" },
+    { id: "container:gw-img", label: "pharmacy-gateway:2026", role: "server", entityType: "container", assetKind: "image", kindLabel: "Image" },
+    { id: "pkg:pillow", label: "pillow", role: "package", entityType: "package" },
+  ];
+  render(<ExposurePathNeighborExplorer path={{ ...path, hops }} />);
+  const drawn = hops.map((hop) => glyph(screen.getByText(hop.label, { selector: "span" }).parentElement?.parentElement ?? null));
+  expect(drawn).toEqual((["mcp_server", "workload", "image", "package"] as AssetKind[]).map(registryGlyph));
 });

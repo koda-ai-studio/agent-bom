@@ -1,11 +1,11 @@
 import type { ElementType } from "react";
 import {
-  Container,
   ExternalLink,
   FileText,
-  Layers,
   Server,
 } from "lucide-react";
+
+import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 
 import type { Agent, BlastRadius, OverviewTopRisk, ScanJob, ScanResult } from "@/lib/api";
 import type {
@@ -100,15 +100,15 @@ export interface ScanSource {
 
 const SOURCE_META: Record<string, { label: string; icon: ElementType }> = {
   agent_discovery: { label: "MCP Agents", icon: Server },
-  image: { label: "Container Images", icon: Container },
-  k8s: { label: "Kubernetes", icon: Layers },
+  image: { label: "Container Images", icon: ASSET_KINDS.image.icon },
+  k8s: { label: "Kubernetes", icon: ASSET_KINDS.cluster.icon },
   sbom: { label: "SBOM Imports", icon: FileText },
   filesystem: { label: "Filesystem", icon: FileText },
-  terraform: { label: "Terraform", icon: Layers },
-  github_actions: { label: "GitHub Actions", icon: Layers },
+  terraform: { label: "Terraform", icon: ASSET_KINDS.config_file.icon },
+  github_actions: { label: "GitHub Actions", icon: ASSET_KINDS.ci_job.icon },
   browser_extensions: { label: "Browser Extensions", icon: ExternalLink },
   jupyter: { label: "Jupyter Notebooks", icon: FileText },
-  gpu_infra: { label: "GPU Infrastructure", icon: Server },
+  gpu_infra: { label: "GPU Infrastructure", icon: ASSET_KINDS.gpu_compute.icon },
 };
 
 export function aggregateSources(jobs: ScanJob[]): ScanSource[] {
@@ -143,7 +143,7 @@ export function aggregateSources(jobs: ScanJob[]): ScanSource[] {
       // Legacy fallback: infer from request
       const req = job.request;
       if (req.images && req.images.length > 0) {
-        const e = srcMap.get("image") ?? { label: "Container Images", icon: Container, count: 0, vulns: 0, critical: 0 };
+        const e = srcMap.get("image") ?? { label: "Container Images", icon: ASSET_KINDS.image.icon, count: 0, vulns: 0, critical: 0 };
         e.count += req.images.length;
         e.vulns += blast.length;
         e.critical += blast.filter((b) => b.severity === "critical").length;

@@ -28,7 +28,6 @@ import {
 import "@xyflow/react/dist/style.css";
 import {
   Search,
-  Package,
   Bug,
   Zap,
   Shield,
@@ -45,6 +44,7 @@ import {
   Move,
 } from "lucide-react";
 import { useGraphLayout } from "@/lib/use-graph-layout";
+import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 import type { StepStatus, StepEvent } from "@/lib/api";
 import {
   buildPipelineGraph,
@@ -89,7 +89,7 @@ const FIT_ALL_MIN_WIDTH_PX = 960;
 // Icons keyed by DAG node id, falling back to the backend stage id.
 const NODE_ICONS: Record<string, React.ElementType> = {
   discovery: Search,
-  extraction: Package,
+  extraction: ASSET_KINDS.package.icon,
   scanning: Bug,
   enrichment: Zap,
   analysis: Shield,

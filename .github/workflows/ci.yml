@@ -4,11 +4,12 @@ permissions:
   contents: read
 
 # Lanes (see docs/operations/CI_RUNBOOK.md "CI lanes"):
-#   pull_request   changed-domain tests and contract smoke on the merge
-#                  result; full Python shards for shared/unmapped inputs,
-#                  path-gated Postgres, UI container and other validators.
+#   pull_request   affected tests (changed-domain map + direct importers)
+#                  and contract smoke on the merge result, in 3 shards; never
+#                  the full suite. Path-gated Postgres, musl subset, one UI E2E
+#                  smoke and other validators.
 #   merge_group    not enabled for this repository; if it fires, it runs the
-#                  PR lanes plus the post-merge lanes.
+#                  full 3.13 shards plus the post-merge lanes.
 #   push to main   everything: full 4-version suite with coverage, performance,
 #                  Postgres, musl, Docker, UI E2E, dogfood. The release gate
 #                  reads this.
@@ -52,6 +53,7 @@ jobs:
       action: ${{ steps.classify.outputs.action }}
       alpine: ${{ steps.classify.outputs.alpine }}
       alpine_full: ${{ steps.classify.outputs.alpine_full }}
+      alpine_pr: ${{ steps.classify.outputs.alpine_pr }}
       native_image: ${{ steps.classify.outputs.native_image }}
       compose: ${{ steps.classify.outputs.compose }}
       docs: ${{ steps.classify.outputs.docs }}
@@ -64,6 +66,7 @@ jobs:
       postgres: ${{ steps.classify.outputs.postgres }}
       python: ${{ steps.classify.outputs.python }}
       ui: ${{ steps.classify.outputs.ui }}
+      ui_e2e: ${{ steps.classify.outputs.ui_e2e }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -133,6 +136,12 @@ jobs:
           if printf '%s\n' "$dependency_changed" | grep -E '^(pyproject\.toml|uv\.lock|Dockerfile|\.github/actions/setup-python/)' > /dev/null; then
             alpine_full=true
           fi
+          # PRs run the musl subset only for dependency/build inputs and this
+          # workflow; main pushes and nightly keep the broader routing above.
+          alpine_pr="$alpine_full"
+          if printf '%s\n' "$changed" | grep -E '^\.github/workflows/ci\.yml$' > /dev/null; then
+            alpine_pr=true
+          fi
           if printf '%s\n' "$dependency_changed" | grep -E '^(deploy/docker/Dockerfile.(native-app|snowpark)$|deploy/snowflake/native-app/|tests/test_(native_app_persistence|snowpark_image)\.py$|src/agent_bom/(api/snowflake_store\.py|cloud/snowflake)|pyproject\.toml$|uv\.lock$|\.github/workflows/ci\.yml$)' > /dev/null; then
             native_image=true
           fi
@@ -175,6 +184,12 @@ jobs:
           if printf '%s\n' "$changed" | grep -E '^(ui/|\.github/workflows/ci\.yml$|\.github/actions/setup-ui/|docs/openapi/|action\.yml|contracts/|src/agent_bom/(api/(routes/|read_models/|error_envelope\.py|versioning\.py|models\.py|server\.py)|graph/|context_graph\.py|graph_schema\.py)|src/agent_bom/models\.py)' > /dev/null; then
             ui=true
           fi
+          # PR browser smoke: UI sources, UI toolchain, and this workflow. API
+          # and graph contract changes reach the UI through UI Validate.
+          ui_e2e=false
+          if printf '%s\n' "$changed" | grep -E '^(ui/|\.github/actions/setup-ui/|\.github/workflows/ci\.yml$)' > /dev/null; then
+            ui_e2e=true
+          fi
           classification="$(printf '%s\n' "$changed" | python3 scripts/classify_ci_changes.py --base-ref "$comparison_base" --head-ref "$comparison_head")"
           printf '%s\n' "$classification" >> "$GITHUB_OUTPUT"
           # Shared models/auth/storage and dependency inputs supplement the
@@ -186,6 +201,7 @@ jobs:
           ui_container="$(printf '%s\n' "$classification" | sed -n 's/^ui_container=//p')"
           if [ "$ui_container" != "false" ]; then
             ui=true
+            ui_e2e=true
           fi
           full_python="$(printf '%s\n' "$classification" | sed -n 's/^full_python=//p')"
           docs_only="$(printf '%s\n' "$classification" | sed -n 's/^docs_only=//p')"
@@ -193,6 +209,7 @@ jobs:
             echo "action=${action}"
             echo "alpine=${alpine}"
             echo "alpine_full=${alpine_full}"
+            echo "alpine_pr=${alpine_pr}"
             echo "native_image=${native_image}"
             echo "compose=${compose}"
             echo "docs=${docs}"
@@ -202,24 +219,27 @@ jobs:
             echo "postgres=${postgres}"
             echo "python=${python}"
             echo "ui=${ui}"
+            echo "ui_e2e=${ui_e2e}"
           } >> "$GITHUB_OUTPUT"
           {
             echo "### PR path classification"
             echo ""
             echo "- GitHub Action dogfood required: \`${action}\`"
             echo "- Alpine/musl compatibility required: \`${alpine}\`"
-            echo "- Alpine/musl full-suite required: \`${alpine_full}\`"
+            echo "- Alpine/musl full-suite required (post-merge): \`${alpine_full}\`"
+            echo "- Alpine/musl subset required on PR: \`${alpine_pr}\`"
             echo "- Compose contract validation required: \`${compose}\`"
             echo "- Docs strict build required: \`${docs}\`"
             echo "- Documentation-only fast path: \`${docs_only}\`"
-            echo "- Full Python suite required: \`${full_python}\`"
+            echo "- Shared/unmapped Python input (full suite runs post-merge): \`${full_python}\`"
             echo "- UI container build required: \`${ui_container}\`"
             echo "- Endpoint packaging required: \`${endpoint}\`"
             echo "- Measured graph performance required: \`${graph_performance}\`"
             echo "- Helm profile validation required: \`${helm}\`"
             echo "- Real Postgres integration required: \`${postgres}\`"
             echo "- Python test suite required: \`${python}\`"
-            echo "- UI Validate (lint + test + build + e2e) required: \`${ui}\`"
+            echo "- UI Validate (lint + test + build) required: \`${ui}\`"
+            echo "- UI E2E smoke required on PR: \`${ui_e2e}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # 1. Security Scanning
@@ -789,6 +809,7 @@ jobs:
   # suite (each shard serves its own standalone build: a 70 s parallel build
   # is cheaper in wall-clock than a serial build job plus artifact transfer).
   # ui-e2e below keeps the required "UI E2E and container smoke" name.
+  # Post-merge only; PRs run ui-e2e-smoke.
   ui-e2e-shard:
     name: UI E2E shard (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
@@ -797,9 +818,7 @@ jobs:
     if: >-
       !cancelled() && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        (github.event_name != 'pull_request' && github.event_name != 'push') ||
-        needs.changes.result != 'success' ||
-        needs.changes.outputs.ui == 'true'
+        (github.event_name != 'pull_request' && github.event_name != 'push')
       )
     strategy:
       fail-fast: false
@@ -861,6 +880,65 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
 
+  # One PR runner renders every packaged route (plus its accessibility
+  # checks) when UI sources change; the full browser suite runs after merge.
+  ui-e2e-smoke:
+    name: UI E2E smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: >-
+      !cancelled() && github.event_name == 'pull_request' && (
+        needs.changes.result != 'success' ||
+        needs.changes.outputs.ui_e2e != 'false'
+      )
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up UI toolchain
+        uses: ./.github/actions/setup-ui
+
+      - name: Install UI dependencies
+        run: |
+          cd ui
+          npm ci
+
+      - name: UI production build
+        run: |
+          cd ui
+          npm run build
+
+      - name: UI bundle budget
+        run: |
+          cd ui
+          npm run bundle:check
+
+      - name: Install Playwright browser
+        run: |
+          cd ui
+          npx playwright install chromium
+
+      - name: UI E2E smoke
+        env:
+          GRAPH_SCAN_ARTIFACT: ""
+        run: |
+          cd ui
+          npm run test:e2e -- e2e/route-catalog-smoke.spec.ts e2e/route-catalog-accessibility.spec.ts
+
+      - name: Retain UI failure diagnostics
+        if: ${{ failure() || cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ui-failure-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}-smoke
+          path: |
+            ui/test-results/**/trace.zip
+            ui/test-results/**/test-failed-*.png
+            ui/test-results/**/error-context.md
+          retention-days: 3
+          if-no-files-found: warn
+
   # Release-image smoke for the UI container, once per run, beside the shards.
   ui-container-smoke:
     name: UI container smoke
@@ -909,13 +987,14 @@ jobs:
           }
 
   # Keeps the context that scripts/check_release_main_ci.py and Test (Python
-  # 3.13) require. Every shard must pass; the container smoke must pass when
-  # selected and may only be skipped when it was not.
+  # 3.13) require. Post-merge every shard must pass; on a PR the browser smoke
+  # must pass when selected. The container smoke must pass when selected.
+  # A lane that is not required may only be skipped or pass.
   ui-e2e:
     name: UI E2E and container smoke
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [changes, ui-e2e-shard, ui-container-smoke]
+    needs: [changes, ui-e2e-shard, ui-e2e-smoke, ui-container-smoke]
     if: >-
       !cancelled() && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -926,26 +1005,30 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Require every E2E shard and the applicable container smoke
+      - name: Require every applicable E2E lane and container smoke
         env:
           SHARD_RESULT: ${{ needs.ui-e2e-shard.result }}
+          SHARD_REQUIRED: ${{ github.event_name != 'pull_request' }}
+          SMOKE_RESULT: ${{ needs.ui-e2e-smoke.result }}
+          SMOKE_REQUIRED: ${{ github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.ui_e2e != 'false') }}
           CONTAINER_RESULT: ${{ needs.ui-container-smoke.result }}
           CONTAINER_REQUIRED: ${{ github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.ui_container != 'false' }}
         run: |
           set -euo pipefail
-          if [ "$SHARD_RESULT" != "success" ]; then
-            echo "UI E2E shards ended with: $SHARD_RESULT" >&2
-            exit 1
-          fi
-          if [ "$CONTAINER_REQUIRED" != "false" ] && [ "$CONTAINER_RESULT" != "success" ]; then
-            echo "Required UI container smoke ended with: $CONTAINER_RESULT" >&2
-            exit 1
-          fi
-          case "$CONTAINER_RESULT" in
-            success|skipped) ;;
-            *) echo "UI container smoke ended with: $CONTAINER_RESULT" >&2; exit 1 ;;
-          esac
-          echo "Every UI E2E shard and the applicable container smoke passed."
+          for lane in SHARD SMOKE CONTAINER; do
+            result_var="${lane}_RESULT"
+            required_var="${lane}_REQUIRED"
+            result="${!result_var}"
+            if [ "${!required_var}" != "false" ] && [ "$result" != "success" ]; then
+              echo "Required UI $lane lane ended with: $result" >&2
+              exit 1
+            fi
+            case "$result" in
+              success|skipped) ;;
+              *) echo "UI $lane lane ended with: $result" >&2; exit 1 ;;
+            esac
+          done
+          echo "Every applicable UI E2E lane and container smoke passed."
 
   compose-contract:
     name: Compose Contract Validate
@@ -1161,31 +1244,32 @@ jobs:
           ./scripts/build-msi.ps1 -BundleDir $env:BUNDLE_DIR -OutputPath (Join-Path $env:RUNNER_TEMP "agent-bom-endpoint.msi") -Version $version -DryRun
 
   # 3. Python correctness
-  # PRs run either changed-domain tests plus cross-surface contracts, or, when
-  # the classifier selects it, the full suite sharded on 3.13 (a superset that
-  # also runs the smoke guards). Main pushes and nightly run smoke plus the
-  # full four-version suite with coverage. Every event runs the Postgres
-  # contract when selected.
-  # Broad source changes can select nearly the full suite here, so partition
-  # the unchanged selection across two jobs. The aggregator retains every
-  # applicable lane; Test (Python 3.13) is the protection context.
+  # PRs run the affected tests (changed-domain map plus direct importers of
+  # every changed module, scripts/pytest_ci_affected.py) and cross-surface
+  # contracts, never the full suite. Main pushes and nightly run the same lane
+  # plus the full four-version suite with coverage; a merge group, if one is
+  # ever enabled, runs the full suite sharded on 3.13. Every event runs the
+  # Postgres contract when selected.
+  # Partition the selection across three jobs so a broad change stays inside
+  # the PR budget. The aggregator retains every applicable lane; Test (Python
+  # 3.13) is the protection context.
   # scripts/ci_pytest_workers.py sizes xdist workers to the runner: every
   # core, capped where demo-estate rebuilds would exhaust its memory.
   test-smoke:
-    name: Python changed-domain and contract smoke (${{ matrix.shard }})
+    name: Python affected tests (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # The broadest measured single-file selection is about five minutes of
+    # tests per shard; the bound leaves headroom for setup and multi-file PRs.
+    timeout-minutes: 15
     strategy:
       fail-fast: false
-      max-parallel: 2
       matrix:
-        shard: [0, 1]
+        shard: [0, 1, 2]
     permissions:
       contents: read
     needs: changes
-    # The full shards replace smoke whenever they run: the inverse of their
-    # condition, so a classifier failure still runs exactly one lane.
-    if: ${{ !cancelled() && !(github.event_name == 'merge_group' || (github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.full_python != 'false'))) }}
+    # Merge groups run the full 3.13 shards instead.
+    if: ${{ !cancelled() && github.event_name != 'merge_group' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1198,7 +1282,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen --extra dev --extra api --extra mcp-server --extra otel
 
-      - name: Run changed-domain and cross-surface smoke
+      - name: Run affected tests and contract smoke
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -1208,8 +1292,8 @@ jobs:
           else
             mapfile -t CHANGED < <(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")
           fi
-          TARGETED_SELECTION=$(uv run python scripts/pytest_ci_plan.py targeted --root . "${CHANGED[@]}")
-          mapfile -t TARGETED <<< "$TARGETED_SELECTION"
+          AFFECTED_SELECTION=$(uv run python scripts/pytest_ci_affected.py --root . "${CHANGED[@]}")
+          mapfile -t TARGETED <<< "$AFFECTED_SELECTION"
           SMOKE=(
             tests/test_ci_workflow_contract.py
             tests/test_runtime_child_span_redaction.py
@@ -1228,14 +1312,15 @@ jobs:
           # An empty targeted selection becomes one empty element; drop blank lines.
           mapfile -t TESTS < <(printf '%s\n' "${SMOKE[@]}" "${TARGETED[@]}" | grep -v '^$' | sort -u)
           # Keep the full selected set, assigning each module to exactly one job.
-          SELECTION=$(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 2 --files "${TESTS[@]}")
+          SELECTION=$(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 3 --files "${TESTS[@]}")
           mapfile -t TESTS < <(printf '%s\n' "$SELECTION")
           if [ "${#TESTS[@]}" -eq 0 ] || [ -z "${TESTS[0]}" ]; then
-            echo "Changed-domain shard selected no tests" >&2
+            echo "Affected-test shard selected no tests" >&2
             exit 1
           fi
           WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
-          uv run pytest "${TESTS[@]}" -v --tb=short --durations=15 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+          echo "Affected shard ${{ matrix.shard }}/3: ${#TESTS[@]} test modules, ${WORKERS} workers"
+          uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
 
       - name: Graph accuracy fixture guard (#2259)
         if: >-
@@ -1287,9 +1372,9 @@ jobs:
           fi
           WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
           if [ "${{ matrix.python-version }}" = "3.11" ]; then
-            uv run pytest "${TESTS[@]}" -q --tb=short --durations=25 --cov=agent_bom --cov-report= --cov-fail-under=0 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+            uv run pytest "${TESTS[@]}" -q --tb=short --durations=50 --cov=agent_bom --cov-report= --cov-fail-under=0 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
           else
-            uv run pytest "${TESTS[@]}" -q --tb=short --durations=25 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+            uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
           fi
 
       - name: Preserve successful coverage shard
@@ -1324,9 +1409,9 @@ jobs:
       - name: Require complete combined coverage
         run: uv run python scripts/combine_ci_coverage.py coverage-artifacts --shards 4 --attempt "${{ github.run_attempt }}"
 
-  # The PR's full correctness proof on GitHub's merge result, in parallel.
-  # scripts/pytest_ci_plan.py assigns every test module to exactly one shard,
-  # so the shards together run the same selection as the full suite.
+  # Full correctness on 3.13 for a merge group (never a pull_request event),
+  # in parallel. scripts/pytest_ci_plan.py assigns every test module to
+  # exactly one shard, so the shards together run the full suite.
   test-shard:
     name: Full correctness shard (${{ matrix.shard }}, Python 3.13)
     runs-on: ubuntu-latest
@@ -1335,7 +1420,7 @@ jobs:
     permissions:
       contents: read
     needs: changes
-    if: ${{ !cancelled() && (github.event_name == 'merge_group' || (github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.full_python != 'false'))) }}
+    if: ${{ !cancelled() && github.event_name == 'merge_group' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1360,7 +1445,7 @@ jobs:
           fi
           WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
           echo "Shard ${{ matrix.shard }}/4: ${#TESTS[@]} test modules, ${WORKERS} workers"
-          uv run pytest "${TESTS[@]}" -v --tb=short --durations=25 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+          uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
 
       # Smoke is skipped when these shards run; keep its non-pytest guards.
       - name: Graph accuracy fixture guard (#2259)
@@ -1449,7 +1534,6 @@ jobs:
       - name: Require every applicable correctness lane
         env:
           EVENT_NAME: ${{ github.event_name }}
-          FULL_REQUIRED: ${{ github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.full_python != 'false' }}
           POSTGRES_REQUIRED: ${{ github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false' }}
           SMOKE_RESULT: ${{ needs.test-smoke.result }}
           MAIN_RESULT: ${{ needs.test-main.result }}
@@ -1461,15 +1545,15 @@ jobs:
           POSTGRES_RESULT: ${{ needs.postgres-integration.result }}
         run: |
           set -euo pipefail
-          # The full PR/merge-group shards replace smoke (required below);
-          # a smoke that did run must still pass.
-          if { [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; } && [ "$FULL_REQUIRED" != "false" ]; then
+          # Merge-group shards replace the affected tests (required below);
+          # every other event must prove them.
+          if [ "$EVENT_NAME" = "merge_group" ]; then
             case "$SMOKE_RESULT" in
               success|skipped) ;;
-              *) echo "Changed-domain and contract smoke ended with: $SMOKE_RESULT" >&2; exit 1 ;;
+              *) echo "Affected tests and contract smoke ended with: $SMOKE_RESULT" >&2; exit 1 ;;
             esac
           elif [ "$SMOKE_RESULT" != "success" ]; then
-            echo "Changed-domain and contract smoke ended with: $SMOKE_RESULT" >&2
+            echo "Affected tests and contract smoke ended with: $SMOKE_RESULT" >&2
             exit 1
           fi
           if [ "$POSTGRES_REQUIRED" != "false" ] && [ "$POSTGRES_RESULT" != "success" ]; then
@@ -1483,10 +1567,13 @@ jobs:
               *) echo "Correctness lane ended with: $result" >&2; exit 1 ;;
             esac
           done
-          # Selected PRs and merge groups prove the full sharded suite;
-          # main push, nightly and manual runs prove every interpreter.
-          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
-            if [ "$FULL_REQUIRED" != "false" ] && [ "$SHARD_RESULT" != "success" ]; then
+          # PRs prove the affected selection only; merge groups prove the full
+          # sharded suite; main push, nightly and manual runs prove every
+          # interpreter.
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            :
+          elif [ "$EVENT_NAME" = "merge_group" ]; then
+            if [ "$SHARD_RESULT" != "success" ]; then
               echo "Sharded full correctness suite ended with: $SHARD_RESULT" >&2
               exit 1
             fi
@@ -1896,13 +1983,15 @@ jobs:
   # glibc-only assumptions in code, compiled extensions, or path handling.
   test-alpine:
     name: Test (Alpine/musl, shard ${{ matrix.shard }})
-    # Run the targeted musl subset on relevant PRs and main pushes, the full
-    # musl suite on dependency changes and every nightly run.
+    # PRs run the targeted musl subset for dependency/build inputs and this
+    # workflow. Main pushes run the subset on Python changes and the full musl
+    # suite on dependency changes; nightly always runs the full suite.
     if: >-
       !cancelled() && (
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
-        needs.changes.outputs.alpine == 'true'
+        (github.event_name == 'push' && needs.changes.outputs.alpine == 'true') ||
+        (github.event_name == 'pull_request' && needs.changes.outputs.alpine_pr == 'true')
       )
     runs-on: ubuntu-latest
     # One shard isolates demo rebuilds; distribute the rest across three more
@@ -1915,7 +2004,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON((needs.changes.outputs.alpine_full == 'true' || github.event_name == 'schedule') && '[0, 1, 2, 3]' || '[0]') }}
+        shard: ${{ fromJSON(((needs.changes.outputs.alpine_full == 'true' && github.event_name != 'pull_request') || github.event_name == 'schedule') && '[0, 1, 2, 3]' || '[0]') }}
     container:
       image: python:3.14.3-alpine3.23@sha256:faee120f7885a06fcc9677922331391fa690d911c020abb9e8025ff3d908e510
     steps:
@@ -1963,7 +2052,7 @@ jobs:
       - name: Run tests (musl)
         shell: bash
         env:
-          ALPINE_FULL: ${{ needs.changes.outputs.alpine_full == 'true' || github.event_name == 'schedule' }}
+          ALPINE_FULL: ${{ (needs.changes.outputs.alpine_full == 'true' && github.event_name != 'pull_request') || github.event_name == 'schedule' }}
           ALPINE_SHARD: ${{ matrix.shard }}
         run: |
           set -euxo pipefail
@@ -1977,9 +2066,9 @@ jobs:
               exit 1
             fi
             echo "Alpine shard $ALPINE_SHARD/4: ${#TESTS[@]} test modules"
-            uv run pytest "${TESTS[@]}" -q --tb=short -m "not network and not slow" -x --durations=20 -n 2 --dist worksteal
+            uv run pytest "${TESTS[@]}" -q --tb=short -m "not network and not slow" -x --durations=50 -n 2 --dist worksteal
           else
-            uv run pytest -q --tb=short -m "not network and not slow" --durations=20 \
+            uv run pytest -q --tb=short -m "not network and not slow" --durations=50 \
               tests/api/test_api_auth_me.py \
               tests/test_quickstart.py \
               tests/test_deploy_teardown.py \
@@ -2329,7 +2418,9 @@ jobs:
           ALPINE_REQUIRED: >-
             ${{
               (github.event_name != 'pull_request' && github.event_name != 'push') ||
-              needs.changes.result != 'success' || needs.changes.outputs.alpine == 'true'
+              needs.changes.result != 'success' ||
+              (github.event_name == 'push' && needs.changes.outputs.alpine == 'true') ||
+              (github.event_name == 'pull_request' && needs.changes.outputs.alpine_pr == 'true')
             }}
           UI_E2E_REQUIRED: >-
             ${{

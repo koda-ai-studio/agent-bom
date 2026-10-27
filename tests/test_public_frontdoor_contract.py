@@ -5,6 +5,7 @@ from __future__ import annotations
 import struct
 from pathlib import Path
 
+from scripts.integrations_manifest import load as load_integrations
 from scripts.render_release_highlights import render_highlights
 from scripts.render_social_preview_svg import render as render_social_preview
 
@@ -19,7 +20,7 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
 
     png_header = preview.read_bytes()[:24]
     assert png_header[:8] == b"\x89PNG\r\n\x1a\n"
-    assert struct.unpack(">II", png_header[16:24]) == (1280, 520)
+    assert struct.unpack(">II", png_header[16:24]) == (1280, 640)
 
     svg = source.read_text(encoding="utf-8")
     template_svg = template.read_text(encoding="utf-8")
@@ -31,17 +32,18 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
         "images + IaC",
         "AI + MCP + models",
         "cloud + identity + data",
-        "AI CLIENTS + MODELS",
-        "CLOUD + IDENTITY + DATA",
+        "AI CLIENTS + IDES",
+        "HYPERSCALERS + KUBERNETES",
+        "EVIDENCE OUT",
         "discover → scan → correlate → act",
     ):
         assert claim in svg
     for integration in (
         "Claude",
-        "OpenAI / Codex",
+        "OpenAI",
+        "Codex",
         "Cursor",
         "GitHub Copilot",
-        "VS Code",
         "Windsurf",
         "Cortex Code",
         "AWS",
@@ -57,7 +59,7 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
     assert ">CVE</text>" not in svg
     assert ">package</text>" not in svg
     assert 'width="244" height="64"' not in svg
-    assert svg.count('width="64" height="64" rx="16"') == 13
+    assert svg.count('<rect width="50" height="50" rx="13"') == sum(min(len(group.logos), 5) for group in load_integrations().groups)
 
     assert "file:///" not in svg
     assert "/Users/" not in svg
@@ -67,29 +69,15 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
     assert "OpenAI · GPT" not in svg
     for brand_color in ("#EA4335", "#4285F4", "#34A853", "#FBBC05"):
         assert brand_color in svg
-    assert 'href="vendor/openai-blossom-white.svg" x="-15" y="-15" width="94" height="94"' in template_svg
-    assert 'href="vendor/simple-icons/clickhouse.svg"' in template_svg
-    assert 'href="vendor/google-cloud-mark.svg"' in template_svg
-    assert 'href="vendor/simple-icons/googlecloud.svg"' not in template_svg
-    assert "Also supports VS Code · Okta · ClickHouse" not in template_svg
-    assert svg.count("<symbol ") == 13
-    assert svg.count('href="#embedded-') == 14
+    assert 'href="#embedded-google-cloud-mark"' in svg
+    assert 'href="#embedded-googlecloud"' not in svg
+    assert "Also supports" not in svg
+    assert '<g id="coverage" />' in template_svg or '<g id="coverage"/>' in template_svg
+    logos = {item.logo for group in load_integrations().groups for item in group.logos[:5]}
+    assert svg.count("<symbol ") == len(logos) + 1
     assert render_social_preview(template) == svg
-    for relative_asset in (
-        "brand/mark-dark.svg",
-        "vendor/claude-icon-rounded.svg",
-        "vendor/openai-blossom-white.svg",
-        "vendor/simple-icons/cursor.svg",
-        "vendor/simple-icons/githubcopilot.svg",
-        "vendor/simple-icons/amazonwebservices.svg",
-        "vendor/simple-icons/microsoftazure.svg",
-        "vendor/google-cloud-mark.svg",
-        "vendor/simple-icons/kubernetes.svg",
-        "vendor/simple-icons/snowflake.svg",
-        "vendor/simple-icons/databricks.svg",
-        "vendor/simple-icons/clickhouse.svg",
-    ):
-        assert relative_asset in template_svg
+    assert "brand/mark-dark.svg" in template_svg
+    for relative_asset in sorted(logos):
         assert (source.parent / relative_asset).is_file()
 
 

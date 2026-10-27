@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Loader2 } from "lucide-react";
-import { ASSET_KINDS, assetIcon, type AssetKind } from "@/lib/asset-icon-registry";
+import { ASSET_KINDS, assetIcon } from "@/lib/asset-icon-registry";
+import { exposureHopAssetKind } from "@/lib/exposure-hop-kind";
 import { api, type GraphNodeNeighborsResponse } from "@/lib/api";
 import type { UnifiedNode } from "@/lib/graph-schema";
 import { buildGraphInvestigationHref, exposureRoleForEntityType } from "@/lib/attack-paths";
@@ -22,17 +23,16 @@ import type { ExposureEntityRole, ExposurePath } from "@/lib/exposure-path";
 
 const NEIGHBOR_LIMIT = 12;
 
-const ROLE_STYLE: Record<ExposureEntityRole, { kind: AssetKind; chip: string; accent: string }> = {
-  agent: { kind: "agent", chip: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200", accent: "text-emerald-300" },
-  server: { kind: "mcp_server", chip: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200", accent: "text-sky-300" },
-  package: { kind: "package", chip: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200", accent: "text-amber-300" },
-  finding: { kind: "vulnerability", chip: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-200", accent: "text-red-300" },
-  credential: { kind: "credential", chip: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-200", accent: "text-fuchsia-300" },
-  tool: { kind: "tool", chip: "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-200", accent: "text-purple-300" },
-  environment: { kind: "environment", chip: "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-200", accent: "text-cyan-300" },
-  cluster: { kind: "cluster", chip: "border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200", accent: "text-indigo-300" },
+const ROLE_STYLE: Record<ExposureEntityRole, { chip: string; accent: string }> = {
+  agent: { chip: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200", accent: "text-emerald-300" },
+  server: { chip: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200", accent: "text-sky-300" },
+  package: { chip: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200", accent: "text-amber-300" },
+  finding: { chip: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-200", accent: "text-red-300" },
+  credential: { chip: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-200", accent: "text-fuchsia-300" },
+  tool: { chip: "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-200", accent: "text-purple-300" },
+  environment: { chip: "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-200", accent: "text-cyan-300" },
+  cluster: { chip: "border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200", accent: "text-indigo-300" },
   unknown: {
-    kind: "unknown",
     chip: "border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] text-[color:var(--text-secondary)]",
     accent: "text-[color:var(--text-tertiary)]",
   },
@@ -125,7 +125,7 @@ function HopRow({ hop, scanId }: { hop: ExposurePath["hops"][number]; scanId?: s
   useEffect(() => () => { requestId.current += 1; }, []);
   const [load, setLoad] = useState<NeighborLoadState | null>(null);
   const style = ROLE_STYLE[hop.role] ?? ROLE_STYLE.unknown;
-  const Icon = ASSET_KINDS[style.kind].icon;
+  const Icon = ASSET_KINDS[exposureHopAssetKind(hop)].icon;
   const expandable = Boolean(hop.id);
 
   const fetchNeighbors = useCallback(async (requestedDirection = direction) => {
