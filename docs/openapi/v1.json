@@ -42136,7 +42136,7 @@
       },
       "SideScanTriggerRequest": {
         "additionalProperties": false,
-        "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nTenant-scoped door for the shipped ``run_provider_side_scan`` executor: an\nopt-in mutation (temp snapshot/disk create, attach, delete) that never\nmodifies the scanned disk or image, mounts a temp copy on an in-account\ncollector read-only and records SBOM + CVE + secret *metadata* only.\nCredentials are never accepted here; the executor resolves scoped lifecycle\ncredentials from the provider chain. AWS EBS keeps its own CLI entrypoint.",
+        "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nOpt-in snapshot/disk lifecycle via ``run_provider_side_scan`` that never\nmodifies the scanned disk or image, mounts a temp copy on an in-account\ncollector read-only and records SBOM + CVE + secret *metadata* only.\nCredentials are never accepted here; a tenant-owned connection must carry an\noperator lifecycle grant for the requested scope. AWS keeps its CLI entrypoint.",
         "properties": {
           "account_id": {
             "description": "Azure subscription id / GCP project id owning the disk + collector.",
@@ -42164,6 +42164,13 @@
             ],
             "description": "Azure only: resource group of the collector VM.",
             "title": "Collector Resource Group"
+          },
+          "connection_id": {
+            "description": "Tenant-owned connection with an operator side-scan lifecycle grant.",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Connection Id",
+            "type": "string"
           },
           "idempotency_key": {
             "anyOf": [
@@ -42229,6 +42236,7 @@
           }
         },
         "required": [
+          "connection_id",
           "provider",
           "target_id",
           "account_id",
@@ -52603,7 +52611,7 @@
         ]
       },
       "post": {
-        "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nRuns the same shipped ``run_provider_side_scan`` executor the CLI\n(``agent-bom cloud side-scan``) uses, tenant-scoped and admin-gated. The heavy\nsnapshot/mount/scan/teardown runs off the event loop in a worker thread under\nbackpressure. The durable lifecycle record is returned so the caller can read\nhonest terminal state \u2014 ``scan_complete`` / ``partial`` / ``failed`` plus\ncleanup status \u2014 never a false clean.\n\nFail-closed and honest:\n- side-scan OFF (``AGENT_BOM_SIDESCAN`` unset) \u2192 ``200`` ``status=disabled``\n  with enablement guidance (no cloud call is made).\n- provider extra / scoped lifecycle credentials unavailable \u2192 ``200``\n  ``status=unavailable`` with the actionable, sanitized reason.\n- Azure requires ``collector_resource_group`` \u2192 ``400``.\nCredentials are never accepted here; the executor resolves separately\nscoped lifecycle credentials from the provider's default chain\n(``credentialed_smoke=false``).",
+        "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nRuns the same shipped ``run_provider_side_scan`` executor the CLI\n(``agent-bom cloud side-scan``) uses, tenant-scoped and admin-gated. The heavy\nsnapshot/mount/scan/teardown runs off the event loop in a worker thread under\nbackpressure. The durable lifecycle record is returned so the caller can read\nhonest terminal state \u2014 ``scan_complete`` / ``partial`` / ``failed`` plus\ncleanup status \u2014 never a false clean.\n\nFail-closed and honest:\n- side-scan OFF (``AGENT_BOM_SIDESCAN`` unset) \u2192 ``200`` ``status=disabled``\n  with enablement guidance (no cloud call is made).\n- provider extra / scoped lifecycle credentials unavailable \u2192 ``200``\n  ``status=unavailable`` with the actionable, sanitized reason.\n- Azure requires ``collector_resource_group`` \u2192 ``400``.\nA tenant-owned connection and exact operator lifecycle grant are required\nbefore execution; missing or mismatched authority returns 403. Bound\ncredentials have no ambient fallback (``credentialed_smoke=false``).",
         "operationId": "cloud_side_scan_trigger_v1_cloud_side_scan_post",
         "parameters": [
           {

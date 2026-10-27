@@ -34,11 +34,13 @@ from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.runtime.patterns import PII_PATTERNS
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator
 from agent_bom.scanners.credential_validation import CredentialValidator, ValidationStatus
+from agent_bom.scanners.public_source_samples import mask_public_docstrings
 from agent_bom.scanners.repo_ignore import RepositoryIgnore
 from agent_bom.scanners.secret_lines import ENTROPY_PLACEHOLDER_RE as _ENTROPY_PLACEHOLDER_RE
 from agent_bom.scanners.secret_lines import is_comment_line, match_credential, match_file_secret
 from agent_bom.scanners.secret_models import SecretFinding as SecretFinding
 from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResult
+from agent_bom.scanners.source_pii import source_pii_match
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
@@ -367,7 +369,7 @@ def _scan_file(
         return []
 
     findings: list[SecretFinding] = []
-    lines = content.split("\n")
+    lines = mask_public_docstrings(content, file_path).split("\n")
     aws_secrets = _aws_secret_candidates(lines) if aws_validator is not None else []
 
     # Check each line against all patterns
@@ -426,6 +428,8 @@ def _scan_file(
             for name, pattern in PII_PATTERNS:
                 match = pattern.search(line)
                 if not match:
+                    continue
+                if file_path.suffix.lower() in _PII_CODE_EXTENSIONS and not source_pii_match(line, name, match):
                     continue
                 if name == "Email Address" and _URL_USERINFO_PREFIX_RE.search(line, 0, match.start()):
                     # `scheme://user:pass@host` — the `pass@host` tail is URL

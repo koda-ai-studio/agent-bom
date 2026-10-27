@@ -95,8 +95,11 @@ else, such as a container mount, `/srv` or `/Volumes/<disk>`, is refused with
 containing `..`, or a filesystem root such as `/` is ignored, so the setting
 cannot open the whole disk.
 
-The plugin's bundled servers don't offer a setting for this variable. Add your
-own server entry that sets it, next to the plugin's servers:
+The Codex plugin passes `AGENT_BOM_MCP_WORKSPACE_ROOTS` from its launch
+environment through `env_vars`; set explicit absolute roots before starting
+Codex, then reconnect the plugin. An unset variable grants no additional roots.
+For a persistent setting independent of the app's launch environment, add your
+own server entry next to the plugin's servers:
 
 - **Claude Code.** Run this once, then restart Claude Code:
 
@@ -204,9 +207,10 @@ The MCP tools take paths under your home directory and under the directories
 named in `AGENT_BOM_MCP_WORKSPACE_ROOTS`. In Claude Code, `.mcp.json` sets that
 variable to `${CLAUDE_PROJECT_DIR}`, so a project in `/tmp`, `/workspaces`
 (devcontainers), `/srv` or `/Volumes` scans without setup. Codex expands no
-variables in a plugin's MCP config, so the `agent-bom-local` Codex plugin
-accepts paths under your home directory only. To scan a project elsewhere from
-Codex, declare the server in `~/.codex/config.toml` with the root set:
+variables in a plugin's MCP config. The `agent-bom-local` Codex plugin passes
+an operator-set `AGENT_BOM_MCP_WORKSPACE_ROOTS` from the launch environment;
+without it, only home-directory paths are accepted. Alternatively, declare
+the server in `~/.codex/config.toml` with the root set:
 
 ```toml
 [mcp_servers.agent-bom]

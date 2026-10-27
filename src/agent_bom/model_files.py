@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING
 
 from agent_bom.floating_refs import classify_model_revision, is_hex_digest
 from agent_bom.model_pickle_scan import PICKLE_BEARING_EXTENSIONS, scan_pickle_file_flags
+from agent_bom.parsers.model_file_types import _looks_like_pickle_header as _looks_like_pickle_header
+from agent_bom.parsers.model_file_types import is_python_startup_file
 
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
@@ -122,31 +124,6 @@ def _allowed_scan_roots() -> list[str]:
     return sorted(roots)
 
 
-_ZIP_MAGICS = (b"PK\x03\x04", b"PK\x05\x06")
-# Pickle protocol-2+ streams begin with the PROTO opcode (0x80) followed by a
-# one-byte protocol number (1..5). Higher protocols (5) cover modern torch.
-_PICKLE_PROTOCOLS = frozenset({1, 2, 3, 4, 5})
-
-
-def _looks_like_pickle_header(file_path: Path) -> bool:
-    """Cheap content sniff: does this file *start* like a pickle or torch zip?
-
-    Reads only the first few bytes (no deserialization, bounded I/O). Used to
-    discover pickle-bearing content hiding under a benign or non-pickle-bearing
-    extension, which extension-only discovery would miss entirely.
-    """
-    try:
-        with open(file_path, "rb") as fh:
-            head = fh.read(4)
-    except OSError:
-        return False
-    if not head:
-        return False
-    if head[:4] in _ZIP_MAGICS:
-        return True
-    return head[:1] == b"\x80" and len(head) >= 2 and head[1] in _PICKLE_PROTOCOLS
-
-
 def _human_size(size_bytes: int | float) -> str:
     """Convert bytes to human-readable size string."""
     for unit in ("B", "KB", "MB", "GB", "TB"):
@@ -183,7 +160,7 @@ def scan_model_files(
     for ext, info in _MODEL_EXTENSIONS.items():
         for file_path in sorted(directory.rglob(f"*{ext}")):
             # Skip hidden directories and common non-model locations
-            if any(part.startswith(".") for part in file_path.parts):
+            if any(part.startswith(".") for part in file_path.parts) or is_python_startup_file(file_path):
                 continue
 
             try:
@@ -192,7 +169,6 @@ def scan_model_files(
                 continue
 
             size_bytes = stat.st_size
-
             security_flags = []
             if ext in _SECURITY_FLAGS:
                 flag = _SECURITY_FLAGS[ext].copy()

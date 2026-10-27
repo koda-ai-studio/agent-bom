@@ -37,14 +37,14 @@ def image_supply_chain_options(*, short_aliases: bool = False) -> list[Any]:
             type=click.Path(dir_okay=False),
             default=None,
             envvar="AGENT_BOM_IMAGE_COSIGN_KEY",
-            help="Cosign public key (PEM) to verify image signatures with. Without it, signatures are reported as present, not verified.",
+            help="Cosign public key (PEM) for verification. Keyless verification instead requires configured signer identity and issuer.",
         ),
         click.option(
             *require,
             "require_image_signature",
             is_flag=True,
             default=False,
-            help="Fail (exit 1) when an image is not signed — or, with a cosign key, when its signature does not verify.",
+            help="Fail (exit 1) unless the image signature verifies against the configured public key or exact keyless signer policy.",
         ),
     ]
 

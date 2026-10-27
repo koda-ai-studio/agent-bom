@@ -140,6 +140,7 @@ function ExecutionRow({ record }: { record: SideScanExecutionRecord }) {
 }
 
 const EMPTY_FORM: SideScanTriggerRequest = {
+  connection_id: "",
   provider: "gcp",
   target_id: "",
   account_id: "",
@@ -225,6 +226,7 @@ export default function CwppSideScanPage() {
       setTriggerNote(null);
       try {
         const body: SideScanTriggerRequest = {
+          connection_id: form.connection_id.trim(),
           provider: form.provider,
           target_id: form.target_id.trim(),
           account_id: form.account_id.trim(),
@@ -323,6 +325,10 @@ export default function CwppSideScanPage() {
             <Play className="h-4 w-4 text-[color:var(--accent)]" /> Run a side-scan
           </h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-[color:var(--text-secondary)] sm:col-span-2">
+              Tenant connection ID
+              <input className={`mt-1 ${fieldClass()}`} value={form.connection_id} onChange={(e) => setForm((f) => ({ ...f, connection_id: e.target.value }))} placeholder="Connection with side-scan permission" required />
+            </label>
             <label className="text-xs text-[color:var(--text-secondary)]">
               Provider
               <select
@@ -359,12 +365,12 @@ export default function CwppSideScanPage() {
             )}
           </div>
           <p className="mt-2 text-[11px] text-[color:var(--text-tertiary)]">
-            Admin access and an API executor on the selected collector are required. Uses the collector’s cloud identity.
+            Requires admin access and a tenant connection authorized for this disk, collector, and location.
           </p>
           <div className="mt-3 flex items-center gap-3">
             <button
               type="submit"
-              disabled={submitting || !canRun || !form.target_id || !form.account_id || !form.location || !form.collector_id}
+              disabled={submitting || !canRun || !form.connection_id.trim() || !form.target_id || !form.account_id || !form.location || !form.collector_id}
               className="inline-flex items-center gap-1.5 rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 dark:bg-emerald-300 dark:text-emerald-950 dark:hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />} Run side-scan

@@ -32,6 +32,7 @@ from typing import IO, Any
 from agent_bom.domain.finding_model import Finding
 from agent_bom.model_files import _MODEL_EXTENSIONS, _SECURITY_FLAGS, _human_size, model_file_findings
 from agent_bom.model_pickle_scan import PICKLE_BEARING_EXTENSIONS, PickleScanResult, _max_pickle_bytes, scan_pickle_file_flags
+from agent_bom.parsers.model_file_types import MAX_STARTUP_BYTES, is_python_startup_text
 from agent_bom.parsers.oci_io import _safe_getmember
 from agent_bom.parsers.oci_layer import _layer_whiteouts
 
@@ -117,6 +118,10 @@ def extract_model_artifacts_layer(scan: Any) -> None:
         member = _safe_getmember(scan.layer_tf, name)
         if member is None or not member.isfile():
             continue
+        if ext == ".pth" and member.size <= MAX_STARTUP_BYTES:
+            stream = _open_member(scan.layer_tf, member)
+            if stream is not None and is_python_startup_text(stream.read(MAX_STARTUP_BYTES + 1)):
+                continue
         flags: list[dict[str, Any]] = [dict(_SECURITY_FLAGS[ext])] if ext in _SECURITY_FLAGS else []
         if ext in PICKLE_BEARING_EXTENSIONS:
             flags.extend(_pickle_flags(scan.layer_tf, member))

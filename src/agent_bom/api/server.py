@@ -28,6 +28,7 @@ from agent_bom.api.auth import Role, get_key_store
 from agent_bom.api.dev_auth_state import get_dev_api_key as get_dev_api_key
 from agent_bom.api.dev_auth_state import get_dev_api_role as get_dev_api_role
 from agent_bom.api.dev_auth_state import set_dev_api_key as set_dev_api_key
+from agent_bom.api.docs_ui import configure_docs
 from agent_bom.api.error_envelope import ERROR_RESPONSES, install_error_envelope
 from agent_bom.api.experimental_gate import ExperimentalFeatureHealth, SystemHealthResponse
 from agent_bom.api.foreground_activity import ForegroundActivityMiddleware
@@ -376,12 +377,12 @@ app = FastAPI(
     title=f"{PRODUCT_NAME} API",
     description=f"{POSITIONING_META}. {TAGLINE_CHAIN}.",
     version=__version__,
-    docs_url=None if APIKeyMiddleware._DOCS_DISABLED else "/docs",
-    redoc_url=None if APIKeyMiddleware._DOCS_DISABLED else "/redoc",
+    docs_url=None,
+    redoc_url=None,
     openapi_url=None if APIKeyMiddleware._DOCS_DISABLED else "/openapi.json",
     lifespan=_lifespan,
-    swagger_ui_parameters={"favicon_url": "/brand/mark.svg"},
 )
+configure_docs(app, disabled=APIKeyMiddleware._DOCS_DISABLED)
 
 _default_origins = [
     "http://localhost:3000",

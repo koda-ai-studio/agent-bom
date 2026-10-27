@@ -193,16 +193,20 @@ agent-bom image ghcr.io/org/app:1.4 --cosign-key cosign.pub --require-signature
 
 | Signature status | Meaning |
 |---|---|
-| `verified` | A cosign signature over this image's digest verified with `--cosign-key` (ECDSA, RSA or Ed25519 PEM public key). |
-| `invalid` | A signature exists but none verified with the key, or it names another digest. |
-| `present-unverified` | A signature artifact exists but nothing about it was verified: no key was given, or it is keyless (Fulcio certificate) or a Sigstore bundle. It is not evidence of trust. Certificate-identity and transparency-log verification are not implemented. |
+| `verified` | A signature over this image's digest verified with `--cosign-key`, or a Sigstore image bundle verified against the configured exact signer identity and issuer. |
+| `invalid` | A signature fails the configured key/signer policy, its cryptographic proof fails, or it names another digest. |
+| `present-unverified` | A signature artifact exists without a configured trust policy, or uses unsupported legacy evidence. Presence alone is not evidence of trust. |
 | `unsigned` | The registry has no signature or bundle for the digest. |
 | `unknown` | Not looked up (archive scans, offline scans, a local image without a registry digest) or the lookup failed. |
 
 `--require-signature` exits 1 unless the status is `verified`, which needs a
-cosign public key (`--cosign-key` or `AGENT_BOM_IMAGE_COSIGN_KEY`). Without a
-key the gate always fails with "a cosign public key is required to enforce
-signatures". Attestations are listed, not verified.
+cosign public key (`--cosign-key` or `AGENT_BOM_IMAGE_COSIGN_KEY`) or both
+`AGENT_BOM_IMAGE_SIGNER_IDENTITY` and `AGENT_BOM_IMAGE_SIGNER_ISSUER` with the
+`agent-bom[sigstore]` extra. Keyless verification checks supported Cosign DSSE
+image-signature bundles offline against cached/bundled Sigstore roots; keep
+that trust material current. General attestations are listed, not treated as
+verified image signatures. See the repository's `docs/IMAGE_SECURITY.md` for
+the first command, trust refresh and report evidence.
 
 The base image is named only from the OCI `org.opencontainers.image.base.name`
 and `org.opencontainers.image.base.digest` annotations or labels. When the

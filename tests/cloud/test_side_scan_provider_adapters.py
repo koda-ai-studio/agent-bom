@@ -126,7 +126,7 @@ class FakeGcpCollection:
         body_key = "snapshot_resource" if self.kind == "snapshots" else "disk_resource"
         body = request[body_key]
         name = body["name"]
-        location = "global" if self.kind == "snapshots" else request["zone"]
+        location = "global" if self.kind == "snapshots" else f"zones/{request['zone']}"
         resource = {
             "name": name,
             "id": name,
@@ -153,6 +153,9 @@ class FakeGcpInstances:
         self.disks: list[dict[str, Any]] = []
         self.attach_calls: list[dict[str, Any]] = []
         self.detach_calls: list[dict[str, Any]] = []
+
+    def get(self, *, request: dict[str, Any]) -> dict[str, Any]:
+        return {"disks": list(self.disks)}
 
     def attach_disk(self, *, request: dict[str, Any]) -> FakeOperation:
         self.attach_calls.append(request)
@@ -330,8 +333,8 @@ def test_gcp_wait_timeout_is_bounded_and_persisted_failed(tmp_path: Path) -> Non
     assert persisted.failure_code == "operation_timeout"
     assert snapshots.resources, "the provider operation may complete after the worker times out"
     swept = adapter.sweep_orphans(active_execution_ids=set())
-    assert len(swept) == 1
-    assert snapshots.resources == {}
+    assert swept == []
+    assert snapshots.resources, "uncertain provider completion requires operator reconciliation"
 
 
 def test_cleanup_restarts_after_delete_failure_without_leaking_other_scope(tmp_path: Path) -> None:
@@ -348,7 +351,7 @@ def test_cleanup_restarts_after_delete_failure_without_leaking_other_scope(tmp_p
     assert partial.cleanup_status is CleanupStatus.PARTIAL
     assert partial.to_evidence_dict()["disposition"] == "partial"
     assert not instances.disks
-    assert not snapshots.resources
+    assert snapshots.resources, "retain the snapshot until its dependent disk is deleted"
     assert any(resource.status is TemporaryResourceStatus.CLEANUP_FAILED for resource in partial.resources)
 
     disks.delete_failures.clear()
@@ -383,7 +386,7 @@ def test_adapter_rejects_cross_account_target_before_sdk_call(tmp_path: Path) ->
     assert snapshots.create_calls == []
 
 
-def test_orphan_sweep_deletes_only_matching_tenant_scope(tmp_path: Path) -> None:
+def test_orphan_sweep_requires_ledger_not_matching_tenant_tags(tmp_path: Path) -> None:
     adapter, _store, snapshots, disks, _vms = _azure_adapter(tmp_path)
     owned = adapter.execution.cleanup_ownership.required_tags()
     foreign = {**owned, "agent-bom-sidescan-scope": "0" * 24}
@@ -405,11 +408,12 @@ def test_orphan_sweep_deletes_only_matching_tenant_scope(tmp_path: Path) -> None
 
     swept = adapter.sweep_orphans(active_execution_ids=set())
 
-    assert set(swept) == {"owned-snap", "owned-disk"}
+    assert swept == []
+    assert snapshots.resources and disks.resources
     assert "workloads/foreign-snap" in snapshots.resources
 
 
-def test_gcp_orphan_sweep_deletes_only_matching_project_scope(tmp_path: Path) -> None:
+def test_gcp_orphan_sweep_requires_ledger_not_matching_project_labels(tmp_path: Path) -> None:
     adapter, _store, snapshots, disks, _instances = _gcp_adapter(tmp_path)
     owned = adapter.execution.cleanup_ownership.required_tags()
     foreign = {**owned, "agent-bom-sidescan-scope": "0" * 24}
@@ -431,7 +435,8 @@ def test_gcp_orphan_sweep_deletes_only_matching_project_scope(tmp_path: Path) ->
 
     swept = adapter.sweep_orphans(active_execution_ids=set())
 
-    assert set(swept) == {"owned-snap", "owned-disk"}
+    assert swept == []
+    assert snapshots.resources and disks.resources
     assert "foreign-snap" in snapshots.resources
 
 
@@ -515,8 +520,10 @@ async def test_run_provider_side_scan_gcp_dispatches_to_adapter_and_cleans_up(tm
 
 
 @pytest.mark.asyncio
-async def test_run_provider_side_scan_cleans_up_on_provider_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A denied attach still tears down the snapshot + temp disk and never reads as clean."""
+async def test_run_provider_side_scan_preserves_resources_after_uncertain_provider_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed mutation leaves dependencies pending for provider reconciliation."""
     monkeypatch.setenv("AGENT_BOM_SIDESCAN", "1")
     snapshots = FakeGcpCollection("snapshots")
     disks = FakeGcpCollection("disks")
@@ -546,10 +553,12 @@ async def test_run_provider_side_scan_cleans_up_on_provider_failure(tmp_path: Pa
             sleep=lambda _seconds: None,
         )
 
-    # Snapshot + temp disk were created, then guaranteed-cleanup reaped both.
+    # The API failure does not prove the provider performed no mutation.
     assert snapshots.insert_calls and disks.insert_calls
-    assert snapshots.resources == {}
-    assert disks.resources == {}
+    assert snapshots.resources and disks.resources
+    record = SQLiteSideScanStateStore(tmp_path / "state.db").list_recent(tenant_id="tenant-a")[0]
+    assert record.cleanup_status is CleanupStatus.PENDING
+    assert "provider_mutation_unreconciled" in record.warning_codes
     # No secret material leaked into the raised error path.
     assert "token=secret" not in "".join(str(call) for call in disks.delete_calls)
 
@@ -655,7 +664,15 @@ async def test_terminal_retry_preserves_counts_without_sdk_calls(tmp_path: Path,
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("change", [{"collector_id": "other-collector"}, {"location": "other-zone"}, {"scan_secrets_enabled": True}])
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"collector_id": "other-collector"},
+        {"location": "other-zone"},
+        {"scan_secrets_enabled": True},
+        {"authorization_ref": "connection:new-binding"},
+    ],
+)
 async def test_retry_rejects_changed_request_before_sdk(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, change: dict[str, Any]) -> None:
     from agent_bom.cloud.side_scan_lifecycle import SideScanStateConflictError
 

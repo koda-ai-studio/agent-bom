@@ -133,6 +133,7 @@ class SideScanExecutionRecord:
     created_at: str = ""
     updated_at: str = ""
     request_fingerprint: str = ""
+    authorization_ref: str = ""
     schema_version: str = field(default=LIFECYCLE_SCHEMA_VERSION, init=False)
 
     def __post_init__(self) -> None:
@@ -327,6 +328,7 @@ class SideScanExecutionRecord:
             "failure_code": self.failure_code,
             "warning_codes": list(self.warning_codes),
             **({"request_fingerprint": self.request_fingerprint} if self.request_fingerprint else {}),
+            **({"authorization_ref": self.authorization_ref} if self.authorization_ref else {}),
             "state_version": self.state_version,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
@@ -401,6 +403,7 @@ class SideScanExecutionRecord:
             failure_code=str(payload.get("failure_code") or ""),
             warning_codes=tuple(str(item) for item in raw_warnings) if isinstance(raw_warnings, list) else (),
             request_fingerprint=str(payload.get("request_fingerprint") or ""),
+            authorization_ref=str(payload.get("authorization_ref") or ""),
             state_version=_coerce_int(payload.get("state_version")),
             created_at=str(payload.get("created_at") or ""),
             updated_at=str(payload.get("updated_at") or ""),

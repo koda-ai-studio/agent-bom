@@ -144,3 +144,29 @@ def test_findings_are_bound_to_the_image_in_the_stream_and_graph(tmp_path: Path)
     assert [h.entity_type for h in holders] == [EntityType.CONTAINER]
     assert holders[0].label == "image: image.tar"
     assert agent.stable_id in holders[0].attributes["identity"]["aliases"]
+
+
+@pytest.mark.parametrize("surface", ["image", "filesystem"])
+@pytest.mark.parametrize(
+    "payload,expected",
+    [
+        (b"import sys; p = sys.path\nimport os; p = os.path\n", False),
+        (pickle.dumps(_Implant(), protocol=0), True),
+        (pickle.dumps(_Implant(), protocol=4), True),
+        (b"import sys\n" + pickle.dumps(_Implant(), protocol=4), True),
+        (b"import sys\nnot valid Python !\n", True),
+    ],
+)
+def test_python_startup_pth_is_distinct_from_model_payload(tmp_path, surface, payload, expected):
+    from agent_bom.model_files import scan_model_files
+
+    name = "google_cloud_aiplatform-nspkg.pth"
+    if surface == "image":
+        _, metadata = _scan(_image(tmp_path, [{f"app/site-packages/{name}": payload}]))
+        artifacts = metadata.get("model_artifacts", [])
+    else:
+        (tmp_path / name).write_bytes(payload)
+        artifacts, _ = scan_model_files(tmp_path)
+    assert bool(artifacts) is expected
+    if payload.startswith((b"cposix", b"\x80")):
+        assert any(flag["type"] == "MALICIOUS_PICKLE" for item in artifacts for flag in item["security_flags"])

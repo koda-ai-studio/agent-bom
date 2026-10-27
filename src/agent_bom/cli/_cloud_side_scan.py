@@ -80,7 +80,9 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     help="console tables, or JSON side_scan_results records (packages + CVEs per VM / image).",
 )
 @click.option("--no-secrets", is_flag=True, help="Skip the redacted secret scan (SBOM + CVEs only).")
-@click.option("--no-sweep-orphans", is_flag=True, help="AWS only: skip the pre-run sweep of stranded snapshots.")
+@click.option(
+    "--no-sweep-orphans", is_flag=True, help="AWS only: suppress the legacy orphan-reconciliation warning; tag-only deletion is disabled."
+)
 def side_scan_cmd(provider: str, image_id: Optional[str], output_format: str, **options: Any) -> None:
     """Agentless disk / machine-image side-scan — SBOM + CVEs per VM + redacted secrets.
 

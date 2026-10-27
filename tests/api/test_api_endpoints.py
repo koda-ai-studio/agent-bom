@@ -6,7 +6,6 @@ import json
 import uuid
 from pathlib import Path
 from unittest.mock import patch
-from urllib.parse import urlsplit
 
 import pytest
 from starlette.testclient import TestClient
@@ -445,7 +444,7 @@ def test_health_keeps_strict_api_csp():
 
 
 def test_docs_csp_relaxation_is_exact_route_scoped():
-    """Only the real Swagger/ReDoc HTML routes should get CDN CSP relaxations."""
+    """Only the real Swagger/ReDoc HTML routes authorize their nonce-bearing scripts."""
     client, _ = _fresh_client()
 
     docs_resp = client.get("/docs")
@@ -456,8 +455,8 @@ def test_docs_csp_relaxation_is_exact_route_scoped():
     directives = [directive.strip() for directive in csp.split(";") if directive.strip()]
     script_src = next((directive for directive in directives if directive.startswith("script-src ")), "")
     script_src_sources = script_src.split()[1:] if script_src else []
-    parsed_sources = [urlsplit(source) for source in script_src_sources]
-    assert any(source.scheme == "https" and source.netloc == ".".join(("cdn", "jsdelivr", "net")) for source in parsed_sources)
+    assert len(script_src_sources) == 1 and script_src_sources[0].startswith("'nonce-")
+    assert "unsafe-inline" not in script_src and "https:" not in script_src
     assert near_miss_resp.headers.get("content-security-policy") == "default-src 'self'"
 
 

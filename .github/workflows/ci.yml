@@ -1616,8 +1616,8 @@ jobs:
         with:
           python-version: '3.13'
 
-      - name: Install cloud extras
-        run: uv sync --frozen --extra dev --extra aws --extra azure --extra gcp
+      - name: Install cloud and signature verification extras
+        run: uv sync --frozen --extra dev --extra aws --extra azure --extra gcp --extra sigstore
 
       - name: Run extra-gated SDK import smoke
         # Extras this job does not install (databricks/snowflake/mcp/…) are
@@ -1626,6 +1626,11 @@ jobs:
         # symbol fails here instead of on a fresh customer install.
         run: |
           uv run pytest tests/test_extra_gated_sdk_imports.py tests/test_gcp_sdk_coverage.py -q
+
+      - name: Verify real Sigstore bundle offline
+        run: |
+          uv run python -c "import sigstore"
+          uv run pytest tests/test_image_keyless_verification.py -q
 
   postgres-integration:
     name: Postgres Integration Contract
@@ -2349,20 +2354,21 @@ jobs:
         run: uv sync --frozen --extra dev
 
       - name: Image vulnerability scan (agent-bom — dogfood)
-        # Self-hosted image gate over the locally loaded agent-bom:test image
-        # (agent-bom shells `docker save` to read it). Native OS-layer
+        # Scan the exact locally built archive. A local RepoDigest does not
+        # prove registry publication; signature discovery belongs to the
+        # published-image release gate. Native OS-layer
         # (dpkg/rpm/apk) + app-dependency scanning at MEDIUM+ severity
         # (no separate UNKNOWN tier), unfixable findings excluded
         # (= ignore-unfixed), and the .image-scan-ignore CVE allowlist.
         run: |
-          uv run agent-bom image agent-bom:test \
+          docker save agent-bom:test -o /tmp/agent-bom-test.tar
+          uv run agent-bom image --tar /tmp/agent-bom-test.tar \
             --ignore .image-scan-ignore \
             --exclude-unfixable \
             --fail-on-severity medium
 
       - name: agent-bom native image tar scan gate
         run: |
-          docker save agent-bom:test -o /tmp/agent-bom-test.tar
           chmod 0644 /tmp/agent-bom-test.tar
           # Private atomic exports must belong to the host validation process.
           docker run --rm --user "$(id -u):$(id -g)" -v /tmp:/workspace agent-bom:test \

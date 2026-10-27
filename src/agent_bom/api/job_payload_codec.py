@@ -23,11 +23,13 @@ from typing import Annotated, Any
 from pydantic import BaseModel, BeforeValidator
 from pydantic_core import to_json
 
+from agent_bom.api.payload_compression import decode_zstd_json
 from agent_bom.config import _str
 
 RESULT_CODEC_KEY = "__abom_codec"
 CODEC_VERSION = 1
 MIN_COMPRESS_BYTES = 4096
+MAX_RESULT_BYTES = 256 * 1024 * 1024
 _ZSTD_LEVEL = 3
 # Keys SQL may read inside a stored result. ``findings``/``vulnerabilities``
 # exist only on plain rows; compressed rows answer through the ``*_count`` keys.
@@ -56,6 +58,8 @@ def encode_result_field(value: Any) -> Any:
     if value is None:
         return None
     raw = to_json(value)
+    if len(raw) > MAX_RESULT_BYTES:
+        raise ValueError("Stored job result exceeds the 256 MiB size limit")
     zstd = _zstd() if compression_enabled() else None
     if len(raw) < MIN_COMPRESS_BYTES or zstd is None:
         return json.loads(raw)
@@ -76,12 +80,18 @@ def decode_result_field(value: Any) -> Any:
         return value
     header = value[RESULT_CODEC_KEY]
     if not isinstance(header, dict) or header.get("v") != CODEC_VERSION or header.get("codec") != "zstd":
-        raise ValueError(f"Unsupported stored job result codec version: {header!r}")
+        raise ValueError("Unsupported stored job result codec version")
+    if header.get("encoding") != "base64":
+        raise ValueError("Unsupported stored job result encoding")
+    size = header.get("raw_bytes")
+    if type(size) is not int or size < 1:
+        raise ValueError("Invalid stored job result size")
+    if size > MAX_RESULT_BYTES:
+        raise ValueError("Stored job result exceeds the 256 MiB size limit")
     zstd = _zstd()
     if zstd is None:  # pragma: no cover - zstandard ships with the api extra
         raise ValueError("Reading a compressed job result requires the zstandard package (agent-bom[api])")
-    raw = zstd.ZstdDecompressor().decompress(base64.b64decode(value["data"]), max_output_size=int(header["raw_bytes"]))
-    return json.loads(raw)
+    return decode_zstd_json(value.get("data"), max_bytes=MAX_RESULT_BYTES, expected_size=size)
 
 
 def encode_job_payload(job: BaseModel) -> str:

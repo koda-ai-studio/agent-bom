@@ -799,9 +799,10 @@ def to_cypher(graph: DepGraph) -> str:
     lines.append("")
     lines.append("// ── Create relationships ──")
 
+    node_labels = {node.id: _NEO4J_LABELS.get(node.kind, "Unknown") for node in graph.nodes}
     for edge in graph.edges:
-        src_label = _NEO4J_LABELS.get(next((n.kind for n in graph.nodes if n.id == edge.source), ""), "Unknown")
-        tgt_label = _NEO4J_LABELS.get(next((n.kind for n in graph.nodes if n.id == edge.target), ""), "Unknown")
+        src_label = node_labels.get(edge.source, "Unknown")
+        tgt_label = node_labels.get(edge.target, "Unknown")
         rel_type = _NEO4J_REL_TYPES.get(edge.kind, edge.kind.upper())
         src_id = _cypher_str(edge.source)
         tgt_id = _cypher_str(edge.target)

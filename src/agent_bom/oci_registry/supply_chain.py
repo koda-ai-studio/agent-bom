@@ -8,6 +8,7 @@ from agent_bom.coverage import record_scan_input_warning
 from agent_bom.image_evidence.base_image import match_base_layers
 from agent_bom.image_evidence.model import ImageEvidence
 from agent_bom.oci_registry.client import RegistryClient, RegistryError
+from agent_bom.oci_registry.keyless import keyless_signature_status
 from agent_bom.oci_registry.manifests import resolve_image_manifest
 from agent_bom.oci_registry.platforms import PlatformNotFoundError
 from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
@@ -22,6 +23,8 @@ def _candidate_digests(evidence: ImageEvidence) -> list[str]:
 
 
 def _signature_status(client: RegistryClient, evidence: ImageEvidence, digests: list[str]) -> dict[str, Any]:
+    if verdict := keyless_signature_status(client, evidence, digests):
+        return verdict
     key = None
     if evidence.cosign_key_path:
         try:

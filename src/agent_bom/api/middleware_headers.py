@@ -14,6 +14,7 @@ from starlette.responses import Response
 
 from agent_bom import __version__
 from agent_bom.api.dashboard_csp import dashboard_csp_header, describe_dashboard_csp_posture
+from agent_bom.api.docs_ui import docs_csp
 from agent_bom.api.error_envelope import (
     _build_error_envelope,
 )
@@ -25,29 +26,11 @@ _logger = logging.getLogger("agent_bom.api.middleware")
 
 _API_CSP = "default-src 'self'"
 
-# /docs (Swagger UI) and /redoc serve HTML shells that load swagger-ui /
-# redoc bundles + a favicon from public CDNs (cdn.jsdelivr.net,
-# fastapi.tiangolo.com). The strict default-src 'self' API CSP blocks
-# them, leaving a blank page. We narrowly relax CSP for these two
-# documentation routes — they remain disable-able via
-# AGENT_BOM_DISABLE_DOCS for production deployments per the
-# _EXEMPT_PATHS toggle below.
-_DOCS_CSP = (
-    "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-    # Favicon is served from /brand/mark.svg (self); keep jsdelivr for swagger assets.
-    "img-src 'self' data: https://cdn.jsdelivr.net; "
-    "font-src 'self' data: https://cdn.jsdelivr.net; "
-    "worker-src 'self' blob:; "
-    "connect-src 'self'"
-)
 
-
-def _content_security_policy(path: str, content_type: str) -> str:
+def _content_security_policy(path: str, content_type: str, docs_nonce: str | None = None) -> str:
     """Return a route-aware CSP that keeps the API strict and the dashboard usable."""
     if path in {"/docs", "/redoc"} and "text/html" in content_type:
-        return _DOCS_CSP
+        return docs_csp(docs_nonce) if docs_nonce else _API_CSP
     if "text/html" in content_type and not path.startswith(("/v1/", "/docs", "/redoc", "/openapi.json")):
         return dashboard_csp_header()
     return _API_CSP
@@ -163,6 +146,7 @@ class TrustHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = _content_security_policy(
             request.url.path,
             response.headers.get("content-type", ""),
+            getattr(request.state, "docs_nonce", None),
         )
         response.headers["Strict-Transport-Security"] = hsts_header_value()
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"

@@ -52,9 +52,6 @@ from agent_bom.api.middleware_headers import (
     _API_CSP as _API_CSP,
 )
 from agent_bom.api.middleware_headers import (
-    _DOCS_CSP as _DOCS_CSP,
-)
-from agent_bom.api.middleware_headers import (
     TrustHeadersMiddleware as TrustHeadersMiddleware,
 )
 from agent_bom.api.middleware_headers import (

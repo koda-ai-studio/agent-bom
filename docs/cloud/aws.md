@@ -154,9 +154,12 @@ never modified or deleted; encrypted AMI snapshots also need KMS use on their
 key). Packages and CVEs are reported per owning instance and project onto the
 EC2 instance node in the graph; `-f json` emits the `side_scan_results` records
 (see [CLOUD_CONNECT.md](../CLOUD_CONNECT.md#side-scan-coverage-packages-and-cves-per-vm-and-machine-images)). `--no-secrets` returns SBOM + CVEs only;
-`--no-sweep-orphans` skips the pre-run stranded-snapshot sweep. With the flag
-unset the command prints how to enable it and exits non-zero — it never starts a
-snapshot implicitly.
+`--no-sweep-orphans` suppresses the legacy orphan-reconciliation warning.
+Automatic tag-only orphan deletion is disabled: generic tags cannot distinguish
+an abandoned snapshot from another active run. Interrupted AWS runs require
+operator reconciliation of recorded IDs, collector mounts and provider events.
+With `AGENT_BOM_SIDESCAN` unset, the command prints enablement guidance and exits
+non-zero; it never starts a snapshot implicitly.
 
 Azure Managed Disk and GCP Persistent Disk inventory also emits
 `side_scan_targets` records with provider, target id, location, size, encryption,

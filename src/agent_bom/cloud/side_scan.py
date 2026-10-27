@@ -16,9 +16,9 @@ Trust model (non-negotiable):
   *type/location* (never secret values, never file contents) are returned.
 - **Cleanup evidence.** ``try/finally`` attempts mount → volume → snapshot
   cleanup. Failed unmounts retain the clone and snapshot for operator recovery;
-  warning codes and resource IDs identify incomplete cleanup. A best-effort
-  orphan sweep handles tagged snapshots after crashes; it is not proof that a
-  collector mount or attached volume has been recovered.
+  warning codes and resource IDs identify incomplete cleanup. After crashes,
+  AWS resources require operator reconciliation; generic ownership tags never
+  authorize automatic orphan deletion.
 
 The actual OS-level mount runs on the collector and is abstracted behind a
 :class:`MountController` so the lifecycle is fully mockable in tests with no real
@@ -51,7 +51,7 @@ from .base import CloudDiscoveryError
 
 logger = logging.getLogger(__name__)
 
-# Tag applied to every snapshot/volume we create, so the orphan sweep can find
+# Tag applied to every snapshot/volume we create for operator identification of
 # and reap resources left behind by a crashed run.
 SIDESCAN_TAG_KEY = "agent-bom-sidescan"
 SIDESCAN_TAG_VALUE = "true"
@@ -530,65 +530,40 @@ class AwsEbsSideScanner:
         if state.volume_id:
             if state.attached_device:
                 try:
-                    self._ec2.detach_volume(VolumeId=state.volume_id, Force=True)
+                    self._ec2.detach_volume(VolumeId=state.volume_id, Force=False)
                     waiter = getattr(self._ec2, "get_waiter", None)
                     if callable(waiter):
-                        try:
-                            self._ec2.get_waiter("volume_available").wait(VolumeIds=[state.volume_id])
-                        except Exception:  # noqa: BLE001
-                            pass
-                except Exception as exc:  # noqa: BLE001
-                    warnings.append(f"detach volume {state.volume_id} failed: {exc}")
+                        self._ec2.get_waiter("volume_available").wait(VolumeIds=[state.volume_id])
+                except Exception:  # noqa: BLE001
+                    warnings.append("collector_detach_incomplete")
+                    return warnings
             try:
                 self._ec2.delete_volume(VolumeId=state.volume_id)
                 logger.info("side-scan: deleted temp volume %s", state.volume_id)
-            except Exception as exc:  # noqa: BLE001
-                warnings.append(f"delete volume {state.volume_id} failed: {exc}")
+            except Exception:  # noqa: BLE001
+                warnings.append("temporary_volume_delete_failed")
+                return warnings
 
         if state.snapshot_id and state.owns_snapshot:
             try:
                 self._ec2.delete_snapshot(SnapshotId=state.snapshot_id)
                 logger.info("side-scan: deleted snapshot %s", state.snapshot_id)
-            except Exception as exc:  # noqa: BLE001
-                warnings.append(f"delete snapshot {state.snapshot_id} failed: {exc}")
+            except Exception:  # noqa: BLE001
+                warnings.append("temporary_snapshot_delete_failed")
 
         return warnings
 
     # ── Orphan sweep (recover from an earlier crash) ──────────────────────
 
     def sweep_orphan_snapshots(self) -> list[str]:
-        """Delete any ``agent-bom-sidescan``-tagged snapshots left by a crash.
+        """Preserve unproven resources: generic tags cannot authorize deletion.
 
-        Best-effort recovery: even though every run cleans up in a ``finally``,
-        a hard kill (OOM, SIGKILL) could strand a snapshot. This sweep is safe to
-        call at the start of every run — it only touches resources we tagged.
-        Returns the list of snapshot ids deleted.
+        Legacy AWS runs have no durable execution ledger. After a process crash,
+        an operator must reconcile the saved resource IDs and provider events.
+        Kept as a non-mutating compatibility hook for existing callers.
         """
-        deleted: list[str] = []
-        filters = [{"Name": f"tag:{SIDESCAN_TAG_KEY}", "Values": [SIDESCAN_TAG_VALUE]}]
-        next_token: str | None = None
-        try:
-            while True:
-                kwargs: dict[str, object] = {"Filters": filters, "OwnerIds": ["self"]}
-                if next_token:
-                    kwargs["NextToken"] = next_token
-                resp = self._ec2.describe_snapshots(**kwargs)
-                for snap in resp.get("Snapshots", []):
-                    snap_id = snap.get("SnapshotId", "")
-                    if not snap_id:
-                        continue
-                    try:
-                        self._ec2.delete_snapshot(SnapshotId=snap_id)
-                        deleted.append(snap_id)
-                        logger.info("side-scan: orphan sweep deleted stranded snapshot %s", snap_id)
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning("side-scan: orphan sweep could not delete %s: %s", snap_id, sanitize_text(exc))
-                next_token = resp.get("NextToken")
-                if not next_token:
-                    break
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("side-scan: orphan sweep describe failed: %s", sanitize_text(exc))
-        return deleted
+        logger.warning("AWS orphan cleanup requires operator reconciliation; tag-only deletion is disabled")
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -616,9 +591,9 @@ async def run_side_scan(
     actionable message when ``AGENT_BOM_SIDESCAN`` is not set — callers should
     surface that message rather than crash.
 
-    Guarantees: each volume's lifecycle cleans up in a ``finally``; when
-    ``sweep_orphans`` is set, any snapshot stranded by an earlier crash is reaped
-    first.
+    Each volume's lifecycle attempts ordered cleanup in a ``finally``. The
+    legacy ``sweep_orphans`` hook only warns: tag-only orphan deletion is disabled;
+    interrupted AWS runs require operator reconciliation.
     """
     scanner = AwsEbsSideScanner(
         ec2_client=ec2_client,

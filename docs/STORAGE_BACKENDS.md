@@ -236,6 +236,14 @@ query reaches any other key. An unknown codec version fails the read rather than
 returning an envelope as data. Measured sizes are in
 [`docs/perf/report-volume.md`](perf/report-volume.md).
 
+Stored job result fields are limited to 256 MiB of decoded JSON; individual
+compliance-hub finding payloads are limited to 16 MiB. New writes enforce these
+limits too. Compressed reads bound the encoded input and decompression window
+(16 MiB), require one complete zstd frame without trailing data, and check a
+job result's decoded size against its header. Corrupt or oversized compressed
+evidence fails the read; it is never replaced with an empty, apparently clean
+finding. Preserve the original row when investigating a failed read.
+
 Releases before this one read a compressed result as the envelope itself. During
 a rolling upgrade, or before a downgrade, set `AGENT_BOM_JOB_RESULT_CODEC=none` on
 every writer so new rows stay readable by the older version; rows already

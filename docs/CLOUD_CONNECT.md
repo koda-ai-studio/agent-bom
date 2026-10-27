@@ -482,8 +482,7 @@ executor and reading the same durable lifecycle store. The executors ship as
 concrete Azure Managed Disk and GCP Persistent Disk adapters with injected SDK
 clients, but no credentialed live smoke is claimed yet
 (`credentialed_smoke=false`) — live proof requires scoped snapshot/attach/delete
-permissions and execution on the selected collector host. The API uses its own
-configured cloud identity; supplying a collector ID does not dispatch work to a
+permissions and execution on the selected collector host. Server triggers use a tenant-owned connection with an operator lifecycle grant; supplying a collector ID does not dispatch work to a
 remote host.
 
 Azure/GCP setup failures are stored as terminal, unevaluable executions with a
@@ -493,6 +492,51 @@ location, or scan options conflict; legacy records without a request fingerprint
 cannot prove equivalence and are rejected without rewriting history. A running
 execution remains running on retry. A new CLI invocation creates a new execution;
 it does not automatically resume an earlier cleanup.
+
+### Authorize a server-side side-scan
+
+REST, MCP, the dashboard, and scheduled targets require `connection_id` for a
+non-demo Azure/GCP workload connection in the authenticated tenant. Add an
+explicit `side_scan` grant to its operator-owned workload binding (§1b):
+
+```json
+"side_scan": {
+  "targets": ["/subscriptions/subscription-id/resourceGroups/workloads/providers/Microsoft.Compute/disks/os"],
+  "collectors": ["collector-vm"],
+  "locations": ["eastus"],
+  "collector_resource_groups": ["collectors"]
+}
+```
+
+These are exact allowlists; wildcards do not grant access. For GCP, use the disk
+or image resource path, collector instance name and zone; omit the Azure
+resource-group list. Organization bindings cannot authorize this lifecycle.
+Grant the selected provider identity only the required snapshot, temporary disk,
+attach and cleanup permissions in the selected account.
+
+Submit `POST /v1/cloud/side-scan` with an authenticated admin session:
+
+```json
+{"connection_id":"connection-id","provider":"azure",
+ "account_id":"subscription-id","location":"eastus",
+ "target_id":"/subscriptions/subscription-id/resourceGroups/workloads/providers/Microsoft.Compute/disks/os",
+ "collector_id":"collector-vm","collector_resource_group":"collectors",
+ "idempotency_key":"disk-assessment-1"}
+```
+
+Use the same `connection_id` in MCP `cloud_side_scan` and scheduler target
+configuration. Inspect the returned execution ID through `GET /v1/cloud/side-scan`
+for scan status, cleanup state and evidence. A missing, foreign, expired, revoked
+or mismatched grant fails closed before provider clients are built. The binding
+is rechecked before credential construction; changing it invalidates the request
+fingerprint used for retries. Server triggers have no ambient credential fallback.
+Standalone CLI execution retains its explicitly configured provider credential
+chain and is not a multi-tenant server authorization boundary.
+
+Ordinary GCP discovery keeps the read-only OAuth scope even when its binding has
+a lifecycle grant. Only the authorized side-scan path requests cloud-platform
+scope for the same bound principal. Provider IAM still limits effective permissions.
+These fixture-tested controls do not establish live provider qualification.
 
 Scan completion and cleanup completion are separate. Failed unmounts remain
 recorded as partial cleanup; the owned attachment, clone disk and snapshot are

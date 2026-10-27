@@ -35,6 +35,7 @@ from agent_bom.api.side_scan_scheduler import (
     schedule_provider_side_scans,
     sidescan_scheduler_enabled,
 )
+from tests._side_scan_test_auth import authorized_side_scan_orchestration as authorized_side_scan_orchestration
 
 _AZURE_TARGET = ScheduledSideScanTarget(
     provider="azure",
@@ -43,6 +44,7 @@ _AZURE_TARGET = ScheduledSideScanTarget(
     location="eastus",
     collector_id="collector-vm",
     tenant_id="tenant-a",
+    connection_id="fixture-connection",
     collector_resource_group="collectors",
 )
 _GCP_TARGET = ScheduledSideScanTarget(
@@ -52,6 +54,7 @@ _GCP_TARGET = ScheduledSideScanTarget(
     location="us-central1-a",
     collector_id="collector-inst",
     tenant_id="tenant-b",
+    connection_id="fixture-connection",
 )
 
 
@@ -115,6 +118,7 @@ def test_schedule_enabled_loads_targets_from_config_when_none_passed(monkeypatch
                     "location": "us-central1-a",
                     "collector_id": "c-9",
                     "tenant_id": "tenant-z",
+                    "connection_id": "fixture-connection",
                 }
             ]
         )
@@ -238,6 +242,7 @@ def test_load_targets_inline_json(monkeypatch):
                     "account_id": "sub",
                     "location": "eastus",
                     "collector_id": "c",
+                    "connection_id": "fixture-connection",
                     "tenant_id": "t",
                     "collector_resource_group": "rg",
                 }
@@ -261,6 +266,7 @@ def test_load_targets_from_file_path(monkeypatch, tmp_path):
                     "account_id": "proj",
                     "location": "us-central1-a",
                     "collector_id": "c",
+                    "connection_id": "fixture-connection",
                     "tenant_id": "t",
                 }
             ]
@@ -281,10 +287,41 @@ def test_load_targets_skips_invalid_provider_and_missing_fields(monkeypatch):
         "AGENT_BOM_SIDESCAN_SCHEDULER_TARGETS",
         json.dumps(
             [
-                {"provider": "aws", "target_id": "x", "account_id": "a", "location": "z", "collector_id": "c", "tenant_id": "t"},
-                {"provider": "azure", "target_id": "x", "account_id": "a", "location": "z", "collector_id": "c", "tenant_id": "t"},  # no RG
-                {"provider": "gcp", "account_id": "a", "location": "z", "collector_id": "c", "tenant_id": "t"},  # no target_id
-                {"provider": "gcp", "target_id": "ok", "account_id": "a", "location": "z", "collector_id": "c", "tenant_id": "t"},
+                {
+                    "provider": "aws",
+                    "target_id": "x",
+                    "account_id": "a",
+                    "location": "z",
+                    "collector_id": "c",
+                    "connection_id": "fixture-connection",
+                    "tenant_id": "t",
+                },
+                {
+                    "provider": "azure",
+                    "target_id": "x",
+                    "account_id": "a",
+                    "location": "z",
+                    "collector_id": "c",
+                    "connection_id": "fixture-connection",
+                    "tenant_id": "t",
+                },  # no RG
+                {
+                    "provider": "gcp",
+                    "account_id": "a",
+                    "location": "z",
+                    "collector_id": "c",
+                    "connection_id": "fixture-connection",
+                    "tenant_id": "t",
+                },  # no target_id
+                {
+                    "provider": "gcp",
+                    "target_id": "ok",
+                    "account_id": "a",
+                    "location": "z",
+                    "collector_id": "c",
+                    "connection_id": "fixture-connection",
+                    "tenant_id": "t",
+                },
             ]
         ),
     )

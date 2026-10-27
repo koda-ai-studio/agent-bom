@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nTenant-scoped door for the shipped ``run_provider_side_scan`` executor: an\nopt-in mutation (temp snapshot/disk create, attach, delete) that never\nmodifies the scanned disk or image, mounts a temp copy on an in-account\ncollector read-only and records SBOM + CVE + secret *metadata* only.\nCredentials are never accepted here; the executor resolves scoped lifecycle\ncredentials from the provider chain. AWS EBS keeps its own CLI entrypoint.",
+  "description": "Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).\n\nOpt-in snapshot/disk lifecycle via ``run_provider_side_scan`` that never\nmodifies the scanned disk or image, mounts a temp copy on an in-account\ncollector read-only and records SBOM + CVE + secret *metadata* only.\nCredentials are never accepted here; a tenant-owned connection must carry an\noperator lifecycle grant for the requested scope. AWS keeps its CLI entrypoint.",
   "properties": {
     "account_id": {
       "description": "Azure subscription id / GCP project id owning the disk + collector.",
@@ -29,6 +29,13 @@
       "default": null,
       "description": "Azure only: resource group of the collector VM.",
       "title": "Collector Resource Group"
+    },
+    "connection_id": {
+      "description": "Tenant-owned connection with an operator side-scan lifecycle grant.",
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Connection Id",
+      "type": "string"
     },
     "idempotency_key": {
       "anyOf": [
@@ -96,6 +103,7 @@
     }
   },
   "required": [
+    "connection_id",
     "provider",
     "target_id",
     "account_id",

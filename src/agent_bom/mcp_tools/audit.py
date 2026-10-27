@@ -6,23 +6,16 @@ import json
 import logging
 
 from agent_bom import discovery, mcp_introspect
-from agent_bom.core.settings import TRUTHY, env_opt
 from agent_bom.discovery.agent_permission_posture import evaluate_agent_permission_posture
 from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
 from agent_bom.mcp_tools.dispatch import resolve_tool_path
 from agent_bom.mcp_tools.host_local import ensure_host_local_allowed
+from agent_bom.mcp_tools.live import LIVE_INTROSPECTION_ENV
+from agent_bom.mcp_tools.live import live_introspection_allowed as _live_introspection_allowed
 from agent_bom.scanners.mcp_audit import audit_mcp_agents
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 
 logger = logging.getLogger(__name__)
-
-LIVE_INTROSPECTION_ENV = "AGENT_BOM_MCP_LIVE_INTROSPECTION"
-
-
-def _live_introspection_allowed() -> bool:
-    """Unset allows live mode; any value other than an explicit yes refuses it."""
-    value = env_opt(LIVE_INTROSPECTION_ENV)
-    return value is None or value.strip().lower() in TRUTHY
 
 
 def _named_auth_findings(agents, auth_findings) -> list[dict]:

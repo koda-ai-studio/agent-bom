@@ -67,7 +67,7 @@ jobs:
           persist-credentials: false
       - id: agent-bom
         # agent-bom: ignore[GHA-002] published template: callers pin this workflow, and it tracks the matching v0 action
-        uses: koda-ai-studio/agent-bom@v0
+        uses: koda-ai-studio/agent-bom@1763233e6868d397a8dbe9d175ca5e9e48d8de9a # v0.110.0
         with:
           scan-type: ${{ inputs.scan-type }}
           scan-ref: ${{ inputs.scan-ref }}

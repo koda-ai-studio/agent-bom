@@ -256,6 +256,7 @@ describe("CWPP side-scan page", () => {
     render(<CwppSideScanPage />);
     await waitFor(() => expect(screen.getByText("Run a side-scan")).toBeInTheDocument());
 
+    fireEvent.change(screen.getByLabelText("Tenant connection ID"), { target: { value: "connection-a" } });
     fireEvent.change(screen.getByPlaceholderText("proj / SUB"), { target: { value: "proj-1" } });
     fireEvent.change(screen.getByPlaceholderText("projects/…/disks/os"), { target: { value: "projects/proj-1/zones/us-central1-a/disks/os" } });
     fireEvent.change(screen.getByPlaceholderText("us-central1-a"), { target: { value: "us-central1-a" } });
@@ -264,7 +265,7 @@ describe("CWPP side-scan page", () => {
     fireEvent.click(screen.getByRole("button", { name: /Run side-scan/i }));
     await waitFor(() => expect(apiMock.triggerSideScan).toHaveBeenCalledTimes(1));
     const body = apiMock.triggerSideScan.mock.calls[0]![0];
-    expect(body).toMatchObject({ provider: "gcp", account_id: "proj-1", collector_id: "collector-vm" });
+    expect(body).toMatchObject({ connection_id: "connection-a", provider: "gcp", account_id: "proj-1", collector_id: "collector-vm" });
     // No credential field is ever sent.
     expect(body).not.toHaveProperty("secret");
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/Scan complete/));
@@ -275,7 +276,7 @@ describe("CWPP side-scan page", () => {
     apiMock.triggerSideScan.mockResolvedValue({ status: "scan_complete", execution_id: "exec-newrun", execution: execution({ cleanup_status: cleanup }) });
     render(<CwppSideScanPage />);
     await screen.findByText("Run a side-scan");
-    for (const placeholder of ["proj / SUB", "projects/…/disks/os", "us-central1-a", "collector-vm"]) {
+    for (const placeholder of ["Connection with side-scan permission", "proj / SUB", "projects/…/disks/os", "us-central1-a", "collector-vm"]) {
       fireEvent.change(screen.getByPlaceholderText(placeholder), { target: { value: "scope" } });
     }
     fireEvent.click(screen.getByRole("button", { name: /Run side-scan/i }));
@@ -295,6 +296,7 @@ describe("CWPP side-scan page", () => {
     });
     render(<CwppSideScanPage />);
     await waitFor(() => expect(screen.getByText("Run a side-scan")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("Tenant connection ID"), { target: { value: "connection-a" } });
     fireEvent.change(screen.getByPlaceholderText("proj / SUB"), { target: { value: "proj-1" } });
     fireEvent.change(screen.getByPlaceholderText("projects/…/disks/os"), { target: { value: "d" } });
     fireEvent.change(screen.getByPlaceholderText("us-central1-a"), { target: { value: "z" } });

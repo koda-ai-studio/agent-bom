@@ -23,12 +23,14 @@
       "command": "uv",
       "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server"],
       "cwd": ".",
+      "env_vars": ["AGENT_BOM_MCP_WORKSPACE_ROOTS"],
       "env": { "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0" }
     },
     "agent-bom-audit": {
       "command": "uv",
       "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server", "--profile", "audit"],
       "cwd": ".",
+      "env_vars": ["AGENT_BOM_MCP_WORKSPACE_ROOTS"],
       "env": { "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0" }
     }
   },

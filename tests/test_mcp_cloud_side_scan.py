@@ -25,6 +25,7 @@ from agent_bom.cloud.side_scan_targets import (
     side_scan_state_db_path,
 )
 from agent_bom.mcp_tools.side_scan import cloud_side_scan_impl
+from tests._side_scan_test_auth import authorized_side_scan_orchestration as authorized_side_scan_orchestration
 
 
 def _truncate(text: str) -> str:

@@ -708,46 +708,24 @@ async def cloud_side_scan_trigger(
     - provider extra / scoped lifecycle credentials unavailable → ``200``
       ``status=unavailable`` with the actionable, sanitized reason.
     - Azure requires ``collector_resource_group`` → ``400``.
-    Credentials are never accepted here; the executor resolves separately
-    scoped lifecycle credentials from the provider's default chain
-    (``credentialed_smoke=false``).
+    A tenant-owned connection and exact operator lifecycle grant are required
+    before execution; missing or mismatched authority returns 403. Bound
+    credentials have no ambient fallback (``credentialed_smoke=false``).
     """
+    from agent_bom.api.side_scan_authorization import prepare_side_scan_request
     from agent_bom.api.side_scan_report import persist_side_scan_graph_async, side_scan_request_error
     from agent_bom.cloud.side_scan import SideScanConfigError, SideScanDisabledError
-    from agent_bom.cloud.side_scan_lifecycle import SideScanStateConflictError, get_side_scan_state_store, new_side_scan_execution
+    from agent_bom.cloud.side_scan_lifecycle import SideScanStateConflictError, get_side_scan_state_store
 
     tenant_id = _tenant(request)
     provider = body.provider
     if rejection := side_scan_request_error(body):
         raise HTTPException(status_code=400, detail=rejection)
 
-    import uuid as _uuid
-
-    idempotency_key = (body.idempotency_key or _uuid.uuid4().hex).strip()
-    # Deterministic execution id so the record is readable by execution_id after
-    # the run, and so retries with the same idempotency key coalesce.
-    execution_id = new_side_scan_execution(
-        tenant_id=tenant_id,
-        provider=provider,
-        account_id=body.account_id.strip(),
-        target_id=body.target_id.strip(),
-        collector_id=body.collector_id.strip(),
-        idempotency_key=idempotency_key,
-    ).execution_id
-
-    run_kwargs = dict(
-        provider=provider,
-        target_id=body.target_id.strip(),
-        account_id=body.account_id.strip(),
-        location=body.location.strip(),
-        collector_id=body.collector_id.strip(),
-        tenant_id=tenant_id,
-        idempotency_key=idempotency_key,
-        collector_resource_group=body.collector_resource_group,
-        region=body.region,
-        scan_secrets_enabled=body.scan_secrets_enabled,
-        target_type=body.target_type,
-    )
+    try:
+        execution_id, run_kwargs = prepare_side_scan_request(tenant_id, body)
+    except SideScanConfigError as exc:
+        raise HTTPException(status_code=403, detail="Side-scan connection or lifecycle scope is not authorized.") from exc
 
     try:
         async with adaptive_backpressure("cloud_side_scan"):

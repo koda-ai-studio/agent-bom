@@ -23,7 +23,7 @@ def _inventory(workloads: int) -> dict[str, Any]:
 
 def _call(monkeypatch: pytest.MonkeyPatch, inventory: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
     monkeypatch.setattr(kspm_tool, "_collect_inventory", lambda **_kw: inventory)
-    raw = asyncio.run(kspm_tool.kspm_workload_inventory_impl(_truncate_response=lambda s: s, **kwargs))
+    raw = asyncio.run(kspm_tool.kspm_workload_inventory_impl(live=True, _truncate_response=lambda s: s, **kwargs))
     return json.loads(raw)
 
 
@@ -48,5 +48,5 @@ def test_tool_error_is_sanitized_json(monkeypatch: pytest.MonkeyPatch) -> None:
         raise RuntimeError("kubectl not available")
 
     monkeypatch.setattr(kspm_tool, "_collect_inventory", boom)
-    data = json.loads(asyncio.run(kspm_tool.kspm_workload_inventory_impl(_truncate_response=lambda s: s)))
+    data = json.loads(asyncio.run(kspm_tool.kspm_workload_inventory_impl(live=True, _truncate_response=lambda s: s)))
     assert "error" in data

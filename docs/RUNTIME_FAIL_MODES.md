@@ -279,3 +279,27 @@ same incomplete-evaluation decision unless ASCII semantics are explicit.
 This avoids differing dotted/dotless-I case folds weakening an existing block.
 Escaped literals may trigger this guard even when they encode ASCII; write the
 literal directly or use explicit ASCII semantics when that is the intended rule.
+
+
+### Side-scan connection authorization
+
+Server-side snapshot scans fail closed unless the authenticated tenant owns a
+non-demo connection and its current operator binding grants the exact target,
+collector and location. REST rejects unauthorized scope with 403; MCP and the
+scheduler return `unavailable`. No provider credential or mutation is attempted
+on denial. Credentials are constructed only from that binding, with no ambient
+fallback, and the binding is rechecked before constructing clients. A changed
+binding invalidates a retry's authorization fingerprint. This gate does not
+revoke tokens already issued by the provider; use provider revocation for that.
+
+
+Side-scan cleanup requires recorded resource IDs and current provider ownership
+before Azure/GCP detach or deletion. Atomic version checks prevent competing
+workers from claiming the same cleanup. Running executions, existing cleanup
+claims and timed-out provider operations are not automatically reclaimed.
+Unmount, detach or disk-deletion failure stops dependent deletion and leaves
+partial cleanup evidence. A confirmed provider 404 is treated as absence;
+permission and network failures remain incomplete. Tag-only AWS orphan sweeps
+are disabled because legacy runs lack durable ownership records. Reconcile
+those resources manually using saved IDs and provider events; no clean-state
+claim follows from an empty sweep result.
