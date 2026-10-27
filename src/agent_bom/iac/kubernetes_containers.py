@@ -7,6 +7,15 @@ import re
 from agent_bom.iac.kubernetes_common import K8sContainer, container_key_line, container_line, security_context_line
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.yaml_lines import item_line
+from agent_bom.kubernetes.pod_security import (
+    PRIVILEGE_ESCALATION,
+    PRIVILEGED,
+    RUNS_AS_ROOT,
+    SecurityContextRule,
+    allows_privilege_escalation,
+    is_privileged,
+    root_settings,
+)
 
 # Secret-like env variable name patterns
 _SECRET_NAME_RE = re.compile(
@@ -43,62 +52,59 @@ def _is_trusted_registry(image: str) -> bool:
     return registry in _TRUSTED_REGISTRIES
 
 
+def _context_finding(c: K8sContainer, *, rule_id: str, rule: SecurityContextRule, title: str, message: str, key: str) -> IaCFinding:
+    return IaCFinding(
+        rule_id=rule_id,
+        severity=rule.severity,
+        title=title,
+        message=message,
+        file_path=c.workload.rel_path,
+        line_number=security_context_line(c, key),
+        category="kubernetes",
+        compliance=list(rule.compliance),
+        attack_techniques=list(rule.attack_techniques),
+    )
+
+
+def _pod_sec_ctx(c: K8sContainer) -> dict:
+    pod_ctx = c.workload.pod_spec.get("securityContext") or {}
+    return pod_ctx if isinstance(pod_ctx, dict) else {}
+
+
+def _set_at(c: K8sContainer, key: str) -> str:
+    return "" if c.sec_ctx.get(key) is not None else ", inherited from the pod securityContext"
+
+
 def k8s_001(c: K8sContainer) -> list[IaCFinding]:
     """K8S-001: privileged."""
-    cname, sec_ctx, name, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.rel_path
-    findings: list[IaCFinding] = []
-    if sec_ctx.get("privileged") is True:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-001",
-                severity="critical",
-                title="Privileged container",
-                message=(
-                    f"Container '{cname}' in '{name}' runs in privileged mode. "
-                    "This gives the container full host access. "
-                    "Remove privileged: true unless absolutely required."
-                ),
-                file_path=rel_path,
-                line_number=security_context_line(c, "privileged"),
-                category="kubernetes",
-                compliance=["CIS-K8s-5.2.1", "NIST-AC-6"],
-            )
-        )
-    return findings
+    if not is_privileged(c.sec_ctx):
+        return []
+    message = (
+        f"Container '{c.cname}' in '{c.workload.name}' runs in privileged mode. "
+        "This gives the container full host access. "
+        "Remove privileged: true unless absolutely required."
+    )
+    return [_context_finding(c, rule_id="K8S-001", rule=PRIVILEGED, title="Privileged container", message=message, key="privileged")]
 
 
 def k8s_005(c: K8sContainer) -> list[IaCFinding]:
-    """K8S-005: runAsUser: 0 or runAsNonRoot: false."""
-    cname, sec_ctx, name, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.rel_path
+    """K8S-005: effective runAsUser: 0 or runAsNonRoot: false (container, else pod securityContext)."""
+    cname, name = c.cname, c.workload.name
     findings: list[IaCFinding] = []
-    if sec_ctx.get("runAsUser") == 0:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-005",
-                severity="high",
-                title="Container runs as root (UID 0)",
-                message=(f"Container '{cname}' in '{name}' runs as root (runAsUser: 0). Use a non-root user to limit exploit impact."),
-                file_path=rel_path,
-                line_number=security_context_line(c, "runAsUser"),
-                category="kubernetes",
-                compliance=["CIS-K8s-5.2.6", "NIST-AC-6"],
+    for key in root_settings(c.sec_ctx, _pod_sec_ctx(c)):
+        if key == "runAsUser":
+            title = "Container runs as root (UID 0)"
+            message = (
+                f"Container '{cname}' in '{name}' runs as root (runAsUser: 0{_set_at(c, key)}). "
+                "Use a non-root user to limit exploit impact."
             )
-        )
-    if sec_ctx.get("runAsNonRoot") is False:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-005",
-                severity="high",
-                title="runAsNonRoot explicitly disabled",
-                message=(
-                    f"Container '{cname}' in '{name}' sets runAsNonRoot: false. Enable runAsNonRoot: true and specify a non-root runAsUser."
-                ),
-                file_path=rel_path,
-                line_number=security_context_line(c, "runAsNonRoot"),
-                category="kubernetes",
-                compliance=["CIS-K8s-5.2.6", "NIST-AC-6"],
+        else:
+            title = "runAsNonRoot explicitly disabled"
+            message = (
+                f"Container '{cname}' in '{name}' sets runAsNonRoot: false{_set_at(c, key)}. "
+                "Enable runAsNonRoot: true and specify a non-root runAsUser."
             )
-        )
+        findings.append(_context_finding(c, rule_id="K8S-005", rule=RUNS_AS_ROOT, title=title, message=message, key=key))
     return findings
 
 
@@ -128,26 +134,23 @@ def k8s_006(c: K8sContainer) -> list[IaCFinding]:
 
 def k8s_009(c: K8sContainer) -> list[IaCFinding]:
     """K8S-009: allowPrivilegeEscalation."""
-    cname, sec_ctx, name, rel_path = c.cname, c.sec_ctx, c.workload.name, c.workload.rel_path
-    findings: list[IaCFinding] = []
-    if sec_ctx.get("allowPrivilegeEscalation") is True:
-        findings.append(
-            IaCFinding(
-                rule_id="K8S-009",
-                severity="high",
-                title="Privilege escalation allowed",
-                message=(
-                    f"Container '{cname}' in '{name}' allows privilege escalation. "
-                    "Set allowPrivilegeEscalation: false to prevent "
-                    "child processes from gaining more privileges."
-                ),
-                file_path=rel_path,
-                line_number=security_context_line(c, "allowPrivilegeEscalation"),
-                category="kubernetes",
-                compliance=["CIS-K8s-5.2.5", "NIST-AC-6"],
-            )
+    if not allows_privilege_escalation(c.sec_ctx):
+        return []
+    message = (
+        f"Container '{c.cname}' in '{c.workload.name}' allows privilege escalation. "
+        "Set allowPrivilegeEscalation: false to prevent "
+        "child processes from gaining more privileges."
+    )
+    return [
+        _context_finding(
+            c,
+            rule_id="K8S-009",
+            rule=PRIVILEGE_ESCALATION,
+            title="Privilege escalation allowed",
+            message=message,
+            key="allowPrivilegeEscalation",
         )
-    return findings
+    ]
 
 
 def k8s_004(c: K8sContainer) -> list[IaCFinding]:

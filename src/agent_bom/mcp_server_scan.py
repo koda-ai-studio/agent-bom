@@ -14,15 +14,12 @@ from pathlib import Path
 from typing import Optional
 
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
-from agent_bom.image_evidence import collect_image_evidence
-from agent_bom.image_evidence.surfaces import image_agent_metadata
 from agent_bom.mcp_blocklist import flag_blocklisted_mcp_servers
 from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_ECOSYSTEM,
     CODE_VALIDATION_INVALID_IMAGE_REF,
     CODE_VALIDATION_INVALID_PATH,
 )
-from agent_bom.parsers.oci_model_artifacts import collect_model_artifacts, model_artifact_metadata
 from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings, restore_scan_warnings
 from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstream importers
 
@@ -277,7 +274,6 @@ async def run_scan_pipeline(
 ):
     """Run discovery -> extraction -> scanning and return agents + findings."""
     from agent_bom.discovery import discover_all
-    from agent_bom.models import Agent, AgentType, MCPServer, TransportType
     from agent_bom.parsers import extract_packages
     from agent_bom.scanners import ScanOptions, scan_agents, scan_agents_with_enrichment
 
@@ -337,36 +333,11 @@ async def run_scan_pipeline(
 
     if image:
         try:
-            from agent_bom.image import scan_image as _scan_image
-            from agent_bom.models import ServerSurface
+            from agent_bom.discovery.carriers import scan_image_carrier
 
-            with collect_image_evidence(image) as image_evidence, collect_model_artifacts(image) as model_artifacts:
-                img_packages, _strategy = _scan_image(image)
-            if img_packages:
-                img_server = MCPServer(
-                    name=f"image:{image}",
-                    command="",
-                    args=[],
-                    env={},
-                    transport=TransportType.UNKNOWN,
-                    packages=img_packages,
-                    surface=ServerSurface.CONTAINER_IMAGE,
-                )
-                agents.append(
-                    Agent(
-                        name=f"image:{image}",
-                        agent_type=AgentType.CUSTOM,
-                        config_path="",
-                        source="image",
-                        metadata={
-                            "inventory_role": "container_image",
-                            "image_ref": image,
-                            **image_agent_metadata(image_evidence),
-                            **model_artifact_metadata(model_artifacts),
-                        },
-                        mcp_servers=[img_server],
-                    )
-                )
+            scanned = await asyncio.to_thread(scan_image_carrier, image)
+            if scanned.packages:
+                agents.append(scanned.carrier)
                 scan_sources.append("image")
         except Exception as exc:
             msg = f"Image scan failed for {image}: {sanitize_error(exc)}"

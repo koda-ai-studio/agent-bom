@@ -20,6 +20,7 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from agent_bom import http_client
+from agent_bom.core.image_ref import parse_image_ref
 
 if TYPE_CHECKING:
     import httpx
@@ -92,52 +93,21 @@ class ContainerImageSbom:
 
 
 def _parse_image_ref(image_ref: str) -> tuple[str, str, str, str]:
-    """Parse image_ref into (registry, org, repo, tag).
+    """Parse image_ref into (registry, org, repo, reference).
 
-    Examples::
+    ``reference`` is what the registry is asked for: the pinned digest, else
+    the tag, else ``latest``. Examples::
 
         "pytorch/pytorch:2.1.0"           → ("docker.io", "pytorch", "pytorch", "2.1.0")
         "ubuntu:22.04"                     → ("docker.io", "library", "ubuntu", "22.04")
-        "nvcr.io/nvidia/cuda:12.3"        → ("nvcr.io", "nvidia", "cuda", "12.3")
-        "ghcr.io/huggingface/tgi:latest"  → ("ghcr.io", "huggingface", "tgi", "latest")
-        "host:5000/img:tag"                → ("host:5000", "library", "img", "tag")
+        "ghcr.io/org/app:1.2@sha256:…"    → ("ghcr.io", "org", "app", "sha256:…")
         "localhost:5000/myimg"             → ("localhost:5000", "library", "myimg", "latest")
     """
-    tag = "latest"
-    last_part = image_ref.rsplit("/", 1)[-1]
-    if ":" in last_part:
-        image_ref, tag = image_ref.rsplit(":", 1)
-
-    parts = image_ref.split("/")
-
-    def _looks_like_registry(s: str) -> bool:
-        # Docker / OCI convention: a registry hostname is the first slash-segment
-        # and is distinguished from a Docker Hub org by containing a `.` (FQDN) or
-        # a `:` (port) — the conservative rule the docker CLI itself uses.
-        return "." in s or ":" in s
-
-    if len(parts) >= 3 and _looks_like_registry(parts[0]):
-        # Custom registry, full path: nvcr.io/nvidia/cuda, ghcr.io/huggingface/tgi
-        registry = parts[0]
-        org = parts[1]
-        repo = "/".join(parts[2:])
-    elif len(parts) == 2 and _looks_like_registry(parts[0]):
-        # Custom registry, no org: host:5000/img, localhost:5000/myimg, registry.io/img
-        registry = parts[0]
-        org = "library"
-        repo = parts[1]
-    elif len(parts) == 2:
-        # Docker Hub user image: pytorch/pytorch
-        registry = "docker.io"
-        org = parts[0]
-        repo = parts[1]
-    else:
-        # Docker Hub official image: ubuntu
-        registry = "docker.io"
-        org = "library"
-        repo = parts[0]
-
-    return registry, org, repo, tag
+    parsed = parse_image_ref(image_ref)
+    org, _, repo = parsed.path.partition("/")
+    if not repo:
+        org, repo = "library", org
+    return parsed.registry, org, repo, parsed.version
 
 
 def _registry_get(url: str, *, headers: dict | None = None, params: dict | None = None) -> httpx.Response | None:
@@ -231,7 +201,7 @@ def scan_container_image(image_ref: str) -> ContainerImageSbom:
     registry, org, repo, tag = _parse_image_ref(image_ref)
 
     findings: list[ContainerImageFinding] = []
-    digest = None
+    digest = parse_image_ref(image_ref).digest or None
     size_bytes = None
     created_at = None
     os_info = None

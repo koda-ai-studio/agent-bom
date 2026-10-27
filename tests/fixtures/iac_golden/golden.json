@@ -39,7 +39,9 @@
  "kubernetes/harvested_041a6158d83a0b84.yaml": [
   {
    "atlas_techniques": [],
-   "attack_techniques": [],
+   "attack_techniques": [
+    "T1611"
+   ],
    "category": "kubernetes",
    "compliance": [
     "CIS-K8s-5.2.1",
@@ -478,7 +480,9 @@
  "kubernetes/harvested_1df7be270dabdc4e.yaml": [
   {
    "atlas_techniques": [],
-   "attack_techniques": [],
+   "attack_techniques": [
+    "T1611"
+   ],
    "category": "kubernetes",
    "compliance": [
     "CIS-K8s-5.2.1",
@@ -1140,7 +1144,9 @@
   },
   {
    "atlas_techniques": [],
-   "attack_techniques": [],
+   "attack_techniques": [
+    "T1611"
+   ],
    "category": "kubernetes",
    "compliance": [
     "CIS-K8s-5.2.1",
@@ -1623,7 +1629,9 @@
  "kubernetes/harvested_5f124328e90236be.yaml": [
   {
    "atlas_techniques": [],
-   "attack_techniques": [],
+   "attack_techniques": [
+    "T1611"
+   ],
    "category": "kubernetes",
    "compliance": [
     "CIS-K8s-5.2.1",
@@ -2673,7 +2681,9 @@
  "kubernetes/harvested_bf6b74b366562fe3.yaml": [
   {
    "atlas_techniques": [],
-   "attack_techniques": [],
+   "attack_techniques": [
+    "T1611"
+   ],
    "category": "kubernetes",
    "compliance": [
     "CIS-K8s-5.2.1",
@@ -2761,7 +2771,9 @@
   },
   {
    "atlas_techniques": [],
-   "attack_techniques": [],
+   "attack_techniques": [
+    "T1611"
+   ],
    "category": "kubernetes",
    "compliance": [
     "CIS-K8s-5.2.1",
@@ -2941,7 +2953,9 @@
  "kubernetes/harvested_d6617d0bac8fcee5.yaml": [
   {
    "atlas_techniques": [],
-   "attack_techniques": [],
+   "attack_techniques": [
+    "T1611"
+   ],
    "category": "kubernetes",
    "compliance": [
     "CIS-K8s-5.2.1",
@@ -3335,7 +3349,9 @@
   },
   {
    "atlas_techniques": [],
-   "attack_techniques": [],
+   "attack_techniques": [
+    "T1611"
+   ],
    "category": "kubernetes",
    "compliance": [
     "CIS-K8s-5.2.1",
@@ -4061,7 +4077,9 @@
   },
   {
    "atlas_techniques": [],
-   "attack_techniques": [],
+   "attack_techniques": [
+    "T1611"
+   ],
    "category": "kubernetes",
    "compliance": [
     "CIS-K8s-5.2.1",
