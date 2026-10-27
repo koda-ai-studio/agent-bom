@@ -10,36 +10,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 from agent_bom.ai_components.import_patterns import js_import as _js_import
 from agent_bom.ai_components.import_patterns import py_import as _py_import
-from agent_bom.ai_components.models import AIComponentSeverity, AIComponentType
+from agent_bom.ai_components.models import AIComponentSeverity, AIComponentType, ModelPattern, SDKPattern
 
 # ── Pattern dataclass ────────────────────────────────────────────────────────
-
-
-@dataclass(frozen=True)
-class SDKPattern:
-    """A single SDK import detection pattern."""
-
-    regex: re.Pattern[str]
-    name: str  # canonical SDK name
-    component_type: AIComponentType
-    package_name: str  # package manager name for CVE linking
-    ecosystem: str  # pypi, npm, cargo, go, maven, nuget, rubygems
-    language: str  # python, javascript, java, go, rust, ruby
-
-
-@dataclass(frozen=True)
-class ModelPattern:
-    """A model string reference pattern."""
-
-    regex: re.Pattern[str]
-    provider: str  # openai, anthropic, google, meta, etc.
-    deprecated: bool = False
-    replacement: Optional[str] = None  # suggested replacement if deprecated
-    severity: AIComponentSeverity = AIComponentSeverity.INFO
 
 
 @dataclass(frozen=True)
@@ -117,6 +93,18 @@ PYTHON_SDK_PATTERNS: list[SDKPattern] = [
     SDKPattern(re.compile(_py_import("ai21")), "ai21", AIComponentType.LLM_PROVIDER, "ai21", "pypi", "python"),
     SDKPattern(re.compile(_py_import("cerebras")), "cerebras", AIComponentType.LLM_PROVIDER, "cerebras-cloud-sdk", "pypi", "python"),
     # Agent frameworks
+    *[
+        SDKPattern(re.compile(_py_import(module)), name, AIComponentType.AGENT_FRAMEWORK, package, "pypi", "python")
+        for module, name, package in (
+            ("nat", "nvidia-nat", "nvidia-nat"),
+            ("google.adk", "google-adk", "google-adk"),
+            ("claude_agent_sdk", "claude-agent-sdk", "claude-agent-sdk"),
+            ("strands", "strands-agents", "strands-agents"),
+            ("bedrock_agentcore", "bedrock-agentcore", "bedrock-agentcore"),
+            ("azure.ai.agents", "azure-ai-agents", "azure-ai-agents"),
+            ("agent_framework", "microsoft-agent-framework", "agent-framework-core"),
+        )
+    ],
     SDKPattern(
         re.compile(_py_import("langchain")),
         "langchain",
@@ -300,6 +288,17 @@ JS_SDK_PATTERNS: list[SDKPattern] = [
     SDKPattern(re.compile(_js_import("replicate")), "replicate", AIComponentType.LLM_PROVIDER, "replicate", "npm", "javascript"),
     SDKPattern(re.compile(_js_import("ollama")), "ollama", AIComponentType.LLM_PROVIDER, "ollama", "npm", "javascript"),
     # Agent frameworks
+    SDKPattern(re.compile(_js_import("openclaw/plugin-sdk")), "openclaw", AIComponentType.AGENT_FRAMEWORK, "openclaw", "npm", "javascript"),
+    *[
+        SDKPattern(re.compile(_js_import(package)), name, AIComponentType.AGENT_FRAMEWORK, package, "npm", "javascript")
+        for package, name in (
+            ("@google/adk", "google-adk"),
+            ("@anthropic-ai/claude-agent-sdk", "claude-agent-sdk"),
+            ("@strands-agents/sdk", "strands-agents"),
+            ("@azure/ai-agents", "azure-ai-agents"),
+            ("@openai/agents", "openai-agents"),
+        )
+    ],
     SDKPattern(
         re.compile(_js_import("langchain")),
         "langchain",

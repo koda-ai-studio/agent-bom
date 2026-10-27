@@ -19,6 +19,7 @@ import re
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
+from agent_bom.ast.js_ts.framework_imports import FRAMEWORK_HINTS as _JS_TS_FRAMEWORK_HINTS
 from agent_bom.ast.source_reader import read_source_for_analysis
 from agent_bom.ast_models import CallEdge, DependencySymbolReach, DetectedGuardrail, ExtractedPrompt, FlowFinding, ToolSignature
 from agent_bom.ast_signal_utils import _GUARDRAIL_CALL_PATTERNS, _balanced_segment, check_prompt_risks, classify_prompt_type
@@ -109,18 +110,6 @@ _JS_TS_UNTRUSTED_DATA_RE = re.compile(
     re.IGNORECASE,
 )
 _JS_TS_DYNAMIC_STRING_RE = re.compile(r"\$\{|(?:^|[^=])[+]\s*|\.concat\s*\(", re.IGNORECASE)
-_JS_TS_FRAMEWORK_HINTS: dict[str, str] = {
-    "@modelcontextprotocol/sdk": "MCP",
-    "@anthropic-ai/sdk": "Anthropic",
-    "anthropic": "Anthropic",
-    "@langchain": "LangChain",
-    "langchain": "LangChain",
-    "@openai/agents": "OpenAI Agents",
-    "openai": "OpenAI",
-    "@mastra/core": "Mastra",
-    "mastra": "Mastra",
-    "@vercel/ai": "Vercel AI SDK",
-}
 
 
 def _js_first_string_argument(source: str, open_paren_index: int) -> str:

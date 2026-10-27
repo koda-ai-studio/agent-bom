@@ -13,11 +13,12 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import click
 
 from agent_bom.cli._common import read_json_file_for_cli
+from agent_bom.cli._gateway_upstream import upstream_options
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.cli._runtime_status import emit_runtime_status_strip
 from agent_bom.cli._server import _is_loopback_host
@@ -133,6 +134,7 @@ def init_policy_cmd(template_name: str, output_path: Path, mode: str, output_for
 
 
 @gateway_group.command("serve")
+@upstream_options
 @click.option(
     "--upstreams",
     "upstreams_path",
@@ -441,6 +443,7 @@ def init_policy_cmd(template_name: str, output_path: Path, mode: str, output_for
     "--log-level", type=click.Choice(["debug", "info", "warning", "error"], case_sensitive=False), default="info", show_default=True
 )
 def serve_cmd(
+    upstream_options: dict[str, Any],
     upstreams_path: Path | None,
     control_plane_url: str | None,
     control_plane_token: str | None,
@@ -657,6 +660,7 @@ def serve_cmd(
         click.echo(f"loaded OAuth scope requirements for {len(tool_scope_mapping)} tool(s)")
 
     settings = GatewaySettings(
+        **upstream_options,
         registry=registry,
         policy=policy,
         audit_sink=audit_sink,
@@ -701,10 +705,6 @@ def serve_cmd(
     app = create_gateway_app(settings)
     policy_summary = summarize_policy_bundle(policy)
 
-    # Binding to 0.0.0.0 is intentional for containerized deploys — ingress /
-    # service mesh terminates external traffic in front of this pod. Set
-    # --bind 127.0.0.1:8090 on a dev workstation to restrict.
-    host = host  # nosec B104
     from agent_bom.output.brand_tokens import emit_cli_runtime_summary
 
     rows = [

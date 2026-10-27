@@ -336,3 +336,11 @@ This detector is advisory/fail-open: alerts do not block tool calls or change
 injection enforcement. A definition change is evidence of drift, not proof of
 malicious intent or execution. This notification refresh applies to the stdio
 proxy; it does not add HTTP gateway or SSE-proxy enforcement.
+
+### Gateway upstream tuning
+
+`gateway serve` accepts upstream HTTP pool, timeout, failure-threshold and
+circuit-cooldown flags with matching `AGENT_BOM_GATEWAY_UPSTREAM_*` environment
+variables. Invalid or non-finite settings fail startup before control-plane
+requests or binding a listener. CLI flags take precedence; security policies and
+authentication defaults are unchanged. See the [operator limits and defaults](perf/gateway-relay-latency.md#configure-upstream-limits).

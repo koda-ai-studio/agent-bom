@@ -6,6 +6,7 @@ a model string reference, an API key, or a deprecated model call.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
@@ -154,3 +155,26 @@ class AIComponentReport:
                 "by_type": {component_type.value: len(items) for component_type, items in self.by_type.items()},
             },
         }
+
+
+@dataclass(frozen=True)
+class SDKPattern:
+    """A single SDK import detection pattern."""
+
+    regex: re.Pattern[str]
+    name: str  # canonical SDK name
+    component_type: AIComponentType
+    package_name: str  # package manager name for CVE linking
+    ecosystem: str  # pypi, npm, cargo, go, maven, nuget, rubygems
+    language: str  # python, javascript, java, go, rust, ruby
+
+
+@dataclass(frozen=True)
+class ModelPattern:
+    """A model string reference pattern."""
+
+    regex: re.Pattern[str]
+    provider: str  # openai, anthropic, google, meta, etc.
+    deprecated: bool = False
+    replacement: Optional[str] = None  # suggested replacement if deprecated
+    severity: AIComponentSeverity = AIComponentSeverity.INFO

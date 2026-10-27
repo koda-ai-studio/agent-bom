@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from agent_bom.ai_components.patterns import EXTENSION_TO_LANGUAGE
 from agent_bom.iac import is_iac_file
 from agent_bom.traversal import iter_discovery_files
 
@@ -154,7 +155,7 @@ class ProjectScanTargets:
     auto_enabled: list[str] = field(default_factory=list)
 
 
-_TREE_SURFACES = frozenset({"jupyter", "sast", "terraform", "iac", "python_source"})
+_TREE_SURFACES = frozenset({"jupyter", "sast", "terraform", "iac", "python_source", "ai_source"})
 
 
 def _tree_surface_hits(path: Path, root: Path, wanted: frozenset[str]) -> set[str]:
@@ -168,6 +169,8 @@ def _tree_surface_hits(path: Path, root: Path, wanted: frozenset[str]) -> set[st
         hits.add("terraform")
     if "python_source" in wanted and suffix == ".py" and path.name != "__init__.py":
         hits.add("python_source")
+    if "ai_source" in wanted and suffix in EXTENSION_TO_LANGUAGE:
+        hits.add("ai_source")
     if "iac" in wanted and is_iac_file(path, root):
         hits.add("iac")
     return hits
@@ -237,6 +240,10 @@ def project_has_python_agent_surface(root: Path) -> bool:
     return _has_python_manifest(root) or "python_source" in detect_tree_surfaces(root, frozenset({"python_source"}))
 
 
+def project_has_ai_inventory_surface(root: Path) -> bool:
+    return _has_python_manifest(root) or "ai_source" in detect_tree_surfaces(root, frozenset({"ai_source"}))
+
+
 def semgrep_available() -> bool:
     from agent_bom.sast import _semgrep_available
 
@@ -270,7 +277,8 @@ def expand_project_scan_targets(
         "sast": not code_paths and semgrep_available(),
         "terraform": not tf_dirs,
         "iac": not iac_paths,
-        "python_source": bool(not agent_projects or not ai_inventory_paths) and not _has_python_manifest(root),
+        "python_source": not agent_projects and not _has_python_manifest(root),
+        "ai_source": not ai_inventory_paths and not _has_python_manifest(root),
     }
     found = detect_tree_surfaces(root, frozenset(name for name, needed in wanted.items() if needed))
     has_python_surface = _has_python_manifest(root) or "python_source" in found
@@ -301,9 +309,8 @@ def expand_project_scan_targets(
         out_agents = (str(root),)
         auto.append("python_agents")
 
-    # Same surface as python agents: SDK/obs imports (LangChain, Langfuse, …)
-    # become first-class AI BOM framework nodes when inventory is enabled.
-    if not ai_inventory_paths and has_python_surface:
+    # Inventory all supported source languages, including JS/TS-only projects.
+    if not ai_inventory_paths and (has_python_surface or "ai_source" in found):
         out_ai_inventory = (str(root),)
         auto.append("ai_inventory")
 
