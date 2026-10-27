@@ -55,7 +55,39 @@ def restore_baseline(path: Path | None) -> set[str] | None:
 
 
 MAX_TOOL_DEFINITIONS = 4096
+MAX_TOOL_DEFINITION_BYTES = 262144
 ToolFingerprints = dict[str, dict[str, str]]
+_DECLARATION_TYPES = {
+    "name": str,
+    "title": str,
+    "description": str,
+    "inputSchema": dict,
+    "outputSchema": dict,
+    "annotations": dict,
+    "execution": dict,
+    "icons": list,
+    "_meta": dict,
+}
+
+
+def _fingerprint_fields(tool: dict) -> dict[str, str] | None:
+    """Stream canonical JSON into bounded hashes without retaining field values."""
+    values = {key: tool.get(key) for key in _DECLARATION_TYPES}
+    # Cover future/vendor declaration fields without exposing arbitrary keys
+    # (which can themselves carry private data) in an alert's field list.
+    values["extensions"] = {key: value for key, value in tool.items() if key not in _DECLARATION_TYPES}
+    encoder = json.JSONEncoder(sort_keys=True, ensure_ascii=True, allow_nan=False)
+    remaining = MAX_TOOL_DEFINITION_BYTES
+    fields = {}
+    for key, value in values.items():
+        digest = hashlib.sha256()
+        for chunk in encoder.iterencode(value):
+            remaining -= len(chunk)  # ensure_ascii makes each character one byte
+            if remaining < 0:
+                return None
+            digest.update(chunk.encode("ascii"))
+        fields[key] = digest.hexdigest()
+    return fields
 
 
 def fingerprint_tools(tools: list[dict]) -> ToolFingerprints | None:
@@ -68,20 +100,15 @@ def fingerprint_tools(tools: list[dict]) -> ToolFingerprints | None:
             return None
         if tool["name"] in fingerprints:
             return None
-        if "description" in tool and not isinstance(tool["description"], str):
-            return None
-        if "inputSchema" in tool and not isinstance(tool["inputSchema"], dict):
+        if any(key in tool and not isinstance(tool[key], expected) for key, expected in _DECLARATION_TYPES.items()):
             return None
         try:
-            fields = {
-                key: json.dumps(tool.get(key), sort_keys=True, ensure_ascii=True, allow_nan=False)
-                for key in ("name", "description", "inputSchema")
-            }
+            fields = _fingerprint_fields(tool)
         except (ValueError, TypeError, RecursionError):
             return None
-        if sum(len(value) for value in fields.values()) > 262144:
+        if fields is None:
             return None
-        fingerprints[tool["name"]] = {key: hashlib.sha256(value.encode()).hexdigest() for key, value in fields.items()}
+        fingerprints[tool["name"]] = fields
     return fingerprints
 
 

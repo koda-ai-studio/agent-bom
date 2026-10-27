@@ -307,8 +307,10 @@ claim follows from an empty sweep result.
 ## Stdio tool-definition drift
 
 The stdio proxy compares each completed `tools/list` catalog with its session
-baseline, including tool names, descriptions and canonical `inputSchema` values.
-A description or schema change under an unchanged name emits a HIGH
+baseline, including `name`, `title`, `description`, `inputSchema`, `outputSchema`,
+`annotations`, `execution`, `icons` and `_meta`. Additional declaration fields
+are hashed together and reported as `extensions`, without exposing their keys.
+A declaration change under an unchanged name emits a HIGH
 `tool_drift` alert identifying the changed fields. Field values are never
 included in these alerts or persisted; only per-field SHA-256 fingerprints are
 held in memory. Durable audit records retain the tool name and a normalized
@@ -322,9 +324,12 @@ refresh. Notifications still reach the client, while proxy-owned responses are
 consumed internally. Client and refresh pagination are kept separate. Refreshes
 coalesce repeated notifications, allow at most 20 pages and 4,096 tools, and
 have a 30-second deadline (each stdin drain is bounded to 5 seconds). Tool names
-are limited to 512 characters and fingerprinted fields to 256 KiB per tool.
-Malformed or oversized catalogs never establish a baseline. Errors, timeouts and
-incomplete refreshes emit an incomplete-catalog alert and preserve the baseline.
+are limited to 512 characters; all fingerprinted fields share a 256 KiB canonical
+JSON byte budget per tool, including extension keys and values. Canonical JSON
+is streamed into the hashes, and metadata object key order does not create drift.
+Malformed or oversized catalogs never establish a baseline. Client-requested
+incomplete catalogs produce a coverage warning. Errors, timeouts and incomplete
+notification refreshes emit an incomplete-catalog alert and preserve the baseline.
 Session shutdown cancels the outstanding deadline.
 
 This detector is advisory/fail-open: alerts do not block tool calls or change

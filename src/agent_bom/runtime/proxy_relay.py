@@ -355,7 +355,7 @@ async def track_declared_tools(session: ProxySession, resp: ServerMessage) -> No
         return
     if not catalog.complete:
         session.host.logger.warning(
-            "tools/list pagination stopped early (page cap %d or invalid cursor); catalog incomplete, removed-tool drift suppressed",
+            "tools/list pagination or declaration validation failed (page cap %d); catalog incomplete, removed-tool drift suppressed",
             MAX_TOOL_CATALOG_PAGES,
         )
     await session.handle_alerts(

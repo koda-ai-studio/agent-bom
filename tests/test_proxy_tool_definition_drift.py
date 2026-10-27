@@ -182,3 +182,117 @@ def test_persisted_alert_retains_structural_change_evidence():
     assert record["details"]["tool_name"] == "read"
     assert record["details"]["reason_code"] == "tool_description_changed"
     assert "private" not in str(record)
+
+
+_METADATA_CHANGES = [
+    ("title", "private display title"),
+    ("annotations", {"readOnlyHint": False, "destructiveHint": True, "idempotentHint": False, "openWorldHint": True}),
+    ("outputSchema", {"type": "object", "properties": {"private_output": {"type": "string"}}}),
+    ("execution", {"taskSupport": "required"}),
+    ("icons", [{"src": "https://example.invalid/private-icon"}]),
+    ("_meta", {"securitySchemes": [{"type": "oauth2", "scopes": ["private_scope"]}]}),
+]
+
+
+@pytest.mark.parametrize("field,value", _METADATA_CHANGES)
+@pytest.mark.parametrize("operation", ["add", "change", "remove"])
+def test_metadata_changes_are_detected_without_values(field, value, operation):
+    session, alerts = _session()
+    original = {"name": "read", field: value}
+    changed = copy.deepcopy(original)
+    if operation == "add":
+        del original[field]
+    elif operation == "remove":
+        del changed[field]
+    else:
+        changed[field] = "other private title" if isinstance(value, str) else ([] if isinstance(value, list) else {})
+    _feed(session, [original])
+    _feed(session, [changed])
+    assert len(alerts) == 1
+    assert alerts[0].details["changed_tools"] == [{"name": "read", "fields": [field]}]
+    assert "private" not in str(alerts[0].to_dict())
+
+
+def test_annotations_and_output_schema_changes_are_one_structural_alert():
+    session, alerts = _session()
+    _feed(session, [{"name": "read", "annotations": {"readOnlyHint": True}, "outputSchema": {"type": "object"}}])
+    _feed(session, [{"name": "read", "annotations": {"readOnlyHint": False, "destructiveHint": True}, "outputSchema": {"type": "string"}}])
+    assert len(alerts) == 1
+    assert alerts[0].details["changed_tools"] == [{"name": "read", "fields": ["annotations", "outputSchema"]}]
+
+
+def test_extension_fields_are_covered_without_exposing_extension_names():
+    session, alerts = _session()
+    _feed(session, [{"name": "read", "private_extension": {"authority": "read"}}])
+    _feed(session, [{"name": "read", "private_extension": {"authority": "write"}}])
+    assert len(alerts) == 1
+    assert alerts[0].details["changed_tools"] == [{"name": "read", "fields": ["extensions"]}]
+    assert "private_extension" not in str(alerts[0].to_dict())
+
+
+@pytest.mark.parametrize("field,value", _METADATA_CHANGES)
+def test_metadata_has_one_aggregate_byte_budget_and_preserves_baseline(field, value, caplog):
+    session, alerts = _session()
+    _feed(session, [{"name": "read"}])
+    baseline = copy.deepcopy(session.detectors.drift._definitions)
+    oversized = "x" * 150_000
+    extra = oversized if isinstance(value, str) else ([{"src": oversized}] if isinstance(value, list) else {"data": oversized})
+    _feed(session, [{"name": "read", "description": oversized, field: extra}])
+    assert session.detectors.drift._definitions == baseline
+    assert alerts == []
+    assert "catalog incomplete" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "field,value", [("title", 1), ("annotations", []), ("outputSchema", []), ("execution", []), ("icons", {}), ("_meta", [])]
+)
+def test_malformed_metadata_does_not_establish_baseline(field, value, caplog):
+    session, alerts = _session()
+    _feed(session, [{"name": "read", field: value}])
+    assert session.detectors.drift.baseline is None
+    assert alerts == []
+    assert "catalog incomplete" in caplog.text
+
+
+def test_metadata_object_order_is_canonical_and_hashes_only():
+    from agent_bom.runtime.drift_baseline import fingerprint_tools
+
+    original = {"name": "read", "annotations": {"readOnlyHint": True, "destructiveHint": False}, "_meta": {"private": {"a": 1, "b": 2}}}
+    reordered = {"_meta": {"private": {"b": 2, "a": 1}}, "annotations": {"destructiveHint": False, "readOnlyHint": True}, "name": "read"}
+    first = fingerprint_tools([original])
+    assert first == fingerprint_tools([reordered])
+    assert first is not None and "annotations" in first["read"]
+    assert all(len(digest) == 64 for digest in first["read"].values())
+    assert "private" not in str(first)
+
+
+@pytest.mark.asyncio
+async def test_notification_refresh_rejects_oversized_metadata_with_coverage_alert():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, Mock
+
+    session, alerts = _session()
+    initial = {"id": 1, "result": {"tools": [{"name": "read", "annotations": {"readOnlyHint": True}}]}}
+    await track_declared_tools(session, ServerMessage(msg=initial, line=b""))
+    baseline = copy.deepcopy(session.detectors.drift._definitions)
+    session.process = SimpleNamespace(stdin=SimpleNamespace(write=Mock(), drain=AsyncMock()))
+    refresh = session.catalog_refresh
+    await refresh.inspect(session, {"method": "notifications/tools/list_changed"})
+    assert await refresh.inspect(
+        session,
+        {"id": refresh.request_id, "result": {"tools": [{"name": "read", "_meta": {"private": "x" * 262145}}]}},
+    )
+    assert session.detectors.drift._definitions == baseline
+    assert alerts[0].details == {"catalog_complete": False, "reason_code": "tool_catalog_incomplete"}
+    assert "private" not in str(alerts[0].to_dict())
+    assert refresh.deadline is None
+
+
+def test_metadata_budget_counts_canonical_json_bytes_and_rejects_non_json():
+    from agent_bom.runtime.drift_baseline import fingerprint_tools
+
+    assert fingerprint_tools([{"name": "read", "title": "é" * 50_000}]) is None
+    assert fingerprint_tools([{"name": "read", "_meta": {"value": float("nan")}}]) is None
+    circular = {}
+    circular["self"] = circular
+    assert fingerprint_tools([{"name": "read", "_meta": circular}]) is None
