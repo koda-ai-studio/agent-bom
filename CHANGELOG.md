@@ -93,6 +93,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Retain package/ecosystem identity and credential-name redaction in the dedicated MCP AI inventory tool.
+
+- Preserve validated sub-second upstream timeouts, disabled keepalive pools, and zero circuit cooldown in the gateway relay.
+
 - Enable AI SDK inventory automatically for supported non-Python source trees, retaining package identity and source locations across project and repository scans.
 - Graph times report when evidence was recorded, never when it was read. Governance overlay nodes and edges (managed identities, JIT grants, conditional-access policies, blueprints, drift incidents) take their times from their own records instead of the request clock, a graph loaded from Neptune keeps its snapshot time, and a scoped consequence graph keeps its source graph's time.
 - On Python 3.11, registry-latest lookups no longer start a second request before the first npm 429 opens the cooldown: the 3 s lookup deadline runs in the caller's task (`asyncio.timeout`) on every supported Python.

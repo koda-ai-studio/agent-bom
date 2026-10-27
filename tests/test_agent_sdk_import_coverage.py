@@ -104,3 +104,48 @@ def test_project_and_repo_inventory_preserve_sdk_evidence(tmp_path, filename, so
     assert package in {c["package"] for c in repo_evidence["components"]}
     assert package in {p.name for a in agents for s in a.mcp_servers for p in s.packages}
     assert all(c["file"] and c["line"] >= 1 for c in repo_evidence["components"])
+
+
+@pytest.mark.parametrize(
+    "filename,source,package,ecosystem",
+    [("agent.py", f"import {module}\n", package, "pypi") for module, package, _ in PYTHON_SDKS]
+    + [("agent.ts", f'import {{ Agent }} from "{module}";\n', module, "npm") for module, _, _ in JS_SDKS]
+    + [("plugin.ts", 'import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";\n', "openclaw", "npm")],
+)
+def test_sdk_evidence_survives_model_graph_and_export_consumers(tmp_path, filename, source, package, ecosystem):
+    from agent_bom.api.repo_tree_scan import _scan_ai_inventory_stage
+    from agent_bom.db.graph_store import load_graph, open_graph_db, save_graph
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.graph.types import EntityType, RelationshipType
+    from agent_bom.models import AIBOMReport
+    from agent_bom.output.cyclonedx_fmt import to_cyclonedx
+    from agent_bom.output.graph_evidence import graph_evidence_sections
+    from agent_bom.output.html.sections_inventory import _ai_inventory_section
+    from agent_bom.output.json_fmt import to_json
+    from agent_bom.output.spdx2_fmt import to_spdx2
+
+    (tmp_path / filename).write_text(source)
+    inventory, agents = {}, []
+    _scan_ai_inventory_stage(tmp_path, inventory, agents, [], None)
+    report = AIBOMReport(agents=agents, blast_radii=[], ai_inventory_data=inventory)
+    serialized = to_json(report)
+    assert serialized["ai_inventory"] == inventory == graph_evidence_sections(report)["ai_inventory"]
+    graph = build_unified_graph_from_report(serialized, scan_id="sdk-consumer", tenant_id="test")
+    framework = next(n for n in graph.nodes_by_type(EntityType.FRAMEWORK) if n.attributes.get("package") == package)
+    assert framework.attributes["ecosystem"] == ecosystem
+    assert framework.attributes["file"].endswith(filename)
+    assert framework.attributes["line"] == 1
+    dependencies = [e.target for e in graph.edges if e.source == framework.id and e.relationship == RelationshipType.DEPENDS_ON]
+    assert dependencies
+    assert all(graph.nodes[n].attributes["ecosystem"] == ecosystem for n in dependencies)
+    assert package in {c["name"] for c in to_cyclonedx(report)["components"]}
+    assert package in {p["name"] for p in to_spdx2(report)["packages"]}
+    assert inventory["components"][0]["name"] in _ai_inventory_section(report)
+    with open_graph_db(tmp_path / "graph.db") as conn:
+        save_graph(conn, graph)
+    with open_graph_db(tmp_path / "graph.db") as conn:
+        restored = load_graph(conn, tenant_id="test", scan_id="sdk-consumer")
+    assert restored.nodes[framework.id].attributes == framework.attributes
+    assert {e.target for e in restored.edges if e.source == framework.id and e.relationship == RelationshipType.DEPENDS_ON} == set(
+        dependencies
+    )

@@ -225,8 +225,10 @@ async def ai_inventory_scan_impl(
                     "components": [
                         {
                             "type": c.component_type.value,
-                            "name": c.name,
+                            "name": "[REDACTED]" if c.component_type.value == "api_key" else c.name,
                             "language": c.language,
+                            "package": c.package_name,
+                            "ecosystem": c.ecosystem,
                             "file": c.file_path,
                             "line": c.line_number,
                             "severity": c.severity.value,
