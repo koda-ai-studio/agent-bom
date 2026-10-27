@@ -150,7 +150,10 @@ def test_local_scan_still_fetches_a_labelled_base_image(registry):
 def test_server_scan_never_falls_back_to_the_docker_daemon(registry, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda cmd: "/usr/bin/docker" if cmd == "docker" else None)
     called: list[str] = []
-    monkeypatch.setattr("agent_bom.image._scan_with_docker", lambda ref, platform=None: called.append(ref) or [Package(name="x", version="1", ecosystem="deb")])
+    monkeypatch.setattr(
+        "agent_bom.image._scan_with_docker",
+        lambda ref, platform=None: called.append(ref) or [Package(name="x", version="1", ecosystem="deb")],
+    )
 
     with pytest.raises(ImageScanError):
         scan_image(f"{REGISTRY}/team/missing:1", server_context=True)

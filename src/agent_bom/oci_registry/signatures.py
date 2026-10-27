@@ -154,4 +154,9 @@ def signature_verdict(signatures: list[CosignSignature], digests: list[str], key
         )
     else:
         detail = "Cosign signature present; pass a public key (--image-cosign-key) to verify it."
-    return {"status": "present-unverified", "method": "keyless" if keyless else "cosign", "signature_count": len(signatures), "detail": detail}
+    return {
+        "status": "present-unverified",
+        "method": "keyless" if keyless else "cosign",
+        "signature_count": len(signatures),
+        "detail": detail,
+    }

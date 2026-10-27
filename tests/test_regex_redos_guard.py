@@ -163,7 +163,9 @@ def test_apt_install_pattern_still_matches_real_commands(segment: str, matches: 
 def test_challenge_params_still_parse() -> None:
     from agent_bom.oci_registry.auth import parse_challenge
 
-    challenge = parse_challenge('Bearer realm="https://auth.example.test/token",service="registry.example.test",scope="repository:a/b:pull"')
+    challenge = parse_challenge(
+        'Bearer realm="https://auth.example.test/token",service="registry.example.test",scope="repository:a/b:pull"'
+    )
     assert challenge is not None
     assert challenge.params == {
         "realm": "https://auth.example.test/token",

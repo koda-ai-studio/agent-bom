@@ -77,7 +77,8 @@ def test_explicit_registry_host_keeps_registry_first_even_when_local(setup, monk
     _hub, daemon = setup
     pulled: list[str] = []
     monkeypatch.setattr(
-        "agent_bom.image.scan_registry_image", lambda ref, **_kw: pulled.append(ref) or [Package(name="remote", version="1", ecosystem="deb")]
+        "agent_bom.image.scan_registry_image",
+        lambda ref, **_kw: pulled.append(ref) or [Package(name="remote", version="1", ecosystem="deb")],
     )
 
     _packages, strategy = scan_image(f"{REGISTRY}/team/app:1.0")

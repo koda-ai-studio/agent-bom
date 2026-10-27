@@ -38,7 +38,13 @@ _MAX_REDIRECTS = 5
 _CHUNK = 1024 * 1024
 _TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 _USER_AGENT = "agent-bom-registry-client"
-_TRANSPORT_ERRORS = (httpx.HTTPError, httpcore.TimeoutException, httpcore.NetworkError, httpcore.ProtocolError, httpcore.UnsupportedProtocol)
+_TRANSPORT_ERRORS = (
+    httpx.HTTPError,
+    httpcore.TimeoutException,
+    httpcore.NetworkError,
+    httpcore.ProtocolError,
+    httpcore.UnsupportedProtocol,
+)
 
 
 class RegistryError(Exception):
