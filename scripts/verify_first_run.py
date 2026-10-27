@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Qualify an installed release from offline demo to a rendered sample graph.
+"""Qualify a release from a clean uvx repository scan to a rendered sample graph.
 
 Run with the clean environment's Python, never ``uv run`` from a source tree.
-Requires agent-bom[ui] and the Playwright test driver with Chromium installed.
+Requires uv, agent-bom[ui] and Playwright with Chromium installed.
+The repository scan uses a separate base-only uvx environment and fresh state.
 Only a fresh output directory and a disposable loopback server are used.
 """
 
@@ -13,10 +14,12 @@ import importlib.metadata
 import json
 import os
 import platform
+import shutil
 import socket
 import subprocess
 import sys
 import time
+import tomllib
 from pathlib import Path
 from urllib.error import URLError
 from urllib.parse import urlencode
@@ -39,6 +42,118 @@ def validate_graph(graph: dict, scan_id: str) -> dict:
     if not nodes or not edges or any(edge["source"] not in ids or edge["target"] not in ids for edge in edges):
         raise ValueError("Sample graph must contain connected nodes and edges")
     return {"nodes": len(nodes), "edges": len(edges)}
+
+
+def validate_repository(report: dict, expected: set[tuple[str, str]]) -> None:
+    validate_report(report)
+    packages = {
+        (package["name"], package["version"])
+        for agent in report["agents"]
+        for server in agent.get("mcp_servers", [])
+        for package in server.get("packages", [])
+    }
+    if not expected or not expected.issubset(packages):
+        raise ValueError("Repository report must contain the fixture's locked packages")
+
+
+def validate_missing_database(report: dict) -> None:
+    scan = report.get("scan_run", {})
+    if scan.get("outcome") != "partial" or not any(
+        issue.get("code") == "required_scanner_unavailable"
+        and issue.get("source") == "vulnerability-data"
+        and issue.get("affects_coverage") is True
+        for issue in scan.get("issues", [])
+    ):
+        raise ValueError("Missing offline database must be reported as incomplete vulnerability coverage")
+
+
+def _isolated_env(output: Path) -> dict[str, str]:
+    # Keep platform/network configuration, never provider credentials or host state.
+    allowed = {
+        "PATH",
+        "SYSTEMROOT",
+        "WINDIR",
+        "COMSPEC",
+        "PATHEXT",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "LANG",
+        "LC_ALL",
+        "SSL_CERT_FILE",
+        "REQUESTS_CA_BUNDLE",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+    }
+    env = {key: value for key, value in os.environ.items() if key.upper() in allowed}
+    home = output / "home"
+    home.mkdir()
+    env.update(
+        HOME=str(home),
+        USERPROFILE=str(home),
+        APPDATA=str(home / "AppData/Roaming"),
+        LOCALAPPDATA=str(home / "AppData/Local"),
+        XDG_CONFIG_HOME=str(home / ".config"),
+        XDG_CACHE_HOME=str(home / ".cache"),
+        UV_CACHE_DIR=str(output / "uv-cache"),
+        UV_NO_CONFIG="1",
+        AGENT_BOM_STATE_DIR=str(output / "state"),
+        AGENT_BOM_DB=str(output / "control-plane.db"),
+        AGENT_BOM_GRAPH_DB=str(output / "control-plane.db"),
+        AGENT_BOM_SKIP_UPDATE_CHECK="1",
+        AGENT_BOM_NO_AUTH_ROLE="analyst",
+        PYTHONIOENCODING="utf-8",
+        PYTHONUTF8="1",
+        NO_COLOR="1",
+    )
+    return env
+
+
+def _command(output: Path, receipt: dict, env: dict, name: str, argv: list[str], expected: tuple[int, ...], cwd: Path) -> None:
+    before = time.monotonic()
+    with (output / f"{name}.log").open("w", encoding="utf-8") as log:
+        result = subprocess.run(argv, cwd=cwd, env=env, stdout=log, stderr=log, timeout=300)
+    receipt["steps"].append(
+        {
+            "name": name,
+            "args": argv[1:],
+            "command": argv,
+            "exit_code": result.returncode,
+            "expected_exit": expected[0] if len(expected) == 1 else None,
+            "expected_exits": expected,
+        }
+    )
+    receipt["timings_seconds"][name] = round(time.monotonic() - before, 3)
+    if result.returncode not in expected:
+        raise RuntimeError(f"{name} returned an unexpected exit code; inspect its log")
+
+
+def _repository_journey(output: Path, version: str, env: dict, receipt: dict) -> None:
+    fixture = Path(__file__).resolve().parents[1] / "tests/fixtures/ordinary-python-app"
+    repository = output / "repository"
+    shutil.copytree(fixture, repository)
+    expected = {(p["name"], p["version"]) for p in tomllib.loads((fixture / "uv.lock").read_text(encoding="utf-8"))["package"]}
+    # Pin only the selected release; do not install UI or test dependencies into this tool environment.
+    launcher = ["uvx", "--python", sys.executable, "--from", f"agent-bom=={version}", "agent-bom"]
+    report_path = output / "repository.json"
+    _command(output, receipt, env, "repository", [*launcher, "scan", ".", "-f", "json", "-o", str(report_path)], (0, 1), repository)
+    validate_repository(json.loads(report_path.read_text(encoding="utf-8")), expected)
+    receipt["repository"] = {"fixture": "ordinary-python-app", "locked_packages": len(expected), "outcome": "complete"}
+    # A live advisory match may legitimately trip the gate; incomplete coverage never qualifies.
+    offline_env = {**env, "AGENT_BOM_STATE_DIR": str(output / "empty-offline-state")}
+    offline_path = output / "offline.json"
+    _command(
+        output,
+        receipt,
+        offline_env,
+        "offline",
+        [*launcher, "scan", ".", "--offline", "-f", "json", "-o", str(offline_path)],
+        (1,),
+        repository,
+    )
+    validate_missing_database(json.loads(offline_path.read_text(encoding="utf-8")))
+    receipt["offline_missing_database"] = "partial_assessment_rejected"
 
 
 def _get_json(url: str) -> dict:
@@ -128,34 +243,21 @@ def run(output: Path, expected_version: str, install_seconds: float | None = Non
         direct_url = json.loads(distribution.read_text("direct_url.json") or "{}")
         if direct_url.get("dir_info", {}).get("editable"):
             raise ValueError("Use a clean installed wheel, not an editable source checkout")
-        executable = Path(sys.executable).with_name("agent-bom")
+        executable = Path(sys.executable).with_name("agent-bom.exe" if os.name == "nt" else "agent-bom")
         if not executable.is_file():
             raise ValueError("Installed console script is missing")
-        env = {k: v for k, v in os.environ.items() if not k.startswith("AGENT_BOM_") and k not in {"PYTHONPATH", "PYTHONHOME"}}
-        env.update(
-            AGENT_BOM_STATE_DIR=str(output / "state"),
-            AGENT_BOM_DB=str(output / "control-plane.db"),
-            AGENT_BOM_GRAPH_DB=str(output / "control-plane.db"),
-            AGENT_BOM_SKIP_UPDATE_CHECK="1",
-            AGENT_BOM_NO_AUTH_ROLE="analyst",
-            NO_COLOR="1",
-        )
+        env = _isolated_env(output)
+        _repository_journey(output, expected_version, env, receipt)
+        receipt["timings_seconds"]["first_report"] = receipt["timings_seconds"]["repository"]
 
         def command(name: str, args: list[str], expected_exit: int) -> None:
-            before = time.monotonic()
-            with (output / f"{name}.log").open("w") as log:
-                result = subprocess.run([str(executable), *args], cwd=output, env=env, stdout=log, stderr=log, timeout=300)
-            receipt["steps"].append({"name": name, "args": args, "exit_code": result.returncode, "expected_exit": expected_exit})
-            receipt["timings_seconds"][name] = round(time.monotonic() - before, 3)
-            if result.returncode != expected_exit:
-                raise RuntimeError(f"{name} returned an unexpected exit code; inspect its log")
+            _command(output, receipt, env, name, [str(executable), *args], (expected_exit,), output)
 
         command("demo", ["scan", "--demo", "--offline", "-f", "json", "-o", str(output / "demo.json")], 1)
-        demo = json.loads((output / "demo.json").read_text())
+        demo = json.loads((output / "demo.json").read_text(encoding="utf-8"))
         validate_report(demo)
-        receipt["timings_seconds"]["first_report"] = round(time.monotonic() - started, 3)
         command("quickstart", ["quickstart", "--run", "--offline", "--sample-dir", str(output / "sample")], 0)
-        report = json.loads((output / "sample/agent-bom-report.json").read_text())
+        report = json.loads((output / "sample/agent-bom-report.json").read_text(encoding="utf-8"))
         scan_id = validate_report(report)
         receipt["scan_id"] = scan_id
         receipt["package_cve_lookup"] = "bundled_demo_only; quickstart_inventory_skips_lookup"
@@ -163,7 +265,7 @@ def run(output: Path, expected_version: str, install_seconds: float | None = Non
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
         base = f"http://127.0.0.1:{port}"
-        with (output / "server.log").open("w") as log:
+        with (output / "server.log").open("w", encoding="utf-8") as log:
             process = subprocess.Popen(
                 [
                     str(executable),
@@ -202,7 +304,7 @@ def run(output: Path, expected_version: str, install_seconds: float | None = Non
                 process.kill()
                 process.wait(timeout=10)
         receipt["elapsed_seconds"] = round(time.monotonic() - started, 3)
-        (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
+        (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
 
 
 def main() -> int:

@@ -1,7 +1,7 @@
 # First Run Guide
 
-This guide is the canonical quickstart for `agent-bom`. It gives new users a
-deterministic path from install to a real inventory and graph.
+Scan a repository, inspect the affected agent and package, apply a reviewed fix,
+then rescan the same scope. No account or control plane is required.
 
 **Investigating through an assistant?** Follow the
 [three MCP workflows](MCP_SERVER.md): find affected agents, inspect an
@@ -14,15 +14,54 @@ paths with read-only cloud connect.
 
 ## 0. One command to see value
 
+With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), run
+this from the repository you want to inspect:
+
+```bash
+uvx agent-bom scan .
+```
+
+The terminal shows inventory, prioritized findings, recorded exposure paths,
+fix guidance, and coverage warnings. Start with the highest-severity finding:
+identify its agent/MCP server and package, review the recommended fix, update
+the dependency and lockfile, and rerun `uvx agent-bom scan .` in the same directory.
+A changed result verifies only the checks and scope named in that scan.
+
+For example, the bundled demo links `langchain-service` to
+`langchain@0.0.150` and CVE-2023-36258, with an upgrade recommendation of
+`>=0.0.247`. That is labeled sample evidence, not a scan of your repository.
+The [annotated output below](#annotated-demo-output) explains the recorded
+exposure path; use your own report's fix version when changing a real project.
+
+Working through a configured coding assistant? Use the existing
+[`checkup` workflow](../README.md#integrations) for a verdict and the top three
+fixes, then its `fix` workflow to review a remediation and rescan. These are
+assistant workflows, not extra CLI commands.
+
+### What this scan does and does not establish
+
+- Discovered inventory and advisory matches describe the inspected files and
+  available vulnerability data. Zero findings do not prove a project is secure.
+- Read coverage warnings beside the verdict. An unavailable scanner, unreadable
+  input, or missing offline database can leave the assessment incomplete.
+- Recorded agent, tool and credential relationships help prioritize review;
+  they do not prove exploitation, successful credential use, or effective access.
+- A dependency upgrade can remove an advisory match. Verify it by rescanning;
+  it does not establish compliance or complete application security.
+
+For an HTML artifact, run `uvx agent-bom scan . -f html -o agent-bom-report.html`.
+Open the report, review the same coverage warnings, and retain it for comparison
+after the fix. JSON and SARIF exports are also available.
+
+If you prefer pip, install `agent-bom` in a virtual environment and use the same
+commands without the `uvx` prefix:
+
 ```bash
 pip install agent-bom
 agent-bom scan .
 ```
 
-`agent-bom scan .` prints a rich console panel — posture grade, blast radius,
-and fix-first findings inline — with nothing to open. This is the recommended
-first command. When you need a file,
-add `-f html -o agent-bom-report.html` (or `-f json`, `-f sarif`); run
+The remaining examples use that installed command. Run
 `agent-bom db update --source osv` first for offline package scans. The OSV
 all-ecosystems archive can exceed 1 GB, may take several minutes, and shows
 live progress with the exact total when the server supplies it. Repeat syncs

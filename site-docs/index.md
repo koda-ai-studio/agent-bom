@@ -49,12 +49,17 @@ owner and SLA, remediate, then verify against the next scan.
 
 ## Quick start
 
+With [uv installed](https://docs.astral.sh/uv/getting-started/installation/),
+scan the repository you want to inspect:
+
 ```bash
-pip install agent-bom
-agent-bom scan .                         # auto-discover local AI agents + MCP servers
-agent-bom skills scan .                 # scan skills / instruction files
-agent-bom check flask@2.0.0 --ecosystem pypi   # check a specific package
+uvx agent-bom scan .
 ```
+
+Review the affected agent, vulnerability, recorded exposure and recommended fix.
+Check coverage warnings beside the verdict: incomplete evidence is not clean.
+Apply a reviewed fix and rerun the same command to verify what changed.
+[Read the first-run evidence boundaries](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
 
 [Get started](getting-started/install.md){ .md-button .md-button--primary }
 [View on GitHub](https://github.com/koda-ai-studio/agent-bom){ .md-button }

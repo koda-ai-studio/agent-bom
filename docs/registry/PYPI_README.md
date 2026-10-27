@@ -11,26 +11,32 @@ inspect connected findings, and verify a changed dependency with a rescan.
 Credential references are names, not secret values. Recorded relationships do
 not prove exploitation or successful data access.
 
+With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), run
+from the repository you want to inspect:
+
 ```bash
-pip install agent-bom
-agent-bom scan .
+uvx agent-bom scan .
 ```
 
 The scan prints inventory, findings, recorded exposure, evidence coverage, and
-the next remediation step. Run `agent-bom doctor` if the first scan cannot
-start.
+the next remediation step. Review coverage warnings beside the verdict;
+incomplete evidence is not a clean assessment.
+[What this scan does and does not establish](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
+Apply a reviewed fix, update the lockfile, and rerun `uvx agent-bom scan .`
+in the same repository. Run `uvx agent-bom doctor` if the first scan cannot start.
 
 For a deterministic sample, use the built-in offline demo. It deliberately
 contains blocking findings, so status `1` is the expected security verdict;
 the printed report is complete.
 
 ```bash
-agent-bom scan --demo --offline
+uvx agent-bom scan --demo --offline
 ```
 
 The demo uses a curated sample for reproducible output within a release; advisory and severity updates can change later releases.
 
-If you want an inspectable sample before scanning your own repo:
+For the installed-command examples below, run `pip install agent-bom` in a
+virtual environment. If you want an inspectable sample before scanning your own repo:
 
 ```bash
 agent-bom samples first-run
