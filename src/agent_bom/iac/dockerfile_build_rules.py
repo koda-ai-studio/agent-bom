@@ -13,12 +13,12 @@ import re
 import shlex
 from pathlib import PurePosixPath
 
-from agent_bom.iac.dockerfile_rules import DockerLine
+from agent_bom.iac.dockerfile_rules import PKG_OPTION_TOKEN, DockerLine
 from agent_bom.iac.models import IaCFinding
 
 _SEGMENT_SPLIT_RE = re.compile(r"&&|\|\||[;|\n]")
 _COMMAND_PREFIX = r"^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:sudo\s+(?:-\S+\s+)*)?(?:\S*/)?"
-_APT_INSTALL_RE = re.compile(_COMMAND_PREFIX + r"(?:apt-get|apt)\s+(?:(?:-\S*|\S*::\S*)\s+)*install\b")
+_APT_INSTALL_RE = re.compile(_COMMAND_PREFIX + r"(?:apt-get|apt)\s+(?:" + PKG_OPTION_TOKEN + r"\s+)*install\b")
 _APK_ADD_RE = re.compile(_COMMAND_PREFIX + r"apk\s+(?:-\S+\s+)*add\b")
 _NO_RECOMMENDS_RE = re.compile(r"--no-install-recommends\b|APT::Install-Recommends=(?:false|0)\b", re.IGNORECASE)
 _PACKAGE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.+_-]*(?::[a-z0-9]+)?$")

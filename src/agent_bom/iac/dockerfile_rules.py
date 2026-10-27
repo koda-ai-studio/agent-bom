@@ -37,11 +37,13 @@ _PIPE_INSTALL_RE = re.compile(
     re.IGNORECASE,
 )
 
+# One package-manager option token with exactly one parse: ``-flag``, or ``Word::Word`` that never
+# starts with ``-``, so runs of colon or dash-colon tokens cannot backtrack exponentially.
+PKG_OPTION_TOKEN = r"(?:-\S*|(?:[^\s:-][^\s:]*)?(?:::[^\s:]*)+)"
+
 # Package manager install without cache cleanup
 _PKG_INSTALL_RE = re.compile(
-    # Each option token has exactly one parse: ``-flag``, or ``Word::Word`` that never starts
-    # with ``-``, so runs of colon or dash-colon tokens cannot backtrack exponentially.
-    r"\b(?:apt-get|apt|apk|yum|dnf|microdnf|zypper)\s+(?:(?:-\S*|(?:[^\s:-][^\s:]*)?(?:::[^\s:]*)+)\s+)*(?:install|add)\b",
+    r"\b(?:apt-get|apt|apk|yum|dnf|microdnf|zypper)\s+(?:" + PKG_OPTION_TOKEN + r"\s+)*(?:install|add)\b",
     re.IGNORECASE,
 )
 

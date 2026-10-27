@@ -24,7 +24,7 @@ from agent_bom.core.settings import env_raw
 from agent_bom.image_evidence.model import as_dict
 from agent_bom.oci_registry.reference import ImageReference
 
-_CHALLENGE_PARAM_RE = re.compile(r'([A-Za-z_]+)\s*=\s*"([^"]*)"')
+_CHALLENGE_PARAM_RE = re.compile(r'(?<![A-Za-z_])([A-Za-z_]+)\s*=\s*"([^"]*)"')
 _HELPER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 _HELPER_TIMEOUT_SECONDS = 15
 _MAX_CONFIG_BYTES = 1024 * 1024
