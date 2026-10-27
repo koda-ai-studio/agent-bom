@@ -5,7 +5,7 @@ permissions:
 
 # Lanes (see docs/operations/CI_RUNBOOK.md "CI lanes"):
 #   pull_request   affected tests (changed-domain map + direct importers)
-#                  and contract smoke on the merge result, in 3 shards; never
+#                  and contract smoke on the merge result, in duration-sized shards; never
 #                  the full suite. Path-gated Postgres, musl subset, one UI E2E
 #                  smoke and other validators.
 #   merge_group    not enabled for this repository; if it fires, it runs the
@@ -50,6 +50,7 @@ jobs:
       actions: read
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     outputs:
+      affected_shards: ${{ steps.affected-plan.outputs.shards }}
       action: ${{ steps.classify.outputs.action }}
       alpine: ${{ steps.classify.outputs.alpine }}
       alpine_full: ${{ steps.classify.outputs.alpine_full }}
@@ -241,6 +242,23 @@ jobs:
             echo "- UI Validate (lint + test + build) required: \`${ui}\`"
             echo "- UI E2E smoke required on PR: \`${ui_e2e}\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Plan affected-test shards
+        id: affected-plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_PATHS=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
+          elif [ -n "${{ github.event.before }}" ] && ! printf '%s' "${{ github.event.before }}" | grep -qE '^0+$'; then
+            CHANGED_PATHS=$(git diff --name-only "${{ github.event.before }}" "$GITHUB_SHA")
+          else
+            CHANGED_PATHS=$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")
+          fi
+          mapfile -t CHANGED <<< "$CHANGED_PATHS"
+          SHARDS=$(python3 scripts/pytest_ci_affected.py --root . --matrix --include-smoke "${CHANGED[@]}")
+          echo "shards=$SHARDS" >> "$GITHUB_OUTPUT"
+          echo "Affected-test shards: $SHARDS" >> "$GITHUB_STEP_SUMMARY"
 
   # 1. Security Scanning
   security:
@@ -1250,21 +1268,21 @@ jobs:
   # plus the full four-version suite with coverage; a merge group, if one is
   # ever enabled, runs the full suite sharded on 3.13. Every event runs the
   # Postgres contract when selected.
-  # Partition the selection across three jobs so a broad change stays inside
-  # the PR budget. The aggregator retains every applicable lane; Test (Python
-  # 3.13) is the protection context.
+  # Size the affected selection by measured worker-seconds, up to twelve jobs.
+  # Keep every selected module; missing classifier output uses all twelve.
+  # The aggregator retains every applicable lane; Test (Python 3.13) is the
+  # protection context.
   # scripts/ci_pytest_workers.py sizes xdist workers to the runner: every
   # core, capped where demo-estate rebuilds would exhaust its memory.
   test-smoke:
-    name: Python affected tests (shard ${{ matrix.shard }}/3)
+    name: Python affected tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
-    # The broadest measured single-file selection is about five minutes of
-    # tests per shard; the bound leaves headroom for setup and multi-file PRs.
+    # Duration estimates size the matrix; this remains a hard failure bound.
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2]
+        shard: ${{ fromJSON(needs.changes.outputs.affected_shards || '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]') }}
     permissions:
       contents: read
     needs: changes
@@ -1286,40 +1304,24 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            mapfile -t CHANGED < <(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
+            CHANGED_PATHS=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
           elif [ -n "${{ github.event.before }}" ] && ! printf '%s' "${{ github.event.before }}" | grep -qE '^0+$'; then
-            mapfile -t CHANGED < <(git diff --name-only "${{ github.event.before }}" "$GITHUB_SHA")
+            CHANGED_PATHS=$(git diff --name-only "${{ github.event.before }}" "$GITHUB_SHA")
           else
-            mapfile -t CHANGED < <(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")
+            CHANGED_PATHS=$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")
           fi
-          AFFECTED_SELECTION=$(uv run python scripts/pytest_ci_affected.py --root . "${CHANGED[@]}")
-          mapfile -t TARGETED <<< "$AFFECTED_SELECTION"
-          SMOKE=(
-            tests/test_ci_workflow_contract.py
-            tests/test_runtime_child_span_redaction.py
-            tests/test_doc_architecture_svgs.py
-            tests/test_public_frontdoor_contract.py
-            tests/test_public_release_contracts.py
-            tests/test_cli_cold_start.py
-            tests/test_docs_toolchain.py
-            tests/test_public_docs_cli_alignment.py
-            tests/test_readme_demo_excerpt.py
-            tests/test_cli_entry_points.py
-            tests/test_product_surface_contract.py
-            tests/api/test_api_scan_findings_wiring.py
-            tests/api/test_live_export_contracts.py
-          )
-          # An empty targeted selection becomes one empty element; drop blank lines.
-          mapfile -t TESTS < <(printf '%s\n' "${SMOKE[@]}" "${TARGETED[@]}" | grep -v '^$' | sort -u)
+          mapfile -t CHANGED <<< "$CHANGED_PATHS"
+          AFFECTED_SELECTION=$(uv run python scripts/pytest_ci_affected.py --root . --include-smoke "${CHANGED[@]}")
+          mapfile -t TESTS <<< "$AFFECTED_SELECTION"
           # Keep the full selected set, assigning each module to exactly one job.
-          SELECTION=$(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 3 --files "${TESTS[@]}")
+          SELECTION=$(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total "${{ strategy.job-total }}" --files "${TESTS[@]}")
           mapfile -t TESTS < <(printf '%s\n' "$SELECTION")
           if [ "${#TESTS[@]}" -eq 0 ] || [ -z "${TESTS[0]}" ]; then
             echo "Affected-test shard selected no tests" >&2
             exit 1
           fi
           WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
-          echo "Affected shard ${{ matrix.shard }}/3: ${#TESTS[@]} test modules, ${WORKERS} workers"
+          echo "Affected shard ${{ matrix.shard }}/${{ strategy.job-total }}: ${#TESTS[@]} test modules, ${WORKERS} workers"
           uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
 
       - name: Graph accuracy fixture guard (#2259)
