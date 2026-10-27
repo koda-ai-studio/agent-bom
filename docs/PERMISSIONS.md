@@ -302,9 +302,11 @@ agent-bom API over HTTP/WebSocket for normal UI operation.
 
 ## Authentication Model — Zero-Credential, Zero-Trust
 
-agent-bom **never stores, logs, or transmits credentials**. Scanning
-authenticates with read-only scopes. The only cloud write path, the opt-in disk
-side-scan, uses a separate lifecycle role (see
+Local scanning does not persist credential values in reports. Provider SDKs
+use credentials to authenticate, and configured control-plane connections
+can retain encrypted credentials. Inventory collection uses read-only scopes.
+Opt-in disk side-scans use a separate lifecycle role; event consumers also
+acknowledge queue messages as described below (see
 [SECURITY.md](../SECURITY.md#trust-model-and-permissions)).
 
 ### How auth works per provider
@@ -351,15 +353,49 @@ agent-bom agents --snowflake --snowflake-authenticator oauth
 
 ### What we never do
 
-- Never write to cloud resources during a scan; only the opt-in disk side-scan
-  creates and deletes its own tagged snapshot and temporary disk
-- Never cache credentials to disk
+- Ordinary inventory scans do not mutate cloud resources. Explicit disk
+  side-scans and configured event consumers have the bounded write permissions
+  described here.
+- Local scanning does not cache credential values; configured control-plane
+  connections use the documented encrypted credential store.
 - Never log credential values (sanitize_error removes them)
 - Never require admin/write permissions for scanning
 - Never make third-party network calls beyond the explicitly listed data sources.
   Local UI-to-API traffic is expected when using the dashboard or browser client.
 
 ---
+
+## Event consumer acknowledgement permissions
+
+Configured AWS and Azure event consumers are queue workers, not ordinary
+inventory reads. They receive messages and delete acknowledged messages from
+the operator-configured queue:
+
+- AWS: grant `sqs:ReceiveMessage` and `sqs:DeleteMessage` only on the dedicated
+  queue. The consumer identity is separate from the brokered read-only customer
+  session used for the resulting scan.
+- Azure: the Storage Queue client needs message receive/process permission,
+  including message deletion, scoped to the dedicated queue. Its credential is
+  separate from the brokered subscription inventory credential.
+
+Successful dispatch is acknowledged. Dispatch failures stay on the queue for
+redelivery after the visibility timeout. Malformed messages and messages for a
+different account/subscription are also deleted, with summary counters; their
+original bodies are not retained by these consumers. Use a dedicated queue per
+connection and retain source CloudTrail/Event Grid evidence independently if
+replay or investigation retention is required. A failed acknowledgement makes
+the pass partial; it is not evidence that the queue was drained.
+
+Implementation: `cloud/event_ingest.py` and `cloud/azure_event_ingest.py`.
+
+## Browser documentation assets
+
+When enabled, `/docs` and `/redoc` load pinned Swagger UI/ReDoc files from
+`cdn.jsdelivr.net` with SHA-384 subresource integrity and fresh script nonces.
+The browser makes these asset requests; the API does not download code at
+startup. Inline styles remain permitted for those renderers. Set
+`AGENT_BOM_DISABLE_DOCS=1` to remove the documentation and schema routes from a
+production deployment.
 
 ## Reporting a Security Issue
 

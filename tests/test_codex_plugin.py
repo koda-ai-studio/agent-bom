@@ -95,6 +95,7 @@ def test_codex_servers_are_the_claude_servers_rooted_by_cwd() -> None:
             "command": spec["command"],
             "args": ["." if arg == "${CLAUDE_PLUGIN_ROOT}" else arg for arg in spec["args"]],
             "cwd": ".",
+            "env_vars": ["AGENT_BOM_MCP_WORKSPACE_ROOTS"],
             "env": {"AGENT_BOM_MCP_LIVE_INTROSPECTION": "0"},
         }
         for name, spec in claude.items()

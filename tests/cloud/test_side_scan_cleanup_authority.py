@@ -162,3 +162,39 @@ def test_conflicting_attachment_cannot_be_assumed_to_belong_to_execution(tmp_pat
     assert not any(resource.kind == "attachment" for resource in adapter.execution.resources)
     assert "provider_mutation_unreconciled" in adapter.execution.warning_codes
     assert instances.detach_calls == []
+
+
+@pytest.mark.parametrize("provider", ["azure", "gcp"])
+def test_provider_dispatch_already_has_durable_uncertainty(tmp_path, monkeypatch, provider):
+    adapter, store, snapshots, _, _ = (_azure_adapter if provider == "azure" else _gcp_adapter)(tmp_path)
+    method = "begin_create_or_update" if provider == "azure" else "insert"
+
+    def dispatch(*args, **kwargs):
+        record = store.get(tenant_id="tenant-a", execution_id=adapter.execution.execution_id)
+        assert record.cleanup_status is CleanupStatus.PENDING
+        assert "provider_mutation_unreconciled" in record.warning_codes
+        raise FakeSdkError("dispatch outcome unavailable", 500)
+
+    monkeypatch.setattr(snapshots, method, dispatch)
+    with pytest.raises(RuntimeError):
+        adapter.create_snapshot(_target(provider))
+    record = store.get(tenant_id="tenant-a", execution_id=adapter.execution.execution_id)
+    assert record.cleanup_status is CleanupStatus.PENDING
+    assert "provider_mutation_unreconciled" in record.warning_codes
+    assert adapter.sweep_orphans(active_execution_ids=set()) == []
+
+
+@pytest.mark.parametrize("provider", ["azure", "gcp"])
+def test_failed_durable_claim_prevents_provider_dispatch(tmp_path, monkeypatch, provider):
+    adapter, store, snapshots, _, _ = (_azure_adapter if provider == "azure" else _gcp_adapter)(tmp_path)
+    original = store.save
+
+    def fail_claim(record, **kwargs):
+        if "provider_mutation_unreconciled" in record.warning_codes:
+            raise SideScanStateConflictError("concurrent claim")
+        return original(record, **kwargs)
+
+    monkeypatch.setattr(store, "save", fail_claim)
+    with pytest.raises(RuntimeError):
+        adapter.create_snapshot(_target(provider))
+    assert snapshots.resources == {}

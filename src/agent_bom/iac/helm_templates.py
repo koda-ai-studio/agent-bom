@@ -18,6 +18,7 @@ import subprocess  # nosec B404 - fixed argv, no shell
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from agent_bom.coverage import record_scan_input_warning
 from agent_bom.iac.kubernetes import scan_k8s_text
 from agent_bom.iac.models import IaCFinding
 
@@ -75,6 +76,19 @@ _RENDER_CACHE: dict[tuple[str, str, tuple[tuple[str, int, int], ...]], tuple[str
 _RENDER_CACHE_MAX = 32
 
 
+def _chart_refusal(chart_root: Path) -> str:
+    """Helm follows chart symlinks, including values and nested dependencies."""
+    try:
+        if chart_root.is_symlink() or any(path.is_symlink() for path in chart_root.rglob("*")):
+            reason = "chart contains a symlink; rendering and textual fallback refused"
+        else:
+            return ""
+    except OSError:
+        reason = "chart inputs could not be inspected; rendering refused"
+    record_scan_input_warning(scanner="helm", path=str(chart_root), reason="unsafe_chart_input", detail=reason)
+    return reason
+
+
 def _chart_fingerprint(chart_root: Path) -> tuple[tuple[str, int, int], ...]:
     stats = []
     for path in sorted(p for p in chart_root.rglob("*") if p.is_file()):
@@ -92,6 +106,8 @@ def render_chart(chart_root: Path) -> tuple[str | None, str]:
     Memoized on the chart's file fingerprint so the IaC rules and the workload
     inventory render a chart once per scan.
     """
+    if reason := _chart_refusal(chart_root):
+        return None, reason
     helm = shutil.which("helm")
     if not helm:
         return None, "helm not on PATH"
@@ -172,6 +188,8 @@ def _scan_textually(chart_root: Path, rel_prefix: str) -> list[IaCFinding]:
 
 def scan_chart_templates(chart_root: Path, walk_root: Path) -> ChartTemplateResult:
     """Evaluate one chart's templates; ``reason`` states how they were evaluated."""
+    if reason := _chart_refusal(chart_root):
+        return ChartTemplateResult(reason=reason)
     files = _template_files(chart_root)
     rel_prefix = chart_root.relative_to(walk_root).as_posix() + "/" if chart_root != walk_root else ""
     result = ChartTemplateResult(files=len(files))
