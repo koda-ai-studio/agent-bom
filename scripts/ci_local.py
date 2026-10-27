@@ -15,6 +15,7 @@ Node comes from ``CI_LOCAL_NODE_BIN`` or a Homebrew node@22/@24 (CI pins 22).
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -55,6 +56,21 @@ class Step:
 
 def matrix_values(job: dict) -> list[str]:
     values = ((job.get("strategy") or {}).get("matrix") or {}).get("shard")
+    if isinstance(values, str):
+        if "fromJSON(needs.changes.outputs.affected_shards" not in values:
+            raise ValueError("unsupported dynamic shard matrix")
+        base = _git("merge-base", "origin/main", "HEAD") or "origin/main"
+        changed = _git("diff", "--name-only", f"{base}...HEAD").splitlines()
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/pytest_ci_affected.py"), "--include-smoke", "--matrix", *changed],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        values = json.loads(result.stdout)
+        if not isinstance(values, list) or not 1 <= len(values) <= 12 or values != list(range(len(values))):
+            raise ValueError("affected planner returned invalid shard indices")
     return [str(value) for value in values] if values else [""]
 
 
@@ -62,10 +78,11 @@ def _git(*args: str) -> str:
     return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=False).stdout.strip()
 
 
-def _expressions(matrix: str) -> dict[str, str]:
+def _expressions(matrix: str, total: int) -> dict[str, str]:
     base = _git("merge-base", "origin/main", "HEAD") or "origin/main"
     return {
         "matrix.shard": matrix,
+        "strategy.job-total": str(total),
         "github.event_name": "pull_request",
         "github.event.pull_request.base.sha": base,
         "github.event.pull_request.head.sha": _git("rev-parse", "HEAD"),
@@ -76,8 +93,8 @@ def _expressions(matrix: str) -> dict[str, str]:
     }
 
 
-def _render(command: str, matrix: str) -> tuple[str, str]:
-    known = _expressions(matrix)
+def _render(command: str, matrix: str, total: int) -> tuple[str, str]:
+    known = _expressions(matrix, total)
     unknown = sorted({expr for expr in _EXPR.findall(command) if expr not in known})
     if unknown:
         return command, f"needs GitHub context: {', '.join(unknown)}"
@@ -93,12 +110,13 @@ def plan(workflow: dict, jobs: tuple[str, ...] = GATING_JOBS) -> list[Step]:
     steps: list[Step] = []
     for job_name in jobs:
         job = workflow["jobs"][job_name]
-        for matrix in matrix_values(job):
+        matrices = matrix_values(job)
+        for matrix in matrices:
             for step in job["steps"]:
                 if "run" not in step:
                     continue
                 name = str(step.get("name") or step["run"].splitlines()[0])
-                command, reason = _render(step["run"], matrix)
+                command, reason = _render(step["run"], matrix, len(matrices))
                 reason = reason or next((why for pattern, why in SKIP_RULES if re.search(pattern, command)), "")
                 steps.append(Step(job_name, name, command, "skip" if reason else "run", reason, matrix))
     return steps
