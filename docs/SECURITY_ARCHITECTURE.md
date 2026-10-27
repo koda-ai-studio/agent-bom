@@ -52,9 +52,10 @@ Cloud scanning never moves customer data out of the account. The contract:
 - **Agentless workload scanning stays in-account.** The AWS EBS side-scan
   (`src/agent_bom/cloud/side_scan.py`) snapshots a volume, attaches it to an
   in-account collector, reads package/filesystem metadata, and deletes the temp
-  snapshot and volume in a guaranteed `try/finally`. An orphan sweep recovers
-  any leftover temp resources (tagged by the scanner) after a hard crash, so a
-  failed run leaves nothing behind. No volume bytes leave the account.
+  snapshot and volume through ordered `try/finally` cleanup. Failed unmount,
+  detach or disk deletion retains dependent resources and reports incomplete
+  cleanup. AWS crash recovery requires operator reconciliation; generic tags
+  never authorize automatic orphan deletion. No volume bytes leave the account.
   Azure Managed Disk and GCP Persistent Disk adapters use the same durable
   ownership and cleanup contract through injected, already-authenticated SDK
   clients. Their provider resources and block bytes remain inside the target

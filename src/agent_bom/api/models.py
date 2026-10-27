@@ -660,15 +660,17 @@ class RuntimeEvidenceIngestRequest(BaseModel):
 class SideScanTriggerRequest(BaseModel):
     """Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).
 
-    Tenant-scoped door for the shipped ``run_provider_side_scan`` executor: an
-    opt-in mutation (temp snapshot/disk create, attach, delete) that never
+    Opt-in snapshot/disk lifecycle via ``run_provider_side_scan`` that never
     modifies the scanned disk or image, mounts a temp copy on an in-account
     collector read-only and records SBOM + CVE + secret *metadata* only.
-    Credentials are never accepted here; the executor resolves scoped lifecycle
-    credentials from the provider chain. AWS EBS keeps its own CLI entrypoint.
+    Credentials are never accepted here; a tenant-owned connection must carry an
+    operator lifecycle grant for the requested scope. AWS keeps its CLI entrypoint.
     """
 
     model_config = ConfigDict(extra="forbid")
+    connection_id: Annotated[
+        str, Field(min_length=1, max_length=256, description="Tenant-owned connection with an operator side-scan lifecycle grant.")
+    ]
     provider: Literal["azure", "gcp"]
     target_id: Annotated[str, Field(min_length=1, max_length=1024, description="Disk resource id, or GCE image path (target_type=image).")]
     target_type: Literal["disk", "image"] = "disk"

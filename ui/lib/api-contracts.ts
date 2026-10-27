@@ -170,6 +170,7 @@ export interface SideScanExecutionResponse {
 
 /** Body for POST /v1/cloud/side-scan (no credential is ever sent). */
 export interface SideScanTriggerRequest {
+  connection_id: string;
   provider: "azure" | "gcp";
   target_id: string;
   /** "image" scans a GCE image; Azure managed images are not supported. */

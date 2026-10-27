@@ -93,7 +93,10 @@ def test_azure_managed_identity_is_explicit(binding: dict[str, Any], monkeypatch
     assert calls == [{"client_id": "client-id"}]
 
 
-def test_google_wif_has_fixed_endpoints_scope_and_principal(binding: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("with_lifecycle_grant", [False, True])
+def test_google_wif_has_fixed_endpoints_scope_and_principal(
+    binding: dict[str, Any], monkeypatch: pytest.MonkeyPatch, with_lifecycle_grant: bool
+) -> None:
     binding.update(
         provider="gcp",
         directory_tenant_id="",
@@ -101,6 +104,9 @@ def test_google_wif_has_fixed_endpoints_scope_and_principal(binding: dict[str, A
         audience="//iam.googleapis.com/projects/123/locations/global/workloadIdentityPools/pool/providers/provider",
     )
     binding["_write"]()
+    if with_lifecycle_grant:
+        binding["side_scan"] = {"targets": ["projects/scope-a/zones/zone-a/disks/os"], "collectors": ["collector"], "locations": ["zone-a"]}
+        binding["_write"]()
     source_calls: list[dict[str, Any]] = []
     target_calls: list[dict[str, Any]] = []
     source = object()
@@ -270,3 +276,34 @@ def test_snowflake_workload_advertisement_requires_native_deployment(monkeypatch
     assert modes["gcp"] == ["workload_identity"]
     if enabled:
         assert modes["snowflake"] == ["workload_identity"]
+
+
+def test_lifecycle_google_scope_requires_explicit_grant(binding, monkeypatch):
+    from agent_bom.cloud.connection_workload import broker_side_scan_binding, resolve_binding
+
+    binding.update(
+        provider="gcp",
+        directory_tenant_id="",
+        role_ref="scanner@project.iam.gserviceaccount.com",
+        audience="//iam.googleapis.com/projects/123/locations/global/workloadIdentityPools/pool/providers/provider",
+    )
+    binding["_write"]()
+    candidate = record("gcp")
+    candidate.role_ref = binding["role_ref"]
+    calls = []
+    monkeypatch.setitem(
+        sys.modules,
+        "google.auth",
+        types.SimpleNamespace(
+            identity_pool=types.SimpleNamespace(Credentials=lambda **kw: object()),
+            impersonated_credentials=types.SimpleNamespace(Credentials=lambda **kw: calls.append(kw)),
+        ),
+    )
+    with pytest.raises(ConnectionBrokerError):
+        broker_side_scan_binding(resolve_binding(candidate))
+    assert calls == []
+    binding["side_scan"] = {"targets": ["projects/scope-a/zones/zone-a/disks/os"], "collectors": ["collector"], "locations": ["zone-a"]}
+    binding["_write"]()
+    broker_side_scan_binding(resolve_binding(candidate))
+    assert calls[0]["target_scopes"] == ["https://www.googleapis.com/auth/cloud-platform"]
+    assert calls[0]["target_principal"] == candidate.role_ref

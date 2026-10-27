@@ -15,6 +15,7 @@ def register_cloud_side_scan(bindings: OperatorToolBindings) -> None:
 
     @mcp.tool(annotations=bindings.write_action, title="Cloud Side-Scan (Azure/GCP)")
     async def cloud_side_scan(
+        connection_id: Annotated[str, Field(description="Tenant-owned connection with an operator side-scan lifecycle grant.")] = "",
         provider: Annotated[str, Field(description="Cloud provider: 'azure' or 'gcp' (AWS EBS uses the CLI side-scan entrypoint).")] = "",
         target_id: Annotated[
             str, Field(description="Managed/persistent disk resource id, or a GCE image path with target_type=image.")
@@ -43,8 +44,8 @@ def register_cloud_side_scan(bindings: OperatorToolBindings) -> None:
         mounts a copy on an in-account collector read-only, returns SBOM + CVEs per
         owning VM + secret *metadata* only, and tears every owned temporary
         resource down. Requires an admin operator + ``cloud:write`` scope.
-        Credentials are never accepted here — the executor resolves scoped
-        lifecycle credentials from the provider's default chain
+        Credentials are never accepted here — a tenant-owned connection and
+        operator lifecycle grant authorize the exact target and collector
         (``credentialed_smoke=false``). Fail-closed and honest: OFF → ``disabled``;
         missing extra/credentials → ``unavailable``; never a clean-workload claim.
         """
@@ -53,6 +54,7 @@ def register_cloud_side_scan(bindings: OperatorToolBindings) -> None:
             bindings.implementations["cloud_side_scan_impl"],
             destructive=True,
             required_scope="cloud:write",
+            connection_id=connection_id,
             provider=provider,
             target_id=target_id,
             target_type=target_type,

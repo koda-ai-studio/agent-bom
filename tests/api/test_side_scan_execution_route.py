@@ -33,6 +33,7 @@ from agent_bom.cloud.side_scan_targets import (
     CloudSideScanExecutionResult,
     side_scan_state_db_path,
 )
+from tests._side_scan_test_auth import authorized_side_scan_orchestration as authorized_side_scan_orchestration
 
 PROXY_SECRET = "test-proxy-secret-with-32-plus-bytes"
 TENANT = "tenant-alpha"
@@ -66,6 +67,7 @@ def state_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def _valid_body(provider: str = "gcp") -> dict:
     body = {
+        "connection_id": "fixture-connection",
         "provider": provider,
         "target_id": "projects/proj/zones/us-central1-a/disks/os",
         "account_id": "proj",

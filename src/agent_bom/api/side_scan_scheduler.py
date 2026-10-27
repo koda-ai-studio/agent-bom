@@ -24,8 +24,8 @@ Design (deliberately thin — reuse, do not build a new subsystem):
   state is consistent across every surface — no false clean.
 * **Honest, fail-soft.** Disabled / unavailable / failed states stay explicit
   per target, and one failing target never sinks the others or the loop.
-* **``credentialed_smoke`` unchanged.** No live-cloud claim is introduced;
-  credentials are still resolved by the executor from the provider default chain.
+* **Bound credentials.** Each target names a tenant-owned connection with an
+  operator lifecycle grant. Missing authority never falls back to ambient credentials.
 
 Targets are supplied out of band (there is no side-scan target store yet) via
 ``AGENT_BOM_SIDESCAN_SCHEDULER_TARGETS`` — a path to a JSON file, or inline JSON.
@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from agent_bom.api.side_scan_authorization import authorize_side_scan
 from agent_bom.api.tenant_worker import run_tenant_bound, tenant_bound_context
 from agent_bom.config import SIDESCAN_SCHEDULER_MAX_CONCURRENCY, SIDESCAN_SCHEDULER_POLL_SECONDS
 from agent_bom.core.tenancy import require_explicit_tenant_id
@@ -68,6 +69,7 @@ class ScheduledSideScanTarget:
     location: str
     collector_id: str
     tenant_id: str
+    connection_id: str = ""
     collector_resource_group: str | None = None
     region: str | None = None
     scan_secrets_enabled: bool = True
@@ -125,6 +127,7 @@ def _coerce_target(raw: Any) -> ScheduledSideScanTarget | None:
         logger.warning("Skipping side-scan scheduler target: invalid tenant_id")
         return None
     fields = {
+        "connection_id": str(raw.get("connection_id") or "").strip(),
         "target_id": str(raw.get("target_id") or "").strip(),
         "account_id": str(raw.get("account_id") or "").strip(),
         "location": str(raw.get("location") or "").strip(),
@@ -244,6 +247,18 @@ def run_scheduled_side_scan_once(
         if state_db_path is not None:
             run_kwargs["state_db_path"] = state_db_path
         try:
+            run_kwargs.update(
+                authorize_side_scan(
+                    tenant_id=target.tenant_id,
+                    connection_id=target.connection_id,
+                    provider=target.provider,
+                    account_id=target.account_id,
+                    target_id=target.target_id,
+                    collector_id=target.collector_id,
+                    location=target.location,
+                    collector_resource_group=target.collector_resource_group,
+                )
+            )
             results = asyncio.run(run_provider_side_scan(**run_kwargs))
         except SideScanDisabledError:
             logger.info("Scheduled side-scan skipped: executor disabled (target %s)", target.target_id)

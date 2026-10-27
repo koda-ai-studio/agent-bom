@@ -129,6 +129,7 @@ def new_side_scan_execution(
     collector_id: str,
     idempotency_key: str,
     request_fingerprint: str = "",
+    authorization_ref: str = "",
     now: str | None = None,
 ) -> SideScanExecutionRecord:
     """Build a deterministic execution identity for retry-safe scheduling."""
@@ -148,6 +149,7 @@ def new_side_scan_execution(
         collector_id=collector_id,
         cleanup_ownership=ownership,
         request_fingerprint=request_fingerprint,
+        authorization_ref=authorization_ref,
         created_at=timestamp,
         updated_at=timestamp,
     )

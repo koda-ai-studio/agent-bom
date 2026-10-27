@@ -13,17 +13,46 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from agent_bom.cloud.connection_broker import ConnectionBrokerError
 
-if TYPE_CHECKING:
-    from agent_bom.api.connection_store import CloudConnectionRecord
-
 _MODES = {"azure": {"managed_identity", "workload_identity"}, "gcp": {"workload_identity"}, "snowflake": {"workload_identity"}}
 _READ_ONLY = "https://www.googleapis.com/auth/cloud-platform.read-only"
+
+
+class WorkloadConnection(Protocol):
+    """Connection fields consumed by the broker, independent of API storage."""
+
+    @property
+    def tenant_id(self) -> str: ...
+
+    @property
+    def provider(self) -> str: ...
+
+    @property
+    def auth_params(self) -> dict[str, Any]: ...
+
+    @property
+    def external_id_encrypted(self) -> str: ...
+
+    @property
+    def role_ref(self) -> str: ...
+
+    @property
+    def inventory_scope(self) -> str: ...
+
+
+class SideScanGrant(BaseModel):
+    """Operator-owned exact allowlists for snapshot lifecycle mutations."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    targets: list[str] = Field(min_length=1, max_length=256)
+    collectors: list[str] = Field(min_length=1, max_length=256)
+    locations: list[str] = Field(min_length=1, max_length=256)
+    collector_resource_groups: list[str] = Field(default_factory=list, max_length=256)
 
 
 class WorkloadBinding(BaseModel):
@@ -39,6 +68,7 @@ class WorkloadBinding(BaseModel):
     audience: str = ""
     enabled: bool = True
     expires_at: str
+    side_scan: SideScanGrant | None = None
 
 
 def supported_workload_modes() -> dict[str, list[str]]:
@@ -58,7 +88,7 @@ def workload_mode(provider: str, params: dict[str, Any]) -> str:
     return mode
 
 
-def resolve_binding(record: CloudConnectionRecord) -> WorkloadBinding:
+def resolve_binding(record: WorkloadConnection) -> WorkloadBinding:
     """Resolve fresh operator configuration and check every delegated boundary."""
     try:
         mode = workload_mode(record.provider, record.auth_params)
@@ -123,8 +153,19 @@ def resolve_binding(record: CloudConnectionRecord) -> WorkloadBinding:
         raise ConnectionBrokerError("Workload connection binding is unavailable or does not match the connection.") from exc
 
 
-def broker_workload(record: CloudConnectionRecord) -> Any:
-    binding = resolve_binding(record)
+def broker_workload(record: WorkloadConnection) -> Any:
+    """Ordinary connection credentials always retain read-only Google scope."""
+    return _broker_binding(resolve_binding(record), google_scope=_READ_ONLY)
+
+
+def broker_side_scan_binding(binding: WorkloadBinding) -> Any:
+    """Use an already authorized operator binding for its explicit lifecycle grant."""
+    if binding.side_scan is None or binding.provider not in {"azure", "gcp"}:
+        raise ConnectionBrokerError("Connection has no side-scan lifecycle grant.")
+    return _broker_binding(binding, google_scope="https://www.googleapis.com/auth/cloud-platform")
+
+
+def _broker_binding(binding: WorkloadBinding, *, google_scope: str) -> Any:
     try:
         if binding.provider == "azure":
             if binding.auth_mode == "managed_identity":
@@ -155,7 +196,7 @@ def broker_workload(record: CloudConnectionRecord) -> Any:
             scopes=["https://www.googleapis.com/auth/iam"],
         )
         return impersonated_credentials.Credentials(
-            source_credentials=source, target_principal=binding.role_ref, target_scopes=[_READ_ONLY], lifetime=3600
+            source_credentials=source, target_principal=binding.role_ref, target_scopes=[google_scope], lifetime=3600
         )
     except Exception as exc:
         raise ConnectionBrokerError("Workload credential could not be constructed.") from exc

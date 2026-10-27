@@ -1821,9 +1821,9 @@ export interface paths {
          *     - provider extra / scoped lifecycle credentials unavailable → ``200``
          *       ``status=unavailable`` with the actionable, sanitized reason.
          *     - Azure requires ``collector_resource_group`` → ``400``.
-         *     Credentials are never accepted here; the executor resolves separately
-         *     scoped lifecycle credentials from the provider's default chain
-         *     (``credentialed_smoke=false``).
+         *     A tenant-owned connection and exact operator lifecycle grant are required
+         *     before execution; missing or mismatched authority returns 403. Bound
+         *     credentials have no ambient fallback (``credentialed_smoke=false``).
          */
         post: operations["cloud_side_scan_trigger_v1_cloud_side_scan_post"];
         delete?: never;
@@ -23749,12 +23749,11 @@ export interface components {
          * SideScanTriggerRequest
          * @description Trigger one cross-cloud (Azure/GCP) agentless disk side-scan (#4158 Wave 2).
          *
-         *     Tenant-scoped door for the shipped ``run_provider_side_scan`` executor: an
-         *     opt-in mutation (temp snapshot/disk create, attach, delete) that never
+         *     Opt-in snapshot/disk lifecycle via ``run_provider_side_scan`` that never
          *     modifies the scanned disk or image, mounts a temp copy on an in-account
          *     collector read-only and records SBOM + CVE + secret *metadata* only.
-         *     Credentials are never accepted here; the executor resolves scoped lifecycle
-         *     credentials from the provider chain. AWS EBS keeps its own CLI entrypoint.
+         *     Credentials are never accepted here; a tenant-owned connection must carry an
+         *     operator lifecycle grant for the requested scope. AWS keeps its CLI entrypoint.
          */
         SideScanTriggerRequest: {
             /**
@@ -23772,6 +23771,11 @@ export interface components {
              * @description Azure only: resource group of the collector VM.
              */
             collector_resource_group?: string | null;
+            /**
+             * Connection Id
+             * @description Tenant-owned connection with an operator side-scan lifecycle grant.
+             */
+            connection_id: string;
             /**
              * Idempotency Key
              * @description Retry-safe key; the same key reuses one execution record.

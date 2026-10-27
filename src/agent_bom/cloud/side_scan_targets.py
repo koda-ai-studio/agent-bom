@@ -356,7 +356,7 @@ async def run_cloud_side_scan_targets(
     return results
 
 
-def _default_provider_clients(provider: str, *, account_id: str, region: str | None) -> dict[str, Any]:
+def _default_provider_clients(provider: str, *, account_id: str, region: str | None, credential: Any = None) -> dict[str, Any]:
     """Build authenticated Azure/GCP compute SDK clients via the default credential chain.
 
     Honest boundary: the executors are shipped and wired, but they never embed
@@ -374,7 +374,7 @@ def _default_provider_clients(provider: str, *, account_id: str, region: str | N
                 "Azure Managed Disk side-scan requires the azure extra. Install with: pip install 'agent-bom[azure]'"
             ) from exc
         try:
-            credential = DefaultAzureCredential()
+            credential = credential if credential is not None else DefaultAzureCredential()
             client = ComputeManagementClient(credential, subscription_id=account_id)
         except Exception as exc:  # noqa: BLE001 - sanitized, actionable, no secret leakage
             detail = sanitize_text(exc)
@@ -394,16 +394,53 @@ def _default_provider_clients(provider: str, *, account_id: str, region: str | N
                 "GCP Persistent Disk side-scan requires the gcp extra. Install with: pip install 'agent-bom[gcp]'"
             ) from exc
         try:
+            kwargs = {"credentials": credential} if credential is not None else {}
             return {
-                "snapshots_client": compute_v1.SnapshotsClient(),
-                "disks_client": compute_v1.DisksClient(),
-                "instances_client": compute_v1.InstancesClient(),
+                "snapshots_client": compute_v1.SnapshotsClient(**kwargs),
+                "disks_client": compute_v1.DisksClient(**kwargs),
+                "instances_client": compute_v1.InstancesClient(**kwargs),
             }
         except Exception as exc:  # noqa: BLE001 - sanitized, actionable, no secret leakage
             raise SideScanConfigError(
                 f"GCP Persistent Disk side-scan could not resolve scoped lifecycle credentials: {sanitize_text(exc)}"
             ) from exc
     raise SideScanConfigError(f"cross-cloud side-scan supports only azure|gcp, not {provider!r}")
+
+
+def _request_fingerprint(
+    *,
+    provider: str,
+    target_id: str,
+    account_id: str,
+    location: str,
+    collector_id: str,
+    collector_resource_group: str | None,
+    collector_lun: int,
+    region: str | None,
+    scan_secrets_enabled: bool,
+    authorization_ref: str,
+    target_type: str,
+) -> str:
+    """Bind retries to every execution option and the verified authorization."""
+    return hashlib.sha256(
+        json.dumps(
+            {
+                "provider": provider,
+                "target_id": target_id,
+                "account_id": account_id,
+                "location": location,
+                "collector_id": collector_id,
+                "collector_resource_group": str(collector_resource_group or "").strip(),
+                "collector_lun": collector_lun,
+                "region": str(region or "").strip(),
+                "scan_secrets_enabled": scan_secrets_enabled,
+                **({"authorization_ref": authorization_ref} if authorization_ref else {}),
+                **({"target_type": "image"} if target_type == "image" else {}),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
 
 
 async def run_provider_side_scan(
@@ -422,6 +459,7 @@ async def run_provider_side_scan(
     region: str | None = None,
     scan_secrets_enabled: bool = True,
     client_factory: ProviderClientFactory | None = None,
+    authorization_ref: str = "",
     mount_controller: MountController | None = None,
     sleep: Callable[[float], None] = time.sleep,
 ) -> list[CloudSideScanExecutionResult]:
@@ -483,24 +521,19 @@ async def run_provider_side_scan(
     )
 
     store = get_side_scan_state_store(state_db_path=state_db_path)
-    fingerprint = hashlib.sha256(
-        json.dumps(
-            {
-                "provider": provider,
-                "target_id": target_id,
-                "account_id": account_id,
-                "location": location,
-                "collector_id": collector_id,
-                "collector_resource_group": str(collector_resource_group or "").strip(),
-                "collector_lun": collector_lun,
-                "region": str(region or "").strip(),
-                "scan_secrets_enabled": scan_secrets_enabled,
-                **({"target_type": "image"} if target_type == "image" else {}),
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-        ).encode()
-    ).hexdigest()
+    fingerprint = _request_fingerprint(
+        provider=provider,
+        target_id=target_id,
+        account_id=account_id,
+        location=location,
+        collector_id=collector_id,
+        collector_resource_group=collector_resource_group,
+        collector_lun=collector_lun,
+        region=region,
+        scan_secrets_enabled=scan_secrets_enabled,
+        authorization_ref=authorization_ref,
+        target_type=target_type,
+    )
     execution = store.create_or_get(
         new_side_scan_execution(
             tenant_id=tenant_id,
@@ -510,6 +543,7 @@ async def run_provider_side_scan(
             collector_id=collector_id,
             idempotency_key=idempotency_key or uuid.uuid4().hex,
             request_fingerprint=fingerprint,
+            authorization_ref=authorization_ref,
         )
     )
 

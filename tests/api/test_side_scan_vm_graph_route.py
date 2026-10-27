@@ -21,6 +21,7 @@ from agent_bom.cloud.side_scan_lifecycle import CleanupStatus, ExecutionStatus, 
 from agent_bom.cloud.side_scan_targets import SIDE_SCAN_STATE_DB_ENV, CloudSideScanExecutionResult, side_scan_state_db_path
 from agent_bom.core.cloud_identity import cloud_resource_node_id
 from agent_bom.models import Package, Severity, Vulnerability
+from tests._side_scan_test_auth import authorized_side_scan_orchestration as authorized_side_scan_orchestration
 
 PROXY_SECRET = "test-proxy-secret-with-32-plus-bytes"
 TENANT = "tenant-vm"
@@ -103,6 +104,7 @@ def _executor(**kwargs) -> list[CloudSideScanExecutionResult]:
 
 def _body() -> dict:
     return {
+        "connection_id": "fixture-connection",
         "provider": "gcp",
         "target_id": f"projects/{PROJECT}/zones/{ZONE}/disks/os",
         "account_id": PROJECT,

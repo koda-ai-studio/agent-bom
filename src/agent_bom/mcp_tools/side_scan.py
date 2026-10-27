@@ -11,8 +11,8 @@ Security posture (non-negotiable):
   records SBOM + CVE (per owning VM) + secret metadata only, and tears every
   owned temporary resource down. The graph snapshot is persisted by the REST
   route; this tool returns the same bounded package/CVE record.
-- Credentials are never accepted here; the executor resolves separately scoped
-  lifecycle credentials from the provider's default chain
+- Credentials are never accepted here; tenant-owned connections and exact
+  operator lifecycle grants select bound credentials with no ambient fallback
   (``credentialed_smoke=False``).
 - Admin-gated destructive write at the dispatch layer (``cloud:write`` scope).
 - Fail-closed and honest: side-scan OFF → ``disabled``; missing provider extra /
@@ -27,6 +27,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import uuid
 
 from agent_bom.cloud.side_scan_inventory import side_scan_response
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
@@ -40,6 +41,7 @@ _SUPPORTED = {"azure", "gcp"}
 async def cloud_side_scan_impl(
     *,
     provider: str = "",
+    connection_id: str = "",
     target_id: str = "",
     target_type: str = "disk",
     account_id: str = "",
@@ -57,6 +59,7 @@ async def cloud_side_scan_impl(
     _authenticated_actor: str = "",
 ) -> str:
     """Run one Azure/GCP agentless disk side-scan through the shared executor."""
+    from agent_bom.api.side_scan_authorization import authorize_side_scan
     from agent_bom.cloud.side_scan import SideScanConfigError, SideScanDisabledError
     from agent_bom.cloud.side_scan_lifecycle import get_side_scan_state_store, new_side_scan_execution
     from agent_bom.cloud.side_scan_targets import run_provider_side_scan
@@ -68,9 +71,7 @@ async def cloud_side_scan_impl(
     if rejection:
         return json.dumps({"status": "rejected", "error": rejection})
 
-    import uuid as _uuid
-
-    idem = idempotency_key.strip() or _uuid.uuid4().hex
+    idem = idempotency_key.strip() or uuid.uuid4().hex
     execution_id = new_side_scan_execution(
         tenant_id=resolved_tenant,
         provider=prov,  # type: ignore[arg-type]
@@ -81,7 +82,18 @@ async def cloud_side_scan_impl(
     ).execution_id
 
     try:
+        authorization = authorize_side_scan(
+            tenant_id=resolved_tenant,
+            connection_id=connection_id,
+            provider=prov,
+            account_id=account_id,
+            target_id=target_id,
+            collector_id=collector_id,
+            location=location,
+            collector_resource_group=collector_resource_group,
+        )
         results = await run_provider_side_scan(
+            **authorization,
             provider=prov,  # type: ignore[arg-type]
             target_id=target_id.strip(),
             target_type=target_type,
