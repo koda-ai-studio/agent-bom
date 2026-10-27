@@ -39,6 +39,16 @@ def _agent_with_package() -> Agent:
     )
 
 
+def _scan_server_image(image_ref: str, *, server_context: bool):
+    assert server_context is True
+    return [Package(name="openssl", version="3.0.16", ecosystem="deb")], "native"
+
+
+def _fail_server_image(image_ref: str, *, server_context: bool):
+    assert server_context is True
+    raise RuntimeError("registry token=secret")
+
+
 def test_api_pipeline_image_scan_uses_container_surface(monkeypatch):
     store = _DummyStore()
     job = ScanJob(
@@ -52,7 +62,7 @@ def test_api_pipeline_image_scan_uses_container_surface(monkeypatch):
     monkeypatch.setattr("agent_bom.discovery.discover_all", lambda *args, **kwargs: [])
     monkeypatch.setattr(
         "agent_bom.image.scan_image",
-        lambda image_ref: ([Package(name="openssl", version="3.0.16", ecosystem="deb")], "native"),
+        _scan_server_image,
     )
     monkeypatch.setattr("agent_bom.scanners.scan_agents_sync", lambda agents, enable_enrichment=False, **kwargs: [])
 
@@ -76,7 +86,7 @@ def test_api_pipeline_requested_image_failure_has_failed_scan_outcome(monkeypatc
 
     monkeypatch.setattr("agent_bom.api.pipeline._get_store", lambda: store)
     monkeypatch.setattr("agent_bom.discovery.discover_all", lambda *args, **kwargs: [])
-    monkeypatch.setattr("agent_bom.image.scan_image", lambda _image: (_ for _ in ()).throw(RuntimeError("registry token=secret")))
+    monkeypatch.setattr("agent_bom.image.scan_image", _fail_server_image)
 
     _run_scan_sync(job)
 
@@ -353,7 +363,7 @@ def test_api_pipeline_persists_clickhouse_analytics(monkeypatch):
     monkeypatch.setattr("agent_bom.discovery.discover_all", lambda *args, **kwargs: [])
     monkeypatch.setattr(
         "agent_bom.image.scan_image",
-        lambda image_ref: ([Package(name="openssl", version="3.0.16", ecosystem="deb")], "native"),
+        _scan_server_image,
     )
 
     def _fake_scan(agents, enable_enrichment=False, **kwargs):
@@ -442,7 +452,7 @@ def test_api_pipeline_persists_unified_graph_snapshot(monkeypatch):
     monkeypatch.setattr("agent_bom.discovery.discover_all", lambda *args, **kwargs: [])
     monkeypatch.setattr(
         "agent_bom.image.scan_image",
-        lambda image_ref: ([Package(name="openssl", version="3.0.16", ecosystem="deb")], "native"),
+        _scan_server_image,
     )
     monkeypatch.setattr("agent_bom.scanners.scan_agents_sync", lambda agents, enable_enrichment=False, **kwargs: [])
 
@@ -467,7 +477,7 @@ def test_api_pipeline_reports_enrichment_as_part_of_scanning(monkeypatch):
     monkeypatch.setattr("agent_bom.discovery.discover_all", lambda *args, **kwargs: [])
     monkeypatch.setattr(
         "agent_bom.image.scan_image",
-        lambda image_ref: ([Package(name="openssl", version="3.0.16", ecosystem="deb")], "native"),
+        _scan_server_image,
     )
 
     def _fake_scan(agents, enable_enrichment=False, **kwargs):
