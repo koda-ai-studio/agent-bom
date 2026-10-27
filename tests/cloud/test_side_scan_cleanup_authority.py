@@ -123,3 +123,42 @@ def test_stale_worker_cannot_claim_cleanup(lifecycle):
     with pytest.raises(SideScanStateConflictError):
         adapter.cleanup(target, "collector-1")
     assert snapshots.delete_calls == disks.delete_calls == []
+
+
+@pytest.mark.parametrize("status", [403, 404, 500])
+def test_successful_create_with_failed_readback_never_claims_cleanup_complete(tmp_path, monkeypatch, status):
+    adapter, store, snapshots, _, _ = _gcp_adapter(tmp_path)
+    original = snapshots.get
+
+    def readback(**kwargs):
+        if snapshots.resources:
+            raise FakeSdkError("readback unavailable", status)
+        return original(**kwargs)
+
+    monkeypatch.setattr(snapshots, "get", readback)
+    with pytest.raises(RuntimeError):
+        adapter.create_snapshot(_target("gcp"))
+    record = store.get(tenant_id="tenant-a", execution_id=adapter.execution.execution_id)
+    assert snapshots.resources
+    assert record.cleanup_status is CleanupStatus.PENDING
+    assert "provider_mutation_unreconciled" in record.warning_codes
+    assert adapter.sweep_orphans(active_execution_ids=set()) == []
+    assert snapshots.delete_calls == []
+
+
+def test_conflicting_attachment_cannot_be_assumed_to_belong_to_execution(tmp_path, monkeypatch):
+    adapter, _, _, _, instances = _gcp_adapter(tmp_path)
+    target = _target("gcp")
+    snapshot_id = adapter.create_snapshot(target)
+    disk_id = adapter.create_scan_disk(target, snapshot_id)
+    instances.disks = [{"device_name": adapter._device_name, "source": "projects/proj-1/zones/us-central1-a/disks/foreign"}]
+
+    def conflict(**kwargs):
+        raise FakeSdkError("conflict", 409)
+
+    monkeypatch.setattr(instances, "attach_disk", conflict)
+    with pytest.raises(RuntimeError):
+        adapter.attach_scan_disk(target, disk_id, "collector-1")
+    assert not any(resource.kind == "attachment" for resource in adapter.execution.resources)
+    assert "provider_mutation_unreconciled" in adapter.execution.warning_codes
+    assert instances.detach_calls == []

@@ -520,8 +520,10 @@ async def test_run_provider_side_scan_gcp_dispatches_to_adapter_and_cleans_up(tm
 
 
 @pytest.mark.asyncio
-async def test_run_provider_side_scan_cleans_up_on_provider_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A denied attach still tears down the snapshot + temp disk and never reads as clean."""
+async def test_run_provider_side_scan_preserves_resources_after_uncertain_provider_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed mutation leaves dependencies pending for provider reconciliation."""
     monkeypatch.setenv("AGENT_BOM_SIDESCAN", "1")
     snapshots = FakeGcpCollection("snapshots")
     disks = FakeGcpCollection("disks")
@@ -551,10 +553,12 @@ async def test_run_provider_side_scan_cleans_up_on_provider_failure(tmp_path: Pa
             sleep=lambda _seconds: None,
         )
 
-    # Snapshot + temp disk were created, then guaranteed-cleanup reaped both.
+    # The API failure does not prove the provider performed no mutation.
     assert snapshots.insert_calls and disks.insert_calls
-    assert snapshots.resources == {}
-    assert disks.resources == {}
+    assert snapshots.resources and disks.resources
+    record = SQLiteSideScanStateStore(tmp_path / "state.db").list_recent(tenant_id="tenant-a")[0]
+    assert record.cleanup_status is CleanupStatus.PENDING
+    assert "provider_mutation_unreconciled" in record.warning_codes
     # No secret material leaked into the raised error path.
     assert "token=secret" not in "".join(str(call) for call in disks.delete_calls)
 
