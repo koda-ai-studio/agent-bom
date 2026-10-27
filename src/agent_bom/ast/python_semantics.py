@@ -32,6 +32,7 @@ _FRAMEWORK_IMPORTS: dict[str, str] = {
     "langgraph": "LangGraph",
     "crewai": "CrewAI",
     "autogen": "AutoGen",
+    "agents": "OpenAI Agents SDK",
     "mcp": "MCP",
     "modelcontextprotocol": "MCP",
     "llama_index": "LlamaIndex",
