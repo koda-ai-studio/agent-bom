@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="520" viewBox="0 0 1280 520" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
   <title id="title">agent-bom: Discover. Scan. Correlate. Act.</title>
-  <desc id="desc">Security evidence across repositories, software supply chains, AI agents, MCP, models, cloud, identity, infrastructure, and data platforms.</desc>
+  <desc id="desc">Security evidence across repositories, software supply chains, AI agents, MCP, models, cloud, identity, infrastructure, and data platforms. Integrations: Claude, Codex, Cursor, GitHub Copilot, Windsurf, Cortex Code, Gemini CLI, JetBrains AI, Junie, Amazon Q, Cline, Roo Code, Continue, Zed, Goose, Snowflake CLI, Docker MCP Toolkit, Tabnine, Sourcegraph Cody, Aider, Void, Aide, Trae, Pieces, OpenClaw, mcp-cli, OpenAI, Hugging Face, Ollama, MLflow, W&amp;B, Langfuse, LangSmith, CoreWeave, Nebius, Lambda, RunPod, Vast.ai, Crusoe, GPU containers + K8s GPU nodes, AWS, Azure, GCP, Kubernetes, Snowflake, Databricks, Supabase, Pinecone, Qdrant, Weaviate, Chroma, Milvus, Okta, GitHub Actions, Vercel, Microsoft Entra ID, Jira, ServiceNow, Slack, Jamf, ClickHouse, BigQuery, S3, GCS, Azure Blob, Jira tickets, Slack alerts, Vanta, Drata, OCSF syslog.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#060b17" />
@@ -63,9 +63,21 @@
       <title>Windsurf</title>
       <path d="M23.55 5.067c-1.2038-.002-2.1806.973-2.1806 2.1765v4.8676c0 .972-.8035 1.7594-1.7597 1.7594-.568 0-1.1352-.286-1.4718-.7659l-4.9713-7.1003c-.4125-.5896-1.0837-.941-1.8103-.941-1.1334 0-2.1533.9635-2.1533 2.153v4.8957c0 .972-.7969 1.7594-1.7596 1.7594-.57 0-1.1363-.286-1.4728-.7658L.4076 5.1598C.2822 4.9798 0 5.0688 0 5.2882v4.2452c0 .2147.0656.4228.1884.599l5.4748 7.8183c.3234.462.8006.8052 1.3509.9298 1.3771.313 2.6446-.747 2.6446-2.0977v-4.893c0-.972.7875-1.7593 1.7596-1.7593h.003a1.798 1.798 0 0 1 1.4718.7658l4.9723 7.0994c.4135.5905 1.05.941 1.8093.941 1.1587 0 2.1515-.9645 2.1515-2.153v-4.8948c0-.972.7875-1.7594 1.7596-1.7594h.194a.22.22 0 0 0 .2204-.2202v-4.622a.22.22 0 0 0-.2203-.2203Z" />
     </symbol>
-    <symbol id="embedded-snowflake" viewBox="0 0 24 24" fill="#29b5e8">
-      <title>Snowflake</title>
-      <path d="M24 3.459c0 .646-.418 1.18-1.141 1.18-.723 0-1.142-.534-1.142-1.18 0-.647.419-1.18 1.142-1.18.723 0 1.141.533 1.141 1.18zm-.228 0c0-.533-.38-.951-.913-.951s-.913.38-.913.95c0 .533.38.952.913.952.57 0 .913-.419.913-.951zm-1.37-.533h.495c.266 0 .456.152.456.38 0 .153-.076.229-.19.305l.19.266v.038h-.266l-.19-.266h-.229v.266h-.266zm.495.228h-.229v.267h.229c.114 0 .152-.038.152-.114.038-.077-.038-.153-.152-.153zM7.602 12.4c.038-.151.076-.304.076-.456 0-.114-.038-.228-.038-.342-.114-.343-.304-.647-.646-.838l-4.87-2.777c-.685-.38-1.56-.152-1.94.533-.381.685-.153 1.56.532 1.94l2.701 1.56-2.701 1.56c-.685.38-.913 1.256-.533 1.94.38.685 1.256.914 1.94.533l4.832-2.777c.343-.267.571-.533.647-.876zm1.332 2.626c-.266-.038-.57.038-.837.19l-4.832 2.777c-.685.38-.913 1.256-.532 1.94.38.686 1.255.914 1.94.533l2.701-1.56v3.12c0 .8.647 1.408 1.446 1.408.799 0 1.407-.647 1.407-1.408v-5.592c0-.761-.57-1.37-1.293-1.408zm4.946-6.088c.266.038.57-.038.837-.19l4.832-2.777c.685-.38.913-1.256.532-1.94-.38-.686-1.255-.914-1.94-.533l-2.701 1.56V1.975c0-.799-.647-1.408-1.446-1.408-.799 0-1.446.609-1.446 1.408V7.53c0 .76.609 1.37 1.332 1.407zM3.265 5.97l4.832 2.777c.266.152.533.19.837.19.723-.038 1.331-.684 1.331-1.407V1.975c0-.799-.646-1.408-1.407-1.408-.799 0-1.446.647-1.446 1.408v3.12l-2.701-1.56c-.685-.38-1.56-.152-1.94.533-.419.646-.19 1.521.494 1.902zm9.093 6.011a.412.412 0 00-.114-.266l-.57-.571a.346.346 0 00-.267-.114.412.412 0 00-.266.114l-.571.57a.411.411 0 00-.114.267c0 .076.038.19.114.267l.57.57a.345.345 0 00.267.114c.076 0 .19-.038.266-.114l.571-.57a.412.412 0 00.114-.267zm1.598.533L11.94 14.53c-.039.038-.153.114-.229.114h-.608a.411.411 0 01-.267-.114L8.82 12.514a.408.408 0 01-.076-.229v-.608c0-.076.038-.19.114-.267l2.016-2.016a.41.41 0 01.267-.114h.608a.41.41 0 01.267.114l2.016 2.016a.347.347 0 01.114.267v.608c-.076.077-.114.19-.19.229zm5.593 5.44l-4.832-2.777c-.266-.152-.57-.19-.837-.152-.723.038-1.332.684-1.332 1.408v5.554c0 .8.647 1.408 1.408 1.408.799 0 1.446-.647 1.446-1.408v-3.12l2.7 1.56c.686.38 1.561.152 1.941-.533.419-.646.19-1.521-.494-1.94zm2.549-7.533l-2.701 1.56 2.7 1.56c.686.38.914 1.256.533 1.94-.38.685-1.255.913-1.94.533l-4.832-2.778a1.644 1.644 0 01-.647-.798c-.037-.153-.076-.305-.076-.457 0-.114.039-.228.039-.342.114-.343.342-.647.646-.837l4.832-2.778c.685-.38 1.56-.152 1.94.533.457.609.19 1.484-.494 1.864" />
+    <symbol id="embedded-huggingface" viewBox="0 0 24 24" fill="#ffd21e">
+      <title>Hugging Face</title>
+      <path d="M12.025 1.13c-5.77 0-10.449 4.647-10.449 10.378 0 1.112.178 2.181.503 3.185.064-.222.203-.444.416-.577a.96.96 0 0 1 .524-.15c.293 0 .584.124.84.284.278.173.48.408.71.694.226.282.458.611.684.951v-.014c.017-.324.106-.622.264-.874s.403-.487.762-.543c.3-.047.596.06.787.203s.31.313.4.467c.15.257.212.468.233.542.01.026.653 1.552 1.657 2.54.616.605 1.01 1.223 1.082 1.912.055.537-.096 1.059-.38 1.572.637.121 1.294.187 1.967.187.657 0 1.298-.063 1.921-.178-.287-.517-.44-1.041-.384-1.581.07-.69.465-1.307 1.081-1.913 1.004-.987 1.647-2.513 1.657-2.539.021-.074.083-.285.233-.542.09-.154.208-.323.4-.467a1.08 1.08 0 0 1 .787-.203c.359.056.604.29.762.543s.247.55.265.874v.015c.225-.34.457-.67.683-.952.23-.286.432-.52.71-.694.257-.16.547-.284.84-.285a.97.97 0 0 1 .524.151c.228.143.373.388.43.625l.006.04a10.3 10.3 0 0 0 .534-3.273c0-5.731-4.678-10.378-10.449-10.378M8.327 6.583a1.5 1.5 0 0 1 .713.174 1.487 1.487 0 0 1 .617 2.013c-.183.343-.762-.214-1.102-.094-.38.134-.532.914-.917.71a1.487 1.487 0 0 1 .69-2.803m7.486 0a1.487 1.487 0 0 1 .689 2.803c-.385.204-.536-.576-.916-.71-.34-.12-.92.437-1.103.094a1.487 1.487 0 0 1 .617-2.013 1.5 1.5 0 0 1 .713-.174m-10.68 1.55a.96.96 0 1 1 0 1.921.96.96 0 0 1 0-1.92m13.838 0a.96.96 0 1 1 0 1.92.96.96 0 0 1 0-1.92M8.489 11.458c.588.01 1.965 1.157 3.572 1.164 1.607-.007 2.984-1.155 3.572-1.164.196-.003.305.12.305.454 0 .886-.424 2.328-1.563 3.202-.22-.756-1.396-1.366-1.63-1.32q-.011.001-.02.006l-.044.026-.01.008-.03.024q-.018.017-.035.036l-.032.04a1 1 0 0 0-.058.09l-.014.025q-.049.088-.11.19a1 1 0 0 1-.083.116 1.2 1.2 0 0 1-.173.18q-.035.029-.075.058a1.3 1.3 0 0 1-.251-.243 1 1 0 0 1-.076-.107c-.124-.193-.177-.363-.337-.444-.034-.016-.104-.008-.2.022q-.094.03-.216.087-.06.028-.125.063l-.13.074q-.067.04-.136.086a3 3 0 0 0-.135.096 3 3 0 0 0-.26.219 2 2 0 0 0-.12.121 2 2 0 0 0-.106.128l-.002.002a2 2 0 0 0-.09.132l-.001.001a1.2 1.2 0 0 0-.105.212q-.013.036-.024.073c-1.139-.875-1.563-2.317-1.563-3.203 0-.334.109-.457.305-.454m.836 10.354c.824-1.19.766-2.082-.365-3.194-1.13-1.112-1.789-2.738-1.789-2.738s-.246-.945-.806-.858-.97 1.499.202 2.362c1.173.864-.233 1.45-.685.64-.45-.812-1.683-2.896-2.322-3.295s-1.089-.175-.938.647 2.822 2.813 2.562 3.244-1.176-.506-1.176-.506-2.866-2.567-3.49-1.898.473 1.23 2.037 2.16c1.564.932 1.686 1.178 1.464 1.53s-3.675-2.511-4-1.297c-.323 1.214 3.524 1.567 3.287 2.405-.238.839-2.71-1.587-3.216-.642-.506.946 3.49 2.056 3.522 2.064 1.29.33 4.568 1.028 5.713-.624m5.349 0c-.824-1.19-.766-2.082.365-3.194 1.13-1.112 1.789-2.738 1.789-2.738s.246-.945.806-.858.97 1.499-.202 2.362c-1.173.864.233 1.45.685.64.451-.812 1.683-2.896 2.322-3.295s1.089-.175.938.647-2.822 2.813-2.562 3.244 1.176-.506 1.176-.506 2.866-2.567 3.49-1.898-.473 1.23-2.037 2.16c-1.564.932-1.686 1.178-1.464 1.53s3.675-2.511 4-1.297c.323 1.214-3.524 1.567-3.287 2.405.238.839 2.71-1.587 3.216-.642.506.946-3.49 2.056-3.522 2.064-1.29.33-4.568 1.028-5.713-.624" />
+    </symbol>
+    <symbol id="embedded-ollama" viewBox="0 0 24 24" fill="#f8fafc">
+      <title>Ollama</title>
+      <path d="M16.361 10.26a.894.894 0 0 0-.558.47l-.072.148.001.207c0 .193.004.217.059.353.076.193.152.312.291.448.24.238.51.3.872.205a.86.86 0 0 0 .517-.436.752.752 0 0 0 .08-.498c-.064-.453-.33-.782-.724-.897a1.06 1.06 0 0 0-.466 0zm-9.203.005c-.305.096-.533.32-.65.639a1.187 1.187 0 0 0-.06.52c.057.309.31.59.598.667.362.095.632.033.872-.205.14-.136.215-.255.291-.448.055-.136.059-.16.059-.353l.001-.207-.072-.148a.894.894 0 0 0-.565-.472 1.02 1.02 0 0 0-.474.007Zm4.184 2c-.131.071-.223.25-.195.383.031.143.157.288.353.407.105.063.112.072.117.136.004.038-.01.146-.029.243-.02.094-.036.194-.036.222.002.074.07.195.143.253.064.052.076.054.255.059.164.005.198.001.264-.03.169-.082.212-.234.15-.525-.052-.243-.042-.28.087-.355.137-.08.281-.219.324-.314a.365.365 0 0 0-.175-.48.394.394 0 0 0-.181-.033c-.126 0-.207.03-.355.124l-.085.053-.053-.032c-.219-.13-.259-.145-.391-.143a.396.396 0 0 0-.193.032zm.39-2.195c-.373.036-.475.05-.654.086-.291.06-.68.195-.951.328-.94.46-1.589 1.226-1.787 2.114-.04.176-.045.234-.045.53 0 .294.005.357.043.524.264 1.16 1.332 2.017 2.714 2.173.3.033 1.596.033 1.896 0 1.11-.125 2.064-.727 2.493-1.571.114-.226.169-.372.22-.602.039-.167.044-.23.044-.523 0-.297-.005-.355-.045-.531-.288-1.29-1.539-2.304-3.072-2.497a6.873 6.873 0 0 0-.855-.031zm.645.937a3.283 3.283 0 0 1 1.44.514c.223.148.537.458.671.662.166.251.26.508.303.82.02.143.01.251-.043.482-.08.345-.332.705-.672.957a3.115 3.115 0 0 1-.689.348c-.382.122-.632.144-1.525.138-.582-.006-.686-.01-.853-.042-.57-.107-1.022-.334-1.35-.68-.264-.28-.385-.535-.45-.946-.03-.192.025-.509.137-.776.136-.326.488-.73.836-.963.403-.269.934-.46 1.422-.512.187-.02.586-.02.773-.002zm-5.503-11a1.653 1.653 0 0 0-.683.298C5.617.74 5.173 1.666 4.985 2.819c-.07.436-.119 1.04-.119 1.503 0 .544.064 1.24.155 1.721.02.107.031.202.023.208a8.12 8.12 0 0 1-.187.152 5.324 5.324 0 0 0-.949 1.02 5.49 5.49 0 0 0-.94 2.339 6.625 6.625 0 0 0-.023 1.357c.091.78.325 1.438.727 2.04l.13.195-.037.064c-.269.452-.498 1.105-.605 1.732-.084.496-.095.629-.095 1.294 0 .67.009.803.088 1.266.095.555.288 1.143.503 1.534.071.128.243.393.264.407.007.003-.014.067-.046.141a7.405 7.405 0 0 0-.548 1.873c-.062.417-.071.552-.071.991 0 .56.031.832.148 1.279L3.42 24h1.478l-.05-.091c-.297-.552-.325-1.575-.068-2.597.117-.472.25-.819.498-1.296l.148-.29v-.177c0-.165-.003-.184-.057-.293a.915.915 0 0 0-.194-.25 1.74 1.74 0 0 1-.385-.543c-.424-.92-.506-2.286-.208-3.451.124-.486.329-.918.544-1.154a.787.787 0 0 0 .223-.531c0-.195-.07-.355-.224-.522a3.136 3.136 0 0 1-.817-1.729c-.14-.96.114-2.005.69-2.834.563-.814 1.353-1.336 2.237-1.475.199-.033.57-.028.776.01.226.04.367.028.512-.041.179-.085.268-.19.374-.431.093-.215.165-.333.36-.576.234-.29.46-.489.822-.729.413-.27.884-.467 1.352-.561.17-.035.25-.04.569-.04.319 0 .398.005.569.04a4.07 4.07 0 0 1 1.914.997c.117.109.398.457.488.602.034.057.095.177.132.267.105.241.195.346.374.43.14.068.286.082.503.045.343-.058.607-.053.943.016 1.144.23 2.14 1.173 2.581 2.437.385 1.108.276 2.267-.296 3.153-.097.15-.193.27-.333.419-.301.322-.301.722-.001 1.053.493.539.801 1.866.708 3.036-.062.772-.26 1.463-.533 1.854a2.096 2.096 0 0 1-.224.258.916.916 0 0 0-.194.25c-.054.109-.057.128-.057.293v.178l.148.29c.248.476.38.823.498 1.295.253 1.008.231 2.01-.059 2.581a.845.845 0 0 0-.044.098c0 .006.329.009.732.009h.73l.02-.074.036-.134c.019-.076.057-.3.088-.516.029-.217.029-1.016 0-1.258-.11-.875-.295-1.57-.597-2.226-.032-.074-.053-.138-.046-.141.008-.005.057-.074.108-.152.376-.569.607-1.284.724-2.228.031-.26.031-1.378 0-1.628-.083-.645-.182-1.082-.348-1.525a6.083 6.083 0 0 0-.329-.7l-.038-.064.131-.194c.402-.604.636-1.262.727-2.04a6.625 6.625 0 0 0-.024-1.358 5.512 5.512 0 0 0-.939-2.339 5.325 5.325 0 0 0-.95-1.02 8.097 8.097 0 0 1-.186-.152.692.692 0 0 1 .023-.208c.208-1.087.201-2.443-.017-3.503-.19-.924-.535-1.658-.98-2.082-.354-.338-.716-.482-1.15-.455-.996.059-1.8 1.205-2.116 3.01a6.805 6.805 0 0 0-.097.726c0 .036-.007.066-.015.066a.96.96 0 0 1-.149-.078A4.857 4.857 0 0 0 12 3.03c-.832 0-1.687.243-2.456.698a.958.958 0 0 1-.148.078c-.008 0-.015-.03-.015-.066a6.71 6.71 0 0 0-.097-.725C8.997 1.392 8.337.319 7.46.048a2.096 2.096 0 0 0-.585-.041Zm.293 1.402c.248.197.523.759.682 1.388.03.113.06.244.069.292.007.047.026.152.041.233.067.365.098.76.102 1.24l.002.475-.12.175-.118.178h-.278c-.324 0-.646.041-.954.124l-.238.06c-.033.007-.038-.003-.057-.144a8.438 8.438 0 0 1 .016-2.323c.124-.788.413-1.501.696-1.711.067-.05.079-.049.157.013zm9.825-.012c.17.126.358.46.498.888.28.854.36 2.028.212 3.145-.019.14-.024.151-.057.144l-.238-.06a3.693 3.693 0 0 0-.954-.124h-.278l-.119-.178-.119-.175.002-.474c.004-.669.066-1.19.214-1.772.157-.623.434-1.185.68-1.382.078-.062.09-.063.159-.012z" />
+    </symbol>
+    <symbol id="embedded-mlflow" viewBox="0 0 24 24" fill="#0194e2">
+      <title>MLflow</title>
+      <path d="M11.883.002a12.044 12.044 0 0 0-9.326 19.463l3.668-2.694A7.573 7.573 0 0 1 12.043 4.45v2.867l6.908-5.14A12.012 12.012 0 0 0 11.883.002zm9.562 4.533L17.777 7.23a7.573 7.573 0 0 1-5.818 12.322v-2.867l-6.908 5.14a12.046 12.046 0 0 0 16.394-17.29z" />
+    </symbol>
+    <symbol id="embedded-weightsandbiases" viewBox="0 0 24 24" fill="#ffbe00">
+      <title>Weights &amp; Biases</title>
+      <path d="M2.48 0a1.55 1.55 0 1 0 0 3.1 1.55 1.55 0 0 0 0-3.1zm19.04 0a1.55 1.55 0 1 0 0 3.101 1.55 1.55 0 0 0 0-3.101zM12 2.295a1.55 1.55 0 1 0 0 3.1 1.55 1.55 0 0 0 0-3.1zM2.48 5.272a2.48 2.48 0 1 0 0 4.96 2.48 2.48 0 0 0 0-4.96zm19.04 0a2.48 2.48 0 1 0 0 4.96 2.48 2.48 0 0 0 0-4.96zM12 8.496a1.55 1.55 0 1 0 0 3.1 1.55 1.55 0 0 0 0-3.1zm-9.52 3.907a1.55 1.55 0 1 0 0 3.1 1.55 1.55 0 0 0 0-3.1zm19.04 0a1.55 1.55 0 1 0 0 3.102 1.55 1.55 0 0 0 0-3.102zM12 13.767a2.48 2.48 0 1 0 0 4.962 2.48 2.48 0 0 0 0-4.962zm-9.52 3.907a2.48 2.48 0 1 0 .001 4.962 2.48 2.48 0 0 0 0-4.962zm19.04.93a1.55 1.55 0 1 0 0 3.102 1.55 1.55 0 0 0 0-3.101zM12 20.9a1.55 1.55 0 1 0 0 3.1 1.55 1.55 0 0 0 0-3.1Z" />
     </symbol>
     <symbol id="embedded-amazonwebservices" viewBox="0 0 24 24" fill="#ff9900">
       <title>Amazon Web Services</title>
@@ -85,16 +97,32 @@
       <title>Kubernetes</title>
       <path d="M10.204 14.35l.007.01-.999 2.413a5.171 5.171 0 0 1-2.075-2.597l2.578-.437.004.005a.44.44 0 0 1 .484.606zm-.833-2.129a.44.44 0 0 0 .173-.756l.002-.011L7.585 9.7a5.143 5.143 0 0 0-.73 3.255l2.514-.725.002-.009zm1.145-1.98a.44.44 0 0 0 .699-.337l.01-.005.15-2.62a5.144 5.144 0 0 0-3.01 1.442l2.147 1.523.004-.002zm.76 2.75l.723.349.722-.347.18-.78-.5-.623h-.804l-.5.623.179.779zm1.5-3.095a.44.44 0 0 0 .7.336l.008.003 2.134-1.513a5.188 5.188 0 0 0-2.992-1.442l.148 2.615.002.001zm10.876 5.97l-5.773 7.181a1.6 1.6 0 0 1-1.248.594l-9.261.003a1.6 1.6 0 0 1-1.247-.596l-5.776-7.18a1.583 1.583 0 0 1-.307-1.34L2.1 5.573c.108-.47.425-.864.863-1.073L11.305.513a1.606 1.606 0 0 1 1.385 0l8.345 3.985c.438.209.755.604.863 1.073l2.062 8.955c.108.47-.005.963-.308 1.34zm-3.289-2.057c-.042-.01-.103-.026-.145-.034-.174-.033-.315-.025-.479-.038-.35-.037-.638-.067-.895-.148-.105-.04-.18-.165-.216-.216l-.201-.059a6.45 6.45 0 0 0-.105-2.332 6.465 6.465 0 0 0-.936-2.163c.052-.047.15-.133.177-.159.008-.09.001-.183.094-.282.197-.185.444-.338.743-.522.142-.084.273-.137.415-.242.032-.024.076-.062.11-.089.24-.191.295-.52.123-.736-.172-.216-.506-.236-.745-.045-.034.027-.08.062-.111.088-.134.116-.217.23-.33.35-.246.25-.45.458-.673.609-.097.056-.239.037-.303.033l-.19.135a6.545 6.545 0 0 0-4.146-2.003l-.012-.223c-.065-.062-.143-.115-.163-.25-.022-.268.015-.557.057-.905.023-.163.061-.298.068-.475.001-.04-.001-.099-.001-.142 0-.306-.224-.555-.5-.555-.275 0-.499.249-.499.555l.001.014c0 .041-.002.092 0 .128.006.177.044.312.067.475.042.348.078.637.056.906a.545.545 0 0 1-.162.258l-.012.211a6.424 6.424 0 0 0-4.166 2.003 8.373 8.373 0 0 1-.18-.128c-.09.012-.18.04-.297-.029-.223-.15-.427-.358-.673-.608-.113-.12-.195-.234-.329-.349-.03-.026-.077-.062-.111-.088a.594.594 0 0 0-.348-.132.481.481 0 0 0-.398.176c-.172.216-.117.546.123.737l.007.005.104.083c.142.105.272.159.414.242.299.185.546.338.743.522.076.082.09.226.1.288l.16.143a6.462 6.462 0 0 0-1.02 4.506l-.208.06c-.055.072-.133.184-.215.217-.257.081-.546.11-.895.147-.164.014-.305.006-.48.039-.037.007-.09.02-.133.03l-.004.002-.007.002c-.295.071-.484.342-.423.608.061.267.349.429.645.365l.007-.001.01-.003.129-.029c.17-.046.294-.113.448-.172.33-.118.604-.217.87-.256.112-.009.23.069.288.101l.217-.037a6.5 6.5 0 0 0 2.88 3.596l-.09.218c.033.084.069.199.044.282-.097.252-.263.517-.452.813-.091.136-.185.242-.268.399-.02.037-.045.095-.064.134-.128.275-.034.591.213.71.248.12.556-.007.69-.282v-.002c.02-.039.046-.09.062-.127.07-.162.094-.301.144-.458.132-.332.205-.68.387-.897.05-.06.13-.082.215-.105l.113-.205a6.453 6.453 0 0 0 4.609.012l.106.192c.086.028.18.042.256.155.136.232.229.507.342.84.05.156.074.295.145.457.016.037.043.09.062.129.133.276.442.402.69.282.247-.118.341-.435.213-.71-.02-.039-.045-.096-.065-.134-.083-.156-.177-.261-.268-.398-.19-.296-.346-.541-.443-.793-.04-.13.007-.21.038-.294-.018-.022-.059-.144-.083-.202a6.499 6.499 0 0 0 2.88-3.622c.064.01.176.03.213.038.075-.05.144-.114.28-.104.266.039.54.138.87.256.154.06.277.128.448.173.036.01.088.019.13.028l.009.003.007.001c.297.064.584-.098.645-.365.06-.266-.128-.537-.423-.608zM16.4 9.701l-1.95 1.746v.005a.44.44 0 0 0 .173.757l.003.01 2.526.728a5.199 5.199 0 0 0-.108-1.674A5.208 5.208 0 0 0 16.4 9.7zm-4.013 5.325a.437.437 0 0 0-.404-.232.44.44 0 0 0-.372.233h-.002l-1.268 2.292a5.164 5.164 0 0 0 3.326.003l-1.27-2.296h-.01zm1.888-1.293a.44.44 0 0 0-.27.036.44.44 0 0 0-.214.572l-.003.004 1.01 2.438a5.15 5.15 0 0 0 2.081-2.615l-2.6-.44-.004.005z" />
     </symbol>
+    <symbol id="embedded-snowflake" viewBox="0 0 24 24" fill="#29b5e8">
+      <title>Snowflake</title>
+      <path d="M24 3.459c0 .646-.418 1.18-1.141 1.18-.723 0-1.142-.534-1.142-1.18 0-.647.419-1.18 1.142-1.18.723 0 1.141.533 1.141 1.18zm-.228 0c0-.533-.38-.951-.913-.951s-.913.38-.913.95c0 .533.38.952.913.952.57 0 .913-.419.913-.951zm-1.37-.533h.495c.266 0 .456.152.456.38 0 .153-.076.229-.19.305l.19.266v.038h-.266l-.19-.266h-.229v.266h-.266zm.495.228h-.229v.267h.229c.114 0 .152-.038.152-.114.038-.077-.038-.153-.152-.153zM7.602 12.4c.038-.151.076-.304.076-.456 0-.114-.038-.228-.038-.342-.114-.343-.304-.647-.646-.838l-4.87-2.777c-.685-.38-1.56-.152-1.94.533-.381.685-.153 1.56.532 1.94l2.701 1.56-2.701 1.56c-.685.38-.913 1.256-.533 1.94.38.685 1.256.914 1.94.533l4.832-2.777c.343-.267.571-.533.647-.876zm1.332 2.626c-.266-.038-.57.038-.837.19l-4.832 2.777c-.685.38-.913 1.256-.532 1.94.38.686 1.255.914 1.94.533l2.701-1.56v3.12c0 .8.647 1.408 1.446 1.408.799 0 1.407-.647 1.407-1.408v-5.592c0-.761-.57-1.37-1.293-1.408zm4.946-6.088c.266.038.57-.038.837-.19l4.832-2.777c.685-.38.913-1.256.532-1.94-.38-.686-1.255-.914-1.94-.533l-2.701 1.56V1.975c0-.799-.647-1.408-1.446-1.408-.799 0-1.446.609-1.446 1.408V7.53c0 .76.609 1.37 1.332 1.407zM3.265 5.97l4.832 2.777c.266.152.533.19.837.19.723-.038 1.331-.684 1.331-1.407V1.975c0-.799-.646-1.408-1.407-1.408-.799 0-1.446.647-1.446 1.408v3.12l-2.701-1.56c-.685-.38-1.56-.152-1.94.533-.419.646-.19 1.521.494 1.902zm9.093 6.011a.412.412 0 00-.114-.266l-.57-.571a.346.346 0 00-.267-.114.412.412 0 00-.266.114l-.571.57a.411.411 0 00-.114.267c0 .076.038.19.114.267l.57.57a.345.345 0 00.267.114c.076 0 .19-.038.266-.114l.571-.57a.412.412 0 00.114-.267zm1.598.533L11.94 14.53c-.039.038-.153.114-.229.114h-.608a.411.411 0 01-.267-.114L8.82 12.514a.408.408 0 01-.076-.229v-.608c0-.076.038-.19.114-.267l2.016-2.016a.41.41 0 01.267-.114h.608a.41.41 0 01.267.114l2.016 2.016a.347.347 0 01.114.267v.608c-.076.077-.114.19-.19.229zm5.593 5.44l-4.832-2.777c-.266-.152-.57-.19-.837-.152-.723.038-1.332.684-1.332 1.408v5.554c0 .8.647 1.408 1.408 1.408.799 0 1.446-.647 1.446-1.408v-3.12l2.7 1.56c.686.38 1.561.152 1.941-.533.419-.646.19-1.521-.494-1.94zm2.549-7.533l-2.701 1.56 2.7 1.56c.686.38.914 1.256.533 1.94-.38.685-1.255.913-1.94.533l-4.832-2.778a1.644 1.644 0 01-.647-.798c-.037-.153-.076-.305-.076-.457 0-.114.039-.228.039-.342.114-.343.342-.647.646-.837l4.832-2.778c.685-.38 1.56-.152 1.94.533.457.609.19 1.484-.494 1.864" />
+    </symbol>
     <symbol id="embedded-databricks" viewBox="0 0 24 24" fill="#ff3621">
       <title>Databricks</title>
       <path d="M.95 14.184L12 20.403l9.919-5.55v2.21L12 22.662l-10.484-5.96-.565.308v.77L12 24l11.05-6.218v-4.317l-.515-.309L12 19.118l-9.867-5.653v-2.21L12 16.805l11.05-6.218V6.32l-.515-.308L12 11.974 2.647 6.681 12 1.388l7.76 4.368.668-.411v-.566L12 0 .95 6.27v.72L12 13.207l9.919-5.55v2.26L12 15.52 1.516 9.56l-.565.308Z" />
     </symbol>
-    <symbol id="embedded-clickhouse" viewBox="0 0 24 24" fill="#ffcc00">
-      <title>ClickHouse</title>
-      <path d="M21.333 10H24v4h-2.667ZM16 1.335h2.667v21.33H16Zm-5.333 0h2.666v21.33h-2.666ZM0 22.665V1.335h2.667v21.33zm5.333-21.33H8v21.33H5.333Z" />
+    <symbol id="embedded-supabase" viewBox="0 0 24 24" fill="#3ecf8e">
+      <title>Supabase</title>
+      <path d="M11.9 1.036c-.015-.986-1.26-1.41-1.874-.637L.764 12.05C-.33 13.427.65 15.455 2.409 15.455h9.579l.113 7.51c.014.985 1.259 1.408 1.873.636l9.262-11.653c1.093-1.375.113-3.403-1.645-3.403h-9.642z" />
+    </symbol>
+    <symbol id="embedded-okta" viewBox="0 0 24 24" fill="#007dc1">
+      <title>Okta</title>
+      <path d="M12 0C5.389 0 0 5.35 0 12s5.35 12 12 12 12-5.35 12-12S18.611 0 12 0zm0 18c-3.325 0-6-2.675-6-6s2.675-6 6-6 6 2.675 6 6-2.675 6-6 6z" />
+    </symbol>
+    <symbol id="embedded-github" viewBox="0 0 24 24" fill="#f8fafc">
+      <title>GitHub</title>
+      <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+    </symbol>
+    <symbol id="embedded-vercel" viewBox="0 0 24 24" fill="#f8fafc">
+      <title>Vercel</title>
+      <path d="m12 1.608 12 20.784H0Z" />
     </symbol>
   </defs>
-  <rect width="1280" height="520" fill="url(#bg)" />
+  <rect width="1280" height="640" fill="url(#bg)" />
   <g font-family="Inter,'Segoe UI',ui-sans-serif,Arial,sans-serif">
     <g transform="translate(60 28)">
       <use width="64" height="64" href="#embedded-mark-dark" />
@@ -122,78 +150,157 @@
         <text x="103" y="25" text-anchor="middle" fill="#c4b5fd" font-size="14" font-weight="700">cloud + identity + data</text>
       </g>
     </g>
-    <text x="60" y="335" fill="#64748b" font-size="12" font-weight="700" letter-spacing="1.4">AI CLIENTS + MODELS</text>
-    <text x="648" y="335" fill="#64748b" font-size="12" font-weight="700" letter-spacing="1.4">CLOUD + IDENTITY + DATA</text>
-    <text x="1220" y="335" text-anchor="end" fill="#64748b" font-size="11">Also supports VS Code · Okta</text>
-    <line x1="626" y1="331" x2="626" y2="453" stroke="#334155" stroke-width="1" />
-    <g transform="translate(60 354)">
-      <g>
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-claude-icon-rounded" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="600">Claude</text>
+    <g id="coverage">
+      <text x="60" y="316" fill="#64748b" font-size="11.5" font-weight="700" letter-spacing="1.3">AI CLIENTS + IDES</text>
+      <text x="197" y="316" fill="#475569" font-size="11.5" font-weight="700">26</text>
+      <g transform="translate(60 326)" data-integration="Claude">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-claude-icon-rounded" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Claude</text>
       </g>
-      <g transform="translate(92)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="-15" y="-15" width="94" height="94" href="#embedded-openai-blossom-white" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="10.5" font-weight="600">OpenAI / Codex</text>
+      <g transform="translate(134 326)" data-integration="Codex">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="-0.265625" y="-0.265625" width="50.5312" height="50.5312" href="#embedded-openai-blossom-white" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Codex</text>
       </g>
-      <g transform="translate(184)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-cursor" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="600">Cursor</text>
+      <g transform="translate(208 326)" data-integration="Cursor">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-cursor" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Cursor</text>
       </g>
-      <g transform="translate(276)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-githubcopilot" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="11" font-weight="600">GitHub Copilot</text>
+      <g transform="translate(282 326)" data-integration="GitHub Copilot">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-githubcopilot" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="10" font-weight="600">GitHub Copilot</text>
       </g>
-      <g transform="translate(368)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-windsurf" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Windsurf</text>
+      <g transform="translate(356 326)" data-integration="Windsurf">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-windsurf" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Windsurf</text>
       </g>
-      <g transform="translate(460)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-snowflake" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="11" font-weight="600">Cortex Code</text>
+      <text x="60" y="410" fill="#94a3b8" font-size="12">+21 more: Cortex Code · Gemini CLI · JetBrains AI · Junie</text>
+      <text x="60" y="425" fill="#94a3b8" font-size="12">Amazon Q · Cline · Roo Code · Continue · Zed · Goose · …</text>
+      <text x="453" y="316" fill="#64748b" font-size="11.5" font-weight="700" letter-spacing="1.3">AI PLATFORMS + MODEL HUBS</text>
+      <text x="672" y="316" fill="#475569" font-size="11.5" font-weight="700">7</text>
+      <g transform="translate(453 326)" data-integration="OpenAI">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="-0.265625" y="-0.265625" width="50.5312" height="50.5312" href="#embedded-openai-blossom-white" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">OpenAI</text>
       </g>
-      <g transform="translate(588)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-amazonwebservices" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="600">AWS</text>
+      <g transform="translate(527 326)" data-integration="Hugging Face">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-huggingface" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="10" font-weight="600">Hugging Face</text>
       </g>
-      <g transform="translate(676)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-microsoftazure" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="600">Azure</text>
+      <g transform="translate(601 326)" data-integration="Ollama">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-ollama" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Ollama</text>
       </g>
-      <g transform="translate(764)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-google-cloud-mark" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="13" font-weight="600">GCP</text>
+      <g transform="translate(675 326)" data-integration="MLflow">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-mlflow" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">MLflow</text>
       </g>
-      <g transform="translate(852)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-kubernetes" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Kubernetes</text>
+      <g transform="translate(749 326)" data-integration="W&amp;B">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-weightsandbiases" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">W&amp;B</text>
       </g>
-      <g transform="translate(940)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-snowflake" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Snowflake</text>
+      <text x="453" y="410" fill="#94a3b8" font-size="12">+2 more: Langfuse · LangSmith</text>
+      <text x="846" y="316" fill="#64748b" font-size="11.5" font-weight="700" letter-spacing="1.3">GPU + NEO CLOUDS</text>
+      <text x="986" y="316" fill="#475569" font-size="11.5" font-weight="700">7</text>
+      <g transform="translate(846 328)" data-integration="CoreWeave">
+        <rect width="92.78" height="26" rx="13" fill="#0f172a" stroke="#334155" />
+        <text x="46.39" y="17.5" text-anchor="middle" fill="#cbd5e1" font-size="12.5" font-weight="600">CoreWeave</text>
       </g>
-      <g transform="translate(1028)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-databricks" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Databricks</text>
+      <g transform="translate(946.78 328)" data-integration="Nebius">
+        <rect width="67.075" height="26" rx="13" fill="#0f172a" stroke="#334155" />
+        <text x="33.5375" y="17.5" text-anchor="middle" fill="#cbd5e1" font-size="12.5" font-weight="600">Nebius</text>
       </g>
-      <g transform="translate(1116)">
-        <rect width="64" height="64" rx="16" fill="#0f172a" stroke="#334155" />
-        <use x="10" y="10" width="44" height="44" href="#embedded-clickhouse" />
-        <text x="32" y="87" text-anchor="middle" fill="#cbd5e1" font-size="11" font-weight="600">ClickHouse</text>
+      <g transform="translate(1021.86 328)" data-integration="Lambda">
+        <rect width="74.495" height="26" rx="13" fill="#0f172a" stroke="#334155" />
+        <text x="37.2475" y="17.5" text-anchor="middle" fill="#cbd5e1" font-size="12.5" font-weight="600">Lambda</text>
       </g>
+      <g transform="translate(1104.35 328)" data-integration="RunPod">
+        <rect width="71.58" height="26" rx="13" fill="#0f172a" stroke="#334155" />
+        <text x="35.79" y="17.5" text-anchor="middle" fill="#cbd5e1" font-size="12.5" font-weight="600">RunPod</text>
+      </g>
+      <g transform="translate(846 362)" data-integration="Vast.ai">
+        <rect width="67.87" height="26" rx="13" fill="#0f172a" stroke="#334155" />
+        <text x="33.935" y="17.5" text-anchor="middle" fill="#cbd5e1" font-size="12.5" font-weight="600">Vast.ai</text>
+      </g>
+      <g transform="translate(921.87 362)" data-integration="Crusoe">
+        <rect width="67.075" height="26" rx="13" fill="#0f172a" stroke="#334155" />
+        <text x="33.5375" y="17.5" text-anchor="middle" fill="#cbd5e1" font-size="12.5" font-weight="600">Crusoe</text>
+      </g>
+      <g transform="translate(846 396)" data-integration="GPU containers + K8s GPU nodes">
+        <rect width="225.81" height="26" rx="13" fill="#0f172a" stroke="#334155" />
+        <text x="112.905" y="17.5" text-anchor="middle" fill="#cbd5e1" font-size="12.5" font-weight="600">GPU containers + K8s GPU nodes</text>
+      </g>
+      <text x="60" y="456" fill="#64748b" font-size="11.5" font-weight="700" letter-spacing="1.3">HYPERSCALERS + KUBERNETES</text>
+      <text x="286" y="456" fill="#475569" font-size="11.5" font-weight="700">4</text>
+      <g transform="translate(60 466)" data-integration="AWS">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-amazonwebservices" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">AWS</text>
+      </g>
+      <g transform="translate(134 466)" data-integration="Azure">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-microsoftazure" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Azure</text>
+      </g>
+      <g transform="translate(208 466)" data-integration="GCP">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-google-cloud-mark" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">GCP</text>
+      </g>
+      <g transform="translate(282 466)" data-integration="Kubernetes">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-kubernetes" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Kubernetes</text>
+      </g>
+      <text x="453" y="456" fill="#64748b" font-size="11.5" font-weight="700" letter-spacing="1.3">DATA + VECTOR STORES</text>
+      <text x="629" y="456" fill="#475569" font-size="11.5" font-weight="700">8</text>
+      <g transform="translate(453 466)" data-integration="Snowflake">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-snowflake" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Snowflake</text>
+      </g>
+      <g transform="translate(527 466)" data-integration="Databricks">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-databricks" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Databricks</text>
+      </g>
+      <g transform="translate(601 466)" data-integration="Supabase">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-supabase" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Supabase</text>
+      </g>
+      <text x="453" y="550" fill="#94a3b8" font-size="12">+5 more: Pinecone · Qdrant · Weaviate · Chroma · Milvus</text>
+      <text x="846" y="456" fill="#64748b" font-size="11.5" font-weight="700" letter-spacing="1.3">IDENTITY + SAAS + DEV</text>
+      <text x="1018" y="456" fill="#475569" font-size="11.5" font-weight="700">8</text>
+      <g transform="translate(846 466)" data-integration="Okta">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-okta" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Okta</text>
+      </g>
+      <g transform="translate(920 466)" data-integration="GitHub Actions">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-github" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="10" font-weight="600">GitHub Actions</text>
+      </g>
+      <g transform="translate(994 466)" data-integration="Vercel">
+        <rect width="50" height="50" rx="13" fill="#0f172a" stroke="#334155" />
+        <use x="7.8125" y="7.8125" width="34.375" height="34.375" href="#embedded-vercel" />
+        <text x="25.0" y="66" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">Vercel</text>
+      </g>
+      <text x="846" y="550" fill="#94a3b8" font-size="12">+5 more: Microsoft Entra ID · Jira · ServiceNow · Slack · Jamf</text>
+      <text x="60" y="592" fill="#64748b" font-size="11.5" font-weight="700" letter-spacing="1.3">EVIDENCE OUT</text>
+      <text x="176" y="592" fill="#94a3b8" font-size="13.5" font-weight="500">ClickHouse · BigQuery · S3 · GCS · Azure Blob · Jira tickets · Slack alerts · Vanta · Drata · OCSF syslog</text>
+      <text x="640" y="622" text-anchor="middle" fill="#64748b" font-size="11.5">Names and logos are trademarks of their owners; no endorsement implied.</text>
     </g>
-    <text x="60" y="493" fill="#475569" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" font-weight="600">discover → scan → correlate → act</text>
-    <text x="1220" y="493" text-anchor="end" fill="#475569" font-size="13" font-weight="600">CLI · CI · API · MCP · self-hosted</text>
+    <text x="60" y="622" fill="#475569" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" font-weight="600">discover → scan → correlate → act</text>
+    <text x="1220" y="622" text-anchor="end" fill="#475569" font-size="13" font-weight="600">CLI · CI · API · MCP · self-hosted</text>
   </g>
 </svg>

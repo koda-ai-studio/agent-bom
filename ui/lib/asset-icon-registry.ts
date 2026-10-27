@@ -1,10 +1,10 @@
 import type { ComponentType, CSSProperties } from "react";
 import {
-  Activity, AppWindow, Archive, BadgeCheck, Bot, Boxes, CircleDashed, Braces, BrainCircuit, BrickWall, BriefcaseBusiness, Bug, Building2,
+  Activity, AppWindow, Archive, BadgeCheck, Blocks, Bot, CircleDashed, Braces, BrainCircuit, BrickWall, BriefcaseBusiness, Bug, Building2,
   Cable, CalendarClock, Cloud, CloudCog, Container, Cpu, Database, Disc3, DraftingCompass, Earth, FileCode, FileCog,
   FileStack, Fingerprint, FlaskConical, Folder, FolderGit2, FolderInput, FolderOutput, Gpu, Handshake, HardDrive, IdCard, Inbox, KeyRound,
-  Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, Package, PlugZap, ScrollText, Server, Share2,
-  ShieldAlert, ShieldCheck, ShipWheel, Siren, Sparkles, SquareFunction, Table, Ticket, User, UserCog, Users, Vault,
+  Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, PlugZap, ScrollText, Server, Share2,
+  ShieldAlert, ShieldCheck, ShipWheel, Siren, Sparkles, SquareFunction, Store, Table, Ticket, User, UserCog, Users, Vault,
   Warehouse, Webhook, Workflow, Wrench, Zap,
 } from "lucide-react";
 
@@ -30,7 +30,7 @@ export const ASSET_KINDS = {
   function: { label: "Function", icon: SquareFunction },
   workload: { label: "Workload", icon: Container },
   image: { label: "Image", icon: Disc3 },
-  registry: { label: "Registry", icon: Boxes },
+  registry: { label: "Registry", icon: Store },
   job: { label: "Job", icon: CalendarClock },
   api_gateway: { label: "Gateway", icon: Webhook },
   network: { label: "Network", icon: Network },
@@ -78,7 +78,7 @@ export const ASSET_KINDS = {
   code_module: { label: "Module", icon: Braces },
   ci_job: { label: "CI job", icon: Workflow },
   blueprint: { label: "Blueprint", icon: DraftingCompass },
-  package: { label: "Package", icon: Package },
+  package: { label: "Package", icon: Blocks },
   vulnerability: { label: "CVE", icon: Bug },
   misconfiguration: { label: "Finding", icon: ShieldAlert },
   drift_incident: { label: "Drift", icon: Siren },

@@ -69,6 +69,7 @@ preflight:  ## Run the drift gates that CI's "Version Alignment" job runs — do
 	@echo "→ default MCP argument inventory";       python scripts/generate_mcp_profile_catalog.py --check
 	@echo "→ product metrics snapshot";             python scripts/product_metrics_snapshot.py --check
 	@echo "→ vendor coverage matrix";               python scripts/generate_vendor_coverage.py --check
+	@echo "→ banner + integration tables";          python scripts/render_social_preview_svg.py --check
 	@echo "→ CVE matching accuracy";                python scripts/cve_matching_accuracy.py --check
 	@echo "→ skill audit accuracy";                 python scripts/skill_audit_accuracy.py --check
 	@echo "→ env-var reference";                    python scripts/generate_env_var_reference.py --check

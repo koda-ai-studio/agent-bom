@@ -1,6 +1,7 @@
 import { severityRank, SEVERITY_ORDER } from "@/lib/severity";
 import { formatExposureEntityTitle, formatExposurePathSequence } from "@/lib/entity-display";
 import type { GraphHopEvidence } from "@/lib/graph-schema";
+import type { AssetKind } from "@/lib/asset-icon-registry";
 
 export type ExposureSeverity = "critical" | "high" | "medium" | "low" | "none" | string;
 
@@ -24,6 +25,8 @@ export interface ExposureEntityRef {
   subtitle?: string | undefined;
   /** More specific presentation kind when canonical graph taxonomy is broader. */
   kindLabel?: string | undefined;
+  /** Registry kind resolved from the entity type and its recorded subtype; drives the hop glyph. */
+  assetKind?: AssetKind | undefined;
   role: ExposureEntityRole;
   severity?: ExposureSeverity | undefined;
   riskScore?: number | undefined;

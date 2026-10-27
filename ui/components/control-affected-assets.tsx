@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { Package, Server } from "lucide-react";
+import { Server } from "lucide-react";
+import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 import { agentDisplayName } from "@/lib/display-name";
+
+const PackageGlyph = ASSET_KINDS.package.icon;
 
 const chip = "rounded bg-[color:var(--surface-muted)] px-2 py-0.5 text-xs text-[color:var(--text-secondary)] underline decoration-dotted underline-offset-2 transition hover:text-[color:var(--foreground)]";
 
@@ -25,7 +28,7 @@ export function ControlAffectedAssets({ packages, agents }: { packages: string[]
   }
   return (
     <div>
-      <AssetGroup icon={<Package className="h-3.5 w-3.5" />} title="Affected packages" items={packages} mono
+      <AssetGroup icon={<PackageGlyph className="h-3.5 w-3.5" />} title="Affected packages" items={packages} mono
         href={(pkg) => `/findings?${new URLSearchParams({ q: pkg })}`} />
       <AssetGroup icon={<Server className="h-3.5 w-3.5" />} title="Affected agents" items={agents} label={agentDisplayName}
         href={(agent) => `/agents?${new URLSearchParams({ name: agent })}`} />

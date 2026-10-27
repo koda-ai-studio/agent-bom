@@ -8,6 +8,13 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+try:
+    from scripts import integrations_manifest
+    from scripts.social_preview_coverage import populate as populate_coverage
+except ModuleNotFoundError:  # executed as ``python scripts/render_social_preview_svg.py``
+    import integrations_manifest  # type: ignore[no-redef]
+    from social_preview_coverage import populate as populate_coverage  # type: ignore[no-redef]
+
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "images" / "social-preview.source.svg"
 OUTPUT = ROOT / "docs" / "images" / "social-preview.svg"
@@ -19,12 +26,19 @@ ICON_COLORS = {
     "clickhouse": "#ffcc00",
     "cursor": "#f8fafc",
     "databricks": "#ff3621",
+    "github": "#f8fafc",
     "githubcopilot": "#f8fafc",
     "googlecloud": "#4285f4",
+    "huggingface": "#ffd21e",
     "kubernetes": "#326ce5",
     "microsoftazure": "#0078d4",
+    "mlflow": "#0194e2",
     "okta": "#007dc1",
+    "ollama": "#f8fafc",
     "snowflake": "#29b5e8",
+    "supabase": "#3ecf8e",
+    "vercel": "#f8fafc",
+    "weightsandbiases": "#ffbe00",
     "windsurf": "#f8fafc",
 }
 
@@ -44,10 +58,24 @@ def _asset_path(source: Path, href: str) -> Path:
     return asset
 
 
-def render(source: Path = SOURCE) -> str:
-    """Inline referenced vectors as symbols and return deterministic SVG text."""
+def _describe(root: ET.Element, manifest: integrations_manifest.Manifest) -> None:
+    desc = root.find(f"{SVG}desc")
+    if desc is None:
+        raise ValueError("social preview must contain a desc element")
+    names = ", ".join(item.name for item in manifest.integrations())
+    desc.text = (
+        "Security evidence across repositories, software supply chains, AI agents, MCP, models, cloud, identity, "
+        f"infrastructure, and data platforms. Integrations: {names}."
+    )
+
+
+def render(source: Path = SOURCE, manifest_path: Path = integrations_manifest.MANIFEST) -> str:
+    """Build the coverage grid from the manifest, inline referenced vectors as symbols, return deterministic SVG text."""
     tree = ET.parse(source)
     root = tree.getroot()
+    manifest = integrations_manifest.load(manifest_path)
+    populate_coverage(root, manifest)
+    _describe(root, manifest)
     defs = root.find(f"{SVG}defs")
     if defs is None:
         raise ValueError("social preview must contain a defs element")
@@ -98,12 +126,21 @@ def render(source: Path = SOURCE) -> str:
     return ET.tostring(root, encoding="unicode") + "\n"
 
 
-def main() -> int:
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else OUTPUT
+def main(argv: list[str]) -> int:
+    manifest = integrations_manifest.load()
+    if "--check" in argv:
+        stale = [] if OUTPUT.read_text(encoding="utf-8") == render() else [str(OUTPUT.relative_to(ROOT))]
+        stale += integrations_manifest.stale_doc_surfaces(manifest)
+        for path in stale:
+            print(f"stale: {path} (run python scripts/render_social_preview_svg.py)")
+        return 1 if stale else 0
+    paths = [arg for arg in argv if not arg.startswith("--")]
+    output = Path(paths[0]) if paths else OUTPUT
     output.write_text(render(), encoding="utf-8")
+    integrations_manifest.write_doc_surfaces(manifest)
     print(f"Rendered portable social preview: {output}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

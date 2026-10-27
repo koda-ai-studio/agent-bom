@@ -4,20 +4,9 @@ import { pathHasFinding, pathRiskBasisLabel } from "@/lib/path-risk-basis";
 import { countLabel } from "@/lib/count-label";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { LucideIcon } from "lucide-react";
-import {
-  Bot,
-  Bug,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  Database,
-  KeyRound,
-  Package,
-  Server,
-  ShieldAlert,
-  Wrench,
-} from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, ShieldAlert } from "lucide-react";
+import { ASSET_KINDS } from "@/lib/asset-icon-registry";
+import { exposureHopAssetKind } from "@/lib/exposure-hop-kind";
 import {
   exposurePathKey,
   pathDisplayTitle,
@@ -62,16 +51,16 @@ const PATH_EVIDENCE_RAIL_CLASS = [
   "@min-[70rem]:sticky @min-[70rem]:top-[5.5rem] @min-[70rem]:flex @min-[70rem]:items-stretch @min-[70rem]:max-h-[min(72svh,54rem)] @min-[70rem]:overflow-y-auto @min-[70rem]:overscroll-contain",
 ].join(" ");
 
-const ROLE_META: Record<ExposureEntityRole, { label: string; icon: LucideIcon; tint: string }> = {
-  agent: { label: "Agent", icon: Bot, tint: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200" },
-  server: { label: "Server", icon: Server, tint: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200" },
-  package: { label: "Package", icon: Package, tint: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200" },
-  finding: { label: "Finding", icon: Bug, tint: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-200" },
-  credential: { label: "Credential", icon: KeyRound, tint: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-200" },
-  tool: { label: "Tool", icon: Wrench, tint: "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-200" },
-  environment: { label: "Environment", icon: Database, tint: "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-200" },
-  cluster: { label: "Cluster", icon: Database, tint: "border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200" },
-  unknown: { label: "Entity", icon: ShieldAlert, tint: "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-200" },
+const ROLE_META: Record<ExposureEntityRole, { label: string; tint: string }> = {
+  agent: { label: "Agent", tint: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200" },
+  server: { label: "Server", tint: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200" },
+  package: { label: "Package", tint: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200" },
+  finding: { label: "Finding", tint: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-200" },
+  credential: { label: "Credential", tint: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-200" },
+  tool: { label: "Tool", tint: "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-200" },
+  environment: { label: "Environment", tint: "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-200" },
+  cluster: { label: "Cluster", tint: "border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200" },
+  unknown: { label: "Entity", tint: "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-200" },
 };
 
 export function ExposurePathCommandCenter({
@@ -586,7 +575,7 @@ function ExposurePathSequence({
       {visibleSteps.map((hop, pageIndex) => {
         const index = stepOffset + pageIndex;
         const meta = ROLE_META[hop.role] ?? ROLE_META.unknown;
-        const Icon = meta.icon;
+        const Icon = ASSET_KINDS[exposureHopAssetKind(hop)].icon;
         const roleLabel = hop.kindLabel ?? meta.label;
         const relationship = pathRelationship(path, index);
         return (

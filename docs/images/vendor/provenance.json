@@ -177,6 +177,83 @@
       "sha256": "b45143544a125fbd03af4628dc16f9dad27ae01deee5a254b5e4a0bb90909dbf",
       "license": "CC0-1.0",
       "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Okta trademarks remain Okta property."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/huggingface.svg",
+      "vendor": "Hugging Face",
+      "source_page": "https://simpleicons.org/?q=huggingface",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/huggingface.svg",
+      "sha256": "aa81744034eecf4ac6b3fb7108dd71223965c7af3c534932391314563b150109",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Hugging Face trademarks remain Hugging Face property."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/ollama.svg",
+      "vendor": "Ollama",
+      "source_page": "https://simpleicons.org/?q=ollama",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/ollama.svg",
+      "sha256": "9c62bf0159ee96c8b58c86a732f33b002b4b3bb165ec86e8ecca51ad6a82dab6",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Ollama trademarks remain Ollama property."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/mlflow.svg",
+      "vendor": "MLflow",
+      "source_page": "https://simpleicons.org/?q=mlflow",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/mlflow.svg",
+      "sha256": "686679a10a6bdf1029ec4103bec15d8aec365a2be39f6b840992c597e2c76d45",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; MLflow trademarks remain with their owner."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/weightsandbiases.svg",
+      "vendor": "Weights & Biases",
+      "source_page": "https://simpleicons.org/?q=weightsandbiases",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/weightsandbiases.svg",
+      "sha256": "92301c77a1466722947118da495537dd2e7d75833dab5cc41accca7a2678c348",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Weights & Biases trademarks remain Weights & Biases property."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/supabase.svg",
+      "vendor": "Supabase",
+      "source_page": "https://simpleicons.org/?q=supabase",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/supabase.svg",
+      "sha256": "61bf16d93be418f723ae1e137e57afdad4f185352fbc6dea9482af1e0a89ccf7",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Supabase trademarks remain Supabase property."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/vercel.svg",
+      "vendor": "Vercel",
+      "source_page": "https://simpleicons.org/?q=vercel",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/vercel.svg",
+      "sha256": "57f1e4135486c566e9878fddd259f7f6bf8ec43f31e7e6e38a36d9e814a1c0e0",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Vercel trademarks remain Vercel property."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/github.svg",
+      "vendor": "GitHub",
+      "source_page": "https://simpleicons.org/?q=github",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/github.svg",
+      "sha256": "3bf8cceead820aec50d4ee825a3fd02c5a1cd6665cc9cf4cbf3d9c8861a204bb",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; GitHub trademarks remain GitHub property."
     }
   ],
   "neutral_icon_policy": "Use agent-bom neutral category icons when a vendor does not publish redistributable diagram assets or when trademark terms are unclear."

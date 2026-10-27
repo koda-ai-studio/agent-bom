@@ -1,28 +1,28 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Attributes 1`] = `"a0c5b1c479f1b5f43ac18dc4a98a922c177293dbbc057a403433b76640b2242d"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Attributes 1`] = `"608988a7183ca2c8f3172d09ac244f243a3e7a8edce4b5a7d938d50b8ab7a5e0"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Impact 1`] = `"b8ded3ec2e047df6c24dbce48f40766f1fcb84c29ab39766d1a61e781bc7079f"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Impact 1`] = `"a93e0121e366f87d81099a38d5599739e73a74bde9891f998c04a73319995af1"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Overview 1`] = `"536dac8183b428224bee3d802215e32d4c453c474a6576190027dc881e0dacbb"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Overview 1`] = `"cb166eeb8c28f3ae8772217a6fd99b783784d8f358adf4f66feb1a888ca44a6c"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Relationships 1`] = `"3153c3d1b7008bb9217a3adacc0f786f29b1fc4a97f030c91f83fd2925d1eef5"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Relationships 1`] = `"a0b40f7bf5d10889866c5bc3f3ea7a3aee3aa20fee2434484492c2374a33fb2e"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Attributes 1`] = `"ab9d40e8e4904b509f13abfd03ca21f3069127635d9b5348577b600501c1ac6c"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Attributes 1`] = `"765760be876d7339d060098b818bd322b7237131781fb9e525b47c7f4c65f1f5"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Impact 1`] = `"dc93842cec531127bb8b75543c112971f4f123befcbdf235720597a2fa795692"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Impact 1`] = `"34461126f5adc5ef91055a16a38ff2da1a0899ecf3bd61551fa7aa82f09ba92d"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Overview 1`] = `"1bb285af136b7ee6afd6e2be21010eaaceb11247b5157a04df25da6823bac35a"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Overview 1`] = `"f182867e79cab278005f47c025681f8a257da22d8f60b203e724b9115bdca052"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Relationships 1`] = `"d109ebd69fa6a411190426aecb3a698bca8d308f1e9c9dbecfdc4aae87c3740b"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Relationships 1`] = `"7e2555fe9a474c835f64e007e338c944b5951f79ad3eefa00670242e1bed08a8"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Attributes 1`] = `"0d7e64f39d0f0b44306cb7d309eaac4e8a7a7ac4f642e629ee54af52c0cb87d4"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Attributes 1`] = `"9d6970712cde54ba1ef231f179288e3a8763308e4166550a1e81494303a6095c"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Impact 1`] = `"2d68391052a5608f8747c1322b660f448654b3b6889c7939b1c261ccc7430020"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Impact 1`] = `"7221325ee8303a5d7a0bf264798b4472743fc2e805b4bce80b009c8bc0b13e86"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Overview 1`] = `"9647a985903dfa07ca38e6a337241d3ba00cf5efb1443fe279fb167dbc8012d4"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Overview 1`] = `"4bbdddecb9af8d8e39b57586fccca61bcc860e25e3ac229054a36f47c20769e7"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Relationships 1`] = `"4f31645a2432edebbba18cd629b3224bded592f9b5cbc1a7b8eca21b51e00a62"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Relationships 1`] = `"297d960cefc116415fdd22b2d418b3112d2b6c4ffdbe96859f796dd4c59e6775"`;
 
 exports[`lineage inspector rendering before extraction > preserves the accessGrant overview DOM 1`] = `"ab168567bef3a0ee9c3e5cd1ee9491ad6ead5cc1d8ec72811432362d9df173a1"`;
 
@@ -76,7 +76,7 @@ exports[`lineage inspector rendering before extraction > preserves the model ove
 
 exports[`lineage inspector rendering before extraction > preserves the org overview DOM 1`] = `"c446c4d61d424ce1e739084926ca66a2bb18f02771b97e747990d0b1d0428e80"`;
 
-exports[`lineage inspector rendering before extraction > preserves the package overview DOM 1`] = `"1932b12fc127e7a0d177602cb4d322b7b0d48d9269cf6055f0d3d0b85c1cb7a6"`;
+exports[`lineage inspector rendering before extraction > preserves the package overview DOM 1`] = `"30a908d6201faae9ca85b616610b723ce5df04a8fd6e31c78e373c5f8fa24034"`;
 
 exports[`lineage inspector rendering before extraction > preserves the policy overview DOM 1`] = `"4d224cbffcced0c16ffca7aa621ffaba07c8ee4527a0b91a1c217ec2c5938854"`;
 
