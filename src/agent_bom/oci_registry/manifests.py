@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_bom.image_evidence.model import bounded_string_map
+from agent_bom.image_evidence.model import as_dict
 from agent_bom.oci_registry.auth import ANONYMOUS, RegistryCredential, resolve_credential
 from agent_bom.oci_registry.client import FetchedManifest, RegistryClient
 from agent_bom.oci_registry.media_types import INDEX_TYPES
@@ -36,12 +36,12 @@ def _is_index(manifest: FetchedManifest) -> bool:
     return manifest.media_type in INDEX_TYPES or ("manifests" in manifest.document and "layers" not in manifest.document)
 
 
-def index_annotations(index: dict[str, Any], manifest_digest: str) -> dict[str, str]:
-    """Index-level annotations plus the chosen platform descriptor's own."""
-    merged = bounded_string_map(index.get("annotations"))
+def index_annotations(index: dict[str, Any], manifest_digest: str) -> dict[str, Any]:
+    """Raw index-level annotations plus the chosen platform descriptor's own (sanitized when recorded)."""
+    merged = dict(as_dict(index.get("annotations")))
     for descriptor in index.get("manifests") or []:
         if isinstance(descriptor, dict) and descriptor.get("digest") == manifest_digest:
-            merged.update(bounded_string_map(descriptor.get("annotations")))
+            merged.update(as_dict(descriptor.get("annotations")))
     return merged
 
 

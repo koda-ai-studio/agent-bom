@@ -36,10 +36,17 @@ def _config_platform(config: dict[str, Any]) -> str | None:
     return f"{os_name}/{arch}/{variant}" if variant else f"{os_name}/{arch}"
 
 
-def _scan_layers(client: RegistryClient, manifest: dict[str, Any], config: dict[str, Any], evidence: ImageEvidence | None) -> list[Package]:
+def _scan_layers(
+    client: RegistryClient,
+    manifest: dict[str, Any],
+    config: dict[str, Any],
+    evidence: ImageEvidence | None,
+    annotations: dict[str, Any] | None = None,
+) -> list[Package]:
     descriptors = [d for d in manifest.get("layers", []) if isinstance(d, dict)]
     layer_paths = [f"blobs/sha256/{str(d.get('digest', '')).removeprefix('sha256:')}" for d in descriptors]
-    record_image_config(config, layer_paths, manifest=manifest, config_ref=str(manifest.get("config", {}).get("digest") or ""))
+    config_ref = str(manifest.get("config", {}).get("digest") or "")
+    record_image_config(config, layer_paths, manifest=manifest, config_ref=config_ref, index_annotations=annotations)
     walk = _ImageWalk(config)
     for descriptor, layer_path, layer in zip(descriptors, layer_paths, _build_layer_metadata(layer_paths, config), strict=False):
         media_type, digest = str(descriptor.get("mediaType") or ""), str(descriptor.get("digest") or "")
@@ -108,9 +115,8 @@ def scan_registry_image(
             evidence.digest, evidence.index_digest = manifest.digest, index.digest if index else None
             evidence.platform, evidence.available_platforms = actual, available
             evidence.config_digest = config_digest
-            if index is not None:
-                evidence.annotations = {**evidence.annotations, **index_annotations(index.document, manifest.digest)}
-        packages = _scan_layers(client, manifest.document, config, evidence)
+        annotations = index_annotations(index.document, manifest.digest) if index is not None else None
+        packages = _scan_layers(client, manifest.document, config, evidence, annotations)
         if evidence is not None:
             evidence.credential_source = client.credential_source
             discover_supply_chain(client, evidence, index.document if index else None)

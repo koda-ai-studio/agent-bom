@@ -15,14 +15,14 @@ from pathlib import Path
 from typing import Any
 
 from agent_bom.constants import is_credential_key
-from agent_bom.image_evidence.model import as_list
+from agent_bom.image_evidence.model import MAX_LABELS, as_list, bounded_string_map
 from agent_bom.scanners.secret_lines import is_placeholder_value
 from agent_bom.secret_scanner import scan_content
 from agent_bom.security import sanitize_text
 
 _CONFIG_PATH = Path("image-config")
 _BUILD_ARG_PREFIX_RE = re.compile(r"^\|\d+\s+((?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)+)")
-_ASSIGNMENT_RE = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)=(\S*)")
+_ASSIGNMENT_RE = re.compile(r"(?<![A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*)=(\S*)")
 _REFERENCE_RE = re.compile(r"^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$")
 _MAX_HISTORY = 500
 
@@ -86,3 +86,25 @@ def scan_config_secrets(config: dict[str, Any] | None) -> list[dict[str, Any]]:
         location = f"image history step {index + 1}"
         secrets.extend(_scan_entry("history", location, created_by, assignments))
     return secrets
+
+
+def scan_string_map(raw: object, kind: str, noun: str) -> tuple[dict[str, str], list[dict[str, Any]]]:
+    """Labels/annotations as a bounded, sanitized map with secret values replaced, plus their secret records.
+
+    Values are scanned before sanitizing so a credential is reported as a finding,
+    not just masked; a flagged value is replaced by the finding's redaction marker.
+    """
+    values = bounded_string_map(raw)
+    if not isinstance(raw, dict):
+        return values, []
+    secrets: list[dict[str, Any]] = []
+    for key in sorted(raw, key=str)[:MAX_LABELS]:
+        value = raw[key]
+        if not isinstance(value, (str, int, float, bool)):
+            continue
+        label = sanitize_text(str(key), max_len=200)
+        found = _scan_entry(kind, f"image {noun} {label}", f"{key}={value}", [(str(key), str(value))])
+        if found:
+            values[label] = str(found[0]["preview"])
+            secrets.extend(found)
+    return values, secrets
