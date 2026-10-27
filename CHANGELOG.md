@@ -36,6 +36,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Findings reachability joins derive each attack path's identifiers once per snapshot index instead of once per finding row. This reduces repeated work during facet aggregation; requests that reach the existing deadline still report partial counts as lower bounds.
+- The AI BOM (`/v1/agent-bom/manifest`) no longer shows a blank transport for an MCP server whose endpoint sync omitted it: it reports the newest transport any observation of that server recorded, and `unknown` when none did.
 - SPDX 2 tag-value export now carries every field of the JSON rendering the grammar can express (`PrimaryPackagePurpose`, `PackageComment`, `PackageHomePage`, summary/description) and writes annotations as spec `Annotator`/`SPDXREF` blocks instead of repeated comment tags, so agent and server context records are no longer read back as software packages. The cloud-inventory extension moved from `DocumentComment` to a document annotation.
 ---
 - A GKE pod's node VM and the GCE inventory or side-scan VM are now one graph node, so an OS CVE on the node disk is an attack path through the pod.

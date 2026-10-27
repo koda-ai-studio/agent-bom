@@ -549,7 +549,7 @@ def _observed_server_entities(observations: Iterable[MCPObservation]) -> list[di
     entities: list[dict[str, object]] = []
     for key, rows in sorted(groups.items()):
         rows.sort(key=lambda row: (str(row.get("updated_at") or ""), str(row["observation_id"])))
-        entity = dict(rows[-1])
+        entity = {**rows[-1], "transport": next((row["transport"] for row in reversed(rows) if row.get("transport")), "unknown")}
         entity["observations"] = rows
         entity["observation_ids"] = sorted(str(row["observation_id"]) for row in rows)
         names = sorted({str(row["agent_name"]) for row in rows if row.get("agent_name")})
