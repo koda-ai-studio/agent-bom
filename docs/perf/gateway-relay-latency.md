@@ -59,7 +59,7 @@ At concurrency **500** (200 requests per level in this run), the gate trips if
   (policy engine not under test)
 - Tuned uvloop: enabled (`uvloop` present in the api extra / venv)
 - Gateway upstream pool: `GatewaySettings.upstream_http_max_connections=100`
-  / keepalive `20` — **not** env-configurable today; tuned mode could not enlarge
+  / keepalive `20` — was **not** env-configurable at measurement time; tuned mode could not enlarge
   the gateway pool without a CLI/settings change
 
 ## Historical commands
@@ -170,3 +170,22 @@ closed at startup. An open circuit continues to deny upstream calls until its
 configured retry window. Benchmark with representative upstream latency and
 policy enforcement before increasing pools; larger limits do not prove higher
 throughput or a latency SLO.
+
+The same environment variables work in Docker (`--env`) and Helm
+(`gateway.env`). For example, in an existing gateway values file:
+
+```yaml
+gateway:
+  env:
+    - name: AGENT_BOM_GATEWAY_UPSTREAM_HTTP_MAX_CONNECTIONS
+      value: "100"
+    - name: AGENT_BOM_GATEWAY_UPSTREAM_HTTP_MAX_KEEPALIVE_CONNECTIONS
+      value: "20"
+    - name: AGENT_BOM_GATEWAY_UPSTREAM_HTTP_TIMEOUT_SECONDS
+      value: "30"
+```
+
+Render the chart with `helm template agent-bom deploy/helm/agent-bom -f values.yaml`
+before deploying, then check `/healthz` for the effective pool and circuit settings.
+These controls do not enable multi-replica gateway persistence; the chart retains
+its existing replica and durable-audit restrictions.

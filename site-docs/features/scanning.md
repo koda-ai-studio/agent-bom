@@ -490,3 +490,44 @@ The marker names one or more rule ids (`ignore[GHA-002,GHA-004]`), and the
 reason is required: a marker without one suppresses nothing. Accepted findings
 leave the active results and the severity gate, and the scan result keeps them
 in `suppressed` so they stay reviewable.
+
+## Agent SDK source inventory
+
+Scan imports without importing or executing the target application:
+
+```bash
+agent-bom scan --ai-inventory ./my-agent --no-discover -o agent-report.json
+```
+
+Inspect `ai_inventory.components` and `ai_inventory.unique_sdks` in the JSON
+artifact, then scan the project's dependency manifests with `--project` to
+establish package versions and advisory matches. Python and JS/TS AST analysis
+also reports the corresponding framework labels.
+
+| SDK | Python import → PyPI package | JS/TS package |
+|---|---|---|
+| OpenAI Agents SDK | `agents` → `openai-agents` | `@openai/agents` |
+| Google ADK | `google.adk` → `google-adk` | `@google/adk` |
+| Claude Agent SDK | `claude_agent_sdk` → `claude-agent-sdk` | `@anthropic-ai/claude-agent-sdk` |
+| Strands Agents | `strands` → `strands-agents` | `@strands-agents/sdk` |
+| Amazon Bedrock AgentCore | `bedrock_agentcore` → `bedrock-agentcore` | Not covered by this import rule |
+| Azure AI Agents | `azure.ai.agents` → `azure-ai-agents` | `@azure/ai-agents` |
+| Microsoft Agent Framework | `agent_framework` → `agent-framework-core` | Not covered by this import rule |
+| NVIDIA NeMo Agent Toolkit | `nat` → `nvidia-nat` | Not covered by this import rule |
+| OpenClaw plugin SDK | Not covered by this import rule | `openclaw/plugin-sdk/*` → `openclaw` |
+| LlamaIndex | `llama_index` → `llama-index-core` | `llamaindex` |
+
+Import evidence identifies SDK use; it does not establish live execution,
+cloud permissions, deployed agents, or complete workflow topology. General
+cloud clients such as `boto3`, `azure.identity`, and `google.cloud` do not alone
+identify an agent framework. Similar names such as `strands_helpers` or
+`@google/adk-helpers` do not match these SDK rules.
+
+OpenClaw config/MCP discovery and skill scanning are separate surfaces. Audit an
+OpenClaw skill directory with `agent-bom skills scan ./skills --format json`;
+this reads `SKILL.md`, including OpenClaw metadata and declared dependencies,
+and produces findings without loading or executing the skills. Review findings
+and coverage before allowing a skill to run. NVIDIA NeMo Guardrails imports are
+also recognized as guardrail evidence; that does not establish effective enforcement.
+
+Project and repository scans automatically enable AI inventory for supported source languages, including JavaScript-only and TypeScript-only projects. CLI, API repository scans, and MCP repository scans preserve package identity and source-file evidence in `ai_inventory`.

@@ -425,10 +425,10 @@ def _scan_ai_inventory_stage(
     root: Path, ai_inventory: dict[str, Any], agents: list[Agent], warnings: list[str], update_progress: Callable[[str], None] | None
 ) -> None:
     # AI SDK / observability inventory (LangChain, LangGraph, Langfuse, …) —
-    # mirrors CLI --project/--repo auto-enable when a Python agent surface exists.
-    from agent_bom.repo_auto_detect import project_has_python_agent_surface
+    # mirrors CLI --project/--repo auto-enable for all supported source languages.
+    from agent_bom.repo_auto_detect import project_has_ai_inventory_surface
 
-    if not project_has_python_agent_surface(root):
+    if not project_has_ai_inventory_surface(root):
         return
     try:
         from agent_bom.ai_components import scan_source
