@@ -1258,9 +1258,9 @@ jobs:
   test-smoke:
     name: Python affected tests (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    # The broadest measured single-file selection is about five minutes of
-    # tests per shard; the bound leaves headroom for setup and multi-file PRs.
-    timeout-minutes: 15
+    # Single-file selections run about five minutes per shard; a broad multi-lane
+    # PR measured ~15, so the bound leaves headroom for setup and wide diffs.
+    timeout-minutes: 22
     strategy:
       fail-fast: false
       matrix:

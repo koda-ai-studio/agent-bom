@@ -112,7 +112,7 @@ def test_affected_job_is_bounded_and_reports_slow_tests() -> None:
     assert job["name"] == f"Python affected tests (shard ${{{{ matrix.shard }}}}/{len(shards)})"
     assert shards == list(range(len(shards))) and len(shards) == 3
     assert job["strategy"]["fail-fast"] is False
-    assert job["timeout-minutes"] <= 15
+    assert job["timeout-minutes"] <= 22
     run = _step(job, AFFECTED_STEP)["run"]
     assert 'AFFECTED_SELECTION=$(uv run python scripts/pytest_ci_affected.py --root . "${CHANGED[@]}")' in run
     assert f'--total {len(shards)} --files "${{TESTS[@]}}"' in run
