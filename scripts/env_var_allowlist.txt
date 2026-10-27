@@ -189,7 +189,6 @@ AGENT_BOM_NHI_DORMANT_DAYS
 AGENT_BOM_NHI_DEPROVISION_DAYS
 # Token age (days, default 90) beyond which an agent identity is flagged rotation_due (advisory, no silent rotation); read in api/agent_identity_store.py.
 AGENT_BOM_TOKEN_ROTATION_DAYS
-AGENT_BOM_CORS_ALL
 AGENT_BOM_DASHBOARD_CSP_HASH_MANIFEST
 AGENT_BOM_DB
 AGENT_BOM_DELIVERY_DB  # optional SQLite path for the outbound delivery foundation (audit log + idempotency ledger + circuit-breaker state); falls back to AGENT_BOM_DB then ~/.agent-bom/db/delivery.db; read in delivery.py

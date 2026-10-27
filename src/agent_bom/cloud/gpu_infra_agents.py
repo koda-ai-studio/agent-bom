@@ -7,6 +7,7 @@ from typing import Any
 from agent_bom.cloud.gpu_k8s_inventory import workload_agent
 from agent_bom.cloud.normalization import build_package_purl
 from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
+from agent_bom.parsers.gpu_stack import DRIVER
 
 
 def _gpu_container_agent(c: Any) -> Agent:
@@ -47,12 +48,47 @@ def _gpu_container_agent(c: Any) -> Agent:
     )
 
 
+def _driver_versions(nodes: list[Any]) -> dict[str, list[str]]:
+    versions: dict[str, set[str]] = {}
+    for node in nodes:
+        if node.cuda_driver_version:
+            versions.setdefault(node.gpu_vendor or "unknown", set()).add(node.cuda_driver_version)
+    return {vendor: sorted(found) for vendor, found in versions.items()}
+
+
+def _nvidia_driver_packages(nodes: list[Any]) -> list[Package]:
+    """One CPE-identified package per NVIDIA driver release; the NVIDIA CSAF and NVD matchers judge it."""
+    nodes_by_version: dict[str, list[str]] = {}
+    for node in nodes:
+        version = node.cuda_driver_version
+        if node.gpu_vendor == "nvidia" and version and DRIVER.cpe(version):
+            nodes_by_version.setdefault(version, []).append(node.name)
+    return [
+        Package(
+            name=DRIVER.name,
+            version=version,
+            ecosystem="generic",
+            purl=DRIVER.purl(version),
+            cpe=DRIVER.cpe(version),
+            is_direct=False,
+            resolved_from_registry=False,
+            discovery_provenance={
+                "source_type": "kubernetes_node_labels",
+                "source": "gpu-feature-discovery-label",
+                "observed_via": [f"k8s-node:{name}" for name in sorted(names)],
+                "confidence": "high",
+            },
+        )
+        for version, names in sorted(nodes_by_version.items())
+    ]
+
+
 def _k8s_gpu_cluster_agent(report: Any) -> Agent:
     """Aggregate the report's K8s GPU nodes into one synthetic cluster agent."""
     total_gpus = sum(n.gpu_capacity for n in report.gpu_nodes)
     vendors = sorted({n.gpu_vendor for n in report.gpu_nodes if n.gpu_vendor})
     node_name = f"k8s-gpu-cluster ({len(report.gpu_nodes)} nodes, {total_gpus} GPUs)"
-    node_server = MCPServer(name=node_name, command="", transport=TransportType.STDIO, packages=[])
+    node_server = MCPServer(name=node_name, command="", transport=TransportType.STDIO, packages=_nvidia_driver_packages(report.gpu_nodes))
     cloud_origin = {
         "provider": "gpu",
         "service": "kubernetes",
@@ -63,7 +99,7 @@ def _k8s_gpu_cluster_agent(report: Any) -> Agent:
             "node_count": len(report.gpu_nodes),
             "gpu_capacity_total": total_gpus,
             "vendors": vendors,
-            "driver_cve_count": len(report.driver_findings),
+            "driver_versions": _driver_versions(report.gpu_nodes),
             "firmware_cve_count": len(report.firmware_findings),
         },
     }
