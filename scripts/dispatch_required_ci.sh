@@ -18,7 +18,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 PR="$1"
-REQUIRED_CHECKS="${REQUIRED_CHECKS:-Lint and Type Check,Test (Python 3.13),Build Package,Security Scan,CodeQL}"
+REQUIRED_CHECKS="${REQUIRED_CHECKS:-Lint and Type Check,Test (Python 3.13),Build Package,Security Scan,CodeQL,Version Alignment,Dependency Review,UI Validate}"
 REPO="${GH_REPO:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 
 pr_json="$(
@@ -108,6 +108,11 @@ for raw_check in "${required_check_list[@]}"; do
   check_state="$(jq --arg name "${check}" '[.[] | select(.name == $name) | {status, conclusion}]' <<< "${check_runs}")"
   check_hits="$(jq 'length' <<< "${check_state}")"
   active_hits="$(jq '[.[] | select(.status != "completed")] | length' <<< "${check_state}")"
+  # These contexts intentionally skip on unrelated paths; GitHub accepts that
+  # verdict. Other skipped required checks still need recovery.
+  if [ "$check" = "UI Validate" ] || [ "$check" = "Version Alignment" ]; then
+    check_state="$(jq 'map(if .conclusion == "skipped" then .conclusion = "success" else . end)' <<< "${check_state}")"
+  fi
   success_hits="$(jq '[.[] | select(.conclusion == "success" or .conclusion == "neutral")] | length' <<< "${check_state}")"
   stale_hits="$(jq '[.[] | select(.conclusion == "cancelled" or .conclusion == "timed_out" or .conclusion == "startup_failure" or .conclusion == "stale" or .conclusion == "skipped")] | length' <<< "${check_state}")"
   failed_hits="$(jq '[.[] | select(.conclusion == "failure" or .conclusion == "action_required")] | length' <<< "${check_state}")"
@@ -151,6 +156,14 @@ if [ "${#stale[@]}" -gt 0 ]; then
   reason_parts+=("stale: $(IFS=', '; echo "${stale[*]}")")
 fi
 reason="$(IFS='; '; echo "${reason_parts[*]}")"
+
+# Dependency Review has only a pull_request trigger; workflow_dispatch cannot
+# supply its PR diff. Do not repeatedly fan out unrelated workflows for it.
+if [ "${#missing[@]}" -eq 1 ] && [ "${#stale[@]}" -eq 0 ] && [ "${missing[0]}" = "Dependency Review" ] ||
+   [ "${#stale[@]}" -eq 1 ] && [ "${#missing[@]}" -eq 0 ] && [ "${stale[0]}" = "Dependency Review" ]; then
+  echo "PR #${PR}: Dependency Review requires a pull_request event or a failed-job rerun; fallback cannot dispatch it."
+  exit 0
+fi
 
 echo "PR #${PR}: dispatching required workflows for head ${head_sha} (${reason})."
 gh workflow run ci.yml --repo "${REPO}" --ref "${head_ref}"

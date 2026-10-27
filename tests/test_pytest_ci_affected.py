@@ -123,3 +123,49 @@ def test_real_shared_inputs_select_their_importers() -> None:
         selected = select_affected_tests(changed_files=[Path(shared)], root=ROOT)
         targeted = select_targeted_tests(changed_files=[Path(shared)], root=ROOT)
         assert len(selected) > len(targeted), shared
+
+
+def test_duration_budget_expands_shards_without_dropping_tests(tmp_path: Path) -> None:
+    from scripts.pytest_ci_affected import affected_shard_count
+    from scripts.pytest_ci_plan import plan_shards
+
+    files = [_write(tmp_path / f"tests/test_case_{i}.py") for i in range(24)]
+    durations = dict.fromkeys(files, 300.0)
+    count = affected_shard_count(files, durations=durations, target_seconds=900)
+    assert count == 8
+    shards = plan_shards(files, total=count, durations=durations)
+    assert sorted(path for shard in shards for path in shard) == sorted(files)
+    assert all(sum(durations[path] for path in shard) <= 900 for shard in shards)
+
+
+def test_affected_shards_are_bounded_and_never_empty(tmp_path: Path) -> None:
+    from scripts.pytest_ci_affected import affected_shard_count
+
+    files = [_write(tmp_path / f"tests/test_case_{i}.py") for i in range(12)]
+    assert affected_shard_count(files, durations=dict.fromkeys(files, 1.0)) == 1
+    assert affected_shard_count(files, durations=dict.fromkeys(files, 10000.0)) == 12
+    assert affected_shard_count(files[:2], durations={}) == 2
+    assert affected_shard_count(files, durations={}) == 12
+    with pytest.raises(ValueError, match="empty"):
+        affected_shard_count([], durations={})
+
+
+def test_partial_timings_estimate_unknown_modules(tmp_path: Path) -> None:
+    from scripts.pytest_ci_affected import affected_shard_count
+
+    files = [_write(tmp_path / f"tests/test_case_{i}.py") for i in range(8)]
+    assert affected_shard_count(files, durations={files[0]: 300.0}, target_seconds=600) == 4
+
+
+def test_cli_matrix_and_selection_include_identical_contracts(tmp_path: Path) -> None:
+    import json
+
+    from scripts.pytest_ci_affected import SMOKE_TESTS
+
+    for name in SMOKE_TESTS:
+        _write(tmp_path / name)
+    command = [sys.executable, str(ROOT / "scripts/pytest_ci_affected.py"), "--root", ".", "--include-smoke"]
+    selection = subprocess.run(command, cwd=tmp_path, capture_output=True, text=True, check=True)
+    matrix = subprocess.run([*command, "--matrix"], cwd=tmp_path, capture_output=True, text=True, check=True)
+    assert selection.stdout.splitlines() == sorted(SMOKE_TESTS)
+    assert json.loads(matrix.stdout) == list(range(12))

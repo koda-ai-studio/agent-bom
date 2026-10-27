@@ -176,7 +176,7 @@ exit 70
 
 
 def test_recovery_required_checks_match_branch_protection() -> None:
-    canonical = "Lint and Type Check,Test (Python 3.13),Build Package,Security Scan,CodeQL"
+    canonical = "Lint and Type Check,Test (Python 3.13),Build Package,Security Scan,CodeQL,Version Alignment,Dependency Review,UI Validate"
     paths = (
         ROOT / "scripts" / "dispatch_required_ci.sh",
         ROOT / "scripts" / "retrigger_stranded_pr.sh",
@@ -227,3 +227,33 @@ esac
     assert '"Test (Python 3.13)"' in result.stdout
     assert "state=active" in result.stdout
     assert "workflow not present" not in result.stdout
+
+
+@pytest.mark.parametrize("script", ["dispatch_required_ci.sh", "retrigger_stranded_pr.sh"])
+@pytest.mark.parametrize("context", ["UI Validate", "Version Alignment"])
+@pytest.mark.parametrize("conclusion", ["skipped", "failure"])
+def test_path_gated_checks_do_not_retrigger(tmp_path: Path, script: str, context: str, conclusion: str) -> None:
+    import json
+
+    check = json.dumps([{"name": context, "status": "completed", "conclusion": conclusion}])
+    stub = """#!/usr/bin/env bash
+case "$*" in
+  'pr view '*) echo '{"isDraft":false,"isCrossRepository":false,"headRepositoryOwner":{"login":"owner"},
+"headRefName":"topic","headRefOid":"head","baseRefName":"main"}' ;;
+  *'/pulls/1 '*) echo head ;;
+  *'/git/ref/heads/main '*) echo base ;;
+  *'/compare/'*) echo 0 ;;
+  *'/commits/head/check-runs'*) echo 'CHECK_JSON' ;;
+  *'actions/runs?head_sha='*) echo 0 ;;
+  *'actions/runs'*) echo '{"workflow_runs":[]}' ;;
+  *) echo "unexpected mutation: $*" >&2; exit 70 ;;
+esac
+""".replace("CHECK_JSON", check)
+    bin_dir = _gh_stub(tmp_path, stub)
+    env = {**os.environ, "GH_REPO": "owner/repo", "REQUIRED_CHECKS": context, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
+    result = subprocess.run(["bash", str(ROOT / "scripts" / script), "1"], capture_output=True, text=True, env=env, timeout=15)
+    assert result.returncode == 0, result.stderr
+    if conclusion == "failure":
+        assert "required check(s) failed" in result.stdout
+    else:
+        assert "No fallback dispatch needed" in result.stdout or "No retrigger needed" in result.stdout
