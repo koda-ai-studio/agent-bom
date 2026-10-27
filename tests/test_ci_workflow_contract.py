@@ -526,7 +526,7 @@ def test_pull_request_classifiers_diff_from_the_merge_base() -> None:
         text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
         assert two_dot not in text, name
         assert three_dot in text, name
-    assert CI_WORKFLOW.read_text(encoding="utf-8").count(three_dot) == 2
+    assert CI_WORKFLOW.read_text(encoding="utf-8").count(three_dot) == 3
 
 
 def test_pr_runs_cancel_superseded_runs_and_every_main_push_completes() -> None:
@@ -688,10 +688,13 @@ def test_python_smoke_gate_combines_changed_domain_and_cross_surface_contracts()
     run = next(step["run"] for step in smoke["steps"] if step.get("name") == "Run affected tests and contract smoke")
 
     assert "scripts/pytest_ci_affected.py" in run
-    assert "tests/test_cli_entry_points.py" in run
-    assert "tests/test_product_surface_contract.py" in run
-    assert "tests/api/test_api_scan_findings_wiring.py" in run
-    assert "tests/api/test_live_export_contracts.py" in run
+    from scripts.pytest_ci_affected import SMOKE_TESTS
+
+    assert "--include-smoke" in run
+    assert "tests/test_cli_entry_points.py" in SMOKE_TESTS
+    assert "tests/test_product_surface_contract.py" in SMOKE_TESTS
+    assert "tests/api/test_api_scan_findings_wiring.py" in SMOKE_TESTS
+    assert "tests/api/test_live_export_contracts.py" in SMOKE_TESTS
 
 
 def test_readme_contracts_run_for_ui_and_documentation_only_changes() -> None:
@@ -702,13 +705,16 @@ def test_readme_contracts_run_for_ui_and_documentation_only_changes() -> None:
         if "uses" in step or step.get("name") in {"Install dependencies", "Run affected tests and contract smoke"}:
             assert step.get("if") is None
     run = next(step["run"] for step in steps if step.get("name") == "Run affected tests and contract smoke")
+    from scripts.pytest_ci_affected import SMOKE_TESTS
+
+    assert "--include-smoke" in run
     for contract in (
         "test_doc_architecture_svgs.py",
         "test_public_frontdoor_contract.py",
         "test_public_docs_cli_alignment.py",
         "test_readme_demo_excerpt.py",
     ):
-        assert f"tests/{contract}" in run
+        assert f"tests/{contract}" in SMOKE_TESTS
 
 
 def test_required_package_build_starts_immediately() -> None:
@@ -1092,9 +1098,12 @@ def test_changed_domain_smoke_distributes_large_test_modules_between_workers() -
 def test_changed_domain_smoke_shards_keep_every_selected_test_required() -> None:
     jobs = _ci()["jobs"]
     smoke = jobs["test-smoke"]
-    assert smoke["strategy"] == {"fail-fast": False, "matrix": {"shard": [0, 1, 2]}}
+    assert smoke["strategy"]["fail-fast"] is False
+    assert "needs.changes.outputs.affected_shards" in smoke["strategy"]["matrix"]["shard"]
     command = next(step["run"] for step in smoke["steps"] if step.get("name") == "Run affected tests and contract smoke")
-    assert 'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 3 --files "${TESTS[@]}"' in command
+    assert (
+        'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total "${{ strategy.job-total }}" --files "${TESTS[@]}"'
+    ) in command
     assert 'if [ "${#TESTS[@]}" -eq 0 ]' in command
     assert '[ -z "${TESTS[0]}" ]' in command
     assert "test-smoke" in jobs["test-core"]["needs"]

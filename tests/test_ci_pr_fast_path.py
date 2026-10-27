@@ -109,14 +109,18 @@ def test_affected_tests_run_on_every_pull_request_input() -> None:
 def test_affected_job_is_bounded_and_reports_slow_tests() -> None:
     job = _ci()["jobs"]["test-smoke"]
     shards = job["strategy"]["matrix"]["shard"]
-    assert job["name"] == f"Python affected tests (shard ${{{{ matrix.shard }}}}/{len(shards)})"
-    assert shards == list(range(len(shards))) and len(shards) == 3
+    assert "needs.changes.outputs.affected_shards" in shards
+    assert "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]" in shards
+    assert job["name"] == "Python affected tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})"
     assert job["strategy"]["fail-fast"] is False
-    assert job["timeout-minutes"] <= 22
+    assert job["timeout-minutes"] <= 15
     run = _step(job, AFFECTED_STEP)["run"]
-    assert 'AFFECTED_SELECTION=$(uv run python scripts/pytest_ci_affected.py --root . "${CHANGED[@]}")' in run
-    assert f'--total {len(shards)} --files "${{TESTS[@]}}"' in run
+    assert 'scripts/pytest_ci_affected.py --root . --include-smoke "${CHANGED[@]}"' in run
+    assert '--total "${{ strategy.job-total }}" --files "${TESTS[@]}"' in run
     assert "--durations=50" in run
+    plan = _step(_ci()["jobs"]["changes"], "Plan affected-test shards")["run"]
+    assert '--matrix --include-smoke "${CHANGED[@]}"' in plan
+    assert "mapfile -t CHANGED < <(" not in plan + run
 
 
 def test_full_suite_lanes_report_the_fifty_slowest_tests() -> None:

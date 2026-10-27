@@ -11,14 +11,33 @@ references count; the full suite runs after merge and nightly.
 from __future__ import annotations
 
 import argparse
+import json
+import math
 import re
 from pathlib import Path, PurePosixPath
 from typing import Iterable
 
 if __package__:
-    from .pytest_ci_plan import discover_test_files, select_targeted_tests
+    from .pytest_ci_plan import discover_test_files, estimate_seconds, load_durations, select_targeted_tests
 else:
-    from pytest_ci_plan import discover_test_files, select_targeted_tests
+    from pytest_ci_plan import discover_test_files, estimate_seconds, load_durations, select_targeted_tests
+
+
+SMOKE_TESTS = (
+    "tests/test_ci_workflow_contract.py",
+    "tests/test_runtime_child_span_redaction.py",
+    "tests/test_doc_architecture_svgs.py",
+    "tests/test_public_frontdoor_contract.py",
+    "tests/test_public_release_contracts.py",
+    "tests/test_cli_cold_start.py",
+    "tests/test_docs_toolchain.py",
+    "tests/test_public_docs_cli_alignment.py",
+    "tests/test_readme_demo_excerpt.py",
+    "tests/test_cli_entry_points.py",
+    "tests/test_product_surface_contract.py",
+    "tests/api/test_api_scan_findings_wiring.py",
+    "tests/api/test_live_export_contracts.py",
+)
 
 
 def _module_patterns(path: PurePosixPath) -> tuple[str, list[re.Pattern[str]]]:
@@ -95,13 +114,40 @@ def select_affected_tests(*, changed_files: Iterable[Path], root: Path) -> list[
     return sorted(selected)
 
 
+def affected_shard_count(files: Iterable[Path], *, durations: dict[Path, float], target_seconds: float = 900) -> int:
+    """Size runners by worker-seconds without discarding any affected module.
+
+    The 900 worker-second target leaves setup and contention headroom in the
+    15-minute job bound. Missing timings use the maximum bounded fan-out.
+    This is an estimate, not a promise that an indivisible slow module fits.
+    """
+    files = sorted(set(files))
+    if not files:
+        raise ValueError("affected selection is empty")
+    if not math.isfinite(target_seconds) or target_seconds <= 0:
+        raise ValueError("target seconds must be finite and positive")
+    maximum = min(12, len(files))
+    seconds = sum(estimate_seconds(files, durations).values())
+    return min(maximum, max(1, math.ceil(seconds / target_seconds))) if seconds else maximum
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("."), help="repository root")
+    parser.add_argument("--matrix", action="store_true", help="print duration-sized shard indices as JSON")
+    parser.add_argument("--include-smoke", action="store_true", help="include mandatory contract modules")
     parser.add_argument("changed_files", nargs="*", type=Path)
     args = parser.parse_args()
     cwd = Path.cwd().resolve()
-    for path in select_affected_tests(changed_files=args.changed_files, root=args.root.resolve()):
+    root = args.root.resolve()
+    selected = set(select_affected_tests(changed_files=args.changed_files, root=root))
+    if args.include_smoke:
+        selected.update(root / path for path in SMOKE_TESTS)
+    if args.matrix:
+        count = affected_shard_count(selected, durations=load_durations(root / "tests/.ci-durations.json"))
+        print(json.dumps(list(range(count))))
+        return 0
+    for path in sorted(selected):
         resolved = path.resolve()
         print(resolved.relative_to(cwd).as_posix() if resolved.is_relative_to(cwd) else resolved.as_posix())
     return 0
