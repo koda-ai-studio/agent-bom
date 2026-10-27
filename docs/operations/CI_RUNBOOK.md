@@ -69,9 +69,11 @@ uv run python scripts/refresh_ci_durations.py --log /tmp/shard-*.log
 ```
 
 Without CI logs, run the suite locally with `--junitxml=/tmp/junit.xml` and pass
-`--junit /tmp/junit.xml` instead. Tests that only read the seeded demo estate
-use `shared_demo_estate_client` (one seed per module); tests that write,
-reseed or patch keep the per-test `demo_estate_client`. See
+`--junit /tmp/junit.xml` instead. Each test worker seeds the demo estate once
+per session and every demo client boots on a SQLite copy of that seed. Tests
+that only read it use `shared_demo_estate_client` (one copy per module); tests
+that write, reseed or patch use the per-test `demo_estate_client`. No test seeds
+the estate itself (`tests/test_demo_estate_fixtures.py` enforces it). See
 `tests/_demo_estate_fixtures.py`.
 
 Python 3.11 shards upload coverage only after their tests pass. The combined

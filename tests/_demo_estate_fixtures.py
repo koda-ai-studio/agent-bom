@@ -1,9 +1,16 @@
 """Seeded demo-estate API clients for the demo contract suites.
 
-``demo_estate_client`` boots a fresh seed for every test. Use it for tests that
+Seeding the demo estate costs tens of seconds, so each xdist worker seeds it
+once per session into a template directory (``_demo_estate_template``). Every
+client then boots the API on its own SQLite backup of those databases: the boot
+takes the product's restart path (the stored showcase graph and demo jobs are
+current, so only the idempotent in-memory seeds rerun), with the same seeded
+data and the same readiness wait as a fresh boot.
+
+``demo_estate_client`` boots a private copy for every test. Use it for tests that
 write, reseed, patch, or rely on a just-booted estate.
 
-``shared_demo_estate_client`` boots one seed per module and serves it to every
+``shared_demo_estate_client`` boots one copy per module and serves it to every
 read-only test in that module, with the same setup and teardown. The autouse
 ``reset_global_test_state`` still runs before each test: durable stores reopen
 from the module's database files, but in-memory state (proxy ring buffers,
@@ -14,9 +21,12 @@ process-global, so a per-test client inside a live shared one would restart it.
 
 from __future__ import annotations
 
+import os
+import sqlite3
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -27,6 +37,8 @@ from starlette.testclient import TestClient
 VIEWER: dict[str, str] = {}
 
 _active_seeds: list[Path] = []
+
+_DEMO_DATABASES = ("demo-estate.db", "demo-graph.db")
 
 
 def _model_stale_backpressure() -> None:
@@ -67,7 +79,7 @@ def _reset_process_seed_state() -> None:
 
 @contextmanager
 def seeded_demo_estate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[TestClient]:
-    """Boot the API on a fresh demo seed under *tmp_path*; restore process state on exit."""
+    """Boot the API on the demo databases under *tmp_path* (seeding them if empty); restore process state on exit."""
     if _active_seeds:
         raise RuntimeError(f"a seeded demo estate already serves this process from {_active_seeds[0]}; use one demo client kind per module")
     _model_stale_backpressure()
@@ -130,15 +142,75 @@ def seeded_demo_estate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Itera
         _reset_process_seed_state()
 
 
+def _utc_day() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def copy_demo_databases(source_dir: Path, target_dir: Path) -> None:
+    """Snapshot the demo databases with SQLite's online backup (WAL-consistent)."""
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for name in _DEMO_DATABASES:
+        source = sqlite3.connect(source_dir / name)
+        destination = sqlite3.connect(target_dir / name)
+        try:
+            source.backup(destination)
+        finally:
+            destination.close()
+            source.close()
+
+
+class DemoEstateTemplate:
+    """One worker's seeded demo databases, copied per client instead of reseeded."""
+
+    def __init__(self, base: Path) -> None:
+        self.base = base
+        self.seeded_days: list[str] = []
+
+    @property
+    def root(self) -> Path:
+        return self.base / self.seeded_days[-1]
+
+    def seed(self) -> None:
+        day = _utc_day()
+        (self.base / day).mkdir(parents=True)
+        # Seeding pins the demo state dir and store paths in os.environ; a
+        # session-scoped seed must not leak them into the first test.
+        saved = dict(os.environ)
+        try:
+            with pytest.MonkeyPatch.context() as monkeypatch, seeded_demo_estate(monkeypatch, self.base / day):
+                pass
+        finally:
+            os.environ.clear()
+            os.environ.update(saved)
+        self.seeded_days.append(day)
+
+    def copy_into(self, target: Path) -> None:
+        # Day-scoped demo evidence (gateway KPIs, cost) windows on the UTC day
+        # it was seeded, so a session that crosses midnight seeds a new template.
+        if not self.seeded_days or self.seeded_days[-1] != _utc_day():
+            self.seed()
+        copy_demo_databases(self.root, target)
+
+
+@pytest.fixture(scope="session")
+def _demo_estate_template(tmp_path_factory: pytest.TempPathFactory) -> DemoEstateTemplate:
+    template = DemoEstateTemplate(tmp_path_factory.mktemp("demo-estate-template"))
+    template.seed()
+    return template
+
+
 @pytest.fixture()
-def demo_estate_client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[TestClient]:
+def demo_estate_client(_demo_estate_template: DemoEstateTemplate, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[TestClient]:
+    _demo_estate_template.copy_into(tmp_path)
     with seeded_demo_estate(monkeypatch, tmp_path) as client:
         yield client
 
 
 @pytest.fixture(scope="module")
-def _module_demo_estate(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
-    with pytest.MonkeyPatch.context() as monkeypatch, seeded_demo_estate(monkeypatch, tmp_path_factory.mktemp("demo-estate")) as client:
+def _module_demo_estate(_demo_estate_template: DemoEstateTemplate, tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
+    root = tmp_path_factory.mktemp("demo-estate")
+    _demo_estate_template.copy_into(root)
+    with pytest.MonkeyPatch.context() as monkeypatch, seeded_demo_estate(monkeypatch, root) as client:
         yield client
 
 
