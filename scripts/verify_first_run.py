@@ -90,6 +90,7 @@ def _isolated_env(output: Path) -> dict[str, str]:
     home = output / "home"
     home.mkdir()
     env.update(
+        PATH=os.pathsep.join((str(Path(sys.executable).parent), env.get("PATH", ""))),
         HOME=str(home),
         USERPROFILE=str(home),
         APPDATA=str(home / "AppData/Roaming"),

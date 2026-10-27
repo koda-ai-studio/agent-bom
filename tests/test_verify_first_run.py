@@ -144,6 +144,9 @@ def test_first_command_exercises_isolated_base_uvx_install(tmp_path, monkeypatch
     assert "AWS_ACCESS_KEY_ID" not in options["env"]
     assert "GH_TOKEN" not in options["env"]
     assert options["env"]["HOME"] == str(tmp_path / "evidence" / "home")
+    # Match an activated installation so quickstart finds its own console script,
+    # including agent-bom.exe on Windows, instead of an ambient/global executable.
+    assert options["env"]["PATH"].split(verify_first_run.os.pathsep)[0] == str(python.parent)
     assert options["cwd"] != tmp_path / "evidence"
 
 
