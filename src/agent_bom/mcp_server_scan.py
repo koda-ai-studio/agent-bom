@@ -335,7 +335,7 @@ async def run_scan_pipeline(
         try:
             from agent_bom.discovery.carriers import scan_image_carrier
 
-            scanned = await asyncio.to_thread(scan_image_carrier, image)
+            scanned = await asyncio.to_thread(scan_image_carrier, image, server_context=True)
             if scanned.packages:
                 agents.append(scanned.carrier)
                 scan_sources.append("image")

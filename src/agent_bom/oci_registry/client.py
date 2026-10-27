@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import IO, Any
 from urllib.parse import urlencode, urljoin, urlparse
 
+import httpcore
 import httpx
 
 from agent_bom.http_client import check_offline
@@ -28,13 +29,16 @@ from agent_bom.oci_registry.auth import (
     validate_realm,
 )
 from agent_bom.oci_registry.media_types import MANIFEST_ACCEPT, OCI_INDEX
+from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.reference import ImageReference
+from agent_bom.runtime.egress_transport import PinnedDNSSyncTransport, UnsafeDestinationError
 
 MAX_MANIFEST_BYTES = 8 * 1024 * 1024
 _MAX_REDIRECTS = 5
 _CHUNK = 1024 * 1024
 _TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 _USER_AGENT = "agent-bom-registry-client"
+_TRANSPORT_ERRORS = (httpx.HTTPError, httpcore.TimeoutException, httpcore.NetworkError, httpcore.ProtocolError, httpcore.UnsupportedProtocol)
 
 
 class RegistryError(Exception):
@@ -43,6 +47,10 @@ class RegistryError(Exception):
     def __init__(self, message: str, status: int | None = None) -> None:
         super().__init__(message)
         self.status = status
+
+
+class RegistryPolicyError(RegistryError):
+    """The registry egress policy refused a destination (server-side scans)."""
 
 
 @dataclass(frozen=True)
@@ -76,6 +84,7 @@ class RegistryClient:
     ref: ImageReference
     credential_resolver: Callable[[], RegistryCredential] = field(default=lambda: ANONYMOUS)
     transport: httpx.BaseTransport | None = None
+    policy: RegistryPolicy = LOCAL_POLICY
     _token: str | None = None
     _basic: str | None = None
     _credential: RegistryCredential | None = None
@@ -83,8 +92,15 @@ class RegistryClient:
 
     def __post_init__(self) -> None:
         check_offline()
+        reason = self.policy.refusal(self.ref)
+        if reason is not None:
+            raise RegistryPolicyError(f"Registry refused by server-side egress policy: {reason}")
         transport = self.transport if self.transport is not None else _default_transport()
-        self._client = httpx.Client(timeout=_TIMEOUT, transport=transport, follow_redirects=False, verify=True)
+        if transport is None and self.policy.server:
+            transport = PinnedDNSSyncTransport(allow_private_networks=False)
+        self._client = httpx.Client(
+            timeout=_TIMEOUT, transport=transport, follow_redirects=False, verify=True, trust_env=not self.policy.server
+        )
 
     def close(self) -> None:
         if self._client is not None:
@@ -102,8 +118,12 @@ class RegistryClient:
 
     @property
     def base_url(self) -> str:
-        scheme = "http" if self.ref.allows_plain_http else "https"
+        scheme = "http" if self.policy.allows_plain_http(self.ref) else "https"
         return f"{scheme}://{self.ref.registry}/v2/{self.ref.repository}"
+
+    def _status(self, status: int) -> str:
+        """`` (HTTP n)`` for the local CLI; server-side scans withhold upstream status."""
+        return "" if self.policy.server else f" (HTTP {status})"
 
     def _auth_headers(self) -> dict[str, str]:
         if self._token:
@@ -126,7 +146,7 @@ class RegistryClient:
         self._token = self._fetch_token(challenge.params)
 
     def _fetch_token(self, params: dict[str, str]) -> str:
-        realm = validate_realm(params.get("realm", ""), self.ref)
+        realm = validate_realm(params.get("realm", ""), allow_plain_http=self.policy.allows_plain_http(self.ref))
         query = {k: v for k, v in params.items() if k in {"service", "scope"} and v}
         query.setdefault("scope", f"repository:{self.ref.repository}:pull")
         credential = self._credential or ANONYMOUS
@@ -140,7 +160,7 @@ class RegistryClient:
                 headers["Authorization"] = basic
             response = self._client.get(f"{realm}?{urlencode(query)}", headers=headers)
         if response.status_code != 200:
-            raise RegistryError(f"Registry token request was refused (HTTP {response.status_code})", response.status_code)
+            raise RegistryError(f"Registry token request was refused{self._status(response.status_code)}", response.status_code)
         try:
             payload = response.json()
         except ValueError as exc:
@@ -160,14 +180,16 @@ class RegistryClient:
             request = self._client.build_request("GET", current, headers=request_headers)
             try:
                 response = self._client.send(request, stream=stream)
-            except httpx.HTTPError as exc:
+            except UnsafeDestinationError as exc:
+                raise RegistryPolicyError("Registry refused by server-side egress policy: destination address is not public") from exc
+            except _TRANSPORT_ERRORS as exc:
                 raise RegistryError(f"Registry request failed: {type(exc).__name__}") from exc
             if response.status_code not in {301, 302, 303, 307, 308}:
                 return response
             location = response.headers.get("location", "")
             response.close()
             target = urljoin(current, location)
-            if urlparse(target).scheme != "https" and not (self.ref.allows_plain_http and urlparse(target).netloc == origin):
+            if urlparse(target).scheme != "https" and not (self.policy.allows_plain_http(self.ref) and urlparse(target).netloc == origin):
                 raise RegistryError("Registry redirected to a non-HTTPS location")
             current = target
         raise RegistryError("Registry redirected too many times")
@@ -190,7 +212,7 @@ class RegistryClient:
         if response.status_code == 404 and missing_ok:
             return None
         if response.status_code != 200:
-            raise RegistryError(f"Manifest {reference} could not be fetched (HTTP {response.status_code})", response.status_code)
+            raise RegistryError(f"Manifest {reference} could not be fetched{self._status(response.status_code)}", response.status_code)
         raw = response.content
         if len(raw) > MAX_MANIFEST_BYTES:
             raise RegistryError("Manifest exceeds the size limit")
@@ -216,7 +238,7 @@ class RegistryClient:
         response = self.get(f"blobs/{digest}", stream=True)
         try:
             if response.status_code != 200:
-                raise RegistryError(f"Blob {digest[:19]} could not be fetched (HTTP {response.status_code})", response.status_code)
+                raise RegistryError(f"Blob {digest[:19]} could not be fetched{self._status(response.status_code)}", response.status_code)
             for chunk in response.iter_bytes(_CHUNK):
                 written += len(chunk)
                 if written > max_bytes:
@@ -225,7 +247,7 @@ class RegistryClient:
                 sink.write(chunk)
                 if on_chunk is not None:
                     on_chunk(written)
-        except httpx.HTTPError as exc:
+        except _TRANSPORT_ERRORS as exc:
             raise RegistryError(f"Blob download failed: {type(exc).__name__}") from exc
         finally:
             response.close()
@@ -250,7 +272,7 @@ class RegistryClient:
         if response.status_code in {404, 405, 400}:
             return None
         if response.status_code != 200:
-            raise RegistryError(f"Referrers query failed (HTTP {response.status_code})", response.status_code)
+            raise RegistryError(f"Referrers query failed{self._status(response.status_code)}", response.status_code)
         try:
             document = response.json()
         except ValueError:

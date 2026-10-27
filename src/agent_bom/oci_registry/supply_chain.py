@@ -9,6 +9,7 @@ from agent_bom.image_evidence.model import ImageEvidence
 from agent_bom.oci_registry.client import RegistryClient, RegistryError
 from agent_bom.oci_registry.manifests import resolve_image_manifest
 from agent_bom.oci_registry.platforms import PlatformNotFoundError
+from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.reference import ReferenceError, parse_reference
 from agent_bom.oci_registry.referrers import discover_referrers
 from agent_bom.oci_registry.signatures import SignatureKeyError, fetch_cosign_signatures, load_public_key, signature_verdict
@@ -52,7 +53,16 @@ def discover_supply_chain(client: RegistryClient, evidence: ImageEvidence, index
         evidence.signature = {"status": "unknown", "detail": f"Signature lookup failed: {exc}"}
 
 
-def resolve_base_layers(evidence: ImageEvidence, open_client: Any) -> None:
+def _base_allowed(evidence: ImageEvidence, ref: Any, policy: RegistryPolicy) -> bool:
+    """Server-side scans fetch a label-named base only from the allowlist, or (without one) the image's own registry."""
+    if not policy.server:
+        return True
+    if policy.allowlist:
+        return policy.permits_host(ref.registry)
+    return ref.registry == evidence.registry
+
+
+def resolve_base_layers(evidence: ImageEvidence, open_client: Any, policy: RegistryPolicy = LOCAL_POLICY) -> None:
     """Fetch the named base image's layer list and attribute layers when it is an exact prefix."""
     base = evidence.base_image
     if base is None or not (base.get("name") or base.get("digest")):
@@ -62,6 +72,10 @@ def resolve_base_layers(evidence: ImageEvidence, open_client: Any) -> None:
         ref = parse_reference(f"{name.split('@', 1)[0]}@{base['digest']}" if base.get("digest") and name else name)
     except ReferenceError:
         base["attribution"] = "unresolved"
+        return
+    if not _base_allowed(evidence, ref, policy):
+        base["attribution"] = "skipped-by-policy"
+        evidence.note("The labelled base image is on a registry outside the server-side scan policy; it was not fetched.")
         return
     try:
         with open_client(ref) as client:

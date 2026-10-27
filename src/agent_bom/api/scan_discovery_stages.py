@@ -143,7 +143,7 @@ def _discover_inventory(ctx: ScanContext) -> None:
 def _image_agent(image_ref: str, *, source: str, image_digest: str = "") -> Any:
     from agent_bom.discovery.carriers import scan_image_carrier
 
-    return scan_image_carrier(image_ref, source=source, digest=image_digest).carrier
+    return scan_image_carrier(image_ref, source=source, digest=image_digest, server_context=True).carrier
 
 
 def _discover_images(ctx: ScanContext) -> None:

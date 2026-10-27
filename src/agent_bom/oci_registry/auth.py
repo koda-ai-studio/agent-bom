@@ -170,13 +170,13 @@ def resolve_credential(ref: ImageReference, username: str | None = None, passwor
     return _from_docker_config(ref) or ANONYMOUS
 
 
-def validate_realm(realm: str, ref: ImageReference) -> str:
+def validate_realm(realm: str, *, allow_plain_http: bool) -> str:
     """Accept a token realm only over HTTPS, and never on a link-local or private address."""
     parsed = urlparse(realm)
     host = (parsed.hostname or "").lower()
     if not host:
         raise RegistryAuthError("Registry token realm has no host")
-    if ref.allows_plain_http and host in {"localhost", "127.0.0.1", "::1"}:
+    if allow_plain_http and host in {"localhost", "127.0.0.1", "::1"}:
         return realm
     if parsed.scheme != "https":
         raise RegistryAuthError("Registry token realm must use HTTPS")

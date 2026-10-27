@@ -20,6 +20,7 @@ from agent_bom.oci_registry.client import RegistryClient, RegistryError
 from agent_bom.oci_registry.manifests import index_annotations, open_client, resolve_image_manifest
 from agent_bom.oci_registry.media_types import MANIFEST_TYPES, READABLE_LAYER_TYPES, ZSTD_LAYER_TYPES
 from agent_bom.oci_registry.platforms import PlatformNotFoundError
+from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.reference import parse_reference
 from agent_bom.oci_registry.supply_chain import discover_supply_chain
 from agent_bom.parsers.oci_io import _max_json_member_bytes, _max_layer_compressed_bytes
@@ -87,11 +88,12 @@ def scan_registry_image(
     platform: str | None = None,
     registry_user: str | None = None,
     registry_pass: str | None = None,
+    policy: RegistryPolicy = LOCAL_POLICY,
 ) -> list[Package]:
     """Scan ``image_ref`` straight from its registry; raise ``RegistryError``/``PlatformNotFoundError`` on failure."""
     ref = parse_reference(image_ref)
     evidence = active_image_evidence()
-    with open_client(ref, registry_user, registry_pass) as client:
+    with open_client(ref, registry_user, registry_pass, policy=policy) as client:
         manifest, index, chosen, available = resolve_image_manifest(client, ref, platform)
         if manifest.media_type not in MANIFEST_TYPES and "layers" not in manifest.document:
             raise RegistryError(f"Unsupported manifest media type: {manifest.media_type or 'unknown'}")

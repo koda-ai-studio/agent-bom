@@ -5,15 +5,31 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.image_evidence.model import bounded_string_map
-from agent_bom.oci_registry.auth import resolve_credential
+from agent_bom.oci_registry.auth import ANONYMOUS, RegistryCredential, resolve_credential
 from agent_bom.oci_registry.client import FetchedManifest, RegistryClient
 from agent_bom.oci_registry.media_types import INDEX_TYPES
 from agent_bom.oci_registry.platforms import select_platform
+from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.reference import ImageReference
 
 
-def open_client(ref: ImageReference, registry_user: str | None = None, registry_pass: str | None = None) -> RegistryClient:
-    return RegistryClient(ref, credential_resolver=lambda: resolve_credential(ref, registry_user, registry_pass))
+def _server_credential(registry_user: str | None, registry_pass: str | None) -> RegistryCredential:
+    """Server-side scans use only credentials passed for this scan, never the host's ambient ones."""
+    if registry_user and registry_pass:
+        return RegistryCredential(source="explicit", username=registry_user, password=registry_pass)
+    return ANONYMOUS
+
+
+def open_client(
+    ref: ImageReference,
+    registry_user: str | None = None,
+    registry_pass: str | None = None,
+    *,
+    policy: RegistryPolicy = LOCAL_POLICY,
+) -> RegistryClient:
+    if policy.server:
+        return RegistryClient(ref, credential_resolver=lambda: _server_credential(registry_user, registry_pass), policy=policy)
+    return RegistryClient(ref, credential_resolver=lambda: resolve_credential(ref, registry_user, registry_pass), policy=policy)
 
 
 def _is_index(manifest: FetchedManifest) -> bool:

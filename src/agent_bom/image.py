@@ -42,6 +42,7 @@ from agent_bom.models import Package, PermissionProfile, Severity, Vulnerability
 from agent_bom.oci_registry.client import RegistryError
 from agent_bom.oci_registry.manifests import open_client
 from agent_bom.oci_registry.platforms import PlatformNotFoundError
+from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.pull import scan_registry_image
 from agent_bom.oci_registry.reference import ReferenceError, parse_reference
 from agent_bom.oci_registry.supply_chain import discover_supply_chain, resolve_base_layers
@@ -639,17 +640,19 @@ def detect_multi_arch(image_ref: str) -> list[str]:
 PULL_MODES = ("auto", "registry", "daemon")
 
 
-def _pull_mode(pull_mode: Optional[str]) -> str:
+def _pull_mode(pull_mode: Optional[str], server_context: bool = False) -> str:
     mode = (pull_mode or env_raw("AGENT_BOM_IMAGE_PULL_MODE") or "auto").strip().lower()
     if mode not in PULL_MODES:
         raise ImageScanError(f"Unknown image pull mode {mode!r}; expected one of {', '.join(PULL_MODES)}")
-    return mode
+    # A server-side scan never reaches the Docker daemon unless the operator chose daemon mode:
+    # the daemon pulls with the host's ambient credentials and network and holds other tenants' images.
+    return "registry" if server_context and mode == "auto" else mode
 
 
 def _scan_from_registry(
-    image_ref: str, registry_user: Optional[str], registry_pass: Optional[str], platform: Optional[str]
+    image_ref: str, registry_user: Optional[str], registry_pass: Optional[str], platform: Optional[str], policy: RegistryPolicy
 ) -> list[Package]:
-    packages = scan_registry_image(image_ref, platform=platform, registry_user=registry_user, registry_pass=registry_pass)
+    packages = scan_registry_image(image_ref, platform=platform, registry_user=registry_user, registry_pass=registry_pass, policy=policy)
     if not packages:
         raise ImageScanError(
             f"Native image scan extracted 0 packages from {image_ref}. This is likely an extraction or parser failure, not a clean scan."
@@ -676,12 +679,14 @@ def _daemon_supply_chain(image_ref: str, registry_user: Optional[str], registry_
         evidence.signature = {"status": "unknown", "detail": f"Signature lookup failed: {exc}"}
 
 
-def _attribute_base_image(packages: list[Package], registry_user: Optional[str], registry_pass: Optional[str]) -> None:
+def _attribute_base_image(
+    packages: list[Package], registry_user: Optional[str], registry_pass: Optional[str], policy: RegistryPolicy = LOCAL_POLICY
+) -> None:
     evidence = active_image_evidence()
     if evidence is None or evidence.base_image is None:
         return
     if not is_offline():
-        resolve_base_layers(evidence, lambda ref: open_client(ref, registry_user, registry_pass))
+        resolve_base_layers(evidence, lambda ref: open_client(ref, registry_user, registry_pass, policy=policy), policy)
     attribute_packages(evidence, packages)
 
 
@@ -691,6 +696,7 @@ def scan_image(
     registry_pass: Optional[str] = None,
     platform: Optional[str] = None,
     pull_mode: Optional[str] = None,
+    server_context: bool = False,
 ) -> tuple[list[Package], str]:
     """Scan a container image and return (packages, strategy_used).
 
@@ -702,22 +708,27 @@ def scan_image(
        ``pull_mode="registry"`` never touches the daemon. ``--offline`` scans
        never contact a registry.
 
+    ``server_context=True`` (API scan jobs, the MCP server) applies the
+    server-side registry policy (see :mod:`agent_bom.oci_registry.policy`) and
+    never uses the Docker daemon unless the operator set daemon mode.
+
     Raises:
         ImageScanError: If neither path can produce a package inventory.
     """
     validate_image_ref(image_ref)
     _validate_platform(platform)
-    mode = _pull_mode(pull_mode)
+    mode = _pull_mode(pull_mode, server_context)
+    policy = RegistryPolicy.for_server() if server_context else LOCAL_POLICY
     registry_failure: str | None = None
     if mode != "daemon" and not is_offline():
         try:
-            packages = _scan_from_registry(image_ref, registry_user, registry_pass, platform)
+            packages = _scan_from_registry(image_ref, registry_user, registry_pass, platform, policy)
         except (RegistryError, ReferenceError, PlatformNotFoundError, ImageScanError, OSError) as exc:
             registry_failure = str(exc)
             if mode == "registry":
                 raise ImageScanError(f"Registry pull failed for {image_ref}: {registry_failure}") from exc
         else:
-            _attribute_base_image(packages, registry_user, registry_pass)
+            _attribute_base_image(packages, registry_user, registry_pass, policy)
             return packages, "registry"
     elif mode == "registry":
         raise ImageScanError("Registry pull mode needs network access; --offline scans can only use the Docker daemon or --image-tar.")
