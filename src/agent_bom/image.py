@@ -649,6 +649,33 @@ def _pull_mode(pull_mode: Optional[str], server_context: bool = False) -> str:
     return "registry" if server_context and mode == "auto" else mode
 
 
+def _names_registry_host(image_ref: str) -> bool:
+    """Whether the reference's first path component is a registry host (distribution reference grammar)."""
+    first, sep, _rest = image_ref.split("@", 1)[0].partition("/")
+    return bool(sep) and ("." in first or ":" in first or first == "localhost")
+
+
+def _local_daemon_has_image(image_ref: str) -> bool:
+    """Whether the local Docker image store already holds ``image_ref`` (never pulls)."""
+    if not _docker_available():
+        return False
+    try:
+        result = subprocess.run(
+            ["docker", "image", "inspect", "--format", "{{.Id}}", image_ref],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def _prefers_local_image(image_ref: str, mode: str, server_context: bool) -> bool:
+    """Auto mode scans a local image named by a host-less reference instead of resolving it to Docker Hub."""
+    return mode == "auto" and not server_context and not _names_registry_host(image_ref) and _local_daemon_has_image(image_ref)
+
+
 def _scan_from_registry(
     image_ref: str, registry_user: Optional[str], registry_pass: Optional[str], platform: Optional[str], policy: RegistryPolicy
 ) -> list[Package]:
@@ -701,6 +728,9 @@ def scan_image(
     """Scan a container image and return (packages, strategy_used).
 
     Strategy order (``pull_mode="auto"``, the default):
+    0. A reference without a registry host (``acme/app:dev``) that the local
+       Docker daemon already holds is scanned from the daemon: it would
+       otherwise resolve to a same-named, possibly squatted Docker Hub image.
     1. Registry pull over the OCI distribution API — no Docker daemon needed
        (strategy ``"registry"``).
     2. Only if that fails: Docker save → native OCI parser, then Docker export
@@ -720,7 +750,8 @@ def scan_image(
     mode = _pull_mode(pull_mode, server_context)
     policy = RegistryPolicy.for_server() if server_context else LOCAL_POLICY
     registry_failure: str | None = None
-    if mode != "daemon" and not is_offline():
+    local_first = _prefers_local_image(image_ref, mode, server_context)
+    if mode != "daemon" and not is_offline() and not local_first:
         try:
             packages = _scan_from_registry(image_ref, registry_user, registry_pass, platform, policy)
         except (RegistryError, ReferenceError, PlatformNotFoundError, ImageScanError, OSError) as exc:
@@ -747,6 +778,11 @@ def scan_image(
     if evidence is not None:
         evidence.restart()
         evidence.source = "daemon"
+        if local_first:
+            evidence.note(
+                f"{image_ref} has no registry host and exists as a local Docker image; scanned the local Docker image, "
+                "not a same-named Docker Hub image."
+            )
     packages = _scan_with_docker(image_ref, platform)
     _daemon_supply_chain(image_ref, registry_user, registry_pass)
     _attribute_base_image(packages, registry_user, registry_pass)
