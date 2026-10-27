@@ -170,12 +170,14 @@ agent-bom image ghcr.io/org/app:1.4 --cosign-key cosign.pub --require-signature
 |---|---|
 | `verified` | A cosign signature over this image's digest verified with `--cosign-key` (ECDSA, RSA or Ed25519 PEM public key). |
 | `invalid` | A signature exists but none verified with the key, or it names another digest. |
-| `signed` | A signature exists and was not verified: no key was given, or it is keyless (Fulcio certificate) or a Sigstore bundle. Certificate-identity and transparency-log verification are not implemented. |
+| `present-unverified` | A signature artifact exists but nothing about it was verified: no key was given, or it is keyless (Fulcio certificate) or a Sigstore bundle. It is not evidence of trust. Certificate-identity and transparency-log verification are not implemented. |
 | `unsigned` | The registry has no signature or bundle for the digest. |
 | `unknown` | Not looked up (archive scans, offline scans, a local image without a registry digest) or the lookup failed. |
 
-`--require-signature` exits 1 unless the status is `signed` or `verified` —
-only `verified` when a key is given. Attestations are listed, not verified.
+`--require-signature` exits 1 unless the status is `verified`, which needs a
+cosign public key (`--cosign-key` or `AGENT_BOM_IMAGE_COSIGN_KEY`). Without a
+key the gate always fails with "a cosign public key is required to enforce
+signatures". Attestations are listed, not verified.
 
 The base image is named only from the OCI `org.opencontainers.image.base.name`
 and `org.opencontainers.image.base.digest` annotations or labels. When the

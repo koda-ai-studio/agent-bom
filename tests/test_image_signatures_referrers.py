@@ -107,13 +107,13 @@ def test_wrong_key_or_wrong_digest_is_invalid_not_verified(registry, tmp_path):
     assert _scan(_write_key(tmp_path, signer)).signature["status"] == "invalid"
 
 
-def test_signature_without_key_is_signed_and_keyless_is_not_claimed_verified(registry):
+def test_signature_without_key_is_present_unverified_and_keyless_is_not_claimed_verified(registry):
     digest = registry.image.manifest_digest
     _push_signature(registry, digest, _payload(digest), b"\x30\x00", certificate=True)
 
     signature = _scan().signature
 
-    assert signature["status"] == "signed"
+    assert signature["status"] == "present-unverified"
     assert signature["method"] == "keyless"
     assert "not performed" in signature["detail"]
 
@@ -139,7 +139,7 @@ def test_referrers_api_lists_sbom_and_sigstore_bundle(registry):
 
     kinds = sorted((r["kind"], r["source"]) for r in evidence.referrers)
     assert kinds == [("sbom", "referrers-api"), ("signature", "referrers-api")]
-    assert evidence.signature["status"] == "signed"
+    assert evidence.signature["status"] == "present-unverified"
     assert evidence.signature["method"] == "sigstore-bundle"
 
 

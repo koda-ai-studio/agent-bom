@@ -18,7 +18,7 @@ from typing import Any
 from agent_bom.core.settings import env_raw
 from agent_bom.security import sanitize_text
 
-SIGNATURE_STATUSES = ("verified", "invalid", "signed", "unsigned", "unknown")
+SIGNATURE_STATUSES = ("verified", "invalid", "present-unverified", "unsigned", "unknown")
 MAX_LABELS = 64
 MAX_LAYER_SECRETS = 200
 

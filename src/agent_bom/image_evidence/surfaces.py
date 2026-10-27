@@ -8,7 +8,7 @@ from agent_bom.image_evidence.model import ImageEvidence, as_dict, as_list
 from agent_bom.security import sanitize_text
 
 IMAGE_SURFACES = frozenset({"container-image", "oci-tarball"})
-_SIGNATURE_STYLE = {"verified": "green", "signed": "cyan", "unsigned": "yellow", "invalid": "red", "unknown": "dim"}
+_SIGNATURE_STYLE = {"verified": "green", "present-unverified": "yellow", "unsigned": "yellow", "invalid": "red", "unknown": "dim"}
 
 
 def image_agent_metadata(evidence: ImageEvidence) -> dict[str, Any]:
@@ -45,12 +45,11 @@ def signature_policy_violation(evidence: ImageEvidence, require: bool) -> str | 
     if not require:
         return None
     status = str(evidence.signature.get("status") or "unknown")
-    wanted = {"verified"} if evidence.cosign_key_path else {"verified", "signed"}
-    if status in wanted:
+    if not evidence.cosign_key_path:
+        return f"image signature is {status}; a cosign public key is required to enforce signatures (pass --image-cosign-key)"
+    if status == "verified":
         return None
-    return f"image signature is {status}" + (
-        " (a verified signature is required with --image-cosign-key)" if evidence.cosign_key_path else ""
-    )
+    return f"image signature is {status} (a verified signature is required with --image-cosign-key)"
 
 
 def console_lines(evidence: ImageEvidence) -> list[str]:

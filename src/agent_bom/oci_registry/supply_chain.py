@@ -31,7 +31,7 @@ def _signature_status(client: RegistryClient, evidence: ImageEvidence, digests: 
     bundles = [r for r in evidence.referrers if r["kind"] == "signature"]
     if bundles:
         return {
-            "status": "invalid" if key is not None else "signed",
+            "status": "invalid" if key is not None else "present-unverified",
             "method": "sigstore-bundle",
             "detail": "A Sigstore bundle is attached as an OCI referrer; bundle verification is not performed"
             + (", so the provided key could not verify it." if key is not None else "."),

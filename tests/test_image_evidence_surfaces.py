@@ -120,6 +120,35 @@ def test_require_image_signature_fails_unsigned_and_passes_verified(registry, tm
     assert result.exit_code == 0, result.output
 
 
+def test_require_image_signature_without_a_key_fails_even_when_a_signature_is_present(registry, tmp_path):
+    _sign(registry, tmp_path)
+    result, report = _scan(tmp_path, "--require-image-signature")
+
+    assert result.exit_code == 1, result.output
+    assert "a cosign public key is required to enforce signatures" in result.output
+    image = _image_agent(report)["metadata"]["image"]
+    assert image["signature"]["status"] == "present-unverified"
+    assert "signature: present-unverified" in result.output
+
+
+def test_signature_presence_without_a_key_is_never_reported_as_signed():
+    from agent_bom.image_evidence.model import SIGNATURE_STATUSES, ImageEvidence
+    from agent_bom.image_evidence.surfaces import signature_policy_violation
+    from agent_bom.oci_registry.signatures import CosignSignature, signature_verdict
+
+    digest = "sha256:" + "a" * 64
+    sig = CosignSignature(signed_digest=digest, payload=b"{}", signature=b"x", keyless=False, has_bundle=False)
+    assert signature_verdict([sig], [digest], None)["status"] == "present-unverified"
+    assert "signed" not in SIGNATURE_STATUSES and "present-unverified" in SIGNATURE_STATUSES
+
+    for status in SIGNATURE_STATUSES:
+        evidence = ImageEvidence(reference="r", signature={"status": status})
+        assert signature_policy_violation(evidence, True) is not None, status
+    keyed = ImageEvidence(reference="r", signature={"status": "verified"}, cosign_key_path="/k.pub")
+    assert signature_policy_violation(keyed, True) is None
+    assert signature_policy_violation(ImageEvidence(reference="r"), False) is None
+
+
 def test_focused_image_command_forwards_pull_mode_and_key(monkeypatch, tmp_path):
     seen: dict[str, Any] = {}
 

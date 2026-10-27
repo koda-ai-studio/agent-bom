@@ -9,7 +9,7 @@ Keyed verification checks the signature over the exact payload bytes with the
 operator's public key (ECDSA P-256/P-384 with SHA-256, RSA PKCS#1 v1.5 with
 SHA-256, or Ed25519 — the verifiers cosign selects for those key types) and
 then that the payload names this image's digest. Keyless signatures (a Fulcio
-certificate plus a Rekor bundle) are reported as ``signed`` but NOT verified:
+certificate plus a Rekor bundle) are reported as ``present-unverified``:
 certificate-chain, identity and transparency-log checks are not implemented.
 """
 
@@ -154,4 +154,4 @@ def signature_verdict(signatures: list[CosignSignature], digests: list[str], key
         )
     else:
         detail = "Cosign signature present; pass a public key (--image-cosign-key) to verify it."
-    return {"status": "signed", "method": "keyless" if keyless else "cosign", "signature_count": len(signatures), "detail": detail}
+    return {"status": "present-unverified", "method": "keyless" if keyless else "cosign", "signature_count": len(signatures), "detail": detail}
