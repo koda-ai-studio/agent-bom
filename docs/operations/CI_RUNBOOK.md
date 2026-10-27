@@ -8,8 +8,14 @@ stuck, a workflow fails unexpectedly, or you need to retrigger checks.
 ## CI lanes
 
 PR CI tests GitHub's merge result with the **affected tests** and shared
-contract smoke, partitioned across three `Python affected tests (shard N/3)`
-jobs with a 15-minute bound. A pull request never runs the full suite.
+contract smoke, partitioned across 1–12 `Python affected tests (shard N/total)`
+jobs with a 15-minute bound. The classifier sizes the matrix from the full
+affected selection plus mandatory smoke, targeting 900 worker-seconds per
+runner using `tests/.ci-durations.json`. Missing timing data uses the maximum
+fan-out; unknown modules use the measured seconds-per-byte estimate. No tests
+are dropped to meet the budget. A slow indivisible module or stale timing can
+still exceed the bound; the timeout remains a failure. Missing classifier
+output falls back to twelve shards. A pull request never runs the full suite.
 `scripts/pytest_ci_affected.py` selects:
 
 - the changed-domain map from `scripts/pytest_ci_plan.py targeted`;
@@ -105,7 +111,7 @@ cannot satisfy the release gate.
 | UI Validate (lint, vitest, schema drift) + UI export build | when UI inputs change | every main push | yes |
 | Docs Strict, Helm, Compose, Endpoint packaging | when their inputs change | when their inputs change | yes |
 | Native App image and persistence | when its inputs change | yes | yes |
-| Python affected tests (shard N/3): affected selection + contract smoke | always (required through aggregation) | yes | yes |
+| Python affected tests (shard N/total): affected selection + contract smoke | always (required through aggregation) | yes | yes |
 | Full correctness suite, Python 3.13 in 4 shards | never (merge group only) | no | no |
 | Full correctness suite, Python 3.11/3.12/3.13/3.14 in 4 shards each (combined 3.11 coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
@@ -166,8 +172,9 @@ contract tests tie them and check that the shards still partition the suite.
 
 ### Required checks
 
-Proposed branch-protection contexts for `main`, exactly as GitHub reports
-them. The owner applies these; nothing in this repository changes settings.
+Required branch-protection contexts for `main`, exactly as GitHub reports
+them. Repository settings were verified on October 26, 2026 with strict
+up-to-date protection and these eight contexts; this file does not enforce settings.
 
 1. `Lint and Type Check`
 2. `Build Package`
@@ -179,7 +186,7 @@ them. The owner applies these; nothing in this repository changes settings.
 8. `UI Validate`
 
 `Test (Python 3.13)` is the affected-tests gate: it requires every
-`Python affected tests (shard N/3)` job on a PR (through `Python correctness
+`Python affected tests (shard N/total)` job on a PR (through `Python correctness
 aggregation`), the Postgres contract, musl subset and UI E2E smoke when
 selected, and on main the four-version suite and Docker image. Do not add the
 shard jobs themselves: matrix names change with the shard count, and the
@@ -192,10 +199,9 @@ on every applicable PR without being required. When the list changes, update
 `scripts/retrigger_stranded_pr.sh` and `.github/workflows/auto-retrigger-stranded.yml`
 in the same change.
 
-Expected PR wall time for a graph-touching change is about 8-10 minutes:
-the affected shards (about 2 minutes of setup plus 3-6 minutes of tests for a
-60-file graph change), `UI Validate` (about 5 minutes) and, when selected,
-`Postgres Integration Contract` (7-10 minutes, the long pole) run in parallel.
+Affected-test duration estimates control runner count, not a guaranteed PR
+wall time. Setup, runner contention, `UI Validate` and the selected Postgres
+contract also contribute; use completed CI logs to measure the actual result.
 
 Why a release is still safe: `release.yml` runs
 `scripts/check_release_main_ci.py`, which accepts a tag only when the exact
