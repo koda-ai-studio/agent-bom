@@ -694,3 +694,15 @@ customer-managed secrets; partial permissions remain visible in scan outcomes.
 See [product boundaries](PRODUCT_BOUNDARIES.md), [provider setup](#provider-setup),
 and [agentic workflows](../site-docs/reference/agentic-workflows.md) for the
 exact credential, artifact, and next-step contracts.
+
+## Hugging Face partial inventory
+
+Hugging Face Hub discovery continues reading models, Spaces and inference
+endpoints when one resource read fails. The existing warnings list identifies
+failed reads with `huggingface:<resource>:denied`, `:throttled` or `:unavailable`.
+Denied reads require checking the token and resource permissions; throttled
+reads can be retried after the provider rate limit clears. Warnings exclude
+provider exception text. A failed read, including interrupted pagination, is
+incomplete evidence; successful results from other resource types are retained.
+A successful empty read produces no warning and does not establish security
+posture beyond the inventory visible to the supplied identity.

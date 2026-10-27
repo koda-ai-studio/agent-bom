@@ -11,6 +11,10 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
+from enum import Enum
+
+import httpx
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
@@ -19,6 +23,40 @@ from .base import CloudDiscoveryError
 from .normalization import build_cloud_origin
 
 logger = logging.getLogger(__name__)
+
+
+class HubCollectionStatus(str, Enum):
+    """Outcome of one Hub inventory read, independent of the other resource types."""
+
+    COMPLETE = "complete"
+    EMPTY = "empty"
+    DENIED = "denied"
+    THROTTLED = "throttled"
+    UNAVAILABLE = "unavailable"
+
+
+def _collect(resource: str, collect: Callable[[], tuple[list[Agent], list[str]]]) -> tuple[list[Agent], list[str], HubCollectionStatus]:
+    """Keep provider failures separate from empty reads without exposing diagnostics."""
+    try:
+        agents, warnings = collect()
+    except (httpx.HTTPError, OSError) as exc:
+        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+    except Exception as exc:
+        # One boundary for older requests-based SDKs and malformed provider data.
+        # Never serialize provider exceptions; their text can contain credentials.
+        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+    else:
+        status = HubCollectionStatus.COMPLETE if agents else HubCollectionStatus.EMPTY
+        return agents, warnings, status
+    status = {401: HubCollectionStatus.DENIED, 403: HubCollectionStatus.DENIED, 429: HubCollectionStatus.THROTTLED}.get(
+        status_code if isinstance(status_code, int) else 0, HubCollectionStatus.UNAVAILABLE
+    )
+    guidance = {
+        HubCollectionStatus.DENIED: "Check the token and read permissions for this resource.",
+        HubCollectionStatus.THROTTLED: "The provider rate limit was reached; retry later.",
+        HubCollectionStatus.UNAVAILABLE: "The provider read failed; retry or check provider availability.",
+    }
+    return [], [f"huggingface:{resource}:{status.value}: Could not collect inventory. {guidance[status]} Assessment incomplete."], status
 
 
 def discover(
@@ -32,7 +70,9 @@ def discover(
     apps), and inference endpoints.
 
     Returns:
-        (agents, warnings) — discovered agents and non-fatal warnings.
+        (agents, warnings) — discovered agents and non-fatal warnings. Failed
+        reads use ``huggingface:<resource>:denied|throttled|unavailable`` codes;
+        a successful empty read has no warning. Other resource reads continue.
 
     Raises:
         CloudDiscoveryError: if ``huggingface-hub`` is not installed.
@@ -56,30 +96,16 @@ def discover(
         )
         return agents, warnings
 
-    # ── Models ────────────────────────────────────────────────────────────
-    try:
-        model_agents, model_warns = _discover_models(resolved_token, author)
-        agents.extend(model_agents)
-        warnings.extend(model_warns)
-    except Exception as exc:
-        warnings.append(f"HF model discovery error: {exc}")
-
-    # ── Spaces ────────────────────────────────────────────────────────────
-    try:
-        space_agents, space_warns = _discover_spaces(resolved_token, author)
-        agents.extend(space_agents)
-        warnings.extend(space_warns)
-    except Exception as exc:
-        warnings.append(f"HF Spaces discovery error: {exc}")
-
-    # ── Inference Endpoints ───────────────────────────────────────────────
+    collectors: list[tuple[str, Callable[[], tuple[list[Agent], list[str]]]]] = [
+        ("models", lambda: _discover_models(resolved_token, author)),
+        ("spaces", lambda: _discover_spaces(resolved_token, author)),
+    ]
     if resolved_token:
-        try:
-            ep_agents, ep_warns = _discover_inference_endpoints(resolved_token)
-            agents.extend(ep_agents)
-            warnings.extend(ep_warns)
-        except Exception as exc:
-            warnings.append(f"HF inference endpoint discovery error: {exc}")
+        collectors.append(("inference-endpoints", lambda: _discover_inference_endpoints(resolved_token)))
+    for resource, collect in collectors:
+        collected, messages, _status = _collect(resource, collect)
+        agents.extend(collected)
+        warnings.extend(messages)
 
     # Per-run discovery envelope (#2083 PR B).
     attach_envelope_to_agents(
@@ -109,12 +135,7 @@ def _discover_models(
 
     api = HfApi(token=token or None)
 
-    try:
-        # HfApi.list_models returns a paginated iterator — no hardcoded limit
-        models = list(api.list_models(author=author))
-    except Exception as exc:
-        warnings.append(f"Could not list HF models: {exc}")
-        return agents, warnings
+    models = list(api.list_models(author=author))
 
     for model in models:
         model_id = getattr(model, "id", "unknown") or getattr(model, "modelId", "unknown")
@@ -177,12 +198,7 @@ def _discover_spaces(
 
     api = HfApi(token=token or None)
 
-    try:
-        # HfApi.list_spaces returns a paginated iterator — no hardcoded limit
-        spaces = list(api.list_spaces(author=author))
-    except Exception as exc:
-        warnings.append(f"Could not list HF Spaces: {exc}")
-        return agents, warnings
+    spaces = list(api.list_spaces(author=author))
 
     for space in spaces:
         space_id = getattr(space, "id", "unknown")
@@ -236,11 +252,7 @@ def _discover_inference_endpoints(
 
     api = HfApi(token=token)
 
-    try:
-        endpoints = list(api.list_inference_endpoints())
-    except Exception as exc:
-        warnings.append(f"Could not list HF inference endpoints: {exc}")
-        return agents, warnings
+    endpoints = list(api.list_inference_endpoints())
 
     for ep in endpoints:
         ep_name = getattr(ep, "name", "unknown")
