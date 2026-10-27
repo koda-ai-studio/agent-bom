@@ -237,7 +237,7 @@ changed path is a recognized public documentation file or asset. Empty,
 mixed, malformed, workflow, dependency, source, UI, and deployment path sets
 fail closed to the normal validation lanes.
 
-For a documentation-only pull request, the five branch-protection contexts
+For a documentation-only pull request, the eight branch-protection contexts
 still attach to the head SHA. Changed-domain and shared contract smoke remain
 mandatory; unrelated full-suite shards, Postgres and UI container checks skip.
 Selected smoke, dependency scanning, type checking and package construction
@@ -260,7 +260,9 @@ As verified on October 6, 2026, legacy `main` protection uses
 `required_status_checks.strict = true` and these five contexts:
 `Lint and Type Check`, `Test (Python 3.13)`, `Build Package`, `Security Scan`,
 and `CodeQL`. The branch rules endpoint returned no active ruleset rules.
-These are a dated settings snapshot, not configuration enforced by this file.
+The October 26 update adds Version Alignment, Dependency Review and UI Validate
+while preserving strict protection and provider bindings. These are dated
+settings snapshots, not configuration enforced by this file.
 Recheck before diagnosing a blocked merge:
 
 ```sh
@@ -325,7 +327,9 @@ scripts/dispatch_required_ci.sh <PR_NUMBER>
 That fallback dispatches the required PR workflows (`ci.yml`,
 `pr-security-gate.yml`, and, when needed, `codeql.yml`) through
 `workflow_dispatch` for same-repo PR heads that already contain current `main`.
-It cannot update stale branches, but it prevents the common "all visible checks
+It cannot dispatch Dependency Review, which needs a pull-request event or a
+failed-job rerun. Valid skipped UI Validate and Version Alignment checks are
+accepted without retriggering. It cannot update stale branches, but it prevents the common "all visible checks
 passed, required contexts are still expected" state from wasting a merge cycle.
 
 Manual one-shot refresh:
@@ -375,8 +379,7 @@ scripts/retrigger_stranded_pr.sh <PR_NUMBER>
 The script:
 
 1. Resolves the PR's current head SHA.
-2. Checks the five branch-protection contexts (`Lint and Type Check`, Python
-   3.13, package build, security scan, and CodeQL) against that SHA via
+2. Checks the eight branch-protection contexts listed above against that SHA via
    `repos/.../commits/<sha>/check-runs`.
 3. Cancels required-workflow runs for older SHAs on the exact PR branch. If a
    normal cancellation does not finish within a short grace, it uses GitHub's
