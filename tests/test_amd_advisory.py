@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from agent_bom.cloud.gpu_infra import _driver_lt
 from agent_bom.models import Package, Severity
 from agent_bom.scanners.amd_advisory import (
     _AMD_PRODUCT_MAP,
@@ -98,23 +97,3 @@ def test_check_amd_advisories_severity_shape():
 
 def test_check_amd_advisories_empty_list():
     assert check_amd_advisories([], live=False) == 0
-
-
-# ─── _driver_lt ──────────────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    "version, threshold, expected",
-    [
-        ("525.85", "555.52", True),
-        ("555.51", "555.52", True),
-        ("555.52", "555.52", False),
-        ("560.00", "555.52", False),
-        ("600.0", "555.52", False),
-        ("520.0.0", "555.52.0", True),
-        ("not_a_version", "555.52", False),
-        ("555.52.1", "555.52.0", False),
-    ],
-)
-def test_driver_lt(version, threshold, expected):
-    assert _driver_lt(version, threshold) == expected

@@ -118,7 +118,6 @@ async def gpu_infra_scan_impl(
                 }
                 for ep in report.dcgm_endpoints
             ],
-            "driver_findings": report.driver_findings,
             "firmware_findings": report.firmware_findings,
             "k8s": report.k8s.to_dict() if report.k8s else None,
             "gpu_posture_findings": report.posture_findings,

@@ -7,6 +7,7 @@ from typing import Any
 
 import click
 
+from agent_bom.cli._param_source import is_explicit, parameter_source
 from agent_bom.cli.agents._context import ScanContext
 from agent_bom.cli.agents._output import render_output
 from agent_bom.cli.agents._posture import render_posture_summary
@@ -173,7 +174,7 @@ def _output_format_was_explicit() -> bool:
     ctx = click.get_current_context(silent=True)
     if ctx is None:
         return False
-    return ctx.get_parameter_source("output_format") is click.core.ParameterSource.COMMANDLINE
+    return parameter_source(ctx, "output_format") is click.core.ParameterSource.COMMANDLINE
 
 
 def _scan_output_target_was_explicit() -> bool:
@@ -181,8 +182,7 @@ def _scan_output_target_was_explicit() -> bool:
     ctx = click.get_current_context(silent=True)
     if ctx is None:
         return False
-    explicit_sources = {click.core.ParameterSource.COMMANDLINE, click.core.ParameterSource.ENVIRONMENT}
-    return ctx.get_parameter_source("output") in explicit_sources or ctx.get_parameter_source("output_format") in explicit_sources
+    return is_explicit(ctx, "output") or is_explicit(ctx, "output_format")
 
 
 def _is_null_device(output: Any) -> bool:

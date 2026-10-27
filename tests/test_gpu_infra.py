@@ -1011,312 +1011,103 @@ def test_k8s_gpu_labels_collected():
     assert "unrelated-label" not in nodes[0].labels
 
 
-# ─── GPU driver CVE matching ──────────────────────────────────────────────────
+# ─── GPU driver versions: read-only, matched by the advisory pipeline ─────────
 
 
-from agent_bom.cloud.gpu_infra import check_nvidia_driver_cves  # noqa: E402
-
-
-def test_check_nvidia_driver_cves_vulnerable():
-    node = GpuNode(name="gpu-node-1", gpu_vendor="nvidia", gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version="525.85")
-    findings = check_nvidia_driver_cves(node)
-    assert len(findings) == 3
-    cve_ids = {f["cve_id"] for f in findings}
-    assert cve_ids == {"CVE-2024-0090", "CVE-2024-0091", "CVE-2024-0092"}
-    for f in findings:
-        assert f["severity"] == "high"
-        assert f["cvss_score"] == 8.8
-        assert f["node"] == "gpu-node-1"
-
-
-def test_check_nvidia_driver_cves_patched():
-    node = GpuNode(name="gpu-node-2", gpu_vendor="nvidia", gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version="555.52")
-    findings = check_nvidia_driver_cves(node)
-    assert findings == []
-
-
-def test_check_nvidia_driver_cves_newer():
-    node = GpuNode(name="gpu-node-3", gpu_vendor="nvidia", gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version="570.00")
-    findings = check_nvidia_driver_cves(node)
-    assert findings == []
-
-
-def test_check_nvidia_driver_cves_no_version():
-    node = GpuNode(name="gpu-node-4", gpu_vendor="nvidia", gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version=None)
-    findings = check_nvidia_driver_cves(node)
-    assert findings == []
-
-
-def test_query_nvidia_driver_version_no_kubectl():
-    from agent_bom.cloud.gpu_infra import _query_nvidia_driver_version
-
-    with patch("shutil.which", return_value=None):
-        result = _query_nvidia_driver_version("my-node", None)
-    assert result is None
-
-
-def test_query_nvidia_driver_version_success():
-    from agent_bom.cloud.gpu_infra import _query_nvidia_driver_version
-
-    mock_result = MagicMock()
-    mock_result.returncode = 0
-    mock_result.stdout = "525.85.12\n"
-
-    with (
-        patch("shutil.which", return_value="/usr/bin/kubectl"),
-        patch("subprocess.run", return_value=mock_result),
-    ):
-        result = _query_nvidia_driver_version("my-node", None)
-    assert result == "525.85.12"
-
-
-def test_query_nvidia_driver_version_failure():
-    from agent_bom.cloud.gpu_infra import _query_nvidia_driver_version
-
-    mock_result = MagicMock()
-    mock_result.returncode = 1
-    mock_result.stdout = ""
-
-    with (
-        patch("shutil.which", return_value="/usr/bin/kubectl"),
-        patch("subprocess.run", return_value=mock_result),
-    ):
-        result = _query_nvidia_driver_version("my-node", None)
-    assert result is None
-
-
-def test_discover_k8s_gpu_nodes_queries_driver_when_labels_missing():
-    """When nvidia labels are absent, _query_nvidia_driver_version is attempted."""
-    node_list = {
+def _node_list(name: str, resource: str, labels: dict[str, str]) -> dict:
+    return {
         "items": [
             {
-                "metadata": {"name": "gpu-node", "labels": {"kubernetes.io/hostname": "gpu-node"}},
-                "status": {
-                    "capacity": {"nvidia.com/gpu": "4", "cpu": "32"},
-                    "allocatable": {"nvidia.com/gpu": "4", "cpu": "32"},
-                },
+                "metadata": {"name": name, "labels": labels},
+                "status": {"capacity": {resource: "4", "cpu": "32"}, "allocatable": {resource: "4", "cpu": "32"}},
             }
         ]
     }
 
-    with (
-        patch("shutil.which", return_value="/usr/bin/kubectl"),
-        patch("subprocess.run") as mock_run,
-        patch("agent_bom.cloud.gpu_infra._query_nvidia_driver_version", return_value="525.85") as mock_query,
-    ):
-        result = MagicMock()
-        result.returncode = 0
-        result.stdout = json.dumps(node_list)
-        mock_run.return_value = result
 
-        nodes, _ = discover_k8s_gpu_nodes()
-
-    assert len(nodes) == 1
-    mock_query.assert_called_once_with("gpu-node", None)
-    assert nodes[0].cuda_driver_version == "525.85"
-
-
-# ─── AMD driver CVE gate ──────────────────────────────────────────────────────
-
-from agent_bom.cloud.gpu_infra import (  # noqa: E402
-    _query_amd_driver_version,
-    check_amd_driver_cves,
+@pytest.mark.parametrize(
+    ("name", "resource", "vendor"),
+    [("nv-node", "nvidia.com/gpu", "nvidia"), ("amd-node", "amd.com/gpu", "amd"), ("intel-node", "gpu.intel.com/i915", "intel")],
 )
-
-
-def test_check_amd_driver_cves_vulnerable():
-    node = GpuNode(name="amd-node-1", gpu_vendor="amd", gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version="5.7")
-    findings = check_amd_driver_cves(node)
-    assert len(findings) == 2
-    cve_ids = {f["cve_id"] for f in findings}
-    assert "CVE-2023-31315" in cve_ids
-    assert "CVE-2024-21944" in cve_ids
-    for f in findings:
-        assert f["severity"] == "high"
-        assert f["node"] == "amd-node-1"
-
-
-def test_check_amd_driver_cves_patched():
-    node = GpuNode(name="amd-node-2", gpu_vendor="amd", gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version="6.1")
-    findings = check_amd_driver_cves(node)
-    assert findings == []
-
-
-def test_check_amd_driver_cves_no_version():
-    node = GpuNode(name="amd-node-3", gpu_vendor="amd", gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version=None)
-    findings = check_amd_driver_cves(node)
-    assert findings == []
-
-
-def test_query_amd_driver_version_no_kubectl():
-    with patch("shutil.which", return_value=None):
-        result = _query_amd_driver_version("amd-node", None)
-    assert result is None
-
-
-def test_query_amd_driver_version_success():
-    mock_result = MagicMock()
-    mock_result.returncode = 0
-    mock_result.stdout = "5.7.0\n"
-
-    with (
-        patch("shutil.which", return_value="/usr/bin/kubectl"),
-        patch("subprocess.run", return_value=mock_result),
-    ):
-        result = _query_amd_driver_version("amd-node", None)
-    assert result == "5.7.0"
-
-
-def test_discover_k8s_gpu_nodes_queries_amd_driver_when_labels_missing():
-    """AMD nodes without labels trigger _query_amd_driver_version."""
-    node_list = {
-        "items": [
-            {
-                "metadata": {"name": "amd-node", "labels": {}},
-                "status": {
-                    "capacity": {"amd.com/gpu": "4", "cpu": "32"},
-                    "allocatable": {"amd.com/gpu": "4", "cpu": "32"},
-                },
-            }
-        ]
-    }
-
+def test_discover_k8s_gpu_nodes_never_execs_into_the_cluster(name, resource, vendor):
+    """Without GFD labels the driver version stays unknown; no exec/shell probe runs."""
     with (
         patch("shutil.which", return_value="/usr/bin/kubectl"),
         patch("subprocess.run") as mock_run,
-        patch("agent_bom.cloud.gpu_infra._query_amd_driver_version", return_value="5.7.0") as mock_query,
     ):
         result = MagicMock()
         result.returncode = 0
-        result.stdout = json.dumps(node_list)
+        result.stdout = json.dumps(_node_list(name, resource, {}))
         mock_run.return_value = result
-
         nodes, _ = discover_k8s_gpu_nodes()
 
-    assert len(nodes) == 1
-    mock_query.assert_called_once_with("amd-node", None)
-    assert nodes[0].cuda_driver_version == "5.7.0"
+    assert [n.gpu_vendor for n in nodes] == [vendor]
+    assert nodes[0].cuda_driver_version is None
+    for call in mock_run.call_args_list:
+        argv = call.args[0]
+        assert argv[0] == "kubectl"
+        assert "exec" not in argv and "sh" not in argv
+        assert argv[1] == "get"
 
 
-# ─── Intel driver CVE gate ────────────────────────────────────────────────────
-
-from agent_bom.cloud.gpu_infra import (  # noqa: E402
-    _query_intel_driver_version,
-    check_intel_driver_cves,
-)
-
-
-def test_check_intel_driver_cves_vulnerable():
-    node = GpuNode(name="intel-node-1", gpu_vendor="intel", gpu_capacity=2, gpu_allocatable=2, gpu_allocated=0, cuda_driver_version="6.1")
-    findings = check_intel_driver_cves(node)
-    assert len(findings) == 2
-    cve_ids = {f["cve_id"] for f in findings}
-    assert "CVE-2023-22655" in cve_ids
-    assert "CVE-2023-25546" in cve_ids
-    for f in findings:
-        assert f["severity"] == "high"
-        assert f["node"] == "intel-node-1"
-
-
-def test_check_intel_driver_cves_partially_patched():
-    """Kernel 6.2 fixes CVE-2023-25546 but not CVE-2023-22655 (needs 6.3)."""
-    node = GpuNode(name="intel-node-2", gpu_vendor="intel", gpu_capacity=2, gpu_allocatable=2, gpu_allocated=0, cuda_driver_version="6.2")
-    findings = check_intel_driver_cves(node)
-    cve_ids = {f["cve_id"] for f in findings}
-    assert "CVE-2023-22655" in cve_ids
-    assert "CVE-2023-25546" not in cve_ids
-
-
-def test_check_intel_driver_cves_fully_patched():
-    node = GpuNode(name="intel-node-3", gpu_vendor="intel", gpu_capacity=2, gpu_allocatable=2, gpu_allocated=0, cuda_driver_version="6.3")
-    findings = check_intel_driver_cves(node)
-    assert findings == []
-
-
-def test_check_intel_driver_cves_newer_kernel():
-    node = GpuNode(name="intel-node-4", gpu_vendor="intel", gpu_capacity=2, gpu_allocatable=2, gpu_allocated=0, cuda_driver_version="6.8")
-    findings = check_intel_driver_cves(node)
-    assert findings == []
-
-
-def test_check_intel_driver_cves_no_version():
-    node = GpuNode(name="intel-node-5", gpu_vendor="intel", gpu_capacity=2, gpu_allocatable=2, gpu_allocated=0, cuda_driver_version=None)
-    findings = check_intel_driver_cves(node)
-    assert findings == []
-
-
-def test_query_intel_driver_version_no_kubectl():
-    with patch("shutil.which", return_value=None):
-        result = _query_intel_driver_version("intel-node", None)
-    assert result is None
-
-
-def test_query_intel_driver_version_i915():
-    mock_result = MagicMock()
-    mock_result.returncode = 0
-    mock_result.stdout = "6.2\n"
-
-    with (
-        patch("shutil.which", return_value="/usr/bin/kubectl"),
-        patch("subprocess.run", return_value=mock_result),
-    ):
-        result = _query_intel_driver_version("intel-node", None)
-    assert result == "6.2"
-
-
-def test_query_intel_driver_version_failure():
-    mock_result = MagicMock()
-    mock_result.returncode = 1
-    mock_result.stdout = ""
-
-    with (
-        patch("shutil.which", return_value="/usr/bin/kubectl"),
-        patch("subprocess.run", return_value=mock_result),
-    ):
-        result = _query_intel_driver_version("intel-node", None)
-    assert result is None
-
-
-def test_discover_k8s_gpu_nodes_queries_intel_driver_when_labels_missing():
-    """Intel nodes without labels trigger _query_intel_driver_version."""
-    node_list = {
-        "items": [
-            {
-                "metadata": {"name": "intel-node", "labels": {}},
-                "status": {
-                    "capacity": {"gpu.intel.com/i915": "2", "cpu": "32"},
-                    "allocatable": {"gpu.intel.com/i915": "2", "cpu": "32"},
-                },
-            }
-        ]
-    }
-
+def test_discover_k8s_gpu_nodes_reads_driver_from_gfd_labels():
+    labels = {"nvidia.com/cuda.driver-version.full": "550.127.05"}
     with (
         patch("shutil.which", return_value="/usr/bin/kubectl"),
         patch("subprocess.run") as mock_run,
-        patch("agent_bom.cloud.gpu_infra._query_intel_driver_version", return_value="6.2") as mock_query,
     ):
         result = MagicMock()
         result.returncode = 0
-        result.stdout = json.dumps(node_list)
+        result.stdout = json.dumps(_node_list("nv-node", "nvidia.com/gpu", labels))
         mock_run.return_value = result
-
         nodes, _ = discover_k8s_gpu_nodes()
 
-    assert len(nodes) == 1
-    mock_query.assert_called_once_with("intel-node", None)
-    assert nodes[0].cuda_driver_version == "6.2"
+    assert nodes[0].cuda_driver_version == "550.127.05"
+    assert mock_run.call_count == 1
 
 
-# ─── scan_gpu_infra: driver + firmware wiring ────────────────────────────────
+def _gpu_node(name: str, vendor: str, driver: str | None) -> GpuNode:
+    return GpuNode(name=name, gpu_vendor=vendor, gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version=driver)
+
+
+def test_cluster_agent_carries_nvidia_driver_packages_for_advisory_matching():
+    """Each distinct NVIDIA driver release becomes one CPE-identified package (CSAF/NVD match it)."""
+    from agent_bom.cloud.gpu_infra import GpuInfraReport, gpu_infra_to_agents
+    from agent_bom.scanners.nvidia_advisory import nvidia_products_for
+
+    report = GpuInfraReport(
+        gpu_containers=[],
+        dcgm_endpoints=[],
+        gpu_nodes=[
+            _gpu_node("a", "nvidia", "550.127.05"),
+            _gpu_node("b", "nvidia", "550.127.05"),
+            _gpu_node("c", "nvidia", "535.216.01"),
+            _gpu_node("d", "amd", "6.1"),
+            _gpu_node("e", "nvidia", None),
+        ],
+        warnings=[],
+    )
+    cluster = next(a for a in gpu_infra_to_agents(report) if a.name == "k8s-gpu-cluster")
+    packages = cluster.mcp_servers[0].packages
+
+    assert sorted((p.name, p.version) for p in packages) == [
+        ("nvidia-gpu-display-driver", "535.216.01"),
+        ("nvidia-gpu-display-driver", "550.127.05"),
+    ]
+    by_version = {p.version: p for p in packages}
+    assert by_version["550.127.05"].cpe == "cpe:2.3:a:nvidia:gpu_display_driver:550.127.05:*:*:*:*:linux:*:*"
+    assert by_version["550.127.05"].purl == "pkg:generic/nvidia/nvidia-gpu-display-driver@550.127.05"
+    assert by_version["550.127.05"].discovery_provenance["observed_via"] == ["k8s-node:a", "k8s-node:b"]
+    assert all(nvidia_products_for(p) == ["gpu display driver"] for p in packages)
+    scope = cluster.metadata["cloud_origin"]["scope"]
+    assert scope["driver_versions"] == {"nvidia": ["535.216.01", "550.127.05"], "amd": ["6.1"]}
+    assert "driver_cve_count" not in scope
 
 
 @pytest.mark.asyncio
-async def test_scan_gpu_infra_driver_findings_wired():
-    """scan_gpu_infra populates driver_findings for vulnerable NVIDIA nodes."""
-    from agent_bom.cloud.gpu_infra import GpuNode
-
-    nodes = [GpuNode(name="gpu-1", gpu_vendor="nvidia", gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version="525")]
+async def test_scan_gpu_infra_claims_no_cves_from_a_version_floor():
+    """An old driver is inventoried, never turned into CVEs without an advisory match."""
+    nodes = [_gpu_node("gpu-1", "nvidia", "525.85.12")]
 
     with (
         patch("agent_bom.cloud.gpu_infra.discover_docker_gpu_containers", return_value=([], [])),
@@ -1326,8 +1117,9 @@ async def test_scan_gpu_infra_driver_findings_wired():
     ):
         report = await scan_gpu_infra()
 
-    assert len(report.driver_findings) == 3  # 3 NVIDIA CVEs for 525
-    assert all(f["node"] == "gpu-1" for f in report.driver_findings)
+    assert not hasattr(report, "driver_findings")
+    assert "driver_cve_count" not in report.risk_summary
+    assert report.risk_summary["gpu_k8s_nodes"] == 1
 
 
 @pytest.mark.asyncio
@@ -1374,8 +1166,8 @@ async def test_scan_gpu_infra_firmware_findings_wired():
 
 
 @pytest.mark.asyncio
-async def test_scan_gpu_infra_risk_summary_includes_cve_counts():
-    """risk_summary includes driver_cve_count and firmware_cve_count."""
+async def test_scan_gpu_infra_risk_summary_includes_firmware_cve_count():
+    """risk_summary carries the advisory-matched firmware count and no version-floor driver count."""
     with (
         patch("agent_bom.cloud.gpu_infra.discover_docker_gpu_containers", return_value=([], [])),
         patch("agent_bom.cloud.gpu_infra.discover_k8s_gpu_nodes", return_value=([], [])),
@@ -1385,14 +1177,12 @@ async def test_scan_gpu_infra_risk_summary_includes_cve_counts():
         report = await scan_gpu_infra()
 
     summary = report.risk_summary
-    assert "driver_cve_count" in summary
-    assert "firmware_cve_count" in summary
-    assert summary["driver_cve_count"] == 0
+    assert "driver_cve_count" not in summary
     assert summary["firmware_cve_count"] == 0
 
 
-def test_gpu_infra_to_agents_k8s_cluster_scope_includes_cve_counts():
-    """K8s cluster agent cloud_origin scope includes driver and firmware CVE counts."""
+def test_gpu_infra_to_agents_k8s_cluster_scope_includes_firmware_count_and_driver_versions():
+    """K8s cluster agent cloud_origin scope carries firmware CVE count and driver versions."""
     nodes = [
         GpuNode(name="node-1", gpu_vendor="nvidia", gpu_capacity=4, gpu_allocatable=4, gpu_allocated=0, cuda_driver_version="525"),
     ]
@@ -1401,11 +1191,11 @@ def test_gpu_infra_to_agents_k8s_cluster_scope_includes_cve_counts():
         dcgm_endpoints=[],
         gpu_nodes=nodes,
         warnings=[],
-        driver_findings=[{"cve_id": "CVE-2024-0090", "node": "node-1"}],
         firmware_findings=[{"cve_id": "CVE-2023-31028", "node": "node-1"}],
     )
     agents = gpu_infra_to_agents(report)
     assert len(agents) == 1
     scope = agents[0].metadata["cloud_origin"]["scope"]
-    assert scope["driver_cve_count"] == 1
+    assert scope["driver_versions"] == {"nvidia": ["525"]}
     assert scope["firmware_cve_count"] == 1
+    assert agents[0].mcp_servers[0].packages == []  # "525" is not a full driver release: no CPE, no package

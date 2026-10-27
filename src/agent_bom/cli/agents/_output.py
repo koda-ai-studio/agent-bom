@@ -13,6 +13,7 @@ import click
 from rich.panel import Panel
 
 from agent_bom.cli._agent_mode import dumps_envelope, success_envelope
+from agent_bom.cli._param_source import is_explicit
 from agent_bom.cli._terminal_sections import print_scan_next_steps, print_section_divider
 from agent_bom.cli.agents._cloud import render_cis_findings_from_context
 from agent_bom.cli.agents._context import ScanContext
@@ -609,11 +610,7 @@ def render_output(
     # is requested.  ZIP is not a normal report format, so do not send that
     # path through report-format inference before the bundle exporter runs.
     click_ctx = click.get_current_context(silent=True)
-    output_source = click_ctx.get_parameter_source("output") if click_ctx is not None else None
-    explicit_output_sources = {click.core.ParameterSource.COMMANDLINE, click.core.ParameterSource.ENVIRONMENT}
-    compliance_bundle_output = bool(
-        compliance_export and output and output.lower().endswith(".zip") and output_source in explicit_output_sources
-    )
+    compliance_bundle_output = bool(compliance_export and output and output.lower().endswith(".zip") and is_explicit(click_ctx, "output"))
     if not compliance_bundle_output:
         with _enospc_report_fallback(
             con,
