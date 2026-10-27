@@ -288,8 +288,8 @@ def test_test_job_timeout_leaves_margin_over_observed_worst_case() -> None:
 
 
 def test_changed_domain_timeout_covers_broad_selections() -> None:
-    """The broadest measured selection is about five minutes per shard; keep the PR bound tight."""
-    assert _ci()["jobs"]["test-smoke"]["timeout-minutes"] == 15
+    """A broad multi-lane PR measured ~15 minutes per shard (cancelled at 99%); keep headroom, stay bounded."""
+    assert _ci()["jobs"]["test-smoke"]["timeout-minutes"] == 22
 
 
 def test_full_correctness_matrix_covers_every_supported_python_minor() -> None:
