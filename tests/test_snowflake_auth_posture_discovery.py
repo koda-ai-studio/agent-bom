@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
 import types
 
@@ -78,7 +79,8 @@ class _FakeConn:
 
 
 def _run(monkeypatch, account_np=""):
-    from agent_bom.cloud import snowflake as sf
+    # Match the discovery implementation's importlib-based facade lookup.
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.setattr(sf, "_get_connection", lambda *a, **k: _FakeConn(account_np))
     monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "acct1")
@@ -123,7 +125,20 @@ def test_account_policy_present_suppresses_network_finding(monkeypatch) -> None:
 
 
 def test_no_account_is_graceful(monkeypatch) -> None:
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.delenv("SNOWFLAKE_ACCOUNT", raising=False)
     assert sf.discover_auth_posture()["status"] == "no_account"
+
+
+def test_fixture_patches_current_facade_after_module_replacement(monkeypatch):
+    import agent_bom.cloud as cloud
+
+    current = importlib.import_module("agent_bom.cloud.snowflake")
+    stale = types.ModuleType(current.__name__)
+    stale.__dict__.update(current.__dict__)
+    monkeypatch.setattr(cloud, "snowflake", stale)
+    # A safe control for the real facade; no SDK/network access is possible.
+    monkeypatch.setattr(current, "_get_connection", lambda *a, **k: _FakeConn("CORP_POLICY"))
+    result = _run(monkeypatch, account_np="")
+    assert "No account-level network policy" in {row["title"] for row in result["findings"]}
