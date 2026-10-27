@@ -184,6 +184,31 @@ class TestScanner:
         assert "langchain" in names
         assert "chromadb" in names
 
+    @pytest.mark.parametrize(
+        ("source", "name", "package_name"),
+        [
+            ("from agents import Agent\n", "openai-agents", "openai-agents"),
+            ("from llama_index.core.agent import AgentRunner\n", "llama-index", "llama-index-core"),
+        ],
+    )
+    def test_scan_python_agent_framework_imports(self, tmp_path: Path, source: str, name: str, package_name: str):
+        (tmp_path / "agent.py").write_text(source, encoding="utf-8")
+
+        report = scan_source(str(tmp_path))
+        components = [component for component in report.components if component.name == name]
+
+        assert len(components) == 1
+        assert components[0].component_type == AIComponentType.AGENT_FRAMEWORK
+        assert components[0].package_name == package_name
+        assert components[0].ecosystem == "pypi"
+
+    def test_scan_python_agent_framework_import_boundaries(self, tmp_path: Path):
+        (tmp_path / "helpers.py").write_text("import agents_helpers\nimport llama_index_helpers\n", encoding="utf-8")
+
+        report = scan_source(str(tmp_path))
+
+        assert not {"openai-agents", "llama-index"}.intersection(component.name for component in report.components)
+
     def test_scan_ai_observability_imports(self, tmp_path: Path):
         (tmp_path / "observability.py").write_text(
             "from langsmith import Client\n"
