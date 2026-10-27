@@ -12,6 +12,8 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
+from agent_bom.ai_components.import_patterns import js_import as _js_import
+from agent_bom.ai_components.import_patterns import py_import as _py_import
 from agent_bom.ai_components.models import AIComponentSeverity, AIComponentType
 
 # ── Pattern dataclass ────────────────────────────────────────────────────────
@@ -54,22 +56,6 @@ class APIKeyPattern:
 
 # Helpers to build word-boundary-safe import patterns
 _WB = r"\b"
-
-
-def _py_import(module: str) -> str:
-    """Python import pattern: import X / from X import ..."""
-    escaped = re.escape(module)
-    return rf"(?:^|\n)\s*(?:import\s+{escaped}|from\s+{escaped}(?:\.\w+)*\s+import)"
-
-
-def _js_import(module: str) -> str:
-    """JS/TS import/require pattern."""
-    escaped = re.escape(module)
-    # SDKs commonly publish subpath exports (for example
-    # ``@modelcontextprotocol/sdk/server/mcp.js``). Requiring the quote directly
-    # after the package root missed the imports real servers use.
-    subpath = r"(?:/[^'\"]+)?"
-    return rf"""(?:import\s+.*?from\s+['"](?:@[^/]+/)?{escaped}{subpath}['"]|require\s*\(\s*['"](?:@[^/]+/)?{escaped}{subpath}['"]\s*\))"""
 
 
 def _java_import(package: str) -> str:
@@ -149,6 +135,14 @@ PYTHON_SDK_PATTERNS: list[SDKPattern] = [
     ),
     SDKPattern(re.compile(_py_import("crewai")), "crewai", AIComponentType.AGENT_FRAMEWORK, "crewai", "pypi", "python"),
     SDKPattern(re.compile(_py_import("autogen")), "autogen", AIComponentType.AGENT_FRAMEWORK, "pyautogen", "pypi", "python"),
+    SDKPattern(
+        re.compile(_py_import("agents")),
+        "openai-agents",
+        AIComponentType.AGENT_FRAMEWORK,
+        "openai-agents",
+        "pypi",
+        "python",
+    ),
     SDKPattern(
         re.compile(_py_import("llama_index")),
         "llama-index",
