@@ -37,6 +37,7 @@ from agent_bom.config import _bool
 from agent_bom.core.settings import env_raw
 from agent_bom.http_client import is_offline
 from agent_bom.image_evidence.base_image import attribute_packages
+from agent_bom.image_evidence.daemon import daemon_registry_reference
 from agent_bom.image_evidence.model import active_image_evidence
 from agent_bom.models import Package, PermissionProfile, Severity, Vulnerability
 from agent_bom.oci_registry.client import RegistryError
@@ -498,9 +499,9 @@ def _record_daemon_inspect(data: object) -> None:
     evidence = active_image_evidence()
     if evidence is None or not isinstance(data, dict):
         return
-    repo_digests = [d for d in data.get("RepoDigests") or [] if isinstance(d, str) and "@sha256:" in d]
-    if repo_digests:
-        evidence.digest = repo_digests[0].split("@", 1)[1]
+    ref = daemon_registry_reference(evidence.reference, data.get("RepoDigests"))
+    if ref:
+        evidence.registry, evidence.repository, evidence.digest = ref.registry, ref.repository, ref.digest
     os_name, arch = data.get("Os"), data.get("Architecture")
     if os_name and arch:
         evidence.platform = f"{os_name}/{arch}" + (f"/{data['Variant']}" if data.get("Variant") else "")
@@ -695,11 +696,11 @@ def _daemon_supply_chain(image_ref: str, registry_user: Optional[str], registry_
     if is_offline():
         evidence.signature = {"status": "unknown", "detail": "Offline scan: the registry was not queried for signatures."}
         return
-    if not evidence.digest:
-        evidence.signature = {"status": "unknown", "detail": "The local image has no registry digest (never pushed or pulled)."}
+    if not (evidence.registry and evidence.repository and evidence.digest):
+        evidence.signature = {"status": "unknown", "detail": "The local image has no unambiguous repository-qualified registry digest."}
         return
     try:
-        ref = parse_reference(image_ref)
+        ref = parse_reference(f"{evidence.registry}/{evidence.repository}@{evidence.digest}")
         with open_client(ref, registry_user, registry_pass) as client:
             discover_supply_chain(client, evidence, None)
     except (ReferenceError, RegistryError) as exc:

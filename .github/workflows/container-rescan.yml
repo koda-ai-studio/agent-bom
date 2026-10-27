@@ -62,13 +62,26 @@ jobs:
           esac
           ACTUAL_PLATFORM=$(docker image inspect agentbom/agent-bom:latest --format '{{.Os}}/{{.Architecture}}')
           test "$ACTUAL_PLATFORM" = "${{ matrix.platform }}"
+          IMAGE_REF=$(python - <<'PYREF'
+          import json, re
+          from pathlib import Path
+          data = json.loads(Path("image-identity.json").read_text())[0]
+          refs = sorted({ref for ref in data.get("RepoDigests", [])
+                         if re.fullmatch(r"agentbom/agent-bom@sha256:[0-9a-f]{64}", ref)})
+          if len(refs) != 1:
+              raise SystemExit("Expected one repository-qualified immutable image reference")
+          print(refs[0])
+          PYREF
+          )
+          test "$(docker image inspect "$IMAGE_REF" --format '{{.Id}}')" = "$IMAGE_ID"
+          echo "ref=$IMAGE_REF" >> "$GITHUB_OUTPUT"
           echo "id=$IMAGE_ID" >> "$GITHUB_OUTPUT"
           echo "Scanning agentbom/agent-bom:latest at $IMAGE_ID for ${{ matrix.platform }}"
 
       - name: Container image scan table (fixable MEDIUM+)
         id: image_scan_table
         env:
-          IMAGE_ID: ${{ steps.image.outputs.id }}
+          IMAGE_REF: ${{ steps.image.outputs.ref }}
         continue-on-error: true
         # Self-hosted image gate (dogfood). agent-bom reads the pulled image
         # from the local Docker daemon (via docker save). Native OS-layer
@@ -76,7 +89,7 @@ jobs:
         # (agent-bom has no separate UNKNOWN tier), unfixable findings excluded
         # (= ignore-unfixed), and the .image-scan-ignore CVE allowlist.
         run: |
-          uv run agent-bom image "$IMAGE_ID" \
+          uv run agent-bom image "$IMAGE_REF" \
             --ignore .image-scan-ignore \
             --exclude-unfixable \
             --fail-on-severity medium
@@ -84,12 +97,12 @@ jobs:
       - name: Container image scan SARIF
         id: image_scan_sarif
         env:
-          IMAGE_ID: ${{ steps.image.outputs.id }}
+          IMAGE_REF: ${{ steps.image.outputs.ref }}
         continue-on-error: true
         # Non-gating SARIF export for the GitHub Security tab. Same scan policy
         # as the table gate above; emits the same allowlist-filtered findings.
         run: |
-          uv run agent-bom image "$IMAGE_ID" \
+          uv run agent-bom image "$IMAGE_REF" \
             --ignore .image-scan-ignore \
             --exclude-unfixable \
             -f sarif -o image-scan-${{ matrix.sarif_category }}.sarif
@@ -112,6 +125,13 @@ jobs:
           cp "${{ steps.sarif.outputs.path }}" "original-${{ steps.sarif.outputs.path }}"
           uv run python scripts/normalize_container_sarif_for_github.py "${{ steps.sarif.outputs.path }}"
 
+      - name: Classify container scan evidence
+        id: triage
+        if: always()
+        run: |
+          python scripts/classify_container_rescan.py "original-image-scan-${{ matrix.sarif_category }}.sarif" \
+            --table "${{ steps.image_scan_table.outcome }}" --sarif "${{ steps.image_scan_sarif.outcome }}"
+
       - name: Retain original container scan evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -119,6 +139,7 @@ jobs:
           name: container-rescan-${{ matrix.sarif_category }}
           path: |
             image-identity.json
+            scan-triage.json
             original-image-scan-${{ matrix.sarif_category }}.sarif
             image-scan-${{ matrix.sarif_category }}.sarif
           if-no-files-found: warn
@@ -138,7 +159,7 @@ jobs:
           echo "::warning::Container scan SARIF was not generated for ${{ matrix.platform }}. Check the preceding scanner step for workflow/config errors."
 
       - name: Flag actionable CVEs found
-        if: steps.image_scan_table.outcome == 'failure'
+        if: steps.triage.outputs.status == 'actionable'
         run: |
           echo "::warning::Container scan found fixable MEDIUM+ CVEs in agentbom/agent-bom:latest (${{ matrix.platform }}). Check SARIF in Security tab."
 
@@ -155,7 +176,7 @@ jobs:
           gh label create automated --color 5319E7 --description "Opened or updated automatically by CI" >/dev/null 2>&1 || true
           EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
 
-          if [ "${{ steps.image_scan_table.outcome }}" = "failure" ]; then
+          if [ "${{ steps.triage.outputs.status }}" = "actionable" ]; then
             BODY=$(cat <<EOF
           ## Automated Base Image Vulnerability Alert
 
@@ -176,7 +197,7 @@ jobs:
             else
               gh issue create --title "$TITLE" --label "base-image-vulnerability,security-preventive,automated" --body "$BODY"
             fi
-          elif [ "${{ steps.image_scan_table.outcome }}" = "success" ] && [ -n "$EXISTING" ]; then
+          elif [ "${{ steps.triage.outputs.status }}" = "clean" ] && [ -n "$EXISTING" ]; then
             gh issue close "$EXISTING" --comment "Published image ${IMAGE_ID} is clean for ${{ matrix.platform }} under the fixable MEDIUM+ policy. Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           elif [ -n "$EXISTING" ]; then
             gh issue comment "$EXISTING" --body "The latest rescan was inconclusive, so this finding remains open. Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
