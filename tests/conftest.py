@@ -733,7 +733,6 @@ _STORAGE_ENV_VARS = (
 # repo_scan, which then demands an explicit host allowlist. Snapshot + revert.
 _SERVER_RUNTIME_ENV_VARS = (
     "AGENT_BOM_MCP_REMOTE_BIND",
-    "AGENT_BOM_CORS_ALL",
     # `serve --no-ui` sets this directly on os.environ (cli/_server.py), so it
     # must be snapshot/restored like its siblings or it leaks the dashboard gate
     # into later tests that read `_ui_disabled()` — the `/` root-route tests then
