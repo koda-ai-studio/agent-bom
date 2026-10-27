@@ -77,6 +77,28 @@ def _digest_hasher(digest: str) -> Any:
     return hashlib.new(algorithm)
 
 
+def _matches_digest(data: bytes, digest: str) -> bool:
+    """Whether ``data`` hashes to ``digest`` (``sha256``/``sha512``; any other algorithm is rejected)."""
+    hasher = _digest_hasher(digest)
+    hasher.update(data)
+    return f"{digest.split(':', 1)[0]}:{hasher.hexdigest()}" == digest
+
+
+def _read_bounded(response: httpx.Response, limit: int, what: str) -> bytes:
+    """Read a streamed body into memory, aborting as soon as it passes ``limit`` bytes."""
+    buffer = bytearray()
+    try:
+        for chunk in response.iter_bytes():
+            buffer += chunk
+            if len(buffer) > limit:
+                raise RegistryError(f"{what} exceeds the size limit")
+    except _TRANSPORT_ERRORS as exc:
+        raise RegistryError(f"{what} download failed: {type(exc).__name__}") from exc
+    finally:
+        response.close()
+    return bytes(buffer)
+
+
 @dataclass
 class RegistryClient:
     """Client for one repository on one registry."""
@@ -200,6 +222,8 @@ class RegistryClient:
         response = self._send(url, headers or {}, stream=stream)
         if response.status_code == 401 and not self._token and not self._basic:
             response.close()
+            if urlparse(str(response.request.url)).netloc != urlparse(url).netloc:
+                raise RegistryError("A registry redirect target asked for credentials; they are only sent to the registry itself", 401)
             try:
                 self._authenticate(response)
             except RegistryAuthError as exc:
@@ -208,20 +232,19 @@ class RegistryClient:
         return response
 
     def get_manifest(self, reference: str, *, missing_ok: bool = False) -> FetchedManifest | None:
-        response = self.get(f"manifests/{reference}", {"Accept": MANIFEST_ACCEPT})
-        if response.status_code == 404 and missing_ok:
-            return None
+        response = self.get(f"manifests/{reference}", {"Accept": MANIFEST_ACCEPT}, stream=True)
         if response.status_code != 200:
+            response.close()
+            if response.status_code == 404 and missing_ok:
+                return None
             raise RegistryError(f"Manifest {reference} could not be fetched{self._status(response.status_code)}", response.status_code)
-        raw = response.content
-        if len(raw) > MAX_MANIFEST_BYTES:
-            raise RegistryError("Manifest exceeds the size limit")
-        digest = sha256_digest(raw)
+        raw = _read_bounded(response, MAX_MANIFEST_BYTES, "Manifest")
         header_digest = response.headers.get("docker-content-digest")
-        if header_digest and header_digest.startswith("sha256:") and header_digest != digest:
+        if header_digest and not _matches_digest(raw, header_digest):
             raise RegistryError("Manifest digest does not match the registry's Docker-Content-Digest")
-        if reference.startswith("sha256:") and reference != digest:
+        if ":" in reference and not _matches_digest(raw, reference):
             raise RegistryError("Manifest content does not match the requested digest")
+        digest = sha256_digest(raw)
         try:
             document = json.loads(raw)
         except ValueError as exc:
@@ -268,13 +291,14 @@ class RegistryClient:
 
     def referrers(self, digest: str) -> list[dict[str, Any]] | None:
         """OCI 1.1 referrers for ``digest``; ``None`` when the registry has no referrers API."""
-        response = self.get(f"referrers/{digest}", {"Accept": OCI_INDEX})
-        if response.status_code in {404, 405, 400}:
-            return None
+        response = self.get(f"referrers/{digest}", {"Accept": OCI_INDEX}, stream=True)
         if response.status_code != 200:
+            response.close()
+            if response.status_code in {404, 405, 400}:
+                return None
             raise RegistryError(f"Referrers query failed{self._status(response.status_code)}", response.status_code)
         try:
-            document = response.json()
+            document = json.loads(_read_bounded(response, MAX_MANIFEST_BYTES, "Referrers index"))
         except ValueError:
             return None
         manifests = document.get("manifests") if isinstance(document, dict) else None
