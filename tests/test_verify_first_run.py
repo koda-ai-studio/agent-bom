@@ -114,3 +114,85 @@ def test_first_run_setup_uses_selected_python_and_scopes_the_lookup_token():
     assert install["run"].startswith("uv run --no-project --python 3.13 python")
     assert "GH_TOKEN" not in install.get("env", {})
     assert "GH_TOKEN" not in workflow["jobs"]["journey"].get("env", {})
+
+
+def test_first_command_exercises_isolated_base_uvx_install(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    python = tmp_path / "bin" / "python"
+    python.parent.mkdir()
+    python.with_name("agent-bom").touch()
+    monkeypatch.setattr(verify_first_run.sys, "executable", str(python))
+    monkeypatch.setattr(
+        verify_first_run.importlib.metadata, "distribution", lambda _: SimpleNamespace(version="0.110.0", read_text=lambda _: None)
+    )
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "fixture-ambient-credential")
+    monkeypatch.setenv("GH_TOKEN", "fixture-ambient-token")
+    calls = []
+
+    def command(args, **kwargs):
+        calls.append((args, kwargs))
+        raise RuntimeError("stop after capturing the first child")
+
+    monkeypatch.setattr(verify_first_run.subprocess, "run", command)
+    with pytest.raises(RuntimeError, match="first child"):
+        verify_first_run.run(tmp_path / "evidence", "0.110.0")
+    args, options = calls[0]
+    assert args[0] == "uvx"
+    assert "agent-bom==0.110.0" in args and not any("[ui]" in arg for arg in args)
+    assert args[args.index("scan") + 1] == "."
+    assert "AWS_ACCESS_KEY_ID" not in options["env"]
+    assert "GH_TOKEN" not in options["env"]
+    assert options["env"]["HOME"] == str(tmp_path / "evidence" / "home")
+    # Match an activated installation so quickstart finds its own console script,
+    # including agent-bom.exe on Windows, instead of an ambient/global executable.
+    assert options["env"]["PATH"].split(verify_first_run.os.pathsep)[0] == str(python.parent)
+    assert options["cwd"] != tmp_path / "evidence"
+
+
+def test_first_run_matrix_covers_windows_and_preserves_failure_artifacts():
+    from pathlib import Path
+
+    import yaml
+
+    workflow = yaml.safe_load((Path(__file__).parents[1] / ".github/workflows/first-run.yml").read_text())
+    job = workflow["jobs"]["journey"]
+    assert set(job["strategy"]["matrix"]["os"]) == {"ubuntu-latest", "macos-latest", "windows-latest"}
+    upload = next(step for step in job["steps"] if step.get("if") == "always()")
+    assert "repository" in upload["with"]["path"]
+    assert "offline" in upload["with"]["path"]
+
+
+def test_repository_qualification_checks_locked_inventory_not_just_exit_code():
+    complete = report(agents=[{"mcp_servers": [{"packages": [{"name": "rich", "version": "14.1.0"}]}]}])
+    verify_first_run.validate_repository(complete, {("rich", "14.1.0")})
+    with pytest.raises(ValueError, match="locked packages"):
+        verify_first_run.validate_repository(complete, {("rich", "14.2.0")})
+    with pytest.raises(ValueError, match="complete"):
+        verify_first_run.validate_repository({**complete, "scan_run": {"outcome": "partial"}}, {("rich", "14.1.0")})
+
+
+@pytest.mark.parametrize(
+    "outcome,affects,code",
+    [
+        ("complete", True, "required_scanner_unavailable"),
+        ("partial", False, "required_scanner_unavailable"),
+        ("partial", True, "scope_exclusion"),
+    ],
+)
+def test_offline_qualification_cannot_accept_clean_or_unrelated_warnings(outcome, affects, code):
+    with pytest.raises(ValueError, match="incomplete vulnerability coverage"):
+        verify_first_run.validate_missing_database(
+            {"scan_run": {"outcome": outcome, "issues": [{"code": code, "source": "vulnerability-data", "affects_coverage": affects}]}}
+        )
+
+
+def test_offline_qualification_accepts_explicit_unavailable_advisory_evidence():
+    verify_first_run.validate_missing_database(
+        {
+            "scan_run": {
+                "outcome": "partial",
+                "issues": [{"code": "required_scanner_unavailable", "source": "vulnerability-data", "affects_coverage": True}],
+            }
+        }
+    )

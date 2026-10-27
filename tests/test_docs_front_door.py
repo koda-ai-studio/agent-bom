@@ -74,7 +74,7 @@ def test_readme_first_screen_states_audience_and_visible_quick_start() -> None:
     assert "## Quick start" in first, "Quick start must be the first README section"
     quick_start = first[first.index("## Quick start") :]
     visible = quick_start.split("<details>", 1)[0]
-    for command in ("pip install agent-bom", "agent-bom scan .", "agent-bom scan --demo --offline"):
+    for command in ("uvx agent-bom scan .", "uvx agent-bom scan --demo --offline"):
         assert command in visible, f"uncollapsed quick start is missing {command!r}"
     assert "Exit `1` is expected" in visible, "the visible demo command must explain its security-gate exit"
     intro = first[: first.index("## Quick start")]

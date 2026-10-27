@@ -221,7 +221,9 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
     assert "trace the exposure evidence" in hero
     assert "docs/GALLERY.md" in hero
     quick_start = readme.split("## Quick start", 1)[1].split("\n## ", 1)[0]
-    assert "pip install agent-bom\nagent-bom scan ." in quick_start
+    assert "```bash\nuvx agent-bom scan .\n```" in quick_start
+    assert "#what-this-scan-does-and-does-not-establish" in quick_start
+    assert "upload-sarif: 'true'" in quick_start
     assert "agent-bom scan --demo --offline" in quick_start
     assert "Exit `1` is expected" in quick_start
     assert "does not prove" in readme or "do not prove" in readme

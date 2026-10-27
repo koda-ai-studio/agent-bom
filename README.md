@@ -32,19 +32,25 @@ and prioritize fixes by blast radius and reachability evidence. Local scans need
 
 ## Quick start
 
-From the repository you want to inspect:
+From the repository you want to inspect, with [uv installed](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-pip install agent-bom
-agent-bom scan .
+uvx agent-bom scan .
 ```
 
-Read the inventory, findings, coverage gaps, and remediation guidance in the terminal.
-Save a report with `agent-bom scan . -f sarif -o findings.sarif`, then
-[upload it and gate CI](docs/FIRST_RUN.md#5-gate-ci-on-the-result).
-Run `agent-bom doctor` if setup fails. See the [first-run guide](docs/FIRST_RUN.md).
+Read the discovered agents and MCP servers, prioritize the highest-severity
+findings, and follow the affected package's fix guidance. Review coverage gaps
+beside the verdict: incomplete evidence is not a clean assessment.
+[What this scan does and does not establish](docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
 
-In GitHub Actions, the same scan uploads SARIF to code scanning and fails on new
+Apply a reviewed fix, update the lockfile, then rerun `uvx agent-bom scan .`
+against the same repository to verify the finding changed.
+Save a report with `uvx agent-bom scan . -f sarif -o findings.sarif`, then
+[upload it and gate CI](docs/FIRST_RUN.md#5-gate-ci-on-the-result).
+Run `uvx agent-bom doctor` if setup fails. See the [first-run guide](docs/FIRST_RUN.md)
+for pip installation and the existing `checkup` assistant workflow.
+
+In GitHub Actions, the same scan uploads SARIF to code scanning and fails on
 high or critical findings, the same default gate as the CLI:
 
 ```yaml
@@ -54,9 +60,11 @@ permissions:
 steps:
   - uses: actions/checkout@v4
   - uses: koda-ai-studio/agent-bom@v0
+    with:
+      upload-sarif: 'true'
 ```
 
-No project handy? Run `agent-bom scan --demo --offline` for a bundled sample.
+No project handy? Run `uvx agent-bom scan --demo --offline` for a bundled sample.
 Exit `1` is expected: the sample trips the security gate. A non-zero exit
 can mean a security gate or incomplete assessment; inspect the report and coverage.
 See the [exit codes](site-docs/reference/exit-codes.md).
@@ -200,8 +208,8 @@ Start with eight focused tools in the default profile.
 [Try three investigations](docs/MCP_SERVER.md): affected agents, exposure receipts and a before/after scan comparison.
 [Import existing scanner reports](docs/IMPORTERS.md) without replacing their source evidence.
 
-Prefer an isolated invocation? Use `uvx agent-bom scan .` or check a dependency
-with `uvx agent-bom check requests@2.33.0 --ecosystem pypi`. Add
+Check a dependency before installing it with
+`uvx agent-bom check requests@2.33.0 --ecosystem pypi`. Add
 [pre-commit and CI setup](docs/FIRST_RUN.md#pre-commit-hook) for repeated checks.
 
 [Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Integration capability matrix](docs/CLOUD_CONNECT.md) · [MCP client setup](docs/MCP_SERVER.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
