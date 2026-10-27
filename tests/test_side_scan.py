@@ -6,7 +6,7 @@ hands back a fixture directory. The tests assert:
 
 - full lifecycle (snapshot → volume → attach → mount → parse → cleanup)
 - cleanup runs even when parsing raises (the load-bearing guarantee)
-- orphan-snapshot sweep by tag
+- tag-only orphan deletion is refused
 - metadata-only output (no file contents, no secret values)
 - opt-in gating (OFF by default; clear error when disabled)
 - missing collector config → actionable error, no crash, still cleans up
@@ -333,32 +333,27 @@ class TestMissingConfig:
 
 
 class TestOrphanSweep:
-    def test_sweep_deletes_tagged_snapshots(self, enabled: None) -> None:
+    def test_sweep_preserves_tagged_snapshots_without_durable_authority(self, enabled: None) -> None:
         ec2 = FakeEc2Client(orphan_snapshots=[{"SnapshotId": "snap-orphan-1"}, {"SnapshotId": "snap-orphan-2"}])
         scanner = AwsEbsSideScanner(ec2_client=ec2)
         deleted = scanner.sweep_orphan_snapshots()
-        assert deleted == ["snap-orphan-1", "snap-orphan-2"]
-        # Filtered by our tag, self-owned only.
-        desc = next(c for c in ec2.calls if c[0] == "describe_snapshots")
-        assert desc[1]["Filters"][0]["Name"] == f"tag:{SIDESCAN_TAG_KEY}"
-        assert desc[1]["OwnerIds"] == ["self"]
+        assert deleted == []
+        assert ec2.calls == []
 
     def test_sweep_nothing_to_do(self, enabled: None) -> None:
         ec2 = FakeEc2Client(orphan_snapshots=[])
         scanner = AwsEbsSideScanner(ec2_client=ec2)
         assert scanner.sweep_orphan_snapshots() == []
 
-    def test_sweep_paginates_describe_snapshots(self, enabled: None) -> None:
+    def test_sweep_does_not_enumerate_tagged_provider_resources(self, enabled: None) -> None:
         ec2 = FakeEc2Client(
             orphan_snapshots=[{"SnapshotId": "snap-orphan-1"}],
         )
         ec2._orphan_snapshots_page2 = [{"SnapshotId": "snap-orphan-2"}]
         scanner = AwsEbsSideScanner(ec2_client=ec2)
         deleted = scanner.sweep_orphan_snapshots()
-        assert deleted == ["snap-orphan-1", "snap-orphan-2"]
-        describe_calls = [c for c in ec2.calls if c[0] == "describe_snapshots"]
-        assert len(describe_calls) == 2
-        assert describe_calls[1][1].get("NextToken") == "page2"
+        assert deleted == []
+        assert ec2.calls == []
 
     @pytest.mark.asyncio
     async def test_run_side_scan_sweeps_then_scans(self, enabled: None, debian_rootfs: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -377,7 +372,7 @@ class TestOrphanSweep:
             mount_controller=mount,
         )
         names = ec2.names()
-        assert "describe_snapshots" in names  # the sweep
+        assert "describe_snapshots" not in names  # no tag-only orphan sweep
         assert "create_snapshot" in names  # the actual scan
         assert len(results) == 1
         assert results[0].cleaned_up is True
