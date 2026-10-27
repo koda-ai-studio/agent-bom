@@ -19,8 +19,8 @@ from collections import Counter
 import pytest
 
 
-@pytest.fixture()
-def seeded_stores(monkeypatch: pytest.MonkeyPatch, tmp_path):
+def _seed_fresh_stores(monkeypatch: pytest.MonkeyPatch, tmp_path) -> str:
+    """Seed into stores opened for this test, never ones another test left behind."""
     monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE", "1")
     monkeypatch.setenv("AGENT_BOM_DB", str(tmp_path / "demo.db"))
     monkeypatch.setenv("AGENT_BOM_GRAPH_DB", str(tmp_path / "graph.db"))
@@ -29,9 +29,15 @@ def seeded_stores(monkeypatch: pytest.MonkeyPatch, tmp_path):
     from agent_bom.api import stores as api_stores
     from agent_bom.demo_estate.showcase_graph import SHOWCASE_TENANT, seed_showcase_fleet_and_runtime
 
-    api_stores._store = None
+    for name in ("_store", "_fleet_store", "_mcp_observation_store"):
+        monkeypatch.setattr(api_stores, name, None)
     seed_showcase_fleet_and_runtime(tenant_id=SHOWCASE_TENANT)
-    yield SHOWCASE_TENANT
+    return SHOWCASE_TENANT
+
+
+@pytest.fixture()
+def seeded_stores(monkeypatch: pytest.MonkeyPatch, tmp_path):
+    yield _seed_fresh_stores(monkeypatch, tmp_path)
 
 
 def _manifest(tenant_id: str) -> dict:
@@ -140,3 +146,23 @@ def test_old_demo_associations_are_repaired_once(seeded_stores):
     assert refreshed.server_count <= 1
     assert next(a for a in store.list_by_tenant(seeded_stores) if a.agent_id == "customer-agent") == unrelated
     assert seed_showcase_fleet_and_runtime(tenant_id=seeded_stores)["seeded"] is False
+
+
+def test_manifest_reads_only_the_seeded_stores(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    """Fleet and observation stores are process-wide; one left by an earlier test must not leak in."""
+    from agent_bom.api import stores as api_stores
+    from agent_bom.api.fleet_store import FleetAgent, InMemoryFleetStore
+    from agent_bom.api.mcp_observation_store import InMemoryMCPObservationStore, MCPObservation
+
+    leaked_fleet, leaked_observations = InMemoryFleetStore(), InMemoryMCPObservationStore()
+    leaked_fleet.put(FleetAgent(tenant_id="default", agent_id="leaked-agent", name="cursor", agent_type="cursor"))
+    leaked_observations.put(
+        MCPObservation(tenant_id="default", observation_id="leaked", server_stable_id="filesystem:", server_name="filesystem")
+    )
+    monkeypatch.setattr(api_stores, "_fleet_store", leaked_fleet)
+    monkeypatch.setattr(api_stores, "_mcp_observation_store", leaked_observations)
+
+    manifest = _manifest(_seed_fresh_stores(monkeypatch, tmp_path))
+
+    assert "filesystem" not in {server["name"] for server in manifest["mcp_servers"]}
+    assert "leaked-agent" not in {agent["id"] for agent in manifest["agents"]}

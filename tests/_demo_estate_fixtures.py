@@ -28,6 +28,12 @@ VIEWER: dict[str, str] = {}
 
 _active_seeds: list[Path] = []
 
+# Process-global stores the seed opens on its own database files. Each is
+# cleared for the seed and restored afterwards: triage decisions in the
+# exception store change view filtering, and fleet agents and MCP observations
+# left behind were read by later tests (an AI BOM row with no transport).
+_SEEDED_API_STORES = ("_store", "_graph_store", "_trend_store", "_exception_store", "_fleet_store", "_mcp_observation_store")
+
 
 def _model_stale_backpressure() -> None:
     from agent_bom.backpressure import _controller_for, reset_backpressure_for_tests
@@ -94,16 +100,10 @@ def seeded_demo_estate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Itera
 
     api_server._runtime_api_key_seeded = False
     api_server._shutting_down = False
-    original_job_store = api_stores._store
-    original_graph_store = api_stores._graph_store
-    original_trend_store = api_stores._trend_store
+    original_stores = {name: getattr(api_stores, name) for name in _SEEDED_API_STORES}
     original_hub_store = hub_store_mod._HUB_STORE
-    # Triage decisions live in the process-wide exception store; one left by another test changes view filtering.
-    original_exception_store = api_stores._exception_store
-    api_stores._exception_store = None
-    api_stores._store = None
-    api_stores._graph_store = None
-    api_stores._trend_store = None
+    for name in _SEEDED_API_STORES:
+        setattr(api_stores, name, None)
     set_compliance_hub_store(None)
     reset_findings_count_cache()
     reset_demo_estate_bootstrap_status()
@@ -120,12 +120,10 @@ def seeded_demo_estate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Itera
             yield client
     finally:
         _active_seeds.remove(tmp_path)
-        api_stores._store = original_job_store
-        api_stores._graph_store = original_graph_store
-        api_stores._trend_store = original_trend_store
+        for name, store in original_stores.items():
+            setattr(api_stores, name, store)
         set_compliance_hub_store(original_hub_store)
         reset_findings_count_cache()
-        api_stores._exception_store = original_exception_store
         reset_backpressure_for_tests()
         _reset_process_seed_state()
 
