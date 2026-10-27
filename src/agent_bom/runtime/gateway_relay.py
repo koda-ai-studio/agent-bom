@@ -48,7 +48,7 @@ class GatewayCircuitBreaker:
 
     def __init__(self, *, failure_threshold: int, cooldown_seconds: float) -> None:
         self.failure_threshold = max(1, failure_threshold)
-        self.cooldown_seconds = max(1.0, cooldown_seconds)
+        self.cooldown_seconds = max(0.0, cooldown_seconds)
         self._states: dict[str, _CircuitState] = {}
         self._lock = asyncio.Lock()
 
@@ -80,9 +80,9 @@ class GatewayUpstreamRelay:
     """Lifecycle-managed upstream relay with connection pooling and breakers."""
 
     def __init__(self, settings: RelaySettings) -> None:
-        self._timeout_seconds = max(1.0, settings.upstream_http_timeout_seconds)
+        self._timeout_seconds = max(0.001, settings.upstream_http_timeout_seconds)
         self._max_connections = max(1, settings.upstream_http_max_connections)
-        self._max_keepalive_connections = max(1, settings.upstream_http_max_keepalive_connections)
+        self._max_keepalive_connections = max(0, settings.upstream_http_max_keepalive_connections)
         self._clients: dict[bool, Any] = {}
         self._client_lock = asyncio.Lock()
         self._breaker = GatewayCircuitBreaker(
