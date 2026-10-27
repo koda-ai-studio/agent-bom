@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from agent_bom.graph.severity import normalize_severity, severity_display_bucket
+from agent_bom.core.severity import normalize_severity, severity_display_bucket
 from agent_bom.models import Severity
 from agent_bom.scanners.risk import cvss_to_severity, parse_cvss_vector, severity_from_label
 

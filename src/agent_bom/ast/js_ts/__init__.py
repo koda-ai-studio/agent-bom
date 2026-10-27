@@ -1,9 +1,7 @@
 """Single public entry point for JavaScript and TypeScript analysis.
 
 The package exposes the scanner facade, including its regex fallback, and the
-tree-sitter engine for callers that need syntax-tree details. The legacy
-``agent_bom.ast_js_ts`` and ``agent_bom.js_ts_ast`` paths remain compatibility
-shims for one deprecation window.
+tree-sitter engine for callers that need syntax-tree details.
 """
 
 from __future__ import annotations

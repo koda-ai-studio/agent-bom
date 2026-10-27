@@ -574,8 +574,8 @@ def test_cloud_cis_check_without_a_severity_is_unrated_not_medium():
     the medium tile. ``unknown`` routes it to the explicit ``unrated`` bucket
     instead, where it is still counted and still visible (#4631).
     """
+    from agent_bom.core.severity import severity_display_bucket
     from agent_bom.finding import cloud_cis_check_to_finding
-    from agent_bom.graph.severity import severity_display_bucket
 
     for blank in ("", "   ", None):
         check = {

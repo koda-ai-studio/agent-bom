@@ -244,29 +244,6 @@ def test_diagram_lake_pdf_and_text_outputs_redact_sensitive_inventory_fields():
         assert credential_url not in rendered
 
 
-def test_ocsf_events_redact_secret_pii_and_credential_urls():
-    from agent_bom.output.ocsf import alert_to_ocsf, finding_to_ocsf
-
-    secret = "ghp_" + "a" * 36
-    email = "alice.sentinel@example.invalid"
-    credential_url = "postgresql://admin:sentinel-password@db.internal/prod"
-    alert = {
-        "severity": "high",
-        "detector": secret,
-        "message": f"{secret} {email} {credential_url}",
-        "details": {"tool": secret, "connection_url": credential_url},
-    }
-    finding = _finding(title=f"{secret} {email}", description=credential_url)
-    finding.affected_agents = [email]
-    finding.exposed_credentials = [secret]
-
-    for event in (alert_to_ocsf(alert), finding_to_ocsf(finding)):
-        encoded = json.dumps(event)
-        assert secret not in encoded
-        assert email not in encoded
-        assert credential_url not in encoded
-
-
 def test_console_attack_flow_and_inventory_redact_sensitive_labels(monkeypatch):
     from rich.console import Console
 

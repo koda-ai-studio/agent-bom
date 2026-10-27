@@ -1458,9 +1458,6 @@
     "ast_java.py::build_java_dependency_symbol_reach": {
       "complexity": 16
     },
-    "ast_js_ts.py": {
-      "deferred_imports": 2
-    },
     "ast_models.py": {
       "file_lines": 618
     },
@@ -3748,9 +3745,6 @@
     "iso_27001.py": {
       "deferred_imports": 1
     },
-    "js_ts_ast.py": {
-      "deferred_imports": 2
-    },
     "jupyter.py::scan_jupyter_notebooks": {
       "function_lines": 101
     },
@@ -4403,12 +4397,6 @@
       "complexity": 19,
       "function_lines": 107
     },
-    "output/ocsf.py": {
-      "deferred_imports": 1
-    },
-    "output/ocsf.py::finding_to_ocsf": {
-      "function_lines": 112
-    },
     "output/pdf.py": {
       "deferred_imports": 2
     },
@@ -4823,10 +4811,6 @@
     "red_team.py": {
       "deferred_imports": 1
     },
-    "red_team_governance.py": {
-      "broad_except": 1,
-      "deferred_imports": 1
-    },
     "red_team_llm.py": {
       "broad_except": 1,
       "deferred_imports": 2
@@ -4898,12 +4882,6 @@
     "resolver.py::resolve_all_versions": {
       "complexity": 34,
       "function_lines": 152
-    },
-    "resolvers/drift_detector.py": {
-      "deferred_imports": 1
-    },
-    "resolvers/drift_detector.py::detect_drift": {
-      "function_lines": 82
     },
     "risk_analyzer.py": {
       "deferred_imports": 2

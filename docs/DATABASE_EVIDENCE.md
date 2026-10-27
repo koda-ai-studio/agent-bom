@@ -52,7 +52,8 @@ query source.
 - The default wheel does not bundle ODBC drivers, JDBC drivers, a JVM, or
   customer DSN configuration.
 
-The code-level contract lives in `src/agent_bom/database_evidence.py`.
+No ODBC or JDBC connector lane ships today; this page is the contract a future
+lane must meet.
 
 ## DSPM database content classification (opt-in)
 

@@ -2,15 +2,13 @@
 
 OCSF is an optional SIEM wire protocol. Core modules
 (scan, enrichment, parsers, cli, cloud, skills, analyzers, api,
-dashboard, db, ingestion) must not import from ``agent_bom.siem.ocsf``
-or ``agent_bom.output.ocsf``. The graph layer is allowed to import
-``agent_bom.graph.ocsf`` because that file is a thin entity→OCSF-id
+dashboard, db, ingestion) must not import from ``agent_bom.siem.ocsf``.
+The graph layer is allowed to import ``agent_bom.graph.ocsf`` because that file is a thin entity→OCSF-id
 mapping table the graph uses as reserved seats for SIEM export;
 nothing in core logic branches on those IDs.
 
 If this test fails, either:
-1. Move the OCSF-using code behind a boundary module (``siem/``,
-   ``output/ocsf.py``), or
+1. Move the OCSF-using code behind the boundary package (``siem/``), or
 2. Update ``docs/OCSF_BOUNDARY.md`` and ``_ALLOWED_OCSF_CONSUMERS``
    below with an explicit, reviewed exception.
 """
@@ -34,11 +32,9 @@ _ALLOWED_OCSF_CONSUMERS = {
     "siem/chronicle.py",
     "siem/security_lake.py",
     "siem/delta_stream.py",
-    # output/ocsf.py is the MCP tool's OCSF serializer.
-    "output/ocsf.py",
 }
 
-_OCSF_EMISSION_MODULES = {"agent_bom.output.ocsf", "agent_bom.siem.ocsf"}
+_OCSF_EMISSION_MODULES = {"agent_bom.siem.ocsf"}
 
 
 def _package_for(relative_path: str) -> list[str]:
@@ -109,9 +105,9 @@ def test_ocsf_boundary_guard_covers_import_shapes() -> None:
         "from agent_bom.siem.ocsf import to_ocsf_batch": "agent_bom.siem.ocsf",
         "from agent_bom.siem import ocsf": "agent_bom.siem.ocsf",
         "from ..siem import ocsf": "agent_bom.siem.ocsf",
-        'import_module("agent_bom.output.ocsf")': "agent_bom.output.ocsf",
+        'import_module("agent_bom.siem.ocsf")': "agent_bom.siem.ocsf",
         'importlib.import_module("agent_bom.siem.ocsf")': "agent_bom.siem.ocsf",
-        '__import__("agent_bom.output.ocsf")': "agent_bom.output.ocsf",
+        '__import__("agent_bom.siem.ocsf")': "agent_bom.siem.ocsf",
     }
     for source, expected in cases.items():
         assert _ocsf_imports(source, "api/example.py") == [(1, expected)]
@@ -125,6 +121,4 @@ def test_graph_ocsf_map_is_thin_mapping_only():
 
     text = (_SRC_ROOT / "graph" / "ocsf.py").read_text(encoding="utf-8")
     for forbidden in ("import requests", "import urllib", "socket", "json.dumps", "to_ocsf_event"):
-        assert forbidden not in text, (
-            f"graph/ocsf.py must stay a thin mapping — found '{forbidden}'. Move emission logic to siem/ocsf.py or output/ocsf.py."
-        )
+        assert forbidden not in text, f"graph/ocsf.py must stay a thin mapping — found '{forbidden}'. Move emission logic to siem/ocsf.py."

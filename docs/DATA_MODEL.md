@@ -390,9 +390,8 @@ richer identity, grants, governance, and lineage APIs. ODBC/JDBC are optional
 fallback lanes for SQL Server, Oracle, Teradata, and customer-managed DSN/JVM
 environments where a generic SQL path is the only viable evidence source.
 
-The contract in `src/agent_bom/database_evidence.py` keeps ODBC/JDBC out of
-the default wheel, marks them non-preferred, and defines the read-only evidence
-kinds they may collect: schemas, tables, views, grants, roles, users,
+No ODBC/JDBC lane ships today. When one does, it stays out of the default
+wheel, is marked non-preferred, and collects only read-only evidence kinds: schemas, tables, views, grants, roles, users,
 classification tags, governance metadata, external shares/stages, and lineage.
 See [`docs/DATABASE_EVIDENCE.md`](DATABASE_EVIDENCE.md) for the operator-facing
 lane and credential-boundary guidance.

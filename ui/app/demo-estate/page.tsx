@@ -38,7 +38,7 @@ const DISPLAY_LABELS: Record<string, string> = {
   snowflake_access_history: "Snowflake Access History",
 };
 
-// Mirrors SEVERITY_DISPLAY_BUCKETS in agent_bom/graph/severity.py. `unrated` is
+// Mirrors SEVERITY_DISPLAY_BUCKETS in agent_bom/core/severity.py. `unrated` is
 // last and always present: the strip sums to the total, so a control the
 // scanner could not evaluate is visible rather than rounded away.
 const SEVERITY_BANDS = ["critical", "high", "medium", "low", "unrated"] as const;

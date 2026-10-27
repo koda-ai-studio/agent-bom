@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from agent_bom.api.routes.scan import _finding_sort_key
-from agent_bom.graph.severity import severity_policy_rank, severity_worst_first_rank
+from agent_bom.core.severity import severity_policy_rank, severity_worst_first_rank
 
 
 def test_finding_sort_key_uses_policy_rank_for_severity_sort() -> None:

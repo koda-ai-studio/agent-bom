@@ -7,8 +7,8 @@ provider adapters. CVSS 4 scoring loads its scorer only when requested.
 Vendor-specific advisory-only fallback policies stay in their adapters;
 missing/invalid CVSS is unknown, while a validated zero score is none.
 
-Existing imports through `models.Severity`, `graph.severity` and scanner risk
-helpers remain compatibility exports of the same implementations. Package
+Existing imports through `models.Severity`, the `agent_bom.graph` severity
+exports and scanner risk helpers remain compatibility exports of the same implementations. Package
 identity and ecosystem version decisions live in `core/packages.py` and the
 bounded `core/versions/` modules. `package_utils` and `version_utils` preserve
 existing imports; registry requests and per-scan warning delivery remain in the

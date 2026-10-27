@@ -186,7 +186,6 @@ def test_flat_and_human_exports_preserve_owner_sla_and_workflow_status() -> None
 
 def test_machine_interop_exports_preserve_owner_sla_and_workflow_status() -> None:
     from agent_bom.output.cyclonedx_fmt import to_cyclonedx
-    from agent_bom.output.ocsf import finding_to_ocsf
     from agent_bom.output.spdx_fmt import to_spdx
 
     report = _owned_report()
@@ -204,11 +203,6 @@ def test_machine_interop_exports_preserve_owner_sla_and_workflow_status() -> Non
     assert "agent-bom:owner=payments-security" in spdx
     assert "agent-bom:sla-due-at=2026-08-08T00:00:00+00:00" in spdx
     assert "agent-bom:workflow-status=in_progress" in spdx
-
-    ocsf = finding_to_ocsf(finding)
-    assert ocsf["unmapped"]["owner"] == "payments-security"
-    assert ocsf["unmapped"]["sla_due_at"] == "2026-08-08T00:00:00+00:00"
-    assert ocsf["unmapped"]["workflow_status"] == "in_progress"
 
 
 def test_tenant_assignment_is_joined_before_rescan_document_export(monkeypatch) -> None:

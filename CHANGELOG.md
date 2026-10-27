@@ -58,6 +58,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Provider-aware GPU posture checks GPU-001 to GPU-021 (SSH open on EKS GPU node groups, AKS node public IPs, GKE default compute service account, untainted EKS/AKS GPU pools, operator-managed drivers, shared GPUs and multi-tenant time-slicing, privileged / hostPath / host-namespace GPU pods, Databricks no-isolation GPU clusters, shared SPCS GPU pools) in the unified findings stream and the graph.
 - Image scans record model files found in layers and statically disassemble pickle-bearing ones (never deserialized) within the existing pickle byte cap, honouring whiteouts; findings attach to the image. See `site-docs/features/gpu-ai-infrastructure.md`.
 
+### Removed
+- The `agent_bom.ast_js_ts` and `agent_bom.js_ts_ast` import paths, deprecated with a warning since 0.96.4. Import from `agent_bom.ast.js_ts`.
+- Internal modules that no product path imported: `alerts/dedup.py`, `resolvers/drift_detector.py`, `database_evidence.py`, `red_team_governance.py`, `output/ocsf.py` (OCSF export is `siem/ocsf.py`) and the `graph/severity.py` re-export of `core/severity.py`. A test now fails when a module under `src/agent_bom` is neither imported by the package nor named by an entry point, unless it is allowlisted with a reason.
+
 ## [0.111.0] - 2026-10-25
 
 ### Highlights

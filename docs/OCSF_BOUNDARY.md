@@ -6,7 +6,7 @@ wire protocol for event ingestion and SIEM interop**, not agent-bom's internal d
 ## What this means
 
 1. **Core scanning, enrichment, graph, and reporting code does not depend
-   on the OCSF emission modules.** `siem/ocsf.py` and `output/ocsf.py`
+   on the OCSF emission modules.** `siem/ocsf.py` and `siem/delta_stream.py`
    translate canonical product records for external consumers. The separate
    inbound adapter normalizes selected OCSF fields into canonical runtime
    observations; downstream code consumes those observations.
@@ -25,9 +25,8 @@ wire protocol for event ingestion and SIEM interop**, not agent-bom's internal d
    AWS-→-OCSF-→-internal double hop. Cloud scanners do not route native inventory through OCSF;
    OCSF adapters remain at the external ingestion and export boundaries.
 4. **OCSF emission stays at the wire boundary.** Translators live
-   in `siem/ocsf.py` (SIEM push, Detection Finding, `class_uid=2004`),
-   `siem/delta_stream.py` (finding delta-stream projection), and
-   `output/ocsf.py` (MCP tool output, Security Finding, `class_uid=2001`).
+   in `siem/ocsf.py` (SIEM push, Detection Finding, `class_uid=2004`) and
+   `siem/delta_stream.py` (finding delta-stream projection).
    Runtime alerts and finding-delta export batches are translated at the
    boundary; CIS / skills / CVE findings stay in internal JSON otherwise.
 
@@ -59,12 +58,11 @@ See [SIEM ingestion](../site-docs/deployment/siem-integration.md#inbound-ocsf-in
 - `siem/` — connector layer, may freely import OCSF.
 - `api/observability_events.py` and `api/ocsf_fields.py` — inbound adapters;
   normalize external fields without importing the emission modules.
-- `output/ocsf.py` — OCSF serializer for MCP tool callers.
 - `graph/ocsf.py` — a thin mapping table (`EntityType` → OCSF
   `category_uid` / `class_uid`) plus `ocsf_type_uid()`. The graph Node
   dataclass carries the resulting IDs as inert fields (reserved seats
   for SIEM export). **No core logic branches on these fields.**
-- `graph/severity.py` — `OCSFSeverity` IntEnum (UNKNOWN=0 … CRITICAL=5)
+- `core/severity.py` — `OCSFSeverity` IntEnum (UNKNOWN=0 … CRITICAL=5)
   used as a stable integer severity scale. Coincidence of convention,
   not a dependency; would stay even without OCSF.
 
@@ -73,7 +71,7 @@ See [SIEM ingestion](../site-docs/deployment/siem-integration.md#inbound-ocsf-in
 Anything under `scan`, `enrichment`, `parsers`, `cli`, `cloud`
 (CIS benchmarks and cloud asset models), `skills`, `analyzers`,
 `api`, `dashboard`, `db`, `ingestion` must not import from
-`agent_bom.siem.ocsf` or `agent_bom.output.ocsf`. These modules
+`agent_bom.siem.ocsf`. These modules
 describe product behaviour; external OCSF payloads are normalized at the
 API boundary before entering the internal model.
 

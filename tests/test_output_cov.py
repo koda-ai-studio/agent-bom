@@ -43,7 +43,6 @@ from agent_bom.output import (
     to_spdx,
 )
 from agent_bom.output.exposure_path import blast_radius_exposure_path
-from agent_bom.output.ocsf import alert_to_ocsf
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -1359,27 +1358,6 @@ def test_to_sarif_emits_unified_non_cve_findings():
 
     assert "finding/MCP_BLOCKLIST" in rule_ids
     assert "mcp.json" in uris
-
-
-def test_output_ocsf_preserves_nested_sanitized_details():
-    event = alert_to_ocsf(
-        {
-            "severity": "high",
-            "detector": "argument_analyzer",
-            "message": "suspicious resource read",
-            "details": {
-                "tool": "resources/read",
-                "discovery_provenance": {
-                    "source_type": "operator_pushed_inventory",
-                    "source": "pipeline:token=secret",
-                },
-            },
-        }
-    )
-
-    data = event["resources"][0]["data"]
-    assert data["discovery_provenance"]["source_type"] == "operator_pushed_inventory"
-    assert "secret" not in str(data)
 
 
 def test_to_sarif_normalizes_iac_and_ai_inventory_paths():

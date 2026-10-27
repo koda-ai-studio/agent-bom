@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import importlib
 import tomllib
-import warnings
 from pathlib import Path
+
+import pytest
 
 
 def test_js_ts_parser_runtime_is_installed_by_the_base_package() -> None:
@@ -55,31 +57,6 @@ def test_package_declares_public_api():
     }
 
 
-def test_legacy_facade_module_delegates_to_package():
-    from agent_bom.ast.js_ts import facade
-
-    with warnings.catch_warnings(record=True):
-        warnings.simplefilter("always")
-        import agent_bom.ast_js_ts as legacy_facade
-
-        assert legacy_facade.scan_js_ts_file is facade.scan_js_ts_file
-        assert legacy_facade.build_js_ts_flow_findings is facade.build_js_ts_flow_findings
-        assert legacy_facade.build_js_ts_dependency_symbol_reach is facade.build_js_ts_dependency_symbol_reach
-        assert legacy_facade._npm_package_from_module is facade._npm_package_from_module
-
-
-def test_legacy_engine_module_delegates_to_package():
-    from agent_bom.ast.js_ts import engine
-
-    with warnings.catch_warnings(record=True):
-        warnings.simplefilter("always")
-        import agent_bom.js_ts_ast as legacy_engine
-
-        assert legacy_engine.analyze_js_ts_block is engine.analyze_js_ts_block
-        assert legacy_engine.JSTSAstUnavailableError is engine.JSTSAstUnavailableError
-        assert legacy_engine.JSTSFunction is engine.JSTSFunction
-
-
 def test_scan_degrades_to_regex_when_engine_unavailable(tmp_path, monkeypatch):
     from agent_bom.ast.js_ts import JSTSAstUnavailableError, engine, scan_js_ts_file
     from agent_bom.scanners.state import consume_coverage_warnings, reset_scan_warnings
@@ -109,32 +86,8 @@ def test_scan_degrades_to_regex_when_engine_unavailable(tmp_path, monkeypatch):
     ]
 
 
-def test_legacy_modules_warn_deprecation():
-    import agent_bom.ast_js_ts as legacy_facade
-    import agent_bom.js_ts_ast as legacy_engine
-
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        getattr(legacy_facade, "scan_js_ts_file")  # noqa: B009
-        getattr(legacy_engine, "analyze_js_ts_block")  # noqa: B009
-
-    messages = [str(entry.message) for entry in caught if issubclass(entry.category, DeprecationWarning)]
-    assert any("agent_bom.ast.js_ts" in message for message in messages)
-    assert len(messages) >= 2
-
-
-def test_legacy_wildcard_imports_preserve_public_api():
-    facade_namespace: dict[str, object] = {}
-    engine_namespace: dict[str, object] = {}
-
-    with warnings.catch_warnings(record=True):
-        warnings.simplefilter("always")
-        exec("from agent_bom.ast_js_ts import *", facade_namespace)
-        exec("from agent_bom.js_ts_ast import *", engine_namespace)
-
-    assert callable(facade_namespace["scan_js_ts_file"])
-    assert callable(facade_namespace["build_js_ts_flow_findings"])
-    assert callable(facade_namespace["build_js_ts_dependency_symbol_reach"])
-    assert callable(engine_namespace["analyze_js_ts_block"])
-    assert "JSTSAstAnalysis" in engine_namespace
-    assert "JSImportRef" in engine_namespace
+@pytest.mark.parametrize("legacy", ["agent_bom.ast_js_ts", "agent_bom.js_ts_ast"])
+def test_legacy_js_ts_module_paths_are_removed(legacy: str) -> None:
+    """The deprecated shims are gone; agent_bom.ast.js_ts is the only import path."""
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module(legacy)

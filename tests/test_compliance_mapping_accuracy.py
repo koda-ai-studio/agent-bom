@@ -177,15 +177,12 @@ def test_access_control_and_transport_cwes_are_not_output_handling(cwe: str) -> 
 
 def test_every_emitted_owasp_llm_code_is_in_the_catalog() -> None:
     from agent_bom.demo_estate import enterprise_risk
-    from agent_bom.red_team_governance import _CATEGORY_FRAMEWORKS
 
     emitted: set[str] = set()
     for row in CWE_COMPLIANCE_MAP.values():
         emitted.update(row.get("owasp_llm", []))
     for rule in (*enterprise_risk._TOOL_RULES, *enterprise_risk._AI_RULES):
         emitted.update(rule.owasp)
-    for refs in _CATEGORY_FRAMEWORKS.values():
-        emitted.update(ref.removeprefix("OWASP-") for ref in refs if ref.startswith("OWASP-LLM"))
     assert emitted <= set(OFFICIAL_OWASP_LLM_2025)
 
 
@@ -202,15 +199,6 @@ def test_mcp_tool_rules_use_2025_semantics() -> None:
     assert creds["MCP-TOOL-05-credential-in-input"] == {SENSITIVE_INFO}
     weak = tags_for("thing", "name", description="")
     assert weak["MCP-TOOL-07-weak-description"] == {EXCESSIVE_AGENCY}
-
-
-def test_red_team_categories_use_2025_ids() -> None:
-    from agent_bom.red_team_governance import _CATEGORY_FRAMEWORKS
-
-    assert "OWASP-LLM06" in _CATEGORY_FRAMEWORKS["tool_abuse"]
-    assert "OWASP-LLM02" in _CATEGORY_FRAMEWORKS["data_exfiltration"]
-    assert "OWASP-LLM02" in _CATEGORY_FRAMEWORKS["credential_leak"]
-    assert "OWASP-LLM05" in _CATEGORY_FRAMEWORKS["response_manipulation"]
 
 
 def test_dataset_card_tags_use_2025_poisoning_id() -> None:

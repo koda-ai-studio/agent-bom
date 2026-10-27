@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.graph import FINDING_ENTITY_TYPES, EntityType, GraphLayout, GraphSemanticLayer, RelationshipType
-from agent_bom.graph.severity import SEVERITY_RANK
 
 ROOT = Path(__file__).resolve().parent.parent
 TS_GRAPH_SCHEMA = ROOT / "ui" / "lib" / "graph-schema.ts"

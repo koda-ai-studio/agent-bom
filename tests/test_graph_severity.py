@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from agent_bom.finding import Asset, Finding, FindingSource, FindingType
-from agent_bom.graph.severity import (
+from agent_bom.core.severity import (
     SEVERITY_POLICY_ORDER,
     normalize_severity,
     severity_at_or_above,
     severity_policy_rank,
     severity_worst_first_rank,
 )
+from agent_bom.finding import Asset, Finding, FindingSource, FindingType
 
 
 def test_normalize_severity_lowercases_and_maps_informational():
@@ -80,7 +80,7 @@ def test_bulk_ingest_severity_uses_central_vendor_mapping():
 
 
 def test_rank_and_ocsf_helpers_strip_whitespace_and_accept_vendor_labels():
-    from agent_bom.graph.severity import OCSFSeverity, severity_rank, severity_to_ocsf
+    from agent_bom.core.severity import OCSFSeverity, severity_rank, severity_to_ocsf
 
     assert severity_rank(" high ") == severity_rank("high") == 4
     assert severity_rank("Moderate") == severity_rank("medium")

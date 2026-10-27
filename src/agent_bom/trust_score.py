@@ -27,7 +27,7 @@ from agent_bom.models import MCPServer, Severity
 
 logger = logging.getLogger(__name__)
 
-# CVE deduction weights keyed by canonical severity rank (graph.severity.SEVERITY_RANK).
+# CVE deduction weights keyed by canonical severity rank (core.severity.SEVERITY_RANK).
 _CVE_WEIGHT_BY_RANK: dict[int, float] = {
     5: 8.0,  # critical
     4: 5.0,  # high

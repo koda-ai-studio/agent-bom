@@ -120,7 +120,7 @@ if needed) and deletes its name from `ALLOWED_TOP_LEVEL_MODULES` is welcome.
 |---|---|---|
 | MCP server and helpers | `mcp_server*.py`, `mcp_*.py` | `mcp_tools/` or a future `mcp/` package |
 | Runtime enforcement | `proxy*.py`, `gateway*.py`, `firewall*.py`, `shield.py`, `enforcement.py` | `runtime/` |
-| Source analysis | `ast_*.py`, `sast.py`, `js_ts_ast.py` | `ast/` |
+| Source analysis | `ast_*.py`, `sast.py` | `ast/` |
 | Compliance frameworks | `owasp*.py`, `nist_*.py`, `mitre_*.py`, `soc2.py`, `iso_27001.py`, `compliance_*.py` | a future `compliance/` package |
 | Enrichment and intel | `enrichment*.py`, `intel_*.py`, `atlas*.py`, `exploitability.py` | `scanners/` or a future `intel/` package |
 | Graph bridge | `context_graph.py`, `graph_backend.py` | `graph/` |

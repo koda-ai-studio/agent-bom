@@ -94,7 +94,7 @@ _SECURITY_SEVERITY_SCORE = {
 
 # ``info`` is the unified findings stream's spelling for "reported, not a
 # problem" — the same thing SARIF calls level ``none``. Every other label is
-# read the way ``graph.severity.normalize_severity`` reads it, which is what
+# read the way ``core.severity.normalize_severity`` reads it, which is what
 # ``Finding.__post_init__`` has already applied to anything in that stream.
 _SARIF_INFO_LABELS = frozenset({"info", "informational"})
 _UNIFIED_RULE_HELP_URI = "https://github.com/koda-ai-studio/agent-bom#readme"

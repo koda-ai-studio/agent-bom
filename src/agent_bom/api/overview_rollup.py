@@ -44,7 +44,7 @@ def _bucket(sev: str | None, severity: dict[str, int]) -> str:
 
     The single choke point shared by every rollup so a finding is counted in one
     and only one bucket and no unknown severity is silently dropped. Delegates
-    to ``graph.severity`` so this module and every other severity strip in the
+    to ``core.severity`` so this module and every other severity strip in the
     product answer the question identically.
     """
     return severity_display_bucket(sev)

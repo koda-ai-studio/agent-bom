@@ -221,7 +221,7 @@ def test_sqlite_cvss_sort_uses_index(tmp_path) -> None:
 def test_sqlite_severity_filter_cvss_sort_uses_index(tmp_path) -> None:
     """severity=critical&sort=cvss must use the severity_rank+cvss composite
     index instead of json_extract on payload (#3192)."""
-    from agent_bom.graph.severity import severity_policy_rank
+    from agent_bom.core.severity import severity_policy_rank
 
     store = SQLiteComplianceHubStore(str(tmp_path / "hub.db"))
     tenant = "tenant-plan"

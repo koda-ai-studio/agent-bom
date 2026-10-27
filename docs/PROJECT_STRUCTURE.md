@@ -102,7 +102,7 @@ The self-hosted operator surface. Same evidence, multi-tenant, audited.
 | Output formatters | `output/` | JSON, SARIF, CycloneDX, SPDX, OCSF, HTML, PDF, CSV, Markdown, JUnit, Prometheus, console, plus graph/mermaid/svg/badge renderers. |
 | SIEM / connectors | `siem/`, `connectors/`, `integrations/` | OCSF SIEM export; Jira/Slack/ServiceNow/Vanta/Drata. |
 | Alerts | `alerts/` | Dedup, dispatch, scan alerts. |
-| Evidence | `evidence/`, `compliance_hub*.py`, `database_evidence.py` | Compliance evidence bundles and policy evidence. |
+| Evidence | `evidence/`, `compliance_hub*.py` | Compliance evidence bundles and policy evidence. |
 
 ### 6. CLI — the developer/CI entry point
 

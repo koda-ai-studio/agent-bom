@@ -203,7 +203,7 @@ def test_severity_cursor_from_payload_row_derives_rank_from_severity() -> None:
     """Enriched API payloads carry ``severity`` but historically not
     ``severity_rank``; the cursor must never silently collapse to rank 0."""
     from agent_bom.api.finding_cursor import cursor_from_current_row
-    from agent_bom.graph.severity import severity_policy_rank
+    from agent_bom.core.severity import severity_policy_rank
 
     payload_row = {
         "id": "payload-1",
@@ -222,7 +222,7 @@ def test_row_is_after_cursor_severity_derives_rank_from_severity() -> None:
     """A row missing ``severity_rank`` must compare by its severity string,
     not fall to rank 0 (which made every real row look already-consumed)."""
     from agent_bom.api.finding_cursor import row_is_after_cursor
-    from agent_bom.graph.severity import severity_policy_rank
+    from agent_bom.core.severity import severity_policy_rank
 
     medium_row = {
         "canonical_id": "medium-1",

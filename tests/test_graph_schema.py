@@ -171,13 +171,6 @@ class TestUnifiedSeverity:
         assert _SEVERITY_RANK is SEVERITY_RANK
         assert _SEVERITY_BADGE is SEVERITY_BADGE
 
-    def test_output_ocsf_uses_unified_severity(self):
-        """Verify output/ocsf.py uses graph_schema severity mapping."""
-        from agent_bom.graph import SEVERITY_TO_OCSF
-        from agent_bom.output.ocsf import _SEVERITY_MAP
-
-        assert _SEVERITY_MAP is SEVERITY_TO_OCSF
-
     def test_siem_ocsf_uses_unified_severity(self):
         """Verify siem/ocsf.py uses graph_schema severity mapping."""
         from agent_bom.graph import OCSF_SEVERITY_NAMES, SEVERITY_TO_OCSF

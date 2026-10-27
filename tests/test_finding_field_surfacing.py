@@ -21,7 +21,6 @@ from agent_bom.models import (
     Vulnerability,
 )
 from agent_bom.output.json_fmt import to_json
-from agent_bom.output.ocsf import finding_to_ocsf, findings_to_ocsf
 from agent_bom.output.sarif import to_sarif
 
 # The fields PR-2 adds to each format. Stripping these from a plain finding's
@@ -254,45 +253,3 @@ def test_sarif_plain_result_properties_superset_only():
 # ---------------------------------------------------------------------------
 # OCSF surfacing
 # ---------------------------------------------------------------------------
-
-
-def test_ocsf_suppressed_finding_status_suppressed():
-    finding = blast_radius_to_finding(_suppressed_br())
-    event = finding_to_ocsf(finding, product_version="9.9.9")
-    assert event["class_uid"] == 2001
-    assert event["status_id"] == 4  # Suppressed
-    assert event["status"] == "Suppressed"
-    supp = event["unmapped"]["suppression"]
-    assert supp["suppressed"] is True
-    assert supp["suppression_id"] == "550e8400-e29b-41d4-a716-446655440000"
-    assert supp["suppression_state"] == "acknowledged"
-    assert supp["unsuppressed_risk_score"] == 9.2
-
-
-def test_ocsf_ai_context_and_reach_surface():
-    finding = blast_radius_to_finding(_ai_context_br())
-    event = finding_to_ocsf(finding)
-    ai = event["unmapped"]["ai_context"]
-    assert ai["ai_risk_context"] == "Reachable from an internet-exposed agent"
-    assert ai["ai_summary"] == "LLM-generated risk narrative"
-    assert ai["attack_vector_summary"] == "agent -> srv-a -> vulnerable aipkg"
-    assert event["unmapped"]["affected_servers"] == ["srv-a", "srv-b", "srv-c"]
-    assert event["unmapped"]["exposed_credentials"] == ["AWS_SECRET_ACCESS_KEY", "STRIPE_KEY"]
-
-
-def test_ocsf_plain_finding_status_new_and_no_suppression():
-    finding = blast_radius_to_finding(_plain_br())
-    event = finding_to_ocsf(finding)
-    assert event["status_id"] == 1  # New
-    assert event["status"] == "New"
-    assert "suppression" not in event["unmapped"]
-    assert "ai_context" not in event["unmapped"]
-    assert event["unmapped"]["affected_servers"] == ["plain-server"]
-    # JSON-serializable.
-    json.dumps(event)
-
-
-def test_findings_to_ocsf_batch():
-    findings = [blast_radius_to_finding(br) for br in (_plain_br(), _suppressed_br())]
-    events = findings_to_ocsf(findings)
-    assert [e["status_id"] for e in events] == [1, 4]
