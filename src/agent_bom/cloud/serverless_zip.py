@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import base64
 import io
 import logging
 import zipfile
 from typing import Any
 
+from agent_bom.cloud.archive_limits import MAX_ARCHIVE_BYTES, ArchiveLimitError, BoundedArchiveBuffer, validate_archive
 from agent_bom.models import Package
 from agent_bom.security import sanitize_text
 
@@ -15,20 +17,19 @@ logger = logging.getLogger(__name__)
 
 def packages_from_zip_bytes(data: bytes, *, ecosystem: str) -> list[Package]:
     """Parse Python or Node packages from an in-memory deployment zip."""
-    if not data:
-        return []
+    if len(data) > MAX_ARCHIVE_BYTES:
+        raise ArchiveLimitError("Deployment archive exceeds compressed byte limit")
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
-            if ecosystem == "pypi":
-                from agent_bom.cloud.aws import _parse_python_packages_from_zip
+            validate_archive(zf)
+            from agent_bom.cloud.aws_lambda_packages import _parse_node_packages_from_zip, _parse_python_packages_from_zip
 
+            if ecosystem == "pypi":
                 return _parse_python_packages_from_zip(zf)
             if ecosystem == "npm":
-                from agent_bom.cloud.aws import _parse_node_packages_from_zip
-
                 return _parse_node_packages_from_zip(zf)
-    except Exception as exc:  # noqa: BLE001 — malformed archives degrade to empty
-        logger.debug("Could not parse serverless zip (%s): %s", ecosystem, sanitize_text(exc))
+    except (zipfile.BadZipFile, OSError, RuntimeError) as exc:
+        raise ArchiveLimitError("Deployment archive could not be inspected") from exc
     return []
 
 
@@ -59,10 +60,13 @@ def extract_gcp_storage_source_packages(
         return []
     try:
         client = storage.Client()
-        data = client.bucket(bucket).blob(obj).download_as_bytes()
-        return packages_from_zip_bytes(data, ecosystem=eco)
+        blob = client.bucket(bucket).blob(obj)
+        blob.chunk_size = 256 * 1024
+        with BoundedArchiveBuffer() as sink:
+            blob.download_to_file(sink, raw_download=True)
+            return packages_from_zip_bytes(sink.getvalue(), ecosystem=eco)
     except Exception as exc:  # noqa: BLE001
-        warnings.append(f"Could not parse GCS source gs://{bucket}/{obj}: {exc}")
+        warnings.append(f"Could not parse GCS source gs://{bucket}/{obj}: {sanitize_text(exc)}; package coverage incomplete.")
         return []
 
 
@@ -90,13 +94,11 @@ def extract_azure_function_packages(
             warnings.append(f"Azure Function {app_name}: publishing credentials unavailable for zip fetch.")
             return []
         zip_url = f"{scm_uri}/api/zip/site/wwwroot/"
-        import base64
-
         from agent_bom.http_client import fetch_bytes
 
         token = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
-        data = fetch_bytes(zip_url, timeout=60, headers={"Authorization": f"Basic {token}"})
+        data = fetch_bytes(zip_url, timeout=60, headers={"Authorization": f"Basic {token}"}, max_bytes=MAX_ARCHIVE_BYTES)
         return packages_from_zip_bytes(data, ecosystem=eco)
     except Exception as exc:  # noqa: BLE001
-        warnings.append(f"Could not parse Azure Function deployment zip for {app_name}: {exc}")
+        warnings.append(f"Could not parse Azure Function deployment zip for {app_name}: {sanitize_text(exc)}; package coverage incomplete.")
         return []

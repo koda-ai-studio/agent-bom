@@ -41,7 +41,7 @@ class _FakeSession:
 
 
 def test_lambda_scans_inline_deployment_package(monkeypatch):
-    monkeypatch.setattr(http_client, "fetch_bytes", lambda url, timeout=60: _zip_with_requests())
+    monkeypatch.setattr(http_client, "fetch_bytes", lambda url, timeout=60, max_bytes=None: _zip_with_requests())
     session = _FakeSession(_FakeLambdaClient(with_code=True))
     warnings: list[str] = []
 
@@ -52,7 +52,7 @@ def test_lambda_scans_inline_deployment_package(monkeypatch):
 
 
 def test_lambda_no_code_location_is_graceful(monkeypatch):
-    monkeypatch.setattr(http_client, "fetch_bytes", lambda url, timeout=60: b"")
+    monkeypatch.setattr(http_client, "fetch_bytes", lambda url, timeout=60, max_bytes=None: b"")
     session = _FakeSession(_FakeLambdaClient(with_code=False))
     warnings: list[str] = []
     pkgs = aws._extract_lambda_packages(session, "arn:aws:lambda:us-east-2:1:function:fn", "us-east-2", warnings)

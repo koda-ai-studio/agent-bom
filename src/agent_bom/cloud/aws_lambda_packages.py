@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-import io
 import json
 import zipfile
 from email.parser import Parser as EmailParser
 from pathlib import Path
 from typing import Any
 
+from agent_bom.cloud.archive_limits import MAX_ARCHIVE_BYTES, ArchiveLimitError, read_member, validate_archive
+from agent_bom.cloud.serverless_zip import packages_from_zip_bytes
 from agent_bom.models import Package
+from agent_bom.security import sanitize_text
 
 from .normalization import (
     build_package_purl,
@@ -48,7 +50,9 @@ def _extract_lambda_packages(
                 layer_packages = _packages_from_layer(lambda_client, layer_arn, ecosystem)
                 packages.extend(layer_packages)
             except Exception as exc:
-                warnings.append(f"Could not extract packages from Lambda layer {layer_arn}: {exc}")
+                warnings.append(
+                    f"Could not extract packages from Lambda layer {layer_arn}: {sanitize_text(exc)}; package coverage incomplete."
+                )
 
         # Extract from the function's own deployment package. Most functions
         # bundle their dependencies inline (vendored into the zip) rather than
@@ -58,17 +62,16 @@ def _extract_lambda_packages(
             try:
                 from agent_bom.http_client import fetch_bytes
 
-                code_bytes = fetch_bytes(code_location, timeout=60)
-                with zipfile.ZipFile(io.BytesIO(code_bytes)) as zf:
-                    if ecosystem == "pypi":
-                        packages.extend(_parse_python_packages_from_zip(zf))
-                    else:
-                        packages.extend(_parse_node_packages_from_zip(zf))
+                code_bytes = fetch_bytes(code_location, timeout=60, max_bytes=MAX_ARCHIVE_BYTES)
+                packages.extend(packages_from_zip_bytes(code_bytes, ecosystem=ecosystem))
             except Exception as exc:
-                warnings.append(f"Could not extract packages from Lambda deployment package {lambda_arn}: {exc}")
+                warnings.append(
+                    f"Could not extract packages from Lambda deployment package {lambda_arn}: "
+                    f"{sanitize_text(exc)}; package coverage incomplete."
+                )
 
     except Exception as exc:
-        warnings.append(f"Could not get Lambda function {lambda_arn}: {exc}")
+        warnings.append(f"Could not get Lambda function {lambda_arn}: {sanitize_text(exc)}; package coverage incomplete.")
 
     return _dedupe_packages(packages)
 
@@ -90,16 +93,8 @@ def _packages_from_layer(
     # Download the layer zip
     from agent_bom.http_client import fetch_bytes
 
-    layer_bytes = fetch_bytes(download_url, timeout=60)
-
-    # Parse the zip for package metadata
-    with zipfile.ZipFile(io.BytesIO(layer_bytes)) as zf:
-        if ecosystem == "pypi":
-            packages = _parse_python_packages_from_zip(zf)
-        elif ecosystem == "npm":
-            packages = _parse_node_packages_from_zip(zf)
-
-    return packages
+    layer_bytes = fetch_bytes(download_url, timeout=60, max_bytes=MAX_ARCHIVE_BYTES)
+    return packages_from_zip_bytes(layer_bytes, ecosystem=ecosystem)
 
 
 def _dedupe_packages(packages: list[Package]) -> list[Package]:
@@ -121,10 +116,12 @@ def _parse_python_packages_from_zip(zf: zipfile.ZipFile) -> list[Package]:
     packages: list[Package] = []
     seen: set[str] = set()
 
-    for name in zf.namelist():
+    validate_archive(zf)
+    for member in zf.infolist():
+        name = member.filename
         if name.endswith(".dist-info/METADATA"):
             try:
-                metadata_text = zf.read(name).decode("utf-8", errors="replace")
+                metadata_text = read_member(zf, member).decode("utf-8", errors="replace")
                 parser = EmailParser()
                 msg = parser.parsestr(metadata_text)
                 pkg_name = msg.get("Name", "")
@@ -139,8 +136,8 @@ def _parse_python_packages_from_zip(zf: zipfile.ZipFile) -> list[Package]:
                             purl=build_package_purl(ecosystem="pypi", name=pkg_name, version=pkg_version),
                         )
                     )
-            except Exception:
-                continue
+            except Exception as exc:
+                raise ArchiveLimitError("Deployment archive metadata could not be inspected") from exc
 
     return packages
 
@@ -150,11 +147,13 @@ def _parse_node_packages_from_zip(zf: zipfile.ZipFile) -> list[Package]:
     packages: list[Package] = []
     seen: set[str] = set()
 
-    for name in zf.namelist():
+    validate_archive(zf)
+    for member in zf.infolist():
+        name = member.filename
         parts = Path(name).parts
         if len(parts) >= 3 and parts[-1] == "package.json" and "node_modules" in parts:
             try:
-                data = json.loads(zf.read(name))
+                data = json.loads(read_member(zf, member))
                 pkg_name = data.get("name", "")
                 pkg_version = data.get("version", "")
                 if pkg_name and pkg_version and pkg_name not in seen:
@@ -167,7 +166,7 @@ def _parse_node_packages_from_zip(zf: zipfile.ZipFile) -> list[Package]:
                             purl=build_package_purl(ecosystem="npm", name=pkg_name, version=pkg_version),
                         )
                     )
-            except Exception:
-                continue
+            except Exception as exc:
+                raise ArchiveLimitError("Deployment archive metadata could not be inspected") from exc
 
     return packages

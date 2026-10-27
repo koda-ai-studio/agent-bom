@@ -87,7 +87,7 @@ def test_host_allowlist_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _fake_clone(populate, returncode: int = 0, stderr: str = ""):
-    """Build a fake subprocess.run that 'clones' by populating the dest dir.
+    """Build a fake clone runner that 'clones' by populating the dest dir.
 
     The destination dir is the last positional arg in the git argv (the temp
     dir agent-bom created). ``populate(dest)`` may add files to simulate a repo.
@@ -114,7 +114,7 @@ def test_clone_success_scans_and_cleans_up(monkeypatch: pytest.MonkeyPatch) -> N
         (dest / "package.json").write_text('{"name": "x"}')
         captured["dest"] = dest
 
-    monkeypatch.setattr(subprocess, "run", _fake_clone(populate))
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", _fake_clone(populate))
 
     with clone_repository("https://github.com/org/repo") as cloned:
         assert cloned.exists()
@@ -124,7 +124,7 @@ def test_clone_success_scans_and_cleans_up(monkeypatch: pytest.MonkeyPatch) -> N
     # try/finally must have removed the temp dir.
     assert not captured["seen"].exists()
     # Shallow + single-branch + no-submodules flags present; no shell.
-    argv = subprocess.run.captured_cmd  # type: ignore[attr-defined]
+    argv = repo_scan.run_bounded_clone.captured_cmd  # type: ignore[attr-defined]
     assert "clone" in argv and "--depth" in argv and "1" in argv
     assert "--single-branch" in argv
     assert "--no-recurse-submodules" in argv
@@ -142,7 +142,7 @@ def test_clone_failure_raises_and_cleans_up(monkeypatch: pytest.MonkeyPatch) -> 
         return d
 
     monkeypatch.setattr(repo_scan.tempfile, "mkdtemp", tracking_mkdtemp)
-    monkeypatch.setattr(subprocess, "run", _fake_clone(None, returncode=128, stderr="fatal: repository not found"))
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", _fake_clone(None, returncode=128, stderr="fatal: repository not found"))
 
     with pytest.raises(RepoScanError) as exc:
         with clone_repository("https://github.com/org/missing"):
@@ -166,7 +166,7 @@ def test_clone_timeout_raises_and_cleans_up(monkeypatch: pytest.MonkeyPatch) -> 
     def _timeout(cmd, *a, **k):  # noqa: ANN001, ANN002, ANN003
         raise subprocess.TimeoutExpired(cmd, 1)
 
-    monkeypatch.setattr(subprocess, "run", _timeout)
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", _timeout)
 
     with pytest.raises(RepoScanError) as exc:
         with clone_repository("https://github.com/org/slow"):
@@ -182,7 +182,7 @@ def test_invalid_url_never_clones(monkeypatch: pytest.MonkeyPatch) -> None:
         called["n"] += 1
         raise AssertionError("git must not run for an invalid URL")
 
-    monkeypatch.setattr(subprocess, "run", _run)
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", _run)
     with pytest.raises(RepoScanError):
         with clone_repository("file:///etc/passwd"):
             pass  # pragma: no cover
@@ -199,7 +199,7 @@ def test_file_count_cap_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
         for i in range(10):
             (dest / f"f{i}.txt").write_text("x")
 
-    monkeypatch.setattr(subprocess, "run", _fake_clone(populate))
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", _fake_clone(populate))
     with pytest.raises(RepoScanError) as exc:
         with clone_repository("https://github.com/org/big"):
             pass  # pragma: no cover
@@ -212,7 +212,7 @@ def test_size_cap_enforced(monkeypatch: pytest.MonkeyPatch) -> None:
     def populate(dest: Path) -> None:
         (dest / "big.bin").write_text("x" * 1000)
 
-    monkeypatch.setattr(subprocess, "run", _fake_clone(populate))
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", _fake_clone(populate))
     with pytest.raises(RepoScanError) as exc:
         with clone_repository("https://github.com/org/huge"):
             pass  # pragma: no cover
@@ -229,7 +229,7 @@ def test_token_used_but_never_leaked(monkeypatch: pytest.MonkeyPatch) -> None:
         (dest / "readme").write_text("ok")
 
     runner = _fake_clone(populate)
-    monkeypatch.setattr(subprocess, "run", runner)
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", runner)
 
     with clone_repository("https://github.com/org/private", token_env="MY_TOKEN"):
         pass
@@ -252,8 +252,8 @@ def test_token_scrubbed_from_clone_error(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("MY_TOKEN", "supersecrettoken123")
     # git failure whose stderr echoes the secret — must be scrubbed before surfacing.
     monkeypatch.setattr(
-        subprocess,
-        "run",
+        repo_scan,
+        "run_bounded_clone",
         _fake_clone(None, returncode=128, stderr="auth failed for supersecrettoken123"),
     )
     with pytest.raises(RepoScanError) as exc:
@@ -283,7 +283,7 @@ def test_only_git_is_executed_never_repo_code(monkeypatch: pytest.MonkeyPatch) -
         os.chmod(dest / "evil.sh", 0o700)  # owner-only; payload must never run regardless
         return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
-    monkeypatch.setattr(subprocess, "run", _run)
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", _run)
 
     pwned = Path("/tmp/abom_pwned")
     if pwned.exists():
@@ -311,7 +311,7 @@ async def test_scan_impl_repo_url_clones_and_routes(monkeypatch: pytest.MonkeyPa
     def populate(dest: Path) -> None:
         (dest / "requirements.txt").write_text("requests==2.0.0\n")
 
-    monkeypatch.setattr(subprocess, "run", _fake_clone(populate))
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", _fake_clone(populate))
 
     async def fake_pipeline(config_path, image, sbom_path, package, enrich, **kw):  # noqa: ANN001, ANN002, ANN003
         captured["config_path"] = config_path
@@ -393,7 +393,7 @@ def test_clone_disables_redirect_following(monkeypatch: pytest.MonkeyPatch) -> N
         (dest / "readme").write_text("ok")
 
     runner = _fake_clone(populate)
-    monkeypatch.setattr(subprocess, "run", runner)
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", runner)
 
     with clone_repository("https://github.com/org/repo"):
         pass
@@ -440,7 +440,7 @@ async def test_repo_clone_runs_off_event_loop(monkeypatch: pytest.MonkeyPatch) -
     def populate(dest: Path) -> None:
         (dest / "requirements.txt").write_text("requests==2.0.0\n")
 
-    monkeypatch.setattr(subprocess, "run", _fake_clone(populate))
+    monkeypatch.setattr(repo_scan, "run_bounded_clone", _fake_clone(populate))
 
     async def fake_pipeline(*a, **k):  # noqa: ANN002, ANN003
         return [], [], [], []

@@ -115,7 +115,7 @@ def _compile(lines: list[str]) -> PathSpec | None:
 
 def _read(path: Path) -> list[str] | None:
     try:
-        if not path.is_file():
+        if path.is_symlink() or not path.is_file():
             return None
         return path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:

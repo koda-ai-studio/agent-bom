@@ -86,7 +86,7 @@ def is_nested_worktree_root(dirpath: Path) -> bool:
         # Python 3.12/3.13 raise EACCES from is_file() for a child of a
         # directory without search permission; an unreadable directory is not
         # provably a worktree, and the walk reports it as a read error.
-        if not pointer.is_file():
+        if pointer.is_symlink() or not pointer.is_file():
             return False
         content = pointer.read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -113,12 +113,27 @@ def _prune_dirnames(
     dirnames: list[str],
     skip: frozenset[str],
     on_prune: Callable[[Path, str], None] | None = None,
+    on_error: Callable[[OSError], None] | None = None,
 ) -> None:
     """Prune ancestors without enumerating their children; report exclusions."""
     kept = []
     for name in dirnames:
         child = dirpath / name
-        reason = "directory_policy" if name in skip else ("nested_worktree" if is_nested_worktree_root(child) else "")
+        try:
+            is_link = child.is_symlink()
+        except OSError as exc:
+            if on_error is not None:
+                on_error(exc)
+            continue
+        reason = (
+            "directory_symlink"
+            if is_link
+            else "directory_policy"
+            if name in skip
+            else "nested_worktree"
+            if is_nested_worktree_root(child)
+            else ""
+        )
         if reason:
             if on_prune is not None:
                 on_prune(child, reason)
@@ -198,9 +213,7 @@ def iter_discovery_files(
     report_gap = _coverage_recorder(root)
 
     def note_pruned(path: Path, reason: str) -> None:
-        report_gap(
-            reason, "Directory subtrees were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected."
-        )
+        report_gap(reason, "Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected.")
         if on_prune is not None:
             on_prune(path, reason)
 
@@ -222,19 +235,7 @@ def iter_discovery_files(
             report_gap("directory_read_error", "One or more directories could not be read.", dirpath)
             dirnames[:] = []
             continue
-        _prune_dirnames(dirpath, dirnames, skip, note_pruned)
-        for name in list(dirnames):
-            try:
-                is_link = (dirpath / name).is_symlink()
-            except OSError as exc:
-                # The parent lists but cannot be searched: nothing under it is
-                # reachable, so count the gap instead of aborting the walk.
-                note_error(exc)
-                dirnames.remove(name)
-                continue
-            if is_link:
-                note_pruned(dirpath / name, "directory_symlink")
-                dirnames.remove(name)
+        _prune_dirnames(dirpath, dirnames, skip, note_pruned, note_error)
         if ignore is not None:
             rel_dir = _relative_posix(root, dirpath)
             ignore.enter_directory(rel_dir)
@@ -250,6 +251,15 @@ def iter_discovery_files(
                     kept.append(name)
             dirnames[:] = kept
         for name in filenames:
+            candidate = dirpath / name
+            try:
+                is_link = candidate.is_symlink()
+            except OSError as exc:
+                note_error(exc)
+                continue
+            if is_link:
+                note_pruned(candidate, "file_symlink")
+                continue
             if ignore is not None:
                 rel_file = f"{rel_dir}/{name}" if rel_dir else name
                 if ignore.is_ignored_file(rel_file):
