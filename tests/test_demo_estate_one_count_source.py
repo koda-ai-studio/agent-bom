@@ -102,6 +102,9 @@ def _check_vuln_card_equals_its_drill_down(surfaces: dict[str, dict], client: Te
     linked = _get(client, "/v1/findings", limit=1, include_facets="true", **api_params)
     assert domain["metric"] > 0
     assert linked["total"] == domain["metric"], (domain["href"], linked["total"], domain["metric"])
+    # A deadline-truncated facet walk is a labelled lower bound; on this small
+    # estate the walk must finish, so say so rather than report a count mismatch.
+    assert linked["facets_approximate"] is False, linked["facet_metadata"]["completeness"]
     assert _bands(linked["facets"]["severity"]) == _bands(domain["detail"]["severity"])
     by_domain = _get(client, "/v1/findings", limit=1, include_facets="true", domain="vuln")
     assert by_domain["total"] == domain["metric"], ("domain=vuln", by_domain["total"], domain["metric"])
