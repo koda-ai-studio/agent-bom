@@ -449,6 +449,7 @@ AGENT_BOM_PUSH_TAGS
 AGENT_BOM_PUSH_URL
 AGENT_BOM_RATE_LIMIT_KEY
 AGENT_BOM_REGISTRY_AIRGAPPED
+AGENT_BOM_REGISTRY_ALLOWLIST  # comma-separated registry hosts server-side image scans (API, MCP) may contact; read in oci_registry/policy.py
 # tier-B replay-log TTL in days — issue #2261 (default 7)
 AGENT_BOM_REPLAY_TTL_DAYS
 # optional comma-separated host allowlist for --repo / repo_url clone targets; empty = any host.

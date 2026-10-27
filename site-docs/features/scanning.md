@@ -144,16 +144,41 @@ one at a time into a temporary file and go through the same bounds as archive
 scans (table below); a layer that cannot be downloaded or read — including
 `tar+zstd` layers, which the walk does not decompress — is a named coverage gap.
 Blob redirects to a CDN are followed over HTTPS only, without the registry
-credential. Plain HTTP is accepted only for a registry on `localhost`.
+credential. Plain HTTP is accepted only for a registry on `localhost` (local CLI only).
+Manifest and referrers bodies stop reading at 8 MB, manifest digests are
+verified for `sha256` and `sha512` (any other algorithm is rejected), and a
+redirect host that asks for credentials never receives the registry's.
 
 | `--pull-mode` | Behaviour |
 |---|---|
-| `auto` (default) | Registry first; the local Docker daemon only if the registry pull fails (the reason is printed and kept in the report). |
+| `auto` (default) | A reference without a registry host (`acme/app:dev`) that the local daemon already holds is scanned from the daemon, so it never resolves to a same-named Docker Hub image (the choice is kept in the report notes). Otherwise registry first; the local Docker daemon only if the registry pull fails (the reason is printed and kept in the report). |
 | `registry` | Registry only; never the daemon. |
 | `daemon` | `docker save` through the local daemon; never the registry. |
 
 `--offline` never contacts a registry, so offline image scans use the daemon or
 `--tar`.
+
+### Server-side image scans
+
+API scan jobs (`POST /v1/scan` with `images`) and the MCP `scan` tool scan a
+reference someone else supplied, so they use a stricter registry policy than
+the local CLI:
+
+- HTTPS only — plain HTTP is never used, not even for `localhost`.
+- Loopback, private, link-local, CGNAT and cloud-metadata registries are
+  refused: address literals before any request, DNS answers at connect time
+  (the same pinned egress check as webhook delivery).
+- Anonymous pulls only: the server's `~/.docker/config.json`, credential
+  helpers and `AGENT_BOM_REGISTRY_USER`/`AGENT_BOM_REGISTRY_PASS` are never
+  sent.
+- `AGENT_BOM_REGISTRY_ALLOWLIST` (comma-separated `host` or `host:port`), when
+  set, is the only set of registries a scan may contact.
+- A base image named by an image label or annotation is fetched only from the
+  allowlist, or — without one — from the scanned image's own registry;
+  otherwise its attribution is `skipped-by-policy`.
+- No Docker daemon fallback unless the operator sets
+  `AGENT_BOM_IMAGE_PULL_MODE=daemon`.
+- Error messages omit the upstream HTTP status.
 
 ### Signatures, attestations and base image
 

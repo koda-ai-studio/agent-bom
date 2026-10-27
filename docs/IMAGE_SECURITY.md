@@ -13,8 +13,24 @@ default is `linux/amd64`). When the scan falls back to the Docker daemon
 (`--pull-mode daemon`, or a failed registry pull), the platform is passed to
 Docker pull, archive save, and the stopped container used by the
 filesystem-export fallback; Docker must then support `save --platform`.
-Signature, attestation, base-image and layer-secret evidence is described in
-`site-docs/features/scanning.md`. Review the report's findings and coverage before
+Signature, attestation, base-image and layer-secret evidence, and the
+server-side registry policy, are described in `site-docs/features/scanning.md`.
+
+## Trust boundaries for image scans
+
+- `--require-signature` passes only for a signature `verified` with a cosign
+  public key (`--cosign-key` / `AGENT_BOM_IMAGE_COSIGN_KEY`); without a key it
+  fails with "a cosign public key is required to enforce signatures". A
+  signature artifact that was found but not verified is `present-unverified`
+  and is never treated as trusted.
+- API scan jobs and the MCP `scan` tool pull anonymously over HTTPS only, refuse
+  loopback, private, link-local, CGNAT and metadata registries, honour
+  `AGENT_BOM_REGISTRY_ALLOWLIST`, and do not use the Docker daemon unless the
+  operator sets `AGENT_BOM_IMAGE_PULL_MODE=daemon`.
+- In `auto` mode a reference without a registry host that the local daemon
+  holds is scanned locally rather than resolved to Docker Hub.
+- Image labels, annotations and history are author-controlled: secrets in them
+  are redacted and reported, and MCP results mark them untrusted. Review the report's findings and coverage before
 using its exit status as a policy gate; an extraction error is not a clean scan.
 
 ## Release policy
