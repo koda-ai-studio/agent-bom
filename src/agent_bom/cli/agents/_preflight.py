@@ -20,6 +20,7 @@ from agent_bom.cli.agents._context import ScanContext
 from agent_bom.cli.agents._output import render_output
 from agent_bom.core.severity import severity_at_or_above
 from agent_bom.models import AIBOMReport
+from agent_bom.output.console_iac import DEFAULT_IAC_TABLE_LIMIT, iac_severity_summary, print_iac_findings_table
 
 
 def _print_scanner_verdicts(con: Any, verdicts: list) -> None:
@@ -228,14 +229,7 @@ def iac_partial_coverage_notes(iac_path: str, result: Any) -> list[str]:
 
 def _print_iac_path_result(con: Any, iac_path: str, result: Any) -> None:
     if result.findings:
-        from collections import Counter
-
-        severity_counts = Counter(f.severity for f in result.findings)
-        severity_parts = [
-            f"[red]{severity_counts.get('critical', 0)} critical[/red]",
-            f"[yellow]{severity_counts.get('high', 0)} high[/yellow]",
-        ]
-        con.print(f"  [red]⚠[/red]  {iac_path}: {len(result.findings)} finding(s) ({', '.join(severity_parts)})")
+        con.print(f"  [red]⚠[/red]  {iac_path}: {len(result.findings)} finding(s) ({iac_severity_summary(result.findings)})")
     elif note := iac_unevaluated_note(iac_path, result):
         con.print(note)
     else:
@@ -320,19 +314,16 @@ def run_iac_only_scan(
         # still contribute findings and the run is reported as partial.
         all_iac_findings.extend(posture.findings)
         if posture.findings:
-            from collections import Counter
-
-            severity_counts = Counter(f.severity for f in posture.findings)
-            severity_parts = [
-                f"[red]{severity_counts.get('critical', 0)} critical[/red]",
-                f"[yellow]{severity_counts.get('high', 0)} high[/yellow]",
-            ]
-            con.print(f"  [red]⚠[/red]  live cluster posture: {len(posture.findings)} finding(s) ({', '.join(severity_parts)})")
+            summary = iac_severity_summary(posture.findings)
+            con.print(f"  [red]⚠[/red]  live cluster posture: {len(posture.findings)} finding(s) ({summary})")
         else:
             con.print("  [green]✓[/green] live cluster posture: no misconfigurations in evaluated collectors")
 
         if posture.status is K8sPostureStatus.PARTIAL:
             con.print("  [yellow]partial coverage[/yellow] — some reads were unevaluable; absence of findings there is not a pass")
+
+    if output_format == "console" and not output and not quiet:
+        print_iac_findings_table(con, all_iac_findings, limit=None if verbose else DEFAULT_IAC_TABLE_LIMIT)
 
     iac_report = AIBOMReport(agents=[], blast_radii=[])
     iac_report.iac_findings_data = {

@@ -29,6 +29,7 @@ from agent_bom.sbom_formats.cyclonedx import (
     vulnerability_for_component,
 )
 from agent_bom.sbom_formats.decode import decode_sbom_document
+from agent_bom.sbom_formats.purl_distro import apply_purl_distro
 from agent_bom.sbom_formats.spdx3 import (
     _spdx3_annotation_kv,
     _spdx3_cvss,
@@ -252,7 +253,7 @@ def parse_cyclonedx(data: dict) -> list[Package]:
             if affected_pkg is not None and vuln not in affected_pkg.vulnerabilities:
                 affected_pkg.vulnerabilities.append(vulnerability_for_component(vuln, vuln_data, affected_ref))
 
-    return packages
+    return apply_purl_distro(packages)
 
 
 # ─── SPDX ────────────────────────────────────────────────────────────────────
@@ -437,7 +438,7 @@ def parse_spdx(data: dict) -> list[Package]:
 
         restore_spdx_hierarchy(data, pkg_by_id)
         _spdx3_vulnerabilities(data, pkg_by_id)
-        return packages
+        return apply_purl_distro(packages)
 
     # SPDX 2.x format
     pkg_by_id = {}
@@ -503,7 +504,7 @@ def parse_spdx(data: dict) -> list[Package]:
             pkg_by_id[pkg_spdxid] = packages[-1]
 
     restore_spdx_hierarchy(data, pkg_by_id)
-    return packages
+    return apply_purl_distro(packages)
 
 
 # ─── Auto-detect + load ──────────────────────────────────────────────────────

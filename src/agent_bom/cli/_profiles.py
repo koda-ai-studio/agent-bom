@@ -11,6 +11,7 @@ from typing import Any
 import click
 
 from agent_bom.cli._grouped_help import SuggestingGroup
+from agent_bom.cli._param_source import is_explicit, parameter_source
 from agent_bom.cli._tenant import TENANT_ENV_VAR
 from agent_bom.core.settings import env_is_set, env_opt, env_path, env_raw
 
@@ -130,10 +131,8 @@ def profile_default(
     """Return a profile value only when the current CLI value was not explicit."""
     if not profile:
         return current
-    if ctx is not None:
-        source = ctx.get_parameter_source(param_name)
-        if source in {click.core.ParameterSource.COMMANDLINE, click.core.ParameterSource.ENVIRONMENT}:
-            return current
+    if is_explicit(ctx, param_name):
+        return current
     for key in keys or (param_name,):
         value = profile.get(key)
         if value is not None and value != "":
@@ -149,10 +148,8 @@ def profile_env_default(
     env_ref_key: str,
 ) -> str | None:
     """Resolve a profile default from an environment-variable reference."""
-    if ctx is not None:
-        source = ctx.get_parameter_source(param_name)
-        if source in {click.core.ParameterSource.COMMANDLINE, click.core.ParameterSource.ENVIRONMENT}:
-            return current
+    if is_explicit(ctx, param_name):
+        return current
     env_name = _string_value(profile, env_ref_key)
     if not env_name:
         return current
@@ -213,19 +210,12 @@ def apply_scan_profile_defaults(
         return output, output_format, preset, nvd_api_key, push_url, push_api_key, clickhouse_url
     apply_profile_environment(profile)
     ctx = click.get_current_context(silent=True)
-    output_source = ctx.get_parameter_source("output") if ctx is not None else None
-    format_source = ctx.get_parameter_source("output_format") if ctx is not None else None
-    explicit_output = output_source in {click.core.ParameterSource.COMMANDLINE, click.core.ParameterSource.ENVIRONMENT}
-    explicit_format = format_source in {click.core.ParameterSource.COMMANDLINE, click.core.ParameterSource.ENVIRONMENT}
-    # When `scan` is invoked via ``ctx.invoke`` from a sibling command
-    # (`sbom`, `image`, `iac`, …), Click reports the parameter source as
-    # DEFAULT even though the caller passed an explicit value. Treat a
-    # truthy caller value as a request to honor it; otherwise fall back to
-    # the active profile default. Without this guard, a profile that pins
-    # ``output = "agent-bom-report.json"`` overrides ``agent-bom sbom -o
-    # custom.json`` because the source is DEFAULT.
-    caller_supplied_output = bool(output)
-    caller_supplied_format = bool(output_format) and output_format != "console"
+    explicit_output = is_explicit(ctx, "output")
+    explicit_format = is_explicit(ctx, "output_format")
+    # A bare ``ctx.invoke`` (not ``invoke_forwarding``) records no source at all;
+    # then a non-default caller value is the only signal of intent.
+    caller_supplied_output = parameter_source(ctx, "output") is None and bool(output)
+    caller_supplied_format = parameter_source(ctx, "output_format") is None and bool(output_format) and output_format != "console"
 
     profile_output = (
         output

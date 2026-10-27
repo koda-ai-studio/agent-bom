@@ -407,8 +407,6 @@ def serve_cmd(
         os.environ["AGENT_BOM_DB"] = persist_path
     demo_state_dir = _activate_demo_state_dir_or_fail()
     persist_path = persist_path or _demo_estate_default_persist(demo_state_dir)
-    if cors_allow_all:
-        os.environ["AGENT_BOM_CORS_ALL"] = "1"
     # REST-only mode: signal the API app (imported below) to skip mounting the
     # dashboard. Set before the first `agent_bom.api.server` import.
     if no_ui:
