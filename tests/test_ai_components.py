@@ -407,6 +407,22 @@ class TestAPIKeys:
             assert full_key not in key.name
             assert full_key not in key.matched_text
 
+    def test_placeholder_key_is_ignored_without_hiding_real_shaped_key(self, tmp_path: Path):
+        placeholder = "sk-" + "your-openai-key-here"
+        real_shaped = "sk-proj-" + "aB3dE5fG7hJ9kL1mN3pQ5rS7"
+        (tmp_path / "config.py").write_text(
+            f'PLACEHOLDER_KEY = "{placeholder}"\nSYNTHETIC_KEY = "{real_shaped}"\n',
+            encoding="utf-8",
+        )
+
+        report = scan_source(str(tmp_path))
+
+        assert len(report.api_keys) == 1
+        assert report.api_keys[0].line_number == 2
+        assert report.api_keys[0].name != placeholder
+        assert real_shaped not in report.api_keys[0].name
+        assert real_shaped not in report.api_keys[0].matched_text
+
 
 # ── Shadow AI detection tests ────────────────────────────────────────────────
 
