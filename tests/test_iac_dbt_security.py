@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from agent_bom.iac import scan_iac_with_context
 from agent_bom.iac.dbt_security import scan_dbt_file
 
@@ -117,3 +119,35 @@ jobs:
     assert {"DBT-SEC-016", "DBT-SEC-017", "DBT-SEC-018"} <= rule_ids
     assert dbt_verdict.status == "ran"
     assert dbt_verdict.files_scanned == 3
+
+
+def test_connection_uri_search_bounds_repeated_scheme_candidates():
+    """A missing :// must not retry the remaining scheme at every dot."""
+    import subprocess
+    import sys
+
+    from agent_bom.iac.dbt_security import _CONNECTION_WITH_PASSWORD_RE
+
+    # Isolate the hostile search so a regression is terminated, never wedging
+    # the test worker. This is a generous completion bound, not a microbenchmark.
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import re, sys; p = re.compile(sys.argv[1], re.I); assert p.search('chmod ' + 'a.' * 50_000 + '!') is None; print('bounded')",
+            _CONNECTION_WITH_PASSWORD_RE.pattern,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=True,
+    )
+    assert result.stdout.strip() == "bounded"
+
+
+@pytest.mark.parametrize("scheme", ["postgres", "postgresql+psycopg2", "custom.driver", "custom-driver", "CUSTOM2"])
+def test_connection_uri_scheme_punctuation_preserves_findings(tmp_path, scheme):
+    path = _write(tmp_path / "profiles.yml", f"uri: '{scheme}://fixture:placeholder@example.invalid/db'\n")
+    findings = [finding for finding in scan_dbt_file(path) if finding.rule_id == "DBT-SEC-002"]
+    assert len(findings) == 1
+    assert findings[0].line_number == 1
