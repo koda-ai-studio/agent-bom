@@ -7,6 +7,7 @@ import json
 import tempfile
 from pathlib import Path
 
+from agent_bom.security import sanitize_text
 from agent_bom.storage import state_home
 
 
@@ -51,3 +52,55 @@ def restore_baseline(path: Path | None) -> set[str] | None:
         except (OSError, UnicodeError, json.JSONDecodeError):
             pass
     return None
+
+
+MAX_TOOL_DEFINITIONS = 4096
+ToolFingerprints = dict[str, dict[str, str]]
+
+
+def fingerprint_tools(tools: list[dict]) -> ToolFingerprints | None:
+    """Hash bounded declaration fields; invalid or oversized catalogs stay incomplete."""
+    fingerprints: ToolFingerprints = {}
+    if len(tools) > MAX_TOOL_DEFINITIONS:
+        return None
+    for tool in tools:
+        if not isinstance(tool, dict) or not isinstance(tool.get("name"), str) or not 0 < len(tool["name"]) <= 512:
+            return None
+        if tool["name"] in fingerprints:
+            return None
+        if "description" in tool and not isinstance(tool["description"], str):
+            return None
+        if "inputSchema" in tool and not isinstance(tool["inputSchema"], dict):
+            return None
+        try:
+            fields = {
+                key: json.dumps(tool.get(key), sort_keys=True, ensure_ascii=True, allow_nan=False)
+                for key in ("name", "description", "inputSchema")
+            }
+        except (ValueError, TypeError, RecursionError):
+            return None
+        if sum(len(value) for value in fields.values()) > 262144:
+            return None
+        fingerprints[tool["name"]] = {key: hashlib.sha256(value.encode()).hexdigest() for key, value in fields.items()}
+    return fingerprints
+
+
+def changed_definition_fields(baseline: ToolFingerprints, current: ToolFingerprints) -> list[dict]:
+    """Report field names only, never values or their fingerprints."""
+    return [
+        {"name": sanitize_text(name), "fields": sorted(key for key in fields if fields[key] != baseline[name].get(key))}
+        for name, fields in current.items()
+        if name in baseline and fields != baseline[name]
+    ]
+
+
+def definition_drift_details(baseline: ToolFingerprints, current: ToolFingerprints) -> list[dict]:
+    """Include existing tier-A fields so audit redaction preserves the change kind."""
+    details = []
+    for change in changed_definition_fields(baseline, current):
+        reason = {
+            ("description",): "tool_description_changed",
+            ("inputSchema",): "tool_schema_changed",
+        }.get(tuple(change["fields"]), "tool_definition_changed")
+        details.append({"tool_name": change["name"], "reason_code": reason, "changed_tools": [change]})
+    return details

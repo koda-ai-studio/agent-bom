@@ -358,7 +358,9 @@ async def track_declared_tools(session: ProxySession, resp: ServerMessage) -> No
             "tools/list pagination stopped early (page cap %d or invalid cursor); catalog incomplete, removed-tool drift suppressed",
             MAX_TOOL_CATALOG_PAGES,
         )
-    await session.handle_alerts(session.detectors.drift.check(catalog.names, complete=catalog.complete), session.log_file)
+    await session.handle_alerts(
+        session.detectors.drift.check(catalog.names, complete=catalog.complete, fingerprints=catalog.fingerprints), session.log_file
+    )
 
 
 async def redact_leaked_credentials(session: ProxySession, resp: ServerMessage) -> None:
@@ -521,6 +523,8 @@ async def relay_server_line(session: ProxySession, line: bytes) -> None:
         return
     if msg:
         session.metrics.total_messages_server_to_client += 1
+        if await session.catalog_refresh.inspect(session, msg):
+            return
         resp = ServerMessage(msg=msg, line=line)
         for stage in SERVER_MESSAGE_STAGES:
             await stage(session, resp)

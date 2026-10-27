@@ -13,6 +13,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from agent_bom.runtime.drift_baseline import MAX_TOOL_DEFINITIONS, ToolFingerprints, fingerprint_tools
 from agent_bom.runtime.mcp_protocol import MAX_TOOL_CATALOG_PAGES
 
 RequestId = int | str
@@ -25,6 +26,7 @@ class ToolCatalog:
 
     names: list[str]
     complete: bool
+    fingerprints: ToolFingerprints = field(default_factory=dict)
 
 
 @dataclass
@@ -32,6 +34,7 @@ class ToolCatalogPages:
     """Per-session accumulator for one in-flight paginated ``tools/list``."""
 
     names: list[str] = field(default_factory=list)
+    fingerprints: ToolFingerprints = field(default_factory=dict)
     pages: int = 0
     seen_cursors: set[str] = field(default_factory=set)
     discarding: bool = False
@@ -52,11 +55,12 @@ class ToolCatalogPages:
 
     def _reset(self) -> None:
         self.names = []
+        self.fingerprints = {}
         self.pages = 0
         self.seen_cursors = set()
 
     def _finish(self, complete: bool) -> ToolCatalog:
-        catalog = ToolCatalog(names=self.names, complete=complete)
+        catalog = ToolCatalog(names=self.names, complete=complete, fingerprints=self.fingerprints)
         self._reset()
         self.discarding = not complete
         return catalog
@@ -78,7 +82,14 @@ class ToolCatalogPages:
             return None
         if is_continuation and self.pages == 0:
             return None
+        tools = result.get("tools", []) if isinstance(result, dict) else []
+        if not isinstance(tools, list) or len(self.names) + len(tools) > MAX_TOOL_DEFINITIONS:
+            return self._finish(complete=False)
+        fingerprints = fingerprint_tools(tools)
+        if fingerprints is None or self.fingerprints.keys() & fingerprints.keys():
+            return self._finish(complete=False)
         self.names.extend(names)
+        self.fingerprints.update(fingerprints)
         self.pages += 1
         if cursor is None:
             return self._finish(complete=True)

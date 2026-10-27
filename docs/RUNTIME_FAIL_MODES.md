@@ -303,3 +303,31 @@ permission and network failures remain incomplete. Tag-only AWS orphan sweeps
 are disabled because legacy runs lack durable ownership records. Reconcile
 those resources manually using saved IDs and provider events; no clean-state
 claim follows from an empty sweep result.
+
+## Stdio tool-definition drift
+
+The stdio proxy compares each completed `tools/list` catalog with its session
+baseline, including tool names, descriptions and canonical `inputSchema` values.
+A description or schema change under an unchanged name emits a HIGH
+`tool_drift` alert identifying the changed fields. Field values are never
+included in these alerts or persisted; only per-field SHA-256 fingerprints are
+held in memory. Durable audit records retain the tool name and a normalized
+change reason; detailed field lists follow the existing replay-only redaction
+policy. JSON object key order does not create drift. Name-only Shield
+callers and persisted server-scoped name baselines retain their existing contract;
+definition fingerprints are established anew in each session.
+
+`notifications/tools/list_changed` starts a private, read-only `tools/list`
+refresh. Notifications still reach the client, while proxy-owned responses are
+consumed internally. Client and refresh pagination are kept separate. Refreshes
+coalesce repeated notifications, allow at most 20 pages and 4,096 tools, and
+have a 30-second deadline (each stdin drain is bounded to 5 seconds). Tool names
+are limited to 512 characters and fingerprinted fields to 256 KiB per tool.
+Malformed or oversized catalogs never establish a baseline. Errors, timeouts and
+incomplete refreshes emit an incomplete-catalog alert and preserve the baseline.
+Session shutdown cancels the outstanding deadline.
+
+This detector is advisory/fail-open: alerts do not block tool calls or change
+injection enforcement. A definition change is evidence of drift, not proof of
+malicious intent or execution. This notification refresh applies to the stdio
+proxy; it does not add HTTP gateway or SSE-proxy enforcement.

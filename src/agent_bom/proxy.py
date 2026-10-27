@@ -882,6 +882,7 @@ async def _close_session(session: _proxy_session.ProxySession, sandbox_evidence:
     if teardown.status_strip_active:
         sys.stderr.write("\n")
         sys.stderr.flush()
+    session.catalog_refresh.close()
     summary = session.metrics.summary()
     summary.update(summarize_runtime_alerts(session.runtime_alerts))
     summary["execution_posture"] = _execution_posture(sandbox_evidence)
