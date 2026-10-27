@@ -122,3 +122,50 @@ def test_image_without_base_evidence_has_no_base(registry):
     with collect_image_evidence(APP_REF) as evidence:
         scan_image(APP_REF)
     assert evidence.base_image is None
+
+
+@pytest.mark.parametrize("config", [{"rootfs": {"diff_ids": 7}}, {"rootfs": {"diff_ids": ["invalid"]}}, {"history": ["bad"]}])
+def test_malformed_base_config_is_unresolved_with_coverage(config):
+    from contextlib import nullcontext
+    from types import SimpleNamespace
+
+    from agent_bom.image_evidence.model import ImageEvidence
+    from agent_bom.oci_registry.supply_chain import resolve_base_layers
+    from agent_bom.scanners.state import consume_coverage_warnings
+
+    digest = "sha256:" + "a" * 64
+    manifest = SimpleNamespace(
+        media_type="application/vnd.oci.image.manifest.v1+json", document={"layers": [], "config": {"digest": digest}}
+    )
+    client = SimpleNamespace(get_manifest=lambda *_args, **_kwargs: manifest, fetch_json_blob=lambda *_args: config)
+    evidence = ImageEvidence(APP_REF, base_image={"name": BASE_REF, "digest": digest}, diff_ids=[digest])
+    resolve_base_layers(evidence, lambda _ref: nullcontext(client))
+    assert evidence.base_image["attribution"] == "unresolved"
+    assert any(w["reason"] == "image_base_attribution_incomplete" for w in consume_coverage_warnings())
+
+
+@pytest.mark.parametrize("digest", ["sha512:" + "b" * 128, "sha512:invalid"])
+def test_base_digest_pin_is_preserved_or_refused_never_replaced_by_tag(digest):
+    from agent_bom.image_evidence.base_image import BASE_DIGEST_KEY, BASE_NAME_KEY, identify_base_image
+    from agent_bom.image_evidence.model import ImageEvidence
+    from agent_bom.oci_registry.client import RegistryError
+    from agent_bom.oci_registry.supply_chain import resolve_base_layers
+    from agent_bom.scanners.state import consume_coverage_warnings
+
+    evidence = ImageEvidence(APP_REF, annotations={BASE_NAME_KEY: BASE_REF, BASE_DIGEST_KEY: digest})
+    evidence.base_image = identify_base_image(evidence)
+    fetched = []
+
+    def open_client(ref):
+        fetched.append(ref.manifest_ref)
+        raise RegistryError("fixture unavailable")
+
+    resolve_base_layers(evidence, open_client)
+    if digest.endswith("invalid"):
+        assert not fetched
+        assert evidence.base_image["digest"] is None
+        assert any(w["reason"] == "image_base_attribution_incomplete" for w in consume_coverage_warnings())
+    else:
+        assert evidence.base_image["digest"] == digest
+        assert fetched == [digest]
+    assert evidence.base_image["attribution"] == "unresolved"

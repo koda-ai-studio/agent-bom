@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.core.image_ref import is_image_digest
 from agent_bom.image_evidence.model import ImageEvidence
 from agent_bom.security import sanitize_text
 
@@ -26,7 +27,8 @@ def identify_base_image(evidence: ImageEvidence) -> dict[str, Any] | None:
         if name or digest:
             return {
                 "name": sanitize_text(name, max_len=300) if name else None,
-                "digest": digest if isinstance(digest, str) and digest.startswith("sha256:") else None,
+                "digest": digest if isinstance(digest, str) and is_image_digest(digest) else None,
+                **({"invalid_digest": True} if digest and (not isinstance(digest, str) or not is_image_digest(digest)) else {}),
                 "source": source,
                 "attribution": "unresolved",
                 "layer_count": None,

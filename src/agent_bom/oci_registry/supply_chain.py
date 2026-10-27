@@ -14,6 +14,7 @@ from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.reference import ReferenceError, parse_reference
 from agent_bom.oci_registry.referrers import discover_referrers
 from agent_bom.oci_registry.signatures import SignatureKeyError, fetch_cosign_signatures, load_public_key, signature_verdict
+from agent_bom.oci_registry.validation import validate_image_config
 
 
 def _candidate_digests(evidence: ImageEvidence) -> list[str]:
@@ -76,6 +77,14 @@ def resolve_base_layers(evidence: ImageEvidence, open_client: Any, policy: Regis
     base = evidence.base_image
     if base is None or not (base.get("name") or base.get("digest")):
         return
+    if base.get("invalid_digest"):
+        record_scan_input_warning(
+            scanner="oci",
+            path=evidence.reference,
+            reason="image_base_attribution_incomplete",
+            detail="The declared base-image digest is invalid; its tag was not fetched as a substitute.",
+        )
+        return
     name = str(base.get("name") or "")
     try:
         ref = parse_reference(f"{name.split('@', 1)[0]}@{base['digest']}" if base.get("digest") and name else name)
@@ -90,9 +99,19 @@ def resolve_base_layers(evidence: ImageEvidence, open_client: Any, policy: Regis
         with open_client(ref) as client:
             manifest, _index, _platform, _available = resolve_image_manifest(client, ref, evidence.platform)
             config = client.fetch_json_blob(str(manifest.document.get("config", {}).get("digest") or ""))
+            try:
+                validate_image_config(config)
+            except ValueError as exc:
+                raise RegistryError("Base image config contains invalid metadata") from exc
     except (RegistryError, PlatformNotFoundError) as exc:
         base["attribution"] = "unresolved"
         evidence.note(f"Base image {name or base.get('digest')} could not be fetched for layer attribution: {exc}")
+        record_scan_input_warning(
+            scanner="oci",
+            path=evidence.reference,
+            reason="image_base_attribution_incomplete",
+            detail="Base-image evidence could not be validated; package layer attribution remains unresolved.",
+        )
         return
     rootfs = config.get("rootfs") if isinstance(config.get("rootfs"), dict) else {}
     diff_ids = [d for d in rootfs.get("diff_ids") or [] if isinstance(d, str)]

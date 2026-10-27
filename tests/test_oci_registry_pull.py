@@ -221,3 +221,22 @@ def test_malformed_config_history_fails_with_typed_scan_error(registry, history)
     registry.add_manifest("team/app", json.dumps(manifest).encode(), "application/vnd.oci.image.manifest.v1+json", "1.0")
     with pytest.raises(ImageScanError, match="invalid metadata"):
         scan_image(REF, pull_mode="registry")
+
+
+def test_sha512_layer_preserves_digest_in_evidence_and_package_occurrences(registry):
+    import hashlib
+    import json
+
+    image = _image(("bash", "5.2"))
+    registry.push_image("team/app", image, "1.0")
+    layer = dict(image.manifest["layers"][0])
+    raw_layer = registry.blobs[layer["digest"]]
+    digest = "sha512:" + hashlib.sha512(raw_layer).hexdigest()
+    registry.blobs[digest] = raw_layer
+    layer["digest"] = digest
+    manifest = {**image.manifest, "layers": [layer, *image.manifest["layers"][1:]]}
+    registry.add_manifest("team/app", json.dumps(manifest).encode(), "application/vnd.oci.image.manifest.v1+json", "1.0")
+    with collect_image_evidence(REF) as evidence:
+        packages, _ = scan_image(REF, pull_mode="registry")
+    assert evidence.layer_digests[0] == digest
+    assert packages[0].occurrences[0].layer_id == digest

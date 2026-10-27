@@ -59,8 +59,8 @@ class LayerMetadata:
 def _normalize_layer_id(layer_path: str) -> str:
     """Return a stable layer identifier from a tar/layout path."""
     layer_path = layer_path.lstrip("./")
-    if layer_path.startswith("blobs/sha256/"):
-        return f"sha256:{layer_path.rsplit('/', 1)[-1]}"
+    if layer_path.startswith(("blobs/sha256/", "blobs/sha512/")):
+        return layer_path.removeprefix("blobs/").replace("/", ":", 1)
     if layer_path.endswith("/layer.tar"):
         return layer_path[: -len("/layer.tar")]
     return layer_path

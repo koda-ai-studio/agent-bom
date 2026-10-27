@@ -45,7 +45,7 @@ def _scan_layers(
     annotations: dict[str, Any] | None = None,
 ) -> list[Package]:
     descriptors = [d for d in manifest.get("layers", []) if isinstance(d, dict)]
-    layer_paths = [f"blobs/sha256/{str(d.get('digest', '')).removeprefix('sha256:')}" for d in descriptors]
+    layer_paths = ["blobs/" + str(d["digest"]).replace(":", "/", 1) for d in descriptors]
     config_ref = str(manifest.get("config", {}).get("digest") or "")
     record_image_config(config, layer_paths, manifest=manifest, config_ref=config_ref, index_annotations=annotations)
     walk = _ImageWalk(config)

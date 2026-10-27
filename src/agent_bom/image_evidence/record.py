@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from agent_bom.core.image_ref import is_image_digest
 from agent_bom.image_evidence.base_image import identify_base_image
 from agent_bom.image_evidence.config_secrets import scan_config_secrets, scan_string_map
 from agent_bom.image_evidence.model import active_image_evidence, as_dict, as_list
@@ -13,6 +14,10 @@ _HEX_RE = re.compile(r"(?:^|/)(?:sha256/)?([a-f0-9]{64})(?:\.json)?$")
 
 
 def _digest_from_path(path: str) -> str | None:
+    normalized = (path or "").lstrip("./")
+    if normalized.startswith(("blobs/sha256/", "blobs/sha512/")):
+        digest = normalized.removeprefix("blobs/").replace("/", ":", 1)
+        return digest if is_image_digest(digest) else None
     match = _HEX_RE.search(path or "")
     return f"sha256:{match.group(1)}" if match else None
 
