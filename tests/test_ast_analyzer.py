@@ -1430,3 +1430,18 @@ def test_source_selection_walks_the_tree_once_and_groups_by_language(tmp_path: P
         ["z.swift"],
         ["k.kt"],
     ]
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("from agents import Agent\n", ["OpenAI Agents SDK"]),
+        ("import agents.tool\n", ["OpenAI Agents SDK"]),
+        ("from llama_index.core.agent import AgentRunner\n", ["LlamaIndex"]),
+        ("import agents_helpers\nimport llama_index_helpers\n", []),
+    ],
+)
+def test_agent_framework_import_display_labels(tmp_path: Path, source: str, expected: list[str]):
+    (tmp_path / "agent.py").write_text(source, encoding="utf-8")
+    result = analyze_project(tmp_path)
+    assert result.frameworks_detected == expected
