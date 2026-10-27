@@ -77,8 +77,8 @@ def _serving(raw: bytes, header_digest: str | None = None):
 
 def test_sha512_manifest_digests_are_verified():
     good = "sha512:" + hashlib.sha512(_MANIFEST).hexdigest()
-    assert _client(_serving(_MANIFEST)).get_manifest(good) is not None
-    assert _client(_serving(_MANIFEST, good)).get_manifest("1") is not None
+    assert _client(_serving(_MANIFEST)).get_manifest(good).digest == good
+    assert _client(_serving(_MANIFEST, good)).get_manifest("1").digest == good
 
     wrong = "sha512:" + hashlib.sha512(b"other").hexdigest()
     with pytest.raises(RegistryError, match="does not match"):
@@ -90,3 +90,29 @@ def test_sha512_manifest_digests_are_verified():
 def test_unknown_digest_algorithms_are_rejected():
     with pytest.raises(RegistryError, match="Unsupported digest algorithm"):
         _client(_serving(_MANIFEST, "md5:" + hashlib.md5(_MANIFEST).hexdigest())).get_manifest("1")  # noqa: S324
+
+
+@pytest.mark.parametrize("identity", [False, True])
+def test_token_responses_are_bounded_before_json_parsing(monkeypatch, identity):
+    monkeypatch.setattr(registry_client, "MAX_TOKEN_BYTES", 64 * 1024, raising=False)
+    body = _Chunks(b" " * 16 * 1024, 16)
+    methods = []
+
+    def handler(request):
+        methods.append(request.method)
+        return httpx.Response(200, content=body)
+
+    with _client(handler) as client:
+        if identity:
+            client._credential = RegistryCredential(source="test", identity_token="fixture-refresh")
+        with pytest.raises(RegistryError, match="size limit"):
+            client._fetch_token({"realm": "https://tokens.example.test/token"})
+    assert methods == ["POST" if identity else "GET"]
+    assert body.served <= 5
+
+
+@pytest.mark.parametrize("payload", [[], "token", 42, None])
+def test_token_response_must_be_an_object(payload):
+    with _client(lambda request: httpx.Response(200, content=json.dumps(payload))) as client:
+        with pytest.raises(RegistryError, match="JSON object"):
+            client._fetch_token({"realm": "https://tokens.example.test/token"})

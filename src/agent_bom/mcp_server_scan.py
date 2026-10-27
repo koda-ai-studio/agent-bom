@@ -20,6 +20,7 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_IMAGE_REF,
     CODE_VALIDATION_INVALID_PATH,
 )
+from agent_bom.models import ServerSurface
 from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings, restore_scan_warnings
 from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstream importers
 
@@ -251,6 +252,19 @@ def _resolve_scan_dir(safe_path, value: str, *, argument: str) -> str:
     return str(resolved)
 
 
+def _scan_image_in_thread(image: str):
+    """Drain image-worker warning channels even when collection raises."""
+    from agent_bom.discovery.carriers import scan_image_carrier
+
+    reset_scan_warnings()
+    scanned, error = None, None
+    try:
+        scanned = scan_image_carrier(image, server_context=True)
+    except Exception as exc:
+        error = exc
+    return scanned, error, consume_scan_warnings(), consume_coverage_warnings()
+
+
 def _host_discovery_refused(config_path: str | None, explicit_target: bool, warnings: list[str]) -> bool:
     """A path-less scan over HTTP or SSE must not read the server host's agent configs."""
     from agent_bom.mcp_tools.host_local import host_discovery_allowed  # dispatch imports this module
@@ -333,12 +347,13 @@ async def run_scan_pipeline(
 
     if image:
         try:
-            from agent_bom.discovery.carriers import scan_image_carrier
-
-            scanned = await asyncio.to_thread(scan_image_carrier, image, server_context=True)
-            if scanned.packages:
-                agents.append(scanned.carrier)
-                scan_sources.append("image")
+            scanned, error, thread_warnings, thread_coverage = await asyncio.to_thread(_scan_image_in_thread, image)
+            restore_scan_warnings(thread_warnings, thread_coverage)
+            if error is not None:
+                raise error
+            assert scanned is not None
+            agents.append(scanned.carrier)
+            scan_sources.append("image")
         except Exception as exc:
             msg = f"Image scan failed for {image}: {sanitize_error(exc)}"
             logger.warning(msg)
@@ -367,7 +382,11 @@ async def run_scan_pipeline(
     flag_blocklisted_mcp_servers(agents)
     for agent in agents:
         for server in agent.mcp_servers:
-            if not server.packages and not server.security_blocked:
+            if (
+                not server.packages
+                and not server.security_blocked
+                and server.surface not in {ServerSurface.CONTAINER_IMAGE, ServerSurface.OCI_TARBALL}
+            ):
                 server.packages = extract_packages(server)
             if offline:
                 for pkg in server.packages:

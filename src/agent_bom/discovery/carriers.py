@@ -119,5 +119,5 @@ def scan_image_carrier(
     with _evidence(image_ref, cosign_key_path) as (evidence, models):
         packages, strategy = scan_image(image_ref, **scan_kwargs)
     metadata = {**image_agent_metadata(evidence), **model_artifact_metadata(models)}
-    carrier = build_image_carrier(image_ref, packages, source=source, digest=digest, metadata=metadata)
+    carrier = build_image_carrier(image_ref, packages, source=source, digest=evidence.digest or digest, metadata=metadata)
     return ImageScan(carrier=carrier, evidence=evidence, strategy=strategy)

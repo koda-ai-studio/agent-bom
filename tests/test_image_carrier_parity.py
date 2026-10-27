@@ -95,8 +95,21 @@ def _identity(agent: Agent) -> dict[str, Any]:
 async def test_cli_api_and_mcp_build_identical_image_carriers(registry, monkeypatch):
     cli, api, mcp = _identity(_cli_carrier()), _identity(_api_carrier()), _identity(await _mcp_carrier(monkeypatch))
 
-    assert cli["image_node"] == f"container:image:{REF}"
+    assert cli["image_node"] == f"container:image:{REGISTRY}/team/api@{registry.image.manifest_digest}"
     assert cli["packages"] == [("bash", "5.2")]
     assert "image" in cli["evidence"]
     assert api == cli
     assert mcp == cli
+
+
+def test_tag_aliases_share_verified_digest_identity_and_replaced_tags_do_not(registry):
+    from agent_bom.discovery.carriers import scan_image_carrier
+
+    first = _identity(scan_image_carrier(REF).carrier)
+    assert first["role"]["image_digest"] == registry.image.manifest_digest
+    alias = f"{REGISTRY}/team/api:alias"
+    registry.push_image("team/api", registry.image, "alias")
+    assert _identity(scan_image_carrier(alias).carrier)["image_node"] == first["image_node"]
+    replacement = build_image([{"var/lib/dpkg/status": dpkg_status(("bash", "5.3"))}])
+    registry.push_image("team/api", replacement, "2.0")
+    assert _identity(scan_image_carrier(REF).carrier)["image_node"] != first["image_node"]

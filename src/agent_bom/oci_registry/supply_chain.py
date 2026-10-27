@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.coverage import record_scan_input_warning
 from agent_bom.image_evidence.base_image import match_base_layers
 from agent_bom.image_evidence.model import ImageEvidence
 from agent_bom.oci_registry.client import RegistryClient, RegistryError
@@ -47,10 +48,18 @@ def discover_supply_chain(client: RegistryClient, evidence: ImageEvidence, index
         evidence.signature = {"status": "unknown", "detail": "The image digest is not known, so signatures could not be looked up."}
         return
     try:
-        evidence.referrers = discover_referrers(client, digests, index)
-        evidence.signature = _signature_status(client, evidence, digests)
+        with client.bounded_evidence():
+            evidence.referrers = discover_referrers(client, digests, index)
+            evidence.signature = _signature_status(client, evidence, digests)
     except RegistryError as exc:
         evidence.signature = {"status": "unknown", "detail": f"Signature lookup failed: {exc}"}
+        evidence.note("Image supply-chain lookup was incomplete; absence of signatures or referrers was not established.")
+        record_scan_input_warning(
+            scanner="oci",
+            path=evidence.reference,
+            reason="image_supply_chain_incomplete",
+            detail="Image signature/referrer discovery did not complete; this is not evidence of an unsigned image.",
+        )
 
 
 def _base_allowed(evidence: ImageEvidence, ref: Any, policy: RegistryPolicy) -> bool:

@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.image_evidence.model import as_dict
-from agent_bom.oci_registry.client import RegistryClient
+from agent_bom.oci_registry.client import RegistryClient, RegistryLimitError
 from agent_bom.oci_registry.media_types import (
     COSIGN_SIMPLESIGNING,
     CYCLONEDX_TYPES,
@@ -61,39 +61,65 @@ def _tag_entries(client: RegistryClient, digest: str, suffix: str, source: str) 
     if manifest is None:
         return []
     layers = manifest.document.get("layers") or manifest.document.get("manifests") or []
-    return [_entry(layer, source, digest) for layer in layers if isinstance(layer, dict)]
+    return _bounded_entries(layers, source, digest)
+
+
+def _bounded_entries(descriptors, source: str, subject: str) -> list[dict[str, Any]]:
+    unique: dict[tuple[str, str], dict[str, Any]] = {}
+    for descriptor in descriptors:
+        if not isinstance(descriptor, dict):
+            continue
+        entry = _entry(descriptor, source, subject)
+        unique.setdefault((entry["digest"], entry["source"]), entry)
+        if len(unique) > MAX_REFERRERS:
+            raise RegistryLimitError("Referrer count limit reached")
+    return list(unique.values())
 
 
 def _referrers_api(client: RegistryClient, digest: str) -> list[dict[str, Any]]:
     listed = client.referrers(digest)
     if listed is not None:
-        return [_entry(d, "referrers-api", digest) for d in listed]
+        return _bounded_entries(listed, "referrers-api", digest)
     return _tag_entries(client, digest, "", "referrers-tag-schema")
 
 
-def _buildkit_attestations(client: RegistryClient, index: dict[str, Any] | None, digest: str) -> list[dict[str, Any]]:
+def _buildkit_attestations(
+    client: RegistryClient, index: dict[str, Any] | None, digest: str, limit: int = MAX_REFERRERS
+) -> list[dict[str, Any]]:
     if not index:
         return []
     found: list[dict[str, Any]] = []
+    seen: set[str] = set()
     for descriptor in index.get("manifests") or []:
         if not isinstance(descriptor, dict) or not is_attestation_descriptor(descriptor):
             continue
         if descriptor.get("annotations", {}).get(DOCKER_REFERENCE_DIGEST) != digest:
             continue
-        manifest = client.get_manifest(str(descriptor.get("digest") or ""), missing_ok=True)
+        manifest_digest = str(descriptor.get("digest") or "")
+        if manifest_digest in seen:
+            continue
+        if len(seen) >= MAX_REFERRERS or len(found) >= limit:
+            raise RegistryLimitError("BuildKit attestation count limit reached")
+        seen.add(manifest_digest)
+        manifest = client.get_manifest(manifest_digest, missing_ok=True)
         layers = manifest.document.get("layers") if manifest is not None else []
-        found.extend(_entry(layer, "buildkit-attestation-manifest", digest) for layer in layers or [] if isinstance(layer, dict))
+        found.extend(_bounded_entries(layers or [], "buildkit-attestation-manifest", digest))
+        if len(found) > limit:
+            raise RegistryLimitError("Referrer count limit reached")
     return found
 
 
 def discover_referrers(client: RegistryClient, digests: list[str], index: dict[str, Any] | None) -> list[dict[str, Any]]:
-    entries: list[dict[str, Any]] = []
-    for digest in digests:
-        entries.extend(_referrers_api(client, digest))
-        entries.extend(_tag_entries(client, digest, ".att", "cosign-attestation-tag"))
-        entries.extend(_tag_entries(client, digest, ".sbom", "cosign-sbom-tag"))
-        entries.extend(_buildkit_attestations(client, index, digest))
     unique: dict[tuple[str, str], dict[str, Any]] = {}
-    for entry in entries:
-        unique.setdefault((entry["digest"], entry["source"]), entry)
-    return list(unique.values())[:MAX_REFERRERS]
+    for digest in dict.fromkeys(digests):
+        for lookup in (
+            lambda: _referrers_api(client, digest),
+            lambda: _tag_entries(client, digest, ".att", "cosign-attestation-tag"),
+            lambda: _tag_entries(client, digest, ".sbom", "cosign-sbom-tag"),
+            lambda: _buildkit_attestations(client, index, digest, MAX_REFERRERS - len(unique)),
+        ):
+            for entry in lookup():
+                unique.setdefault((entry["digest"], entry["source"]), entry)
+                if len(unique) > MAX_REFERRERS:
+                    raise RegistryLimitError("Referrer count limit reached")
+    return list(unique.values())

@@ -28,7 +28,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, padding, rsa
 
 from agent_bom.image_evidence.model import as_dict
-from agent_bom.oci_registry.client import RegistryClient, RegistryError
+from agent_bom.oci_registry.client import RegistryClient, RegistryError, RegistryLimitError
 from agent_bom.oci_registry.media_types import COSIGN_SIMPLESIGNING
 
 SIGNATURE_ANNOTATION = "dev.cosignproject.cosign/signature"
@@ -36,6 +36,7 @@ CERTIFICATE_ANNOTATION = "dev.sigstore.cosign/certificate"
 BUNDLE_ANNOTATION = "dev.sigstore.cosign/bundle"
 _MAX_PAYLOAD_BYTES = 256 * 1024
 _MAX_KEY_BYTES = 64 * 1024
+MAX_SIGNATURES = 16
 
 
 class SignatureKeyError(Exception):
@@ -103,20 +104,29 @@ def fetch_cosign_signatures(client: RegistryClient, digest: str) -> list[CosignS
     if manifest is None:
         return []
     found: list[CosignSignature] = []
+    seen: set[tuple[str, str]] = set()
+    payloads: dict[str, bytes] = {}
     for layer in manifest.document.get("layers") or []:
         if not isinstance(layer, dict) or layer.get("mediaType") != COSIGN_SIMPLESIGNING:
             continue
         annotations = as_dict(layer.get("annotations"))
+        digest_key = str(layer.get("digest") or "")
+        encoded_signature = str(annotations.get(SIGNATURE_ANNOTATION) or "")
+        identity = (digest_key, encoded_signature)
+        if identity in seen:
+            continue
+        if len(seen) >= MAX_SIGNATURES:
+            raise RegistryLimitError("Signature count limit reached")
+        seen.add(identity)
         try:
-            signature = base64.b64decode(str(annotations.get(SIGNATURE_ANNOTATION) or ""), validate=True)
+            signature = base64.b64decode(encoded_signature, validate=True)
         except (binascii.Error, ValueError):
-            continue
-        buffer = io.BytesIO()
-        try:
-            client.fetch_blob(str(layer.get("digest") or ""), buffer, _MAX_PAYLOAD_BYTES)
-        except RegistryError:
-            continue
-        payload = buffer.getvalue()
+            raise RegistryError("Signature annotation is not valid base64") from None
+        if digest_key not in payloads:
+            buffer = io.BytesIO()
+            client.fetch_blob(digest_key, buffer, _MAX_PAYLOAD_BYTES)
+            payloads[digest_key] = buffer.getvalue()
+        payload = payloads[digest_key]
         found.append(
             CosignSignature(
                 signed_digest=payload_digest(payload) or "",

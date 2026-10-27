@@ -11,7 +11,9 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import time
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import IO, Any
 from urllib.parse import urlencode, urljoin, urlparse
@@ -34,6 +36,7 @@ from agent_bom.oci_registry.reference import ImageReference
 from agent_bom.runtime.egress_transport import PinnedDNSSyncTransport, UnsafeDestinationError
 
 MAX_MANIFEST_BYTES = 8 * 1024 * 1024
+MAX_TOKEN_BYTES = 64 * 1024
 _MAX_REDIRECTS = 5
 _CHUNK = 1024 * 1024
 _TIMEOUT = httpx.Timeout(30.0, connect=10.0)
@@ -57,6 +60,38 @@ class RegistryError(Exception):
 
 class RegistryPolicyError(RegistryError):
     """The registry egress policy refused a destination (server-side scans)."""
+
+
+class RegistryLimitError(RegistryError):
+    """A supply-chain lookup exceeded a finite resource budget."""
+
+
+@dataclass
+class EvidenceBudget:
+    deadline: float
+    max_requests: int = 64
+    max_bytes: int = 16 * 1024 * 1024
+    requests: int = 0
+    bytes_read: int = 0
+
+    def remaining(self) -> float:
+        remaining = self.deadline - time.monotonic()
+        if remaining <= 0:
+            raise RegistryLimitError("Supply-chain lookup time limit reached")
+        return remaining
+
+    def request(self) -> httpx.Timeout:
+        remaining = self.remaining()
+        if self.requests >= self.max_requests:
+            raise RegistryLimitError("Supply-chain lookup request limit reached")
+        self.requests += 1
+        return httpx.Timeout(min(30.0, remaining), connect=min(10.0, remaining))
+
+    def consume(self, size: int) -> None:
+        self.remaining()
+        self.bytes_read += size
+        if self.bytes_read > self.max_bytes:
+            raise RegistryLimitError("Supply-chain lookup aggregate byte limit reached")
 
 
 @dataclass(frozen=True)
@@ -90,11 +125,13 @@ def _matches_digest(data: bytes, digest: str) -> bool:
     return f"{digest.split(':', 1)[0]}:{hasher.hexdigest()}" == digest
 
 
-def _read_bounded(response: httpx.Response, limit: int, what: str) -> bytes:
+def _read_bounded(response: httpx.Response, limit: int, what: str, on_chunk: Callable[[int], None] | None = None) -> bytes:
     """Read a streamed body into memory, aborting as soon as it passes ``limit`` bytes."""
     buffer = bytearray()
     try:
         for chunk in response.iter_bytes():
+            if on_chunk is not None:
+                on_chunk(len(chunk))
             buffer += chunk
             if len(buffer) > limit:
                 raise RegistryError(f"{what} exceeds the size limit")
@@ -117,6 +154,7 @@ class RegistryClient:
     _basic: str | None = None
     _credential: RegistryCredential | None = None
     _client: httpx.Client | None = None
+    _evidence_budget: EvidenceBudget | None = None
 
     def __post_init__(self) -> None:
         check_offline()
@@ -139,6 +177,19 @@ class RegistryClient:
 
     def __exit__(self, *_exc: object) -> None:
         self.close()
+
+    @contextmanager
+    def bounded_evidence(self, *, seconds: float = 30.0, max_requests: int = 64, max_bytes: int = 16 * 1024 * 1024):
+        previous = self._evidence_budget
+        self._evidence_budget = previous or EvidenceBudget(time.monotonic() + seconds, max_requests, max_bytes)
+        try:
+            yield self._evidence_budget
+        finally:
+            self._evidence_budget = previous
+
+    def _consume_evidence(self, size: int) -> None:
+        if self._evidence_budget is not None:
+            self._evidence_budget.consume(size)
 
     @property
     def credential_source(self) -> str:
@@ -181,22 +232,36 @@ class RegistryClient:
         assert self._client is not None
         if credential.identity_token:
             form = {"grant_type": "refresh_token", "refresh_token": credential.identity_token, "client_id": "agent-bom", **query}
-            response = self._client.post(realm, data=form, headers={"User-Agent": _USER_AGENT})
+            response = self._send_request("POST", realm, {"User-Agent": _USER_AGENT}, data=form)
         else:
             headers = {"User-Agent": _USER_AGENT}
             if (basic := basic_header(credential)) is not None:
                 headers["Authorization"] = basic
-            response = self._client.get(f"{realm}?{urlencode(query)}", headers=headers)
+            response = self._send_request("GET", f"{realm}?{urlencode(query)}", headers)
         if response.status_code != 200:
+            response.close()
             raise RegistryError(f"Registry token request was refused{self._status(response.status_code)}", response.status_code)
         try:
-            payload = response.json()
+            payload = json.loads(_read_bounded(response, MAX_TOKEN_BYTES, "Registry token response", self._consume_evidence))
         except ValueError as exc:
             raise RegistryError("Registry token response was not JSON") from exc
+        if not isinstance(payload, dict):
+            raise RegistryError("Registry token response was not a JSON object")
         token = payload.get("token") or payload.get("access_token")
         if not isinstance(token, str) or not token:
             raise RegistryError("Registry token response carried no token")
         return token
+
+    def _send_request(self, method: str, url: str, headers: dict[str, str], *, stream: bool = True, data: Any = None) -> httpx.Response:
+        assert self._client is not None
+        timeout = self._evidence_budget.request() if self._evidence_budget is not None else _TIMEOUT
+        request = self._client.build_request(method, url, headers=headers, data=data, timeout=timeout)
+        try:
+            return self._client.send(request, stream=stream)
+        except UnsafeDestinationError as exc:
+            raise RegistryPolicyError("Registry refused by server-side egress policy: destination address is not public") from exc
+        except _TRANSPORT_ERRORS as exc:
+            raise RegistryError(f"Registry request failed: {type(exc).__name__}") from exc
 
     def _send(self, url: str, headers: dict[str, str], *, stream: bool) -> httpx.Response:
         assert self._client is not None
@@ -205,13 +270,7 @@ class RegistryClient:
         for _ in range(_MAX_REDIRECTS + 1):
             same_origin = urlparse(current).netloc == origin
             request_headers = {"User-Agent": _USER_AGENT, **headers, **(self._auth_headers() if same_origin else {})}
-            request = self._client.build_request("GET", current, headers=request_headers)
-            try:
-                response = self._client.send(request, stream=stream)
-            except UnsafeDestinationError as exc:
-                raise RegistryPolicyError("Registry refused by server-side egress policy: destination address is not public") from exc
-            except _TRANSPORT_ERRORS as exc:
-                raise RegistryError(f"Registry request failed: {type(exc).__name__}") from exc
+            response = self._send_request("GET", current, request_headers, stream=stream)
             if response.status_code not in {301, 302, 303, 307, 308}:
                 return response
             location = response.headers.get("location", "")
@@ -244,13 +303,13 @@ class RegistryClient:
             if response.status_code == 404 and missing_ok:
                 return None
             raise RegistryError(f"Manifest {reference} could not be fetched{self._status(response.status_code)}", response.status_code)
-        raw = _read_bounded(response, MAX_MANIFEST_BYTES, "Manifest")
+        raw = _read_bounded(response, MAX_MANIFEST_BYTES, "Manifest", self._consume_evidence)
         header_digest = response.headers.get("docker-content-digest")
         if header_digest and not _matches_digest(raw, header_digest):
             raise RegistryError("Manifest digest does not match the registry's Docker-Content-Digest")
         if ":" in reference and not _matches_digest(raw, reference):
             raise RegistryError("Manifest content does not match the requested digest")
-        digest = sha256_digest(raw)
+        digest = reference if ":" in reference else header_digest or sha256_digest(raw)
         try:
             document = json.loads(raw)
         except ValueError as exc:
@@ -269,6 +328,7 @@ class RegistryClient:
             if response.status_code != 200:
                 raise RegistryError(f"Blob {digest[:19]} could not be fetched{self._status(response.status_code)}", response.status_code)
             for chunk in response.iter_bytes(_CHUNK):
+                self._consume_evidence(len(chunk))
                 written += len(chunk)
                 if written > max_bytes:
                     raise RegistryError("Blob exceeds the size limit")
@@ -304,7 +364,7 @@ class RegistryClient:
                 return None
             raise RegistryError(f"Referrers query failed{self._status(response.status_code)}", response.status_code)
         try:
-            document = json.loads(_read_bounded(response, MAX_MANIFEST_BYTES, "Referrers index"))
+            document = json.loads(_read_bounded(response, MAX_MANIFEST_BYTES, "Referrers index", self._consume_evidence))
         except ValueError:
             return None
         manifests = document.get("manifests") if isinstance(document, dict) else None

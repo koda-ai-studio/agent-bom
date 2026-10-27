@@ -62,3 +62,82 @@ async def test_mcp_scan_pipeline_attaches_image_evidence(registry, monkeypatch):
     [agent] = agents
     assert agent.metadata["image"]["digest"] == registry.image.manifest_digest
     assert [s["layer_digest"] for s in agent.metadata["image"]["secrets"]] == [registry.image.layer_digests[1]]
+
+
+@pytest.mark.asyncio
+async def test_mcp_keeps_image_evidence_without_packages(monkeypatch):
+    from agent_bom.discovery.carriers import ImageScan, build_image_carrier
+    from agent_bom.image_evidence.model import ImageEvidence
+    from agent_bom.mcp_server_scan import run_scan_pipeline
+
+    metadata = {"image": {"secrets": [{"type": "fixture", "preview": "[CREDENTIAL_REDACTED]"}]}}
+
+    def scan_image(image, *, server_context):
+        assert server_context is True
+        return ImageScan(build_image_carrier(image, [], metadata=metadata), ImageEvidence(image), "registry")
+
+    async def scan(agents, **kwargs):
+        return []
+
+    monkeypatch.setattr("agent_bom.scanners.scan_agents", scan)
+    monkeypatch.setattr("agent_bom.discovery.carriers.scan_image_carrier", scan_image)
+    agents, _, _, sources = await run_scan_pipeline(safe_path=lambda value: value, image=REF, no_discover=True)
+    assert sources == ["image"]
+    assert len(agents) == 1
+    assert agents[0].mcp_servers[0].packages == []
+    assert agents[0].metadata["image"]["secrets"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fail", [False, True])
+async def test_mcp_restores_image_worker_coverage(registry, monkeypatch, fail):
+    from agent_bom.discovery import carriers
+    from agent_bom.mcp_server_scan import run_scan_pipeline
+    from agent_bom.scanners.state import consume_coverage_warnings, record_coverage_warning
+
+    original = carriers.scan_image_carrier
+
+    def scan_image(*args, **kwargs):
+        record_coverage_warning({"release": REF, "reason": "oci_layer_download_failed"})
+        if fail:
+            raise RuntimeError("fixture image failure")
+        return original(*args, **kwargs)
+
+    async def scan(agents, **kwargs):
+        return []
+
+    monkeypatch.setattr(carriers, "scan_image_carrier", scan_image)
+    monkeypatch.setattr("agent_bom.scanners.scan_agents", scan)
+    await run_scan_pipeline(safe_path=lambda value: value, image=REF, no_discover=True)
+    assert any(w["reason"] == "oci_layer_download_failed" for w in consume_coverage_warnings())
+
+
+@pytest.mark.asyncio
+async def test_mcp_tool_response_includes_image_worker_coverage(registry, monkeypatch):
+    import json
+
+    from mcp import Client
+
+    from agent_bom.discovery import carriers
+    from agent_bom.mcp_server import create_mcp_server
+    from agent_bom.scanners.state import record_coverage_warning, record_scan_warning
+
+    original = carriers.scan_image_carrier
+
+    def scan_image(*args, **kwargs):
+        record_coverage_warning({"release": REF, "reason": "oci_layer_download_failed", "detail": "fixture gap"})
+        record_scan_warning("fixture image warning")
+        return original(*args, **kwargs)
+
+    async def scan(agents, **kwargs):
+        return []
+
+    monkeypatch.setattr(carriers, "scan_image_carrier", scan_image)
+    monkeypatch.setattr("agent_bom.scanners.scan_agents", scan)
+    monkeypatch.setattr("agent_bom.graph.scan_findings.surface_graph_derived_findings", lambda *_args, **_kwargs: None)
+    async with Client(create_mcp_server(profile="full")) as client:
+        result = await client.call_tool("scan", {"image": REF, "no_discover": True})
+    assert not result.is_error
+    summary = json.loads(result.content[0].text)
+    assert "fixture image warning" in summary["warnings"]
+    assert any(w["reason"] == "oci_layer_download_failed" for w in summary["coverage_warnings"])
