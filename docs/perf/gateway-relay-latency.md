@@ -119,8 +119,8 @@ pool, not the load generator).
 
 ## Gaps
 
-- Gateway upstream pool size is not exposed via `AGENT_BOM_*` env; a follow-up
-  settings/CLI knob is required before claiming a “fully tuned” Python pool.
+- Upstream pool/timeout/circuit settings are configurable (below), but these
+  historical samples have not been rerun with the new operator controls.
 - Single-process loopback only — no multi-replica Helm gateway, TLS, or auth.
 - Empty / fail-open policy path only — no enforce-mode policy, DLP, firewall,
   or visual-leak cost in the samples.
@@ -132,3 +132,41 @@ pool, not the load generator).
 `gate_tripped=true` → proceed to Phase 2 (Python-only relay interface +
 contract tests). Do not implement a Go sidecar until that contract exists
 (ADR-009). Phase 2 Python extract: [`docs/design/GATEWAY_RELAY_CONTRACT.md`](../design/GATEWAY_RELAY_CONTRACT.md).
+
+## Configure upstream limits
+
+Start with an upstreams YAML and bind locally for a first-run check:
+
+```bash
+agent-bom gateway serve --upstreams upstreams.yaml --bind 127.0.0.1:8090 \
+  --upstream-http-max-connections 100 \
+  --upstream-http-max-keepalive-connections 20 \
+  --upstream-http-timeout-seconds 30 \
+  --upstream-failure-threshold 3 \
+  --upstream-circuit-cooldown-seconds 30
+```
+
+The gateway exposes the configured upstreams on its MCP endpoint. Connect a
+client and verify a permitted tool call before increasing concurrency. Preserve
+incoming authentication and agent identity enforcement for non-loopback deploys.
+These controls do not alter policy, authentication, or tenant isolation.
+
+Each flag has an environment equivalent, shown by `gateway serve --help`:
+
+| Flag | Environment variable | Default |
+|---|---|---:|
+| `--upstream-http-max-connections` | `AGENT_BOM_GATEWAY_UPSTREAM_HTTP_MAX_CONNECTIONS` | 100 |
+| `--upstream-http-max-keepalive-connections` | `AGENT_BOM_GATEWAY_UPSTREAM_HTTP_MAX_KEEPALIVE_CONNECTIONS` | 20 |
+| `--upstream-http-timeout-seconds` | `AGENT_BOM_GATEWAY_UPSTREAM_HTTP_TIMEOUT_SECONDS` | 30 |
+| `--upstream-failure-threshold` | `AGENT_BOM_GATEWAY_UPSTREAM_FAILURE_THRESHOLD` | 3 |
+| `--upstream-circuit-cooldown-seconds` | `AGENT_BOM_GATEWAY_UPSTREAM_CIRCUIT_COOLDOWN_SECONDS` | 30 |
+
+CLI flags override environment values. The existing runtime validator rejects
+invalid settings before control-plane discovery or listener startup: total
+connections and failure threshold must be positive integers; keepalive must be
+an integer from zero through the total pool; timeout must be finite and at least
+0.001 seconds; cooldown must be finite and non-negative. Invalid settings fail
+closed at startup. An open circuit continues to deny upstream calls until its
+configured retry window. Benchmark with representative upstream latency and
+policy enforcement before increasing pools; larger limits do not prove higher
+throughput or a latency SLO.
