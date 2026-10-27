@@ -93,6 +93,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Retain package/ecosystem identity and credential-name redaction in the dedicated MCP AI inventory tool.
+
 - Preserve validated sub-second upstream timeouts, disabled keepalive pools, and zero circuit cooldown in the gateway relay.
 
 - Enable AI SDK inventory automatically for supported non-Python source trees, retaining package identity and source locations across project and repository scans.
