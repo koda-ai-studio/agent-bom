@@ -5,7 +5,9 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,6 +63,33 @@ def test_the_smoke_tier_runs_its_tests() -> None:
     ci_local = _ci_local()
     smoke = [step for step in ci_local.plan(workflow, ci_local.SMOKE_JOBS) if step.job == "test-smoke" and "pytest" in step.command]
     assert smoke and all(step.action == "run" for step in smoke), [step.reason for step in smoke]
+
+
+def test_dynamic_shards_use_the_affected_planner_and_render_the_total(monkeypatch) -> None:
+    ci_local = _ci_local()
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append((command, kwargs))
+        return SimpleNamespace(stdout="[0, 1, 2]")
+
+    monkeypatch.setattr(ci_local.subprocess, "run", run)
+    monkeypatch.setattr(ci_local, "_git", lambda *args: "src/agent_bom/image.py" if args[0] == "diff" else "base")
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+    job = workflow["jobs"]["test-smoke"]
+    assert ci_local.matrix_values(job) == ["0", "1", "2"]
+    assert calls[0][0][-3:] == ["--include-smoke", "--matrix", "src/agent_bom/image.py"]
+    assert calls[0][1]["check"] is True
+    steps = ci_local.plan(workflow, ("test-smoke",))
+    tests = [step for step in steps if "pytest_ci_plan.py shard" in step.command]
+    assert len(tests) == 3
+    assert {step.matrix for step in tests} == {"0", "1", "2"}
+    assert all(step.action == "run" and '--total "3"' in step.command for step in tests)
+
+
+def test_unknown_dynamic_matrix_is_rejected_instead_of_iterated_as_text() -> None:
+    with pytest.raises(ValueError, match="unsupported dynamic shard matrix"):
+        _ci_local().matrix_values({"strategy": {"matrix": {"shard": "${{ needs.other.outputs.shards }}"}}})
 
 
 def test_rendered_commands_run_on_the_bash_that_ships_with_macos() -> None:
