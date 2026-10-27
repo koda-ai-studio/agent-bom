@@ -15,6 +15,7 @@ import click
 
 from agent_bom.cli._cloud_sdk import exit_if_sdk_missing
 from agent_bom.cli._grouped_help import SuggestingGroup
+from agent_bom.cli._param_source import invoke_forwarding
 from agent_bom.evidence.cloud_scan import inventory_artifact
 
 
@@ -171,7 +172,8 @@ def _run_cloud_scan(
 
     ctx = click.get_current_context()
     ctx.meta[CIS_SHOW_PASSED_META] = show_passed
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
         aws=aws_on,
         aws_region=aws_region,

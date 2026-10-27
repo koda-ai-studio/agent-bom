@@ -22,6 +22,7 @@ from typing import Optional
 
 import click
 
+from agent_bom.cli._param_source import invoke_forwarding
 from agent_bom.cli._scan_help import AliasedChoice
 from agent_bom.cli.options_sources import SCAN_OUTPUT_FORMAT_ALIASES, SCAN_OUTPUT_FORMATS
 from agent_bom.core.severity import severity_at_or_above
@@ -130,8 +131,10 @@ def image_cmd(
         raise click.BadParameter(f"Path '{image_tar}' does not exist.", param_hint="--tar")
 
     ctx = click.get_current_context()
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
+        aliases={"image_platform": "platform"},
         images=(image_ref,) if image_ref else (),
         image_tars=(image_tar,) if image_tar else (),
         _image_only=True,
@@ -197,7 +200,8 @@ def fs_cmd(
     from agent_bom.cli.agents import scan
 
     ctx = click.get_current_context()
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
         filesystem_paths=(path,),
         output_format=output_format,
@@ -271,7 +275,8 @@ def iac_cmd(
         effective_fail_on_severity = "high"
 
     ctx = click.get_current_context()
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
         iac_paths=paths,
         no_scan=True,  # IaC command: skip CVE scanning, package extraction, MCP agent discovery
@@ -320,7 +325,8 @@ def sbom_cmd(
     from agent_bom.cli.agents import scan
 
     ctx = click.get_current_context()
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
         sbom_file=path,
         sbom_name=sbom_name,

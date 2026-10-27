@@ -10,6 +10,7 @@ import click
 from rich.console import Console
 
 from agent_bom.cli._common import _sync_runtime_consoles, logger
+from agent_bom.cli._param_source import is_explicit
 from agent_bom.cli.agents._modes import apply_demo_mode, apply_self_scan_mode, validate_primary_input_modes, validate_skill_mode
 from agent_bom.cli.agents.scan_pipeline.helpers import _is_null_device, _output_format_was_explicit
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
@@ -88,8 +89,7 @@ def _apply_profile_and_agent_mode(opts: ScanOptions, st: ScanState) -> None:
             raise click.ClickException("--agent-mode requires --format json.")
         opts.output_format = "json"
         click_ctx = click.get_current_context(silent=True)
-        output_source = click_ctx.get_parameter_source("output") if click_ctx is not None else None
-        explicit_output = output_source in {click.core.ParameterSource.COMMANDLINE, click.core.ParameterSource.ENVIRONMENT}
+        explicit_output = is_explicit(click_ctx, "output")
         opts.output = opts.output if explicit_output and opts.output else "-"
         opts.quiet = True
         opts.no_color = True

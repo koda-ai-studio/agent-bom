@@ -17,6 +17,7 @@ import click
 from agent_bom import __version__
 from agent_bom.cli._entry import make_entry_point
 from agent_bom.cli._grouped_help import GroupedGroup
+from agent_bom.cli._param_source import invoke_forwarding
 
 # ── Help categories ──────────────────────────────────────────────────────────
 
@@ -101,7 +102,8 @@ def snowflake_cmd(output_format: str, output_path: Optional[str], cis: bool, no_
     from agent_bom.cli.agents import scan
 
     ctx = click.get_current_context()
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
         snowflake_flag=True,
         snowflake_cis_benchmark=cis and not no_cis,
@@ -120,7 +122,8 @@ def databricks_cmd(output_format: str, output_path: Optional[str], quiet: bool) 
     from agent_bom.cli.agents import scan
 
     ctx = click.get_current_context()
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
         databricks_flag=True,
         databricks_security=True,
@@ -140,7 +143,8 @@ def huggingface_cmd(verify_hashes: bool, output_format: str, output_path: Option
     from agent_bom.cli.agents import scan
 
     ctx = click.get_current_context()
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
         hf_flag=True,
         verify_model_hashes=verify_hashes,
@@ -159,7 +163,8 @@ def ollama_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> N
     from agent_bom.cli.agents import scan
 
     ctx = click.get_current_context()
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
         ollama_flag=True,
         output_format=output_format,
@@ -182,7 +187,8 @@ def posture_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> 
     from agent_bom.cli.agents import scan
 
     ctx = click.get_current_context()
-    ctx.invoke(
+    invoke_forwarding(
+        ctx,
         scan,
         aws=bool(shutil.which("aws")),
         azure_flag=bool(shutil.which("az")),
