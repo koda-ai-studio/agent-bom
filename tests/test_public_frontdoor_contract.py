@@ -178,9 +178,10 @@ def test_public_first_run_surfaces_share_one_primary_command() -> None:
     pypi = (ROOT / "docs" / "registry" / "PYPI_README.md").read_text(encoding="utf-8")
     guide = (ROOT / "docs" / "FIRST_RUN.md").read_text(encoding="utf-8")
 
-    assert "pip install agent-bom\nagent-bom scan ." in readme
-    assert "pip install agent-bom\nagent-bom scan ." in pypi
-    assert "pip install agent-bom\nagent-bom scan ." in guide
+    site = (ROOT / "site-docs/index.md").read_text(encoding="utf-8")
+    for text in (readme, pypi, guide, site):
+        assert text.split("```bash", 1)[1].split("```", 1)[0].strip() == "uvx agent-bom scan ."
+    assert "pip install agent-bom\nagent-bom scan ." in guide  # supported alternative
     assert "agent-bom scan -p ." not in guide
 
 
