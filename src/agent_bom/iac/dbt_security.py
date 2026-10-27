@@ -43,7 +43,9 @@ _DBT_PROFILE_NAMES = frozenset({"profiles.yml", "profiles.yaml"})
 _DBT_PACKAGE_NAMES = frozenset({"packages.yml", "packages.yaml"})
 _CI_WORKFLOW_PARTS = (".github", "workflows")
 _SECRET_KEY_RE = re.compile(r"(?:password|token|private[_-]?key|secret|credential|api[_-]?key)", re.IGNORECASE)
-_CONNECTION_WITH_PASSWORD_RE = re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s:@/]+:[^\s@/]+@", re.IGNORECASE)
+# A word boundary alone retries the remaining scheme after every dot/hyphen.
+# Start only at a scheme-token boundary so a missing :// remains linear.
+_CONNECTION_WITH_PASSWORD_RE = re.compile(r"(?<![\w+.-])[a-z][a-z0-9+.-]*://[^\s:@/]+:[^\s@/]+@", re.IGNORECASE)
 _REQUIRE_SSL_FALSE_RE = re.compile(r"\brequire_ssl\s*:\s*false\b|\bsslmode\s*:\s*(?:disable|allow)\b", re.IGNORECASE)
 _PASSWORD_AUTH_RE = re.compile(r"\b(?:method|auth(?:entication)?)\s*:\s*password\b|\bpassword\s*:", re.IGNORECASE)
 _VAR_RAW_SQL_RE = re.compile(r"(?<!['\"])\{\{\s*var\([^}]+?\)\s*\}\}(?!['\"])", re.IGNORECASE)
