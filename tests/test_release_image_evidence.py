@@ -42,5 +42,9 @@ def test_daily_rescan_retains_original_sarif_and_immutable_identity():
     assert "image-identity.json" in archive["with"]["path"]
     assert "original-image-scan-" in archive["with"]["path"]
     for name in ("Container image scan table (fixable MEDIUM+)", "Container image scan SARIF"):
-        assert "steps.image.outputs.id" in steps[name]["env"]["IMAGE_ID"]
-        assert '"$IMAGE_ID"' in steps[name]["run"]
+        assert "steps.image.outputs.ref" in steps[name]["env"]["IMAGE_REF"]
+        assert '"$IMAGE_REF"' in steps[name]["run"]
+
+    identity = steps["Resolve pulled image identity"]["run"]
+    assert 'docker image inspect "$IMAGE_REF" --format' in identity
+    assert '= "$IMAGE_ID"' in identity
