@@ -5,6 +5,7 @@ from __future__ import annotations
 import gzip
 import io
 import json
+import zlib
 from collections.abc import Callable
 from typing import Any
 
@@ -45,7 +46,7 @@ def gunzip_bounded(raw: bytes, limit: int = MAX_SBOM_BYTES) -> bytes:
     try:
         with gzip.GzipFile(fileobj=io.BytesIO(raw)) as stream:
             inflated = stream.read(limit + 1)
-    except (OSError, EOFError) as exc:
+    except (OSError, EOFError, zlib.error) as exc:
         raise ValueError("SBOM is not a valid gzip stream") from exc
     if len(inflated) > limit:
         raise ValueError("SBOM exceeds the 10 MiB import limit once decompressed")
