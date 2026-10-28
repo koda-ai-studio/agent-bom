@@ -48,7 +48,7 @@ against the same repository to verify the finding changed.
 Save a report with `uvx agent-bom scan . -f sarif -o findings.sarif`, then
 [upload it and gate CI](docs/FIRST_RUN.md#5-gate-ci-on-the-result).
 Run `uvx agent-bom doctor` if setup fails. See the [first-run guide](docs/FIRST_RUN.md)
-for pip installation and the existing `checkup` assistant workflow.
+for pip installation, or ask your coding agent with the [`checkup` skill](#integrations).
 
 In GitHub Actions, the same scan uploads SARIF to code scanning and fails on
 high or critical findings, the same default gate as the CLI:
@@ -205,7 +205,7 @@ proxy and gateway deployments add runtime evidence.
 For other MCP clients, run `agent-bom mcp server`.
 Start with eight focused tools in the default profile.
 [Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
-[Try three investigations](docs/MCP_SERVER.md): affected agents, exposure receipts and a before/after scan comparison.
+[Try three investigations](docs/MCP_SERVER.md#investigation-workflows): affected agents, exposure receipts and a before/after scan comparison.
 [Import existing scanner reports](docs/IMPORTERS.md) without replacing their source evidence.
 
 Check a dependency before installing it with

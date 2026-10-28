@@ -25,6 +25,7 @@ from agent_bom.ai_components.langgraph_prebuilt import (
     unwrap_compile,
 )
 from agent_bom.ai_components.langgraph_topology import collect_langgraph_topology
+from agent_bom.ai_components.project_scope import project_scope
 from agent_bom.ai_components.python_scopes import ScopeIndex
 from agent_bom.ast.source_reader import parse_python_source
 from agent_bom.ast_signal_utils import is_agent_tool_decorator
@@ -104,10 +105,11 @@ def scan_framework_agents(*paths: str | Path) -> list[FrameworkAgent]:
     """Scan Python source for framework-native agents and relationships."""
     agents: list[FrameworkAgent] = []
     seen: set[str] = set()
+    scopes: dict[str, Path] = {}
     for path in paths:
         root = Path(path)
         files = [root] if root.is_file() else _iter_python_files(root)
-        scope = (root if root.is_dir() else root.parent).resolve().name
+        scope = project_scope((root if root.is_dir() else root.parent).resolve(), scopes)
         for filepath in files:
             for agent in _scoped(_scan_python_file(filepath, root if root.is_dir() else filepath.parent), scope):
                 key = agent.stable_id

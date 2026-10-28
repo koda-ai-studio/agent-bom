@@ -257,9 +257,9 @@ def page_answer(
     offset = 0
     if cursor:
         value = _decode_cursor(cursor)
-        if value["f"] != filters:
+        if value["f"] != filters or value["t"] != tenant_id:
             raise AffectedCursorError("malformed", "Cursor belongs to a different filter; restart from the first page.")
-        if value["t"] != tenant_id or value["g"] != answer["generation"] or value["o"] > len(rows):
+        if value["g"] != answer["generation"] or value["o"] > len(rows):
             raise AffectedCursorError("stale", "Affected assets changed since this cursor was issued; restart from the first page.")
         offset = value["o"]
     page = rows[offset : offset + limit]

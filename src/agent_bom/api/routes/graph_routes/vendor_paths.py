@@ -5,11 +5,12 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, Optional
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from agent_bom.api.graph_generation import pin_generation, verify_generation
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph_vendor_paths import GraphCrossVendorPathsResponse
+from agent_bom.api.request_contract import reject_unknown_query_params
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.path_cursor import path_continuation, path_cursor_scope, path_page_cursors
@@ -78,7 +79,12 @@ async def _whole_queue_slice(
     return ranked, selected[offset : offset + limit], len(selected), vendor_pair_facets(crossing), source, page.covers_all_matches
 
 
-@router.get("/graph/attack-paths/cross-vendor", **documented(GraphCrossVendorPathsResponse), tags=["graph"])
+@router.get(
+    "/graph/attack-paths/cross-vendor",
+    **documented(GraphCrossVendorPathsResponse),
+    tags=["graph"],
+    dependencies=[Depends(reject_unknown_query_params)],
+)
 async def get_cross_vendor_attack_paths(
     request: Request,
     scan_id: Optional[str] = Query(None, description="Scan ID"),

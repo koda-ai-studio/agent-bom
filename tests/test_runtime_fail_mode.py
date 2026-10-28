@@ -45,6 +45,7 @@ def test_matrix_covers_every_gateway_enforcement_subsystem() -> None:
         "graph_reachability_enforcement",
         "device_posture_enrichment",
         "audit_export",
+        "audit_admission",
         "injection_protection",
     }
 
@@ -218,3 +219,12 @@ def test_non_managed_token_unaffected_by_identity_store_outage(monkeypatch: pyte
     resp = client.post("/mcp/filesystem", json=_call(token="token-a"))
     assert _blocked_source(resp) is None, resp.text
     assert resp.json().get("result") == {"ok": True}, resp.text
+
+
+def test_audit_admission_is_documented_fail_closed() -> None:
+    """Shared/control-plane audit delivery gates admission; export stays fail-open."""
+    admission = _BY_NAME["audit_admission"]
+    assert admission.default_posture is FailPosture.CLOSED
+    assert not admission.follows_gateway_fail_mode
+    assert "503" in admission.on_failure and "AGENT_BOM_GATEWAY_AUDIT_BACKEND" in admission.control
+    assert "audit_admission" in _BY_NAME["audit_export"].on_failure

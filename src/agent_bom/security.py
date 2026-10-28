@@ -803,7 +803,6 @@ def validate_url(url: str, *, allowed_schemes: tuple[str, ...] = ("https",), all
     Raises:
         SecurityError: If URL is invalid or uses insecure protocol
     """
-    import socket
     from urllib.parse import urlparse
 
     try:
@@ -853,10 +852,9 @@ def validate_url(url: str, *, allowed_schemes: tuple[str, ...] = ("https",), all
         pass  # hostname is a domain name — resolve below
 
     # DNS rebinding protection: resolve hostname and validate all resolved IPs
-    try:
-        addrinfos = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-    except socket.gaierror:
-        raise SecurityError(f"Cannot resolve hostname: {hostname}")
+    from agent_bom.core.egress_resolution import resolve_egress_hostname
+
+    addrinfos = resolve_egress_hostname(hostname, SecurityError)
 
     for family, _type, _proto, _canonname, sockaddr in addrinfos:
         resolved_ip = sockaddr[0]

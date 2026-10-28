@@ -19,6 +19,7 @@ signed release evidence.
 
 | Surface | Command | Release bar |
 |---|---|---|
+| Pre-tag preflight | `scripts/preflight_release.sh <version>` | Runs the managed-file checks below plus `check_release_tag_is_new.py`: the version is not already tagged or published and the changelog documents it (this is what caught the 0.99.0 re-tag). |
 | Exact main CI | `uv run python scripts/check_release_main_ci.py --repo koda-ai-studio/agent-bom --sha "$(git rev-parse HEAD)" --branch main --workflow ci.yml` | Candidate equals current `main` and its exact `CI/CD Pipeline` main-push run is completed successfully; pending, canceled, stale, or PR-only runs fail closed. |
 | Exact main runtime acceptance | `uv run python scripts/check_release_main_ci.py --repo koda-ai-studio/agent-bom --sha "$(git rev-parse HEAD)" --branch main --workflow runtime-acceptance.yml` | The same main SHA has a successful push run and completed `Gateway ingest and replica reconnect` job. Missing, skipped, stale, failed, or pending runtime evidence blocks tagging. |
 | Version alignment | `uv run python scripts/check_release_consistency.py` | Package, docs, OpenAPI, Docker, Helm, and integration versions agree. |

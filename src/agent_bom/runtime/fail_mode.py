@@ -198,7 +198,20 @@ GATEWAY_FAIL_MODE_MATRIX: tuple[SubsystemFailMode, ...] = (
         follows_gateway_fail_mode=False,
         control="none (fixed)",
         on_failure=(
-            "Audit-sink, SIEM webhook, and OCSF interop delivery failures never block the relay; decisions are made before export."
+            "SIEM webhook and OCSF interop delivery failures never block the relay; decisions are made before export. "
+            "Control-plane audit admission is a separate subsystem (audit_admission)."
+        ),
+    ),
+    SubsystemFailMode(
+        subsystem="audit_admission",
+        default_posture=FailPosture.CLOSED,
+        follows_gateway_fail_mode=False,
+        control="AGENT_BOM_GATEWAY_AUDIT_BACKEND (local | postgres); none for the posture itself (fixed)",
+        on_failure=(
+            "When a control-plane audit sink is configured, every tools/call is admitted only after its gateway "
+            "decision is durably acknowledged (local spill or shared Postgres outbox, up to 20 seconds). An "
+            "unavailable sink, an open delivery circuit, or an unacknowledged batch denies the call with 503; "
+            "the relay never forwards a call whose decision could be lost."
         ),
     ),
     SubsystemFailMode(

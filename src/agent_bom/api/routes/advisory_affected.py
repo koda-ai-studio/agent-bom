@@ -15,10 +15,11 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 
 import anyio
-from fastapi import APIRouter, HTTPException, Path, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 
 from agent_bom.api.advisory_affected_read import tenant_affected_answer
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
+from agent_bom.api.request_contract import reject_unknown_query_params
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.scanners.advisory_affected import DEFAULT_LIMIT, MAX_LIMIT, AffectedCursorError, page_answer
 
@@ -45,7 +46,7 @@ def advisory_affected_page(
         raise HTTPException(status_code=422, detail=str(exc)) from exc  # exc-safe: fixed verdict/limit messages from page_answer
 
 
-@router.get("/intel/advisories/{advisory_id}/affected", tags=_TAGS)
+@router.get("/intel/advisories/{advisory_id}/affected", tags=_TAGS, dependencies=[Depends(reject_unknown_query_params)])
 async def get_advisory_affected_assets(
     request: Request,
     advisory_id: Annotated[str, Path(min_length=3, max_length=96, pattern=r"^[A-Za-z][A-Za-z0-9._:-]+$")],

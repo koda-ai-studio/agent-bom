@@ -19,14 +19,21 @@
     },
     "coverage_warnings": {
       "type": "array",
-      "description": "OS releases whose vulnerability data the source does not carry (typically end-of-life); a low/zero count for these must not be read as clean.",
+      "description": "Coverage limits a reader must weigh before calling a result clean: OS releases whose vulnerability data the source does not carry (typically end-of-life), unresolved package versions, and remote lookups that failed or were skipped. Rows without `kind` describe one ecosystem/release; rows with `kind` (`package_version_gap`, `remote_lookup_error`, `remote_lookup_gap`, ...) describe a scan-wide gap.",
       "items": {
         "type": "object",
-        "required": ["ecosystem", "release", "reason", "detail"],
+        "required": ["release"],
+        "anyOf": [
+          { "required": ["ecosystem", "reason", "detail"] },
+          { "required": ["kind"] }
+        ],
         "properties": {
+          "kind": { "type": "string", "minLength": 1 },
           "ecosystem": { "type": "string" },
+          "ecosystems": { "type": "array", "items": { "type": "string" } },
           "release": { "type": "string" },
           "reason": { "type": "string" },
+          "reasons": { "type": "array", "items": { "type": "string" } },
           "detail": { "type": "string" },
           "package_count": { "type": "integer", "minimum": 0 },
           "advisory_rows": { "type": "integer", "minimum": 0 }
@@ -108,11 +115,15 @@
     },
     "blast_radius": {
       "type": "array",
+      "description": "Schema \"1\" rows embed the matching exposure path as `exposure_path`; schema \"2\" rows reference it by `exposure_path_rank` (1-based index into `exposure_paths.paths`) and `exposure_path_id`.",
       "items": {
         "type": "object",
         "required": ["schema_version"],
         "properties": {
-          "schema_version": { "type": "string", "pattern": "^1(\\.\\d+)?$" }
+          "schema_version": { "type": "string", "pattern": "^(1(\\.\\d+)?|2)$" },
+          "exposure_path_rank": { "type": "integer", "minimum": 1 },
+          "exposure_path_id": { "type": "string", "minLength": 1 },
+          "exposure_path": { "type": "object" }
         },
         "additionalProperties": true
       }
