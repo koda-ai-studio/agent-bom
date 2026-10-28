@@ -38,6 +38,8 @@ export type StatStripItem = {
   href?: string;
   /** Makes the cell a button. */
   onClick?: () => void;
+  /** Native tooltip on the cell, e.g. the basis a count derives from. */
+  title?: string;
 };
 
 export type StatStripProps = {
@@ -86,6 +88,7 @@ function StatCell({ item }: { item: StatStripItem }) {
     icon: Icon,
     href,
     onClick,
+    title,
   } = item;
 
   const tinted =
@@ -112,7 +115,7 @@ function StatCell({ item }: { item: StatStripItem }) {
 
   if (href) {
     return (
-      <Link href={href} className={`${base} hover:bg-[color:var(--surface-elevated)]`}>
+      <Link href={href} title={title} className={`${base} hover:bg-[color:var(--surface-elevated)]`}>
         {inner}
       </Link>
     );
@@ -122,11 +125,12 @@ function StatCell({ item }: { item: StatStripItem }) {
       <button
         type="button"
         onClick={onClick}
+        title={title}
         className={`${base} w-full hover:bg-[color:var(--surface-elevated)]`}
       >
         {inner}
       </button>
     );
   }
-  return <div className={base}>{inner}</div>;
+  return <div className={base} title={title}>{inner}</div>;
 }
