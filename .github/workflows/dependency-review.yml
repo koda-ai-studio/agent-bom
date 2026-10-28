@@ -23,7 +23,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          # The merge commit plus both parents is all the diff below needs; a
+          # full-history clone was most of this required check's wall time.
+          fetch-depth: 2
 
       - name: Detect dependency-workflow bootstrap PR
         id: bootstrap
@@ -50,11 +52,23 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "skip=false" >> "$GITHUB_OUTPUT"
+          # The review diffs dependency snapshots between base and head. A PR
+          # that touches no manifest, lockfile, Dockerfile, chart or workflow
+          # (actions are dependencies too) cannot change that snapshot, so the
+          # required check reports success without waiting on the API.
+          if echo "$CHANGED" | grep -Eq '(^|/)(pyproject\.toml|uv\.lock|package\.json|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|requirements[^/]*\.txt|constraints[^/]*\.txt|go\.mod|go\.sum|Cargo\.toml|Cargo\.lock|Gemfile(\.lock)?|composer\.(json|lock)|Chart\.yaml|Chart\.lock|Dockerfile[^/]*|action\.ya?ml|\.pre-commit-config\.yaml)$|^\.github/'; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "reason=no dependency manifest, lockfile, Dockerfile, chart or workflow changed" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Skip dependency review for bootstrap workflow change
+      - name: Skip dependency review
         if: steps.bootstrap.outputs.skip == 'true'
-        run: echo "Skipping dependency review for dependency graph bootstrap workflow change."
+        env:
+          REASON: ${{ steps.bootstrap.outputs.reason }}
+        run: |
+          echo "Skipping dependency review: ${REASON:-dependency graph bootstrap workflow change}."
 
       - name: Review dependency changes
         if: steps.bootstrap.outputs.skip != 'true'

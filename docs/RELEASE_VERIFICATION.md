@@ -607,6 +607,21 @@ submission pin). Merge it to advance the docs. `scripts/check_version_alignment.
 fails if `PUBLISHED_VERSION` is ahead of the source version or, when release tags
 are available locally, names a tag that does not exist.
 
+#### Post-release pin sync
+
+The `Sync post-release pins` job of `release.yml` needs two repository settings;
+without them it still pushes the `chore/post-release-pins-vX.Y.Z` branch and
+ends as a labelled skip (a `::notice` on the run and a step-summary entry name
+the manual command) instead of failing the published release:
+
+| Setting | Where | Without it |
+|---|---|---|
+| `AUTOMATION_SSH_SIGNING_KEY` secret: the private SSH key (`ssh-keygen -t ed25519`) whose public half is registered as a **signing key** on the automation account | Settings → Secrets and variables → Actions | the branch is pushed with unsigned commits; re-sign before merging (`git rebase --exec 'git commit --amend --no-edit -S'`) |
+| **Allow GitHub Actions to create and approve pull requests** | Settings → Actions → General → Workflow permissions | the branch is pushed, no PR is opened; `gh pr create --repo <owner>/<repo> --base main --head chore/post-release-pins-vX.Y.Z` opens it by hand |
+
+The job authenticates with the run's `GITHUB_TOKEN` (`contents: write`,
+`pull-requests: write`); no personal token is stored.
+
 #### Release checkouts run their own tag
 
 Because pull-only pins track `PUBLISHED_VERSION`, a checkout of tag `vX` still

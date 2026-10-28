@@ -605,8 +605,11 @@ def test_docs_workflow_never_deploys_pages_from_release_tags():
     """Release tags may build docs, but Pages deploy is protected to main only."""
     workflow = (ROOT / ".github" / "workflows" / "docs.yml").read_text()
     assert "github.ref == 'refs/heads/main'" in workflow
-    assert "inputs.deploy == true" in workflow
     assert "actions/deploy-pages" in workflow
+    # The release run calls the build-only workflow; docs.yml is never callable from a tag.
+    assert "workflow_call" not in workflow
+    assert "actions/deploy-pages" not in (ROOT / ".github" / "workflows" / "docs-build.yml").read_text()
+    assert "uses: ./.github/workflows/docs.yml" not in (ROOT / ".github" / "workflows" / "release.yml").read_text()
 
 
 def test_release_registry_gate_is_deterministic_without_live_sync():

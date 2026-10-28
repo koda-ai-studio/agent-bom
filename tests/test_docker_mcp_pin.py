@@ -116,11 +116,12 @@ def test_post_release_pins_refresh_product_proof_before_publication() -> None:
     publish = next(step["run"] for step in steps if "gh pr create" in step.get("run", ""))
     # A real capture needs a built UI and clean committed inputs. Both source
     # and generated proof must be committed and validated before the first push.
-    source_commit = publish.index("git commit -S")
+    assert 'COMMIT="git commit -S"' in publish, "commits are signed whenever the automation key is configured"
+    source_commit = publish.index("$COMMIT -m")
     build = publish.index("npm run build")
     capture = publish.index("npm run capture:product-proof")
     validate = publish.index("python scripts/check_release_consistency.py")
-    proof_commit = publish.index("git commit -S", source_commit + 1)
+    proof_commit = publish.index("$COMMIT -m", source_commit + 1)
     push = publish.index("git push")
     assert source_commit < build < capture < validate < proof_commit < push
     assert "npm ci" in publish
@@ -138,18 +139,42 @@ def test_post_release_capture_installs_and_selects_python_dependencies() -> None
     assert steps[capture_index]["env"]["PYTHON"] == "${{ github.workspace }}/.venv/bin/python"
 
 
-def test_missing_signing_key_fails_the_pin_job_loudly() -> None:
-    """Exiting 0 without the key left main on the previous PUBLISHED_VERSION with no failing check."""
+def test_missing_signing_key_still_pushes_the_pin_branch_with_a_labelled_warning() -> None:
+    """A missing key must neither hide the gap (exit 0 silently) nor paint a published release red."""
     workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
     steps = workflow["jobs"]["docker-mcp-pin"]["steps"]
     signing = next(step for step in steps if step.get("id") == "signing")
-    missing = signing["run"].split("\nfi\n", 1)[0]
-    assert "skipping PR creation" not in missing
-    assert "exit 0" not in missing
-    assert "exit 1" in missing
-    assert "::error::" in missing
-    assert "$GITHUB_STEP_SUMMARY" in missing
+    missing = signing["run"].split("\n          else\n", 1)[0]
+    assert "exit 1" not in missing
+    assert "::error::" not in missing
+    assert "::warning title=Post-release pins: AUTOMATION_SSH_SIGNING_KEY not configured::" in missing
+    assert "docs/RELEASE_VERIFICATION.md" in missing
+    assert "configured=false" in missing
+    # The preflight also reads the repository setting that blocks `gh pr create`.
+    assert "actions/permissions/workflow" in signing["run"]
+    assert "can_approve_pull_request_reviews" in signing["run"]
+
+    publish = next(step for step in steps if "gh pr create" in step.get("run", ""))
+    assert publish["if"] == "steps.pin.outputs.changed == 'true'", "the branch is pushed even when the key or the PR permission is missing"
+    assert "SIGNING_CONFIGURED" in publish["env"]
+    assert "PR_CREATE" in publish["env"]
+    assert "git push --force-with-lease origin" in publish["run"]
+
+
+def test_pr_creation_refusal_is_a_labelled_skip_with_the_manual_command() -> None:
+    """'GitHub Actions is not permitted to create or approve pull requests' must not fail the release run."""
+    workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["docker-mcp-pin"]["steps"]
+    publish = next(step["run"] for step in steps if "gh pr create" in step.get("run", ""))
+    push = publish.index("git push --force-with-lease")
+    refusal = publish.index("not permitted to create or approve pull requests")
+    assert push < refusal, "the branch must already be pushed when the PR refusal is classified"
+    assert "::notice title=Post-release pin PR skipped" in publish
+    assert "gh pr create --repo ${GITHUB_REPOSITORY} --base main --head ${BRANCH}" in publish
+    assert "Allow GitHub Actions to create and approve pull requests" in publish
+    assert '[ "$PR_CREATE" = "false" ]' in publish
+    assert "$GITHUB_STEP_SUMMARY" in publish
     report = [step for step in steps if str(step.get("if", "")).startswith("failure()")]
-    assert report, "a failed pin job must still leave a summary the run page shows despite continue-on-error"
+    assert report, "a genuinely failed pin job must still leave a summary the run page shows despite continue-on-error"
     assert "$GITHUB_STEP_SUMMARY" in report[-1]["run"]
     assert "::error::" in report[-1]["run"]
