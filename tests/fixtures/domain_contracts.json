@@ -1291,6 +1291,7 @@
         "confidence",
         "cvss_score",
         "fixed_version",
+        "fix_is_prerelease",
         "references",
         "epss_score",
         "epss_percentile",

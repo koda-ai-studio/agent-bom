@@ -26,6 +26,7 @@ from agent_bom.cmmc import tag_blast_radius as tag_cmmc
 from agent_bom.compliance_utils import apply_effective_blast_radius_tags
 from agent_bom.constants import AI_PACKAGES as _AI_FRAMEWORK_PACKAGES
 from agent_bom.core.suppression_score import risk_rank_key
+from agent_bom.core.versions.prerelease_fix import fix_is_prerelease
 from agent_bom.eu_ai_act import tag_blast_radius as tag_eu_ai_act
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.fedramp import tag_blast_radius as tag_fedramp
@@ -358,12 +359,7 @@ def build_vulnerabilities(vuln_data_list: list[dict], package: Package) -> list[
                 source_package=package.source_package,
                 aliases=tuple(package.lookup_names),
             ):
-                _logger.debug(
-                    "Filtered %s: version %s not in affected range for %s",
-                    vuln_id,
-                    package.version,
-                    package.name,
-                )
+                _logger.debug("Filtered %s: version %s not in affected range for %s", vuln_id, package.version, package.name)
                 continue
 
         from agent_bom.advisory_ids import canonical_vulnerability_id, match_confidence_tier
@@ -406,6 +402,7 @@ def build_vulnerabilities(vuln_data_list: list[dict], package: Package) -> list[
                 cvss_score=cvss_score,
                 cvss_vector=cvss_vector,
                 fixed_version=fixed,
+                fix_is_prerelease=fix_is_prerelease(fixed, package.ecosystem),
                 references=references,
                 published_at=vuln_data.get("published"),
                 modified_at=vuln_data.get("modified"),

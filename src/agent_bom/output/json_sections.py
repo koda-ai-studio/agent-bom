@@ -76,6 +76,7 @@ def _vulnerability_json(v: Any) -> dict[str, Any]:
         "exploitability": v.exploitability,
         "cwe_ids": v.cwe_ids,
         "fixed_version": v.fixed_version,
+        "fix_is_prerelease": bool(getattr(v, "fix_is_prerelease", False)),
         "references": v.references,
         "nvd_published": v.nvd_published,
         "nvd_modified": v.nvd_modified,

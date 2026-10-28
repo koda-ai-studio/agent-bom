@@ -117,6 +117,7 @@ def serialize_vulnerability(vulnerability: Any) -> dict[str, Any]:
         "summary": getattr(vulnerability, "summary", None),
         "severity": severity_value,
         "fixed_version": getattr(vulnerability, "fixed_version", None),
+        "fix_is_prerelease": bool(getattr(vulnerability, "fix_is_prerelease", False)),
         "match_confidence_tier": getattr(vulnerability, "match_confidence_tier", None),
         "is_kev": bool(getattr(vulnerability, "is_kev", False)),
         "kev_date_added": getattr(vulnerability, "kev_date_added", None),

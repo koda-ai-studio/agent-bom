@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
+from agent_bom.core.versions.prerelease_fix import fix_is_prerelease
 from agent_bom.cpe_match import cpe_applicability, cpe_identity
 from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.malicious import flag_malicious_from_vulns
@@ -88,6 +89,7 @@ def _local_vuln_to_vulnerability(lv: "Any") -> Vulnerability:
         cvss_score=cvss_score,
         cvss_vector=cvss_vector if isinstance(cvss_vector, str) and cvss_vector else None,
         fixed_version=fixed_version,
+        fix_is_prerelease=fix_is_prerelease(fixed_version, getattr(lv, "ecosystem", None)),
         epss_score=lv.epss_probability,
         epss_percentile=lv.epss_percentile,
         is_kev=lv.is_kev,

@@ -128,7 +128,9 @@ def merge_advisory_clusters(records: list[Vulnerability], *, fix_fallback: bool 
         representative = authoritative[0]
         result = deepcopy(representative)
         if fix_fallback and not (result.fixed_version or "").strip():
-            result.fixed_version = next((record.fixed_version for record in authoritative if (record.fixed_version or "").strip()), None)
+            donor = next((record for record in authoritative if (record.fixed_version or "").strip()), None)
+            result.fixed_version = donor.fixed_version if donor else None
+            result.fix_is_prerelease = bool(donor and donor.fix_is_prerelease)
         keys = set().union(*(advisory_keys(record) for record in cluster))
         cves = sorted(key for key in keys if key.upper().startswith("CVE-"))
         result.id = cves[0] if cves else min(keys)
