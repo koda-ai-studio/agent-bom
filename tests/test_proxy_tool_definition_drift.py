@@ -332,6 +332,29 @@ def test_any_of_member_order_and_required_membership_still_drift():
     assert [a.details["changed_tools"] for a in alerts] == [[{"name": "a", "fields": ["inputSchema"]}]] * 2
 
 
+@pytest.mark.parametrize("keyword", ["const", "default", "examples", "enum"])
+def test_schema_literal_array_order_is_not_treated_as_a_schema_set(keyword):
+    from agent_bom.runtime.drift_baseline import fingerprint_tools
+
+    literal = {"required": ["first", "second"], "enum": ["first", "second"]}
+    value = [literal] if keyword in {"enum", "examples"} else literal
+    tool = {"name": "read", "inputSchema": {keyword: value}}
+    changed = copy.deepcopy(tool)
+    target = changed["inputSchema"][keyword]
+    target = target[0] if isinstance(target, list) else target
+    target["required"].reverse()
+    assert fingerprint_tools([tool]) != fingerprint_tools([changed])
+
+
+def test_vendor_metadata_array_order_remains_significant():
+    from agent_bom.runtime.drift_baseline import fingerprint_tools
+
+    tool = {"name": "read", "_meta": {"required": ["first", "second"]}}
+    changed = copy.deepcopy(tool)
+    changed["_meta"]["required"].reverse()
+    assert fingerprint_tools([tool]) != fingerprint_tools([changed])
+
+
 class _SingleWaiterStdin:
     """Mimics CPython <= 3.11 StreamWriter.drain, which asserts on a second concurrent waiter."""
 

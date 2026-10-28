@@ -70,20 +70,52 @@ _DECLARATION_TYPES = {
 }
 
 
-# JSON Schema treats these as sets; MCP icon order carries no meaning. ``anyOf``/``oneOf``
-# members stay positional, as do ``properties`` entries (hashed with sorted keys already).
-_ORDER_INSENSITIVE_LISTS = frozenset({"required", "enum", "icons"})
+_SCHEMA_MAPS = frozenset({"properties", "patternProperties", "$defs", "definitions", "dependentSchemas", "dependencies"})
+_SCHEMA_CHILDREN = frozenset(
+    {
+        "items",
+        "additionalItems",
+        "contains",
+        "additionalProperties",
+        "unevaluatedItems",
+        "unevaluatedProperties",
+        "propertyNames",
+        "not",
+        "if",
+        "then",
+        "else",
+    }
+)
+_SCHEMA_ARRAYS = frozenset({"allOf", "anyOf", "oneOf", "prefixItems"})
+
+
+def _sort_set(items: list) -> list:
+    return sorted(items, key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=True, allow_nan=False))
+
+
+def _canonical_schema(value: object) -> object:
+    """Normalize schema sets only; literal values and extension data retain array order."""
+    if not isinstance(value, dict):
+        return value
+    result = dict(value)
+    for key, child in value.items():
+        if key in {"required", "enum"} and isinstance(child, list):
+            result[key] = _sort_set(child)
+        elif key in _SCHEMA_MAPS and isinstance(child, dict):
+            result[key] = {name: _canonical_schema(schema) for name, schema in child.items()}
+        elif (key in _SCHEMA_ARRAYS or key == "items") and isinstance(child, list):
+            result[key] = [_canonical_schema(schema) for schema in child]
+        elif key in _SCHEMA_CHILDREN:
+            result[key] = _canonical_schema(child)
+    return result
 
 
 def _canonical(value: object, key: str | None = None) -> object:
-    """Copy ``value`` with order-insensitive lists sorted so a reordering is not drift."""
-    if isinstance(value, dict):
-        return {str(k): _canonical(v, str(k)) for k, v in value.items()}
-    if isinstance(value, list):
-        items = [_canonical(item) for item in value]
-        if key in _ORDER_INSENSITIVE_LISTS:
-            items.sort(key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=True, default=str))
-        return items
+    """Normalize only declaration fields with known order-insensitive semantics."""
+    if key in {"inputSchema", "outputSchema"}:
+        return _canonical_schema(value)
+    if key == "icons" and isinstance(value, list):
+        return _sort_set(value)
     return value
 
 

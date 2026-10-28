@@ -344,7 +344,9 @@ A declaration change under an unchanged name emits a HIGH
 included in these alerts or persisted; only per-field SHA-256 fingerprints are
 held in memory. Durable audit records retain the tool name and a normalized
 change reason; detailed field lists follow the existing replay-only redaction
-policy. JSON object key order does not create drift. Name-only Shield
+policy. JSON object key order, schema `required`/`enum` set order and declaration
+`icons` order do not create drift. Arrays inside literal schema values or vendor
+metadata retain their order, so changing them still produces drift. Name-only Shield
 callers and persisted server-scoped name baselines retain their existing contract;
 definition fingerprints are established anew in each session.
 
