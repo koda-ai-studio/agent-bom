@@ -78,7 +78,7 @@ export function RelationshipIcon({ relationship }: { relationship: string }) {
 export function qualifiedLabel(relationship: string, label: React.ReactNode, data: EdgeProps["data"]): React.ReactNode {
   const qualifier = accessEvidenceQualifier(relationship, data as Parameters<typeof accessEvidenceQualifier>[1]);
   const suffix = ` · ${qualifier}`;
-  if (!qualifier || typeof label !== "string" || !label.endsWith(suffix)) return label;
+  if (data?.boundedOverview || !qualifier || typeof label !== "string" || !label.endsWith(suffix)) return label;
   return <>{label.slice(0, -suffix.length)}<span className="sr-only">{suffix}</span></>;
 }
 

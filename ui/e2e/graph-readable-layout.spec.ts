@@ -174,13 +174,18 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
   await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges);
-  await page.goto("/graph?capture=1&scan=snapshot&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
+  await page.goto("/graph?scan=snapshot&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
   await expect(page.locator(".react-flow__node")).not.toHaveCount(0);
   await page.locator(".react-flow__controls-fitview").click();
   await settle(page);
   expect(await cardOverlaps(page)).toEqual([]);
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await labelCollisions(page)).toEqual([]);
+  await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(proof.capture_fixture.graph.edges.length);
+  for (const verb of [/Authenticates As/i, /Has Permission/i, /Invoked/i, /Exposed To/i]) {
+    await expect(page.locator(".graph-relationship-label").filter({ hasText: verb })).toBeVisible();
+  }
+  await expect(page.locator(".graph-relationship-label .sr-only")).toHaveCount(0);
   const clippedIds = await page.locator("[data-graph-entity] p > span[title]").evaluateAll(ids =>
     ids.filter(id => id.scrollWidth > id.clientWidth + 1).map(id => id.textContent));
   expect(clippedIds).toEqual([]);

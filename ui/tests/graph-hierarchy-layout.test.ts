@@ -138,11 +138,12 @@ describe("evidence-driven graph flow", () => {
     expect(result.nodes.every(n => Number.isFinite(n.position.x) && Number.isFinite(n.position.y))).toBe(true);
   });
 
-  it("keeps overview connections quiet and reveals relationship labels on selection", () => {
+  it("names bounded overview relationships and retains their recorded direction without selection", () => {
     const result = graphHierarchyLayout(nodes, edges);
     const quiet = readableGraphEdges(result.edges);
-    expect(quiet.find(e => e.id === "source")?.label).toBeUndefined();
-    expect(quiet.find(e => e.id === "config")?.label).toBeUndefined();
+    expect(quiet.find(e => e.id === "source")?.label).toBeDefined();
+    expect(result.edges.every(e => e.data?.directionEmphasis === true)).toBe(true);
+    expect(quiet.find(e => e.id === "config")?.label).toBeDefined();
     const selected = readableGraphEdges(result.edges, new Set(["repo", "source"]));
     expect(selected.find(e => e.id === "source")?.label).toBeDefined();
     expect(quiet.find(e => e.id === "source")?.ariaLabel).toContain("relationship");

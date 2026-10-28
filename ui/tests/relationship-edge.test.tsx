@@ -33,6 +33,12 @@ describe("relationship badges", () => {
     expect(qualifiedLabel("depends_on", "Depends On", { evidenceMode: "static" })).toBe("Depends On");
   });
 
+  it("shows the evidence qualifier on bounded overview relationships", () => {
+    const { container } = render(<RelationshipBadge relationship="can_access">{qualifiedLabel("can_access", "Can Access · modeled", { evidenceMode: "inferred", boundedOverview: true })}</RelationshipBadge>);
+    expect(container.querySelector(".sr-only")).toBeNull();
+    expect(screen.getByText("Can Access · modeled")).toBeVisible();
+  });
+
   it("styles the canvas chip as one inline line, never a wrapped box", () => {
     const css = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
     const rule = css.match(/\.graph-relationship-label \.relationship-badge \{([^}]*)\}/)?.[1] ?? "";
