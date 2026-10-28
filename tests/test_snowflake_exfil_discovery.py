@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
 import types
 
 import pytest
+
+from tests.snowflake_fixture_helpers import _snowflake_facade_alias  # noqa: F401 - fixture
 
 
 @pytest.fixture(autouse=True)
@@ -68,7 +71,7 @@ class _FakeConn:
 
 @pytest.fixture
 def _exfil(monkeypatch):
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.setattr(sf, "_get_connection", lambda *a, **k: _FakeConn())
     monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "acct1")
@@ -106,7 +109,7 @@ def test_findings_flag_unprotected_and_marketplace(_exfil) -> None:
 
 
 def test_no_account_is_graceful(monkeypatch) -> None:
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.delenv("SNOWFLAKE_ACCOUNT", raising=False)
     out = sf.discover_data_exfil()
