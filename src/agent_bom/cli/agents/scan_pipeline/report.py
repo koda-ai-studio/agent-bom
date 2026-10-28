@@ -172,6 +172,21 @@ def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
         for _notice in st.ctx.scan_notices
     )
     st.scan_issues.extend(_benchmark_scan_issues(st.ctx))
+    _enrichment = st.metadata_enrichment
+    if _enrichment is not None and int(getattr(_enrichment, "skipped", 0) or 0) > 0:
+        st.scan_issues.append(
+            ScanIssue(
+                code="metadata_enrichment_capped",
+                stage="inventory",
+                source="autodiscover",
+                message=(
+                    f"Auto-discovered risk metadata fetched for {_enrichment.attempted} of {_enrichment.candidates} "
+                    f"candidate package(s); {_enrichment.skipped} not enriched. Raise "
+                    "AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES to look up more. Advisory only: vulnerability coverage is unaffected."
+                ),
+                affects_coverage=False,
+            )
+        )
     if opts.no_scan:
         st.scan_issues.append(vulnerability_scan_skipped_issue())
     st.scan_outcome = (

@@ -9,16 +9,25 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from typing import Optional
 
+from agent_bom.core.settings import env_int
 from agent_bom.models import Package
 
 logger = logging.getLogger(__name__)
+
+# Per-scan cap on packages sent to npm/PyPI for auto-discovered risk metadata.
+# Read at call time so a long-lived control plane honors operator changes.
+_MAX_CANDIDATES_ENV = "AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES"
+_DEFAULT_MAX_CANDIDATES = 200
 
 # ─── npm / PyPI metadata fetchers ────────────────────────────────────────────
 
 _NPM_URL = "https://registry.npmjs.org/{}/latest"
 _PYPI_URL = "https://pypi.org/pypi/{}/json"
+_REQUEST_TIMEOUT = 5.0
+_CONCURRENCY = 5
 
 # Keywords that signal higher-risk capabilities
 _HIGH_RISK_KEYWORDS = frozenset(
@@ -62,7 +71,7 @@ _MEDIUM_RISK_KEYWORDS = frozenset(
 async def fetch_npm_metadata(name: str, client: object) -> Optional[dict]:  # noqa: ANN001
     """Fetch package metadata from the npm registry."""
     try:
-        resp = await client.get(_NPM_URL.format(name), timeout=5.0)  # type: ignore[attr-defined]
+        resp = await client.get(_NPM_URL.format(name), timeout=_REQUEST_TIMEOUT)  # type: ignore[attr-defined]
         if resp.status_code != 200:
             return None
         data = resp.json()
@@ -84,7 +93,7 @@ async def fetch_npm_metadata(name: str, client: object) -> Optional[dict]:  # no
 async def fetch_pypi_metadata(name: str, client: object) -> Optional[dict]:  # noqa: ANN001
     """Fetch package metadata from PyPI."""
     try:
-        resp = await client.get(_PYPI_URL.format(name), timeout=5.0)  # type: ignore[attr-defined]
+        resp = await client.get(_PYPI_URL.format(name), timeout=_REQUEST_TIMEOUT)  # type: ignore[attr-defined]
         if resp.status_code != 200:
             return None
         data = resp.json()
@@ -216,17 +225,38 @@ async def autodiscover_package(
     }
 
 
-async def enrich_unknown_packages(packages: list[Package], *, global_timeout: float | None = 30.0) -> int:
+@dataclass
+class EnrichmentOutcome:
+    """What one metadata-enrichment pass attempted and what it left out."""
+
+    candidates: int = 0
+    cap: int = 0
+    attempted: int = 0
+    enriched: int = 0
+    skipped: int = 0
+    timed_out: bool = False
+
+
+def _candidate_cap(global_timeout: float | None) -> int:
+    """Candidates that fit the time budget: at least one concurrent batch."""
+    cap = env_int(_MAX_CANDIDATES_ENV, _DEFAULT_MAX_CANDIDATES, minimum=0, on_invalid="default")
+    if global_timeout is not None:
+        batches = max(int(global_timeout // _REQUEST_TIMEOUT), 1)
+        cap = min(cap, batches * _CONCURRENCY)
+    return cap
+
+
+async def enrich_unknown_packages(packages: list[Package], *, global_timeout: float | None = 30.0) -> EnrichmentOutcome:
     """Batch-enrich packages not found in the bundled registry.
 
     Updates Package objects in-place with auto_risk_level,
     auto_risk_justification, maintainer_count, and source_repo.
 
-    The global timeout bounds the whole enrichment pass. Individual requests
-    already have request timeouts, but large inventories can otherwise wait for
-    many slow registry calls in sequence across semaphore batches.
-
-    Returns the number of packages successfully enriched.
+    Only as many candidates as fit the budget are attempted: the smaller of
+    ``AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES`` and the requests the global
+    timeout can serve at the configured concurrency. The rest are reported as
+    skipped rather than scheduled and cancelled. The global timeout bounds the
+    whole pass.
     """
     from agent_bom.http_client import create_client
 
@@ -240,12 +270,24 @@ async def enrich_unknown_packages(packages: list[Package], *, global_timeout: fl
         and p.ecosystem in ("npm", "pypi", "PyPI")
     ]
 
-    if not to_enrich:
-        return 0
+    cap = _candidate_cap(global_timeout)
+    outcome = EnrichmentOutcome(candidates=len(to_enrich), cap=cap)
+    attempt = to_enrich[:cap]
+    outcome.attempted = len(attempt)
+    outcome.skipped = len(to_enrich) - len(attempt)
+    if outcome.skipped:
+        logger.info(
+            "Auto-discovery metadata enrichment capped at %s of %s candidate package(s); "
+            "set AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES to change the cap",
+            len(attempt),
+            len(to_enrich),
+        )
 
-    enriched = 0
+    if not attempt:
+        return outcome
+
     async with create_client(timeout=15.0) as client:
-        sem = asyncio.Semaphore(5)
+        sem = asyncio.Semaphore(_CONCURRENCY)
 
         async def _enrich_one(pkg: Package) -> bool:
             async with sem:
@@ -258,21 +300,21 @@ async def enrich_unknown_packages(packages: list[Package], *, global_timeout: fl
                     return True
                 return False
 
-        tasks = [asyncio.create_task(_enrich_one(pkg)) for pkg in to_enrich]
+        tasks = [asyncio.create_task(_enrich_one(pkg)) for pkg in attempt]
         done, pending = await asyncio.wait(tasks, timeout=global_timeout)
         for task in pending:
             task.cancel()
+        outcome.enriched = sum(1 for task in done if not task.cancelled() and task.exception() is None and task.result() is True)
         if pending:
+            outcome.timed_out = True
             # Do not block the scan path waiting for slow registry tasks to finish
             # after cancellation; honor global_timeout wall-clock.
             await asyncio.wait(pending, timeout=0.05)
             logger.warning(
                 "Auto-discovery metadata enrichment timed out after %.1fs; enriched %s/%s package(s)",
                 global_timeout or 0.0,
-                sum(1 for task in done if task.done() and not task.cancelled() and task.exception() is None and task.result() is True),
-                len(to_enrich),
+                outcome.enriched,
+                len(attempt),
             )
-        results = [task.result() if task.exception() is None else task.exception() for task in done if not task.cancelled()]
-        enriched = sum(1 for r in results if r is True)
 
-    return enriched
+    return outcome

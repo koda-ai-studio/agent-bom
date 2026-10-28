@@ -1,6 +1,7 @@
 """Tests for the auto-discovery module — risk inference, justification, and enrichment filtering."""
 
 import asyncio
+import time
 
 from agent_bom.autodiscover import (
     enrich_unknown_packages,
@@ -204,7 +205,96 @@ def test_enrich_unknown_packages_global_timeout(monkeypatch):
         # it means the 10 ms global timeout never fired.
         return await asyncio.wait_for(enrich_unknown_packages(packages, global_timeout=0.01), timeout=30)
 
-    enriched = asyncio.run(_bounded())
+    outcome = asyncio.run(_bounded())
 
-    assert enriched == 0
+    assert outcome.enriched == 0
+    assert outcome.attempted == 3
+    assert outcome.timed_out is True
     assert all(pkg.auto_risk_level is None for pkg in packages)
+
+
+class _CountingClient:
+    """Async HTTP client stand-in that records every request it receives."""
+
+    def __init__(self) -> None:
+        self.requests = 0
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return None
+
+    async def get(self, url, timeout=None):
+        self.requests += 1
+        await asyncio.sleep(0)
+        return _FakeResponse()
+
+
+class _FakeResponse:
+    status_code = 200
+
+    @staticmethod
+    def json():
+        return {"name": "pkg", "maintainers": [{"name": "m"}], "dependencies": {}, "keywords": []}
+
+
+def _unknown_packages(count: int) -> list[Package]:
+    return [Package(name=f"unknown-{idx}", version="1.0.0", ecosystem="npm", resolved_from_registry=False) for idx in range(count)]
+
+
+def test_enrich_unknown_packages_caps_candidates_to_budget(monkeypatch):
+    """10,000 candidates must not become 10,000 tasks: only the budgeted slice is requested."""
+    client = _CountingClient()
+    monkeypatch.setattr("agent_bom.http_client.create_client", lambda **_kwargs: client)
+    monkeypatch.delenv("AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES", raising=False)
+    packages = _unknown_packages(10_000)
+
+    start = time.monotonic()
+    outcome = asyncio.run(enrich_unknown_packages(packages, global_timeout=30.0))
+    elapsed = time.monotonic() - start
+
+    # floor(30 s / 5 s per request) * 5 concurrent = 30 fits the budget; the 200 default cap is larger.
+    assert outcome.cap == 30
+    assert outcome.candidates == 10_000
+    assert outcome.attempted == 30
+    assert outcome.skipped == 10_000 - 30
+    assert outcome.enriched == 30
+    assert outcome.timed_out is False
+    assert client.requests == 30
+    assert elapsed < 5.0
+    assert sum(1 for pkg in packages if pkg.auto_risk_level) == 30
+
+
+def test_enrich_unknown_packages_respects_max_candidates_env(monkeypatch):
+    client = _CountingClient()
+    monkeypatch.setattr("agent_bom.http_client.create_client", lambda **_kwargs: client)
+    monkeypatch.setenv("AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES", "7")
+    packages = _unknown_packages(50)
+
+    outcome = asyncio.run(enrich_unknown_packages(packages, global_timeout=30.0))
+
+    assert outcome.cap == 7
+    assert client.requests == 7
+    assert outcome.skipped == 43
+
+
+def test_enrich_unknown_packages_no_skip_when_under_cap(monkeypatch):
+    client = _CountingClient()
+    monkeypatch.setattr("agent_bom.http_client.create_client", lambda **_kwargs: client)
+    packages = _unknown_packages(4)
+
+    outcome = asyncio.run(enrich_unknown_packages(packages, global_timeout=30.0))
+
+    assert outcome.candidates == 4
+    assert outcome.attempted == 4
+    assert outcome.skipped == 0
+    assert outcome.enriched == 4
+    assert client.requests == 4
+
+
+def test_enrich_unknown_packages_empty():
+    outcome = asyncio.run(enrich_unknown_packages([], global_timeout=30.0))
+    assert outcome.candidates == 0
+    assert outcome.enriched == 0
+    assert outcome.skipped == 0

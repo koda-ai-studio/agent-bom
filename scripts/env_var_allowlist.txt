@@ -13,6 +13,8 @@
 # `# reason` comments are stripped by the loader.
 
 AGENT_BOM_AI_MODEL_ADVISORY_FEED
+# Per-scan cap on npm/PyPI metadata lookups for auto-discovered packages (default 200); read at call time so operator changes apply without restart.
+AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES
 # Comma list of flag-gated experimental features; read at call time by agent_bom.core.experimental (docs/EXPERIMENTAL.md).
 AGENT_BOM_EXPERIMENTAL
 # CLI machine-readable envelope toggle; read by the entrypoint before config is loaded.
