@@ -312,3 +312,27 @@ def test_distro_label_matches_its_pre_mapped_family() -> None:
         family = comparator_ecosystem(ecosystem)
         assert family in {"deb", "apk", "rpm"}
         assert compare_version_order(lower, higher, ecosystem) == compare_version_order(lower, higher, family)
+
+
+@pytest.mark.parametrize(
+    "label,lower,higher",
+    [
+        ("Debian GNU/Linux", "2.0-1ubuntu1", "2.0-1ubuntu2"),
+        ("Ubuntu 22.04", "1:2.0-1", "1:2.0-2"),
+        ("Alpine Linux", "1.2.3-r0", "1.2.3-r1"),
+        ("Red Hat Enterprise Linux", "2.4-12.el8", "2.4.1-1.el8"),
+    ],
+)
+def test_os_release_style_labels_route_to_the_distro_comparator(label: str, lower: str, higher: str) -> None:
+    from agent_bom.core.versions.ordering import comparator_ecosystem, compare_version_order
+
+    assert comparator_ecosystem(label) in {"deb", "apk", "rpm"}
+    assert compare_version_order(lower, higher, label) == -1
+    assert compare_version_order(higher, lower, label) == 1
+
+
+def test_non_distro_multiword_labels_are_left_alone() -> None:
+    from agent_bom.core.versions.ordering import comparator_ecosystem
+
+    assert comparator_ecosystem("GitHub Actions") == "github actions"
+    assert comparator_ecosystem("crates.io") == "crates.io"
