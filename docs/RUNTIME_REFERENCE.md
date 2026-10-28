@@ -55,7 +55,10 @@ jobs. API idempotency fencing uses an additional pool of up to four connections
 per process. The bootstrap application role permits 20 connections: default
 five-connection minimums can exhaust it with four replicas alone. Size pools
 and the database role limit together before enabling autoscaling; raising the
-replica count does not raise database capacity.
+replica count does not raise database capacity. Upstream connection pools and
+circuit breakers remain per process. Configure the existing shared rate-limit
+backend when enforcing tenant-wide quotas across replicas; delivery leases alone
+do not coordinate those controls.
 
 Before switching from a PVC spool, drain and verify the old deployment's backlog;
 the shared backend does not import local queues. Drain the shared queue before
@@ -433,6 +436,14 @@ and Python. Its JSON artifact is written only after every assertion and cleanup
 succeeds. Record a clean source commit and the image identity before treating a
 run as release evidence. CI pins kind, Helm and the Kubernetes node image.
 
+For shared-delivery acceptance, rerun the probe on the same disposable cluster
+with `--shared-delivery` and a separate `--output` path. This deploys two gateway
+pods without a shared PVC, repeats the 212-call restart test, then seeds one
+already-leased blocked-event fixture and force-deletes its owner pod. The
+surviving worker must deliver that event after lease expiry, leaving 213 unique
+ledger events. The fixture tests delivery recovery, not a replayed tool action.
+Pool sizes are bounded explicitly to fit the test database connection budget.
+
 For browser acceptance, build the production dashboard with Node 22, copy
 `.next/static` to `.next/standalone/.next/static` and `public` to
 `.next/standalone/public`, install Playwright Chromium, and add `--ui-root ui`.
@@ -451,9 +462,10 @@ reopen and signed-session SSE resume. Its upstream and OCR detector are fixtures
 Proof boundaries: the deployment probe uses a synthetic upstream and locally
 signed browser session, not an external identity-provider login. Its self-signed
 Postgres TLS checks do not certify a managed provider, ingress TLS, network-policy
-enforcement or multi-node failure. A single persistent gateway restart does not
-prove concurrent gateway replicas or audit delivery during a total control-plane
-outage. Missing/foreign auth and invalid tenant cursors fail closed; a transport
+enforcement or multi-node failure. The shared-delivery mode proves bounded
+two-pod lease recovery on one Kubernetes node; it does not establish fleet
+throughput, multi-node availability, or admission during a total control-plane
+outage. Admission requires a durable remote acknowledgement. Missing/foreign auth and invalid tenant cursors fail closed; a transport
 failure preserves the last complete browser batch until authenticated reconnect.
 
 Managed identity lookup now requires schema component version 2. Run Alembic
