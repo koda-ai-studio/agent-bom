@@ -169,6 +169,10 @@
         "upstream_ids": [],
         "user_interaction": null,
         "vendor_severity": null,
+        "vex_justification": null,
+        "vex_source": null,
+        "vex_status": null,
+        "vex_suppressed": false,
         "vulnerability_id": null
       },
       {
@@ -335,6 +339,10 @@
         "upstream_ids": [],
         "user_interaction": null,
         "vendor_severity": null,
+        "vex_justification": null,
+        "vex_source": null,
+        "vex_status": null,
+        "vex_suppressed": false,
         "vulnerability_id": null
       },
       {
@@ -505,6 +513,10 @@
         "upstream_ids": [],
         "user_interaction": null,
         "vendor_severity": null,
+        "vex_justification": null,
+        "vex_source": null,
+        "vex_status": null,
+        "vex_suppressed": false,
         "vulnerability_id": null
       }
     ],
@@ -632,6 +644,10 @@
       "upstream_ids": [],
       "user_interaction": null,
       "vendor_severity": null,
+      "vex_justification": null,
+      "vex_source": null,
+      "vex_status": null,
+      "vex_suppressed": false,
       "vulnerability_id": null
     },
     "secret": {
@@ -888,6 +904,10 @@
       "upstream_ids": [],
       "user_interaction": null,
       "vendor_severity": null,
+      "vex_justification": null,
+      "vex_source": null,
+      "vex_status": null,
+      "vex_suppressed": false,
       "vulnerability_id": null
     }
   },

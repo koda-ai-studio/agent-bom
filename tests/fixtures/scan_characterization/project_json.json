@@ -1177,7 +1177,8 @@
    "path_count": 0,
    "paths": [],
    "schema_version": "1",
-   "source": "blast_radius_output"
+   "source": "blast_radius_output",
+   "suppressed_path_count": 0
   },
   "finding_summary": {
    "by_severity": {
@@ -2061,13 +2062,15 @@
    "critical_unified_findings": 0,
    "high_unified_findings": 0,
    "installed_unconfigured_agents": 0,
+   "suppressed_vulnerabilities": 0,
    "total_agents": 1,
    "total_findings": 0,
    "total_mcp_servers": 1,
    "total_packages": 5,
    "total_vulnerabilities": 0,
    "unique_assets": 0,
-   "unique_packages": 5
+   "unique_packages": 5,
+   "vulnerability_occurrences": 0
   },
   "threat_framework_summary": {
    "cis_controls": [
