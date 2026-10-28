@@ -157,7 +157,7 @@
   "exception": null,
   "exit_code": 2,
   "file": null,
-  "stderr": "Usage: main check [OPTIONS] PACKAGE_SPEC\nTry 'main check --help' for help.\n\nError: Invalid pypi package name 'flask==@@'. Provide a package name followed by an explicit version.\n",
+  "stderr": "Usage: main check [OPTIONS] PACKAGE_SPEC\nTry 'main check -h' for help.\n\nError: Invalid pypi package name 'flask==@@'. Provide a package name followed by an explicit version.\n",
   "stdout": ""
  },
  "malicious_console": {
@@ -192,7 +192,7 @@
   "exception": null,
   "exit_code": 2,
   "file": null,
-  "stderr": "Usage: main check [OPTIONS] PACKAGE_SPEC\nTry 'main check --help' for help.\n\nError: Maven package 'log4j-core' is missing its group:artifact coordinate. Use --ecosystem maven with a fully qualified coordinate, for example org.apache.logging.log4j:log4j-core@2.14.1; a bare artifact name cannot produce a trustworthy clean verdict.\n",
+  "stderr": "Usage: main check [OPTIONS] PACKAGE_SPEC\nTry 'main check -h' for help.\n\nError: Maven package 'log4j-core' is missing its group:artifact coordinate. Use --ecosystem maven with a fully qualified coordinate, for example org.apache.logging.log4j:log4j-core@2.14.1; a bare artifact name cannot produce a trustworthy clean verdict.\n",
   "stdout": ""
  },
  "maven_bare_json": {

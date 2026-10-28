@@ -14,9 +14,9 @@ export interface AdvisoryAffectedRow {
   asset: { agent: string; server: string; asset_type?: string | undefined; node_id?: string | undefined };
   asset_label: string;
   /** `mcp_server`, `container_image` (an image-scan carrier) or the recorded type of a standalone asset (`package`). */
-  asset_type: string;
+  asset_type?: string;
   /** The graph node the asset is: the server, the image, or the package occurrence itself. */
-  asset_node_id: string | null;
+  asset_node_id?: string | null;
   package: { name: string; version: string; ecosystem: string; purl?: string | undefined; cpe?: string | undefined };
   installed_version: string;
   fixed_version: string | null;

@@ -20560,6 +20560,8 @@ export interface components {
             affected: components["schemas"]["AffectedProduct"][];
             /** Aliases */
             aliases?: string[];
+            /** Cvss Score */
+            cvss_score?: number | null;
             /** Id */
             id: string;
             /** Published At */
@@ -20571,6 +20573,8 @@ export interface components {
              * @enum {string}
              */
             severity: "critical" | "high" | "medium" | "low";
+            /** Severity Source */
+            severity_source?: string | null;
             /** Summary */
             summary: string;
         };
