@@ -23,7 +23,7 @@ it("separates identical agent names by reported origin and drills into exactly t
 
 it("keeps warning groups ahead of repetitive allows without hiding the allowed events", () => {
   const events = Array.from({ length: 80 }, (_, i) => ({ ...activity(i), source_id: "allowed-origin", session_id: "a" }));
-  events.push({ ...activity(100), source_id: "warning-origin", session_id: "w", decision: "warn" });
+  events.push({ ...activity(100), source_id: "warning-origin", session_id: "w", decision: "warn", event_type: "gateway.runtime_profile.warned" });
   render(<ActivityWindow events={events} onFreeze={vi.fn()} />);
   const rows = within(screen.getByRole("region", { name: "Reported activity groups" })).getAllByRole("button");
   expect(rows).toHaveLength(2);
