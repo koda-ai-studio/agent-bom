@@ -738,3 +738,46 @@ A pre-built Grafana dashboard is available at [`deploy/grafana/grafana-agent-bom
 - Proxy runtime panels (call rate, block reasons, latency p50/p95, replay rejections)
 
 See [`deploy/grafana/README.md`](../deploy/grafana/README.md) for setup details.
+
+## Fleet activity triage
+
+Open **Runtime → Live Activity** to inspect the recent received window. The
+connection summary separates saved profiles and policy mode, browser transport,
+recent receipt time, and recorded blocking decisions. It reads setup once or on
+explicit refresh; the receipt clock updates locally without polling setup.
+A policy-store configuration does not prove that endpoints applied it. Failed
+setup reads remain unavailable, including when event delivery still works. The
+initial **Activity groups** view prioritizes blocked and warning activity and
+combines only matching reported origin, session, agent, identity and profile
+contexts. Collector submitters and reported sources remain separate. Missing
+origins stay separate; group counts are not verified unique-agent counts.
+Select a group to inspect its event records, or select **Events** for chronological
+paging. Search accepts agent, origin, profile, tool and reason. Details expose
+collector and reported origin context alongside policy, evidence and trace links.
+Agent-name trace searches can include other origins and are labeled accordingly.
+
+The browser retains at most 1,000 received events and renders a bounded page.
+Counts describe the visible buffered window, not total fleet activity or complete
+history. **Browse retained history** uses the authenticated durable cursor;
+retention gaps and unavailable delivery stay explicit. The runtime overview
+continues to show a five-event preview linked to this full view.
+
+### Where the platform and runtime run
+
+| Deployment | Runtime placement | Where results appear |
+|---|---|---|
+| Local scan | CLI on the workstation; a scan does not intercept tool calls | Terminal or generated report. `--open` explicitly opens an HTML/graph report in the default browser. |
+| Local runtime | Configured local proxy or gateway through which the agent sends calls | Local audit evidence; connected delivery can populate the platform's Live Activity page. |
+| Managed endpoints | Configured client proxies deployed through endpoint management | Endpoint evidence is submitted to the chosen self-hosted control plane. See [endpoint rollout](DEPLOY_PLATFORM.md#endpoint-fleet-rollout). |
+| Cloud or Kubernetes | Shared gateway processes/pods and the API with durable storage | The same authenticated platform UI, reached through the deployment's URL. |
+
+**Live Activity**, **Runtime controls**, and **Trace explorer** navigate within the
+platform. They do not launch a separate gateway app or automatically install a
+proxy on endpoints. The browser uses its deployment's same-origin API proxy;
+operators configure that proxy's backend destination. A generated HTML report is
+a static artifact, not the live control plane. Cloud inventory discovery also
+does not prove that an agent's calls are routed through runtime enforcement.
+
+Connect the intended client/upstream, make a permitted test call, and inspect its
+profile, origin, policy decision and trace in Live Activity before treating the
+integration as active. An empty view is not proof of coverage or clean posture.

@@ -74,6 +74,8 @@ try {
       await page.getByRole("button", { name: "Live Feed", exact: true }).click();
       await page.getByRole("link", { name: "Open live activity", exact: true }).click();
       await expect(page).toHaveURL(/\/live-activity/);
+      await expect(page.getByRole("region", { name: "Reported activity groups", exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Events", exact: true }).click();
       await page.getByLabel("Rows per page").selectOption("250");
       await expect(feed.getByTestId("gateway-activity-row")).toHaveCount(212);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Page must fit viewport");

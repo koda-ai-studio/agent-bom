@@ -1,0 +1,42 @@
+import { act, render, screen, within } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import { GatewayFeedPanel } from "@/app/gateway/GatewayFeedPanel";
+import { activity } from "./fixtures/gateway-activity";
+const mocks = vi.hoisted(() => ({ profiles: vi.fn(), stats: vi.fn(), events: [] as ReturnType<typeof activity>[] }));
+vi.mock("@/components/auth-provider", () => ({ useAuthState: () => ({ session: { tenant_id: "tenant-a", subject: "operator" } }) }));
+vi.mock("@/lib/api", async () => ({ ...await vi.importActual("@/lib/api"), api: { listRuntimeProfiles: mocks.profiles, getGatewayStats: mocks.stats } }));
+vi.mock("@/lib/gateway-activity", async () => ({ ...await vi.importActual("@/lib/gateway-activity"), streamGatewayActivity: async function* () {
+  yield { schema_version: "gateway.activity.stream.v1", tenant_id: "tenant-a", events: mocks.events, next_cursor: "cursor", has_more: false, latest_ordinal: mocks.events.length, retention_floor_ordinal: 1 };
+  await new Promise(() => {});
+} }));
+afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); mocks.events = []; });
+it("separates saved blocking configuration and connected evidence from runtime coverage", async () => {
+  vi.useFakeTimers();
+  mocks.profiles.mockResolvedValue({ assignments: [{ config_id: "one", tenant_id: "tenant-a", status: "active", revoked: false, expires_at: "" }] });
+  mocks.stats.mockResolvedValue({ policy_runtime: { source_kind: "policy_store", rollout_mode: "blocking", enabled_policies: 1 } });
+  render(<GatewayFeedPanel />);
+  await act(() => vi.advanceTimersByTimeAsync(1));
+  const status = screen.getByRole("region", { name: "Runtime connection status" });
+  expect(within(status).getByText("1 active profile")).toBeInTheDocument();
+  expect(within(status).getByText("Browser stream connected")).toBeInTheDocument();
+  expect(within(status).getByText("Blocking configured")).toBeInTheDocument();
+  expect(within(status).getByText("No receipts in this window")).toBeInTheDocument();
+  expect(within(status).getByText(/Application to endpoints is unverified/)).toBeInTheDocument();
+  expect(within(status).getByRole("link", { name: "Configure clients and gateway" })).toHaveAttribute("href", "/runtime?tab=gateway");
+});
+it("keeps unavailable or foreign configuration unknown while exposing received blocking evidence", async () => {
+  vi.useFakeTimers();
+  mocks.events = [{ ...activity(1), decision: "deny", ingested_at: new Date().toISOString() }];
+  mocks.profiles.mockResolvedValue({ assignments: [{ config_id: "foreign", tenant_id: "tenant-b", status: "active", revoked: false, expires_at: "" }] });
+  mocks.stats.mockRejectedValue(new Error("private credentials must not be displayed"));
+  render(<GatewayFeedPanel />);
+  await act(() => vi.advanceTimersByTimeAsync(1));
+  const status = screen.getByRole("region", { name: "Runtime connection status" });
+  expect(within(status).getByText("Profile setup unavailable")).toBeInTheDocument();
+  expect(within(status).getByText("Policy setup unavailable")).toBeInTheDocument();
+  expect(within(status).getByText("Received within 2 minutes")).toBeInTheDocument();
+  expect(within(status).getByRole("button", { name: "Inspect 1 blocked decision" })).toBeInTheDocument();
+  expect(screen.queryByText(/private credentials/)).not.toBeInTheDocument();
+  await act(() => vi.advanceTimersByTimeAsync(150000));
+  expect(within(status).getByText("Receipt older than 2 minutes")).toBeInTheDocument();
+});
