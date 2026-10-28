@@ -97,6 +97,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
     returnToSummary, navigateRollupBreadcrumb, resetRollupToRoot, drillIntoRollup, investigateRollup, loadBlastRadius,
     retryGraph, graphTruncated,
   } = page;
+  const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
   if (loadingSnapshots) {
     return (
       <div className="flex items-center justify-center h-[80vh] text-ink-secondary">
@@ -731,7 +732,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             />
           ) : (
             <ReactFlow
-              style={readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext), Boolean(investigationContext) && compactInvestigationTopology && !narrowViewport)}
+              style={readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport)}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={presentation.nodes}

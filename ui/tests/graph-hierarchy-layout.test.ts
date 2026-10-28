@@ -26,6 +26,25 @@ describe("evidence-driven graph flow", () => {
     expect(graphAdaptiveFrame({ bounds: { x: left, y: top, width: right - left, height: bottom - top }, width: 1134, availableHeight: 684, inspector: false }).fitAll).toBe(true);
   });
 
+  it("centres a bounded multi-source workload across its relationship ranks", () => {
+    const entries = [node("service", "server"), node("deployment", "container"), node("image", "container"), node("file", "sourceFile"),
+      node("workload", "agent"), node("package", "package"), node("identity", "serviceAccount"), node("tool", "tool"),
+      node("finding", "vulnerability"), node("records", "dataStore")];
+    entries[1]!.data.occurrenceRole = "deployment";
+    const links = [edge("exposure", "service", "workload", "exposed_to"), edge("workload", "deployment", "workload", "contains"),
+      ...["deployment", "image", "file"].map(id => edge(id, id, "package", "contains")),
+      edge("identity", "workload", "identity", "authenticates_as"), edge("invocation", "workload", "tool", "invoked"),
+      edge("permission", "identity", "records", "has_permission"), edge("finding", "package", "finding", "vulnerable_to")];
+    const result = graphHierarchyLayout(entries, links, readableLineageDagreLr({ fitAspect: 1.65 }));
+    const ranks = new Map<number, number[]>();
+    for (const n of result.nodes) ranks.set(n.position.x, [...(ranks.get(n.position.x) ?? []), n.position.y]);
+    const centres = [...ranks.values()].map(ys => (Math.min(...ys) + Math.max(...ys)) / 2);
+    expect(Math.max(...centres) - Math.min(...centres)).toBeLessThan(1);
+    const byId = new Map(result.nodes.map(n => [n.id, n.position]));
+    for (const link of links) expect(byId.get(link.source)!.x).toBeLessThan(byId.get(link.target)!.x);
+    expect(result.edges.map(e => [e.id, e.source, e.target])).toEqual(links.map(e => [e.id, e.source, e.target]));
+  });
+
   it("reserves overview caption space for a multi-source correlation", () => {
     const entries = [node("file", "sourceFile"), node("image", "container"), node("deployment", "container"), node("package", "package"), node("finding", "vulnerability")];
     entries[2]!.data.occurrenceRole = "deployment occurrence";
@@ -138,10 +157,11 @@ describe("evidence-driven graph flow", () => {
     expect(result.nodes.every(n => Number.isFinite(n.position.x) && Number.isFinite(n.position.y))).toBe(true);
   });
 
-  it("keeps overview connections quiet and reveals relationship labels on selection", () => {
+  it("keeps bounded overview captions quiet while retaining arrows and selectable meaning", () => {
     const result = graphHierarchyLayout(nodes, edges);
     const quiet = readableGraphEdges(result.edges);
     expect(quiet.find(e => e.id === "source")?.label).toBeUndefined();
+    expect(result.edges.every(e => e.data?.directionEmphasis === true)).toBe(true);
     expect(quiet.find(e => e.id === "config")?.label).toBeUndefined();
     const selected = readableGraphEdges(result.edges, new Set(["repo", "source"]));
     expect(selected.find(e => e.id === "source")?.label).toBeDefined();

@@ -9,6 +9,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Small multi-source graphs use balanced relationship ranks, retain directional arrows, and reveal relationship captions on selection.
+- Completed graph queries keep display labels in the inspector instead of rewriting the URL, preserving newer root navigation and explicit link labels on slower browsers.
+
 ## [0.111.0] - 2026-10-28
 
 ### Highlights

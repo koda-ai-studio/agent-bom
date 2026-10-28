@@ -172,7 +172,10 @@ export function emphasizedDisplayEdges({ edges, nodes, neighborhood, pathEdgeIds
     ...(edge.data?.isClusterEdge ? { labelStyle: { ...edge.labelStyle, fontSize: 18 } } : {}),
     // Unselected links keep their labels and evidence with one legible
     // theme-aware stroke. Focus restores semantic emphasis.
-    ...(!neighborhood || neighborhood.size > 13 ? { style: { ...edge.style, stroke: "var(--text-tertiary)" } } : {}),
+    ...(!neighborhood || neighborhood.size > 13 ? { style: { ...edge.style,
+      stroke: edge.data?.boundedOverview ? "var(--text-secondary)" : "var(--text-tertiary)",
+      ...(edge.data?.boundedOverview ? { strokeWidth: 1.6, vectorEffect: "non-scaling-stroke" } : {}),
+    } } : {}),
   }));
 }
 
