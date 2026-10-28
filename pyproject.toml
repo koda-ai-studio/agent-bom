@@ -62,7 +62,7 @@ dependencies = [
     # NOTE: nltk pin removed — safety (which pulled nltk) was replaced by pip-audit.
     # nltk is not imported by agent-bom. Keeping it added 3 CVEs to Docker images.
     "pyjwt>=2.15.0",  # CVE-2026-101918 (nested JWT payload error handling)
-    "tornado>=6.5.10",  # Static-file symlink, response-size and cookie-parser security fixes
+    "tornado>=6.6",  # GHSA-pcg2-g6cj-q92c, GHSA-pw9p-v7r6-gx4p, GHSA-r4j5-9xpp-3985 fixed in 6.6
     # NOTE: stale pyopenssl suppressions were retired after snowflake-connector-python moved to a compatible range.
     # Tracked: https://github.com/koda-ai-studio/agent-bom/issues/930
     "cryptography>=50.0.0",  # CVE-2026-69247; required by audit chain, proxy response signing, and OIDC.
