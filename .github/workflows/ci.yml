@@ -898,8 +898,8 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
 
-  # One PR runner renders every packaged route (plus its accessibility
-  # checks) when UI sources change; the full browser suite runs after merge.
+  # One PR runner renders every packaged route, accessibility checks, and
+  # graph readability in both themes. The remaining browser suite runs after merge.
   ui-e2e-smoke:
     name: UI E2E smoke
     runs-on: ubuntu-latest
@@ -943,7 +943,7 @@ jobs:
           GRAPH_SCAN_ARTIFACT: ""
         run: |
           cd ui
-          npm run test:e2e -- e2e/route-catalog-smoke.spec.ts e2e/route-catalog-accessibility.spec.ts
+          npm run test:e2e -- e2e/route-catalog-smoke.spec.ts e2e/route-catalog-accessibility.spec.ts e2e/lineage-graph-readability.spec.ts
 
       - name: Retain UI failure diagnostics
         if: ${{ failure() || cancelled() }}

@@ -1038,7 +1038,15 @@ for (const theme of ["light", "dark"] as const) {
     await page.locator(".react-flow__edge").first().focus();
     await expect(page.locator(".relationship-badge")).toHaveCount(1);
     const overlaps = await page.locator(".react-flow").evaluate(canvas => {
-      const cards = [...canvas.querySelectorAll(".react-flow__node")].map(n => n.getBoundingClientRect());
+      // Circular entities reserve a wide hit area around the glyph. Check
+      // rendered glyphs and caption rows, not invisible space in that hit area.
+      const cards = [...canvas.querySelectorAll(".react-flow__node")].flatMap(node => {
+        const entity = node.querySelector("[data-graph-entity]");
+        return (entity ? [...entity.children] : [node]).filter(element => {
+          const style = getComputedStyle(element);
+          return style.visibility !== "hidden" && style.display !== "none";
+        }).map(element => element.getBoundingClientRect()).filter(box => box.width > 0 && box.height > 0);
+      });
       return [...canvas.querySelectorAll(".relationship-badge")].filter(label => {
         const r = label.getBoundingClientRect();
         return cards.some(n => r.left < n.right && r.right > n.left && r.top < n.bottom && r.bottom > n.top);
@@ -1095,8 +1103,10 @@ for (const theme of ["light", "dark"] as const) {
       return { verb: text.textContent!.replace(hidden?.textContent ?? "", ""),
         lines: text.getBoundingClientRect().height / lineHeight };
     }));
-    expect(metrics.some(metric => metric.verb === "Invoked")).toBe(true);
-    // Every chip is one inline line; the evidence tier is in assistive text and the edge's hover.
+    // Bounded views expose the evidence qualifier when a relationship is
+    // inspected, so the full observed label must remain visible and unwrapped.
+    expect(metrics.some(metric => metric.verb === "Invoked · observed")).toBe(true);
+    await expect(page.locator(".graph-relationship-label .sr-only")).toHaveCount(0);
     expect(metrics.every(metric => metric.lines <= 1.1)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`expanded-reference-${theme}.png`), fullPage: true });
   });
