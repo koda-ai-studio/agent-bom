@@ -22,6 +22,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Reports written to a file (including through a saved profile that pins `format`/`output`) confirm the path on stdout instead of leaving it empty.
 - `agent-bom iac` no longer flags `uv pip install --no-cache` as a missing `--no-cache-dir`; the shipped `Dockerfile` pins its Alpine packages and the image self-scan is clean.
 
+- Secret scanning no longer reports template placeholders as hardcoded credentials: Go/Helm/Jinja `{{ ... }}` actions, `${VAR}`/`$VAR` references, printf verbs (`postgres://%v:%v@%v`), `<placeholder>` values and a value that only repeats its key name (`password = "password"`). The same rejection applies to Terraform `TF-SEC-051`. Findings under `testdata/`, `__fixtures__/` and `__mocks__/` are kept at `low` severity with a `downgrade_reason` instead of their default severity.
+
 ### Deprecated
 - `agent-bom gateway serve --oauth-as-issuer` / `AGENT_BOM_GATEWAY_OAUTH_AS_ISSUER` is hidden and ignored (the embedded OAuth AS is unavailable); it will be removed in a later release.
 

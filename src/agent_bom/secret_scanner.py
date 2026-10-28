@@ -462,6 +462,23 @@ def _scan_file(
         if detect_entropy and not any(f.line_number == line_num for f in findings):
             findings.extend(_entropy_findings(line, rel_path, line_num))
 
+    return _downgrade_fixture_findings(rel_path, findings)
+
+
+# Go `testdata/` and JS `__fixtures__`/`__mocks__` hold sample inputs beside the
+# code under test. Unlike `tests/` (never scanned), they are scanned and kept:
+# a real credential left in a fixture is still a leak, so the finding is
+# lowered, not hidden.
+_FIXTURE_DIRS = frozenset({"testdata", "__fixtures__", "__mocks__"})
+
+
+def _downgrade_fixture_findings(rel_path: str, findings: list[SecretFinding]) -> list[SecretFinding]:
+    fixture_dir = next((part for part in Path(rel_path).parts[:-1] if part in _FIXTURE_DIRS), None)
+    if fixture_dir is None:
+        return findings
+    for finding in findings:
+        finding.severity = "low"
+        finding.downgrade_reason = f"test fixture path ({fixture_dir}); verify the value is synthetic"
     return findings
 
 

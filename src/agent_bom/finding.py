@@ -311,6 +311,11 @@ def secret_dict_to_finding(secret: dict) -> "Finding":
             ),
             "category": category,
             "redacted_preview": _safe_secret_preview(secret.get("preview")),
+            **(
+                {"downgrade_reason": sanitize_text(secret["downgrade_reason"], max_len=200)}
+                if isinstance(secret.get("downgrade_reason"), str) and secret["downgrade_reason"]
+                else {}
+            ),
         },
         id=stable_id("secret", file_path, str(line or ""), secret_type, category),
     )
