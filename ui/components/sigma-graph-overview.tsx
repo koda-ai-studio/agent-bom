@@ -2,6 +2,8 @@
 
 import { countLabel } from "@/lib/count-label";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
 import type Sigma from "sigma";
 import type { Edge, Node } from "@xyflow/react";
 import { Sparkles } from "lucide-react";
@@ -101,6 +103,8 @@ export function SigmaGraphOverview({
   const onClearRef = useRef(onClearSelection);
   const neighborsRef = useRef(new Set<string>());
   const [renderError, setRenderError] = useState<string | null>(null);
+  const wheelGate = useWheelZoomGate();
+  useEffect(() => { rendererRef.current?.setSetting("enableCameraZooming", wheelGate.armed); }, [wheelGate.armed]);
   const hasPresentationScope = presentationScope !== undefined;
   const presentationTenantId = presentationScope?.tenantId ?? "";
   const presentationSubject = presentationScope?.subject ?? "";
@@ -229,6 +233,9 @@ export function SigmaGraphOverview({
         renderer = new SigmaRenderer(currentModel.current.graph, container, {
           allowInvalidContainer: true,
           autoCenter: true,
+          // Map convention: a plain wheel scrolls the page; Ctrl/⌘ + wheel or a
+          // click on the canvas arms zooming (see useWheelZoomGate).
+          enableCameraZooming: false,
           autoRescale: true,
           defaultEdgeColor: palette.defaultEdge,
           defaultNodeColor: palette.defaultNode,
@@ -465,7 +472,8 @@ export function SigmaGraphOverview({
           {neighbors.length === 0 && <p>No connected assets are present in this displayed scope.</p>}
         </details>
       </div>}
-      <div className="relative min-h-0 flex-1 bg-background">
+      <div className="relative min-h-0 flex-1 bg-background" {...wheelGate.handlers}>
+        <WheelZoomHint visible={wheelGate.hintVisible} />
         <div
           ref={containerRef}
           className="h-full min-h-[20rem] w-full"

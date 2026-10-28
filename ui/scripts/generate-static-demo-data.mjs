@@ -14,9 +14,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-import { installRoutes, overviewProof } from "./capture-product-proof.mjs";
+import { FIXTURE_SCAN_ID, fixtureAuditEntries, fixtureFindings, fixtureGraph, installRoutes, overviewProof } from "./capture-product-proof.mjs";
 import { CREATED_AT } from "./product-proof-fixtures.mjs";
 import { staticDemoDataKey, staticDemoQueryKey } from "../lib/static-demo-key.mjs";
+import { installStaticDemoRoutes } from "./static-demo-routes.mjs";
 import { startStaticDemoServer } from "./static-demo-server.mjs";
 
 const UI_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -25,7 +26,11 @@ const PHP2SHELL_ID = "CVE-2026-109618";
 const MAX_RESPONSE_BYTES = 1_500_000;
 
 /** Deep links the overview and guides use, crawled after every exported page. */
-const DEEP_LINKS = ["/findings?lens=trust", `/advisories?id=${PHP2SHELL_ID}`, "/advisories?tab=declare"];
+const DEEP_LINKS = [
+  "/findings?lens=trust", `/advisories?id=${PHP2SHELL_ID}`, "/advisories?tab=declare",
+  // The Investigation journey: each step reads its own evidence for the headline path.
+  "/security-graph?step=impact", "/security-graph?step=owner", "/security-graph?step=fix", "/remediation?view=verification",
+];
 // Pages whose only purpose is a write (sign-in, starting a scan) are never part of a read-only demo.
 const WRITE_ONLY_ROUTES = new Set(["/login", "/scan"]);
 
@@ -87,6 +92,9 @@ async function main() {
     const apiPage = await browser.newPage();
     await installRoutes(apiPage);
     await installAdvisoryRoutes(apiPage);
+    await installStaticDemoRoutes(apiPage, {
+      graph: fixtureGraph, findings: fixtureFindings(), auditEntries: fixtureAuditEntries(), scanId: FIXTURE_SCAN_ID, tenantId: "default", snapshotAt: CREATED_AT,
+    });
     await apiPage.goto(`${server.origin}/`);
 
     const answer = async (apiPath, onOverview) => {

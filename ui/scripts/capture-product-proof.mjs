@@ -1745,7 +1745,8 @@ export async function installRoutes(page, fixtureGraph = graph) {
     has_more: false,
     next_cursor: null,
   }));
-  await page.route("**/v1/campaigns", (route) => fulfill(route, {
+  // The UI appends its (possibly empty) query, so match the path rather than the bare glob.
+  await page.route((url) => url.pathname === "/v1/campaigns", (route) => fulfill(route, {
     schema_version: "risk-campaigns.v1",
     tenant_id: "default",
     campaigns: [{
@@ -4049,7 +4050,7 @@ function checkAdvisoryFixtures() {
   }
 }
 checkAdvisoryFixtures();
-export { overviewProof };
+export { overviewProof, graph as fixtureGraph, auditEntries as fixtureAuditEntries, buildFindings as fixtureFindings, SCAN_ID as FIXTURE_SCAN_ID };
 // Importable by the static demo generator, which reuses these fixture routes.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   (process.argv.includes("--check-fixtures") ? Promise.resolve() : main()).catch((error) => {
