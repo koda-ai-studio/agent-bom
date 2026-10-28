@@ -103,6 +103,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The release `docker-mcp-pin` job fails loudly, with a run-summary section and the manual commands, when the automation signing key is missing instead of silently leaving the published pins at the previous version.
 
 ### Fixed
+- Completed graph queries keep display labels in the inspector instead of rewriting the URL, preserving newer root navigation and explicit link labels on slower browsers.
 - Hugging Face collection failures return stable outcome codes (`denied`, `throttled`, `unavailable`, `empty`) and keep the partial inventory instead of failing the whole cloud scan.
 - Corrupt or truncated gzip SBOM payloads are rejected as validation errors instead of raising inside the parser (ClusterFuzzLite regression).
 - `HELM-003` no longer reports the `key`/`name` fields of an `existingSecret`, `secretKeyRef` or `valueFrom` block as a hardcoded secret, so a chart that references a Kubernetes Secret the documented way (including this project's `nvdApiKey.existingSecret`) passes the default gate.
