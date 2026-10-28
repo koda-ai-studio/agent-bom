@@ -52,6 +52,7 @@ from agent_bom.api.observability_push_receipts import (
     _record_push_trend,
     _release_cohort_push_claim,
     _release_push_idempotency_claim,
+    _store_pushed_job,
     _wait_for_cohort_child,
     _wait_for_pushed_job,
 )
@@ -546,15 +547,14 @@ async def receive_push(request: Request, body: PushPayload) -> dict:
         with tenant_quota_guard(tenant_id, lambda: enforce_retained_jobs_quota(tenant_id)):
             audit_push_admission(job, job_result, actor=_triggered_by(request), request_hash=request_hash)
             try:
-                job_store.put(job)
+                _store_pushed_job(job_store, job)
                 job_persisted = True
                 if endpoint is not None:
                     fleet_store.put_endpoint(endpoint)
                     endpoint_persisted = True
                 _persist_graph_snapshot(job, job_result, write_generation=graph_write_generation)
-                # Job stores serialize on put and graph persistence adds its receipt
-                # to job.result: persist once more before the idempotency receipt.
-                job_store.put(job)
+                # Publish the graph receipt before committing idempotency.
+                _store_pushed_job(job_store, job)
                 _record_push_trend(job, job_result, body)
             except Exception:
                 if graph_snapshot_preexisted:

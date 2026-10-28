@@ -159,7 +159,7 @@ def _enabled() -> bool:
         return True
 
 
-def _drain() -> None:
+def _drain_pending() -> None:
     global _WORKER
     while True:
         with _LOCK:
@@ -173,6 +173,22 @@ def _drain() -> None:
                 prewarm_rollup(store_factory(), tenant_id=tenant_id)
         except Exception:  # noqa: BLE001 - a warm-up is an optimisation; the next reader computes cold
             logger.debug("graph rollup warm-up skipped", exc_info=False)
+
+
+def _drain() -> None:
+    global _WORKER
+    try:
+        _drain_pending()
+    finally:
+        # Native serializer panics inherit BaseException. Preserve that failure,
+        # but never leave shutdown waiting for a dead worker. Pending cache
+        # warm-ups are optional; subsequent readers compute their views cold.
+        with _LOCK:
+            if _WORKER is threading.current_thread():
+                _WORKER = None
+                _PENDING.clear()
+                _IDLE.set()
+                logger.warning("graph rollup warm-up worker stopped before draining its queue")
 
 
 def schedule_rollup_prewarm(store_factory: Callable[[], Any], *, tenant_id: str) -> None:

@@ -102,6 +102,50 @@ def test_push_http_route_preserves_targets_after_readback(scan_store, tmp_path, 
     assert {f["canonical_id"] for f in response.json()["findings"]} == {"finding-6", "finding-7"}
 
 
+def test_push_graph_enrichment_does_not_mutate_published_job(scan_store, tmp_path, monkeypatch):  # noqa: F811
+    from copy import deepcopy
+
+    from starlette.testclient import TestClient
+
+    from agent_bom.api import stores
+    from agent_bom.api.graph_store import SQLiteGraphStore
+    from agent_bom.api.routes import observability
+    from agent_bom.api.server import app
+    from tests.auth_helpers import proxy_headers
+
+    monkeypatch.setattr(stores, "_graph_store", SQLiteGraphStore(tmp_path / "isolated-push.db"))
+    persist = observability._persist_graph_snapshot
+    observed = []
+
+    def enrich(job, report, **kwargs):
+        published = scan_store.get(job.job_id, tenant_id=job.tenant_id)
+        before = deepcopy(published.result)
+        # Hold the reader's dictionary across both top-level and nested writes,
+        # as current-estate serialization does in the background worker.
+        reader = iter(published.result)
+        next(reader)
+        report["graph_enrichment_probe"] = True
+        report["findings"][0]["graph_node_id"] = "finding:probe"
+        observed.append((published, before))
+        assert list(reader)
+        assert published.result == before
+        persist(job, report, **kwargs)
+
+    monkeypatch.setattr(observability, "_persist_graph_snapshot", enrich)
+    row = pushed(6, scope="v1:" + "a" * 64)
+    with TestClient(app) as client:
+        response = client.post(
+            "/v1/results/push",
+            json={**row.result, "source_id": row.source_id},
+            headers=proxy_headers(role="analyst", tenant="history-tenant"),
+        )
+    assert response.status_code == 201, response.text
+    stored = scan_store.get(response.json()["job_id"], tenant_id="history-tenant")
+    assert stored.result["graph_persistence"]["status"] == "persisted"
+    assert stored.result["graph_enrichment_probe"] is True
+    assert observed[0][0].result == observed[0][1]
+
+
 @pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="requires isolated live Postgres")
 def test_postgres_pushed_targets_survive_reconnect_and_tenant_isolation():
     from agent_bom.api import postgres_common
