@@ -83,7 +83,15 @@ def main() -> None:
         redactions.extend([password, app_password, maintenance_password, api_key, transport_key])
         app_url = f"postgresql://agent_bom_app:{app_password}@postgres:5432/agentbom?sslmode=require"
         apply("Secret", "postgres", stringData={"POSTGRES_PASSWORD": password, "POSTGRES_DB": "agentbom"})
-        apply("Secret", "db-app", stringData={"AGENT_BOM_POSTGRES_URL": app_url})
+        apply(
+            "Secret",
+            "db-app",
+            stringData={
+                "AGENT_BOM_POSTGRES_URL": app_url,
+                "AGENT_BOM_POSTGRES_POOL_MIN_SIZE": "1",
+                "AGENT_BOM_POSTGRES_POOL_MAX_SIZE": "2",
+            },
+        )
         apply(
             "Secret",
             "db-maintenance",
@@ -113,6 +121,8 @@ def main() -> None:
             "gateway-auth",
             stringData={
                 "AGENT_BOM_POSTGRES_URL": app_url,
+                "AGENT_BOM_POSTGRES_POOL_MIN_SIZE": "1",
+                "AGENT_BOM_POSTGRES_POOL_MAX_SIZE": "2",
                 "AGENT_BOM_GATEWAY_BEARER_TOKEN": transport_key,
                 "AGENT_BOM_GATEWAY_BEARER_TOKEN_EXPIRES_AT": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
                 "AGENT_BOM_CONTROL_PLANE_TOKEN": api_key,
@@ -229,7 +239,11 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ag
                 "api": {
                     "replicas": 2,
                     "envFrom": [{"secretRef": {"name": "api-auth"}}],
-                    "env": [{"name": "AGENT_BOM_STATE_DIR", "value": "/tmp/agent-bom"}],
+                    "env": [
+                        {"name": "AGENT_BOM_STATE_DIR", "value": "/tmp/agent-bom"},
+                        {"name": "AGENT_BOM_POSTGRES_POOL_MIN_SIZE", "value": "1"},
+                        {"name": "AGENT_BOM_POSTGRES_POOL_MAX_SIZE", "value": "2"},
+                    ],
                 },
             },
             "gateway": {

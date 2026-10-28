@@ -49,6 +49,13 @@ a 64 KiB per-event ceiling. Full or unavailable storage blocks new admission.
 Unacknowledged events are retained rather than silently evicted; inspect and
 reconcile conflicting or permanently rejected events before resuming traffic.
 Shared database availability, capacity, TLS and backup remain operator duties.
+Budget `AGENT_BOM_POSTGRES_POOL_MIN_SIZE` and `AGENT_BOM_POSTGRES_POOL_MAX_SIZE`
+across every API and gateway process, including rollout overlap and verification
+jobs. API idempotency fencing uses an additional pool of up to four connections
+per process. The bootstrap application role permits 20 connections: default
+five-connection minimums can exhaust it with four replicas alone. Size pools
+and the database role limit together before enabling autoscaling; raising the
+replica count does not raise database capacity.
 
 Before switching from a PVC spool, drain and verify the old deployment's backlog;
 the shared backend does not import local queues. Drain the shared queue before
