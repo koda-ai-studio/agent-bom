@@ -28,7 +28,7 @@ it("keeps warning groups ahead of repetitive allows without hiding the allowed e
   const rows = within(screen.getByRole("region", { name: "Reported activity groups" })).getAllByRole("button");
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("warning-origin");
-  expect(rows[0]).toHaveTextContent("1 warnings");
+  expect(rows[0]).toHaveTextContent("1 warning");
   expect(rows[1]).toHaveTextContent("80 events");
   expect(screen.getByText(/not a verified unique-agent count/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Events" }));
