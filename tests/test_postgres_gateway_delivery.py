@@ -191,7 +191,8 @@ def test_concurrent_admission_cannot_exceed_shared_budget(queue):
 
 
 @pytest.mark.asyncio
-async def test_another_workers_lease_cannot_admit_an_unacknowledged_event(queue):
+async def test_another_workers_lease_cannot_admit_an_unacknowledged_event(queue, monkeypatch):
+    monkeypatch.setattr("agent_bom.runtime.gateway_shared_audit.ADMISSION_ACK_TIMEOUT_SECONDS", 0.1, raising=False)
     record = event(queue)
     queue.enqueue(record)
     lease = queue.claim()
@@ -208,3 +209,29 @@ async def test_another_workers_lease_cannot_admit_an_unacknowledged_event(queue)
     assert queue.pending("event-one")
     assert sink.health()["durable"], "pending remote acknowledgement does not mean the durable database is unavailable"
     assert not sink.health()["accepting_events"]
+
+
+@pytest.mark.asyncio
+async def test_admission_waits_for_peer_to_acknowledge_the_exact_event(queue):
+    record = event(queue)
+    queue.enqueue(record)
+    lease = queue.claim()
+    assert lease is not None
+
+    async def unexpected_send(payload, headers):
+        pytest.fail("the requester must not steal a peer's live lease")
+
+    sink = SharedGatewayAuditSink(
+        "https://api.example", "placeholder", tenant_id=queue.tenant_id, source_id="gateway", store=queue, sender=unexpected_send
+    )
+    admission = asyncio.create_task(sink.admit_before_tool_execution(record))
+    try:
+        await asyncio.sleep(0.1)
+        assert not admission.done(), "peer delivery in progress must not spuriously reject the call"
+        assert await asyncio.to_thread(queue.acknowledge, lease)
+        await asyncio.wait_for(admission, timeout=2)
+        assert not queue.pending(record["event_id"])
+        assert sink.health()["remote_acknowledgement_available"]
+    finally:
+        admission.cancel()
+        await asyncio.gather(admission, return_exceptions=True)

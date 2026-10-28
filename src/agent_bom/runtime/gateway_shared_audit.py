@@ -12,6 +12,8 @@ from agent_bom.runtime.gateway_audit import ControlPlaneAuditSink, _send_gateway
 from agent_bom.runtime.gateway_contracts import GatewayAuditDeliveryUnavailableError, GatewayAuditSender
 from agent_bom.runtime.gateway_events import canonicalize_gateway_enforcement_event, ensure_gateway_event_identity
 
+ADMISSION_ACK_TIMEOUT_SECONDS = 20
+
 
 class SharedGatewayAuditSink(ControlPlaneAuditSink):
     """Cross-pod retries with fenced acknowledgement and fail-closed admission.
@@ -58,19 +60,31 @@ class SharedGatewayAuditSink(ControlPlaneAuditSink):
             record = canonicalize_gateway_enforcement_event(ensure_gateway_event_identity(event))
             event_id = await asyncio.to_thread(self.store.enqueue, record)
             self._available = True
-            await self.flush_once()
-            # Another pod may own this event. Never infer its acknowledgement
-            # merely because this pod's claim was empty or a different batch passed.
-            if require_ack and await asyncio.to_thread(self.store.pending, event_id):
-                raise GatewayAuditDeliveryUnavailableError("durable acknowledgement is pending")
+            if require_ack:
+                await self._flush_until_acknowledged(event_id)
+            else:
+                await self.flush_once()
         except asyncio.CancelledError:
             raise
-        except GatewayAuditDeliveryUnavailableError:
+        except (GatewayAuditDeliveryUnavailableError, TimeoutError):
             self._remote_ack = False
             raise GatewayAuditDeliveryUnavailableError("shared audit delivery unavailable") from None
         except Exception:
             self._available = False
             raise GatewayAuditDeliveryUnavailableError("shared audit delivery unavailable") from None
+
+    async def _flush_until_acknowledged(self, event_id: str) -> None:
+        # A peer may claim the event between enqueue and flush. Wait for that
+        # exact row's fenced deletion, never another batch's acknowledgement.
+        async with asyncio.timeout(ADMISSION_ACK_TIMEOUT_SECONDS):
+            await self.flush_once()
+            delay = 0.05
+            while await asyncio.to_thread(self.store.pending, event_id):
+                if not self._available or self.controller.consecutive_failures:
+                    raise GatewayAuditDeliveryUnavailableError("durable acknowledgement is pending")
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 0.25)
+            self._remote_ack = True
 
     async def __call__(self, event: dict[str, Any]) -> None:
         await self._record(event, require_ack=False)
