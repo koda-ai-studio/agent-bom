@@ -109,7 +109,16 @@ def comparator_ecosystem(ecosystem: str) -> str:
     distro ordering.
     """
     base = (ecosystem or "").split(":", 1)[0].strip().lower()
-    return _ECO_FAMILY_TO_COMPARATOR.get(base, base)
+    family = _ECO_FAMILY_TO_COMPARATOR.get(base)
+    if family is None:
+        # ``/etc/os-release`` style labels: ``Debian GNU/Linux``, ``Alpine Linux``,
+        # ``Red Hat Enterprise Linux``. The longest family name that opens the
+        # label (as a whole word) names the comparator.
+        for key in sorted(_ECO_FAMILY_TO_COMPARATOR, key=len, reverse=True):
+            if base.startswith(key + " "):
+                family = _ECO_FAMILY_TO_COMPARATOR[key]
+                break
+    return family if family is not None else base
 
 
 @lru_cache(maxsize=131072)

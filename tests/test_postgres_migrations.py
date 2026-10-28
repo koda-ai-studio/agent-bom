@@ -1174,6 +1174,11 @@ def test_drift_blueprint_seek_migration_is_guarded_concurrent_and_chained() -> N
     downgrade = source.split("def downgrade()", 1)[1]
     assert "DROP INDEX CONCURRENTLY IF EXISTS public.idx_drift_incidents_tenant_blueprint_key_open" in downgrade
     assert "DROP COLUMN IF EXISTS blueprint_key" in downgrade
+    # A cancelled CONCURRENTLY build leaves an INVALID index; the rerun must rebuild it.
+    assert "indisvalid" in source
+    assert source.index("_index_is_invalid(") < source.index(
+        "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drift_incidents_tenant_blueprint_key_open"
+    )
 
 
 def test_gateway_delivery_leases_grant_readonly_select_in_every_schema_path() -> None:

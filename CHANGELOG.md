@@ -9,7 +9,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.111.0] - 2026-10-27
+## [0.111.0] - 2026-10-28
 
 ### Highlights
 - **"Am I affected by CVE-X?"** answered across every stored scan, from the CLI, API, MCP, UI, skills and Action, using every alias record of a vulnerability.
@@ -112,6 +112,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Source-only projects (no manifest or lockfile) now get a project host agent, so LangGraph builders fold under `contains` edges and `code_agents` the same way as projects with a `requirements.txt`; previously every construct scanned as a standalone agent.
 - `init.sql` bootstrap carries `trend_history.kev_count`, matching migration `20261022_01`; the gateway audit outbox grants `agent_bom_readonly` SELECT in both schema paths.
 - Stdio proxy: the catalog refresh and the client relay share one stdin writer lock, so a `tools/list_changed` refresh under backpressure no longer races the relay's drain on Python 3.11 and kills the session.
+- Version ordering for `/etc/os-release` style labels (`Debian GNU/Linux`, `Alpine Linux`, `Red Hat Enterprise Linux`, `Ubuntu 22.04`) routes to the distro comparator; previously such labels fell through to PEP 440 and could compare distinct revisions as equal.
+- Migration `20261027_03` drops and rebuilds its partial index when an earlier `CONCURRENTLY` build was cancelled and left it `INVALID`, instead of keeping the invalid index and marking the schema version as upgraded.
 
 - Retain package/ecosystem identity and credential-name redaction in the dedicated MCP AI inventory tool.
 - Preserve validated sub-second upstream timeouts, disabled keepalive pools, and zero circuit cooldown in the gateway relay.

@@ -25,6 +25,18 @@ def _table_exists() -> bool:
     return op.get_bind().exec_driver_sql("SELECT to_regclass('public.drift_incidents')").scalar() is not None
 
 
+def _index_is_invalid(name: str) -> bool:
+    return bool(
+        op.get_bind()
+        .exec_driver_sql(
+            "SELECT NOT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid "
+            "JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname=%(name)s",
+            {"name": name},
+        )
+        .scalar()
+    )
+
+
 def upgrade() -> None:
     if not _table_exists():
         return
@@ -33,6 +45,10 @@ ALTER TABLE public.drift_incidents ADD COLUMN IF NOT EXISTS blueprint_key TEXT
  GENERATED ALWAYS AS (lower(replace(btrim(data->>'blueprint_id', E' \t\n\x0b\f\r'), '-', '_'))) STORED;
 """)
     with op.get_context().autocommit_block():
+        # A CONCURRENTLY build that was cancelled or timed out leaves the index
+        # INVALID; IF NOT EXISTS would keep it and the planner would ignore it.
+        if _index_is_invalid("idx_drift_incidents_tenant_blueprint_key_open"):
+            op.execute("DROP INDEX CONCURRENTLY IF EXISTS public.idx_drift_incidents_tenant_blueprint_key_open")
         op.execute(
             "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drift_incidents_tenant_blueprint_key_open ON public.drift_incidents "
             "(tenant_id, blueprint_key, last_detected_at DESC, incident_id DESC) WHERE NOT resolved"
