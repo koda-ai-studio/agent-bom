@@ -42,7 +42,7 @@ export const runtimeApi = {
 
   listGatewayAudit: () => get<GatewayAuditResponse>("/v1/gateway/audit"),
 
-  getGatewayStats: () => get<GatewayStatsResponse>("/v1/gateway/stats"),
+  getGatewayStats: (fresh = false) => get<GatewayStatsResponse>("/v1/gateway/stats", fresh ? { ttlMs: 0 } : {}),
 
   getGatewayFeed: (limit = 100, cursor?: string) => {
     const params = new URLSearchParams({ limit: String(limit) });

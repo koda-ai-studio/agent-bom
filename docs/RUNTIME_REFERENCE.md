@@ -742,6 +742,11 @@ See [`deploy/grafana/README.md`](../deploy/grafana/README.md) for setup details.
 ## Fleet activity triage
 
 Open **Runtime → Live Activity** to inspect the recent received window. The
+connection summary separates saved profiles and policy mode, browser transport,
+recent receipt time, and recorded blocking decisions. It reads setup once or on
+explicit refresh; the receipt clock updates locally without polling setup.
+A policy-store configuration does not prove that endpoints applied it. Failed
+setup reads remain unavailable, including when event delivery still works. The
 initial **Activity groups** view prioritizes blocked and warning activity and
 combines only matching reported origin, session, agent, identity and profile
 contexts. Collector submitters and reported sources remain separate. Missing

@@ -9,6 +9,7 @@ import { ActivityStreamError, gatewayActivityPage, mergeActivity, streamGatewayA
 
 
 import { ActivityRows } from "./GatewayActivityRows";
+import { RuntimeConnectionStatus } from "./RuntimeConnectionStatus";
 import { ActivityWindow } from "./GatewayActivityWindow";
 import { nowForRelativeTime } from "@/lib/relative-clock";
 
@@ -125,9 +126,10 @@ function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSea
       </div>
     </div>
     <p className="my-3 text-xs text-[var(--text-tertiary)]">{preview ? `Showing ${Math.min(5, visible.length)} recent matches` : `Newest ${displayed.length} events in this view`} · bounded to 1,000 received events, not a complete history.</p>
-    {!preview && <div className="my-4 grid grid-cols-3 gap-3" aria-label="Activity window summary">
+    {!preview && <RuntimeConnectionStatus tenantId={tenantId} streamState={state} events={events} onBlocked={() => scope("deny", "")} />}
+    {!preview && <div className="my-3 flex flex-wrap gap-4" aria-label="Activity window summary">
       {[["Blocked", displayed.filter(row => row.decision === "deny").length], ["Warnings", displayed.filter(row => /warned|dev_bypass/.test(row.event_type)).length], ["Without trace ID", displayed.filter(row => !row.trace_id).length]].map(([label, count]) =>
-        <div key={label} className="rounded-lg bg-[var(--background)] p-3"><p className="text-xs text-[var(--text-secondary)]">{label}</p><p className="mt-1 text-xl font-semibold">{displayed.length ? count : "—"}</p></div>)}
+        <div key={label} className="flex items-baseline gap-2"><p className="text-xs text-[var(--text-secondary)]">{label}</p><p className="text-sm font-semibold">{displayed.length ? count : "—"}</p></div>)}
     </div>}
     {staleReceipt && <p className="mb-3 text-xs text-amber-800 dark:text-amber-200">Latest receipt is older than 2 minutes. A connected transport does not prove current producer activity.</p>}
     {history ? <RetainedHistory tenantId={tenant.current ?? tenantId} /> : <>

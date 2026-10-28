@@ -36,6 +36,7 @@ export function ActivityWindow({ events, onFreeze }: { events: GatewayActivity[]
           <span className="flex flex-wrap gap-2 text-xs">
             {group.blocked > 0 && <span className="rounded bg-red-50 px-2 py-1 font-medium text-red-800 dark:bg-red-950 dark:text-red-200">{group.blocked} blocked</span>}
             {group.warnings > 0 && <span className="rounded bg-amber-50 px-2 py-1 font-medium text-amber-800 dark:bg-amber-950 dark:text-amber-200">{group.warnings} {group.warnings === 1 ? "warning" : "warnings"}</span>}
+            <time className="py-1 text-[var(--text-secondary)]" dateTime={group.event.ingested_at}>Received {Number.isFinite(Date.parse(group.event.ingested_at)) ? new Date(group.event.ingested_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "at an unknown time"}</time>
             <span className="py-1 text-[var(--text-secondary)]">{group.total} {group.total === 1 ? "event" : "events"} · {group.tools.size} {group.tools.size === 1 ? "tool" : "tools"}</span>
           </span>
         </button>;
