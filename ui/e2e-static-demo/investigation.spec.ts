@@ -12,11 +12,14 @@ test.afterAll(async () => { await server.close(); });
 
 const url = (route: string) => `${server.origin}${BASE_PATH}${route}`;
 const viewportTransform = (page: Page) => page.locator(".react-flow__viewport").first().evaluate((el) => el.getAttribute("style") ?? "");
+/** Nodes (labels included) outside the canvas or under its zoom controls. */
 const nodesOutsideCanvas = (page: Page) => page.locator(".react-flow").first().evaluate((flow) => {
   const box = flow.getBoundingClientRect();
+  const controls = flow.querySelector(".react-flow__controls")?.getBoundingClientRect();
+  const overlaps = (rect: DOMRect, other: DOMRect) => rect.left < other.right && rect.right > other.left && rect.top < other.bottom && rect.bottom > other.top;
   return [...flow.querySelectorAll(".react-flow__node")].filter((node) => {
     const rect = node.getBoundingClientRect();
-    return rect.top < box.top || rect.bottom > box.bottom || rect.left < box.left || rect.right > box.right;
+    return rect.top < box.top || rect.bottom > box.bottom || rect.left < box.left || rect.right > box.right || (controls ? overlaps(rect, controls) : false);
   }).map((node) => node.textContent?.slice(0, 24));
 });
 

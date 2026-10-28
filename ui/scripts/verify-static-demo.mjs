@@ -111,6 +111,23 @@ async function main() {
           for (const href of hidden) if (!demoRoutes.has(href.replace(/\/+$/, "") || "/")) problems.push(`${route}: nav links to ${href}, which is not in the demo`);
         }
       }
+      if (viewport.width === 1440 && theme === "light") {
+        // Overview severity tiles and the Findings lanes read the same sample estate.
+        await page.goto(`${server.origin}${basePath}/`, { waitUntil: "networkidle" });
+        await page.waitForTimeout(600);
+        const tiles = await page.getByTestId("overview-severity-issue-strip").evaluate((strip) => Object.fromEntries(
+          [...strip.querySelectorAll("a, button")].map((tile) => [...tile.querySelectorAll("p")].map((p) => p.textContent?.trim() ?? ""))
+            .filter((cells) => ["Critical", "High", "Medium", "Low"].includes(cells[0] ?? "")).map((cells) => [cells[0].toLowerCase(), Number(cells[1].replace(/,/g, ""))])));
+        await page.goto(`${server.origin}${basePath}/findings`, { waitUntil: "networkidle" });
+        await page.waitForTimeout(600);
+        const findingsText = await page.locator("#main-content").innerText();
+        const laneTotal = Number(/All findings\s*([\d,]+)/.exec(findingsText)?.[1]?.replace(/,/g, "") ?? Number.NaN);
+        const pills = Object.fromEntries(["Critical", "High", "Medium", "Low"].map((band) => [band.toLowerCase(), Number(new RegExp(`${band} \\((\\d+)\\)`).exec(findingsText)?.[1] ?? Number.NaN)]));
+        const tileTotal = Object.values(tiles).reduce((sum, value) => sum + value, 0);
+        if (Object.keys(tiles).length !== 4 || Number.isNaN(laneTotal)) problems.push(`reconciliation: could not read overview tiles ${JSON.stringify(tiles)} or lane total ${laneTotal}`);
+        else if (tileTotal !== laneTotal) problems.push(`reconciliation: overview tiles sum to ${tileTotal}, findings lanes total ${laneTotal}`);
+        for (const band of Object.keys(tiles)) if (!Number.isNaN(pills[band]) && pills[band] !== tiles[band]) problems.push(`reconciliation: overview ${band} ${tiles[band]} != findings ${band} ${pills[band]}`);
+      }
       if (viewport.width === 1440) {
         await page.goto(`${server.origin}${basePath}/`, { waitUntil: "networkidle" });
         await page.getByRole("navigation").getByRole("link", { name: /^Findings/ }).first().click();

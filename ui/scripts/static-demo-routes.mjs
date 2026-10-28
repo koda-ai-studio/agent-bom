@@ -87,6 +87,48 @@ export function findingFacets(findings) {
   };
 }
 
+/** Open-issue severity totals of the rows the Findings page lists. */
+export function severityTotals(findings) {
+  const totals = { critical: 0, high: 0, medium: 0, low: 0, total: findings.length };
+  for (const finding of findings) if (finding.severity in totals) totals[finding.severity] += 1;
+  return totals;
+}
+
+/**
+ * The fixture overview with every count re-derived from the same finding rows
+ * the Findings page lists, so tiles, chips, coverage lanes and the nav badge
+ * reconcile with the lanes. The posture grade is the fixture's own; the
+ * scoring model is server-side and not reproduced here.
+ */
+export function overviewFromFindings(base, findings) {
+  const totals = severityTotals(findings);
+  const kev = findings.filter((finding) => finding.is_kev === true || finding.cisa_kev === true).length;
+  const credentialExposed = findings.filter((finding) => (finding.exposed_credentials ?? []).length > 0).length;
+  const severity = { critical: totals.critical, high: totals.high, medium: totals.medium, low: totals.low, unrated: 0 };
+  return {
+    ...base,
+    headline: {
+      ...base.headline,
+      critical: totals.critical,
+      high: totals.high,
+      critical_high: totals.critical + totals.high,
+      kev,
+      credential_exposed: credentialExposed,
+      hub_findings: totals.total,
+    },
+    issue_counts: { ...totals, kev },
+    coverage: (base.coverage ?? []).map((lane) => lane.domain === "vuln" ? { ...lane, count: totals.total, severity } : lane),
+    domains: base.domains?.vuln ? {
+      ...base.domains,
+      vuln: { ...base.domains.vuln, metric: totals.total, detail: { ...base.domains.vuln.detail, critical: totals.critical, high: totals.high, severity } },
+    } : base.domains,
+  };
+}
+
+export function postureCountsFromFindings(base, findings) {
+  return { ...base, ...severityTotals(findings) };
+}
+
 const AUDIT_OUTCOMES = {
   "scan.completed": { outcome: "completed" },
   "gateway.policy.denied": { decision: "denied" },
@@ -101,8 +143,14 @@ export function auditEntriesWithOutcomes(entries) {
   return entries.map((entry) => ({ ...entry, details: { ...AUDIT_OUTCOMES[entry.action], ...entry.details } }));
 }
 
+/** Registered after the fixture routes on a page that has navigated, so the fixture answers can be read back and re-derived. */
 export async function installStaticDemoRoutes(page, { graph, findings, auditEntries, scanId, tenantId, snapshotAt }) {
   const enriched = enrichFindings(findings, graph, { snapshotAt });
+  const readFixture = (apiPath) => page.evaluate(async (url) => (await fetch(url)).json(), apiPath);
+  const overview = overviewFromFindings(await readFixture("/v1/overview"), enriched);
+  const postureCounts = postureCountsFromFindings(await readFixture("/v1/posture/counts"), enriched);
+  await page.route("**/v1/overview", (route) => fulfill(route, overview));
+  await page.route("**/v1/posture/counts", (route) => fulfill(route, postureCounts));
   await page.route("**/v1/graph/impact?**", (route) => {
     const url = new URL(route.request().url());
     const nodeId = url.searchParams.get("node") ?? "";
