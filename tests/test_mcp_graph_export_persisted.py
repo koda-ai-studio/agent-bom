@@ -9,6 +9,7 @@ import pytest
 
 from agent_bom.api import stores
 from agent_bom.api.graph_store import SQLiteGraphStore
+from agent_bom.api.store import InMemoryJobStore
 from tests.test_graph_tenant_scope_and_bounds import _path_graph
 
 TENANT = "tenant-a"
@@ -24,6 +25,8 @@ def export(tmp_path, monkeypatch):
 
     store = SQLiteGraphStore(tmp_path / "graph.db")
     monkeypatch.setattr(stores, "_graph_store", store)
+    # Current-estate selection reads both stores; isolate the paired job ledger.
+    monkeypatch.setattr(stores, "_store", InMemoryJobStore())
     monkeypatch.delenv("AGENT_BOM_POSTGRES_URL", raising=False)
     monkeypatch.delenv("AGENT_BOM_DB", raising=False)
     scans: list[str] = []
@@ -88,3 +91,29 @@ def test_unbound_local_server_without_a_store_keeps_the_host_export(export, monk
     body, scans = call()
     assert scans == ["host"]
     assert "error" not in body, body
+
+
+def test_export_fixture_isolates_completed_jobs_from_other_tests(request, monkeypatch):
+    from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
+
+    ambient = InMemoryJobStore()
+    ambient.put(
+        ScanJob(
+            job_id="unrelated-scan",
+            tenant_id=TENANT,
+            status=JobStatus.DONE,
+            created_at="2026-05-01T00:00:00+00:00",
+            request=ScanRequest(),
+            result={"scan_id": "unrelated-scan", "agents": []},
+        )
+    )
+    monkeypatch.setattr(stores, "_store", ambient)
+    store, call = request.getfixturevalue("export")
+    store.save_graph(_path_graph(TENANT))
+    monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", TENANT)
+
+    body, scans = call(scan=_no_host_scan)
+
+    assert scans == []
+    assert {node["id"] for node in body["nodes"]} == {"principal:reader", "data:store"}, body
+    assert ambient.get("unrelated-scan", tenant_id=TENANT) is not None

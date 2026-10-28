@@ -40,7 +40,10 @@ worker state and acknowledgement availability; `/readyz` reflects admission.
 Delivery is at least once: pods claim bounded batches for 60 seconds using the
 database clock, send with a 20-second deadline, and acknowledge only their current
 lease. A crashed pod's work becomes eligible after expiry. The receiving ledger
-deduplicates event IDs. Tool execution still requires acknowledgement of its own
+deduplicates event IDs. Admission waits up to 20 seconds for delivery and the
+exact event's acknowledgement, including delivery owned by a peer replica.
+A timeout or failed delivery denies execution and retains pending evidence.
+Tool execution still requires acknowledgement of its own
 admission event; a different pod's in-flight claim is not proof of delivery.
 No exactly-once tool execution guarantee is implied.
 

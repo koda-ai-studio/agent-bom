@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -112,18 +113,24 @@ def test_pages_report_stored_times_never_the_read_clock(export, monkeypatch):  #
     from agent_bom.graph import container as container_module
     from agent_bom.graph import edge as edge_module
     from agent_bom.graph import node as node_module
+    from agent_bom.mcp_tools.graph_export_persisted import _read_page
 
     store, call = export
+    # Keep the evidence inside retention regardless of when this test runs.
+    stored_time = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     graph = _chain()
-    graph.created_at = "2026-05-01T00:00:00+00:00"
+    graph.created_at = stored_time
     for node in graph.nodes.values():
-        node.first_seen = node.last_seen = "2026-05-01T00:00:00+00:00"
+        node.first_seen = node.last_seen = stored_time
     store.save_graph(graph)
     monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", TENANT)
     read_clock = "2099-01-01T00:00:00+00:00"
     for module in (node_module, edge_module, container_module):
         monkeypatch.setattr(module, "_now_iso", lambda: read_clock)
 
+    page = _read_page(store, TENANT, None, 10)
+    assert isinstance(page, tuple)
+    assert all(node.first_seen == node.last_seen == stored_time for node in page[0].nodes.values())
     body, _scans = call({"limit": 10}, scan=_no_host_scan)
 
     assert any((node.get("attributes") or {}).get("page_reference") for node in body["nodes"])
