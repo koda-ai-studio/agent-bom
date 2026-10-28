@@ -9,12 +9,14 @@ HAS_PERMISSION (role->sensitive table) edges the graph builds.
 
 from __future__ import annotations
 
+import importlib
 import sys
 import types
 
 import pytest
 
 from agent_bom.graph.builder import build_unified_graph_from_report
+from tests.snowflake_fixture_helpers import _snowflake_facade_alias  # noqa: F401 - fixture
 
 
 @pytest.fixture(autouse=True)
@@ -95,7 +97,7 @@ class _FakeConn:
 
 @pytest.fixture
 def _live(monkeypatch):
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.setattr(sf, "_get_connection", lambda *a, **k: _FakeConn())
     monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "acct1")
@@ -135,14 +137,14 @@ def test_user_and_role_memberships(_live) -> None:
 
 
 def test_no_account_is_graceful(monkeypatch) -> None:
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.delenv("SNOWFLAKE_ACCOUNT", raising=False)
     assert sf.discover_identity_live()["status"] == "no_account"
 
 
 def test_per_role_failure_degrades_to_warning(monkeypatch) -> None:
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     class _BoomCursor(_FakeCursor):
         def execute(self, sql, *a, **k):
@@ -168,7 +170,7 @@ def test_per_role_failure_degrades_to_warning(monkeypatch) -> None:
 
 
 def test_merge_prefers_live_and_unions(_live) -> None:
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     lagged = {
         "status": "ok",

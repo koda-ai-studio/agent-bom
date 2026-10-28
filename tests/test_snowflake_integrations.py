@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
 import types
 
 import pytest
 
 from agent_bom.graph.builder import build_unified_graph_from_report
+from tests.snowflake_fixture_helpers import _snowflake_facade_alias  # noqa: F401 - fixture
 
 
 # ── Graph ────────────────────────────────────────────────────────────────
@@ -103,7 +105,7 @@ class _FakeConn:
 
 
 def test_discovery_parses_and_flags(monkeypatch) -> None:
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.setattr(sf, "_get_connection", lambda *a, **k: _FakeConn())
     monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "acct1")
@@ -116,7 +118,7 @@ def test_discovery_parses_and_flags(monkeypatch) -> None:
 
 
 def test_no_account_is_graceful(monkeypatch) -> None:
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.delenv("SNOWFLAKE_ACCOUNT", raising=False)
     assert sf.discover_snowflake_integrations()["status"] == "no_account"
@@ -124,7 +126,7 @@ def test_no_account_is_graceful(monkeypatch) -> None:
 
 @pytest.mark.parametrize("raw,expected", [("true", True), ("false", False), ("unknown", None), (None, None)])
 def test_show_integrations_enabled_receipt_reaches_graph_without_unknown_coercion(monkeypatch, raw, expected):
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     original_execute = _FakeCursor.execute
 

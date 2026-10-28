@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
 import types
 
 import pytest
 
 from agent_bom.graph.builder import build_unified_graph_from_report
+from tests.snowflake_fixture_helpers import _snowflake_facade_alias  # noqa: F401 - fixture
 
 
 # ── Graph ────────────────────────────────────────────────────────────────
@@ -109,7 +111,7 @@ class _FakeConn:
 
 @pytest.fixture
 def _ext(monkeypatch):
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.setattr(sf, "_get_connection", lambda *a, **k: _FakeConn())
     monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "acct1")
@@ -137,7 +139,7 @@ def test_findings_flag_external_catalog_and_external_tables(_ext) -> None:
 
 
 def test_no_account_is_graceful(monkeypatch) -> None:
-    from agent_bom.cloud import snowflake as sf
+    sf = importlib.import_module("agent_bom.cloud.snowflake")
 
     monkeypatch.delenv("SNOWFLAKE_ACCOUNT", raising=False)
     assert sf.discover_snowflake_external_data()["status"] == "no_account"
