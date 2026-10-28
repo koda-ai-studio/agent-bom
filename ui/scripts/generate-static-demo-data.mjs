@@ -5,7 +5,9 @@
  * Crawls the static export (built with NEXT_PUBLIC_STATIC_DEMO=1) and answers
  * every demo-data read from the product-proof fixture routes — the same
  * labelled sample estate the README screenshots use — plus the PHP2Shell
- * advisory fixture. Nothing is hand-written and nothing touches a network.
+ * advisory fixture and the journey answers derived from that estate
+ * (static-demo-routes.mjs). Nothing is hand-written and nothing touches a
+ * network.
  *
  *   node scripts/generate-static-demo-data.mjs --out out --base-path /agent-bom/demo
  */
@@ -14,7 +16,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-import { FIXTURE_SCAN_ID, fixtureAuditEntries, fixtureFindings, fixtureGraph, installRoutes, overviewProof } from "./capture-product-proof.mjs";
+import { FIXTURE_SCAN_ID, fixtureAuditEntries, fixtureFindings, fixtureGraph, installRoutes } from "./capture-product-proof.mjs";
 import { CREATED_AT } from "./product-proof-fixtures.mjs";
 import { staticDemoDataKey, staticDemoQueryKey } from "../lib/static-demo-key.mjs";
 import { installStaticDemoRoutes } from "./static-demo-routes.mjs";
@@ -92,14 +94,13 @@ async function main() {
     const apiPage = await browser.newPage();
     await installRoutes(apiPage);
     await installAdvisoryRoutes(apiPage);
+    await apiPage.goto(`${server.origin}/`);
+    // Every page, the overview included, answers from the one fixture estate so its counts reconcile.
     await installStaticDemoRoutes(apiPage, {
       graph: fixtureGraph, findings: fixtureFindings(), auditEntries: fixtureAuditEntries(), scanId: FIXTURE_SCAN_ID, tenantId: "default", snapshotAt: CREATED_AT,
     });
-    await apiPage.goto(`${server.origin}/`);
 
-    const answer = async (apiPath, onOverview) => {
-      const proof = overviewProof.responses[apiPath.split("?")[0]];
-      if (onOverview && proof) return { status: 200, body: JSON.stringify(proof) };
+    const answer = async (apiPath) => {
       return apiPage.evaluate(async (url) => {
         const res = await fetch(url);
         return { status: res.status, body: await res.text() };
@@ -115,8 +116,7 @@ async function main() {
       if (!apiPath.startsWith("/") || (key !== staticDemoDataKey(apiPath) && !exactQuery)) return route.fulfill({ status: 404, body: "" });
       if (unanswered.has(key)) return route.fulfill({ status: 404, body: "" });
       if (!recorded.has(key)) {
-        const onOverview = new URL(page.url()).pathname === `${basePath}` || new URL(page.url()).pathname === `${basePath}/`;
-        const { status, body } = await answer(apiPath, onOverview);
+        const { status, body } = await answer(apiPath);
         let json;
         try { json = status === 200 ? JSON.parse(body) : undefined; } catch { json = undefined; }
         if (json !== undefined && body.length > MAX_RESPONSE_BYTES) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { auditEntriesWithOutcomes, enrichFindings, findingFacets, graphImpact } from "../scripts/static-demo-routes.mjs";
+import { auditEntriesWithOutcomes, enrichFindings, findingFacets, graphImpact, overviewFromFindings, postureCountsFromFindings, severityTotals } from "../scripts/static-demo-routes.mjs";
 
 const graph = {
   nodes: [
@@ -46,6 +46,34 @@ describe("static demo sample answers", () => {
     expect(facets.severity).toMatchObject({ critical: 1, high: 1, medium: 0 });
     expect(facets.fixability).toEqual({ fix_available: 1, no_fix_available: 1 });
     expect(facets.status).toEqual({ open: 2, resolved: 0 });
+  });
+
+  it("re-derives the overview and posture counts from the rows the findings page lists", () => {
+    const rows = [
+      { severity: "critical", exposed_credentials: ["KEY"], is_kev: true },
+      { severity: "critical", exposed_credentials: [] },
+      { severity: "high" },
+      { severity: "medium", exposed_credentials: ["TOKEN"] },
+    ];
+    expect(severityTotals(rows)).toEqual({ critical: 2, high: 1, medium: 1, low: 0, total: 4 });
+    const base = {
+      posture: { grade: "D", score: 43 },
+      headline: { critical: 3, high: 9, critical_high: 12, credential_exposed: 3, hub_findings: 15, scans: 3 },
+      coverage: [{ domain: "cspm", count: 0 }, { domain: "vuln", count: 15, severity: { critical: 3, high: 9, medium: 3, low: 0, unrated: 0 } }],
+      domains: { vuln: { metric: 15, detail: { critical: 3, high: 9, packages: 148 } }, ops: { metric: 3 } },
+      top_risks: [{ vulnerability_id: "CVE-2025-29927" }],
+    };
+    const overview = overviewFromFindings(base, rows);
+    expect(overview.headline).toEqual({ critical: 2, high: 1, critical_high: 3, credential_exposed: 2, hub_findings: 4, kev: 1, scans: 3 });
+    expect(overview.issue_counts).toEqual({ critical: 2, high: 1, medium: 1, low: 0, total: 4, kev: 1 });
+    expect(overview.coverage[1]).toEqual({ domain: "vuln", count: 4, severity: { critical: 2, high: 1, medium: 1, low: 0, unrated: 0 } });
+    expect(overview.coverage[0]).toEqual({ domain: "cspm", count: 0 });
+    expect(overview.domains.vuln).toEqual({ metric: 4, detail: { critical: 2, high: 1, packages: 148, severity: { critical: 2, high: 1, medium: 1, low: 0, unrated: 0 } } });
+    expect(overview.domains.ops).toEqual({ metric: 3 });
+    expect(overview.posture).toEqual(base.posture);
+    expect(overview.top_risks).toBe(base.top_risks);
+    expect(postureCountsFromFindings({ critical: 3, high: 9, medium: 3, low: 0, total: 15, scan_count: 3 }, rows))
+      .toEqual({ critical: 2, high: 1, medium: 1, low: 0, total: 4, scan_count: 3 });
   });
 
   it("records an outcome for every fixture audit action", () => {

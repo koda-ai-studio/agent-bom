@@ -52,7 +52,7 @@ import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import { useGraphLayout } from "@/lib/use-graph-layout";
 import { useGraphPresentation } from "@/hooks/use-graph-presentation";
 import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
-import { viewportShowsNodes } from "@/lib/graph-viewport-fit";
+import { CONTROLS_OVERLAY, fitPaddingAroundOverlay, viewportShowsNodes } from "@/lib/graph-viewport-fit";
 import { graphTopologyKey, type GraphPresentationScope } from "@/lib/graph-presentation";
 import { useCaptureMode } from "@/lib/use-capture-mode";
 import { useElementWidth } from "@/hooks/use-element-width";
@@ -182,13 +182,16 @@ function InvestigationFlow({
   const responsiveScope = useMemo(() => compact
     ? { ...presentationScope, scope: `${presentationScope.scope}:${columnLayout ? "column-mobile" : "readable-mobile"}` }
     : presentationScope, [columnLayout, compact, presentationScope]);
+  const controlsOverlay = CONTROLS_OVERLAY[embedded ? "horizontal" : "vertical"];
   const fitOptions = useMemo(() => {
     if (columnLayout) return COLUMN_FIT_OPTIONS;
     const options = graphFitViewOptions(viewportInput);
     // Text and badges grow as the viewport fits; reserve room for that final
-    // measured size so the last finding is not clipped below the canvas.
-    return { ...options, padding: embedded ? 0.12 : Math.max(0.2, options.padding) };
-  }, [columnLayout, embedded, viewportInput]);
+    // measured size so the last finding is not clipped below the canvas, and
+    // keep the bottom-left clear of the zoom controls so no label sits under them.
+    const padding = embedded ? 0.12 : Math.max(0.2, options.padding);
+    return { ...options, padding: fitPaddingAroundOverlay(padding, { width: canvasWidth, height: canvasHeight }, controlsOverlay) };
+  }, [canvasHeight, canvasWidth, columnLayout, controlsOverlay, embedded, viewportInput]);
   const fitOptionsRef = useRef(fitOptions);
   fitOptionsRef.current = fitOptions;
 
@@ -226,7 +229,7 @@ function InvestigationFlow({
       // The restored viewport is applied when the pane initialises; judging
       // the default (0, 0, 1) before then would accept any saved framing.
       if (!reactFlow.viewportInitialized || restoredViewportChecked.current === presentation.storageKey) return;
-      if (viewportShowsNodes(reactFlow.getNodes(), reactFlow.getViewport(), { width: canvasWidth, height: canvasHeight })) {
+      if (viewportShowsNodes(reactFlow.getNodes(), reactFlow.getViewport(), { width: canvasWidth, height: canvasHeight }, controlsOverlay)) {
         restoredViewportChecked.current = presentation.storageKey;
         return;
       }
@@ -239,7 +242,7 @@ function InvestigationFlow({
       else void fitView(fitOptionsRef.current);
     });
     return () => cancelAnimationFrame(raf);
-  }, [canvasWidth, canvasHeight, stepper, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey, reactFlow]);
+  }, [canvasWidth, canvasHeight, controlsOverlay, stepper, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey, reactFlow]);
   const fitVisible = useCallback(() => {
     manualViewportScope.current = null;
     setOverview(true);
