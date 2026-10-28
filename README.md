@@ -3,10 +3,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/koda-ai-studio/agent-bom/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/koda-ai-studio/agent-bom/ci.yml?branch=main&style=flat&label=Build" alt="Build"></a>
-  <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/pypi/v/agent-bom?style=flat&label=PyPI&cacheSeconds=60" alt="PyPI"></a>
-  <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/badge/Python-3.11%E2%80%933.14-blue?style=flat" alt="Python 3.11 through 3.14"></a>
-  <a href="https://hub.docker.com/r/agentbom/agent-bom"><img src="https://img.shields.io/docker/pulls/agentbom/agent-bom?style=flat&label=Docker%20pulls" alt="Docker pulls"></a>
+  <a href="https://github.com/koda-ai-studio/agent-bom/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/koda-ai-studio/agent-bom/ci.yml?branch=main&style=flat&label=Build&logo=github" alt="Build"></a>
+  <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/pypi/v/agent-bom?style=flat&label=PyPI&logo=pypi&logoColor=white&cacheSeconds=60" alt="PyPI"></a>
+  <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/badge/Python-3.11%E2%80%933.14-blue?style=flat&logo=python&logoColor=white" alt="Python 3.11 through 3.14"></a>
+  <a href="https://hub.docker.com/r/agentbom/agent-bom"><img src="https://img.shields.io/docker/pulls/agentbom/agent-bom?style=flat&label=Docker%20pulls&logo=docker&logoColor=white" alt="Docker pulls"></a>
+</p>
+<p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat" alt="Apache-2.0 license"></a>
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom"><img src="https://img.shields.io/ossf-scorecard/github.com/koda-ai-studio/agent-bom?style=flat&label=OpenSSF%20scorecard" alt="OpenSSF Scorecard"></a>
   <a href="https://glama.ai/mcp/servers/koda-ai-studio/agent-bom"><img src="https://img.shields.io/badge/MCP-Glama-7c3aed?style=flat" alt="Glama MCP server"></a>
@@ -17,9 +19,8 @@
 <p align="center"><b>Find vulnerable software behind your AI agents—and trace the exposure evidence.</b></p>
 
 **Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.**
-For AppSec and platform engineers responsible for AI agents and MCP servers:
-scan a repository, correlate its findings with agent and infrastructure context,
-and prioritize fixes by blast radius and reachability evidence. Local scans need no account.
+For AppSec and platform engineers: scan a repository, trace findings through agents and infrastructure, and prioritize
+fixes using blast radius and reachability evidence. Local scans need no account.
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
@@ -43,6 +44,14 @@ findings, and follow the affected package's fix guidance. Review coverage gaps
 beside the verdict: incomplete evidence is not a clean assessment.
 [What this scan does and does not establish](docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
 
+No project handy? Run `uvx agent-bom scan --demo --offline` for a bundled sample.
+Exit `1` is expected: the sample trips the security gate. A non-zero exit
+can mean a security gate or incomplete assessment; inspect the report and coverage.
+See the [exit codes](site-docs/reference/exit-codes.md).
+
+<details>
+<summary>Verify fixes, export reports, and add a CI gate</summary>
+
 Apply a reviewed fix, update the lockfile, then rerun `uvx agent-bom scan .`
 against the same repository to verify the finding changed.
 Save a report with `uvx agent-bom scan . -f sarif -o findings.sarif`, then
@@ -64,10 +73,9 @@ steps:
       upload-sarif: 'true'
 ```
 
-No project handy? Run `uvx agent-bom scan --demo --offline` for a bundled sample.
-Exit `1` is expected: the sample trips the security gate. A non-zero exit
-can mean a security gate or incomplete assessment; inspect the report and coverage.
-See the [exit codes](site-docs/reference/exit-codes.md).
+</details>
+
+
 
 <p align="center"><img src="docs/images/demo-latest.gif" alt="Recorded agent-bom CLI showing sample findings and remediation guidance; no fix executed" width="920" /></p>
 
@@ -86,9 +94,10 @@ exploitation or successful data access.
 | Cloud | Read-only collection from AWS, Azure, GCP, Databricks, Snowflake and more, with CIS and best-practice checks in the same graph. |
 | Runtime | An MCP proxy and gateway that alert on poisoned tools and injected results, or block them with `--injection-mode enforce`. |
 
-### Supported sources
+<details>
+<summary>All supported sources and evidence destinations</summary>
 
-Discovery and scanning read from these sources today; the last row lists where evidence can be sent. The list is generated from a code-backed manifest (`docs/images/integrations-manifest.json`); a test fails if it names anything without an implementation.
+Discovery and scanning read from these sources; the last row lists evidence destinations.
 
 <!-- integrations:begin (generated by scripts/render_social_preview_svg.py; do not edit) -->
 | Area | Integrations |
@@ -103,6 +112,8 @@ Discovery and scanning read from these sources today; the last row lists where e
 
 Product names and logos are trademarks of their owners, used only to identify supported evidence sources. Their use does not imply endorsement or partnership.
 <!-- integrations:end -->
+
+</details>
 
 ## Investigate context and exposure
 
@@ -124,6 +135,9 @@ proposed [remediation](docs/GALLERY.md#engineers-and-grc-fix-and-verify) →
 [rescan the changed pin](examples/connected-bom/README.md) and compare snapshots.
 The comparison verifies the changed input, not a running deployment.
 
+<details>
+<summary>Inspect the evidence: one package, three parsed inputs</summary>
+
 **Supporting evidence: one package, three parsed inputs.** A repository pin, an
 image SBOM and a modeled Kubernetes workload resolve to one `pillow@9.0.0`. The
 image inventory and the deployment occurrence stay separate nodes; the advisory
@@ -135,6 +149,8 @@ receipt is open.
 [Open the full-size relationship graph](docs/images/graph-relationship-dark-live.png).
 
 [Explore context, correlation and reachability](docs/GALLERY.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md) · [Reproduce these screenshots](docs/GALLERY.md#reproduce-the-readme-screenshots)
+
+</details>
 
 Explain a finding to your team: [create an impact brief](docs/operations/IMPACT_BRIEF.md)
 with affected assets, source receipts, evidence gaps and the next action to review.
@@ -253,6 +269,9 @@ Discovery uses read-only access by default. Explicit disk side-scans create
 temporary cloud resources. Missing evidence stays unavailable or partial;
 control mappings are not audit certification.
 
+<details>
+<summary>Runtime evidence and MITRE mapping boundaries</summary>
+
 Persisted runtime, proxy and gateway activity retains source receipts and
 bounded time windows in the graph. Exact inventory references can bind records;
 unresolved identities and collection gaps remain explicit. Recorded activity
@@ -263,15 +282,18 @@ attack. [ATLAS mapping receipts](docs/ATLAS_COVERAGE.md) retain the weakness
 association and source catalog hashes; modeled graph paths do not establish
 observed execution or effective access.
 
+</details>
+
 [Measured matcher proof](site-docs/features/scanning.md#reproducible-matching-evidence) · [Product boundaries](docs/PRODUCT_BOUNDARIES.md) · [Permissions](docs/PERMISSIONS.md) · [Threat model](docs/THREAT_MODEL.md) · [Release verification](docs/RELEASE_VERIFICATION.md) · [Graph data model](docs/graph/DATA_MODEL.md)
 
 ## Contributing and support
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/koda-ai-studio/agent-bom)
 
-New here? The [first PR in 30 minutes](CONTRIBUTING.md#your-first-pr-in-30-minutes) guide and a ready Codespace get you from zero to a passing test without local setup. Start with a [`good first issue`](https://github.com/koda-ai-studio/agent-bom/issues?q=is%3Aopen+label%3A%22good+first+issue%22) or the [contributor roadmap](docs/ROADMAP.md), and ask in `#contributors` on [Discord](https://discord.gg/3YmYPqKZh5).
-
-agent-bom wants more maintainers: [GOVERNANCE.md](GOVERNANCE.md) lays out the path from contributor to triager, reviewer and maintainer, and [MAINTAINERS.md](MAINTAINERS.md) lists who reviews what. If agent-bom gave you useful evidence, a star or a short note in [feedback](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml) helps other security teams find and trust it.
+Start with the [first PR guide](CONTRIBUTING.md#your-first-pr-in-30-minutes)
+or a [`good first issue`](https://github.com/koda-ai-studio/agent-bom/issues?q=is%3Aopen+label%3A%22good+first+issue%22).
+Ask in [Discord](https://discord.gg/3YmYPqKZh5), share [feedback](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml),
+or follow the [maintainer path](GOVERNANCE.md) ([review owners](MAINTAINERS.md)).
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
