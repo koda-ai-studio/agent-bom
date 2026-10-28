@@ -80,9 +80,18 @@ record wins and the declaration is reported as superseded.
 
 The API and MCP answer has a `summary` (`affected`, `possibly_affected`,
 `not_affected`, `clean_scanned`, `assets_examined`, `reports_examined`), a
-`complete` flag and one row per asset and package with `installed_version`,
+`coverage` block (`agent_packages`, `standalone_packages` and any
+`unexamined_sections`), a `complete` flag and one row per asset and package
+with `asset_type` (`mcp_server`, `container_image`, or the recorded type of a
+standalone occurrence such as `package`), `asset_node_id`, `installed_version`,
 `fixed_version`, `verdict`, `verdict_reason`, `verdict_detail`, `provenance`
-and `graph` node ids. For PHP2Shell across three stored image scans:
+and `graph` node ids. Every package occurrence the stored scan recorded is
+examined: packages behind MCP servers and scan wrappers, and image or SBOM-only
+occurrences the correlation step recorded as their own assets (the same rows
+`GET /v1/findings` lists), so `assets_examined` counts images too. The
+advisory's `severity` follows the findings policy (a CVSS score first, then the
+feed's rating) and says so in `severity_source`. For PHP2Shell across three
+stored image scans:
 
 | Asset | Package | Verdict | What to do |
 |---|---|---|---|

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from agent_bom.core.suppression_score import mark_blast_radius_suppressed
@@ -11,13 +12,29 @@ VEX_SOURCE_DISCOVERED = "discovered"
 _SUPPRESSING_VEX_STATUSES = frozenset({"not_affected", "fixed"})
 
 
+def is_vex_suppressed_fields(vex_status: Any, vex_source: Any) -> bool:
+    """The suppression rule on bare fields, for serialized rows and evidence dicts."""
+    return vex_source == VEX_SOURCE_OPERATOR and vex_status in _SUPPRESSING_VEX_STATUSES
+
+
+def vex_row_fields(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    """The VEX assertion a serialized finding row carries, read from its evidence."""
+    status, source = evidence.get("vex_status"), evidence.get("vex_source")
+    return {
+        "vex_status": status,
+        "vex_justification": evidence.get("vex_justification"),
+        "vex_source": source,
+        "vex_suppressed": is_vex_suppressed_fields(status, source),
+    }
+
+
 def is_vex_suppressed(vuln) -> bool:
     """True only for an operator-supplied ``not_affected``/``fixed`` assertion.
 
     VEX discovered inside scanned artifacts is attacker-influenced supply-chain
     content, so it stays evidence and never lowers totals or gates.
     """
-    return getattr(vuln, "vex_source", None) == VEX_SOURCE_OPERATOR and getattr(vuln, "vex_status", None) in _SUPPRESSING_VEX_STATUSES
+    return is_vex_suppressed_fields(getattr(vuln, "vex_status", None), getattr(vuln, "vex_source", None))
 
 
 def active_blast_radii(blast_radii):

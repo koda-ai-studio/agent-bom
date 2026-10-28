@@ -29,6 +29,10 @@ def _display_package_name(name: str, version: str | None) -> str:
     return name
 
 
+def _fix_text(display_name: str, fixed_version: str | None) -> str:
+    return f"Upgrade {display_name} to {fixed_version}" if fixed_version else "No upstream fix recorded; monitor advisory source"
+
+
 def exposure_path_for_finding(
     finding: Finding,
     *,
@@ -58,11 +62,7 @@ def exposure_path_for_finding(
         tool_refs,
         credential_refs,
     )
-    fix = (
-        f"Upgrade {display_name} to {finding.fixed_version}"
-        if finding.fixed_version
-        else "No upstream fix recorded; monitor advisory source"
-    )
+    fix = _fix_text(display_name, finding.fixed_version)
     proof_bits: list[str] = []
     if finding.affected_agents:
         proof_bits.append(f"{len(finding.affected_agents)} affected agent(s)")
@@ -111,6 +111,9 @@ def exposure_path_for_finding(
         },
         "fix": fix,
         "evidence": proof_bits,
+        # A suppressed finding keeps its path as evidence; ``path_count`` counts only open paths.
+        "suppressed": bool(finding.suppressed),
+        "suppressionState": finding.suppression_state if finding.suppressed else None,
         "provenance": {"source": provenance_source, "graphPersistence": False},
     }
     return {key: value for key, value in path.items() if value is not None}

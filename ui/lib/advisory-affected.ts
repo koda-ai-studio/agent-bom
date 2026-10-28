@@ -10,8 +10,13 @@ export const AFFECTED_VERDICT_FILTERS: readonly AffectedVerdictFilter[] = ["all"
 export const AFFECTED_PAGE_LIMIT = 50;
 
 export interface AdvisoryAffectedRow {
-  asset: { agent: string; server: string };
+  /** A standalone (image/SBOM-only) occurrence has empty agent/server and carries its own `asset_type` and `node_id`. */
+  asset: { agent: string; server: string; asset_type?: string | undefined; node_id?: string | undefined };
   asset_label: string;
+  /** `mcp_server`, `container_image` (an image-scan carrier) or the recorded type of a standalone asset (`package`). */
+  asset_type: string;
+  /** The graph node the asset is: the server, the image, or the package occurrence itself. */
+  asset_node_id: string | null;
   package: { name: string; version: string; ecosystem: string; purl?: string | undefined; cpe?: string | undefined };
   installed_version: string;
   fixed_version: string | null;
@@ -42,12 +47,17 @@ export interface AdvisoryAffectedResponse {
     aliases: string[];
     summary: string;
     severity: string;
+    /** How `severity` was derived: `cvss`, `<feed>_advisory`, `operator_advisory` or `scan`. */
+    severity_source?: string | null | undefined;
+    cvss_score?: number | null | undefined;
     /** `scan`: no declaration or feed record knows the id; answered from the stored findings that name it. */
     source: AffectedProvenance;
     published_at: string | null;
     fixed_versions: string[];
   };
   summary: AdvisoryAffectedSummary;
+  /** Which report sections were examined; a non-empty `unexamined_sections` makes the answer incomplete. */
+  coverage?: { agent_packages: number; standalone_packages: number; unexamined_sections: string[] } | undefined;
   complete: boolean;
   /** Why `complete` is false when the cause is the source itself (e.g. answered from stored findings). */
   incomplete_reason?: string | undefined;

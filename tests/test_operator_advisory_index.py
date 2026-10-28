@@ -45,7 +45,7 @@ def _reference(advisories: list[OperatorAdvisory], reports: list[dict[str, Any]]
         )
         for asset, package, owners in iter_report_packages(report):
             result.packages_examined += 1
-            result.assets_examined.add((ctx.scan_id, asset["agent"], asset["server"]))
+            result.assets_examined.add(oa.asset_key(ctx.scan_id, asset))
             occurrence = oa._Occurrence(asset, package, owners, ctx)
             for advisory in advisories:
                 oa._match_package(advisory, occurrence, result)

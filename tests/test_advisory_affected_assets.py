@@ -71,6 +71,8 @@ def test_php2shell_answer_per_asset() -> None:
         "aliases": ["CVE-2026-109619"],
         "summary": "php2shell: unauthenticated remote code execution in PHP core",
         "severity": "critical",
+        "severity_source": "operator_advisory",
+        "cvss_score": None,
         "source": "operator_advisory",
         "published_at": "2026-10-21T00:00:00+00:00",
         "fixed_versions": ["8.2.35", "8.3.36", "8.4.27", "8.5.12"],

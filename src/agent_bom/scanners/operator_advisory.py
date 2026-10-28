@@ -33,6 +33,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from agent_bom.core.versions import compare_version_order
 from agent_bom.core.versions.osv import version_match_state
+from agent_bom.scanners.advisory_occurrences import asset_key, iter_report_occurrences, unexamined_sections
 from agent_bom.scanners.cpe_distro_packages import CPE_DISTRO_PACKAGES, distro_ships_cpe_product
 
 if TYPE_CHECKING:
@@ -128,6 +129,9 @@ class OperatorAdvisory(BaseModel):
     aliases: list[str] = Field(default_factory=list, max_length=16)
     summary: str = Field(min_length=1, max_length=1000)
     severity: Literal["critical", "high", "medium", "low"]
+    # How ``severity`` was derived (``cvss``, ``<source>_advisory``, ...); an operator declaration has none.
+    severity_source: str | None = Field(default=None, max_length=64)
+    cvss_score: float | None = Field(default=None, ge=0, le=10)
     published_at: datetime | None = None
     references: list[str] = Field(default_factory=list, max_length=16)
     affected: list[AffectedProduct] = Field(min_length=1, max_length=64)
@@ -166,11 +170,14 @@ class AdvisoryMatchResult:
     # One verdict per (advisory, asset, package) whose identity the advisory names;
     # what the "affected assets" read pages over.
     rows: list[dict[str, Any]] = field(default_factory=list)
-    assets_examined: set[tuple[str, str, str]] = field(default_factory=set)
+    # ``(scan_id, agent, server, standalone node id)`` per examined asset (see ``advisory_occurrences.asset_key``).
+    assets_examined: set[tuple[str, str, str, str]] = field(default_factory=set)
+    standalone_packages_examined: int = 0
+    unexamined_sections: set[str] = field(default_factory=set)
 
     @property
     def complete(self) -> bool:
-        return self.reports_examined > 0 and not self.indeterminate
+        return self.reports_examined > 0 and not self.indeterminate and not self.unexamined_sections
 
     @property
     def blocking_indeterminate(self) -> list[dict[str, Any]]:
@@ -238,17 +245,15 @@ def _feed_id(advisory: OperatorAdvisory, package: dict[str, Any]) -> str | None:
     return None
 
 
-def iter_report_packages(report: dict[str, Any]) -> Iterator[tuple[dict[str, str], dict[str, Any], tuple[dict, dict]]]:
-    """``(asset, package, (agent, server))`` for every named, versioned package in one stored report."""
-    for agent in report.get("agents") or []:
-        if not isinstance(agent, dict):
-            continue
-        for server in agent.get("mcp_servers") or []:
-            if not isinstance(server, dict):
-                continue
-            for package in server.get("packages") or []:
-                if isinstance(package, dict) and package.get("name") and package.get("version"):
-                    yield {"agent": str(agent.get("name") or ""), "server": str(server.get("name") or "")}, package, (agent, server)
+def iter_report_packages(report: dict[str, Any]) -> Iterator[tuple[dict[str, str], dict[str, Any], tuple[dict, dict] | None]]:
+    """``(asset, package, owners)`` for every package occurrence in one stored report.
+
+    ``owners`` is ``(agent, server)`` for a package under an agent's server and
+    ``None`` for an image/SBOM-only occurrence recorded as its own asset, whose
+    ``asset`` carries ``asset_type`` and ``node_id`` (see ``advisory_occurrences``).
+    """
+    for occurrence in iter_report_occurrences(report):
+        yield occurrence.asset, occurrence.package, occurrence.owners
 
 
 @dataclass(frozen=True)
@@ -265,7 +270,7 @@ class _Occurrence:
 
     asset: dict[str, str]
     package: dict[str, Any]
-    owners: tuple[dict, dict]
+    owners: tuple[dict, dict] | None
     ctx: _ReportContext
 
 
@@ -294,7 +299,7 @@ def _row(
         "id": occurrence_id(advisory.id, package, asset, occ.ctx.provenance),
         "advisory_id": advisory.id,
         "asset": dict(asset),
-        "asset_label": asset.get("server") or asset.get("agent") or "",
+        "asset_label": asset.get("server") or asset.get("agent") or asset.get("node_id") or str(package.get("asset_name") or ""),
         "package": _package_ref(package),
         "installed_version": str(package.get("version") or ""),
         "fixed_version": fixed,
@@ -455,9 +460,11 @@ def match_advisories_against_reports(
         result.reports_examined += 1
         observed = report.get("scan_completed_at")
         ctx = _ReportContext(str(report.get("scan_id") or ""), str(observed) if observed else None, provenance, distro_verdict)
+        result.unexamined_sections.update(unexamined_sections(report))
         for asset, package, owners in iter_report_packages(report):
             result.packages_examined += 1
-            result.assets_examined.add((ctx.scan_id, asset["agent"], asset["server"]))
+            result.standalone_packages_examined += owners is None
+            result.assets_examined.add(asset_key(ctx.scan_id, asset))
             occurrence = _Occurrence(asset, package, owners, ctx)
             for advisory in index.candidates(package):
                 _match_package(advisory, occurrence, result)
