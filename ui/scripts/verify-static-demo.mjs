@@ -19,10 +19,15 @@ import { startStaticDemoServer } from "./static-demo-server.mjs";
 const WALL_CLOCK_AGE = /\b\d+\s*(months?|years?|mo|yr)\s+ago\b|\b[1-9]\d{2,}\s*(d|days?)\s+ago\b|overdue by \d+ (months?|years?)/i;
 const ERROR_TEXT = /no sample data in the read-only demo|something went wrong|failed to load|could not be loaded|network request failed|application error/i;
 
+// [name, route, expected text, text that must not appear]
 const PAGES = [
   ["overview", "/", "Overview"],
   ["investigation", "/security-graph", null],
-  ["findings", "/findings", null],
+  ["investigation-impact", "/security-graph?step=impact", /\d+ assets? exposed to this finding/, /Impact evidence is unavailable/],
+  ["investigation-owner", "/security-graph?step=owner", /Owner \/ team\s*data-platform/, /Ownership is unavailable|No finding record for this path/],
+  ["investigation-verify", "/remediation?view=verification", /Awaiting re-verification/, /no sample data/],
+  ["findings", "/findings", /Vulnerabilities\s*\d+/, null],
+  ["audit", "/audit", /completed|denied|issued/, /Not recorded/],
   ["advisories-php2shell", "/advisories?id=CVE-2026-109618", null],
   ["inventory", "/inventory", null],
   ["remediation", "/remediation", null],
@@ -68,9 +73,12 @@ async function main() {
           problems.push(`${label}: no sample data for ${url.searchParams.get("path")} on ${new URL(page.url()).pathname}`);
         }
       });
-      for (const [name, route] of PAGES) {
+      for (const [name, route, expected, forbidden] of PAGES) {
         await page.goto(`${server.origin}${basePath}${route}`, { waitUntil: "networkidle" });
         await page.waitForTimeout(600);
+        const text = await page.locator("#main-content").innerText().catch(() => "");
+        if (expected instanceof RegExp && !expected.test(text)) problems.push(`${label} ${name}: expected ${expected} in the page`);
+        if (forbidden && forbidden.test(text)) problems.push(`${label} ${name}: ${text.match(forbidden)[0]}`);
         if (!(await page.getByTestId("static-demo-banner").isVisible())) problems.push(`${label} ${name}: demo banner not visible`);
         const theme_ = await page.locator("html").getAttribute("data-theme");
         if (theme_ !== theme) problems.push(`${label} ${name}: theme ${theme_} != ${theme}`);

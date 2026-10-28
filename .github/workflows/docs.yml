@@ -79,6 +79,10 @@ jobs:
         working-directory: ui
         run: node scripts/verify-static-demo.mjs --out out --base-path /agent-bom/demo
 
+      - name: Browser checks on the demo's investigation journey
+        working-directory: ui
+        run: npm run test:static-demo
+
       - name: Place demo under the docs site
         run: |
           rm -rf site/demo
