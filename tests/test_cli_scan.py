@@ -780,7 +780,7 @@ def test_scan_output_appends_format_extension_for_extensionless_path(tmp_path):
     assert result.exit_code == 0, result.output
     assert expected.exists()
     assert not out.exists()
-    assert "SARIF report:" in result.output
+    assert "SARIF report written to" in result.output
     assert "scan-report.sarif" in result.output
 
 

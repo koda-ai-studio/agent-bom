@@ -387,7 +387,9 @@ def init_policy_cmd(template_name: str, output_path: Path, mode: str, output_for
     "--oauth-as-issuer",
     envvar="AGENT_BOM_GATEWAY_OAUTH_AS_ISSUER",
     default=None,
-    help=("Compatibility option only; embedded OAuth AS activation is unavailable."),
+    hidden=True,
+    expose_value=False,
+    deprecated="ignored; the embedded OAuth AS is unavailable and the gateway reads no issuer from this option",
 )
 @click.option(
     "--a2a-mutual-auth-enforcement",
@@ -475,7 +477,6 @@ def serve_cmd(
     graph_reachability_bundle_poll_seconds: float,
     graph_reachability_failure_mode: str,
     enable_oauth_as: bool,
-    oauth_as_issuer: str | None,
     a2a_mutual_auth_enforcement: str,
     tool_scope_map: Path | None,
     enable_dlp: bool,

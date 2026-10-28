@@ -433,7 +433,6 @@ def run_local_discovery(
     k8s_mcp_context: Any,
     no_skill: bool,
     skill_paths: tuple,
-    skill_only_mode: bool,
     ai_enrich: bool,
     ai_model: str,
     sbom_file: Any,

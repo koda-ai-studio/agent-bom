@@ -140,7 +140,7 @@ def dependency_groups(packages: list[Package]) -> tuple[list[Package], list[Pack
 def dependency_count_label(packages: list[Package], *, compact: bool = False) -> str:
     direct, transitive, unknown = dependency_groups(packages)
     if compact:
-        return f" ({len(direct)}D/{len(transitive)}T/{len(unknown)} unknown)" if transitive or unknown else ""
+        return f" ({len(direct)} direct/{len(transitive)} transitive/{len(unknown)} unknown)" if transitive or unknown else ""
     return f"{len(direct)} direct, {len(transitive)} transitive, {len(unknown)} unknown"
 
 

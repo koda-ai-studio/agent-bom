@@ -323,7 +323,7 @@ class OAuthAuthorizationServer:
             # base URL on a listener that has not opted into host derivation.
             raise OAuthError(
                 "server_error",
-                "OAuth AS issuer is not configured; set AGENT_BOM_GATEWAY_OAUTH_AS_ISSUER (--oauth-as-issuer) to the public base URL",
+                "OAuth AS issuer is not configured; construct the authorization server with issuer set to its public base URL",
                 status=500,
             )
         if self._observed_issuer:

@@ -281,3 +281,22 @@ class TestSingleFileScanParity:
         result = scan_iac_with_context(tmp_path / "does-not-exist")
         assert result.findings == []
         assert all(v.status in {"not-applicable", "disabled"} for v in result.verdicts)
+
+
+class TestDockerPipCache:
+    """DOCKER-017: pip install without --no-cache-dir (uv spells it --no-cache)."""
+
+    def test_pip_without_no_cache_dir(self, tmp_dockerfile):
+        content = "FROM python:3.12\nRUN pip install flask\nUSER app\nHEALTHCHECK CMD true"
+        findings = scan_dockerfile(tmp_dockerfile(content))
+        assert len([f for f in findings if f.rule_id == "DOCKER-017"]) == 1
+
+    def test_uv_pip_no_cache_is_the_same_opt_out(self, tmp_dockerfile):
+        content = "FROM python:3.12\nRUN uv pip install --no-cache --python /app/.venv/bin/python flask\nUSER app\nHEALTHCHECK CMD true"
+        findings = scan_dockerfile(tmp_dockerfile(content))
+        assert [f for f in findings if f.rule_id == "DOCKER-017"] == []
+
+    def test_no_cache_prefix_of_another_flag_does_not_count(self, tmp_dockerfile):
+        content = "FROM python:3.12\nRUN pip install --no-cachefoo flask\nUSER app\nHEALTHCHECK CMD true"
+        findings = scan_dockerfile(tmp_dockerfile(content))
+        assert len([f for f in findings if f.rule_id == "DOCKER-017"]) == 1

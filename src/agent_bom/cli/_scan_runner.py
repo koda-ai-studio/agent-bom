@@ -122,7 +122,6 @@ def run_default_scan(cfg: ScanConfig, con: "Console") -> ScanResult:
             k8s_mcp_context=None,
             no_skill=True,
             skill_paths=(),
-            skill_only_mode=False,
             ai_enrich=False,
             ai_model="",
             sbom_file=None,

@@ -23,6 +23,7 @@ from agent_bom.output.compact_text import GRADE_ECHO as _GRADE_ECHO
 from agent_bom.output.compact_text import clip as _clip
 from agent_bom.output.compact_text import compact_detail as _compact_detail
 from agent_bom.output.dependency_hierarchy import dependency_count_label
+from agent_bom.output.inventory_label import inventory_counts, inventory_subjects
 from agent_bom.output.kernel_header_console import collapse_kernel_header_findings, print_findings_heading, print_kernel_groups_only
 from agent_bom.output.possibly_affected import print_possibly_affected
 
@@ -252,7 +253,7 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
     has_more_context = bool(weak_dimensions or cred_names or elevated or has_ai_inventory or coverage_incomplete or scorecard.score < 90)
 
     inventory_line = (
-        f"  [bold]{report.total_agents}[/bold] agents [dim]·[/dim] "
+        f"  {inventory_subjects(report)} [dim]·[/dim] "
         f"[bold]{report.total_servers}[/bold] servers [dim]·[/dim] "
         f"[bold]{report.total_packages}[/bold][dim]{pkg_detail}[/dim] packages"
     )
@@ -359,7 +360,8 @@ def print_compact_agents(report: AIBOMReport) -> None:
         return
 
     console.print()
-    console.print(Rule(lane_title("discover", "Agents"), style="dim"))
+    agent_count, project_count = inventory_counts(report)
+    console.print(Rule(lane_title("discover", "Projects" if project_count and not agent_count else "Agents"), style="dim"))
     table = Table(box=None, padding=(0, 2), show_header=True, header_style="bold dim")
     table.add_column("Agent")
     table.add_column("Type", style="dim")
@@ -697,7 +699,7 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
     # compact operator view groups identical rule occurrences while the report,
     # SARIF, JSON, and graph retain every occurrence for drill-through.
     grouped: list[tuple[Finding, int, list[str]]] = []
-    grouped_index: dict[tuple[str, str, str, str], int] = {}
+    grouped_index: dict[tuple[str, str, str], int] = {}
     for finding in findings:
         evidence = finding.evidence or {}
         is_iac = evidence.get("iac") is True
@@ -708,7 +710,6 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
             finding.finding_type.value,
             str(evidence.get("rule_id") or finding.title or ""),
             str(finding.severity),
-            finding.description or "",
         )
         existing = grouped_index.get(key)
         if existing is None:
@@ -882,7 +883,7 @@ def print_compact_export_hint(report: AIBOMReport) -> None:
     # same CVE counts once per package copy here, so "instance(s)" keeps it
     # distinct from the deduped "package CVEs" finding total on the scan line.
     console.print(
-        f"\n  [bold]{report.total_agents} agents[/bold] · "
+        f"\n  {inventory_subjects(report)} · "
         f"[bold]{report.total_servers} servers[/bold] · "
         f"[bold]{report.total_packages} packages[/bold] · "
         f"[bold {vuln_color}]{report.total_vulnerabilities} package CVE instance(s)[/bold {vuln_color}]"
