@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from agent_bom.advisory_ids import STALE_RECEIPT_WARNINGS
 from agent_bom.core.timestamps import parse_timestamp as _parse_ts
 from agent_bom.domain.report_payloads import OSVResponseCachePayload, VulnerabilityFreshnessPayload
 
@@ -490,6 +491,16 @@ def allow_stale_db() -> bool:
     if _allow_stale_db_flag:
         return True
     return _env_flag("AGENT_BOM_ALLOW_STALE_DB")
+
+
+def accepted_scan_warnings() -> frozenset[str]:
+    """Scanner warnings that are informational, not coverage gaps, for this run.
+
+    ``--allow-stale-db`` / ``AGENT_BOM_ALLOW_STALE_DB`` accepts old local data,
+    so the range-receipt warnings for rows it cannot verify stay visible in
+    ``scan_run.issues`` without turning the outcome partial.
+    """
+    return STALE_RECEIPT_WARNINGS if allow_stale_db() else frozenset()
 
 
 def db_staleness(

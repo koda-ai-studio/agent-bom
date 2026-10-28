@@ -5,20 +5,12 @@ from __future__ import annotations
 import sqlite3
 from typing import Callable, Optional
 
+# Re-exported for the lookup path; defined on the leaf module so scanners and
+# evidence code can name them without importing the database package.
+from agent_bom.advisory_ids import LEGACY_RECEIPT_WARNING as LEGACY_RECEIPT_WARNING
+from agent_bom.advisory_ids import UNVERIFIED_RANGE_WARNING as UNVERIFIED_RANGE_WARNING
 from agent_bom.core.versions.osv import is_valid_fix_version
 from agent_bom.version_utils import compare_version_order
-
-# Rows carried over by the v7->v8 schema upgrade lost their OSV range limits,
-# so neither membership nor the fix can be confirmed until an OSV refresh.
-LEGACY_RECEIPT_WARNING = (
-    "Local advisory rows predate range-limit receipts (not refreshed since the DB schema upgrade): "
-    "findings from them are marked unverified_range and their fixed versions are withheld. "
-    "Run `agent-bom db update` to restore range bounds and fixed versions."
-)
-UNVERIFIED_RANGE_WARNING = (
-    "Some local advisory ranges cannot be verified. Findings marked unverified_range are candidates; "
-    "run agent-bom db update to refresh source bounds and review unresolved versions."
-)
 
 
 def next_window_fix(

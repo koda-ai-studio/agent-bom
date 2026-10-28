@@ -21,6 +21,7 @@ from rich.console import Console
 
 from agent_bom import vuln_freshness
 from agent_bom.cli import _check_published
+from agent_bom.cli._check_candidates import print_candidates
 from agent_bom.cli._check_support import (
     _check_result_payload,
     _format_vulnerability_count,
@@ -77,6 +78,7 @@ class CheckRun:
 def _emit(run: CheckRun, *, ecosystems: list[str], verdict: str, message: str, exit_code: int, **extra: Any) -> None:
     """Write the machine-readable verdict for ``--format json|sarif`` or agent mode."""
     extra.setdefault("version_source", run.version_source)
+    extra.setdefault("possibly_affected", list(getattr(run.matched_pkg, "possibly_affected", None) or []))
     if run.data_evidence is not None:
         extra.setdefault("vuln_data_freshness", run.data_evidence.freshness)
         extra.setdefault("completeness", run.data_evidence.completeness())
@@ -248,8 +250,9 @@ def _scan(run: CheckRun) -> None:
         run.console.print(f"  [yellow]⚠[/yellow] Scan completed with {len(run.scan_warnings)} warning(s); results may be incomplete.")
     _record_data_evidence(run, coverage_warnings)
 
-    run.matched_pkg = next((p for p in run.pkgs if p.vulnerabilities), run.pkgs[0])
+    run.matched_pkg = next((p for p in run.pkgs if p.vulnerabilities or p.possibly_affected), run.pkgs[0])
     run.vulns = run.matched_pkg.vulnerabilities
+    print_candidates(run.matched_pkg, run.console, quiet=run.quiet or run.structured_output)
     run.fail_threshold = run.fail_on_severity.lower() if run.fail_on_severity else None
 
 

@@ -38,6 +38,9 @@ class PackageCheckResult:
     # "requested" when the caller named the version; "registry_latest" (or
     # "registry_fallback") when none was given and the latest was checked.
     version_source: str = "requested"
+    # Advisories the lookup could not decide (local rows without a range
+    # receipt, no live answer): review items, never counted as vulnerabilities.
+    possibly_affected: tuple[dict[str, Any], ...] = ()
 
     @property
     def canonical_verdict(self) -> str:
@@ -69,6 +72,7 @@ class PackageCheckResult:
             "scan_warnings": list(self.warnings),
             "vuln_data_freshness": self.vuln_data_freshness,
             "completeness": self.completeness,
+            "possibly_affected": list(self.possibly_affected),
             **self.source_context,
         }
 

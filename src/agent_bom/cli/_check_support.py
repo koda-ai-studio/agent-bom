@@ -372,6 +372,7 @@ def _check_result_payload(
     vuln_data_freshness: dict | None = None,
     completeness: dict | None = None,
     version_source: str = "requested",
+    possibly_affected: list[dict] | None = None,
 ) -> dict:
     """Build machine-readable check output."""
     from agent_bom.scanners.package_check_result import PackageCheckResult, serialize_vulnerability
@@ -391,6 +392,7 @@ def _check_result_payload(
         vuln_data_freshness=vuln_data_freshness,
         completeness=completeness,
         version_source=version_source,
+        possibly_affected=tuple(possibly_affected or []),
     )
     return result.cli_payload(
         legacy_verdict=verdict,

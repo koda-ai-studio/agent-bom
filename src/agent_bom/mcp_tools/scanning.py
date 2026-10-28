@@ -42,6 +42,7 @@ from agent_bom.scanners.local_data_freshness import freshness_snapshot
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings
 from agent_bom.security import sanitize_error
+from agent_bom.vuln_freshness import accepted_scan_warnings
 
 logger = logging.getLogger(__name__)
 
@@ -340,7 +341,7 @@ def _attach_pipeline_evidence(report, scanner_warnings: list[str], coverage_warn
 
     Same scan_run evidence the CLI grades, so the posture grade is one computation.
     """
-    report.scan_run.issues.extend(scanner_warning_issues(scanner_warnings))
+    report.scan_run.issues.extend(scanner_warning_issues(scanner_warnings, accepted=accepted_scan_warnings()))
     if coverage_warnings:
         report.coverage_warnings = coverage_warnings
     repo_inventory = consume_repo_tree_inventory()
