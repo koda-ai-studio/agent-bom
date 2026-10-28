@@ -6,6 +6,7 @@ import json
 import re
 from io import StringIO
 from pathlib import Path
+from types import SimpleNamespace
 
 from click.testing import CliRunner
 from rich.console import Console
@@ -178,7 +179,8 @@ def test_dependency_count_label_spells_out_the_legend():
 # ── D6: a file artifact is confirmed on stdout even when diagnostics go to stderr
 
 
-def test_announce_report_written_goes_to_stdout(capsys):
+def test_announce_report_written_goes_to_stdout_on_a_terminal(capsys, monkeypatch):
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
     diagnostics = StringIO()
     con = Console(file=diagnostics, force_terminal=False)
 
@@ -193,7 +195,15 @@ def test_announce_report_written_respects_quiet(capsys):
     assert capsys.readouterr().out == ""
 
 
-def test_profile_redirected_scan_confirms_the_report_path_on_stdout(tmp_path, monkeypatch):
+def test_announce_report_written_keeps_piped_stdout_clean(capsys, monkeypatch):
+    monkeypatch.setattr("sys.stdout.isatty", lambda: False)
+    announce_report_written(SimpleNamespace(quiet=False), "JSON report", "agent-bom-report.json")
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "JSON report written to agent-bom-report.json" in captured.err
+
+
+def test_profile_redirected_scan_confirms_the_report_path(tmp_path, monkeypatch):
     config_path = tmp_path / "config.toml"
     config_path.write_text('current_profile = "default"\n\n[profiles.default]\nformat = "json"\noutput = "agent-bom-report.json"\n')
     monkeypatch.setenv("AGENT_BOM_CONFIG", str(config_path))
@@ -206,6 +216,7 @@ def test_profile_redirected_scan_confirms_the_report_path_on_stdout(tmp_path, mo
     result = CliRunner().invoke(main, ["scan", ".", "--no-scan", "--no-auto-update-db", "--offline"], catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    assert "JSON report written to" in result.stdout
-    assert "agent-bom-report.json" in result.stdout
+    confirmation = result.stdout + result.stderr
+    assert "JSON report written to" in confirmation
+    assert "agent-bom-report.json" in confirmation
     assert json.loads((project / "agent-bom-report.json").read_text())["agents"]

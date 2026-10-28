@@ -6,6 +6,8 @@
   <a href="https://github.com/koda-ai-studio/agent-bom/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/koda-ai-studio/agent-bom/ci.yml?branch=main&style=flat&label=Build&logo=github" alt="Build"></a>
   <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/pypi/v/agent-bom?style=flat&label=PyPI&logo=pypi&logoColor=white&cacheSeconds=60" alt="PyPI"></a>
   <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/badge/Python-3.11%E2%80%933.14-blue?style=flat&logo=python&logoColor=white" alt="Python 3.11 through 3.14"></a>
+</p>
+<p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat" alt="Apache-2.0 license"></a>
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom"><img src="https://img.shields.io/ossf-scorecard/github.com/koda-ai-studio/agent-bom?style=flat&label=OpenSSF%20scorecard" alt="OpenSSF Scorecard"></a>
 </p>
@@ -159,7 +161,7 @@ affected distro packages to verify, and the blast radius
 ```bash
 agent-bom db update                                   # refresh OSV, NVD, KEV and EPSS
 agent-bom db advisory affected CVE-2026-109618        # most recent saved scan
-agent-bom db advisory affected CVE-2026-109618 --report web.json --format json
+agent-bom db advisory affected CVE-2026-109618 --report <scan-report.json> --format json   # a report saved with scan -f json -o
 ```
 
 From an MCP client, the read-only `affected_assets` tool (`graph` and `full`

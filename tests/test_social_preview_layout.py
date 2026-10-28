@@ -37,7 +37,7 @@ def test_banner_uses_three_logo_rows_without_category_boxes() -> None:
 def test_readme_badges_use_two_balanced_rows_and_keep_live_build_status() -> None:
     header = (ROOT / "README.md").read_text().split("<!-- mcp-name:", 1)[0]
     rows = [row for row in re.findall(r"<p[^>]*>(.*?)</p>", header, re.S) if "img.shields.io" in row]
-    assert [row.count("<img ") for row in rows] == [4, 4]
+    assert [row.count("<img ") for row in rows] == [3, 2]
     assert "actions/workflow/status/koda-ai-studio/agent-bom/ci.yml?branch=main" in rows[0]
     for logo in ("github", "pypi", "python", "docker"):
         assert f"logo={logo}" in rows[0]
