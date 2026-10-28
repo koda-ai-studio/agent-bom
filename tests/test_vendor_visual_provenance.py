@@ -44,6 +44,19 @@ ICON_SET_VENDORS = {
     "Amazon Web Services",
     "ClickHouse",
     "Databricks",
+    "Docker MCP Toolkit",
+    "JetBrains AI",
+    "Jira",
+    "Milvus",
+    "Qdrant",
+    "Cline",
+    "Crusoe",
+    "Gemini CLI",
+    "Goose",
+    "Langfuse",
+    "LangSmith",
+    "OpenClaw",
+    "Roo Code",
     "GitHub",
     "GitHub Copilot",
     "Google Cloud",
@@ -65,8 +78,18 @@ REPOSITORY_PINNED_VENDORS = {
 BRAND_REFERENCE_VENDORS = {
     "Google Cloud",
 }
-ICON_SET_SOURCE_HOST = "simpleicons.org"
-ICON_SET_ALLOWED_LICENSES = {"CC0-1.0"}
+ICON_SET_SOURCES = {
+    "https://github.com/msaad00/cloud-ai-security-skills": ("https://simpleicons.org", "CC0-1.0"),
+    "https://github.com/simple-icons/simple-icons": ("https://simpleicons.org", "CC0-1.0"),
+    "https://github.com/lobehub/lobe-icons": ("https://github.com/lobehub/lobe-icons", "MIT"),
+}
+VENDOR_SVG_HOSTS = {
+    "CoreWeave": ("www.coreweave.com", "cdn.prod.website-files.com"),
+    "Nebius": ("nebius.com", "nebius.com"),
+    "Lambda": ("lambda.ai", "lambda.ai"),
+    "RunPod": ("www.runpod.io", None),
+    "Vast.ai": ("vast.ai", "vast.ai"),
+}
 _FULL_COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
@@ -98,16 +121,19 @@ def test_vendor_diagram_assets_have_first_party_pinned_provenance() -> None:
     icon_set = _icon_set(assets)
     repository_pinned = _repository_pinned(assets)
     brand_reference = _brand_reference(assets)
+    vendor_svg = [asset for asset in assets if asset.get("source_kind") == "vendor_svg"]
 
     # Every asset must declare exactly one pin. An entry with neither is
     # unpinned; an entry with both hides which guarantee actually applies.
-    assert len(first_party) + len(icon_set) + len(repository_pinned) + len(brand_reference) == len(assets)
+    for asset in assets:
+        assert sum(asset in group for group in (first_party, icon_set, repository_pinned, brand_reference, vendor_svg)) == 1
     assert not [a for a in assets if "source_archive" in a and "source_repo" in a]
 
     assert {asset["vendor"] for asset in first_party} == FIRST_PARTY_VENDORS
     assert {asset["vendor"] for asset in icon_set} == ICON_SET_VENDORS
     assert {asset["vendor"] for asset in repository_pinned} == (REPOSITORY_PINNED_VENDORS)
     assert {asset["vendor"] for asset in brand_reference} == BRAND_REFERENCE_VENDORS
+    assert {asset["vendor"] for asset in vendor_svg} == set(VENDOR_SVG_HOSTS)
 
     # Shared contract: the bytes on disk are the bytes that were reviewed.
     for asset in assets:
@@ -124,12 +150,26 @@ def test_vendor_diagram_assets_have_first_party_pinned_provenance() -> None:
             assert parsed.hostname in ALLOWED_SOURCE_HOSTS
 
     for asset in icon_set:
-        page = urlparse(asset["source_page"])
-        assert page.scheme == "https"
-        assert page.hostname == ICON_SET_SOURCE_HOST
+        page, license_id = ICON_SET_SOURCES[asset["source_repo"]]
+        actual_page, expected_page = urlparse(asset["source_page"]), urlparse(page)
+        assert (actual_page.scheme, actual_page.hostname, actual_page.path.rstrip("/")) == (
+            expected_page.scheme,
+            expected_page.hostname,
+            expected_page.path.rstrip("/"),
+        )
+        assert asset["license"] == license_id
 
-        # Redistribution rests on the license, so it has to be stated, not implied.
-        assert asset["license"] in ICON_SET_ALLOWED_LICENSES
+    for asset in vendor_svg:
+        page_host, asset_host = VENDOR_SVG_HOSTS[asset["vendor"]]
+        page = urlparse(asset["source_page"])
+        assert page.scheme == "https" and page.hostname == page_host
+        assert asset["retrieved_at"]
+        if asset_host:
+            source = urlparse(asset["source_path"])
+            assert source.scheme == "https" and source.hostname == asset_host
+        else:
+            assert asset["source_path"] == "footer-logo.svg"
+            assert asset["source_selector"] == ".footer-logo svg"
 
     for asset in brand_reference:
         page = urlparse(asset["source_page"])
