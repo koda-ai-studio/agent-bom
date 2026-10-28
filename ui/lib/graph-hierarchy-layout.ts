@@ -173,12 +173,14 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
       ? layout.nodes.map(node => ({ ...node, style: { ...node.style, minHeight: nodeHeight } }))
       : layout.nodes;
   const positioned = new Map((compact && repository ? alignHierarchyBranches(ordered, rankedEdges, rowStep) : ordered).map(node => [node.id, node]));
+  const columns = [...new Set([...positioned.values()].map(node => node.position.x))].sort((a, b) => a - b);
+  const roomyOverview = boundedOverview && columns.length > 1 && columns.slice(1).every((x, index) => x - columns[index]! >= 364);
   return {
     nodes: nodes.map(node => positioned.get(node.id)!),
     edges: edges.map((edge): Edge => ({ ...edge,
       ...(contextEdges.has(edge.id) ? { sourceHandle: "context", targetHandle: "context" } : {}),
       data: { ...edge.data, quietLabel: !edge.data?.isClusterEdge,
-        boundedOverview, directionEmphasis: boundedOverview || edge.data?.directionEmphasis === true },
+        boundedOverview, roomyOverview, directionEmphasis: boundedOverview || edge.data?.directionEmphasis === true },
     })),
   };
 }
