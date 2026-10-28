@@ -2,12 +2,9 @@
 
 <!-- mcp-name: io.github.koda-ai-studio/agent-bom -->
 
-**Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.**
+**AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.**
 
-**Find vulnerable software behind your AI agents—and trace the exposure evidence.**
-
-For AppSec and platform engineers: scan repositories and MCP configurations,
-inspect connected findings, and verify a changed dependency with a rescan.
+For AppSec and platform engineers. Self-host free; local scans need no account.
 Credential references are names, not secret values. Recorded relationships do
 not prove exploitation or successful data access.
 

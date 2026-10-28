@@ -1,5 +1,5 @@
 site_name: agent-bom
-site_description: Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure
+site_description: AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach
 site_url: https://koda-ai-studio.github.io/agent-bom
 repo_url: https://github.com/koda-ai-studio/agent-bom
 repo_name: koda-ai-studio/agent-bom

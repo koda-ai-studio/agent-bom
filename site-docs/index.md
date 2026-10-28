@@ -7,13 +7,18 @@
 
 # agent-bom
 
-**Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.**
+**AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.**
 
-**Find vulnerable software behind your AI agents—and trace the exposure evidence.**
+For AppSec and platform engineers. Self-host free; local scans need no account.
 
-For AppSec and platform engineers: scan a repository, inspect connected findings,
-and verify a changed dependency with a rescan. Centralize the same evidence in
-your own infrastructure when your team needs a shared control plane.
+```bash
+uvx agent-bom scan .
+```
+
+Measured on real repositories: [299 of 299 OSV advisories matched across seven
+real repositories, no false positives](features/real-repository-accuracy.md).
+Centralize the same evidence in your own infrastructure when your team needs a
+shared control plane.
 
 `agent-bom` is also an open security data plane. It generates a
 reachability-backed AI BOM across agents, MCP servers, tools, packages,

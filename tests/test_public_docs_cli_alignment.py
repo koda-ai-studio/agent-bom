@@ -217,11 +217,20 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
     positions = [readme.index(marker) for marker in markers]
     assert positions == sorted(positions)
     hero = readme[: positions[0]]
-    assert "For AppSec and platform engineers" in hero
-    assert "trace the exposure evidence" in hero
+    # One lead message: the tagline, one audience line, one command.
+    assert "<b>AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.</b>" in hero
+    assert "For AppSec and platform engineers. Self-host free; local scans need no account." in hero
+    assert "Find vulnerable software behind" not in hero, "the second bold descriptor paragraph was dropped"
+    assert hero.count("img.shields.io") <= 5, "the badge rows are capped at five badges"
     assert "docs/GALLERY.md" in hero
     quick_start = readme.split("## Quick start", 1)[1].split("\n## ", 1)[0]
     assert "```bash\nuvx agent-bom scan .\n```" in quick_start
+    command_end = quick_start.index("```bash\nuvx agent-bom scan .\n```") + len("```bash\nuvx agent-bom scan .\n```")
+    accuracy = quick_start.index("site-docs/features/real-repository-accuracy.md")
+    assert command_end < accuracy < command_end + 400, "the measured accuracy link sits directly under the quick-start command"
+    assert "299 of 299 OSV advisories" in quick_start
+    assert "agent-bom db advisory affected CVE-" in readme
+    assert "`affected_assets` tool" in readme
     assert "#what-this-scan-does-and-does-not-establish" in quick_start
     assert "upload-sarif: 'true'" in quick_start
     assert "agent-bom scan --demo --offline" in quick_start

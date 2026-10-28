@@ -12,7 +12,7 @@ PRODUCT_NAME = "agent-bom"
 # Capability line for meta/prose — not shown under the nav lockup.
 POSITIONING_SHORT = "Open security scanner for AI infrastructure"
 # Longer meta line for OpenAPI / HTML <title> chrome (matches VISUAL_LANGUAGE).
-POSITIONING_META = "Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure"
+POSITIONING_META = "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach"
 TAGLINE_CHAIN = "agent → MCP server → packages → CVEs → blast radius"
 DOCS_URL = "https://github.com/koda-ai-studio/agent-bom"
 REPORT_TITLE = f"{PRODUCT_NAME} scan report"
