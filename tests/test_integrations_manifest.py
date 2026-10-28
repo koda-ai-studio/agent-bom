@@ -129,23 +129,17 @@ def test_banner_is_rendered_from_the_manifest() -> None:
     assert render_social_preview(BANNER_SOURCE) == BANNER.read_text(encoding="utf-8")
 
 
-def test_banner_names_every_group_and_logo_and_counts_the_rest() -> None:
+def test_banner_renders_every_available_source_logo_without_category_clutter() -> None:
+    root = ET.parse(BANNER).getroot()
+    tiles = [element for element in root.iter("{http://www.w3.org/2000/svg}g") if element.get("data-integration")]
+    assert {tile.get("data-integration") for tile in tiles} == {
+        item.name for group in (*MANIFEST.groups, MANIFEST.evidence_out) for item in group.logos
+    }
+    for tile in tiles:
+        assert tile.find("{http://www.w3.org/2000/svg}use") is not None
     text = _banner_text()
-    for group in MANIFEST.groups:
-        assert group.title.upper() in text, group.title
-        if not group.logos:
-            for item in group.integrations:
-                assert item.name in text, item.name
-            continue
-        shown = group.logos[:5]
-        for item in shown:
-            assert item.name in text, item.name
-        rest = len(group.integrations) - len(shown)
-        if rest:
-            assert f"+{rest} more" in text, group.title
-    for item in MANIFEST.evidence_out.integrations:
-        assert item.name in text, item.name
     assert "trademarks of their owners" in text
+    assert "Explore all supported integrations" in text
 
 
 def test_banner_never_names_an_unlisted_integration() -> None:

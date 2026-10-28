@@ -13,17 +13,17 @@
         {"name": "GitHub Copilot", "logo": "vendor/simple-icons/githubcopilot.svg", "implements": ["agent_type:vscode-copilot", "agent_type:copilot-cli"]},
         {"name": "Windsurf", "logo": "vendor/simple-icons/windsurf.svg", "implements": ["agent_type:windsurf"]},
         {"name": "Cortex Code", "implements": ["agent_type:cortex-code"]},
-        {"name": "Gemini CLI", "implements": ["agent_type:gemini-cli"]},
-        {"name": "JetBrains AI", "implements": ["agent_type:jetbrains-ai"]},
+        {"name": "Gemini CLI", "logo": "vendor/lobe-icons/geminicli-color.svg", "implements": ["agent_type:gemini-cli"]},
+        {"name": "JetBrains AI", "logo": "vendor/simple-icons/jetbrains.svg", "implements": ["agent_type:jetbrains-ai"]},
         {"name": "Junie", "implements": ["agent_type:junie"]},
         {"name": "Amazon Q", "implements": ["agent_type:amazon-q"]},
-        {"name": "Cline", "implements": ["agent_type:cline"]},
-        {"name": "Roo Code", "implements": ["agent_type:roo-code"]},
+        {"name": "Cline", "logo": "vendor/lobe-icons/cline.svg", "implements": ["agent_type:cline"]},
+        {"name": "Roo Code", "logo": "vendor/lobe-icons/roocode.svg", "implements": ["agent_type:roo-code"]},
         {"name": "Continue", "implements": ["agent_type:continue"]},
         {"name": "Zed", "implements": ["agent_type:zed"]},
-        {"name": "Goose", "implements": ["agent_type:goose"]},
+        {"name": "Goose", "logo": "vendor/lobe-icons/goose.svg", "implements": ["agent_type:goose"]},
         {"name": "Snowflake CLI", "implements": ["agent_type:snowflake-cli"]},
-        {"name": "Docker MCP Toolkit", "implements": ["agent_type:docker-mcp", "symbol:agent_bom.discovery.local_sources:discover_docker_mcp"]},
+        {"name": "Docker MCP Toolkit", "logo": "vendor/simple-icons/docker.svg", "implements": ["agent_type:docker-mcp", "symbol:agent_bom.discovery.local_sources:discover_docker_mcp"]},
         {"name": "Tabnine", "implements": ["agent_type:tabnine"]},
         {"name": "Sourcegraph Cody", "implements": ["agent_type:sourcegraph-cody"]},
         {"name": "Aider", "implements": ["agent_type:aider"]},
@@ -31,7 +31,7 @@
         {"name": "Aide", "implements": ["agent_type:aide"]},
         {"name": "Trae", "implements": ["agent_type:trae"]},
         {"name": "Pieces", "implements": ["agent_type:pieces"]},
-        {"name": "OpenClaw", "implements": ["agent_type:openclaw"]},
+        {"name": "OpenClaw", "logo": "vendor/lobe-icons/openclaw-color.svg", "implements": ["agent_type:openclaw"]},
         {"name": "mcp-cli", "implements": ["agent_type:mcp-cli"]}
       ]
     },
@@ -44,20 +44,20 @@
         {"name": "Ollama", "logo": "vendor/simple-icons/ollama.svg", "implements": ["cloud_provider:ollama"]},
         {"name": "MLflow", "logo": "vendor/simple-icons/mlflow.svg", "implements": ["cloud_provider:mlflow"]},
         {"name": "W&B", "logo": "vendor/simple-icons/weightsandbiases.svg", "implements": ["cloud_provider:wandb"]},
-        {"name": "Langfuse", "implements": ["trace_connector:langfuse"]},
-        {"name": "LangSmith", "implements": ["trace_connector:langsmith"]}
+        {"name": "Langfuse", "logo": "vendor/lobe-icons/langfuse-color.svg", "implements": ["trace_connector:langfuse"]},
+        {"name": "LangSmith", "logo": "vendor/lobe-icons/langsmith-color.svg", "implements": ["trace_connector:langsmith"]}
       ]
     },
     {
       "id": "gpu_clouds",
       "title": "GPU + neo clouds",
       "integrations": [
-        {"name": "CoreWeave", "implements": ["cloud_provider:coreweave"]},
-        {"name": "Nebius", "implements": ["cloud_provider:nebius"]},
-        {"name": "Lambda", "implements": ["cloud_provider:lambda"]},
-        {"name": "RunPod", "implements": ["cloud_provider:runpod"]},
-        {"name": "Vast.ai", "implements": ["cloud_provider:vastai"]},
-        {"name": "Crusoe", "implements": ["cloud_provider:crusoe"]},
+        {"name": "CoreWeave", "logo": "vendor/coreweave-icon.svg", "implements": ["cloud_provider:coreweave"]},
+        {"name": "Nebius", "logo": "vendor/nebius-logo.svg", "implements": ["cloud_provider:nebius"]},
+        {"name": "Lambda", "logo": "vendor/lambda-white.svg", "implements": ["cloud_provider:lambda"]},
+        {"name": "RunPod", "logo": "vendor/runpod-icon.svg", "implements": ["cloud_provider:runpod"]},
+        {"name": "Vast.ai", "logo": "vendor/vast-logo.svg", "implements": ["cloud_provider:vastai"]},
+        {"name": "Crusoe", "logo": "vendor/lobe-icons/crusoe-color.svg", "implements": ["cloud_provider:crusoe"]},
         {"name": "GPU containers + K8s GPU nodes", "implements": ["symbol:agent_bom.cloud.gpu_infra:scan_gpu_infra"]}
       ]
     },
@@ -79,10 +79,10 @@
         {"name": "Databricks", "logo": "vendor/simple-icons/databricks.svg", "implements": ["cloud_provider:databricks"]},
         {"name": "Supabase", "logo": "vendor/simple-icons/supabase.svg", "implements": ["symbol:agent_bom.cloud.supabase_inventory:collect_report"]},
         {"name": "Pinecone", "implements": ["symbol:agent_bom.cloud.vector_db:discover_pinecone"]},
-        {"name": "Qdrant", "implements": ["vector_db:qdrant"]},
+        {"name": "Qdrant", "logo": "vendor/simple-icons/qdrant.svg", "implements": ["vector_db:qdrant"]},
         {"name": "Weaviate", "implements": ["vector_db:weaviate"]},
         {"name": "Chroma", "implements": ["vector_db:chroma"]},
-        {"name": "Milvus", "implements": ["vector_db:milvus"]}
+        {"name": "Milvus", "logo": "vendor/simple-icons/milvus.svg", "implements": ["vector_db:milvus"]}
       ]
     },
     {
@@ -93,7 +93,7 @@
         {"name": "GitHub Actions", "logo": "vendor/simple-icons/github.svg", "implements": ["symbol:agent_bom.github_actions:scan_github_actions"]},
         {"name": "Vercel", "logo": "vendor/simple-icons/vercel.svg", "implements": ["symbol:agent_bom.cloud.vercel_inventory:collect_report"]},
         {"name": "Microsoft Entra ID", "implements": ["symbol:agent_bom.identity.entra_nhi:discover_entra_non_human_identities"]},
-        {"name": "Jira", "implements": ["connector:jira"]},
+        {"name": "Jira", "logo": "vendor/simple-icons/jira.svg", "implements": ["connector:jira"]},
         {"name": "ServiceNow", "implements": ["connector:servicenow"]},
         {"name": "Slack", "implements": ["connector:slack"]},
         {"name": "Jamf", "implements": ["endpoint_provider:jamf", "symbol:agent_bom.connectors.endpoints.providers:jamf_page"]}
@@ -103,7 +103,7 @@
   "evidence_out": {
     "title": "Evidence out",
     "integrations": [
-      {"name": "ClickHouse", "implements": ["export_kind:clickhouse", "symbol:agent_bom.api.clickhouse_store:ClickHouseAnalyticsStore"]},
+      {"name": "ClickHouse", "logo": "vendor/simple-icons/clickhouse.svg", "implements": ["export_kind:clickhouse", "symbol:agent_bom.api.clickhouse_store:ClickHouseAnalyticsStore"]},
       {"name": "BigQuery", "implements": ["export_kind:bigquery"]},
       {"name": "S3", "implements": ["export_kind:s3"]},
       {"name": "GCS", "implements": ["export_kind:gcs"]},

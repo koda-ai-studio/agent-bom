@@ -28,13 +28,8 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
         "Discover. Scan.",
         "Correlate. Act.",
         "Security evidence across repositories, supply chains, AI + MCP, cloud, identity, and data.",
-        "repos + SCA",
-        "images + IaC",
-        "AI + MCP + models",
-        "cloud + identity + data",
-        "AI CLIENTS + IDES",
-        "HYPERSCALERS + KUBERNETES",
-        "EVIDENCE OUT",
+        "Works with your AI tools, cloud infrastructure, data, and identity stack.",
+        "Explore all supported integrations in the README",
         "discover → scan → correlate → act",
     ):
         assert claim in svg
@@ -59,7 +54,9 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
     assert ">CVE</text>" not in svg
     assert ">package</text>" not in svg
     assert 'width="244" height="64"' not in svg
-    assert svg.count('<rect width="50" height="50" rx="13"') == sum(min(len(group.logos), 5) for group in load_integrations().groups)
+    assert svg.count('<rect width="50" height="50" rx="13"') == sum(
+        len(group.logos) for group in (*load_integrations().groups, load_integrations().evidence_out)
+    )
 
     assert "file:///" not in svg
     assert "/Users/" not in svg
@@ -73,7 +70,7 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
     assert 'href="#embedded-googlecloud"' not in svg
     assert "Also supports" not in svg
     assert '<g id="coverage" />' in template_svg or '<g id="coverage"/>' in template_svg
-    logos = {item.logo for group in load_integrations().groups for item in group.logos[:5]}
+    logos = {item.logo for group in (*load_integrations().groups, load_integrations().evidence_out) for item in group.logos}
     assert svg.count("<symbol ") == len(logos) + 1
     assert render_social_preview(template) == svg
     assert "brand/mark-dark.svg" in template_svg

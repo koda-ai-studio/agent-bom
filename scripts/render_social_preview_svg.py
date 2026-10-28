@@ -69,6 +69,52 @@ def _describe(root: ET.Element, manifest: integrations_manifest.Manifest) -> Non
     )
 
 
+def _scope_symbol_ids(symbol: ET.Element) -> None:
+    """Keep vendor gradient, mask and clip IDs local to their embedded mark."""
+    definitions: dict[str, str] = {}
+    for parent in symbol.iter(f"{SVG}defs"):
+        for child in list(parent):
+            if not (identifier := child.get("id")):
+                continue
+            canonical = ET.canonicalize(ET.tostring(child, encoding="unicode"), strip_text=True)
+            if identifier in definitions:
+                if definitions[identifier] != canonical:
+                    raise ValueError(f"conflicting vendor SVG definitions: {identifier}")
+                parent.remove(child)
+            else:
+                definitions[identifier] = canonical
+    prefix = symbol.attrib["id"]
+    ids = {
+        element.attrib["id"]: f"{prefix}-{element.attrib['id']}"
+        for element in symbol.iter()
+        if element is not symbol and "id" in element.attrib
+    }
+    for element in symbol.iter():
+        if element is not symbol and "id" in element.attrib:
+            element.set("id", ids[element.attrib["id"]])
+        for attribute, value in list(element.attrib.items()):
+            if attribute == "id":
+                continue
+            if value.startswith("#") and value[1:] in ids:
+                value = f"#{ids[value[1:]]}"
+            for old, new in ids.items():
+                for quote in ("", "'", '"'):
+                    value = value.replace(f"url({quote}#{old}{quote})", f"url({quote}#{new}{quote})")
+            element.set(attribute, value)
+
+
+def _coreweave_dark_variant(symbol: ET.Element) -> None:
+    """Use the blue C and light W from CoreWeave's current site header."""
+    for parent in symbol.iter():
+        for child in list(parent):
+            if child.tag == f"{SVG}style":
+                parent.remove(child)
+    for index, path in enumerate(symbol.iter(f"{SVG}path")):
+        path.set("fill", "#2741e7" if index == 0 else "#f8fafc")
+        if path.get("class") == "cls-2":
+            path.set("fill-rule", "evenodd")
+
+
 def render(source: Path = SOURCE, manifest_path: Path = integrations_manifest.MANIFEST) -> str:
     """Build the coverage grid from the manifest, inline referenced vectors as symbols, return deterministic SVG text."""
     tree = ET.parse(source)
@@ -105,6 +151,9 @@ def render(source: Path = SOURCE, manifest_path: Path = integrations_manifest.MA
                 for element in symbol.iter():
                     if "fill" in element.attrib:
                         element.set("fill", color)
+            _scope_symbol_ids(symbol)
+            if asset.stem == "coreweave-icon":
+                _coreweave_dark_variant(symbol)
             defs.append(symbol)
 
         use = ET.Element(
