@@ -136,3 +136,20 @@ def test_post_release_capture_installs_and_selects_python_dependencies() -> None
     installs = [step.get("run", "") for step in steps[:capture_index]]
     assert any("uv sync --frozen" in run and "--extra api" in run for run in installs)
     assert steps[capture_index]["env"]["PYTHON"] == "${{ github.workspace }}/.venv/bin/python"
+
+
+def test_missing_signing_key_fails_the_pin_job_loudly() -> None:
+    """Exiting 0 without the key left main on the previous PUBLISHED_VERSION with no failing check."""
+    workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["docker-mcp-pin"]["steps"]
+    signing = next(step for step in steps if step.get("id") == "signing")
+    missing = signing["run"].split("\nfi\n", 1)[0]
+    assert "skipping PR creation" not in missing
+    assert "exit 0" not in missing
+    assert "exit 1" in missing
+    assert "::error::" in missing
+    assert "$GITHUB_STEP_SUMMARY" in missing
+    report = [step for step in steps if str(step.get("if", "")).startswith("failure()")]
+    assert report, "a failed pin job must still leave a summary the run page shows despite continue-on-error"
+    assert "$GITHUB_STEP_SUMMARY" in report[-1]["run"]
+    assert "::error::" in report[-1]["run"]

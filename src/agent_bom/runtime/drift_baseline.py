@@ -70,9 +70,28 @@ _DECLARATION_TYPES = {
 }
 
 
+# JSON Schema treats these as sets; MCP icon order carries no meaning. ``anyOf``/``oneOf``
+# members stay positional, as do ``properties`` entries (hashed with sorted keys already).
+_ORDER_INSENSITIVE_LISTS = frozenset({"required", "enum", "icons"})
+
+
+def _canonical(value: object, key: str | None = None) -> object:
+    """Copy ``value`` with order-insensitive lists sorted so a reordering is not drift."""
+    if isinstance(value, dict):
+        return {str(k): _canonical(v, str(k)) for k, v in value.items()}
+    if isinstance(value, list):
+        items = [_canonical(item) for item in value]
+        if key in _ORDER_INSENSITIVE_LISTS:
+            items.sort(key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=True, default=str))
+        return items
+    return value
+
+
 def _fingerprint_fields(tool: dict) -> dict[str, str] | None:
     """Stream canonical JSON into bounded hashes without retaining field values."""
-    values = {key: tool.get(key) for key in _DECLARATION_TYPES}
+    values = {key: _canonical(tool.get(key), key) for key in _DECLARATION_TYPES}
+    # An absent ``annotations`` block means the same as an empty one.
+    values["annotations"] = values["annotations"] or {}
     # Cover future/vendor declaration fields without exposing arbitrary keys
     # (which can themselves carry private data) in an alert's field list.
     values["extensions"] = {key: value for key, value in tool.items() if key not in _DECLARATION_TYPES}

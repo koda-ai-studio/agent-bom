@@ -153,6 +153,29 @@ def _runtime_credential(url_name: str, password_file_name: str, expected_role: s
     return raw_url, password
 
 
+# Runtime roles never migrate. ``20261023_02`` revokes their writes on
+# ``alembic_version``, so a deployment that historically migrated as one would
+# revoke its own ledger access mid-upgrade and fail on the next revision.
+RUNTIME_ROLES_REFUSED_FOR_MIGRATION = frozenset({"agent_bom_app", "agent_bom_rls_maintenance"})
+
+
+def assert_migration_role(connection: Any) -> str:
+    """Refuse to migrate as a runtime role; return the connected role name.
+
+    Issues only ``SELECT current_user``. The error names the role and the
+    requirement, never the DSN: the URL may embed a password.
+    """
+    role = str(connection.exec_driver_sql("SELECT current_user").scalar() or "")
+    if role in RUNTIME_ROLES_REFUSED_FOR_MIGRATION:
+        raise RuntimeError(
+            f"ALEMBIC_DATABASE_URL connects as runtime role {role!r}; schema migrations must run as the "
+            "Postgres bootstrap/admin (migration owner) role. Runtime roles cannot write alembic_version "
+            "(revision 20261023_02), so migrating as one fails partway through. Point ALEMBIC_DATABASE_URL "
+            "(and ALEMBIC_DATABASE_PASSWORD_FILE) at the admin credential."
+        )
+    return role
+
+
 def configure_bootstrap_credentials(connection: Any) -> None:
     """Supply baseline role passwords only inside the migration transaction.
 

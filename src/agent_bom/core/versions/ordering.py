@@ -6,7 +6,12 @@ import re
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
-from agent_bom.core.versions.distro import _compare_apk_versions, _compare_debian_versions, _compare_rpm_versions
+from agent_bom.core.versions.distro import (
+    OS_DISTRO_COMPARATOR_FAMILIES,
+    _compare_apk_versions,
+    _compare_debian_versions,
+    _compare_rpm_versions,
+)
 from agent_bom.core.versions.go import _compare_go_versions
 from agent_bom.core.versions.maven import _compare_maven_versions
 from agent_bom.core.versions.nuget import _compare_nuget_versions
@@ -77,6 +82,36 @@ _ECOSYSTEM_COMPARATORS = {
 }
 
 
+# Distro families as OSV and vendor feeds label them, keyed to the comparator
+# that orders their revisions (``debian``/``ubuntu`` -> dpkg, ``alpine`` -> apk,
+# ``linux``/``red hat``/``suse`` -> rpm).
+_ECO_FAMILY_TO_COMPARATOR = {
+    "debian": "deb",
+    "ubuntu": "deb",
+    "deb": "deb",
+    "alpine": "apk",
+    "apk": "apk",
+    "rpm": "rpm",
+    "linux": "rpm",
+    **OS_DISTRO_COMPARATOR_FAMILIES,
+}
+
+
+def comparator_ecosystem(ecosystem: str) -> str:
+    """Normalise a DB ecosystem to a key the version comparator can order.
+
+    DB ``affected`` rows store distro ecosystems with a release suffix
+    (``debian:10``, ``alpine:v3.18``, ``ubuntu:22.04``) and vendor labels
+    (``Red Hat``, ``Rocky Linux``). The comparators are keyed by base family
+    (``deb``/``apk``/``rpm``); handed the raw label the comparator fell through
+    to PEP 440, which reads ``2.0-1ubuntu1`` and ``2.0-1ubuntu2`` as equal and
+    silently flips distro verdicts. Normalising to the family restores the
+    distro ordering.
+    """
+    base = (ecosystem or "").split(":", 1)[0].strip().lower()
+    return _ECO_FAMILY_TO_COMPARATOR.get(base, base)
+
+
 @lru_cache(maxsize=131072)
 def _pep440_version(normalized: str) -> "Version":
     """Parse once per distinct string; ingest compares each release many times."""
@@ -93,13 +128,7 @@ def compare_version_order(left: str, right: str, ecosystem: str) -> int | None:
     ``left > right``, and ``None`` when the versions should not be compared
     (for example git commit SHAs leaking from advisory ranges).
     """
-    eco = (ecosystem or "").lower()
-    if eco == "debian":
-        eco = "deb"
-    elif eco == "alpine":
-        eco = "apk"
-    elif eco == "linux":
-        eco = "rpm"
+    eco = comparator_ecosystem(ecosystem)
     left = (left or "").strip()
     right = (right or "").strip()
     if not left or not right:

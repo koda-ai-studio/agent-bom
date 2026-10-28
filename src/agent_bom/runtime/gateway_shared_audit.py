@@ -39,6 +39,7 @@ class SharedGatewayAuditSink(ControlPlaneAuditSink):
         self.store = store or PostgresGatewayOutbox(tenant_id, stream)
         self._sender = sender or self._send
         self._lock = asyncio.Lock()
+        self._wake = asyncio.Event()
         self._worker: asyncio.Task[None] | None = None
         self._closed = False
         self._available = False
@@ -63,7 +64,7 @@ class SharedGatewayAuditSink(ControlPlaneAuditSink):
             if require_ack:
                 await self._flush_until_acknowledged(event_id)
             else:
-                await self.flush_once()
+                await self._nudge_worker()
         except asyncio.CancelledError:
             raise
         except (GatewayAuditDeliveryUnavailableError, TimeoutError):
@@ -138,10 +139,27 @@ class SharedGatewayAuditSink(ControlPlaneAuditSink):
                     self._available = False
                 return False
 
+    async def _nudge_worker(self) -> None:
+        """Non-admission events only enqueue; the worker sends them off the request path.
+
+        A sink that was never started has no worker, so it keeps the inline flush
+        rather than leaving rows in the outbox with nothing to deliver them.
+        """
+        if self._worker is not None and not self._worker.done():
+            self._wake.set()
+            return
+        await self.flush_once()
+
     async def _retry_loop(self) -> None:
         while True:
-            await asyncio.sleep(self.controller.current_backoff_seconds())
-            await self.flush_once()
+            try:
+                await asyncio.wait_for(self._wake.wait(), timeout=self.controller.current_backoff_seconds())
+            except asyncio.TimeoutError:
+                pass
+            self._wake.clear()
+            # Keep draining while batches deliver and rows remain (a claim is at most one batch).
+            while await self.flush_once() and self._backlog > 0:
+                pass
 
     async def start(self) -> None:
         if self._worker is None:

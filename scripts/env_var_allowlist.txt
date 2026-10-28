@@ -310,6 +310,8 @@ AGENT_BOM_LOG
 AGENT_BOM_LOG_FILE
 AGENT_BOM_LOG_JSON
 AGENT_BOM_LOG_LEVEL
+# Cap for one registry image config blob read into memory (default 16 MiB); read per scan in parsers/oci_io.py, documented in docs/IMAGE_SECURITY.md.
+AGENT_BOM_MAX_IMAGE_CONFIG_BYTES
 AGENT_BOM_MAX_MANIFEST_BYTES
 AGENT_BOM_MCP_BEARER_TOKEN
 # Time-bound MCP read token expiry; deploy/runtime secret lifecycle, read at server startup.

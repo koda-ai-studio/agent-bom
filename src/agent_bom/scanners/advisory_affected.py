@@ -26,11 +26,11 @@ import json
 import re
 import sqlite3
 from collections.abc import Iterable
-from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.advisory_ids import derive_cve_from_advisory_id
 from agent_bom.core.severity import normalize_severity, severity_rank
+from agent_bom.core.timestamps import parse_timestamp
 from agent_bom.scanners.advisory_graph_ids import occurrence_graph_ids
 from agent_bom.scanners.advisory_merge import self_consistent_aliases
 from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn
@@ -40,6 +40,7 @@ from agent_bom.scanners.operator_advisory import (
     AffectedProduct,
     FeedAffectedRange,
     OperatorAdvisory,
+    iter_report_packages,
     match_advisories_against_reports,
 )
 
@@ -130,17 +131,13 @@ STORED_FINDINGS_REASON = "no advisory feed record; answered from stored findings
 def _referencing_findings(wanted: str, reports: list[dict[str, Any]]) -> Iterable[tuple[dict[str, Any], dict[str, Any], set[str]]]:
     """``(package, vuln, ids)`` for every stored scan finding whose id or alias is ``wanted``."""
     for report in reports:
-        for agent in report.get("agents") or []:
-            for server in (agent.get("mcp_servers") or []) if isinstance(agent, dict) else []:
-                for package in (server.get("packages") or []) if isinstance(server, dict) else []:
-                    if not isinstance(package, dict) or not (package.get("name") and package.get("version")):
-                        continue
-                    for vuln in package.get("vulnerabilities") or []:
-                        if not isinstance(vuln, dict) or vuln.get("provenance") == OPERATOR_ADVISORY_PROVENANCE:
-                            continue
-                        ids = {str(vuln.get("id") or ""), *(str(alias) for alias in vuln.get("aliases") or [])} - {""}
-                        if wanted in {identifier.upper() for identifier in ids}:
-                            yield package, vuln, ids
+        for _asset, package, _owners in iter_report_packages(report):
+            for vuln in package.get("vulnerabilities") or []:
+                if not isinstance(vuln, dict) or vuln.get("provenance") == OPERATOR_ADVISORY_PROVENANCE:
+                    continue
+                ids = {str(vuln.get("id") or ""), *(str(alias) for alias in vuln.get("aliases") or [])} - {""}
+                if wanted in {identifier.upper() for identifier in ids}:
+                    yield package, vuln, ids
 
 
 def stored_findings_answer(
@@ -358,9 +355,13 @@ def _cpe_products(conn: sqlite3.Connection, cve_id: str) -> list[AffectedProduct
     return list(grouped.values())
 
 
-def _package_products(conn: sqlite3.Connection, vuln_id: str) -> list[AffectedProduct]:
+def _limit_column(conn: sqlite3.Connection) -> str:
+    """Projection of the range limit; a DB built before limits were stored has none."""
     columns = {row[1] for row in conn.execute("PRAGMA table_info(affected)").fetchall()}
-    limit = "limit_version" if "limit_version" in columns else "''"
+    return "limit_version" if "limit_version" in columns else "''"
+
+
+def _package_products(conn: sqlite3.Connection, vuln_id: str, limit: str) -> list[AffectedProduct]:
     rows = conn.execute(
         f"SELECT ecosystem, package_name, introduced, fixed, last_affected, {limit} FROM affected WHERE vuln_id = ?",  # nosec B608
         (vuln_id,),
@@ -379,16 +380,6 @@ def _package_products(conn: sqlite3.Connection, vuln_id: str) -> list[AffectedPr
         )
         for eco, name, introduced, fixed, last, lim in rows
     ]
-
-
-def _parse_published(value: Any) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
 def _merged_products(products: Iterable[AffectedProduct]) -> list[AffectedProduct]:
@@ -419,8 +410,9 @@ def feed_advisory_from_db(conn: sqlite3.Connection, advisory_id: str) -> Operato
     if not records:
         return None
     products: list[AffectedProduct] = []
+    limit = _limit_column(conn)
     for record in records:
-        products.extend(_package_products(conn, str(record[0])))
+        products.extend(_package_products(conn, str(record[0]), limit))
         products.extend(_cpe_products(conn, str(record[0])))
     if not products:
         return None
@@ -436,7 +428,7 @@ def feed_advisory_from_db(conn: sqlite3.Connection, advisory_id: str) -> Operato
         aliases=aliases,
         summary=str(summary or "No description available"),
         severity=severity,
-        published_at=_parse_published(published),
+        published_at=parse_timestamp(str(published)) if published else None,
         references=[],
         affected=_merged_products(products),
     )

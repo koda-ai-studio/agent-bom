@@ -688,8 +688,10 @@ def _scan_from_registry(
     return packages
 
 
-def _daemon_supply_chain(image_ref: str, registry_user: Optional[str], registry_pass: Optional[str]) -> None:
-    """Look up signatures/referrers for a daemon-scanned image by its registry digest (online only)."""
+def _daemon_supply_chain(
+    image_ref: str, registry_user: Optional[str], registry_pass: Optional[str], policy: RegistryPolicy = LOCAL_POLICY
+) -> None:
+    """Look up signatures/referrers for a daemon-scanned image by its registry digest (online only, under ``policy``)."""
     evidence = active_image_evidence()
     if evidence is None:
         return
@@ -701,7 +703,7 @@ def _daemon_supply_chain(image_ref: str, registry_user: Optional[str], registry_
         return
     try:
         ref = parse_reference(f"{evidence.registry}/{evidence.repository}@{evidence.digest}")
-        with open_client(ref, registry_user, registry_pass) as client:
+        with open_client(ref, registry_user, registry_pass, policy=policy) as client:
             discover_supply_chain(client, evidence, None)
     except (ReferenceError, RegistryError) as exc:
         evidence.signature = {"status": "unknown", "detail": f"Signature lookup failed: {exc}"}
@@ -785,8 +787,9 @@ def scan_image(
                 "not a same-named Docker Hub image."
             )
     packages = _scan_with_docker(image_ref, platform)
-    _daemon_supply_chain(image_ref, registry_user, registry_pass)
-    _attribute_base_image(packages, registry_user, registry_pass)
+    # Daemon-mode server scans still look up signatures and base layers under the server registry policy.
+    _daemon_supply_chain(image_ref, registry_user, registry_pass, policy)
+    _attribute_base_image(packages, registry_user, registry_pass, policy)
     return packages, "native"
 
 

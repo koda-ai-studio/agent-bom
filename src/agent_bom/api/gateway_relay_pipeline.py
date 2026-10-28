@@ -87,6 +87,7 @@ def forward_context(runtime: RelayRuntime, ctx: RelayContext) -> GatewayForwardC
         response_scanner=runtime.response_scanner,
         tracer=runtime.tracer,
         injection_mode=gateway_injection_mode(settings.injection_mode, runtime.policy_reload.state.policy),
+        withheld_tools=runtime.withheld_tools,
     )
 
 

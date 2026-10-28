@@ -321,3 +321,76 @@ def test_proxy_cli_exposes_flag_and_rejects_sse_enforce():
     result = CliRunner().invoke(proxy_cmd, ["--url", "http://127.0.0.1:9/mcp", "--injection-mode", "enforce"])
     assert result.exit_code == 2
     assert "SSE/HTTP" in result.output
+
+
+def test_gateway_enforce_refuses_calls_to_withheld_tools():
+    """A tool stripped from tools/list stays uncallable through the gateway (same envelope as the proxy)."""
+    app, events = _gateway(injection_mode="enforce")
+    with TestClient(app) as client:
+        listed = _post(client, 1, "tools/list")
+        poisoned = _post(client, 2, "tools/call", "add_numbers")
+        echo = _post(client, 3, "tools/call", "echo")
+    assert "add_numbers" not in _tool_names(listed)
+    assert poisoned["error"]["code"] == -32001
+    assert poisoned["error"]["data"] == {
+        "policy_source": "injection_protection",
+        "action": "blocked",
+        "detectors": ["injection_protection"],
+        "categories": ["withheld_tool"],
+    }
+    assert echo["result"]["content"][0]["text"] == "ok:echo"
+    # The call never reached admission (and so never reached the upstream).
+    assert not any(e.get("action") == "gateway.tool_call" and e.get("tool") == "add_numbers" for e in events)
+    blocked = [a for a in _gateway_alerts(events) if a["details"].get("category") == "withheld_tool"]
+    assert blocked and blocked[0]["action"] == "blocked" and blocked[0]["details"]["tool"] == "add_numbers"
+    typed = [e for e in events if e.get("data_action") == "withheld_tool_call_blocked"]
+    assert typed and typed[0]["decision"] == "deny" and typed[0]["policy_source"] == "injection_protection"
+
+
+def test_gateway_alert_mode_never_withholds_calls():
+    app, _events = _gateway()
+    with TestClient(app) as client:
+        _post(client, 1, "tools/list")
+        assert _post(client, 2, "tools/call", "add_numbers")["result"]["content"][0]["text"] == "ok:add_numbers"
+
+
+def test_injection_mode_help_states_the_enforce_threshold():
+    from agent_bom.runtime.injection_protection import INJECTION_MODE_HELP
+
+    assert "high" in INJECTION_MODE_HELP.lower() and "critical" in INJECTION_MODE_HELP.lower()
+    assert "medium" in INJECTION_MODE_HELP.lower()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("mode", "forwarded"), [("alert", True), ("enforce", False)])
+async def test_enforce_drops_unparsed_upstream_stdout_even_without_inline_scanning(mode, forwarded, monkeypatch):
+    import io
+    from types import SimpleNamespace
+
+    from agent_bom.proxy_scanner import ScanConfig
+    from agent_bom.runtime import proxy_relay
+    from agent_bom.runtime.proxy_session import RelayOptions
+    from tests.test_proxy_tool_catalog_paging import _session
+
+    session, alerts = _session()
+    session.scan_config = ScanConfig(enabled=False)
+    session.options = RelayOptions(
+        block_undeclared=False,
+        log_only=False,
+        rate_limit_threshold=0,
+        alert_webhook=None,
+        response_signing_key=None,
+        policy_refresh_seconds=0,
+        injection_mode=mode,
+    )
+    output = io.BytesIO()
+    with monkeypatch.context() as scoped:
+        scoped.setattr(proxy_relay.sys, "stdout", SimpleNamespace(buffer=output))
+        await proxy_relay.relay_server_line(session, b"private plain text that is not JSON-RPC\n")
+    assert bool(output.getvalue()) is forwarded
+    if forwarded:
+        assert alerts == []
+    else:
+        assert alerts[0].action == "blocked"
+        assert alerts[0].details["category"] == "unparsed_stdout"
+        assert "private plain text" not in json.dumps(alerts[0].to_dict())

@@ -93,6 +93,33 @@ def test_keyed_signature_verifies_with_the_matching_public_key(registry, tmp_pat
     assert evidence.signature["signed_digest"] == digest
 
 
+@pytest.mark.parametrize(
+    "curve,hash_algorithm",
+    [(ec.SECP256R1(), hashes.SHA256()), (ec.SECP384R1(), hashes.SHA384()), (ec.SECP521R1(), hashes.SHA512())],
+    ids=["p256-sha256", "p384-sha384", "p521-sha512"],
+)
+def test_ecdsa_verification_selects_the_hash_cosign_uses_for_the_curve(registry, tmp_path, curve, hash_algorithm):
+    """cosign signs P-256/P-384/P-521 keys with SHA-256/SHA-384/SHA-512 respectively."""
+    digest = registry.image.manifest_digest
+    payload = _payload(digest)
+    private = ec.generate_private_key(curve)
+    _push_signature(registry, digest, payload, private.sign(payload, ec.ECDSA(hash_algorithm)))
+
+    evidence = _scan(_write_key(tmp_path, private))
+
+    assert evidence.signature["status"] == "verified"
+    assert evidence.signature["signed_digest"] == digest
+
+
+def test_p384_signature_made_with_the_wrong_hash_is_invalid(registry, tmp_path):
+    digest = registry.image.manifest_digest
+    payload = _payload(digest)
+    private = ec.generate_private_key(ec.SECP384R1())
+    _push_signature(registry, digest, payload, private.sign(payload, ec.ECDSA(hashes.SHA256())))
+
+    assert _scan(_write_key(tmp_path, private)).signature["status"] == "invalid"
+
+
 def test_wrong_key_or_wrong_digest_is_invalid_not_verified(registry, tmp_path):
     digest = registry.image.manifest_digest
     signer = ec.generate_private_key(ec.SECP256R1())

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from rich.panel import Panel as AiPanel
@@ -96,6 +97,12 @@ def _print_all_safe(run: DiscoveryRun, ai_report: Any) -> None:
     )
 
 
+def _project_root_metadata(path: Any) -> dict[str, Any]:
+    """The scanned directory is the project root; the graph folds code-level constructs into that agent."""
+    root = Path(str(path))
+    return {"project_root": str(root.resolve())} if root.is_dir() else {}
+
+
 def _attach_sdk_packages(run: DiscoveryRun, ai_report: Any, first_path: Any) -> None:
     # Create synthetic packages for SDK components -> feed into CVE scanning
     ai_packages: list[Package] = []
@@ -115,6 +122,7 @@ def _attach_sdk_packages(run: DiscoveryRun, ai_report: Any, first_path: Any) -> 
             config_path=str(first_path),
             source="ai-inventory",
             mcp_servers=[server],
+            metadata=_project_root_metadata(first_path),
         )
         run.ctx.agents.append(ai_agent)
 

@@ -256,3 +256,23 @@ Postgres schema migrations for the control plane run automatically on Helm
 (the default). Operators do not run Alembic manually before routine chart
 upgrades; see [`DEPLOY_PLATFORM.md`](DEPLOY_PLATFORM.md) and
 [`site-docs/deployment/control-plane-helm.md`](../site-docs/deployment/control-plane-helm.md).
+Revision `20261027_03` adds a stored generated column to `drift_incidents`,
+which rewrites that table under an `ACCESS EXCLUSIVE` lock for the duration of
+the rewrite; gateway and API writers to `drift_incidents` block until it
+commits, and the accompanying index is built `CONCURRENTLY` afterwards so the
+lock does not also cover the index build.
+
+Alembic refuses to run as a runtime role. `ALEMBIC_DATABASE_URL` must connect
+as the Postgres bootstrap/admin (migration owner) identity; a connection whose
+`current_user` is `agent_bom_app` or `agent_bom_rls_maintenance` fails before
+any revision runs, because `20261023_02` revokes those roles' writes on
+`alembic_version` and a deployment that migrated as one would revoke its own
+ledger access partway through. There is no override: `compose migrate` and the
+Helm hook already use the admin credential, so point the URL (and
+`ALEMBIC_DATABASE_PASSWORD_FILE`) at it.
+
+`alembic downgrade` cannot pass below `20261027_02` (shared gateway audit
+delivery): that revision raises instead of dropping `gateway_audit_outbox`, so
+queued audit evidence is never discarded by a rollback. Rolling back further
+needs the queue drained and the pre-upgrade backup restored with the matching
+application version.

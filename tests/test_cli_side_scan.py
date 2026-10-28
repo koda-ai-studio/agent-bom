@@ -198,6 +198,9 @@ def test_side_scan_azure_gcp_dispatch_to_provider_executor(monkeypatch, provider
     assert result.exit_code == 0, result.output
     assert captured["provider"] == provider
     assert captured["target_id"] == "disk-1"
+    # Only the operator-run CLI may use the provider default credential chain.
+    assert captured["allow_ambient"] is True
+    assert "client_factory" not in captured
     assert captured["account_id"] == "acct-1"
     assert captured["collector_id"] == "collector-1"
     assert captured["location"] == location

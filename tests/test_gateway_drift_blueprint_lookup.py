@@ -124,6 +124,7 @@ def test_sqlite_blueprint_lookup_uses_the_open_blueprint_index(tmp_path):
 
 
 def test_postgres_blueprint_index_is_identical_in_every_schema_path():
+    import re
     from pathlib import Path
 
     from agent_bom.api.storage.registry_schema import DRIFT_BLUEPRINT_KEY_COLUMN_DDL, DRIFT_BLUEPRINT_OPEN_INDEX_DDL
@@ -132,6 +133,8 @@ def test_postgres_blueprint_index_is_identical_in_every_schema_path():
     migration = (root / "alembic" / "versions" / "20261027_03_drift_blueprint_seek.py").read_text()
     assert 'down_revision = "20261027_02"' in migration
     for source in (migration, (root / "runtime-schema.sql").read_text()):
-        normalized = " ".join(source.split())
+        # The migration concatenates adjacent Python string literals and builds
+        # the index CONCURRENTLY; the index definition itself must still match.
+        normalized = " ".join(re.sub(r'"\s*\n\s*"', "", source).replace("CONCURRENTLY ", "").split())
         assert " ".join(DRIFT_BLUEPRINT_KEY_COLUMN_DDL.split()) + ";" in normalized
-        assert " ".join(DRIFT_BLUEPRINT_OPEN_INDEX_DDL.split()) + ";" in normalized
+        assert " ".join(DRIFT_BLUEPRINT_OPEN_INDEX_DDL.split()) in normalized

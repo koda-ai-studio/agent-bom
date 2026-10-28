@@ -32,12 +32,16 @@ from typing import Any, Protocol
 
 from agent_bom.api import health_models
 from agent_bom.api.advisory_affected_read import persist_tenant_advisories
+from agent_bom.api.finding_job_metadata import FindingHistoryJob
 from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.models import JobStatus
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
+from agent_bom.api.storage.finding_history import HistoryUnavailableError, metadata_for_job
+from agent_bom.api.store import InMemoryJobStore
 from agent_bom.api.stores import _get_operator_advisory_store, _get_store
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.core.settings import env_bool, env_int
+from agent_bom.core.timestamps import parse_timestamp
 from agent_bom.db import schema as _schema
 from agent_bom.db.operator_advisories import distro_verdicts
 from agent_bom.db.schema import open_existing_db_readonly
@@ -189,18 +193,51 @@ def _feed_batch(conn: sqlite3.Connection, ids: list[str]) -> FeedBatch:
 
 
 def _parse(value: Any) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return parse_timestamp(str(value)) if value else None
+
+
+def _selection_metadata(store: Any, tenant_id: str) -> list[FindingHistoryJob] | None:
+    """Scope and authority of every completed job without its result, or ``None`` when only the full rows can say.
+
+    SQL stores keep the projection (``finding_history_jobs``) when scan
+    snapshots are enabled; the in-memory store derives it from its resident
+    rows, which costs no decode. Anything else falls back to the full fold.
+    """
+    read = getattr(store, "finding_history_read", None)
+    if callable(read):
+        try:
+            with read(tenant_id) as reader:
+                return list(reader.jobs())
+        except HistoryUnavailableError:
+            return None
+    if isinstance(store, InMemoryJobStore):
+        return [metadata_for_job(job) for job in store.list_all(tenant_id=tenant_id) if job.status == JobStatus.DONE and job.result]
+    return None
+
+
+def _current_jobs(tenant_id: str) -> list[Any]:
+    """The newest completed job per scope, decoding only those winners.
+
+    A winner that is gone or no longer complete by the time it is read means
+    the store changed under the run; the caller records the run incomplete and
+    retries next time rather than matching a partial estate.
+    """
+    store = _get_store()
+    metadata = _selection_metadata(store, tenant_id)
+    if metadata is None:
+        return current_scan_jobs(_completed_jobs_for_tenant(tenant_id), since=None, scan_id=None)
+    jobs = []
+    for selected in current_scan_jobs(metadata, since=None, scan_id=None):
+        job = store.get(selected.job_id, tenant_id)
+        if job is None or job.status != JobStatus.DONE or not isinstance(job.result, dict):
+            raise RuntimeError("a stored scan changed while it was being re-matched")
+        jobs.append(job)
+    return jobs
 
 
 def _stored_reports(tenant_id: str) -> list[dict[str, Any]]:
     reports = []
-    for job in current_scan_jobs(_completed_jobs_for_tenant(tenant_id), since=None, scan_id=None):
+    for job in _current_jobs(tenant_id):
         result = dict(job.result or {})
         result.setdefault("scan_id", job.job_id)
         result["scan_completed_at"] = job.completed_at or job.created_at

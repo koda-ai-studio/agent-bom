@@ -145,3 +145,38 @@ def test_admission_waits_for_a_peer_lease_then_reclaims_on_expiry(monkeypatch):
 
     asyncio.run(sink.admit_before_tool_execution(_event("admission")))
     assert sent == ["admission"] and store.rows == []
+
+
+@pytest.mark.asyncio
+async def test_slow_sender_does_not_delay_non_admission_events_but_admission_still_waits(monkeypatch):
+    """Non-admission events enqueue and nudge the worker; they never wait behind a 20 s network send."""
+    import time
+
+    store = FakeOutbox()
+    delay = 1.0
+
+    async def slow_sender(payload: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+        await asyncio.sleep(delay)
+        return _ack(payload["alerts"])
+
+    monkeypatch.setattr(gateway_shared_audit, "ADMISSION_ACK_TIMEOUT_SECONDS", 5)
+    sink = _sink(store, slow_sender)
+    await sink.start()
+    try:
+        started = time.monotonic()
+        await asyncio.gather(*(sink(_event(f"evt-{i}")) for i in range(20)))
+        assert time.monotonic() - started < 0.5
+        assert len(store.rows) == 20
+        for _ in range(100):
+            if not store.rows:
+                break
+            await asyncio.sleep(0.05)
+        assert store.rows == [], "the retry worker must deliver nudged events without waiting for its backoff"
+
+        delay = 0.2
+        started = time.monotonic()
+        await sink.admit_before_tool_execution(_event("admission"))
+        assert time.monotonic() - started >= 0.2
+        assert not store.pending("admission")
+    finally:
+        await sink.aclose()

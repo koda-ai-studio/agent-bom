@@ -311,8 +311,9 @@ async def forward_to_server(
                     baggage=trace_meta.get("baggage"),
                 )
                 line = (json.dumps(forwarded_message) + "\n").encode()
-            process.stdin.write(line)
-            await process.stdin.drain()
+            async with session.server_stdin_lock:
+                process.stdin.write(line)
+                await process.stdin.drain()
 
 
 async def relay_client_line(session: ProxySession, line: bytes) -> None:
@@ -507,11 +508,14 @@ SERVER_MESSAGE_STAGES: tuple[ServerMessageStage, ...] = (
 
 
 async def _drop_unparsed_server_output(session: ProxySession, line_str: str) -> bool:
-    """Scan non-JSON-RPC stdout (still an outbound channel); enforce mode never relays it."""
-    _, findings = session.host.scan_jsonrpc_response({"result": line_str}, session.scan_config)
-    await session.handle_alerts(session.host._response_scan_alerts(findings, "upstream stdout"), session.log_file)
-    if session.scan_config.mode != "enforce":
+    """Non-JSON-RPC stdout is still an outbound channel: scan it when inline scanning is on; enforce never relays it."""
+    if session.scan_config.enabled:
+        _, findings = session.host.scan_jsonrpc_response({"result": line_str}, session.scan_config)
+        await session.handle_alerts(session.host._response_scan_alerts(findings, "upstream stdout"), session.log_file)
+    scan_enforce = session.scan_config.enabled and session.scan_config.mode == "enforce"
+    if not scan_enforce and session.options.injection_mode != "enforce":
         return False
+    await session.handle_alerts([injection_protection.unparsed_output_alert(len(line_str))], session.log_file)
     session.host.logger.warning("Dropped non-JSON-RPC upstream stdout")
     return True
 
@@ -519,7 +523,7 @@ async def _drop_unparsed_server_output(session: ProxySession, line_str: str) -> 
 async def relay_server_line(session: ProxySession, line: bytes) -> None:
     line_str = line.decode("utf-8", errors="replace")
     msg = session.host.parse_jsonrpc(line_str)
-    if msg is None and session.scan_config.enabled and await _drop_unparsed_server_output(session, line_str):
+    if msg is None and await _drop_unparsed_server_output(session, line_str):
         return
     if msg:
         session.metrics.total_messages_server_to_client += 1
