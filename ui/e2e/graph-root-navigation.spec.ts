@@ -5,6 +5,20 @@ const exact = "server:with spaces/+&?";
 const node = (id: string, label: string) => ({ id, label, entity_type: id.startsWith("agent:") ? "agent" : "server", attributes: {}, severity: "none", severity_id: 0, risk_score: 0, status: "active", data_sources: ["fixture"], dimensions: {}, compliance_tags: [] });
 for (const theme of ["light", "dark"]) for (const width of [390, 1440]) {
   test(`canonical graph roots survive navigation ${theme} ${width}`, async ({ page }, testInfo) => {
+    if (theme === "dark" && width === 1440) {
+      // Exercise queued router commits while a completed query updates the drawer.
+      const session = await page.context().newCDPSession(page);
+      await session.send("Emulation.setCPUThrottlingRate", { rate: 6 });
+    }
+    await page.addInitScript(() => {
+      const labels: (string | null)[] = [];
+      Reflect.set(window, "graphUrlLabels", labels);
+      const replace = History.prototype.replaceState;
+      History.prototype.replaceState = function (...args) {
+        if (args[2]) labels.push(new URL(String(args[2]), location.href).searchParams.get("q"));
+        return replace.apply(this, args);
+      };
+    });
     await page.setViewportSize({ width, height: 1000 });
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     const requested: string[] = [];
@@ -29,7 +43,7 @@ for (const theme of ["light", "dark"]) for (const width of [390, 1440]) {
       if (url.pathname === "/v1/graph/incident-edges") return route.fulfill({status: 404, json: {detail: "No supplemental evidence"}});
       return route.fulfill({ status: 404, json: { detail: "Outside fixture scope" } });
     });
-    const params = new URLSearchParams({ lens: "context", scan: "snapshot", root: exact, agent: "Carried display name" });
+    const params = new URLSearchParams({ lens: "context", scan: "snapshot", root: exact, q: "Carried root label", agent: "Carried display name" });
     await page.goto(`/graph?${params}`);
     const inspector = page.getByTestId("graph-entity-drawer");
     await expect(inspector.getByRole("heading", { name: "Exact file server", exact: true })).toBeVisible();
@@ -71,6 +85,11 @@ for (const theme of ["light", "dark"]) for (const width of [390, 1440]) {
       await page.evaluate(href => window.history.pushState(null, "", href), pendingUrl);
       await expect(inspector.getByRole("heading", { name: "Exact file server", exact: true })).toBeVisible();
     }
+    // API labels belong in the drawer; late responses must not rewrite navigation.
+    const writtenLabels = await page.evaluate(() => Reflect.get(window, "graphUrlLabels") as (string | null)[]);
+    expect(writtenLabels).not.toContain("Exact file server");
+    expect(writtenLabels).not.toContain("Second server");
+    expect(new URL(page.url()).searchParams.get("q")).toBe("Carried root label");
     expect(errors).toEqual([]);
   });
 }

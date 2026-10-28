@@ -1,5 +1,6 @@
 "use client";
 
+import { decodeGraphInvestigationParams } from "@/lib/attack-paths";
 import { boundedGraphElements } from "@/lib/graph-neighbor-expansion";
 import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
 import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
@@ -210,12 +211,12 @@ export function useGraphCanvasModel(page: GraphPageData) {
       nextParams.set("investigate", "1");
       nextParams.set("root", shareableInvestigation.rootId);
       nextParams.set("direction", requestedInvestigationRef.current?.direction ?? investigationDirection);
-      if (
-        shareableInvestigation.rootLabel &&
-        shareableInvestigation.rootLabel !== shareableInvestigation.rootId
-      ) {
-        nextParams.set("q", shareableInvestigation.rootLabel);
-      }
+      // Response labels are presentation data. Writing them back after a fetch
+      // can enqueue a stale router restore over a newer root navigation.
+      const urlInvestigation = decodeGraphInvestigationParams(currentSearch);
+      const requestedLabel = requestedInvestigationRef.current?.rootLabel ??
+        (urlInvestigation?.rootId === shareableInvestigation.rootId ? urlInvestigation.rootLabel : undefined);
+      if (requestedLabel && requestedLabel !== shareableInvestigation.rootId) nextParams.set("q", requestedLabel);
     }
     const shareablePath = selectedAttackPathKey ?? requestedAttackPathKeyRef.current;
     if (shareablePath) nextParams.set("path", shareablePath);
