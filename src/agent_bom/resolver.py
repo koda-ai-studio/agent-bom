@@ -24,8 +24,8 @@ from agent_bom.models import Package
 from agent_bom.package_utils import package_purl
 from agent_bom.parsers.npm_semver import classify_npm_spec
 from agent_bom.resolvers.registry_budget import (
-    REGISTRY_LATEST_DEADLINE,
     RESOLVE_ALL_TIMEOUT,
+    latest_deadline,
     record_registry_degraded,
     record_registry_timeout,
     registry_latest_get,
@@ -467,50 +467,37 @@ async def _resolve_declared_constraint(pkg: Package, constraint: str, client: ht
     return False
 
 
-async def _latest_metadata(pkg: Package, client: httpx.AsyncClient) -> tuple[Optional[str], Optional[str]]:
-    """Return (latest version, license) from the package's registry."""
-    if pkg.ecosystem == "npm":
-        return await resolve_npm_metadata(pkg.name, client)
-    if pkg.ecosystem == "pypi":
-        return await resolve_pypi_metadata(pkg.name, client)
-    if pkg.ecosystem == "go":
-        from agent_bom.version_utils import resolve_go_metadata
-
-        return await resolve_go_metadata(pkg.name, client)
-    if pkg.ecosystem == "cargo":
-        from agent_bom.version_utils import resolve_cargo_metadata
-
-        return await resolve_cargo_metadata(pkg.name, client)
-    if pkg.ecosystem == "conda":
-        # Conda packages often have PyPI equivalents — try PyPI resolution
-        return await resolve_pypi_metadata(pkg.name, client)
-    if pkg.ecosystem == "maven" and ":" in pkg.name:
-        from agent_bom.version_utils import resolve_maven_metadata
-
-        group, artifact = pkg.name.split(":", 1)
-        return await resolve_maven_metadata(group, artifact, client)
-    return None, None
-
-
 async def resolve_package_version(pkg: Package, client: httpx.AsyncClient) -> bool:
+    """Resolve an unpinned package to its latest stable published version.
+
+    The registry wait is bounded by ``latest_deadline()`` (the bulk-scan budget
+    unless a caller widened it). A package whose registry has published only
+    pre-releases resolves to the newest one with
+    ``version_source="registry_latest_prerelease"``.
+    """
+    from agent_bom.resolvers.latest_stable import PRERELEASE_VERSION_SOURCE, resolve_latest_release
+
     if pkg.version not in _INVALID_VERSIONS - {"{{VERSION}}"}:
         return False
+    budget = latest_deadline()
     constraint = _declared_constraint(pkg)
     if constraint is not None:
         try:
-            return await asyncio.wait_for(_resolve_declared_constraint(pkg, constraint, client), timeout=REGISTRY_LATEST_DEADLINE + 0.5)
+            return await asyncio.wait_for(_resolve_declared_constraint(pkg, constraint, client), timeout=budget + 0.5)
         except asyncio.TimeoutError:
-            record_registry_timeout(pkg.ecosystem, pkg.name, REGISTRY_LATEST_DEADLINE)
+            record_registry_timeout(pkg.ecosystem, pkg.name, budget)
             return False
     try:
-        version, lic = await asyncio.wait_for(_latest_metadata(pkg, client), timeout=REGISTRY_LATEST_DEADLINE + 0.5)
+        release = await asyncio.wait_for(resolve_latest_release(pkg, client), timeout=budget + 0.5)
     except asyncio.TimeoutError:
-        record_registry_timeout(pkg.ecosystem, pkg.name, REGISTRY_LATEST_DEADLINE)
-        version, lic = None, None
-    if version:
-        apply_registry_latest(pkg, version)
-        if lic and not pkg.license:
-            pkg.license = lic
+        record_registry_timeout(pkg.ecosystem, pkg.name, budget)
+        release = None
+    if release is not None:
+        apply_registry_latest(pkg, release.version)
+        if release.is_prerelease:
+            pkg.version_source = PRERELEASE_VERSION_SOURCE
+        if release.license and not pkg.license:
+            pkg.license = release.license
         return True
     return _apply_registry_version_fallback(pkg)
 

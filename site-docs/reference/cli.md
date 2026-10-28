@@ -284,6 +284,9 @@ agent-bom agents -f json|html|sarif|csv|cyclonedx|spdx
 # Output file
 agent-bom agents -o report.json
 agent-bom check requests@2.33.0 -e pypi -f json -o check.json
+# No version: checks the latest stable release (pre-releases skipped); the result's
+# version_source is registry_latest, or registry_latest_prerelease when only pre-releases exist
+agent-bom check lodash -e npm -f json
 agent-bom report diff before.json after.json -f json -o diff.json
 agent-bom report pipeline-events scan-job.json -o pipeline-events.jsonl
 

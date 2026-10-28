@@ -36,7 +36,10 @@ class PackageCheckResult:
     vuln_data_freshness: dict[str, Any] | None = None
     completeness: dict[str, str] | None = None
     # "requested" when the caller named the version; "registry_latest" (or
-    # "registry_fallback") when none was given and the latest was checked.
+    # "registry_fallback") when none was given and the latest stable release
+    # was checked; "registry_latest_prerelease" when the registry has published
+    # only pre-releases and the newest one was checked; "unresolved" when no
+    # version could be resolved and nothing was checked.
     version_source: str = "requested"
     # Advisories the lookup could not decide (local rows without a range
     # receipt, no live answer): review items, never counted as vulnerabilities.

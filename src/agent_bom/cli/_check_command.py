@@ -33,6 +33,7 @@ from agent_bom.cli._check_support import (
     _write_check_output,
 )
 from agent_bom.cli._common import _sync_runtime_consoles
+from agent_bom.resolvers.latest_stable import PRERELEASE_NOTE, PRERELEASE_VERSION_SOURCE, resolved_version_source
 from agent_bom.vuln_freshness import db_stale_days_threshold, db_staleness, set_allow_stale_db
 
 
@@ -181,12 +182,15 @@ def _resolve_latest(run: CheckRun) -> None:
         resolved, malicious_reason = _check_published.resolve_latest(run.pkgs)
     if resolved is not None:
         run.version = resolved.version
-        run.version_source = "registry_fallback" if resolved.version_source == "registry_fallback" else "registry_latest"
+        run.version_source = resolved_version_source(resolved.version_source)
         for p in run.pkgs:
             p.version = run.version
         if not run.quiet and not run.structured_output:
-            run.console.print(f"  [green]✓ No version given; checking the latest published version, {run.version}[/green]")
+            note = f" ({PRERELEASE_NOTE})" if run.version_source == PRERELEASE_VERSION_SOURCE else ""
+            run.console.print(f"  [green]✓ No version given; checking the latest published version, {run.version}{note}[/green]")
         return
+    # Nothing resolved: the payload must not read as a requested version of "latest".
+    run.version_source = "unresolved"
     eco_str = "/".join(run.ecosystems)
     if malicious_reason:
         run.pkgs[0].is_malicious, run.pkgs[0].malicious_reason = True, malicious_reason

@@ -25,6 +25,7 @@ PACKAGE_VERSION_SOURCES = frozenset(
 PACKAGE_VERSION_CONFIDENCE = frozenset({"exact", "high", "medium", "low", "unknown"})
 _VERSION_SOURCE_ALIASES = {
     "registry_fallback": "registry_latest",
+    "registry_latest_prerelease": "registry_latest",
     "registry": "registry_latest",
     "latest": "registry_latest",
     "sbom_ingest": "image_sbom",

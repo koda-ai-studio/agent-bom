@@ -15,6 +15,7 @@ from agent_bom.http_client import create_client
 from agent_bom.mcp_tools import check_lookup
 from agent_bom.mcp_tools.check_lookup import version_published
 from agent_bom.models import Package
+from agent_bom.resolvers.latest_stable import CHECK_LATEST_DEADLINE, check_latest_budget
 
 REGISTRY_ECOSYSTEMS = frozenset({"npm", "pypi"})
 
@@ -42,10 +43,11 @@ def unpublished_pin(name: str, version: str, ecosystems: list[str]) -> tuple[str
 
 
 async def _resolve_latest(pkgs: list[Package]) -> tuple[Package | None, str | None]:
-    async with http_client.create_client(timeout=http_client.REGISTRY_LOOKUP_MAX_WAIT) as client:
-        for pkg in pkgs:
-            if await resolver.resolve_package_version(pkg, client):
-                return pkg, None
+    async with http_client.create_client(timeout=CHECK_LATEST_DEADLINE) as client:
+        with check_latest_budget():
+            for pkg in pkgs:
+                if await resolver.resolve_package_version(pkg, client):
+                    return pkg, None
         for pkg in pkgs:
             reason = await check_lookup.resolution_malware_reason(False, pkg.name, pkg.ecosystem, client)
             if reason:
@@ -54,7 +56,7 @@ async def _resolve_latest(pkgs: list[Package]) -> tuple[Package | None, str | No
 
 
 def resolve_latest(pkgs: list[Package]) -> tuple[Package | None, str | None]:
-    """Resolve the latest published version, as the MCP ``check`` tool does.
+    """Resolve the latest stable published version, as the MCP ``check`` tool does.
 
     Returns ``(package, None)`` for the first package that resolved, or
     ``(None, malware_reason)`` when none did; the reason is set only when the

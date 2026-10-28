@@ -61,7 +61,7 @@ class Package:
     reachability_evidence: str = "runtime_dependency"  # runtime_dependency, declaration_only, lockfile, unknown
     resolved_from_registry: bool = False  # True if resolved dynamically vs from lock file
     registry_version: Optional[str] = None  # Latest version from registry (for drift comparison)
-    version_source: str = "detected"  # "detected" | "manifest" | "registry_fallback"
+    version_source: str = "detected"  # "detected" | "manifest" | "registry_fallback" | "registry_latest_prerelease"
     declared_version: Optional[str] = None  # Version/ref declared by command or manifest (may be latest/floating)
     resolved_version: Optional[str] = None  # Exact version selected after resolution, when known
     version_confidence: Optional[str] = None  # ADR-007 confidence enum for the resolved version
