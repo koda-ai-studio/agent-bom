@@ -131,11 +131,13 @@ class VulnDataFreshness:
             return None
         return self.age_hours // 24
 
-    def to_dict(self, *, osv_performance: dict | None = None) -> VulnerabilityFreshnessPayload:
+    def to_dict(self, *, osv_performance: dict | None = None, epss_source: dict | None = None) -> VulnerabilityFreshnessPayload:
         """Report observed OSV response-cache use separately from feed-sync age.
 
         Other providers may still use the network; a cache hit does not prove
         an offline scan or establish the response cache's advisory freshness.
+        ``epss_source`` (an ``EpssSourceSummary`` dict) states which EPSS
+        source — local table, cache or live backfill — scored the findings.
         """
         cache_hits = (osv_performance or {}).get("cache_hits", 0)
         cache: OSVResponseCachePayload = {"packages": cache_hits, "live_queries": (osv_performance or {}).get("queries_sent", 0)}
@@ -156,6 +158,8 @@ class VulnDataFreshness:
             payload["partial_sources"] = [dict(item) for item in self.partial_sources]
         if cache_hits:
             payload["osv_response_cache"] = cache
+        if epss_source:
+            payload["epss"] = dict(epss_source)
         return payload
 
     def summary_line(self) -> str:

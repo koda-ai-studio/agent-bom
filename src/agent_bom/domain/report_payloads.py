@@ -83,6 +83,8 @@ class VulnerabilityFreshnessPayload(TypedDict):
     osv_response_cache: NotRequired[OSVResponseCachePayload]
     integrity_issue: NotRequired[str]
     partial_sources: NotRequired[list[dict[str, str]]]
+    # Which EPSS source scored the findings: local table, cache or live backfill.
+    epss: NotRequired[dict[str, Any]]
 
 
 class CorrelatedFindingPayload(TypedDict):

@@ -29,6 +29,7 @@ from agent_bom.models import AIBOMReport
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.resolver import consume_performance_stats as consume_resolution_performance
 from agent_bom.scanners import consume_coverage_warnings, consume_scan_performance
+from agent_bom.scanners.epss_backfill import epss_source_summary
 from agent_bom.scanners.mcp_audit import config_posture_findings
 from agent_bom.vuln_freshness import accepted_scan_warnings
 
@@ -302,8 +303,10 @@ def _attach_context_data(opts: ScanOptions, st: ScanState) -> None:
     # API and MCP tool return the vuln-data source/age/staleness verbatim.
     if st.vuln_freshness is not None:
         try:
+            epss_summary = epss_source_summary()
             st.report.vuln_data_freshness = st.vuln_freshness.to_dict(
-                osv_performance=(st.report.scan_performance_data or {}).get("osv", {})
+                osv_performance=(st.report.scan_performance_data or {}).get("osv", {}),
+                epss_source=epss_summary.to_dict() if epss_summary is not None else None,
             )
         except Exception:
             pass

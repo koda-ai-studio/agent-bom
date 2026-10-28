@@ -67,3 +67,10 @@ The canonical command reference lives in
   installs that accept old local data pass `--allow-stale-db` (or set
   `AGENT_BOM_ALLOW_STALE_DB=1`). `check --require-fresh-db` exits `3` like
   `scan`. See the [exit-code contract](../site-docs/reference/exit-codes.md).
+  With `--enrich`, `vuln_data_freshness.epss` states which EPSS source scored
+  the findings: the local `epss_scores` table, the enrichment cache, or a live
+  backfill from the FIRST API for CVEs both left unscored. The backfill is
+  bounded — 100 CVEs per request, at most 20 requests (2,000 CVEs) per scan,
+  15 s per request — and anything it cannot answer stays `null` and is reported
+  as `EPSS incomplete` coverage, never guessed. `--offline` makes no EPSS
+  requests at all.
