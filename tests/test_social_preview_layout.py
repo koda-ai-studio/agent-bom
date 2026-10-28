@@ -60,3 +60,13 @@ def test_banner_vendor_assets_are_pinned_and_self_contained() -> None:
                     assert not key.lower().startswith("on")
                     if key.rsplit("}", 1)[-1] in {"href", "src"}:
                         assert value.startswith("#")
+
+
+def test_embedded_vendor_gradients_have_unique_resolvable_ids() -> None:
+    root = ET.fromstring(render())
+    ids = [element.attrib["id"] for element in root.iter() if "id" in element.attrib]
+    assert len(ids) == len(set(ids)), "Vendor SVG gradients must not affect another logo"
+    for element in root.iter():
+        for value in element.attrib.values():
+            for reference in re.findall(r"url\(#([^)]+)\)", value):
+                assert reference in ids
