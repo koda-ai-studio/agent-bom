@@ -53,3 +53,11 @@ it("rejects a complete batch from a different authenticated tenant", async () =>
   vi.stubGlobal("fetch", async () => response(wire("next", [activity(1)])));
   await expect(gatewayActivityPage(undefined, new AbortController().signal, "another-tenant")).rejects.toMatchObject({ kind: "auth" });
 });
+
+it("rejects malformed or oversized origin fields without consuming their cursor", async () => {
+  for (const origin of [{ source_id: {} }, { source_id: "x".repeat(201) }, { submission_provenance: [] }, { submission_provenance: { reported_source_id: 7 } }]) {
+    const row = { ...activity(1), ...origin } as unknown as GatewayActivity;
+    vi.stubGlobal("fetch", async () => response(wire("untrusted", [row])));
+    await expect(gatewayActivityPage(undefined, new AbortController().signal)).rejects.toMatchObject({ kind: "invalid" });
+  }
+});

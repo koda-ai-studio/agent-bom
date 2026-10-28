@@ -94,7 +94,7 @@ function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSea
   const staleReceipt = Boolean(receiptTime && nowForRelativeTime() - Date.parse(receiptTime) > 120000);
   const displayed = frozen ?? events;
   const visible = displayed.filter(row => (!filter || (filter === "deny" ? row.decision === "deny" : filter === "data" ? /dlp|visual/.test(row.event_type) : row.event_type.includes(filter))) &&
-    [row.agent_id, row.tool, row.upstream, row.reason_code].join(" ").toLowerCase().includes(search.toLowerCase()));
+    [row.agent_id, row.tool, row.upstream, row.reason_code, row.profile_id, row.identity_id, row.source_id, row.session_id, row.submission_provenance?.reported_source_id, row.submission_provenance?.reported_session_id].join(" ").toLowerCase().includes(search.toLowerCase()));
   const params = new URLSearchParams();
   if (filter) params.set("filter", filter);
   if (search) params.set("q", search);
@@ -135,7 +135,7 @@ function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSea
         {[["", "All"], ["deny", "Blocked"], ["data", "Data filters"], ["runtime_profile", "Profile decisions"], ["enforcement", "Enforcement"]].map(([value, label]) =>
           <button key={label} onClick={() => scope(value ?? "", search)} aria-pressed={filter === value} className={`rounded px-2 py-1 text-xs ${filter === value ? "bg-[var(--surface-muted)] text-[var(--foreground)]" : "text-[var(--text-secondary)]"}`}>{label}</button>)}
       </div>
-      <label className="mb-3 block text-xs text-[var(--text-secondary)]">Search agent, tool or reason
+      <label className="mb-3 block text-xs text-[var(--text-secondary)]">Search agent, origin, profile, tool or reason
         <input value={search} onChange={event => scope(filter, event.target.value)} className="mt-1 block w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]" placeholder="Filter activity…" />
       </label>
       {!visible.length && <p className="py-6 text-sm text-[var(--text-secondary)]">{events.length ? "No activity matches this filter." : state === "live" ? "No retained gateway activity yet." : "No verified activity loaded."}</p>}

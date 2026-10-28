@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GatewayFeedPanel } from "@/app/gateway/GatewayFeedPanel";
 import { GatewayFeedKpiBar } from "@/components/gateway-feed-kpi-bar";
@@ -51,20 +51,20 @@ describe("runtime receipt assurance", () => {
     expect(producerEvidenceLabel("caller_asserted")).toBe("Reported producer");
   });
   it("separates fresh live transport from reported producer evidence", async () => {
-    render(<GatewayFeedPanel />); await screen.findByText(/filesystem \/ read_file/);
+    render(<GatewayFeedPanel />); fireEvent.click(screen.getByRole("button", { name: "Events" })); await screen.findByText(/filesystem \/ read_file/);
     expect(screen.getByText("Connected to durable activity")).toBeInTheDocument();
     expect(screen.getAllByText("Reported producer").length).toBeGreaterThan(0);
     expect(screen.queryByText(/^(Live|Verified)$/i)).not.toBeInTheDocument();
   });
   it("keeps legacy producer identity unknown despite durable storage and fresh transport", async () => {
     stream.rows = [( { ...stream.rows[0] as object, submission_provenance: undefined } )];
-    render(<GatewayFeedPanel />); await screen.findByText(/filesystem \/ read_file/);
+    render(<GatewayFeedPanel />); fireEvent.click(screen.getByRole("button", { name: "Events" })); await screen.findByText(/filesystem \/ read_file/);
     expect(screen.getAllByText("Producer unknown").length).toBeGreaterThan(0);
     expect(screen.queryByText("Reported producer")).not.toBeInTheDocument();
   });
   it("retains stale receipt state independently of producer assurance", async () => {
     stream.rows = [{ ...stream.rows[0] as object, ingested_at: "2020-01-01T00:00:00Z" }];
-    render(<GatewayFeedPanel />); await screen.findByText(/filesystem \/ read_file/);
+    render(<GatewayFeedPanel />); fireEvent.click(screen.getByRole("button", { name: "Events" })); await screen.findByText(/filesystem \/ read_file/);
     expect(screen.getByText(/Latest receipt is older than 2 minutes/)).toBeInTheDocument();
     expect(screen.queryByText("Live transport")).not.toBeInTheDocument();
     expect(screen.getAllByText("Reported producer").length).toBeGreaterThan(0);

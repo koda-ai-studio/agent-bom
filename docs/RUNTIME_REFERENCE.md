@@ -20,6 +20,24 @@ rejects autoscaling until shared delivery leases exist. A local-only gateway
 remains ready while its SQLite audit store is writable. Persistence failure, a
 full bounded backlog, or shutdown returns 503.
 
+### Fleet activity triage
+
+Open **Runtime → Live Activity** to inspect the recent received window. The
+initial **Activity groups** view prioritizes blocked and warning activity and
+combines only matching reported origin, session, agent, identity and profile
+contexts. Collector submitters and reported sources remain separate. Missing
+origins stay separate; group counts are not verified unique-agent counts.
+Select a group to inspect its event records, or select **Events** for chronological
+paging. Search accepts agent, origin, profile, tool and reason. Details expose
+collector and reported origin context alongside policy, evidence and trace links.
+Agent-name trace searches can include other origins and are labeled accordingly.
+
+The browser retains at most 1,000 received events and renders a bounded page.
+Counts describe the visible buffered window, not total fleet activity or complete
+history. **Browse retained history** uses the authenticated durable cursor;
+retention gaps and unavailable delivery stay explicit. The runtime overview
+continues to show a five-event preview linked to this full view.
+
 ### Runtime doc set
 
 This page is the canonical runtime surface map. The detail docs:

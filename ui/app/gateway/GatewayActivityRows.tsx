@@ -37,6 +37,11 @@ export function ActivityRows({ events }: { events: GatewayActivity[] }) {
         {selected.development_mode && <p className="text-amber-800 dark:text-amber-200">Development bypass</p>}
         <dl className="space-y-3">{[
           ["Received", selected.ingested_at ? formatDate(selected.ingested_at) : "Unavailable"], ["Reported time", selected.event_timestamp],
+          ["Submitter", selected.submission_provenance?.submitter_principal_id],
+          ["Authentication method", selected.submission_provenance?.authentication_method],
+          ["Collector source", selected.submission_provenance?.submission_source_id || selected.source_id],
+          ["Collector session", selected.submission_provenance?.submission_session_id || selected.session_id],
+          ["Reported source", selected.submission_provenance?.reported_source_id], ["Reported session", selected.submission_provenance?.reported_session_id],
           ["Profile", selected.profile_id], ["Profile revision", selected.profile_revision], ["Blueprint", selected.blueprint_id], ["Blueprint revision", selected.blueprint_revision],
           ["Policies", selected.policy_ids?.join(", ") || selected.policy_id], ["Evidence", selected.evidence_id], ["Trace ID", selected.trace_id],
           ["Receipt trace", selected.receipt_trace_id], ["Identity", selected.identity_id], ["Event ID", selected.event_id], ["Event type", selected.event_type],
@@ -46,7 +51,7 @@ export function ActivityRows({ events }: { events: GatewayActivity[] }) {
           {selected.trace_id && <Link className="graph-page-action" href={`/security-graph?${new URLSearchParams({ trace: selected.trace_id, agent: selected.agent_id })}`}>Pin trace</Link>}
           {selected.agent_id && <Link className="graph-page-action" href={`/traces?${new URLSearchParams({ agent: selected.agent_id })}`}>Agent traces</Link>}
         </div>
-        <p className="text-xs text-[var(--text-secondary)]">Agent traces match recorded agent identity in a bounded sample. They do not establish that these events belong to the same trace.</p>
+        <p className="text-xs text-[var(--text-secondary)]">Agent traces match the reported agent name across origins in a bounded sample. This is not proof of a unique agent or shared trace.</p>
       </div>}
     </Drawer>
   </>;

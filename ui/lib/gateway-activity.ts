@@ -9,6 +9,8 @@ export interface GatewayActivity {
   event_timestamp: string;
   ingested_at: string;
   ingest_ordinal: number;
+  source_id?: string;
+  session_id?: string;
   agent_id: string;
   identity_id: string;
   upstream: string;
@@ -26,7 +28,10 @@ export interface GatewayActivity {
   reason_code: string;
   data_action: string;
   development_mode: boolean;
-  submission_provenance?: { producer_assurance?: string };
+  submission_provenance?: {
+    producer_assurance?: string; submission_source_id?: string; submission_session_id?: string;
+    reported_source_id?: string; reported_session_id?: string; submitter_principal_id?: string; authentication_method?: string;
+  };
 }
 
 export interface ActivityPage {
@@ -99,7 +104,7 @@ export async function* streamGatewayActivity(cursor: string | undefined, signal:
             typeof page.has_more !== "boolean" || !Number.isSafeInteger(page.latest_ordinal) ||
             page.events.some(row => !row || row.tenant_id !== page.tenant_id || !Number.isSafeInteger(row.ingest_ordinal) ||
               ["event_id", "event_type", "event_timestamp", "ingested_at", "agent_id", "identity_id", "upstream", "tool", "decision", "profile_id", "blueprint_id", "policy_id", "evidence_id", "trace_id", "reason_code", "data_action"].some(key => typeof (row as unknown as Record<string, unknown>)[key] !== "string") ||
-              !Array.isArray(row.policy_ids) || row.policy_ids.some(value => typeof value !== "string"))) {
+              !validActivityOrigin(row) || !Array.isArray(row.policy_ids) || row.policy_ids.some(value => typeof value !== "string"))) {
             throw new ActivityStreamError("invalid");
           }
           if (expectedTenant && page.tenant_id !== expectedTenant) throw new ActivityStreamError("auth");
@@ -127,4 +132,15 @@ export function mergeActivity(current: GatewayActivity[], incoming: GatewayActiv
   const rows = new Map(current.map(row => [row.event_id, row]));
   for (const row of incoming) rows.set(row.event_id, row);
   return [...rows.values()].sort((a, b) => b.ingest_ordinal - a.ingest_ordinal).slice(0, limit);
+}
+
+/** Optional fields preserve legacy records; malformed origin metadata cannot become identity. */
+function validActivityOrigin(row: GatewayActivity): boolean {
+  const bounded = (value: unknown) => value === undefined || (typeof value === "string" && value.length <= 200);
+  const provenance = row.submission_provenance;
+  return bounded(row.source_id) && bounded(row.session_id) && (provenance == null ||
+    (typeof provenance === "object" && !Array.isArray(provenance) &&
+      [provenance.producer_assurance, provenance.submission_source_id, provenance.submission_session_id,
+        provenance.reported_source_id, provenance.reported_session_id, provenance.submitter_principal_id,
+        provenance.authentication_method].every(bounded)));
 }

@@ -14,6 +14,7 @@ it("merges more than 200 events, resumes once, deduplicates and preserves an exp
     .mockImplementationOnce(async function* () { yield batch(250, 2, "251"); throw new ActivityStreamError("gap"); });
   const view = render(<GatewayFeedPanel onActivity={() => {}} />);
   await act(() => vi.advanceTimersByTimeAsync(0));
+  fireEvent.click(screen.getByRole("button", { name: "Events" }));
   fireEvent.change(screen.getByLabelText("Rows per page"), { target: { value: "250" } });
   expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(250);
   view.rerender(<GatewayFeedPanel onActivity={() => {}} />);
@@ -59,6 +60,7 @@ it("freezes the visible rows while continuing to receive and resume complete bat
     .mockImplementationOnce(async function* () { yield batch(3, 1, "3"); });
   render(<GatewayFeedPanel />);
   await act(() => vi.advanceTimersByTimeAsync(0));
+  fireEvent.click(screen.getByRole("button", { name: "Events" }));
   fireEvent.click(screen.getByRole("button", { name: "Pause view" }));
   await act(() => vi.advanceTimersByTimeAsync(1000));
   expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(2);
@@ -68,17 +70,18 @@ it("freezes the visible rows while continuing to receive and resume complete bat
   expect(screen.getByRole("dialog", { name: "Activity details" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Agent traces" })).toHaveAttribute("href", "/traces?agent=payroll-agent");
 });
-it("paginates a frozen window and aggregates exact agent identities", async () => {
+it("paginates a frozen window and aggregates matching reported origins", async () => {
   vi.useFakeTimers();
   mocks.stream.mockImplementation(async function* () { yield { ...batch(1, 65, "65"), events: Array.from({ length: 65 }, (_, i) => ({ ...activity(i + 1), agent_id: i < 60 ? "agent-a" : "agent-b", decision: i < 3 ? "deny" : "allow" })) }; });
   render(<GatewayFeedPanel />);
   await act(() => vi.advanceTimersByTimeAsync(0));
+  fireEvent.click(screen.getByRole("button", { name: "Events" }));
   expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(50);
   fireEvent.click(screen.getByRole("button", { name: "Next events" }));
   expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(15);
   expect(screen.getByRole("button", { name: /Resume/ })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "By agent" }));
-  expect(screen.getByRole("button", { name: /agent-a.*60 events.*3 blocked/ })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Activity groups" }));
+  expect(screen.getByRole("button", { name: /agent-a.*3 blocked.*60 events/ })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /agent-b.*5 events/ }));
   expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(5);
   expect(screen.queryByRole("button", { name: /Inspect agent-a/ })).not.toBeInTheDocument();
