@@ -126,6 +126,9 @@ PUBLIC_FRONTDOOR_CONTRACTS = frozenset(
         "test_readme_demo_excerpt.py",
         "test_release_storefront_contract.py",
         "test_stats_alignment.py",
+        "test_vendor_visual_provenance.py",
+        "test_social_preview_layout.py",
+        "test_integrations_manifest.py",
         "test_surface_freshness.py",
     }
 )
@@ -309,6 +312,17 @@ def plan_shards(files: Iterable[Path], *, total: int, durations: dict[Path, floa
     return _balance({path: float(path.stat().st_size) for path in files}, total=total)
 
 
+def _public_frontdoor_changed(path: Path) -> bool:
+    return path.as_posix().startswith("docs/images/") or path.as_posix() in {
+        "README.md",
+        "docs/FIRST_RUN.md",
+        "docs/GALLERY.md",
+        "docs/registry/PYPI_README.md",
+        "scripts/render_social_preview_svg.py",
+        "scripts/social_preview_coverage.py",
+    }
+
+
 def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[Path]:
     """Select directly changed tests and basename matches for source modules."""
     test_root = root / "tests"
@@ -421,7 +435,7 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             normalized.as_posix() == "README.md" or normalized.as_posix().startswith(("docs/", "site-docs/"))
         ):
             selected.update(candidate for candidate in available if candidate.name == "test_docs_front_door.py")
-        if normalized.as_posix() in {"README.md", "docs/FIRST_RUN.md", "docs/GALLERY.md", "docs/registry/PYPI_README.md"}:
+        if _public_frontdoor_changed(normalized):
             selected.update(candidate for candidate in available if candidate.name in PUBLIC_FRONTDOOR_CONTRACTS)
         if normalized.as_posix() in {
             "docs/CLOUD_CONNECT.md",

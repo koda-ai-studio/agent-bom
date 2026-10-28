@@ -262,7 +262,10 @@
       "source_path": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.101.0.tgz#package/icons/geminicli-color.svg",
       "sha256": "c2f54ebaa4c3b9191c6a07f7b0c66bc78e4abe486003dc564469cf650672663e",
       "terms": "MIT (Lobe Icons)",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/lobehub/lobe-icons",
+      "source_commit": "aea0ecb0fe1439467219197c52ffaeb579dfe33f",
+      "license": "MIT"
     },
     {
       "path": "docs/images/vendor/lobe-icons/cline.svg",
@@ -271,7 +274,10 @@
       "source_path": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.101.0.tgz#package/icons/cline.svg",
       "sha256": "9003d2cdce82b016147b732abb4def60af55c348ba2cea2ba0b69a3c7d159b19",
       "terms": "MIT (Lobe Icons)",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/lobehub/lobe-icons",
+      "source_commit": "aea0ecb0fe1439467219197c52ffaeb579dfe33f",
+      "license": "MIT"
     },
     {
       "path": "docs/images/vendor/lobe-icons/roocode.svg",
@@ -280,7 +286,10 @@
       "source_path": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.101.0.tgz#package/icons/roocode.svg",
       "sha256": "34904d40bfd976b5c1c7495d2fdfdca1c137cb416bff2000184e0ee27bfb5161",
       "terms": "MIT (Lobe Icons)",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/lobehub/lobe-icons",
+      "source_commit": "aea0ecb0fe1439467219197c52ffaeb579dfe33f",
+      "license": "MIT"
     },
     {
       "path": "docs/images/vendor/lobe-icons/goose.svg",
@@ -289,7 +298,10 @@
       "source_path": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.101.0.tgz#package/icons/goose.svg",
       "sha256": "8779d9a61c5b0be78a3d36cab6843ba5af86218ba2ff1b18eb918c7a8d25bb99",
       "terms": "MIT (Lobe Icons)",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/lobehub/lobe-icons",
+      "source_commit": "aea0ecb0fe1439467219197c52ffaeb579dfe33f",
+      "license": "MIT"
     },
     {
       "path": "docs/images/vendor/lobe-icons/openclaw-color.svg",
@@ -298,7 +310,10 @@
       "source_path": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.101.0.tgz#package/icons/openclaw-color.svg",
       "sha256": "4123c0c75dda5b28e3e0d38075514085bf546178a620776344813c08fa41277c",
       "terms": "MIT (Lobe Icons)",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/lobehub/lobe-icons",
+      "source_commit": "aea0ecb0fe1439467219197c52ffaeb579dfe33f",
+      "license": "MIT"
     },
     {
       "path": "docs/images/vendor/lobe-icons/crusoe-color.svg",
@@ -307,7 +322,10 @@
       "source_path": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.101.0.tgz#package/icons/crusoe-color.svg",
       "sha256": "4aaec4fa4b003d63d03ec9f2ab14d4c1fb94bb40d919cd57d7194f0d4f6bf2e8",
       "terms": "MIT (Lobe Icons)",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/lobehub/lobe-icons",
+      "source_commit": "aea0ecb0fe1439467219197c52ffaeb579dfe33f",
+      "license": "MIT"
     },
     {
       "path": "docs/images/vendor/lobe-icons/langfuse-color.svg",
@@ -316,7 +334,10 @@
       "source_path": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.101.0.tgz#package/icons/langfuse-color.svg",
       "sha256": "620f1d64b782c6f828024f7ff2aad9f3210c38b99d2f529f62e9d0da694686e8",
       "terms": "MIT (Lobe Icons)",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/lobehub/lobe-icons",
+      "source_commit": "aea0ecb0fe1439467219197c52ffaeb579dfe33f",
+      "license": "MIT"
     },
     {
       "path": "docs/images/vendor/lobe-icons/langsmith-color.svg",
@@ -325,61 +346,81 @@
       "source_path": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.101.0.tgz#package/icons/langsmith-color.svg",
       "sha256": "7cb7852a25becfaf3b7bbe6179b379352be5efdd347546adc6b09059b1d35cfe",
       "terms": "MIT (Lobe Icons)",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/lobehub/lobe-icons",
+      "source_commit": "aea0ecb0fe1439467219197c52ffaeb579dfe33f",
+      "license": "MIT"
     },
     {
       "path": "docs/images/vendor/simple-icons/jetbrains.svg",
       "vendor": "JetBrains AI",
-      "source_page": "https://github.com/simple-icons/simple-icons",
+      "source_page": "https://simpleicons.org",
       "source_path": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.36.0.tgz#package/icons/jetbrains.svg",
       "sha256": "7086a4a78912dc77e73a951cc1b047b049701406574b9d8eedf3b17d307621fb",
       "terms": "CC0-1.0 (Simple Icons); brand trademarks remain with their owners.",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "27a47e6540abf45107f0bfe50fd0d1f8e6395263",
+      "license": "CC0-1.0"
     },
     {
       "path": "docs/images/vendor/simple-icons/qdrant.svg",
       "vendor": "Qdrant",
-      "source_page": "https://github.com/simple-icons/simple-icons",
+      "source_page": "https://simpleicons.org",
       "source_path": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.36.0.tgz#package/icons/qdrant.svg",
       "sha256": "c5fbbbf771648975f22973627b4eb5620c68a4f81ccfb6c21633bb1d04f9fdf1",
       "terms": "CC0-1.0 (Simple Icons); brand trademarks remain with their owners.",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "27a47e6540abf45107f0bfe50fd0d1f8e6395263",
+      "license": "CC0-1.0"
     },
     {
       "path": "docs/images/vendor/simple-icons/milvus.svg",
       "vendor": "Milvus",
-      "source_page": "https://github.com/simple-icons/simple-icons",
+      "source_page": "https://simpleicons.org",
       "source_path": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.36.0.tgz#package/icons/milvus.svg",
       "sha256": "167dcc6fbaf7a1d6fd9b9a21a0a66141e00212a48cd38ba6e0a1ccf17ffae20b",
       "terms": "CC0-1.0 (Simple Icons); brand trademarks remain with their owners.",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "27a47e6540abf45107f0bfe50fd0d1f8e6395263",
+      "license": "CC0-1.0"
     },
     {
       "path": "docs/images/vendor/simple-icons/jira.svg",
       "vendor": "Jira",
-      "source_page": "https://github.com/simple-icons/simple-icons",
+      "source_page": "https://simpleicons.org",
       "source_path": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.36.0.tgz#package/icons/jira.svg",
       "sha256": "68f8703698538ee7863bf69b72bf9f0d78a72d218e7eb7e0617237ae43ae5ade",
       "terms": "CC0-1.0 (Simple Icons); brand trademarks remain with their owners.",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "27a47e6540abf45107f0bfe50fd0d1f8e6395263",
+      "license": "CC0-1.0"
     },
     {
       "path": "docs/images/vendor/simple-icons/docker.svg",
       "vendor": "Docker MCP Toolkit",
-      "source_page": "https://github.com/simple-icons/simple-icons",
+      "source_page": "https://simpleicons.org",
       "source_path": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.36.0.tgz#package/icons/docker.svg",
       "sha256": "65571291c261ef869c31540a38f3ca0f0ee3bb73f179c172211c8860f19a6359",
       "terms": "CC0-1.0 (Simple Icons); brand trademarks remain with their owners.",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "27a47e6540abf45107f0bfe50fd0d1f8e6395263",
+      "license": "CC0-1.0"
     },
     {
       "path": "docs/images/vendor/runpod-icon.svg",
       "vendor": "RunPod",
       "source_page": "https://www.runpod.io/brandkit",
-      "source_path": "Inline footer-logo SVG",
+      "source_path": "footer-logo.svg",
       "sha256": "dadfb322d7b67f8f42bbe9adbae074a06748fb4d1456a50fcb76be6937560cf2",
       "terms": "Official Runpod cube mark used to identify a supported integration; no endorsement implied.",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_kind": "vendor_svg",
+      "source_selector": ".footer-logo svg"
     },
     {
       "path": "docs/images/vendor/coreweave-icon.svg",
@@ -389,7 +430,8 @@
       "sha256": "536ba9e8ebfcbca5ddcab012ca17ab179b2a50164216c1f2a809957861d46fbc",
       "terms": "Official vendor mark used to identify a supported integration; no endorsement implied.",
       "retrieved_at": "2026-10-28",
-      "rendering_note": "Standalone vendor geometry with the current site header colors: C #2741e7 and light W on dark. Source: https://www.coreweave.com/ (kat26-navbar-logo inline SVG), verified 2026-10-28."
+      "rendering_note": "Standalone vendor geometry with the current site header colors: C #2741e7 and light W on dark. Source: https://www.coreweave.com/ (kat26-navbar-logo inline SVG), verified 2026-10-28.",
+      "source_kind": "vendor_svg"
     },
     {
       "path": "docs/images/vendor/vast-logo.svg",
@@ -398,7 +440,8 @@
       "source_path": "https://vast.ai/logos/vast_logo_cropped_nostroke.svg",
       "sha256": "61d7d2e877f80a0e0fa1090fdce305f253009042549848ec5daf40724bbc4bb8",
       "terms": "Official vendor mark used to identify a supported integration; no endorsement implied.",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "source_kind": "vendor_svg"
     },
     {
       "path": "docs/images/vendor/nebius-logo.svg",
@@ -407,7 +450,8 @@
       "source_path": "https://nebius.com/logo.svg",
       "sha256": "35a8a56d0a07e7acb3813839126cf425e012a3f70307d405ede58aa784162374",
       "retrieved_at": "2026-10-28",
-      "terms": "Vendor trademark; used only to identify a supported integration, without endorsement or partnership claims."
+      "terms": "Vendor trademark; used only to identify a supported integration, without endorsement or partnership claims.",
+      "source_kind": "vendor_svg"
     },
     {
       "path": "docs/images/vendor/lambda-white.svg",
@@ -416,7 +460,8 @@
       "source_path": "https://lambda.ai/hubfs/raw_assets/Lambda%20Marketing%20Website/151/js_client_assets/assets/logo-white-amFAN7ru.svg",
       "sha256": "99e4620fbd842d977cac8ce82a58506da7aa4527764c4502e85634d9a6161c2c",
       "retrieved_at": "2026-10-28",
-      "terms": "Vendor trademark; used only to identify a supported integration, without endorsement or partnership claims."
+      "terms": "Vendor trademark; used only to identify a supported integration, without endorsement or partnership claims.",
+      "source_kind": "vendor_svg"
     }
   ],
   "neutral_icon_policy": "Use agent-bom neutral category icons when a vendor does not publish redistributable diagram assets or when trademark terms are unclear."
