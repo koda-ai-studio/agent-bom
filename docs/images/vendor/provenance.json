@@ -388,7 +388,8 @@
       "source_path": "https://cdn.prod.website-files.com/62ba1fb86485b6d5029975c4/6778537637e2049e3a9bfe7d_logo_icon_small_dark.svg",
       "sha256": "536ba9e8ebfcbca5ddcab012ca17ab179b2a50164216c1f2a809957861d46fbc",
       "terms": "Official vendor mark used to identify a supported integration; no endorsement implied.",
-      "retrieved_at": "2026-10-28"
+      "retrieved_at": "2026-10-28",
+      "rendering_note": "Standalone vendor geometry with the current site header colors: C #2741e7 and light W on dark. Source: https://www.coreweave.com/ (kat26-navbar-logo inline SVG), verified 2026-10-28."
     },
     {
       "path": "docs/images/vendor/vast-logo.svg",

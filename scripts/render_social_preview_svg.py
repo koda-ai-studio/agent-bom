@@ -103,6 +103,18 @@ def _scope_symbol_ids(symbol: ET.Element) -> None:
             element.set(attribute, value)
 
 
+def _coreweave_dark_variant(symbol: ET.Element) -> None:
+    """Use the blue C and light W from CoreWeave's current site header."""
+    for parent in symbol.iter():
+        for child in list(parent):
+            if child.tag == f"{SVG}style":
+                parent.remove(child)
+    for index, path in enumerate(symbol.iter(f"{SVG}path")):
+        path.set("fill", "#2741e7" if index == 0 else "#f8fafc")
+        if path.get("class") == "cls-2":
+            path.set("fill-rule", "evenodd")
+
+
 def render(source: Path = SOURCE, manifest_path: Path = integrations_manifest.MANIFEST) -> str:
     """Build the coverage grid from the manifest, inline referenced vectors as symbols, return deterministic SVG text."""
     tree = ET.parse(source)
@@ -140,6 +152,8 @@ def render(source: Path = SOURCE, manifest_path: Path = integrations_manifest.MA
                     if "fill" in element.attrib:
                         element.set("fill", color)
             _scope_symbol_ids(symbol)
+            if asset.stem == "coreweave-icon":
+                _coreweave_dark_variant(symbol)
             defs.append(symbol)
 
         use = ET.Element(

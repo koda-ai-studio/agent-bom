@@ -70,3 +70,14 @@ def test_embedded_vendor_gradients_have_unique_resolvable_ids() -> None:
         for value in element.attrib.values():
             for reference in re.findall(r"url\(#([^)]+)\)", value):
                 assert reference in ids
+
+
+def test_coreweave_uses_the_current_blue_and_light_mark_on_dark() -> None:
+    root = ET.fromstring(render())
+    symbol = next(element for element in root.iter(f"{SVG}symbol") if element.get("id") == "embedded-coreweave-icon")
+    paths = list(symbol.iter(f"{SVG}path"))
+    assert paths[0].get("fill") == "#2741e7"
+    assert all(path.get("fill") == "#f8fafc" for path in paths[1:])
+    assert not list(symbol.iter(f"{SVG}style"))
+    tile = next(element for element in root.iter(f"{SVG}g") if element.get("data-integration") == "CoreWeave")
+    assert tile.find(f"{SVG}rect").get("fill") == "#0f1a2b"

@@ -14,7 +14,7 @@ TILE = 50
 COLUMNS = 13
 PITCH = 92
 ROW_PITCH = 108
-ICON_SCALE = {"vendor/openai-blossom-white.svg": 1.47}
+ICON_SCALE = {"vendor/openai-blossom-white.svg": 1.47, "vendor/coreweave-icon.svg": 1.2}
 BANNER_TRADEMARK_NOTE = "Names and logos are trademarks of their owners; no endorsement implied."
 
 
@@ -27,7 +27,7 @@ def _el(parent: ET.Element, tag: str, text: str | None = None, **attrs: object) 
 
 def _tile(parent: ET.Element, name: str, logo: str, x: float, y: int) -> None:
     tile = _el(parent, "g", transform=f"translate({x:g} {y})", data_integration=name, fill="#f8fafc", color="#f8fafc")
-    background = "#e2e8f0" if name in {"CoreWeave", "LangSmith"} else "#0f1a2b"
+    background = "#e2e8f0" if name == "LangSmith" else "#0f1a2b"
     _el(tile, "rect", width=TILE, height=TILE, rx=13, fill=background)
     size = TILE * 0.72 * ICON_SCALE.get(logo, 1.0)
     if name in {"Nebius", "Lambda"}:
