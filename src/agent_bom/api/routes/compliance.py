@@ -49,6 +49,7 @@ from agent_bom.api.routes.compliance_routes.common import _POSTURE_COUNTS_CACHE 
 from agent_bom.api.routes.compliance_routes.common import (
     SEEDING_GUARD,
     _compliance_evidence_authority_key,
+    _get_hub_posture_impl,
     _get_posture_counts_impl,
     _latest_aisvs_benchmark_from_jobs,
     _tenant_id,
@@ -946,19 +947,16 @@ router.include_router(reads.hub_router)
 async def get_hub_posture(request: Request) -> dict:
     """Aggregate compliance posture across native scans + hub-ingested findings.
 
-    Returns per-framework counts, severity breakdown, and source mix
-    (native vs external) so the dashboard /compliance page can render a
-    single posture story across every entry point.
-
-    The synchronous store aggregates (severity GROUP BY, SQL-side framework
-    counts, tenant total) plus the native-job fold run in a worker thread under
-    adaptive backpressure so this O(table) read cannot block the event loop and
-    starve ``/health`` (mirrors ``/v1/findings``); under saturation it sheds with
-    ``429 + Retry-After``.
+    Per-framework counts, severity breakdown and source mix (native vs external)
+    for the dashboard /compliance page. The store aggregates and the native-job
+    fold run in a worker thread under adaptive backpressure (mirrors
+    ``/v1/findings``); under saturation it sheds with ``429 + Retry-After``.
     """
     try:
         async with adaptive_backpressure("compliance"):
-            return await anyio.to_thread.run_sync(common._cached_hub_posture, request)
+            return await anyio.to_thread.run_sync(
+                common.cached_tenant_read, request, "hub_posture", (), lambda: _get_hub_posture_impl(request)
+            )
     except BackpressureRejectedError as exc:
         raise HTTPException(
             status_code=429,
