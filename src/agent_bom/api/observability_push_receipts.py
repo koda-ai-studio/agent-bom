@@ -14,6 +14,16 @@ from agent_bom.api.trend_recording import record_scan_trend_best_effort
 from agent_bom.security import sanitize_error, sanitize_text
 
 
+def _store_pushed_job(store: Any, job: ScanJob) -> None:
+    """Publish detached evidence before graph enrichment can mutate the writer's report.
+
+    SQL stores serialize on put. The ephemeral store retains references, so it
+    needs its own snapshot to keep concurrent current-estate readers stable.
+    """
+    stored = job.model_copy(deep=True) if getattr(store, "retains_job_objects_in_memory", False) else job
+    store.put(stored)
+
+
 def _prepare_push_endpoint(body: PushPayload, job: ScanJob, job_result: dict, tenant_id: str) -> tuple:
     fleet_store = _get_fleet_store()
     previous_endpoint = None

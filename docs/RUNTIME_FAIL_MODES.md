@@ -333,6 +333,15 @@ are disabled because legacy runs lack durable ownership records. Reconcile
 those resources manually using saved IDs and provider events; no clean-state
 claim follows from an empty sweep result.
 
+## Graph roll-up warm-up failures
+
+Roll-up warming is a best-effort cache optimization. A failed warm-up does not
+change persisted scan evidence; the next reader computes the view cold. A fatal
+worker exit releases its busy state and discards only pending cache warm-ups,
+while the original exception remains visible. New commits can start another
+worker. Pushed reports use detached snapshots in the in-memory job store so
+background readers do not serialize the writer's report during graph enrichment.
+
 ## Stdio tool-definition drift
 
 The stdio proxy compares each completed `tools/list` catalog with its session

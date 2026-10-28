@@ -144,6 +144,28 @@ def test_a_failing_warm_up_never_reaches_the_writer(monkeypatch) -> None:
     assert graph_rollup_prewarm.wait_idle(5)
 
 
+def test_fatal_worker_exit_releases_busy_state_without_hiding_failure(monkeypatch):
+    from collections import OrderedDict
+
+    class WorkerPanic(BaseException):
+        pass
+
+    def panic():
+        raise WorkerPanic("serializer panic")
+
+    idle = threading.Event()
+    monkeypatch.setattr(graph_rollup_prewarm, "_PENDING", OrderedDict([("tenant-a", panic)]))
+    monkeypatch.setattr(graph_rollup_prewarm, "_IDLE", idle)
+    monkeypatch.setattr(graph_rollup_prewarm, "_WORKER", threading.current_thread())
+    try:
+        with pytest.raises(WorkerPanic, match="serializer panic"):
+            graph_rollup_prewarm._drain()
+        assert idle.is_set()
+        assert graph_rollup_prewarm._WORKER is None
+    finally:
+        idle.set()
+
+
 def test_prewarm_can_be_disabled(monkeypatch) -> None:
     calls: list[str] = []
     monkeypatch.setattr(graph_rollup_prewarm, "prewarm_rollup", lambda _store, *, tenant_id: calls.append(tenant_id) or 0)
