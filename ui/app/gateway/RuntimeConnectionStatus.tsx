@@ -39,7 +39,15 @@ export function RuntimeConnectionStatus({ tenantId, streamState, events, onBlock
   return <section aria-label="Runtime connection status" className="my-4 rounded-lg border border-[var(--border-subtle)] p-3">
     <h4 className="mb-3 text-sm font-semibold">Runtime connection status</h4>
     <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {cards.map(([label, value, hint]) => <div key={label} className="min-w-0"><dt className="text-xs text-[var(--text-secondary)]">{label}</dt><dd className="mt-1 break-words text-sm font-medium">{value}</dd><p className="mt-1 text-xs text-[var(--text-secondary)]">{hint}</p></div>)}
+      {cards.map(([label, value, hint]) => (
+        <div key={label} className="min-w-0">
+          <dt className="text-xs text-[var(--text-secondary)]">{label}</dt>
+          <dd className="mt-1 break-words text-sm font-medium">
+            {value}
+            <p className="mt-1 text-xs font-normal text-[var(--text-secondary)]">{hint}</p>
+          </dd>
+        </div>
+      ))}
     </dl>
     <div className="mt-3 flex flex-wrap gap-2 text-xs">
       <Link className="graph-page-action" href="/runtime?tab=gateway">Configure clients and gateway</Link>

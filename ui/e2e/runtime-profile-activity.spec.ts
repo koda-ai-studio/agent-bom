@@ -1,4 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { createRequire } from "node:module";
+
+const resolveModule = createRequire(`${__dirname}/../package.json`);
+// Test-only instrumentation; production CSP remains unchanged.
+test.use({ bypassCSP: true });
 
 const profile = { config_id: "finance-prod", tenant_id: "tenant-a", name: "Finance production", identity_id: "identity-a", profile_id: "finance", revision: 3, status: "active", revoked: false, issuer: "agent-bom", environment: "prod", connector_ids: ["filesystem"], allowed_tools: ["read_file"], required_scopes: ["tools:read"], policy_ids: ["policy-finance"], connection_ids: [], expires_at: "" };
 const event = (i: number) => ({ source_id: i % 2 ? "gateway-east" : "gateway-west", session_id: "fixture-session", tenant_id: "tenant-a", event_id: `event-${i}`, ingest_ordinal: i, event_type: i % 3 ? "gateway.tool_call.allowed" : "gateway.runtime_profile.blocked", event_timestamp: "2026-09-08T12:00:00Z", ingested_at: "2026-09-08T12:00:01Z", agent_id: i === 3 ? "extremely-long-payroll-agent-name-used-to-verify-mobile-wrapping" : "payroll-agent", identity_id: "identity-a", upstream: "filesystem", tool: "read_file", decision: i % 3 ? "allow" : "deny", profile_id: "finance-prod", profile_revision: 3, blueprint_id: "finance", blueprint_revision: 1, policy_ids: ["policy-finance"], policy_id: "policy-finance", evidence_id: "evidence-7", trace_id: "trace-7", reason_code: i % 3 ? "resolved" : "environment_mismatch", data_action: "", development_mode: false });
@@ -52,6 +57,13 @@ for (const theme of ["light", "dark"] as const) {
     const groups = page.getByRole("region", { name: "Reported activity groups", exact: true });
     await expect(groups).toBeVisible();
     await expect(groups.getByRole("button")).toHaveCount(3);
+    await page.addScriptTag({ path: resolveModule.resolve("axe-core/axe.min.js") });
+    const violations = await page.evaluate(async () => {
+      const axe = (window as unknown as { axe: typeof import("axe-core") }).axe;
+      const result = await axe.run('[aria-label="Runtime connection status"]');
+      return result.violations.filter(item => item.impact === "serious" || item.impact === "critical");
+    });
+    expect(violations).toEqual([]);
     await page.screenshot({ fullPage: true, path: testInfo.outputPath(`groups-${theme}-desktop.png`) });
     await page.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
