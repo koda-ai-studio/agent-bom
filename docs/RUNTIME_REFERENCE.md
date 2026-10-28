@@ -67,6 +67,14 @@ the delivery receipt is verified. SQLite's UTC expression index is built once
 on upgrade; before running an older binary against that file, stop writers and
 drop only `idx_gateway_activity_window` (the event records remain unchanged).
 
+The Postgres upgrade also stores a normalized drift blueprint key so tenant-RLS
+lookups can filter in the index. Migration `20261027_03` rewrites
+`drift_incidents` while holding a write lock: schedule a maintenance window for
+large tables and run migrations before starting the new API/gateway version.
+Existing writers remain compatible; PostgreSQL computes the key from their JSON
+writes. Downgrading this migration preserves incident records but requires
+stopping the new application first.
+
 ### Runtime doc set
 
 This page is the canonical runtime surface map. The detail docs:

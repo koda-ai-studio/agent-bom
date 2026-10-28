@@ -238,6 +238,7 @@ def test_startup_requires_campaign_checkpoint_migration(monkeypatch):
     from agent_bom.api.storage import registry_stores
 
     checked = []
+    versions = {}
 
     class Connection:
         def execute(self, *args):
@@ -248,8 +249,9 @@ def test_startup_requires_campaign_checkpoint_migration(monkeypatch):
         def connection(self):
             yield Connection()
 
-    def validate(conn, component):
+    def validate(conn, component, version=1):
         checked.append(component)
+        versions[component] = version
         if component == "campaign_evidence_state":
             raise RuntimeError("required campaign migration missing")
 
@@ -258,6 +260,7 @@ def test_startup_requires_campaign_checkpoint_migration(monkeypatch):
     with pytest.raises(RuntimeError, match="campaign migration missing"):
         registry_stores.validate_postgres_registries()
     assert "campaign_evidence_state" in checked
+    assert versions["drift_incidents"] == 2
 
 
 def _paged_source(monkeypatch, pages):

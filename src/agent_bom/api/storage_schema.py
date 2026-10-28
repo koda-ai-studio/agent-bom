@@ -102,7 +102,7 @@ CONTROL_PLANE_SCHEMA_COMPONENTS: tuple[StorageSchemaComponent, ...] = (
     StorageSchemaComponent("issue_mappings", "sqlite/postgres", ("issue_mappings",)),
     StorageSchemaComponent("dataset_versions", "sqlite/postgres", ("dataset_versions",)),
     StorageSchemaComponent("evaluation_runs", "sqlite/postgres", ("evaluation_runs",)),
-    StorageSchemaComponent("drift_incidents", "sqlite/postgres", ("drift_incidents",)),
+    StorageSchemaComponent("drift_incidents", "sqlite/postgres", ("drift_incidents",), version=2),
     StorageSchemaComponent("export_schedules", "sqlite/postgres", ("export_schedules",)),
     StorageSchemaComponent("export_destinations", "sqlite/postgres", ("export_destinations",)),
     StorageSchemaComponent("graph_scenarios", "sqlite/postgres", ("graph_scenarios",)),

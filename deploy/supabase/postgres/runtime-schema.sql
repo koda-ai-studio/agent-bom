@@ -692,8 +692,14 @@ DROP POLICY IF EXISTS drift_incidents_tenant_isolation ON public.drift_incidents
 CREATE POLICY drift_incidents_tenant_isolation ON public.drift_incidents USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant()) WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.drift_incidents TO agent_bom_app, agent_bom_rls_maintenance;
 INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('drift_incidents',1,now()) ON CONFLICT(component) DO UPDATE SET version=GREATEST(control_plane_schema_versions.version,1);
--- Gateway drift enforcement reads open incidents per (tenant, blueprint); see 20261024_01.
-CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_blueprint_open ON public.drift_incidents (tenant_id, (lower(replace(btrim(data->>'blueprint_id', E' \t\n\x0b\f\r'), '-', '_'))), last_detected_at DESC) WHERE NOT resolved;
+-- Stored normalization permits the restricted RLS role to seek the blueprint.
+ALTER TABLE public.drift_incidents ADD COLUMN IF NOT EXISTS blueprint_key TEXT
+ GENERATED ALWAYS AS (lower(replace(btrim(data->>'blueprint_id', E' \t\n\x0b\f\r'), '-', '_'))) STORED;
+CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_blueprint_key_open ON public.drift_incidents
+ (tenant_id, blueprint_key, last_detected_at DESC, incident_id DESC) WHERE NOT resolved;
+DROP INDEX IF EXISTS public.idx_drift_incidents_tenant_blueprint_open;
+ANALYZE public.drift_incidents;
+UPDATE control_plane_schema_versions SET version=GREATEST(version,2),updated_at=now() WHERE component='drift_incidents';
 
 
 CREATE TABLE IF NOT EXISTS public.campaign_evidence_state (

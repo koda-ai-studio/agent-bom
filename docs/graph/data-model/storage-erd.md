@@ -354,6 +354,7 @@ Tables defined for both backends whose column sets differ (columns added by `ALT
 | `api_keys` | `created_by`, `last_used`, `revoked`, `team_id` | `tenant_id` |
 | `audit_chain_checkpoint` | `updated_at` | — |
 | `audit_log` | `team_id` | `tenant_id` |
+| `drift_incidents` | `blueprint_key` | — |
 | `exceptions` | `team_id` | `tenant_id` |
 | `fleet_agents` | — | `device_fingerprint` |
 | `gateway_policies` | `team_id` | `enabled`, `mode`, `name`, `tenant_id`, `updated_at` |
