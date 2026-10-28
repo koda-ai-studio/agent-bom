@@ -411,3 +411,22 @@ def _complete_correlation_run_atomically(
     )
     if conn.execute("SELECT changes()").fetchone()[0] != 1:
         raise RuntimeError("correlation run changed during atomic completion")
+
+
+def checkpoint_wal(conn: sqlite3.Connection) -> bool:
+    """Fold the write-ahead log back into the main file after a bulk save.
+
+    A snapshot save appends tens of megabytes to ``-wal`` that SQLite only
+    reclaims at its own auto-checkpoint pace while readers keep the log pinned.
+    Runs outside any transaction (callers commit first) and is best effort:
+    ``True`` when the log was truncated, ``False`` when the database is not in
+    WAL mode, a reader still pins the log, or the connection is unusable.
+    """
+    try:
+        if conn.in_transaction:
+            return False
+        row = conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+    except sqlite3.Error:
+        return False
+    # (busy, log_frames, checkpointed_frames); -1 frames means no WAL.
+    return bool(row) and row[0] == 0 and row[1] >= 0

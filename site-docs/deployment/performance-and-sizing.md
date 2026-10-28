@@ -95,9 +95,16 @@ That example already enables:
 Current chart defaults in [values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/values.yaml):
 
 - replicas: `2`
-- requests: `100m` CPU / `256Mi` memory
-- limits: `1000m` CPU / `1Gi` memory
+- requests: `100m` CPU / `512Mi` memory
+- limits: `1000m` CPU / `2Gi` memory
 - `HPA` packaged but off by default
+
+A worker that serves the exec reads (posture, compliance, fix-first) holds the
+tenant's graph snapshot and stored scan payloads resident while it builds the
+body: roughly 750Mi for a 5k-node estate. Repeated reads are served from a
+60-second per-process response cache keyed on the evidence generation
+(`AGENT_BOM_READ_CACHE_TTL_SECONDS`, `0` disables it), so the limit covers one
+cold rebuild per worker, not one per request.
 
 Recommended production operator posture:
 

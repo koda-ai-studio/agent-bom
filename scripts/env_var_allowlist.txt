@@ -374,6 +374,8 @@ AGENT_BOM_OFFLINE
 AGENT_BOM_OVERVIEW_CACHE_TTL_SECONDS
 # How long a concurrent /v1/overview reader waits on the in-flight fold before recomputing itself; read at call time.
 AGENT_BOM_OVERVIEW_SINGLEFLIGHT_TIMEOUT_SECONDS
+# TTL (seconds) for the per-process exec read response cache (posture, compliance, fix-first view); read at call time. 0 disables.
+AGENT_BOM_READ_CACHE_TTL_SECONDS
 # Rows one scope-filtered /v1/findings page walk may examine before it stops and reports a partial page; read at call time.
 AGENT_BOM_SCOPE_FILTER_SCAN_BUDGET
 # Wall-clock ceiling (seconds) for one scope-filtered /v1/findings page walk; read at call time.

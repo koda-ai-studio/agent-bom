@@ -21,7 +21,6 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 from agent_bom.api import read_models
-from agent_bom.api.finding_read_context import finding_read_snapshot
 from agent_bom.api.hub_ingest import read_compliance_ingest_body
 from agent_bom.api.models import ComplianceReportBundle, JobStatus
 from agent_bom.api.read_models._base import documented
@@ -31,7 +30,7 @@ from agent_bom.api.read_models.compliance import (
     FrameworkComplianceResponse,
     Nist80053DrillResponse,
 )
-from agent_bom.api.routes.compliance_routes import cis, reads
+from agent_bom.api.routes.compliance_routes import cis, common, reads
 from agent_bom.api.routes.compliance_routes.bundle import (
     _attach_signer_key,
     _audit_window,
@@ -50,7 +49,6 @@ from agent_bom.api.routes.compliance_routes.common import _POSTURE_COUNTS_CACHE 
 from agent_bom.api.routes.compliance_routes.common import (
     SEEDING_GUARD,
     _compliance_evidence_authority_key,
-    _get_hub_posture_impl,
     _get_posture_counts_impl,
     _latest_aisvs_benchmark_from_jobs,
     _tenant_id,
@@ -118,7 +116,7 @@ async def get_compliance(
     return await anyio.to_thread.run_sync(_compliance_for_request, request, scan_id)
 
 
-@finding_read_snapshot
+@common.cached_compliance_snapshot
 def _compliance_for_request(request: Request, scan_id: str | None) -> dict[str, Any]:
     return _build_compliance(jobs := _tenant_jobs(request), scan_id=scan_id, cis_graph=cis.current_cis_graph(request, scan_id, jobs))
 
@@ -779,7 +777,9 @@ async def get_posture_counts(request: Request) -> dict:
     """
     try:
         async with adaptive_backpressure("overview"):
-            return await anyio.to_thread.run_sync(_get_posture_counts_impl, request)
+            return await anyio.to_thread.run_sync(
+                common.cached_tenant_read, request, "posture_counts", (), lambda: _get_posture_counts_impl(request)
+            )
     except BackpressureRejectedError as exc:
         raise HTTPException(
             status_code=429,
@@ -958,7 +958,7 @@ async def get_hub_posture(request: Request) -> dict:
     """
     try:
         async with adaptive_backpressure("compliance"):
-            return await anyio.to_thread.run_sync(_get_hub_posture_impl, request)
+            return await anyio.to_thread.run_sync(common._cached_hub_posture, request)
     except BackpressureRejectedError as exc:
         raise HTTPException(
             status_code=429,

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from functools import wraps
 from typing import Any, cast
 
 import anyio.to_thread
@@ -13,8 +15,10 @@ from agent_bom.api.compliance_hub_store import get_compliance_hub_store as _hub_
 from agent_bom.api.credential_rotation import build_credential_rotation_governance
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.finding_read_context import finding_read_snapshot
+from agent_bom.api.finding_suppression import suppression_revision
 from agent_bom.api.models import JobStatus
 from agent_bom.api.posture_counts_cache import POSTURE_COUNTS_CACHE, cached_posture_block
+from agent_bom.api.read_cache import cached_read
 from agent_bom.api.routes.compliance_routes.evidence import (
     _build_aisvs_payload,
     _result_evidence_context,
@@ -54,6 +58,48 @@ def _tenant_id(request: Request) -> str:
 
 def _tenant_jobs(request: Request) -> list:
     return cast(list, _get_store().list_all(tenant_id=_tenant_id(request)))
+
+
+def evidence_generation(tenant_id: str) -> str | None:
+    """Token covering every evidence store a tenant's exec reads derive from.
+
+    Job-store, hub, suppression and graph-snapshot revisions are each advanced
+    by their writers, so a body cached under one generation can never survive a
+    new scan, ingest, exception or seed. ``None`` when a store cannot report a
+    token (the in-memory job store): callers then compute without caching.
+    """
+    reader = getattr(_get_store(), "overview_evidence_revision", None)
+    if not callable(reader):
+        return None
+    try:
+        jobs = str(reader(tenant_id))
+        hub = str(_hub_store().overview_evidence_revision(tenant_id))
+        suppressions = suppression_revision(tenant_id)
+        graph = str(_get_graph_store().latest_snapshot_id(tenant_id=tenant_id, snapshot_kind="scan"))
+    except Exception:  # noqa: BLE001 - a failing token read disables caching, never staleness
+        return None
+    return f"jobs={jobs}|hub={hub}|suppressions={suppressions}|graph={graph}"
+
+
+def cached_tenant_read(request: Request, kind: str, params: Any, compute: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    """Serve ``compute()`` from the response cache while the tenant's evidence generation holds."""
+    tenant_id = require_request_tenant_id(request)
+    return cached_read(kind, tenant_id, params, compute, generation=evidence_generation(tenant_id))
+
+
+def cached_compliance_snapshot(fn: Callable[[Request, str | None], dict[str, Any]]) -> Callable[[Request, str | None], dict[str, Any]]:
+    """``finding_read_snapshot`` for ``(request, scan_id)`` readers, served through the response cache."""
+    snapshot = finding_read_snapshot(fn)
+
+    @wraps(fn)
+    def read(request: Request, scan_id: str | None) -> dict[str, Any]:
+        return cached_tenant_read(request, "compliance", (("scan_id", scan_id),), lambda: snapshot(request, scan_id))
+
+    return read
+
+
+def _cached_hub_posture(request: Request) -> dict:
+    return cached_tenant_read(request, "hub_posture", (), lambda: _get_hub_posture_impl(request))
 
 
 def _credential_rotation_governance(tenant_id: str) -> dict[str, Any]:
