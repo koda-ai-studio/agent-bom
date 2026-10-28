@@ -25,6 +25,7 @@ from agent_bom.runtime.gateway_events import GatewayRuntimeEventType, build_gate
 from agent_bom.runtime.gateway_policy_reload import GatewayPolicyReloader
 from agent_bom.runtime.gateway_settings import GatewaySettings
 from agent_bom.runtime.graph_reachability import ReachabilityMap
+from agent_bom.runtime.withheld_tools import WithheldToolRegistry
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger("agent_bom.gateway_server")
@@ -144,6 +145,7 @@ class RelayRuntime:
     visual_detector: Callable[[], Any]
     response_scanner: Callable[[dict[str, Any], ScanConfig], tuple[dict[str, Any], list[ScanResult]]]
     tracer: Any
+    withheld_tools: WithheldToolRegistry = field(default_factory=WithheldToolRegistry)
 
     async def audit(self, event: dict[str, Any]) -> None:
         if self.settings.audit_sink is not None:

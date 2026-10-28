@@ -381,7 +381,10 @@ CREATE TABLE IF NOT EXISTS trend_history (
     low           INTEGER NOT NULL DEFAULT 0,
     posture_score REAL NOT NULL DEFAULT 0,
     posture_grade TEXT NOT NULL DEFAULT '',
-    scan_id       TEXT
+    scan_id       TEXT,
+    -- Nullable: legacy rows never measured KEV; migration 20261022_01 adds it
+    -- to databases bootstrapped before this column shipped.
+    kev_count     INTEGER CHECK (kev_count >= 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_trend_history_team_ts ON trend_history(team_id, timestamp DESC);

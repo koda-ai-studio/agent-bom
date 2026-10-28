@@ -1452,11 +1452,21 @@ jobs:
         if: steps.pin.outputs.changed == 'true'
         env:
           AUTOMATION_SSH_SIGNING_KEY: ${{ secrets.AUTOMATION_SSH_SIGNING_KEY }}
+          TAG: ${{ github.ref_name }}
+          TAGGED_SHA: ${{ github.sha }}
         run: |
           if [ -z "$AUTOMATION_SSH_SIGNING_KEY" ]; then
-            echo "AUTOMATION_SSH_SIGNING_KEY not configured — skipping PR creation."
+            # Exiting 0 here used to leave main on the previous PUBLISHED_VERSION
+            # with no failing check anywhere. Fail the step so the run shows it.
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "::error::AUTOMATION_SSH_SIGNING_KEY is not configured; the post-release pin PR for ${TAG} was not opened. PUBLISHED_VERSION and the Docker MCP pin still name the previous release."
+            {
+              echo "## Post-release pins NOT synced"
+              echo
+              echo "\`AUTOMATION_SSH_SIGNING_KEY\` is not configured, so no pin-update PR was opened for \`${TAG}\`."
+              echo "Configure the secret and re-run this job, or open the PR by hand: \`python scripts/sync_docker_mcp_pin.py --set ${TAGGED_SHA}\` and \`python scripts/bump-version.py --published ${TAG#v}\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
           mkdir -p "$HOME/.ssh"
           printf '%s\n' "$AUTOMATION_SSH_SIGNING_KEY" > "$HOME/.ssh/automation_signing_key"
@@ -1534,6 +1544,20 @@ jobs:
       - name: Pins already current
         if: steps.pin.outputs.changed == 'false'
         run: echo "Docker MCP pin and PUBLISHED_VERSION already name ${{ github.ref_name }}."
+
+      - name: Report un-synced pins on the run summary
+        # continue-on-error keeps the release green, so a failure above would
+        # otherwise be visible only inside this job's log. Put it on the run page.
+        if: failure()
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          echo "::error::Post-release pin sync for ${TAG} failed; main still names the previous PUBLISHED_VERSION and Docker MCP pin."
+          {
+            echo "## Post-release pin sync failed for ${TAG}"
+            echo
+            echo "The release artifacts are published, but \`PUBLISHED_VERSION\` and the Docker MCP pin on \`main\` were not updated. Re-run the \`Sync post-release pins\` job after fixing the step above."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-mcp-sse:
     name: Deploy MCP SSE

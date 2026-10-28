@@ -71,7 +71,8 @@ decide what happens on a detection.
 | | `alert` (default in 0.111.0) | `enforce` |
 |---|---|---|
 | Poisoned tool description | forwarded; alert | tool removed from `tools/list`; alert `action: stripped` |
-| Later call to a removed tool | forwarded | proxy rejects it before the server sees it; alert `action: blocked` |
+| Later call to a removed tool | forwarded | proxy and gateway reject it before the server sees it; alert `action: blocked` |
+| Non-JSON-RPC upstream stdout (stdio proxy) | forwarded (scanned when inline scanning is on) | dropped, never relayed; alert `action: blocked`, category `unparsed_stdout` |
 | Injected tool result | forwarded; alert | result replaced by a JSON-RPC error; alert `action: blocked` |
 | Detector error | fail-open: forwarded; `detector_error` alert | fail-closed: that tool or result withheld; alert tagged as above |
 
@@ -93,10 +94,16 @@ in the gateway policy file (at startup or after a hot reload) is treated as
 The SSE/HTTP proxy (`agent-bom proxy --url`) has no enforcement path yet and
 refuses to start when `enforce` is selected; use the stdio proxy or the gateway.
 
-What enforcement acts on: `response_inspector` detections in the categories
-`prompt_injection`, `semantic_injection`, `cloaking`, `svg_payload` and
-`invisible_text` at high or critical severity, and all `vector_db_injection`
-detections. Medium-severity semantic scores and base64 blobs stay alert-only.
+What enforcement acts on (the enforce threshold): `response_inspector`
+detections in the categories `prompt_injection`, `semantic_injection`,
+`cloaking`, `svg_payload` and `invisible_text` at **high or critical**
+severity, and all `vector_db_injection` detections, block or strip.
+**Medium**-severity detections (semantic scores under the high band, base64
+blobs) are forwarded with an alert in both profiles; enforce does not raise
+their severity. In enforce mode the stdio proxy also drops upstream stdout that
+is not JSON-RPC, whether or not inline scanning is enabled (the bytes are never
+copied into the alert, only their length), because an unparsed line is an
+outbound channel no detector has inspected.
 Error responses and notifications are not inspected by this profile; inline
 scanning (`inline_scanning` in the policy) and gateway DLP still cover them.
 
@@ -105,9 +112,21 @@ only place a tool carries instructions (`inputSchema` field descriptions and
 annotations are scanned as well), and a placeholder description would leave a
 callable tool whose behaviour the client can no longer judge. Removing it fails
 safe. The stdio proxy also refuses calls to it for the rest of the session; a
-later clean `tools/list` restores it. The gateway relay keeps no session state,
-so it strips the tool from each listing but does not refuse a call made with a
-cached name. The result of such a call is still inspected.
+later clean `tools/list` restores it. The gateway relay keeps no session, so it
+remembers withheld names per `(tenant, upstream)` in a process-local registry
+(`agent_bom.runtime.withheld_tools`, at most 4096 entries, 24 h TTL, oldest
+evicted first) and refuses a `tools/call` made with a cached name before
+admission and before any upstream call. The refusal is the same `-32001`
+envelope as a blocked result (`categories: ["withheld_tool"]`) and is audited
+as `gateway.injection_alert` with `action: blocked` plus the typed
+`gateway.tool_call.blocked` event (`data_action: withheld_tool_call_blocked`).
+Fail mode: the registry is memory on one replica. A replica that never saw the
+poisoned listing, a restart, TTL expiry or eviction under a hostile 4096+ tool
+flood all forget the name (fail-open for that call), and the call's result is
+still inspected and blocked on detection. The registry is only consulted while
+the effective mode is `enforce`; switching to `alert` forwards calls again.
+Audit delivery failure while refusing never forwards the call: the response is
+still the refusal, marked `X-Agent-BOM-Audit-Delivery: degraded`.
 
 The replacement error for a blocked result is:
 
@@ -325,7 +344,9 @@ A declaration change under an unchanged name emits a HIGH
 included in these alerts or persisted; only per-field SHA-256 fingerprints are
 held in memory. Durable audit records retain the tool name and a normalized
 change reason; detailed field lists follow the existing replay-only redaction
-policy. JSON object key order does not create drift. Name-only Shield
+policy. JSON object key order, schema `required`/`enum` set order and declaration
+`icons` order do not create drift. Arrays inside literal schema values or vendor
+metadata retain their order, so changing them still produces drift. Name-only Shield
 callers and persisted server-scoped name baselines retain their existing contract;
 definition fingerprints are established anew in each session.
 

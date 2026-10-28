@@ -19,7 +19,7 @@ from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.reference import parse_reference
 from agent_bom.scanners.state import reset_scan_warnings
 from tests._oci_image_builder import build_image, dpkg_status
-from tests._oci_registry_fake import REGISTRY, FakeRegistry
+from tests._oci_registry_fake import AUTH_HOST, REGISTRY, FakeRegistry
 
 REF = f"{REGISTRY}/team/app:1.0"
 
@@ -118,9 +118,50 @@ def test_server_scan_honours_the_registry_allowlist(registry, monkeypatch):
         scan_image(REF, server_context=True)
     assert registry.requests == []
 
-    monkeypatch.setenv("AGENT_BOM_REGISTRY_ALLOWLIST", REGISTRY)
+    # The registry's bearer-token realm lives on another host; an allowlist must name it too.
+    monkeypatch.setenv("AGENT_BOM_REGISTRY_ALLOWLIST", f"{REGISTRY},{AUTH_HOST}")
     packages, strategy = scan_image(REF, server_context=True)
     assert (strategy, [p.name for p in packages]) == ("registry", ["bash"])
+
+
+def test_server_allowlist_refuses_a_token_realm_on_an_unlisted_host(registry, monkeypatch):
+    registry.push_image("team/app", _image(), "1.0")
+    monkeypatch.setenv("AGENT_BOM_REGISTRY_ALLOWLIST", REGISTRY)
+
+    with pytest.raises(ImageScanError, match="egress policy") as raised:
+        scan_image(REF, server_context=True)
+
+    assert not [r for r in registry.requests if r.url.host == AUTH_HOST]
+    assert "HTTP" not in str(raised.value)
+
+
+def test_server_allowlist_accepts_a_token_realm_on_the_registry_itself(registry, monkeypatch):
+    registry.push_image("team/app", _image(), "1.0")
+    monkeypatch.setenv("AGENT_BOM_REGISTRY_ALLOWLIST", REGISTRY)
+    assert RegistryPolicy.for_server().realm_refusal(parse_reference(REF), REGISTRY) is None
+    assert RegistryPolicy.for_server().realm_refusal(parse_reference(REF), f"{REGISTRY}:443") is None
+
+
+def test_server_scan_without_an_allowlist_keeps_accepting_a_separate_token_realm(registry, monkeypatch):
+    registry.push_image("team/app", _image(), "1.0")
+    monkeypatch.delenv("AGENT_BOM_REGISTRY_ALLOWLIST", raising=False)
+    packages, strategy = scan_image(REF, server_context=True)
+    assert (strategy, [p.name for p in packages]) == ("registry", ["bash"])
+    assert [r for r in registry.requests if r.url.host == AUTH_HOST]
+
+
+@pytest.mark.parametrize("entry", ["docker.io", "index.docker.io", "registry-1.docker.io"])
+def test_docker_hub_allowlist_entry_covers_every_hub_alias_and_its_token_realm(monkeypatch, entry):
+    """Hub references normalise to registry-1.docker.io; `docker.io` in the allowlist must still admit them."""
+    monkeypatch.setenv("AGENT_BOM_REGISTRY_ALLOWLIST", entry)
+    policy = RegistryPolicy.for_server()
+    ref = parse_reference("library/alpine:3.20")
+    assert ref.registry == "registry-1.docker.io"
+    assert policy.refusal(ref) is None
+    assert policy.permits_host("index.docker.io") and policy.permits_host("docker.io")
+    assert policy.realm_refusal(ref, "auth.docker.io") is None
+    assert not policy.permits_host("ghcr.io")
+    assert policy.realm_refusal(ref, "auth.example.test") is not None
 
 
 def test_server_scan_skips_a_base_image_label_pointing_at_another_registry(registry):

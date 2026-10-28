@@ -229,6 +229,9 @@ class RegistryClient:
 
     def _fetch_token(self, params: dict[str, str]) -> str:
         realm = validate_realm(params.get("realm", ""), allow_plain_http=self.policy.allows_plain_http(self.ref))
+        reason = self.policy.realm_refusal(self.ref, urlparse(realm).hostname or "")
+        if reason is not None:
+            raise RegistryPolicyError(f"Registry refused by server-side egress policy: {reason}")
         query = {k: v for k, v in params.items() if k in {"service", "scope"} and v}
         query.setdefault("scope", f"repository:{self.ref.repository}:pull")
         credential = self._credential or ANONYMOUS

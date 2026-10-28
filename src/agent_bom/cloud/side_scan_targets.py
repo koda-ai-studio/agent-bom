@@ -33,8 +33,8 @@ from .side_scan import (
     is_sidescan_enabled,
     scan_workload_disk_findings,
 )
-from .side_scan_images import resolve_target_type
 from .side_scan_lifecycle import SideScanProvider
+from .side_scan_preflight import validate_provider_side_scan_request
 
 # Type of the pluggable SDK-client factory: given a provider (plus subscription /
 # project id and optional region) it returns the already-authenticated provider
@@ -462,35 +462,31 @@ async def run_provider_side_scan(
     authorization_ref: str = "",
     mount_controller: MountController | None = None,
     sleep: Callable[[float], None] = time.sleep,
+    allow_ambient: bool = False,
 ) -> list[CloudSideScanExecutionResult]:
     """Run one Azure/GCP disk or GCE image side-scan end to end from the CLI/API/MCP/scheduler.
 
     Builds the durable lifecycle record and the injected-SDK adapter, then drives
     :func:`run_cloud_side_scan_targets` (owned-resource teardown, incomplete
     cleanup persisted). AWS keeps :func:`agent_bom.cloud.side_scan.run_side_scan`.
-    ``client_factory`` resolves credentials from the provider default chain
-    (tests inject fakes); ``credentialed_smoke`` stays ``False`` until proven live.
+    ``client_factory`` supplies provider SDK clients bound to the caller's
+    authorized credential (REST/MCP/scheduler pass the tenant-scoped connection
+    factory; tests inject fakes). The provider default credential chain is used
+    only when the operator-run CLI opts in with ``allow_ambient=True``; a
+    tenant-scoped caller that omits the factory fails closed before any state is
+    written. ``credentialed_smoke`` stays ``False`` until proven live.
     """
-    if provider not in {"azure", "gcp"}:
-        raise SideScanConfigError("run_provider_side_scan handles only azure|gcp; use run_side_scan for AWS EBS")
-    if not is_sidescan_enabled():
-        raise SideScanDisabledError(
-            "Disk side-scan is opt-in and currently OFF. Set AGENT_BOM_SIDESCAN=1 and provide a scoped snapshot role "
-            "plus an in-account collector instance."
-        )
-
-    required = (
-        ("--volume-id (target disk id)", target_id),
-        ("--account-id (subscription/project)", account_id),
-        ("--availability-zone (disk location/zone)", location),
-        ("--collector-instance-id (in-account collector)", collector_id),
+    lifecycle_type = validate_provider_side_scan_request(
+        provider=provider,
+        target_id=target_id,
+        account_id=account_id,
+        location=location,
+        collector_id=collector_id,
+        target_type=target_type,
+        collector_resource_group=collector_resource_group,
+        has_client_factory=client_factory is not None,
+        allow_ambient=allow_ambient,
     )
-    missing = [label for label, value in required if not str(value).strip()]
-    if missing:
-        raise SideScanConfigError(f"{provider} side-scan requires: {', '.join(missing)}")
-    lifecycle_type = resolve_target_type(provider, target_type)
-    if provider == "azure" and not str(collector_resource_group or "").strip():
-        raise SideScanConfigError("Azure Managed Disk side-scan requires --collector-resource-group for the in-account collector VM")
 
     from .side_scan_lifecycle import (
         CleanupStatus,
@@ -586,7 +582,7 @@ async def run_provider_side_scan(
     claimed = execution.transition(status=ExecutionStatus.RUNNING)
     store.save(claimed, expected_version=execution.state_version)
     execution = claimed
-    factory = client_factory or _default_provider_clients
+    factory: ProviderClientFactory = client_factory if client_factory is not None else _default_provider_clients
     try:
         clients = factory(provider, account_id=account_id, region=region)
         lifecycle: CloudSideScanLifecycle

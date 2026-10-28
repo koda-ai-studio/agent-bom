@@ -21,8 +21,9 @@ from agent_bom.security import sanitize_text
 INJECTION_MODES = ("alert", "enforce")
 INJECTION_MODE_HELP = (
     "Poisoned tool descriptions / injected tool results: alert (default) forwards them with an alert; enforce strips the "
-    "poisoned tool from tools/list and withholds the injected result. A policy file's injection_mode can also select "
-    "enforce. See docs/RUNTIME_FAIL_MODES.md."
+    "poisoned tool from tools/list, refuses later calls to it, withholds the injected result and drops non-JSON-RPC "
+    "upstream stdout. Only high/critical response-inspector detections (and any vector_db_injection) block; medium ones "
+    "are forwarded with an alert. A policy file's injection_mode can also select enforce. See docs/RUNTIME_FAIL_MODES.md."
 )
 DEFAULT_INJECTION_MODE = "alert"
 POLICY_KEY = "injection_mode"
@@ -210,6 +211,17 @@ def inspect_server_result(
     for alert in triggers:
         alert.action = "blocked"
     return InjectionOutcome(blocked_result(message, triggers), alerts, blocked=True)
+
+
+def unparsed_output_alert(size: int) -> Alert:
+    """Enforce mode dropped upstream stdout that was not JSON-RPC; the bytes themselves are never recorded."""
+    return Alert(
+        detector=POLICY_SOURCE,
+        severity=AlertSeverity.MEDIUM,
+        message="Dropped non-JSON-RPC upstream stdout in enforce mode",
+        details={"category": "unparsed_stdout", "bytes": int(size)},
+        action="blocked",
+    )
 
 
 def withheld_tool_call_alert(tool_name: str) -> Alert:

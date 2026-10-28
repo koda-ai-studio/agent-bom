@@ -70,9 +70,60 @@ _DECLARATION_TYPES = {
 }
 
 
+_SCHEMA_MAPS = frozenset({"properties", "patternProperties", "$defs", "definitions", "dependentSchemas", "dependencies"})
+_SCHEMA_CHILDREN = frozenset(
+    {
+        "items",
+        "additionalItems",
+        "contains",
+        "additionalProperties",
+        "unevaluatedItems",
+        "unevaluatedProperties",
+        "propertyNames",
+        "not",
+        "if",
+        "then",
+        "else",
+    }
+)
+_SCHEMA_ARRAYS = frozenset({"allOf", "anyOf", "oneOf", "prefixItems"})
+
+
+def _sort_set(items: list) -> list:
+    return sorted(items, key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=True, allow_nan=False))
+
+
+def _canonical_schema(value: object) -> object:
+    """Normalize schema sets only; literal values and extension data retain array order."""
+    if not isinstance(value, dict):
+        return value
+    result = dict(value)
+    for key, child in value.items():
+        if key in {"required", "enum"} and isinstance(child, list):
+            result[key] = _sort_set(child)
+        elif key in _SCHEMA_MAPS and isinstance(child, dict):
+            result[key] = {name: _canonical_schema(schema) for name, schema in child.items()}
+        elif (key in _SCHEMA_ARRAYS or key == "items") and isinstance(child, list):
+            result[key] = [_canonical_schema(schema) for schema in child]
+        elif key in _SCHEMA_CHILDREN:
+            result[key] = _canonical_schema(child)
+    return result
+
+
+def _canonical(value: object, key: str | None = None) -> object:
+    """Normalize only declaration fields with known order-insensitive semantics."""
+    if key in {"inputSchema", "outputSchema"}:
+        return _canonical_schema(value)
+    if key == "icons" and isinstance(value, list):
+        return _sort_set(value)
+    return value
+
+
 def _fingerprint_fields(tool: dict) -> dict[str, str] | None:
     """Stream canonical JSON into bounded hashes without retaining field values."""
-    values = {key: tool.get(key) for key in _DECLARATION_TYPES}
+    values = {key: _canonical(tool.get(key), key) for key in _DECLARATION_TYPES}
+    # An absent ``annotations`` block means the same as an empty one.
+    values["annotations"] = values["annotations"] or {}
     # Cover future/vendor declaration fields without exposing arbitrary keys
     # (which can themselves carry private data) in an alert's field list.
     values["extensions"] = {key: value for key, value in tool.items() if key not in _DECLARATION_TYPES}

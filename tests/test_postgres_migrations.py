@@ -1134,3 +1134,56 @@ def test_rate_limit_prune_index_migration_is_chained_concurrent_and_in_bootstrap
     assert "to_regclass('public.api_rate_limit_hits')" in source
     bootstrap = (ALEMBIC_DIR.parent / "init.sql").read_text()
     assert "idx_api_rate_limit_hits_hit_at" in bootstrap
+
+
+def test_trend_kev_count_lands_in_migration_and_bootstrap() -> None:
+    """``20261022_01`` adds ``kev_count``; a fresh init.sql bootstrap must ship it too."""
+    column = "kev_count INTEGER CHECK (kev_count >= 0)"
+    migration = (VERSIONS_DIR / "20261022_01_trend_kev_count.py").read_text()
+    assert column in migration
+    bootstrap = (POSTGRES_DIR / "init.sql").read_text()
+    table = bootstrap.split("CREATE TABLE IF NOT EXISTS trend_history (", 1)[1].split(");", 1)[0]
+    assert column in " ".join(table.split())
+
+
+def test_agent_identity_tenant_key_matches_bootstrap() -> None:
+    """``20261024_02`` re-keys ``agent_identities``; the replayable bootstrap must agree."""
+    migration = (VERSIONS_DIR / "20261024_02_agent_identity_tenant_key.py").read_text()
+    assert "PRIMARY KEY (tenant_id, identity_id)" in migration
+    assert "to_regclass('public.agent_identities')" in migration
+    bootstrap = RUNTIME_SCHEMA_SQL.read_text()
+    table = bootstrap.split("CREATE TABLE IF NOT EXISTS agent_identities (", 1)[1].split(");", 1)[0]
+    assert "primarykey(tenant_id,identity_id)" in _canonical_sql(table)
+    assert "primarykey(identity_id)" not in _canonical_sql(table)
+
+
+def test_drift_blueprint_seek_migration_is_guarded_concurrent_and_chained() -> None:
+    """The stored column rewrites the table; the index must not also hold the table locked."""
+    source = (VERSIONS_DIR / "20261027_03_drift_blueprint_seek.py").read_text()
+    assert re.search(r'revision\s*=\s*"20261027_03"', source)
+    assert re.search(r'down_revision\s*=\s*"20261027_02"', source)
+    assert "to_regclass('public.drift_incidents')" in source
+    upgrade = source.split("def upgrade()", 1)[1].split("def downgrade()", 1)[0]
+    assert "autocommit_block()" in upgrade
+    assert "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drift_incidents_tenant_blueprint_key_open" in upgrade
+    assert "DROP INDEX CONCURRENTLY IF EXISTS public.idx_drift_incidents_tenant_blueprint_open" in upgrade
+    assert "ADD COLUMN IF NOT EXISTS blueprint_key TEXT" in upgrade
+    assert "GENERATED ALWAYS AS" in upgrade and "STORED" in upgrade
+    docstring = source.split('"""', 2)[1]
+    assert "lock" in docstring.lower()
+    downgrade = source.split("def downgrade()", 1)[1]
+    assert "DROP INDEX CONCURRENTLY IF EXISTS public.idx_drift_incidents_tenant_blueprint_key_open" in downgrade
+    assert "DROP COLUMN IF EXISTS blueprint_key" in downgrade
+
+
+def test_gateway_delivery_leases_grant_readonly_select_in_every_schema_path() -> None:
+    """Evidence reviewers read the audit outbox; the migration role's defaults do not reach them."""
+    migration = (VERSIONS_DIR / "20261027_02_gateway_delivery_leases.py").read_text()
+    grant = "GRANT SELECT ON gateway_audit_outbox TO agent_bom_readonly"
+    for source in (migration, RUNTIME_SCHEMA_SQL.read_text()):
+        assert grant in source
+        guard = source.index("rolname='agent_bom_readonly'")
+        assert guard < source.index(grant)
+    # The outbox is drained only by app-role writers; the cross-tenant maintenance
+    # role has no consumer and gets no new DML on audit evidence.
+    assert "gateway_audit_outbox TO agent_bom_rls_maintenance" not in migration

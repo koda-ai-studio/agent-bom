@@ -91,6 +91,8 @@ class ProxySession:
     audit_buffer: list[dict] = field(default_factory=list)
     audit_buffer_bytes: int = 0
     audit_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    # One writer at a time on the server's stdin: CPython <= 3.11 StreamWriter.drain allows a single waiter.
+    server_stdin_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     runtime_alerts: list[dict] = field(default_factory=list)
     declared_tools: set[str] = field(default_factory=set)
     withheld_tools: set[str] = field(default_factory=set)

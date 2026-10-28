@@ -33,6 +33,15 @@ server-side registry policy, are described in `site-docs/features/scanning.md`.
   are redacted and reported, and MCP results mark them untrusted. Review the report's findings and coverage before
 using its exit status as a policy gate; an extraction error is not a clean scan.
 
+## Registry pull limits
+
+A registry pull streams every blob under a hard byte cap and verifies its digest
+before use. The image config blob is read into memory and is capped separately
+from manifests and archive JSON members: `AGENT_BOM_MAX_IMAGE_CONFIG_BYTES`
+(default 16 MiB). A config whose declared or actual size crosses the cap fails
+the scan with an `ImageScanError` before any layer is downloaded; it is never
+partially parsed.
+
 ## Supply-chain lookup limits
 
 Signature and referrer discovery share a 30-second elapsed budget, at most 64

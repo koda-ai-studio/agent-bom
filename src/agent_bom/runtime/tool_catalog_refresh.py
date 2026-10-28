@@ -18,6 +18,7 @@ class CatalogRefreshSession(Protocol):
     process: Any
     detectors: Any
     log_file: Any
+    server_stdin_lock: asyncio.Lock
 
     async def handle_alerts(self, alerts: Any, log_f: Any = None) -> None: ...
 
@@ -77,9 +78,11 @@ class ToolCatalogRefresh:
             if session.process is None or session.process.stdin is None:
                 await self._incomplete(session)
                 return
-            session.process.stdin.write((json.dumps(request) + "\n").encode())
-            await asyncio.wait_for(session.process.stdin.drain(), timeout=5)
-        except (OSError, RuntimeError, TimeoutError):
+            async with session.server_stdin_lock:
+                session.process.stdin.write((json.dumps(request) + "\n").encode())
+                await asyncio.wait_for(session.process.stdin.drain(), timeout=5)
+        except (OSError, RuntimeError, TimeoutError, AssertionError):
+            # AssertionError: a second drain waiter on CPython <= 3.11; the catalog is simply not refreshed.
             await self._incomplete(session)
 
     async def inspect(self, session: CatalogRefreshSession, msg: dict) -> bool:

@@ -981,3 +981,38 @@ def test_azure_snapshot_records_the_disk_owner_vm(tmp_path: Path) -> None:
 
     assert adapter.owner_instance_id == vm
     assert adapter.owner_instance_name == "app-1"
+
+
+@pytest.mark.asyncio
+async def test_run_provider_side_scan_refuses_ambient_credentials_without_a_client_factory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The tenant-scoped executor never falls back to the provider default credential chain."""
+    monkeypatch.setenv("AGENT_BOM_SIDESCAN", "1")
+
+    def ambient(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("ambient provider credentials must not be resolved")
+
+    monkeypatch.setattr("agent_bom.cloud.side_scan_targets._default_provider_clients", ambient)
+
+    with pytest.raises(SideScanConfigError, match="client_factory"):
+        await run_provider_side_scan(**_retry_kwargs(tmp_path))
+    assert SQLiteSideScanStateStore(tmp_path / "retry.db").list_recent(tenant_id="tenant-a") == []
+
+
+@pytest.mark.asyncio
+async def test_run_provider_side_scan_allows_ambient_credentials_only_when_explicitly_opted_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AGENT_BOM_SIDESCAN", "1")
+    calls: list[str] = []
+
+    def ambient(provider: str, *, account_id: str, region: str | None, credential: Any = None) -> dict[str, Any]:
+        calls.append(provider)
+        raise SideScanConfigError("synthetic provider unavailable")
+
+    monkeypatch.setattr("agent_bom.cloud.side_scan_targets._default_provider_clients", ambient)
+
+    with pytest.raises(SideScanConfigError, match="synthetic"):
+        await run_provider_side_scan(**_retry_kwargs(tmp_path), allow_ambient=True)
+    assert calls == ["gcp"]

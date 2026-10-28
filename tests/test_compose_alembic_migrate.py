@@ -194,3 +194,39 @@ def test_bootstrap_credentials_preserve_out_of_band_role_path(monkeypatch: pytes
     calls: list[object] = []
     cm.configure_bootstrap_credentials(SimpleNamespace(exec_driver_sql=lambda *args: calls.append(args)))
     assert calls == []
+
+
+class _RoleConnection:
+    def __init__(self, role: str) -> None:
+        self.role = role
+        self.statements: list[str] = []
+
+    def exec_driver_sql(self, sql: str, *args: object):
+        self.statements.append(sql)
+        return SimpleNamespace(scalar=lambda: self.role)
+
+
+@pytest.mark.parametrize("role", ["agent_bom_app", "agent_bom_rls_maintenance"])
+def test_migration_role_preflight_refuses_runtime_roles(role: str) -> None:
+    """``20261023_02`` revokes ledger writes from runtime roles; migrating as one would self-revoke."""
+    connection = _RoleConnection(role)
+    with pytest.raises(RuntimeError) as excinfo:
+        cm.assert_migration_role(connection)
+    message = str(excinfo.value)
+    assert role in message
+    assert "ALEMBIC_DATABASE_URL" in message
+    assert "admin" in message.lower()
+    assert connection.statements == ["SELECT current_user"]
+
+
+@pytest.mark.parametrize("role", ["postgres", "agentbom_migration_owner", "agent_bom_maintenance"])
+def test_migration_role_preflight_allows_other_identities(role: str) -> None:
+    connection = _RoleConnection(role)
+    assert cm.assert_migration_role(connection) == role
+
+
+def test_alembic_env_checks_the_migration_role_before_any_migration_runs() -> None:
+    env_source = (Path(__file__).parents[1] / "deploy/supabase/postgres/alembic/env.py").read_text(encoding="utf-8")
+    online = env_source.split("def run_migrations_online()", 1)[1]
+    assert online.index("assert_migration_role(connection)") < online.index("configure_bootstrap_credentials(connection)")
+    assert online.index("assert_migration_role(connection)") < online.index("context.run_migrations()")

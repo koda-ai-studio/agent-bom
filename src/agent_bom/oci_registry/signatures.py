@@ -6,8 +6,9 @@ tagged ``sha256-<hex>.sig``. Each layer is a simple-signing payload whose
 base64 signature in the ``dev.cosignproject.cosign/signature`` annotation.
 
 Keyed verification checks the signature over the exact payload bytes with the
-operator's public key (ECDSA P-256/P-384 with SHA-256, RSA PKCS#1 v1.5 with
-SHA-256, or Ed25519 — the verifiers cosign selects for those key types) and
+operator's public key (ECDSA P-256/P-384/P-521 with SHA-256/SHA-384/SHA-512
+by curve, RSA PKCS#1 v1.5 with SHA-256, or Ed25519 — the verifiers cosign
+selects for those key types) and
 then that the payload names this image's digest. Keyless signatures (a Fulcio
 certificate plus a Rekor bundle) are reported as ``present-unverified``:
 certificate-chain, identity and transparency-log checks are not implemented.
@@ -72,10 +73,19 @@ def load_public_key(path: str) -> Any:
     return key
 
 
+def _ecdsa_hash(key: ec.EllipticCurvePublicKey) -> hashes.HashAlgorithm:
+    """The digest cosign pairs with an ECDSA key: SHA-256 for P-256, SHA-384 for P-384, SHA-512 for P-521."""
+    if isinstance(key.curve, ec.SECP384R1):
+        return hashes.SHA384()
+    if isinstance(key.curve, ec.SECP521R1):
+        return hashes.SHA512()
+    return hashes.SHA256()
+
+
 def verify_with_key(key: Any, payload: bytes, signature: bytes) -> bool:
     try:
         if isinstance(key, ec.EllipticCurvePublicKey):
-            key.verify(signature, payload, ec.ECDSA(hashes.SHA256()))
+            key.verify(signature, payload, ec.ECDSA(_ecdsa_hash(key)))
         elif isinstance(key, rsa.RSAPublicKey):
             key.verify(signature, payload, padding.PKCS1v15(), hashes.SHA256())
         elif isinstance(key, ed25519.Ed25519PublicKey):

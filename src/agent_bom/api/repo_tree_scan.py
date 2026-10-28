@@ -417,6 +417,7 @@ def _append_ai_inventory_agent(root: Path, ai_report: Any, agents: list[Agent], 
             source="ai-inventory",
             discovery_provenance=ai_provenance,
             mcp_servers=[MCPServer(name="ai-inventory", surface=ServerSurface.AI_INVENTORY, packages=ai_packages)],
+            metadata={"project_root": str(root.resolve())},
         )
     )
 

@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 
 DOCKER_HUB_API = "registry-1.docker.io"
-_DOCKER_HUB_ALIASES = frozenset({"docker.io", "index.docker.io", "registry-1.docker.io", "registry.hub.docker.com"})
+DOCKER_HUB_ALIASES = frozenset({"docker.io", "index.docker.io", "registry-1.docker.io", "registry.hub.docker.com"})
 _DOCKER_HUB_LEGACY_KEY = "https://index.docker.io/v1/"
 _COMPONENT_RE = re.compile(r"^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*$")
 _TAG_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")
@@ -85,7 +85,7 @@ def _split_registry(name: str) -> tuple[str, str]:
     if rest and ("." in first or ":" in first or first == "localhost"):
         if not _HOST_RE.match(first):
             raise ReferenceError(f"Invalid registry host: {first!r}")
-        registry = DOCKER_HUB_API if first.lower() in _DOCKER_HUB_ALIASES else first.lower()
+        registry = DOCKER_HUB_API if first.lower() in DOCKER_HUB_ALIASES else first.lower()
         return registry, rest
     return DOCKER_HUB_API, name
 

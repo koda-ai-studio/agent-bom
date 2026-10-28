@@ -21,6 +21,9 @@ _logger = logging.getLogger("agent_bom.oci_parser")
 _MAX_JSON_MEMBER_BYTES = 100 * 1024 * 1024
 
 
+_MAX_IMAGE_CONFIG_BYTES = 16 * 1024 * 1024
+
+
 _MAX_LAYER_UNCOMPRESSED_BYTES = 5 * 1024 * 1024 * 1024
 
 
@@ -49,6 +52,11 @@ def _env_int(name: str, default: int) -> int:
 
 def _max_json_member_bytes() -> int:
     return _env_int("AGENT_BOM_MAX_MANIFEST_BYTES", _MAX_JSON_MEMBER_BYTES)
+
+
+def _max_image_config_bytes() -> int:
+    """Cap for one image config blob read into memory from a registry (default 16 MiB)."""
+    return _env_int("AGENT_BOM_MAX_IMAGE_CONFIG_BYTES", _MAX_IMAGE_CONFIG_BYTES)
 
 
 def _max_layer_uncompressed_bytes() -> int:

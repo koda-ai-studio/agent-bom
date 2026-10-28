@@ -24,7 +24,7 @@ from agent_bom.oci_registry.policy import LOCAL_POLICY, RegistryPolicy
 from agent_bom.oci_registry.reference import parse_reference
 from agent_bom.oci_registry.supply_chain import discover_supply_chain
 from agent_bom.oci_registry.validation import validate_image_config
-from agent_bom.parsers.oci_io import _max_json_member_bytes, _max_layer_compressed_bytes
+from agent_bom.parsers.oci_io import _max_image_config_bytes, _max_layer_compressed_bytes
 from agent_bom.parsers.oci_metadata import _build_layer_metadata
 from agent_bom.parsers.oci_stream import LayerLimitError
 
@@ -90,6 +90,20 @@ def _scan_layers(
     return packages
 
 
+def _fetch_image_config(client: RegistryClient, descriptor: dict[str, Any]) -> dict[str, Any]:
+    """Read the image config blob under ``AGENT_BOM_MAX_IMAGE_CONFIG_BYTES``; refuse rather than parse a truncated one."""
+    limit = _max_image_config_bytes()
+    declared = descriptor.get("size")
+    if isinstance(declared, int) and not isinstance(declared, bool) and declared > limit:
+        raise RegistryError(f"Image config exceeds the size limit ({declared} > {limit} bytes; AGENT_BOM_MAX_IMAGE_CONFIG_BYTES)")
+    try:
+        return client.fetch_json_blob(str(descriptor["digest"]), limit)
+    except RegistryError as exc:
+        if "size limit" in str(exc):
+            raise RegistryError(f"Image config exceeds the size limit ({limit} bytes; AGENT_BOM_MAX_IMAGE_CONFIG_BYTES)") from exc
+        raise
+
+
 def scan_registry_image(
     image_ref: str,
     *,
@@ -108,7 +122,7 @@ def scan_registry_image(
         if "config" not in manifest.document or "layers" not in manifest.document:
             raise RegistryError("Image manifest has invalid or missing config/layers")
         config_digest = str(manifest.document["config"]["digest"])
-        config = client.fetch_json_blob(config_digest, _max_json_member_bytes())
+        config = _fetch_image_config(client, manifest.document["config"])
         try:
             validate_image_config(config)
         except ValueError as exc:

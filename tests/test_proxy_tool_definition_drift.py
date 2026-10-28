@@ -296,3 +296,112 @@ def test_metadata_budget_counts_canonical_json_bytes_and_rejects_non_json():
     circular = {}
     circular["self"] = circular
     assert fingerprint_tools([{"name": "read", "_meta": circular}]) is None
+
+
+def test_order_insensitive_schema_lists_and_empty_annotations_do_not_drift():
+    session, alerts = _session()
+    tool = {
+        "name": "a",
+        "inputSchema": {
+            "type": "object",
+            "required": ["b", "a"],
+            "properties": {"a": {"enum": ["x", "y", 1]}, "b": {"type": "string"}},
+        },
+        "icons": [{"src": "one"}, {"src": "two"}],
+    }
+    _feed(session, [tool])
+    changed = copy.deepcopy(tool)
+    changed["inputSchema"]["required"] = ["a", "b"]
+    changed["inputSchema"]["properties"]["a"]["enum"] = [1, "y", "x"]
+    changed["icons"] = [{"src": "two"}, {"src": "one"}]
+    changed["annotations"] = {}
+    _feed(session, [changed])
+    assert alerts == []
+
+
+def test_any_of_member_order_and_required_membership_still_drift():
+    session, alerts = _session()
+    tool = {"name": "a", "inputSchema": {"type": "object", "anyOf": [{"type": "string"}, {"type": "null"}], "required": ["a"]}}
+    _feed(session, [tool])
+    reordered = copy.deepcopy(tool)
+    reordered["inputSchema"]["anyOf"].reverse()
+    _feed(session, [reordered])
+    grown = copy.deepcopy(reordered)
+    grown["inputSchema"]["required"] = ["a", "b"]
+    _feed(session, [grown])
+    assert [a.details["changed_tools"] for a in alerts] == [[{"name": "a", "fields": ["inputSchema"]}]] * 2
+
+
+@pytest.mark.parametrize("keyword", ["const", "default", "examples", "enum"])
+def test_schema_literal_array_order_is_not_treated_as_a_schema_set(keyword):
+    from agent_bom.runtime.drift_baseline import fingerprint_tools
+
+    literal = {"required": ["first", "second"], "enum": ["first", "second"]}
+    value = [literal] if keyword in {"enum", "examples"} else literal
+    tool = {"name": "read", "inputSchema": {keyword: value}}
+    changed = copy.deepcopy(tool)
+    target = changed["inputSchema"][keyword]
+    target = target[0] if isinstance(target, list) else target
+    target["required"].reverse()
+    assert fingerprint_tools([tool]) != fingerprint_tools([changed])
+
+
+def test_vendor_metadata_array_order_remains_significant():
+    from agent_bom.runtime.drift_baseline import fingerprint_tools
+
+    tool = {"name": "read", "_meta": {"required": ["first", "second"]}}
+    changed = copy.deepcopy(tool)
+    changed["_meta"]["required"].reverse()
+    assert fingerprint_tools([tool]) != fingerprint_tools([changed])
+
+
+class _SingleWaiterStdin:
+    """Mimics CPython <= 3.11 StreamWriter.drain, which asserts on a second concurrent waiter."""
+
+    def __init__(self) -> None:
+        self.lines: list[bytes] = []
+        self.draining = False
+
+    def write(self, data: bytes) -> None:
+        self.lines.append(data)
+
+    async def drain(self) -> None:
+        assert not self.draining, "concurrent drain"
+        self.draining = True
+        try:
+            await asyncio.sleep(0.01)
+        finally:
+            self.draining = False
+
+
+@pytest.mark.asyncio
+async def test_catalog_refresh_and_client_writer_share_one_stdin_drain():
+    from types import SimpleNamespace
+
+    from agent_bom.runtime import proxy_relay
+
+    session, alerts = _session()
+    stdin = _SingleWaiterStdin()
+    session.process = SimpleNamespace(stdin=stdin)
+    await asyncio.gather(
+        proxy_relay.forward_to_server(session, b'{"id": 1}\n', None, None, {}),
+        session.catalog_refresh._send(session),
+        proxy_relay.forward_to_server(session, b'{"id": 2}\n', None, None, {}),
+    )
+    assert alerts == []
+    assert len(stdin.lines) == 3 and all(line.endswith(b"\n") for line in stdin.lines)
+
+
+@pytest.mark.asyncio
+async def test_catalog_refresh_treats_drain_assertion_as_incomplete():
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    async def drain() -> None:
+        raise AssertionError("second waiter")
+
+    session, alerts = _session()
+    session.process = SimpleNamespace(stdin=SimpleNamespace(write=Mock(), drain=drain))
+    await session.catalog_refresh._send(session)
+    assert alerts[0].details == {"catalog_complete": False, "reason_code": "tool_catalog_incomplete"}
+    assert session.catalog_refresh.request_id is None

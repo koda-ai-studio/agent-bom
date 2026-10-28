@@ -28,6 +28,7 @@ from agent_bom.runtime.gateway_contracts import AuditSink, GatewayAuditDeliveryU
 from agent_bom.runtime.gateway_events import GatewayRuntimeEventType
 from agent_bom.runtime.gateway_relay import GatewayCircuitOpenError
 from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta
+from agent_bom.runtime.withheld_tools import WithheldToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,8 @@ class GatewayForwardContext:
     response_scanner: Callable[[dict, ScanConfig], tuple[dict, list[ScanResult]]]
     tracer: Any
     injection_mode: str = injection_protection.DEFAULT_INJECTION_MODE
+    # App-scoped memory of tools stripped by enforce mode; ``None`` means no memory (stateless relay).
+    withheld_tools: WithheldToolRegistry | None = None
 
 
 @dataclass
@@ -444,18 +447,58 @@ async def _apply_injection_policy(
                 **typed,
             }
         )
+    if context.withheld_tools is not None and context.message.get("method") == "tools/list":
+        context.withheld_tools.update(context.tenant_id, context.upstream.name, withheld=outcome.withheld_tools, clean=outcome.clean_tools)
     if outcome.blocked:
         record_gateway_relay(context.upstream.name, "blocked")
         return JSONResponse(outcome.message, status_code=200, headers=audit.headers(dict(context.rate_limit_headers)) or None)
     return outcome.message
 
 
+async def _refuse_withheld_tool(context: GatewayForwardContext, audit: CompletionAudit) -> JSONResponse | None:
+    """Enforce mode: a tool stripped from an earlier ``tools/list`` is refused before admission and upstream."""
+    registry = context.withheld_tools
+    if registry is None or context.injection_mode != "enforce" or not is_tools_call(context.message):
+        return None
+    tool = str(extract_tool_name(context.message) or "")
+    if not tool or not registry.is_withheld(context.tenant_id, context.upstream.name, tool):
+        return None
+    alert = injection_protection.withheld_tool_call_alert(tool)
+    logger.warning("Gateway refused call to withheld tool (upstream=%s)", context.upstream.name)
+    record_gateway_relay(context.upstream.name, "blocked")
+    await audit.emit(
+        {
+            "action": "gateway.injection_alert",
+            "upstream": context.upstream.name,
+            "tenant_id": context.tenant_id,
+            "source_agent": context.source_agent,
+            "tool": tool,
+            "alert": alert.to_dict(),
+            **context.runtime_event(
+                GatewayRuntimeEventType.TOOL_CALL_BLOCKED,
+                decision="deny",
+                policy_source=injection_protection.POLICY_SOURCE,
+                tool=tool,
+                data_action="withheld_tool_call_blocked",
+            ),
+        }
+    )
+    return JSONResponse(
+        injection_protection.blocked_result(context.message, [alert]),
+        status_code=200,
+        headers=audit.headers(dict(context.rate_limit_headers)) or None,
+    )
+
+
 async def forward_authorized_request(context: GatewayForwardContext) -> JSONResponse:
     """Admit before effects, then retain the outcome through response policies."""
+    audit = CompletionAudit(context)
+    refused = await _refuse_withheld_tool(context, audit)
+    if refused is not None:
+        return refused
     admission_failure = await _admit_tool_execution(context)
     if admission_failure is not None:
         return admission_failure
-    audit = CompletionAudit(context)
     upstream_response = await _call_upstream(context, audit)
     record_gateway_relay(context.upstream.name, "forwarded")
     visual_failure = await _apply_visual_policy(context, audit, upstream_response)

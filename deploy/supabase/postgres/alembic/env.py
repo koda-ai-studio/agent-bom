@@ -8,6 +8,7 @@ from sqlalchemy import engine_from_config, pool
 
 from deploy.supabase.postgres.compose_migrate import (
     _normalize_sqlalchemy_url,
+    assert_migration_role,
     configure_bootstrap_credentials,
     top_up_observation_partition_runway,
 )
@@ -86,6 +87,9 @@ def run_migrations_online() -> None:
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
+            # Refuse runtime roles before any revision runs: 20261023_02 revokes
+            # their alembic_version writes, so they would self-revoke mid-upgrade.
+            assert_migration_role(connection)
             configure_bootstrap_credentials(connection)
             context.run_migrations()
             # Partition provisioning is migration-owned (the runtime roles are

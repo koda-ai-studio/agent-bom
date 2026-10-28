@@ -223,6 +223,29 @@ def test_malformed_config_history_fails_with_typed_scan_error(registry, history)
         scan_image(REF, pull_mode="registry")
 
 
+def test_oversized_image_config_is_refused_before_any_layer_is_read(registry, monkeypatch):
+    """The config blob has its own cap (AGENT_BOM_MAX_IMAGE_CONFIG_BYTES), far below the 100 MiB manifest cap."""
+    image = _image(("bash", "5.2"))
+    registry.push_image("team/app", image, "1.0")
+    config = {**image.config, "config": {**image.config["config"], "Labels": {"pad": "x" * 4096}}}
+    raw_config = json.dumps(config).encode()
+    digest = registry.add_blob(raw_config)
+    manifest = {**image.manifest, "config": {**image.manifest["config"], "digest": digest, "size": len(raw_config)}}
+    registry.add_manifest("team/app", json.dumps(manifest).encode(), "application/vnd.oci.image.manifest.v1+json", "1.0")
+    monkeypatch.setenv("AGENT_BOM_MAX_IMAGE_CONFIG_BYTES", "2048")
+    monkeypatch.setenv("AGENT_BOM_MAX_MANIFEST_BYTES", str(100 * 1024 * 1024))
+
+    with pytest.raises(ImageScanError, match="config exceeds"):
+        scan_image(REF, pull_mode="registry")
+
+    layer_digests = [layer["digest"] for layer in image.manifest["layers"]]
+    assert not [r for r in registry.requests if any(d in str(r.url) for d in layer_digests)]
+
+    monkeypatch.setenv("AGENT_BOM_MAX_IMAGE_CONFIG_BYTES", str(16 * 1024 * 1024))
+    packages, _ = scan_image(REF, pull_mode="registry")
+    assert [p.name for p in packages] == ["bash"]
+
+
 def test_sha512_layer_preserves_digest_in_evidence_and_package_occurrences(registry):
     import hashlib
     import json

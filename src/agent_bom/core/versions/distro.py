@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 # Base ecosystem family (the part before the first ``:``, lowercased) → the
-# version comparator key. Consumed by ``db.lookup._ECO_FAMILY_TO_COMPARATOR``
+# version comparator key. Consumed by ``core.versions.ordering.comparator_ecosystem``
 # and re-exported by ``agent_bom.os_advisory``.
 OS_DISTRO_COMPARATOR_FAMILIES: dict[str, str] = {
     "red hat": "rpm",

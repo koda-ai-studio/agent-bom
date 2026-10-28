@@ -194,6 +194,8 @@ async def _execute(provider_key: str, image_id: Optional[str], options: dict[str
         collector_resource_group=options["collector_resource_group"],
         region=options["region"],
         scan_secrets_enabled=not options["no_secrets"],
+        # The operator runs the CLI as themselves: their own provider credential chain is in scope.
+        allow_ambient=True,
     )
 
 

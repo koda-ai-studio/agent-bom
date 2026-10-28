@@ -33,7 +33,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from agent_bom.core.versions import compare_version_order
 from agent_bom.core.versions.osv import version_match_state
-from agent_bom.scanners.cpe_distro_packages import distro_ships_cpe_product
+from agent_bom.scanners.cpe_distro_packages import CPE_DISTRO_PACKAGES, distro_ships_cpe_product
 
 if TYPE_CHECKING:
     from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn
@@ -238,7 +238,8 @@ def _feed_id(advisory: OperatorAdvisory, package: dict[str, Any]) -> str | None:
     return None
 
 
-def _report_packages(report: dict[str, Any]) -> Iterator[tuple[dict[str, str], dict[str, Any], tuple[dict, dict]]]:
+def iter_report_packages(report: dict[str, Any]) -> Iterator[tuple[dict[str, str], dict[str, Any], tuple[dict, dict]]]:
+    """``(asset, package, (agent, server))`` for every named, versioned package in one stored report."""
     for agent in report.get("agents") or []:
         if not isinstance(agent, dict):
             continue
@@ -396,6 +397,44 @@ def _match_package(advisory: OperatorAdvisory, occ: _Occurrence, out: AdvisoryMa
         _match_distro_package(advisory, occ, distro_product, out)
 
 
+class _AdvisoryIndex:
+    """Per-run lookup from a package's identities to the advisories that can name it.
+
+    ``_match_package`` is a no-op for an advisory whose products share neither
+    an ``(ecosystem, name)``, a CPE product nor a distro-shipped CPE product
+    with the package, so trying only the indexed candidates, in declaration
+    order, yields exactly the rows of the exhaustive walk.
+    """
+
+    def __init__(self, advisories: Iterable[OperatorAdvisory]) -> None:
+        self.advisories = list(advisories)
+        self.by_package: dict[tuple[str, str], list[int]] = {}
+        self.by_cpe: dict[str, list[int]] = {}
+        for index, advisory in enumerate(self.advisories):
+            for product in advisory.affected:
+                if product.cpe_product:
+                    self._add(self.by_cpe, product.cpe_product, index)
+                if product.ecosystem and product.name:
+                    self._add(self.by_package, (product.ecosystem.lower(), product.name.lower()), index)
+        self.distro_cpes = [cpe for cpe in self.by_cpe if cpe in CPE_DISTRO_PACKAGES]
+
+    @staticmethod
+    def _add(table: dict, key: Any, index: int) -> None:
+        bucket = table.setdefault(key, [])
+        if not bucket or bucket[-1] != index:
+            bucket.append(index)
+
+    def candidates(self, package: dict[str, Any]) -> list[OperatorAdvisory]:
+        buckets = [self.by_package.get((str(package.get("ecosystem") or "").lower(), str(package.get("name") or "").lower()), ())]
+        cpe = _cpe_product(package)
+        if cpe:
+            buckets.append(self.by_cpe.get(cpe, ()))
+        buckets.extend(self.by_cpe[product] for product in self.distro_cpes if distro_ships_cpe_product(product, package))
+        if len(buckets) == 1:
+            return [self.advisories[index] for index in buckets[0]]
+        return [self.advisories[index] for index in sorted({index for bucket in buckets for index in bucket})]
+
+
 def match_advisories_against_reports(
     advisories: Iterable[OperatorAdvisory],
     reports: Iterable[dict[str, Any]],
@@ -411,15 +450,15 @@ def match_advisories_against_reports(
     distro feed; without it they are indeterminate.
     """
     result = AdvisoryMatchResult()
-    advisory_list = list(advisories)
+    index = _AdvisoryIndex(advisories)
     for report in reports:
         result.reports_examined += 1
         observed = report.get("scan_completed_at")
         ctx = _ReportContext(str(report.get("scan_id") or ""), str(observed) if observed else None, provenance, distro_verdict)
-        for asset, package, owners in _report_packages(report):
+        for asset, package, owners in iter_report_packages(report):
             result.packages_examined += 1
             result.assets_examined.add((ctx.scan_id, asset["agent"], asset["server"]))
             occurrence = _Occurrence(asset, package, owners, ctx)
-            for advisory in advisory_list:
+            for advisory in index.candidates(package):
                 _match_package(advisory, occurrence, result)
     return result

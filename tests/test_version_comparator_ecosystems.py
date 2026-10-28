@@ -272,3 +272,43 @@ def test_rubygems_matches_a_live_gem_version_oracle() -> None:
         if compare_version_order(left, right, "rubygems") != want
     ]
     assert not mismatches, f"Gem::Version disagreements: {mismatches}"
+
+
+# ---------------------------------------------------------------------------
+# Distro labels as OSV and vendor feeds spell them
+# ---------------------------------------------------------------------------
+
+# (ecosystem label, lower, higher): every label must reach the distro comparator
+# that orders a backport revision, not the PEP 440 fallback that reads them equal.
+DISTRO_LABEL_PAIRS = [
+    ("Ubuntu", "2.0-1ubuntu1", "2.0-1ubuntu2"),
+    ("Ubuntu:22.04", "2.0-1ubuntu1", "2.0-1ubuntu2"),
+    ("Debian:12", "2.0-1+deb12u1", "2.0-1+deb12u2"),
+    ("Debian", "1:2.0-1", "1:2.0-2"),
+    ("Alpine:v3.18", "2.0-r1", "2.0-r2"),
+    ("Red Hat", "2.0-1.el9", "2.0-2.el9"),
+    ("Rocky Linux", "2.0-1.el9", "2.0-2.el9"),
+    ("AlmaLinux", "2.0-1.el9_2", "2.0-1.el9_3"),
+    ("SUSE", "2.0-150500.1.1", "2.0-150500.1.2"),
+    ("openSUSE", "2.0-1.1", "2.0-1.2"),
+    ("Wolfi", "2.0-r1", "2.0-r2"),
+]
+
+
+@pytest.mark.parametrize(("ecosystem", "lower", "higher"), DISTRO_LABEL_PAIRS)
+def test_distro_labels_order_backport_revisions(ecosystem: str, lower: str, higher: str) -> None:
+    assert compare_version_order(lower, higher, ecosystem) == -1
+    assert compare_version_order(higher, lower, ecosystem) == 1
+    assert compare_version_order(lower, lower, ecosystem) == 0
+    assert version_in_range(lower, None, higher, None, ecosystem) is True
+    assert version_in_range(higher, None, higher, None, ecosystem) is False
+
+
+def test_distro_label_matches_its_pre_mapped_family() -> None:
+    """A caller that already mapped the label (db/lookup) and one that did not agree."""
+    from agent_bom.core.versions.osv import comparator_ecosystem
+
+    for ecosystem, lower, higher in DISTRO_LABEL_PAIRS:
+        family = comparator_ecosystem(ecosystem)
+        assert family in {"deb", "apk", "rpm"}
+        assert compare_version_order(lower, higher, ecosystem) == compare_version_order(lower, higher, family)

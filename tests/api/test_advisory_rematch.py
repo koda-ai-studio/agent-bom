@@ -364,3 +364,75 @@ def test_distro_package_awaiting_its_distro_record_is_reported_without_freezing_
     assert status["new_findings"] == 0
     assert status["indeterminate_distro"] == 1
     assert env.get_rematch_state("tenant-d")["operator_cursor"] == NOW.isoformat()
+
+
+def _history(store) -> list[dict]:
+    """Fifty completed jobs over three scopes; the full fold selects the newest per scope."""
+    from agent_bom.api.findings_current import current_scan_jobs
+
+    for index in range(50):
+        scope = index % 3
+        completed = f"2026-10-{1 + index // 3:02d}T00:00:00+00:00"
+        job = _job("tenant-h", f"pkg{scope}", "1.0", completed=completed)
+        job.job_id = f"job-{index}"
+        job.result["agents"][0]["mcp_servers"][0]["packages"][0]["version"] = f"1.{index}"
+        store.put(job)
+    set_job_store(store)
+    expected = [
+        {**dict(job.result or {}), "scan_completed_at": job.completed_at}
+        for job in current_scan_jobs(store.list_all(tenant_id="tenant-h"), since=None, scan_id=None)
+    ]
+    assert len(expected) == 3
+    return expected
+
+
+def test_stored_reports_read_only_the_current_job_per_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    jobs = InMemoryJobStore()
+    expected = _history(jobs)
+    reads: list[str] = []
+    original_get = jobs.get
+
+    def counted_get(job_id: str, tenant_id: str | None = None, **kwargs):
+        reads.append(job_id)
+        return original_get(job_id, tenant_id, **kwargs)
+
+    monkeypatch.setattr(jobs, "get", counted_get)
+
+    assert rematch._stored_reports("tenant-h") == expected
+    assert sorted(reads) == ["job-47", "job-48", "job-49"]
+
+
+def test_stored_reports_decode_only_the_winners_from_a_durable_store(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """With the history projection, 50 persisted results decode 3 times, not 50."""
+    from agent_bom.api.store import SQLiteJobStore
+
+    monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOTS", "1")
+    jobs = SQLiteJobStore(str(tmp_path / "jobs.db"))
+    expected = _history(jobs)
+    decoded: list[int] = []
+    original = ScanJob.model_validate_json.__func__
+
+    def counted(cls, payload, *args, **kwargs):
+        decoded.append(len(payload))
+        return original(cls, payload, *args, **kwargs)
+
+    monkeypatch.setattr(ScanJob, "model_validate_json", classmethod(counted))
+
+    assert rematch._stored_reports("tenant-h") == expected
+    assert len(decoded) == 3
+
+
+def test_stored_reports_fail_closed_when_a_selected_job_vanishes(monkeypatch: pytest.MonkeyPatch) -> None:
+    jobs = InMemoryJobStore()
+    jobs.put(_job("tenant-v", "php", "8.3.30"))
+    set_job_store(jobs)
+    monkeypatch.setattr(jobs, "get", lambda *a, **k: None)
+    store = InMemoryOperatorAdvisoryStore()
+    set_operator_advisory_store(store)
+    try:
+        status = rematch.run_tenant_rematch("tenant-v", feed_source=_Feed([_feed_advisory()]), now=NOW)
+    finally:
+        set_operator_advisory_store(None)
+    assert status["status"] == "incomplete"
+    assert status["reason"] == "store_unavailable"
+    assert store.get_rematch_state("tenant-v").get("feed_cursor") is None

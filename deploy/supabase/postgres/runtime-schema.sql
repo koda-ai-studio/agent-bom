@@ -899,6 +899,13 @@ DO $$ BEGIN
  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='agent_bom_app') THEN
   GRANT SELECT,INSERT,UPDATE,DELETE ON gateway_audit_outbox TO agent_bom_app;
  END IF;
+ -- Evidence reviewers read the queue; init.sql's default privileges belong to
+ -- the bootstrap owner and do not reach tables a different migration role
+ -- creates. The cross-tenant RLS maintenance role has no consumer here, so it
+ -- gets no DML on queued audit evidence.
+ IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='agent_bom_readonly') THEN
+  GRANT SELECT ON gateway_audit_outbox TO agent_bom_readonly;
+ END IF;
 END $$;
 INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('gateway_audit_outbox',1,now())
 ON CONFLICT(component) DO NOTHING;
