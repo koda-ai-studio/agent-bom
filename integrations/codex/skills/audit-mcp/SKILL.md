@@ -18,9 +18,9 @@ requires:
 
 Audit MCP server configuration with agent-bom. This skill is read-only: it reads config files and package metadata, never connects to or launches the servers it audits, and never changes a config.
 
-1. Run `uvx --from agent-bom==0.110.0 agent-bom mcp audit --format json --output "$OUT/audit.json"`, adding the directory as the last argument if the user named one. Never add `--live` or `--allow-command-execution`: live mode connects to remote servers and can launch local ones. Only offer live mode if the user explicitly asks for it, and explain that first.
-2. Run `uvx --from agent-bom==0.110.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"` (same directory as `-p '<dir>'`) for each agent's `config_path` and each server's `command`, `args`, `transport`, packages and `credential_env_vars`.
-3. Run `uvx --from agent-bom==0.110.0 agent-bom --agent-mode scan -q` (directory: `--no-discover --config-dir '<dir>' -p '<dir>'`) for CVEs and malicious or typosquatted packages in `data.top_findings[]`.
+1. Run `uvx --from agent-bom==0.111.0 agent-bom mcp audit --format json --output "$OUT/audit.json"`, adding the directory as the last argument if the user named one. Never add `--live` or `--allow-command-execution`: live mode connects to remote servers and can launch local ones. Only offer live mode if the user explicitly asks for it, and explain that first.
+2. Run `uvx --from agent-bom==0.111.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"` (same directory as `-p '<dir>'`) for each agent's `config_path` and each server's `command`, `args`, `transport`, packages and `credential_env_vars`.
+3. Run `uvx --from agent-bom==0.111.0 agent-bom --agent-mode scan -q` (directory: `--no-discover --config-dir '<dir>' -p '<dir>'`) for CVEs and malicious or typosquatted packages in `data.top_findings[]`.
 4. Report findings grouped by server, most severe first:
    - **Credentials in config**: `credential_env_vars` per server. Give the variable name and the agent's `config_path` only.
    - **Unpinned launchers**: packages in `ai_bom_entities.packages[]` whose `version_provenance.pinned` is false (a launcher such as `npx -y <package>` or `uvx <package>` with no version). Recommend an exact version pin.

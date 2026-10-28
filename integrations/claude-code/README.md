@@ -105,7 +105,7 @@ own server entry next to the plugin's servers:
 
   ```bash
   claude mcp add --scope user --env AGENT_BOM_MCP_WORKSPACE_ROOTS=/srv/app:/Volumes/work \
-    agent-bom-workspace -- uvx --from agent-bom==0.110.0 agent-bom mcp server
+    agent-bom-workspace -- uvx --from agent-bom==0.111.0 agent-bom mcp server
   ```
 
 - **Codex.** Add this to `~/.codex/config.toml`:
@@ -113,7 +113,7 @@ own server entry next to the plugin's servers:
   ```toml
   [mcp_servers.agent-bom-workspace]
   command = "uvx"
-  args = ["--from", "agent-bom==0.110.0", "agent-bom", "mcp", "server"]
+  args = ["--from", "agent-bom==0.111.0", "agent-bom", "mcp", "server"]
 
   [mcp_servers.agent-bom-workspace.env]
   AGENT_BOM_MCP_WORKSPACE_ROOTS = "/srv/app:/Volumes/work"

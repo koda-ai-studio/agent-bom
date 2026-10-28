@@ -1,6 +1,6 @@
 {
   "name": "agent-bom-local",
-  "version": "0.110.0",
+  "version": "0.111.0",
   "description": "Inventory and audit your AI estate: scan MCP servers, agents and packages for CVEs, supply-chain risk and exposed credentials; audit MCP configs and skills for injection and risky grants; check a server before you add it; plan fixes. Read-only by default and local.",
   "author": {
     "name": "koda-ai-studio",

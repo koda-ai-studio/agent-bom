@@ -310,8 +310,8 @@ through a managed tap instead of direct package upload.
 
 ```bash
 python3 scripts/render_homebrew_formula.py \
-  --version 0.110.0 \
-  --url https://github.com/koda-ai-studio/agent-bom/archive/refs/tags/v0.110.0.tar.gz \
+  --version 0.111.0 \
+  --url https://github.com/koda-ai-studio/agent-bom/archive/refs/tags/v0.111.0.tar.gz \
   --sha256 <release-sha256>
 ```
 

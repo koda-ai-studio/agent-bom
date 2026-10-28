@@ -18,7 +18,7 @@ requires:
 
 List the AI estate with agent-bom. This skill is read-only: it reads MCP client configuration files and changes nothing. It does not look up vulnerabilities.
 
-1. Run `uvx --from agent-bom==0.110.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"`. Add `-p '<dir>'` only if the user named a project or config directory; with no argument it discovers every supported MCP client on this machine.
+1. Run `uvx --from agent-bom==0.111.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"`. Add `-p '<dir>'` only if the user named a project or config directory; with no argument it discovers every supported MCP client on this machine.
 2. Read the result:
    - `agents[]`: each MCP client or project, with its `mcp_servers[]` (`name`, `command`, `transport`, `url`, `auth_mode`, `packages[]`).
    - `ai_bom_entities`: the joined snapshot. `summary` gives counts; `servers`, `tools`, `packages` and `relationships` (`uses`, `depends_on`, `exposes_tool`, `exposes_resource`, `exposes_prompt`) connect agent -> server -> tool and package. Join them by `id`. Each package's `version_provenance` has `pinned` and `version_source`.
@@ -26,7 +26,7 @@ List the AI estate with agent-bom. This skill is read-only: it reads MCP client 
    - one line of totals from `ai_bom_entities.summary`: agents, servers, tools, packages
    - a compact table per agent: server, transport, command or URL, packages
    - what stands out: remote servers (`transport` is not `stdio`, note `auth_mode`), packages whose `version_provenance.pinned` is false (the launcher pins no version; the version shown was found this time from `version_source`, such as a local tool cache or the bundled registry, and is not a pin), and servers that expose no tool list (`tools` is 0 until a live listing exists)
-4. If `agents` is empty, say no supported MCP client configuration was found and name the directory that was checked; `uvx --from agent-bom==0.110.0 agent-bom where` lists the paths agent-bom looks in.
+4. If `agents` is empty, say no supported MCP client configuration was found and name the directory that was checked; `uvx --from agent-bom==0.111.0 agent-bom where` lists the paths agent-bom looks in.
 5. Offer the `audit-mcp` skill to review these servers for risky configuration and the `scan` skill for CVEs.
 
 ## Running agent-bom

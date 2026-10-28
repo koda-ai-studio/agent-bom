@@ -1,6 +1,6 @@
 {
   "name": "agent-bom-guard",
-  "version": "0.110.0",
+  "version": "0.111.0",
   "displayName": "agent-bom guard",
   "description": "Checks package installs before Claude runs them: blocks known-malicious npm, PyPI, crates.io and Go packages and typosquatted npm and PyPI names, and warns on known advisories for an exact pinned version and on installs from a custom registry. Silent otherwise; never runs the command it inspects.",
   "author": {
