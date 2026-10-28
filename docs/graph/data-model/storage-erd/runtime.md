@@ -5,7 +5,7 @@
 
 Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
-17 tables.
+18 tables.
 
 Tables from other domains drawn for their relations: `policy_results`.
 
@@ -20,6 +20,11 @@ erDiagram
   }
   gateway_activity_tombstones {
     text tenant_id PK
+    text event_id PK
+  }
+  gateway_audit_outbox {
+    text tenant_id PK
+    text stream_id PK
     text event_id PK
   }
   gateway_policies {
@@ -122,7 +127,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 | Column | Tables |
 |---|---|
-| `event_id` | `gateway_activity_events`, `gateway_activity_tombstones`, `runtime_events` |
+| `event_id` | `gateway_activity_events`, `gateway_activity_tombstones`, `gateway_audit_outbox`, `runtime_events` |
 | `source_id` | `runtime_events`, `runtime_workload_evidence` |
 
 ## Tables
@@ -132,6 +137,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `gateway_activity_events` | Postgres, SQLite | 7 |  | persistent |
 | `gateway_activity_sequences` | Postgres, SQLite | 2 |  | persistent |
 | `gateway_activity_tombstones` | Postgres, SQLite | 4 |  | persistent |
+| `gateway_audit_outbox` | Postgres | 9 |  | persistent |
 | `gateway_policies` | Postgres, SQLite, Snowflake | 8 |  | persistent |
 | `llm_cost_budgets` | Postgres, SQLite | 8 |  | persistent |
 | `llm_costs` | Postgres, SQLite | 13 |  | persistent |

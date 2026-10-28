@@ -7,7 +7,7 @@ Every table agent-bom creates, read from the DDL in the code: the Postgres contr
 
 ## Overview
 
-160 tables in 10 domains. 18 declared foreign keys; 36 logical joins derived from shared key-column names. Arrows count relations that cross domains.
+161 tables in 10 domains. 18 declared foreign keys; 36 logical joins derived from shared key-column names. Arrows count relations that cross domains.
 
 ```mermaid
 flowchart LR
@@ -16,7 +16,7 @@ flowchart LR
   inventory["Inventory and assets<br/>16 tables"]
   findings["Findings, triage and VEX<br/>25 tables"]
   graph["Graph nodes, edges, snapshots and attack paths<br/>21 tables"]
-  runtime["Runtime, gateway and traces<br/>17 tables"]
+  runtime["Runtime, gateway and traces<br/>18 tables"]
   compliance["Compliance, audit and evidence<br/>10 tables"]
   connectors["Connectors, delivery and schedules<br/>16 tables"]
   vulndb["Vulnerability intelligence (local database)<br/>7 tables"]
@@ -38,7 +38,7 @@ flowchart LR
 | Inventory and assets | 16 | [storage-erd/inventory.md](storage-erd/inventory.md) |
 | Findings, triage and VEX | 25 | [storage-erd/findings.md](storage-erd/findings.md) |
 | Graph nodes, edges, snapshots and attack paths | 21 | [storage-erd/graph.md](storage-erd/graph.md) |
-| Runtime, gateway and traces | 17 | [storage-erd/runtime.md](storage-erd/runtime.md) |
+| Runtime, gateway and traces | 18 | [storage-erd/runtime.md](storage-erd/runtime.md) |
 | Compliance, audit and evidence | 10 | [storage-erd/compliance.md](storage-erd/compliance.md) |
 | Connectors, delivery and schedules | 16 | [storage-erd/connectors.md](storage-erd/connectors.md) |
 | Vulnerability intelligence (local database) | 7 | [storage-erd/vulndb.md](storage-erd/vulndb.md) |
@@ -141,6 +141,7 @@ Excluded:
 | `gateway_activity_events` | [Runtime, gateway and traces](storage-erd/runtime.md) | Postgres, SQLite | `tenant_id`, `event_id` | `tenant_id`, `event_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260728_02_gateway_activity_ledger.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/gateway_activity_store.py` |
 | `gateway_activity_sequences` | [Runtime, gateway and traces](storage-erd/runtime.md) | Postgres, SQLite | `tenant_id` | `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260728_02_gateway_activity_ledger.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/gateway_activity_store.py` |
 | `gateway_activity_tombstones` | [Runtime, gateway and traces](storage-erd/runtime.md) | Postgres, SQLite | `tenant_id`, `event_id` | `tenant_id`, `event_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260728_02_gateway_activity_ledger.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/gateway_activity_store.py` |
+| `gateway_audit_outbox` | [Runtime, gateway and traces](storage-erd/runtime.md) | Postgres | `tenant_id`, `stream_id`, `event_id` | `tenant_id`, `stream_id`, `event_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20261027_02_gateway_delivery_leases.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/storage/gateway_delivery.py` |
 | `gateway_policies` | [Runtime, gateway and traces](storage-erd/runtime.md) | Postgres, SQLite, Snowflake | `policy_id` | `policy_id`, `team_id` | `team_id` | persistent | `deploy/snowflake/setup.sql`, `deploy/supabase/postgres/init.sql`, `api/policy_store.py` (+2) |
 | `governance_audit_log` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres, SQLite | `seq` | `seq`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/governance_audit_log.py`, `api/postgres_governance_audit.py` |
 | `graph_attack_paths` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | Postgres, SQLite | `tenant_id`, `scan_id`, `path_key` | `tenant_id`, `scan_id`, `path_key` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20261013_01_graph_attack_paths.py`, `deploy/supabase/postgres/init.sql`, `api/postgres_graph_schema.py` (+1) |
