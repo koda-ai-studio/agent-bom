@@ -7,7 +7,7 @@ name = "agent-bom-plugin-launcher"
 version = "0.0.0"
 description = "Pins the agent-bom release the plugin's MCP servers run."
 requires-python = ">=3.11,<3.15"
-dependencies = ["agent-bom==0.110.0"]
+dependencies = ["agent-bom==0.111.0"]
 
 [tool.uv]
 package = false

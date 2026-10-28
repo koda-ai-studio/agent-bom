@@ -14,7 +14,7 @@ type: fixed
     {
      "type": "application",
      "name": "agent-bom",
-     "version": "0.110.0",
+     "version": "0.111.0",
      "description": "Security scanner for AI infrastructure \u2014 from agent to runtime"
     }
    ]
@@ -590,7 +590,7 @@ type: fixed
     {
      "type": "application",
      "name": "agent-bom",
-     "version": "0.110.0"
+     "version": "0.111.0"
     }
    ]
   }
