@@ -3315,9 +3315,7 @@ async function main() {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       await fitReactFlow(proofPage);
       await expect(proofPage.locator(".react-flow__edge-path[marker-end]")).toHaveCount(referenceGraph.edges.length);
-      for (const verb of [/Authenticates As/i, /Has Permission/i, /Invoked/i, /Exposed To/i]) {
-        await expect(proofPage.locator(".graph-relationship-label").filter({ hasText: verb })).toBeVisible();
-      }
+      await expect(proofPage.locator(".graph-relationship-label")).toHaveCount(0);
       await scrollTo(proofPage, 0);
     };
     // A phone opens on the ranked hop list, its readable sequential path view.

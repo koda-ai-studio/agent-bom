@@ -126,8 +126,14 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   // Compact correlations can still be wide fan-ins/fan-outs. Keep their
   // aspect-aware wrapping so a small evidence set does not become a tall
   // column that the adaptive camera can only show one node at a time.
-  const compact = nodes.length <= 24 && (repository || Math.max(0, ...fanIn.values(), ...fanOut.values()) <= 2);
+  const boundedOverview = nodes.length <= 16 && edges.length <= 16;
   const captionRanks = nodes.length <= 24 ? sourceRanks(nodes, rankedEdges) : null;
+  const rankSizes = new Map<number, number>();
+  for (const rank of captionRanks?.values() ?? []) rankSizes.set(rank, (rankSizes.get(rank) ?? 0) + 1);
+  // Small converging graphs need centred ranks too. Keep wider fan-outs on
+  // the wrapped layout so balancing never creates an unreadable tall column.
+  const balanced = boundedOverview && captionRanks !== null && Math.max(0, ...rankSizes.values()) <= 4;
+  const compact = nodes.length <= 24 && (balanced || repository || Math.max(0, ...fanIn.values(), ...fanOut.values()) <= 2);
   const stackedFinding = nodes.length <= 24 && nodes.some(node => FINDINGS.has(node.data.nodeType) &&
     (!captionRanks || nodes.some(peer => peer.id !== node.id && captionRanks.get(peer.id) === captionRanks.get(node.id))));
   const tallCaptions = stackedFinding || nodes.some(node => node.data.occurrenceRole || node.data.description ||
@@ -167,12 +173,11 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
       ? layout.nodes.map(node => ({ ...node, style: { ...node.style, minHeight: nodeHeight } }))
       : layout.nodes;
   const positioned = new Map((compact && repository ? alignHierarchyBranches(ordered, rankedEdges, rowStep) : ordered).map(node => [node.id, node]));
-  const boundedOverview = nodes.length <= 16 && edges.length <= 16;
   return {
     nodes: nodes.map(node => positioned.get(node.id)!),
     edges: edges.map((edge): Edge => ({ ...edge,
       ...(contextEdges.has(edge.id) ? { sourceHandle: "context", targetHandle: "context" } : {}),
-      data: { ...edge.data, quietLabel: !boundedOverview && !edge.data?.isClusterEdge,
+      data: { ...edge.data, quietLabel: !edge.data?.isClusterEdge,
         boundedOverview, directionEmphasis: boundedOverview || edge.data?.directionEmphasis === true },
     })),
   };

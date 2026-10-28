@@ -182,10 +182,14 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await labelCollisions(page)).toEqual([]);
   await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(proof.capture_fixture.graph.edges.length);
-  for (const verb of [/Authenticates As/i, /Has Permission/i, /Invoked/i, /Exposed To/i]) {
-    await expect(page.locator(".graph-relationship-label").filter({ hasText: verb })).toBeVisible();
-  }
-  await expect(page.locator(".graph-relationship-label .sr-only")).toHaveCount(0);
+  // The overview keeps all directional relationships without nine competing captions.
+  expect(await visibleLabelTexts(page)).toEqual([]);
+  const smallestCaption = await page.locator("[data-graph-entity] > p:first-of-type").evaluateAll(labels => {
+    const viewport = document.querySelector(".react-flow__viewport")!;
+    const zoom = new DOMMatrixReadOnly(getComputedStyle(viewport).transform).a;
+    return Math.min(...labels.map(label => parseFloat(getComputedStyle(label).fontSize) * zoom));
+  });
+  expect(smallestCaption, "entity names remain readable after Fit all").toBeGreaterThanOrEqual(12);
   const clippedIds = await page.locator("[data-graph-entity] p > span[title]").evaluateAll(ids =>
     ids.filter(id => id.scrollWidth > id.clientWidth + 1).map(id => id.textContent));
   expect(clippedIds).toEqual([]);
