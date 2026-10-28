@@ -32,6 +32,14 @@ _SECRET_REFERENCE_FIELD_RE = re.compile(
     r"(?:^topologyKey$|LabelKey$|SecretKey$|SecretName$)",
     re.IGNORECASE,
 )
+# Parent blocks whose children name a Kubernetes Secret and the key inside it
+# (``existingSecret: {name, key}``, ``secretKeyRef``, ``valueFrom``): the
+# values are references to secret material, never the material itself.
+_SECRET_REFERENCE_PARENT_RE = re.compile(
+    r"(?:existingSecret|secretKeyRef|secretRef|configMapKeyRef|valueFrom|secretStoreRef|externalSecret)s?$",
+    re.IGNORECASE,
+)
+_SECRET_REFERENCE_CHILD_KEYS = frozenset({"key", "name", "namespace", "kind", "property"})
 
 
 def _find_line(content: str, key: str, value: Any, start_line: int = 1) -> int:
@@ -72,10 +80,19 @@ def _is_secret_reference_field(key: str) -> bool:
     return bool(_SECRET_REFERENCE_FIELD_RE.search(key))
 
 
-def _walk_secret_fields(obj: Any, content: str, file_path: str, findings: list[IaCFinding]) -> None:
+def _walk_secret_fields(
+    obj: Any,
+    content: str,
+    file_path: str,
+    findings: list[IaCFinding],
+    parent_key: str | None = None,
+) -> None:
     """Recursively walk a parsed YAML object and flag secret-like fields with real values."""
     if isinstance(obj, dict):
+        in_reference_block = bool(parent_key and _SECRET_REFERENCE_PARENT_RE.search(parent_key))
         for k, v in obj.items():
+            if in_reference_block and isinstance(k, str) and k in _SECRET_REFERENCE_CHILD_KEYS:
+                continue
             if isinstance(k, str) and _SECRET_FIELD_RE.search(k) and not _is_secret_reference_field(k):
                 if isinstance(v, str) and v and not _is_placeholder(v):
                     findings.append(
@@ -96,8 +113,8 @@ def _walk_secret_fields(obj: Any, content: str, file_path: str, findings: list[I
                     )
             # Recurse into nested structures regardless
             if isinstance(v, (dict, list)):
-                _walk_secret_fields(v, content, file_path, findings)
+                _walk_secret_fields(v, content, file_path, findings, k if isinstance(k, str) else None)
     elif isinstance(obj, list):
         for item in obj:
             if isinstance(item, (dict, list)):
-                _walk_secret_fields(item, content, file_path, findings)
+                _walk_secret_fields(item, content, file_path, findings, parent_key)

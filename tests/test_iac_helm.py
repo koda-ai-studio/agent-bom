@@ -210,6 +210,50 @@ class TestValuesYamlSecrets:
         findings = scan_values_yaml(p)
         assert "HELM-003" not in _rule_ids(findings)
 
+    def test_existing_secret_reference_key_ok(self, tmp_path):
+        """``existingSecret.key`` names the key inside a Secret, not secret material.
+
+        The shipped chart's ``nvdApiKey.existingSecret.key: NVD_API_KEY`` must not
+        fail the default gate as a critical hardcoded secret.
+        """
+        p = _write(
+            tmp_path,
+            "values.yaml",
+            """\
+            nvdApiKey:
+              existingSecret:
+                name: nvd-api
+                key: NVD_API_KEY
+            db:
+              auth:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
+            env:
+              - name: TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: tokens
+                    key: api-token
+        """,
+        )
+        findings = scan_values_yaml(p)
+        assert "HELM-003" not in _rule_ids(findings)
+
+    def test_secret_value_inside_reference_block_still_flagged(self, tmp_path):
+        p = _write(
+            tmp_path,
+            "values.yaml",
+            """\
+            db:
+              existingSecret:
+                name: db-credentials
+                password: super-secret-value
+        """,
+        )
+        findings = scan_values_yaml(p)
+        assert "HELM-003" in _rule_ids(findings)
+
     def test_hardcoded_token_flagged(self, tmp_path):
         p = _write(
             tmp_path,

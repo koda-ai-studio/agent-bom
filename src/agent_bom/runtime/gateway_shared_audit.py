@@ -77,13 +77,22 @@ class SharedGatewayAuditSink(ControlPlaneAuditSink):
         # A peer may claim the event between enqueue and flush. Wait for that
         # exact row's fenced deletion, never another batch's acknowledgement.
         async with asyncio.timeout(ADMISSION_ACK_TIMEOUT_SECONDS):
-            await self.flush_once()
+            delivered = await self.flush_once()
             delay = 0.05
             while await asyncio.to_thread(self.store.pending, event_id):
                 if not self._available or self.controller.consecutive_failures:
                     raise GatewayAuditDeliveryUnavailableError("durable acknowledgement is pending")
+                if delivered:
+                    # Older rows left the queue ahead of ours (a backlog after
+                    # an outage): keep draining instead of handing the rest to
+                    # the retry worker, whose backoff outlasts the admission deadline.
+                    delivered = await self.flush_once()
+                    continue
+                # A peer holds the lease. Poll for its fenced deletion, then try
+                # to claim again in case the lease expired without delivery.
                 await asyncio.sleep(delay)
                 delay = min(delay * 2, 0.25)
+                delivered = await self.flush_once()
             self._remote_ack = True
 
     async def __call__(self, event: dict[str, Any]) -> None:

@@ -161,3 +161,34 @@ def test_scan_report_contract_accepts_agent_type_without_legacy_type() -> None:
     payload["agents"][0].pop("type")
 
     jsonschema.validate(payload, _load(CONTRACTS / "scan-report.schema.json"))
+
+
+def test_demo_scan_report_matches_contract_schema(tmp_path) -> None:
+    """A real report with blast-radius rows and coverage warnings validates.
+
+    The serializer test above builds an empty report, so ``blast_radius``
+    (schema ``"2"`` since 0.111.0) and scan-wide ``coverage_warnings`` rows
+    (``kind`` instead of ``ecosystem``/``reason``/``detail``) never reached
+    the contract. The bundled demo exercises both.
+    """
+    from click.testing import CliRunner
+
+    from agent_bom.cli import main
+
+    out = tmp_path / "demo.json"
+    runner = CliRunner()
+    result = runner.invoke(main, ["scan", "--demo", "--offline", "-f", "json", "-o", str(out), "--quiet"])
+    assert out.exists(), result.output
+    report = _load(out)
+    assert report["blast_radius"], "demo report should carry blast-radius rows"
+    assert all(row["schema_version"] == "2" for row in report["blast_radius"])
+    jsonschema.validate(report, _load(CONTRACTS / "scan-report.schema.json"))
+    schema = _load(CONTRACTS / "scan-report.schema.json")
+    scan_wide = {
+        "release": "remote:osv",
+        "kind": "remote_lookup_error",
+        "ecosystems": ["npm", "pypi"],
+        "package_count": 3,
+        "reasons": ["unavailable"],
+    }
+    jsonschema.validate({**report, "coverage_warnings": [scan_wide]}, schema)

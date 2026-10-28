@@ -835,3 +835,39 @@ def test_validate_url_allows_public_ip(monkeypatch):
 def test_validate_url_private_override_still_allows_cgnat(monkeypatch):
     monkeypatch.setenv("AGENT_BOM_ALLOW_PRIVATE_EGRESS_URLS", "true")
     validate_url("https://100.64.0.1/api")
+
+
+def test_validate_url_unresolvable_host_rejected_without_proxy(monkeypatch):
+    import socket
+
+    for name in ("HTTPS_PROXY", "https_proxy", "ALL_PROXY", "all_proxy", "NO_PROXY", "no_proxy"):
+        monkeypatch.delenv(name, raising=False)
+
+    def _fail(*_a, **_k):
+        raise socket.gaierror("Name or service not known")
+
+    monkeypatch.setattr(socket, "getaddrinfo", _fail)
+    with pytest.raises(SecurityError, match="Cannot resolve hostname"):
+        validate_url("https://api.osv.dev/v1/query")
+
+
+def test_validate_url_unresolvable_host_allowed_behind_egress_proxy(monkeypatch):
+    """Proxy-only networks resolve names at the proxy; local DNS failure is not a verdict."""
+    import socket
+
+    for name in ("HTTPS_PROXY", "https_proxy", "ALL_PROXY", "all_proxy", "NO_PROXY", "no_proxy"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.internal:8080")
+    monkeypatch.setenv("NO_PROXY", "internal.example")
+
+    def _fail(*_a, **_k):
+        raise socket.gaierror("Name or service not known")
+
+    monkeypatch.setattr(socket, "getaddrinfo", _fail)
+    validate_url("https://api.osv.dev/v1/query")
+    # A NO_PROXY host connects directly, so it must still resolve locally.
+    with pytest.raises(SecurityError, match="Cannot resolve hostname"):
+        validate_url("https://internal.example/api")
+    # Literal private/metadata targets stay refused regardless of the proxy.
+    with pytest.raises(SecurityError):
+        validate_url("https://169.254.169.254/latest/meta-data/")

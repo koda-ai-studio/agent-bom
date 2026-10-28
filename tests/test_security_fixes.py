@@ -73,10 +73,12 @@ def test_validate_url_allows_public_resolution():
         validate_url("https://example.com/webhook")  # Should not raise
 
 
-def test_validate_url_unresolvable_host():
-    """Hostname that cannot be resolved should be blocked."""
+def test_validate_url_unresolvable_host(monkeypatch):
+    """Hostname that cannot be resolved should be blocked (no egress proxy configured)."""
     import socket
 
+    for name in ("HTTPS_PROXY", "https_proxy", "ALL_PROXY", "all_proxy"):
+        monkeypatch.delenv(name, raising=False)
     with patch("socket.getaddrinfo", side_effect=socket.gaierror("Name not found")):
         with pytest.raises(SecurityError, match="Cannot resolve"):
             validate_url("https://nonexistent.invalid/callback")

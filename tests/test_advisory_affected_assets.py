@@ -120,7 +120,8 @@ def test_pages_carry_generation_and_refuse_a_changed_snapshot() -> None:
     assert stale.value.kind == "stale"
     with pytest.raises(AffectedCursorError) as other_tenant:
         page_answer(answer, tenant_id="t2", limit=2, cursor=first["next_cursor"])
-    assert other_tenant.value.kind == "stale"
+    # A cursor minted for another tenant is malformed (422) on every route, never "stale".
+    assert other_tenant.value.kind == "malformed"
     with pytest.raises(AffectedCursorError) as malformed:
         page_answer(answer, tenant_id="t1", limit=2, cursor="not-a-cursor")
     assert malformed.value.kind == "malformed"

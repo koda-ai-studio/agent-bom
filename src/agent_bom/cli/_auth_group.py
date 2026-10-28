@@ -190,6 +190,18 @@ def write_env_file(path: str | Path, block: str) -> Path:
     return target
 
 
+def _caused_by_resolver_failure(exc: BaseException) -> bool:
+    """True when ``exc`` or any exception in its chain is a DNS resolver failure."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if isinstance(current, socket.gaierror):
+            return True
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return False
+
+
 def check_issuer_connectivity(issuer: str) -> dict[str, object]:
     """Reuse the mechanism's discovery to confirm the issuer's endpoints resolve.
 
@@ -216,6 +228,11 @@ def check_issuer_connectivity(issuer: str) -> dict[str, object]:
             raise
         return {**offline, "warning": "OIDC issuer hostname could not be resolved"}
     except OIDCError as exc:
+        # Behind an egress proxy validate_url lets an unresolvable name through
+        # and the resolver fails inside the fetch instead; the resolver text can
+        # carry the hostname, so it gets the same fixed warning.
+        if _caused_by_resolver_failure(exc):
+            return {**offline, "warning": "OIDC issuer hostname could not be resolved"}
         warning = sanitize_text(sanitize_error(exc)) or "OIDC issuer discovery failed"
         return {**offline, "warning": warning}
     endpoints = {key: str(doc.get(key) or "").strip() for key in ("authorization_endpoint", "token_endpoint", "jwks_uri")}

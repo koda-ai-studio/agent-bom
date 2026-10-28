@@ -168,6 +168,7 @@ def test_healthz_publishes_fail_mode_matrix_default_closed() -> None:
     assert subsystems["caller_identity"]["posture"] == "fail_closed"
     assert subsystems["drift_enforcement"]["posture"] == "fail_open"
     assert subsystems["audit_export"]["posture"] == "fail_open"
+    assert subsystems["audit_admission"]["posture"] == "fail_closed"
 
 
 def test_healthz_fail_mode_matrix_reflects_explicit_open_mode() -> None:
