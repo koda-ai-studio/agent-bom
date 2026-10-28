@@ -126,10 +126,12 @@ def test_sqlite_blueprint_lookup_uses_the_open_blueprint_index(tmp_path):
 def test_postgres_blueprint_index_is_identical_in_every_schema_path():
     from pathlib import Path
 
-    from agent_bom.api.storage.registry_schema import DRIFT_BLUEPRINT_KEY_SQL, DRIFT_BLUEPRINT_OPEN_INDEX_DDL
+    from agent_bom.api.storage.registry_schema import DRIFT_BLUEPRINT_KEY_COLUMN_DDL, DRIFT_BLUEPRINT_OPEN_INDEX_DDL
 
     root = Path(__file__).resolve().parents[1] / "deploy" / "supabase" / "postgres"
-    migration = (root / "alembic" / "versions" / "20261024_01_drift_incident_blueprint_index.py").read_text()
-    assert f"({DRIFT_BLUEPRINT_KEY_SQL})" in migration
-    assert 'down_revision = "20261023_02"' in migration
-    assert DRIFT_BLUEPRINT_OPEN_INDEX_DDL + ";" in (root / "runtime-schema.sql").read_text()
+    migration = (root / "alembic" / "versions" / "20261027_03_drift_blueprint_seek.py").read_text()
+    assert 'down_revision = "20261027_02"' in migration
+    for source in (migration, (root / "runtime-schema.sql").read_text()):
+        normalized = " ".join(source.split())
+        assert " ".join(DRIFT_BLUEPRINT_KEY_COLUMN_DDL.split()) + ";" in normalized
+        assert " ".join(DRIFT_BLUEPRINT_OPEN_INDEX_DDL.split()) + ";" in normalized

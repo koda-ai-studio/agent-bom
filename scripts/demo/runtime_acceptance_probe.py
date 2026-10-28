@@ -11,6 +11,48 @@ def run(config: dict) -> dict:
     from agent_bom.api.browser_session import SESSION_COOKIE_NAME, create_browser_session_token
 
     mode = config["mode"]
+    if mode in {"claim_delivery", "delivery_pending"}:
+        import hashlib
+
+        from agent_bom.api.storage.gateway_delivery import PostgresGatewayOutbox
+        from agent_bom.runtime.gateway_events import GatewayRuntimeEventType, build_gateway_runtime_event
+
+        stream = hashlib.sha256(b"http://agent-bom-api:8422\0gateway\0default").hexdigest()
+        queue = PostgresGatewayOutbox("default", stream)
+        if mode == "delivery_pending":
+            return {"pending": queue.pending(config["event_id"])}
+        event = build_gateway_runtime_event(
+            GatewayRuntimeEventType.TOOL_CALL_BLOCKED,
+            tenant_id="default",
+            agent_id="acceptance-agent",
+            profile_id="acceptance-profile",
+            upstream="filesystem",
+            tool="read_file",
+            decision="deny",
+            policy_source="fixture",
+            trace_id="failover-fixture",
+            reason_code="failover_fixture",
+        )
+        # Seed an already-owned fixture atomically so another live pod cannot
+        # race the probe between enqueue and claim. Production enqueue/claim
+        # concurrency is covered by the real-Postgres contract suite.
+        payload = json.dumps(event, sort_keys=True, separators=(",", ":"))
+        with queue.connection() as conn:
+            conn.execute(
+                "INSERT INTO gateway_audit_outbox(tenant_id,stream_id,event_id,digest,payload,payload_bytes,lease_token,lease_until) "
+                "VALUES(%s,%s,%s,%s,%s,%s,%s,clock_timestamp()+interval '60 seconds')",
+                (
+                    "default",
+                    stream,
+                    event["event_id"],
+                    hashlib.sha256(payload.encode()).hexdigest(),
+                    payload,
+                    len(payload.encode()),
+                    "acceptance-owner",
+                ),
+            )
+            conn.commit()
+        return {"event_id": event["event_id"], "lease_seconds": queue.lease_seconds}
     if mode == "source":
         import hashlib
         from pathlib import Path

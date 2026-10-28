@@ -11,6 +11,7 @@ from agent_bom.api.dataset_version_store import DatasetVersionRecord
 from agent_bom.api.drift_incident_store import DriftIncident, drift_blueprint_key
 from agent_bom.api.evaluation_store import EvaluationRunRecord
 from agent_bom.api.storage.registry_schema import (
+    DRIFT_BLUEPRINT_KEY_COLUMN_DDL,
     DRIFT_BLUEPRINT_KEY_SQL,
     DRIFT_BLUEPRINT_OPEN_INDEX_DDL,
     REGISTRY_TABLES,
@@ -30,11 +31,12 @@ class RegistryStore:
     record_type: Any
     # Development/test bootstrap only; deployed schemas get these from Alembic.
     index_ddl: tuple[str, ...] = ()
+    schema_version = 1
 
     def __init__(self, pool: Any = None) -> None:
         self._pool = pool or postgres_common._get_pool()
         with self._pool.connection() as conn:
-            if ensure_postgres_schema_version(conn, self.table):
+            if ensure_postgres_schema_version(conn, self.table, version=self.schema_version):
                 conn.execute(registry_table_ddl(self.table))
                 for statement in self.index_ddl:
                     conn.execute(statement)
@@ -152,7 +154,8 @@ class PostgresDriftIncidentStore(RegistryStore):
     keys = ("incident_id",)
     columns = ("incident_id", "resolved", "last_detected_at")
     record_type = DriftIncident
-    index_ddl = (DRIFT_BLUEPRINT_OPEN_INDEX_DDL,)
+    schema_version = 2
+    index_ddl = (DRIFT_BLUEPRINT_KEY_COLUMN_DDL, DRIFT_BLUEPRINT_OPEN_INDEX_DDL)
 
     def get(self, tenant_id: str, incident_id: str) -> DriftIncident | None:
         return self._get(tenant_id, incident_id)
@@ -209,5 +212,6 @@ def validate_postgres_registries() -> None:
     pool = postgres_common._get_pool()
     with pool.connection() as conn:
         for table in (*REGISTRY_TABLES, "campaign_evidence_state"):
-            ensure_postgres_schema_version(conn, table)
+            version = PostgresDriftIncidentStore.schema_version if table == "drift_incidents" else 1
+            ensure_postgres_schema_version(conn, table, version=version)
             conn.execute(f"SELECT 1 FROM {table} LIMIT 0")  # nosec B608 - identifiers and query fragments are fixed by internal adapters; values are bound

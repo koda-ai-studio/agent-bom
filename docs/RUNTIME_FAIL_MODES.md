@@ -9,6 +9,16 @@ evaluator that raises. The canonical inventory is code, not prose:
   (resolved against the running `AGENT_BOM_GATEWAY_FAIL_MODE`)
 - **Regression pin:** `tests/test_runtime_fail_mode.py`
 
+Shared gateway audit delivery (`AGENT_BOM_GATEWAY_AUDIT_BACKEND=postgres`) is an
+admission requirement, separate from optional audit export. Missing migrations,
+database failure, a full queue, expired ownership, or incomplete remote
+acknowledgement never authorize tool execution. A crash after remote commit but
+before local acknowledgement can replay the event; the receiving ledger must
+deduplicate it. Database-clock leases fence stale acknowledgements. The retry
+worker can recover another pod's expired claim without its credentials: the
+replica set uses one dedicated, tenant-bound delivery credential. Health reports
+pending work and loss of acknowledgement; it does not attest the reported agent.
+
 ## Summary
 
 | Subsystem | Default posture | Follows `AGENT_BOM_GATEWAY_FAIL_MODE` |

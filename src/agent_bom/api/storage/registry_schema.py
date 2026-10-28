@@ -16,13 +16,17 @@ REGISTRY_TABLES = {
     "PRIMARY KEY (tenant_id, incident_id)",
 }
 
-# Match key for open-incident lookups by (tenant, blueprint); mirrors
-# ``drift_incident_store.drift_blueprint_key``. Must stay byte-identical to the
-# expression in the index below (and its Alembic revision 20261024_01).
-DRIFT_BLUEPRINT_KEY_SQL = r"lower(replace(btrim(data->>'blueprint_id', E' \t\n\x0b\f\r'), '-', '_'))"
+# Stored normalization keeps the lookup indexable for the restricted RLS role.
+# JSON extraction is not leakproof, so a query-time expression is filtered only
+# after tenant rows are read. PostgreSQL maintains this key on every data write.
+DRIFT_BLUEPRINT_KEY_SQL = "blueprint_key"
+DRIFT_BLUEPRINT_KEY_COLUMN_DDL = (
+    "ALTER TABLE public.drift_incidents ADD COLUMN IF NOT EXISTS blueprint_key TEXT "
+    r"GENERATED ALWAYS AS (lower(replace(btrim(data->>'blueprint_id', E' \t\n\x0b\f\r'), '-', '_'))) STORED"
+)
 DRIFT_BLUEPRINT_OPEN_INDEX_DDL = (
-    "CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_blueprint_open ON public.drift_incidents "
-    f"(tenant_id, ({DRIFT_BLUEPRINT_KEY_SQL}), last_detected_at DESC) WHERE NOT resolved"
+    "CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_blueprint_key_open ON public.drift_incidents "
+    "(tenant_id, blueprint_key, last_detected_at DESC, incident_id DESC) WHERE NOT resolved"
 )
 
 

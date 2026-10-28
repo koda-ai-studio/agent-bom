@@ -131,7 +131,7 @@ from agent_bom.runtime.gateway_relay import _default_upstream_caller as _default
 from agent_bom.runtime.gateway_relay import _post_upstream_jsonrpc as _post_upstream_jsonrpc
 from agent_bom.runtime.gateway_relay_contract import MAX_GATEWAY_RELAY_MESSAGE_BYTES
 from agent_bom.runtime.gateway_settings import GatewaySettings as GatewaySettings
-from agent_bom.runtime.gateway_settings import validate_gateway_security_settings
+from agent_bom.runtime.gateway_settings import validate_gateway_startup_settings
 from agent_bom.runtime.graph_reachability import ReachabilityMap, load_reachability_map
 from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta
 from agent_bom.security import sanitize_text
@@ -230,7 +230,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
     Separating app construction from CLI entry point keeps the server
     testable end-to-end via ``TestClient(create_gateway_app(settings))``.
     """
-    validate_gateway_security_settings(settings)
+    validate_gateway_startup_settings(settings)
     if settings.bearer_token:
         settings._bearer_token_deadline = _parse_gateway_token_expiry(settings.bearer_token_expires_at)
     if settings.audit_sink is None:

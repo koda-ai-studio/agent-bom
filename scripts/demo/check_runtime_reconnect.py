@@ -13,6 +13,7 @@ import json
 import secrets
 import subprocess
 import tempfile
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -23,6 +24,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kubeconfig", type=Path, required=True)
     parser.add_argument("--image", default="agent-bom:runtime-acceptance")
+    parser.add_argument("--shared-delivery", action="store_true", help="Qualify two gateway pods with Postgres audit leases")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--ui-root", type=Path, help="Built standalone UI with Playwright dependencies; enables real browser proof")
     args = parser.parse_args()
@@ -52,7 +54,12 @@ def main() -> None:
         "source_commit": command(["git", "-C", str(ROOT), "rev-parse", "HEAD"]).strip(),
         "source_dirty": bool(command(["git", "-C", str(ROOT), "status", "--porcelain"]).strip()),
         "started_at": datetime.now(timezone.utc).isoformat(),
-        "topology": {"api_replicas": 2, "gateway_replicas": 1, "gateway_storage": "PVC", "activity_storage": "Postgres"},
+        "topology": {
+            "api_replicas": 2,
+            "gateway_replicas": 2 if args.shared_delivery else 1,
+            "gateway_storage": "Postgres leases" if args.shared_delivery else "PVC",
+            "activity_storage": "Postgres",
+        },
     }
 
     def apply(kind, name, **fields):
@@ -76,7 +83,15 @@ def main() -> None:
         redactions.extend([password, app_password, maintenance_password, api_key, transport_key])
         app_url = f"postgresql://agent_bom_app:{app_password}@postgres:5432/agentbom?sslmode=require"
         apply("Secret", "postgres", stringData={"POSTGRES_PASSWORD": password, "POSTGRES_DB": "agentbom"})
-        apply("Secret", "db-app", stringData={"AGENT_BOM_POSTGRES_URL": app_url})
+        apply(
+            "Secret",
+            "db-app",
+            stringData={
+                "AGENT_BOM_POSTGRES_URL": app_url,
+                "AGENT_BOM_POSTGRES_POOL_MIN_SIZE": "1",
+                "AGENT_BOM_POSTGRES_POOL_MAX_SIZE": "2",
+            },
+        )
         apply(
             "Secret",
             "db-maintenance",
@@ -106,9 +121,12 @@ def main() -> None:
             "gateway-auth",
             stringData={
                 "AGENT_BOM_POSTGRES_URL": app_url,
+                "AGENT_BOM_POSTGRES_POOL_MIN_SIZE": "1",
+                "AGENT_BOM_POSTGRES_POOL_MAX_SIZE": "2",
                 "AGENT_BOM_GATEWAY_BEARER_TOKEN": transport_key,
                 "AGENT_BOM_GATEWAY_BEARER_TOKEN_EXPIRES_AT": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
                 "AGENT_BOM_CONTROL_PLANE_TOKEN": api_key,
+                "AGENT_BOM_AUDIT_HMAC_KEY": secrets.token_urlsafe(32),
             },
         )
         with tempfile.TemporaryDirectory(prefix="runtime-postgres-tls-") as tls_dir:
@@ -181,9 +199,12 @@ HTTPServer(('0.0.0.0',8100),Handler).serve_forever()
         )
         command([*kubectl, "label", "pod", "upstream", "app=upstream"])
         apply("Service", "upstream", spec={"selector": {"app": "upstream"}, "ports": [{"port": 8100}]})
-        apply(
-            "PersistentVolumeClaim", "gateway-state", spec={"accessModes": ["ReadWriteOnce"], "resources": {"requests": {"storage": "1Gi"}}}
-        )
+        if not args.shared_delivery:
+            apply(
+                "PersistentVolumeClaim",
+                "gateway-state",
+                spec={"accessModes": ["ReadWriteOnce"], "resources": {"requests": {"storage": "1Gi"}}},
+            )
         command([*kubectl, "wait", "--for=condition=Ready", "pod/postgres", "--timeout=180s"])
         # Alembic-only BYO Postgres requires the app login to be provisioned
         # first; migrations reconcile its password and own all schema objects.
@@ -218,13 +239,19 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ag
                 "api": {
                     "replicas": 2,
                     "envFrom": [{"secretRef": {"name": "api-auth"}}],
-                    "env": [{"name": "AGENT_BOM_STATE_DIR", "value": "/tmp/agent-bom"}],
+                    "env": [
+                        {"name": "AGENT_BOM_STATE_DIR", "value": "/tmp/agent-bom"},
+                        {"name": "AGENT_BOM_POSTGRES_POOL_MIN_SIZE", "value": "1"},
+                        {"name": "AGENT_BOM_POSTGRES_POOL_MAX_SIZE", "value": "2"},
+                    ],
                 },
             },
             "gateway": {
                 "enabled": True,
                 "image": {"repository": repository, "tag": tag},
-                "persistence": {"enabled": True, "existingClaim": "gateway-state"},
+                "replicas": 2 if args.shared_delivery else 1,
+                "auditBackend": "postgres" if args.shared_delivery else "local",
+                "persistence": {"enabled": not args.shared_delivery, "existingClaim": "gateway-state"},
                 "profileEnforcement": "enforce",
                 "profileEnvironment": "prod",
                 "envFrom": [{"secretRef": {"name": "gateway-auth"}}],
@@ -269,6 +296,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ag
             "api/storage_schema.py",
         ]
         expected_sources = {name: hashlib.sha256((ROOT / "src/agent_bom" / name).read_bytes()).hexdigest() for name in source_files}
+        for name in ["runtime/gateway_shared_audit.py", "api/storage/gateway_delivery.py"]:
+            expected_sources[name] = hashlib.sha256((ROOT / "src/agent_bom" / name).read_bytes()).hexdigest()
+        source_files = list(expected_sources)
         assert probe(writer, "source", files=source_files) == expected_sources, "Image runtime sources differ from checkout"
         report["verified_image_sources"] = expected_sources
         report["container_images"] = [
@@ -277,7 +307,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ag
         gateway_before = json.loads(command([*kubectl, "get", "pods", "-l", "app.kubernetes.io/component=gateway", "-o", "json"]))["items"][
             0
         ]
-        pvc_before = json.loads(command([*kubectl, "get", "pvc", "gateway-state", "-o", "json"]))["metadata"]["uid"]
+        pvc_before = None
+        if not args.shared_delivery:
+            pvc_before = json.loads(command([*kubectl, "get", "pvc", "gateway-state", "-o", "json"]))["metadata"]["uid"]
         report["postgres_verification"] = command(
             [*kubectl, "logs", "-l", "app.kubernetes.io/component=postgres-verification", "--tail=1"]
         ).strip()
@@ -287,7 +319,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ag
         probe(writer, "call", count=205, identity_token=identity, transport_token=transport_key)
         first = probe(writer, "read", host=pods[0]["status"]["podIP"], cursor=checkpoint)
         assert len(first["events"]) == 205
-        print("Restarting the serving API pod and the PVC-backed gateway", flush=True)
+        print("Restarting the serving API pod and gateway deployment", flush=True)
         command([*kubectl, "delete", "pod", reader, "--wait=true"])
         command([*kubectl, "rollout", "restart", "deployment/agent-bom-gateway"])
         for deployment in ["agent-bom-api", "agent-bom-gateway"]:
@@ -307,12 +339,29 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ag
             0
         ]
         assert gateway_before["metadata"]["uid"] != gateway_after["metadata"]["uid"]
-        assert json.loads(command([*kubectl, "get", "pvc", "gateway-state", "-o", "json"]))["metadata"]["uid"] == pvc_before
+        if pvc_before is not None:
+            assert json.loads(command([*kubectl, "get", "pvc", "gateway-state", "-o", "json"]))["metadata"]["uid"] == pvc_before
         report["gateway_restart"] = {
             "before_uid": gateway_before["metadata"]["uid"],
             "after_uid": gateway_after["metadata"]["uid"],
             "pvc_uid": pvc_before,
         }
+        if args.shared_delivery:
+            current_gateways = json.loads(command([*kubectl, "get", "pods", "-l", "app.kubernetes.io/component=gateway", "-o", "json"]))[
+                "items"
+            ]
+            assert len(current_gateways) == 2
+            owner = current_gateways[0]["metadata"]["name"]
+            pending = probe(owner, "claim_delivery")
+            command([*kubectl, "delete", "pod", owner, "--grace-period=0", "--force", "--wait=true"])
+            deadline = time.monotonic() + pending["lease_seconds"] + 60
+            while probe(writer, "delivery_pending", event_id=pending["event_id"])["pending"]:
+                assert time.monotonic() < deadline, "surviving gateway failed to recover expired delivery lease"
+                time.sleep(2)
+            recovered = probe(writer, "read", host=replacement["status"]["podIP"], cursor=second["cursor"])
+            assert [row["event_id"] for row in recovered["events"]] == [pending["event_id"]]
+            report["shared_delivery_failover"] = {"killed_pod": owner, "recovered_events": 1, "duplicates": 0}
+            events += recovered["events"]
         if args.ui_root:
             print("Verifying authenticated browser themes, mobile layout and live transport reconnect", flush=True)
             cookie = probe(writer, "cookie", role="admin")
@@ -334,7 +383,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ag
             )
         report.update(
             {
-                "events_verified": 212,
+                "events_verified": len(events),
                 "duplicates": 0,
                 "missing_ordinals": 0,
                 "replacement_api_uid": replacement["metadata"]["uid"],

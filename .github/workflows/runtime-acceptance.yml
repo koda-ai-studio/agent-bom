@@ -62,6 +62,8 @@ jobs:
           kind load docker-image agent-bom:runtime-acceptance --name runtime-acceptance
       - name: Verify actual Helm gateway delivery and reconnect
         run: python3 scripts/demo/check_runtime_reconnect.py --kubeconfig "$RUNNER_TEMP/runtime-kubeconfig" --ui-root "$GITHUB_WORKSPACE/ui" --output "$RUNNER_TEMP/runtime-helm-proof.json"
+      - name: Verify shared gateway leases and pod-loss recovery
+        run: python3 scripts/demo/check_runtime_reconnect.py --shared-delivery --kubeconfig "$RUNNER_TEMP/runtime-kubeconfig" --output "$RUNNER_TEMP/runtime-shared-proof.json"
       - name: Upload non-secret acceptance result
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -69,6 +71,7 @@ jobs:
           path: |
             ${{ runner.temp }}/runtime-helm-proof.json
             ${{ runner.temp }}/runtime-helm-proof/*.png
+            ${{ runner.temp }}/runtime-shared-proof.json
           if-no-files-found: error
       - name: Remove isolated cluster
         if: always()

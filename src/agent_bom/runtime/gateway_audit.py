@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from agent_bom.core.settings import env_str
 from agent_bom.runtime.audit_delivery import (
     AuditDeliveryController,
     AuditDeliveryState,
@@ -455,6 +456,18 @@ def build_control_plane_audit_sink(
     max_tenant_sinks: int = _GATEWAY_AUDIT_MAX_TENANT_SINKS,
 ) -> ControlPlaneAuditSink:
     """Build the gateway's shared bounded control-plane audit delivery sink."""
+
+    backend = env_str("AGENT_BOM_GATEWAY_AUDIT_BACKEND", "local").strip().lower()
+    if backend not in {"local", "postgres"}:
+        raise ValueError("Invalid gateway audit backend")
+    if backend == "postgres":
+        if not env_str("AGENT_BOM_POSTGRES_URL").strip():
+            raise ValueError("Shared gateway audit requires Postgres")
+        if not token or spill_path or dlq_path or session_id:
+            raise ValueError("Shared gateway audit requires a dedicated credential and generated shared delivery identity")
+        from agent_bom.runtime.gateway_shared_audit import SharedGatewayAuditSink
+
+        return SharedGatewayAuditSink(base_url, token, tenant_id=tenant_id, source_id=source_id, sender=sender)
 
     audit_url = base_url.rstrip("/") + "/v1/proxy/audit"
     normalized_tenant_id = tenant_id.strip()

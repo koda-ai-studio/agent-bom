@@ -381,6 +381,11 @@ def test_drift_open_incidents_filter_by_blueprint_past_tenant_cap():
     if not os.environ.get("AGENT_BOM_POSTGRES_URL"):
         pytest.skip("requires restricted-role Postgres")
 
+    admin_url = os.environ.get("AGENT_BOM_POSTGRES_ADMIN_URL")
+    if not admin_url:
+        pytest.skip("requires admin fixture connection to analyze seeded planner statistics")
+    import psycopg
+
     tenant, other = "drift-bp-" + uuid4().hex, "drift-bp-" + uuid4().hex
 
     def incident(tenant_id, incident_id, blueprint, at, resolved=False):
@@ -409,14 +414,24 @@ def test_drift_open_incidents_filter_by_blueprint_past_tenant_cap():
             assert (hit.violates, hit.unavailable) == (True, False)
             assert (miss.violates, miss.unavailable) == (False, False)
             assert (clean.violates, clean.unavailable) == (False, False)
+            # Refresh this newly seeded distribution without changing planner
+            # security: EXPLAIN below still runs as the restricted tenant role.
+            with psycopg.connect(admin_url, autocommit=True) as admin:
+                admin.execute("ANALYZE public.drift_incidents")
             with _tenant_connection(pool) as conn:
                 conn.execute("SET LOCAL enable_seqscan = off")
                 plan = conn.execute(
-                    "EXPLAIN SELECT data FROM drift_incidents WHERE tenant_id=%s AND NOT resolved "  # nosec B608 - fixed test SQL
+                    "EXPLAIN (ANALYZE, FORMAT JSON) SELECT data FROM drift_incidents WHERE tenant_id=%s AND NOT resolved "  # nosec B608 - fixed test SQL
                     f"AND {DRIFT_BLUEPRINT_KEY_SQL}=%s ORDER BY last_detected_at DESC LIMIT 5",
                     (tenant, "target_role"),
                 ).fetchall()
-            assert "idx_drift_incidents_tenant_blueprint_open" in " ".join(row[0] for row in plan)
+            # An index name alone can hide a tenant-wide scan under RLS: the
+            # blueprint must participate in the seek, not a post-index filter.
+            nodes = [plan[0][0][0]["Plan"]]
+            for node in nodes:
+                nodes.extend(node.get("Plans", []))
+            assert any("target_role" in node.get("Index Cond", "") for node in nodes), nodes
+            assert sum(node.get("Rows Removed by Filter", 0) for node in nodes) <= 5
         with tenant_scope(other):
             assert store.list_open_for_blueprint(other, "target_role", limit=10) == []
     finally:

@@ -14,11 +14,66 @@ The standalone gateway exposes separate liveness and admission signals.
 returns 200 only while the configured audit path can admit tool execution. A
 control-plane gateway therefore becomes unready when the remote durable
 acknowledgement is unavailable, even though its bounded local spool retains the
-event for retry. The Helm chart requires that spool on a restart-stable PVC for
-both remote-connected and local-only gateways, runs one writer replica, and
-rejects autoscaling until shared delivery leases exist. A local-only gateway
+event for retry. Local delivery uses a restart-stable PVC and one writer replica.
+Shared Postgres delivery uses database-clock leases and fenced acknowledgements
+across a tenant-bound gateway replica set. A local-only gateway
 remains ready while its SQLite audit store is writable. Persistence failure, a
 full bounded backlog, or shutdown returns 503.
+
+### Shared gateway delivery
+
+Use SQLite/PVC delivery for local or single-writer installations. For overlapping
+gateway pods, apply the Postgres migrations before setting `gateway.auditBackend:
+postgres`, disable `gateway.persistence`, and configure `gateway.envFrom` and
+`gateway.controlPlaneDiscovery.url`. The Secret must supply a dedicated
+`AGENT_BOM_CONTROL_PLANE_TOKEN`, `AGENT_BOM_POSTGRES_URL`, and an explicit
+`AGENT_BOM_TENANT_ID`, plus the gateway's incoming authentication settings.
+Use one tenant-bound replica set per tenant. Per-request credentials are never
+written to the outbox or reused to drain another tenant's queue.
+
+The CLI uses the same backend through `AGENT_BOM_GATEWAY_AUDIT_BACKEND=postgres`
+with `agent-bom gateway serve --from-control-plane URL --upstreams FILE`.
+The default remains `local`. A missing database or remote sink never falls back
+to an ephemeral queue. Inspect `/healthz` for `shared_postgres`, pending bytes,
+worker state and acknowledgement availability; `/readyz` reflects admission.
+
+Delivery is at least once: pods claim bounded batches for 60 seconds using the
+database clock, send with a 20-second deadline, and acknowledge only their current
+lease. A crashed pod's work becomes eligible after expiry. The receiving ledger
+deduplicates event IDs. Tool execution still requires acknowledgement of its own
+admission event; a different pod's in-flight claim is not proof of delivery.
+No exactly-once tool execution guarantee is implied.
+
+Each tenant/destination queue is bounded to 8 MiB and 10,000 pending events, with
+a 64 KiB per-event ceiling. Full or unavailable storage blocks new admission.
+Unacknowledged events are retained rather than silently evicted; inspect and
+reconcile conflicting or permanently rejected events before resuming traffic.
+Shared database availability, capacity, TLS and backup remain operator duties.
+Budget `AGENT_BOM_POSTGRES_POOL_MIN_SIZE` and `AGENT_BOM_POSTGRES_POOL_MAX_SIZE`
+across every API and gateway process, including rollout overlap and verification
+jobs. API idempotency fencing uses an additional pool of up to four connections
+per process. The bootstrap application role permits 20 connections: default
+five-connection minimums can exhaust it with four replicas alone. Size pools
+and the database role limit together before enabling autoscaling; raising the
+replica count does not raise database capacity. Upstream connection pools and
+circuit breakers remain per process. Configure the existing shared rate-limit
+backend when enforcing tenant-wide quotas across replicas; delivery leases alone
+do not coordinate those controls.
+
+Before switching from a PVC spool, drain and verify the old deployment's backlog;
+the shared backend does not import local queues. Drain the shared queue before
+switching back or removing its schema. Keep local spool and audit evidence until
+the delivery receipt is verified. SQLite's UTC expression index is built once
+on upgrade; before running an older binary against that file, stop writers and
+drop only `idx_gateway_activity_window` (the event records remain unchanged).
+
+The Postgres upgrade also stores a normalized drift blueprint key so tenant-RLS
+lookups can filter in the index. Migration `20261027_03` rewrites
+`drift_incidents` while holding a write lock: schedule a maintenance window for
+large tables and run migrations before starting the new API/gateway version.
+Existing writers remain compatible; PostgreSQL computes the key from their JSON
+writes. Downgrading this migration preserves incident records but requires
+stopping the new application first.
 
 ### Runtime doc set
 
@@ -389,6 +444,14 @@ and Python. Its JSON artifact is written only after every assertion and cleanup
 succeeds. Record a clean source commit and the image identity before treating a
 run as release evidence. CI pins kind, Helm and the Kubernetes node image.
 
+For shared-delivery acceptance, rerun the probe on the same disposable cluster
+with `--shared-delivery` and a separate `--output` path. This deploys two gateway
+pods without a shared PVC, repeats the 212-call restart test, then seeds one
+already-leased blocked-event fixture and force-deletes its owner pod. The
+surviving worker must deliver that event after lease expiry, leaving 213 unique
+ledger events. The fixture tests delivery recovery, not a replayed tool action.
+Pool sizes are bounded explicitly to fit the test database connection budget.
+
 For browser acceptance, build the production dashboard with Node 22, copy
 `.next/static` to `.next/standalone/.next/static` and `public` to
 `.next/standalone/public`, install Playwright Chromium, and add `--ui-root ui`.
@@ -407,9 +470,10 @@ reopen and signed-session SSE resume. Its upstream and OCR detector are fixtures
 Proof boundaries: the deployment probe uses a synthetic upstream and locally
 signed browser session, not an external identity-provider login. Its self-signed
 Postgres TLS checks do not certify a managed provider, ingress TLS, network-policy
-enforcement or multi-node failure. A single persistent gateway restart does not
-prove concurrent gateway replicas or audit delivery during a total control-plane
-outage. Missing/foreign auth and invalid tenant cursors fail closed; a transport
+enforcement or multi-node failure. The shared-delivery mode proves bounded
+two-pod lease recovery on one Kubernetes node; it does not establish fleet
+throughput, multi-node availability, or admission during a total control-plane
+outage. Admission requires a durable remote acknowledgement. Missing/foreign auth and invalid tenant cursors fail closed; a transport
 failure preserves the last complete browser batch until authenticated reconnect.
 
 Managed identity lookup now requires schema component version 2. Run Alembic

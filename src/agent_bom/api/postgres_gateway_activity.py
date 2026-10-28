@@ -43,6 +43,7 @@ def bootstrap_postgres_gateway_activity_schema(conn: Connection) -> None:
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_gateway_activity_events_tenant_ordinal ON gateway_activity_events(tenant_id, ingest_ordinal)"
     )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_gateway_activity_window ON gateway_activity_events(tenant_id, event_timestamp, event_id)")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_gateway_activity_events_tenant_event_time "
         "ON gateway_activity_events("

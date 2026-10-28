@@ -24,7 +24,9 @@ from agent_bom.api.proxy_provenance import GatewaySubmissionProvenance, Producer
 from agent_bom.api.storage.gateway_activity_window import (
     GatewayActivityWindowSummary,
     _window_summary,
+    ensure_activity_time_index,
     memory_activity_window,
+    register_activity_clock,
     sql_activity_window,
 )
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
@@ -124,6 +126,7 @@ def ensure_sqlite_gateway_activity_schema(conn: sqlite3.Connection) -> None:
     conn.execute(_SQLITE_EVENTS_DDL)
     conn.execute(_SQLITE_SEQUENCES_DDL)
     conn.execute(_SQLITE_TOMBSTONES_DDL)
+    ensure_activity_time_index(conn)
     conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_gateway_activity_events_tenant_ordinal ON gateway_activity_events(tenant_id, ingest_ordinal)"
     )
@@ -721,6 +724,7 @@ class SQLiteGatewayActivityStore:
     def _conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
             self._local.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            register_activity_clock(self._local.conn)
             self._local.conn.execute("PRAGMA journal_mode=WAL")
         return self._local.conn
 

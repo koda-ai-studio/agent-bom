@@ -141,6 +141,7 @@ CREATE TABLE IF NOT EXISTS gateway_activity_sequences (tenant_id TEXT PRIMARY KE
 CREATE TABLE IF NOT EXISTS gateway_activity_tombstones (tenant_id TEXT NOT NULL,event_id TEXT NOT NULL,event_digest TEXT NOT NULL,pruned_ordinal BIGINT NOT NULL,PRIMARY KEY(tenant_id,event_id));
 CREATE UNIQUE INDEX IF NOT EXISTS idx_gateway_activity_events_tenant_ordinal ON gateway_activity_events(tenant_id,ingest_ordinal);
 CREATE INDEX IF NOT EXISTS idx_gateway_activity_events_tenant_event_time ON gateway_activity_events(tenant_id,event_timestamp,((data::jsonb)->>'event_type'),((data::jsonb)->>'reason_code'));
+CREATE INDEX IF NOT EXISTS idx_gateway_activity_window ON gateway_activity_events(tenant_id,event_timestamp,event_id);
 CREATE INDEX IF NOT EXISTS idx_gateway_activity_tombstones_tenant_ordinal ON gateway_activity_tombstones(tenant_id,pruned_ordinal);
 CREATE TABLE IF NOT EXISTS runtime_workload_evidence (
   tenant_id TEXT NOT NULL,
@@ -691,8 +692,14 @@ DROP POLICY IF EXISTS drift_incidents_tenant_isolation ON public.drift_incidents
 CREATE POLICY drift_incidents_tenant_isolation ON public.drift_incidents USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant()) WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.drift_incidents TO agent_bom_app, agent_bom_rls_maintenance;
 INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('drift_incidents',1,now()) ON CONFLICT(component) DO UPDATE SET version=GREATEST(control_plane_schema_versions.version,1);
--- Gateway drift enforcement reads open incidents per (tenant, blueprint); see 20261024_01.
-CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_blueprint_open ON public.drift_incidents (tenant_id, (lower(replace(btrim(data->>'blueprint_id', E' \t\n\x0b\f\r'), '-', '_'))), last_detected_at DESC) WHERE NOT resolved;
+-- Stored normalization permits the restricted RLS role to seek the blueprint.
+ALTER TABLE public.drift_incidents ADD COLUMN IF NOT EXISTS blueprint_key TEXT
+ GENERATED ALWAYS AS (lower(replace(btrim(data->>'blueprint_id', E' \t\n\x0b\f\r'), '-', '_'))) STORED;
+CREATE INDEX IF NOT EXISTS idx_drift_incidents_tenant_blueprint_key_open ON public.drift_incidents
+ (tenant_id, blueprint_key, last_detected_at DESC, incident_id DESC) WHERE NOT resolved;
+DROP INDEX IF EXISTS public.idx_drift_incidents_tenant_blueprint_open;
+ANALYZE public.drift_incidents;
+UPDATE control_plane_schema_versions SET version=GREATEST(version,2),updated_at=now() WHERE component='drift_incidents';
 
 
 CREATE TABLE IF NOT EXISTS public.campaign_evidence_state (
@@ -863,4 +870,35 @@ DO $$ BEGIN
     END IF;
 END $$;
 INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('trace_collection',1,now())
+ON CONFLICT(component) DO NOTHING;
+
+-- Shared gateway delivery lease storage.
+
+CREATE TABLE IF NOT EXISTS gateway_audit_outbox (
+    tenant_id TEXT NOT NULL,
+    stream_id TEXT NOT NULL,
+    event_id TEXT NOT NULL,
+    digest TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    payload_bytes INTEGER NOT NULL CHECK (payload_bytes > 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    lease_token TEXT,
+    lease_until TIMESTAMPTZ,
+    PRIMARY KEY (tenant_id, stream_id, event_id)
+);
+CREATE INDEX IF NOT EXISTS idx_gateway_audit_outbox_claim
+    ON gateway_audit_outbox(tenant_id, stream_id, created_at, event_id);
+
+ALTER TABLE gateway_audit_outbox ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gateway_audit_outbox FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS gateway_audit_outbox_tenant_isolation ON gateway_audit_outbox;
+CREATE POLICY gateway_audit_outbox_tenant_isolation ON gateway_audit_outbox
+ USING (public.abom_rls_bypass() OR tenant_id=public.abom_current_tenant())
+ WITH CHECK (public.abom_rls_bypass() OR tenant_id=public.abom_current_tenant());
+DO $$ BEGIN
+ IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='agent_bom_app') THEN
+  GRANT SELECT,INSERT,UPDATE,DELETE ON gateway_audit_outbox TO agent_bom_app;
+ END IF;
+END $$;
+INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('gateway_audit_outbox',1,now())
 ON CONFLICT(component) DO NOTHING;
