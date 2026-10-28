@@ -287,6 +287,7 @@ def secret_dict_to_finding(secret: dict) -> "Finding":
             "secret manager — never committed in code."
         )
         remediation = "Remove the hardcoded value, rotate it, and load it from an environment variable or secret manager."
+    reason = secret.get("downgrade_reason")
     finding = Finding(
         finding_type=FindingType.PII_EXPOSURE if is_pii else FindingType.CREDENTIAL_EXPOSURE,
         source=FindingSource.SECRET_SCAN,
@@ -311,11 +312,7 @@ def secret_dict_to_finding(secret: dict) -> "Finding":
             ),
             "category": category,
             "redacted_preview": _safe_secret_preview(secret.get("preview")),
-            **(
-                {"downgrade_reason": sanitize_text(secret["downgrade_reason"], max_len=200)}
-                if isinstance(secret.get("downgrade_reason"), str) and secret["downgrade_reason"]
-                else {}
-            ),
+            **({"downgrade_reason": sanitize_text(reason, max_len=200)} if isinstance(reason, str) and reason else {}),
         },
         id=stable_id("secret", file_path, str(line or ""), secret_type, category),
     )
