@@ -161,7 +161,7 @@ affected distro packages to verify, and the blast radius
 ```bash
 agent-bom db update                                   # refresh OSV, NVD, KEV and EPSS
 agent-bom db advisory affected CVE-2026-109618        # most recent saved scan
-agent-bom db advisory affected CVE-2026-109618 --report <scan-report.json> --format json   # a report saved with scan -f json -o
+agent-bom db advisory affected CVE-2026-109618 --report <scan-report.json> --format json   # a JSON report written by an earlier scan
 ```
 
 From an MCP client, the read-only `affected_assets` tool (`graph` and `full`

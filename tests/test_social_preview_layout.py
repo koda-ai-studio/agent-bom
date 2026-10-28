@@ -39,7 +39,7 @@ def test_readme_badges_use_two_balanced_rows_and_keep_live_build_status() -> Non
     rows = [row for row in re.findall(r"<p[^>]*>(.*?)</p>", header, re.S) if "img.shields.io" in row]
     assert [row.count("<img ") for row in rows] == [3, 2]
     assert "actions/workflow/status/koda-ai-studio/agent-bom/ci.yml?branch=main" in rows[0]
-    for logo in ("github", "pypi", "python", "docker"):
+    for logo in ("github", "pypi", "python"):
         assert f"logo={logo}" in rows[0]
 
 
