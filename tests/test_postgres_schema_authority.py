@@ -247,6 +247,7 @@ def test_every_postgres_store_guards_runtime_schema_ddl() -> None:
             "rate_limit_store.py",
             "proxy_replay_store.py",
             "shared_auth_state.py",
+            "storage/gateway_delivery.py",
         )
     )
     runtime_schema_files.append(ROOT / "src" / "agent_bom" / "cloud" / "runtime_workload_evidence_store.py")
@@ -298,6 +299,7 @@ def test_migration_schema_covers_every_runtime_postgres_table_and_component() ->
             "report_job_store.py",
             "export_destination_store.py",
             "storage/export_schedules.py",
+            "storage/gateway_delivery.py",
             "lifecycle_store.py",
             "shared_auth_state.py",
         )

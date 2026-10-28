@@ -1,11 +1,25 @@
 {{- $profileEnforcement := .Values.gateway.profileEnforcement | default "off" -}}
 {{- $gatewayEnvFrom := .Values.gateway.envFrom -}}
 {{- $gatewayPersistence := .Values.gateway.persistence | default dict -}}
+{{- $auditBackend := .Values.gateway.auditBackend | default "local" -}}
+{{- if not (has $auditBackend (list "local" "postgres")) -}}
+{{- fail "gateway.auditBackend must be local or postgres" -}}
+{{- end -}}
+{{- range .Values.gateway.env -}}
+{{- if eq .name "AGENT_BOM_GATEWAY_AUDIT_BACKEND" -}}
+{{- fail "use gateway.auditBackend instead of overriding AGENT_BOM_GATEWAY_AUDIT_BACKEND" -}}
+{{- end -}}
+{{- end -}}
+{{- if and .Values.gateway.enabled (eq $auditBackend "postgres") -}}
+{{- if or (not $gatewayEnvFrom) (not .Values.gateway.controlPlaneDiscovery.url) ($gatewayPersistence.enabled | default false) -}}
+{{- fail "shared gateway audit requires gateway.envFrom, controlPlaneDiscovery.url and persistence.enabled=false" -}}
+{{- end -}}
+{{- end -}}
 {{- $gatewayRuntimeReplicas := int (.Values.gateway.replicas | default 1) -}}
 {{- if or (.Values.gateway.autoscaling.enabled | default false) (.Values.gateway.autoscaling.keda.enabled | default false) -}}
 {{- $gatewayRuntimeReplicas = int (.Values.gateway.autoscaling.maxReplicas | default 2) -}}
 {{- end -}}
-{{- if and .Values.gateway.enabled (not ($gatewayPersistence.enabled | default false)) -}}
+{{- if and .Values.gateway.enabled (eq $auditBackend "local") (not ($gatewayPersistence.enabled | default false)) -}}
 {{- fail "gateway audit requires gateway.persistence.enabled=true and a restart-stable PVC, including control-plane-connected deployments" -}}
 {{- end -}}
 {{- if and .Values.gateway.enabled ($gatewayPersistence.enabled | default false) (ne (int (.Values.gateway.replicas | default 1)) 1) -}}
@@ -151,6 +165,8 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           env:
+            - name: AGENT_BOM_GATEWAY_AUDIT_BACKEND
+              value: {{ $auditBackend | quote }}
             - name: AGENT_BOM_GATEWAY_REPLICAS
               value: {{ $gatewayRuntimeReplicas | quote }}
             - name: AGENT_BOM_STATE_DIR

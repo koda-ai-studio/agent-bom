@@ -14,11 +14,48 @@ The standalone gateway exposes separate liveness and admission signals.
 returns 200 only while the configured audit path can admit tool execution. A
 control-plane gateway therefore becomes unready when the remote durable
 acknowledgement is unavailable, even though its bounded local spool retains the
-event for retry. The Helm chart requires that spool on a restart-stable PVC for
-both remote-connected and local-only gateways, runs one writer replica, and
-rejects autoscaling until shared delivery leases exist. A local-only gateway
+event for retry. Local delivery uses a restart-stable PVC and one writer replica.
+Shared Postgres delivery uses database-clock leases and fenced acknowledgements
+across a tenant-bound gateway replica set. A local-only gateway
 remains ready while its SQLite audit store is writable. Persistence failure, a
 full bounded backlog, or shutdown returns 503.
+
+### Shared gateway delivery
+
+Use SQLite/PVC delivery for local or single-writer installations. For overlapping
+gateway pods, apply the Postgres migrations before setting `gateway.auditBackend:
+postgres`, disable `gateway.persistence`, and configure `gateway.envFrom` and
+`gateway.controlPlaneDiscovery.url`. The Secret must supply a dedicated
+`AGENT_BOM_CONTROL_PLANE_TOKEN`, `AGENT_BOM_POSTGRES_URL`, and an explicit
+`AGENT_BOM_TENANT_ID`, plus the gateway's incoming authentication settings.
+Use one tenant-bound replica set per tenant. Per-request credentials are never
+written to the outbox or reused to drain another tenant's queue.
+
+The CLI uses the same backend through `AGENT_BOM_GATEWAY_AUDIT_BACKEND=postgres`
+with `agent-bom gateway serve --from-control-plane URL --upstreams FILE`.
+The default remains `local`. A missing database or remote sink never falls back
+to an ephemeral queue. Inspect `/healthz` for `shared_postgres`, pending bytes,
+worker state and acknowledgement availability; `/readyz` reflects admission.
+
+Delivery is at least once: pods claim bounded batches for 60 seconds using the
+database clock, send with a 20-second deadline, and acknowledge only their current
+lease. A crashed pod's work becomes eligible after expiry. The receiving ledger
+deduplicates event IDs. Tool execution still requires acknowledgement of its own
+admission event; a different pod's in-flight claim is not proof of delivery.
+No exactly-once tool execution guarantee is implied.
+
+Each tenant/destination queue is bounded to 8 MiB and 10,000 pending events, with
+a 64 KiB per-event ceiling. Full or unavailable storage blocks new admission.
+Unacknowledged events are retained rather than silently evicted; inspect and
+reconcile conflicting or permanently rejected events before resuming traffic.
+Shared database availability, capacity, TLS and backup remain operator duties.
+
+Before switching from a PVC spool, drain and verify the old deployment's backlog;
+the shared backend does not import local queues. Drain the shared queue before
+switching back or removing its schema. Keep local spool and audit evidence until
+the delivery receipt is verified. SQLite's UTC expression index is built once
+on upgrade; before running an older binary against that file, stop writers and
+drop only `idx_gateway_activity_window` (the event records remain unchanged).
 
 ### Runtime doc set
 

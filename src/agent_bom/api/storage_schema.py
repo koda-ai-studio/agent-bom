@@ -95,6 +95,7 @@ CONTROL_PLANE_SCHEMA_COMPONENTS: tuple[StorageSchemaComponent, ...] = (
         version=11,
     ),
     StorageSchemaComponent("webhook_subscriptions", "sqlite/postgres", ("webhook_subscriptions",)),
+    StorageSchemaComponent("gateway_audit_outbox", "postgres", ("gateway_audit_outbox",)),
     StorageSchemaComponent("kspm_cluster_posture", "sqlite/postgres", ("kspm_cluster_posture",)),
     StorageSchemaComponent("skills_scan_run", "sqlite/postgres", ("skills_scan_run",)),
     StorageSchemaComponent("scan_snapshots", "sqlite/postgres", ("scan_snapshot_jobs", "scan_snapshot_rows")),

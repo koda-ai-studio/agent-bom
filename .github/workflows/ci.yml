@@ -1897,6 +1897,7 @@ jobs:
             tests/test_graph_page_edge_budget_postgres.py \
             tests/test_vex_graph_severity_counts_postgres.py \
             tests/test_postgres_gateway_activity.py \
+            tests/test_postgres_gateway_delivery.py \
             tests/test_trace_collection_postgres.py \
             tests/test_trace_collection_recovery.py \
             tests/test_postgres_agent_lifecycle.py \

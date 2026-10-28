@@ -10,6 +10,7 @@ from typing import Any, Awaitable, Callable, Mapping
 
 from agent_bom.api.oauth_as import OAuthAuthorizationServer
 from agent_bom.api.oidc_discovery_shim import OIDCDiscoveryShimConfig
+from agent_bom.core.settings import env_str
 from agent_bom.gateway_upstreams import UpstreamRegistry
 from agent_bom.runtime.gateway_contracts import AuditSink, UpstreamCaller
 
@@ -216,3 +217,10 @@ def validate_gateway_security_settings(settings: GatewaySettings) -> None:
             raise ValueError(f"{name} must be finite and at least {minimum}")
     if settings.upstream_http_max_keepalive_connections > settings.upstream_http_max_connections:
         raise ValueError("upstream_http_max_keepalive_connections must not exceed upstream_http_max_connections")
+
+
+def validate_gateway_startup_settings(settings: GatewaySettings) -> None:
+    """Validate the constructed gateway, including an explicit shared sink."""
+    validate_gateway_security_settings(settings)
+    if settings.audit_sink is None and env_str("AGENT_BOM_GATEWAY_AUDIT_BACKEND", "local").strip().lower() != "local":
+        raise ValueError("Shared gateway delivery requires a configured control-plane audit sink")

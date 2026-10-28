@@ -21,7 +21,7 @@ class LocalGatewayAuditSink:
     """HMAC-chained local durability for gateways without a control plane."""
 
     def __init__(self, db_path: Path) -> None:
-        from agent_bom.api.audit_log import SQLiteAuditLog
+        from agent_bom.api.audit_log import AuditEntry, SQLiteAuditLog, sanitize_audit_details
 
         db_path = canonical_runtime_state_path(db_path)
         parent_fd = AuditSpilloverStore._safe_parent_fd(db_path)
@@ -29,6 +29,8 @@ class LocalGatewayAuditSink:
         AuditSpilloverStore._validate_existing_path(db_path)
         self._hmac_key = self.load_key(db_path, create=not db_path.exists())
         self._store = SQLiteAuditLog(str(db_path), hmac_key=self._hmac_key)
+        self._entry_type = AuditEntry
+        self._sanitize_details = sanitize_audit_details
         self._available = True
         self.db_path = db_path
 
@@ -40,8 +42,6 @@ class LocalGatewayAuditSink:
         )
 
     async def __call__(self, event: dict[str, Any]) -> None:
-        from agent_bom.api.audit_log import AuditEntry, sanitize_audit_details
-
         if not self._available:
             raise GatewayAuditDeliveryUnavailableError("local durable audit store is unavailable")
         identified = canonicalize_gateway_enforcement_event(ensure_gateway_event_identity(event))
@@ -51,11 +51,11 @@ class LocalGatewayAuditSink:
             raise GatewayAuditDeliveryUnavailableError("local durable audit event is invalid")
         action = str(sanitized.get("action") or sanitized.get("event_type") or "gateway.runtime")[:256]
         upstream = str(sanitized.get("upstream") or "gateway")[:200]
-        entry = AuditEntry(
+        entry = self._entry_type(
             action=action,
             actor="gateway",
             resource=f"upstream/{upstream}",
-            details=sanitize_audit_details(sanitized),
+            details=self._sanitize_details(sanitized),
         )
         try:
             await asyncio.to_thread(self._store.append, entry)

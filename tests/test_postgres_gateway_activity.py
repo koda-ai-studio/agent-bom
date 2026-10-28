@@ -12,6 +12,7 @@ import pytest
 from agent_bom.api.gateway_activity_store import GatewayActivityConflictError, gateway_activity_record_from_event
 from agent_bom.api.postgres_common import _tenant_connection, reset_current_tenant, set_current_tenant
 from agent_bom.api.postgres_gateway_activity import PostgresGatewayActivityStore
+from agent_bom.api.storage.gateway_activity_window import sql_activity_window
 
 
 def _record(event_id: str, tenant_id: str, *, timestamp: str | None = None, tool: str = "read_file"):
@@ -259,6 +260,38 @@ def test_postgres_graph_window_uses_utc_keysets_and_request_tenant() -> None:
     token = set_current_tenant(f"foreign-{uuid.uuid4().hex}")
     try:
         assert store.window_activity(tenant_id, **kwargs) == []
+    finally:
+        reset_current_tenant(token)
+        _cleanup(store, tenant_id)
+
+
+@pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="requires migrated Postgres")
+def test_graph_time_window_uses_native_timestamp_seek_index():
+    store = PostgresGatewayActivityStore()
+    tenant_id = "gateway-index-" + uuid.uuid4().hex
+    token = set_current_tenant(tenant_id)
+    try:
+        store.append_batch([_record(f"index-{i:03d}", tenant_id, timestamp="2026-10-15T00:00:00Z") for i in range(100)])
+        with _tenant_connection(store._pool) as conn:
+            conn.execute("SET LOCAL enable_seqscan=off")
+            plans = []
+
+            class ExplainConnection:
+                def execute(self, sql, params):
+                    plans.extend(row[0] for row in conn.execute("EXPLAIN " + sql, params).fetchall())
+                    return conn.execute(sql, params)
+
+            rows = sql_activity_window(
+                ExplainConnection(),
+                tenant_id,
+                window_start="2026-10-01T00:00:00Z",
+                window_end="2026-10-20T00:00:00Z",
+                limit=5,
+                postgres=True,
+            )
+            assert len(rows) == 5
+            assert any("idx_gateway_activity_window" in line for line in plans)
+            assert not any("Sort" in line for line in plans)
     finally:
         reset_current_tenant(token)
         _cleanup(store, tenant_id)

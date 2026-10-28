@@ -4,11 +4,25 @@ from __future__ import annotations
 
 import heapq
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable
 
 from agent_bom.api.storage.runtime_observation_window import _validate, epoch_us
 from agent_bom.runtime.gateway_events import GATEWAY_ALLOWED_EVENT_TYPES, GATEWAY_BLOCKED_EVENT_TYPES, GATEWAY_DATA_FILTER_EVENT_TYPES
 from agent_bom.runtime.profile_resolution import classify_profile_shadow_reason
+
+
+def register_activity_clock(conn: Any) -> None:
+    """Register the deterministic UTC clock before reading or writing its index."""
+    conn.create_function("agent_bom_epoch_us", 1, epoch_us, deterministic=True)
+
+
+def ensure_activity_time_index(conn: Any) -> None:
+    register_activity_clock(conn)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_gateway_activity_window ON gateway_activity_events"
+        "(tenant_id, agent_bom_epoch_us(event_timestamp), event_id)"
+    )
 
 
 def memory_activity_window(
@@ -37,17 +51,22 @@ def sql_activity_window(
 ) -> list[str]:
     start, end, cursor = _validate(window_start, window_end, limit, ("gateway",), before)
     marker = "%s" if postgres else "?"
+    tick = "event_timestamp" if postgres else "agent_bom_epoch_us(event_timestamp)"
+    bounds: tuple[int | datetime, int | datetime]
+    seek_values: tuple[int | datetime, str] | tuple[()]
     if postgres:
-        tick = "(EXTRACT(EPOCH FROM event_timestamp) * 1000000)::bigint"
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        bounds = (epoch + timedelta(microseconds=start), epoch + timedelta(microseconds=end))
+        seek_values = (epoch + timedelta(microseconds=cursor[0]), cursor[1]) if cursor else ()
     else:
-        conn.create_function("agent_bom_epoch_us", 1, epoch_us, deterministic=True)
-        tick = "agent_bom_epoch_us(event_timestamp)"
+        register_activity_clock(conn)
+        bounds, seek_values = (start, end), cursor or ()
     seek = f"AND (tick, event_id) < ({marker}, {marker})" if cursor else ""
     rows = conn.execute(
         f"WITH candidates AS (SELECT data, event_id, {tick} AS tick FROM gateway_activity_events "  # nosec B608
         f"WHERE tenant_id = {marker}) SELECT data FROM candidates "
         f"WHERE tick >= {marker} AND tick <= {marker} {seek} ORDER BY tick DESC, event_id DESC LIMIT {marker}",
-        (tenant_id, start, end, *(cursor or ()), limit),
+        (tenant_id, *bounds, *seek_values, limit),
     ).fetchall()
     return [row[0] for row in rows]
 
