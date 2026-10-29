@@ -37,6 +37,7 @@ import logging
 import os
 from typing import Any
 
+from agent_bom.cloud.cis_scope import bounded_scope_ids
 from agent_bom.security import sanitize_text
 
 from .aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage  # noqa: F401 - facade re-export
@@ -226,6 +227,8 @@ _MAX_CIS_FANOUT_WORKERS = 8
 def run_all_project_benchmarks(
     credentials: Any = None,
     checks: list[str] | None = None,
+    *,
+    project_ids: list[str] | None = None,
 ) -> GCPCISReport:
     """Run the CIS GCP benchmark for EVERY project in the org/folder tree.
 
@@ -248,25 +251,16 @@ def run_all_project_benchmarks(
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    from agent_bom.cloud import gcp_inventory, gcp_organizations
+    from agent_bom.cloud import gcp_inventory
 
     warnings: list[str] = []
     resolved = gcp_inventory._resolve_impersonation(credentials, warnings)
 
-    try:
-        project_ids = gcp_organizations.list_project_ids(resolved, force=True)
-    except Exception as exc:  # noqa: BLE001 — org enumeration failure must degrade, not crash
-        logger.warning("GCP org project enumeration failed: %s", sanitize_text(sanitize_discovery_warning(exc)))
-        warnings.append(sanitize_discovery_warning(exc))
-        project_ids = []
-
-    if not project_ids:
-        single = os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip()
-        project_ids = [single] if single else []
-    if not project_ids:
-        raise CloudDiscoveryError(
-            "No GCP projects resolved for the multi-project CIS benchmark. Grant org/folder browse access or set GOOGLE_CLOUD_PROJECT."
-        )
+    if project_ids is None:
+        project_ids, discovery_warnings = _benchmark_project_ids(resolved)
+        warnings.extend(discovery_warnings)
+    project_ids, cap_warnings = bounded_scope_ids(project_ids, gcp_inventory._MAX_PROJECTS, "projects")
+    warnings.extend(cap_warnings)
 
     aggregate = GCPCISReport(project_id=", ".join(project_ids))
     aggregate.warnings.extend(warnings)
@@ -298,3 +292,20 @@ def run_all_project_benchmarks(
         aggregate.warnings.extend(merged.warnings)
 
     return aggregate
+
+
+def _benchmark_project_ids(resolved: Any) -> tuple[list[str], list[str]]:
+    from agent_bom.cloud import gcp_organizations
+
+    warnings: list[str] = []
+    try:
+        project_ids = gcp_organizations.list_project_ids(resolved, force=True)
+    except Exception as exc:  # noqa: BLE001 — org enumeration failure must degrade, not crash
+        logger.warning("GCP org project enumeration failed: %s", sanitize_text(sanitize_discovery_warning(exc)))
+        warnings.append(sanitize_discovery_warning(exc))
+        project_ids = []
+
+    if not project_ids:
+        single = os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip()
+        project_ids = [single] if single else []
+    return project_ids, warnings

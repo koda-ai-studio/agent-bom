@@ -266,3 +266,34 @@ for (const theme of ["light", "dark"] as const) {
     });
   }
 }
+
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [1440, 390]) {
+    for (const [provider, multiple, single] of [
+      ["Microsoft Azure", "Discovered subscriptions", "Single subscription"],
+      ["Google Cloud", "Discovered organization projects", "Single project"],
+    ] as const) {
+      test(`organization setup ${provider} ${theme} ${width}`, async ({ page }, testInfo) => {
+        await page.setViewportSize({ width, height: 900 });
+        await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+        await routeConnections(page);
+        await page.goto("/connections");
+        await page.getByRole("button", { name: "Add cloud account", exact: true }).click();
+        const wizard = page.getByRole("dialog", { name: "Add cloud account" });
+        await wizard.getByRole("button", { name: new RegExp(provider) }).click();
+        await wizard.getByRole("button", { name: "Next", exact: true }).click();
+        await expect(wizard.getByRole("button", { name: single, exact: true })).toHaveAttribute("aria-pressed", "true");
+        await wizard.getByRole("button", { name: multiple, exact: true }).click();
+        await expect(wizard.getByRole("region", { name: "Organization setup" })).toBeVisible();
+        await expect(wizard.getByText(/creating this connection does not grant access/)).toBeVisible();
+        await wizard.getByRole("button", { name: "Next", exact: true }).scrollIntoViewIfNeeded();
+        await expect(wizard.getByRole("button", { name: "Next", exact: true })).toBeInViewport();
+        await expect.poll(() => wizard.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+        await page.screenshot({ path: testInfo.outputPath(`organization-${provider}-${theme}-${width}.png`), fullPage: true });
+        await wizard.getByRole("button", { name: "Next", exact: true }).click();
+        await wizard.getByRole("button", { name: "Create connection", exact: true }).click();
+        await expect(wizard.getByText("A display name is required.")).toBeVisible();
+      });
+    }
+  }
+}

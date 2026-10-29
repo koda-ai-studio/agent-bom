@@ -29,7 +29,7 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
         "Correlate. Act.",
         "Security evidence across repositories, supply chains, AI + MCP, cloud, identity, and data.",
         "Works with your AI tools, cloud infrastructure, data, and identity stack.",
-        "Explore all supported integrations in the README",
+        "Open the integration directory for all vendors and coverage",
         "discover → scan → correlate → act",
     ):
         assert claim in svg

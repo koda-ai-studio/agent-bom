@@ -139,7 +139,7 @@ def test_banner_renders_every_available_source_logo_without_category_clutter() -
         assert tile.find("{http://www.w3.org/2000/svg}use") is not None
     text = _banner_text()
     assert "trademarks of their owners" in text
-    assert "Explore all supported integrations" in text
+    assert "Open the integration directory for all vendors and coverage" in text
 
 
 def test_banner_never_names_an_unlisted_integration() -> None:
@@ -154,3 +154,17 @@ def test_doc_surfaces_carry_the_generated_integration_table() -> None:
         text = path.read_text(encoding="utf-8")
         for item in MANIFEST.integrations():
             assert item.name in text, (path.name, item.name)
+
+
+def test_generated_directory_lists_every_manifest_entry_by_category():
+    from scripts.integrations_manifest import integration_directory, load
+
+    manifest = load()
+    document = integration_directory(manifest)
+    for group in (*manifest.groups, manifest.evidence_out):
+        assert f'<a id="{group.id}"></a>' in document
+        assert f"](#{group.id})" in document
+        for item in group.integrations:
+            assert f"| {item.name} |" in document
+    assert "not a guarantee of every workflow" in document
+    assert "PROVIDER_WORKFLOW_BOUNDARIES.md" in document

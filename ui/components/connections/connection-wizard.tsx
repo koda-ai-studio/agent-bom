@@ -1,4 +1,5 @@
 "use client";
+import { ConnectionScopePicker, OrganizationScopeSetup } from "@/components/connections/scope-picker";
 import { WizardNavigation } from "@/components/connections/wizard-navigation";
 import { ErrorBanner } from "@/components/empty-state";
 
@@ -66,9 +67,8 @@ export function AddConnectionWizard({
   const [formError, setFormError] = useState<string | null>(null);
   const [generatedExternalId, setGeneratedExternalId] = useState("");
   const [grantMethod, setGrantMethod] = useState<CloudGrantMethod>("cli");
-  // AWS onboarding scope: a single account, or the whole AWS Organization via a
-  // CloudFormation StackSet (deploy once, every member account auto-enrolls).
-  const [awsScope, setAwsScope] = useState<"account" | "organization">("account");
+  // Broader collection is explicit; changing provider restores the narrow default.
+  const [inventoryScope, setInventoryScope] = useState<"account" | "organization">("account");
   // Connect depth (progressive disclosure): baseline (least privilege, default)
   // vs opt-in read-only deep-scan + optional bucket-scoped DSPM object read.
   const [deepScan, setDeepScan] = useState(false);
@@ -163,7 +163,7 @@ export function AddConnectionWizard({
     setForm((current) => {
       if (current.provider === value) return current;
       setGeneratedExternalId("");
-      setAwsScope("account");
+      setInventoryScope("account");
       setDeepScan(false);
       setDspmBucketsText("");
       setAllRegions(false);
@@ -239,7 +239,8 @@ export function AddConnectionWizard({
     supportsDepth ? depth : undefined,
   );
   const snowflakeSpcsScript = buildSnowflakeSpcsScript({ account: form.role_ref.trim() });
-  const isOrgScope = isAws && awsScope === "organization";
+  const isOrgScope = ["aws", "azure", "gcp"].includes(provider.value) && inventoryScope === "organization";
+  const isAwsOrgScope = isAws && isOrgScope;
   const orgStackSetScript = buildAwsOrgStackSetScript(
     generatedExternalId || undefined,
     DEFAULT_AWS_ORG_ROLE_NAME,
@@ -321,7 +322,7 @@ export function AddConnectionWizard({
       external_id: usesWorkloadBinding ? "" : externalId,
       regions,
       auth_params: authParams,
-      inventory_scope: managedTrial ? "account" : isAws && awsScope === "organization" ? "organization" : "account",
+      inventory_scope: !managedTrial && isOrgScope ? "organization" : "account",
       scan_mode: managedTrial ? "full" : form.scan_mode,
       auto_scan_on_create: managedTrial ? false : form.auto_scan_on_create,
     };
@@ -465,7 +466,10 @@ export function AddConnectionWizard({
               </fieldset>
             ) : null}
 
-            {step === 1 && usesWorkloadBinding ? (
+            {step === 1 && <ConnectionScopePicker provider={provider.value} value={inventoryScope} restricted={managedTrial} onChange={setInventoryScope} />}
+            {step === 1 && isOrgScope && !isAws ? (
+              <OrganizationScopeSetup provider={provider.value} workload={usesWorkloadBinding} />
+            ) : step === 1 && usesWorkloadBinding ? (
               <section aria-label="Workload setup" className="space-y-3 text-sm">
                 <h3 className="font-semibold">Operator-managed workload binding</h3>
                 <p>{usesSnowflakeWorkload ? "Requires a control plane running inside the Snowflake Native App. Ask your operator for a read-only binding matching this tenant and the service’s injected account. The service uses Snowflake’s rotating workload identity; user, role, warehouse and token paths cannot be selected here." : "Ask your operator for a read-only binding ID for this tenant, provider, identity and subscription or project. The control plane exchanges the configured workload identity for provider credentials."}</p>
@@ -478,34 +482,8 @@ export function AddConnectionWizard({
                   Grant read-only access
                 </p>
                 <div className="rounded-xl border border-outline bg-surface-elevated p-4 text-xs leading-6 text-ink-secondary">
-                  {isAws ? (
-                    <div
-                      role="group"
-                      aria-label="AWS onboarding scope"
-                      className="mb-3 grid grid-cols-2 gap-1 rounded-xl border border-outline bg-surface-muted p-1"
-                    >
-                      {(managedTrial ? (["account"] as const) : (["account", "organization"] as const)).map((scope) => {
-                        const active = awsScope === scope;
-                        return (
-                          <button
-                            key={scope}
-                            type="button"
-                            aria-pressed={active}
-                            onClick={() => setAwsScope(scope)}
-                            className={`rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition ${
-                              active
-                                ? "bg-emerald-500 text-black"
-                                : "text-ink-secondary hover:text-foreground"
-                            }`}
-                          >
-                            {scope === "account" ? "Single account" : "Whole organization"}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : null}
                   <p className="text-foreground">
-                    {isOrgScope ? (
+                    {isAwsOrgScope ? (
                       "Deploy one CloudFormation StackSet from your AWS Organization management (or delegated-admin) account. That grant mints the read-only role in every member account and auto-enrolls new ones — then paste this management account's role ARN in the next step. This connection is stored with inventory_scope=organization so Run scan fans out across member accounts (member roles must be deployed)."
                     ) : (
                       <>
@@ -514,7 +492,7 @@ export function AddConnectionWizard({
                       </>
                     )}
                   </p>
-                  {isOrgScope ? (
+                  {isAwsOrgScope ? (
                     <div className="mt-4 space-y-2" data-testid="wizard-org-explainer">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-ink-tertiary">

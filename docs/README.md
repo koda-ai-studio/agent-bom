@@ -6,6 +6,7 @@ the [documentation site](../site-docs/index.md) owns onboarding walkthroughs.
 ## Using agent-bom
 
 - [FIRST_RUN.md](FIRST_RUN.md)
+- [INTEGRATIONS.md](INTEGRATIONS.md)
 - [RESPOND_TO_A_NEW_CVE.md](RESPOND_TO_A_NEW_CVE.md)
 - [GALLERY.md](GALLERY.md)
 - [MCP_SERVER.md](MCP_SERVER.md)

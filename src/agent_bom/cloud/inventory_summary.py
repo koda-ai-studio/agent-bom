@@ -72,3 +72,16 @@ def _summarize_inventory_payload(provider: str, payload: dict[str, Any]) -> dict
             reason_codes=authorization_evidence_gap_reason_codes(authorization_evidence),
         )
     return summary
+
+
+def summarize_inventory_collection(provider: str, payload: Any) -> dict[str, Any]:
+    """Roll up discovered scopes without dropping per-scope collection gaps."""
+    if not isinstance(payload, list):
+        return _summarize_inventory_payload(provider, payload)
+    accounts = [_summarize_inventory_payload(provider, item) for item in payload if isinstance(item, dict)]
+    return {
+        "provider": provider,
+        "status": "ok" if accounts and len(accounts) == len(payload) and all(item["status"] == "ok" for item in accounts) else "partial",
+        "account_count": len(accounts),
+        "accounts": accounts,
+    }

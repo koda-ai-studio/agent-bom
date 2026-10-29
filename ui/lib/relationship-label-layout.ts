@@ -43,7 +43,11 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
       return [...card.children].flatMap(child => {
         const box = child.getBoundingClientRect();
         if (box.width <= 0 || box.height <= 0) return [];
-        const ring = child.classList.contains("graph-entity-glyph") ? 8 : 0;
+        // Outline and shadow scale with the glyph; a fixed screen-space margin
+        // overstates them at overview zoom and detaches short-link captions.
+        const layoutWidth = (child as HTMLElement).offsetWidth;
+        const glyphScale = layoutWidth > 0 ? box.width / layoutWidth : 1;
+        const ring = child.classList.contains("graph-entity-glyph") ? 8 * glyphScale : 0;
         return [{ left: box.left - ring, right: box.right + ring,
           top: box.top - ring, bottom: box.bottom + ring }];
       });

@@ -469,7 +469,7 @@ def all_subscriptions_enabled() -> bool:
     return os.environ.get(ALL_SUBSCRIPTIONS_ENV_FLAG, "").strip().lower() in _TRUTHY
 
 
-def enumerate_subscription_ids(credential: Any) -> tuple[list[str], list[str]]:
+def enumerate_subscription_ids(credential: Any, *, allow_ambient_fallback: bool = True) -> tuple[list[str], list[str]]:
     """Resolve every subscription id to fan a single scan across (read-only).
 
     The single source of truth for the multi-subscription boundary set: discover
@@ -488,7 +488,7 @@ def enumerate_subscription_ids(credential: Any) -> tuple[list[str], list[str]]:
         warnings.append(sanitize_discovery_warning(exc))
 
     sub_ids = _subscription_ids_from_mg_tree(management_groups)
-    if not sub_ids:
+    if not sub_ids and allow_ambient_fallback:
         # No tenant-root visibility — fall back to the single configured sub.
         single = os.environ.get("AZURE_SUBSCRIPTION_ID", "").strip()
         if single:
@@ -496,19 +496,15 @@ def enumerate_subscription_ids(credential: Any) -> tuple[list[str], list[str]]:
     return sub_ids, warnings
 
 
-def discover_all_subscription_inventories(credential: Any = None, *, force: bool = False) -> list[dict[str, Any]]:
-    """Inventory EVERY subscription in the tenant (multi-subscription fan-out).
+def discover_all_subscription_inventories(
+    credential: Any = None, *, force: bool = False, allow_ambient_fallback: bool = True
+) -> list[dict[str, Any]]:
+    """Inventory the scopes discovered through the credential's hierarchy access.
 
-    The Azure counterpart of the AWS Organizations multi-account enumeration:
-    discover the subscription set from the management-group hierarchy, then run
-    the per-subscription inventory for each (partitioned by ``account_id`` so the
-    graph keeps thousands of subscriptions as distinct accounts under the
-    management-group ``CONTAINS`` tree). Read-only.
-
-    Returns a LIST of per-subscription inventory payloads (the exact shape the
-    graph builder's ``_iter_cloud_inventories`` consumes). Falls back to the
-    single ``AZURE_SUBSCRIPTION_ID`` when the management-group tree is unavailable
-    (e.g. the credential lacks Management Group Reader). Never raises.
+    Returns per-scope payloads, bounded by the configured collection cap.
+    CLI callers may fall back to the ambient scope when discovery is unavailable;
+    saved connections disable that fallback. Permission gaps do not establish
+    full organization coverage. Read-only; never raises.
     """
     if not force and not inventory_enabled():
         return []
@@ -522,7 +518,11 @@ def discover_all_subscription_inventories(credential: Any = None, *, force: bool
         except Exception:  # noqa: BLE001
             return []
 
-    sub_ids, _warnings = enumerate_subscription_ids(credential)
+    sub_ids, _warnings = (
+        enumerate_subscription_ids(credential)
+        if allow_ambient_fallback
+        else enumerate_subscription_ids(credential, allow_ambient_fallback=False)
+    )
 
     payloads: list[dict[str, Any]] = []
     for sub_id in sub_ids[:_MAX_SUBSCRIPTIONS]:

@@ -482,7 +482,7 @@
         <use x="7" y="7" width="36" height="36" href="#embedded-clickhouse" />
         <text x="25.0" y="69" text-anchor="middle" fill="#cbd5e1" font-size="11" font-weight="500">ClickHouse</text>
       </g>
-      <text x="640" y="564" text-anchor="middle" fill="#94a3b8" font-size="13">Explore all supported integrations in the README</text>
+      <text x="640" y="564" text-anchor="middle" fill="#94a3b8" font-size="13">Open the integration directory for all vendors and coverage</text>
       <text x="640" y="622" text-anchor="middle" fill="#94a3b8" font-size="10">Names and logos are trademarks of their owners; no endorsement implied.</text>
     </g>
     <text x="40" y="622" fill="#94a3b8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="10" font-weight="600">discover → scan → correlate → act</text>

@@ -69,7 +69,9 @@ def _cis_summary(cis_dict: Mapping[str, Any]) -> dict[str, Any]:
         "benchmark_version": cis_dict.get("benchmark_version"),
         "scope": cis_dict.get("scope"),
         "completeness": cis_dict.get("completeness"),
-        "accounts_scanned": len(cis_dict.get("accounts_scanned") or []),
+        "accounts_scanned": len(
+            cis_dict.get("accounts_scanned") or cis_dict.get("subscriptions_scanned") or cis_dict.get("projects_scanned") or []
+        ),
         "regions_scanned": len(cis_dict.get("regions_scanned") or []),
         "passed": cis_dict.get("passed"),
         "failed": cis_dict.get("failed"),

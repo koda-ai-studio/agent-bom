@@ -6,6 +6,8 @@ support for every identity, data, disk or runtime workflow.
 
 | Provider / workflow | Implemented boundary | Additional work required |
 | --- | --- | --- |
+| Azure multi-subscription | Connections offers explicit discovered-subscription scope. Inventory and CIS use the same returned subscription IDs and brokered identity; sensitive-data findings retain each subscription attribution | Management-group discovery and Reader access must already be granted. Collection caps and unreadable scopes limit coverage. No ambient subscription fallback for saved connections. |
+| GCP multi-project | Connections offers explicit discovered-organization-project scope. Inventory and CIS use the same returned project IDs and brokered identity | Organization/folder discovery and Viewer access must already be granted. Collection caps and unreadable projects limit coverage. No ambient project fallback for saved connections. |
 | Databricks saved connections | Explicit workspace token, cluster-read verification, discovery, vendor security checks, full scheduled scans, CLI and wizard | Event ingestion, organization fan-out and workload identity require new adapters. |
 | Snowflake inventory and identity | Saved connections already thread one brokered session through discovery, CIS and estate enrichment; warehouses, databases, roles, users, grants and memberships become graph evidence | A permission-decision evaluator equivalent to the cloud authorization evaluators requires new semantics and tests. Role inventory alone is not an effective-access verdict. |
 | Snowflake data | Estate metadata, external-data surfaces and governance mining exist | Generic database content sampling is a separate opt-in path; neither metadata nor a connection label establishes full content coverage. |
@@ -28,3 +30,10 @@ verify the scoped read, then scan and inspect its coverage artifact. Unavailable
 or denied evidence remains a gap. Local fixtures and mocked clients validate
 contracts; they do not prove access, completeness or performance in a customer
 account.
+
+Multi-scope onboarding stays opt-in. Start with a single subscription or project,
+or choose the wider scope in Connections. For workload identity, the operator
+binding must explicitly authorize organization scope and match the connection
+identity and anchor scope. Creating a connection grants no cloud permissions.
+Verify the connection, request a scan, then inspect per-scope inventory, CIS
+results and warnings. Local tests do not establish live organization coverage.

@@ -59,6 +59,13 @@ def populate(root: ET.Element, manifest: Manifest) -> None:
         assert item.logo is not None
         _tile(target, item.name, item.logo, start + column * PITCH, 234 + row * ROW_PITCH)
     _el(
-        target, "text", "Explore all supported integrations in the README", x=640, y=564, text_anchor="middle", fill="#94a3b8", font_size=13
+        target,
+        "text",
+        "Open the integration directory for all vendors and coverage",
+        x=640,
+        y=564,
+        text_anchor="middle",
+        fill="#94a3b8",
+        font_size=13,
     )
     _el(target, "text", BANNER_TRADEMARK_NOTE, x=640, y=622, text_anchor="middle", fill="#94a3b8", font_size=10)
