@@ -299,8 +299,9 @@ Minimum verification matrix:
 - **Setup:** open the Codespace / dev container, or run `uv sync --extra dev`
   then `uv tool install pre-commit && pre-commit install`. `pre-commit` is not
   in the `dev` extra, so `uv run pre-commit` fails on a fresh checkout.
-- **Size ratchet:** no file over 1,000 lines, and function size, `api/`
-  imports and deferred imports may only shrink. Run
+- **Size ratchet:** no file over 1,000 lines or Python function over 150
+  (`python scripts/check_line_ceiling.py`, Python and `ui/`), and function
+  size, `api/` imports and deferred imports may only shrink. Run
   `python scripts/check_architecture.py --base-ref origin/main`; split code
   into a subpackage instead of growing a large file.
 - **Optional dependencies stay lazy:** CI test jobs install `dev` plus at most

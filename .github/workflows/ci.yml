@@ -534,6 +534,12 @@ jobs:
           ARCHITECTURE_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || github.sha }}
         run: uv run python scripts/check_architecture.py --base-ref "$ARCHITECTURE_BASE"
 
+      - name: Line ceiling (1,000 lines per file, 150 per Python function)
+        if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
+        env:
+          ARCHITECTURE_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before || github.sha }}
+        run: uv run python scripts/check_line_ceiling.py --base-ref "$ARCHITECTURE_BASE"
+
       - name: Source changes carry tests
         if: github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true')
         env:
