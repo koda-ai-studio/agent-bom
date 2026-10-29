@@ -16,10 +16,19 @@ describe("package ecosystem glyph", () => {
     expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "pillow@9.0.0")).toBeVisible();
   });
 
-  it.each([{}, { ecosystem: "npm" }, { ecosystem: "unknown" }])("does not infer PyPI from a familiar package name: %j", (metadata) => {
+  it.each([{}, { ecosystem: "unknown" }, { ecosystem: "constructor" }, { ecosystem: "https://example.com/icon.svg" }])("does not infer PyPI from a familiar package name: %j", (metadata) => {
     const { container } = renderPackage(metadata);
     expect(screen.queryByRole("img", { name: "Python package" })).not.toBeInTheDocument();
     expect(container.querySelector('.graph-entity-glyph svg')).not.toBeNull();
+  });
+
+  it.each([
+    ["npm", "npm", "npm package"], ["golang", "go", "Go package"],
+    ["cargo", "rust", "Rust package"], ["nuget", "nuget", "NuGet package"],
+    ["gem", "rubygems", "RubyGems package"], ["composer", "packagist", "Packagist package"],
+  ])("shows a local ecosystem mark for recorded %s metadata", (ecosystem, asset, label) => {
+    renderPackage({ ecosystem });
+    expect(screen.getByRole("img", { name: label })).toHaveAttribute("src", `/logos/${asset}.svg`);
   });
 
   it("keeps the package glyph and ecosystem text if the image fails", () => {

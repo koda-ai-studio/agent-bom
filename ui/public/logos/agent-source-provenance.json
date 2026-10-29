@@ -92,6 +92,78 @@
       "sha256": "baec8662a1461c2cacc326b54d2727cb2f1ce07ba02d00f5b826d035104f649f",
       "terms": "Unmodified Python two-snakes logo used to identify Python packages from recorded ecosystem metadata. The text badge separately identifies PyPI. Python marks remain property of the Python Software Foundation; no endorsement or registry verification is implied.",
       "repository_source": "docs/images/vendor/python.svg"
+    },
+    {
+      "path": "ui/public/logos/npm.svg",
+      "vendor": "npm",
+      "source_page": "https://simpleicons.org/?q=npm",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/npm.svg",
+      "sha256": "00b410dc2c839cfa62910a065eaf28a48cbdb4babe503cf34d475cc94ba03be1",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; npm trademarks remain with their owner.",
+      "repository_source": "docs/images/vendor/simple-icons/npm.svg"
+    },
+    {
+      "path": "ui/public/logos/go.svg",
+      "vendor": "Go",
+      "source_page": "https://simpleicons.org/?q=go",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/go.svg",
+      "sha256": "36a745fe15584bf138d02ae6abcbdd155bc1cd4f4976634ad34861b2059db559",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; Go trademarks remain with their owner.",
+      "repository_source": "docs/images/vendor/simple-icons/go.svg"
+    },
+    {
+      "path": "ui/public/logos/rust.svg",
+      "vendor": "Rust",
+      "source_page": "https://simpleicons.org/?q=rust",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/rust.svg",
+      "sha256": "95a291d8887610d103704adcc5c5f2cbfa4c80a96f8e72b00531d5691beb67a8",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; Rust trademarks remain with their owner.",
+      "repository_source": "docs/images/vendor/simple-icons/rust.svg"
+    },
+    {
+      "path": "ui/public/logos/nuget.svg",
+      "vendor": "NuGet",
+      "source_page": "https://simpleicons.org/?q=nuget",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/nuget.svg",
+      "sha256": "fcc6db143e466201504e825d4d3b5f376c4cfe7b5709116e247970c38bbf9497",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; NuGet trademarks remain with their owner.",
+      "repository_source": "docs/images/vendor/simple-icons/nuget.svg"
+    },
+    {
+      "path": "ui/public/logos/rubygems.svg",
+      "vendor": "RubyGems",
+      "source_page": "https://simpleicons.org/?q=rubygems",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/rubygems.svg",
+      "sha256": "2779c5b37e4ee94f8cca3d5e7d5c2a4ccbfe29306c02837c3c7a1a887b9c623c",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; RubyGems trademarks remain with their owner.",
+      "repository_source": "docs/images/vendor/simple-icons/rubygems.svg"
+    },
+    {
+      "path": "ui/public/logos/packagist.svg",
+      "vendor": "Packagist",
+      "source_page": "https://simpleicons.org/?q=packagist",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/packagist.svg",
+      "sha256": "176488bda903cf3c84e247e4569412a82766b25558cc05b474980940046bad6d",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; Packagist trademarks remain with their owner.",
+      "repository_source": "docs/images/vendor/simple-icons/packagist.svg"
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useDemoMode } from "@/hooks/use-demo-mode";
 
@@ -22,6 +22,14 @@ vi.mock("@/lib/api", () => ({ api: apiMock }));
 vi.mock("@/components/auth-provider", () => ({ useAuthState: () => authState }));
 
 describe("useDemoMode", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it("recognizes the static demo without consulting API health", () => {
+    vi.stubEnv("NEXT_PUBLIC_STATIC_DEMO", "1");
+    apiMock.health.mockResolvedValue({ auth_configured: true });
+    const { result } = renderHook(() => useDemoMode());
+    expect(result.current).toEqual({ isDemoMode: true, loading: false });
+    expect(apiMock.health).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     apiMock.health.mockReset();
   });

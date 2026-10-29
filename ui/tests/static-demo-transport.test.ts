@@ -50,6 +50,25 @@ describe("static demo transport", () => {
     ]);
   });
 
+  it("filters unseen findings queries from one recorded dataset with honest totals", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STATIC_DEMO", "1");
+    const rows = [
+      { id: "high", severity: "high", finding_type: "vulnerability", lane: "vulnerabilities", cve_id: "CVE-2025-1000" },
+      { id: "critical", severity: "critical", finding_type: "vulnerability", lane: "vulnerabilities", cve_id: "CVE-2025-1001" },
+    ];
+    const fetchMock = vi.fn(async (_url: string) => new Response(JSON.stringify({ findings: rows, total: 2, scan_id: "sample", snapshot_at: "2026-06-03T20:30:00Z" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { get } = await loadTransport();
+    const result = await get<{ findings: { id: string }[]; total: number; facets: { lane: Record<string, number> } }>("/v1/findings?severity=high&scan_id=sample&limit=50");
+    expect(result.findings.map(row => row.id)).toEqual(["high"]);
+    expect(result.total).toBe(1);
+    expect(result.facets.lane.cloud).toBe(0);
+    const empty = await get<{ findings: unknown[]; total: number }>("/v1/findings?severity=low");
+    expect(empty.findings).toEqual([]);
+    expect(empty.total).toBe(0);
+    expect(fetchMock.mock.calls.every(call => !String(call[0]).includes("__q"))).toBe(true);
+  });
+
   it("refuses writes with the read-only message and makes no request", async () => {
     vi.stubEnv("NEXT_PUBLIC_STATIC_DEMO", "1");
     const fetchMock = vi.fn();

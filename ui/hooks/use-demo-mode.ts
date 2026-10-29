@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { useAuthState } from "@/components/auth-provider";
+import { isStaticDemo } from "@/lib/static-demo";
 import { api, type HealthResponse } from "@/lib/api";
 
 /**
@@ -22,6 +23,7 @@ export function useDemoMode(): { isDemoMode: boolean; loading: boolean } {
   const [healthLoading, setHealthLoading] = useState(true);
 
   useEffect(() => {
+    if (isStaticDemo()) return;
     let mounted = true;
     api
       .health()
@@ -41,7 +43,7 @@ export function useDemoMode(): { isDemoMode: boolean; loading: boolean } {
     };
   }, []);
 
-  const loading = authLoading || healthLoading;
+  const loading = !isStaticDemo() && (authLoading || healthLoading);
 
   // Server is in open/demo posture: anonymous access is allowed and no real
   // auth provider is configured.
@@ -55,7 +57,7 @@ export function useDemoMode(): { isDemoMode: boolean; loading: boolean } {
     ? session.auth_method === "anonymous" || !session.authenticated
     : true;
 
-  const isDemoMode = !loading && serverIsOpen && viewerIsAnonymous;
+  const isDemoMode = isStaticDemo() || (!loading && serverIsOpen && viewerIsAnonymous);
 
   return { isDemoMode, loading };
 }

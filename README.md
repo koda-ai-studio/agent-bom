@@ -85,12 +85,27 @@ exploitation or successful data access.
 
 | Area | What you get |
 |---|---|
+| SBOM, AI-BOM and Agent-BOM | Generate software SBOMs in CycloneDX or SPDX. For an AI-BOM, CycloneDX AI components carry collected model metadata. Native agent-bom JSON connects agents, MCP servers, tools, credential references and packages. |
 | Dependencies | Lockfiles and manifests across Python, JavaScript, Go, Java, .NET, Rust and more, matched against OSV, GitHub advisories and NVD with KEV and EPSS. Ask "am I affected by CVE-X" across every stored scan. |
 | Code | Findings from Semgrep or any SARIF tool, plus native analysis of AI code (prompt-injection sinks, guardrails, tool exposure) and whether your code reaches the vulnerable function. |
 | Containers and IaC | Images scanned in bounded memory and time; Dockerfile, Terraform, Kubernetes, Helm and compose risks with exact lines in SARIF. |
 | AI agents and MCP | Agents, MCP servers, tools and credentials from local configs and agent frameworks, linked to what they can reach. |
-| Cloud | Read-only collection from AWS, Azure, GCP, Databricks, Snowflake and more, with CIS and best-practice checks in the same graph. |
+| Cloud and data platforms | Read-only collection from AWS, Azure, GCP, Kubernetes, Databricks and Snowflake, with provider-specific posture checks and graph context. See the [coverage matrix](docs/VENDOR_COVERAGE.md) for each collection lane. |
+| GPU and AI infrastructure | Discover AI workloads on CoreWeave, Nebius, Lambda, RunPod, Vast.ai and Crusoe; inventory GPU containers and Kubernetes GPU nodes. Collection depth varies by provider. |
+| Models and AI platforms | Discover supported OpenAI, Hugging Face, Ollama, MLflow and W&B assets and retain available model provenance alongside dependencies and agent context. |
 | Runtime | An MCP proxy and gateway that alert on poisoned tools and injected results, or block them with `--injection-mode enforce`. |
+
+Generate a BOM from a project, or inspect an agent inventory with sample data:
+
+```bash
+agent-bom scan --project . -f cyclonedx -o sbom.cdx.json
+agent-bom scan --project . -f spdx -o sbom.spdx.json
+agent-bom scan --demo --offline -f json -o agent-bom.json
+```
+
+Open the artifact to inspect the collected components and relationships. Model
+metadata appears when the selected source supplies it; a BOM is an inventory,
+not proof of safe execution or complete collection.
 
 <details>
 <summary>All supported sources and evidence destinations</summary>

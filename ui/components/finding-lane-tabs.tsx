@@ -18,11 +18,11 @@ export function FindingLaneTabs({ lane, counts, approximate, onChange }: {
             document.getElementById(`finding-lane-${FINDING_LANES[next]!.key}`)?.focus();
           }} tabIndex={lane === item.key ? 0 : -1}
           className={`rounded-lg px-3 py-2 text-sm transition-colors ${lane === item.key ? "bg-background text-foreground shadow-sm font-semibold" : "text-ink-secondary hover:bg-background"}`}>
-          {item.label} <span className="ml-1 text-xs tabular-nums text-ink-tertiary">{count == null ? "—" : `${approximate ? "≥" : ""}${count.toLocaleString()}`}</span>
+          {item.label}{count != null && <span className="ml-1 text-xs tabular-nums text-ink-tertiary">{`${approximate ? "≥" : ""}${count.toLocaleString()}`}</span>}
         </button>;
       })}
     </div>
-    <p className="text-xs text-ink-secondary">{current.hint} Tab counts: canonical issues in the current filter scope{approximate ? " (partial; lower bounds)" : ""}.
+    <p className="text-xs text-ink-secondary">{current.hint} {!counts && <span>Counts are unavailable.</span>} Tab counts: canonical issues in the current filter scope{approximate ? " (partial; lower bounds)" : ""}.
       {lane === "cloud" && <> Table rows and severity counts group those issues by control; resource findings remain expandable.</>}
       {lane === "all" && <> <Link className="underline" href="/">Overview</Link> · <Link className="underline" href="/security-graph">Investigation</Link></>}
     </p>

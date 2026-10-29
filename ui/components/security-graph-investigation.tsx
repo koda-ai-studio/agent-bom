@@ -56,6 +56,7 @@ import { CONTROLS_OVERLAY, fitPaddingAroundOverlay, viewportShowsNodes } from "@
 import { graphTopologyKey, type GraphPresentationScope } from "@/lib/graph-presentation";
 import { useCaptureMode } from "@/lib/use-capture-mode";
 import { useElementWidth } from "@/hooks/use-element-width";
+import { useRelationshipLabelControl } from "@/components/relationship-label-control";
 import { InvestigationToolbar } from "@/components/investigation-toolbar";
 import { PathToolbarLead } from "@/components/path-view-toolbar";
 import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
@@ -472,6 +473,7 @@ export function SecurityGraphInvestigation({
     } })), undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) });
     return columnLayout ? columnFlowEdges(readable, attackPath?.hops ?? []) : readable;
   }, [attackPath, columnLayout, layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId, pathEdges]);
+  const relationshipLabels = useRelationshipLabelControl(displayEdges);
   const legendItems = useMemo(
     () => legendItemsForVisibleGraph(layout.nodes, displayEdges),
     [displayEdges, layout.nodes],
@@ -653,6 +655,7 @@ export function SecurityGraphInvestigation({
   }
 
   const graphControls = <>
+          {rendererDecision.kind === "react-flow" && relationshipLabels.control}
 
           <button
             type="button"
@@ -676,13 +679,13 @@ export function SecurityGraphInvestigation({
           <FullscreenButton />
 
     {embedded && rendererDecision.kind === "react-flow" && layout.nodes.length > 0 ? (
-      <div data-testid="security-graph-legend-band"><GraphLegend items={legendItems} footer={<GraphScopeEvidence edges={displayEdges} inline />} /></div>
+      <div data-testid="security-graph-legend-band"><GraphLegend items={legendItems} footer={<GraphScopeEvidence edges={relationshipLabels.edges} inline />} /></div>
     ) : null}
   </>;
 
   return (
     <section className={`rounded-2xl border border-outline bg-surface ${embedded ? "" : "overflow-hidden"}`}>
-      {!embedded && <GraphScopeEvidence edges={displayEdges} />}
+      {!embedded && <GraphScopeEvidence edges={relationshipLabels.edges} />}
       {!embedded && (<div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Interactive graph</h2>
@@ -723,7 +726,7 @@ export function SecurityGraphInvestigation({
 
       {embedded && rendererDecision.kind === "webgl" && <div role="toolbar" aria-label="Graph controls" className="flex flex-wrap items-center justify-end gap-2 border-b border-outline px-3 py-2">
         <PathToolbarLead />
-        <GraphScopeEvidence edges={displayEdges} inline />
+        <GraphScopeEvidence edges={relationshipLabels.edges} inline />
         {graphControls}
       </div>}
 
@@ -754,7 +757,7 @@ export function SecurityGraphInvestigation({
         ) : rendererDecision.kind === "webgl" ? (
           <SigmaGraphOverview
             nodes={layout.nodes as Node<LineageNodeData>[]}
-            edges={displayEdges}
+            edges={relationshipLabels.edges}
             legendItems={legendItems}
             embedded
             onNodeSelect={setSelectedNodeId}
@@ -765,7 +768,7 @@ export function SecurityGraphInvestigation({
           <ReactFlowProvider>
             <InvestigationFlow
               nodes={canvasNodes as Node<LineageNodeData>[]}
-              edges={displayEdges}
+              edges={relationshipLabels.edges}
               viewportInput={viewportInput}
               onNodeSelect={id => { setSelectedEdge(null); setSelectedNodeId(id); }}
               onEdgeSelect={edge => { setSelectedNodeId(null); setSelectedEdge(edge); }}
