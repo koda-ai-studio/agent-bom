@@ -126,3 +126,16 @@ test("unrecorded severity and scan filters resolve from the bundled findings", a
   await expect(page.getByRole("tab", { name: /^Vulnerabilities/ })).toContainText(/\d+/);
   await expect(page.getByRole("tab", { name: /^Cloud config/ })).toContainText("0");
 });
+
+test("relationship labels can be hidden without losing the path", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openInvestigation(page);
+  const labels = page.getByRole("combobox", { name: "Relationship labels" });
+  await expect(labels).toBeVisible();
+  const edges = await page.locator(".react-flow__edge").count();
+  await labels.selectOption("show");
+  await expect(page.locator(".graph-relationship-label").first()).toBeVisible();
+  await labels.selectOption("hide");
+  await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
+  await expect(page.locator(".react-flow__edge")).toHaveCount(edges);
+});

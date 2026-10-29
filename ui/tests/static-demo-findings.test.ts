@@ -7,8 +7,8 @@ it("sorts by the requested recorded signal, not the unrelated risk score", () =>
     { id: "reach", cvss_score: 7.5, risk_score: 5, effective_reach_score: 90 },
     { id: "risk", cvss_score: 5, risk_score: 99 },
   ];
-  expect(queryStaticFindings({ findings }, "/v1/findings?sort=cvss").findings.map(row => row.id)).toEqual(["cvss", "reach", "risk"]);
-  expect(queryStaticFindings({ findings }, "/v1/findings?sort=effective_reach").findings.map(row => row.id)).toEqual(["reach", "cvss", "risk"]);
+  expect(queryStaticFindings({ findings }, "/v1/findings?sort=cvss").findings.map((row: { id: string }) => row.id)).toEqual(["cvss", "reach", "risk"]);
+  expect(queryStaticFindings({ findings }, "/v1/findings?sort=effective_reach").findings.map((row: { id: string }) => row.id)).toEqual(["reach", "cvss", "risk"]);
 });
 
 it("does not turn missing sample data into a clean result", () => {
