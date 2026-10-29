@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import dataclasses
 import hashlib
 import re
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from agent_bom.asset_provenance import agent_discovery_provenance, sanitize_discovery_provenance
 from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
@@ -33,7 +31,23 @@ from agent_bom.output.finding_views import (
 )
 from agent_bom.output.json_writer import write_json_file
 from agent_bom.output.possibly_affected import add_sarif_results as add_possibly_affected_sarif
-from agent_bom.output.sarif_iac import iac_rule, iac_rule_id, iac_shared_compliance
+from agent_bom.output.sarif_common import (
+    _SARIF_SEVERITY_MAP,
+    _SECURITY_SEVERITY_SCORE,
+    _ecosystem_from_purl,
+    _sanitize_sarif_property,
+    _sarif_fingerprint_fields,
+    _sarif_location,
+    _sarif_severity,
+    _SarifCatalog,
+    _to_relative_path,
+)
+from agent_bom.output.sarif_scanners import (
+    _DEDICATED_CIS_PROVIDERS,
+    _add_ai_inventory_results,
+    _add_cis_benchmark_results,
+    _add_iac_results,
+)
 from agent_bom.output.sarif_taxonomy import (
     _FRAMEWORK_TAXONOMY_META,  # noqa: F401
     _attach_cwe_taxonomy,
@@ -49,78 +63,10 @@ from agent_bom.output.source_locations import (
     finding_package_location,
     package_source_index,
 )
-from agent_bom.security import sanitize_sensitive_payload, sanitize_text, sanitize_url
+from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
-_SARIF_SEVERITY_MAP = {
-    Severity.CRITICAL: "error",
-    Severity.HIGH: "error",
-    Severity.MEDIUM: "warning",
-    Severity.LOW: "note",
-    Severity.NONE: "none",
-    Severity.UNKNOWN: "note",
-}
-
-
-def _sarif_fingerprint_fields(
-    *,
-    stable_input: str,
-    artifact_uri: str,
-    start_line: int | None = 1,
-) -> dict[str, dict[str, str]]:
-    """Return SARIF fingerprints and GitHub partialFingerprints for dedup."""
-    fields = {
-        "fingerprints": {
-            "agent-bom/v1": hashlib.sha256(stable_input.encode()).hexdigest(),
-        },
-        "partialFingerprints": {
-            "primaryLocationLineHash": hashlib.sha256(f"{artifact_uri}:{start_line}".encode()).hexdigest(),
-        },
-    }
-    if start_line is None or artifact_uri.startswith(("self-scan://", "pkg:", "package:")):
-        fields.pop("partialFingerprints")
-    return fields
-
-
-# GitHub Security tab uses security-severity (0.0–10.0) for granular sorting.
-# Ranges per docs.github.com: >9.0=critical, 7.0–8.9=high, 4.0–6.9=medium, 0.1–3.9=low
-_SECURITY_SEVERITY_SCORE = {
-    Severity.CRITICAL: "9.5",
-    Severity.HIGH: "7.5",
-    Severity.MEDIUM: "5.5",
-    Severity.LOW: "2.5",
-    Severity.NONE: "0.0",
-    Severity.UNKNOWN: "0.0",
-}
-
-# ``info`` is the unified findings stream's spelling for "reported, not a
-# problem" — the same thing SARIF calls level ``none``. Every other label is
-# read the way ``graph.severity.normalize_severity`` reads it, which is what
-# ``Finding.__post_init__`` has already applied to anything in that stream.
-_SARIF_INFO_LABELS = frozenset({"info", "informational"})
 _UNIFIED_RULE_HELP_URI = "https://github.com/koda-ai-studio/agent-bom#readme"
 _SARIF_RULE_TOKEN_RE = re.compile(r"[^A-Za-z0-9._-]+")
-
-
-def _sarif_severity(label: object) -> tuple[str, str]:
-    """Return ``(level, security-severity)`` for a finding severity label.
-
-    Every result stream in a document resolves severity here. The unified
-    finding, IaC, AI and CIS streams each used to carry an inline copy of these
-    tables keyed by severity string; none of the copies had a ``none`` or
-    ``unknown`` key and they fell back to ``warning`` / ``4.0``, so a finding
-    rated ``none`` — or one the scanner could not rate — reached GitHub code
-    scanning as Medium while the CVE stream in the same document reported it as
-    ``note`` / ``0.0``. An unrecognised label resolves to ``unknown``: unrated
-    is never silently promoted to a rating.
-    """
-    name = str(label or "").strip().lower()
-    if name in _SARIF_INFO_LABELS:
-        return _SARIF_SEVERITY_MAP[Severity.NONE], _SECURITY_SEVERITY_SCORE[Severity.NONE]
-    try:
-        severity = Severity(name)
-    except ValueError:
-        severity = Severity.UNKNOWN
-    return _SARIF_SEVERITY_MAP[severity], _SECURITY_SEVERITY_SCORE[severity]
 
 
 def _unified_finding_rule_id(finding: Finding) -> str:
@@ -154,78 +100,6 @@ def _unified_finding_rule_id(finding: Finding) -> str:
     return f"{family_rule_id}/{token}"
 
 
-# Per-ecosystem manifest candidates, checked in order. Lets a SARIF result for
-# a maven/go/cargo finding point at pom.xml/go.mod/Cargo.toml instead of all
-# findings collapsing onto the first manifest in the directory.
-_ECOSYSTEM_MANIFESTS: dict[str, tuple[str, ...]] = {
-    "pypi": ("requirements.txt", "pyproject.toml", "setup.py", "Pipfile"),
-    "npm": ("package.json",),
-    "maven": ("pom.xml", "build.gradle", "build.gradle.kts"),
-    "gradle": ("build.gradle", "build.gradle.kts", "pom.xml"),
-    "go": ("go.mod",),
-    "cargo": ("Cargo.toml", "Cargo.lock"),
-    "rubygems": ("Gemfile", "Gemfile.lock"),
-    "composer": ("composer.json",),
-    "nuget": ("packages.config",),
-    "hex": ("mix.exs",),
-    "pub": ("pubspec.yaml",),
-    "conda": ("environment.yml", "environment.yaml"),
-}
-
-
-def _ecosystem_from_purl(identifier: Optional[str]) -> Optional[str]:
-    """Extract the ecosystem from a purl identifier (``pkg:pypi/...`` → ``pypi``)."""
-    if identifier and identifier.startswith("pkg:"):
-        rest = identifier[4:]
-        return rest.split("/", 1)[0].split("@", 1)[0].lower() or None
-    return None
-
-
-def _to_relative_path(path: str, ecosystem: Optional[str] = None) -> str:
-    """Convert an absolute path to a relative path suitable for SARIF.
-
-    GitHub Code Scanning requires relative paths from the repo root.
-    Absolute paths cause "No summary of scanned files" in the Security tab.
-    For dependency findings on a directory, points to the manifest of the
-    finding's own ecosystem (so maven/go/cargo findings don't all collapse onto
-    the first manifest), falling back to any present manifest.
-    """
-
-    p = Path(path)
-    # If it's a directory (e.g., project root from --self-scan), point to manifest
-    if p.is_dir():
-        if ecosystem:
-            for manifest in _ECOSYSTEM_MANIFESTS.get(ecosystem.lower(), ()):
-                if (p / manifest).exists():
-                    return manifest
-        for manifest in ("pyproject.toml", "package.json", "go.mod", "Cargo.toml", "requirements.txt", "pom.xml"):
-            if (p / manifest).exists():
-                return manifest
-        return "pyproject.toml"  # default fallback for Python projects
-
-    # If it's an absolute path, try to make it relative to cwd
-    if p.is_absolute():
-        try:
-            return str(p.relative_to(Path.cwd()))
-        except ValueError:
-            # Can't make relative — extract just the filename
-            return p.name
-
-    return path
-
-
-def _sanitize_sarif_property(value: Any) -> Any:
-    """Apply final defensive redaction before data leaves via SARIF.
-
-    Property bags carry arbitrary nested evidence — scanner payloads, runtime
-    capture, provenance — so they keep the conservative tier-A allowlist.
-    """
-    sanitized = sanitize_sensitive_payload(value, max_str_len=1000)
-    if isinstance(sanitized, str):
-        return None
-    return redact_for_persistence({"details": sanitized}, EvidenceTier.SAFE_TO_STORE).get("details")
-
-
 def _sanitize_scanner_text(field_name: str, value: Any, *, fallback: str = "") -> str:
     """Redact scanner free text that may quote the scanned workspace.
 
@@ -241,14 +115,6 @@ def _sanitize_scanner_text(field_name: str, value: Any, *, fallback: str = "") -
     if redacted is None:
         return fallback
     return str(redacted)
-
-
-def _cis_remediation_text(remediation: Any) -> str:
-    """Flatten a CIS remediation dict into one sanitized guidance line."""
-    if not isinstance(remediation, dict):
-        return ""
-    parts = [sanitize_advisory_text("recommendation", remediation.get(key)) for key in ("fix_cli", "fix_console")]
-    return " ".join(part for part in parts if part)
 
 
 def _exposure_related_locations(exposure_path: dict[str, Any]) -> list[dict]:
@@ -350,21 +216,6 @@ def _suppression_entries(source: object) -> list[dict]:
     if properties:
         entry["properties"] = properties
     return [entry]
-
-
-# Cloud providers whose CIS benchmark failures are emitted by the dedicated CIS
-# loop (_add_cis_benchmark_results) with per-check rule IDs + structured remediation. The
-# unified non-CVE loop skips these so each failed check yields exactly one SARIF
-# result (no duplicate ruleId+location) in the GitHub Security tab. databricks
-# CIS and snowflake governance findings have no dedicated loop, so they keep
-# flowing through the unified path.
-_DEDICATED_CIS_BENCHMARKS: tuple[tuple[str, str], ...] = (
-    ("aws", "cis_benchmark_data"),
-    ("azure", "azure_cis_benchmark_data"),
-    ("gcp", "gcp_cis_benchmark_data"),
-    ("snowflake", "snowflake_cis_benchmark_data"),
-)
-_DEDICATED_CIS_PROVIDERS = frozenset(provider for provider, _ in _DEDICATED_CIS_BENCHMARKS)
 
 
 def _agent_discovery_provenance_from_report(report: AIBOMReport, agent_names: list[str]) -> list[Any]:
@@ -647,33 +498,6 @@ def _cve_sarif_result(
     return result
 
 
-@dataclasses.dataclass
-class _SarifCatalog:
-    """Rules and results accumulated across finding families for one SARIF run."""
-
-    rules: list[dict[str, Any]] = dataclasses.field(default_factory=list)
-    results: list[dict[str, Any]] = dataclasses.field(default_factory=list)
-    seen_rule_ids: set[str] = dataclasses.field(default_factory=set)
-
-    def claim_rule(self, rule_id: str) -> bool:
-        """Return True the first time a rule ID is seen, so its rule is emitted once."""
-        if rule_id in self.seen_rule_ids:
-            return False
-        self.seen_rule_ids.add(rule_id)
-        return True
-
-
-def _sarif_location(uri: str, start_line: Any, *, scanned_artifact: str | None = None) -> dict[str, Any]:
-    # Package identities are logical; code scanning needs the scanned image as a physical artifact.
-    if uri.startswith(("self-scan://", "pkg:", "package:")):
-        logical = {"logicalLocations": [{"fullyQualifiedName": uri}]}
-        return {"physicalLocation": {"artifactLocation": {"uri": scanned_artifact}}, **logical} if scanned_artifact else logical
-    location: dict[str, Any] = {"artifactLocation": {"uri": uri, "uriBaseId": "%SRCROOT%"}}
-    if type(start_line) is int and start_line > 0:
-        location["region"] = {"startLine": start_line, "startColumn": 1}
-    return {"physicalLocation": location}
-
-
 def _add_cve_results(
     catalog: _SarifCatalog,
     report: AIBOMReport,
@@ -887,215 +711,6 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
         if catalog.claim_rule(rule_id):
             catalog.rules.append(_unified_finding_rule(finding, rule_id, level, security_severity))
         catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence))
-
-
-def _add_iac_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
-    """IaC misconfiguration findings (Dockerfile, K8s, Terraform, CloudFormation)."""
-    iac_data = getattr(report, "iac_findings_data", None)
-    if not iac_data:
-        return
-    findings = iac_data.get("findings", [])
-    shared_compliance = iac_shared_compliance(findings)
-    for iac_finding in findings:
-        sev = iac_finding.get("severity", "medium").lower()
-        rule_id = iac_rule_id(iac_finding)
-        level, security_severity = _sarif_severity(sev)
-        file_path = _to_relative_path(iac_finding.get("file_path", "unknown") or "unknown")
-        line_num = iac_finding.get("line_number") or 1
-        if catalog.claim_rule(rule_id):
-            catalog.rules.append(iac_rule(iac_finding, rule_id, level, security_severity, shared_compliance[rule_id]))
-
-        fp_input = f"{rule_id}:{file_path}:{line_num}"
-        catalog.results.append(
-            {
-                "ruleId": rule_id,
-                "level": level,
-                "kind": "fail",
-                "message": {
-                    "text": sanitize_advisory_text(
-                        "description",
-                        iac_finding.get("message"),
-                        fallback=sanitize_advisory_text("title", iac_finding.get("title", "IaC misconfiguration")),
-                    )
-                },
-                **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=file_path, start_line=line_num),
-                "locations": [_sarif_location(file_path, line_num)],
-                "properties": {"compliance": list(iac_finding.get("compliance") or [])},
-            }
-        )
-
-
-def _ai_inventory_rule(comp: dict[str, Any], rule_id: str, name: str, level: str, security_severity: str) -> dict[str, Any]:
-    sev = comp.get("severity", "info")
-    comp_type = comp.get("type", "unknown")
-    description = sanitize_advisory_text(
-        "description",
-        comp.get("description", ""),
-        fallback=f"AI component finding: {name}",
-    )
-    ai_rule: dict[str, Any] = {
-        "id": rule_id,
-        "shortDescription": {"text": sanitize_advisory_text("title", f"{sev.upper()}: {comp_type.replace('_', ' ')} - {name}")},
-        "fullDescription": {"text": description},
-        "defaultConfiguration": {"level": level},
-        "properties": {"security-severity": security_severity},
-    }
-    help_body = advisory_help(
-        description,
-        remediation=sanitize_advisory_text("recommendation", comp.get("recommendation")),
-    )
-    if help_body:
-        ai_rule["help"] = help_body
-    return ai_rule
-
-
-def _add_ai_inventory_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
-    """AI inventory findings (shadow AI, deprecated models, API keys, invisible Unicode)."""
-    ai_inv = getattr(report, "ai_inventory_data", None)
-    if not ai_inv:
-        return
-    for comp in ai_inv.get("components", []):
-        sev = comp.get("severity", "info")
-        if sev not in ("critical", "high", "medium"):
-            continue  # only actionable findings in SARIF
-        comp_type = comp.get("type", "unknown")
-        # Redact credential fragments — never embed key material in SARIF
-        raw_name = comp.get("name", "")
-        name = "[REDACTED]" if comp_type == "api_key" else raw_name
-        rule_id = f"ai-inventory/{comp_type}/{name}"
-        level, security_severity = _sarif_severity(sev)
-        if catalog.claim_rule(rule_id):
-            catalog.rules.append(_ai_inventory_rule(comp, rule_id, name, level, security_severity))
-
-        file_path = _to_relative_path(comp.get("file", "unknown") or "unknown")
-        line_num = int(comp.get("line", 1) or 1)
-        fp_input = f"{rule_id}:{file_path}:{line_num}"
-        desc = sanitize_advisory_text("description", comp.get("description", ""), fallback=f"{comp_type.replace('_', ' ')}: {name}")
-        catalog.results.append(
-            {
-                "ruleId": rule_id,
-                "level": level,
-                "kind": "fail",
-                "message": {"text": desc},
-                **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=file_path, start_line=line_num),
-                "locations": [_sarif_location(file_path, comp.get("line", 1))],
-            }
-        )
-
-
-def _cis_rule(check: dict[str, Any], cloud_key: str, rule_id: str, level: str, security_severity: str) -> dict[str, Any]:
-    cis_severity = str(check.get("severity") or "unknown").lower()
-    check_id = check.get("check_id") or "unknown"
-    remediation = check.get("remediation") or {}
-    title = check.get("title") or rule_id
-    help_uri = sanitize_url(str(remediation.get("docs") or "")) or ""
-    recommendation = sanitize_advisory_text(
-        "recommendation",
-        check.get("recommendation"),
-        fallback=sanitize_advisory_text("title", title, fallback=rule_id),
-    )
-    cis_rule: dict = {
-        "id": rule_id,
-        "shortDescription": {
-            "text": sanitize_advisory_text(
-                "title",
-                f"{cis_severity.upper()}: CIS {cloud_key.upper()} {check_id} - {title}",
-                fallback=rule_id,
-            )
-        },
-        "fullDescription": {"text": recommendation},
-        "defaultConfiguration": {"level": level},
-        "properties": {
-            "security-severity": security_severity,
-            "tags": ["cis", cloud_key, "compliance"],
-            "cis_section": check.get("cis_section") or "",
-        },
-    }
-    if help_uri:
-        cis_rule["helpUri"] = help_uri
-    help_body = advisory_help(
-        recommendation,
-        remediation=_cis_remediation_text(remediation),
-        reference_uri=help_uri,
-    )
-    if help_body:
-        cis_rule["help"] = help_body
-    return cis_rule
-
-
-def _cis_result_properties(check: dict[str, Any]) -> dict[str, Any]:
-    remediation = check.get("remediation") or {}
-    result_props: dict = {
-        "remediation": remediation,
-        "cis_section": check.get("cis_section") or "",
-        "evidence": _sanitize_sarif_property(check.get("evidence") or ""),
-        "resource_ids": _sanitize_sarif_property(check.get("resource_ids") or []),
-    }
-    # Surface the remediation knobs flat for consumers that
-    # can't (or don't want to) read nested dicts.
-    if remediation:
-        result_props["fix_cli"] = remediation.get("fix_cli")
-        result_props["fix_console"] = remediation.get("fix_console") or ""
-        result_props["effort"] = remediation.get("effort") or "manual"
-        result_props["priority"] = remediation.get("priority") or 3
-        result_props["guardrails"] = remediation.get("guardrails") or []
-        result_props["requires_human_review"] = bool(remediation.get("requires_human_review"))
-    return result_props
-
-
-def _cis_result(check: dict[str, Any], cloud_key: str, rule_id: str, level: str) -> dict[str, Any]:
-    check_id = check.get("check_id") or "unknown"
-    title = check.get("title") or rule_id
-    # Synthetic fingerprint so repeat runs produce stable IDs.
-    fp_input = f"{rule_id}:{','.join(check.get('resource_ids') or [])}"
-    # CIS findings are cloud-control-level, not file-level. Point
-    # at a conventional manifest so GitHub renders the result;
-    # the rich context lives in ``properties``.
-    artifact_uri = f"cis-{cloud_key}-benchmark"
-    return {
-        "ruleId": rule_id,
-        "level": level,
-        "kind": "fail",
-        "message": {
-            "text": sanitize_advisory_text(
-                "title",
-                f"CIS {cloud_key.upper()} {check_id} failed: {title}",
-                fallback=rule_id,
-            )
-        },
-        **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=artifact_uri, start_line=1),
-        "locations": [_sarif_location(artifact_uri, 1)],
-        "properties": _cis_result_properties(check),
-    }
-
-
-def _add_cis_benchmark_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
-    """CIS benchmark findings (AWS / Azure / GCP / Snowflake).
-
-    Each failed check emits a SARIF result with the structured remediation dict
-    (issue #665) in ``properties.remediation`` so GitHub Code Scanning and
-    downstream SARIF consumers can surface fix guidance per finding.
-    """
-    from agent_bom.cloud.cis_remediation import fail_closed_cis_bundle
-
-    for cloud_key, data_attr in _DEDICATED_CIS_BENCHMARKS:
-        bundle = getattr(report, data_attr, None)
-        if not bundle:
-            continue
-        bundle = fail_closed_cis_bundle(bundle, cloud=cloud_key)
-        for check in bundle.get("checks", []):
-            if check.get("status") != "fail":
-                continue
-            # Matches `cis_check_to_finding`: a control that reports no severity
-            # is unrated, not medium. Defaulting to a rated band here published
-            # the check to GitHub as Medium while every summary built from the
-            # unified stream called the same check unrated.
-            cis_severity = str(check.get("severity") or "unknown").lower()
-            rule_id = f"cis/{cloud_key}/{check.get('check_id') or 'unknown'}"
-            level, security_severity = _sarif_severity(cis_severity)
-            if catalog.claim_rule(rule_id):
-                catalog.rules.append(_cis_rule(check, cloud_key, rule_id, level, security_severity))
-            catalog.results.append(_cis_result(check, cloud_key, rule_id, level))
 
 
 def _sarif_invocation(scan_run: ScanRun) -> dict[str, Any]:

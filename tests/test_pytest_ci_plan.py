@@ -21,6 +21,18 @@ def test_narrative_owners_keep_public_contract_selection(tmp_path: Path, owner: 
     assert contract in selected
 
 
+@pytest.mark.parametrize("owner", ["common", "scanners"])
+def test_sarif_owners_keep_schema_and_characterization_selection(tmp_path: Path, owner: str) -> None:
+    contracts = [
+        tmp_path / "tests" / name
+        for name in ("test_sarif_schema_2_1_0.py", "test_sarif_severity_agreement.py", "test_output_render_characterization.py")
+    ]
+    for contract in contracts:
+        _write(contract, 1)
+    selected = select_targeted_tests(changed_files=[Path(f"src/agent_bom/output/sarif_{owner}.py")], root=tmp_path)
+    assert set(contracts) <= set(selected)
+
+
 @pytest.mark.parametrize("source", [".github/workflows/ci.yml", ".github/workflows/release.yml"])
 def test_workflow_edits_select_deployment_contracts(tmp_path: Path, source: str) -> None:
     contract = tmp_path / "tests/test_deployment.py"

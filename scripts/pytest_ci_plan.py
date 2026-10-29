@@ -336,6 +336,8 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
         "src/agent_bom/api/identity_models.py": "src/agent_bom/api/agent_identity_store.py",
         "src/agent_bom/api/identity_local_store.py": "src/agent_bom/api/agent_identity_store.py",
         "src/agent_bom/output/json_inventory.py": "src/agent_bom/output/json_fmt.py",
+        "src/agent_bom/output/sarif_common.py": "src/agent_bom/output/sarif.py",
+        "src/agent_bom/output/sarif_scanners.py": "src/agent_bom/output/sarif.py",
         "src/agent_bom/output/compliance_narrative_models.py": "src/agent_bom/output/compliance_narrative.py",
         "src/agent_bom/output/compliance_narrative_templates.py": "src/agent_bom/output/compliance_narrative.py",
         "src/agent_bom/output/compliance_narrative_findings.py": "src/agent_bom/output/compliance_narrative.py",
