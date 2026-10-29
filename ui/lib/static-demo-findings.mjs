@@ -42,6 +42,7 @@ function groupRows(rows, enabled) {
     else {
       group.occurrence_count++;
       group.occurrences.push({ ...row });
+      group.domains = [...new Set([...domains(group), ...domains(row)])];
       if ((RANK[row.severity] ?? 0) > (RANK[group.severity] ?? 0)) group.severity = row.severity;
     }
   }
@@ -49,14 +50,19 @@ function groupRows(rows, enabled) {
 }
 
 export function queryStaticFindings(body, apiPath) {
+  if (!body || !Array.isArray(body.findings)) throw new Error("The sample findings dataset is unavailable.");
   const params = new URL(apiPath, "https://demo.invalid").searchParams;
   const source = (body.findings ?? []).map(row => ({ ...row, scan_id: row.scan_id ?? body.scan_id }));
   const grouped = params.get("group_occurrences") === "true";
   const filtered = groupRows(source.filter(row => matches(row, params, null, body.snapshot_at)), grouped);
   const sort = params.get("sort") ?? "effective_reach";
-  filtered.sort((a, b) => sort === "package" ? text(a.package_name).localeCompare(text(b.package_name))
-    : sort === "severity" ? (RANK[b.severity] ?? 0) - (RANK[a.severity] ?? 0)
-      : Number(b.risk_score ?? b.cvss_score ?? 0) - Number(a.risk_score ?? a.cvss_score ?? 0));
+  // Use recorded ranking signals. A generic risk score is not effective reach.
+  const numeric = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const primary = row => sort === "severity" ? RANK[row.severity] ?? 0
+    : sort === "cvss" ? numeric(row.cvss_score)
+      : numeric(row.effective_reach_score ?? row.effective_reach?.composite);
+  filtered.sort((a, b) => primary(b) - primary(a) || numeric(b.cvss_score) - numeric(a.cvss_score)
+    || (RANK[b.severity] ?? 0) - (RANK[a.severity] ?? 0) || text(a.id).localeCompare(text(b.id)));
   const limit = Math.max(1, Math.min(1000, Number(params.get("limit")) || 50));
   const offset = Math.max(0, Number(params.get("offset")) || 0);
   const facets = {};
