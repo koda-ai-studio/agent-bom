@@ -15,6 +15,7 @@ become ``delegated_to`` edges with ``declared`` provenance:
   and ``child`` nests under ``sub``
 - ``return Command(goto="b")`` inside a node function → node → ``b`` (handoff);
   ``graph=Command.PARENT`` resolves ``b`` in the enclosing graph
+- ``return Send("worker", state)`` → node → ``worker`` (kind ``fan_out``)
 
 Graph bindings and node functions resolve through lexical scope, so two
 functions that each build a ``builder`` describe two graphs, and same-named
@@ -139,8 +140,14 @@ class _Command:
     to_parent: bool
 
 
+@dataclass(frozen=True)
+class _Send:
+    line: int
+    target: str | None
+
+
 class _Module:
-    """Module-level facts the passes share: graph scopes, START/END aliases, functions by qualified name."""
+    """Module-level facts the passes share: graph scopes, import aliases, functions by qualified name."""
 
     def __init__(
         self,
@@ -157,12 +164,16 @@ class _Module:
         self.scopes = {key: _GraphScope(agent) for key, agent in graph_bindings.items() if agent.framework == "langgraph"}
         self.compiled_bindings: dict[tuple[str, str], _GraphScope] = {}
         self.constants: dict[str, str] = {"START": _START, "END": _END}
+        self.send_names = {"Send"}
         self._commands: dict[str, list[_Command]] = {}
+        self._sends: dict[str, list[_Send]] = {}
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
                 for alias in node.names:
                     if alias.name in ("START", "END") and alias.asname:
                         self.constants[alias.asname] = self.constants[alias.name]
+                    elif alias.name == "Send":
+                        self.send_names.add(alias.asname or alias.name)
             elif isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
                 binding = _first_target_name(node.targets)
                 child = self.subgraph_scope(node.value, index.scope_of(node))
@@ -222,6 +233,18 @@ class _Module:
                         found.append(_Command(call.lineno, self.node_refs(goto), to_parent))
             self._commands[qualname] = found
         return self._commands[qualname]
+
+    def sends(self, qualname: str) -> list[_Send]:
+        """``Send(node, ...)`` calls inside the function ``qualname``, parsed once per function."""
+        if qualname not in self._sends:
+            found: list[_Send] = []
+            for definition in self.index.functions.get(qualname, []):
+                for call in ast.walk(definition):
+                    if not isinstance(call, ast.Call) or _call_name(call.func).split(".")[-1] not in self.send_names:
+                        continue
+                    found.append(_Send(call.lineno, self.node_ref(_arg(call, 0, "node"))))
+            self._sends[qualname] = found
+        return self._sends[qualname]
 
 
 def collect_langgraph_topology(
@@ -421,15 +444,20 @@ def _branches(module: _Module, path_map: ast.AST | None) -> list[tuple[str, str 
     return None
 
 
-# ── Command(goto=...) handoffs ───────────────────────────────────────────────
+# ── Command(goto=...) handoffs and Send(node) fan-out ────────────────────────
 
 
 def _record_handoffs(module: _Module, scope: _GraphScope, topology: LangGraphTopology) -> None:
     for qualname, node_names in scope.node_by_function.items():
         commands = module.commands(qualname)
+        sends = module.sends(qualname)
         for node_name in node_names:
             for command in commands:
                 _record_command(module, scope, scope.nodes[node_name], command, topology)
+                if topology.truncated:
+                    return
+            for send in sends:
+                _record_send(module, scope, scope.nodes[node_name], send, topology)
                 if topology.truncated:
                     return
 
@@ -450,6 +478,17 @@ def _record_command(module: _Module, scope: _GraphScope, source: FrameworkAgent,
         edge = _edge(source, target, evidence, command.line, module.rel_path, "medium", kind=_kind(target_scope, source, target))
         if not topology.emit(edge, source, evidence, command.line):
             return
+
+
+def _record_send(module: _Module, scope: _GraphScope, source: FrameworkAgent, send: _Send, topology: LangGraphTopology) -> None:
+    evidence = "Send(node)"
+    target = scope.resolve(send.target)
+    if target is None:
+        reason = f"target {send.target!r} is not a node of this graph" if send.target else "target decided at runtime"
+        topology.unresolved(source, evidence, send.line, reason)
+        return
+    edge = _edge(source, target, evidence, send.line, module.rel_path, "medium", kind="fan_out")
+    topology.emit(edge, source, evidence, send.line)
 
 
 # ── Shared helpers ───────────────────────────────────────────────────────────
