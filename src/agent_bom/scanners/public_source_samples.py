@@ -55,3 +55,45 @@ def mask_public_docstrings(content: str, path: Path) -> str:
             end = node.end_col_offset if number == node.end_lineno and node.end_col_offset is not None else len(line.rstrip(b"\r\n"))
             lines[number - 1] = (line[:start] + b" " * (end - start) + line[end:]).decode()
     return "".join(lines)
+
+
+def mask_public_module_links(content: str, path: Path) -> str:
+    """Mask exact CPython module-catalog links, never arbitrary assignments.
+
+    CPython 3.14.8 Lib/pydoc_data/module_docs.py maps module names to public
+    documentation anchors. The spwd key resembles a password assignment.
+    Only the canonical value in that module's top-level module_docs dictionary
+    is masked; changed values, duplicate entries and adjacent code are scanned.
+    """
+    if path.parts[-2:] != ("pydoc_data", "module_docs.py") or len(content.encode("utf-8")) > _MAX_PARSE_BYTES:
+        return content
+    try:
+        tree = ast.parse(content)
+    except (SyntaxError, ValueError, RecursionError):
+        return content
+    lines = content.splitlines(keepends=True)
+    for statement in tree.body:
+        if not (
+            isinstance(statement, ast.Assign)
+            and len(statement.targets) == 1
+            and isinstance(statement.targets[0], ast.Name)
+            and statement.targets[0].id == "module_docs"
+            and isinstance(statement.value, ast.Dict)
+        ):
+            continue
+        for key, value in zip(statement.value.keys, statement.value.values):
+            if not (
+                isinstance(key, ast.Constant)
+                and key.value in ("pwd", "spwd")
+                and isinstance(value, ast.Constant)
+                and value.value == f"{key.value}#module-{key.value}"
+            ):
+                continue
+            # AST columns count UTF-8 bytes. Keep surrounding code and lines.
+            for number in range(value.lineno, (value.end_lineno or value.lineno) + 1):
+                line = lines[number - 1].encode()
+                start = value.col_offset if number == value.lineno else 0
+                end = value.end_col_offset if number == value.end_lineno else len(line.rstrip(b"\r\n"))
+                assert end is not None
+                lines[number - 1] = (line[:start] + b" " * (end - start) + line[end:]).decode()
+    return "".join(lines)

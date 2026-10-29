@@ -35,7 +35,7 @@ from agent_bom.runtime.patterns import PII_PATTERNS
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator
 from agent_bom.scanners.build_metadata import mask_build_config_quantities
 from agent_bom.scanners.credential_validation import CredentialValidator, ValidationStatus
-from agent_bom.scanners.public_source_samples import mask_public_docstrings
+from agent_bom.scanners.public_source_samples import mask_public_docstrings, mask_public_module_links
 from agent_bom.scanners.repo_ignore import RepositoryIgnore
 from agent_bom.scanners.secret_lines import ENTROPY_PLACEHOLDER_RE as _ENTROPY_PLACEHOLDER_RE
 from agent_bom.scanners.secret_lines import is_comment_line, match_credential, match_file_secret
@@ -392,7 +392,7 @@ def _scan_file(
         return []
 
     findings: list[SecretFinding] = []
-    lines = mask_public_docstrings(content, file_path).split("\n")
+    lines = mask_public_module_links(mask_public_docstrings(content, file_path), file_path).split("\n")
     pii_lines = mask_build_config_quantities("\n".join(lines), file_path).split("\n")
     aws_secrets = _aws_secret_candidates(lines) if aws_validator is not None else []
 

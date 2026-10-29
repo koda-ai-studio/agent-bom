@@ -128,3 +128,19 @@ def test_gpg_exception_does_not_hide_secret_material(tmp_path, key):
     _, evidence = _scan(tmp_path, image)
     assert len(evidence.config_secrets) == 1
     assert value not in json.dumps(evidence.to_metadata())
+
+
+def test_stdlib_module_catalog_does_not_mask_adjacent_layer_credentials(tmp_path):
+    value = "fixture-" + "credential-381"
+    source = "module_docs = {'pwd': 'pwd#module-pwd', 'spwd': 'spwd#module-spwd'}\n"
+    image = build_image(
+        [
+            {
+                "usr/local/lib/python3.14/pydoc_data/module_docs.py": source.encode(),
+                "app/config.py": f'password = "{value}"\n'.encode(),
+            }
+        ]
+    )
+    _, evidence = _scan(tmp_path, image)
+    assert [s["image_path"] for s in evidence.layer_secrets] == ["app/config.py"]
+    assert value not in json.dumps(evidence.to_metadata())
