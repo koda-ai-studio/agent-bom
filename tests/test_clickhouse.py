@@ -768,7 +768,9 @@ def test_build_scan_analytics_payload_splits_findings_by_agent():
 
     assert payload.scan_id == "scan-xyz"
     assert payload.scan_metadata["source"] == "api"
-    assert payload.scan_metadata["vuln_count"] == 2
+    # One correlated package/CVE finding, with an occurrence attributed to each agent.
+    assert payload.scan_metadata["vuln_count"] == 1
+    assert sum(len(rows) for rows in payload.agent_findings.values()) == 2
     assert payload.agent_findings["alpha"][0]["source"] == "osv"
     assert payload.agent_findings["beta"][0]["cve_id"] == "CVE-2026-9999"
     assert payload.posture_snapshots["alpha"]["critical"] == 1
