@@ -151,11 +151,7 @@ const BUDGETS = {
   // the runtime snapshot/unattributed-block labels: our own code, no new
   // dependency. The clean build measures 4316.7 KiB; keep 15.3 KiB of bounded
   // headroom at 4332 KiB. Shared-runtime and largest-chunk limits stay fixed.
-  // The scroll-safe graph canvases (wheel gate + hint), controls-aware viewport
-  // fit, demo compliance note and count-scope captions measure 4335.4 KiB on
-  // Linux CI, 3.4 KiB over the 4332 KiB line. Restore ~16 KiB of bounded
-  // headroom at 4352 KiB; shared-runtime and largest-chunk limits stay fixed.
-  totalClientJsBytes: 4_456_448,
+  totalClientJsBytes: 4_435_968,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.

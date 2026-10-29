@@ -154,7 +154,7 @@ async def get_fix_first_graph_view(
         raise HTTPException(status_code=503, detail="Graph snapshots not found. Run a scan first.")
 
     cache_params = (("scan_id", requested_scan_id), ("cve", cve), ("package", package), ("agent", agent), ("limit", limit))
-    generation = await _runtime._graph_store_call(evidence_generation, tenant)
+    generation = await _runtime._graph_store_call(evidence_generation, tenant, scan_id=requested_scan_id)
     cached = read_cache_get("fix_first_view", tenant, cache_params, generation=generation)
     if cached is not None:
         return cached

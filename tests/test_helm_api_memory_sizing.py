@@ -1,10 +1,4 @@
-"""The default control-plane API pod must survive a demo-estate read working set.
-
-An API worker that materialises a 5k-node graph beside every stored scan
-payload holds roughly 750 MiB resident on a default install; a 1Gi limit put
-it one request away from OOMKill. The chart's defaults and the published
-sizing table must agree on the headroom.
-"""
+"""The rendered API memory defaults and published sizing table must agree."""
 
 from __future__ import annotations
 

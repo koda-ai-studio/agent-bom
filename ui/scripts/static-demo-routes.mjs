@@ -156,15 +156,16 @@ export async function installStaticDemoRoutes(page, { graph, findings, auditEntr
     const nodeId = url.searchParams.get("node") ?? "";
     const maxDepth = Number(url.searchParams.get("max_depth") ?? 4);
     const direction = url.searchParams.get("direction") === "forward" ? "forward" : "reverse";
+    const impact = graphImpact(graph, nodeId, { maxDepth, direction });
     return fulfill(route, {
       scan_id: url.searchParams.get("scan_id") ?? scanId,
       tenant_id: tenantId,
       snapshot_generation: graph.snapshot_generation ?? "a".repeat(32),
-      interpretation: { basis: "recorded_reverse_reachability", execution: "not_established", collection_coverage: "unknown", traversable_only: false, max_depth: maxDepth },
-      completeness: { complete: true, truncated: false, sampled: false, status: "complete", total: null, returned: 0, missing_endpoint_count: 0, scope: "impact" },
+      interpretation: { basis: `recorded_${direction}_reachability`, execution: "not_established", collection_coverage: "unknown", traversable_only: false, max_depth: maxDepth },
+      completeness: { complete: true, truncated: false, sampled: false, status: "complete", total: impact.affected_count, returned: impact.affected_count, missing_endpoint_count: 0, scope: "impact" },
       node_id: nodeId,
       direction,
-      ...graphImpact(graph, nodeId, { maxDepth, direction }),
+      ...impact,
     });
   });
   await page.route("**/v1/findings?**", (route) => {

@@ -180,9 +180,10 @@ def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
                 stage="inventory",
                 source="autodiscover",
                 message=(
-                    f"Auto-discovered risk metadata fetched for {_enrichment.attempted} of {_enrichment.candidates} "
-                    f"candidate package(s); {_enrichment.skipped} not enriched. Raise "
-                    "AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES to look up more. Advisory only: vulnerability coverage is unaffected."
+                    f"Auto-discovered risk metadata lookup attempted for {_enrichment.attempted} of {_enrichment.candidates} "
+                    f"candidate package(s); {_enrichment.enriched} enriched, {_enrichment.skipped} skipped by the cap. "
+                    "AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES and the time budget bound lookups. "
+                    "Advisory only: vulnerability coverage is unaffected."
                 ),
                 affects_coverage=False,
             )

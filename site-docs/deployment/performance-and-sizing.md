@@ -99,12 +99,18 @@ Current chart defaults in [values.yaml](https://github.com/koda-ai-studio/agent-
 - limits: `1000m` CPU / `2Gi` memory
 - `HPA` packaged but off by default
 
-A worker that serves the exec reads (posture, compliance, fix-first) holds the
-tenant's graph snapshot and stored scan payloads resident while it builds the
-body: roughly 750Mi for a 5k-node estate. Repeated reads are served from a
-60-second per-process response cache keyed on the evidence generation
-(`AGENT_BOM_READ_CACHE_TTL_SECONDS`, `0` disables it), so the limit covers one
-cold rebuild per worker, not one per request.
+A worker serving posture, compliance and fix-first reads can hold graph and
+scan payloads in memory while building the response. The default memory limit
+provides headroom; measure peak resident memory with your inventory and expected
+concurrency before choosing production limits.
+
+Repeated reads use a per-process cache of at most 64 responses, keyed by tenant,
+query parameters and evidence revisions, including graph snapshot replacements.
+The default TTL is 60 seconds (`AGENT_BOM_READ_CACHE_TTL_SECONDS`; `0` disables
+caching). Inputs outside the revision token, such as runtime observations, can
+remain cached until that TTL expires. If a store cannot report its revision,
+the request computes directly. Concurrent async graph requests can still rebuild
+the same response; size for concurrent cold reads as well as retained cache data.
 
 Recommended production operator posture:
 

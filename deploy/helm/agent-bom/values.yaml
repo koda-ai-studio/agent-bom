@@ -691,9 +691,8 @@ controlPlane:
       enabled: true
       type: ClusterIP
       annotations: {}
-    # One API worker holding a graph snapshot of a few thousand nodes beside the
-    # tenant's stored scan payloads sits near 750Mi resident; 1Gi was one
-    # request away from OOMKill on a default install.
+    # Allow headroom for graph and scan payloads, response caching, and concurrent
+    # cold reads. Measure peak resident memory against the deployed inventory.
     resources:
       requests:
         memory: "512Mi"

@@ -161,7 +161,7 @@ def test_evidence_generation_is_none_without_a_revision_capable_job_store(monkey
 
 
 def test_evidence_generation_changes_with_each_input(monkeypatch):
-    revisions = {"jobs": "db1:1", "hub": 1, "suppressions": "s1", "graph": "scan-1"}
+    revisions = {"jobs": "db1:1", "hub": 1, "suppressions": "s1", "graph": "scan-1", "graph_revision": "r1"}
 
     class _Store:
         def overview_evidence_revision(self, tenant_id: str) -> str:
@@ -173,23 +173,42 @@ def test_evidence_generation_changes_with_each_input(monkeypatch):
             return revisions["hub"]
 
     class _Graph:
-        def latest_snapshot_id(self, *, tenant_id: str, snapshot_kind: str = "scan") -> str:
-            return revisions["graph"]
+        def snapshot_identity(self, *, tenant_id: str, scan_id: str = "", for_paging: bool = False) -> tuple[str, str]:
+            assert tenant_id == "acme" and for_paging
+            return revisions["graph"], revisions["graph_revision"]
 
     monkeypatch.setattr(common, "_get_store", lambda: _Store())
     monkeypatch.setattr(common, "_hub_store", lambda: _Hub())
     monkeypatch.setattr(common, "_get_graph_store", lambda: _Graph())
     monkeypatch.setattr(common, "suppression_revision", lambda tenant_id: revisions["suppressions"])
     seen = {common.evidence_generation("acme")}
-    for key, value in (("jobs", "db1:2"), ("hub", 2), ("suppressions", "s2"), ("graph", "scan-2")):
+    for key, value in (("jobs", "db1:2"), ("hub", 2), ("suppressions", "s2"), ("graph", "scan-2"), ("graph_revision", "r2")):
         revisions[key] = value
         seen.add(common.evidence_generation("acme"))
-    assert len(seen) == 5
+    assert len(seen) == 6
     assert None not in seen
 
 
+def test_compliance_cache_tracks_the_selected_snapshot(monkeypatch):
+    seen = []
+
+    def generation(tenant_id, *, scan_id=""):
+        seen.append((tenant_id, scan_id))
+        return "g1"
+
+    monkeypatch.setattr(common, "evidence_generation", generation)
+
+    @common.cached_compliance_snapshot
+    def reader(request, scan_id):
+        return {"scan_id": scan_id}
+
+    request = Request({"type": "http", "state": {"tenant_id": "acme"}})
+    assert reader(request, "historic")["scan_id"] == "historic"
+    assert seen == [("acme", "historic")]
+
+
 def test_cached_tenant_read_keys_on_request_tenant(monkeypatch):
-    monkeypatch.setattr(common, "evidence_generation", lambda tenant_id: f"gen-{tenant_id}")
+    monkeypatch.setattr(common, "evidence_generation", lambda tenant_id, **kwargs: f"gen-{tenant_id}")
     calls, compute = _counter()
     req_a = Request({"type": "http", "state": {"tenant_id": "acme"}})
     req_b = Request({"type": "http", "state": {"tenant_id": "globex"}})
@@ -212,7 +231,7 @@ def test_get_put_primitives_follow_generation_and_ttl():
 
 def test_cached_compliance_snapshot_reuses_the_body_until_the_generation_moves(monkeypatch):
     generation = {"value": "g1"}
-    monkeypatch.setattr(common, "evidence_generation", lambda tenant_id: generation["value"])
+    monkeypatch.setattr(common, "evidence_generation", lambda tenant_id, **kwargs: generation["value"])
     calls = {"n": 0}
 
     @common.cached_compliance_snapshot

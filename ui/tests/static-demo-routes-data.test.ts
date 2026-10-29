@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { auditEntriesWithOutcomes, enrichFindings, findingFacets, graphImpact, overviewFromFindings, postureCountsFromFindings, severityTotals } from "../scripts/static-demo-routes.mjs";
+import { auditEntriesWithOutcomes, enrichFindings, findingFacets, graphImpact, installStaticDemoRoutes, overviewFromFindings, postureCountsFromFindings, severityTotals } from "../scripts/static-demo-routes.mjs";
 
 const graph = {
   nodes: [
@@ -21,6 +21,22 @@ const graph = {
 };
 
 describe("static demo sample answers", () => {
+  it("reports the returned impact count and direction consistently", async () => {
+    type Route = { request: () => { url: () => string }; fulfill: (options: { body: string }) => Promise<void> };
+    const handlers = new Map<string, (route: Route) => Promise<void>>();
+    const page = { evaluate: async () => ({}), route: async (pattern: string, handler: (route: Route) => Promise<void>) => handlers.set(pattern, handler) };
+    await installStaticDemoRoutes(page, { graph, findings: [], auditEntries: [], scanId: "scan", tenantId: "default", snapshotAt: "2026-06-03T20:30:00Z" });
+    let response = "";
+    await handlers.get("**/v1/graph/impact?**")!({
+      request: () => ({ url: () => "http://localhost/v1/graph/impact?node=cve%3Anext&direction=forward" }),
+      fulfill: async ({ body: json }) => { response = json; },
+    });
+    const body = JSON.parse(response);
+    expect(body.affected_count).toBe(1);
+    expect(body.completeness.returned).toBe(1);
+    expect(body.interpretation.basis).toBe("recorded_forward_reachability");
+  });
+
   it("walks the recorded graph in reverse from a finding and counts what reaches it", () => {
     const impact = graphImpact(graph, "cve:next", { maxDepth: 4 });
     expect(impact.affected_count).toBe(4);

@@ -50,6 +50,15 @@ def test_uncapped_enrichment_adds_no_issue(tmp_path):
     assert all(issue.code != "metadata_enrichment_capped" for issue in st.scan_issues)
 
 
+def test_capped_enrichment_does_not_report_failed_lookups_as_fetched(tmp_path):
+    st = _state()
+    st.metadata_enrichment = EnrichmentOutcome(candidates=10, cap=5, attempted=5, enriched=2, skipped=5)
+    _collect_scan_issues(SimpleNamespace(no_scan=False, project=str(tmp_path)), st)
+    issue = next(issue for issue in st.scan_issues if issue.code == "metadata_enrichment_capped")
+    assert "attempted for 5 of 10" in issue.message
+    assert "2 enriched" in issue.message
+
+
 def test_autodiscover_stage_records_outcome_and_prints_cap_line(monkeypatch):
     st = _state()
     st.all_packages = [Package(name=f"p{i}", version="1.0.0", ecosystem="npm", resolved_from_registry=False) for i in range(12)]
