@@ -381,7 +381,7 @@ def _control_plane_command(*, control_plane_db: Path, graph_db: Path, port: int)
     """Render a shell-safe command that opens the database just verified."""
 
     environment = []
-    if os.environ.get("AGENT_BOM_STATE_DIR", "").strip():
+    if state_home.state_dir().expanduser().resolve() != state_home.default_product_state_dir().resolve():
         environment.append(f"AGENT_BOM_STATE_DIR={shlex.quote(str(state_home.state_dir().expanduser().resolve()))}")
     if graph_db != control_plane_db:
         environment.append(f"AGENT_BOM_GRAPH_DB={shlex.quote(str(graph_db))}")
