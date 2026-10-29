@@ -230,6 +230,70 @@ def test_command_goto_literal_is_a_declared_handoff(tmp_path: Path):
     assert agents["review"]["dynamic_edges"] is False
 
 
+def test_send_literal_targets_are_declared_fan_out_edges(tmp_path: Path):
+    root = _write(
+        tmp_path,
+        "from langgraph.types import Send as LangGraphSend\n\n"
+        "def supervisor(s):\n    return [LangGraphSend('writer', {'item': item}) for item in s['items']]\n\n"
+        "def review(s):\n    return LangGraphSend(node='writer', arg=s)\n\n"
+        "g = StateGraph(dict)\ng.add_node('supervisor', supervisor)\ng.add_node('review', review)\ng.add_node('writer', lambda s: s)\n",
+    )
+    agents = _payloads(root)
+
+    for source in ("supervisor", "review"):
+        edge = next(e for e in agents[source]["topology_edges"] if e["target_name"] == "writer")
+        assert edge["evidence"] == "Send(node)"
+        assert edge["kind"] == "fan_out"
+        assert edge["provenance"] == "declared"
+        assert edge["confidence"] == "medium"
+        assert agents[source]["dynamic_edges"] is False
+
+    graph = build_unified_graph_from_report({"ai_inventory": {"framework_agents": list(agents.values())}, "agents": []})
+    projected = next(
+        e
+        for e in graph.edges
+        if e.source == agents["supervisor"]["stable_id"]
+        and e.target == agents["writer"]["stable_id"]
+        and e.relationship == RelationshipType.DELEGATED_TO
+    )
+    assert projected.evidence["kind"] == "fan_out"
+    assert projected.evidence["provenance"] == "declared"
+
+
+def test_send_dynamic_target_is_recorded_as_unresolved(tmp_path: Path):
+    root = _write(
+        tmp_path,
+        "from langgraph.types import Send\n\n"
+        "def supervisor(s):\n    return Send(s['next'], {})\n\n"
+        "g = StateGraph(dict)\ng.add_node('supervisor', supervisor)\ng.add_node('writer', lambda s: s)\n",
+    )
+    agents = _payloads(root)
+    supervisor = agents["supervisor"]
+
+    assert supervisor["topology_edges"] == []
+    assert supervisor["dynamic_edges"] is True
+    assert supervisor["unresolved_routes"] == [
+        {
+            "evidence": "Send(node)",
+            "line_number": 6,
+            "reason": "target decided at runtime",
+        }
+    ]
+
+
+def test_send_unknown_target_is_recorded_as_unresolved(tmp_path: Path):
+    root = _write(
+        tmp_path,
+        "from langgraph.types import Send\n\n"
+        "def supervisor(s):\n    return Send('missing', {})\n\n"
+        "g = StateGraph(dict)\ng.add_node('supervisor', supervisor)\n",
+    )
+    agents = _payloads(root)
+
+    assert agents["supervisor"]["topology_edges"] == []
+    assert agents["supervisor"]["unresolved_routes"][0]["reason"] == "target 'missing' is not a node of this graph"
+
+
 # ── Fixture smoke test (#5987) and graph projection ─────────────────────────
 
 
