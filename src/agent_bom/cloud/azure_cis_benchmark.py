@@ -48,6 +48,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from agent_bom.cloud.cis_scope import bounded_scope_ids
 from agent_bom.security import sanitize_text
 
 from .aws_cis_benchmark import CheckStatus, CISCheckResult
@@ -741,6 +742,8 @@ _MAX_CIS_FANOUT_WORKERS = 8
 def run_all_subscription_benchmarks(
     checks: list[str] | None = None,
     credential: Any = None,
+    *,
+    subscription_ids: list[str] | None = None,
 ) -> AzureCISReport:
     """Run the CIS Azure benchmark for EVERY subscription in the tenant.
 
@@ -770,13 +773,9 @@ def run_all_subscription_benchmarks(
             raise CloudDiscoveryError("azure-identity is required for Azure CIS benchmark. Install with: pip install 'agent-bom[azure]'")
         credential = DefaultAzureCredential()
 
-    sub_ids, warnings = azure_inventory.enumerate_subscription_ids(credential)
-    if not sub_ids:
-        raise CloudDiscoveryError(
-            "No Azure subscriptions resolved for the multi-subscription CIS benchmark. "
-            "Grant Management Group Reader or set AZURE_SUBSCRIPTION_ID."
-        )
-
+    sub_ids, warnings = azure_inventory.enumerate_subscription_ids(credential) if subscription_ids is None else (subscription_ids, [])
+    sub_ids, cap_warnings = bounded_scope_ids(sub_ids, azure_inventory._MAX_SUBSCRIPTIONS, "subscriptions")
+    warnings.extend(cap_warnings)
     aggregate = AzureCISReport(subscription_id=", ".join(sub_ids))
     aggregate.warnings.extend(warnings)
 

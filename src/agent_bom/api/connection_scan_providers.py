@@ -18,6 +18,18 @@ if TYPE_CHECKING:
     from agent_bom.api.models import ScanJob
 
 
+def _azure_inventory_findings(inventory_payload: Any, subscription_id: str | None) -> list[Any]:
+    """Retain content-confirmed findings and their subscription attribution."""
+    from agent_bom.cloud.dspm_findings import build_inventory_dspm_findings
+
+    findings = []
+    for item in inventory_payload if isinstance(inventory_payload, list) else [inventory_payload]:
+        if isinstance(item, dict):
+            scope_id = item.get("subscription_id") or item.get("account_id") or subscription_id
+            findings.extend(build_inventory_dspm_findings(item, provider="azure", account_ref=f"azure:{scope_id}" if scope_id else None))
+    return findings
+
+
 def _run_azure_connection_scan(
     record: CloudConnectionRecord,
     tenant_id: str,
@@ -31,33 +43,28 @@ def _run_azure_connection_scan(
     ``azure_inventory.discover_inventory`` and Azure CIS ``run_benchmark`` the
     sibling cloud routes use run against the customer subscription. Read-only.
     """
-    from agent_bom.cloud import azure_inventory
-    from agent_bom.cloud.azure_cis_benchmark import run_benchmark as run_azure_cis
+    from agent_bom.cloud import azure_cis_benchmark, azure_inventory
     from agent_bom.cloud.connection_broker import broker_session
-    from agent_bom.cloud.inventory_summary import _summarize_inventory_payload
+    from agent_bom.cloud.inventory_summary import summarize_inventory_collection
     from agent_bom.models import AIBOMReport
 
     credential = broker_session(record, session_name=f"agent-bom-scan-{record.id[:8]}")
     subscription_id = str(record.auth_params.get("subscription_id") or "").strip() or None
 
     if connection_org_fanout_enabled(record):
-        inventory_payload: Any = azure_inventory.discover_all_subscription_inventories(credential=credential, force=True)
+        inventory_payload: Any = azure_inventory.discover_all_subscription_inventories(
+            credential=credential, force=True, allow_ambient_fallback=False
+        )
+        cis_report = azure_cis_benchmark.run_all_subscription_benchmarks(
+            credential=credential,
+            subscription_ids=[str(item.get("subscription_id") or item.get("account_id") or "") for item in inventory_payload],
+        )
     else:
         inventory_payload = azure_inventory.discover_inventory(subscription_id=subscription_id, credential=credential, force=True)
-    cis_report = run_azure_cis(subscription_id=subscription_id, credential=credential)
+        cis_report = azure_cis_benchmark.run_benchmark(subscription_id=subscription_id, credential=credential)
     cis_dict = cis_report.to_dict()
 
-    # Content-confirmed sensitive Azure Blob containers (when blob sampling is
-    # enabled) become canonical DSPM findings on the report's findings spine.
-    from agent_bom.cloud.dspm_findings import build_inventory_dspm_findings
-
-    account_ref = f"azure:{subscription_id}" if subscription_id else None
-    primary_for_dspm = inventory_payload[0] if isinstance(inventory_payload, list) and inventory_payload else inventory_payload
-    dspm_findings = build_inventory_dspm_findings(
-        primary_for_dspm if isinstance(primary_for_dspm, dict) else {},
-        provider="azure",
-        account_ref=account_ref,
-    )
+    dspm_findings = _azure_inventory_findings(inventory_payload, subscription_id)
 
     report = AIBOMReport(
         agents=[],
@@ -70,15 +77,7 @@ def _run_azure_connection_scan(
     report.azure_cis_benchmark_data = cis_dict
     scan_id = _persist_connection_report(record, tenant_id, report, queued_job=queued_job)
 
-    if isinstance(inventory_payload, list):
-        inventory_summary: dict[str, Any] = {
-            "provider": "azure",
-            "status": "ok",
-            "account_count": len(inventory_payload),
-            "accounts": [_summarize_inventory_payload("azure", item) for item in inventory_payload if isinstance(item, dict)],
-        }
-    else:
-        inventory_summary = _summarize_inventory_payload("azure", inventory_payload)
+    inventory_summary = summarize_inventory_collection("azure", inventory_payload)
 
     return {
         "schema_version": "cloud.connections.scan.v1",
@@ -108,20 +107,24 @@ def _run_gcp_connection_scan(
     same ``gcp_inventory.discover_inventory`` and GCP CIS ``run_benchmark`` the
     sibling cloud routes use run against the customer project. Read-only.
     """
-    from agent_bom.cloud import gcp_inventory
+    from agent_bom.cloud import gcp_cis_benchmark, gcp_inventory
     from agent_bom.cloud.connection_broker import broker_session
-    from agent_bom.cloud.gcp_cis_benchmark import run_benchmark as run_gcp_cis
-    from agent_bom.cloud.inventory_summary import _summarize_inventory_payload
+    from agent_bom.cloud.inventory_summary import summarize_inventory_collection
     from agent_bom.models import AIBOMReport
 
     credentials = broker_session(record, session_name=f"agent-bom-scan-{record.id[:8]}")
     project_id = str(record.auth_params.get("project_id") or "").strip() or None
 
     if connection_org_fanout_enabled(record):
-        inventory_payload: Any = gcp_inventory.discover_all_project_inventories(credentials=credentials, force=True)
+        inventory_payload: Any = gcp_inventory.discover_all_project_inventories(
+            credentials=credentials, force=True, allow_ambient_fallback=False
+        )
+        cis_report = gcp_cis_benchmark.run_all_project_benchmarks(
+            credentials=credentials, project_ids=[str(item.get("project_id") or item.get("account_id") or "") for item in inventory_payload]
+        )
     else:
         inventory_payload = gcp_inventory.discover_inventory(project_id=project_id, credentials=credentials, force=True)
-    cis_report = run_gcp_cis(project_id=project_id, credentials=credentials)
+        cis_report = gcp_cis_benchmark.run_benchmark(project_id=project_id, credentials=credentials)
     cis_dict = cis_report.to_dict()
 
     report = AIBOMReport(
@@ -135,15 +138,7 @@ def _run_gcp_connection_scan(
     report.gcp_cis_benchmark_data = cis_dict
     scan_id = _persist_connection_report(record, tenant_id, report, queued_job=queued_job)
 
-    if isinstance(inventory_payload, list):
-        inventory_summary: dict[str, Any] = {
-            "provider": "gcp",
-            "status": "ok",
-            "account_count": len(inventory_payload),
-            "accounts": [_summarize_inventory_payload("gcp", item) for item in inventory_payload if isinstance(item, dict)],
-        }
-    else:
-        inventory_summary = _summarize_inventory_payload("gcp", inventory_payload)
+    inventory_summary = summarize_inventory_collection("gcp", inventory_payload)
 
     return {
         "schema_version": "cloud.connections.scan.v1",

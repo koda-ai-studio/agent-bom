@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/social-preview.svg" alt="agent-bom — Discover. Scan. Correlate. Act. Security evidence across repositories, software supply chains, AI and MCP, cloud, identity, and data." width="1280" />
+  <a href="docs/INTEGRATIONS.md"><img src="docs/images/social-preview.svg" alt="agent-bom — Discover. Scan. Correlate. Act. Security evidence across repositories, software supply chains, AI and MCP, cloud, identity, and data." width="1280" /></a>
 </p>
 
 <p align="center">
@@ -19,7 +19,7 @@ For AppSec and platform engineers. Self-host free; local scans need no account.
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
-  <a href="#integrations">Integrations</a> ·
+  <a href="docs/INTEGRATIONS.md">All integrations</a> ·
   <a href="#open-the-sample-graph">Sample graph</a> ·
   <a href="#self-host-in-your-environment">Self-host</a> ·
   <a href="docs/GALLERY.md">Product tour</a> ·

@@ -137,20 +137,15 @@ def all_projects_enabled() -> bool:
     return os.environ.get(ALL_PROJECTS_ENV_FLAG, "").strip().lower() in _TRUTHY
 
 
-def discover_all_project_inventories(credentials: Any = None, *, force: bool = False) -> list[dict[str, Any]]:
-    """Inventory EVERY project in the org/folder tree (multi-project fan-out).
+def discover_all_project_inventories(
+    credentials: Any = None, *, force: bool = False, allow_ambient_fallback: bool = True
+) -> list[dict[str, Any]]:
+    """Inventory the scopes discovered through the credential's hierarchy access.
 
-    The GCP counterpart of the AWS Organizations multi-account enumeration and
-    the Azure multi-subscription fan-out: discover the project set from the
-    organization → folders → projects hierarchy, then run the per-project
-    inventory for each concurrently (partitioned by ``project_id`` so the graph
-    keeps every project as a distinct account under the org ``CONTAINS`` tree).
-    Read-only; impersonated credentials are threaded into every per-project call.
-
-    Returns a LIST of per-project inventory payloads (the exact shape the graph
-    builder's ``_iter_cloud_inventories`` consumes). Falls back to the single
-    ambient ``GOOGLE_CLOUD_PROJECT`` when the org tree is unavailable (a
-    standalone project, or a credential without org-level read). Never raises.
+    Returns per-scope payloads, bounded by the configured collection cap.
+    CLI callers may fall back to the ambient scope when discovery is unavailable;
+    saved connections disable that fallback. Permission gaps do not establish
+    full organization coverage. Read-only; never raises.
     """
     if not force and not inventory_enabled():
         return []
@@ -166,7 +161,7 @@ def discover_all_project_inventories(credentials: Any = None, *, force: bool = F
         logger.warning("GCP org project enumeration failed: %s", sanitize_text(sanitize_discovery_warning(exc)))
         project_ids = []
 
-    if not project_ids:
+    if not project_ids and allow_ambient_fallback:
         single = os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip()
         project_ids = [single] if single else []
     if not project_ids:
