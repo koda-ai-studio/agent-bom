@@ -66,7 +66,7 @@ it("keeps unreconfirmed status and collection attempt separate from original evi
 
 it("qualifies a group with an observed representative and an unreconfirmed occurrence", () => {
   render(<FindingDrawer vuln={{ ...base, observation_status: "observed", unreconfirmed_occurrence_count: 1, occurrence_count: 2 }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
-  expect(screen.getByRole("note", { name: "Unreconfirmed collection evidence" })).toHaveTextContent("1 occurrence retains earlier evidence");
+  expect(screen.getByRole("note", { name: "Unreconfirmed collection evidence" })).toHaveTextContent("1 finding retains earlier evidence");
   expect(screen.queryByText(/Latest attempt:/)).not.toBeInTheDocument();
 });
 
@@ -172,4 +172,12 @@ it("labels drawer credentials as impact-filtered exposure in the overview and ev
   expect(screen.queryByText(/credential reference/)).not.toBeInTheDocument();
   await user.click(screen.getByRole("tab", { name: "Evidence" }));
   expect(screen.getByText("Credentials exposed by impact")).toBeVisible();
+});
+
+
+it("labels repeated scans separately from findings in an issue", async () => {
+  render(<FindingDrawer vuln={{ ...base, scan_count: 3, occurrence_count: 2 }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  await userEvent.setup().click(screen.getByRole("tab", { name: "Evidence" }));
+  expect(screen.getByLabelText("Scans observed: 3")).toHaveTextContent("3");
+  expect(screen.getByLabelText("Findings in this issue: 2")).toHaveTextContent("2");
 });

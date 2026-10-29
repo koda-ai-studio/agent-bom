@@ -7,6 +7,7 @@ import { AlertCircle, ArrowUpRight, Bug, CheckCircle2, Copy, MessageSquareQuote 
 
 import { useDeploymentContext } from "@/hooks/use-deployment-context";
 import { api, type AuthDebugResponse, type VersionInfo } from "@/lib/api";
+import { deploymentModeLabel } from "@/lib/deployment-context";
 import { buildIssueUrl, buildSupportBundle } from "@/lib/feedback";
 
 export default function HelpPage() {
@@ -59,7 +60,7 @@ export default function HelpPage() {
   }
 
   const bugTitle = `bug(ui): issue from ${from}`;
-  const feedbackTitle = `feedback(ui): ${counts?.deployment_mode ?? "self-hosted"} operator feedback`;
+  const feedbackTitle = `feedback(ui): ${deploymentModeLabel(counts?.deployment_mode)} operator feedback`;
 
   return (
     <div className="space-y-6">
@@ -78,7 +79,7 @@ export default function HelpPage() {
           </div>
           <div className="rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-4 py-3 text-xs text-[color:var(--text-secondary)]">
             <div>Opened from: <span className="font-mono text-[color:var(--foreground)]">{from}</span></div>
-            <div>Deployment mode: <span className="font-mono text-[color:var(--foreground)]">{counts?.deployment_mode ?? "unknown"}</span></div>
+            <div>Evidence sources: <span className="font-mono text-[color:var(--foreground)]">{deploymentModeLabel(counts?.deployment_mode)}</span></div>
             <div>Version: <span className="font-mono text-[color:var(--foreground)]">{version?.version ?? (loading ? "Loading…" : "unknown")}</span></div>
           </div>
         </div>

@@ -503,7 +503,7 @@ function OccurrenceDisclosure({
 }) {
   const count = vuln.occurrence_count ?? 1;
   if (count <= 1) return null;
-  const label = `${expanded ? "Hide" : "Show"} ${count} affected asset occurrences`;
+  const label = `${expanded ? "Hide" : "Show"} ${count} findings by asset`;
   return (
     <div className="mt-2">
       <button
@@ -517,7 +517,7 @@ function OccurrenceDisclosure({
         className="inline-flex items-center gap-1 rounded border border-outline px-2 py-1 text-[11px] font-medium text-ink-secondary transition hover:border-outline-strong hover:text-foreground"
       >
         {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        {count} occurrences
+        {count} findings
       </button>
       {expanded && showDetails ? <OccurrenceList vuln={vuln} /> : null}
     </div>
@@ -530,7 +530,7 @@ function OccurrenceList({ vuln }: { vuln: EnrichedVuln }) {
   return (
     <div className="rounded-lg border border-outline bg-background p-3">
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-tertiary">
-        Asset-scoped occurrences
+        Findings by asset
       </p>
       <ul className="grid gap-2 text-[11px] text-ink-secondary sm:grid-cols-2 xl:grid-cols-4">
         {visible.map((occurrence, index) => {
@@ -553,7 +553,7 @@ function OccurrenceList({ vuln }: { vuln: EnrichedVuln }) {
       </ul>
       {remaining > 0 || vuln.occurrences_truncated ? (
         <p className="mt-2 text-[11px] text-ink-tertiary">
-          {remaining > 0 ? `${remaining} more occurrences retained.` : "Additional occurrences are retained."} Narrow the query to inspect a specific asset.
+          {remaining > 0 ? `${remaining} more findings retained.` : "Additional findings are retained."} Narrow the query to inspect a specific asset.
         </p>
       ) : null}
     </div>

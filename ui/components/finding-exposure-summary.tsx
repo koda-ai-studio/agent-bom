@@ -60,7 +60,7 @@ export function FindingExposureSummary({ vuln, hostServers = [] }: { vuln: Enric
           </> : null}
         </dl>
       ) : (
-        <p className="text-sm text-ink-secondary">No agent or MCP server is recorded for this occurrence.</p>
+        <p className="text-sm text-ink-secondary">No agent or MCP server is recorded for this finding.</p>
       )}
     </div>
   );

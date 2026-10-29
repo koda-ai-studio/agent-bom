@@ -54,7 +54,7 @@ describe("feedback helpers", () => {
     });
 
     expect(bundle).toContain("Page opened from: `/gateway`");
-    expect(bundle).toContain("Deployment mode: `hybrid`");
+    expect(bundle).toContain("Observed evidence mode: `hybrid`");
     expect(bundle).toContain("Tenant: `tenant-alpha`");
     expect(bundle).toContain("Trace ID: `trace-1`");
     expect(bundle).toContain("Scan sources: `fleet, cluster`");

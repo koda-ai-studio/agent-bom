@@ -64,6 +64,28 @@ describe("LoginPage", () => {
     });
   });
 
+
+  it("prevents duplicate sign-in and reset while an exchange is pending and permits retry", async () => {
+    let rejectExchange!: (reason: Error) => void;
+    apiMock.createAuthSession.mockImplementationOnce(() => new Promise((_, reject) => { rejectExchange = reject; }));
+    render(<AuthProvider><LoginPage /></AuthProvider>);
+    const input = await screen.findByLabelText("API key");
+    fireEvent.change(input, { target: { value: "test-placeholder" } });
+    fireEvent.submit(input.closest("form")!);
+    fireEvent.submit(input.closest("form")!);
+    expect(apiMock.createAuthSession).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Signing in…" })).toBeDisabled();
+    expect(input).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reset sign-in" })).toBeDisabled();
+    rejectExchange(new Error("Unauthorized"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sign-in failed");
+    expect(input).toHaveValue("");
+    expect(input).not.toBeDisabled();
+    fireEvent.change(input, { target: { value: "test-retry-placeholder" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(apiMock.createAuthSession).toHaveBeenCalledTimes(2));
+  });
+
   it("renders a single-purpose API-key sign-in surface", async () => {
     render(
       <AuthProvider>

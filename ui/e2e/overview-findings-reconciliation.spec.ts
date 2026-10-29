@@ -221,10 +221,10 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByTestId("findings-filters-toggle").click();
     await expect(page.getByText(/26 issues/).first()).toBeVisible();
     await expect(page.getByText("Page 1 of 2 (26 issues)")).toBeVisible();
-    const occurrences = page.getByRole("button", { name: "Show 3 affected asset occurrences" });
+    const occurrences = page.getByRole("button", { name: "Show 3 findings by asset" });
     await expect(occurrences).toBeVisible();
     await occurrences.click();
-    await expect(page.getByText("Asset-scoped occurrences")).toBeVisible();
+    await expect(page.getByText("Findings by asset")).toBeVisible();
     // Exact name: the dev server also renders an "Open Next.js Dev Tools"
     // button, which a loose /Next/i match resolves to as well.
     const nextPage = page.getByRole("button", { name: "Next", exact: true });
@@ -559,7 +559,7 @@ for (const theme of ["light", "dark"] as const) {
         }
         const account = controls[2]!;
         await account.click();
-        await expect(page.getByRole("link", {name: "Profile & settings"})).toBeVisible();
+        await expect(page.getByRole("link", {name: "Account & settings"})).toBeVisible();
         await page.keyboard.press("Escape");
         await expect(account).toBeFocused();
         await page.getByRole("banner").screenshot({path: testInfo.outputPath(`header-zoom-${theme}-${viewport.width}.png`)});
@@ -710,6 +710,6 @@ test("the severity trend's latest point is the overview headline", async ({ page
   await expect(chart).toBeVisible();
   await expect(chart.locator("p").first()).toHaveText(/^\s*7\s*critical now · 2 more than the first snapshot/);
   await expect(chart).toContainText("5 snapshots");
-  await expect(chart).toContainText("Vulnerability occurrences in this scan scope, a different unit: 2 critical · 4 high");
+  await expect(chart).toContainText("Vulnerability findings in this scan scope, a different unit: 2 critical · 4 high");
   await expect(chart).not.toContainText("Different basis");
 });

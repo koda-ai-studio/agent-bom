@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "purpose": "Identify recorded agent sources in the dashboard. Logos do not indicate endorsement, verification, or risk.",
+  "purpose": "Identify recorded agent sources and package ecosystems in the dashboard. Logos do not indicate endorsement, verification, or risk.",
   "assets": [
     {
       "path": "ui/public/logos/openai.svg",
@@ -83,6 +83,17 @@
       "license": "CC0-1.0",
       "terms": "Unmodified Simple Icons vector used for nominative technical documentation; ClickHouse trademarks remain ClickHouse property.",
       "repository_source": "docs/images/vendor/simple-icons/clickhouse.svg"
+    },
+    {
+      "path": "ui/public/logos/pypi.svg",
+      "vendor": "Python Software Foundation",
+      "source_page": "https://pypi.org/trademarks/",
+      "source_repo": "https://github.com/pypi/warehouse",
+      "source_commit": "481006fedf843ecb08ceadd978a02e9c05c8256d",
+      "source_path": "warehouse/static/images/logo-small.svg",
+      "sha256": "c7cb98a1e1bc92d9e7bd2a9cdfef9a4311aeae17f4851b282fa5bd8b2378bee5",
+      "terms": "Unmodified PyPI blocks logo used to identify recorded PyPI package ecosystems. PyPI and the blocks logos are registered trademarks of the Python Software Foundation; no endorsement or registry verification is implied.",
+      "repository_source": "docs/images/vendor/pypi.svg"
     }
   ]
 }

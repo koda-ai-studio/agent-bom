@@ -219,6 +219,39 @@ scoped read-only connection, verify access, then start a scan. Use the
 - **Centralize** inventory, graph evidence, remediation and compliance in your own control plane.
 - **Enforce** policy on selected live MCP tool calls through the proxy or gateway.
 
+### Deployment types and operating modes
+
+Choose where to run the product, then enable the collection or runtime modes
+needed for your environment.
+
+| Deployment | First step | Result and next step |
+|---|---|---|
+| CLI or CI job | `agent-bom scan --demo --offline -o report.json` | Labelled sample findings in JSON; scan your own inventory or configure a [CI gate](docs/FIRST_RUN.md#pre-commit-hook). |
+| Local API and dashboard | `agent-bom quickstart --run --offline` | Sample report and persisted graph; run the printed loopback server command and open its graph URL. |
+| Docker Compose pilot | Release checkout and `docker compose up -d` above | Loopback API/UI with retained state; connect a read-only source and run a scan. |
+| Authenticated single host | [Platform Compose setup](site-docs/deployment/authenticated-hosted-instance.md) | Login-gated API/UI and PostgreSQL; configure TLS, identity, secrets and backups before sharing access. |
+| Kubernetes / EKS | [Helm deployment](site-docs/deployment/control-plane-helm.md) | Control plane in your cluster; provision role-separated secrets and storage, then validate authentication and health. |
+
+Operating modes can be combined:
+
+- **Scan:** collect inventory and findings on demand or in CI; retain reports and graph evidence.
+- **Fleet inventory:** endpoints or collectors sync inventory to the control plane. Start with the [fleet sync command](site-docs/deployment/proxy-vs-gateway-vs-fleet.md#fleet), then review endpoint inventory and last-seen evidence.
+- **MCP server:** `agent-bom mcp server` exposes security tools to an MCP client. Configure the client and [tool profile](docs/MCP_SERVER.md), then query scan evidence.
+- **Runtime proxy:** wrap selected local stdio MCP servers to inspect tool calls. Follow the [proxy setup](site-docs/deployment/proxy-vs-gateway-vs-fleet.md#proxy) and verify policy decisions in the audit trail.
+- **Runtime gateway:** relay selected remote MCP traffic through a shared service. Follow the [gateway setup](site-docs/deployment/proxy-vs-gateway-vs-fleet.md#gateway) and validate client authentication, policy and upstream connectivity.
+
+The dashboard's **Sources** indicator describes recorded evidence: local scans,
+fleet inventory, cluster scans, CI/CD, imported evidence, or mixed sources. It
+does not select a deployment type or enable runtime enforcement. **Demo data**
+identifies labelled sample inventory. Preview and community deployment paths
+have separate [support boundaries](site-docs/deployment/product-boundaries.md).
+
+In the console, **Assets** are inventoried resources, **Findings** are detections
+on those resources, and **Issues** group related findings for investigation or
+remediation. **Affected assets** counts distinct resources only when that count
+is available. One finding may belong to several security areas, so area counts
+must not be summed. Repeated observations across scans are shown separately.
+
 [Docker pilot guide](docs/DEPLOY_PLATFORM.md) · [Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Choose a deployment](site-docs/deployment/overview.md) · [Enterprise controls](docs/TRUST.md) · [Connect cloud accounts](docs/CLOUD_CONNECT.md)
 
 <details>

@@ -31,7 +31,7 @@ export function buildSupportBundle(input: {
     `- Python package: \`${version?.python_package ?? "unknown"}\``,
     "",
     "## Deployment context",
-    `- Deployment mode: \`${counts?.deployment_mode ?? "unknown"}\``,
+    `- Observed evidence mode: \`${counts?.deployment_mode ?? "unknown"}\``,
     `- Scan sources: \`${(counts?.scan_sources ?? []).join(", ") || "unknown"}\``,
     `- Fleet ingest: \`${counts?.has_fleet_ingest ?? false}\``,
     `- Gateway detected: \`${counts?.has_gateway ?? false}\``,

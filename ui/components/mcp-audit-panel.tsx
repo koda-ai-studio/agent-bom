@@ -64,7 +64,7 @@ export function McpAuditPanel({ result, scanId: jobId }: { result: ScanResult; s
           </article>;
         })}
       </div>
-      {findings.length > 8 ? <p className='text-sm text-ink-secondary'>Showing 8 of {findings.length} MCP findings. Open scan findings for all occurrences.</p> : null}
+      {findings.length > 8 ? <p className='text-sm text-ink-secondary'>Showing 8 of {findings.length} MCP findings. Open scan findings for all findings.</p> : null}
       <p className='text-xs text-ink-secondary'>Review the descriptor or server configuration, make a scoped change, then re-run <code>agent-bom mcp audit . --format json --output mcp-audit.json</code>.</p>
     </section>
   );

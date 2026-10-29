@@ -64,7 +64,7 @@ export function CategoryChip({
 /** KEV is counted in issues, like the tiles; occurrences are named, never a bare second total. */
 export function kevChipTitle(issues: number, occurrences: number | null | undefined): string {
   const issueText = `${issues.toLocaleString()} known-exploited issue${issues === 1 ? "" : "s"} (CISA KEV)`;
-  return occurrences != null && occurrences !== issues ? `${issueText} · ${occurrences.toLocaleString()} occurrences` : issueText;
+  return occurrences != null && occurrences !== issues ? `${issueText} · ${occurrences.toLocaleString()} findings` : issueText;
 }
 
 export function SeverityIssueStrip({

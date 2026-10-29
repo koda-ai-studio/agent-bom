@@ -338,7 +338,7 @@ describe("OverviewCockpit", () => {
     // The magnitude must carry its unit. A bare number under a heading called
     // CSPM reads as assets, accounts or data stores depending on the reader —
     // all wrong. These are findings, which is what the severity chips sum to.
-    expect(screen.getByText("Counts are finding occurrences, not issues; one may appear in several areas.")).toBeInTheDocument();
+    expect(screen.getByText("Findings can appear in more than one security area; counts cannot be added together.")).toBeInTheDocument();
     const coverageHelp = screen.getByRole("button", { name: "About assessment coverage" });
     expect(coverageHelp).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();

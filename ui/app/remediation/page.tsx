@@ -212,7 +212,7 @@ function NarrativeRow({
         </td>
 
         {/* Reach */}
-        <td className="px-4 py-3 text-xs text-ink-secondary" title="Across every occurrence of this package version, not one path">
+        <td className="px-4 py-3 text-xs text-ink-secondary" title="Across all affected instances of this package version">
           <div>{item.affected_agents?.length ?? 0} agent{(item.affected_agents?.length ?? 0) !== 1 ? "s" : ""}</div>
           <div className="text-ink-tertiary" title={EXPOSED_BY_IMPACT_NOTE}>{exposedByImpactLabel(item.exposed_credentials?.length ?? 0)}</div>
           {typeof item.server_credential_count === "number" && (
@@ -757,7 +757,7 @@ function RemediationPage() {
                     />
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-ink-tertiary uppercase tracking-wide">
-                    Reach · all occurrences
+                    Reach · affected packages
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-ink-tertiary uppercase tracking-wide">
                     Compliance

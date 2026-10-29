@@ -45,7 +45,7 @@ describe("trend basis versus the posture headline", () => {
 
   it("names its unit and states the headline's different basis beside it", () => {
     render(<SeverityTrend points={points} headline={{ critical: 332, high: 817 }} />);
-    expect(screen.getByText("Critical and high vulnerability occurrences in this scan scope")).toBeVisible();
+    expect(screen.getByText("Critical and high vulnerability findings in this scan scope")).toBeVisible();
     expect(screen.getByText(/posture headline counts 332 critical and 817 high open issues across every surface/)).toBeVisible();
   });
 
@@ -82,7 +82,7 @@ describe("trend on the posture headline's issue basis", () => {
 
   it("keeps the occurrence count visible under its own label", () => {
     render(<SeverityTrend points={points} headline={{ critical: 332, high: 817 }} />);
-    expect(screen.getByText(/Vulnerability occurrences in this scan scope, a different unit: 103 critical · 449 high in the latest scan/)).toBeVisible();
+    expect(screen.getByText(/Vulnerability findings in this scan scope, a different unit: 103 critical · 449 high in the latest scan/)).toBeVisible();
   });
 
   it("says when the headline moved after the latest recorded point", () => {

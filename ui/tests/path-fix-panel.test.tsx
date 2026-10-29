@@ -35,7 +35,7 @@ describe("fix in context", () => {
     const nonPackagePath = { ...path, hops: [finding.id], vuln_ids: [], finding_ids: ["finding-7"] };
     render(<InvestigationLifecyclePanel step="fix" path={nonPackagePath} nodeById={new Map([[finding.id, finding]])} scanId="scan-7" tenantId="t" snapshotGeneration="g" />);
     expect(screen.getByText("Remove the unused credential from the server environment.")).toBeVisible();
-    expect(screen.queryByText(/No fixed version|Other occurrences of the package/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No fixed version|Other affected instances of the package/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Open finding workflow/ })).toHaveAttribute("href", "/remediation?finding=finding-7&view=verification#campaigns");
   });
   it("answers Fix on the investigation page with the upgrade, scope and a link out", () => {

@@ -22,7 +22,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     });
     await page.goto("/settings");
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
-    await expect(page.getByText("This identity belongs to an API key.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Identity & access" }).getByText("This identity belongs to an API key.", { exact: false })).toBeVisible();
     await expect(page.getByRole("region", { name: "Identity & access" }).getByText("synthetic-staging", { exact: true })).toBeVisible();
     await expect(page.getByRole("combobox", { name: /workspace/i })).toHaveCount(0);
     await page.getByLabel(/^Account menu:/).focus();
@@ -32,6 +32,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(await page.getByLabel("Account details").evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
     expect(menuBounds.x).toBeGreaterThanOrEqual(0);
     expect(menuBounds.x + menuBounds.width).toBeLessThanOrEqual(width);
+    await expect(page.getByLabel("Account details")).toContainText("Workspace");
+    await page.screenshot({ path: testInfo.outputPath(`account-menu-${theme}-${width}.png`), fullPage: true });
     await page.keyboard.press("Escape");
     await expect(page.getByLabel(/^Account menu:/)).toBeFocused();
     await page.screenshot({ path: testInfo.outputPath(`settings-${theme}-${width}.png`), fullPage: true });
@@ -83,11 +85,11 @@ for (const role of ["viewer", "analyst", "admin"] as const) {
     await page.getByLabel(/^Account menu:/).click();
     await expect(page.getByLabel("Account details")).toContainText("synthetic-tenant");
     await expect(page.getByLabel("Account details").getByRole("link", { name: "Access & keys" })).toHaveCount(role === "admin" ? 1 : 0);
-    await page.getByRole("link", { name: "Profile & settings" }).click();
+    await page.getByRole("link", { name: "Account & settings" }).click();
     const controls = page.getByRole("region", { name: "Workspace & deployment" });
     if (role === "viewer") await expect(controls).toHaveCount(0);
     else await expect(controls.getByRole("link", { name: /Connections/ })).toBeVisible();
-    await expect(page.getByText("This identity belongs to an API key.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Identity & access" }).getByText("This identity belongs to an API key.", { exact: false })).toBeVisible();
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Signed out", exact: true })).toBeVisible();
     await expect(page.getByLabel(/^Account menu:/)).toHaveCount(0);

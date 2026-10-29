@@ -193,7 +193,7 @@ describe("FindingsPage", () => {
       ),
     );
     expect(await screen.findByText(/1 finding.*Last 90 days/)).toBeInTheDocument();
-    const expander = await screen.findByRole("button", { name: "Show 2 affected asset occurrences" });
+    const expander = await screen.findByRole("button", { name: "Show 2 findings by asset" });
     expect(screen.queryByText("api-image")).not.toBeInTheDocument();
 
     fireEvent.click(expander);

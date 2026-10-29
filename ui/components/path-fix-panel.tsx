@@ -28,7 +28,7 @@ export function PathFixPanel({ path, nodes, findingId }: { path: AttackPath; nod
       ) : (
         <p className="mt-1 text-ink-secondary">No fixed version is recorded for {cve}{name ? ` in ${name}` : ""}. Check the advisory or apply a compensating control{where ? ` ${where}` : ""}.</p>
       )}
-      <p className="mt-1 text-xs text-ink-secondary">{packageFinding ? "This path only. Other occurrences of the package and their owners are listed in Remediation." : "Recorded guidance requires review. Rescan after changes; guidance alone does not verify a fix."}</p>
+      <p className="mt-1 text-xs text-ink-secondary">{packageFinding ? "This path only. Other affected instances of the package and their owners are listed in Remediation." : "Recorded guidance requires review. Rescan after changes; guidance alone does not verify a fix."}</p>
       {packageFinding && name ? (
         <Link href={packageRemediationHref(pkg?.label)} className="mt-2 inline-flex rounded-lg border border-outline bg-surface px-3 py-2 text-xs font-medium hover:bg-surface-muted">
           Open {name} in Remediation →

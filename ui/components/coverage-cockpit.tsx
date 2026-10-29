@@ -9,7 +9,7 @@ import {
   type CloudConnectionRecord,
   type PostureCountsResponse,
 } from "@/lib/api";
-import { deploymentModeLabel } from "@/lib/deployment-context";
+import { deploymentModeLabel, evidenceSourceDescription } from "@/lib/deployment-context";
 import { providerDisplayName } from "@/lib/scan-scope";
 
 type CoverageCockpitProps = {
@@ -74,7 +74,7 @@ export function CoverageCockpit({
 
   const connections = connectionsProp ?? fetchedConnections;
 
-  const deploymentMode = counts?.deployment_mode ?? "local";
+  const deploymentMode = counts?.deployment_mode ?? "unknown";
   const deploymentLabel = deploymentModeLabel(deploymentMode);
   const signals = useMemo(() => deploymentSignals(counts), [counts]);
 
@@ -103,26 +103,18 @@ export function CoverageCockpit({
           Onboard & coverage
         </h2>
         <p className="mt-1 text-xs text-[color:var(--text-tertiary)]">
-          Deployment is your control plane. Accounts are onboarded cloud boundaries. Scans are the evidence runs that feed Overview posture.
+          Evidence sources show where inventory was collected. Cloud accounts define collection scope. Scans provide findings and posture evidence.
         </p>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
         <CoverageCard
           icon={Server}
-          title="Deployment"
-          subtitle={`${deploymentLabel} control plane`}
+          title="Evidence sources"
+          subtitle={deploymentLabel}
           href="/help"
           chips={signals.length > 0 ? signals : ["No ingest signals yet"]}
-          footer={
-            deploymentMode === "local"
-              ? "Self-hosted on this host — ad-hoc scans and local MCP discovery run here."
-              : deploymentMode === "fleet"
-                ? "Fleet ingest is active — endpoint sync populates inventory between scans."
-                : deploymentMode === "cluster"
-                  ? "Cluster evidence is present — prioritize Kubernetes and connected accounts."
-                  : "Hybrid — cloud connectors, fleet, and workstation scans share one graph."
-          }
+          footer={evidenceSourceDescription(deploymentMode)}
         />
 
         <CoverageCard

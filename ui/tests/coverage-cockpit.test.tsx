@@ -58,8 +58,8 @@ describe("CoverageCockpit", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Onboard & coverage" })).toBeInTheDocument();
-    expect(screen.getByText(/Deployment is your control plane/i)).toBeInTheDocument();
-    expect(screen.getByText("Deployment")).toBeInTheDocument();
+    expect(screen.getByText(/Evidence sources show where inventory was collected/i)).toBeInTheDocument();
+    expect(screen.getByText("Evidence sources")).toBeInTheDocument();
     expect(screen.getByText("Cloud accounts")).toBeInTheDocument();
     expect(screen.getByText("Scans")).toBeInTheDocument();
     await waitFor(() => {
@@ -76,4 +76,11 @@ it("keeps an unavailable account collection distinct from an empty estate", asyn
   expect(screen.queryByText(/0 connected/)).not.toBeInTheDocument();
   expect(screen.queryByText("No accounts connected")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Review connections" })).toHaveAttribute("href", "/connections");
+});
+
+
+it("does not infer hosting or local collection from missing evidence", () => {
+  render(<CoverageCockpit counts={null} scanCount={null} latestScanLabel={null} connections={[]} />);
+  expect(screen.getByText("Not observed")).toBeVisible();
+  expect(screen.queryByText(/Local control plane|Self-hosted on this host|Hybrid —/)).not.toBeInTheDocument();
 });

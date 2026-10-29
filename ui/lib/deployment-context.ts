@@ -35,13 +35,13 @@ function bool(value: boolean | undefined): boolean {
 export function deploymentModeLabel(mode?: DeploymentMode): string {
   switch (mode) {
     case "fleet":
-      return "Fleet";
+      return "Fleet inventory";
     case "cluster":
-      return "Cluster";
+      return "Cluster scans";
     case "hybrid":
-      return "Hybrid";
+      return "Mixed sources";
     case "local":
-      return "Local";
+      return "Local scans";
     case "ci":
       return "CI/CD";
     case "ingest":
@@ -49,6 +49,19 @@ export function deploymentModeLabel(mode?: DeploymentMode): string {
     case "unknown":
     default:
       return "Not observed";
+  }
+}
+
+/** Recorded collection sources do not determine hosting or enforcement. */
+export function evidenceSourceDescription(mode?: DeploymentMode): string {
+  switch (mode) {
+    case "local": return "Inventory was collected by local scans.";
+    case "fleet": return "Inventory was synced from endpoints or collectors. Fleet collection does not enable runtime enforcement.";
+    case "cluster": return "Inventory was collected from Kubernetes clusters.";
+    case "hybrid": return "Evidence from multiple source types is available in this workspace.";
+    case "ci": return "Evidence was collected by CI/CD scans.";
+    case "ingest": return "Imported evidence is available in this workspace.";
+    default: return "No evidence source has been observed yet. Connect a source or run a scan.";
   }
 }
 
@@ -105,7 +118,7 @@ const SURFACE_DEFINITIONS: Record<DeploymentSurface, DeploymentSurfaceDefinition
       "Persisted endpoint evidence separate from one-off local scans",
     ],
     summary: (mode) =>
-      `The Fleet page is populated by persisted endpoint sync, not by standalone local scans. Your current deployment mode is ${mode}, so this surface remains empty until fleet ingest is enabled.`,
+      `The Fleet page is populated by persisted endpoint sync, not by standalone local scans. Your observed evidence source is ${mode}, so this surface remains empty until fleet ingest is enabled.`,
   },
   mesh: {
     label: "Agent Mesh",
@@ -121,7 +134,7 @@ const SURFACE_DEFINITIONS: Record<DeploymentSurface, DeploymentSurfaceDefinition
       "Runtime-aware graph exploration instead of a raw scan list",
     ],
     summary: (mode) =>
-      `The Agent Mesh needs relationship-rich scan data. Your current deployment mode is ${mode}, so this page stays empty until scans produce mesh context for agents, workloads, or fleet inventory.`,
+      `The Agent Mesh needs relationship-rich scan data. Your observed evidence source is ${mode}, so this page stays empty until scans produce mesh context for agents, workloads, or fleet inventory.`,
   },
   context: {
     label: "Context Map",
@@ -137,7 +150,7 @@ const SURFACE_DEFINITIONS: Record<DeploymentSurface, DeploymentSurfaceDefinition
       "Direct drilldown into MCP interaction risk instead of raw findings only",
     ],
     summary: (mode) =>
-      `The Context Map is built from MCP-aware scan results. Your current deployment mode is ${mode}, so this page stays empty until scans collect agent and MCP context.`,
+      `The Context Map is built from MCP-aware scan results. Your observed evidence source is ${mode}, so this page stays empty until scans collect agent and MCP context.`,
   },
   proxy: {
     label: "Proxy",
@@ -151,7 +164,7 @@ const SURFACE_DEFINITIONS: Record<DeploymentSurface, DeploymentSurfaceDefinition
       "Proxy-specific metrics separate from control-plane-only scans",
     ],
     summary: (mode) =>
-      `The Proxy dashboard is only populated when runtime proxy telemetry is present. Your current deployment mode is ${mode}, so this surface is idle until proxy enforcement is enabled.`,
+      `The Proxy dashboard is only populated when runtime proxy telemetry is present. Your observed evidence source is ${mode}, so this surface is idle until proxy enforcement is enabled.`,
   },
   gateway: {
     label: "Gateway",
@@ -165,7 +178,7 @@ const SURFACE_DEFINITIONS: Record<DeploymentSurface, DeploymentSurfaceDefinition
       "A shared relay/policy surface for cluster or hybrid MCP traffic",
     ],
     summary: (mode) =>
-      `The Gateway page becomes active when the shared runtime gateway is in use. Your current deployment mode is ${mode}, so this surface remains optional until gateway policy management is enabled.`,
+      `The Gateway page becomes active when the shared runtime gateway is in use. Your observed evidence source is ${mode}, so this surface remains optional until gateway policy management is enabled.`,
   },
   traces: {
     label: "Traces",
@@ -179,7 +192,7 @@ const SURFACE_DEFINITIONS: Record<DeploymentSurface, DeploymentSurfaceDefinition
       "Manual or pipeline-fed runtime evidence beyond static scans",
     ],
     summary: (mode) =>
-      `The Traces page needs runtime telemetry, not just stored scan results. Your current deployment mode is ${mode}, so this surface stays empty until traces or proxy/gateway telemetry are pushed in.`,
+      `The Traces page needs runtime telemetry, not just stored scan results. Your observed evidence source is ${mode}, so this surface stays empty until traces or proxy/gateway telemetry are pushed in.`,
   },
   audit: {
     label: "Audit Log",
@@ -193,7 +206,7 @@ const SURFACE_DEFINITIONS: Record<DeploymentSurface, DeploymentSurfaceDefinition
       "Integrity status for operator-visible audit history",
     ],
     summary: (mode) =>
-      `The Audit Log becomes useful when runtime or policy surfaces emit audit events. Your current deployment mode is ${mode}, so this page stays quiet until those surfaces are active.`,
+      `The Audit Log becomes useful when runtime or policy surfaces emit audit events. Your observed evidence source is ${mode}, so this page stays quiet until those surfaces are active.`,
   },
 };
 
