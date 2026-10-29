@@ -12,6 +12,15 @@ def _write(path: Path, lines: int) -> None:
     path.write_text("x\n" * lines, encoding="utf-8")
 
 
+@pytest.mark.parametrize("owner", ["models", "templates", "findings"])
+def test_narrative_owners_keep_public_contract_selection(tmp_path: Path, owner: str) -> None:
+    contract = tmp_path / "tests/test_compliance_narrative.py"
+    _write(contract, 1)
+    _write(tmp_path / "tests/test_unrelated.py", 1)
+    selected = select_targeted_tests(changed_files=[Path(f"src/agent_bom/output/compliance_narrative_{owner}.py")], root=tmp_path)
+    assert contract in selected
+
+
 @pytest.mark.parametrize("source", [".github/workflows/ci.yml", ".github/workflows/release.yml"])
 def test_workflow_edits_select_deployment_contracts(tmp_path: Path, source: str) -> None:
     contract = tmp_path / "tests/test_deployment.py"

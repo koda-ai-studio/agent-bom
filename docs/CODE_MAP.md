@@ -85,6 +85,11 @@ the PR. Maintainers would rather discuss placement early than move code later.
   calls. These presentation modules consume the canonical graph entities; they
   do not define parallel asset or identity models.
 
+Compliance narratives retain `output/compliance_narrative.py` as their public
+entry point. `compliance_narrative_models.py` owns serializable contracts,
+`compliance_narrative_templates.py` formats evaluated evidence, and
+`compliance_narrative_findings.py` projects persisted findings without rescanning.
+
 ## Layering rules in plain language
 
 `scripts/check_architecture.py` (with `scripts/check_import_graph.py`) enforces
