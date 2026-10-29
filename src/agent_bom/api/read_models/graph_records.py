@@ -134,3 +134,12 @@ class GraphAttackPathRecord(GraphAttackPathSummary):
     severity: str | None = None
     ranking_factors: dict[str, Any] | None = None
     exposure_path: dict[str, Any] | None = None
+    graph_reachable: bool | None = Field(default=None, description="A finding occurs on the graph path; not proof of execution.")
+    graph_reachability: Literal["no_finding_on_path", "reachable", "reachable_from_agent"] | None = Field(
+        default=None, description="Topology-based finding reachability from the recorded path entrypoint."
+    )
+    evidence_tier: int | None = Field(
+        default=None, ge=0, le=3, description="Queue evidence tier: 0 none, 1 exposure, 2 finding, 3 entrypoint."
+    )
+    is_kev: bool | None = Field(default=None, description="At least one on-path finding is recorded in CISA KEV.")
+    suppressed: bool | None = Field(default=None, description="Every finding occurrence on the path has an approved suppression.")

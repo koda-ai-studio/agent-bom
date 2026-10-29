@@ -177,6 +177,7 @@ def test_exposure_paths_rank_like_the_dashboard_queue(estate: _Estate) -> None:
     mcp = estate.mcp(exposure_paths_impl, limit=25)
     assert [path["id"] for path in mcp["paths"]] == _rest_ids(rest)
     assert mcp["total"] == rest["pagination"]["total"]
+    assert mcp["count_metadata"]["path_population"] == rest["count_metadata"]["path_population"] == "derived_investigation_paths"
     assert mcp["ranking"]["method"] == rest["count_metadata"]["ranking"]["method"]
     assert mcp["ranking"]["order"] == rest["count_metadata"]["ranking"]["order"]
     for path, row in zip(mcp["paths"], rest["attack_paths"], strict=True):

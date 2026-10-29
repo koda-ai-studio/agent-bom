@@ -119,6 +119,7 @@ def _attach_facets(envelope: dict[str, Any], facets: dict, completeness: dict) -
     envelope["facets"] = facets
     envelope["facets_approximate"] = completeness["status"] != "complete"
     envelope["facet_metadata"] = {
+        "domain": {"basis": "multi_label", "sums_to_total": False},
         "freshness": {
             "basis": ["last_observed", "last_seen"],
             "thresholds_hours": [24, 168, 720],

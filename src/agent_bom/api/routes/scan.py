@@ -76,6 +76,7 @@ from agent_bom.api.models import InventoryResponse, JobStatus, ScanJob, ScanRequ
 from agent_bom.api.pipeline import request_scan_cancellation
 from agent_bom.api.read_models import FindingsResponse, JobsResponse, documented
 from agent_bom.api.read_models.scan import ScanDriversResponse, ScanStatusResponse
+from agent_bom.api.request_contract import reject_unknown_query_params
 from agent_bom.api.routes.scan_exports import router as exports_router
 from agent_bom.api.scan_cohorts import correlation_cohort_id as correlation_cohort_id
 from agent_bom.api.scan_finding_projection import _finding_from_blast_radius as _finding_from_blast_radius
@@ -595,7 +596,7 @@ def _list_jobs_impl(
     }
 
 
-@router.get("/findings", **documented(FindingsResponse), tags=["scan"])
+@router.get("/findings", **documented(FindingsResponse), tags=["scan"], dependencies=[Depends(reject_unknown_query_params)])
 async def list_findings(
     request: Request,
     q: Annotated[str | None, Query(max_length=256)] = None,

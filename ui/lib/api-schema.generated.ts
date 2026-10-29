@@ -16135,18 +16135,38 @@ export interface components {
             credential_exposure: string[];
             /** Edges */
             edges: string[];
+            /**
+             * Evidence Tier
+             * @description Queue evidence tier: 0 none, 1 exposure, 2 finding, 3 entrypoint.
+             */
+            evidence_tier?: number | null;
             /** Exposure Path */
             exposure_path?: {
                 [key: string]: unknown;
             } | null;
             /** Finding Ids */
             finding_ids: string[];
+            /**
+             * Graph Reachability
+             * @description Topology-based finding reachability from the recorded path entrypoint.
+             */
+            graph_reachability?: ("no_finding_on_path" | "reachable" | "reachable_from_agent") | null;
+            /**
+             * Graph Reachable
+             * @description A finding occurs on the graph path; not proof of execution.
+             */
+            graph_reachable?: boolean | null;
             /** Hop Evidence */
             hop_evidence: {
                 [key: string]: unknown;
             }[];
             /** Hops */
             hops: string[];
+            /**
+             * Is Kev
+             * @description At least one on-path finding is recorded in CISA KEV.
+             */
+            is_kev?: boolean | null;
             /** Mitre Technique Ids */
             mitre_technique_ids: string[];
             /** Ranking Factors */
@@ -16163,6 +16183,11 @@ export interface components {
             source: string;
             /** Summary */
             summary: string;
+            /**
+             * Suppressed
+             * @description Every finding occurrence on the path has an approved suppression.
+             */
+            suppressed?: boolean | null;
             /** Target */
             target: string;
             /** Technique Mappings */

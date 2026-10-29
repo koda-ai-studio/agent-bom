@@ -13954,6 +13954,14 @@ components:
             type: string
           title: Edges
           type: array
+        evidence_tier:
+          anyOf:
+          - maximum: 3.0
+            minimum: 0.0
+            type: integer
+          - type: 'null'
+          description: 'Queue evidence tier: 0 none, 1 exposure, 2 finding, 3 entrypoint.'
+          title: Evidence Tier
         exposure_path:
           anyOf:
           - additionalProperties: true
@@ -13965,6 +13973,23 @@ components:
             type: string
           title: Finding Ids
           type: array
+        graph_reachability:
+          anyOf:
+          - enum:
+            - no_finding_on_path
+            - reachable
+            - reachable_from_agent
+            type: string
+          - type: 'null'
+          description: Topology-based finding reachability from the recorded path
+            entrypoint.
+          title: Graph Reachability
+        graph_reachable:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: A finding occurs on the graph path; not proof of execution.
+          title: Graph Reachable
         hop_evidence:
           items:
             additionalProperties: true
@@ -13976,6 +14001,12 @@ components:
             type: string
           title: Hops
           type: array
+        is_kev:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: At least one on-path finding is recorded in CISA KEV.
+          title: Is Kev
         mitre_technique_ids:
           items:
             type: string
@@ -14006,6 +14037,12 @@ components:
         summary:
           title: Summary
           type: string
+        suppressed:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Every finding occurrence on the path has an approved suppression.
+          title: Suppressed
         target:
           title: Target
           type: string

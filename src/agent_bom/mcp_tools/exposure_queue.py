@@ -18,7 +18,7 @@ from typing import Any, Literal
 from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence
 from agent_bom.config import GRAPH_INVESTIGATION_NODE_BUDGET, MCP_MAX_RESPONSE_CHARS
 from agent_bom.core.graph_backend_errors import NeptuneGraphStoreUnsupportedOperationError
-from agent_bom.graph.attack_path_queue import AttackPathFilters, QueuePage, attack_path_rank_window, ranked_queue_page
+from agent_bom.graph.attack_path_queue import AttackPathFilters, QueuePage, attack_path_rank_window, path_population, ranked_queue_page
 from agent_bom.graph.attack_path_queue_rank import MIN_SEVERITY_CHOICES, path_is_kev, path_rank_fields
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.container import AttackPath
@@ -412,6 +412,7 @@ def _envelope(tenant_id: str, read: _Read, query: PathQuery, view: str, limit: i
         "snapshot_total": ranked.snapshot_total,
         "count_metadata": {
             "source": read.page.source,
+            "path_population": path_population(read.page.source),
             "total_is_lower_bound": lower_bound,
             "snapshot_total": ranked.snapshot_total,
             "materialized_paths": read.page.materialized_paths,

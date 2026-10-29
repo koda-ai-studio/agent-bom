@@ -6,7 +6,6 @@ import os
 import threading
 from typing import TYPE_CHECKING, Any, cast
 
-from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.operator_advisory_store import InMemoryOperatorAdvisoryStore, OperatorAdvisoryStore, SQLiteOperatorAdvisoryStore
 from agent_bom.api.storage.analytics import get_analytics_store
 from agent_bom.api.storage.analytics import set_analytics_store as set_analytics_store
@@ -525,6 +524,8 @@ def _get_graph_store() -> GraphStoreProtocol:
             if _graph_store is None:
                 backend = os.environ.get("AGENT_BOM_GRAPH_BACKEND", "").strip().lower()
                 if backend == "neptune":
+                    from agent_bom.api.neptune_graph import NeptuneGraphStore
+
                     _graph_store = NeptuneGraphStore()
                 elif postgres_deployment_configured():
                     from agent_bom.api.postgres_store import PostgresGraphStore

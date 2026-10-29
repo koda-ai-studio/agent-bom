@@ -206,6 +206,31 @@ def test_materialization_does_not_mutate_fusion_rows(store: SQLiteGraphStore) ->
     before = _dicts(graph.attack_paths)
     store.save_graph(graph)
     assert _dicts(graph.attack_paths) == before
+    loaded = store.load_graph(tenant_id="tenant-a", scan_id=graph.scan_id)
+    assert _dicts(loaded.attack_paths) == before
+    derived = store.snapshot_attack_paths(tenant_id="tenant-a", scan_id=graph.scan_id)
+    assert derived is not None
+    assert _dicts(derived.paths) != before, "Derived hop receipts and reachability must not overwrite base evidence"
+
+
+def test_derived_population_can_exist_without_base_paths(store: SQLiteGraphStore) -> None:
+    graph = build_unified_graph_from_report(shared_server_estate(agents=20, group_size=10), scan_id="derived-only", tenant_id="tenant-a")
+    assert graph.attack_paths == []
+    store.save_graph(graph)
+    assert store.load_graph(tenant_id="tenant-a", scan_id="derived-only").attack_paths == []
+    derived = store.snapshot_attack_paths(tenant_id="tenant-a", scan_id="derived-only")
+    assert derived is not None and len(derived.paths) == 40
+    assert store.snapshot_attack_paths(tenant_id="tenant-b", scan_id="derived-only") is None
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [("persisted_graph_paths", "base_graph_paths"), ("derived_graph_paths", "derived_investigation_paths"), ("future", "unknown")],
+)
+def test_queue_population_identifies_base_and_derived_sources(source: str, expected: str) -> None:
+    from agent_bom.graph.attack_path_queue import path_population
+
+    assert path_population(source) == expected
 
 
 def test_cross_tenant_isolation_of_stored_paths(store: SQLiteGraphStore) -> None:
