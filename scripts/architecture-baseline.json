@@ -4229,22 +4229,19 @@
     },
     "output/compliance_narrative.py": {
       "api_imports": 1,
-      "deferred_imports": 8,
-      "file_lines": 1053
+      "deferred_imports": 6
     },
     "output/compliance_narrative.py::_build_framework_narrative": {
-      "complexity": 21,
-      "function_lines": 150
+      "function_lines": 120
     },
     "output/compliance_narrative.py::_build_remediation_impact": {
       "function_lines": 97
     },
-    "output/compliance_narrative.py::blast_radii_from_finding_rows": {
-      "complexity": 16,
-      "function_lines": 96
-    },
     "output/compliance_narrative.py::generate_compliance_narrative": {
-      "function_lines": 120
+      "function_lines": 116
+    },
+    "output/compliance_narrative_templates.py": {
+      "deferred_imports": 1
     },
     "output/console_frameworks.py": {
       "deferred_imports": 11
