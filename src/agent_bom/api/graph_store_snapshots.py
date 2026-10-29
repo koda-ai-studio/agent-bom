@@ -16,6 +16,7 @@ from agent_bom.api.graph_store_traversal import SQLiteGraphTraversalMixin
 from agent_bom.api.storage.sqlite_graph_search import ensure_search_index
 from agent_bom.db import graph_store as sqlite_graph_store
 from agent_bom.db.graph_revision import read_snapshot_identity
+from agent_bom.db.graph_store_write import checkpoint_wal
 from agent_bom.graph import (
     AttackPath,
     UnifiedEdge,
@@ -78,6 +79,7 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
             sqlite_graph_store.save_graph(conn, graph)
             sqlite_graph_store._backfill_empty_tenant_ids(conn, _API_GRAPH_TENANT_TABLE_KEYS)
             conn.commit()
+            checkpoint_wal(conn)
 
     def save_graph_streaming(
         self,
@@ -123,6 +125,7 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
             )
             sqlite_graph_store._backfill_empty_tenant_ids(conn, _API_GRAPH_TENANT_TABLE_KEYS)
             conn.commit()
+            checkpoint_wal(conn)
             return counts
 
     def iter_nodes(

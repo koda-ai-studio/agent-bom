@@ -13,6 +13,7 @@ import { AssetDetail } from "@/components/inventory/asset-detail";
 import { PageEmptyState, PageLoadingState } from "@/components/states/page-state";
 import { useInventorySelection } from "@/lib/inventory-selection";
 import { useInventory } from "@/lib/inventory-context";
+import { SNAPSHOT_COUNT_SCOPE } from "@/lib/count-scope";
 import { ASSET_KINDS, type AssetRow } from "@/lib/inventory";
 
 export function InventoryIndex() {
@@ -113,9 +114,13 @@ export function InventoryIndex() {
             if (summary?.scan_id) query.set("scan", summary.scan_id);
             for (const [key, value] of Object.entries(filters)) if (value) query.set(key === "minSeverity" ? "min_severity" : key, value);
             return `/inventory/${kind.id}?${query}`;
-          })()} className="flex min-h-24 items-center gap-3 rounded-xl border border-outline bg-surface p-4 text-ink-secondary transition-colors hover:border-outline-strong hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2">
+          })()} title={SNAPSHOT_COUNT_SCOPE.title} className="flex min-h-24 items-center gap-3 rounded-xl border border-outline bg-surface p-4 text-ink-secondary transition-colors hover:border-outline-strong hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2">
             <Icon className="h-6 w-6 shrink-0 text-cyan-600 dark:text-cyan-400" aria-hidden="true" />
-            <span className="min-w-0"><strong className="block text-2xl font-semibold tabular-nums text-foreground">{total.toLocaleString()}</strong><span className="text-sm">{kind.label}</span></span>
+            <span className="min-w-0">
+              <strong className="block text-2xl font-semibold tabular-nums text-foreground">{total.toLocaleString()}</strong>
+              <span className="text-sm">{kind.label}</span>
+              <span className="block text-[11px] text-ink-tertiary">{SNAPSHOT_COUNT_SCOPE.caption}</span>
+            </span>
           </Link>;
         })}
       </nav>

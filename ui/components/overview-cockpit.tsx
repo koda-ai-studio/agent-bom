@@ -3,10 +3,9 @@
 import { Collapsible } from "@/components/collapsible";
 import { DetailTabs } from "@/components/detail-tabs";
 import { OverviewAssets } from "@/components/overview-assets";
-import { ArrowRight } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import { ComplianceSnapshotPanel, hasEvaluatedCompliance } from "./overview/compliance";
+import { ViewAllFrameworksLink } from "./overview/compliance-link";
 import { SecurityCoverageLanes } from "./overview/coverage";
 import { SeverityIssueStrip } from "./overview/issue-strip";
 import { PostureHero, ScoreExplainer } from "./overview/posture-score";
@@ -119,7 +118,7 @@ export function OverviewCockpit({
       <div className="grid items-start gap-6 xl:grid-cols-2 xl:items-stretch">
         <section aria-label="Compliance & frameworks" className="min-w-0 rounded-2xl border border-outline bg-surface p-5 sm:p-6">
           <Collapsible bare title="Compliance & frameworks" titleClassName={SECTION_TITLE_CLASS} defaultOpen
-            actions={localReport ? undefined : <Link href="/compliance" aria-label="View all frameworks" title="View all frameworks" className="inline-flex min-h-8 min-w-8 items-center justify-center gap-1 text-xs text-emerald-700 dark:text-emerald-300"><span className="hidden sm:inline">View all frameworks</span><ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>}>
+            actions={localReport ? undefined : <ViewAllFrameworksLink />}>
             {localReport ? <p className="text-sm text-ink-secondary">Tenant compliance assessment is unavailable for this local report.</p> : <ComplianceSnapshotPanel compliance={compliance} hasScanEvidence={hasScanEvidence}
               loading={loading || complianceLoading || scanScopeLoading} scanScopeKnown={scans !== null} />}
           </Collapsible>

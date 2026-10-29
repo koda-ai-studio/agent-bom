@@ -691,12 +691,14 @@ controlPlane:
       enabled: true
       type: ClusterIP
       annotations: {}
+    # Allow headroom for graph and scan payloads, response caching, and concurrent
+    # cold reads. Measure peak resident memory against the deployed inventory.
     resources:
       requests:
-        memory: "256Mi"
+        memory: "512Mi"
         cpu: "100m"
       limits:
-        memory: "1Gi"
+        memory: "2Gi"
         cpu: "1000m"
     livenessProbe:
       httpGet:

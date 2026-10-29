@@ -262,3 +262,19 @@ it("does not call an agent clean when no identity-linked findings are available"
   expect(screen.queryByText("Clean")).not.toBeInTheDocument();
   expect(apiMock.getAgentDetail).toHaveBeenCalledWith("agent-id-1");
 });
+
+describe("AgentsPage count scope", () => {
+  it("labels server and package tiles as configured entries and points at the inventory basis", async () => {
+    render(<AgentsPage />);
+    const kpis = within(await screen.findByTestId("agents-kpis"));
+    for (const label of ["MCP servers", "Packages"]) {
+      const cell = kpis.getByText(label).parentElement!.parentElement!;
+      expect(within(cell).getByText(/configured/)).toBeInTheDocument();
+      expect(cell).toHaveAttribute("title", expect.stringMatching(/Asset inventory/));
+    }
+    expect(kpis.getByText("Agents on this host").parentElement!.parentElement!).toHaveAttribute(
+      "title",
+      expect.stringMatching(/Asset inventory/),
+    );
+  });
+});

@@ -345,14 +345,21 @@ def _autodiscover_and_drift(opts: ScanOptions, st: ScanState) -> None:
     if unknown_pkgs and not opts.no_scan and not opts.offline:
         import asyncio as _asyncio_ad
 
-        from agent_bom.autodiscover import enrich_unknown_packages
+        from agent_bom import autodiscover as _autodiscover
 
         if not opts.quiet:
             st.con.print(f"\n[bold blue]Auto-discovering metadata for {len(unknown_pkgs)} package(s)...[/bold blue]\n")
         with st.con.status("[bold]Fetching package metadata...[/bold]", spinner="dots") if not opts.quiet else _nullcontext():
-            enriched_count = _asyncio_ad.run(enrich_unknown_packages(unknown_pkgs))
+            outcome = _asyncio_ad.run(_autodiscover.enrich_unknown_packages(unknown_pkgs))
+        st.metadata_enrichment = outcome
         if not opts.quiet:
-            st.con.print(f"  [green]✓[/green] Auto-discovered metadata for {enriched_count} package(s)")
+            st.con.print(f"  [green]✓[/green] Auto-discovered metadata for {outcome.enriched} package(s)")
+            if outcome.skipped:
+                st.con.print(
+                    f"  [yellow]↷[/yellow] {outcome.skipped} package(s) not enriched: metadata lookups capped at "
+                    f"{outcome.attempted} per scan (AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES); advisory only, "
+                    "vulnerability coverage is unaffected"
+                )
 
     # Step 3c: Version drift detection
     registry_pkgs = [p for p in st.all_packages if p.resolved_from_registry]

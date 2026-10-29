@@ -12,6 +12,7 @@ import { agentRecordDisplayName, entityIdHint } from "@/lib/display-name";
 import { FIRST_SCAN_ACTIONS } from "@/lib/empty-state-actions";
 import { AlertCircle, GitBranch, Network, Search, Shield, X } from "lucide-react";
 import { ASSET_KINDS } from "@/lib/asset-icon-registry";
+import { CONFIGURED_COUNT_SCOPE, scopedHint } from "@/lib/count-scope";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AgentDetailDrawer } from "./agent-detail-drawer";
@@ -214,9 +215,22 @@ export function AgentsList() {
               hint: !scannedEstate && estateAgents !== null
                 ? `${estateAgents.toLocaleString()} in the estate`
                 : `${configured.length} configured${installedOnly.length > 0 ? ` · ${installedOnly.length} not` : ""}`,
+              title: CONFIGURED_COUNT_SCOPE.title,
             },
-            { label: "MCP servers", value: totalServers, icon: ASSET_KINDS.mcp_server.icon, hint: `${remoteServers} remote` },
-            { label: "Packages", value: totalPackages, icon: ASSET_KINDS.package.icon, hint: ecosystemHint },
+            {
+              label: "MCP servers",
+              value: totalServers,
+              icon: ASSET_KINDS.mcp_server.icon,
+              hint: scopedHint(CONFIGURED_COUNT_SCOPE.caption, `${remoteServers} remote`),
+              title: CONFIGURED_COUNT_SCOPE.title,
+            },
+            {
+              label: "Packages",
+              value: totalPackages,
+              icon: ASSET_KINDS.package.icon,
+              hint: scopedHint(CONFIGURED_COUNT_SCOPE.caption, ecosystemHint),
+              title: CONFIGURED_COUNT_SCOPE.title,
+            },
             {
               label: "Unique credentials",
               value: totalCredentials,

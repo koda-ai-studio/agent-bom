@@ -34,6 +34,7 @@ class ScanState:
     findings: list[Any] = field(default_factory=list)
     hc_results: Any = None
     intro_report: Any = None
+    metadata_enrichment: Any = None
     pre_scan_step_timings: dict[str, float] = field(default_factory=dict)
     prefer_local_db: bool = False
     repo_trust_data: Any = None

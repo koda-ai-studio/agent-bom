@@ -51,6 +51,8 @@ import { hopReceiptCoverage } from "@/lib/hop-receipt-coverage";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import { useGraphLayout } from "@/lib/use-graph-layout";
 import { useGraphPresentation } from "@/hooks/use-graph-presentation";
+import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
+import { CONTROLS_OVERLAY, fitPaddingAroundOverlay, viewportShowsNodes } from "@/lib/graph-viewport-fit";
 import { graphTopologyKey, type GraphPresentationScope } from "@/lib/graph-presentation";
 import { useCaptureMode } from "@/lib/use-capture-mode";
 import { useElementWidth } from "@/hooks/use-element-width";
@@ -167,6 +169,8 @@ function InvestigationFlow({
   const [navigationId, setNavigationId] = useState<string | null>(null);
   const [overview, setOverview] = useState(false);
   const manualViewportScope = useRef<string | null>(null);
+  const wheelGate = useWheelZoomGate();
+  const restoredViewportChecked = useRef<string | null>(null);
   const navigationNodes = useMemo(() => {
     const byId = new Map(nodes.map(node => [node.id, node]));
     const ordered = pathNodeIds.map(id => byId.get(id)).filter((node): node is Node<LineageNodeData> => Boolean(node));
@@ -178,13 +182,16 @@ function InvestigationFlow({
   const responsiveScope = useMemo(() => compact
     ? { ...presentationScope, scope: `${presentationScope.scope}:${columnLayout ? "column-mobile" : "readable-mobile"}` }
     : presentationScope, [columnLayout, compact, presentationScope]);
+  const controlsOverlay = CONTROLS_OVERLAY[embedded ? "horizontal" : "vertical"];
   const fitOptions = useMemo(() => {
     if (columnLayout) return COLUMN_FIT_OPTIONS;
     const options = graphFitViewOptions(viewportInput);
     // Text and badges grow as the viewport fits; reserve room for that final
-    // measured size so the last finding is not clipped below the canvas.
-    return { ...options, padding: embedded ? 0.12 : Math.max(0.2, options.padding) };
-  }, [columnLayout, embedded, viewportInput]);
+    // measured size so the last finding is not clipped below the canvas, and
+    // keep the bottom-left clear of the zoom controls so no label sits under them.
+    const padding = embedded ? 0.12 : Math.max(0.2, options.padding);
+    return { ...options, padding: fitPaddingAroundOverlay(padding, { width: canvasWidth, height: canvasHeight }, controlsOverlay) };
+  }, [canvasHeight, canvasWidth, columnLayout, controlsOverlay, embedded, viewportInput]);
   const fitOptionsRef = useRef(fitOptions);
   fitOptionsRef.current = fitOptions;
 
@@ -212,13 +219,30 @@ function InvestigationFlow({
     void fitView({ nodes: [{ id }], minZoom: 1, maxZoom: 1, padding: 0.08, duration: 200 });
   }, [fitView]);
   useEffect(() => {
-    if (nodes.length === 0 || !nodesInitialized || !canvasWidth || !canvasHeight || presentation.restoredSavedState || manualViewportScope.current === presentation.storageKey) return;
+    if (nodes.length === 0 || !nodesInitialized || !canvasWidth || !canvasHeight || manualViewportScope.current === presentation.storageKey) return;
+    // A viewport restored from storage was fitted to an earlier canvas size
+    // (or persisted by an automatic fit there). Judge it once per mount, not
+    // on every re-measure or resize (node chrome scales with the zoom level,
+    // so repeated fits do not converge on the same framing): keep it while it
+    // shows the whole path on this canvas, else re-fit.
+    if (presentation.restoredSavedState) {
+      // The restored viewport is applied when the pane initialises; judging
+      // the default (0, 0, 1) before then would accept any saved framing.
+      if (!reactFlow.viewportInitialized || restoredViewportChecked.current === presentation.storageKey) return;
+      if (viewportShowsNodes(reactFlow.getNodes(), reactFlow.getViewport(), { width: canvasWidth, height: canvasHeight }, controlsOverlay)) {
+        restoredViewportChecked.current = presentation.storageKey;
+        return;
+      }
+    }
     const raf = requestAnimationFrame(() => {
+      // Marked only when the fit really runs: a dependency change can cancel
+      // this frame, and the next pass must then still re-fit.
+      restoredViewportChecked.current = presentation.storageKey;
       if (stepper && navigationNode) focusNode(navigationNode.id);
       else void fitView(fitOptionsRef.current);
     });
     return () => cancelAnimationFrame(raf);
-  }, [canvasWidth, canvasHeight, stepper, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey]);
+  }, [canvasWidth, canvasHeight, controlsOverlay, stepper, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey, reactFlow]);
   const fitVisible = useCallback(() => {
     manualViewportScope.current = null;
     setOverview(true);
@@ -265,7 +289,8 @@ function InvestigationFlow({
         controls={controls}
         layoutControls={presentation.enabled ? layoutControls : null}
       />}
-      <div className={`relative min-h-0 flex-1 ${roundedBottom ? "overflow-hidden rounded-b-2xl" : ""}`}>
+      <div className={`relative min-h-0 flex-1 ${roundedBottom ? "overflow-hidden rounded-b-2xl" : ""}`} {...wheelGate.handlers}>
+        <WheelZoomHint visible={wheelGate.hintVisible} />
         <ReactFlow
           style={embedded ? pathCardNodeStyle(viewport.zoom) : readableGraphNodeStyle(viewport.zoom)}
           key={`${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "fresh"}`}
@@ -278,11 +303,13 @@ function InvestigationFlow({
           minZoom={0.2}
           maxZoom={2.5}
           defaultViewport={presentation.restoredViewport ?? presentation.viewport}
-          zoomOnScroll
+          // Map convention: a plain wheel scrolls the page; Ctrl/⌘ + wheel or a
+          // click on the canvas arms zooming (see useWheelZoomGate).
+          zoomOnScroll={wheelGate.armed}
           zoomOnPinch
           // A whole stacked path needs no panning; touch drags scroll the page.
           panOnDrag={!columnLayout}
-          preventScrolling={!columnLayout}
+          preventScrolling={!columnLayout && wheelGate.armed}
           nodesDraggable={presentation.editing}
           nodesConnectable={false}
           nodesFocusable

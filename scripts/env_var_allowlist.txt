@@ -13,6 +13,8 @@
 # `# reason` comments are stripped by the loader.
 
 AGENT_BOM_AI_MODEL_ADVISORY_FEED
+# Per-scan cap on npm/PyPI metadata lookups for auto-discovered packages (default 200); read at call time so operator changes apply without restart.
+AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES
 # Comma list of flag-gated experimental features; read at call time by agent_bom.core.experimental (docs/EXPERIMENTAL.md).
 AGENT_BOM_EXPERIMENTAL
 # CLI machine-readable envelope toggle; read by the entrypoint before config is loaded.
@@ -374,6 +376,8 @@ AGENT_BOM_OFFLINE
 AGENT_BOM_OVERVIEW_CACHE_TTL_SECONDS
 # How long a concurrent /v1/overview reader waits on the in-flight fold before recomputing itself; read at call time.
 AGENT_BOM_OVERVIEW_SINGLEFLIGHT_TIMEOUT_SECONDS
+# TTL (seconds) for the per-process exec read response cache (posture, compliance, fix-first view); read at call time. 0 disables.
+AGENT_BOM_READ_CACHE_TTL_SECONDS
 # Rows one scope-filtered /v1/findings page walk may examine before it stops and reports a partial page; read at call time.
 AGENT_BOM_SCOPE_FILTER_SCAN_BUDGET
 # Wall-clock ceiling (seconds) for one scope-filtered /v1/findings page walk; read at call time.

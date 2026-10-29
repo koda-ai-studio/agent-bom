@@ -19,10 +19,15 @@ import { startStaticDemoServer } from "./static-demo-server.mjs";
 const WALL_CLOCK_AGE = /\b\d+\s*(months?|years?|mo|yr)\s+ago\b|\b[1-9]\d{2,}\s*(d|days?)\s+ago\b|overdue by \d+ (months?|years?)/i;
 const ERROR_TEXT = /no sample data in the read-only demo|something went wrong|failed to load|could not be loaded|network request failed|application error/i;
 
+// [name, route, expected text, text that must not appear]
 const PAGES = [
   ["overview", "/", "Overview"],
   ["investigation", "/security-graph", null],
-  ["findings", "/findings", null],
+  ["investigation-impact", "/security-graph?step=impact", /\d+ assets? exposed to this finding/, /Impact evidence is unavailable/],
+  ["investigation-owner", "/security-graph?step=owner", /Owner \/ team\s*data-platform/, /Ownership is unavailable|No finding record for this path/],
+  ["investigation-verify", "/remediation?view=verification", /Awaiting re-verification/, /no sample data/],
+  ["findings", "/findings", /Vulnerabilities\s*\d+/, null],
+  ["audit", "/audit", /completed|denied|issued/, /Not recorded/],
   ["advisories-php2shell", "/advisories?id=CVE-2026-109618", null],
   ["inventory", "/inventory", null],
   ["remediation", "/remediation", null],
@@ -68,9 +73,12 @@ async function main() {
           problems.push(`${label}: no sample data for ${url.searchParams.get("path")} on ${new URL(page.url()).pathname}`);
         }
       });
-      for (const [name, route] of PAGES) {
+      for (const [name, route, expected, forbidden] of PAGES) {
         await page.goto(`${server.origin}${basePath}${route}`, { waitUntil: "networkidle" });
         await page.waitForTimeout(600);
+        const text = await page.locator("#main-content").innerText().catch(() => "");
+        if (expected instanceof RegExp && !expected.test(text)) problems.push(`${label} ${name}: expected ${expected} in the page`);
+        if (forbidden && forbidden.test(text)) problems.push(`${label} ${name}: ${text.match(forbidden)[0]}`);
         if (!(await page.getByTestId("static-demo-banner").isVisible())) problems.push(`${label} ${name}: demo banner not visible`);
         const theme_ = await page.locator("html").getAttribute("data-theme");
         if (theme_ !== theme) problems.push(`${label} ${name}: theme ${theme_} != ${theme}`);
@@ -103,10 +111,28 @@ async function main() {
           for (const href of hidden) if (!demoRoutes.has(href.replace(/\/+$/, "") || "/")) problems.push(`${route}: nav links to ${href}, which is not in the demo`);
         }
       }
+      if (viewport.width === 1440 && theme === "light") {
+        // Overview severity tiles and the Findings lanes read the same sample estate.
+        await page.goto(`${server.origin}${basePath}/`, { waitUntil: "networkidle" });
+        await page.waitForTimeout(600);
+        const tiles = await page.getByTestId("overview-severity-issue-strip").evaluate((strip) => Object.fromEntries(
+          [...strip.querySelectorAll("a, button")].map((tile) => [...tile.querySelectorAll("p")].map((p) => p.textContent?.trim() ?? ""))
+            .filter((cells) => ["Critical", "High", "Medium", "Low"].includes(cells[0] ?? "")).map((cells) => [cells[0].toLowerCase(), Number(cells[1].replace(/,/g, ""))])));
+        await page.goto(`${server.origin}${basePath}/findings`, { waitUntil: "networkidle" });
+        await page.waitForTimeout(600);
+        const findingsText = await page.locator("#main-content").innerText();
+        const laneTotal = Number(/All findings\s*([\d,]+)/.exec(findingsText)?.[1]?.replace(/,/g, "") ?? Number.NaN);
+        const pills = Object.fromEntries(["Critical", "High", "Medium", "Low"].map((band) => [band.toLowerCase(), Number(new RegExp(`${band} \\((\\d+)\\)`).exec(findingsText)?.[1] ?? Number.NaN)]));
+        const tileTotal = Object.values(tiles).reduce((sum, value) => sum + value, 0);
+        if (Object.keys(tiles).length !== 4 || Number.isNaN(laneTotal)) problems.push(`reconciliation: could not read overview tiles ${JSON.stringify(tiles)} or lane total ${laneTotal}`);
+        else if (tileTotal !== laneTotal) problems.push(`reconciliation: overview tiles sum to ${tileTotal}, findings lanes total ${laneTotal}`);
+        for (const band of Object.keys(tiles)) if (!Number.isNaN(pills[band]) && pills[band] !== tiles[band]) problems.push(`reconciliation: overview ${band} ${tiles[band]} != findings ${band} ${pills[band]}`);
+      }
       if (viewport.width === 1440) {
         await page.goto(`${server.origin}${basePath}/`, { waitUntil: "networkidle" });
         await page.getByRole("navigation").getByRole("link", { name: /^Findings/ }).first().click();
-        await page.waitForURL(`**${basePath}/findings`);
+        await page.waitForURL((url) => url.pathname === `${basePath}/findings`);
+        await page.getByRole("heading", { name: "Findings", exact: true }).waitFor();
         await page.goto(`${server.origin}${basePath}/advisories?tab=declare`, { waitUntil: "networkidle" });
         await page.getByLabel("Advisory ID").fill("CVE-2026-109618");
         await page.getByLabel("Summary").fill("php2shell");

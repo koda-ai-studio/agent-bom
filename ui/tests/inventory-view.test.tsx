@@ -446,3 +446,16 @@ it("classifies typed transport failures as offline with a retry action", async (
   expect(await screen.findByRole("heading", { name: "Cannot connect to the agent-bom API" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
 });
+
+it("labels every asset-type tile as a snapshot count and points at the Agents page basis", async () => {
+  render(<InventoryProvider><InventoryIndex /></InventoryProvider>);
+  // The provider re-reads once it pins the resolved snapshot, so assert within one settled render.
+  await waitFor(() => {
+    for (const [name, total] of [["Packages 700", "700"], ["Servers & tools 200", "200"], ["AI entities 100", "100"]] as const) {
+      const tile = screen.getByRole("link", { name });
+      expect(within(tile).getByText(total)).toBeInTheDocument();
+      expect(within(tile).getByText("in snapshot")).toBeInTheDocument();
+      expect(tile).toHaveAttribute("title", expect.stringMatching(/Agents page/));
+    }
+  }, { timeout: 4000 });
+});

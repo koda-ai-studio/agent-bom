@@ -1,0 +1,248 @@
+/**
+ * Sample answers the read-only demo needs beyond the product-proof fixture
+ * routes: the Investigation journey's Impact (graph impact walk), Owner
+ * (finding ownership and SLA), Verify (campaign re-verification queue), the
+ * findings lane counts and recorded audit outcomes. Every answer is derived
+ * from the same fixture estate the other pages show, never hand-typed counts.
+ *
+ * Registered after `installRoutes`, so these handlers win for the paths they
+ * cover (Playwright matches routes in reverse registration order).
+ */
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Read the owning generated taxonomy; unknown relationship types do not imply reachability.
+const schema = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../lib/graph-schema.generated.ts"), "utf8");
+const metadata = schema.match(/export const GRAPH_EDGE_KIND_META:[^\n]+ = (\{[\s\S]*?\n\});/);
+if (!metadata) throw new Error("Generated graph relationship taxonomy is missing");
+const relationshipSpecs = JSON.parse(metadata[1].replace(/,\s*}$/, "\n}"));
+const REACH_CLASSES = new Set(["authority", "dependency", "derived", "exposure", "runtime"]);
+const DAY_MS = 86_400_000;
+const LANE_BY_FINDING_TYPE = {
+  vulnerability: "vulnerabilities", malicious_package: "vulnerabilities", misconfiguration: "cloud", iac: "iac",
+  secret: "secrets", identity: "identity", pii_exposure: "data",
+};
+
+function fulfill(route, json) {
+  return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(json) });
+}
+
+/** Breadth-first walk over recorded edges; reverse = what reaches this node, forward = what it reaches. */
+export function graphImpact(graph, nodeId, { maxDepth = 4, direction = "reverse" } = {}) {
+  const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+  const next = new Map();
+  const entries = new Set();
+  const findingRoot = ["vulnerability", "misconfiguration"].includes(byId.get(nodeId)?.entity_type);
+  for (const edge of graph.edges) {
+    if (findingRoot && ["vulnerable_to", "affects"].includes(edge.relationship)) {
+      if (edge.source === nodeId && byId.has(edge.target)) entries.add(edge.target);
+      if (edge.target === nodeId && byId.has(edge.source)) entries.add(edge.source);
+    }
+    if (!REACH_CLASSES.has(relationshipSpecs[edge.relationship]?.traversal_class) || edge.relationship === "trace_step") continue;
+    const [from, to] = direction === "reverse" ? [edge.target, edge.source] : [edge.source, edge.target];
+    if (!next.has(from)) next.set(from, []);
+    next.get(from).push(to);
+  }
+  // A finding names its affected assets in either orientation; only subsequent
+  // hops follow the requested direction and the canonical reach classes.
+  if (findingRoot) next.set(nodeId, [...entries]);
+  const depth = new Map([[nodeId, 0]]);
+  const queue = [nodeId];
+  while (queue.length) {
+    const current = queue.shift();
+    const level = depth.get(current);
+    if (level >= maxDepth) continue;
+    for (const neighbor of next.get(current) ?? []) {
+      if (depth.has(neighbor) || !byId.has(neighbor)) continue;
+      depth.set(neighbor, level + 1);
+      queue.push(neighbor);
+    }
+  }
+  const depthLimited = [...depth].some(([id, level]) => level >= maxDepth
+    && (next.get(id) ?? []).some((neighbor) => byId.has(neighbor) && !depth.has(neighbor)));
+  depth.delete(nodeId);
+  const detail = [...depth].map(([id, level]) => ({ id, label: byId.get(id).label, entity_type: byId.get(id).entity_type, depth: level }))
+    .sort((left, right) => left.depth - right.depth || left.label.localeCompare(right.label));
+  const byType = {};
+  for (const item of detail) byType[item.entity_type] = (byType[item.entity_type] ?? 0) + 1;
+  return {
+    affected_nodes: detail.map((item) => item.id),
+    affected_nodes_detail: detail,
+    affected_by_type: byType,
+    affected_count: detail.length,
+    max_depth_reached: detail.reduce((max, item) => Math.max(max, item.depth), 0),
+    completeness: {
+      complete: !depthLimited, truncated: depthLimited, sampled: false,
+      status: depthLimited ? "truncated" : "complete", returned: detail.length,
+      total: depthLimited ? null : detail.length,
+      ...(depthLimited ? { lower_bound: detail.length, reason: "depth_limit" } : {}),
+    },
+  };
+}
+
+/** Lane, owner, SLA and graph anchors the findings page and the Owner step read. */
+export function enrichFindings(findings, graph, { snapshotAt, owner = "data-platform" }) {
+  const cveNodes = new Map(graph.nodes.filter((node) => node.entity_type === "vulnerability").map((node) => [node.label, node.id]));
+  const due = new Date(Date.parse(snapshotAt) + 7 * DAY_MS).toISOString();
+  return findings.map((finding) => ({
+    ...finding,
+    lane: LANE_BY_FINDING_TYPE[finding.finding_type] ?? "other",
+    node_id: cveNodes.get(finding.cve_id) ?? null,
+    package: finding.package_name && finding.package_version ? `${finding.package_name}@${finding.package_version}` : null,
+    owner,
+    owner_type: "team",
+    sla_due_at: due,
+    sla_due_at_source: "severity-kev/v1",
+  }));
+}
+
+export function findingFacets(findings) {
+  const count = (key) => findings.reduce((acc, finding) => {
+    const value = key(finding);
+    acc[value] = (acc[value] ?? 0) + 1;
+    return acc;
+  }, {});
+  return {
+    lane: count((finding) => finding.lane),
+    finding_class: { vulnerability: 0, misconfiguration: 0, secret: 0, pii: 0, identity: 0, unclassified: 0, ...count((finding) => finding.finding_type === "vulnerability" ? "vulnerability" : "unclassified") },
+    severity: { critical: 0, high: 0, medium: 0, low: 0, info: 0, unknown: 0, ...count((finding) => finding.severity) },
+    status: { open: findings.length, resolved: 0 },
+    domain: { cspm: 0, vuln: findings.length, aspm: 0, dspm: 0, aispm: 0 },
+    freshness: { last_24_hours: 0, last_7_days: findings.length, last_30_days: 0, older: 0, unavailable: 0 },
+    fixability: count((finding) => finding.fixed_version ? "fix_available" : "no_fix_available"),
+    ownership: count((finding) => finding.owner ? "owned" : "unowned"),
+  };
+}
+
+/** Open-issue severity totals of the rows the Findings page lists. */
+export function severityTotals(findings) {
+  const totals = { critical: 0, high: 0, medium: 0, low: 0, total: findings.length };
+  for (const finding of findings) if (finding.severity in totals) totals[finding.severity] += 1;
+  return totals;
+}
+
+/**
+ * The fixture overview with every count re-derived from the same finding rows
+ * the Findings page lists, so tiles, chips, coverage lanes and the nav badge
+ * reconcile with the lanes. The posture grade is the fixture's own; the
+ * scoring model is server-side and not reproduced here.
+ */
+export function overviewFromFindings(base, findings) {
+  const totals = severityTotals(findings);
+  const kev = findings.filter((finding) => finding.is_kev === true || finding.cisa_kev === true).length;
+  const credentialExposed = findings.filter((finding) => (finding.exposed_credentials ?? []).length > 0).length;
+  const severity = { critical: totals.critical, high: totals.high, medium: totals.medium, low: totals.low, unrated: 0 };
+  return {
+    ...base,
+    headline: {
+      ...base.headline,
+      critical: totals.critical,
+      high: totals.high,
+      critical_high: totals.critical + totals.high,
+      kev,
+      credential_exposed: credentialExposed,
+      hub_findings: totals.total,
+    },
+    issue_counts: { ...totals, kev },
+    coverage: (base.coverage ?? []).map((lane) => lane.domain === "vuln" ? { ...lane, count: totals.total, severity } : lane),
+    domains: base.domains?.vuln ? {
+      ...base.domains,
+      vuln: { ...base.domains.vuln, metric: totals.total, detail: { ...base.domains.vuln.detail, critical: totals.critical, high: totals.high, severity } },
+    } : base.domains,
+  };
+}
+
+export function postureCountsFromFindings(base, findings) {
+  return { ...base, ...severityTotals(findings) };
+}
+
+const AUDIT_OUTCOMES = {
+  "scan.completed": { outcome: "completed" },
+  "gateway.policy.denied": { decision: "denied" },
+  "agent_identity.issued": { status: "issued" },
+  "agent_identity.rotated": { status: "rotated" },
+  "agent_identity.revoked": { status: "revoked" },
+  "compliance.bundle.signed": { outcome: "signed" },
+};
+
+/** The fixture audit trail with the outcome each action recorded. */
+export function auditEntriesWithOutcomes(entries) {
+  return entries.map((entry) => ({ ...entry, details: { ...AUDIT_OUTCOMES[entry.action], ...entry.details } }));
+}
+
+/** Registered after the fixture routes on a page that has navigated, so the fixture answers can be read back and re-derived. */
+export async function installStaticDemoRoutes(page, { graph, findings, auditEntries, scanId, tenantId, snapshotAt }) {
+  const enriched = enrichFindings(findings, graph, { snapshotAt });
+  const readFixture = (apiPath) => page.evaluate(async (url) => (await fetch(url)).json(), apiPath);
+  const overview = overviewFromFindings(await readFixture("/v1/overview"), enriched);
+  const postureCounts = postureCountsFromFindings(await readFixture("/v1/posture/counts"), enriched);
+  await page.route("**/v1/overview", (route) => fulfill(route, overview));
+  await page.route("**/v1/posture/counts", (route) => fulfill(route, postureCounts));
+  await page.route("**/v1/graph/impact?**", (route) => {
+    const url = new URL(route.request().url());
+    const nodeId = url.searchParams.get("node") ?? "";
+    const maxDepth = Number(url.searchParams.get("max_depth") ?? 4);
+    const direction = url.searchParams.get("direction") === "forward" ? "forward" : "reverse";
+    const impact = graphImpact(graph, nodeId, { maxDepth, direction });
+    return fulfill(route, {
+      scan_id: url.searchParams.get("scan_id") ?? scanId,
+      tenant_id: tenantId,
+      snapshot_generation: graph.snapshot_generation ?? "a".repeat(32),
+      interpretation: { basis: `recorded_${direction}_reachability`, execution: "not_established", collection_coverage: "unknown", traversable_only: false, max_depth: maxDepth },
+      node_id: nodeId,
+      direction,
+      ...impact,
+    });
+  });
+  await page.route("**/v1/findings?**", (route) => {
+    const url = new URL(route.request().url());
+    const query = (url.searchParams.get("q") ?? url.searchParams.get("query") ?? "").trim().toLowerCase();
+    const lane = url.searchParams.get("lane");
+    const rows = enriched.filter((finding) => (!query || `${finding.cve_id} ${finding.title} ${finding.package_name}`.toLowerCase().includes(query))
+      && (!lane || lane === "all" || finding.lane === lane));
+    return fulfill(route, {
+      schema_version: "findings.v1",
+      findings: rows,
+      count: rows.length,
+      total: rows.length,
+      limit: Number(url.searchParams.get("limit") ?? 50),
+      offset: 0,
+      sort: "risk",
+      scan_id: scanId,
+      facets: findingFacets(enriched),
+      warnings: [],
+    });
+  });
+  await page.route("**/v1/campaigns/verification-queue**", (route) => fulfill(route, {
+    schema_version: "risk-campaign-verification-queue.v1",
+    tenant_id: tenantId,
+    entries: [{
+      campaign_id: "campaign-demo-next-middleware",
+      title: "Upgrade next to 15.2.3 on the GitHub Enterprise MCP path",
+      original_member_count: 1,
+      owner: "data-platform",
+      sla_due_at: new Date(Date.parse(snapshotAt) + 7 * DAY_MS).toISOString(),
+      state: "verifying",
+      verification_status: "unverified",
+      active: false,
+      version: 2,
+      updated_at: snapshotAt,
+    }],
+    count: 1,
+    limit: 25,
+    has_more: false,
+    next_cursor: null,
+  }));
+  await page.route("**/v1/audit?**", (route) => {
+    const url = new URL(route.request().url());
+    const resource = url.searchParams.get("resource") ?? "";
+    const action = url.searchParams.get("action") ?? "";
+    const since = url.searchParams.get("since") ?? "";
+    const entries = auditEntriesWithOutcomes(auditEntries).filter((entry) => (!resource || entry.resource.startsWith(resource))
+      && (!action || entry.action === action) && (!since || entry.timestamp >= since));
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+    return fulfill(route, { entries: entries.slice(offset, offset + limit), total: entries.length });
+  });
+}

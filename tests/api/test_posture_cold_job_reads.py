@@ -84,7 +84,9 @@ def _reset_read_caches() -> None:
     overview._reset_overview_cache()
 
 
-def test_cold_posture_request_parses_the_job_payload_once(sqlite_store, parses) -> None:
+@pytest.mark.parametrize("cache_ttl", ["0", "60"])
+def test_cold_posture_request_parses_the_job_payload_once(sqlite_store, parses, monkeypatch, cache_ttl) -> None:
+    monkeypatch.setenv("AGENT_BOM_READ_CACHE_TTL_SECONDS", cache_ttl)
     sqlite_store.put(_job(TENANT))
     _reset_read_caches()
     client = TestClient(app)

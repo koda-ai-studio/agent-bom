@@ -95,9 +95,22 @@ That example already enables:
 Current chart defaults in [values.yaml](https://github.com/koda-ai-studio/agent-bom/blob/main/deploy/helm/agent-bom/values.yaml):
 
 - replicas: `2`
-- requests: `100m` CPU / `256Mi` memory
-- limits: `1000m` CPU / `1Gi` memory
+- requests: `100m` CPU / `512Mi` memory
+- limits: `1000m` CPU / `2Gi` memory
 - `HPA` packaged but off by default
+
+A worker serving posture, compliance and fix-first reads can hold graph and
+scan payloads in memory while building the response. The default memory limit
+provides headroom; measure peak resident memory with your inventory and expected
+concurrency before choosing production limits.
+
+Repeated reads use a per-process cache of at most 64 responses, keyed by tenant,
+query parameters and evidence revisions, including graph snapshot replacements.
+The default TTL is 60 seconds (`AGENT_BOM_READ_CACHE_TTL_SECONDS`; `0` disables
+caching). Inputs outside the revision token, such as runtime observations, can
+remain cached until that TTL expires. If a store cannot report its revision,
+the request computes directly. Concurrent async graph requests can still rebuild
+the same response; size for concurrent cold reads as well as retained cache data.
 
 Recommended production operator posture:
 

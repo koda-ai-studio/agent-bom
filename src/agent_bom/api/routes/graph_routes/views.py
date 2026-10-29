@@ -18,6 +18,7 @@ from agent_bom.api.graph_contracts import (
 )
 from agent_bom.api.graph_estate_changes import graph_estate_changes_read
 from agent_bom.api.graph_generation import pin_generation, verify_generation
+from agent_bom.api.read_cache import read_cache_get, read_cache_put
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import (
     GraphActiveEdgesResponse,
@@ -30,6 +31,7 @@ from agent_bom.api.read_models.graph import (
     documented_list,
 )
 from agent_bom.api.request_contract import reject_unknown_query_params
+from agent_bom.api.routes.compliance_routes.common import evidence_generation
 from agent_bom.api.routes.graph_routes import _runtime, path_count
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.consequences import router as consequence_router
@@ -151,14 +153,22 @@ async def get_fix_first_graph_view(
     ):
         raise HTTPException(status_code=503, detail="Graph snapshots not found. Run a scan first.")
 
+    cache_params = (("scan_id", requested_scan_id), ("cve", cve), ("package", package), ("agent", agent), ("limit", limit))
+    generation = await _runtime._graph_store_call(evidence_generation, tenant_id=tenant, scan_id=requested_scan_id)
+    cached = read_cache_get("fix_first_view", tenant, cache_params, generation=generation)
+    if cached is not None:
+        return cached
+
     graph = await _runtime._load_graph_for_investigation(
         graph_store,
         scan_id=requested_scan_id,
         tenant_id=tenant,
     )
-    return await _runtime._graph_compute_call(
+    payload = await _runtime._graph_compute_call(
         _fix_first_graph_view_payload, graph, cve=cve, package=package, agent=agent, limit=limit, graph_store=graph_store
     )
+    read_cache_put("fix_first_view", tenant, cache_params, payload, generation=generation)
+    return payload
 
 
 @investigation_router.get("/graph/diff", **documented(GraphDiffResponse), tags=["graph"])

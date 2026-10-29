@@ -443,6 +443,13 @@ def _reset_api_runtime_state() -> None:
     except Exception:
         pass
 
+    try:
+        from agent_bom.api.read_cache import clear_read_cache
+
+        clear_read_cache()
+    except Exception:
+        pass
+
     # Sidebar responses include agent IDs derived from the current test's
     # discovery inputs. Keeping them across tests makes detail reads resolve
     # another app's IDs against newly reset stores and return spurious 404s.

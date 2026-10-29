@@ -29,6 +29,7 @@ from agent_bom.api.routes.compliance_routes.common import (
     _posture_scorecard_impl,
     _tenant_id,
     _tenant_jobs,
+    cached_tenant_read,
 )
 from agent_bom.api.routes.compliance_routes.evidence import _narrative_to_dict
 from agent_bom.api.routes.compliance_routes.hub_paging import _cursor_walk_page, _decode_hub_list_cursor, _unpack_hub_list_page
@@ -179,7 +180,11 @@ async def get_posture_scorecard(request: Request) -> dict:
     breakdown covering vulnerability posture, credential hygiene, supply
     chain quality, compliance coverage, active exploitation, and configuration.
     """
-    return await anyio.to_thread.run_sync(_posture_scorecard_impl, request)
+    return await anyio.to_thread.run_sync(_cached_posture_scorecard, request)
+
+
+def _cached_posture_scorecard(request: Request) -> dict:
+    return cached_tenant_read(request, "posture", (), lambda: _posture_scorecard_impl(request))
 
 
 @posture_router.get("/posture/enrichment", **documented(EnrichmentPostureResponse), tags=["compliance"])

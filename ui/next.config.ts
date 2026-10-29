@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
   webpack(config, { dev, isServer }) {
     if (!dev && !isServer && config.optimization?.splitChunks) {
       config.optimization.splitChunks.cacheGroups.appShared = {
-        test: /[\\/]ui[\\/](?:components|lib)[\\/]/,
+        test: /[\\/]ui[\\/](?:components|hooks|lib)[\\/]/,
         minChunks: 2,
         minSize: 8_000,
         priority: 1,

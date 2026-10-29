@@ -16,6 +16,7 @@
     "lock:normalize": "npm install --package-lock-only --ignore-scripts",
     "test:runtime-proxy": "node scripts/smoke-runtime-api-proxy.mjs",
     "test:e2e": "node scripts/assert-install-matches-lockfile.mjs && node scripts/assert-build-is-current.mjs && playwright test",
+    "test:static-demo": "playwright test --config playwright.static-demo.config.ts",
     "verify:toolchain": "node scripts/verify-toolchain.mjs && node --test scripts/next-root-dirs.test.mjs",
     "headers:sync": "node scripts/sync-vercel-headers.mjs",
     "headers:check": "node scripts/sync-vercel-headers.mjs --check",

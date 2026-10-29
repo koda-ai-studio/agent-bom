@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -97,7 +98,17 @@ def test_clone_budget_aborts_live_download_and_descendant(tmp_path, monkeypatch)
         import psutil
 
         pid = int(receipt.read_text())
-        assert not psutil.pid_exists(pid) or psutil.Process(pid).status() == psutil.STATUS_ZOMBIE
+        # SIGKILL reaches the whole group, but waiting for the parent does not
+        # wait for its child to be scheduled and exit on a busy CI runner.
+        deadline = time.monotonic() + 5
+        while True:
+            try:
+                if psutil.Process(pid).status() == psutil.STATUS_ZOMBIE:
+                    break
+            except psutil.NoSuchProcess:
+                break
+            assert time.monotonic() < deadline, "clone descendant survived process-group cleanup"
+            time.sleep(0.01)
     finally:
         if receipt.exists():
             import signal

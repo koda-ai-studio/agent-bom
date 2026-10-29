@@ -645,10 +645,12 @@ function EngineeringCells({
             {vuln.fixed_version ? `Upgrade ${vuln.fixed_version}` : "Fix not provided"}
           </span>
           {remediationLifecycle(vuln) ? <span className="text-ink-secondary">{remediationLifecycle(vuln)}</span> : null}
-          {verifyCommand || vuln.fixed_version ? (
-            <span className="max-w-[14rem] truncate font-mono text-[11px] text-ink-tertiary" title={verifyCommand ?? "No scanner-provided verification command"}>
-              {verifyCommand ? `Verify: ${verifyCommand}` : "No scanner-provided verification command"}
+          {verifyCommand ? (
+            <span className="max-w-[14rem] truncate font-mono text-[11px] text-ink-tertiary" title={`Verify: ${verifyCommand}`}>
+              {`Verify: ${verifyCommand}`}
             </span>
+          ) : vuln.fixed_version ? (
+            <span className="text-[11px] text-ink-tertiary">No verify command</span>
           ) : null}
         </div>
       </td>),

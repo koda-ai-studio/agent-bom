@@ -2005,15 +2005,10 @@ export interface paths {
          * Get Hub Posture
          * @description Aggregate compliance posture across native scans + hub-ingested findings.
          *
-         *     Returns per-framework counts, severity breakdown, and source mix
-         *     (native vs external) so the dashboard /compliance page can render a
-         *     single posture story across every entry point.
-         *
-         *     The synchronous store aggregates (severity GROUP BY, SQL-side framework
-         *     counts, tenant total) plus the native-job fold run in a worker thread under
-         *     adaptive backpressure so this O(table) read cannot block the event loop and
-         *     starve ``/health`` (mirrors ``/v1/findings``); under saturation it sheds with
-         *     ``429 + Retry-After``.
+         *     Per-framework counts, severity breakdown and source mix (native vs external)
+         *     for the dashboard /compliance page. The store aggregates and the native-job
+         *     fold run in a worker thread under adaptive backpressure (mirrors
+         *     ``/v1/findings``); under saturation it sheds with ``429 + Retry-After``.
          */
         get: operations["get_hub_posture_v1_compliance_hub_posture_get"];
         put?: never;
@@ -14247,6 +14242,12 @@ export interface components {
             suppression_id?: string | null;
             /** Title */
             title?: string | null;
+            /** Vex Justification */
+            vex_justification?: string | null;
+            /** Vex Status */
+            vex_status?: string | null;
+            /** Vex Suppressed */
+            vex_suppressed?: boolean | null;
             /** Vulnerability Id */
             vulnerability_id?: string | null;
         } & {

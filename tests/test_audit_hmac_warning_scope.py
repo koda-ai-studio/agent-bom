@@ -75,7 +75,8 @@ def test_api_lifespan_calls_the_startup_warning() -> None:
     assert "warn_if_ephemeral_hmac_key()" in lifespan
 
 
-def test_cli_scan_output_has_no_audit_hmac_log_line(tmp_path: Path) -> None:
+@pytest.mark.parametrize("compliance", [False, True])
+def test_cli_scan_output_has_no_audit_hmac_log_line(tmp_path: Path, compliance: bool) -> None:
     home = tmp_path / "home"
     home.mkdir()
     project = tmp_path / "project"
@@ -83,8 +84,8 @@ def test_cli_scan_output_has_no_audit_hmac_log_line(tmp_path: Path) -> None:
     (project / "requirements.txt").write_text("requests==2.33.0\n", encoding="utf-8")
     env = {key: value for key, value in os.environ.items() if not key.startswith("AGENT_BOM_AUDIT_HMAC")}
     env.update({"HOME": str(home), "NO_COLOR": "1"})
-    # Run the real entry point, then report whether the posture path that used to
-    # trigger the import-time warning was exercised, so this cannot pass vacuously.
+    # A partial plain scan does not evaluate compliance. The completed offline
+    # demo exercises the narrative path that used to trigger the import warning.
     driver = (
         "import sys\n"
         "from agent_bom.cli import main\n"
@@ -95,7 +96,7 @@ def test_cli_scan_output_has_no_audit_hmac_log_line(tmp_path: Path) -> None:
         "print('AUDIT_MODULE_LOADED=' + str('agent_bom.api.audit_log' in sys.modules))\n"
     )
     result = subprocess.run(
-        [sys.executable, "-c", driver, "scan", str(project), "--offline"],
+        [sys.executable, "-c", driver, "scan", *(["--demo", "--compliance"] if compliance else [str(project)]), "--offline"],
         cwd=project,
         env=env,
         capture_output=True,
@@ -105,7 +106,7 @@ def test_cli_scan_output_has_no_audit_hmac_log_line(tmp_path: Path) -> None:
     )
     combined = result.stdout + result.stderr
     assert "Offline mode" in combined, combined[-2000:]
-    assert "AUDIT_MODULE_LOADED=True" in combined, combined[-2000:]
+    assert f"AUDIT_MODULE_LOADED={compliance}" in combined, combined[-2000:]
     assert WARNING_TEXT not in combined
 
 
