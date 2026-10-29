@@ -36,8 +36,11 @@ def _issue_action(tmp_path, report, table="failure", sarif="failure"):
     trace = tmp_path / "gh.jsonl"
     mock = tmp_path / "gh"
     mock.write_text(
-        f"#!{sys.executable}\nimport json, os, sys\n"
-        "with open(os.environ['GH_TRACE'], 'a') as f: f.write(json.dumps(sys.argv[1:])+'\\n')\n"
+        f"#!{sys.executable}\nimport json, os, sys\nfrom pathlib import Path\n"
+        "args = sys.argv[1:]\n"
+        "if '--body-file' in args:\n"
+        " i = args.index('--body-file'); args[i:i+2] = ['--body', Path(args[i+1]).read_text()]\n"
+        "with open(os.environ['GH_TRACE'], 'a') as f: f.write(json.dumps(args)+'\\n')\n"
         "if sys.argv[1:3] == ['issue', 'list']: print('6031')\n"
     )
     mock.chmod(0o700)
@@ -95,6 +98,53 @@ def test_fixable_medium_finding_is_actionable_even_with_partial_coverage(tmp_pat
     finding = {"ruleId": "CVE-2099-0001", "level": "warning", "properties": {"fixed_version": "2.0"}}
     actions = _issue_action(tmp_path, _report("partial", [finding]))
     assert "Automated Base Image Vulnerability Alert" in " ".join(actions[0])
+
+
+def test_actionable_issue_explains_versions_impact_and_evidence_boundary(tmp_path):
+    finding = {
+        "ruleId": "CVE-2099-0001",
+        "level": "warning",
+        "properties": {
+            "fixed_version": "2.0",
+            "is_kev": False,
+            "epss_score": 0.003,
+            "package_version_provenance": {"declared_name": "sample", "resolved_version": "1.0"},
+        },
+    }
+    report = _report("partial", [finding])
+    report["runs"][0]["tool"]["driver"]["rules"] = [
+        {
+            "id": "CVE-2099-0001",
+            "fullDescription": {"text": "Excessive memory use from small chunks"},
+            "properties": {"security-severity": "5.3"},
+        }
+    ]
+    body = " ".join(_issue_action(tmp_path, report)[0])
+    for text in ("CVE-2099-0001", "sample", "1.0", "2.0", "Excessive memory use", "5.3", "0.30%", "partial"):
+        assert text in body
+    assert "does not establish runtime reachability" in body
+    assert "Rebuild" in body and "rescan" in body
+
+
+def test_issue_renderer_bounds_and_escapes_untrusted_advisory_content():
+    from scripts.render_container_rescan_issue import MAX_ROWS, render
+
+    findings = [{"ruleId": f"CVE-2099-{index:04}", "level": "warning", "properties": {"fixed_version": "2.0"}} for index in range(60)]
+    report = _report(results=findings + findings)
+    report["runs"][0]["tool"]["driver"]["rules"] = [
+        {
+            "id": "CVE-2099-0000",
+            "fullDescription": {"text": "@everyone <script>bad</script> | [link](bad)\n" + "x" * 500},
+        }
+    ]
+    body = render(
+        report, platform="linux/amd64", image_id="sha256:fixture", category="container-amd64", evidence="https://example.invalid/run/1"
+    )
+    assert f"Showing the first {MAX_ROWS} distinct findings" in body
+    assert "Fixable findings (60)" in body
+    assert "CVE-2099-0049" in body and "CVE-2099-0050" not in body
+    assert "@everyone" not in body and "<script>" not in body and "[link]" not in body
+    assert "x" * 250 not in body
 
 
 @pytest.mark.parametrize("change", ["failed_invocation", "coverage_warning", "missing_invocation", "wrong_tool", "malformed_results"])

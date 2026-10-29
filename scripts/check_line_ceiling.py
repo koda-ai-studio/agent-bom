@@ -133,6 +133,8 @@ def check(
     for key in sorted(ui_baseline):
         if sizes.get(key, 0) <= FILE_CEILING:
             errors.append(f"{key}: baseline entry is stale (file within the ceiling or removed); run --write-baseline")
+        elif sizes[key] < ui_baseline[key]:
+            errors.append(f"{key}: baseline allowance is stale ({ui_baseline[key]} recorded, {sizes[key]} current); run --write-baseline")
     if base_ui_counts is not None:
         errors.extend(baseline_growth(ui_baseline, base_ui_counts))
     return errors

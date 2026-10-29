@@ -98,6 +98,12 @@ def test_stale_ui_baseline_entry_must_be_removed(tmp_path: Path) -> None:
     ]
 
 
+def test_shrunk_ui_file_requires_baseline_refresh_before_ci(tmp_path: Path) -> None:
+    root = _tree(tmp_path, {"ui/lib/types.ts": "x\n" * (FILE_CEILING + 1)})
+    errors = check(root, {}, {"ui/lib/types.ts": FILE_CEILING + 2}, base_ui_counts=None)
+    assert errors == ["ui/lib/types.ts: baseline allowance is stale (1002 recorded, 1001 current); run --write-baseline"]
+
+
 def test_editing_the_ui_baseline_cannot_approve_growth() -> None:
     base_counts = {"ui/components/nav.tsx": 1014}
     grown = baseline_growth({"ui/components/nav.tsx": 1015}, base_counts)
