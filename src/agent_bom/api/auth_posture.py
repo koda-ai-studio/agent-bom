@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+from typing import cast
 
 from agent_bom.api.auth_runtime_state import _AUTH_POSTURE as _AUTH_POSTURE
 from agent_bom.api.auth_runtime_state import _AUTH_RUNTIME_STATUS as _AUTH_RUNTIME_STATUS
@@ -12,7 +13,8 @@ from agent_bom.api.auth_runtime_state import AuthPostureError as AuthPostureErro
 from agent_bom.api.auth_runtime_state import apply_auth_posture as apply_auth_posture
 from agent_bom.api.auth_runtime_state import get_auth_posture as get_auth_posture
 from agent_bom.api.auth_runtime_state import get_auth_runtime_status as get_auth_runtime_status
-from agent_bom.core.settings import env_bool, env_str
+from agent_bom.api.storage.deployment import _production_or_clustered_control_plane
+from agent_bom.core.settings import env_bool, env_raw, env_str
 
 _TRUSTED_PROXY_SECRET_MIN_BYTES = 32
 
@@ -208,3 +210,186 @@ def configure_auth_runtime(
         anonymous_allowed=bool(unauthenticated_allowed),
     )
     apply_auth_posture(posture)
+
+
+_PROXY_CONTROL_PLANE_MTLS_MODES = {"app_native", "delegated", "disabled"}
+
+
+def _app_native_mtls_config() -> dict[str, object]:
+    cert_file = env_raw("AGENT_BOM_TLS_CERT_FILE", "").strip()
+    key_file = env_raw("AGENT_BOM_TLS_KEY_FILE", "").strip()
+    client_ca_file = env_raw("AGENT_BOM_TLS_CLIENT_CA_FILE", "").strip()
+    require_client_cert = _env_flag("AGENT_BOM_TLS_REQUIRE_CLIENT_CERT")
+    complete = bool(cert_file and key_file and client_ca_file and require_client_cert)
+    missing = []
+    if not cert_file:
+        missing.append("AGENT_BOM_TLS_CERT_FILE")
+    if not key_file:
+        missing.append("AGENT_BOM_TLS_KEY_FILE")
+    if not client_ca_file:
+        missing.append("AGENT_BOM_TLS_CLIENT_CA_FILE")
+    if not require_client_cert:
+        missing.append("AGENT_BOM_TLS_REQUIRE_CLIENT_CERT")
+    return {
+        "cert_file_configured": bool(cert_file),
+        "key_file_configured": bool(key_file),
+        "client_ca_file_configured": bool(client_ca_file),
+        "require_client_cert": require_client_cert,
+        "complete": complete,
+        "missing_evidence": missing,
+    }
+
+
+def describe_control_plane_direct_listener_posture(
+    *,
+    listener_host: str | None = None,
+    mtls_ok: bool | None = None,
+    trusted_proxy_ok: bool | None = None,
+) -> dict[str, object]:
+    """Return non-secret direct-listener posture for operator policy surfaces."""
+
+    host = _configured_listener_host(listener_host)
+    loopback = _is_loopback_listener(host)
+    production_or_clustered = _production_or_clustered_control_plane()
+    if mtls_ok is None or trusted_proxy_ok is None:
+        mtls = describe_proxy_control_plane_mtls_posture(listener_host=host)
+        if mtls_ok is None:
+            mtls_ok = mtls.get("status") == "ok" and mtls.get("mtls_mode") in {"app_native", "delegated"}
+        if trusted_proxy_ok is None:
+            trusted_proxy_ok = get_trusted_proxy_auth_status().get("status") == "ok"
+    unsafe = bool(production_or_clustered and not loopback and not mtls_ok and not trusted_proxy_ok)
+    return {
+        "host": host,
+        "loopback": loopback,
+        "production_or_clustered": production_or_clustered,
+        "trusted_proxy_attestation": "enabled" if trusted_proxy_ok else "disabled",
+        "mtls_enforced": bool(mtls_ok),
+        "status": "unknown" if host == "unknown" else ("unsafe" if unsafe else "ok"),
+        "message": (
+            "Listener address is not declared; set AGENT_BOM_API_HOST to the ASGI server's actual bind address."
+            if host == "unknown"
+            else "Production or clustered control planes must not expose a non-loopback listener without "
+            "trusted-proxy attestation or app-native mTLS."
+            if unsafe
+            else "Direct listener posture is acceptable for the declared deployment mode."
+        ),
+    }
+
+
+def require_safe_control_plane_listener(listener_host: str | None = None) -> None:
+    """Fail closed for unsafe production/clustered direct listener exposure."""
+
+    posture = describe_control_plane_direct_listener_posture(listener_host=listener_host)
+    if posture["status"] == "unsafe":
+        raise RuntimeError(str(posture["message"]))
+
+
+def describe_proxy_control_plane_mtls_posture(*, listener_host: str | None = None) -> dict[str, object]:
+    """Return non-secret proxy-to-control-plane mTLS posture.
+
+    Delegated ingress or service-mesh mTLS remains the production default.
+    App-native mTLS is available as a fallback for non-mesh deployments and is
+    reported here only from non-secret environment posture.
+    """
+
+    raw_mode = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE", "disabled").strip().lower() or "disabled"
+    provider = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_PROVIDER", "").strip()
+    client_ca_ref = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_CLIENT_CA_REF", "").strip()
+    evidence_ref = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_EVIDENCE_REF", "").strip()
+    cert_header = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_CERT_HEADER", "").strip()
+    trusted_proxy = get_trusted_proxy_auth_status()
+    app_native = _app_native_mtls_config()
+    effective_mode = "app_native" if raw_mode == "app_native" or app_native["complete"] else raw_mode
+    mtls_mode = "none" if effective_mode == "disabled" else effective_mode
+
+    base: dict[str, object] = {
+        "mode": effective_mode,
+        "declared_mode": raw_mode,
+        "mtls_mode": mtls_mode,
+        "supported_modes": sorted(_PROXY_CONTROL_PLANE_MTLS_MODES),
+        "mode_env": "AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE",
+        "provider": provider or None,
+        "client_ca_ref_configured": bool(client_ca_ref),
+        "client_cert_header_configured": bool(cert_header),
+        "evidence_ref": evidence_ref or None,
+        "trusted_proxy_auth_status": trusted_proxy.get("status"),
+        "trusted_proxy_issuer_pinned": bool(trusted_proxy.get("issuer_pinned")),
+        "trusted_proxy_attestation": "enabled" if trusted_proxy.get("status") == "ok" else "disabled",
+        "app_native_mtls": app_native,
+    }
+    if raw_mode not in _PROXY_CONTROL_PLANE_MTLS_MODES:
+        return {
+            **base,
+            "status": "misconfigured",
+            "enforced": False,
+            "message": (
+                "Unsupported AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE. Use disabled or delegated; "
+                "terminate and verify mTLS in ingress, Envoy, or a service mesh, or use app_native with TLS env vars."
+            ),
+        }
+    if effective_mode == "app_native":
+        status = "ok" if app_native["complete"] else "needs_evidence"
+        missing = list(cast(list[str], app_native["missing_evidence"]))
+        direct = describe_control_plane_direct_listener_posture(
+            listener_host=listener_host,
+            mtls_ok=status == "ok",
+            trusted_proxy_ok=trusted_proxy.get("status") == "ok",
+        )
+        return {
+            **base,
+            "status": status,
+            "enforced": status == "ok",
+            "missing_evidence": missing,
+            "direct_listener": direct,
+            "message": (
+                "App-native mTLS is configured for the FastAPI control plane."
+                if status == "ok"
+                else "App-native mTLS was requested, but TLS certificate, key, client CA, or client-cert enforcement is incomplete."
+            ),
+        }
+    if effective_mode == "disabled":
+        direct = describe_control_plane_direct_listener_posture(
+            listener_host=listener_host,
+            mtls_ok=False,
+            trusted_proxy_ok=trusted_proxy.get("status") == "ok",
+        )
+        return {
+            **base,
+            "status": "disabled",
+            "enforced": False,
+            "direct_listener": direct,
+            "message": "Proxy-to-control-plane mTLS posture is disabled or not declared.",
+        }
+
+    return _delegated_mtls_posture(base, trusted_proxy, client_ca_ref, evidence_ref, listener_host)
+
+
+def _delegated_mtls_posture(
+    base: dict[str, object], trusted_proxy: dict, client_ca_ref: str, evidence_ref: str, listener_host: str | None
+) -> dict[str, object]:
+    trusted_ok = trusted_proxy.get("status") == "ok"
+    status = "ok" if client_ca_ref and evidence_ref and trusted_ok else "needs_evidence"
+    missing = []
+    if not client_ca_ref:
+        missing.append("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_CLIENT_CA_REF")
+    if not evidence_ref:
+        missing.append("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_EVIDENCE_REF")
+    if not trusted_ok:
+        missing.append("trusted proxy auth with issuer pinning")
+    direct = describe_control_plane_direct_listener_posture(
+        listener_host=listener_host,
+        mtls_ok=status == "ok",
+        trusted_proxy_ok=trusted_ok,
+    )
+    return {
+        **base,
+        "status": status,
+        "enforced": True,
+        "missing_evidence": missing,
+        "direct_listener": direct,
+        "message": (
+            "Delegated mTLS is declared and backed by client-CA evidence plus trusted-proxy issuer pinning."
+            if status == "ok"
+            else "Delegated mTLS is declared, but operator evidence is incomplete."
+        ),
+    }
