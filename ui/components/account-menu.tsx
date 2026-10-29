@@ -29,6 +29,7 @@ export function AccountMenu() {
           <div className="min-w-0 flex-1">
             <p className="break-words text-sm font-semibold text-foreground">{session ? identity.name : "Offline report"}</p>
             <p className="mt-1 text-xs text-ink-secondary">{session ? identity.method : "No control-plane session"}{session?.role_summary?.display_name ? ` · ${session.role_summary.display_name}` : ""}</p>
+            {session && <p className="mt-2 text-xs leading-5 text-ink-secondary">{identity.description}</p>}
             <span className="mt-2 inline-flex items-center rounded-full border border-outline bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-secondary">
               {!session ? "Offline" : isStaticDemo() ? "Read-only demo" : session.auth_required === false ? "Unauthenticated access" : session.authenticated ? "Signed in" : "Sign-in required"}
             </span>
@@ -36,7 +37,7 @@ export function AccountMenu() {
         </div>
       </section>
       <section aria-labelledby="account-workspace-label" className="border-b border-outline py-4">
-        <p id="account-workspace-label" className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-secondary">Organization</p>
+        <p id="account-workspace-label" className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-secondary">Workspace</p>
         {session ? <div className="flex min-w-0 items-center gap-3">
           <Building2 className="h-5 w-5 shrink-0 text-ink-secondary" aria-hidden="true" />
           <span className="min-w-0 flex-1" title={session.tenant_id}><span className="block text-xs text-ink-secondary">Tenant ID</span><span className="block truncate text-sm font-medium">{session.tenant_id}</span></span>
@@ -48,8 +49,8 @@ export function AccountMenu() {
         <ThemePreferenceControl />
       </section>
       <section aria-label="Account navigation" className="space-y-1 pt-4">
-        <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.16em] text-ink-secondary">You</p>
-        <Link href="/settings" onClick={close} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-muted"><Settings className="h-4 w-4" />Profile &amp; settings</Link>
+        <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.16em] text-ink-secondary">Account</p>
+        <Link href="/settings" onClick={close} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-muted"><Settings className="h-4 w-4" />Account &amp; settings</Link>
         {hasCapability("keys.manage") && <Link href="/audit#access" onClick={close} className="block rounded-lg px-2 py-2 text-sm hover:bg-surface-muted">Access &amp; keys</Link>}
         {hasCapability("audit.read") && <Link href="/audit" onClick={close} className="block rounded-lg px-2 py-2 text-sm hover:bg-surface-muted">Audit history</Link>}
         {identity.canSignOut && <button type="button" onClick={() => { close(); void signOut(); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-muted"><LogOut className="h-4 w-4" />Sign out</button>}

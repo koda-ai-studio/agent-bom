@@ -14,7 +14,7 @@ it("gives a viewer truthful identity and appearance without admin links or unsup
   expect(memberships).not.toHaveAttribute("open");
   fireEvent.click(within(memberships!).getByText(/Other workspace memberships/));
   expect(within(memberships!).getByText("research")).toBeInTheDocument();
-  expect(screen.getByText("Active tenant")).toBeInTheDocument();
+  expect(screen.getByText("Workspace (tenant ID)")).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /Access.*keys/ })).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /Control plane security/ })).not.toBeInTheDocument();
   expect(screen.queryByRole("combobox")).not.toBeInTheDocument();

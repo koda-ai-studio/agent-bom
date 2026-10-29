@@ -35,7 +35,7 @@ export function FindingReconfirmation({ finding }: { finding: Observation }) {
   const labels = (attempt?.reason_codes ?? []).map((code) => reasons[code]).filter(Boolean);
   return <div role="note" aria-label="Unreconfirmed collection evidence" className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-5 text-ink-secondary">
     <p className="font-semibold text-foreground">Current presence unconfirmed</p>
-    <p>{count > 0 ? `${count} occurrence${count === 1 ? " retains" : "s retain"} earlier evidence after incomplete collection.` : "This finding retains earlier evidence after an incomplete collection."} Restore collection coverage and rescan the same scope.</p>
+    <p>{count > 0 ? `${count} finding${count === 1 ? " retains" : "s retain"} earlier evidence after incomplete collection.` : "This finding retains earlier evidence after an incomplete collection."} Restore collection coverage and rescan the same scope.</p>
     {attempt?.scan_id ? <p className="mt-1 break-words">Latest attempt: <span className="font-mono">{attempt.scan_id}</span></p> : null}
     {attempt?.attempted_at ? <p className="break-words">Attempted at: <time dateTime={attempt.attempted_at}>{attempt.attempted_at}</time></p> : null}
     {labels.length ? <p>{labels.join(" · ")}</p> : null}

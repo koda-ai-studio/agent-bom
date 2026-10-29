@@ -748,7 +748,7 @@ export function Nav() {
                   {group.hiddenLinks.length > 0 && (
                     <details className="mt-2 rounded-lg border border-outline bg-surface px-3 py-2">
                       <summary className="cursor-pointer list-none text-xs font-medium uppercase tracking-[0.2em] text-ink-tertiary">
-                        Unused in {deploymentModeLabel(counts?.deployment_mode)} ({group.hiddenLinks.length})
+                        Awaiting evidence ({group.hiddenLinks.length})
                       </summary>
                       <div className="mt-2 space-y-0.5">
                         {group.hiddenLinks.map(({ href, label, icon: Icon }) => (
@@ -756,7 +756,7 @@ export function Nav() {
                             key={href}
                             href={href}
                             className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12px] text-ink-tertiary transition-colors hover:bg-surface-muted hover:text-ink-secondary"
-                            title="Hidden until this deployment mode is detected"
+                            title="Collect evidence to populate this page"
                           >
                             <Icon className={`h-3.5 w-3.5 shrink-0 opacity-60 ${NAV_LINK_ICON_CLASS[href] ?? ""}`} />
                             <span className="truncate">{label}</span>
@@ -817,8 +817,8 @@ export function Nav() {
                     </div>
                     {group.hiddenLinks.length > 0 && (
                       <p className="mt-2 rounded-lg border border-outline bg-surface-muted px-2.5 py-1.5 text-xs text-ink-tertiary">
-                        {group.hiddenLinks.length} page{group.hiddenLinks.length === 1 ? "" : "s"} hidden for{" "}
-                        {deploymentModeLabel(counts?.deployment_mode)} mode.
+                        {group.hiddenLinks.length} page{group.hiddenLinks.length === 1 ? "" : "s"} awaiting evidence from{" "}
+                        {deploymentModeLabel(counts?.deployment_mode)}.
                       </p>
                     )}
                   </div>
@@ -850,12 +850,12 @@ export function Nav() {
           />
         </Link>
         {counts?.deployment_mode && (
-          <span
+          <Link href="/sources"
             className="hidden rounded-full border border-outline bg-surface-elevated px-2.5 py-0.5 text-xs font-mono uppercase tracking-[0.12em] text-ink-secondary sm:inline-flex"
-            title={`${deploymentModeLabel(counts.deployment_mode)} evidence — observed source receipts; this label does not configure storage or enforcement`}
+            title={`View evidence sources: ${deploymentModeLabel(counts.deployment_mode)}. This describes collected inventory; hosting and runtime enforcement are configured separately.`}
           >
-            {deploymentModeLabel(counts.deployment_mode)}
-          </span>
+            Sources: {deploymentModeLabel(counts.deployment_mode)}
+          </Link>
         )}
         <DemoEstateLabel scanSources={counts?.scan_sources} />
         <div className="ml-auto flex min-w-0 items-center gap-0.5 sm:gap-2">

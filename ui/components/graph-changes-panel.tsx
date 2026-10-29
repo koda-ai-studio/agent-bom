@@ -86,7 +86,7 @@ export function GraphChangesPanel({
       size="md"
       eyebrow="What changed"
       title={title}
-      subtitle={changes ? "Each source is compared with its previous comparable snapshot. Counts are graph nodes and links between the two snapshots, not finding occurrences." : undefined}
+      subtitle={changes ? "Each source is compared with its previous comparable snapshot. Counts are graph nodes and links between the two snapshots, not findings." : undefined}
       ariaLabel={title}
       bodyClassName="space-y-3"
     >

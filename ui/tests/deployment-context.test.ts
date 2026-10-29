@@ -38,10 +38,10 @@ function makeCounts(overrides: Partial<PostureCountsResponse> = {}): PostureCoun
 
 describe("deployment-context helpers", () => {
   it("formats deployment mode labels", () => {
-    expect(deploymentModeLabel("local")).toBe("Local");
-    expect(deploymentModeLabel("fleet")).toBe("Fleet");
-    expect(deploymentModeLabel("cluster")).toBe("Cluster");
-    expect(deploymentModeLabel("hybrid")).toBe("Hybrid");
+    expect(deploymentModeLabel("local")).toBe("Local scans");
+    expect(deploymentModeLabel("fleet")).toBe("Fleet inventory");
+    expect(deploymentModeLabel("cluster")).toBe("Cluster scans");
+    expect(deploymentModeLabel("hybrid")).toBe("Mixed sources");
     expect(deploymentModeLabel("ingest")).toBe("Evidence intake");
     expect(deploymentModeLabel("ci")).toBe("CI/CD");
     expect(deploymentModeLabel(undefined)).toBe("Not observed");

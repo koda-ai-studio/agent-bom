@@ -214,7 +214,7 @@ describe("GraphChangesPanel exposures", () => {
     expect(screen.getByTestId("graph-changes-completeness")).toHaveTextContent("scanned once");
     expect(screen.getByRole("button", { name: "Highlight changes" })).toBeEnabled();
     // The basis is explicit so these numbers are never read as finding counts.
-    expect(screen.getByText(/Counts are graph nodes and links between the two snapshots, not finding occurrences/)).toBeInTheDocument();
+    expect(screen.getByText(/Counts are graph nodes and links between the two snapshots, not findings/)).toBeInTheDocument();
   });
 
   it("lists new and removed exposure and drills into it", () => {

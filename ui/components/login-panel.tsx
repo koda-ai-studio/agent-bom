@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useAuthState } from "@/components/auth-provider";
 import { BrandLogo } from "@/components/brand-logo";
@@ -43,6 +43,8 @@ export function LoginPanel({
 }) {
   const { session, loading, error, refresh, signedOut, signOutConfirmed, signOutError, signOut, resumeSession } = useAuthState();
   const [apiKey, setApiKey] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const submissionPending = useRef(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [authUnconfigured, setAuthUnconfigured] = useState(false);
   const signedIn = Boolean(session && (!session.auth_required || session.authenticated));
@@ -185,17 +187,23 @@ export function LoginPanel({
           {browserOidcConfigured ? trialInvitation : null}
 
           <form
+            aria-busy={submitting}
             onSubmit={async (event) => {
               event.preventDefault();
+              if (submissionPending.current) return;
               setFormError(null);
               const trimmedApiKey = apiKey.trim();
               if (!trimmedApiKey) {
                 setFormError("Enter an API key to sign in.");
                 return;
               }
+              submissionPending.current = true;
+              setSubmitting(true);
               try {
                 await api.createAuthSession(trimmedApiKey);
                 clearSessionApiKey();
+                setApiKey("");
+                await refresh();
               } catch (nextError) {
                 clearSessionApiKey();
                 setApiKey("");
@@ -207,9 +215,10 @@ export function LoginPanel({
                 setFormError(authFailure ? AUTH_FAILURE_MESSAGE : status === 429
                   ? "Too many sign-in attempts. Wait a moment and try again."
                   : "Sign-in is unavailable. Try again, or contact your administrator.");
-                return;
+              } finally {
+                submissionPending.current = false;
+                setSubmitting(false);
               }
-              await refresh();
             }}
           >
             <label
@@ -222,6 +231,7 @@ export function LoginPanel({
               <input
                 id="agent-bom-browser-session-api-key"
                 type="password"
+                disabled={submitting}
                 value={apiKey}
                 onChange={(event) => setApiKey(event.target.value)}
                 className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--background)] px-3 py-3 font-mono text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
@@ -245,14 +255,14 @@ export function LoginPanel({
 
             <button
               type="submit"
-              disabled={!apiKey.trim()}
+              disabled={submitting || !apiKey.trim()}
               className={
                 ssoConfigured
                   ? "login-submit login-submit-sso"
                   : "login-submit login-submit-key"
               }
             >
-              Sign in
+              {submitting ? "Signing in…" : "Sign in"}
             </button>
 
             {shownError ? (
@@ -264,7 +274,9 @@ export function LoginPanel({
             <div className="mt-4 text-center">
               <button
                 type="button"
+                disabled={submitting}
                 onClick={async () => {
+                  if (submissionPending.current) return;
                   try {
                     await api.deleteAuthSession();
                   } catch {

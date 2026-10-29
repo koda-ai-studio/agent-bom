@@ -83,7 +83,7 @@ for (const role of ["viewer", "analyst", "admin"] as const) {
     await page.getByLabel(/^Account menu:/).click();
     await expect(page.getByLabel("Account details")).toContainText("synthetic-tenant");
     await expect(page.getByLabel("Account details").getByRole("link", { name: "Access & keys" })).toHaveCount(role === "admin" ? 1 : 0);
-    await page.getByRole("link", { name: "Profile & settings" }).click();
+    await page.getByRole("link", { name: "Account & settings" }).click();
     const controls = page.getByRole("region", { name: "Workspace & deployment" });
     if (role === "viewer") await expect(controls).toHaveCount(0);
     else await expect(controls.getByRole("link", { name: /Connections/ })).toBeVisible();

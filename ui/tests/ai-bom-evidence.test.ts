@@ -76,7 +76,7 @@ describe("ai-bom-evidence", () => {
         },
         manifestFixture,
       ),
-    ).toBe("Local · tenant default · control plane");
+    ).toBe("Local scans · tenant default · control plane");
   });
 
   it("rolls up AI estate entities from the manifest graph", () => {

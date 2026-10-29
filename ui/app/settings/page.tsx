@@ -50,7 +50,7 @@ export default function SettingsPage() {
           <dl>
             <MetadataRow label="Authentication" value={session ? identity.method : "No control-plane session"} />
             <MetadataRow label="Role" value={session?.role_summary?.display_name || session?.role || "Not available"} />
-            <MetadataRow label="Active tenant" value={workspaceName} />
+            <MetadataRow label="Workspace (tenant ID)" value={workspaceName} />
           </dl>
           {session && memberships.length > 1 && <details className="mb-3 rounded-lg border border-outline bg-surface-muted/20">
             <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium marker:text-ink-secondary">Other workspace memberships <span className="ml-1 text-xs font-normal text-ink-secondary">{memberships.length - (activeMembership ? 1 : 0)}</span></summary>

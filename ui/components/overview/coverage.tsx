@@ -75,7 +75,7 @@ export function SecurityCoverageLanes({
   return (
     <div className="@container pt-1" data-testid="overview-security-coverage">
       <div className="relative mb-3 flex items-center gap-2 text-xs leading-relaxed text-ink-secondary">
-        <p>Counts are finding occurrences, not issues; one may appear in several areas.</p>
+        <p>Findings can appear in more than one security area; counts cannot be added together.</p>
         <button
           type="button"
           aria-label="About assessment coverage"
@@ -143,7 +143,7 @@ export function SecurityCoverageLanes({
                   </span>
                   {known && total > 0 ? (
                     <span className="text-xs font-medium uppercase tracking-[0.08em] text-ink-secondary">
-                      {lane.count === 1 ? "occurrence" : "occurrences"}
+                      {lane.count === 1 ? "finding" : "findings"}
                     </span>
                   ) : null}
                 </span> : null}

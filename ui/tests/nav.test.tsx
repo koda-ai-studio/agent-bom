@@ -691,14 +691,14 @@ describe('Nav', () => {
     fireEvent.click(screen.getByRole('button', { name: /^inventory/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/unused in local \(1\)/i)).toBeInTheDocument()
+      expect(screen.getByText(/awaiting evidence \(1\)/i)).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByText(/unused in local \(1\)/i))
+    fireEvent.click(screen.getByText(/awaiting evidence \(1\)/i))
 
     const fleetLink = screen.getByRole('link', { name: /^fleet$/i })
     expect(fleetLink).toHaveAttribute('href', '/fleet')
-    expect(fleetLink).toHaveAttribute('title', 'Hidden until this deployment mode is detected')
+    expect(fleetLink).toHaveAttribute('title', 'Collect evidence to populate this page')
   })
 
   it('keeps runtime and traces visible for hybrid deployments', async () => {
@@ -757,7 +757,7 @@ describe('Nav', () => {
     expect(within(details).getByText('security@acme.example')).toBeInTheDocument()
     expect(within(details).getByText(/Security analyst/)).toBeInTheDocument()
     expect(within(details).getByText('tenant-acme')).toBeInTheDocument()
-    expect(within(details).getByText('Organization')).toBeInTheDocument()
+    expect(within(details).getByText('Workspace')).toBeInTheDocument()
     expect(within(details).getByText('Active')).toBeInTheDocument()
     expect(within(details).getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(within(details).queryByRole('link', { name: 'Access & keys' })).not.toBeInTheDocument()
@@ -798,14 +798,14 @@ describe('Nav', () => {
     fireEvent.click(screen.getByRole('button', { name: /^inventory/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/unused in local/i)).toBeInTheDocument()
+      expect(screen.getByText(/awaiting evidence/i)).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByText(/unused in local/i))
+    fireEvent.click(screen.getByText(/awaiting evidence/i))
 
     const agentsLink = screen.getByRole('link', { name: /^agents$/i })
     expect(agentsLink).toHaveAttribute('href', '/agents')
-    expect(agentsLink).toHaveAttribute('title', 'Hidden until this deployment mode is detected')
+    expect(agentsLink).toHaveAttribute('title', 'Collect evidence to populate this page')
   })
 })
 

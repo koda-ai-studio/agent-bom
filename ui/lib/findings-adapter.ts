@@ -149,7 +149,7 @@ export function collectUnifiedFindings(findings: UnifiedFinding[]): LaneFinding[
       reopened_at: finding.reopened_at ?? undefined,
       scan_count: finding.scan_count,
       last_observed: finding.last_observed ?? finding.last_seen ?? undefined,
-      occurrence_count: finding.occurrence_count ?? finding.scan_count,
+      occurrence_count: finding.occurrence_count ?? undefined,
       occurrences: finding.occurrences,
       occurrences_truncated: finding.occurrences_truncated,
       remediation_versions: finding.remediation_versions ?? undefined,

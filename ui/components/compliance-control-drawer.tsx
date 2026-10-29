@@ -24,7 +24,7 @@ function plural(count: number, unit: string): string {
 
 /** ``findings`` counts mapped occurrences; ``issue_count`` the issue groups "View findings" lists. */
 export function controlFindingUnits(control: Pick<ComplianceControl, "findings" | "issue_count">): string {
-  const occurrences = plural(control.findings, "finding occurrence");
+  const occurrences = plural(control.findings, "finding");
   const issues = typeof control.issue_count === "number" ? ` · ${plural(control.issue_count, "issue")}` : "";
   return `${occurrences}${issues} mapped to this control.`;
 }

@@ -30,4 +30,13 @@ describe("collectUnifiedFindings risk + lineage", () => {
     const [row] = collectUnifiedFindings([finding({ is_direct: false, dependency_depth: 2, introduced_via: "requests" })]);
     expect([row?.is_direct, row?.dependency_depth, row?.introduced_via]).toEqual([false, 2, "requests"]);
   });
+  it("keeps repeated scans separate from findings on assets", () => {
+    const [row] = collectUnifiedFindings([finding({ scan_count: 3 })]);
+    expect(row?.scan_count).toBe(3);
+    expect(row?.occurrence_count).toBeUndefined();
+    const [group] = collectUnifiedFindings([finding({ scan_count: 3, occurrence_count: 2 })]);
+    expect(group?.occurrence_count).toBe(2);
+    expect(group?.scan_count).toBe(3);
+  });
+
 });

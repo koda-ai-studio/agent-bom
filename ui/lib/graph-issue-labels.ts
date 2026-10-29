@@ -12,7 +12,7 @@ export function estateIssueLine(summary: IssueCounts | null | undefined): string
   if (typeof summary?.issue_count !== "number") return null;
   const issues = count(summary.issue_count, "issue", "issues");
   return typeof summary.finding_occurrence_count === "number"
-    ? `${issues} · ${count(summary.finding_occurrence_count, "occurrence", "occurrences")}`
+    ? `${issues} · ${count(summary.finding_occurrence_count, "finding", "findings")}`
     : issues;
 }
 

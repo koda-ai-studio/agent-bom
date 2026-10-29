@@ -45,14 +45,14 @@ function ConsequenceForm({ nodeId, scanId, snapshotGeneration, findingRoot = fal
   }
   return <details className="rounded-lg border border-outline bg-surface-muted p-3 text-xs text-ink-secondary">
     <summary className="cursor-pointer font-semibold text-ink">Investigate consequences · experimental</summary>
-    <p className="mt-2">{findingRoot ? "Vulnerability: check this occurrence's prerequisites before tracing authority." : "Assume compromised agent or principal: inspect potential actions, resources and stopping controls."}</p>
+    <p className="mt-2">{findingRoot ? "Vulnerability: check this affected asset's prerequisites before tracing authority." : "Assume compromised agent or principal: inspect potential actions, resources and stopping controls."}</p>
     <form className="my-3 space-y-3" onSubmit={event => { event.preventDefault(); void assess(); }}>
-      {findingRoot ? <label className="block">Affected occurrence
+      {findingRoot ? <label className="block">Affected asset
         <select disabled={pending} className="mt-1 w-full min-w-0 rounded border border-outline bg-surface p-2 text-ink" value={affected} onChange={event => { setAffected(event.target.value); setResult(null); }}>
           <option value="">Select a linked component</option>
           {affectedNodeIds.map(id => <option key={id} value={id}>{id}</option>)}
         </select>
-        {affectedNodeIds.length === 0 && <span className="mt-1 block">No linked occurrence loaded. Expand the finding evidence first.</span>}
+        {affectedNodeIds.length === 0 && <span className="mt-1 block">No linked affected asset loaded. Expand the finding evidence first.</span>}
       </label> : <label className="flex items-start gap-2"><input disabled={pending} type="checkbox" checked={control} onChange={event => { setControl(event.target.checked); setResult(null); }} />Assume control of this agent or principal</label>}
       <button type="submit" className="rounded border border-outline bg-surface px-3 py-2 font-medium text-ink disabled:opacity-50" disabled={pending || (findingRoot ? !affectedNodeIds.includes(affected) : !control)}>{pending ? "Assessing…" : "Trace consequences"}</button>
     </form>

@@ -10,7 +10,7 @@ function change(delta: number): string {
 
 const CAPTION = {
   issues: "Critical and high open issues (posture headline basis)",
-  occurrences: "Critical and high vulnerability occurrences in this scan scope",
+  occurrences: "Critical and high vulnerability findings in this scan scope",
 } as const;
 
 function BasisNote({ basis, latest, headline }: { basis: "issues" | "occurrences"; latest: { critical: number; high: number; timestamp: string }; headline: { critical: number; high: number } }) {
@@ -19,7 +19,7 @@ function BasisNote({ basis, latest, headline }: { basis: "issues" | "occurrences
     <p className="mt-2 rounded-md border border-outline bg-surface-muted px-2 py-1.5 text-xs text-ink-secondary">
       {basis === "issues"
         ? `The headline now counts ${headline.critical.toLocaleString()} critical and ${headline.high.toLocaleString()} high open issues; the latest point was recorded ${new Date(latest.timestamp).toLocaleString()}, and the next scan adds a point at the current count.`
-        : `Different basis: this chart counts vulnerability occurrences recorded by this scan scope (${latest.critical.toLocaleString()} critical). The posture headline counts ${headline.critical.toLocaleString()} critical and ${headline.high.toLocaleString()} high open issues across every surface, so the two are not expected to match.`}
+        : `Different basis: this chart counts vulnerability findings recorded by this scan scope (${latest.critical.toLocaleString()} critical). The posture headline counts ${headline.critical.toLocaleString()} critical and ${headline.high.toLocaleString()} high open issues across every surface, so the two are not expected to match.`}
     </p>
   );
 }
@@ -32,7 +32,7 @@ export function SeverityTrend({ points, headline }: { points: SeverityPoint[]; h
   if (trend.status === "single") {
     return (
       <p className="text-sm text-ink-secondary">
-        One snapshot so far ({new Date(latest.time).toLocaleDateString()}): <span className="font-semibold text-foreground">{latest.critical}</span> critical, {latest.high} high {trend.basis === "issues" ? "open issues" : "vulnerability occurrences"}. A trend appears after the next scan.
+        One snapshot so far ({new Date(latest.time).toLocaleDateString()}): <span className="font-semibold text-foreground">{latest.critical}</span> critical, {latest.high} high {trend.basis === "issues" ? "open issues" : "vulnerability findings"}. A trend appears after the next scan.
       </p>
     );
   }
@@ -73,7 +73,7 @@ export function SeverityTrend({ points, headline }: { points: SeverityPoint[]; h
       </p>
       {trend.latestOccurrences && (
         <p className="mt-1 text-xs text-ink-secondary">
-          Vulnerability occurrences in this scan scope, a different unit: {trend.latestOccurrences.critical.toLocaleString()} critical · {trend.latestOccurrences.high.toLocaleString()} high in the latest scan.
+          Vulnerability findings in this scan scope, a different unit: {trend.latestOccurrences.critical.toLocaleString()} critical · {trend.latestOccurrences.high.toLocaleString()} high in the latest scan.
         </p>
       )}
       {headline ? <BasisNote basis={trend.basis} latest={latest} headline={headline} /> : null}
