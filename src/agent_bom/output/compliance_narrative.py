@@ -25,8 +25,8 @@ Supported frameworks (slug → display name):
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
-from dataclasses import asdict, dataclass, field
+from collections.abc import Mapping
+from dataclasses import asdict
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
@@ -36,7 +36,6 @@ from agent_bom.core.severity import evaluated_control_status as _control_status
 if TYPE_CHECKING:
     from agent_bom.models import AIBOMReport
 
-from agent_bom import config
 from agent_bom.compliance_coverage import (
     COMPLIANCE_TAG_FIELDS,
     FRAMEWORK_SLUG_ALIASES,
@@ -45,10 +44,20 @@ from agent_bom.compliance_coverage import (
 )
 from agent_bom.evidence.control_modes import DETECTIVE_CONTROLS
 from agent_bom.evidence.detective_evidence import DetectiveScanEvidence
-
-COMPLIANCE_CLAIM_BOUNDARY = (
-    "Vulnerability-to-control mappings are review evidence, not a determination of compliance, "
-    "certification, audit result, or regulatory breach."
+from agent_bom.output.compliance_narrative_findings import blast_radii_from_finding_rows as blast_radii_from_finding_rows
+from agent_bom.output.compliance_narrative_models import COMPLIANCE_CLAIM_BOUNDARY as COMPLIANCE_CLAIM_BOUNDARY
+from agent_bom.output.compliance_narrative_models import ComplianceNarrative as ComplianceNarrative
+from agent_bom.output.compliance_narrative_models import ControlNarrative as ControlNarrative
+from agent_bom.output.compliance_narrative_models import FrameworkNarrative as FrameworkNarrative
+from agent_bom.output.compliance_narrative_models import RemediationImpact as RemediationImpact
+from agent_bom.output.compliance_narrative_templates import (
+    _build_executive_summary,
+    _build_risk_narrative,
+    _control_narrative,
+    _control_remediation_steps,
+    _detective_control_narrative,
+    _detective_remediation_steps,
+    _framework_overall_narrative,
 )
 
 # ─── Catalogue lookups ────────────────────────────────────────────────────────
@@ -90,228 +99,6 @@ def _all_framework_slugs() -> list[str]:
 
 ALL_FRAMEWORK_SLUGS: list[str] = _all_framework_slugs()
 ACCEPTED_FRAMEWORK_SLUGS: list[str] = [*ALL_FRAMEWORK_SLUGS, *FRAMEWORK_SLUG_ALIASES]
-
-
-# ─── Dataclasses ─────────────────────────────────────────────────────────────
-
-
-@dataclass
-class ControlNarrative:
-    """Auditor-facing explanation of a single failing control."""
-
-    control_id: str
-    title: str
-    status: str  # "pass" | "warning" | "fail"
-    narrative: str
-    affected_packages: list[str] = field(default_factory=list)
-    affected_agents: list[str] = field(default_factory=list)
-    # The vulnerability ids that mapped onto this control. Without them an
-    # auditor can only walk control -> package and can never tie the control
-    # assertion back to the finding that produced it.
-    affected_findings: list[str] = field(default_factory=list)
-    remediation_steps: list[str] = field(default_factory=list)
-
-
-@dataclass
-class FrameworkNarrative:
-    """Per-framework compliance story."""
-
-    framework: str  # display name, e.g. "OWASP Top 10 for LLM"
-    slug: str  # e.g. "owasp-llm"
-    status: str  # "evidence_current" | "review" | "action_required" | "not_evaluated"
-    score: int  # 0-100, over evaluated controls only (0 when nothing evaluated)
-    narrative: str  # 2-3 sentences
-    failing_controls: list[ControlNarrative] = field(default_factory=list)
-    recommendations: list[str] = field(default_factory=list)
-
-
-@dataclass
-class RemediationImpact:
-    """How a single package upgrade maps to compliance controls."""
-
-    package: str
-    current_version: str
-    fix_version: str  # empty string when no fix is available
-    controls_fixed: list[str]  # control codes, e.g. ["LLM03", "MCP04"]
-    frameworks_impacted: list[str]  # framework display names
-    narrative: str  # "Upgrading X from Y to Z fixes controls A, B, C"
-
-
-@dataclass
-class ComplianceNarrative:
-    """Full review-ready compliance story from a scan."""
-
-    executive_summary: str
-    framework_narratives: list[FrameworkNarrative]
-    remediation_impact: list[RemediationImpact]
-    risk_narrative: str
-    generated_at: str  # ISO 8601
-    claim_boundary: str = COMPLIANCE_CLAIM_BOUNDARY
-    # Catalog-backed NIST SP 800-53 Rev 5 line (vendor-asserted), scored over
-    # EVALUATED controls only, with ISO-by-id attribution — the same
-    # representation the /v1/compliance API line reports (one source of truth).
-    # Empty dict when a single-framework narrative is scoped to a non-NIST slug.
-    nist_800_53_catalog: dict = field(default_factory=dict)
-    # One-paragraph leadership read plus the top risks it names, from the same
-    # rows the framework sections evaluate (see agent_bom.output.executive_headline).
-    executive_headline: dict = field(default_factory=dict)
-
-
-# ─── Internal helpers ─────────────────────────────────────────────────────────
-
-
-def _severity_order(sev: str) -> int:
-    from agent_bom.core.severity import severity_worst_first_rank
-
-    return severity_worst_first_rank(sev)
-
-
-def _control_narrative(
-    control_id: str,
-    control_name: str,
-    findings: int,
-    affected_pkgs: list[str],
-    affected_agents: list[str],
-    sev_breakdown: dict[str, int],
-) -> str:
-    """Generate a plain-English explanation for a control's status."""
-    if findings == 0:
-        return (
-            f"Control {control_id} ({control_name}) shows no findings in this scan. "
-            "This is an absence of mapped findings, not a determination that the control is satisfied."
-        )
-
-    pkg_str = ", ".join(affected_pkgs[:3])
-    if len(affected_pkgs) > 3:
-        pkg_str += f" and {len(affected_pkgs) - 3} more"
-
-    agent_str = ""
-    if affected_agents:
-        a_list = ", ".join(affected_agents[:3])
-        agent_str = f" reaching agent{'s' if len(affected_agents) > 1 else ''} {a_list}"
-
-    crit = sev_breakdown.get("critical", 0)
-    high = sev_breakdown.get("high", 0)
-    med = sev_breakdown.get("medium", 0)
-
-    severity_desc = ""
-    if crit:
-        severity_desc = f"{crit} critical"
-        if high:
-            severity_desc += f" and {high} high"
-    elif high:
-        severity_desc = f"{high} high"
-    elif med:
-        severity_desc = f"{med} medium"
-    else:
-        severity_desc = "low"
-
-    return (
-        f"Control {control_id} ({control_name}) has {findings} finding"
-        f"{'s' if findings > 1 else ''} ({severity_desc} severity) "
-        f"in packages: {pkg_str}{agent_str}. "
-        "The mapped finding requires review and remediation; this mapping does not determine control compliance."
-    )
-
-
-def _detective_control_narrative(control_id: str, control_name: str, status: str) -> str:
-    """Explain a detective control's status in scan-evidence terms.
-
-    A detective control is *implemented by* the scan (see
-    :mod:`agent_bom.evidence.control_modes`), so its story is about evidence
-    freshness, never about which findings mapped to it.
-    """
-    if status == "pass":
-        return (
-            f"Control {control_id} ({control_name}) is evidenced by this scan itself: "
-            "the run completed inside the evidence-freshness window, which is what "
-            "this control requires. Findings surfaced by the scan are proof the "
-            "control operates, not proof it failed."
-        )
-    return (
-        f"Control {control_id} ({control_name}) has no scan evidence inside the "
-        f"freshness window ({config.COMPLIANCE_DETECTIVE_EVIDENCE_MAX_AGE_DAYS} days) — "
-        "the evidence backing it is stale, so continuous monitoring has lapsed. "
-        "Its evidence status requires action independently of any vulnerability finding."
-    )
-
-
-def _detective_remediation_steps(control_id: str, control_name: str) -> list[str]:
-    """Remediation for a detective control is to resume scanning, not to patch."""
-    return [
-        f"Re-run agent-bom so {control_id} is backed by evidence inside the "
-        f"{config.COMPLIANCE_DETECTIVE_EVIDENCE_MAX_AGE_DAYS}-day freshness window.",
-        "Schedule the scan continuously (CI or a recurring job) — this evidence documents "
-        "ongoing monitoring, so a one-off run is current only until the window lapses.",
-        f"Record the scan cadence for {control_name} in your compliance evidence package.",
-    ]
-
-
-def _control_remediation_steps(
-    control_id: str,
-    control_name: str,
-    affected_pkgs: list[str],
-    sev_breakdown: dict[str, int],
-) -> list[str]:
-    """Generate actionable remediation steps for mapped control evidence."""
-    steps: list[str] = []
-    if affected_pkgs:
-        steps.append(f"Upgrade vulnerable packages: {', '.join(affected_pkgs[:5])}" + (" (and others)" if len(affected_pkgs) > 5 else ""))
-    if sev_breakdown.get("critical", 0) or sev_breakdown.get("high", 0):
-        steps.append("Prioritise critical and high severity findings for immediate patching, then validate the control independently.")
-    steps.append(f"Re-run agent-bom after upgrades to verify findings mapped to {control_id} are no longer detected.")
-    steps.append(f"Document the remediation timeline for {control_name} in your compliance evidence package.")
-    return steps
-
-
-def _framework_overall_narrative(
-    display_name: str,
-    total_controls: int,
-    evaluated_count: int,
-    pass_count: int,
-    fail_count: int,
-    warn_count: int,
-    critical_failing: list[str],
-    score: int,
-) -> str:
-    """2-3 sentence framework-level posture narrative."""
-    if evaluated_count == 0:
-        return (
-            f"No {display_name} controls could be evaluated in this scan: "
-            f"0 of {total_controls} controls have vulnerability-derived evidence. "
-            "This is a coverage gap, not a pass — controls without mapped findings are "
-            f"reported as not-evaluated. Run scans that map findings to {display_name} "
-            "before relying on this posture."
-        )
-
-    plural = "s" if evaluated_count != 1 else ""
-    if fail_count == 0 and warn_count == 0:
-        return (
-            f"Evidence is current for all {evaluated_count} evaluated {display_name} control{plural} "
-            f"({evaluated_count} of {total_controls} controls evaluated; score {score}/100 "
-            "over evaluated controls). Controls with no mapped findings are reported as "
-            "not-evaluated rather than compliant. This evidence status is not an audit conclusion."
-        )
-
-    if fail_count == 0:
-        return (
-            f"{display_name} evidence requires review: {warn_count} control"
-            f"{'s have' if warn_count > 1 else ' has'} mapped medium or low severity findings "
-            f"(score {score}/100 over {evaluated_count} evaluated control{plural}). "
-            "Schedule remediation within the next maintenance cycle. The mapping is not a compliance determination."
-        )
-
-    ctrl_str = ", ".join(critical_failing[:3])
-    if len(critical_failing) > 3:
-        ctrl_str += f" and {len(critical_failing) - 3} others"
-
-    return (
-        f"{display_name} evidence requires action: {fail_count} control"
-        f"{'s have' if fail_count > 1 else ' has'} mapped critical or high severity findings "
-        f"(score {score}/100 over {evaluated_count} evaluated control{plural}). "
-        f"Controls requiring review include {ctrl_str}. "
-        "Remediate the underlying findings and obtain independent control evidence before drawing a compliance conclusion."
-    )
 
 
 def _signing_caveat() -> str:
@@ -367,21 +154,7 @@ def _framework_recommendations(
 # ─── Per-framework builder ────────────────────────────────────────────────────
 
 
-def _build_framework_narrative(
-    slug: str,
-    blast_radii_dicts: list[dict],
-    *,
-    scan_evidence: DetectiveScanEvidence = DetectiveScanEvidence(),
-) -> FrameworkNarrative:
-    """Build a FrameworkNarrative for a single framework from pre-serialised blast radius data.
-
-    ``scan_evidence`` carries the scan evidence detective controls are scored
-    from — see :func:`_build_framework_narrative`'s detective branch and
-    :mod:`agent_bom.evidence.control_modes`.
-    """
-    catalog, tag_field, display_name = _get_catalog(slug)
-    detective_ids = DETECTIVE_CONTROLS.get(tag_field, frozenset())
-
+def _collect_control_findings(catalog: dict[str, str], tag_field: str, blast_radii_dicts: list[dict]) -> dict[str, dict]:
     control_data: dict[str, dict] = {}
     for code, name in catalog.items():
         control_data[code] = {
@@ -413,6 +186,25 @@ def _build_framework_narrative(
                 entry["affected_findings"].add(vuln_id)
             for agent in agents:
                 entry["affected_agents"].add(agent)
+    return control_data
+
+
+def _build_framework_narrative(
+    slug: str,
+    blast_radii_dicts: list[dict],
+    *,
+    scan_evidence: DetectiveScanEvidence = DetectiveScanEvidence(),
+) -> FrameworkNarrative:
+    """Build a FrameworkNarrative for a single framework from pre-serialised blast radius data.
+
+    ``scan_evidence`` carries the scan evidence detective controls are scored
+    from — see :func:`_build_framework_narrative`'s detective branch and
+    :mod:`agent_bom.evidence.control_modes`.
+    """
+    catalog, tag_field, display_name = _get_catalog(slug)
+    detective_ids = DETECTIVE_CONTROLS.get(tag_field, frozenset())
+
+    control_data = _collect_control_findings(catalog, tag_field, blast_radii_dicts)
 
     total_controls = len(control_data)
     evaluated_count = 0
@@ -621,167 +413,6 @@ def _build_remediation_impact(
     return impacts
 
 
-# ─── Top-level risk narrative ─────────────────────────────────────────────────
-
-
-def _build_risk_narrative(
-    blast_radii_dicts: list[dict],
-    total_agents: int,
-    total_vulns: int,
-    critical_count: int,
-    finding_label: str = "vulnerability",
-) -> str:
-    """Plain-English top-risk explanation from scan data."""
-    plural_label = "vulnerabilities" if finding_label == "vulnerability" else f"{finding_label}s"
-    if not blast_radii_dicts:
-        if finding_label != "vulnerability":
-            return (
-                "No security findings were detected in the current evidence scope. "
-                "This is not a claim that unscanned or unavailable sources are clean."
-            )
-        return (
-            "No vulnerabilities were detected in this scan. "
-            "The AI agent environment appears clean based on the packages assessed. "
-            "Continue regular scanning to detect newly published vulnerabilities."
-        )
-
-    kev_entries = [br for br in blast_radii_dicts if br.get("is_kev")]
-    # Find the highest-risk entry
-    sorted_by_risk = sorted(
-        blast_radii_dicts,
-        key=lambda b: (
-            -(b.get("risk_score") or 0),
-            _severity_order(b.get("severity") or "low"),
-        ),
-    )
-    top = sorted_by_risk[0] if sorted_by_risk else None
-
-    parts: list[str] = []
-
-    # Lead sentence
-    agent_str = f"{total_agents} agent{'s' if total_agents != 1 else ''}"
-    item_word = finding_label if total_vulns == 1 else plural_label
-    evidence_subject = "This scan" if finding_label == "vulnerability" else "Current evidence"
-    parts.append(f"{evidence_subject} identified {total_vulns} {item_word} across {agent_str}.")
-
-    # KEV callout
-    if kev_entries:
-        kev_pkgs = list({(br.get("package") or "") for br in kev_entries})[:3]
-        parts.append(
-            f"{len(kev_entries)} finding{'s are' if len(kev_entries) > 1 else ' is'} "
-            f"listed in the CISA Known Exploited Vulnerabilities (KEV) catalog "
-            f"(packages: {', '.join(kev_pkgs)}), indicating active exploitation in the wild."
-        )
-
-    # Critical callout
-    if critical_count and not kev_entries:
-        parts.append(
-            f"{critical_count} critical severity finding{'s require' if critical_count > 1 else ' requires'} "
-            "immediate attention as they represent the highest exploitability risk."
-        )
-
-    # Top finding
-    if top:
-        top_pkg = top.get("package", "an affected package")
-        top_vuln = top.get("vulnerability_id", "an unknown CVE")
-        top_agents = top.get("affected_agents", [])
-        top_creds = top.get("exposed_credentials", [])
-        top_score = top.get("risk_score") or 0
-
-        agent_exposure = ""
-        if top_agents:
-            agent_exposure = f", affecting agent{'s' if len(top_agents) > 1 else ''} {', '.join(top_agents[:2])}"
-
-        cred_exposure = ""
-        if top_creds:
-            cred_exposure = f" with {len(top_creds)} exposed credential{'s' if len(top_creds) > 1 else ''}"
-
-        subject = top["title"] if (top.get("finding_type") or "CVE") != "CVE" and top.get("title") else f"{top_vuln} in {top_pkg}"
-        parts.append(f"The highest-risk finding is {subject} (risk score {top_score:.1f}/10{agent_exposure}{cred_exposure}).")
-
-    return " ".join(parts)
-
-
-# ─── Executive summary ────────────────────────────────────────────────────────
-
-
-def _named_list(names: list[str], shown: int = 3) -> str:
-    """Name the first few items and count the rest, so a list is never silently cut."""
-    head = ", ".join(names[:shown])
-    return f"{head} and {len(names) - shown} more" if len(names) > shown else head
-
-
-def _build_executive_summary(
-    framework_narratives: list[FrameworkNarrative],
-    total_agents: int,
-    total_packages: int,
-    total_vulns: int,
-    critical_count: int,
-    generated_at: str,
-    finding_label: str = "vulnerability",
-) -> str:
-    """3-5 sentence executive summary for compliance stakeholders."""
-    action_fws = [fn for fn in framework_narratives if fn.status == "action_required"]
-    review_fws = [fn for fn in framework_narratives if fn.status == "review"]
-    evaluated_fws = [fn for fn in framework_narratives if fn.status in ("evidence_current", "review", "action_required")]
-    # Lead: what was scanned
-    evidence_verb = "scanned on" if finding_label == "vulnerability" else "represented in current evidence through"
-    sentences: list[str] = [
-        f"This AI-BOM compliance report covers {total_agents} AI agent"
-        f"{'s' if total_agents != 1 else ''} "
-        f"and {total_packages} package{'s' if total_packages != 1 else ''} "
-        f"{evidence_verb} {generated_at[:10]}."
-    ]
-
-    plural_label = "vulnerabilities" if finding_label == "vulnerability" else f"{finding_label}s"
-    item_word = finding_label if total_vulns == 1 else plural_label
-    # Finding posture
-    if total_vulns == 0:
-        if finding_label == "vulnerability":
-            sentences.append("No vulnerabilities were detected; all assessed dependencies are clean.")
-        else:
-            sentences.append(
-                "No security findings were detected in the current evidence scope; unavailable or unscanned sources are not claimed clean."
-            )
-    elif critical_count > 0:
-        sentences.append(
-            f"{total_vulns} {item_word} {'were' if total_vulns > 1 else 'was'} identified "
-            f"including {critical_count} critical finding"
-            f"{'s' if critical_count > 1 else ''} that require immediate remediation."
-        )
-    else:
-        sentences.append(f"{total_vulns} {item_word} {'were' if total_vulns > 1 else 'was'} identified across the assessed evidence.")
-
-    # Framework posture
-    total_fws = len(framework_narratives)
-    if action_fws:
-        fw_names = _named_list([fn.framework for fn in action_fws])
-        sentences.append(f"{len(action_fws)} of {total_fws} framework mappings have evidence requiring action: {fw_names}.")
-    elif review_fws:
-        fw_names = _named_list([fn.framework for fn in review_fws])
-        sentences.append(
-            f"No framework mapping has critical/high findings; {len(review_fws)} "
-            f"{'require' if len(review_fws) > 1 else 'requires'} review: {fw_names}."
-        )
-    elif evaluated_fws:
-        sentences.append(f"All {len(evaluated_fws)} evaluated framework evidence sets are current with no mapped critical findings.")
-    else:
-        sentences.append(
-            f"None of the {total_fws} frameworks could be evaluated — no findings mapped to their "
-            "controls, so compliance posture is unknown rather than compliant."
-        )
-
-    # Closing action
-    if action_fws or review_fws:
-        sentences.append(
-            f"Remediation of identified {plural_label} is the highest-priority action; control owners must validate compliance separately."
-        )
-    else:
-        sentences.append("Continue regular scanning and independent control validation to maintain current evidence coverage.")
-
-    return " ".join(sentences)
-
-
 def _headline_title(row: Mapping[str, object]) -> str:
     vulnerability_id = str(row.get("vulnerability_id") or "Unavailable")
     if row.get("finding_type") == "CVE" and row.get("package"):
@@ -908,109 +539,6 @@ def generate_compliance_narrative(
         nist_800_53_catalog=nist_800_53_catalog,
         executive_headline=asdict(headline),
     )
-
-
-def _row_cwe_ids(row: Mapping[str, object]) -> list[str]:
-    raw = row.get("cwe_ids")
-    return [str(cwe) for cwe in raw if str(cwe).strip()] if isinstance(raw, (list, tuple)) else []
-
-
-def blast_radii_from_finding_rows(findings: Iterable[Mapping[str, object]]) -> list[SimpleNamespace]:
-    """Project unified finding rows onto the blast-radius shape the narrative evaluates.
-
-    Every row keeps its own control tags (legacy ``*_tags`` arrays, structured
-    ``controls`` and flattened ``framework_tags``), its finding type, owner and
-    SLA, so non-advisory findings are evaluated alongside package advisories.
-    """
-    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
-
-    tag_aliases: dict[str, str] = {}
-    for metadata in TAG_MAPPED_FRAMEWORKS:
-        for alias in (
-            metadata.slug,
-            metadata.slug.replace("-", "_"),
-            metadata.output_key,
-            metadata.summary_prefix,
-            metadata.tag_field.removesuffix("_tags"),
-        ):
-            tag_aliases[alias.lower().replace("-", "_")] = metadata.tag_field
-
-    blast_radii: list[SimpleNamespace] = []
-    for row in findings:
-        tag_values: dict[str, list[str]] = {metadata.tag_field: [] for metadata in TAG_MAPPED_FRAMEWORKS}
-        for metadata in TAG_MAPPED_FRAMEWORKS:
-            raw_tags = row.get(metadata.tag_field)
-            if isinstance(raw_tags, (list, tuple, set)):
-                tag_values[metadata.tag_field].extend(str(tag) for tag in raw_tags if str(tag).strip())
-
-        controls = row.get("controls")
-        if isinstance(controls, list):
-            for control in controls:
-                if not isinstance(control, Mapping):
-                    continue
-                framework_name = str(control.get("framework") or "").strip().lower().replace("-", "_")
-                tag_field = tag_aliases.get(framework_name)
-                control_id = str(control.get("control") or control.get("id") or "").strip()
-                if tag_field and control_id:
-                    tag_values[tag_field].append(control_id)
-
-        flattened = row.get("framework_tags")
-        if isinstance(flattened, list):
-            for item in flattened:
-                prefix, separator, control_id = str(item).partition(":")
-                tag_field = tag_aliases.get(prefix.strip().lower().replace("-", "_"))
-                if separator and tag_field and control_id.strip():
-                    tag_values[tag_field].append(control_id.strip())
-
-        tag_values = {tag_field: list(dict.fromkeys(values)) for tag_field, values in tag_values.items()}
-
-        raw_asset = row.get("asset")
-        asset: Mapping[str, object] = raw_asset if isinstance(raw_asset, Mapping) else {}
-        package_value = str(row.get("package") or row.get("package_name") or asset.get("name") or "Unavailable")
-        if "@" in package_value:
-            package_name, package_version = package_value.rsplit("@", 1)
-        else:
-            package_name = package_value
-            package_version = str(row.get("package_version") or "")
-        severity = str(row.get("effective_severity") or row.get("severity") or "unknown").lower()
-        vulnerability_id = str(row.get("cve_id") or row.get("vulnerability_id") or row.get("id") or "Unavailable")
-        raw_risk_score = row.get("risk_score") or row.get("effective_reach_score") or 0
-        try:
-            risk_score = float(raw_risk_score) if isinstance(raw_risk_score, int | float | str) else 0.0
-        except ValueError:
-            risk_score = 0.0
-        raw_agents = row.get("affected_agents")
-        affected_agents = raw_agents if isinstance(raw_agents, (list, tuple, set)) else []
-        if not affected_agents and asset.get("asset_type") == "agent" and asset.get("name"):
-            # The finding is about this agent (e.g. a toxic combination on it).
-            affected_agents = [asset["name"]]
-        raw_servers = row.get("affected_servers")
-        affected_servers = raw_servers if isinstance(raw_servers, (list, tuple, set)) else []
-        raw_credentials = row.get("exposed_credentials")
-        exposed_credentials = raw_credentials if isinstance(raw_credentials, (list, tuple, set)) else []
-        blast_radii.append(
-            SimpleNamespace(
-                vulnerability=SimpleNamespace(
-                    id=vulnerability_id,
-                    severity=SimpleNamespace(value=severity),
-                    fixed_version=row.get("fixed_version"),
-                    is_kev=bool(row.get("is_kev")),
-                    cwe_ids=_row_cwe_ids(row),
-                ),
-                package=SimpleNamespace(name=package_name, version=package_version),
-                risk_score=risk_score,
-                affected_agents=[SimpleNamespace(name=str(name)) for name in affected_agents],
-                affected_servers=[SimpleNamespace(name=str(name)) for name in affected_servers],
-                exposed_credentials=[str(name) for name in exposed_credentials],
-                finding_type=str(row.get("finding_type") or "CVE"),
-                title=str(row["title"]) if row.get("title") else None,
-                owner=row.get("owner"),
-                sla_due_at=row.get("sla_due_at"),
-                **tag_values,
-            )
-        )
-
-    return blast_radii
 
 
 def generate_compliance_narrative_from_findings(
