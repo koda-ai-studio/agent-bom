@@ -55,14 +55,11 @@ dependencies = [
     # Transitive dep pins — fix known CVEs flagged by OpenSSF/OSV
     "certifi>=2026.10.19",  # GHSA-6q48-6c7w-9gw2 (compromised emSign intermediate CA keys)
     "jinja2>=3.1.6",  # GHSA-cpwx-vrp4-4pq7, GHSA-gmj6-6f8f-6699 (sandbox breakout)
-    "werkzeug>=3.1.9",  # GHSA-g6x2-hccm-hh4m, GHSA-29vq-49wr-vm6x, GHSA-2g68-c3qc-8985, GHSA-87hc-h4r5-73f7, GHSA-f9vj-2wh5-fj8j, GHSA-hgf8-39gv-g3f2, GHSA-hrfv-mqp8-q5rw, GHSA-px8h-6qxv-m22q, GHSA-q34m-jh98-gwm2, GHSA-xg9f-g7g7-2323
-    "flask>=3.1.3",  # GHSA-68rp-wp8r-4726, GHSA-m2qf-hxjv-5gpq (Vary: Cookie session exposure; transitive via mlflow)
     "requests>=2.33.0",  # GHSA-9hjg-9r4m-mvj7, GHSA-j8r2-6x86-q33q (session cookie leak)
     "urllib3>=2.8.0",  # CVE-2026-97687, CVE-2026-97689 (proxy TLS isolation and chunk parsing)
     # NOTE: nltk pin removed — safety (which pulled nltk) was replaced by pip-audit.
     # nltk is not imported by agent-bom. Keeping it added 3 CVEs to Docker images.
     "pyjwt>=2.15.0",  # CVE-2026-101918 (nested JWT payload error handling)
-    "tornado>=6.6",  # GHSA-pcg2-g6cj-q92c, GHSA-pw9p-v7r6-gx4p, GHSA-r4j5-9xpp-3985 fixed in 6.6
     # NOTE: stale pyopenssl suppressions were retired after snowflake-connector-python moved to a compatible range.
     # Tracked: https://github.com/koda-ai-studio/agent-bom/issues/930
     "cryptography>=50.0.0",  # CVE-2026-69247; required by audit chain, proxy response signing, and OIDC.
@@ -77,6 +74,8 @@ dependencies = [
 
 [project.optional-dependencies]
 api = [
+    # API local-path scans use werkzeug.security.safe_join; preserve its security floor.
+    "werkzeug>=3.1.9",  # GHSA-g6x2-hccm-hh4m, GHSA-29vq-49wr-vm6x, GHSA-2g68-c3qc-8985, GHSA-87hc-h4r5-73f7, GHSA-f9vj-2wh5-fj8j, GHSA-hgf8-39gv-g3f2, GHSA-hrfv-mqp8-q5rw, GHSA-px8h-6qxv-m22q, GHSA-q34m-jh98-gwm2, GHSA-xg9f-g7g7-2323
     "fastapi>=0.115,!=0.136.3",
     "uvicorn[standard]>=0.49.0",
     "sse-starlette>=2.1",
@@ -211,7 +210,8 @@ lake = [
     "pyarrow>=15.0",
     "pyiceberg>=0.11.1",
 ]
-snyk = []  # Uses existing httpx dependency, no additional packages needed
+sca-import = []  # Supported external scanner reports use base dependencies.
+snyk = []  # Deprecated packaging alias; retained through the next release for compatibility.
 interactive = ["prompt-toolkit>=3.0"]
 oidc = [
     "PyJWT>=2.15.0",  # CVE-2026-101918
@@ -265,15 +265,9 @@ dev = [
     "pytest-benchmark>=5.2.3",  # Performance benchmarking — see docs/PERFORMANCE_BENCHMARKS.md
     "pytest-xdist>=3.5",  # Parallel test execution (-n auto) — cuts CI test wall time
     "pytest-randomly>=3.15",  # Randomize test order to surface order-dependence early
-    # API-layer test modules (tests/test_api_*, TestClient) fail to COLLECT
-    # without these. Keep Starlette on its patched 1.x line but do not install
-    # its optional TestClient transport until that package passes our
-    # supply-chain gate; tests use Starlette's governed httpx fallback instead.
-    # fastapi + starlette live in the [api] extra, so a dev-only env can't import
-    # the API app under test. Pin them into [dev] so the full suite collects
-    # locally without needing `[dev,api]`. (#1969)
-    "fastapi>=0.115,!=0.136.3",
-    "starlette>=1.4.1,<2",
+    # API tests import the complete runtime, including the filesystem jail.
+    # Reuse its dependency floors so a dev-only install can collect the suite.
+    "agent-bom[api]",
 ]
 dev-all = [
     "agent-bom[dev]",
