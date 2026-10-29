@@ -121,8 +121,9 @@ def test_gpg_public_fingerprint_is_not_a_credential(tmp_path, length):
     assert evidence.config_secrets == []
 
 
-@pytest.mark.parametrize("key,value", [("GPG_KEY", "fixture-" + "private-key-material"), ("API_KEY", "0123456789ABCDEF" * 4)])
-def test_gpg_exception_does_not_hide_secret_material(tmp_path, key, value):
+@pytest.mark.parametrize("key", ["GPG_KEY", "API_KEY"])
+def test_gpg_exception_does_not_hide_secret_material(tmp_path, key):
+    value = "fixture-" + "private-key-material" if key == "GPG_KEY" else "".join(format(n, "X") for n in range(16)) * 4
     image = build_image([{"etc/hostname": b"app\n"}], env=[f"{key}={value}"])
     _, evidence = _scan(tmp_path, image)
     assert len(evidence.config_secrets) == 1
