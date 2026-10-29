@@ -29,9 +29,9 @@ it holds the product rules this skill assumes.
 ## 3. Make it pass (green), then refactor
 
 - Write the smallest change that makes the test pass; run it again.
-- Refactor with the tests green. Keep functions short and files under 1,000
-  lines; `python scripts/check_architecture.py --base-ref origin/main` must
-  pass.
+- Refactor with the tests green. Keep functions under 150 lines and files
+  under 1,000; `python scripts/check_architecture.py --base-ref origin/main`
+  and `python scripts/check_line_ceiling.py --base-ref origin/main` must pass.
 - Never weaken, skip or delete an existing test to get green. If an existing
   expectation is wrong, change it in its own commit and say why in the PR.
 
@@ -42,6 +42,7 @@ From `.agents/AGENTS.md`, "Setup and pre-push checks CI enforces":
 ```bash
 uv run ruff check src tests && uv run ruff format --check src tests
 python scripts/check_architecture.py --base-ref origin/main
+python scripts/check_line_ceiling.py --base-ref origin/main
 python scripts/pytest_ci_plan.py targeted --root . <changed files>   # then run those tests
 make preflight          # when API routes/models or generated artifacts change
 ```

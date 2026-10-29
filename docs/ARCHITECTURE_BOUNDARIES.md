@@ -30,6 +30,16 @@ no inherited exception. The Python gate excludes browser bundles and generated
 JSON/schema/TypeScript artifacts, which retain their owning generation checks.
 It sets no PR line-count limit.
 
+`python scripts/check_line_ceiling.py` (CI lint job, `make preflight`) is the
+hard ceiling on top of that ratchet: 1,000 lines per file and 150 per Python
+function across `src/agent_bom` and the hand-written dashboard sources
+(`ui/app`, `ui/components`, `ui/lib`, `ui/hooks`; generated TypeScript and
+vendored bundles excluded). Python units above the ceiling are allowed only up
+to their `architecture-baseline.json` size; dashboard files above it are listed
+in `scripts/line_ceiling_baseline.json`. Both lists only shrink. After splitting
+a file, run `python scripts/check_line_ceiling.py --write-baseline` (and
+`check_architecture.py --write-baseline` for Python) to drop the entry.
+
 Finding ledger and current-state reads share `api/storage/finding_reads.py`
 and `finding_current_reads.py` across SQLite and Postgres. Explicit tenants are
 required. A page's count, rows and reference hydration use one read-only
