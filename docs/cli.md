@@ -55,6 +55,13 @@ The canonical command reference lives in
 - `agent-bom cloud registry-scan --provider <ecr|acr|gar>` sweeps an entire
   container registry read-only, deduping by content digest and capping the work
   list with `AGENT_BOM_REGISTRY_MAX_IMAGES` / `AGENT_BOM_REGISTRY_MAX_TAGS_PER_REPO`.
+- `agent-bom check <name>` without a version (CLI, MCP and `POST /v1/scan/check`)
+  checks the latest **stable** release the registry has published, skipping
+  pre-releases on every ecosystem (npm, PyPI, Maven Central, crates.io, Go). The
+  result says so in `version_source`: `registry_latest`, or
+  `registry_latest_prerelease` when the package has published only
+  pre-releases and the newest one was checked. When no registry answers, nothing
+  is checked: `check` exits `2` with `version_source: "unresolved"`.
 - `agent-bom db freshness` emits the structured vuln-data freshness indicator
   (sources, age, staleness) — the same snapshot surfaced on every scan and
   returned by the API and MCP tool. Whenever it does not report the local DB as
@@ -67,3 +74,10 @@ The canonical command reference lives in
   installs that accept old local data pass `--allow-stale-db` (or set
   `AGENT_BOM_ALLOW_STALE_DB=1`). `check --require-fresh-db` exits `3` like
   `scan`. See the [exit-code contract](../site-docs/reference/exit-codes.md).
+  With `--enrich`, `vuln_data_freshness.epss` states which EPSS source scored
+  the findings: the local `epss_scores` table, the enrichment cache, or a live
+  backfill from the FIRST API for CVEs both left unscored. The backfill is
+  bounded — 100 CVEs per request, at most 20 requests (2,000 CVEs) per scan,
+  15 s per request — and anything it cannot answer stays `null` and is reported
+  as `EPSS incomplete` coverage, never guessed. `--offline` makes no EPSS
+  requests at all.

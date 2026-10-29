@@ -321,10 +321,22 @@ VULNERABILITY_SCAN_SKIPPED_CODE = "vulnerability_scan_skipped"
 VULNERABILITY_SCAN_SKIPPED_MESSAGE = "Vulnerability scanning skipped by request"
 
 
-def scanner_warning_issues(warnings: list[str]) -> list[ScanIssue]:
-    """Scanner warnings as coverage-affecting run issues — one shape for CLI and MCP."""
+def scanner_warning_issues(warnings: list[str], *, accepted: frozenset[str] = frozenset()) -> list[ScanIssue]:
+    """Scanner warnings as coverage-affecting run issues — one shape for CLI and MCP.
+
+    ``accepted`` names warnings the operator explicitly accepted (the stale
+    range-receipt warnings under ``--allow-stale-db``, see
+    :func:`agent_bom.vuln_freshness.accepted_scan_warnings`): they stay visible
+    but are not coverage gaps.
+    """
     return [
-        ScanIssue(code="scanner_warning", stage="scanning", source="vulnerability-data", message=warning, affects_coverage=True)
+        ScanIssue(
+            code="scanner_warning",
+            stage="scanning",
+            source="vulnerability-data",
+            message=warning,
+            affects_coverage=warning not in accepted,
+        )
         for warning in warnings
     ]
 

@@ -22291,6 +22291,13 @@ components:
           maxItems: 16
           title: Aliases
           type: array
+        cvss_score:
+          anyOf:
+          - maximum: 10.0
+            minimum: 0.0
+            type: number
+          - type: 'null'
+          title: Cvss Score
         id:
           title: Id
           type: string
@@ -22314,6 +22321,12 @@ components:
           - low
           title: Severity
           type: string
+        severity_source:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          title: Severity Source
         summary:
           maxLength: 1000
           minLength: 1

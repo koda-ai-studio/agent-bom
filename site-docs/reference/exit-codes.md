@@ -75,7 +75,14 @@ OSV did not answer, the result rests on old data only:
 `completeness: {status, reason}` and `vuln_data_freshness`. For air-gapped
 operation where old local data is accepted, pass `--allow-stale-db` or set
 `AGENT_BOM_ALLOW_STALE_DB=1`: the result then exits as it would on fresh data,
-but `completeness` still says `incomplete`. `--require-fresh-db` /
+but `completeness` still says `incomplete`. The same opt-out makes the
+range-receipt warning for local rows the upgraded schema cannot verify
+(`unverified_range`) informational — it stays in `scan_run.issues` with
+`affects_coverage: false` and no longer turns the outcome `partial`. Without
+the flag that warning keeps the run `partial` (exit `1`) whenever live OSV did
+not decide every such row; the undecided rows are reported as
+`possibly_affected` candidates, never as findings. `--exit-zero` covers
+vulnerability verdicts only and does not clear a `partial` outcome. `--require-fresh-db` /
 `AGENT_BOM_REQUIRE_FRESH_DB` is the stricter opt-in: it exits `3` on a DB older
 than `AGENT_BOM_DB_STALE_DAYS` (default 14) before any lookup, for `check` and
 `scan` alike, and takes precedence over `--allow-stale-db`.

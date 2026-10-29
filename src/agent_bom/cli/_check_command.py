@@ -21,17 +21,19 @@ from rich.console import Console
 
 from agent_bom import vuln_freshness
 from agent_bom.cli import _check_published
+from agent_bom.cli._check_candidates import print_candidates
 from agent_bom.cli._check_support import (
     _check_result_payload,
+    _emit,
     _format_vulnerability_count,
     _package_spec_error,
     _parse_package_spec,
     _resolve_check_ecosystems,
     _vulnerability_row,
     _vulns_at_or_above,
-    _write_check_output,
 )
 from agent_bom.cli._common import _sync_runtime_consoles
+from agent_bom.resolvers.latest_stable import PRERELEASE_NOTE, PRERELEASE_VERSION_SOURCE, resolved_version_source
 from agent_bom.vuln_freshness import db_stale_days_threshold, db_staleness, set_allow_stale_db
 
 
@@ -72,29 +74,6 @@ class CheckRun:
     vulns: list[Any] = field(default_factory=list)
     fail_threshold: str | None = None
     data_evidence: Any = None
-
-
-def _emit(run: CheckRun, *, ecosystems: list[str], verdict: str, message: str, exit_code: int, **extra: Any) -> None:
-    """Write the machine-readable verdict for ``--format json|sarif`` or agent mode."""
-    extra.setdefault("version_source", run.version_source)
-    if run.data_evidence is not None:
-        extra.setdefault("vuln_data_freshness", run.data_evidence.freshness)
-        extra.setdefault("completeness", run.data_evidence.completeness())
-    _write_check_output(
-        run.result_payload(
-            name=run.name,
-            version=run.version,
-            ecosystems=ecosystems,
-            verdict=verdict,
-            message=message,
-            exit_code=exit_code,
-            **extra,
-        ),
-        run.output_path,
-        agent_mode=run.agent_mode,
-        exit_code=exit_code,
-        output_format=run.output_format,
-    )
 
 
 def _prepare(ctx: click.Context, run: CheckRun) -> None:
@@ -179,12 +158,15 @@ def _resolve_latest(run: CheckRun) -> None:
         resolved, malicious_reason = _check_published.resolve_latest(run.pkgs)
     if resolved is not None:
         run.version = resolved.version
-        run.version_source = "registry_fallback" if resolved.version_source == "registry_fallback" else "registry_latest"
+        run.version_source = resolved_version_source(resolved.version_source)
         for p in run.pkgs:
             p.version = run.version
         if not run.quiet and not run.structured_output:
-            run.console.print(f"  [green]✓ No version given; checking the latest published version, {run.version}[/green]")
+            note = f" ({PRERELEASE_NOTE})" if run.version_source == PRERELEASE_VERSION_SOURCE else ""
+            run.console.print(f"  [green]✓ No version given; checking the latest published version, {run.version}{note}[/green]")
         return
+    # Nothing resolved: the payload must not read as a requested version of "latest".
+    run.version_source = "unresolved"
     eco_str = "/".join(run.ecosystems)
     if malicious_reason:
         run.pkgs[0].is_malicious, run.pkgs[0].malicious_reason = True, malicious_reason
@@ -248,8 +230,9 @@ def _scan(run: CheckRun) -> None:
         run.console.print(f"  [yellow]⚠[/yellow] Scan completed with {len(run.scan_warnings)} warning(s); results may be incomplete.")
     _record_data_evidence(run, coverage_warnings)
 
-    run.matched_pkg = next((p for p in run.pkgs if p.vulnerabilities), run.pkgs[0])
+    run.matched_pkg = next((p for p in run.pkgs if p.vulnerabilities or p.possibly_affected), run.pkgs[0])
     run.vulns = run.matched_pkg.vulnerabilities
+    print_candidates(run.matched_pkg, run.console, quiet=run.quiet or run.structured_output)
     run.fail_threshold = run.fail_on_severity.lower() if run.fail_on_severity else None
 
 

@@ -372,6 +372,7 @@ def _check_result_payload(
     vuln_data_freshness: dict | None = None,
     completeness: dict | None = None,
     version_source: str = "requested",
+    possibly_affected: list[dict] | None = None,
 ) -> dict:
     """Build machine-readable check output."""
     from agent_bom.scanners.package_check_result import PackageCheckResult, serialize_vulnerability
@@ -391,6 +392,7 @@ def _check_result_payload(
         vuln_data_freshness=vuln_data_freshness,
         completeness=completeness,
         version_source=version_source,
+        possibly_affected=tuple(possibly_affected or []),
     )
     return result.cli_payload(
         legacy_verdict=verdict,
@@ -507,4 +509,28 @@ def _vulnerability_row(v: Any, classify_cwe_impact: Callable[[Any], str]) -> tup
         f"[{impact_style}]{impact_label}[/{impact_style}]",
         fix_display,
         summary_text,
+    )
+
+
+def _emit(run: Any, *, ecosystems: list[str], verdict: str, message: str, exit_code: int, **extra: Any) -> None:
+    """Write the machine-readable verdict for ``--format json|sarif`` or agent mode."""
+    extra.setdefault("version_source", run.version_source)
+    extra.setdefault("possibly_affected", list(getattr(run.matched_pkg, "possibly_affected", None) or []))
+    if run.data_evidence is not None:
+        extra.setdefault("vuln_data_freshness", run.data_evidence.freshness)
+        extra.setdefault("completeness", run.data_evidence.completeness())
+    _write_check_output(
+        run.result_payload(
+            name=run.name,
+            version=run.version,
+            ecosystems=ecosystems,
+            verdict=verdict,
+            message=message,
+            exit_code=exit_code,
+            **extra,
+        ),
+        run.output_path,
+        agent_mode=run.agent_mode,
+        exit_code=exit_code,
+        output_format=run.output_format,
     )

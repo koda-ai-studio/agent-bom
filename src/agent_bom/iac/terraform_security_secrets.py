@@ -6,6 +6,7 @@ import re
 
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.terraform_security_common import TfResource, line_number, provider_compliance
+from agent_bom.scanners.secret_lines import is_placeholder_value
 
 _SECRET_ARGS = frozenset(
     {
@@ -35,7 +36,8 @@ _SKIP_TYPES = frozenset({"aws_lambda_function"})
 
 
 def _is_literal_secret(arg: str, value: str) -> bool:
-    if "${" in value or _PLACEHOLDER_RE.match(value.strip()):
+    stripped = value.strip()
+    if "${" in value or _PLACEHOLDER_RE.match(stripped) or is_placeholder_value(stripped):
         return False
     # Inline SSH keys are TF-SEC-007.
     return not (arg == "private_key" and value.startswith(_SSH_KEY_PREFIXES))

@@ -15,9 +15,12 @@ from agent_bom.asset_provenance import (
     package_version_provenance,
     sanitize_discovery_provenance,
 )
+from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import severity_basis
+from agent_bom.core.vex_policy import is_vex_suppressed
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import AIBOMReport, Severity
+from agent_bom.output.vulnerability_counts import SuppressionStates, suppression_states
 from agent_bom.security import (
     sanitize_command_args,
     sanitize_path_label,
@@ -53,9 +56,17 @@ def _package_occurrence_to_dict(occurrence) -> dict[str, object]:
     }
 
 
-def _vulnerability_json(v: Any) -> dict[str, Any]:
+def _vulnerability_json(v: Any, *, suppression_state: str | None = None) -> dict[str, Any]:
+    """One advisory on one package; ``suppression_state`` is the blast radius's verdict for this (package, advisory)."""
+    vex_suppressed = is_vex_suppressed(v)
+    state = suppression_state or ("vex" if vex_suppressed else None)
     return {
         "id": v.id,
+        "suppressed": state is not None,
+        "suppression_state": state,
+        "vex_source": v.vex_source,
+        "vex_statement_id": v.vex_statement_id,
+        "vex_suppressed": vex_suppressed,
         "summary": v.summary,
         "severity": v.severity.value,
         "severity_label": _severity_label(v.severity, v.severity_source),
@@ -76,6 +87,7 @@ def _vulnerability_json(v: Any) -> dict[str, Any]:
         "exploitability": v.exploitability,
         "cwe_ids": v.cwe_ids,
         "fixed_version": v.fixed_version,
+        "fix_is_prerelease": bool(getattr(v, "fix_is_prerelease", False)),
         "references": v.references,
         "nvd_published": v.nvd_published,
         "nvd_modified": v.nvd_modified,
@@ -86,7 +98,8 @@ def _vulnerability_json(v: Any) -> dict[str, Any]:
     }
 
 
-def _package_json(pkg: Any, agent: Any) -> dict[str, Any]:
+def _package_json(pkg: Any, agent: Any, states: SuppressionStates | None = None) -> dict[str, Any]:
+    key = canonical_package_key(str(pkg.name), str(pkg.version or ""), str(pkg.ecosystem or ""), getattr(pkg, "purl", None))
     return {
         "name": pkg.name,
         "stable_id": pkg.stable_id,
@@ -153,7 +166,7 @@ def _package_json(pkg: Any, agent: Any) -> dict[str, Any]:
         "scorecard_lookup_state": pkg.scorecard_lookup_state,
         "scorecard_lookup_reason": pkg.scorecard_lookup_reason,
         "vulnerability_count": len(pkg.vulnerabilities),
-        "vulnerabilities": [_vulnerability_json(v) for v in pkg.vulnerabilities],
+        "vulnerabilities": [_vulnerability_json(v, suppression_state=(states or {}).get((key, str(v.id)))) for v in pkg.vulnerabilities],
     }
 
 
@@ -209,7 +222,7 @@ def _prompt_json(p: Any) -> dict[str, Any]:
     }
 
 
-def _server_json(server: Any, agent: Any) -> dict[str, Any]:
+def _server_json(server: Any, agent: Any, states: SuppressionStates | None = None) -> dict[str, Any]:
     return {
         "name": server.name,
         "stable_id": server.stable_id,
@@ -241,7 +254,7 @@ def _server_json(server: Any, agent: Any) -> dict[str, Any]:
         "tools": [_tool_json(t) for t in server.tools],
         "resources": [_resource_json(r) for r in server.resources],
         "prompts": [_prompt_json(p) for p in server.prompts],
-        "packages": [_package_json(pkg, agent) for pkg in server.packages],
+        "packages": [_package_json(pkg, agent, states) for pkg in server.packages],
         "permission_profile": (
             {
                 "runs_as_root": server.permission_profile.runs_as_root,
@@ -259,7 +272,7 @@ def _server_json(server: Any, agent: Any) -> dict[str, Any]:
     }
 
 
-def _agent_json(agent: Any) -> dict[str, Any]:
+def _agent_json(agent: Any, states: SuppressionStates | None = None) -> dict[str, Any]:
     return {
         "name": agent.name,
         "stable_id": agent.stable_id,
@@ -277,10 +290,15 @@ def _agent_json(agent: Any) -> dict[str, Any]:
         "discovery_provenance": agent_discovery_provenance(agent),
         "metadata": agent.metadata,
         "automation_settings": agent.automation_settings,
-        "mcp_servers": [_server_json(server, agent) for server in agent.mcp_servers],
+        "mcp_servers": [_server_json(server, agent, states) for server in agent.mcp_servers],
     }
 
 
 def agents_json(report: AIBOMReport) -> list[dict[str, Any]]:
-    """Serialize every agent with its servers, tools, packages and vulnerabilities."""
-    return [_agent_json(agent) for agent in report.agents]
+    """Serialize every agent with its servers, tools, packages and vulnerabilities.
+
+    Each package-tree vulnerability carries the suppression verdict its blast
+    radius reached, so the tree never shows open what ``blast_radius`` shows suppressed.
+    """
+    states = suppression_states(list(report.blast_radii))
+    return [_agent_json(agent, states) for agent in report.agents]

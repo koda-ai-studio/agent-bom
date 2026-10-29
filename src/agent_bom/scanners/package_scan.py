@@ -26,6 +26,7 @@ from agent_bom.cmmc import tag_blast_radius as tag_cmmc
 from agent_bom.compliance_utils import apply_effective_blast_radius_tags
 from agent_bom.constants import AI_PACKAGES as _AI_FRAMEWORK_PACKAGES
 from agent_bom.core.suppression_score import risk_rank_key
+from agent_bom.core.versions.prerelease_fix import fix_is_prerelease
 from agent_bom.eu_ai_act import tag_blast_radius as tag_eu_ai_act
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.fedramp import tag_blast_radius as tag_fedramp
@@ -48,6 +49,7 @@ from agent_bom.scanners.compat_exports import resolve_legacy_export
 from agent_bom.scanners.distro_cpe_scan import propagate_possibly_affected
 from agent_bom.scanners.kev_default_join import join_default_kev_catalog
 from agent_bom.scanners.local_advisories import _scan_local_advisories, merge_scanner_vulnerabilities
+from agent_bom.scanners.local_data_freshness import _osv_answered
 from agent_bom.scanners.osv import enrich_results_if_needed as _enrich_results_if_needed_impl
 from agent_bom.scanners.osv import parse_fixed_version, query_osv_batch_impl
 from agent_bom.scanners.package_coverage import (
@@ -81,7 +83,13 @@ from agent_bom.scanners.package_versions import is_unresolved_package as _is_unr
 from agent_bom.scanners.risk import osv_cvss_vector, parse_osv_severity
 from agent_bom.scanners.scan_options import IncompleteScanError as IncompleteScanError
 from agent_bom.scanners.scan_options import ScanOptions, _logger, _package_db_key, console
-from agent_bom.scanners.state import _bump_scan_perf, _get_api_semaphore
+from agent_bom.scanners.state import _bump_scan_perf, _get_api_semaphore, peek_coverage_warnings
+from agent_bom.scanners.unverified_range_policy import (
+    demote_to_candidates,
+    retire_stale_receipt_warnings_if_decided,
+    supersede_with_live_answer,
+    unverified_packages,
+)
 from agent_bom.scanners.upstream_severity import resolve_upstream_advisory_severity
 from agent_bom.soc2 import tag_blast_radius as tag_soc2
 from agent_bom.vuln_compliance import tag_vulnerability as _tag_vuln
@@ -351,12 +359,7 @@ def build_vulnerabilities(vuln_data_list: list[dict], package: Package) -> list[
                 source_package=package.source_package,
                 aliases=tuple(package.lookup_names),
             ):
-                _logger.debug(
-                    "Filtered %s: version %s not in affected range for %s",
-                    vuln_id,
-                    package.version,
-                    package.name,
-                )
+                _logger.debug("Filtered %s: version %s not in affected range for %s", vuln_id, package.version, package.name)
                 continue
 
         from agent_bom.advisory_ids import canonical_vulnerability_id, match_confidence_tier
@@ -399,6 +402,7 @@ def build_vulnerabilities(vuln_data_list: list[dict], package: Package) -> list[
                 cvss_score=cvss_score,
                 cvss_vector=cvss_vector,
                 fixed_version=fixed,
+                fix_is_prerelease=fix_is_prerelease(fixed, package.ecosystem),
                 references=references,
                 published_at=vuln_data.get("published"),
                 modified_at=vuln_data.get("modified"),
@@ -451,13 +455,23 @@ def apply_framework_tags(br: BlastRadius) -> None:
     br.pci_dss_tags = tag_pci_dss(br)
 
 
+def _live_osv_decided(pkg: Package) -> bool:
+    """Whether live OSV (or its response cache) answered for ``pkg`` in this scan."""
+    if not _osv_answered() or any(w.get("kind") == "remote_lookup_error" for w in peek_coverage_warnings()):
+        return False
+    return bool(_osv_ecosystems_for_package(pkg)) and not _is_unresolved_package(pkg)
+
+
 def _apply_osv_results(scannable: list[Package], osv_targets: list[Package], results: dict[str, list[dict]]) -> int:
     """Merge OSV findings into packages and compliance-tag every vulnerability; return new count."""
     added = 0
     for pkg in osv_targets:
         vuln_data = results.get(_package_db_key(pkg), [])
+        new_vulns = _scanners_patchable("build_vulnerabilities")(vuln_data, pkg) if vuln_data else []
+        if _live_osv_decided(pkg):
+            # The live answer wins over stale local rows whose range receipt cannot verify a match.
+            supersede_with_live_answer(pkg, new_vulns)
         if vuln_data:
-            new_vulns = _scanners_patchable("build_vulnerabilities")(vuln_data, pkg)
             # Merge: don't duplicate what the local DB (or an imported report) already found
             merged = merge_scanner_vulnerabilities(pkg, new_vulns)
             added += len(merged)
@@ -530,10 +544,15 @@ async def scan_packages(
     local_count, db_covered, local_db_targets = _scan_local_advisories(scannable, scan_options, demo_inventory_keys)
     coverage_gaps = _detect_coverage_gaps(scannable)
     osv_targets, covered_ecos = _select_osv_targets(scannable, scan_offline, local_db_targets, db_covered, coverage_gaps)
+    if not scan_offline:
+        # A local row without a range receipt is only a candidate; let live OSV decide it.
+        osv_targets.extend(pkg for pkg in unverified_packages(scannable) if pkg not in osv_targets)
     results = await _query_osv_results(scannable, osv_targets, covered_ecos, scan_options)
 
     total_vulns = local_count + runtime_count
     total_vulns += _apply_osv_results(scannable, osv_targets, results)
+    total_vulns -= sum(demote_to_candidates(pkg) for pkg in scannable)
+    retire_stale_receipt_warnings_if_decided(scannable)
     total_vulns += await _scan_supplemental_advisories(scannable, scan_offline)
     resolve_upstream_advisory_severity(scannable)
     _flag_suspicious_packages(scannable)

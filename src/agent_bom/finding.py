@@ -9,6 +9,7 @@ from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.core.exploitability import fused_triage_priority
 from agent_bom.core.packages import synthesize_purl
 from agent_bom.core.severity import severity_basis
+from agent_bom.core.versions.prerelease_fix import upgrade_remediation
 from agent_bom.domain.finding_model import Asset as Asset
 from agent_bom.domain.finding_model import Finding as Finding
 from agent_bom.domain.finding_types import _CIS_BENCHMARK_FRAMEWORKS as _CIS_BENCHMARK_FRAMEWORKS
@@ -107,13 +108,10 @@ def _remediation_guidance_for_vulnerability(vuln: object, pkg: object) -> str:
         detail = f" ({reason})" if isinstance(reason, str) and reason.strip() else ""
         return f"Remove {package_name} from all environments immediately{detail}."
 
-    fixed_version = _forward_fixed_version(
-        getattr(vuln, "fixed_version", None),
-        getattr(pkg, "version", None),
-        getattr(pkg, "ecosystem", None),
-    )
+    ecosystem = getattr(pkg, "ecosystem", None)
+    fixed_version = _forward_fixed_version(getattr(vuln, "fixed_version", None), getattr(pkg, "version", None), ecosystem)
     if isinstance(fixed_version, str) and fixed_version.strip():
-        return f"Upgrade {package_name} to {fixed_version.strip()}."
+        return upgrade_remediation(package_name, fixed_version.strip(), ecosystem, bool(getattr(vuln, "fix_is_prerelease", False)))
 
     vuln_id = getattr(vuln, "id", None)
     if getattr(vuln, "is_kev", False):
@@ -289,6 +287,7 @@ def secret_dict_to_finding(secret: dict) -> "Finding":
             "secret manager — never committed in code."
         )
         remediation = "Remove the hardcoded value, rotate it, and load it from an environment variable or secret manager."
+    reason = secret.get("downgrade_reason")
     finding = Finding(
         finding_type=FindingType.PII_EXPOSURE if is_pii else FindingType.CREDENTIAL_EXPOSURE,
         source=FindingSource.SECRET_SCAN,
@@ -313,6 +312,7 @@ def secret_dict_to_finding(secret: dict) -> "Finding":
             ),
             "category": category,
             "redacted_preview": _safe_secret_preview(secret.get("preview")),
+            **({"downgrade_reason": sanitize_text(reason, max_len=200)} if isinstance(reason, str) and reason else {}),
         },
         id=stable_id("secret", file_path, str(line or ""), secret_type, category),
     )

@@ -37,7 +37,7 @@ export function AffectedAssetsTable({ rows }: { rows: AdvisoryAffectedRow[] }) {
               <tr key={rowKey(row)} className="align-top">
                 <td className="px-3 py-2">
                   <p className="truncate font-medium text-foreground" title={row.asset_label}>{row.asset_label}</p>
-                  <p className="truncate text-xs text-ink-tertiary" title={row.asset.agent}>{row.asset.agent}</p>
+                  <p className="truncate text-xs text-ink-tertiary" title={row.asset.agent || row.asset_type}>{row.asset.agent || row.asset_type}</p>
                   <div className="mt-1.5"><BlastRadiusLink row={row} /></div>
                 </td>
                 <td className="px-3 py-2">

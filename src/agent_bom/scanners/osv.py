@@ -113,9 +113,10 @@ def parse_fixed_version(
     ecosystem: str = "",
     current_version: str = "",
     source_package: str | None = None,
-    allow_prerelease: bool = False,
+    allow_prerelease: bool = True,
     aliases: tuple[str, ...] = (),
 ) -> Optional[str]:
+    """Smallest fix for the installed version's window; stable preferred, pre-release otherwise."""
     from agent_bom.version_utils import compare_version_order, is_prerelease_version
 
     names = candidate_package_names(package_name, ecosystem, source_package, aliases)
@@ -156,7 +157,7 @@ def parse_fixed_version(
     return chosen
 
 
-def _next_unaffected_fixes(windows: list, current_version: str, ecosystem: str, allow_prerelease: bool) -> list[str]:
+def _next_unaffected_fixes(windows: list, current_version: str, ecosystem: str, allow_prerelease: bool = True) -> list[str]:
     """Fixes named by other windows when the installed version's window has none.
 
     An advisory can end one release line with ``last_affected`` and fix a later
@@ -175,17 +176,16 @@ def _next_unaffected_fixes(windows: list, current_version: str, ecosystem: str, 
 
     if affected(current_version) != "affected":
         return []
-    out: list[str] = []
+    stable: list[str] = []
+    prereleases: list[str] = []
     for _introduced, fixed, _last, _events in windows:
-        if not isinstance(fixed, str) or not is_valid_fix_version(fixed) or fixed in out:
-            continue
-        if is_prerelease_version(fixed, ecosystem) and not allow_prerelease:
+        if not isinstance(fixed, str) or not is_valid_fix_version(fixed) or fixed in stable or fixed in prereleases:
             continue
         order = compare_version_order(fixed, current_version, ecosystem)
         if order is None or order <= 0 or affected(fixed) != "unaffected":
             continue
-        out.append(fixed)
-    return out
+        (prereleases if is_prerelease_version(fixed, ecosystem) else stable).append(fixed)
+    return stable or (prereleases if allow_prerelease else [])
 
 
 def _collect_batch_vulns(

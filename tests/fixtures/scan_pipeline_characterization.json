@@ -365,7 +365,8 @@
     "path_count": 0,
     "paths": [],
     "schema_version": "1",
-    "source": "blast_radius_output"
+    "source": "blast_radius_output",
+    "suppressed_path_count": 0
    },
    "finding_summary": {
     "by_severity": {
@@ -516,13 +517,15 @@
     "critical_unified_findings": 0,
     "high_unified_findings": 0,
     "installed_unconfigured_agents": 0,
+    "suppressed_vulnerabilities": 0,
     "total_agents": 0,
     "total_findings": 0,
     "total_mcp_servers": 0,
     "total_packages": 0,
     "total_vulnerabilities": 0,
     "unique_assets": 0,
-    "unique_packages": 0
+    "unique_packages": 0,
+    "vulnerability_occurrences": 0
    },
    "threat_framework_summary": {
     "cis_controls": [
@@ -1923,6 +1926,7 @@
            "epss_score": null,
            "exploit_likelihood": "unassessed",
            "exploitability": null,
+           "fix_is_prerelease": false,
            "fixed_version": null,
            "id": "CVE-2026-0001",
            "is_kev": false,
@@ -1944,9 +1948,14 @@
            "severity_source": null,
            "severity_state": "scored",
            "summary": "test vuln",
+           "suppressed": false,
+           "suppression_state": null,
            "upstream_ids": [],
            "vex_justification": null,
-           "vex_status": null
+           "vex_source": null,
+           "vex_statement_id": null,
+           "vex_status": null,
+           "vex_suppressed": false
           }
          ],
          "vulnerability_count": 1
@@ -2465,11 +2474,13 @@
       "severity": "high",
       "source": "agent:cfg-e12ed29252b1:api-agent",
       "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
+      "suppressed": false,
       "target": "vuln:CVE-2026-0001"
      }
     ],
     "schema_version": "1",
-    "source": "blast_radius_output"
+    "source": "blast_radius_output",
+    "suppressed_path_count": 0
    },
    "finding_summary": {
     "by_severity": {
@@ -2723,6 +2734,10 @@
      "upstream_ids": [],
      "user_interaction": null,
      "vendor_severity": null,
+     "vex_justification": null,
+     "vex_source": null,
+     "vex_status": null,
+     "vex_suppressed": false,
      "vulnerability_id": "CVE-2026-0001"
     }
    ],
@@ -3065,13 +3080,15 @@
     "critical_unified_findings": 0,
     "high_unified_findings": 1,
     "installed_unconfigured_agents": 0,
+    "suppressed_vulnerabilities": 0,
     "total_agents": 1,
     "total_findings": 1,
     "total_mcp_servers": 1,
     "total_packages": 1,
     "total_vulnerabilities": 1,
     "unique_assets": 1,
-    "unique_packages": 1
+    "unique_packages": 1,
+    "vulnerability_occurrences": 1
    },
    "threat_framework_summary": {
     "cis_controls": [
@@ -4615,6 +4632,7 @@
            "epss_score": null,
            "exploit_likelihood": "unassessed",
            "exploitability": null,
+           "fix_is_prerelease": false,
            "fixed_version": null,
            "id": "CVE-2026-0001",
            "is_kev": false,
@@ -4636,9 +4654,14 @@
            "severity_source": null,
            "severity_state": "scored",
            "summary": "test vuln",
+           "suppressed": false,
+           "suppression_state": null,
            "upstream_ids": [],
            "vex_justification": null,
-           "vex_status": null
+           "vex_source": null,
+           "vex_statement_id": null,
+           "vex_status": null,
+           "vex_suppressed": false
           }
          ],
          "vulnerability_count": 1
@@ -5157,11 +5180,13 @@
       "severity": "high",
       "source": "agent:cfg-e12ed29252b1:api-agent",
       "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
+      "suppressed": false,
       "target": "vuln:CVE-2026-0001"
      }
     ],
     "schema_version": "1",
-    "source": "blast_radius_output"
+    "source": "blast_radius_output",
+    "suppressed_path_count": 0
    },
    "finding_summary": {
     "by_severity": {
@@ -5415,6 +5440,10 @@
      "upstream_ids": [],
      "user_interaction": null,
      "vendor_severity": null,
+     "vex_justification": null,
+     "vex_source": null,
+     "vex_status": null,
+     "vex_suppressed": false,
      "vulnerability_id": "CVE-2026-0001"
     }
    ],
@@ -5761,13 +5790,15 @@
     "critical_unified_findings": 0,
     "high_unified_findings": 1,
     "installed_unconfigured_agents": 0,
+    "suppressed_vulnerabilities": 0,
     "total_agents": 1,
     "total_findings": 1,
     "total_mcp_servers": 1,
     "total_packages": 1,
     "total_vulnerabilities": 1,
     "unique_assets": 1,
-    "unique_packages": 1
+    "unique_packages": 1,
+    "vulnerability_occurrences": 1
    },
    "threat_framework_summary": {
     "cis_controls": [
@@ -7527,7 +7558,8 @@
     "path_count": 0,
     "paths": [],
     "schema_version": "1",
-    "source": "blast_radius_output"
+    "source": "blast_radius_output",
+    "suppressed_path_count": 0
    },
    "finding_summary": {
     "by_severity": {
@@ -7812,13 +7844,15 @@
     "critical_unified_findings": 0,
     "high_unified_findings": 0,
     "installed_unconfigured_agents": 0,
+    "suppressed_vulnerabilities": 0,
     "total_agents": 1,
     "total_findings": 0,
     "total_mcp_servers": 1,
     "total_packages": 1,
     "total_vulnerabilities": 0,
     "unique_assets": 0,
-    "unique_packages": 1
+    "unique_packages": 1,
+    "vulnerability_occurrences": 0
    },
    "threat_framework_summary": {
     "cis_controls": [
@@ -9461,7 +9495,8 @@
     "path_count": 0,
     "paths": [],
     "schema_version": "1",
-    "source": "blast_radius_output"
+    "source": "blast_radius_output",
+    "suppressed_path_count": 0
    },
    "finding_summary": {
     "by_severity": {
@@ -9753,13 +9788,15 @@
     "critical_unified_findings": 0,
     "high_unified_findings": 0,
     "installed_unconfigured_agents": 0,
+    "suppressed_vulnerabilities": 0,
     "total_agents": 1,
     "total_findings": 0,
     "total_mcp_servers": 1,
     "total_packages": 1,
     "total_vulnerabilities": 0,
     "unique_assets": 0,
-    "unique_packages": 1
+    "unique_packages": 1,
+    "vulnerability_occurrences": 0
    },
    "threat_framework_summary": {
     "cis_controls": [
@@ -11298,6 +11335,7 @@
            "epss_score": null,
            "exploit_likelihood": "unassessed",
            "exploitability": null,
+           "fix_is_prerelease": false,
            "fixed_version": null,
            "id": "CVE-2026-0001",
            "is_kev": false,
@@ -11319,9 +11357,14 @@
            "severity_source": null,
            "severity_state": "scored",
            "summary": "test vuln",
+           "suppressed": false,
+           "suppression_state": null,
            "upstream_ids": [],
            "vex_justification": null,
-           "vex_status": null
+           "vex_source": null,
+           "vex_statement_id": null,
+           "vex_status": null,
+           "vex_suppressed": false
           }
          ],
          "vulnerability_count": 1
@@ -11840,11 +11883,13 @@
       "severity": "high",
       "source": "agent:cfg-e12ed29252b1:api-agent",
       "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
+      "suppressed": false,
       "target": "vuln:CVE-2026-0001"
      }
     ],
     "schema_version": "1",
-    "source": "blast_radius_output"
+    "source": "blast_radius_output",
+    "suppressed_path_count": 0
    },
    "finding_summary": {
     "by_severity": {
@@ -12098,6 +12143,10 @@
      "upstream_ids": [],
      "user_interaction": null,
      "vendor_severity": null,
+     "vex_justification": null,
+     "vex_source": null,
+     "vex_status": null,
+     "vex_suppressed": false,
      "vulnerability_id": "CVE-2026-0001"
     }
    ],
@@ -12431,13 +12480,15 @@
     "critical_unified_findings": 0,
     "high_unified_findings": 1,
     "installed_unconfigured_agents": 0,
+    "suppressed_vulnerabilities": 0,
     "total_agents": 1,
     "total_findings": 1,
     "total_mcp_servers": 1,
     "total_packages": 1,
     "total_vulnerabilities": 1,
     "unique_assets": 1,
-    "unique_packages": 1
+    "unique_packages": 1,
+    "vulnerability_occurrences": 1
    },
    "threat_framework_summary": {
     "cis_controls": [
@@ -13856,6 +13907,7 @@
            "epss_score": null,
            "exploit_likelihood": "unassessed",
            "exploitability": null,
+           "fix_is_prerelease": false,
            "fixed_version": null,
            "id": "CVE-2026-0001",
            "is_kev": false,
@@ -13877,9 +13929,14 @@
            "severity_source": null,
            "severity_state": "scored",
            "summary": "test vuln",
+           "suppressed": false,
+           "suppression_state": null,
            "upstream_ids": [],
            "vex_justification": null,
-           "vex_status": null
+           "vex_source": null,
+           "vex_statement_id": null,
+           "vex_status": null,
+           "vex_suppressed": false
           }
          ],
          "vulnerability_count": 1
@@ -14398,11 +14455,13 @@
       "severity": "high",
       "source": "agent:cfg-e12ed29252b1:api-agent",
       "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
+      "suppressed": false,
       "target": "vuln:CVE-2026-0001"
      }
     ],
     "schema_version": "1",
-    "source": "blast_radius_output"
+    "source": "blast_radius_output",
+    "suppressed_path_count": 0
    },
    "finding_summary": {
     "by_severity": {
@@ -14656,6 +14715,10 @@
      "upstream_ids": [],
      "user_interaction": null,
      "vendor_severity": null,
+     "vex_justification": null,
+     "vex_source": null,
+     "vex_status": null,
+     "vex_suppressed": false,
      "vulnerability_id": "CVE-2026-0001"
     }
    ],
@@ -14989,13 +15052,15 @@
     "critical_unified_findings": 0,
     "high_unified_findings": 1,
     "installed_unconfigured_agents": 0,
+    "suppressed_vulnerabilities": 0,
     "total_agents": 1,
     "total_findings": 1,
     "total_mcp_servers": 1,
     "total_packages": 1,
     "total_vulnerabilities": 1,
     "unique_assets": 1,
-    "unique_packages": 1
+    "unique_packages": 1,
+    "vulnerability_occurrences": 1
    },
    "threat_framework_summary": {
     "cis_controls": [
@@ -16405,6 +16470,7 @@
            "epss_score": null,
            "exploit_likelihood": "unassessed",
            "exploitability": null,
+           "fix_is_prerelease": false,
            "fixed_version": null,
            "id": "CVE-2026-0001",
            "is_kev": false,
@@ -16426,9 +16492,14 @@
            "severity_source": null,
            "severity_state": "scored",
            "summary": "test vuln",
+           "suppressed": false,
+           "suppression_state": null,
            "upstream_ids": [],
            "vex_justification": null,
-           "vex_status": null
+           "vex_source": null,
+           "vex_statement_id": null,
+           "vex_status": null,
+           "vex_suppressed": false
           }
          ],
          "vulnerability_count": 1
@@ -16679,7 +16750,8 @@
     "path_count": 0,
     "paths": [],
     "schema_version": "1",
-    "source": "blast_radius_output"
+    "source": "blast_radius_output",
+    "suppressed_path_count": 0
    },
    "finding_summary": {
     "by_severity": {
@@ -16954,13 +17026,15 @@
     "critical_unified_findings": 0,
     "high_unified_findings": 0,
     "installed_unconfigured_agents": 0,
+    "suppressed_vulnerabilities": 0,
     "total_agents": 1,
     "total_findings": 0,
     "total_mcp_servers": 1,
     "total_packages": 1,
     "total_vulnerabilities": 1,
     "unique_assets": 0,
-    "unique_packages": 1
+    "unique_packages": 1,
+    "vulnerability_occurrences": 1
    },
    "threat_framework_summary": {
     "cis_controls": [
@@ -18359,6 +18433,7 @@
            "epss_score": null,
            "exploit_likelihood": "unassessed",
            "exploitability": null,
+           "fix_is_prerelease": false,
            "fixed_version": null,
            "id": "CVE-2026-0001",
            "is_kev": false,
@@ -18380,9 +18455,14 @@
            "severity_source": null,
            "severity_state": "scored",
            "summary": "test vuln",
+           "suppressed": false,
+           "suppression_state": null,
            "upstream_ids": [],
            "vex_justification": null,
-           "vex_status": null
+           "vex_source": null,
+           "vex_statement_id": null,
+           "vex_status": null,
+           "vex_suppressed": false
           }
          ],
          "vulnerability_count": 1
@@ -18901,11 +18981,13 @@
       "severity": "high",
       "source": "agent:cfg-e12ed29252b1:api-agent",
       "summary": "CVE-2026-0001 affects express@4.18.2 with likely reachability.",
+      "suppressed": false,
       "target": "vuln:CVE-2026-0001"
      }
     ],
     "schema_version": "1",
-    "source": "blast_radius_output"
+    "source": "blast_radius_output",
+    "suppressed_path_count": 0
    },
    "finding_summary": {
     "by_severity": {
@@ -19159,6 +19241,10 @@
      "upstream_ids": [],
      "user_interaction": null,
      "vendor_severity": null,
+     "vex_justification": null,
+     "vex_source": null,
+     "vex_status": null,
+     "vex_suppressed": false,
      "vulnerability_id": "CVE-2026-0001"
     }
    ],
@@ -19492,13 +19578,15 @@
     "critical_unified_findings": 0,
     "high_unified_findings": 1,
     "installed_unconfigured_agents": 0,
+    "suppressed_vulnerabilities": 0,
     "total_agents": 1,
     "total_findings": 1,
     "total_mcp_servers": 1,
     "total_packages": 1,
     "total_vulnerabilities": 1,
     "unique_assets": 1,
-    "unique_packages": 1
+    "unique_packages": 1,
+    "vulnerability_occurrences": 1
    },
    "threat_framework_summary": {
     "cis_controls": [

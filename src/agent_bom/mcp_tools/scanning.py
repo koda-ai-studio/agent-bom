@@ -38,10 +38,12 @@ from agent_bom.mcp_tools.scan_response import (
     section_page,
 )
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
+from agent_bom.resolvers.latest_stable import check_latest_budget, resolved_version_source
 from agent_bom.scanners.local_data_freshness import freshness_snapshot
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings
 from agent_bom.security import sanitize_error
+from agent_bom.vuln_freshness import accepted_scan_warnings
 
 logger = logging.getLogger(__name__)
 
@@ -340,7 +342,7 @@ def _attach_pipeline_evidence(report, scanner_warnings: list[str], coverage_warn
 
     Same scan_run evidence the CLI grades, so the posture grade is one computation.
     """
-    report.scan_run.issues.extend(scanner_warning_issues(scanner_warnings))
+    report.scan_run.issues.extend(scanner_warning_issues(scanner_warnings, accepted=accepted_scan_warnings()))
     if coverage_warnings:
         report.coverage_warnings = coverage_warnings
     repo_inventory = consume_repo_tree_inventory()
@@ -634,20 +636,18 @@ async def check_impl(
         # Resolve "latest" via registry
         if version in ("latest", ""):
             if offline:
-                return service_result(
-                    "incomplete",
-                    f"Offline package checks require an explicit version for {name}",
-                )
+                return service_result("incomplete", f"Offline package checks require an explicit version for {name}")
             from agent_bom.http_client import create_client
             from agent_bom.resolver import resolve_package_version
 
             async with create_client(timeout=15.0) as client:
-                resolved = await resolve_package_version(pkg, client)
+                with check_latest_budget():
+                    resolved = await resolve_package_version(pkg, client)
                 reason = await resolution_malware_reason(resolved, name, eco, client)
             if not resolved:
                 return _unresolved_result(pkg, name, eco, reason, service_result)
             version = pkg.version
-            version_source[0] = "registry_fallback" if pkg.version_source == "registry_fallback" else "registry_latest"
+            version_source[0] = resolved_version_source(pkg.version_source)
 
         try:
             coverage_warnings, data_evidence = await scan_checked_package(pkg, offline=offline, warnings=result_warnings)

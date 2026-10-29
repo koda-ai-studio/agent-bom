@@ -316,8 +316,9 @@ def test_parse_fixed_version_prerelease():
             }
         ]
     }
-    result = parse_fixed_version(vuln, "foo")
-    assert result is None
+    # A pre-release is the only fix published; callers opt out explicitly.
+    assert parse_fixed_version(vuln, "foo") == "1.0.0rc1"
+    assert parse_fixed_version(vuln, "foo", allow_prerelease=False) is None
 
 
 def test_parse_fixed_version_empty():

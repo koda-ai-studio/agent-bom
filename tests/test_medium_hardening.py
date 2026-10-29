@@ -450,8 +450,8 @@ def test_fixed_version_skips_prerelease():
     assert result == "3.0.0"
 
 
-def test_fixed_version_suppresses_prerelease_only_fix_by_default():
-    """parse_fixed_version suppresses prerelease-only fixes by default."""
+def test_fixed_version_returns_prerelease_only_fix_by_default():
+    """A prerelease-only fix is still the only fix; callers opt out with allow_prerelease=False."""
     from agent_bom.scanners import parse_fixed_version
 
     vuln_data = {
@@ -471,8 +471,8 @@ def test_fixed_version_suppresses_prerelease_only_fix_by_default():
         ]
     }
 
-    result = parse_fixed_version(vuln_data, "mylib")
-    assert result is None
+    assert parse_fixed_version(vuln_data, "mylib") == "2.0.0a1"
+    assert parse_fixed_version(vuln_data, "mylib", allow_prerelease=False) is None
 
 
 def test_fixed_version_can_return_prerelease_when_explicitly_allowed():

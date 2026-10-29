@@ -1,19 +1,21 @@
 {
  "document": {
-  "sha256": "213a08cdbf7583ca7eca05ced8f38aa740a43efb8fbe1fd17a6474dbad04aa68",
+  "sha256": "54d207fcdf630e2e48fbf7d9cd6114d8b7e90e5a46430fd930ad8dfd6db392b6",
   "summary": {
    "coverage_warnings": [],
    "critical_findings": 0,
    "critical_unified_findings": 0,
    "high_unified_findings": 0,
    "installed_unconfigured_agents": 0,
+   "suppressed_vulnerabilities": 0,
    "total_agents": 1,
    "total_findings": 0,
    "total_mcp_servers": 1,
    "total_packages": 5,
    "total_vulnerabilities": 0,
    "unique_assets": 0,
-   "unique_packages": 5
+   "unique_packages": 5,
+   "vulnerability_occurrences": 0
   }
  },
  "exit_code": 1

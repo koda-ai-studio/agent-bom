@@ -1523,6 +1523,10 @@ def test_demo_offline_with_missing_ambient_db_keeps_complete_bundled_evidence(mo
     """The advertised demo must not inherit partial coverage from an absent user DB."""
     from agent_bom.db import schema
     from agent_bom.demo_advisories import DEMO_ADVISORIES
+    from agent_bom.scanners.epss_backfill import EpssSourceSummary, record_epss_source_summary
+
+    # A prior enriched scan on this worker must not contaminate the demo receipt.
+    record_epss_source_summary(EpssSourceSummary(local_table=22, cache=0, live_backfill=0, unscored=0, requests=0, capped=0))
 
     output = tmp_path / "demo.json"
     monkeypatch.setattr(schema, "DB_PATH", tmp_path / "missing" / "vulns.db")

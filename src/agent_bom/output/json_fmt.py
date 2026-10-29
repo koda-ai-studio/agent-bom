@@ -81,6 +81,7 @@ from agent_bom.output.json_sections import _package_occurrence_to_dict, _severit
 from agent_bom.output.json_writer import write_json_document, write_json_file
 from agent_bom.output.possibly_affected import json_section as possibly_affected_json
 from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
+from agent_bom.output.vulnerability_counts import vulnerability_counts
 from agent_bom.redaction.payload import StreamingRedaction
 from agent_bom.redaction.report_paths import prepare_iac_path_redaction
 from agent_bom.security import (
@@ -735,7 +736,7 @@ def to_json(report: AIBOMReport) -> dict:
             "total_mcp_servers": report.total_servers,
             "total_packages": report.total_packages,
             "unique_packages": len(ai_bom_entities.get("packages", [])),
-            "total_vulnerabilities": report.total_vulnerabilities,
+            **vulnerability_counts(report),
             "critical_findings": len(report.critical_vulns),
             "total_findings": finding_summary["total"],
             "unique_assets": len(asset_inventory),
@@ -752,7 +753,8 @@ def to_json(report: AIBOMReport) -> dict:
         "exposure_paths": {
             "schema_version": "1",
             "source": "blast_radius_output",
-            "path_count": len(exposure_paths),
+            "path_count": sum(1 for path in exposure_paths if not path.get("suppressed")),
+            "suppressed_path_count": sum(1 for path in exposure_paths if path.get("suppressed")),
             "paths": exposure_paths,
         },
         "findings": unified_findings,

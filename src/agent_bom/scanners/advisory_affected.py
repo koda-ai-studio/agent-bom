@@ -31,12 +31,16 @@ from typing import Any
 from agent_bom.advisory_ids import derive_cve_from_advisory_id
 from agent_bom.core.severity import normalize_severity, severity_rank
 from agent_bom.core.timestamps import parse_timestamp
+from agent_bom.graph.image_projection import carrier_node_id
+from agent_bom.scanners.advisory_feed_severity import feed_severity
 from agent_bom.scanners.advisory_graph_ids import occurrence_graph_ids
 from agent_bom.scanners.advisory_merge import self_consistent_aliases
+from agent_bom.scanners.advisory_occurrences import asset_key
 from agent_bom.scanners.distro_cpe_verdict import DistroVerdictFn
 from agent_bom.scanners.operator_advisory import (
     DISTRO_BACKPORT_UNVERIFIED,
     OPERATOR_ADVISORY_PROVENANCE,
+    AdvisoryMatchResult,
     AffectedProduct,
     FeedAffectedRange,
     OperatorAdvisory,
@@ -76,6 +80,8 @@ def _advisory_view(advisory: OperatorAdvisory, source: str) -> dict[str, Any]:
         "aliases": list(advisory.aliases),
         "summary": advisory.summary,
         "severity": advisory.severity,
+        "severity_source": advisory.severity_source or ("operator_advisory" if source == "operator_advisory" else None),
+        "cvss_score": advisory.cvss_score,
         "source": source,
         "published_at": advisory.published_at.isoformat() if advisory.published_at else None,
         "fixed_versions": _fixed_versions(advisory),
@@ -88,8 +94,28 @@ def _row_order(row: dict[str, Any]) -> tuple:
 
 
 def _with_graph_ids(row: dict[str, Any]) -> dict[str, Any]:
-    agent, server = row.pop("_owners")
-    return {**row, "graph": occurrence_graph_ids(agent, server, row["package"])}
+    """Add the graph node ids plus the asset's type and node id (a server, an image carrier or a standalone asset)."""
+    owners = row.pop("_owners")
+    if owners is None:
+        node_id = row["asset"].get("node_id") or None
+        graph: dict[str, str | None] = {"package_node_id": node_id, "server_node_id": None, "agent_node_id": None}
+        return {**row, "asset_type": row["asset"].get("asset_type") or "package", "asset_node_id": node_id, "graph": graph}
+    agent, server = owners
+    ids = occurrence_graph_ids(agent, server, row["package"])
+    image = carrier_node_id(agent)
+    asset_type = "container_image" if image else "mcp_server"
+    return {**row, "asset_type": asset_type, "asset_node_id": image or ids["server_node_id"], "graph": ids}
+
+
+UNEXAMINED_SECTIONS_REASON = "a stored report section could not be read; see coverage.unexamined_sections"
+
+
+def _coverage(result: AdvisoryMatchResult) -> dict[str, Any]:
+    return {
+        "agent_packages": result.packages_examined - result.standalone_packages_examined,
+        "standalone_packages": result.standalone_packages_examined,
+        "unexamined_sections": sorted(result.unexamined_sections),
+    }
 
 
 def affected_answer(
@@ -104,13 +130,10 @@ def affected_answer(
     result = match_advisories_against_reports([advisory], reports, provenance=provenance, distro_verdict=distro_verdict)
     rows = sorted((_with_graph_ids(row) for row in result.rows), key=_row_order)
     counts = {verdict: sum(1 for row in rows if row["verdict"] == verdict) for verdict in VERDICTS}
-    flagged = {
-        (row["scan_id"] or "", row["asset"].get("agent", ""), row["asset"].get("server", ""))
-        for row in rows
-        if row["verdict"] != "not_affected"
-    }
+    flagged = {asset_key(row["scan_id"] or "", row["asset"]) for row in rows if row["verdict"] != "not_affected"}
     retryable = [row for row in rows if row["verdict"] == "possibly_affected" and row["verdict_reason"] != DISTRO_BACKPORT_UNVERIFIED]
-    return {
+    unexamined = sorted(result.unexamined_sections)
+    answer: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "advisory": _advisory_view(advisory, source),
         "summary": {
@@ -119,10 +142,15 @@ def affected_answer(
             "assets_examined": len(result.assets_examined),
             "reports_examined": result.reports_examined,
         },
-        "complete": result.reports_examined > 0 and not retryable,
+        "coverage": _coverage(result),
+        "complete": result.reports_examined > 0 and not retryable and not unexamined,
         "generation": _generation(advisory.id, rows),
         "rows": rows,
     }
+    if unexamined:
+        answer["incomplete_reason"] = UNEXAMINED_SECTIONS_REASON
+        answer["warnings"] = [UNEXAMINED_SECTIONS_REASON]
+    return answer
 
 
 STORED_FINDINGS_REASON = "no advisory feed record; answered from stored findings"
@@ -154,12 +182,15 @@ def stored_findings_answer(
     wanted = advisory_id.strip().upper()
     products: dict[tuple[str, str], AffectedProduct] = {}
     spellings: set[str] = set()
-    severities: list[str] = []
+    severities: list[tuple[str, str | None, float | None]] = []
     fixed: set[str] = set()
     summary = ""
     for package, vuln, ids in _referencing_findings(wanted, report_list):
         spellings |= ids
-        severities.append(normalize_severity(vuln.get("severity")))
+        cvss = vuln.get("cvss_score")
+        severities.append(
+            (normalize_severity(vuln.get("severity")), vuln.get("severity_source"), cvss if isinstance(cvss, (int, float)) else None)
+        )
         if vuln.get("fixed_version"):
             fixed.add(str(vuln["fixed_version"]))
         summary = summary or str(vuln.get("summary") or vuln.get("description") or "")
@@ -172,11 +203,15 @@ def stored_findings_answer(
     if not products:
         return None
     canonical = next((spelling for spelling in sorted(spellings) if spelling.upper() == wanted), advisory_id.strip())
+    # The stored findings already applied the scan's severity policy; the worst recorded verdict speaks for the advisory.
+    severity, severity_source, cvss_score = max(severities, key=lambda item: severity_rank(item[0]))
     advisory = OperatorAdvisory.model_construct(
         id=canonical,
         aliases=sorted(spellings - {canonical}),
         summary=summary or f"{canonical}, as recorded by the stored scan findings",
-        severity=max(severities, key=severity_rank),
+        severity=severity,
+        severity_source=severity_source or "scan",
+        cvss_score=cvss_score,
         published_at=None,
         references=[],
         affected=list(products.values()),
@@ -278,7 +313,7 @@ def page_answer(
 # --- feed records (OSV/GHSA/distro rows and NVD CPE ranges) from the local DB ----------------
 
 
-_VULN_COLUMNS = "id, summary, severity, aliases, published"
+_VULN_COLUMNS = "id, summary, severity, aliases, published, cvss_score, cvss_vector, source"
 _MAX_ALIAS_RECORDS = 32
 
 
@@ -418,7 +453,9 @@ def feed_advisory_from_db(conn: sqlite3.Connection, advisory_id: str) -> Operato
         return None
     primary = records[0]
     vuln_id, summary, published = str(primary[0]), primary[1], primary[4]
-    severity = max((normalize_severity(record[2]) for record in records), key=severity_rank)
+    # The findings policy: the primary record's CVSS decides the band, its own label applies without one,
+    # and alias records (a GHSA copy of a CVE) are consulted only when the primary rates nothing.
+    severity, severity_source, cvss_score = feed_severity(records)
     identities = [str(record[0]) for record in records] + [
         alias for record in records for alias in self_consistent_aliases(str(record[0]), _split_aliases(record[3]))
     ]
@@ -428,6 +465,8 @@ def feed_advisory_from_db(conn: sqlite3.Connection, advisory_id: str) -> Operato
         aliases=aliases,
         summary=str(summary or "No description available"),
         severity=severity,
+        severity_source=severity_source,
+        cvss_score=cvss_score,
         published_at=parse_timestamp(str(published)) if published else None,
         references=[],
         affected=_merged_products(products),

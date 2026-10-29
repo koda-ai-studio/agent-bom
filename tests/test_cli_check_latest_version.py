@@ -40,7 +40,7 @@ def clean_scan(monkeypatch: pytest.MonkeyPatch) -> list[Package]:
 def _registry_latest(monkeypatch: pytest.MonkeyPatch, latest: str | None, *, malicious_reason: str | None = None) -> list[str]:
     asked: list[str] = []
 
-    async def _resolve(pkg: Package, _client) -> bool:
+    async def _resolve(pkg: Package, _client, **_kwargs) -> bool:
         asked.append(pkg.name)
         if latest is None:
             return False

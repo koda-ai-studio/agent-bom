@@ -17,6 +17,19 @@ MATCH_CONFIDENCE_OSV_ECOSYSTEM = "osv_ecosystem"
 MATCH_CONFIDENCE_UNFIXED_DISTRO = "unfixed_distro"
 MATCH_CONFIDENCE_NVD_CPE_CANDIDATE = "nvd_cpe_candidate"
 MATCH_CONFIDENCE_UNVERIFIED_RANGE = "unverified_range"
+
+# Rows carried over by the v7->v8 schema upgrade lost their OSV range limits,
+# so neither membership nor the fix can be confirmed until an OSV refresh.
+LEGACY_RECEIPT_WARNING = (
+    "Local advisory rows predate range-limit receipts (not refreshed since the DB schema upgrade): "
+    "findings from them are marked unverified_range and their fixed versions are withheld. "
+    "Run `agent-bom db update` to restore range bounds and fixed versions."
+)
+UNVERIFIED_RANGE_WARNING = (
+    "Some local advisory ranges cannot be verified. Findings marked unverified_range are candidates; "
+    "run agent-bom db update to refresh source bounds and review unresolved versions."
+)
+STALE_RECEIPT_WARNINGS = frozenset({LEGACY_RECEIPT_WARNING, UNVERIFIED_RANGE_WARNING})
 # A distro package with no release metadata, matched against every supported
 # release branch at once. The advisory is real for *some* release; whether it is
 # real for the scanned one is unknown, and so is which branch's fix applies.

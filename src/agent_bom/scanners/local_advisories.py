@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
+from agent_bom.core.versions.prerelease_fix import fix_is_prerelease
 from agent_bom.cpe_match import cpe_applicability, cpe_identity
 from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.malicious import flag_malicious_from_vulns
@@ -21,6 +22,7 @@ from agent_bom.scanners.package_matching import _emit_scan_warning as _emit_scan
 from agent_bom.scanners.package_matching import _scanners_patchable as _scanners_patchable
 from agent_bom.scanners.risk import advisory_id_severity_fallback, cvss_to_severity, parse_cvss_vector, severity_from_label
 from agent_bom.scanners.scan_options import ScanOptions, _logger, _package_db_key
+from agent_bom.scanners.unverified_range_policy import withhold_unverified_fixes
 from agent_bom.vuln_compliance import tag_vulnerability as _tag_vuln
 
 
@@ -36,6 +38,7 @@ def merge_scanner_vulnerabilities(pkg: Package, new_vulns: list[Vulnerability]) 
 def merge_local_vulns(pkg: "Any", local_vulns: "list[Any]") -> "list[Vulnerability]":
     """Use the same alias/severity reconciliation as online advisory scanning."""
     added = merge_scanner_vulnerabilities(pkg, [_local_vuln_to_vulnerability(record) for record in local_vulns])
+    withhold_unverified_fixes(pkg.vulnerabilities)
     _apply_distro_release_ambiguity(pkg, pkg.vulnerabilities)
     return added
 
@@ -86,6 +89,7 @@ def _local_vuln_to_vulnerability(lv: "Any") -> Vulnerability:
         cvss_score=cvss_score,
         cvss_vector=cvss_vector if isinstance(cvss_vector, str) and cvss_vector else None,
         fixed_version=fixed_version,
+        fix_is_prerelease=fix_is_prerelease(fixed_version, getattr(lv, "ecosystem", None)),
         epss_score=lv.epss_probability,
         epss_percentile=lv.epss_percentile,
         is_kev=lv.is_kev,

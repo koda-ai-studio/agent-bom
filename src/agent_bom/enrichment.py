@@ -26,8 +26,10 @@ from agent_bom.core.errors import DegradedCoverage, UpstreamError, UpstreamInval
 from agent_bom.enrichment_posture import record_enrichment_source
 from agent_bom.http_client import create_client, request_with_retry
 from agent_bom.models import Vulnerability, compute_confidence
+from agent_bom.scanners import epss_backfill as _epss
 from agent_bom.scanners.enrichment_apply import apply_intel, join_kev_status, vuln_cve_ids
 from agent_bom.scanners.enrichment_apply import calculate_exploitability as calculate_exploitability
+from agent_bom.scanners.epss_backfill import EPSS_API_URL as EPSS_API_URL
 from agent_bom.scanners.state import record_degraded_coverage, record_scan_warning
 from agent_bom.scanners.upstream import upstream_request
 from agent_bom.storage import state_home
@@ -50,7 +52,6 @@ _logger = logging.getLogger(__name__)
 
 # API Endpoints
 NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-EPSS_API_URL = "https://api.first.org/data/v1/epss"
 CISA_KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 
 # Air-gap bundle filenames (written by scripts/release/bundle-vuln-db.sh).
@@ -343,8 +344,11 @@ def _cached_epss_scores(cve_ids: list[str], *, allow_stale: bool = False, offlin
     scores: dict[str, dict] = {}
     for cve_id in cve_ids:
         cached = raw_cache.get(cve_id)
-        if not isinstance(cached, dict):
+        # An entry without a usable score is not an answer: leave the CVE
+        # uncached so the live fetch asks again instead of pinning it to None.
+        if not _epss.has_epss_score(cached):
             continue
+        assert isinstance(cached, dict)  # has_epss_score() checked the shape
         cached_at = cached.get("_cached_at", 0)
         if allow_stale or now - cached_at < max_age_secs:
             scores[cve_id] = {k: v for k, v in cached.items() if k != "_cached_at"}
@@ -471,72 +475,73 @@ def _record_failure(source: str, failure: UpstreamError, errors: list[UpstreamEr
         errors.append(failure)
 
 
-def _parse_epss_items(data: dict, scores: dict[str, dict]) -> None:
-    """Parse into ``scores`` item by item, so entries before a malformed one are kept."""
-    for item in data.get("data", []):
-        cve = item.get("cve")
-        if not cve:
-            continue
-        raw_epss = item.get("epss")
-        raw_pct = item.get("percentile")
-        parsed_score = float(raw_epss) if raw_epss is not None else None
-        parsed_pct = float(raw_pct) if raw_pct is not None else None
-        # Validate EPSS ranges — reject out-of-bounds values
-        if parsed_score is not None and not (0.0 <= parsed_score <= 1.0):
-            parsed_score = None
-        if parsed_pct is not None and not (0.0 <= parsed_pct <= 100.0):
-            parsed_pct = None
-        scores[cve] = {"score": parsed_score, "percentile": parsed_pct, "date": item.get("date")}
-
-
 async def fetch_epss_scores(
     cve_ids: list[str],
     client: httpx.AsyncClient,
     *,
     errors: list[UpstreamError] | None = None,
 ) -> dict[str, dict]:
-    """Fetch EPSS scores for multiple CVEs (with persistent file cache).
+    """Fetch EPSS scores for multiple CVEs: cache first, then a bounded live backfill.
 
     EPSS (Exploit Prediction Scoring System) provides probability that a CVE
-    will be exploited in the wild within the next 30 days. Each batch EPSS
-    could not answer appends one typed error (``affected`` = batch size).
+    will be exploited in the wild within the next 30 days. The live step is
+    bounded by :mod:`agent_bom.scanners.epss_backfill` (100 CVEs per request,
+    at most ``EPSS_BACKFILL_MAX_REQUESTS`` requests, per-request timeout); each
+    batch it could not answer appends one typed error (``affected`` = batch
+    size). The outcome, including which CVEs the cache answered, is recorded
+    for the scan's freshness label.
     """
     if not cve_ids:
+        _epss.record_epss_fetch_outcome(_epss.EpssFetchOutcome())
         return {}
 
     _load_enrichment_cache()
 
-    scores: dict[str, dict] = {}
-    scores.update(_cached_epss_scores(cve_ids))
-    uncached = [cve_id for cve_id in cve_ids if cve_id not in scores]
-    if not uncached:
-        return scores
-
-    # EPSS API accepts comma-separated CVE list — paginate in batches
-    epss_batch_size = 100
-    for batch_start in range(0, len(uncached), epss_batch_size):
-        batch = uncached[batch_start : batch_start + epss_batch_size]
-        batch_scores: dict[str, dict] = {}
-        try:
-            response = await upstream_request("epss", request_with_retry, client, "GET", EPSS_API_URL, params={"cve": ",".join(batch)})
-            record_enrichment_source("epss", "success")
-            _parse_epss_items(response.json(), batch_scores)
-        except UpstreamError as failure:
-            failure.affected = len(batch)
-            _record_failure("epss", failure, errors)
-            _logger.warning("EPSS API request failed for %d CVEs (batch %d–%d)", len(batch), batch_start, batch_start + len(batch))
-            continue
-        except (ValueError, KeyError, AttributeError, TypeError) as e:
-            invalid = UpstreamInvalidResponseError("epss", f"parse error: {type(e).__name__}", affected=len(batch))
-            _record_failure("epss", invalid, errors)
-            _logger.warning("EPSS parse error for batch starting at %d: %s", batch_start, type(e).__name__)
-        scores.update(batch_scores)
-        now = time.time()
-        for cve, entry in batch_scores.items():
-            _epss_file_cache[cve] = {**entry, "_cached_at": now}
+    cached = _cached_epss_scores(cve_ids)
+    uncached = [cve_id for cve_id in cve_ids if cve_id not in cached]
+    outcome = _epss.EpssFetchOutcome()
+    if uncached:
+        outcome = await _epss.fetch_epss_batches(uncached, client, request_fn=request_with_retry, errors=errors)
+    now = time.time()
+    for cve, entry in outcome.scores.items():
+        _epss_file_cache[cve] = {**entry, "_cached_at": now}
+    outcome.cached = set(cached)
+    outcome.scores = {**cached, **outcome.scores}
+    _epss.record_epss_fetch_outcome(outcome)
 
     _evict_oldest(_epss_file_cache, _MAX_ENRICHMENT_CACHE_ENTRIES)
-    return scores
+    return outcome.scores
+
+
+async def _epss_for_scan(targets: list[str], client: httpx.AsyncClient, *, offline: bool, errors: list[UpstreamError]) -> dict:
+    """EPSS for the CVEs still unscored: cache only offline; cache then bounded live backfill online."""
+    if offline:
+        cached = _cached_epss_scores(targets, allow_stale=True, offline=True)
+        _epss.record_epss_fetch_outcome(_epss.EpssFetchOutcome(scores=dict(cached), cached=set(cached)))
+        return cached
+    return await fetch_epss_scores(targets, client, errors=errors) or {}
+
+
+def _begin_epss(vulnerabilities: list[Vulnerability], cve_ids: list[str], *, offline: bool) -> tuple[set[int], list[str]]:
+    """Reset per-scan EPSS state; return findings already scored and the CVEs to look up.
+
+    Online, only CVEs the local table (or the scanner) left unscored go to the
+    cache and then, bounded, to the FIRST API; offline joins every CVE from cache.
+    """
+    scored_before = {id(vuln) for vuln in vulnerabilities if vuln.epss_score is not None}
+    return scored_before, (cve_ids if offline else _epss.unscored_cve_ids(vulnerabilities))
+
+
+def _report_epss(vulnerabilities: list[Vulnerability], scored_before: set[int], epss_data: dict, errors: list[UpstreamError]) -> None:
+    """Print the EPSS outcome and record which source scored each finding for the report."""
+    if epss_data:
+        console.print(f"  [green]✓[/green] EPSS: {len(epss_data)} CVE(s)")
+    elif errors:
+        console.print("  [yellow]⚠[/yellow] EPSS data unavailable")
+    outcome = _epss.last_epss_fetch_outcome() or _epss.EpssFetchOutcome()
+    summary = _epss.summarize_epss_sources(vulnerabilities, scored_before=scored_before, outcome=outcome)
+    _epss.record_epss_source_summary(summary)
+    console.print(f"  [dim]{summary.label()}[/dim]")
 
 
 def _persist_kev_cache(kev_dict: dict) -> None:
@@ -681,6 +686,7 @@ async def enrich_vulnerabilities(
     Returns:
         Number of vulnerabilities enriched
     """
+    _epss.reset_epss_state()
     if not vulnerabilities:
         return 0
 
@@ -693,6 +699,7 @@ async def enrich_vulnerabilities(
     console.print(f"\n[bold blue]🔬 Enriching {len(cve_ids)} CVE(s) with external data...[/bold blue]\n")
 
     offline_enrichment = offline or _offline_enrichment_enabled()
+    epss_scored_before, epss_targets = _begin_epss(vulnerabilities, cve_ids, offline=offline_enrichment)
 
     async with create_client(timeout=30.0) as client:
         # ── Parallel enrichment: EPSS + KEV + NVD run concurrently ──
@@ -710,10 +717,7 @@ async def enrich_vulnerabilities(
         async def _fetch_epss() -> dict:
             if not enable_epss:
                 return {}
-            if offline_enrichment:
-                return _cached_epss_scores(cve_ids, allow_stale=True, offline=True)
-            data = await fetch_epss_scores(cve_ids, client, errors=epss_errors)
-            return data or {}
+            return await _epss_for_scan(epss_targets, client, offline=offline_enrichment, errors=epss_errors)
 
         async def _fetch_kev() -> dict:
             if not enable_kev:
@@ -775,7 +779,7 @@ async def enrich_vulnerabilities(
             return 0
         epss_raw, kev_raw, nvd_raw = outcomes
         if isinstance(epss_raw, BaseException):
-            epss_errors.append(_task_failure("epss", epss_raw, affected=len(cve_ids)))
+            epss_errors.append(_task_failure("epss", epss_raw, affected=len(epss_targets) or len(cve_ids)))
             epss_data = {}
         else:
             epss_data = epss_raw
@@ -791,17 +795,11 @@ async def enrich_vulnerabilities(
             nvd_data, nvd_skipped, nvd_total = nvd_raw
         kev_unavailable = enable_kev and not kev_data and bool(kev_errors)
         for degraded in (
-            DegradedCoverage.from_errors("EPSS", epss_errors, requested=len(cve_ids), unit="CVE(s)"),
+            DegradedCoverage.from_errors("EPSS", epss_errors, requested=len(epss_targets) or len(cve_ids), unit="CVE(s)"),
             DegradedCoverage.from_errors("CISA KEV", kev_errors, requested=1, unit="catalog(s)") if kev_unavailable else None,
             DegradedCoverage.from_errors("NVD", nvd_errors, requested=max(nvd_total, 1), unit="CVE(s)"),
         ):
             record_degraded_coverage(degraded)
-
-        # Report results
-        if epss_data:
-            console.print(f"  [green]✓[/green] EPSS: {len(epss_data)} CVE(s)")
-        elif enable_epss:
-            console.print("  [yellow]⚠[/yellow] EPSS data unavailable")
 
         kev_count = sum(1 for vuln in vulnerabilities if vuln.id in kev_data) if kev_data else 0
         if kev_count:
@@ -821,8 +819,9 @@ async def enrich_vulnerabilities(
         # Match by primary ID or CVE aliases; count each vulnerability once however many sources enriched it.
         enriched_count = sum(1 for vuln in vulnerabilities if apply_intel(vuln, epss_data, kev_data, nvd_data if enable_nvd else {}))
         join_kev_status(vulnerabilities, kev_data, consulted=enable_kev)
+        if enable_epss:
+            _report_epss(vulnerabilities, epss_scored_before, epss_data, epss_errors)
 
-    # Persist enrichment caches to disk
     _save_enrichment_cache()
 
     _finalize_confidence(vulnerabilities)

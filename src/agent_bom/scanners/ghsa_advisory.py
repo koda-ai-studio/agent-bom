@@ -16,6 +16,7 @@ import time
 import httpx
 
 from agent_bom.config import GHSA_UNAUTH_PACKAGE_BUDGET as _CONFIG_GHSA_UNAUTH_PACKAGE_BUDGET
+from agent_bom.core.versions.prerelease_fix import fix_is_prerelease
 from agent_bom.enrichment_posture import record_enrichment_source
 from agent_bom.http_client import create_client, request_with_retry
 from agent_bom.models import Package, Severity, Vulnerability
@@ -454,14 +455,13 @@ async def check_github_advisories(
                         fixed = _extract_fixed_version(advisory, target_pkg.name, target_eco, current_version=target_pkg.version or "")
 
                         if target_pkg.version:
-                            # Skip if the installed version is already at or beyond
-                            # the fix. ``compare_versions`` returns True only when
-                            # fix > current (upgrade needed); False = already
-                            # patched. This is a short-circuit ONLY — it can never
-                            # stand in for the advisory's own range, because a fix
-                            # bound says nothing about the range's LOWER bound
-                            # (jackson-databind 2.9.10 is below the fix 2.18.8 but
-                            # also below the ">= 2.13.0" the advisory introduces).
+                            # Skip if the installed version is already at or beyond the
+                            # fix. ``compare_versions`` returns True only when fix >
+                            # current (upgrade needed); False = already patched. This is
+                            # a short-circuit ONLY — it can never stand in for the
+                            # advisory's own range, because a fix bound says nothing about
+                            # the range's LOWER bound (jackson-databind 2.9.10 is below the
+                            # fix 2.18.8 but also below the ">= 2.13.0" the advisory introduces).
                             if fixed:
                                 from agent_bom.version_utils import compare_versions
 
@@ -482,6 +482,7 @@ async def check_github_advisories(
                             severity=severity,
                             cvss_score=cvss_score,
                             fixed_version=fixed,
+                            fix_is_prerelease=fix_is_prerelease(fixed, target_eco),
                             references=refs,
                             cwe_ids=cwe_ids,
                             affected_symbols=advisory_affected_symbols_list(advisory),

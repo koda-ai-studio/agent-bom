@@ -12,7 +12,9 @@ from __future__ import annotations
 import asyncio
 import threading
 from collections import defaultdict
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from urllib.parse import urlparse
 
 import httpx
@@ -21,6 +23,25 @@ from agent_bom.http_client import REGISTRY_LOOKUP_MAX_WAIT, request_with_retry
 
 REGISTRY_LATEST_DEADLINE = REGISTRY_LOOKUP_MAX_WAIT
 RESOLVE_ALL_TIMEOUT = 8.0
+_LATEST_DEADLINE_OVERRIDE: ContextVar[float | None] = ContextVar("agent_bom_latest_deadline", default=None)
+
+
+def latest_deadline() -> float:
+    """Seconds a registry-latest lookup may wait in the current context."""
+    override = _LATEST_DEADLINE_OVERRIDE.get()
+    return REGISTRY_LATEST_DEADLINE if override is None else override
+
+
+@contextmanager
+def latest_deadline_budget(seconds: float) -> Iterator[None]:
+    """Let one caller (a single-package ``check``) wait longer than a bulk scan does."""
+    token = _LATEST_DEADLINE_OVERRIDE.set(seconds)
+    try:
+        yield
+    finally:
+        _LATEST_DEADLINE_OVERRIDE.reset(token)
+
+
 _REGISTRY_HOSTS = {"npm": "registry.npmjs.org", "pypi": "pypi.org", "conda": "pypi.org", "go": "proxy.golang.org", "cargo": "crates.io"}
 _LOCK = threading.Lock()
 _DEGRADED: dict[str, str] = {}
@@ -66,13 +87,14 @@ async def registry_latest_get(
     package_name: str,
     request: Callable[..., Awaitable[httpx.Response | None]] = request_with_retry,
 ) -> httpx.Response | None:
-    """GET a registry-latest document within ``REGISTRY_LATEST_DEADLINE`` seconds."""
+    """GET a registry-latest document within the current ``latest_deadline()`` seconds."""
     host = urlparse(url).hostname or url
+    deadline = latest_deadline()
     try:
-        async with asyncio.timeout(REGISTRY_LATEST_DEADLINE):
-            response = await request(client, "GET", url, max_wait=REGISTRY_LATEST_DEADLINE)
+        async with asyncio.timeout(deadline):
+            response = await request(client, "GET", url, max_wait=deadline)
     except TimeoutError:
-        record_registry_degraded(host, f"did not answer within {REGISTRY_LATEST_DEADLINE:.0f}s", package_name)
+        record_registry_degraded(host, f"did not answer within {deadline:.0f}s", package_name)
         return None
     if response is None:
         record_registry_degraded(host, "was unreachable or timed out", package_name)

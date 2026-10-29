@@ -19,6 +19,9 @@ class SecretFinding:
     matched_preview: str  # redacted evidence label; never includes matched bytes
     category: str  # "credential", "pii", "secret"
     validation_status: ValidationStatus | None = None
+    # Set when the severity was lowered from the pattern's default (e.g. a
+    # test-fixture path). The finding is kept so the location stays visible.
+    downgrade_reason: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -29,6 +32,7 @@ class SecretFinding:
             "preview": self.matched_preview,
             "category": self.category,
             **({"validation_status": self.validation_status} if self.validation_status is not None else {}),
+            **({"downgrade_reason": self.downgrade_reason} if self.downgrade_reason is not None else {}),
         }
 
 

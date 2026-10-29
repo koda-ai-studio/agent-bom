@@ -321,18 +321,56 @@ async def resolve_cargo_metadata(
     Returns (version, license).
     """
 
+    from agent_bom import __version__
+
     url = f"https://crates.io/api/v1/crates/{_url_quote(crate_name, safe='')}"
-    response = await request_with_retry(client, "GET", url, max_wait=REGISTRY_LOOKUP_MAX_WAIT)  # type: ignore[arg-type]
+    # crates.io's data-access policy rejects (HTTP 403) requests whose
+    # User-Agent does not identify the client.
+    headers = {"User-Agent": f"agent-bom/{__version__} (github.com/koda-ai-studio/agent-bom)"}
+    response = await request_with_retry(client, "GET", url, max_wait=REGISTRY_LOOKUP_MAX_WAIT, headers=headers)  # type: ignore[arg-type]
     if response and response.status_code == 200:
         try:
             data = response.json()
             crate = data.get("crate", {})
-            version = crate.get("newest_version") or crate.get("max_version")
+            # ``max_stable_version`` excludes pre-releases; the others may not.
+            version = crate.get("max_stable_version") or crate.get("newest_version") or crate.get("max_version")
             license_id = crate.get("license")
             return version, license_id
         except (ValueError, KeyError):
             pass
     return None, None
+
+
+async def resolve_maven_versions(
+    group_id: str,
+    artifact_id: str,
+    client: object,
+    *,
+    rows: int = 20,
+) -> list[str]:
+    """Return the newest ``rows`` published versions of a Maven artifact (newest first).
+
+    Uses the Maven Central search ``gav`` core, which lists one document per
+    version, so the caller can skip pre-releases that ``latestVersion`` would
+    report. Returns ``[]`` when the search is unavailable.
+    """
+
+    g = _url_quote(group_id, safe="")
+    a = _url_quote(artifact_id, safe="")
+    url = f"https://search.maven.org/solrsearch/select?q=g:{g}+AND+a:{a}&core=gav&rows={int(rows)}&wt=json"
+    response = await request_with_retry(client, "GET", url, max_wait=REGISTRY_LOOKUP_MAX_WAIT)  # type: ignore[arg-type]
+    if not response or response.status_code != 200:
+        return []
+    try:
+        docs = response.json().get("response", {}).get("docs", [])
+    except (ValueError, KeyError, AttributeError):
+        return []
+    versions: list[str] = []
+    for doc in docs if isinstance(docs, list) else []:
+        version = doc.get("v") if isinstance(doc, dict) else None
+        if isinstance(version, str) and version.strip():
+            versions.append(version.strip())
+    return versions
 
 
 async def resolve_maven_metadata(

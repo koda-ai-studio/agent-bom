@@ -9,6 +9,7 @@ from agent_bom.advisory_ids import derive_cve_from_advisory_id, finding_advisory
 from agent_bom.canonical_ids import canonical_finding_id, source_ids
 from agent_bom.core.asset_types import entity_type_for_asset_type
 from agent_bom.core.sla import finding_owner, finding_sla_fields
+from agent_bom.core.vex_policy import vex_row_fields
 from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
 from agent_bom.evidence.finding_lanes import model_lane_fields
 
@@ -575,13 +576,12 @@ class Finding:
             **sla,
             "status": self.lifecycle_status,
             "lifecycle_status": self.lifecycle_status,
-            # Suppression state — a suppressed finding must never surface as
-            # unsuppressed downstream (mirrors BlastRadius / SARIF suppressions[]).
             "suppressed": self.suppressed,
             "suppression_id": self.suppression_id,
             "suppression_state": self.suppression_state,
             "suppression_reason": self.suppression_reason,
             "unsuppressed_risk_score": self.unsuppressed_risk_score,
+            **vex_row_fields(self.evidence),
             # AI-native risk context
             "ai_risk_context": self.ai_risk_context,
             "ai_summary": self.ai_summary,
