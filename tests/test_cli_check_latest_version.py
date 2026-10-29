@@ -119,8 +119,11 @@ def test_offline_check_without_version_still_skips_lookup(monkeypatch: pytest.Mo
 
 
 def test_mcp_check_without_version_reports_the_same_version_source(monkeypatch: pytest.MonkeyPatch, clean_scan: list[Package]) -> None:
-    _registry_latest(monkeypatch, "4.18.2")
+    # Import before patching shared helpers: scanning binds the malware resolver
+    # at import time, so a cold import under the patch would retain the fake.
     from agent_bom.mcp_tools.scanning import check_impl
+
+    _registry_latest(monkeypatch, "4.18.2")
 
     async def _no_osv_name_lookup(*_args, **_kwargs):
         return []
