@@ -645,6 +645,28 @@ describe("ConnectionsPage — Connect segment", () => {
     );
   });
 
+  it.each([
+    { provider: "azure", label: /Microsoft Azure/, scope: "Discovered subscriptions", fields: { "Client ID (app registration)": "fixture-client", "Tenant ID": "fixture-tenant", "Subscription ID": "fixture-sub", "Client secret": SECRET } },
+    { provider: "gcp", label: /Google Cloud/, scope: "Discovered organization projects", fields: { "Service account email": "agent-bom@fixture.iam.gserviceaccount.com", "Project ID": "fixture-project", "Service account key (JSON)": SECRET } },
+  ])("persists explicit multi-scope onboarding for $provider", async ({ provider, label, scope, fields }) => {
+    apiMock.createCloudConnection.mockResolvedValue({ ...CREATED_RECORD, provider, inventory_scope: "organization" });
+    render(<ConnectionsPage />);
+    await waitForConnectTab();
+    fireEvent.click(screen.getByRole("button", { name: "Add cloud account" }));
+    const wizard = screen.getByRole("dialog", { name: "Add cloud account" });
+    fireEvent.click(within(wizard).getByRole("button", { name: label }));
+    fireEvent.click(within(wizard).getByRole("button", { name: /Next/ }));
+    fireEvent.click(within(wizard).getByRole("button", { name: scope }));
+    expect(within(wizard).getByText(/only the scopes returned by discovery/i)).toBeInTheDocument();
+    fireEvent.click(within(wizard).getByRole("button", { name: /Next/ }));
+    fireEvent.change(screen.getByPlaceholderText("Production account"), { target: { value: "Scoped estate" } });
+    for (const [label, value] of Object.entries(fields)) {
+      fireEvent.change(within(wizard).getByLabelText(label, { exact: false }), { target: { value } });
+    }
+    fireEvent.click(within(wizard).getByRole("button", { name: "Create connection" }));
+    await waitFor(() => expect(apiMock.createCloudConnection).toHaveBeenCalledWith(expect.objectContaining({ provider, inventory_scope: "organization" })));
+  });
+
   it("maps provider-specific GCP fields to role_ref / external_id / auth_params", async () => {
     apiMock.createCloudConnection.mockResolvedValue({ ...CREATED_RECORD, provider: "gcp" });
 
