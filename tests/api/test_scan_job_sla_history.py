@@ -46,7 +46,7 @@ def job(month, *, tenant="history-tenant", target="repo-a", findings=None):
 def get_rows(*, tenant="history-tenant", **params):
     with TestClient(app) as client:
         client.headers.update(proxy_headers(role="analyst", tenant=tenant))
-        response = client.get("/v1/findings", params={"origin": "scan", "window_days": 0, **params})
+        response = client.get("/v1/findings", params={"window_days": 0, **params})
     assert response.status_code == 200
     return response.json()["findings"]
 
@@ -159,7 +159,7 @@ def test_history_uses_existing_tenant_read_and_does_not_mutate_snapshots(scan_st
     with TestClient(app) as client:
         client.headers.update(proxy_headers(role="analyst", tenant="history-tenant"))
         calls.clear()  # Application startup restores jobs independently of this read route.
-        response = client.get("/v1/findings", params={"origin": "scan", "window_days": 0})
+        response = client.get("/v1/findings", params={"window_days": 0})
         assert response.status_code == 200 and len(response.json()["findings"]) == 1
     from agent_bom.core.settings import env_flag
 
