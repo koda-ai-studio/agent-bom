@@ -208,14 +208,17 @@ def test_collector_refresh_applies_certifi_overlay_after_released_lock() -> None
     assert all("--hash=sha256:" in entry for entry in entries)
 
 
+@pytest.mark.parametrize("dockerfile_path", ["Dockerfile", "deploy/docker/Dockerfile.collector"])
 @pytest.mark.parametrize(("installed", "installer_status"), [(False, 0), (True, 0), (True, 23)])
-def test_release_refresh_patches_tornado_only_when_present(tmp_path: Path, installed: bool, installer_status: int) -> None:
+def test_release_refresh_patches_tornado_only_when_present(
+    tmp_path: Path, installed: bool, installer_status: int, dockerfile_path: str
+) -> None:
     """Old release locks need the patch; new images must not regain an unused server."""
     import os
     import subprocess
     import sys
 
-    dockerfile = (ROOT / "Dockerfile").read_text()
+    dockerfile = (ROOT / dockerfile_path).read_text()
     marker = "if /app/.venv/bin/python -c"
     assert marker in dockerfile, "released Tornado 6.5.10 needs a conditional security overlay"
     command = dockerfile[dockerfile.index(marker) :].split("\n\n", 1)[0].replace("\\\n", "")
@@ -244,7 +247,10 @@ def test_release_refresh_patches_tornado_only_when_present(tmp_path: Path, insta
         assert args[-2:] == ["-r", "deploy/docker/tornado-security-requirements.txt"]
 
 
-def test_tornado_refresh_manifest_is_hashed_and_reaches_released_build() -> None:
+@pytest.mark.parametrize(
+    ("job", "dockerfile_path"), [("refresh-latest", "Dockerfile"), ("refresh-collector-latest", "deploy/docker/Dockerfile.collector")]
+)
+def test_tornado_refresh_manifest_is_hashed_and_reaches_released_build(job: str, dockerfile_path: str) -> None:
     manifest = "deploy/docker/tornado-security-requirements.txt"
     path = ROOT / manifest
     assert path.exists(), "old release locks need reviewed Tornado 6.6 wheels"
@@ -254,9 +260,9 @@ def test_tornado_refresh_manifest_is_hashed_and_reaches_released_build() -> None
     assert requirement.name == "tornado"
     assert "6.5.10" not in requirement.specifier
     assert str(requirement.specifier) == "==6.6"
-    assert entries[0].count("--hash=sha256:") == 2
-    assert f"COPY {manifest} ./{manifest}" in (ROOT / "Dockerfile").read_text()
-    _, overlay = _refresh_step("refresh-latest", "Apply current runtime security overlay")
+    assert entries[0].count("--hash=sha256:") == 4
+    assert f"COPY {manifest} ./{manifest}" in (ROOT / dockerfile_path).read_text()
+    _, overlay = _refresh_step(job, "Apply current runtime security overlay")
     assert manifest in overlay["run"]
     # The ordinary package remains free of the obsolete web server dependency.
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]

@@ -1,5 +1,6 @@
 """Source syntax distinguishes personal fields from arithmetic and documentation."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -87,3 +88,79 @@ def test_modified_public_docstring_does_not_receive_sample_exemption():
     source = (Path(__file__).parent / "fixtures/source_samples/urllib_request.py").read_text()
     source = source.replace("geheim" + "$parole", "fixture-" + "password-983")
     assert any(f.category == "secret" for f in scan_content(source, Path("urllib/request.py"), "urllib/request.py"))
+
+
+@pytest.mark.parametrize(
+    "field,value", [("expire", 4294967294), ("imgOptMaxInputPixels", 268402689), ("turbopackStaleOutputMaxAge", 604800000)]
+)
+def test_next_build_numeric_limits_are_not_personal_records(field, value):
+    source = json.dumps(
+        {"version": 1, "config": {"cacheLife": {"default": {field: value}}} if field == "expire" else {"experimental": {field: value}}}
+    )
+    path = "app/.next/required-server-files.json"
+    assert not [f for f in scan_content(source, Path(path), path) if f.category == "pii"]
+
+
+def test_next_build_metadata_still_reports_personal_fields_and_secrets():
+    source = '{"ssn":123456789}\npassword = "fixture-' + 'credential-387"'
+    path = "app/.next/required-server-files.json"
+    findings = scan_content(source, Path(path), path)
+    assert {f.category for f in findings} == {"pii", "secret"}
+
+
+def test_cloud_service_account_address_is_machine_identity_not_personal_email():
+    source = 'placeholder:"agent-bom@project.iam.gserviceaccount.com"'
+    assert not [f for f in scan_content(source, Path("page.js"), "page.js") if f.category == "pii"]
+
+
+def test_issue_style_map_is_not_a_credential_assignment():
+    source = (
+        'const styles={vulnerability:"bg-ink-secondary",misconfiguration:"bg-ink-tertiary",'
+        'secret:"bg-ink-secondary opacity-60",pii:"bg-ink-secondary opacity-45"};'
+    )
+    assert scan_content(source, Path("page.js"), "page.js") == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'const config={secret:"fixture-' + 'credential-387"};',
+        'const styles={vulnerability:"bg-ink-secondary",misconfiguration:"bg-ink-tertiary",secret:"fixture-'
+        + 'credential-387",pii:"bg-ink-secondary opacity-45"};',
+        'const config={secret:"bg-ink-secondary opacity-60"};',
+    ],
+)
+def test_secret_literals_outside_a_complete_style_map_still_report(source):
+    assert any(f.category == "secret" for f in scan_content(source, Path("page.js"), "page.js"))
+
+
+@pytest.mark.parametrize(
+    "source,kind",
+    [
+        ('{"version":1,"config":{"cacheLife":{"default":{"expire":4294967294}},"env":{"phone":2125550199}}}', "US Phone Number"),
+        ('{"version":1,"config":{"experimental":{"imgOptMaxInputPixels":268402689},"env":{"ssn":123456789}}}', "US SSN"),
+        ('const x={service:"reader@project.iam.gserviceaccount.com",person:"person@example.test"}', "Email Address"),
+    ],
+)
+def test_non_personal_match_does_not_hide_later_personal_value(source, kind):
+    path = "app/.next/required-server-files.json"
+    assert any(f.secret_type == kind for f in scan_content(source, Path(path), path))
+
+
+def test_numeric_settings_outside_next_manifest_still_report():
+    source = '{"expire":4294967294}'
+    assert any(f.category == "pii" for f in scan_content(source, Path("data.json"), "data.json"))
+
+
+def test_style_map_does_not_hide_another_secret_on_same_minified_line():
+    source = (
+        'const styles={vulnerability:"bg-ink-secondary",secret:"bg-ink-secondary opacity-60",'
+        'pii:"bg-ink-secondary opacity-45"};const config={secret:"fixture-' + 'credential-387"};'
+    )
+    assert any(f.category == "secret" for f in scan_content(source, Path("page.js"), "page.js"))
+
+
+def test_next_manifest_application_fields_are_not_exempted_as_build_settings():
+    source = json.dumps({"version": 1, "config": {"env": {"expire": 123456789}}})
+    path = "app/.next/required-server-files.json"
+    assert any(f.secret_type == "US SSN" for f in scan_content(source, Path(path), path))

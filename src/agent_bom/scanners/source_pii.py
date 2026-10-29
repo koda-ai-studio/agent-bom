@@ -12,6 +12,13 @@ _NUMERIC_FIELDS = {
     "US Phone Number": re.compile(r"(?i)(?:^|[^a-z0-9])(?:[a-z]+_)*(?:phone|phone_?number|telephone|mobile|tel)['\"]?\s*[=:]\s*['\"]?\s*$"),
 }
 
+_GCP_SERVICE_ACCOUNT = re.compile(r"[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com", re.IGNORECASE)
+
+
+def machine_identity_match(name: str, match: re.Match[str]) -> bool:
+    """A provider-issued service-account address identifies a machine, not a person."""
+    return name == "Email Address" and bool(_GCP_SERVICE_ACCOUNT.fullmatch(match.group()))
+
 
 def source_pii_match(line: str, name: str, match: re.Match[str]) -> bool:
     """Require a personal field for bare numeric values; retain formatted strings.

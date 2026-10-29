@@ -33,6 +33,7 @@ from agent_bom import config
 from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.runtime.patterns import PII_PATTERNS
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator
+from agent_bom.scanners.build_metadata import mask_build_config_quantities
 from agent_bom.scanners.credential_validation import CredentialValidator, ValidationStatus
 from agent_bom.scanners.public_source_samples import mask_public_docstrings
 from agent_bom.scanners.repo_ignore import RepositoryIgnore
@@ -40,7 +41,7 @@ from agent_bom.scanners.secret_lines import ENTROPY_PLACEHOLDER_RE as _ENTROPY_P
 from agent_bom.scanners.secret_lines import is_comment_line, match_credential, match_file_secret
 from agent_bom.scanners.secret_models import SecretFinding as SecretFinding
 from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResult
-from agent_bom.scanners.source_pii import source_pii_match
+from agent_bom.scanners.source_pii import machine_identity_match, source_pii_match
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
@@ -351,6 +352,26 @@ def scan_content(content: str, file_path: Path, rel_path: str, *, detect_entropy
     return _scan_file(file_path, rel_path, detect_entropy=detect_entropy, content=content)
 
 
+def _pii_type(file_path: Path, line: str) -> str | None:
+    """Return the first personal value, continuing past non-personal matches."""
+    if not _should_scan_pii_line(file_path, line):
+        return None
+    for name, pattern in PII_PATTERNS:
+        for match in pattern.finditer(line):
+            if machine_identity_match(name, match):
+                continue
+            if file_path.suffix.lower() in _PII_CODE_EXTENSIONS and not source_pii_match(line, name, match):
+                break
+            if name == "Email Address" and _URL_USERINFO_PREFIX_RE.search(line, 0, match.start()):
+                # URL userinfo belongs to credential detection, not personal email.
+                break
+            if name == "IP Address (IPv4)":
+                if not _IPV4_PII_CONTEXT_RE.search(line) or not _is_reportable_ipv4(match.group(0)):
+                    break
+            return name
+    return None
+
+
 def _scan_file(
     file_path: Path,
     rel_path: str,
@@ -372,6 +393,7 @@ def _scan_file(
 
     findings: list[SecretFinding] = []
     lines = mask_public_docstrings(content, file_path).split("\n")
+    pii_lines = mask_build_config_quantities("\n".join(lines), file_path).split("\n")
     aws_secrets = _aws_secret_candidates(lines) if aws_validator is not None else []
 
     # Check each line against all patterns
@@ -422,40 +444,18 @@ def _scan_file(
                 )
             )
 
-        # PII patterns (MEDIUM) stay limited to structured config/secrets
-        # surfaces and config-like code lines. Markdown/plain-text docs are
-        # still scanned for credentials above, but generic emails/IPs there
-        # are usually examples or contacts.
-        if _should_scan_pii_line(file_path, line):
-            for name, pattern in PII_PATTERNS:
-                match = pattern.search(line)
-                if not match:
-                    continue
-                if file_path.suffix.lower() in _PII_CODE_EXTENSIONS and not source_pii_match(line, name, match):
-                    continue
-                if name == "Email Address" and _URL_USERINFO_PREFIX_RE.search(line, 0, match.start()):
-                    # `scheme://user:pass@host` — the `pass@host` tail is URL
-                    # userinfo, reported above as a credential when it carries
-                    # a password, never as a person's email address.
-                    continue
-                if name == "IP Address (IPv4)":
-                    if not _IPV4_PII_CONTEXT_RE.search(line) or not _is_reportable_ipv4(match.group(0)):
-                        # A routable service/configuration address is not itself
-                        # evidence of personal data. Require an explicit user,
-                        # client, visitor, or request-record field before
-                        # classifying the literal as PII.
-                        continue
-                findings.append(
-                    SecretFinding(
-                        file_path=rel_path,
-                        line_number=line_num,
-                        secret_type=name,
-                        severity="medium",
-                        matched_preview="[PII_REDACTED]",
-                        category="pii",
-                    )
+        pii_type = _pii_type(file_path, pii_lines[line_num - 1])
+        if pii_type is not None:
+            findings.append(
+                SecretFinding(
+                    file_path=rel_path,
+                    line_number=line_num,
+                    secret_type=pii_type,
+                    severity="medium",
+                    matched_preview="[PII_REDACTED]",
+                    category="pii",
                 )
-                break
+            )
 
         # Entropy detection runs only on lines no named pattern already flagged,
         # so it adds coverage for novel secrets instead of duplicating findings.

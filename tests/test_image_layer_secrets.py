@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from agent_bom.image_evidence import collect_image_evidence
 from agent_bom.oci_parser import parse_oci_layout_dir
 from tests._oci_image_builder import build_image, dpkg_status
@@ -105,3 +107,24 @@ def test_no_collector_means_no_secret_work(tmp_path):
     image = build_image([{"app/settings.py": f'KEY = "{_AWS_KEY_ID}"\n'.encode()}])
     result = parse_oci_layout_dir(image.write_layout(tmp_path / "layout"))
     assert result.packages == []
+
+
+@pytest.mark.parametrize("length", [40, 64])
+def test_gpg_public_fingerprint_is_not_a_credential(tmp_path, length):
+    fingerprint = ("0123456789ABCDEF" * 4)[:length]
+    image = build_image(
+        [{"etc/hostname": b"app\n"}],
+        env=[f"GPG_KEY={fingerprint}"],
+        history=[f"/bin/sh -c #(nop) ENV GPG_KEY={fingerprint}"],
+    )
+    _, evidence = _scan(tmp_path, image)
+    assert evidence.config_secrets == []
+
+
+@pytest.mark.parametrize("key", ["GPG_KEY", "API_KEY"])
+def test_gpg_exception_does_not_hide_secret_material(tmp_path, key):
+    value = "fixture-" + "private-key-material" if key == "GPG_KEY" else "".join(format(n, "X") for n in range(16)) * 4
+    image = build_image([{"etc/hostname": b"app\n"}], env=[f"{key}={value}"])
+    _, evidence = _scan(tmp_path, image)
+    assert len(evidence.config_secrets) == 1
+    assert value not in json.dumps(evidence.to_metadata())

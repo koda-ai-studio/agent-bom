@@ -86,3 +86,7 @@ c64637d9a918d14df8240f8ac5c8f1050878b7ff:tests/test_iac_redacted_graph_roundtrip
 # Side-scan docstring prose matched generic-api-key; no secret.
 3f98a7e090c4fb3e6798b4c030482eae1c4f4f4e:.gitleaksignore:generic-api-key:86
 6c67cca43f53a704055281b877354b899017414f:src/agent_bom/cloud/side_scan_targets.py:generic-api-key:256
+
+# History-only false positive: a hexadecimal digit sequence in the image
+# scanner regression. The current test generates this non-functional value.
+62ca10d6c3a984ff73d0e0b05b918b2b0a66108f:tests/test_image_layer_secrets.py:generic-api-key:124
