@@ -851,7 +851,7 @@ export function Nav() {
         </Link>
         {counts?.deployment_mode && (
           <Link href="/sources"
-            className="hidden rounded-full border border-outline bg-surface-elevated px-2.5 py-0.5 text-xs font-mono uppercase tracking-[0.12em] text-ink-secondary sm:inline-flex"
+            className="hidden rounded-full border border-outline bg-surface-elevated px-2.5 py-0.5 text-xs text-ink-secondary sm:inline-flex"
             title={`View evidence sources: ${deploymentModeLabel(counts.deployment_mode)}. This describes collected inventory; hosting and runtime enforcement are configured separately.`}
           >
             Sources: {deploymentModeLabel(counts.deployment_mode)}
