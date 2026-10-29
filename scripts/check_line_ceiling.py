@@ -111,12 +111,12 @@ def _violations(sizes: dict[str, int], allowances: dict[str, int], prefix: str) 
     return errors
 
 
-def baseline_growth(current: dict[str, int], trusted: dict[str, int]) -> list[str]:
+def baseline_growth(current: dict[str, int], base_counts: dict[str, int]) -> list[str]:
     """An edited dashboard baseline can only shrink or lose entries."""
     return [
-        f"{key}: baseline allowance {value} exceeds trusted {trusted.get(key, 0)}"
+        f"{key}: baseline allowance {value} exceeds trusted {base_counts.get(key, 0)}"
         for key, value in sorted(current.items())
-        if value > trusted.get(key, 0)
+        if value > base_counts.get(key, 0)
     ]
 
 
@@ -125,7 +125,7 @@ def check(
     python_allowed: dict[str, int],
     ui_baseline: dict[str, int],
     *,
-    trusted_ui_baseline: dict[str, int] | None,
+    base_ui_counts: dict[str, int] | None,
 ) -> list[str]:
     errors = _violations(python_sizes(root), python_allowed, f"{PYTHON_ROOT.as_posix()}/")
     sizes = ui_sizes(root)
@@ -133,12 +133,12 @@ def check(
     for key in sorted(ui_baseline):
         if sizes.get(key, 0) <= FILE_CEILING:
             errors.append(f"{key}: baseline entry is stale (file within the ceiling or removed); run --write-baseline")
-    if trusted_ui_baseline is not None:
-        errors.extend(baseline_growth(ui_baseline, trusted_ui_baseline))
+    if base_ui_counts is not None:
+        errors.extend(baseline_growth(ui_baseline, base_ui_counts))
     return errors
 
 
-def trusted_baseline(root: Path, ref: str) -> dict[str, int] | None:
+def load_base_ref_counts(root: Path, ref: str) -> dict[str, int] | None:
     # A missing commit is an error; a missing file permits the initial rollout.
     subprocess.run(["git", "cat-file", "-e", f"{ref}^{{commit}}"], cwd=root, check=True, capture_output=True)
     exists = subprocess.run(["git", "cat-file", "-e", f"{ref}:{BASELINE.as_posix()}"], cwd=root, capture_output=True)
@@ -160,15 +160,15 @@ def summary(root: Path) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--write-baseline", action="store_true", help="record the current dashboard debt; refuses growth")
-    parser.add_argument("--base-ref", help="trusted base commit used to reject increased baseline allowances")
+    parser.add_argument("--base-ref", help="reference base commit used to reject increased baseline allowances")
     args = parser.parse_args()
     stored = load_ui_baseline(ROOT)
-    trusted = trusted_baseline(ROOT, args.base_ref) if args.base_ref else None
+    base_counts = load_base_ref_counts(ROOT, args.base_ref) if args.base_ref else None
     if args.write_baseline:
         current = current_ui_debt(ROOT)
         errors = baseline_growth(current, stored) if (ROOT / BASELINE).exists() else []
-        if trusted is not None:
-            errors.extend(baseline_growth(current, trusted))
+        if base_counts is not None:
+            errors.extend(baseline_growth(current, base_counts))
         if errors:
             print("\n".join(errors))
             return 1
@@ -179,7 +179,7 @@ def main() -> int:
         }
         (ROOT / BASELINE).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         stored = current
-    errors = check(ROOT, python_allowances(ROOT), stored, trusted_ui_baseline=trusted)
+    errors = check(ROOT, python_allowances(ROOT), stored, base_ui_counts=base_counts)
     if errors:
         print("\n".join(errors))
         return 1

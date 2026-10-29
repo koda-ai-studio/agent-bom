@@ -32,7 +32,7 @@ def _python_function(name: str, body_lines: int) -> str:
 
 
 def test_current_tree_is_within_ceiling_or_recorded() -> None:
-    errors = check(ROOT, python_allowances(ROOT), load_ui_baseline(ROOT), trusted_ui_baseline=None)
+    errors = check(ROOT, python_allowances(ROOT), load_ui_baseline(ROOT), base_ui_counts=None)
     assert errors == [], "\n".join(errors)
 
 
@@ -40,10 +40,10 @@ def test_python_file_over_ceiling_fails_without_architecture_allowance(tmp_path:
     root = _tree(tmp_path, {"src/agent_bom/big.py": "x = 1\n" * (FILE_CEILING + 1)})
     sizes = python_sizes(root)
     assert sizes["big.py"] == FILE_CEILING + 1
-    errors = check(root, {}, {}, trusted_ui_baseline=None)
+    errors = check(root, {}, {}, base_ui_counts=None)
     assert errors == [f"src/agent_bom/big.py: {FILE_CEILING + 1} lines exceeds the {FILE_CEILING}-line file ceiling (allowance 0)"]
-    assert not check(root, {"big.py": FILE_CEILING + 1}, {}, trusted_ui_baseline=None)
-    assert check(root, {"big.py": FILE_CEILING}, {}, trusted_ui_baseline=None)
+    assert not check(root, {"big.py": FILE_CEILING + 1}, {}, base_ui_counts=None)
+    assert check(root, {"big.py": FILE_CEILING}, {}, base_ui_counts=None)
 
 
 def test_python_function_over_ceiling_uses_qualified_name(tmp_path: Path) -> None:
@@ -51,26 +51,26 @@ def test_python_function_over_ceiling_uses_qualified_name(tmp_path: Path) -> Non
     root = _tree(tmp_path, {"src/agent_bom/api/worker.py": source})
     sizes = python_sizes(root)
     assert sizes["api/worker.py::Worker.run"] == FUNCTION_CEILING + 1
-    errors = check(root, {}, {}, trusted_ui_baseline=None)
+    errors = check(root, {}, {}, base_ui_counts=None)
     expected = f"{FUNCTION_CEILING + 1} lines exceeds the {FUNCTION_CEILING}-line function ceiling (allowance 0)"
     assert errors == [f"src/agent_bom/api/worker.py::Worker.run: {expected}"]
-    assert not check(root, {"api/worker.py::Worker.run": FUNCTION_CEILING + 1}, {}, trusted_ui_baseline=None)
+    assert not check(root, {"api/worker.py::Worker.run": FUNCTION_CEILING + 1}, {}, base_ui_counts=None)
 
 
 def test_python_function_at_ceiling_passes(tmp_path: Path) -> None:
     root = _tree(tmp_path, {"src/agent_bom/ok.py": _python_function("run", FUNCTION_CEILING - 1)})
     assert python_sizes(root)["ok.py::run"] == FUNCTION_CEILING
-    assert not check(root, {}, {}, trusted_ui_baseline=None)
+    assert not check(root, {}, {}, base_ui_counts=None)
 
 
 def test_ui_file_over_ceiling_needs_a_matching_baseline_entry(tmp_path: Path) -> None:
     root = _tree(tmp_path, {"ui/components/nav.tsx": "x\n" * (FILE_CEILING + 1), "ui/lib/small.ts": "x\n"})
     assert ui_sizes(root) == {"ui/components/nav.tsx": FILE_CEILING + 1, "ui/lib/small.ts": 1}
-    assert check(root, {}, {}, trusted_ui_baseline=None) == [
+    assert check(root, {}, {}, base_ui_counts=None) == [
         f"ui/components/nav.tsx: {FILE_CEILING + 1} lines exceeds the {FILE_CEILING}-line file ceiling (allowance 0)"
     ]
-    assert not check(root, {}, {"ui/components/nav.tsx": FILE_CEILING + 1}, trusted_ui_baseline=None)
-    assert check(root, {}, {"ui/components/nav.tsx": FILE_CEILING}, trusted_ui_baseline=None)
+    assert not check(root, {}, {"ui/components/nav.tsx": FILE_CEILING + 1}, base_ui_counts=None)
+    assert check(root, {}, {"ui/components/nav.tsx": FILE_CEILING}, base_ui_counts=None)
 
 
 def test_generated_and_vendored_ui_files_are_not_measured(tmp_path: Path) -> None:
@@ -86,12 +86,12 @@ def test_generated_and_vendored_ui_files_are_not_measured(tmp_path: Path) -> Non
         },
     )
     assert ui_sizes(root) == {"ui/hooks/use-thing.tsx": 1}
-    assert not check(root, {}, {}, trusted_ui_baseline=None)
+    assert not check(root, {}, {}, base_ui_counts=None)
 
 
 def test_stale_ui_baseline_entry_must_be_removed(tmp_path: Path) -> None:
     root = _tree(tmp_path, {"ui/app/page.tsx": "x\n" * 10})
-    errors = check(root, {}, {"ui/app/page.tsx": FILE_CEILING + 5, "ui/app/gone.tsx": FILE_CEILING + 1}, trusted_ui_baseline=None)
+    errors = check(root, {}, {"ui/app/page.tsx": FILE_CEILING + 5, "ui/app/gone.tsx": FILE_CEILING + 1}, base_ui_counts=None)
     assert errors == [
         "ui/app/gone.tsx: baseline entry is stale (file within the ceiling or removed); run --write-baseline",
         "ui/app/page.tsx: baseline entry is stale (file within the ceiling or removed); run --write-baseline",
@@ -99,21 +99,21 @@ def test_stale_ui_baseline_entry_must_be_removed(tmp_path: Path) -> None:
 
 
 def test_editing_the_ui_baseline_cannot_approve_growth() -> None:
-    trusted = {"ui/components/nav.tsx": 1014}
-    grown = baseline_growth({"ui/components/nav.tsx": 1015}, trusted)
+    base_counts = {"ui/components/nav.tsx": 1014}
+    grown = baseline_growth({"ui/components/nav.tsx": 1015}, base_counts)
     assert grown == ["ui/components/nav.tsx: baseline allowance 1015 exceeds trusted 1014"]
-    added = baseline_growth({"ui/components/new.tsx": 1001}, trusted)
+    added = baseline_growth({"ui/components/new.tsx": 1001}, base_counts)
     assert added == ["ui/components/new.tsx: baseline allowance 1001 exceeds trusted 0"]
-    assert not baseline_growth({"ui/components/nav.tsx": 1000}, trusted)
-    assert not baseline_growth({}, trusted)
+    assert not baseline_growth({"ui/components/nav.tsx": 1000}, base_counts)
+    assert not baseline_growth({}, base_counts)
 
 
-def test_check_applies_trusted_baseline_ratchet(tmp_path: Path) -> None:
+def test_check_applies_base_ref_ratchet(tmp_path: Path) -> None:
     root = _tree(tmp_path, {"ui/components/nav.tsx": "x\n" * (FILE_CEILING + 2)})
     baseline = {"ui/components/nav.tsx": FILE_CEILING + 2}
-    assert not check(root, {}, baseline, trusted_ui_baseline={"ui/components/nav.tsx": FILE_CEILING + 2})
-    assert check(root, {}, baseline, trusted_ui_baseline={"ui/components/nav.tsx": FILE_CEILING + 1})
-    assert check(root, {}, baseline, trusted_ui_baseline={})
+    assert not check(root, {}, baseline, base_ui_counts={"ui/components/nav.tsx": FILE_CEILING + 2})
+    assert check(root, {}, baseline, base_ui_counts={"ui/components/nav.tsx": FILE_CEILING + 1})
+    assert check(root, {}, baseline, base_ui_counts={})
 
 
 def test_write_baseline_records_only_current_ui_violators(tmp_path: Path) -> None:
@@ -135,9 +135,7 @@ def test_checked_in_ui_baseline_matches_the_tree() -> None:
 def test_handwritten_api_contracts_are_not_exempt(tmp_path: Path) -> None:
     root = _tree(tmp_path, {"ui/lib/api-types.ts": "export type Row = {};\n" * (FILE_CEILING + 1)})
     assert ui_sizes(root) == {"ui/lib/api-types.ts": FILE_CEILING + 1}
-    assert check(root, {}, {}, trusted_ui_baseline=None) == [
-        "ui/lib/api-types.ts: 1001 lines exceeds the 1000-line file ceiling (allowance 0)"
-    ]
+    assert check(root, {}, {}, base_ui_counts=None) == ["ui/lib/api-types.ts: 1001 lines exceeds the 1000-line file ceiling (allowance 0)"]
 
 
 def test_write_cannot_reintroduce_debt_after_baseline_is_empty(tmp_path: Path, monkeypatch, capsys) -> None:
