@@ -102,7 +102,12 @@ jobs:
             railway up --detach
           fi
 
+      # The Railway deploy above has already succeeded when this runs. The probe
+      # verifies the deployed release contract; its outcome is classified so an
+      # identity-provider outage reads as "deploy succeeded, probe deferred"
+      # instead of a failed deploy.
       - name: Post-deploy exact release contract check
+        id: probe
         shell: bash
         env:
           RAILWAY_MCP_URL: ${{ vars.RAILWAY_MCP_URL }}
@@ -118,6 +123,7 @@ jobs:
           sleep 60
           DEPLOY_URL="${RAILWAY_MCP_URL:-https://agent-bom-mcp.up.railway.app}"
           echo "Checking the public server card at $DEPLOY_URL"
+          set +e
           PYTHONPATH=src python3 scripts/deploy/probe_with_oauth.py -- \
             --base-url "$DEPLOY_URL" \
             --server-card --require-mcp-auth \
@@ -126,4 +132,40 @@ jobs:
             --attempts 5 \
             --backoff-seconds 30 \
             --timeout 15 >/dev/null
-          echo "Exact release contract confirmed: v${repo_version}, ${repo_tool_count} MCP tool schemas"
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "outcome=verified" >> "$GITHUB_OUTPUT"
+            echo "Exact release contract confirmed: v${repo_version}, ${repo_tool_count} MCP tool schemas"
+          fi
+          # probe_with_oauth.py wrote probe_outcome / probe_detail to GITHUB_OUTPUT.
+          exit 0
+
+      - name: Classify a failed post-deploy probe (deploy already succeeded)
+        if: steps.probe.outputs.outcome != 'verified'
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.probe.outputs.probe_outcome }}
+          DETAIL: ${{ steps.probe.outputs.probe_detail }}
+          VERSION: ${{ env.repo_version }}
+        run: |
+          set -euo pipefail
+          OUTCOME="${OUTCOME:-probe_failed}"
+          DETAIL="${DETAIL:-no detail recorded}"
+          if [ "$OUTCOME" = "auth_provider_unavailable" ]; then
+            echo "::warning title=Deploy succeeded, post-deploy probe deferred::Railway deploy of v${VERSION} succeeded; the probe could not obtain a token because the OAuth provider was unavailable (${DETAIL}). Re-run the Deployment freshness workflow once the identity provider is back."
+            {
+              echo "## Deploy succeeded, post-deploy probe deferred"
+              echo
+              echo "Railway deploy of v${VERSION} succeeded. The authenticated contract check was not run: ${DETAIL}."
+              echo "Re-run the **Deployment freshness** workflow once the identity provider is reachable."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "::error title=Deploy succeeded, release contract NOT verified::Railway deploy of v${VERSION} succeeded but the post-deploy probe failed (${OUTCOME}: ${DETAIL}). The deployed version and tool count are unverified."
+          {
+            echo "## Deploy succeeded, release contract NOT verified"
+            echo
+            echo "Railway deploy of v${VERSION} succeeded. The post-deploy probe failed: ${OUTCOME}: ${DETAIL}."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1

@@ -23,7 +23,8 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
     PIP_CERT=${PIP_CERT}
 
 # Build-time deps for wheel compilation when musllinux wheels are unavailable.
-RUN apk add --no-cache build-base ca-certificates git libffi-dev linux-headers \
+# Pins track the base-image digest above; refresh both together.
+RUN apk add --no-cache build-base~=0.5 ca-certificates~=20260909 git~=2.52 libffi-dev~=3.5 linux-headers~=6.16 \
     && apk upgrade --no-cache --available \
     && update-ca-certificates
 
@@ -62,7 +63,7 @@ RUN set -eu; \
     done; \
     CFLAGS="-I/usr/local/include/tree-sitter-typescript/tsx/src" \
         uv sync --locked --no-dev --no-editable ${sync_args}; \
-    uv pip install --no-config --python /app/.venv/bin/python --no-deps --require-hashes \
+    uv pip install --no-cache --no-config --python /app/.venv/bin/python --no-deps --require-hashes \
         -r deploy/docker/runtime-security-requirements.txt
 
 ## ── Runtime stage ────────────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ COPY --from=builder /app/LICENSE /app/LICENSE
 COPY --from=builder /app/deploy/supabase/postgres /opt/agent-bom/deploy/supabase/postgres
 
 # Repository URL scans shallow-clone with git at runtime as the non-root user.
-RUN apk add --no-cache ca-certificates git libffi libgcc libstdc++ \
+RUN apk add --no-cache ca-certificates~=20260909 git~=2.52 libffi~=3.5 libgcc~=15.2 libstdc++~=15.2 \
     && apk upgrade --no-cache --available \
     && update-ca-certificates
 # The runtime never installs packages. Remove packaging tools and pip's vendored

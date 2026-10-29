@@ -1,6 +1,8 @@
 # agent-bom
 
-**Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.**
+**AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.**
+
+For AppSec and platform engineers. Self-host free; local scans need no account.
 
 `agent-bom` follows package, agent, MCP, credential-name, cloud estate,
 non-human identity, runtime, and skill evidence into one reachability-backed AI

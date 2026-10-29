@@ -6,21 +6,16 @@
   <a href="https://github.com/koda-ai-studio/agent-bom/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/koda-ai-studio/agent-bom/ci.yml?branch=main&style=flat&label=Build&logo=github" alt="Build"></a>
   <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/pypi/v/agent-bom?style=flat&label=PyPI&logo=pypi&logoColor=white&cacheSeconds=60" alt="PyPI"></a>
   <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/badge/Python-3.11%E2%80%933.14-blue?style=flat&logo=python&logoColor=white" alt="Python 3.11 through 3.14"></a>
-  <a href="https://hub.docker.com/r/agentbom/agent-bom"><img src="https://img.shields.io/docker/pulls/agentbom/agent-bom?style=flat&label=Docker%20pulls&logo=docker&logoColor=white" alt="Docker pulls"></a>
 </p>
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat" alt="Apache-2.0 license"></a>
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom"><img src="https://img.shields.io/ossf-scorecard/github.com/koda-ai-studio/agent-bom?style=flat&label=OpenSSF%20scorecard" alt="OpenSSF Scorecard"></a>
-  <a href="https://glama.ai/mcp/servers/koda-ai-studio/agent-bom"><img src="https://img.shields.io/badge/MCP-Glama-7c3aed?style=flat" alt="Glama MCP server"></a>
-  <a href="https://smithery.ai/servers/agentbom/agent-bom"><img src="https://img.shields.io/badge/MCP-Smithery-1f6feb?style=flat" alt="Smithery MCP server"></a>
 </p>
 <!-- mcp-name: io.github.koda-ai-studio/agent-bom -->
 
-<p align="center"><b>Find vulnerable software behind your AI agents—and trace the exposure evidence.</b></p>
+<p align="center"><b>AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.</b></p>
 
-**Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.**
-For AppSec and platform engineers: scan a repository, trace findings through agents and infrastructure, and prioritize
-fixes using blast radius and reachability evidence. Local scans need no account.
+For AppSec and platform engineers. Self-host free; local scans need no account.
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
@@ -38,6 +33,9 @@ From the repository you want to inspect, with [uv installed](https://docs.astral
 ```bash
 uvx agent-bom scan .
 ```
+
+Measured on real repositories: [299 of 299 OSV advisories matched across seven
+real repositories, no false positives](site-docs/features/real-repository-accuracy.md).
 
 Read the discovered agents and MCP servers, prioritize the highest-severity
 findings, and follow the affected package's fix guidance. Review coverage gaps
@@ -155,10 +153,22 @@ receipt is open.
 Explain a finding to your team: [create an impact brief](docs/operations/IMPACT_BRIEF.md)
 with affected assets, source receipts, evidence gaps and the next action to review.
 
-Am I affected by a new CVE? [Respond to a new CVE](docs/RESPOND_TO_A_NEW_CVE.md):
-match it against stored scans, including CVEs only NVD has published, and get
-affected assets with their patch target, possibly affected distro packages to
-verify, and the blast radius.
+Am I affected by a new CVE? Match it against stored scans, including CVEs only
+NVD has published, and get affected assets with their patch target, possibly
+affected distro packages to verify, and the blast radius
+([walkthrough](docs/RESPOND_TO_A_NEW_CVE.md)):
+
+```bash
+agent-bom db update                                   # refresh OSV, NVD, KEV and EPSS
+agent-bom db advisory affected CVE-2026-109618        # most recent saved scan
+agent-bom db advisory affected CVE-2026-109618 --report <scan-report.json> --format json   # a JSON report written by an earlier scan
+```
+
+From an MCP client, the read-only `affected_assets` tool (`graph` and `full`
+profiles) takes the same `advisory_id`. In CI, run `uvx agent-bom db update`
+before the GitHub Action step above (its `auto-update-db` default only
+refreshes feeds older than seven days); the rescan then fails on the new
+advisory at the configured severity.
 
 <details>
 <summary>Repository and cloud investigations</summary>
@@ -292,7 +302,7 @@ observed execution or effective access.
 
 Start with the [first PR guide](CONTRIBUTING.md#your-first-pr-in-30-minutes)
 or a [`good first issue`](https://github.com/koda-ai-studio/agent-bom/issues?q=is%3Aopen+label%3A%22good+first+issue%22).
-Ask in [Discord](https://discord.gg/3YmYPqKZh5), share [feedback](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml),
+Ask in [GitHub Discussions](https://github.com/koda-ai-studio/agent-bom/discussions) (or [Discord](https://discord.gg/3YmYPqKZh5)), share [feedback](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml),
 or follow the [maintainer path](GOVERNANCE.md) ([review owners](MAINTAINERS.md)).
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)

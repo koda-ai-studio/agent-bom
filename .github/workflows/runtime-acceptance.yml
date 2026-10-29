@@ -2,15 +2,18 @@ name: Runtime Helm Acceptance
 
 on:
   workflow_dispatch:
-  # PRs run this ~7 minute kind/Helm lane only when the gateway runtime itself
-  # changes. Every main commit needs this proof before it can be released.
+  # PRs run this 6-10 minute kind/Helm lane only when the chart, the runtime
+  # deployment assets or the lane itself change; gateway/runtime source edits
+  # get this proof on the main push (watched by main-failure-alert.yml), so
+  # the PR tail is set by the Python and UI lanes instead. Every main commit
+  # needs this proof before it can be released.
   pull_request:
     paths:
       - '.github/workflows/runtime-acceptance.yml'
+      - 'deploy/helm/**'
+      - 'deploy/runtime/**'
       - 'scripts/demo/*runtime*'
       - 'tests/api/test_gateway_runtime_acceptance.py'
-      - 'src/agent_bom/gateway*'
-      - 'src/agent_bom/runtime/**'
   push:
     branches: [main]
 

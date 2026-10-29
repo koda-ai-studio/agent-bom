@@ -30,7 +30,7 @@ question to several does not make it get answered sooner.
 | Docs that confused you | [Open an issue](https://github.com/koda-ai-studio/agent-bom/issues/new/choose) — `Docs Confusion` |
 | A feature or integration request | [Open an issue](https://github.com/koda-ai-studio/agent-bom/issues/new/choose) — `Feature Request` / `Integration Request` |
 | An open-ended question, or "am I holding it wrong?" | [First-run and investigation feedback](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml) |
-| Wanting to talk to other users | [Discord](https://discord.gg/3YmYPqKZh5) — `#support` for usage, `#contributors` for PR questions |
+| Wanting to talk to other users | [GitHub Discussions](https://github.com/koda-ai-studio/agent-bom/discussions) first; [Discord](https://discord.gg/3YmYPqKZh5) — `#support` for usage, `#contributors` for PR questions |
 | Wanting to contribute code | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## What to expect

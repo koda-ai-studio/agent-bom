@@ -151,7 +151,22 @@ def verify_mcp_auth(base_url: str | None, *, bearer_token: str | None, expected_
                 raise ValueError("Anonymous MCP rejection could not be verified") from exc
     except (OSError, ValueError, TypeError, AttributeError) as exc:
         # Never print response bodies, headers, request URLs or credential-bearing exceptions.
-        raise RuntimeError("Authenticated MCP initialize failed; check credential validity and deployed release") from exc
+        raise RuntimeError(_initialize_failure_message(exc)) from exc
+
+
+def _initialize_failure_message(exc: BaseException) -> str:
+    """Status-only description of a failed initialize: numeric HTTP code or exception class, never server text."""
+    if isinstance(exc, urllib.error.HTTPError):
+        kind = f"HTTP {exc.code}"
+    elif isinstance(exc, urllib.error.URLError):
+        kind = f"connection error: {type(exc.reason).__name__}"
+    elif isinstance(exc, OSError):
+        kind = f"connection error: {type(exc).__name__}"
+    elif isinstance(exc, ValueError) and not isinstance(exc, json.JSONDecodeError):
+        kind = str(exc)
+    else:
+        kind = f"malformed response: {type(exc).__name__}"
+    return f"Authenticated MCP initialize failed ({kind}); check credential validity and deployed release"
 
 
 def _fetch_json(

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agent-bom"
 version = "0.111.0"
-description = "Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure."
+description = "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach."
 readme = "docs/registry/PYPI_README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]

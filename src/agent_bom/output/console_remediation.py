@@ -346,7 +346,7 @@ def priority_tier(g: dict) -> tuple[str, str]:
     if g["critical_count"] >= 3:
         return "P1", f"{g['critical_count']} critical vulnerabilities"
     if g["critical_count"] > 0:
-        return "P2", "critical severity"
+        return "P2", f"{g['critical_count']} critical, not known exploited; P1 needs KEV or 3+ critical"
     if g["high_count"] > 0 and g["creds"]:
         return "P2", "high severity with credential reach"
     if g["high_count"] > 0:

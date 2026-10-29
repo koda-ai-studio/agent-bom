@@ -232,9 +232,24 @@ def test_expired_authenticated_access_cannot_pass_public_card_gate(monkeypatch, 
     assert result == 1
     captured = capsys.readouterr()
     assert captured.out == ""
-    assert "Authenticated MCP initialize failed" in captured.err
+    assert "Authenticated MCP initialize failed (HTTP 401)" in captured.err
     assert "private-token" not in captured.err
     assert "secret.example" not in captured.err
+    assert "token=private-token" not in captured.err
+
+
+def test_unreachable_mcp_origin_names_the_failure_kind_without_the_host(monkeypatch, capsys):
+    from types import SimpleNamespace
+
+    def unreachable(*args, **kwargs):
+        raise urllib.error.URLError(ConnectionRefusedError(61, "secret.example refused"))
+
+    monkeypatch.setattr("agent_bom.deployment_probe.urllib.request.build_opener", lambda *args: SimpleNamespace(open=unreachable))
+    result = main(["--require-mcp-auth", "--bearer-token", "private-token", "--attempts", "1", "--backoff-seconds", "0"])
+    assert result == 1
+    err = capsys.readouterr().err
+    assert "Authenticated MCP initialize failed (connection error: ConnectionRefusedError)" in err
+    assert "secret.example" not in err
 
 
 @pytest.mark.parametrize("becomes_ready", [True, False])

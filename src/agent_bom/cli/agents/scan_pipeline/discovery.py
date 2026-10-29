@@ -229,7 +229,6 @@ def _discover_local(opts: ScanOptions, st: ScanState) -> None:
         k8s_mcp_context=opts.k8s_mcp_context,
         no_skill=opts.no_skill,
         skill_paths=opts.skill_paths,
-        skill_only_mode=opts.skill_only,
         ai_enrich=opts.ai_enrich,
         ai_model=opts.ai_model,
         sbom_file=opts.sbom_file,

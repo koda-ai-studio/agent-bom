@@ -165,6 +165,7 @@ def _render(opts: ScanOptions, st: ScanState) -> None:
                 agent_mode_full=opts.agent_mode_full,
                 page=opts.page,
                 next_steps_target=_next_steps_target(opts),
+                compliance_enabled=opts.compliance,
             )
         finally:
             st.ctx.con = st.con

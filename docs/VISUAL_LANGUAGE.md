@@ -28,10 +28,11 @@ tagline under the nav lockup — the wordmark is enough.
 - **No lockup tagline:** Do not ship “BOM for humans & agents” (or similar) under
   the mark/wordmark. Human UI and headless/agent surfaces are both first-class;
   that is product behavior, not a subtitle.
-- **Meta / prose description:** "Open security scanner and self-hosted control
-  plane for AI, MCP, and cloud infrastructure."
-- **Positioning line (README hero):** "Open security scanner and self-hosted control
-  plane for AI, MCP, and cloud infrastructure."
+- **Meta / prose description:** "AI supply-chain BOM: every agent, MCP server and
+  AI package, and what each one can reach."
+- **Positioning line (README hero):** the same sentence, followed by one audience
+  line: "For AppSec and platform engineers. Self-host free; local scans need no
+  account." and the one command `uvx agent-bom scan .`.
 - **Accent (product UI / lockup):** emerald → cyan. Light `#059669 → #0891b2`;
   dark `#34d399 → #06b6d4` / `#22d3ee`. Ink `#1f2937` (light) / `#e6edf3` (dark);
   muted `#6b7280` / `#8b949e`.

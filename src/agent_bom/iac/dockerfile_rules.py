@@ -18,7 +18,8 @@ _CHMOD_777_RE = re.compile(r"chmod\s+(?:-[A-Za-z]+\s+)*0?777\b", re.IGNORECASE)
 _COPY_CHMOD_777_RE = re.compile(r"--chmod\s*=\s*0?777\b", re.IGNORECASE)
 _REMOTE_ADD_RE = re.compile(r"\bhttps?://", re.IGNORECASE)
 _SUDO_RE = re.compile(r"\bsudo\b", re.IGNORECASE)
-_PIP_NO_CACHE_RE = re.compile(r"pip3?\s+install(?!.*--no-cache-dir)", re.IGNORECASE)
+# ``uv pip install`` spells the same opt-out ``--no-cache``.
+_PIP_NO_CACHE_RE = re.compile(r"pip3?\s+install(?!.*--no-cache(?:-dir)?\b)", re.IGNORECASE)
 _NET_HOST_RE = re.compile(r"--network\s*=\s*host", re.IGNORECASE)
 
 # Regex patterns for secret-like ENV variable names

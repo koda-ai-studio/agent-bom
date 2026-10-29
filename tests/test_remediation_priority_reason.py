@@ -16,7 +16,7 @@ def _group(**overrides) -> dict:
     [
         (_group(has_kev=True, high_count=1), ("P1", "known exploited (KEV)")),
         (_group(critical_count=3), ("P1", "3 critical vulnerabilities")),
-        (_group(critical_count=1), ("P2", "critical severity")),
+        (_group(critical_count=1), ("P2", "1 critical, not known exploited; P1 needs KEV or 3+ critical")),
         (_group(high_count=2, creds=["DB_PASSWORD"]), ("P2", "high severity with credential reach")),
         (_group(high_count=4), ("P3", "high severity; not known exploited, no credential reach")),
         (_group(), ("P4", "medium or lower severity")),

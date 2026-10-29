@@ -32,7 +32,9 @@ store can defeat that local evidence boundary.
 | Kubernetes posture | MCP posture/workload tools require per-call `live=true` and the server live-introspection policy. | A refused collection is `not_collected`; it is not a successful empty scan. Kubernetes read permissions remain privileged. |
 | API callers | Authentication, tenant context, role and route policy, request limits, CSRF/session checks and Host validation. | The customer must configure its IdP, TLS and proxy trust boundary correctly. An authorized administrator can perform documented destructive actions. |
 | MCP callers and results | Strict arguments, path validation, explicit live/write gates, and untrusted-result notices. | JSON, notices, sanitization and injection heuristics do not make model consumption safe by themselves. |
+| MCP `scan` `project_path` (filesystem) | The server reads a caller-supplied directory statically and read-only. The path must resolve, symlinks followed, to an existing directory inside the server user's home or a root listed in `AGENT_BOM_MCP_WORKSPACE_ROOTS` (absolute, non-root entries only); traversal, symlink escapes, files and missing paths are refused with `AGENTBOM_MCP_VALIDATION_INVALID_PATH`. | A caller with MCP access can enumerate any readable project under those roots. Keep the roots narrow and run the server as a low-privilege user; the sandbox bounds reads, not what the caller may ask about. |
 | Proxy, gateway and Shield | Policy enforcement applies to traffic routed through configured enforcement points; decisions and audit receipts record that scope. | Direct SDK/cloud-console calls and bypassed traffic remain outside enforcement. |
+| Gateway and posture audit outboxes | Durable per-tenant, per-destination queues (`gateway_audit_outbox` on Postgres, `posture_webhook_outbox` on SQLite) persist sanitized events before delivery. Rows are tenant-bound with RLS, admission is capped by bytes and row count, and delivery claims hold a database-clock lease; an acknowledgement deletes only rows that still carry the claimant's unexpired lease token (fenced), so a stale worker cannot drop work it no longer owns. Delivery is at least once. | The outbox is a second copy of audit evidence inside the database boundary: a database administrator can read, delete or replay it, and the receiving ledger must deduplicate event IDs. Lease expiry depends on the database clock, not the worker's. |
 | Database and export destinations | Tenant-aware stores, configured encryption, redaction and authenticated delivery. | Database administrators and downstream retention/access policies remain part of the customer's trust boundary. |
 
 ## Image evidence and signature verification
@@ -111,6 +113,12 @@ messages are discarded with counters, without retaining their original body.
 Use dedicated per-connection queues and independently retained source events
 for investigation or replay. A queue acknowledgement is a cloud mutation and is
 not part of a read-only inventory claim. See [Permissions](PERMISSIONS.md).
+
+The gateway and posture outboxes apply the same rule inward: a worker
+acknowledges only the rows its own unexpired lease covers, an expired lease
+makes the rows claimable again, and an acknowledgement reports whether every
+claimed row was removed, so a caller cannot mistake a lost lease for a
+completed delivery.
 
 Audit hash chains and configured HMACs detect changes relative to a trusted
 checkpoint/key. They cannot prove completeness against someone who can delete

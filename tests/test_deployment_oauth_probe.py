@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -72,3 +73,80 @@ def test_redirect_rejected():
 
 def test_static_mode_preserved():
     assert probe.probe_environment({"RAILWAY_MCP_BEARER_TOKEN": "existing"})["AGENT_BOM_DEPLOYMENT_BEARER_TOKEN"] == "existing"
+
+
+def _http_error(code: int) -> urllib.error.HTTPError:
+    return urllib.error.HTTPError("https://id.example/realms/mcp/token", code, "status text from server", {}, None)
+
+
+@pytest.mark.parametrize(
+    ("exc", "outcome", "detail"),
+    [
+        (_http_error(503), probe.OUTCOME_AUTH_PROVIDER_UNAVAILABLE, "OAuth token endpoint returned HTTP 503"),
+        (_http_error(502), probe.OUTCOME_AUTH_PROVIDER_UNAVAILABLE, "OAuth token endpoint returned HTTP 502"),
+        (
+            urllib.error.URLError(ConnectionRefusedError(61, "refused")),
+            probe.OUTCOME_AUTH_PROVIDER_UNAVAILABLE,
+            "unreachable (ConnectionRefusedError)",
+        ),
+        (TimeoutError("timed out"), probe.OUTCOME_AUTH_PROVIDER_UNAVAILABLE, "timed out"),
+        (_http_error(401), probe.OUTCOME_CREDENTIAL_REJECTED, "OAuth token endpoint returned HTTP 401"),
+        (_http_error(400), probe.OUTCOME_CREDENTIAL_REJECTED, "OAuth token endpoint returned HTTP 400"),
+        (ValueError("Incomplete OAuth probe configuration"), probe.OUTCOME_PROBE_CONFIGURATION, "Incomplete OAuth probe configuration"),
+    ],
+)
+def test_token_failures_are_classified_without_leaking_the_response(exc, outcome, detail):
+    got_outcome, got_detail = probe.classify_token_failure(exc)
+    assert got_outcome == outcome
+    assert detail in got_detail
+    # The HTTP reason phrase is server-controlled text and the URL names the issuer; neither is printed.
+    assert "status text from server" not in got_detail
+    assert "id.example" not in got_detail
+
+
+def test_main_reports_the_token_endpoint_status_before_exiting(monkeypatch, environment, tmp_path, capsys):
+    opener = MagicMock()
+    opener.open.side_effect = _http_error(503)
+    monkeypatch.setattr(probe.urllib.request, "build_opener", lambda *handlers: opener)
+    output = tmp_path / "github_output"
+    monkeypatch.setattr(probe.os, "environ", {**environment, "GITHUB_OUTPUT": str(output)})
+    monkeypatch.setattr(probe.sys, "argv", ["probe_with_oauth.py", "--", "--server-card"])
+
+    assert probe.main() == 1
+
+    err = capsys.readouterr().err
+    assert "OAuth token endpoint returned HTTP 503" in err
+    assert "auth_provider_unavailable" in err
+    recorded = output.read_text()
+    assert "probe_outcome=auth_provider_unavailable\n" in recorded
+    assert "probe_detail=OAuth token endpoint returned HTTP 503" in recorded
+    assert "private-test-value" not in recorded + err
+
+
+def test_main_classifies_a_failed_mcp_probe_after_a_token_was_issued(monkeypatch, environment, tmp_path, capsys):
+    opener = MagicMock()
+    opener.open.return_value.__enter__.return_value.read.return_value = json.dumps(
+        dict(access_token="fresh-token", token_type="Bearer", expires_in=300)
+    ).encode()
+    monkeypatch.setattr(probe.urllib.request, "build_opener", lambda *handlers: opener)
+    output = tmp_path / "github_output"
+    monkeypatch.setattr(probe.os, "environ", {**environment, "GITHUB_OUTPUT": str(output)})
+    monkeypatch.setattr(probe.sys, "argv", ["probe_with_oauth.py", "--", "--server-card"])
+    monkeypatch.setattr(probe.subprocess, "run", lambda *a, **k: MagicMock(returncode=1))
+
+    assert probe.main() == 1
+
+    assert "probe_outcome=probe_failed\n" in output.read_text()
+    assert "MCP probe exited 1" in capsys.readouterr().err
+
+
+def test_main_flags_a_missing_probe_credential_as_configuration(monkeypatch, tmp_path, capsys):
+    output = tmp_path / "github_output"
+    monkeypatch.setattr(probe.os, "environ", {"GITHUB_OUTPUT": str(output)})
+    monkeypatch.setattr(probe.sys, "argv", ["probe_with_oauth.py", "--", "--server-card"])
+    monkeypatch.setattr(probe.subprocess, "run", lambda *a, **k: pytest.fail("probe must not run without a credential"))
+
+    assert probe.main() == 1
+
+    assert "probe_outcome=probe_configuration\n" in output.read_text()
+    assert "RAILWAY_MCP_BEARER_TOKEN is empty" in capsys.readouterr().err

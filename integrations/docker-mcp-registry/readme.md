@@ -1,6 +1,6 @@
 # agent-bom
 
-Open security scanner and self-hosted control plane for agentic infrastructure — discover agents and MCP, map blast radius, and inspect selected runtime paths.
+AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach. Discover agents and MCP, map blast radius, and inspect selected runtime paths.
 
 Discovers AI agents and MCP servers, scans packages, images, filesystems, IaC, and cloud AI infrastructure, maps blast radius showing which credential names and tools each CVE reaches, applies optional proxy/gateway policy to selected MCP traffic, and generates compliance evidence.
 

@@ -249,7 +249,7 @@ def test_readme_offline_bootstrap_links_the_advisory_prerequisite() -> None:
 def test_docs_home_leads_with_product_value_and_attack_path_proof() -> None:
     home = (ROOT / "site-docs" / "index.md").read_text(encoding="utf-8")
 
-    assert home.index("**Open security scanner") < home.index('!!! info "Canonical docs tree"')
+    assert home.index("**AI supply-chain BOM") < home.index('!!! info "Canonical docs tree"')
     assert home.index("correlation-path-live.png") < home.index('!!! info "Canonical docs tree"')
 
 

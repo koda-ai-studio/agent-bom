@@ -11,6 +11,7 @@ import click
 from rich.rule import Rule
 
 from agent_bom.cli.agents._discovery_state import DiscoveryRun
+from agent_bom.cli.agents._warning_dedupe import dedupe_hardening_warnings
 from agent_bom.discovery.carriers import (
     build_filesystem_carrier,
     build_image_tar_carrier,
@@ -361,7 +362,7 @@ def scan_github_actions(run: DiscoveryRun) -> None:
     con.print(f"\n[bold blue]Scanning GitHub Actions workflows in {gha_path}...[/bold blue]\n")
     gha_agents, gha_warnings = _scan_workflows(gha_path)
     gha_packages = discover_github_action_packages(gha_path)
-    for w in gha_warnings:
+    for w in dedupe_hardening_warnings(gha_warnings):
         con.print(f"  [yellow]⚠[/yellow] {w}")
     if gha_agents or gha_packages:
         cred_count = sum(len(s.credential_names) for a in gha_agents for s in a.mcp_servers)

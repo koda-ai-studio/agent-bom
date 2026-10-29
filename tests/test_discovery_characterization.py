@@ -56,7 +56,6 @@ BASE_KWARGS: dict[str, Any] = {
     "k8s_mcp_context": None,
     "no_skill": False,
     "skill_paths": (),
-    "skill_only_mode": False,
     "ai_enrich": False,
     "ai_model": "",
     "sbom_file": None,

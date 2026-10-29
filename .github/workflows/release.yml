@@ -146,15 +146,14 @@ jobs:
         run: python3 scripts/check_duplicate_artifacts.py
 
   docs-site:
-    name: Rebuild and deploy docs
+    # Build-only proof that the docs site still renders at the tag. Pages
+    # deploys stay with docs.yml on main pushes, so the release run never
+    # shows a skipped deploy job.
+    name: Docs build (deploy on main)
     needs: version-guard
     permissions:
       contents: read
-      pages: write
-      id-token: write
-    uses: ./.github/workflows/docs.yml
-    with:
-      deploy: false
+    uses: ./.github/workflows/docs-build.yml
 
   mcp-registry-freshness-gate:
     name: MCP registry freshness gate
@@ -470,7 +469,7 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           set -euo pipefail
-          SHORT_DESCRIPTION="Open security scanner for AI supply chain and infrastructure: agents, MCP, cloud, GPU, runtime."
+          SHORT_DESCRIPTION="AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach."
           TOKEN=$(curl -sf -X POST "https://hub.docker.com/v2/users/login" \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"${DOCKERHUB_USERNAME}\",\"password\":\"${DOCKERHUB_TOKEN}\"}" \
@@ -1447,63 +1446,76 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Configure signed automation commits
+      - name: Preflight signing key and PR-creation permission
         id: signing
         if: steps.pin.outputs.changed == 'true'
         env:
+          GH_TOKEN: ${{ github.token }}
           AUTOMATION_SSH_SIGNING_KEY: ${{ secrets.AUTOMATION_SSH_SIGNING_KEY }}
           TAG: ${{ github.ref_name }}
-          TAGGED_SHA: ${{ github.sha }}
         run: |
-          if [ -z "$AUTOMATION_SSH_SIGNING_KEY" ]; then
-            # Exiting 0 here used to leave main on the previous PUBLISHED_VERSION
-            # with no failing check anywhere. Fail the step so the run shows it.
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::error::AUTOMATION_SSH_SIGNING_KEY is not configured; the post-release pin PR for ${TAG} was not opened. PUBLISHED_VERSION and the Docker MCP pin still name the previous release."
-            {
-              echo "## Post-release pins NOT synced"
-              echo
-              echo "\`AUTOMATION_SSH_SIGNING_KEY\` is not configured, so no pin-update PR was opened for \`${TAG}\`."
-              echo "Configure the secret and re-run this job, or open the PR by hand: \`python scripts/sync_docker_mcp_pin.py --set ${TAGGED_SHA}\` and \`python scripts/bump-version.py --published ${TAG#v}\`."
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          mkdir -p "$HOME/.ssh"
-          printf '%s\n' "$AUTOMATION_SSH_SIGNING_KEY" > "$HOME/.ssh/automation_signing_key"
-          chmod 600 "$HOME/.ssh/automation_signing_key"
-          ssh-keygen -y -f "$HOME/.ssh/automation_signing_key" > "$HOME/.ssh/automation_signing_key.pub"
-          eval "$(ssh-agent -s)"
-          ssh-add "$HOME/.ssh/automation_signing_key"
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "34316639+msaad00@users.noreply.github.com"
-          git config gpg.format ssh
-          git config user.signingkey "$HOME/.ssh/automation_signing_key.pub"
-          git config commit.gpgsign true
-          echo "configured=true" >> "$GITHUB_OUTPUT"
+          if [ -z "$AUTOMATION_SSH_SIGNING_KEY" ]; then
+            # The pin branch is still pushed (unsigned) so the operator only has
+            # to re-sign and open the PR; the release itself is already published.
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Post-release pins: AUTOMATION_SSH_SIGNING_KEY not configured::The pin branch for ${TAG} is pushed with unsigned commits. Configure the secret (docs/RELEASE_VERIFICATION.md, 'Post-release pin sync') and re-sign before merging."
+          else
+            mkdir -p "$HOME/.ssh"
+            printf '%s\n' "$AUTOMATION_SSH_SIGNING_KEY" > "$HOME/.ssh/automation_signing_key"
+            chmod 600 "$HOME/.ssh/automation_signing_key"
+            ssh-keygen -y -f "$HOME/.ssh/automation_signing_key" > "$HOME/.ssh/automation_signing_key.pub"
+            eval "$(ssh-agent -s)"
+            ssh-add "$HOME/.ssh/automation_signing_key"
+            git config gpg.format ssh
+            git config user.signingkey "$HOME/.ssh/automation_signing_key.pub"
+            git config commit.gpgsign true
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+          # "Allow GitHub Actions to create and approve pull requests"
+          # (Settings → Actions → General → Workflow permissions). GITHUB_TOKEN
+          # may not be allowed to read the setting; "unknown" still attempts
+          # the PR creation and classifies the refusal afterwards.
+          PR_CREATE="$(gh api "repos/${GITHUB_REPOSITORY}/actions/permissions/workflow" --jq '.can_approve_pull_request_reviews' 2>/dev/null || echo unknown)"
+          case "$PR_CREATE" in
+            true|false) ;;
+            *) PR_CREATE=unknown ;;
+          esac
+          echo "pr_create=${PR_CREATE}" >> "$GITHUB_OUTPUT"
+          echo "Signing configured: $([ -n "$AUTOMATION_SSH_SIGNING_KEY" ] && echo yes || echo no); Actions may create PRs: ${PR_CREATE}"
 
       - uses: ./.github/actions/setup-ui
-        if: steps.pin.outputs.changed == 'true' && steps.signing.outputs.configured == 'true'
+        if: steps.pin.outputs.changed == 'true'
 
       - name: Install Python capture dependencies
-        if: steps.pin.outputs.changed == 'true' && steps.signing.outputs.configured == 'true'
+        if: steps.pin.outputs.changed == 'true'
         run: uv sync --frozen --extra dev --extra api
 
-      - name: Open the pin-update PR
-        if: steps.pin.outputs.changed == 'true' && steps.signing.outputs.configured == 'true'
+      - name: Push the pin branch and open the pin-update PR
+        if: steps.pin.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           TAGGED_SHA: ${{ github.sha }}
           PYTHON: ${{ github.workspace }}/.venv/bin/python
+          SIGNING_CONFIGURED: ${{ steps.signing.outputs.configured }}
+          PR_CREATE: ${{ steps.signing.outputs.pr_create }}
         run: |
           set -euo pipefail
           BRANCH="chore/post-release-pins-${TAG}"
+          if [ "$SIGNING_CONFIGURED" = "true" ]; then
+            COMMIT="git commit -S"
+          else
+            COMMIT="git commit --no-gpg-sign"
+          fi
           git switch -C "$BRANCH" origin/main
           python scripts/sync_docker_mcp_pin.py --set "$TAGGED_SHA"
           python scripts/bump-version.py --published "${TAG#v}"
           python scripts/check_version_alignment.py
           git add -u
-          git commit -S -m "chore(release): point published pins at ${TAG}"
+          $COMMIT -m "chore(release): point published pins at ${TAG}"
           # Dashboard starter commands track the published version. Capture
           # their committed inputs before pushing so the proof drift gate and
           # storefront contracts cannot inherit the pre-publication digest.
@@ -1517,7 +1529,7 @@ jobs:
           )
           python scripts/check_release_consistency.py
           git add docs/images
-          git commit -S -m "docs(release): refresh product proof for ${TAG} published pins"
+          $COMMIT -m "docs(release): refresh product proof for ${TAG} published pins"
           git push --force-with-lease origin "$BRANCH"
           TITLE="chore(release): point published pins at ${TAG}"
           BODY="${TAG} is published, so the pins that could not name it before now can:
@@ -1534,12 +1546,43 @@ jobs:
             dashboard inputs; release consistency passes before publication.
 
           Opened by the release run after every publish job succeeded."
+          BODY_FILE="$(mktemp)"
+          printf '%s\n' "$BODY" > "$BODY_FILE"
+          MANUAL="gh pr create --repo ${GITHUB_REPOSITORY} --base main --head ${BRANCH} --title '${TITLE}' --body-file pr-body.md"
+          skip_pr() {
+            # Clearly-labelled skip: the branch is pushed, only the PR is missing.
+            echo "::notice title=Post-release pin PR skipped (${1})::Branch ${BRANCH} is pushed. Open the PR by hand: ${MANUAL}"
+            {
+              echo "## Post-release pin PR skipped: ${1}"
+              echo
+              echo "Branch \`${BRANCH}\` is pushed with the ${TAG} pins. Open the PR by hand:"
+              echo
+              echo '```bash'
+              echo "${MANUAL}"
+              echo '```'
+              echo
+              echo "Enable **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests** (docs/RELEASE_VERIFICATION.md, 'Post-release pin sync') so the next release opens it automatically."
+            } >> "$GITHUB_STEP_SUMMARY"
+          }
+          if [ "$PR_CREATE" = "false" ]; then
+            skip_pr "Actions may not create pull requests"
+            exit 0
+          fi
           PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --json number --jq '.[0].number')
           if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
-            gh pr edit "$PR_NUMBER" --title "$TITLE" --body "$BODY"
-          else
-            gh pr create --title "$TITLE" --body "$BODY" --base main
+            gh pr edit "$PR_NUMBER" --title "$TITLE" --body-file "$BODY_FILE"
+            exit 0
           fi
+          ERR_FILE="$(mktemp)"
+          if gh pr create --title "$TITLE" --body-file "$BODY_FILE" --base main --head "$BRANCH" 2>"$ERR_FILE"; then
+            exit 0
+          fi
+          if grep -q "not permitted to create or approve pull requests" "$ERR_FILE"; then
+            skip_pr "Actions may not create pull requests"
+            exit 0
+          fi
+          cat "$ERR_FILE" >&2
+          exit 1
 
       - name: Pins already current
         if: steps.pin.outputs.changed == 'false'

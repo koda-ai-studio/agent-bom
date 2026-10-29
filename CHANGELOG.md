@@ -9,9 +9,21 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- One lead message on every public surface (README, docs home, PyPI and Docker Hub descriptions, package metadata, registry manifests): "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach." The README leads with the measured real-repository accuracy, shows the `db advisory affected` / `affected_assets` commands for a new CVE, keeps five badges, and points to GitHub Discussions first.
+- `docs/THREAT_MODEL.md` records the gateway/posture audit outbox (leased, fenced acknowledgements) and the MCP `scan` `project_path` filesystem boundary.
+
 ### Fixed
+- Release automation: the post-release pin job pushes its branch and ends as a labelled skip with the manual `gh pr create` command when the signing key or the "Allow GitHub Actions to create and approve pull requests" setting is missing; the MCP SSE deploy separates "deploy succeeded, probe deferred" (OAuth provider outage, with the token endpoint status) from a failed deploy; the release run calls the docs build alone instead of showing a skipped Pages deploy.
+- PR CI: the kind/Helm runtime acceptance lane runs on PRs only for chart, runtime deploy or lane changes, and Dependency Review skips the snapshot diff when no manifest, lockfile, Dockerfile, chart or workflow changed.
 - Small multi-source graphs use balanced relationship ranks, retain directional arrows, and reveal relationship captions on selection.
 - Completed graph queries keep display labels in the inspector instead of rewriting the URL, preserving newer root navigation and explicit link labels on slower browsers.
+- First-run console output: repeated CI-hardening warnings collapse to one line per rule with a count, IaC rule groups count occurrences instead of splitting per message, a scanned repository is counted as a project rather than an agent, the dependency legend spells out direct/transitive/unknown, a lone critical says why it is P2 rather than P1, and the compliance block appears only with `--compliance` or benchmark evidence (one hint line otherwise).
+- Reports written to a file (including through a saved profile that pins `format`/`output`) confirm the path on stdout instead of leaving it empty.
+- `agent-bom iac` no longer flags `uv pip install --no-cache` as a missing `--no-cache-dir`; the shipped `Dockerfile` pins its Alpine packages and the image self-scan is clean.
+
+### Deprecated
+- `agent-bom gateway serve --oauth-as-issuer` / `AGENT_BOM_GATEWAY_OAUTH_AS_ISSUER` is hidden and ignored (the embedded OAuth AS is unavailable); it will be removed in a later release.
 
 ## [0.111.0] - 2026-10-28
 

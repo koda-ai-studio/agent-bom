@@ -60,7 +60,7 @@ SITE_INDEX = ROOT / "site-docs" / "index.md"
 TOP_DOCKERFILE = ROOT / "Dockerfile"
 PYPROJECT = ROOT / "pyproject.toml"
 MCP_REGISTRY = ROOT / "src" / "agent_bom" / "mcp_registry.json"
-CANONICAL_TAGLINE = "Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure."
+CANONICAL_TAGLINE = "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach."
 CANONICAL_TAGLINE_SURFACES: list[Path] = [
     README,
     PYPI_README,

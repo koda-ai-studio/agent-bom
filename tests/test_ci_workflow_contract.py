@@ -675,9 +675,26 @@ def test_codeql_pr_analysis_skips_test_code_only() -> None:
 def test_runtime_acceptance_is_post_merge_for_broad_api_changes() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/runtime-acceptance.yml").read_text())
     triggers = workflow.get(True, workflow.get("on", {}))
-    assert "src/agent_bom/api/**" not in triggers["pull_request"]["paths"]
+    paths = triggers["pull_request"]["paths"]
+    assert "src/agent_bom/api/**" not in paths
+    # Gateway/runtime source edits are proven on the main push; on PRs the
+    # 6-10 minute kind lane runs only for chart, runtime deploy or lane changes.
+    assert not any(path.startswith("src/") for path in paths), paths
+    assert {"deploy/helm/**", "deploy/runtime/**", ".github/workflows/runtime-acceptance.yml"} <= set(paths)
     assert triggers["push"] == {"branches": ["main"]}
-    assert ".github/workflows/runtime-acceptance.yml" in triggers["pull_request"]["paths"]
+
+
+def test_dependency_review_skips_the_api_diff_when_no_manifest_changed() -> None:
+    """The required check stays, but a docs-only PR must not wait on a dependency snapshot diff."""
+    workflow = yaml.safe_load((ROOT / ".github/workflows/dependency-review.yml").read_text())
+    steps = workflow["jobs"]["dependency-review"]["steps"]
+    checkout = next(step for step in steps if str(step.get("uses", "")).startswith("actions/checkout@"))
+    assert checkout["with"]["fetch-depth"] == 2
+    bootstrap = next(step for step in steps if step.get("id") == "bootstrap")
+    for manifest in ("pyproject\\.toml", "uv\\.lock", "package-lock\\.json", "Dockerfile[^/]*", "Chart\\.yaml", "^\\.github/"):
+        assert manifest in bootstrap["run"], manifest
+    review = next(step for step in steps if str(step.get("uses", "")).startswith("actions/dependency-review-action@"))
+    assert review["if"] == "steps.bootstrap.outputs.skip != 'true'"
 
     alert = yaml.safe_load((ROOT / ".github/workflows/main-failure-alert.yml").read_text())
     watched = alert.get(True, alert.get("on", {}))["workflow_run"]["workflows"]

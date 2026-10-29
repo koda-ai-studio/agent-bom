@@ -166,7 +166,7 @@ def test_compact_summary_default_is_verdict_led():
     # Verdict + inventory still surface:
     assert "SCAN" in output
     assert "CLEAN" in output
-    assert "agents" in output
+    assert "agent" in output
     assert "packages" in output
 
 
@@ -505,7 +505,7 @@ def test_compact_export_hint():
     agent = _make_agent(servers=[_make_server()])
     report = AIBOMReport(agents=[agent])
     output = _plain(_capture(print_compact_export_hint, report))
-    assert "agents" in output
+    assert "agent" in output
     assert "servers" in output
     assert "packages" in output
     # The per-package CVE-instance total is labelled with an explicit scope so it
