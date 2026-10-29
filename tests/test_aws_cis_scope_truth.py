@@ -286,7 +286,7 @@ def test_public_estate_benchmark_entrypoints_preserve_explicit_region_scope(
     explicit_scope_guard: str,
 ) -> None:
     if entrypoint == "cli":
-        from agent_bom.cli.agents._cloud import run_benchmarks as target
+        from agent_bom.cli.agents._benchmark_phases import _run_aws_cis_benchmark_phase as target
     elif entrypoint == "rest":
         from agent_bom.api.routes.cloud import _run_cis_benchmark as target
     else:
@@ -295,6 +295,58 @@ def test_public_estate_benchmark_entrypoints_preserve_explicit_region_scope(
     source = inspect.getsource(target)
     assert "run_benchmark_all_regions" in source
     assert explicit_scope_guard in source
+
+
+@pytest.mark.parametrize("region", [None, "eu-west-1"])
+def test_cli_benchmark_dispatch_preserves_requested_region(monkeypatch, region) -> None:
+    from agent_bom.cli.agents._cloud import run_benchmarks
+    from agent_bom.cli.agents._context import ScanContext
+    from agent_bom.cloud import aws_organizations
+
+    report = cis.CISBenchmarkReport(account_id="fixture-account")
+    all_regions = MagicMock(return_value=report)
+    one_region = MagicMock(return_value=report)
+    monkeypatch.setattr(aws_organizations, "org_fanout_enabled", lambda: False)
+    monkeypatch.setattr(cis, "run_benchmark_all_regions", all_regions)
+    monkeypatch.setattr(cis, "run_benchmark", one_region)
+    context = ScanContext(con=MagicMock(), quiet=True)
+    run_benchmarks(
+        context,
+        skill_only=False,
+        verify_model_hashes=False,
+        project=None,
+        hf_token=None,
+        aws_cis_benchmark=True,
+        aws_region=region,
+        aws_profile="fixture-profile",
+        snowflake_cis_benchmark=False,
+        snowflake_authenticator=None,
+        azure_cis_benchmark=False,
+        azure_subscription=None,
+        gcp_cis_benchmark=False,
+        gcp_project=None,
+        databricks_security=False,
+        aisvs_flag=False,
+        vector_db_scan=False,
+        gpu_scan_flag=False,
+        gpu_k8s_context=None,
+        no_dcgm_probe=True,
+        smithery_flag=False,
+        smithery_token=None,
+        mcp_registry_flag=False,
+        snyk_flag=False,
+        snyk_token=None,
+        snyk_org=None,
+        cortex_observability=False,
+    )
+    assert context.cis_benchmark_report is report
+    assert context.cloud_provider_failures == []
+    if region:
+        one_region.assert_called_once_with(profile="fixture-profile", region=region)
+        all_regions.assert_not_called()
+    else:
+        all_regions.assert_called_once_with(profile="fixture-profile")
+        one_region.assert_not_called()
 
 
 class _SerializedReport:
