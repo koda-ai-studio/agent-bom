@@ -241,3 +241,29 @@ def test_record_call_evicts_least_recently_used_agent_state():
     assert set(c._baseline_sizes) == {"agent-A", "agent-C"}
     assert set(c._calls_since_baseline) == {"agent-A", "agent-C"}
     assert set(c._reported_novel) == {"agent-A", "agent-C"}
+
+
+def test_rare_tool_in_mature_baseline_is_not_novel():
+    c = CrossAgentCorrelator()
+    ts = time.time()
+    c.record_call("agent-A", "rare_tool", ts)
+    for index in range(19):
+        c.record_call("agent-A", "read_file", ts + index + 1)
+
+    assert c._baselines["agent-A"]["rare_tool"] == 0.05
+    assert c.record_call("agent-A", "rare_tool", ts + 20) is None
+    assert c.record_call("agent-B", "new_tool", ts + 21) is None
+
+
+def test_evicted_agent_restarts_warmup_without_old_novelty_state():
+    c = CrossAgentCorrelator(min_baseline_calls=2, max_agents=1)
+    ts = time.time()
+    for _ in range(2):
+        c.record_call("agent-A", "read_file", ts)
+    assert c.record_call("agent-A", "new_tool", ts) is not None
+    c.record_call("agent-B", "read_file", ts)
+
+    assert c.record_call("agent-A", "new_tool", ts) is None
+    assert "agent-A" not in c._baselines
+    assert c.record_call("agent-A", "read_file", ts) is None
+    assert c.record_call("agent-A", "another_tool", ts)["baseline_size"] == 2

@@ -178,6 +178,24 @@ def test_process_tool_call_novel_tool_alert_requires_mature_baseline():
     assert [a for a in repeated if a["detector"] == "cross_agent_correlator"] == []
 
 
+def test_novel_tool_alert_redacts_identifiers_and_is_advisory():
+    import json
+
+    engine = ProtectionEngine()
+    token = "ghp_" + "abcdefghijklmnopqrstuvwxyz" + "123456"
+    agent_id = f"agent-token={token}"
+    for _ in range(20):
+        _run(engine.process_tool_call("read_file", {}, agent_id=agent_id))
+
+    alerts = _run(engine.process_tool_call(f"new-tool-token={token}", {}, agent_id=agent_id))
+    novel = [a for a in alerts if a["detector"] == "cross_agent_correlator"]
+    assert len(novel) == 1
+    assert token not in json.dumps(novel)
+    assert novel[0]["severity"] == "medium"
+    assert "action" not in novel[0]
+    assert engine.is_blocked is False
+
+
 # ─── Tool Response Processing ────────────────────────────────────────────────
 
 
