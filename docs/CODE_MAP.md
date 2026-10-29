@@ -90,6 +90,11 @@ entry point. `compliance_narrative_models.py` owns serializable contracts,
 `compliance_narrative_templates.py` formats evaluated evidence, and
 `compliance_narrative_findings.py` projects persisted findings without rescanning.
 
+SARIF exports retain `output/sarif.py` as their public entry point for CVE and
+unified findings. `sarif_common.py` owns shared severity, location, redaction and
+catalog helpers; `sarif_scanners.py` projects IaC, AI inventory and cloud CIS
+results into that same catalog.
+
 ## Layering rules in plain language
 
 `scripts/check_architecture.py` (with `scripts/check_import_graph.py`) enforces

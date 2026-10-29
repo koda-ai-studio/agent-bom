@@ -4427,12 +4427,15 @@
       "function_lines": 179
     },
     "output/sarif.py": {
-      "deferred_imports": 3,
-      "file_lines": 1210
+      "deferred_imports": 2,
+      "file_lines": 799
     },
     "output/sarif.py::_cve_sarif_result": {
       "complexity": 16,
       "function_lines": 131
+    },
+    "output/sarif_scanners.py": {
+      "deferred_imports": 1
     },
     "output/scan_document.py": {
       "deferred_imports": 6
