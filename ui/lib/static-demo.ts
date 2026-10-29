@@ -1,3 +1,4 @@
+import { queryStaticFindings } from "./static-demo-findings.mjs";
 import { ApiError, ApiNetworkError, classifyApiResponse } from "./api-errors";
 import { staticDemoDataKey, staticDemoQueryKey } from "./static-demo-key.mjs";
 
@@ -31,8 +32,9 @@ export async function staticDemoFetch(apiPath: string, init: RequestInit, method
   if (method !== "GET") {
     throw new StaticDemoReadOnlyError(apiPath, method);
   }
-  const queryKey = staticDemoQueryKey(apiPath);
-  const url = staticDemoDataUrl(apiPath);
+  const findings = apiPath.split(/[?#]/)[0] === "/v1/findings";
+  const queryKey = findings ? null : staticDemoQueryKey(apiPath);
+  const url = staticDemoDataUrl(findings ? "/v1/findings" : apiPath);
   let res: Response;
   try {
     // An answer recorded for this exact query wins over the path's default answer.
@@ -45,5 +47,6 @@ export async function staticDemoFetch(apiPath: string, init: RequestInit, method
   if (!res.ok) {
     throw classifyApiResponse(res, { detail: "This view has no sample data in the read-only demo." }, method);
   }
+  if (findings) return new Response(JSON.stringify(queryStaticFindings(await res.json(), apiPath)), { status: 200, headers: { "Content-Type": "application/json" } });
   return res;
 }

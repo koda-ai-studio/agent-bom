@@ -167,6 +167,7 @@ for (const theme of ["light", "dark"] as const) {
       const table = await page.getByRole("table").boundingBox();
       expect(table!.y).toBeLessThan(width === 390 ? 760 : 620);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`source-workspace-${theme}-${width}.png`), fullPage: true });
       const connectionButton = page.getByRole("button", { name: "Production account", exact: true });
       await connectionButton.click();
       const drawer = page.getByRole("dialog", { name: "Production account" });
@@ -190,6 +191,8 @@ for (const theme of ["light", "dark"] as const) {
       await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
       await sourcesTab.focus();
       await page.keyboard.press("Home");
+      await expect(sourcesTab).toBeFocused();
+      await page.keyboard.press("ArrowRight");
       const addTab = page.getByRole("tab", { name: /Add source/ });
       await expect(addTab).toHaveAttribute("aria-selected", "true");
       await expect(addTab).toBeFocused();

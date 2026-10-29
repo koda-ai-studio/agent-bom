@@ -42,14 +42,14 @@ export function HubTabs({
   sourceCount: number;
 }) {
   const tabs: { key: HubTab; label: string; count?: number; icon: typeof Plug }[] = [
-    { key: "connect", label: "Add source", count: connectCount, icon: Plug },
     { key: "sources", label: "Sources", count: sourceCount, icon: Boxes },
+    { key: "connect", label: "Add source", count: connectCount, icon: Plug },
     { key: "endpoints", label: "Endpoints", icon: Shield },
     { key: "traces", label: "Observability & SIEM", icon: Plug },
   ];
   return (
     <div
-      className="inline-flex max-w-full flex-wrap items-center gap-1 rounded-xl border border-outline bg-surface-muted p-1"
+      className="flex max-w-full items-center gap-1 overflow-x-auto border-b border-outline pb-2"
       role="tablist"
       aria-label="Connections segment"
     >
@@ -73,7 +73,7 @@ export function HubTabs({
               buttons?.[nextIndex]?.focus();
             }}
             onClick={() => onChange(item.key)}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               selected
                 ? "bg-surface text-foreground shadow-sm"
                 : "text-ink-tertiary hover:text-foreground"

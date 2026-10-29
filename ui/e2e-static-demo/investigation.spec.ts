@@ -102,3 +102,40 @@ test("findings lanes carry counts and the audit log records outcomes", async ({ 
   await expect(page.locator("#main-content")).toContainText(/completed|denied|issued/);
   await expect(page.locator("#main-content")).not.toContainText("Not recorded");
 });
+
+for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
+  test(`sample onboarding and source browsing ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await page.goto(url("/demo-estate"), { waitUntil: "networkidle" });
+    await expect(page.getByRole("heading", { name: "Explore the sample estate" })).toBeVisible();
+    await page.getByRole("link", { name: "Inspect sample sources" }).click();
+    await expect(page.getByRole("table")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Register a source" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add cloud account" })).toHaveCount(0);
+    await expect(page.getByTestId("connections-scheduler-disabled-banner")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`sample-sources-${theme}-${width}.png`), fullPage: true });
+  });
+}
+
+test("unrecorded severity and scan filters resolve from the bundled findings", async ({ page }) => {
+  await page.goto(url("/findings?lane=all&scan=scan-proof-ai-platform&severity=high"), { waitUntil: "networkidle" });
+  await expect(page.getByText("Findings need the agent-bom API")).toHaveCount(0);
+  await expect(page.getByText("Total unavailable", { exact: false })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: /^Vulnerabilities/ })).toContainText(/\d+/);
+  await expect(page.getByRole("tab", { name: /^Cloud config/ })).toContainText("0");
+});
+
+test("relationship labels can be hidden without losing the path", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openInvestigation(page);
+  const labels = page.getByRole("combobox", { name: "Relationship labels" });
+  await expect(labels).toBeVisible();
+  const edges = await page.locator(".react-flow__edge").count();
+  await labels.selectOption("show");
+  await expect(page.locator(".graph-relationship-label").first()).toBeVisible();
+  await labels.selectOption("hide");
+  await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
+  await expect(page.locator(".react-flow__edge")).toHaveCount(edges);
+});

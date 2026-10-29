@@ -462,6 +462,72 @@
       "retrieved_at": "2026-10-28",
       "terms": "Vendor trademark; used only to identify a supported integration, without endorsement or partnership claims.",
       "source_kind": "vendor_svg"
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/npm.svg",
+      "vendor": "npm",
+      "source_page": "https://simpleicons.org/?q=npm",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/npm.svg",
+      "sha256": "00b410dc2c839cfa62910a065eaf28a48cbdb4babe503cf34d475cc94ba03be1",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; npm trademarks remain with their owner."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/go.svg",
+      "vendor": "Go",
+      "source_page": "https://simpleicons.org/?q=go",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/go.svg",
+      "sha256": "36a745fe15584bf138d02ae6abcbdd155bc1cd4f4976634ad34861b2059db559",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; Go trademarks remain with their owner."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/rust.svg",
+      "vendor": "Rust",
+      "source_page": "https://simpleicons.org/?q=rust",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/rust.svg",
+      "sha256": "95a291d8887610d103704adcc5c5f2cbfa4c80a96f8e72b00531d5691beb67a8",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; Rust trademarks remain with their owner."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/nuget.svg",
+      "vendor": "NuGet",
+      "source_page": "https://simpleicons.org/?q=nuget",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/nuget.svg",
+      "sha256": "fcc6db143e466201504e825d4d3b5f376c4cfe7b5709116e247970c38bbf9497",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; NuGet trademarks remain with their owner."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/rubygems.svg",
+      "vendor": "RubyGems",
+      "source_page": "https://simpleicons.org/?q=rubygems",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/rubygems.svg",
+      "sha256": "2779c5b37e4ee94f8cca3d5e7d5c2a4ccbfe29306c02837c3c7a1a887b9c623c",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; RubyGems trademarks remain with their owner."
+    },
+    {
+      "path": "docs/images/vendor/simple-icons/packagist.svg",
+      "vendor": "Packagist",
+      "source_page": "https://simpleicons.org/?q=packagist",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/packagist.svg",
+      "sha256": "176488bda903cf3c84e247e4569412a82766b25558cc05b474980940046bad6d",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; Packagist trademarks remain with their owner."
     }
   ],
   "neutral_icon_policy": "Use agent-bom neutral category icons when a vendor does not publish redistributable diagram assets or when trademark terms are unclear."

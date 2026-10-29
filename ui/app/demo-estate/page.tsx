@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { StaticDemoGuide } from "@/components/static-demo-guide";
+import { isStaticDemo } from "@/lib/static-demo";
 import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
@@ -81,6 +83,10 @@ function classifyDemoLoadFailure(reason: unknown): DemoLoadFailure {
 }
 
 export default function DemoEstatePage() {
+  return isStaticDemo() ? <StaticDemoGuide /> : <EnterpriseDemoEstatePage />;
+}
+
+function EnterpriseDemoEstatePage() {
   const [story, setStory] = useState<EnterpriseDemoStory | null>(null);
   const [demoStatus, setDemoStatus] = useState<DemoEstateStatus | null>(null);
   const [error, setError] = useState<string | null>(null);

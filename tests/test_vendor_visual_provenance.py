@@ -41,6 +41,12 @@ FIRST_PARTY_VENDORS = {
     "OpenAI",
 }
 ICON_SET_VENDORS = {
+    "npm",
+    "Go",
+    "Rust",
+    "NuGet",
+    "RubyGems",
+    "Packagist",
     "Amazon Web Services",
     "ClickHouse",
     "Databricks",

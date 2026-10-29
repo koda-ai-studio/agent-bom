@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./connections.css";
 
 /* Tailwind's dark variant follows the same explicit selector as the runtime
  * theme toggle; it must not depend on the host operating-system preference. */
@@ -867,8 +868,8 @@ main > div {
 .advisory-freshness-summary::-webkit-details-marker { display: none; }
 .advisory-freshness-counts { @apply flex flex-wrap items-center gap-2 text-xs text-ink-secondary; }
 .advisory-freshness-body { @apply space-y-3 border-t border-outline p-4; }
-.advisory-source-list { @apply divide-y divide-outline overflow-hidden rounded-xl border border-outline; }
-.advisory-source-row { @apply grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(10rem,auto)] sm:items-center sm:px-4; }
+.advisory-source-list { @apply grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5; }
+.advisory-source-row { @apply flex min-w-0 flex-col items-start justify-between gap-3 rounded-xl border border-outline p-3 sm:p-4; }
 .advisory-source-status { @apply rounded-full border border-outline bg-surface-muted px-2.5 py-1 text-xs font-medium text-ink-secondary; }
 .advisory-source-status[data-status="synced"] { @apply border-emerald-700/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200; }
 .advisory-source-status[data-status="failed"], .advisory-source-status[data-status="error"] { @apply border-red-700/30 bg-red-500/10 text-red-800 dark:text-red-200; }

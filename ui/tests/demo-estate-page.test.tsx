@@ -435,3 +435,15 @@ describe("DemoEstatePage", () => {
     expect(screen.getByText("Enterprise demo is unavailable")).toBeInTheDocument();
   });
 });
+
+it("opens a guided static-demo journey without calling the live estate service", () => {
+  vi.stubEnv("NEXT_PUBLIC_STATIC_DEMO", "1");
+  try {
+    apiMock.getDemoEstateStatus.mockClear();
+    render(<DemoEstatePage />);
+    expect(screen.getByRole("heading", { name: "Explore the sample estate" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Inspect sample sources" })).toHaveAttribute("href", "/connections?tab=sources");
+    expect(screen.getByRole("link", { name: "Review sample findings" })).toHaveAttribute("href", expect.stringContaining("/findings"));
+    expect(apiMock.getDemoEstateStatus).not.toHaveBeenCalled();
+  } finally { vi.unstubAllEnvs(); }
+});

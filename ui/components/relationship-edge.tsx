@@ -106,8 +106,11 @@ export function RelationshipEdge(props: EdgeProps) {
   // Endpoint types already explain package → CVE; path emphasis alone must not
   // restore its redundant chip. Explicit inspection still exposes the verb.
   const inspectLabel = inspecting || (!packageFinding && props.data?.pathEmphasis === true);
-  const label = (packageFinding || props.data?.quietLabel) && !inspectLabel ? null
-    : props.label ?? (inspectLabel && relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
+  const visibility = props.data?.labelVisibility;
+  const label = visibility === "hide" ? null
+    : visibility === "show" ? props.label ?? (relationship ? relationshipEdgeLabelText(relationship, props.data) : null)
+      : (packageFinding || props.data?.quietLabel) && !inspectLabel ? null
+        : props.label ?? (inspectLabel && relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
   const columnSource = props.data?.columnFlow === true ? nodes.find(node => node.id === props.source) : undefined;

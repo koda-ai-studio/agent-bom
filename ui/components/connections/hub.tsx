@@ -690,14 +690,14 @@ export function ConnectionsHub() {
               <RefreshCcw className="h-4 w-4" />
               Refresh
             </button>
-            <button
+            {!isDemoMode && <button
               onClick={() => openWizard()}
               disabled={!canManage}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Plus className="h-4 w-4" />
               Add cloud account
-            </button>
+            </button>}
           </>
         }
         banner={["endpoints", "traces"].includes(tab) ? undefined :
@@ -713,7 +713,7 @@ export function ConnectionsHub() {
 
       {message ? <p className="text-sm text-emerald-400">{message}</p> : null}
       {!["endpoints", "traces"].includes(tab) && <div className="grid gap-3 lg:grid-cols-2">
-      {!connectionsSchedulerEnabled &&
+      {!isDemoMode && !connectionsSchedulerEnabled &&
       connections.some(
         (connection) => connection.scan_interval_minutes || isContinuousMode(connection),
       ) ? (
@@ -734,7 +734,7 @@ export function ConnectionsHub() {
           </details>
         </div>
       ) : null}
-      {!canManage ? (
+      {!isDemoMode && !canManage ? (
         <PermissionDeniedNotice
           session={session}
           needed="analyst"
@@ -805,7 +805,7 @@ export function ConnectionsHub() {
           onUpdateForm={updateForm}
           submitting={submitting}
           onCreateSource={handleCreateSource}
-          createDefaultOpen={createNonce > 0 || unifiedRows.length === 0}
+          createDefaultOpen={createNonce > 0}
           createKey={`create-${createNonce}`}
           onGoConnect={() => setTab("connect")}
         />

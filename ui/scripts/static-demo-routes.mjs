@@ -8,6 +8,7 @@
  * Registered after `installRoutes`, so these handlers win for the paths they
  * cover (Playwright matches routes in reverse registration order).
  */
+import { queryStaticFindings } from "../lib/static-demo-findings.mjs";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -195,25 +196,13 @@ export async function installStaticDemoRoutes(page, { graph, findings, auditEntr
       ...impact,
     });
   });
-  await page.route("**/v1/findings?**", (route) => {
-    const url = new URL(route.request().url());
-    const query = (url.searchParams.get("q") ?? url.searchParams.get("query") ?? "").trim().toLowerCase();
-    const lane = url.searchParams.get("lane");
-    const rows = enriched.filter((finding) => (!query || `${finding.cve_id} ${finding.title} ${finding.package_name}`.toLowerCase().includes(query))
-      && (!lane || lane === "all" || finding.lane === lane));
-    return fulfill(route, {
-      schema_version: "findings.v1",
-      findings: rows,
-      count: rows.length,
-      total: rows.length,
-      limit: Number(url.searchParams.get("limit") ?? 50),
-      offset: 0,
-      sort: "risk",
-      scan_id: scanId,
-      facets: findingFacets(enriched),
-      warnings: [],
-    });
-  });
+  await page.route("**/v1/findings", (route) => fulfill(route, {
+    schema_version: "findings.v1", findings: enriched, count: enriched.length, total: enriched.length,
+    scan_id: scanId, snapshot_at: snapshotAt, facets: findingFacets(enriched), warnings: [],
+  }));
+  await page.route("**/v1/findings?**", (route) => fulfill(route, queryStaticFindings({
+    schema_version: "findings.v1", findings: enriched, scan_id: scanId, snapshot_at: snapshotAt, warnings: [],
+  }, route.request().url())));
   await page.route("**/v1/campaigns/verification-queue**", (route) => fulfill(route, {
     schema_version: "risk-campaign-verification-queue.v1",
     tenant_id: tenantId,

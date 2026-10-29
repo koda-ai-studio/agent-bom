@@ -860,6 +860,7 @@ describe("ConnectionsPage — Connect segment", () => {
       config: { scan_request: { repo_url: "https://github.com/acme/payments" } },
     });
     render(<ConnectionsPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Register a source" }));
     fireEvent.change(await screen.findByPlaceholderText("Payments monorepo"), {
       target: { value: "Payments monorepo" },
     });
@@ -901,6 +902,7 @@ describe("ConnectionsPage — Connect segment", () => {
     });
     render(<ConnectionsPage />);
 
+    fireEvent.click(await screen.findByRole("button", { name: "Register a source" }));
     fireEvent.change(await screen.findByPlaceholderText("Payments monorepo"), {
       target: { value: "Jira evidence" },
     });
@@ -1727,4 +1729,20 @@ it("opens the endpoint deep link without cloud setup banners or stacked source s
   expect(screen.queryByRole("button", {name: "Add cloud account"})).not.toBeInTheDocument();
   expect(screen.queryByTestId("connections-scheduler-disabled-banner")).not.toBeInTheDocument();
   expect(screen.queryByText("Access verification pending")).not.toBeInTheDocument();
+});
+
+
+it("keeps the static demo source list free of mutation forms and production warnings", async () => {
+  vi.stubEnv("NEXT_PUBLIC_STATIC_DEMO", "1");
+  try {
+    navState.search = "tab=sources";
+    apiMock.listCloudConnections.mockResolvedValue({ connections: [{ ...CREATED_RECORD, scan_interval_minutes: 60 }], count: 1 });
+    render(<ConnectionsPage />);
+    await screen.findByRole("button", { name: "Production account" });
+    expect(screen.queryByRole("button", { name: "Register a source" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add cloud account" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("connections-scheduler-disabled-banner")).not.toBeInTheDocument();
+    expect(screen.queryByText("This environment is read-only for this action.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Fleet sync" })).not.toBeInTheDocument();
+  } finally { vi.unstubAllEnvs(); }
 });

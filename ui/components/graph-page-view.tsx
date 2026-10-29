@@ -1,5 +1,6 @@
 "use client";
 
+import { useRelationshipLabelControl } from "@/components/relationship-label-control";
 import { GraphFocusedPathDecision } from "@/components/graph-focused-path-decision";
 import { AlertTriangle } from "lucide-react";
 import { GraphConnectionsList } from "@/components/graph-connections-list";
@@ -97,6 +98,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
     returnToSummary, navigateRollupBreadcrumb, resetRollupToRoot, drillIntoRollup, investigateRollup, loadBlastRadius,
     retryGraph, graphTruncated,
   } = page;
+  const relationshipLabels = useRelationshipLabelControl(displayEdges);
   const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
   if (loadingSnapshots) {
     return (
@@ -606,7 +608,8 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             baseline={viewingCurrentEstate ? "previous scans" : "previous snapshot"} highlighting={driftLensEngaged}
             onOpen={() => { setChangesOpen(true); if (!viewingCurrentEstate) setComparisonRequested(true); }}
             onClearHighlight={() => { setDriftLensActive(false); setDriftFilter("all"); highlight.clear(); }} />}
-          {showScopeEvidence && <GraphScopeEvidence edges={displayEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
+          {graphRenderer.kind === "react-flow" && relationshipLabels.control}
+          {showScopeEvidence && <GraphScopeEvidence edges={relationshipLabels.edges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
           {showContextControls && investigationContext && <GraphInvestigationContextControls inline
             groups={investigationContext.groups} selected={selectedContextGroup}
             visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
@@ -629,9 +632,9 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               className="graph-page-action min-h-11 flex-1 aria-pressed:bg-surface-elevated">{view === "list" ? (investigationMode ? "List" : "Paths") : "Graph"}</button>)}
           </div>}
           {mobileListActive && (investigationMode
-            ? <GraphConnectionsList rootId={investigationMode.rootId} nodes={displayNodes} edges={displayEdges} memberNodes={flowNodeById}
+            ? <GraphConnectionsList rootId={investigationMode.rootId} nodes={displayNodes} edges={relationshipLabels.edges} memberNodes={flowNodeById}
               onSelect={id => { const node = flowNodeById.get(id); if (node) onNodeClick({} as React.MouseEvent, node); }} />
-            : <GraphPathList nodes={displayNodes} edges={displayEdges}
+            : <GraphPathList nodes={displayNodes} edges={relationshipLabels.edges}
               onSelect={id => { const node = flowNodeById.get(id) ?? displayNodes.find(item => item.id === id); if (node) onNodeClick({} as React.MouseEvent, node); }} />)}
           <div ref={setGraphNavigationMount} className={mobileListActive ? "hidden" : undefined} />
           <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`${mobileListActive ? "hidden " : ""}relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
@@ -717,7 +720,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             <SigmaGraphOverview
               embedded
               nodes={displayNodes}
-              edges={displayEdges}
+              edges={relationshipLabels.edges}
               legendItems={legendItems}
               onNodeSelect={onLargeGraphNodeSelect}
               selectedId={selectedNodeId}
@@ -736,7 +739,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={presentation.nodes}
-              edges={displayEdges}
+              edges={relationshipLabels.edges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
               // Ordinary views have one camera owner: GraphCanvasAutoFit.

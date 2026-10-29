@@ -8,7 +8,6 @@ import { Collapsible } from "@/components/collapsible";
 import { CATEGORY_CHIP_TONE,eventMode,formatWhen,isContinuousMode,isOrganizationScope,kindOption,OPERATING_SURFACES,providerLabel,SCANNABLE_PROVIDERS,SCHEDULE_OPTIONS,SOURCE_KIND_OPTIONS,sourceTargetSpec,type FormState } from "@/components/connections/catalog";
 import { ModeChip,ProviderLogo,SourceStatusPill,StatusPill,summarizeProviders } from "@/components/connections/display";
 import { ProviderContractCard } from "@/components/connections/provider-contract";
-import { DemoConnectCard } from "@/components/demo-mode-cta";
 import { ErrorBanner } from "@/components/empty-state";
 import { ServiceStateBanner,ServiceStateChip } from "@/components/service-state-chip";
 import { StatStrip } from "@/components/stat-strip";
@@ -192,7 +191,7 @@ export function SourcesSegment(props: SourcesSegmentProps) {
         </p>
       ) : (
         <div className="relative overflow-x-auto rounded-xl border border-outline" data-testid="unified-sources-table">
-          <table className="w-full min-w-[1000px] border-collapse text-left text-sm">
+          <table className="source-results-table w-full border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-outline bg-surface-elevated text-[11px] uppercase tracking-[0.16em] text-ink-tertiary">
                 <th className="px-4 py-3 font-medium">Name</th>
@@ -226,6 +225,7 @@ export function SourcesSegment(props: SourcesSegmentProps) {
         </div>
       )}
 
+      {!isDemoMode && <Collapsible title="Operations and diagnostics" defaultOpen={false}>
       <div className="flex flex-wrap items-center gap-2">
         <ServiceStateChip
           serviceId="data_sources"
@@ -246,7 +246,7 @@ export function SourcesSegment(props: SourcesSegmentProps) {
       </div>
 
       <ServiceStateBanner serviceId="data_sources" entry={dataSourcesService} registry={servicesRegistry} />
-      {isDemoMode ? <DemoConnectCard /> : null}
+
 
 
 
@@ -256,7 +256,7 @@ export function SourcesSegment(props: SourcesSegmentProps) {
           { label: "Registered", value: loading ? "…" : totalRows },
           {
             label: "Connector health",
-            value: loading ? "…" : connectorHealthUnavailable ? "Unavailable" : `${healthyConnectors}/${connectorHealth.length || 0}`,
+            value: loading ? "…" : connectorHealthUnavailable ? "Unavailable" : connectorHealth.length ? `${healthyConnectors}/${connectorHealth.length}` : "Not reported",
             accent:
               connectorHealth.length > 0 && healthyConnectors === connectorHealth.length
                 ? "success"
@@ -274,6 +274,8 @@ export function SourcesSegment(props: SourcesSegmentProps) {
           },
         ]}
       />
+
+      </Collapsible>}
 
       {!isDemoMode ? (
         <div className="grid gap-4 xl:grid-cols-2">
@@ -598,7 +600,7 @@ export function UnifiedRow({
 
   return (
     <tr className="group border-b border-outline last:border-b-0 align-top">
-      <td className="px-4 py-3">
+      <td data-label="Source" className="px-4 py-3">
         <button
           type="button"
           onClick={onOpen}
@@ -617,7 +619,7 @@ export function UnifiedRow({
           {row.detail}
         </p>
       </td>
-      <td className="px-4 py-3">
+      <td data-label="Kind" className="px-4 py-3">
         <div className="flex flex-col gap-1.5">
           <span className="inline-flex items-center gap-2 whitespace-nowrap text-ink-secondary">
             {isCloud ? (
@@ -660,11 +662,11 @@ export function UnifiedRow({
           </div>
         </div>
       </td>
-      <td className="px-4 py-3">
+      <td data-label="Status" className="px-4 py-3">
         {isCloud ? <StatusPill status={row.status} /> : <SourceStatusPill status={row.status} />}
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-ink-secondary">{formatWhen(row.lastScanAt)}</td>
-      <td className="px-4 py-3">
+      <td data-label="Last scan" className="whitespace-nowrap px-4 py-3 text-ink-secondary">{formatWhen(row.lastScanAt)}</td>
+      <td data-label="Schedule" className="px-4 py-3">
         {isCloud ? (
           <div className="flex flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-2">
@@ -712,7 +714,7 @@ export function UnifiedRow({
           </span>
         )}
       </td>
-      <td className="px-4 py-3">
+      <td data-label="Actions" className="px-4 py-3">
         {isCloud ? (
           <div className="flex justify-end gap-2">
             <button
@@ -726,7 +728,7 @@ export function UnifiedRow({
               className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 dark:border-emerald-800/70 bg-emerald-500/10 dark:bg-emerald-950/20 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-200 transition hover:border-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              {isBusy ? "Working…" : "Test"}
+              <span className="source-action-label">{isBusy ? "Working…" : "Test"}</span>
             </button>
             <button
               onClick={() => onCloudScan(connection!)}
@@ -741,16 +743,17 @@ export function UnifiedRow({
               className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <ShieldCheck className="h-3.5 w-3.5" />
-              {isBusy ? "Working…" : "Run scan"}
+              <span className="source-action-label">{isBusy ? "Working…" : "Run scan"}</span>
             </button>
             <button
               onClick={() => onCloudDelete(connection!)}
               disabled={isBusy || !canDelete}
               aria-label={`Delete ${connection!.display_name}`}
+              title={`Delete ${connection!.display_name}`}
               className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 dark:border-red-900/60 bg-red-500/10 dark:bg-red-950/20 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 transition hover:bg-red-500/10 dark:hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Delete
+              <span className="source-action-label">Delete</span>
             </button>
           </div>
         ) : (
