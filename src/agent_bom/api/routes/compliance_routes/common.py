@@ -16,7 +16,6 @@ from agent_bom.api.credential_rotation import build_credential_rotation_governan
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.finding_read_context import finding_read_snapshot
 from agent_bom.api.finding_suppression import suppression_revision
-from agent_bom.api.graph_scan_ids import resolve_graph_scan_id
 from agent_bom.api.models import JobStatus
 from agent_bom.api.posture_counts_cache import POSTURE_COUNTS_CACHE, cached_posture_block
 from agent_bom.api.read_cache import cached_read
@@ -76,9 +75,7 @@ def evidence_generation(tenant_id: str, *, scan_id: str = "") -> str | None:
         jobs = str(reader(tenant_id))
         hub = str(_hub_store().overview_evidence_revision(tenant_id))
         suppressions = suppression_revision(tenant_id)
-        graph = _get_graph_store().snapshot_identity(
-            tenant_id=tenant_id, scan_id=resolve_graph_scan_id(tenant_id, scan_id), for_paging=True
-        )
+        graph = _get_graph_store().snapshot_identity(tenant_id=tenant_id, scan_id=scan_id, for_paging=True)
         if not graph[1]:
             return None
     except Exception:  # noqa: BLE001 - a failing token read disables caching, never staleness
