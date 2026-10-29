@@ -198,3 +198,46 @@ def test_update_baseline_then_detect_anomaly():
 
     # Unknown tool is anomalous
     assert c.detect_anomaly("agent-A", "drop_database") is True
+
+
+def test_record_call_matures_baseline_and_reports_novel_tool_once():
+    c = CrossAgentCorrelator()
+    ts = time.time()
+
+    for index in range(20):
+        assert c.record_call("agent-A", "read_file", ts + index) is None
+    assert c._baselines["agent-A"] == {"read_file": 1.0}
+
+    assert c.record_call("agent-A", "drop_database", ts + 20) == {
+        "agent_id": "agent-A",
+        "tool": "drop_database",
+        "baseline_size": 20,
+    }
+    assert c.record_call("agent-A", "drop_database", ts + 21) is None
+
+
+def test_record_call_refreshes_baseline_every_configured_interval():
+    c = CrossAgentCorrelator(min_baseline_calls=3, baseline_refresh_calls=2)
+    ts = time.time()
+    for index in range(3):
+        c.record_call("agent-A", "read_file", ts + index)
+
+    assert c.record_call("agent-A", "new_tool", ts + 3)["baseline_size"] == 3
+    c.record_call("agent-A", "read_file", ts + 4)
+    assert set(c._baselines["agent-A"]) == {"read_file", "new_tool"}
+    assert c.record_call("agent-A", "new_tool", ts + 5) is None
+
+
+def test_record_call_evicts_least_recently_used_agent_state():
+    c = CrossAgentCorrelator(min_baseline_calls=1, max_agents=2)
+    ts = time.time()
+    c.record_call("agent-A", "read_file", ts)
+    c.record_call("agent-B", "read_file", ts + 1)
+    c.record_call("agent-A", "read_file", ts + 2)
+    c.record_call("agent-C", "read_file", ts + 3)
+
+    assert list(c._agent_calls) == ["agent-A", "agent-C"]
+    assert set(c._baselines) == {"agent-A", "agent-C"}
+    assert set(c._baseline_sizes) == {"agent-A", "agent-C"}
+    assert set(c._calls_since_baseline) == {"agent-A", "agent-C"}
+    assert set(c._reported_novel) == {"agent-A", "agent-C"}

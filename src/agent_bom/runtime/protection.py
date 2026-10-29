@@ -44,6 +44,7 @@ from agent_bom.runtime.incident_feedback import (
     RuntimeIncidentRecord,
     RuntimeIncidentSink,
 )
+from agent_bom.runtime.novel_tool import build_novel_tool_alert
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 from agent_bom.storage import state_home
 
@@ -749,11 +750,8 @@ class ProtectionEngine:
         """
         self._stats.tool_calls_analyzed += 1
         self._record_tool_call_graph(tool_name, arguments, agent_id)
-
-        # Cross-agent correlation: record every call for lateral movement detection
-        if agent_id:
-            self._correlator.record_call(agent_id, tool_name, time.time())
-
+        # Cross-agent correlation: lateral movement plus per-agent novel-tool detection.
+        novel_tool = self._correlator.record_call(agent_id, tool_name, time.time()) if agent_id else None
         # Deep defense: check kill-switch before processing
         if self._shield:
             block_alerts = self._check_blocked(tool_name)
@@ -775,6 +773,8 @@ class ProtectionEngine:
                 return block_alerts
 
         all_alerts: list[dict] = []
+        if novel_tool:
+            all_alerts.append(build_novel_tool_alert(novel_tool))
 
         # Argument analysis — shell injection, path traversal, etc.
         arg_alerts = self.arg_analyzer.check(tool_name, arguments)

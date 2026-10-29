@@ -152,6 +152,32 @@ def test_process_tool_call_records_session_graph():
     assert any(event["kind"] == "tool_call" for event in graph["timeline"])
 
 
+def test_process_tool_call_novel_tool_alert_requires_mature_baseline():
+    engine = ProtectionEngine()
+    engine.start()
+
+    cold_start = _run(engine.process_tool_call("read_file", {}, agent_id="agent-1"))
+    assert cold_start == []
+
+    for _ in range(19):
+        _run(engine.process_tool_call("read_file", {}, agent_id="agent-1"))
+    _run(engine.process_tool_call("rare_but_known", {}, agent_id="agent-1"))
+
+    known = _run(engine.process_tool_call("rare_but_known", {}, agent_id="agent-1"))
+    assert [a for a in known if a["detector"] == "cross_agent_correlator"] == []
+
+    alerts = _run(engine.process_tool_call("never_seen_tool", {}, agent_id="agent-1"))
+    novel = [a for a in alerts if a["detector"] == "cross_agent_correlator"]
+    assert len(novel) == 1
+    assert novel[0]["severity"] == "medium"
+    assert novel[0]["details"]["agent_id"] == "agent-1"
+    assert novel[0]["details"]["tool"] == "never_seen_tool"
+    assert novel[0]["details"]["baseline_size"] == 20
+
+    repeated = _run(engine.process_tool_call("never_seen_tool", {}, agent_id="agent-1"))
+    assert [a for a in repeated if a["detector"] == "cross_agent_correlator"] == []
+
+
 # ─── Tool Response Processing ────────────────────────────────────────────────
 
 
