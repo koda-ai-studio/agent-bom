@@ -131,7 +131,8 @@ async function main() {
       if (viewport.width === 1440) {
         await page.goto(`${server.origin}${basePath}/`, { waitUntil: "networkidle" });
         await page.getByRole("navigation").getByRole("link", { name: /^Findings/ }).first().click();
-        await page.waitForURL(`**${basePath}/findings`);
+        await page.waitForURL((url) => url.pathname === `${basePath}/findings`);
+        await page.getByRole("heading", { name: "Findings", exact: true }).waitFor();
         await page.goto(`${server.origin}${basePath}/advisories?tab=declare`, { waitUntil: "networkidle" });
         await page.getByLabel("Advisory ID").fill("CVE-2026-109618");
         await page.getByLabel("Summary").fill("php2shell");
