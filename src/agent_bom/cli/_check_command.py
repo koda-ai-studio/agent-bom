@@ -24,13 +24,13 @@ from agent_bom.cli import _check_published
 from agent_bom.cli._check_candidates import print_candidates
 from agent_bom.cli._check_support import (
     _check_result_payload,
+    _emit,
     _format_vulnerability_count,
     _package_spec_error,
     _parse_package_spec,
     _resolve_check_ecosystems,
     _vulnerability_row,
     _vulns_at_or_above,
-    _write_check_output,
 )
 from agent_bom.cli._common import _sync_runtime_consoles
 from agent_bom.resolvers.latest_stable import PRERELEASE_NOTE, PRERELEASE_VERSION_SOURCE, resolved_version_source
@@ -74,30 +74,6 @@ class CheckRun:
     vulns: list[Any] = field(default_factory=list)
     fail_threshold: str | None = None
     data_evidence: Any = None
-
-
-def _emit(run: CheckRun, *, ecosystems: list[str], verdict: str, message: str, exit_code: int, **extra: Any) -> None:
-    """Write the machine-readable verdict for ``--format json|sarif`` or agent mode."""
-    extra.setdefault("version_source", run.version_source)
-    extra.setdefault("possibly_affected", list(getattr(run.matched_pkg, "possibly_affected", None) or []))
-    if run.data_evidence is not None:
-        extra.setdefault("vuln_data_freshness", run.data_evidence.freshness)
-        extra.setdefault("completeness", run.data_evidence.completeness())
-    _write_check_output(
-        run.result_payload(
-            name=run.name,
-            version=run.version,
-            ecosystems=ecosystems,
-            verdict=verdict,
-            message=message,
-            exit_code=exit_code,
-            **extra,
-        ),
-        run.output_path,
-        agent_mode=run.agent_mode,
-        exit_code=exit_code,
-        output_format=run.output_format,
-    )
 
 
 def _prepare(ctx: click.Context, run: CheckRun) -> None:
