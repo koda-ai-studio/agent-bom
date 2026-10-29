@@ -14242,6 +14242,12 @@ export interface components {
             suppression_id?: string | null;
             /** Title */
             title?: string | null;
+            /** Vex Justification */
+            vex_justification?: string | null;
+            /** Vex Status */
+            vex_status?: string | null;
+            /** Vex Suppressed */
+            vex_suppressed?: boolean | null;
             /** Vulnerability Id */
             vulnerability_id?: string | null;
         } & {

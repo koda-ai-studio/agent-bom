@@ -108,6 +108,9 @@ class FindingRow(ReadModel):
     schema_version: str | None = None
     suppressed: bool | None = None
     suppression_id: str | None = None
+    vex_status: str | None = None
+    vex_justification: str | None = None
+    vex_suppressed: bool | None = None
 
 
 class FindingsResponse(ReadResponse):

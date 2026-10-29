@@ -110,6 +110,21 @@ def test_seeded_bodies_match_documented_models(demo_estate_client: TestClient) -
     assert not problems, "\n".join(problems)
 
 
+def test_finding_row_documents_operator_vex_projection() -> None:
+    from agent_bom.api.read_models.estate import FindingRow
+
+    row = {
+        "id": "finding-1",
+        "severity": "high",
+        "vex_status": "not_affected",
+        "vex_justification": "code_not_reachable",
+        "vex_suppressed": True,
+    }
+    model = FindingRow.model_validate(row, context={read_models.STRICT_CONTRACT: True})
+    assert _undeclared_keys(model) == []
+    assert model.model_dump(mode="json", exclude_unset=True) == row
+
+
 @pytest.fixture()
 def empty_estate_client(monkeypatch: pytest.MonkeyPatch, tmp_path: Any):
     monkeypatch.setenv("AGENT_BOM_DB", str(tmp_path / "empty.db"))

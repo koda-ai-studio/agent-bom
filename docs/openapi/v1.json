@@ -15462,6 +15462,39 @@
             ],
             "title": "Title"
           },
+          "vex_justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vex Justification"
+          },
+          "vex_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vex Status"
+          },
+          "vex_suppressed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vex Suppressed"
+          },
           "vulnerability_id": {
             "anyOf": [
               {

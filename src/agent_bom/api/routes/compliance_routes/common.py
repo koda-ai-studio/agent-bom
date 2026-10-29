@@ -83,6 +83,7 @@ def evidence_generation(tenant_id: str, *, scan_id: str = "") -> str | None:
     return f"jobs={jobs}|hub={hub}|suppressions={suppressions}|graph={graph}"
 
 
+@finding_read_snapshot
 def cached_tenant_read(
     request: Request, kind: str, params: Any, compute: Callable[[], dict[str, Any]], *, scan_id: str = ""
 ) -> dict[str, Any]:
