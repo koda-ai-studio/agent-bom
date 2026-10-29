@@ -56,7 +56,7 @@ describe("static demo transport", () => {
       { id: "high", severity: "high", finding_type: "vulnerability", lane: "vulnerabilities", cve_id: "CVE-2025-1000" },
       { id: "critical", severity: "critical", finding_type: "vulnerability", lane: "vulnerabilities", cve_id: "CVE-2025-1001" },
     ];
-    const fetchMock = vi.fn(async (_url: string) => new Response(JSON.stringify({ findings: rows, total: 2, scan_id: "sample", snapshot_at: "2026-06-03T20:30:00Z" }), { status: 200 }));
+    const fetchMock = vi.fn<(url: string) => Promise<Response>>(async () => new Response(JSON.stringify({ findings: rows, total: 2, scan_id: "sample", snapshot_at: "2026-06-03T20:30:00Z" }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const { get } = await loadTransport();
     const result = await get<{ findings: { id: string }[]; total: number; facets: { lane: Record<string, number> } }>("/v1/findings?severity=high&scan_id=sample&limit=50");
