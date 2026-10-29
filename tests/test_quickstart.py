@@ -48,7 +48,8 @@ def _fake_scan(monkeypatch):
     return calls
 
 
-def test_quickstart_dry_run_offline_prints_local_next_steps():
+def test_quickstart_dry_run_offline_prints_local_next_steps(monkeypatch):
+    monkeypatch.delenv("AGENT_BOM_STATE_DIR", raising=False)
     result = CliRunner().invoke(main, ["quickstart", "--dry-run", "--offline"])
 
     assert result.exit_code == 0
@@ -90,6 +91,7 @@ def test_quickstart_rejects_dry_run_with_run():
 def test_quickstart_run_scans_with_context_graph_and_seeds_policy(tmp_path, _fake_scan, monkeypatch):
     sample_dir = tmp_path / "stack"
     monkeypatch.delenv("AGENT_BOM_DB", raising=False)
+    monkeypatch.delenv("AGENT_BOM_STATE_DIR", raising=False)
 
     result = CliRunner().invoke(main, ["quickstart", "--run", "--offline", "--sample-dir", str(sample_dir)])
 
