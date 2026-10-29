@@ -200,6 +200,13 @@ control-plane command, and a graph URL pinned to the snapshot just read back.
 Start that command before opening the URL. A missing or incomplete persisted
 graph fails the quickstart instead of printing a successful handoff.
 
+Set `AGENT_BOM_STATE_DIR` to keep the quickstart's databases and other local
+state in a dedicated directory. The printed server command preserves that
+directory, including paths containing spaces. Explicit `AGENT_BOM_DB` and
+`AGENT_BOM_GRAPH_DB` paths take precedence and are preserved in the handoff.
+`quickstart --dry-run` prints the same database configuration without creating
+stores.
+
 Credential-reach findings from the scan appear as graph finding nodes linked to
 their owning agents. Agent scope summaries include their recorded severity;
 Find a path shows the recorded agent/server/credential chain and its final

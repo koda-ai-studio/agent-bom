@@ -16,13 +16,14 @@ from urllib.parse import urlencode
 import click
 
 from agent_bom.samples import write_first_run_sample
+from agent_bom.storage import state_home
 
 QUICKSTART_SCAN_TIMEOUT_SECONDS = 300
 
 
 def _durable_local_control_plane_db() -> Path:
-    """The printed durable control-plane path, resolved against the current HOME."""
-    return Path.home() / ".agent-bom" / "control-plane.db"
+    """Resolve the durable control-plane default within the configured state directory."""
+    return state_home.state_path("control-plane.db")
 
 
 class _GraphReceipt(TypedDict):
@@ -119,10 +120,8 @@ def quickstart_cmd(
     click.echo("")
     click.echo("Local API/UI:")
     click.echo("  pip install 'agent-bom[ui]'")
-    click.echo(
-        f"  AGENT_BOM_NO_AUTH_ROLE=analyst agent-bom serve --persist ~/.agent-bom/control-plane.db"
-        f" --host 127.0.0.1 --port {port} --allow-insecure-no-auth"
-    )
+    control_plane_db, graph_db = _resolve_quickstart_databases(dict(os.environ))
+    click.echo(f"  {_control_plane_command(control_plane_db=control_plane_db, graph_db=graph_db, port=port)}")
     click.echo("  # the explicit local analyst role permits scans in this loopback-only workflow;")
     click.echo("  # on a shared host use --api-key <key> or configure OIDC authentication instead.")
     click.echo(f"  API docs: http://127.0.0.1:{port}/docs")
@@ -382,12 +381,14 @@ def _control_plane_command(*, control_plane_db: Path, graph_db: Path, port: int)
     """Render a shell-safe command that opens the database just verified."""
 
     environment = []
+    if state_home.state_dir().expanduser().resolve() != state_home.default_product_state_dir().resolve():
+        environment.append(f"AGENT_BOM_STATE_DIR={shlex.quote(str(state_home.state_dir().expanduser().resolve()))}")
     if graph_db != control_plane_db:
         environment.append(f"AGENT_BOM_GRAPH_DB={shlex.quote(str(graph_db))}")
     environment.append("AGENT_BOM_NO_AUTH_ROLE=analyst")
     persisted = (
         "~/.agent-bom/control-plane.db"
-        if control_plane_db == _durable_local_control_plane_db().expanduser().resolve()
+        if control_plane_db == (state_home.default_product_state_dir() / "control-plane.db").resolve()
         else shlex.quote(str(control_plane_db))
     )
     return f"{' '.join(environment)} agent-bom serve --persist {persisted} --host 127.0.0.1 --port {port} --allow-insecure-no-auth"
