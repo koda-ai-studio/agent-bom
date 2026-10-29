@@ -286,6 +286,8 @@ for (const theme of ["light", "dark"] as const) {
         await wizard.getByRole("button", { name: multiple, exact: true }).click();
         await expect(wizard.getByRole("region", { name: "Organization setup" })).toBeVisible();
         await expect(wizard.getByText(/creating this connection does not grant access/)).toBeVisible();
+        await wizard.getByRole("button", { name: "Next", exact: true }).scrollIntoViewIfNeeded();
+        await expect(wizard.getByRole("button", { name: "Next", exact: true })).toBeInViewport();
         await expect.poll(() => wizard.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
         await page.screenshot({ path: testInfo.outputPath(`organization-${provider}-${theme}-${width}.png`), fullPage: true });
         await wizard.getByRole("button", { name: "Next", exact: true }).click();

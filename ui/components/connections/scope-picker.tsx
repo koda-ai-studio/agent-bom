@@ -21,7 +21,7 @@ export function ConnectionScopePicker({ provider, value, restricted, onChange }:
         className={`rounded-lg border px-3 py-2 text-left text-sm ${value === scope ? "border-emerald-500 bg-emerald-500/10 text-foreground" : "border-outline text-ink-secondary"}`}
       >{scope === "account" ? config.single : config.multiple}</button>)}
     </div>
-    {value === "organization" && <p className="text-xs leading-5 text-ink-secondary">{config.grant}</p>}
+    {value === "organization" && provider === "aws" && <p className="text-xs leading-5 text-ink-secondary">{config.grant}</p>}
   </section>;
 }
 
