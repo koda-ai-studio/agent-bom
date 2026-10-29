@@ -12,15 +12,25 @@ const graph = {
     { id: "pkg:other", entity_type: "package", label: "left-pad@1.0.0" },
   ],
   edges: [
-    { source: "user:contractor", target: "agent:copilot" },
-    { source: "agent:copilot", target: "server:github" },
-    { source: "server:github", target: "pkg:next" },
-    { source: "pkg:next", target: "cve:next" },
-    { source: "cve:next", target: "pkg:other" },
+    { source: "user:contractor", target: "agent:copilot", relationship: "can_access" },
+    { source: "agent:copilot", target: "server:github", relationship: "uses" },
+    { source: "server:github", target: "pkg:next", relationship: "depends_on" },
+    { source: "pkg:next", target: "cve:next", relationship: "vulnerable_to" },
   ],
 };
 
 describe("static demo sample answers", () => {
+  it("excludes structural and correlation edges from impact, including trace order", () => {
+    for (const relationship of ["hosts", "correlates_with", "shares_server", "trace_step"]) {
+      const fixture = { ...graph, edges: [...graph.edges, { source: "pkg:other", target: "server:github", relationship }] };
+      expect(graphImpact(fixture, "cve:next").affected_nodes).not.toContain("pkg:other");
+    }
+  });
+
+  it("marks an impact cut short by depth as a lower bound", () => {
+    const impact = graphImpact(graph, "cve:next", { maxDepth: 2 });
+    expect(impact.completeness).toMatchObject({ complete: false, total: null, returned: 2, lower_bound: 2 });
+  });
   it("reports the returned impact count and direction consistently", async () => {
     type Route = { request: () => { url: () => string }; fulfill: (options: { body: string }) => Promise<void> };
     const handlers = new Map<string, (route: Route) => Promise<void>>();
@@ -44,7 +54,7 @@ describe("static demo sample answers", () => {
     expect(impact.max_depth_reached).toBe(4);
     expect(impact.affected_nodes_detail[0]).toEqual({ id: "pkg:next", label: "next@15.2.2", entity_type: "package", depth: 1 });
     expect(graphImpact(graph, "cve:next", { maxDepth: 2 }).affected_count).toBe(2);
-    expect(graphImpact(graph, "cve:next", { direction: "forward" }).affected_nodes).toEqual(["pkg:other"]);
+    expect(graphImpact(graph, "cve:next", { direction: "forward" }).affected_nodes).toEqual(["pkg:next"]);
   });
 
   it("anchors findings to the path and gives them a lane, owner and SLA dated from the snapshot", () => {

@@ -8,6 +8,16 @@
  * Registered after `installRoutes`, so these handlers win for the paths they
  * cover (Playwright matches routes in reverse registration order).
  */
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Read the owning generated taxonomy; unknown relationship types do not imply reachability.
+const schema = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../lib/graph-schema.generated.ts"), "utf8");
+const metadata = schema.match(/export const GRAPH_EDGE_KIND_META:[^\n]+ = (\{[\s\S]*?\n\});/);
+if (!metadata) throw new Error("Generated graph relationship taxonomy is missing");
+const relationshipSpecs = JSON.parse(metadata[1].replace(/,\s*}$/, "\n}"));
+const REACH_CLASSES = new Set(["authority", "dependency", "derived", "exposure", "runtime"]);
 const DAY_MS = 86_400_000;
 const LANE_BY_FINDING_TYPE = {
   vulnerability: "vulnerabilities", malicious_package: "vulnerabilities", misconfiguration: "cloud", iac: "iac",
@@ -22,11 +32,21 @@ function fulfill(route, json) {
 export function graphImpact(graph, nodeId, { maxDepth = 4, direction = "reverse" } = {}) {
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
   const next = new Map();
+  const entries = new Set();
+  const findingRoot = ["vulnerability", "misconfiguration"].includes(byId.get(nodeId)?.entity_type);
   for (const edge of graph.edges) {
+    if (findingRoot && ["vulnerable_to", "affects"].includes(edge.relationship)) {
+      if (edge.source === nodeId && byId.has(edge.target)) entries.add(edge.target);
+      if (edge.target === nodeId && byId.has(edge.source)) entries.add(edge.source);
+    }
+    if (!REACH_CLASSES.has(relationshipSpecs[edge.relationship]?.traversal_class) || edge.relationship === "trace_step") continue;
     const [from, to] = direction === "reverse" ? [edge.target, edge.source] : [edge.source, edge.target];
     if (!next.has(from)) next.set(from, []);
     next.get(from).push(to);
   }
+  // A finding names its affected assets in either orientation; only subsequent
+  // hops follow the requested direction and the canonical reach classes.
+  if (findingRoot) next.set(nodeId, [...entries]);
   const depth = new Map([[nodeId, 0]]);
   const queue = [nodeId];
   while (queue.length) {
@@ -39,6 +59,8 @@ export function graphImpact(graph, nodeId, { maxDepth = 4, direction = "reverse"
       queue.push(neighbor);
     }
   }
+  const depthLimited = [...depth].some(([id, level]) => level >= maxDepth
+    && (next.get(id) ?? []).some((neighbor) => byId.has(neighbor) && !depth.has(neighbor)));
   depth.delete(nodeId);
   const detail = [...depth].map(([id, level]) => ({ id, label: byId.get(id).label, entity_type: byId.get(id).entity_type, depth: level }))
     .sort((left, right) => left.depth - right.depth || left.label.localeCompare(right.label));
@@ -50,6 +72,12 @@ export function graphImpact(graph, nodeId, { maxDepth = 4, direction = "reverse"
     affected_by_type: byType,
     affected_count: detail.length,
     max_depth_reached: detail.reduce((max, item) => Math.max(max, item.depth), 0),
+    completeness: {
+      complete: !depthLimited, truncated: depthLimited, sampled: false,
+      status: depthLimited ? "truncated" : "complete", returned: detail.length,
+      total: depthLimited ? null : detail.length,
+      ...(depthLimited ? { lower_bound: detail.length, reason: "depth_limit" } : {}),
+    },
   };
 }
 
@@ -162,7 +190,6 @@ export async function installStaticDemoRoutes(page, { graph, findings, auditEntr
       tenant_id: tenantId,
       snapshot_generation: graph.snapshot_generation ?? "a".repeat(32),
       interpretation: { basis: `recorded_${direction}_reachability`, execution: "not_established", collection_coverage: "unknown", traversable_only: false, max_depth: maxDepth },
-      completeness: { complete: true, truncated: false, sampled: false, status: "complete", total: impact.affected_count, returned: impact.affected_count, missing_endpoint_count: 0, scope: "impact" },
       node_id: nodeId,
       direction,
       ...impact,
