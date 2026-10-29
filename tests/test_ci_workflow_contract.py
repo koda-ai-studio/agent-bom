@@ -1414,6 +1414,12 @@ def test_extras_audit_skips_only_proven_unchanged_dependency_inputs() -> None:
 UI_E2E_SHARDS = 4
 
 
+def test_pr_browser_smoke_covers_graph_drawer_readability() -> None:
+    steps = _ci()["jobs"]["ui-e2e-smoke"]["steps"]
+    command = next(step["run"] for step in steps if step.get("name") == "UI E2E smoke")
+    assert "e2e/graph-efficient-workspace.spec.ts" in command
+
+
 def test_release_ui_context_aggregates_every_playwright_shard() -> None:
     """The required job name survives; the browser suite is split by --shard."""
     from scripts.check_release_main_ci import REQUIRED_UI_JOBS

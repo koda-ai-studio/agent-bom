@@ -14,6 +14,12 @@ from scripts.pytest_ci_plan import select_targeted_tests
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_contract_smoke_always_checks_the_line_ceiling_baseline() -> None:
+    from scripts.pytest_ci_affected import SMOKE_TESTS
+
+    assert "tests/test_check_line_ceiling.py" in SMOKE_TESTS
+
+
 def _write(path: Path, text: str = "x\n") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")

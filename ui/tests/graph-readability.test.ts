@@ -43,3 +43,11 @@ it("keeps evidence metadata legible at the bounded repository overview zoom", as
   const style = readableGraphNodeStyle(0.49) as Record<string, string>;
   expect(Number.parseFloat(style["--graph-node-meta-size"]!) * 0.49).toBeGreaterThanOrEqual(11);
 });
+
+it("keeps glyphs at 64px when fitting a compact evidence graph beside its drawer", async () => {
+  const { readableGraphNodeStyle } = await import("@/lib/graph-node-dimensions");
+  for (const zoom of [0.5, 0.55, 0.6]) {
+    const style = readableGraphNodeStyle(zoom) as Record<string, string>;
+    expect(Number.parseFloat(style["--graph-node-glyph-size"]!) * zoom).toBeGreaterThanOrEqual(64);
+  }
+});

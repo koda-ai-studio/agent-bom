@@ -177,25 +177,14 @@ jobs:
           EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
 
           if [ "${{ steps.triage.outputs.status }}" = "actionable" ]; then
-            BODY=$(cat <<EOF
-          ## Automated Base Image Vulnerability Alert
-
-          Daily image rescan found fixable \`MEDIUM+\` findings in \`agentbom/agent-bom:latest\`.
-
-          - Platform: \`${{ matrix.platform }}\`
-          - Image ID: \`${IMAGE_ID}\`
-          - SARIF category: \`${{ matrix.sarif_category }}\`
-          - Source workflow: \`.github/workflows/container-rescan.yml\`
-          - Policy: container scans run with \`agent-bom image --fail-on-severity medium --exclude-unfixable\`
-          - Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-
-          Review the GitHub Security tab and the immutable workflow evidence for the current image findings.
-          EOF
-          )
+            python scripts/render_container_rescan_issue.py "original-image-scan-${{ matrix.sarif_category }}.sarif" \
+              --platform "${{ matrix.platform }}" --image-id "$IMAGE_ID" --category "${{ matrix.sarif_category }}" \
+              --evidence "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+              --output container-rescan-issue.md
             if [ -n "$EXISTING" ]; then
-              gh issue comment "$EXISTING" --body "$BODY"
+              gh issue comment "$EXISTING" --body-file container-rescan-issue.md
             else
-              gh issue create --title "$TITLE" --label "base-image-vulnerability,security-preventive,automated" --body "$BODY"
+              gh issue create --title "$TITLE" --label "base-image-vulnerability,security-preventive,automated" --body-file container-rescan-issue.md
             fi
           elif [ "${{ steps.triage.outputs.status }}" = "clean" ] && [ -n "$EXISTING" ]; then
             gh issue close "$EXISTING" --comment "Published image ${IMAGE_ID} is clean for ${{ matrix.platform }} under the fixable MEDIUM+ policy. Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

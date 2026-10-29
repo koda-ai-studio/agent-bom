@@ -9,7 +9,7 @@
     "ui/components/key-lifecycle-panel.tsx": 1051,
     "ui/components/nav.tsx": 1014,
     "ui/components/scan-form.tsx": 1103,
-    "ui/lib/api-types.ts": 5613
+    "ui/lib/api-types.ts": 5612
   },
   "python": "allowances come from scripts/architecture-baseline.json (scripts/check_architecture.py)"
 }
