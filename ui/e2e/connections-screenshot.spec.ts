@@ -289,7 +289,8 @@ for (const theme of ["light", "dark"] as const) {
         await expect.poll(() => wizard.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
         await page.screenshot({ path: testInfo.outputPath(`organization-${provider}-${theme}-${width}.png`), fullPage: true });
         await wizard.getByRole("button", { name: "Next", exact: true }).click();
-        await expect(wizard.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
+        await wizard.getByRole("button", { name: "Create connection", exact: true }).click();
+        await expect(wizard.getByText("A display name is required.")).toBeVisible();
       });
     }
   }

@@ -178,3 +178,28 @@ it("re-places captions once after the canvas stops panning", () => {
   expect(frames).toHaveLength(1);
   vi.useRealTimers();
 });
+
+it("scales glyph clearance with the rendered glyph so short-link labels stay attached", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  labels[1]!.remove();
+  document.querySelector('.react-flow__edge[data-id="b"]')!.remove();
+  const canvas = document.querySelector<HTMLElement>(".react-flow")!;
+  const original = canvas.querySelector<HTMLElement>(".react-flow__node")!;
+  original.remove();
+  for (const x of [368, 548]) {
+    const node = document.createElement("div");
+    node.className = "react-flow__node";
+    node.innerHTML = '<div data-graph-entity="true"><div class="graph-entity-glyph"></div></div>';
+    const glyph = node.querySelector<HTMLElement>(".graph-entity-glyph")!;
+    glyph.getBoundingClientRect = () => new DOMRect(x, 68, 64, 64);
+    Object.defineProperty(glyph, "offsetWidth", { value: 128 });
+    canvas.append(node);
+  }
+  const path = canvas.querySelector("path")!;
+  Object.assign(path, { getTotalLength: () => 116, getPointAtLength: (at: number) => ({ x: 432 + at, y: 100 }) });
+  labels[0]!.dataset.labelX = "490";
+  scheduleRelationshipLabelLayout(labels[0]!);
+  expect(labels[0]!.style.transform).toContain("translate(490px, 100px)");
+});
