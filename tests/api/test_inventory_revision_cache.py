@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from starlette.testclient import TestClient
 
-from agent_bom.api import stores
+from agent_bom.api import agent_evidence, stores
 from agent_bom.api.agent_evidence import clear_agent_evidence_cache
 from agent_bom.api.server import app
 from agent_bom.api.store import SQLiteJobStore
@@ -46,27 +46,30 @@ def _get(tenant: str = TENANT) -> dict:
     return response.json()
 
 
-@pytest.mark.parametrize("background_read", [False, True])
+@pytest.mark.parametrize("background_read", [None, "all-tenants", "same-tenant"])
 def test_repeat_inventory_read_does_not_reparse_jobs(jobs, monkeypatch, background_read):
     jobs.put(_scan(8, "alpha"))
     calls = []
-    original = SQLiteJobStore.list_all
+    original = agent_evidence.build_agent_evidence
 
-    def count_inventory_reads(self, *args, **kwargs):
-        # Lifespan workers also query this class, across all tenants. Only the
-        # request's store and tenant measure this projection's cache behavior.
-        if self is jobs and kwargs.get("tenant_id") == TENANT:
+    def count_inventory_projection(rows):
+        # Campaign workers may independently read this same store and tenant.
+        # Measure the scanned-estate projection, not every background DB read.
+        rows = list(rows)
+        if any(row.tenant_id == TENANT for row in rows):
             calls.append(1)
-        return original(self, *args, **kwargs)
+        return original(rows)
 
-    monkeypatch.setattr(SQLiteJobStore, "list_all", count_inventory_reads)
+    monkeypatch.setattr(agent_evidence, "build_agent_evidence", count_inventory_projection)
     first = _get()
-    assert calls, "the cold projection must exercise the instrumented read"
+    assert calls == [1], "the cold request must build the projection exactly once"
     calls.clear()
 
-    if background_read:
+    if background_read == "all-tenants":
         # A lifecycle worker can read the store while this request is served.
         jobs.list_all(all_tenants=True)
+    elif background_read == "same-tenant":
+        jobs.list_all(tenant_id=TENANT)
     second = _get()
 
     assert second == first
