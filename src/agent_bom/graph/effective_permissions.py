@@ -19,23 +19,27 @@ scale: principals and chain depth are capped.
 from __future__ import annotations
 
 import logging
-import re
 from collections import defaultdict
-from dataclasses import replace
 from datetime import datetime, timezone
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
-from agent_bom.cloud.aws_iam_evaluator import IamDecision, evaluate_identity_policies
+from agent_bom.cloud.aws_iam_evaluator import IamDecision
 from agent_bom.cloud.aws_iam_evidence import (
     EvidenceCompleteness,
-    NormalizedIamPolicy,
-    normalize_iam_policy_document,
 )
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import InteractionRisk, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.permission_policy import _ACCOUNT_WIDE_IAM_ARN as _ACCOUNT_WIDE_IAM_ARN
+from agent_bom.graph.permission_policy import _ADMIN_EQUIVALENCE_PROBES as _ADMIN_EQUIVALENCE_PROBES
+from agent_bom.graph.permission_policy import _POLICY_DOC_KEYS as _POLICY_DOC_KEYS
+from agent_bom.graph.permission_policy import _admin_equivalence_decisions as _admin_equivalence_decisions
+from agent_bom.graph.permission_policy import _admin_resource_scopes as _admin_resource_scopes
+from agent_bom.graph.permission_policy import _iter_policy_documents as _iter_policy_documents
+from agent_bom.graph.permission_policy import _normalized_policies_for as _normalized_policies_for
+from agent_bom.graph.permission_policy import _potential_conditional_admin as _potential_conditional_admin
 from agent_bom.graph.types import EntityType, RelationshipType
 
 _logger = logging.getLogger(__name__)
@@ -80,148 +84,6 @@ _ESCALATION_ADMIN_ATTRIBUTES = (
     "admin_escalation_targets",
 )
 _ADMIN_PRIVILEGE_KEYWORDS = ("administratoraccess", "fullaccess", "poweruseraccess", "iamfullaccess", "*:*", "admin", "owner", "root")
-
-# Admin-equivalence probes for real IAM evaluation. A policy that ALLOWs any of
-# these unrestricted (Resource "*") actions grants effective admin: either full
-# access (``*``) or an IAM self-escalation primitive that lets the identity mint
-# arbitrary permissions for itself. Evaluation respects explicit Deny, resource
-# scope, and conditions — so a scoped or denied variant is NOT flagged, which a
-# name/keyword match cannot distinguish.
-_ADMIN_EQUIVALENCE_PROBES: tuple[tuple[str, str], ...] = (
-    ("*", "*"),
-    ("iam:PutUserPolicy", "*"),
-    ("iam:PutRolePolicy", "*"),
-    ("iam:PutGroupPolicy", "*"),
-    ("iam:AttachUserPolicy", "*"),
-    ("iam:AttachRolePolicy", "*"),
-    ("iam:AttachGroupPolicy", "*"),
-    ("iam:CreatePolicyVersion", "*"),
-    ("iam:UpdateAssumeRolePolicy", "*"),
-    ("iam:CreateAccessKey", "*"),
-)
-
-# Node-attribute keys under which a raw IAM policy document (or list of them) may
-# be carried, so the overlay can run real evaluation when the evidence is present.
-_POLICY_DOC_KEYS = ("policy_document", "policy_documents", "policy_documents_json")
-
-
-def _iter_policy_documents(attrs: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    """Extract raw IAM policy documents from a node's attributes (best-effort)."""
-    docs: list[Mapping[str, Any]] = []
-    for key in _POLICY_DOC_KEYS:
-        value = attrs.get(key)
-        if isinstance(value, Mapping):
-            docs.append(value)
-        elif isinstance(value, (list, tuple)):
-            docs.extend(item for item in value if isinstance(item, Mapping))
-    return docs
-
-
-# Every IAM resource in one account (``arn:aws:iam::123456789012:*``) or in any
-# account (``arn:aws:iam::*:*``). ``iam:*`` over either lets an identity attach
-# AdministratorAccess to itself. Path-scoped forms (``:role/app/*``) are not
-# account-wide and stay excluded.
-_ACCOUNT_WIDE_IAM_ARN = re.compile(r"arn:(?:aws(?:-[a-z]+)*|\*):iam:\*?:(?:[0-9]{12}|\*):\*")
-
-
-def _admin_resource_scopes(policies: Sequence[NormalizedIamPolicy]) -> list[str]:
-    """Only account-wide IAM ARNs extend the unrestricted probes.
-
-    A specific user/role ARN or a path-scoped wildcard is not account-wide.
-    Keep the original scope in evidence rather than substituting Resource '*'.
-    Each scope is probed as-is, so a Deny whose resource pattern covers it
-    (``*``, the same ARN, or a broader glob) still takes precedence.
-    """
-    return sorted(
-        {
-            resource
-            for policy in policies
-            for statement in policy.statements
-            if statement.effect == "Allow"
-            for resource in statement.resources
-            if _ACCOUNT_WIDE_IAM_ARN.fullmatch(resource)
-        }
-    )
-
-
-def _admin_equivalence_decisions(policies: Sequence[NormalizedIamPolicy]) -> set[IamDecision]:
-    """Retain deny precedence and uncertainty for global and account-wide probes."""
-    probes = [*_ADMIN_EQUIVALENCE_PROBES]
-    for resource in _admin_resource_scopes(policies):
-        probes.extend((action, resource) for action, _ in _ADMIN_EQUIVALENCE_PROBES if action.startswith("iam:"))
-    return {evaluate_identity_policies(policies, action=action, resource=resource).decision for action, resource in probes}
-
-
-def _potential_conditional_admin(policies: Sequence[NormalizedIamPolicy]) -> bool:
-    """Identify broad conditional grants, without claiming their conditions hold.
-
-    Remove Allow conditions only for classification. Deny conditions and
-    incomplete-policy markers remain intact, so unresolved restrictions cannot
-    produce a confirmed grant or override an explicit deny.
-    """
-    supported = {
-        "Bool",
-        "Null",
-        "StringEquals",
-        "StringNotEquals",
-        "StringLike",
-        "StringNotLike",
-        "ArnEquals",
-        "ArnNotEquals",
-        "ArnLike",
-        "ArnNotLike",
-        "IpAddress",
-        "NotIpAddress",
-        "DateEquals",
-        "DateNotEquals",
-        "DateLessThan",
-        "DateLessThanEquals",
-        "DateGreaterThan",
-        "DateGreaterThanEquals",
-        "NumericEquals",
-        "NumericNotEquals",
-        "NumericLessThan",
-        "NumericLessThanEquals",
-        "NumericGreaterThan",
-        "NumericGreaterThanEquals",
-    }
-    for policy in policies:
-        for statement in policy.statements:
-            for operator, _, _ in statement.conditions:
-                parts = operator.split(":")
-                if len(parts) > 2 or (len(parts) == 2 and parts[0] not in {"ForAllValues", "ForAnyValue"}):
-                    return False
-                if parts[-1].removesuffix("IfExists") not in supported:
-                    return False
-    relaxed = [
-        replace(
-            policy,
-            statements=tuple(
-                replace(statement, conditions=()) if statement.effect == "Allow" else statement for statement in policy.statements
-            ),
-        )
-        for policy in policies
-    ]
-    return IamDecision.ALLOW in _admin_equivalence_decisions(relaxed)
-
-
-def _normalized_policies_for(principal: UnifiedNode, attached_policies: Sequence[UnifiedNode]) -> list[NormalizedIamPolicy]:
-    """Collect normalized IAM policies from a principal's inline + attached documents.
-
-    Documents may be carried on the principal node itself (inline policies) or on
-    each attached ``POLICY`` node. Documents that normalize to no statements
-    (``UNAVAILABLE``) are dropped so ``[]`` cleanly means "no evidence to evaluate"
-    and the caller degrades to the scanner/name signal.
-    """
-    raw_docs: list[Mapping[str, Any]] = list(_iter_policy_documents(principal.attributes))
-    for policy in attached_policies:
-        raw_docs.extend(_iter_policy_documents(policy.attributes))
-    normalized: list[NormalizedIamPolicy] = []
-    for doc in raw_docs:
-        parsed = normalize_iam_policy_document(doc)
-        if parsed.completeness is not EvidenceCompleteness.UNAVAILABLE:
-            normalized.append(parsed)
-    return normalized
 
 
 def _validity_instant(value: str) -> datetime | None:
@@ -280,67 +142,101 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
             "skipped": True,
             "skipped_reason": f"principal_cap_exceeded:{len(principals)}>{_MAX_PRINCIPALS}",
         }
-    principal_ids = {p.id for p in principals}
+    return _PermissionDerivation(graph, principals, moment, limits, input_limited).run()
 
-    direct_access: dict[str, set[str]] = defaultdict(set)
-    assumes: dict[str, set[str]] = defaultdict(set)
-    member_of_groups: dict[str, set[str]] = defaultdict(set)
-    access_edges: dict[tuple[str, str], UnifiedEdge] = {}
-    assume_edges: dict[tuple[str, str], UnifiedEdge] = {}
-    membership_edges: dict[tuple[str, str], UnifiedEdge] = {}
-    attached_policy_labels: dict[str, list[str]] = defaultdict(list)
-    attached_policy_nodes: dict[str, list[UnifiedNode]] = defaultdict(list)
-    admin_by_policy_actions: set[str] = set()
-    admin_with_unavailable_policy: set[str] = set()
-    validity: dict[str, tuple[datetime, datetime | None]] = {}
-    invalid_validity = 0
-    inactive_edges = 0
-    temporal_relations = {*_ASSUME_RELS, RelationshipType.CAN_ACCESS, RelationshipType.MEMBER_OF, RelationshipType.ATTACHED}
-    for edge in graph.edges:
-        rel = edge.relationship
-        if rel in temporal_relations:
+
+class _PermissionDerivation:
+    """Per-evaluation authority indexes and bounded evidence witnesses."""
+
+    def __init__(
+        self, graph: UnifiedGraph, principals: list[UnifiedNode], moment: datetime, limits: dict[str, int], input_limited: bool
+    ) -> None:
+        self.graph = graph
+        self.principals = principals
+        self.moment = moment
+        self.limits = limits
+        self.input_limited = input_limited
+        self.principal_ids = {p.id for p in self.principals}
+
+        self.direct_access: dict[str, set[str]] = defaultdict(set)
+        self.assumes: dict[str, set[str]] = defaultdict(set)
+        self.member_of_groups: dict[str, set[str]] = defaultdict(set)
+        self.access_edges: dict[tuple[str, str], UnifiedEdge] = {}
+        self.assume_edges: dict[tuple[str, str], UnifiedEdge] = {}
+        self.membership_edges: dict[tuple[str, str], UnifiedEdge] = {}
+        self.attached_policy_labels: dict[str, list[str]] = defaultdict(list)
+        self.attached_policy_nodes: dict[str, list[UnifiedNode]] = defaultdict(list)
+        self.admin_by_policy_actions: set[str] = set()
+        self.admin_with_unavailable_policy: set[str] = set()
+        self.validity: dict[str, tuple[datetime, datetime | None]] = {}
+        self.invalid_validity = 0
+        self.inactive_edges = 0
+        self.temporal_relations = {*_ASSUME_RELS, RelationshipType.CAN_ACCESS, RelationshipType.MEMBER_OF, RelationshipType.ATTACHED}
+        self.admin_principals: set[str] = set()
+        # Broad admin grants whose Allow conditions (MFA, source IP, region, ...)
+        # have not been verified. They feed escalation analysis as a distinct,
+        # lower-confidence target and never set ``admin_equivalent``.
+        self.conditional_admin_principals: set[str] = set()
+        self.admin_via_evaluation = 0
+        self.admin_via_scanner = 0
+        self.admin_via_heuristic = 0
+        self.depth_limited = False
+        self.witness_limited = False
+        self.edges_added = 0
+        self.escalations = 0
+        self.seen_perm: set[tuple[str, str]] = set()
+
+    def _active_at_evaluation(self, edge: UnifiedEdge) -> bool:
+        if edge.relationship in self.temporal_relations:
             start = _validity_instant(edge.valid_from)
             end = _validity_instant(edge.valid_to) if edge.valid_to is not None else None
             if start is None or (edge.valid_to is not None and end is None) or (end is not None and end <= start):
-                invalid_validity += 1
+                self.invalid_validity += 1
+                return False
+            if edge.activity_id == 3 or self.moment < start or (end is not None and self.moment >= end):
+                self.inactive_edges += 1
+                return False
+            self.validity[edge.id] = (start, end)
+        return True
+
+    def _index_sources(self) -> None:
+        for edge in self.graph.edges:
+            rel = edge.relationship
+            if not self._active_at_evaluation(edge):
                 continue
-            if edge.activity_id == 3 or moment < start or (end is not None and moment >= end):
-                inactive_edges += 1
+            # Context-only links cannot acquire authority through a derived overlay.
+            # Attached policy documents remain available to the policy evaluator;
+            # only access, membership and delegation walks require traversability.
+            if not edge.traversable and rel in {*_ASSUME_RELS, RelationshipType.CAN_ACCESS, RelationshipType.MEMBER_OF}:
                 continue
-            validity[edge.id] = (start, end)
-        # Context-only links cannot acquire authority through a derived overlay.
-        # Attached policy documents remain available to the policy evaluator;
-        # only access, membership and delegation walks require traversability.
-        if not edge.traversable and rel in {*_ASSUME_RELS, RelationshipType.CAN_ACCESS, RelationshipType.MEMBER_OF}:
-            continue
-        if rel == RelationshipType.CAN_ACCESS and edge.source in principal_ids:
-            target = graph.nodes.get(edge.target)
-            if target is not None and target.entity_type in _RESOURCE_TYPES:
-                direct_access[edge.source].add(edge.target)
-                access_edges[(edge.source, edge.target)] = edge
-        elif rel in _ASSUME_RELS and edge.source in principal_ids and edge.target in principal_ids:
-            assumes[edge.source].add(edge.target)
-            key = (edge.source, edge.target)
-            if key not in assume_edges or edge.id < assume_edges[key].id:
-                assume_edges[key] = edge
-        elif rel == RelationshipType.MEMBER_OF and edge.source in principal_ids:
-            # A principal inherits the access of every GROUP it belongs to. Group
-            # membership is NOT an assume chain, so it is tracked separately and
-            # never flagged as privilege escalation.
-            target = graph.nodes.get(edge.target)
-            if target is not None and target.entity_type == EntityType.GROUP:
-                member_of_groups[edge.source].add(edge.target)
-                membership_edges[(edge.source, edge.target)] = edge
-        elif rel == RelationshipType.ATTACHED and edge.source in principal_ids:
-            policy = graph.nodes.get(edge.target)
-            if policy is not None and policy.entity_type == EntityType.POLICY:
-                attached_policy_labels[edge.source].append(policy.label)
-                attached_policy_nodes[edge.source].append(policy)
-                # Action-derived privilege from the scanner (precise, beats name match).
-                if policy.attributes.get("privilege_level") == "admin":
-                    admin_by_policy_actions.add(edge.source)
-                    if not _normalized_policies_for(policy, ()):
-                        admin_with_unavailable_policy.add(edge.source)
+            if rel == RelationshipType.CAN_ACCESS and edge.source in self.principal_ids:
+                target = self.graph.nodes.get(edge.target)
+                if target is not None and target.entity_type in _RESOURCE_TYPES:
+                    self.direct_access[edge.source].add(edge.target)
+                    self.access_edges[(edge.source, edge.target)] = edge
+            elif rel in _ASSUME_RELS and edge.source in self.principal_ids and edge.target in self.principal_ids:
+                self.assumes[edge.source].add(edge.target)
+                key = (edge.source, edge.target)
+                if key not in self.assume_edges or edge.id < self.assume_edges[key].id:
+                    self.assume_edges[key] = edge
+            elif rel == RelationshipType.MEMBER_OF and edge.source in self.principal_ids:
+                # A principal inherits the access of every GROUP it belongs to. Group
+                # membership is NOT an assume chain, so it is tracked separately and
+                # never flagged as privilege escalation.
+                target = self.graph.nodes.get(edge.target)
+                if target is not None and target.entity_type == EntityType.GROUP:
+                    self.member_of_groups[edge.source].add(edge.target)
+                    self.membership_edges[(edge.source, edge.target)] = edge
+            elif rel == RelationshipType.ATTACHED and edge.source in self.principal_ids:
+                policy = self.graph.nodes.get(edge.target)
+                if policy is not None and policy.entity_type == EntityType.POLICY:
+                    self.attached_policy_labels[edge.source].append(policy.label)
+                    self.attached_policy_nodes[edge.source].append(policy)
+                    # Action-derived privilege from the scanner (precise, beats name match).
+                    if policy.attributes.get("privilege_level") == "admin":
+                        self.admin_by_policy_actions.add(edge.source)
+                        if not _normalized_policies_for(policy, ()):
+                            self.admin_with_unavailable_policy.add(edge.source)
 
     # Admin-equivalence is derived, in priority order, from:
     #   1. REAL IAM evaluation of attached/inline policy documents (policy
@@ -359,78 +255,67 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
     #      INDETERMINATE), so it must NOT suppress the heuristic: a role with
     #      AdministratorAccess attached alongside a single malformed statement
     #      still fails toward flagging a possible admin (safe direction).
-    admin_principals: set[str] = set()
-    # Broad admin grants whose Allow conditions (MFA, source IP, region, ...)
-    # have not been verified. They feed escalation analysis as a distinct,
-    # lower-confidence target and never set ``admin_equivalent``.
-    conditional_admin_principals: set[str] = set()
-    admin_via_evaluation = 0
-    admin_via_scanner = 0
-    admin_via_heuristic = 0
-    for p in principals:
-        docs = _normalized_policies_for(p, attached_policy_nodes.get(p.id, ()))
-        # Evidence is authoritative only when EVERY collected document is COMPLETE.
-        # A single PARTIAL document means the evaluator's non-ALLOW verdict is
-        # inconclusive, not a real "not admin" — it must not gate out the heuristic.
-        evidence_authoritative = bool(docs) and all(d.completeness is EvidenceCompleteness.COMPLETE for d in docs)
-        basis: str | None = None
-        decisions = _admin_equivalence_decisions(docs) if docs else set()
-        pnode = graph.nodes.get(p.id) or p
-        # Re-evaluation must not retain a previous unconditional admin label.
-        pnode.attributes.pop("admin_equivalent", None)
-        pnode.attributes.pop("admin_equivalence_basis", None)
-        pnode.attributes["admin_equivalence_status"] = "unknown"
-        pnode.attributes["admin_equivalence_resource_scopes"] = _admin_resource_scopes(docs)
-        if evidence_authoritative:
+    def _classify_admins(self) -> None:
+        for p in self.principals:
+            docs = _normalized_policies_for(p, self.attached_policy_nodes.get(p.id, ()))
+            # Evidence is authoritative only when EVERY collected document is COMPLETE.
+            # A single PARTIAL document means the evaluator's non-ALLOW verdict is
+            # inconclusive, not a real "not admin" — it must not gate out the heuristic.
+            evidence_authoritative = bool(docs) and all(d.completeness is EvidenceCompleteness.COMPLETE for d in docs)
+            basis: str | None = None
+            decisions = _admin_equivalence_decisions(docs) if docs else set()
+            pnode = self.graph.nodes.get(p.id) or p
+            # Re-evaluation must not retain a previous unconditional admin label.
+            pnode.attributes.pop("admin_equivalent", None)
+            pnode.attributes.pop("admin_equivalence_basis", None)
+            pnode.attributes["admin_equivalence_status"] = "unknown"
+            pnode.attributes["admin_equivalence_resource_scopes"] = _admin_resource_scopes(docs)
+            if evidence_authoritative:
+                if IamDecision.ALLOW in decisions:
+                    pnode.attributes["admin_equivalence_status"] = "admin"
+                elif IamDecision.INDETERMINATE in decisions:
+                    if _potential_conditional_admin(docs):
+                        pnode.attributes["admin_equivalence_status"] = "conditional_admin"
+                        self.conditional_admin_principals.add(p.id)
+                elif p.id not in self.admin_with_unavailable_policy:
+                    pnode.attributes["admin_equivalence_status"] = "not_admin"
             if IamDecision.ALLOW in decisions:
-                pnode.attributes["admin_equivalence_status"] = "admin"
-            elif IamDecision.INDETERMINATE in decisions:
-                if _potential_conditional_admin(docs):
-                    pnode.attributes["admin_equivalence_status"] = "conditional_admin"
-                    conditional_admin_principals.add(p.id)
-            elif p.id not in admin_with_unavailable_policy:
-                pnode.attributes["admin_equivalence_status"] = "not_admin"
-        if IamDecision.ALLOW in decisions:
-            # Real policy evaluation ALLOWs an unrestricted admin/escalation action.
-            basis = "policy_evaluation"
-            admin_via_evaluation += 1
-        elif decisions == {IamDecision.EXPLICIT_DENY} or (evidence_authoritative and p.id not in admin_with_unavailable_policy):
-            # COMPLETE documents did not prove unconditional admin-equivalence.
-            # Deny, resource scope and unresolved conditions must not be bypassed
-            # by an action-only scanner classification or a policy-name guess.
-            # Record the evaluation basis without inventing a request context.
-            # An unfetched admin policy remains a degraded signal unless every
-            # admin probe is explicitly denied by the collected documents.
-            # Re-resolve
-            # through the graph before writing so the mutation persists on a
-            # store-backed container (the held principal may have been evicted from
-            # the LRU during the scan above); in-RAM this is the same object.
-            (graph.nodes.get(p.id) or p).attributes["admin_equivalence_basis"] = "policy_evaluation"
-        elif p.id in admin_by_policy_actions:
-            basis = "scanner_actions"
-            admin_via_scanner += 1
-        else:
-            # No documents, OR only PARTIAL/incomplete evidence (non-authoritative):
-            # fall back to the name/keyword heuristic and fail toward flagging.
-            haystack = " ".join([p.label, *attached_policy_labels.get(p.id, [])]).lower().replace(" ", "")
-            if any(kw in haystack for kw in _ADMIN_PRIVILEGE_KEYWORDS):
-                basis = "name_heuristic"
-                admin_via_heuristic += 1
-        if basis is not None:
-            admin_principals.add(p.id)
-            # Re-resolve before mutating so the write persists store-backed (see above).
-            pnode = graph.nodes.get(p.id) or p
-            pnode.attributes["admin_equivalent"] = True
-            pnode.attributes["admin_equivalence_basis"] = basis
-
-    depth_limited = False
-    witness_limited = False
+                # Real policy evaluation ALLOWs an unrestricted admin/escalation action.
+                basis = "policy_evaluation"
+                self.admin_via_evaluation += 1
+            elif decisions == {IamDecision.EXPLICIT_DENY} or (evidence_authoritative and p.id not in self.admin_with_unavailable_policy):
+                # COMPLETE documents did not prove unconditional admin-equivalence.
+                # Deny, resource scope and unresolved conditions must not be bypassed
+                # by an action-only scanner classification or a policy-name guess.
+                # Record the evaluation basis without inventing a request context.
+                # An unfetched admin policy remains a degraded signal unless every
+                # admin probe is explicitly denied by the collected documents.
+                # Re-resolve
+                # through the graph before writing so the mutation persists on a
+                # store-backed container (the held principal may have been evicted from
+                # the LRU during the scan above); in-RAM this is the same object.
+                (self.graph.nodes.get(p.id) or p).attributes["admin_equivalence_basis"] = "policy_evaluation"
+            elif p.id in self.admin_by_policy_actions:
+                basis = "scanner_actions"
+                self.admin_via_scanner += 1
+            else:
+                # No documents, OR only PARTIAL/incomplete evidence (non-authoritative):
+                # fall back to the name/keyword heuristic and fail toward flagging.
+                haystack = " ".join([p.label, *self.attached_policy_labels.get(p.id, [])]).lower().replace(" ", "")
+                if any(kw in haystack for kw in _ADMIN_PRIVILEGE_KEYWORDS):
+                    basis = "name_heuristic"
+                    self.admin_via_heuristic += 1
+            if basis is not None:
+                self.admin_principals.add(p.id)
+                # Re-resolve before mutating so the write persists store-backed (see above).
+                pnode = self.graph.nodes.get(p.id) or p
+                pnode.attributes["admin_equivalent"] = True
+                pnode.attributes["admin_equivalence_basis"] = basis
 
     def _walk(
-        principal_id: str, adjacency: Mapping[str, set[str]], source_edges: Mapping[tuple[str, str], UnifiedEdge]
+        self, principal_id: str, adjacency: Mapping[str, set[str]], source_edges: Mapping[tuple[str, str], UnifiedEdge]
     ) -> dict[str, tuple[str, ...]]:
         """One deterministic shortest witness per reachable principal, not all paths."""
-        nonlocal depth_limited
         paths: dict[str, tuple[str, ...]] = {principal_id: ()}
         frontier = [principal_id]
         for _ in range(_MAX_DEPTH):
@@ -446,21 +331,20 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
                 break
         # Cycles and already visited nodes do not imply unexamined authority.
         if any(target not in paths for source in frontier for target in adjacency.get(source, set())):
-            depth_limited = True
+            self.depth_limited = True
         paths.pop(principal_id)
         return paths
 
-    def effective(principal_id: str) -> tuple[set[str], set[str], set[str], set[str], dict[str, dict[str, Any]]]:
-        nonlocal witness_limited
-        direct = set(direct_access.get(principal_id, set()))
-        groups = _walk(principal_id, member_of_groups, membership_edges)
-        assumed = _walk(principal_id, assumes, assume_edges)
+    def _effective(self, principal_id: str) -> tuple[set[str], set[str], set[str], set[str], dict[str, dict[str, Any]]]:
+        direct = set(self.direct_access.get(principal_id, set()))
+        groups = self._walk(principal_id, self.member_of_groups, self.membership_edges)
+        assumed = self._walk(principal_id, self.assumes, self.assume_edges)
         via_group: set[str] = set()
         via_assume: set[str] = set()
         proofs: dict[str, dict[str, Any]] = {}
         for access, sources in (("direct", {principal_id: ()}), ("group", groups), ("assume_chain", assumed)):
             for source, chain in sorted(sources.items()):
-                for resource in sorted(direct_access.get(source, set())):
+                for resource in sorted(self.direct_access.get(source, set())):
                     if access == "group":
                         via_group.add(resource)
                     elif access == "assume_chain":
@@ -469,7 +353,7 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
                         resource,
                         {
                             "basis": "recorded_graph_connections",
-                            "source_scan_id": graph.scan_id,
+                            "source_scan_id": self.graph.scan_id,
                             "path_selection": "one_shortest_path_per_grant_and_access",
                             "paths": [],
                             "truncated": False,
@@ -477,9 +361,9 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
                     )
                     if len(proof["paths"]) >= _MAX_PERMISSION_WITNESSES:
                         proof["truncated"] = True
-                        witness_limited = True
+                        self.witness_limited = True
                         continue
-                    grant = access_edges[(source, resource)]
+                    grant = self.access_edges[(source, resource)]
                     proof["paths"].append(
                         {
                             "access": access,
@@ -491,10 +375,10 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
         all_resources = direct | via_assume | via_group
         return all_resources, via_assume - direct, via_group - direct - via_assume, set(assumed), proofs
 
-    def witnessed_window(proof: Mapping[str, Any]) -> tuple[str, str | None]:
+    def _witnessed_window(self, proof: Mapping[str, Any]) -> tuple[str, str | None]:
         intervals = []
         for path in proof["paths"]:
-            windows = [validity[edge_id] for edge_id in path["source_edge_ids"]]
+            windows = [self.validity[edge_id] for edge_id in path["source_edge_ids"]]
             ends = [end for _start, end in windows if end is not None]
             intervals.append((max(start for start, _end in windows), min(ends) if ends else None))
         # Every retained witness contains the evaluation instant. Their union is
@@ -503,43 +387,14 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
         end = None if any(end is None for _start, end in intervals) else max(end for _start, end in intervals if end is not None)
         return start.isoformat(), end.isoformat() if end is not None else None
 
-    edges_added = 0
-    escalations = 0
-    seen_perm: set[tuple[str, str]] = set()
-    for principal in principals:
-        all_resources, escalated, via_group_only, assumed, proofs = effective(principal.id)
-        for resource_id in sorted(all_resources):
-            key = (principal.id, resource_id)
-            if key in seen_perm:
-                continue
-            seen_perm.add(key)
-            if resource_id in escalated:
-                via = "assume_chain"
-            elif resource_id in via_group_only:
-                via = "group"
-            else:
-                via = "direct"
-            valid_from, valid_to = witnessed_window(proofs[resource_id])
-            graph.add_edge(
-                UnifiedEdge(
-                    source=principal.id,
-                    target=resource_id,
-                    relationship=RelationshipType.HAS_PERMISSION,
-                    valid_from=valid_from,
-                    valid_to=valid_to,
-                    weight=5.0 if via == "assume_chain" else 2.0,
-                    provenance={"source": _OVERLAY_SOURCE},
-                    evidence={"tier": "derived", "derived_via": via, "access": via, "permission_derivation": proofs[resource_id]},
-                )
-            )
-            edges_added += 1
+    def _emit_escalation(self, principal: UnifiedNode, escalated: set[str], assumed: set[str]) -> None:
         for stale in _ESCALATION_ADMIN_ATTRIBUTES:
             principal.attributes.pop(stale, None)
         if escalated:
             principal.attributes["can_escalate_privilege"] = True
-            to_admin = bool(assumed & admin_principals)
-            to_conditional_admin = not to_admin and bool(assumed & conditional_admin_principals)
-            admin_targets = sorted(assumed & (admin_principals | conditional_admin_principals))
+            to_admin = bool(assumed & self.admin_principals)
+            to_conditional_admin = not to_admin and bool(assumed & self.conditional_admin_principals)
+            admin_targets = sorted(assumed & (self.admin_principals | self.conditional_admin_principals))
             if to_admin:
                 principal.attributes["escalates_to_admin"] = True
                 principal.attributes["admin_escalation_confidence"] = "confirmed"
@@ -550,12 +405,14 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
                 principal.attributes["admin_escalation_targets"] = [
                     {
                         "principal_id": target_id,
-                        "admin_equivalence_status": "admin" if target_id in admin_principals else "conditional_admin",
+                        "admin_equivalence_status": "admin" if target_id in self.admin_principals else "conditional_admin",
                     }
                     for target_id in admin_targets[:_MAX_PERMISSION_WITNESSES]
                 ]
             exposed = sorted(
-                rid for rid in escalated if graph.nodes.get(rid) and coerce_truthy(graph.nodes[rid].attributes.get("internet_exposed"))
+                rid
+                for rid in escalated
+                if self.graph.nodes.get(rid) and coerce_truthy(self.graph.nodes[rid].attributes.get("internet_exposed"))
             )
             if exposed:
                 risk = 9.5
@@ -571,7 +428,7 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
                 target_phrase = "a role with conditional admin permissions (conditions not verified)"
             else:
                 target_phrase = "another role"
-            graph.interaction_risks.append(
+            self.graph.interaction_risks.append(
                 InteractionRisk(
                     pattern="privilege_escalation",
                     agents=[principal.label],
@@ -584,38 +441,72 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
                     owasp_agentic_tag=None,
                 )
             )
-            escalations += 1
+            self.escalations += 1
 
-    reason_codes = tuple(
-        code
-        for code, limited in (
-            ("permission_depth_limit", depth_limited),
-            ("permission_witness_limit", witness_limited),
-            ("incomplete_source_graph", input_limited),
-            ("invalid_permission_validity", invalid_validity > 0),
+    def run(self) -> dict[str, object]:
+        self._index_sources()
+        self._classify_admins()
+        for principal in self.principals:
+            all_resources, escalated, via_group_only, assumed, proofs = self._effective(principal.id)
+            for resource_id in sorted(all_resources):
+                key = (principal.id, resource_id)
+                if key in self.seen_perm:
+                    continue
+                self.seen_perm.add(key)
+                if resource_id in escalated:
+                    via = "assume_chain"
+                elif resource_id in via_group_only:
+                    via = "group"
+                else:
+                    via = "direct"
+                valid_from, valid_to = self._witnessed_window(proofs[resource_id])
+                self.graph.add_edge(
+                    UnifiedEdge(
+                        source=principal.id,
+                        target=resource_id,
+                        relationship=RelationshipType.HAS_PERMISSION,
+                        valid_from=valid_from,
+                        valid_to=valid_to,
+                        weight=5.0 if via == "assume_chain" else 2.0,
+                        provenance={"source": _OVERLAY_SOURCE},
+                        evidence={"tier": "derived", "derived_via": via, "access": via, "permission_derivation": proofs[resource_id]},
+                    )
+                )
+                self.edges_added += 1
+            self._emit_escalation(principal, escalated, assumed)
+        return self._result()
+
+    def _result(self) -> dict[str, object]:
+        reason_codes = tuple(
+            code
+            for code, limited in (
+                ("permission_depth_limit", self.depth_limited),
+                ("permission_witness_limit", self.witness_limited),
+                ("incomplete_source_graph", self.input_limited),
+                ("invalid_permission_validity", self.invalid_validity > 0),
+            )
+            if limited
         )
-        if limited
-    )
-    graph.analysis_status[_ANALYZER] = GraphAnalysisStatus(
-        status=GraphAnalysisState.LIMITED if reason_codes else GraphAnalysisState.COMPLETE,
-        reason_codes=reason_codes,
-        limits=limits,
-        observed={
-            "principal_count": len(principals),
-            "has_permission_edges": edges_added,
-            "privilege_escalations": escalations,
-            "admin_principals": len(admin_principals),
-            "conditional_admin_principals": len(conditional_admin_principals),
-            "inactive_source_edges": inactive_edges,
-            "invalid_source_validity": invalid_validity,
-        },
-    )
-    return {
-        "has_permission_edges": edges_added,
-        "privilege_escalations": escalations,
-        "admin_principals": len(admin_principals),
-        "conditional_admin_principals": len(conditional_admin_principals),
-        "admin_via_evaluation": admin_via_evaluation,
-        "admin_via_scanner": admin_via_scanner,
-        "admin_via_heuristic": admin_via_heuristic,
-    }
+        self.graph.analysis_status[_ANALYZER] = GraphAnalysisStatus(
+            status=GraphAnalysisState.LIMITED if reason_codes else GraphAnalysisState.COMPLETE,
+            reason_codes=reason_codes,
+            limits=self.limits,
+            observed={
+                "principal_count": len(self.principals),
+                "has_permission_edges": self.edges_added,
+                "privilege_escalations": self.escalations,
+                "admin_principals": len(self.admin_principals),
+                "conditional_admin_principals": len(self.conditional_admin_principals),
+                "inactive_source_edges": self.inactive_edges,
+                "invalid_source_validity": self.invalid_validity,
+            },
+        )
+        return {
+            "has_permission_edges": self.edges_added,
+            "privilege_escalations": self.escalations,
+            "admin_principals": len(self.admin_principals),
+            "conditional_admin_principals": len(self.conditional_admin_principals),
+            "admin_via_evaluation": self.admin_via_evaluation,
+            "admin_via_scanner": self.admin_via_scanner,
+            "admin_via_heuristic": self.admin_via_heuristic,
+        }

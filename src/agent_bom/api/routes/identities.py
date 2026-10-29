@@ -37,6 +37,13 @@ from agent_bom.api.delegation_service import (
     verify_identity_delegation,
 )
 from agent_bom.api.delegation_token import DelegationTokenError
+from agent_bom.api.identity_request_values import _actor as _actor
+from agent_bom.api.identity_request_values import _bool as _bool
+from agent_bom.api.identity_request_values import _delegation_scopes as _delegation_scopes
+from agent_bom.api.identity_request_values import _int_list as _int_list
+from agent_bom.api.identity_request_values import _str_list as _str_list
+from agent_bom.api.identity_request_values import _tool_name as _tool_name
+from agent_bom.api.identity_request_values import _ttl_seconds as _ttl_seconds
 from agent_bom.api.read_models import IdentitiesResponse, documented
 from agent_bom.api.read_models import admin as m
 from agent_bom.api.request_contract import PageLimit1000, reject_unknown_fields, require_scalar_str
@@ -56,34 +63,9 @@ def _tenant(request: Request) -> str:
     return require_request_tenant_id(request)
 
 
-def _actor(request: Request) -> str:
-    return (
-        getattr(getattr(request, "state", None), "actor", None) or getattr(getattr(request, "state", None), "api_key_name", None) or "api"
-    )
-
-
 def _emit(event_type: str, *, tenant_id: str, subject_id: str, **payload: object) -> None:
     """Fan a governance lifecycle event out to subscribed webhooks (best-effort)."""
     emit_governance_event(event_type=event_type, tenant_id=tenant_id, source="identities.api", subject_id=subject_id, payload=payload)
-
-
-def _tool_name(body: dict) -> str:
-    tool_name = require_scalar_str(body, "tool_name", max_length=120)
-    if not tool_name:
-        raise HTTPException(status_code=400, detail="'tool_name' is required")
-    return tool_name
-
-
-def _ttl_seconds(body: dict, *, default: int = 3600, max_seconds: int = 24 * 3600) -> int:
-    try:
-        ttl_seconds = int(body.get("ttl_seconds", default))
-    except (TypeError, ValueError) as exc:
-        raise HTTPException(status_code=400, detail="'ttl_seconds' must be an integer") from exc
-    if ttl_seconds < 60:
-        raise HTTPException(status_code=400, detail="'ttl_seconds' must be at least 60")
-    if ttl_seconds > max_seconds:
-        raise HTTPException(status_code=400, detail=f"'ttl_seconds' must be at most {max_seconds}")
-    return ttl_seconds
 
 
 def _identity_for_tenant(request: Request, identity_id: str) -> AgentIdentity:
@@ -427,40 +409,6 @@ def list_agent_identity_jit_for_identity(
     }
 
 
-def _str_list(body: dict, key: str, *, max_items: int = 200, max_len: int = 120) -> list[str]:
-    raw = body.get(key, [])
-    if raw in (None, ""):
-        return []
-    if not isinstance(raw, list):
-        raise HTTPException(status_code=400, detail=f"'{key}' must be a list of strings")
-    return [str(v).strip()[:max_len] for v in raw if str(v).strip()][:max_items]
-
-
-def _bool(body: dict, key: str) -> bool:
-    raw = body.get(key, False)
-    if isinstance(raw, bool):
-        return raw
-    return str(raw).strip().lower() in {"true", "1", "yes", "on"}
-
-
-def _int_list(body: dict, key: str, *, lo: int, hi: int) -> list[int]:
-    raw = body.get(key, [])
-    if raw in (None, ""):
-        return []
-    if not isinstance(raw, list):
-        raise HTTPException(status_code=400, detail=f"'{key}' must be a list of integers")
-    out: list[int] = []
-    for v in raw:
-        try:
-            n = int(v)
-        except (TypeError, ValueError) as exc:
-            raise HTTPException(status_code=400, detail=f"'{key}' must contain integers") from exc
-        if not (lo <= n <= hi):
-            raise HTTPException(status_code=400, detail=f"'{key}' values must be between {lo} and {hi}")
-        out.append(n)
-    return out
-
-
 @router.post("/conditional-access-policies", status_code=201, dependencies=[_dep("config")])
 def create_conditional_access_policy(request: Request, body: dict) -> dict[str, object]:
     """Create a context-aware access policy (time / CIDR / environment guardrail)."""
@@ -596,19 +544,6 @@ def get_conditional_access_policy(request: Request, policy_id: str) -> dict[str,
     """Return one conditional-access policy."""
     policy = _conditional_policy_for_tenant(request, policy_id)
     return {"schema_version": "agent.identity.conditional.v1", "policy": policy.to_public_dict()}
-
-
-# ── Scoped delegation tokens (multi-agent handoff) ──────────────────────────────
-
-
-def _delegation_scopes(body: dict) -> list[str]:
-    raw = body.get("scopes", [])
-    if not isinstance(raw, list) or not raw:
-        raise HTTPException(status_code=400, detail="'scopes' must be a non-empty list of capability strings")
-    scopes = [str(v).strip()[:200] for v in raw if str(v).strip()][:100]
-    if not scopes:
-        raise HTTPException(status_code=400, detail="'scopes' must contain at least one non-empty capability")
-    return scopes
 
 
 @router.post("/identities/{identity_id}/delegations", status_code=201, dependencies=[_dep("config")])

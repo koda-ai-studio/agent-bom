@@ -738,6 +738,11 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                 for name in ("test_api_endpoints.py", "test_api_dashboard_deeplink_routes.py", "test_operation_scope_coverage.py")
                 if root / "tests/api" / name in available
             )
+        # Route response models can move without an edit to the server entrypoint.
+        if normalized.as_posix().startswith("src/agent_bom/api/"):
+            contract = root / "tests/api/test_server_composition_contract.py"
+            if contract in available:
+                selected.add(contract)
         if normalized.as_posix() in {"src/agent_bom/api/server.py", "src/agent_bom/api/dashboard_missing.py"} or (
             normalized.parent == Path("src/agent_bom/api") and normalized.name.startswith("server_")
         ):
