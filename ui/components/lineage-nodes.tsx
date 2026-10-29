@@ -5,6 +5,7 @@ import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/rea
 import { Bug, FolderGit2, KeyRound, Wrench } from "lucide-react";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
+import { GraphPackageGlyph } from "@/components/graph-package-glyph";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
 import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { entitySource } from "@/lib/agent-source";
@@ -218,7 +219,7 @@ function NodeCard({
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
-        <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
+        <GraphPackageGlyph ecosystem={data.nodeType === "package" ? allBadges.find(badge => badge.kind === "ecosystem")?.value : undefined} fallback={<Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />} />
         {/* A contrasting vendor badge at 4:30, shown once per scope. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
       </div>
