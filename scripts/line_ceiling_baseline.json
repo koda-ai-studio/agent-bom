@@ -3,13 +3,6 @@
     "file_lines": 1000,
     "function_lines": 150
   },
-  "files": {
-    "ui/app/findings/page.tsx": 1113,
-    "ui/components/connections/connection-wizard.tsx": 1003,
-    "ui/components/key-lifecycle-panel.tsx": 1051,
-    "ui/components/nav.tsx": 1014,
-    "ui/components/scan-form.tsx": 1103,
-    "ui/lib/api-types.ts": 5612
-  },
+  "files": {},
   "python": "allowances come from scripts/architecture-baseline.json (scripts/check_architecture.py)"
 }

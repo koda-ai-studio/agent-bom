@@ -17,7 +17,6 @@ import hmac
 import json
 import logging
 import os
-import re
 import secrets as _secrets
 import sqlite3
 import threading
@@ -25,22 +24,24 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Protocol
-from urllib.parse import urlparse
 from uuid import uuid4
 
+from agent_bom.api.audit_details import _AUDIT_DETAIL_KEY_RE as _AUDIT_DETAIL_KEY_RE
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_COLLECTION_ITEMS as _MAX_AUDIT_DETAIL_COLLECTION_ITEMS
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_DEPTH as _MAX_AUDIT_DETAIL_DEPTH
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_KEY_LENGTH as _MAX_AUDIT_DETAIL_KEY_LENGTH
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_KEYS as _MAX_AUDIT_DETAIL_KEYS
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_STRING_LENGTH as _MAX_AUDIT_DETAIL_STRING_LENGTH
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAILS_JSON_BYTES as _MAX_AUDIT_DETAILS_JSON_BYTES
+from agent_bom.api.audit_details import _safe_audit_label as _safe_audit_label
+from agent_bom.api.audit_details import _sanitize_detail_key as _sanitize_detail_key
+from agent_bom.api.audit_details import _sanitize_detail_value as _sanitize_detail_value
+from agent_bom.api.audit_details import sanitize_audit_details as sanitize_audit_details
 from agent_bom.api.secret_source import resolve_secret
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.settings import env_bool, env_int
-from agent_bom.security import sanitize_path_label, sanitize_sensitive_payload
 
 logger = logging.getLogger(__name__)
-_AUDIT_DETAIL_KEY_RE = re.compile(r"[^a-zA-Z0-9_.:-]+")
-_MAX_AUDIT_DETAIL_KEYS = 64
-_MAX_AUDIT_DETAIL_KEY_LENGTH = 96
-_MAX_AUDIT_DETAIL_STRING_LENGTH = 2048
-_MAX_AUDIT_DETAIL_COLLECTION_ITEMS = 32
-_MAX_AUDIT_DETAIL_DEPTH = 4
-_MAX_AUDIT_DETAILS_JSON_BYTES = 16 * 1024
 # Bound on chain-head re-read retries when a concurrent writer wins the race to
 # link the current head; each retry re-reads a strictly newer head, so this only
 # caps pathological contention rather than normal operation.
@@ -883,84 +884,6 @@ def _default_tenant_id(details: dict[str, object]) -> str:
     except Exception:
         logger.debug("Audit tenant fallback unavailable", exc_info=False)
     return "default"
-
-
-def _sanitize_detail_key(key: object) -> str:
-    cleaned = _AUDIT_DETAIL_KEY_RE.sub("_", str(key).strip())[:_MAX_AUDIT_DETAIL_KEY_LENGTH].strip("._:-")
-    cleaned = cleaned.strip("_")
-    return cleaned or "detail"
-
-
-def _sanitize_detail_value(value: object, *, depth: int = 0) -> object:
-    if depth >= _MAX_AUDIT_DETAIL_DEPTH:
-        return "[truncated]"
-    if value is None or isinstance(value, bool | int | float):
-        return value
-    if isinstance(value, str):
-        sanitized = sanitize_sensitive_payload(value, max_str_len=_MAX_AUDIT_DETAIL_STRING_LENGTH)
-        text = str(sanitized).replace("\r", " ").replace("\n", " ").replace("\t", " ")
-        return text[:_MAX_AUDIT_DETAIL_STRING_LENGTH]
-    if isinstance(value, dict):
-        out: dict[str, object] = {}
-        for index, (raw_key, raw_value) in enumerate(value.items()):
-            if index >= _MAX_AUDIT_DETAIL_COLLECTION_ITEMS:
-                out["_truncated"] = True
-                break
-            clean_key = _sanitize_detail_key(raw_key)
-            out[clean_key] = _sanitize_detail_value(
-                sanitize_sensitive_payload(raw_value, key=clean_key, max_str_len=_MAX_AUDIT_DETAIL_STRING_LENGTH),
-                depth=depth + 1,
-            )
-        return out
-    if isinstance(value, list | tuple | set):
-        items = list(value)
-        list_out = [
-            _sanitize_detail_value(sanitize_sensitive_payload(item, max_str_len=_MAX_AUDIT_DETAIL_STRING_LENGTH), depth=depth + 1)
-            for item in items[:_MAX_AUDIT_DETAIL_COLLECTION_ITEMS]
-        ]
-        if len(items) > _MAX_AUDIT_DETAIL_COLLECTION_ITEMS:
-            list_out.append("[truncated]")
-        return list_out
-    return str(sanitize_sensitive_payload(value, max_str_len=_MAX_AUDIT_DETAIL_STRING_LENGTH))[:_MAX_AUDIT_DETAIL_STRING_LENGTH]
-
-
-def sanitize_audit_details(details: dict[str, object]) -> dict[str, object]:
-    """Bound audit metadata shape and size before persistence/export."""
-    sanitized: dict[str, object] = {}
-    for index, (raw_key, raw_value) in enumerate(details.items()):
-        if index >= _MAX_AUDIT_DETAIL_KEYS:
-            sanitized["_truncated"] = True
-            break
-        clean_key = _sanitize_detail_key(raw_key)
-        sanitized[clean_key] = _sanitize_detail_value(
-            sanitize_sensitive_payload(raw_value, key=clean_key, max_str_len=_MAX_AUDIT_DETAIL_STRING_LENGTH)
-        )
-
-    encoded = json.dumps(sanitized, sort_keys=True, default=str, ensure_ascii=False).encode("utf-8")
-    if len(encoded) <= _MAX_AUDIT_DETAILS_JSON_BYTES:
-        return sanitized
-
-    tenant_id = sanitized.get("tenant_id", "default")
-    return {
-        "tenant_id": str(tenant_id)[:_MAX_AUDIT_DETAIL_STRING_LENGTH],
-        "_truncated": True,
-        "_original_bytes": len(encoded),
-    }
-
-
-def _safe_audit_label(value: object, *, key: str, default: str = "") -> str:
-    """Return a durable tier-A label for top-level actor/resource fields."""
-    if value in (None, ""):
-        return default
-    text = str(sanitize_sensitive_payload(value, key=key, max_str_len=256) or "")
-    if not text:
-        return default
-    parsed = urlparse(text)
-    if parsed.scheme and parsed.netloc:
-        return f"<url:{parsed.hostname or 'host'}>"
-    if text.startswith(("/", "~/")) or re.match(r"^[A-Za-z]:[\\/]", text):
-        return sanitize_path_label(text)
-    return text[:256]
 
 
 def set_audit_log(store: AuditLogStore) -> None:

@@ -238,3 +238,33 @@ def test_alternate_permission_witnesses_preserve_union_of_overlapping_windows():
     assert permission.valid_from == "2026-09-01T00:00:00+00:00"
     assert permission.valid_to == "2026-11-01T00:00:00+00:00"
     assert len(permission.evidence["permission_derivation"]["paths"]) == 2
+
+
+def test_permission_evaluations_do_not_share_indexes_or_witnesses():
+    """Identical node IDs in another snapshot never inherit prior grants."""
+    graphs = [UnifiedGraph(scan_id=scan, tenant_id=tenant) for scan, tenant in [("first", "tenant-a"), ("second", "tenant-b")]]
+    for graph in graphs:
+        for node_id, kind in [("user:a", EntityType.USER), ("role:r", EntityType.ROLE), ("data:x", EntityType.DATA_STORE)]:
+            graph.add_node(UnifiedNode(id=node_id, entity_type=kind, label=node_id))
+    _edge(graphs[0], "user:a", "role:r", RelationshipType.ASSUMES)
+    _edge(graphs[0], "role:r", "data:x", RelationshipType.CAN_ACCESS)
+    direct = _edge(graphs[1], "user:a", "data:x", RelationshipType.CAN_ACCESS)
+
+    first = apply_effective_permissions(graphs[0])
+    second = apply_effective_permissions(graphs[1])
+
+    assert first["privilege_escalations"] == 1
+    assert second["has_permission_edges"] == 1
+    assert second["privilege_escalations"] == 0
+    permission = _permission(graphs[1], "user:a", "data:x")
+    proof = permission.evidence["permission_derivation"]
+    assert proof["source_scan_id"] == "second"
+    assert proof["paths"] == [
+        {
+            "access": "direct",
+            "grant_principal_id": "user:a",
+            "grant_edge_id": direct.id,
+            "source_edge_ids": [direct.id],
+        }
+    ]
+    assert not graphs[1].interaction_risks

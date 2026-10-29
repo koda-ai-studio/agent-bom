@@ -1044,3 +1044,19 @@ def test_guard_plugin_inputs_select_the_guard_contract(tmp_path, source):
     expected = tmp_path / "tests/test_agent_bom_guard.py"
     _write(expected, 1)
     assert expected in select_targeted_tests(changed_files=[Path(source)], root=tmp_path)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "src/agent_bom/api/routes/gateway_feed.py",
+        "src/agent_bom/api/gateway_feed_models.py",
+        "src/agent_bom/api/models.py",
+        "src/agent_bom/api/storage/gateway_activity_contract.py",
+    ],
+)
+def test_api_edits_select_route_composition_contract(tmp_path, source):
+    contract = tmp_path / "tests/api/test_server_composition_contract.py"
+    contract.parent.mkdir(parents=True)
+    contract.write_text("def test_contract(): pass\n")
+    assert contract in select_targeted_tests(changed_files=[Path(source)], root=tmp_path)

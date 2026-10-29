@@ -1,4 +1,5 @@
 "use client";
+import { WizardNavigation } from "@/components/connections/wizard-navigation";
 import { ErrorBanner } from "@/components/empty-state";
 
 import { Collapsible } from "@/components/collapsible";
@@ -7,34 +8,31 @@ import { ProviderLogo } from "@/components/connections/display";
 import { ConnectDepthControl,CopyTextButton,GrantMethodPicker,SnowflakePackagingPicker } from "@/components/connections/wizard-controls";
 import { buildWizardForm,StepIndicator,type VerifyState,type WizardForm,type WizardStep } from "@/components/connections/wizard-support";
 import {
-  api,
-  type CloudConnectionCreateRequest,
-  type CloudConnectionRecord,
-  type DiscoveryProvidersResponse,
-  type ManagedTrialEnvelope
+api,
+type CloudConnectionCreateRequest,
+type CloudConnectionRecord,
+type DiscoveryProvidersResponse,
+type ManagedTrialEnvelope
 } from "@/lib/api";
 import {
-  buildAwsOrgStackSetScript,
-  buildGrantScript,
-  buildSnowflakeSpcsScript,
-  cloudGrantMethodLabel,
-  cloudProviderMeta,
-  DEFAULT_AWS_ORG_ROLE_NAME,
-  generateConnectionExternalId,
-  type CloudGrantMethod,
-  type ConnectDepth
+buildAwsOrgStackSetScript,
+buildGrantScript,
+buildSnowflakeSpcsScript,
+cloudGrantMethodLabel,
+cloudProviderMeta,
+DEFAULT_AWS_ORG_ROLE_NAME,
+generateConnectionExternalId,
+type CloudGrantMethod,
+type ConnectDepth
 } from "@/lib/cloud-connect-wizard";
 import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  Loader2,
-  Lock,
-  Plus,
-  RefreshCcw,
-  ShieldCheck,
-  X
+AlertTriangle,
+CheckCircle2,
+Loader2,
+Lock,
+RefreshCcw,
+ShieldCheck,
+X
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback,useEffect,useMemo,useRef,useState } from "react";
@@ -946,56 +944,7 @@ export function AddConnectionWizard({
             {formError ? <ErrorBanner compact message={formError} /> : null}
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t border-outline px-5 py-4">
-            {step === 3 ? (
-              // The connection already exists; going back would re-create it. Verify
-              // and first-scan actions live in the panel; the footer only closes.
-              <span aria-hidden className="h-9" />
-            ) : (
-              <button
-                type="button"
-                onClick={() => (step === 0 ? onClose() : setStep((s) => (s - 1) as WizardStep))}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-outline bg-surface-elevated px-4 py-2 text-sm text-foreground transition hover:border-outline-strong"
-              >
-                {step === 0 ? (
-                  "Cancel"
-                ) : (
-                  <>
-                    <ArrowLeft className="h-4 w-4" /> Back
-                  </>
-                )}
-              </button>
-            )}
-            {step < 2 ? (
-              <button
-                key="wizard-next"
-                type="button"
-                onClick={goNext}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-black transition hover:bg-emerald-400"
-              >
-                Next <ArrowRight className="h-4 w-4" />
-              </button>
-            ) : step === 2 ? (
-              <button
-                key="wizard-submit"
-                type="submit"
-                disabled={submitting}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-black transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Plus className="h-4 w-4" />
-                {submitting ? "Connecting…" : "Create connection"}
-              </button>
-            ) : (
-              <button
-                key="wizard-done"
-                type="button"
-                onClick={onClose}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-black transition hover:bg-emerald-400"
-              >
-                Done
-              </button>
-            )}
-          </div>
+          <WizardNavigation step={step} setStep={setStep} onClose={onClose} goNext={goNext} submitting={submitting} />
         </form>
       </div>
     </div>
