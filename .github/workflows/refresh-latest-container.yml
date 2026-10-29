@@ -546,6 +546,7 @@ jobs:
           git checkout "${{ steps.release.outputs.main_sha }}" -- \
             deploy/docker/Dockerfile.collector \
             deploy/docker/collector-security-requirements.txt \
+            deploy/docker/tornado-security-requirements.txt \
             .dockerignore \
             .image-scan-ignore \
             docs/security/image-exceptions.yaml

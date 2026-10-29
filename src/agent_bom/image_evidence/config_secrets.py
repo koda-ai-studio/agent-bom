@@ -30,6 +30,11 @@ _MAX_HISTORY = 500
 def _literal_secret(key: str, value: str) -> bool:
     if not value or not is_credential_key(key) or key.upper().endswith(("_FILE", "_PATH", "_DIR", "_URL_FILE")):
         return False
+    # Official language images identify a release-signing public key this way.
+    # A fingerprint is not private key material; other values and key names
+    # still follow credential detection (including GPG_PRIVATE_KEY).
+    if key.upper() == "GPG_KEY" and re.fullmatch(r"(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})", value):
+        return False
     return not (is_placeholder_value(value) or _REFERENCE_RE.match(value) or value.startswith("/"))
 
 

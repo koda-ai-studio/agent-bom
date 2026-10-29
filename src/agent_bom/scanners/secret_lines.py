@@ -17,8 +17,8 @@ from agent_bom.runtime.patterns import CODE_CALL_ASSIGNMENT, CREDENTIAL_PATTERNS
 
 # Additional patterns specific to file scanning (not in runtime patterns)
 FILE_SECRET_PATTERNS: list[tuple[str, re.Pattern]] = [
-    ("Hardcoded password", re.compile(r'(?:password|passwd|pwd)\s*[=:]\s*["\'][^"\']{8,}["\']', re.IGNORECASE)),
-    ("Hardcoded secret", re.compile(r'(?:secret|secret_key)\s*[=:]\s*["\'][^"\']{8,}["\']', re.IGNORECASE)),
+    ("Hardcoded password", re.compile(r'(?:password|passwd|pwd)["\']?\s*[=:]\s*["\'][^"\']{8,}["\']', re.IGNORECASE)),
+    ("Hardcoded secret", re.compile(r'(?:secret|secret_key)["\']?\s*[=:]\s*["\'][^"\']{8,}["\']', re.IGNORECASE)),
     (
         ".env password",
         re.compile(r"^(?:DB_PASSWORD|DATABASE_PASSWORD|REDIS_PASSWORD|MYSQL_PASSWORD)\s*=\s*\S+", re.MULTILINE | re.IGNORECASE),
@@ -132,7 +132,7 @@ def matched_assignment_is_placeholder(match: re.Match, line: str | None = None) 
     matched = match.group(0)
     if matched == "AKIAIOSFODNN7EXAMPLE":
         return True
-    if _assignment_opens_template(line[match.start() :] if line is not None else matched):
+    if _assignment_opens_template(line[match.start() : match.start() + 512] if line is not None else matched):
         return True
     if _dsn_password_is_placeholder(matched):
         return True
@@ -168,10 +168,37 @@ def match_credential(line: str) -> tuple[str, re.Match] | None:
 def match_file_secret(line: str) -> tuple[str, re.Match] | None:
     """Return the first file-specific secret pattern that is not a placeholder."""
     for name, pattern in FILE_SECRET_PATTERNS:
-        match = pattern.search(line)
-        if match and not matched_assignment_is_placeholder(match, line):
-            return name, match
+        for match in pattern.finditer(line):
+            if not matched_assignment_is_placeholder(match, line) and not _issue_style_map(match, line):
+                return name, match
     return None
+
+
+_STYLE_ENTRY = re.compile(
+    r"""\s*["']?(vulnerability|misconfiguration|secret|pii|identity|unclassified)["']?\s*:\s*["']"""
+    r"""(bg-ink-(?:secondary|tertiary)(?: opacity-(?:100|[1-9]?[0-9]))?)["']\s*"""
+)
+
+
+def _issue_style_map(match: re.Match, line: str) -> bool:
+    """A complete issue-category CSS map is display configuration, not a secret.
+
+    Require a bounded object containing multiple known categories and only
+    the supported literal style values. A credential value in that same map,
+    or a lone secret assignment, remains a finding.
+    """
+    start = line.rfind("{", max(0, match.start() - 1024), match.start())
+    end = line.find("}", match.end(), match.end() + 1024)
+    if start < 0 or end < 0:
+        return False
+    entries = line[start + 1 : end].strip().rstrip(",").split(",")
+    if not 3 <= len(entries) <= 6:
+        return False
+    parsed = [_STYLE_ENTRY.fullmatch(entry) for entry in entries]
+    if not all(parsed):
+        return False
+    keys = {item.group(1) for item in parsed if item}
+    return len(keys) == len(entries) and {"vulnerability", "secret"} <= keys
 
 
 def is_sample_value(match: re.Match) -> bool:
