@@ -164,3 +164,38 @@ def test_next_manifest_application_fields_are_not_exempted_as_build_settings():
     source = json.dumps({"version": 1, "config": {"env": {"expire": 123456789}}})
     path = "app/.next/required-server-files.json"
     assert any(f.secret_type == "US SSN" for f in scan_content(source, Path(path), path))
+
+
+@pytest.mark.parametrize("name", ["pwd", "spwd"])
+def test_stdlib_module_documentation_links_are_not_passwords(name):
+    source = f"module_docs = {{'{name}': '{name}#module-{name}'}}"
+    path = "usr/local/lib/python3.14/pydoc_data/module_docs.py"
+    assert scan_content(source, Path(path), path) == []
+
+
+@pytest.mark.parametrize("variant", ["changed", "other_file", "other_owner", "invalid", "oversized", "literal"])
+def test_module_link_exemption_requires_exact_catalog_context(variant):
+    source = "module_docs = {'spwd': 'spwd#module-spwd'}"
+    path = "pydoc_data/module_docs.py"
+    if variant == "changed":
+        source = source.replace("spwd#module-spwd", "fixture-" + "credential-381")
+    elif variant == "other_file":
+        path = "app/module_docs.py"
+    elif variant == "other_owner":
+        source = source.replace("module_docs =", "settings =")
+    elif variant == "invalid":
+        source += "\n("
+    elif variant == "oversized":
+        source += "\n#" + "x" * (256 * 1024)
+    else:
+        source = "spwd = 'spwd#module-spwd'"
+    assert any(f.category == "secret" for f in scan_content(source, Path(path), path))
+
+
+def test_module_link_mask_preserves_adjacent_secret_and_duplicate_entry():
+    value = "fixture-" + "credential-381"
+    source = f"label = '日本'; module_docs = {{'spwd': 'spwd#module-spwd', 'spwd': '{value}'}}; password = '{value}'"
+    path = "pydoc_data/module_docs.py"
+    findings = scan_content(source, Path(path), path)
+    assert any(f.category == "secret" and f.line_number == 1 for f in findings)
+    assert value not in str(findings)

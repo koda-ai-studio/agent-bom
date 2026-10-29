@@ -191,7 +191,17 @@ jobs:
           "${RUNNER_TEMP}/abom-scanner/bin/agent-bom" image agent-bom:latest-refresh-test \
             --ignore .image-scan-ignore \
             --exclude-unfixable \
+            --format sarif --output image-refresh.sarif \
             --fail-on-severity medium
+
+      - name: Preserve image scan evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: refresh-latest-scan-evidence
+          path: image-refresh.sarif
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Build and push refreshed latest
         id: build-push
@@ -408,7 +418,17 @@ jobs:
           "${RUNNER_TEMP}/abom-scanner/bin/agent-bom" image agent-bom-ui:latest-refresh-test \
             --ignore .image-scan-ignore \
             --exclude-unfixable \
+            --format sarif --output image-refresh.sarif \
             --fail-on-severity medium
+
+      - name: Preserve image scan evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: refresh-ui-latest-scan-evidence
+          path: image-refresh.sarif
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Build and push refreshed UI latest
         id: build-push-ui
@@ -597,7 +617,17 @@ jobs:
           "${RUNNER_TEMP}/abom-scanner/bin/agent-bom" image agent-bom-collector:latest-refresh-test \
             --ignore .image-scan-ignore \
             --exclude-unfixable \
+            --format sarif --output image-refresh.sarif \
             --fail-on-severity medium
+
+      - name: Preserve image scan evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: refresh-collector-latest-scan-evidence
+          path: image-refresh.sarif
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Build and push refreshed collector latest
         id: build-push
