@@ -1,0 +1,7 @@
+# Older release locks contain Tornado; current main no longer depends on it.
+# Apply only when installed so new images do not regain an unused web server.
+# Tornado 6.6 fixes CVE-2026-115927, CVE-2026-116577 and CVE-2026-116578.
+# PyPI cp311-abi3 musllinux_1_2 wheels: aarch64, x86_64 (compatible with 3.14).
+tornado==6.6 \
+    --hash=sha256:61fc5513cea97720ab9bf54b04827ac0f4500c63f0b072b963d6145c798b4661 \
+    --hash=sha256:fc7c8a3263501fbe97518cd699101bc3c5f499a7dd4f75fc6cbb3bd9ee1db1f1

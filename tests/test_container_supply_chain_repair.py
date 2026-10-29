@@ -206,3 +206,58 @@ def test_collector_refresh_applies_certifi_overlay_after_released_lock() -> None
     names = sorted(entry.split("==", 1)[0] for entry in entries)
     assert names == ["certifi", "filelock"], "collector overlay is limited to universal pure-Python wheels"
     assert all("--hash=sha256:" in entry for entry in entries)
+
+
+@pytest.mark.parametrize(("installed", "installer_status"), [(False, 0), (True, 0), (True, 23)])
+def test_release_refresh_patches_tornado_only_when_present(tmp_path: Path, installed: bool, installer_status: int) -> None:
+    """Old release locks need the patch; new images must not regain an unused server."""
+    import os
+    import subprocess
+    import sys
+
+    dockerfile = (ROOT / "Dockerfile").read_text()
+    marker = "if /app/.venv/bin/python -c"
+    assert marker in dockerfile, "released Tornado 6.5.10 needs a conditional security overlay"
+    command = dockerfile[dockerfile.index(marker) :].split("\n\n", 1)[0].replace("\\\n", "")
+    command = command.replace("/app/.venv/bin/python", f'"{sys.executable}" -S')
+    fake_uv = tmp_path / "uv"
+    fake_uv.write_text(f'#!/bin/sh\nprintf "%s\\n" "$@" > "$RECEIPT"\nexit {installer_status}\n')
+    fake_uv.chmod(0o755)
+    if installed:
+        (tmp_path / "tornado.py").write_text("# fixture module\n")
+    receipt = tmp_path / "receipt"
+    result = subprocess.run(
+        ["sh", "-c", command],
+        cwd=tmp_path,
+        env={**os.environ, "PATH": f"{tmp_path}:{os.environ['PATH']}", "PYTHONPATH": str(tmp_path), "RECEIPT": str(receipt)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == (installer_status if installed else 0), result.stderr
+    assert receipt.exists() == installed
+    if installed:
+        args = receipt.read_text().splitlines()
+        assert "--require-hashes" in args
+        assert "--no-deps" in args
+        assert "--only-binary=:all:" in args
+        assert args[-2:] == ["-r", "deploy/docker/tornado-security-requirements.txt"]
+
+
+def test_tornado_refresh_manifest_is_hashed_and_reaches_released_build() -> None:
+    manifest = "deploy/docker/tornado-security-requirements.txt"
+    path = ROOT / manifest
+    assert path.exists(), "old release locks need reviewed Tornado 6.6 wheels"
+    entries = [line for line in path.read_text().replace("\\\n", "").splitlines() if line and not line.startswith("#")]
+    assert len(entries) == 1
+    requirement = Requirement(entries[0].split("--hash=")[0].strip())
+    assert requirement.name == "tornado"
+    assert "6.5.10" not in requirement.specifier
+    assert str(requirement.specifier) == "==6.6"
+    assert entries[0].count("--hash=sha256:") == 2
+    assert f"COPY {manifest} ./{manifest}" in (ROOT / "Dockerfile").read_text()
+    _, overlay = _refresh_step("refresh-latest", "Apply current runtime security overlay")
+    assert manifest in overlay["run"]
+    # The ordinary package remains free of the obsolete web server dependency.
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
+    assert "tornado" not in {Requirement(item).name.lower() for item in project["dependencies"]}
