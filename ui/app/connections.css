@@ -1,0 +1,20 @@
+/* Source identity and status remain readable before operational controls. */
+@media (max-width: 1279px) {
+  .source-results-table, .source-results-table tbody { display: block; }
+  .source-results-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .source-results-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .5rem; }
+  .source-results-table td { display: flex; min-width: 0; flex-direction: column; gap: .375rem; padding: .625rem; white-space: normal; }
+  .source-results-table td::before { content: attr(data-label); font-size: .6875rem; color: var(--text-tertiary); }
+  .source-results-table td:first-child { grid-column: 1 / -1; }
+  .source-results-table td:last-child { grid-column: 1 / -1; }
+  .source-results-table td > div { flex-wrap: wrap; justify-content: flex-start; }
+}
+@media (max-width: 359px) {
+  .source-results-table tr { grid-template-columns: minmax(0, 1fr); }
+}
+
+.source-results-table td > span { align-self: flex-start; }
+@media (min-width: 1280px) {
+  .source-results-table .source-action-label { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .source-results-table td, .source-results-table th { padding-left: .75rem; padding-right: .75rem; }
+}
