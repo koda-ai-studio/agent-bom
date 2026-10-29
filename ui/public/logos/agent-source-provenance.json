@@ -85,15 +85,13 @@
       "repository_source": "docs/images/vendor/simple-icons/clickhouse.svg"
     },
     {
-      "path": "ui/public/logos/pypi.svg",
+      "path": "ui/public/logos/python.svg",
       "vendor": "Python Software Foundation",
-      "source_page": "https://pypi.org/trademarks/",
-      "source_repo": "https://github.com/pypi/warehouse",
-      "source_commit": "481006fedf843ecb08ceadd978a02e9c05c8256d",
-      "source_path": "warehouse/static/images/logo-small.svg",
-      "sha256": "c7cb98a1e1bc92d9e7bd2a9cdfef9a4311aeae17f4851b282fa5bd8b2378bee5",
-      "terms": "Unmodified PyPI blocks logo used to identify recorded PyPI package ecosystems. PyPI and the blocks logos are registered trademarks of the Python Software Foundation; no endorsement or registry verification is implied.",
-      "repository_source": "docs/images/vendor/pypi.svg"
+      "source_page": "https://www.python.org/community/logos/",
+      "source_path": "https://s3.dualstack.us-east-2.amazonaws.com/pythondotorg-assets/media/files/python-logo-only.svg",
+      "sha256": "baec8662a1461c2cacc326b54d2727cb2f1ce07ba02d00f5b826d035104f649f",
+      "terms": "Unmodified Python two-snakes logo used to identify Python packages from recorded ecosystem metadata. The text badge separately identifies PyPI. Python marks remain property of the Python Software Foundation; no endorsement or registry verification is implied.",
+      "repository_source": "docs/images/vendor/python.svg"
     }
   ]
 }

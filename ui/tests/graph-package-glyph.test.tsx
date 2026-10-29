@@ -9,22 +9,22 @@ function renderPackage(extra: Partial<LineageNodeData> = {}) {
 }
 
 describe("package ecosystem glyph", () => {
-  it.each([{ ecosystem: "pypi" }, { attributes: { ecosystem: "PyPI" } }])("uses the local PyPI mark from recorded metadata: %j", (metadata) => {
+  it.each([{ ecosystem: "pypi" }, { attributes: { ecosystem: "PyPI" } }])("uses the Python symbol with a separate PyPI ecosystem label: %j", (metadata) => {
     renderPackage(metadata);
-    expect(screen.getByRole("img", { name: "PyPI package" })).toHaveAttribute("src", "/logos/pypi.svg");
+    expect(screen.getByRole("img", { name: "Python package" })).toHaveAttribute("src", "/logos/python.svg");
     expect(screen.getByText("PyPI", { exact: true })).toBeVisible();
     expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "pillow@9.0.0")).toBeVisible();
   });
 
   it.each([{}, { ecosystem: "npm" }, { ecosystem: "unknown" }])("does not infer PyPI from a familiar package name: %j", (metadata) => {
     const { container } = renderPackage(metadata);
-    expect(screen.queryByRole("img", { name: "PyPI package" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Python package" })).not.toBeInTheDocument();
     expect(container.querySelector('.graph-entity-glyph svg')).not.toBeNull();
   });
 
   it("keeps the package glyph and ecosystem text if the image fails", () => {
     const { container } = renderPackage({ ecosystem: "pypi" });
-    fireEvent.error(screen.getByRole("img", { name: "PyPI package" }));
+    fireEvent.error(screen.getByRole("img", { name: "Python package" }));
     expect(container.querySelector('.graph-entity-glyph svg')).not.toBeNull();
     expect(screen.getByText("PyPI", { exact: true })).toBeVisible();
   });
