@@ -97,7 +97,7 @@ def test_push_http_route_preserves_targets_after_readback(scan_store, tmp_path, 
             assert graph.snapshot_identity(tenant_id="history-tenant", scan_id=stored.result["scan_id"])[1]
         # Read back on the same client: a second app lifespan would close the
         # shared Postgres pool that process-wide stores already hold.
-        response = client.get("/v1/findings", params={"origin": "scan", "window_days": 0})
+        response = client.get("/v1/findings", params={"window_days": 0})
         assert response.status_code == 200, response.text
     assert {f["canonical_id"] for f in response.json()["findings"]} == {"finding-6", "finding-7"}
 

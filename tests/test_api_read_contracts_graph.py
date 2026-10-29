@@ -182,6 +182,21 @@ def test_canvas_graph_body_matches_documented_model(graph_client):
     assert parsed.model_dump(mode="json", exclude_unset=True) == body
 
 
+def test_attack_path_record_declares_live_queue_rank_fields(graph_client):
+    from agent_bom.api.read_models.graph_records import GraphAttackPathRecord
+
+    response = graph_client.get("/v1/graph/attack-paths?scan_id=contract-s2")
+    assert response.status_code == 200
+    rows = response.json()["attack_paths"]
+    assert rows
+    fields = {"graph_reachable", "graph_reachability", "evidence_tier", "is_kev", "suppressed"}
+    assert fields <= GraphAttackPathRecord.model_json_schema()["properties"].keys()
+    for row in rows:
+        parsed = GraphAttackPathRecord.model_validate(row).model_dump(exclude_unset=True)
+        assert type(parsed["evidence_tier"]) is int
+        assert {key: parsed[key] for key in fields if key in row} == {key: row[key] for key in fields if key in row}
+
+
 @pytest.mark.parametrize(("collection", "field"), [("nodes", "canonical_id"), ("edges", "valid_from")])
 def test_full_projection_cannot_fall_back_to_canvas_contract(graph_client, collection, field):
     from pydantic import ValidationError

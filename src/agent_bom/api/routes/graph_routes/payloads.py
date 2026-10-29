@@ -22,6 +22,7 @@ from agent_bom.api.routes.graph_routes.params import (
 )
 from agent_bom.graph import AttackPath, EntityType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import analysis_status_map_to_dict
+from agent_bom.graph.attack_path_queue import path_population
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.interaction_risk_ids import interaction_risk_agent_ids
 from agent_bom.graph.path_derivation import _build_edge_lookup, _derived_attack_paths
@@ -319,6 +320,7 @@ def _serialize_attack_path_queue(
         "count_metadata": {
             "definition": "Ranked persisted attack paths when available, otherwise paths derived from traversable graph topology.",
             "source": path_source,
+            "path_population": path_population(path_source),
             "scope": "tenant graph snapshot",
             "window": {"snapshot_created_at": created_at},
             "filters": {"scan_id": scan_id, "offset": offset, "limit": limit, **(filters or {})},

@@ -8,6 +8,38 @@ The generated [data model reference](DATA_MODEL.md) lists every entity, relation
 
 ---
 
+## Base paths and derived investigation paths
+
+SQLite and Postgres retain two path populations for each tenant and scan:
+
+- `attack_paths` preserves the paths supplied by the base graph, normally the
+  fusion analyzer's output. Full-graph loading and base-path traversal read it.
+- `graph_attack_paths` is a versioned investigation projection, including
+  derived governance, credential and component paths, hop evidence, and indexed
+  queue ordering and vendor filters. Snapshot path pages read this projection.
+
+These populations are not additive. A graph can have no base paths and still
+produce investigation paths. Paths with the same hop chain can have different
+reachability, risk or evidence after derivation. Equal counts do not prove the
+payloads are interchangeable: the showcase demo intentionally supplies already
+projected base paths, while scanner graphs may require further derivation.
+
+`GET /v1/graph/attack-paths` and the MCP `exposure_paths` tool share the same
+queue selection. Their `count_metadata.path_population` is
+`derived_investigation_paths` for a current snapshot projection or read-time
+derivation, and `base_graph_paths` for the persisted base fallback. Counts
+describe the selected population; never add both tables to compute a total.
+The existing `source`, completeness, snapshot and generation fields retain
+their scope and continuation semantics.
+
+Keep base evidence intact when refreshing derived paths. A shared-payload
+storage design would need to preserve distinct payloads, duplicate path
+occurrences, tenant/scan identity, derivation-version fallback and atomic
+snapshot replacement in both backends. Dropping `path_json` or replacing the
+base table with a view over derived rows would lose that distinction. The
+current separate projection avoids a join on indexed queue reads in exchange
+for additional storage.
+
 ## Current estate and historical scans
 
 An omitted `scan_id` on inventory and graph reads selects the current tenant

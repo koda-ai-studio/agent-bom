@@ -26,6 +26,14 @@ def attack_path_rank_window() -> int:
     return RANK_WINDOW
 
 
+def path_population(source: str) -> str:
+    """Name the served population without treating the two storage tables as additive."""
+    return {
+        "derived_graph_paths": "derived_investigation_paths",
+        "persisted_graph_paths": "base_graph_paths",
+    }.get(source, "unknown")
+
+
 @dataclass(slots=True)
 class AttackPathFilters:
     min_severity: str | None = None

@@ -319,7 +319,8 @@ export type AttackPath = Pick<GraphApiSchemas["GraphAttackPathRecord"],
   "source" | "target" | "hops" | "edges" | "composite_risk" | "summary" |
   "credential_exposure" | "tool_exposure" | "vuln_ids"
 > & Partial<Pick<GraphApiSchemas["GraphAttackPathRecord"],
-  "finding_ids" | "reachability" | "reachability_basis" | "mitre_technique_ids"
+  "finding_ids" | "reachability" | "reachability_basis" | "mitre_technique_ids" |
+  "graph_reachable" | "graph_reachability" | "evidence_tier" | "is_kev" | "suppressed"
 >> & {
   /** Server-ranked finding severity; never inferred from composite_risk. */
   severity?: string;

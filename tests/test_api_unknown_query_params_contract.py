@@ -26,6 +26,9 @@ def client(monkeypatch: pytest.MonkeyPatch):
 @pytest.mark.parametrize(
     "path",
     [
+        "/v1/findings?kev_only=true",
+        "/v1/findings?origin=scan",
+        "/v1/findings?group_occurrences=true&unknown_filter=high",
         "/v1/intel/advisories/CVE-2026-0001/affected?verdict_=affected",
         "/v1/graph/attack-paths/cross-vendor?source_vendors=aws",
     ],

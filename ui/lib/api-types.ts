@@ -382,8 +382,6 @@ export interface GraphHistoryResponse {
 
 export interface GraphAttackPath extends AttackPath {
   exposure_path?: ExposurePath | undefined;
-  /** Every finding occurrence the path ends on is suppressed by an approved exception: evidence, not an open path. */
-  suppressed?: boolean | undefined;
 }
 
 export interface GraphVendorFacets {
@@ -1834,6 +1832,7 @@ export interface FindingListEnvelope<T> {
   lane_counts_approximate?: boolean;
   facets_approximate?: boolean | undefined;
   facet_metadata?: {
+    domain?: { basis: "multi_label"; sums_to_total: false };
     freshness: {
       basis: string[];
       thresholds_hours: number[];

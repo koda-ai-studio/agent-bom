@@ -160,6 +160,38 @@ def test_unknown_findings_are_visible_and_filterable_as_unclassified() -> None:
     assert body["facets_approximate"] is False
 
 
+@pytest.mark.parametrize("grouped", [False, True])
+def test_domain_facet_declares_its_multi_label_basis(grouped: bool) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    job = ScanJob(job_id="facet-contract", tenant_id="default", created_at=now, request=ScanRequest())
+    job.status, job.completed_at = JobStatus.DONE, now
+    job.result = {
+        "findings": [
+            {"id": "repo", "finding_type": "CVE", "source": "SBOM", "cve_id": "CVE-2026-1000", "severity": "high"},
+            {"id": "image", "finding_type": "CVE", "source": "CONTAINER", "cve_id": "CVE-2026-1002", "severity": "high"},
+        ]
+    }
+    _get_store().put(job)
+    response = TestClient(app).get(
+        "/v1/findings",
+        params={
+            "finding_class": "vulnerability",
+            "severity": "high",
+            "include_facets": "true",
+            "window_days": 0,
+            "group_occurrences": str(grouped).lower(),
+        },
+        headers=_headers("default"),
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["total"] == 2
+    assert body["facets"]["domain"]["vuln"] == 2
+    assert body["facets"]["domain"]["aspm"] == 1
+    assert sum(body["facets"]["domain"].values()) > body["total"]
+    assert body["facet_metadata"]["domain"] == {"basis": "multi_label", "sums_to_total": False}
+
+
 def test_facets_exclude_only_their_own_active_dimension() -> None:
     tenant = "default"
     _seed_scan(tenant)
