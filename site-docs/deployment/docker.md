@@ -107,6 +107,37 @@ For stdio MCP wrapping, prefer the repo's runtime compose example or run
 
 ## Images
 
+### Approved images and immutable deployments
+
+Use an approved image digest for production, for example
+`agentbom/agent-bom@sha256:<approved-index-digest>`. A digest identifies immutable
+content; `latest` is a floating tag and a version tag is still a registry label.
+Pinning an image does not keep its dependencies free of newly disclosed CVEs.
+
+Treat a golden image as an approved artifact with retained evidence:
+
+1. Record the image index digest and the platform digest for every architecture
+   deployed. Validate the signature's expected workflow identity and issuer, and
+   retain the SBOM, provenance, scan coverage and runtime smoke results.
+2. Approve and deploy that exact digest. Rebuilding the same source can produce
+   a different image; a new digest needs its own validation.
+3. Rescan deployed digests as advisories change. For a fix, validate a replacement
+   digest and deliberately roll deployments forward. Keep the prior digest and
+   its evidence available for rollback review.
+
+The release workflow builds with SBOM and provenance metadata and signs the
+published images. The daily security refresh rebuilds the released application
+with reviewed runtime security overlays and updates the Docker Hub `latest`
+tags; it does not update already pinned deployments. Review the completed
+workflow and its exact image evidence before approving a refreshed digest.
+
+The image vulnerability gate excludes findings without an available fix and
+applies the repository's reviewed exception policy. Passing that gate means
+meeting that policy, not that the image has no vulnerabilities. Incomplete
+coverage must remain explicit in the approval evidence.
+
+### Image variants
+
 | Image | Purpose |
 |-------|---------|
 | `agentbom/agent-bom:latest` | Main runtime image: CLI, API, scanner jobs, gateway, MCP server |

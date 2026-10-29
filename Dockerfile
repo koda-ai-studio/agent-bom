@@ -34,6 +34,7 @@ COPY docs/registry/PYPI_README.md ./docs/registry/
 COPY src/ ./src/
 COPY deploy/supabase/postgres/ ./deploy/supabase/postgres/
 COPY deploy/docker/runtime-security-requirements.txt ./deploy/docker/runtime-security-requirements.txt
+COPY deploy/docker/tornado-security-requirements.txt ./deploy/docker/tornado-security-requirements.txt
 
 # tree-sitter-typescript 0.23.2 has no musllinux aarch64 wheel and its PyPI
 # sdist omits internal headers needed to compile the bundled grammars.
@@ -64,7 +65,11 @@ RUN set -eu; \
     CFLAGS="-I/usr/local/include/tree-sitter-typescript/tsx/src" \
         uv sync --locked --no-dev --no-editable ${sync_args}; \
     uv pip install --no-cache --no-config --python /app/.venv/bin/python --no-deps --require-hashes \
-        -r deploy/docker/runtime-security-requirements.txt
+        -r deploy/docker/runtime-security-requirements.txt; \
+    if /app/.venv/bin/python -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('tornado') is None)"; then \
+        uv pip install --no-cache --no-config --python /app/.venv/bin/python --no-deps --require-hashes \
+            --only-binary=:all: -r deploy/docker/tornado-security-requirements.txt; \
+    fi
 
 ## ── Runtime stage ────────────────────────────────────────────────────────────
 FROM python:3.14.8-alpine3.23@sha256:e7cff362a12454395f8dc99607c21a602ea880cdce03538877b90c2ba932b16f
