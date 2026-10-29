@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import logging
 import math
-import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -32,6 +31,7 @@ from agent_bom.core.errors import UpstreamError, UpstreamInvalidResponseError
 from agent_bom.enrichment_posture import record_enrichment_source
 from agent_bom.models import Vulnerability
 from agent_bom.scanners.enrichment_apply import vuln_cve_ids
+from agent_bom.scanners.state import _scan_state_local
 from agent_bom.scanners.upstream import upstream_request
 
 _logger = logging.getLogger(__name__)
@@ -191,26 +191,23 @@ def summarize_epss_sources(
     )
 
 
-_state = threading.local()
-
-
 def record_epss_fetch_outcome(outcome: EpssFetchOutcome) -> None:
-    _state.outcome = outcome
+    _scan_state_local.epss_outcome = outcome
 
 
 def last_epss_fetch_outcome() -> EpssFetchOutcome | None:
-    return getattr(_state, "outcome", None)
+    return getattr(_scan_state_local, "epss_outcome", None)
 
 
 def record_epss_source_summary(summary: EpssSourceSummary) -> None:
-    _state.summary = summary
+    _scan_state_local.epss_summary = summary
 
 
 def epss_source_summary() -> EpssSourceSummary | None:
     """The summary of the most recent enrichment on this thread, for the report."""
-    return getattr(_state, "summary", None)
+    return getattr(_scan_state_local, "epss_summary", None)
 
 
 def reset_epss_state() -> None:
-    _state.outcome = None
-    _state.summary = None
+    _scan_state_local.epss_outcome = None
+    _scan_state_local.epss_summary = None

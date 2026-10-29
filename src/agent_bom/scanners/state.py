@@ -81,6 +81,8 @@ def reset_scan_warnings() -> None:
     _scan_state_local.warnings = []
     _scan_state_local.coverage_warnings = []
     _scan_state_local.resolution_deadline = None
+    _scan_state_local.epss_outcome = None
+    _scan_state_local.epss_summary = None
 
 
 def scan_scoped_deadline(seconds: float, now: float) -> float:

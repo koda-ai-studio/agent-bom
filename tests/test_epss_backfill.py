@@ -26,6 +26,18 @@ from agent_bom.vuln_freshness import VulnDataFreshness
 _FIRST_SCORES = {"CVE-2026-115774": "0.004300000", "CVE-2026-104844": "0.003890000"}
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("vulnerabilities", [[], [Vulnerability(id="GHSA-example-only", summary="No CVE", severity=Severity.HIGH)]])
+async def test_empty_enrichment_clears_previous_epss_receipt(vulnerabilities):
+    epss_backfill.record_epss_source_summary(epss_backfill.EpssSourceSummary(22, 0, 0, 0, 0, 0))
+    epss_backfill.record_epss_fetch_outcome(epss_backfill.EpssFetchOutcome(requests=1))
+
+    await enrichment.enrich_vulnerabilities(vulnerabilities, offline=True)
+
+    assert epss_backfill.epss_source_summary() is None
+    assert epss_backfill.last_epss_fetch_outcome() is None
+
+
 @pytest.fixture(autouse=True)
 def _isolated_enrichment_state(tmp_path, monkeypatch):
     monkeypatch.setattr(enrichment, "_ENRICHMENT_CACHE_DIR", tmp_path)

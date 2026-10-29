@@ -528,7 +528,6 @@ def _begin_epss(vulnerabilities: list[Vulnerability], cve_ids: list[str], *, off
     Online, only CVEs the local table (or the scanner) left unscored go to the
     cache and then, bounded, to the FIRST API; offline joins every CVE from cache.
     """
-    _epss.reset_epss_state()
     scored_before = {id(vuln) for vuln in vulnerabilities if vuln.epss_score is not None}
     return scored_before, (cve_ids if offline else _epss.unscored_cve_ids(vulnerabilities))
 
@@ -687,6 +686,7 @@ async def enrich_vulnerabilities(
     Returns:
         Number of vulnerabilities enriched
     """
+    _epss.reset_epss_state()
     if not vulnerabilities:
         return 0
 
