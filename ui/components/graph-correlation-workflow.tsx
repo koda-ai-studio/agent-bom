@@ -1,5 +1,6 @@
 "use client";
 
+import { ASSET_BASE } from "@/lib/asset-base";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -326,7 +327,7 @@ export function GraphCorrelationWorkflow({
             </div>
             {isComplete && run.output_scan_id && (!boundOutcome || attackPaths === 0) ? <div className="gc-actions">
               {isComplete && attackPaths === 0 && run.output_scan_id ? (
-                <a href={`/security-graph?lens=attack-path&scan=${encodeURIComponent(run.output_scan_id)}`} className="gc-primary">
+                <a href={`${ASSET_BASE}/security-graph?lens=attack-path&scan=${encodeURIComponent(run.output_scan_id)}`} className="gc-primary">
                   Review exposure candidates
                 </a>
               ) : null}

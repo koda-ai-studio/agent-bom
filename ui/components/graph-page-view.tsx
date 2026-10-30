@@ -1,5 +1,6 @@
 "use client";
 
+import { ASSET_BASE } from "@/lib/asset-base";
 import { useRelationshipLabelControl } from "@/components/relationship-label-control";
 import { GraphFocusedPathDecision } from "@/components/graph-focused-path-decision";
 import { AlertTriangle } from "lucide-react";
@@ -456,7 +457,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                   drift incidents on estate containers.
                 </span>
                 <a
-                  href="/drift"
+                  href={`${ASSET_BASE}/drift`}
                   className="graph-chip-orange"
                 >
                   Open drift incidents

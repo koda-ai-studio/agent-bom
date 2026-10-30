@@ -719,7 +719,7 @@ function EngineeringCells({
           </div>
         ) : (
           <a
-            href="/compliance"
+            href={`${ASSET_BASE}/compliance`}
             onClick={(event) => event.stopPropagation()}
             className="text-xs text-ink-tertiary underline decoration-dotted underline-offset-2 hover:text-ink-secondary"
           >
