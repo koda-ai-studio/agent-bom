@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:1f368e9be8b9a08c4343e487973a01af2756cc439ec21f852a5b8c35ceaaafc1",
+  "artifact_sha256": "sha256:a4c9adc09a4f1d363e3b001d6618a8bb5fe61b40eb5d95c870dbdfc6e8c94d09",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -3172,6 +3172,22 @@
         "agent": "",
         "cve": "",
         "package": ""
+      },
+      "remediation_priorities": {
+        "assessed_paths": 4,
+        "candidate_count": 0,
+        "complete": true,
+        "coverage_basis": "recorded_paths_touching_selected_findings",
+        "covered_paths": 0,
+        "limitations": [],
+        "method": "greedy_marginal_critical_then_high_then_all_path_coverage",
+        "path_budget": 5000,
+        "recommendation_limit": 5,
+        "recommendations": [],
+        "remaining_paths": 4,
+        "remediation_verified": false,
+        "schema_version": "graph-remediation-priorities.v1",
+        "source_coverage": "not_assessed"
       },
       "scan_id": "reference-evidence-correlation-v1",
       "summary": {

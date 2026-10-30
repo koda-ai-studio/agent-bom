@@ -220,4 +220,60 @@ def compromise_cmd(
 
 graph_paths_cmd.add_command(consequences_cmd)
 
+
+@graph_paths_cmd.command("fixes")
+@click.option("--scan-id", required=True, help="Exact persisted snapshot to prioritize.")
+@click.option("--format", "output_format", type=click.Choice(["table", "json"]), default="table", show_default=True)
+@_common_api_options
+def graph_fixes_cmd(
+    api_url: str | None,
+    api_key: str | None,
+    bearer_token: str | None,
+    tenant_id: str | None,
+    scan_id: str,
+    output_format: str,
+) -> None:
+    """Prioritize recorded fixes by shared path coverage; does not apply or verify changes."""
+    client = _make_client(api_url, api_key, bearer_token, tenant_id)
+    payload = _run_request(client, lambda api: api.graph_fix_priorities(scan_id=scan_id))
+    priorities = payload.get("remediation_priorities")
+    if not isinstance(priorities, dict) or payload.get("scan_id") != scan_id:
+        raise click.ClickException("Remediation priorities are unavailable for the requested snapshot; no fix is verified.")
+    if output_format == "json":
+        _emit_json(
+            {
+                "scan_id": payload["scan_id"],
+                "tenant_id": payload.get("tenant_id"),
+                "snapshot_generation": payload.get("snapshot_generation"),
+                **priorities,
+            }
+        )
+        return
+    click.echo(f"Recorded fix priorities: {_string(priorities.get('assessed_paths'))} paths assessed (scan {scan_id})")
+    click.echo(
+        "Coverage is recorded path overlap, not predicted path removal or a verified fix. Source collection coverage is not assessed."
+    )
+    if not priorities.get("complete"):
+        click.echo("Assessment limited; inspect JSON limitations before interpreting coverage.")
+    click.echo("rank\tfinding\tasset\tpaths\tadditional\tremaining\tunknown reachability")
+    rows = priorities.get("recommendations")
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        click.echo(
+            "\t".join(
+                " ".join(_string(row.get(key)).split())
+                for key in (
+                    "rank",
+                    "finding_label",
+                    "asset_label",
+                    "covered_paths",
+                    "newly_covered_paths",
+                    "remaining_paths_after_selection",
+                    "unknown_reachability_paths",
+                )
+            )
+        )
+
+
 __all__ = ["graph_paths_cmd"]

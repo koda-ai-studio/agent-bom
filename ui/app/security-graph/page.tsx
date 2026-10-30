@@ -28,6 +28,7 @@ import { AttackPathTechniqueChain } from "@/components/attack-path-technique-cha
 import { AttackPathCorrelationProof } from "@/components/attack-path-correlation-proof";
 import { ExposurePathCommandCenter, type ExposurePathView } from "@/components/exposure-path-command-center";
 import { InvestigationPathWorkspace, InvestigationTools } from "@/components/investigation-path-workspace";
+import { GraphRemediationPriorities } from "@/components/graph-remediation-priorities";
 import { DeployGatePanel } from "@/components/deploy-gate-panel";
 import { ExposurePathLens } from "@/components/exposure-path-lens";
 import { GraphPanelSkeleton } from "@/components/graph-state-panels";
@@ -777,6 +778,7 @@ function AttackPathInvestigationContent() {
           />
         }
       />
+      <GraphRemediationPriorities view={fixFirstView} scanId={graphData?.scan_id || selectedScanId} />
       <InvestigationNotices
         question={Boolean(requestedQuestion)}
         sharedPathMissing={Boolean(requestedSelectedPath && graphData && !allAttackPaths.some(path => attackPathKey(path) === requestedSelectedPath))}
