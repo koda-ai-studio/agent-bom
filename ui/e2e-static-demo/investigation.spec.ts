@@ -139,3 +139,23 @@ test("relationship labels can be hidden without losing the path", async ({ page 
   await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
   await expect(page.locator(".react-flow__edge")).toHaveCount(edges);
 });
+
+for (const theme of ["dark", "light"]) {
+  test(`findings drill-down and installation links stay usable in the static demo (${theme})`, async ({ page }, testInfo) => {
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await page.goto(url("/findings?lane=all"), { waitUntil: "networkidle" });
+    await expect(page.getByRole("button", { name: "Low (0)", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /undefined/ })).toHaveCount(0);
+    const assets = page.locator('a[href*="/findings?q="]');
+    expect(await assets.count()).toBeGreaterThan(0);
+    for (const href of await assets.evaluateAll(links => links.map(link => link.getAttribute("href")))) {
+      expect(href).toMatch(/^\/agent-bom\/demo\/findings\?q=/);
+    }
+    await expect(page.getByTestId("demo-nav-sign-in")).toHaveAttribute("href", "https://koda-ai-studio.github.io/agent-bom/getting-started/quickstart/");
+    await expect(page.getByRole("link", { name: /sign in/i })).toHaveCount(0);
+    await assets.first().click();
+    await expect(page).toHaveURL(/\/agent-bom\/demo\/findings\?q=/);
+    await expect(page.getByRole("table", { name: "Findings and supporting evidence" })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`findings-drilldown-${theme}.png`), fullPage: true });
+  });
+}

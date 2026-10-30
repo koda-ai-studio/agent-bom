@@ -68,7 +68,7 @@ export function queryStaticFindings(body, apiPath) {
   const facets = {};
   for (const field of ["lane", "severity", "status", "finding_class", "domain"]) {
     const population = groupRows(source.filter(row => matches(row, params, field, body.snapshot_at)), grouped);
-    facets[field] = field === "lane" ? Object.fromEntries(["vulnerabilities", "cloud", "iac", "secrets", "identity", "data", "other"].map(key => [key, 0])) : {};
+    facets[field] = field === "lane" ? Object.fromEntries(["vulnerabilities", "cloud", "iac", "secrets", "identity", "data", "other"].map(key => [key, 0])) : field === "severity" ? Object.fromEntries(Object.keys(RANK).map(key => [key, 0])) : {};
     for (const row of population) {
       const keys = field === "domain" ? domains(row) : [field === "finding_class" ? findingClass(row) : row[field] ?? (field === "status" ? "open" : "unknown")];
       for (const key of new Set(keys)) facets[field][key] = (facets[field][key] ?? 0) + 1;

@@ -1,5 +1,6 @@
 "use client";
 
+import { ASSET_BASE } from "@/lib/asset-base";
 import { packageVersionLabel } from "@/lib/package-version-label";
 import { agentDisplayName } from "@/lib/display-name";
 import { findingHolder } from "@/lib/finding-holder";
@@ -609,7 +610,7 @@ function EngineeringCells({
         <div className="flex flex-col gap-1 text-xs">
           {packageName ? (
             <a
-              href={`/findings?q=${encodeURIComponent(packageName)}`}
+              href={`${ASSET_BASE}/findings?q=${encodeURIComponent(packageName)}`}
               onClick={(event) => event.stopPropagation()}
               title={packageVersionLabel(vuln)}
               className="line-clamp-2 font-mono text-ink-secondary underline decoration-dotted underline-offset-2 [overflow-wrap:anywhere] transition hover:text-foreground"
@@ -625,7 +626,7 @@ function EngineeringCells({
                 <span key={agent}>
                   {index > 0 ? ", " : null}
                   <a
-                    href={`/findings?q=${encodeURIComponent(agent)}`}
+                    href={`${ASSET_BASE}/findings?q=${encodeURIComponent(agent)}`}
                     onClick={(event) => event.stopPropagation()}
                     className="underline decoration-dotted underline-offset-2 transition hover:text-foreground"
                   >

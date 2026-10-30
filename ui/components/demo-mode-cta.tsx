@@ -3,12 +3,11 @@
 import { ArrowRight, Sparkles } from "lucide-react";
 
 import { useDemoMode } from "@/hooks/use-demo-mode";
+import { isStaticDemo, STATIC_DEMO_QUICKSTART_URL } from "@/lib/static-demo";
 import { getSignInUrl } from "@/lib/runtime-config";
 
-const CTA_LABEL = "Sign in";
-
 function ctaHref(): string {
-  return getSignInUrl();
+  return isStaticDemo() ? STATIC_DEMO_QUICKSTART_URL : getSignInUrl();
 }
 
 /** @deprecated Page banner removed — demo is indicated by watermark + nav/sources CTA only. */
@@ -29,12 +28,12 @@ export function DemoNavSignIn({ collapsed = false }: { collapsed?: boolean }) {
       className={`flex items-center gap-2 rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-3 py-2 text-[12px] font-medium text-[color:var(--foreground)] transition-colors hover:border-[color:var(--border-strong)] ${
         collapsed ? "justify-center px-2" : ""
       }`}
-      title="Sign in to connect your cloud"
+      title={isStaticDemo() ? "Install agent-bom to connect your cloud" : "Sign in to connect your cloud"}
     >
       <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
       {!collapsed && (
         <>
-          <span>Demo · Sign in</span>
+          <span>{isStaticDemo() ? "Run agent-bom" : "Demo · Sign in"}</span>
           <ArrowRight className="ml-auto h-3.5 w-3.5" aria-hidden="true" />
         </>
       )}
@@ -57,13 +56,14 @@ export function DemoConnectCard() {
       className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3"
     >
       <p className="text-sm text-[color:var(--text-secondary)]">
-        <span className="font-medium text-[color:var(--foreground)]">Read-only demo.</span> Sign in to register cloud accounts and data sources.
+        <span className="font-medium text-[color:var(--foreground)]">Read-only demo.</span>{" "}
+        {isStaticDemo() ? "Install agent-bom to connect your environment." : "Sign in to register cloud accounts and data sources."}
       </p>
       <a
         href={ctaHref()}
         className="inline-flex shrink-0 items-center gap-2 rounded-md bg-emerald-500 px-3 py-1.5 text-sm font-medium text-black transition hover:bg-emerald-400"
       >
-        {CTA_LABEL}
+        {isStaticDemo() ? "Open the quick start" : "Sign in"}
         <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </a>
     </section>
