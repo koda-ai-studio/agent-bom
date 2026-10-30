@@ -175,3 +175,7 @@ selected event fields; it is not a universal posture snapshot importer.
 For inventory/relationship row exports, use `agent-bom ingest warehouse` and its
 versioned graph mapping. For outbound findings delivery, see
 [Backend and security lakes](backend-and-security-lakes.md).
+
+For a leadership handoff after reviewing imported evidence, open the
+[executive brief](executive-brief.md). Its independent source scopes and coverage
+limits remain visible in the preview and downloads.

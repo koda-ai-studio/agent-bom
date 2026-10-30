@@ -427,7 +427,7 @@ export default function Dashboard() {
     <div className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-        <Link href="/connections" className="max-w-full text-sm text-emerald-800 dark:text-emerald-300">Manage sources →</Link>
+        <div className="flex flex-wrap gap-4 text-sm text-emerald-800 dark:text-emerald-300"><Link href="/brief">Executive brief →</Link><Link href="/connections">Manage sources →</Link></div>
       </header>
 
       {importedReport && <button type="button" onClick={() => setImportedReport(null)} className="text-sm text-emerald-800 dark:text-emerald-300">Return to live overview</button>}

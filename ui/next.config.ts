@@ -25,14 +25,14 @@ const headersForNextServer =
     : securityHeaders;
 
 const nextConfig: NextConfig = {
-  // Reuse medium-sized application modules across routes instead of emitting
+  // Reuse application modules across routes instead of emitting
   // another copy in each page chunk. Keep Next's framework/runtime groups intact.
   webpack(config, { dev, isServer }) {
     if (!dev && !isServer && config.optimization?.splitChunks) {
       config.optimization.splitChunks.cacheGroups.appShared = {
         test: /[\\/]ui[\\/](?:components|hooks|lib)[\\/]/,
         minChunks: 2,
-        minSize: 8_000,
+        minSize: 4_000,
         priority: 1,
         reuseExistingChunk: true,
       };
