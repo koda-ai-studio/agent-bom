@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Download, Network, Package, ShieldCheck } from "lucide-react";
+import { ArrowRight, Download, Network, ShieldCheck } from "lucide-react";
 import { useAuthState } from "@/components/auth-provider";
 import { SeverityBadge } from "@/components/severity-badge";
 import { useIncidentNeighborhood } from "@/hooks/use-incident-neighborhood";
@@ -10,6 +10,7 @@ import { FINDING_ENTITY_TYPES, type UnifiedEdge, type UnifiedNode } from "@/lib/
 import { buildGraphInvestigationBundle, downloadGraphInvestigation } from "@/lib/graph-investigation-bundle";
 import { plainRelationshipSummary } from "@/lib/graph-relationship-plain";
 import { formatFindingTimestamp } from "@/lib/findings-view";
+import { assetIcon } from "@/lib/asset-icon-registry";
 import { humanizeEnum } from "@/lib/enum-labels";
 
 const actionClass = "inline-flex items-center justify-center gap-2 rounded-lg border border-outline px-3 py-2 text-sm font-medium hover:bg-surface-muted";
@@ -58,6 +59,7 @@ function ComponentFindingEvidence({ assetId, scanId, owner }: { assetId: string;
   const graph = useIncidentNeighborhood(scanId, assetId, "both", owner);
   const [exportError, setExportError] = useState(false);
   const component = graph.nodes.find(node => node.id === assetId);
+  const ComponentIcon = assetIcon({ entityType: component?.entity_type, attributes: component?.attributes });
   const adjacent = new Set(graph.edges.flatMap(edge => edge.source === assetId ? [edge.target] : edge.target === assetId ? [edge.source] : []));
   const neighbors = graph.nodes.filter(node => node.id !== assetId && adjacent.has(node.id));
   const findings = neighbors.filter(isFinding);
@@ -69,7 +71,7 @@ function ComponentFindingEvidence({ assetId, scanId, owner }: { assetId: string;
       <Link href="/findings" className="text-xs text-ink-secondary underline underline-offset-4">All findings</Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="rounded-xl border border-outline bg-surface p-3"><Package className="h-6 w-6 text-[color:var(--accent)]" aria-hidden="true" /></span>
+          <span className="rounded-xl border border-outline bg-surface p-3"><ComponentIcon className="h-6 w-6 text-[color:var(--accent)]" aria-hidden="true" /></span>
           <div className="min-w-0"><p className="text-xs uppercase tracking-wide text-ink-secondary">Component finding evidence</p>
             <h1 className="mt-1 break-words text-2xl font-semibold">{component?.label || assetId}</h1>
             <p className="mt-1 text-sm text-ink-secondary">What is linked to this component, why it matters, and where to investigate next.</p>
