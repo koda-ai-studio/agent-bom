@@ -29,11 +29,11 @@ import {
 // connections + registered sources merged and deduped). Retires the separate
 // `/sources` route (kept as a redirect).
 
-export type HubTab = "connect" | "sources" | "endpoints" | "traces";
+export type HubTab = "connect" | "sources" | "imports" | "endpoints" | "traces";
 
 
 export function parseTab(value: string | null, established: boolean): HubTab {
-  if (value === "sources" || value === "connect" || value === "endpoints" || value === "traces") return value;
+  if (value === "sources" || value === "connect" || value === "imports" || value === "endpoints" || value === "traces") return value;
   return established ? "sources" : "connect";
 }
 

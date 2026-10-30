@@ -8,16 +8,48 @@ current inventory and permissions that the exported records do not contain.
 
 ## First command → report → control plane
 
-From a repository checkout:
+Open **Connections → Lake imports** for the guided workflow. An installed build
+containing `lake-sample` can create its sample without a repository checkout:
 
 ```bash
-agent-bom ingest lake examples/lake/findings.json \
-  --mapping examples/lake/mapping.json -o lake-report.json
+agent-bom ingest lake-sample --directory lake-pilot
+agent-bom ingest lake lake-pilot/findings.json \
+  --mapping lake-pilot/mapping.json -o lake-pilot/preview-report.json
 ```
 
-This sample contains one labelled finding observation. The command writes a
-private JSON report (mode `0600`) and refuses to overwrite existing evidence.
-Inspect its `findings`, `lake_receipt` and `coverage_warnings` fields.
+The private directory (mode `0700`) contains two synthetic finding observations
+and a mapping (files mode `0600`). Both findings name the same sample resource,
+carry a `sample` environment and have explicit synthetic labels. Use an isolated
+pilot control plane, not a production evidence collection, for this exercise.
+The import writes a private JSON report (mode `0600`) and prints its path.
+Neither command overwrites existing evidence. Inspect `findings`, `lake_receipt`
+and `coverage_warnings` before pushing anything.
+
+Start a customer-controlled API and dashboard using the
+[Docker deployment guide](docker.md) or [Helm profiles](control-plane-helm.md).
+Use an authenticated key with permission to push scan results; the key determines
+the tenant scope. Keep cloud credentials on the CLI host when reading S3, and
+supply `AGENT_BOM_PUSH_API_KEY` through your secret manager. Set
+`AGENT_BOM_CONTROL_PLANE_URL` to the API base URL, including its reverse-proxy
+prefix when present. Do not paste credentials into the URL.
+
+```bash
+agent-bom ingest lake lake-pilot/findings.json \
+  --mapping lake-pilot/mapping.json -o lake-pilot/pushed-report.json \
+  --push "$AGENT_BOM_CONTROL_PLANE_URL"
+```
+
+Successful activation returns the stored scan ID, graph node/relationship counts,
+and scan-specific Findings and Investigation links. The graph receipt is the
+server's durable persistence result, separate from collection completeness or
+exploitability. Older servers without a graph receipt remain unconfirmed in the
+CLI. A persisted empty graph is also called out rather than advertised as a
+useful investigation.
+
+Check the imported asset's account, region and observation time in the graph.
+Repeat the push with another new output path: identical evidence should return
+the same stored scan and graph receipt. If the API and dashboard use different
+origins, open the printed route and query on the dashboard's origin.
 
 For a customer snapshot, replace both inputs with your own files. To submit the
 retained report through the existing authenticated results endpoint, set

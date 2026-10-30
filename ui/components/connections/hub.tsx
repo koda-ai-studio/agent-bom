@@ -9,6 +9,7 @@ import { summarizeProviders } from "@/components/connections/display";
 import { SourceDrawer } from "@/components/connections/source-detail";
 import { SourcesSegment } from "@/components/connections/sources-workflow";
 import { ObservabilityConnections } from "@/components/connections/observability";
+import { LakeImportWorkflow } from "@/components/connections/lake-import";
 import { EndpointConnectionsPanel } from "@/components/endpoint-connections";
 import { PageLaneHeader } from "@/components/page-lane";
 import { PermissionDeniedNotice } from "@/components/role-access";
@@ -744,7 +745,7 @@ export function ConnectionsHub() {
 
       </div>}
 
-      {tab === "traces" ? <ObservabilityConnections key={session?.tenant_id ?? "unauthenticated"} /> : tab === "endpoints" ? (
+      {tab === "imports" ? <LakeImportWorkflow /> : tab === "traces" ? <ObservabilityConnections key={session?.tenant_id ?? "unauthenticated"} /> : tab === "endpoints" ? (
         <EndpointConnectionsPanel key={session?.tenant_id ?? "unauthenticated"} canManage={session?.role === "admin" && !managedTrialSession} demo={isDemoMode} />
       ) : tab === "connect" ? (
         <ConnectSegment

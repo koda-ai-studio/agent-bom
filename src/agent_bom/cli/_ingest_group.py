@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Optional
 import click
 
 from agent_bom.cli._grouped_help import SuggestingGroup
+from agent_bom.cli._lake_activation import lake_sample_cmd
 from agent_bom.cli._lake_ingest import lake_cmd
 from agent_bom.cli._warehouse_ingest import warehouse_cmd
 
@@ -41,6 +42,7 @@ def ingest_group() -> None:
     Subcommands:
       hardware   Ingest hardware/firmware attestation evidence (host/GPU/firmware)
       lake       Import mapped lake finding snapshots; optionally push to the control plane
+      lake-sample  Create a private synthetic snapshot and mapping for an isolated pilot
       warehouse  Map local exported warehouse rows to graph evidence
     """
 
@@ -164,3 +166,4 @@ ingest_group.add_command(hardware_cmd, "hardware")
 ingest_group.add_command(warehouse_cmd, "warehouse")
 
 ingest_group.add_command(lake_cmd, "lake")
+ingest_group.add_command(lake_sample_cmd, "lake-sample")

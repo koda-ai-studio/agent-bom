@@ -8,6 +8,7 @@ from pathlib import Path
 
 import click
 
+from agent_bom.cli._lake_activation import emit_lake_push_receipt
 from agent_bom.connectors.lake_snapshot import decode_lake_snapshot, read_lake_snapshot
 from agent_bom.core.settings import env_opt
 from agent_bom.parsers.lake_evidence import build_lake_report
@@ -54,11 +55,11 @@ def lake_cmd(
     except OSError:
         raise click.ClickException("Cannot create report; choose a new writable artifact path.") from None
     click.echo(f"Retained finding observations: {len(report['findings'])}. Source collection coverage remains unknown.")
+    click.echo("Report saved: " + sanitize_text(str(output_file.resolve()), max_len=2000))
     if push_url:
         response = push_json(
             normalize_scan_push_url(push_url), report, api_key, source_id=report["source_id"], idempotency_key=report["idempotency_key"]
         )
         if response is None:
             raise click.ClickException("Push failed. The local report is retained for retry.")
-        job_id = sanitize_text(str(response.get("job_id") or "unknown"), max_len=100)
-        click.echo(f"Stored scan: {job_id}. Open it in Findings or Investigation; inspect its graph persistence receipt.")
+        emit_lake_push_receipt(response, push_url)
