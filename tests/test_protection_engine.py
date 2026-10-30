@@ -152,6 +152,50 @@ def test_process_tool_call_records_session_graph():
     assert any(event["kind"] == "tool_call" for event in graph["timeline"])
 
 
+def test_process_tool_call_novel_tool_alert_requires_mature_baseline():
+    engine = ProtectionEngine()
+    engine.start()
+
+    cold_start = _run(engine.process_tool_call("read_file", {}, agent_id="agent-1"))
+    assert cold_start == []
+
+    for _ in range(19):
+        _run(engine.process_tool_call("read_file", {}, agent_id="agent-1"))
+    _run(engine.process_tool_call("rare_but_known", {}, agent_id="agent-1"))
+
+    known = _run(engine.process_tool_call("rare_but_known", {}, agent_id="agent-1"))
+    assert [a for a in known if a["detector"] == "cross_agent_correlator"] == []
+
+    alerts = _run(engine.process_tool_call("never_seen_tool", {}, agent_id="agent-1"))
+    novel = [a for a in alerts if a["detector"] == "cross_agent_correlator"]
+    assert len(novel) == 1
+    assert novel[0]["severity"] == "medium"
+    assert novel[0]["details"]["agent_id"] == "agent-1"
+    assert novel[0]["details"]["tool"] == "never_seen_tool"
+    assert novel[0]["details"]["baseline_size"] == 20
+
+    repeated = _run(engine.process_tool_call("never_seen_tool", {}, agent_id="agent-1"))
+    assert [a for a in repeated if a["detector"] == "cross_agent_correlator"] == []
+
+
+def test_novel_tool_alert_redacts_identifiers_and_is_advisory():
+    import json
+
+    engine = ProtectionEngine()
+    token = "ghp_" + "abcdefghijklmnopqrstuvwxyz" + "123456"
+    agent_id = f"agent-token={token}"
+    for _ in range(20):
+        _run(engine.process_tool_call("read_file", {}, agent_id=agent_id))
+
+    alerts = _run(engine.process_tool_call(f"new-tool-token={token}", {}, agent_id=agent_id))
+    novel = [a for a in alerts if a["detector"] == "cross_agent_correlator"]
+    assert len(novel) == 1
+    assert token not in json.dumps(novel)
+    assert novel[0]["severity"] == "medium"
+    assert "action" not in novel[0]
+    assert engine.is_blocked is False
+
+
 # ─── Tool Response Processing ────────────────────────────────────────────────
 
 

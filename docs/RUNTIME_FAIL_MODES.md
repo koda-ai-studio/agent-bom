@@ -222,6 +222,22 @@ truncates, rewrites or removes the source JSONL. The existing append sink remain
 fail-open for relay availability; operators retain ownership of file rotation
 and evidence retention.
 
+## Per-agent novel-tool baseline
+
+`ProtectionEngine.process_tool_call(..., agent_id=...)` learns a tool-frequency
+baseline after 20 calls and refreshes it every 10 further calls. A tool absent
+from the prior baseline produces a sanitized medium alert carrying the agent,
+tool and baseline sample size; repeated calls to that tool are suppressed until
+the next refresh. Rare tools already in the baseline are not novel. This is
+evidence of a changed call pattern, not confirmed execution or compromise.
+
+This detector is advisory: it does not directly block a call. When Shield is
+enabled, its alert participates in the existing correlation and kill-switch
+policy. No identity, cold start, restart or LRU eviction means no mature
+per-agent baseline and therefore no novelty alert (fail-open for this signal).
+State stays in one engine instance, with at most 1,024 agents and 1,000 recent
+calls per agent; callers must provide a stable, appropriately scoped agent ID.
+
 ## Local tool-drift baselines
 
 `Shield(deep=True, server_id="tenant-a/account-a/server-a")` restores the
