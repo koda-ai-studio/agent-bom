@@ -11,6 +11,7 @@ export const PRODUCT_ROUTES = [
   "/agents/topology",
   "/audit",
   "/blueprints",
+  "/brief",
   "/compliance",
   "/connections",
   "/context",
