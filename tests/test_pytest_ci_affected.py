@@ -32,6 +32,18 @@ def test_ui_pr_smoke_checks_the_transitive_canvas_contract(changed: str) -> None
     assert "tests/api/test_graph_canvas_view.py" in result.stdout.splitlines()
 
 
+@pytest.mark.parametrize("changed", ["pyproject.toml", "src/agent_bom/__init__.py", "scripts/bump-version.py"])
+def test_version_bump_smoke_checks_the_scan_pipeline_contract(changed: str) -> None:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/pytest_ci_affected.py"), "--root", ".", "--include-smoke", changed],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "tests/test_scan_pipeline_characterization.py" in result.stdout.splitlines()
+
+
 def _write(path: Path, text: str = "x\n") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
