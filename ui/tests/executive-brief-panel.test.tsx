@@ -32,7 +32,7 @@ it("previews canonical counts, sample and unavailable evidence with scoped drill
   expect(screen.getByText("Sample data")).toBeVisible();
   expect(screen.getByText(/Path evidence unavailable/)).toBeVisible();
   expect(screen.getByText(/different_scope/)).toBeVisible();
-  expect(screen.getByRole("link", { name: /CVE-example/ })).toHaveAttribute("href", "/findings?finding=finding%2Fone&asset=asset-a");
+  expect(screen.getByRole("link", { name: /CVE-example/ })).toHaveAttribute("href", "/findings?finding=finding%2Fone");
   expect(screen.getByRole("button", { name: "Download Markdown" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "Download JSON" })).toBeEnabled();
 });

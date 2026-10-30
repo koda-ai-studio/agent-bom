@@ -28,3 +28,7 @@ it("composes sample counts and paths from the same estate without inventing owne
   expect(brief.exposure_paths?.paths[0]).toMatchObject({ source: { id: "a", label: "Agent" }, reachability: "unknown" });
   expect(brief.scan_history.data_points[0]?.comparison?.status).toBe("not_comparable");
 });
+it("uses the supported findings text filter when an occurrence identifier is absent", async () => {
+  const { briefFindingHref } = await import("@/lib/executive-brief");
+  expect(briefFindingHref(makeBrief().remediation_priorities[0]!)).toBe("/findings?q=%3Cscript%3E%7C%0A%23+injected");
+});

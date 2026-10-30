@@ -9,8 +9,7 @@ export const pathLabel = (value: unknown) => value && typeof value === "object" 
 export function briefFindingHref(row: ExecutiveBrief["remediation_priorities"][number]): string {
   const params = new URLSearchParams();
   if (row.canonical_id) params.set("finding", row.canonical_id);
-  else params.set("search", row.vulnerability_id);
-  if (row.asset_id) params.set("asset", row.asset_id);
+  else params.set("q", row.vulnerability_id);
   return `/findings?${params}`;
 }
 
