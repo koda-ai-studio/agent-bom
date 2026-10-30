@@ -5,6 +5,19 @@ import type { FixFirstGraphViewResponse } from "@/lib/api-contracts/graph-views"
 /** Server-ranked coverage of recorded guidance, never a simulated or verified fix. */
 export function GraphRemediationPriorities({ view, scanId }: { view: FixFirstGraphViewResponse | null; scanId: string }) {
   const priorities = view?.scan_id === scanId ? view.remediation_priorities : undefined;
+  return <details className="group rounded-xl border border-outline bg-surface">
+    <summary className="flex min-h-11 cursor-pointer flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+      <span className="font-semibold text-foreground">Prioritize fixes</span>
+      <span className="text-xs text-ink-secondary">{priorities
+        ? `${priorities.candidate_count} candidate${priorities.candidate_count === 1 ? "" : "s"} · ${priorities.assessed_paths} paths assessed`
+        : "Select a retained scan with path evidence"}</span>
+    </summary>
+    <div className="border-t border-outline p-4"><PriorityDetails view={view} scanId={scanId} /></div>
+  </details>;
+}
+
+function PriorityDetails({ view, scanId }: { view: FixFirstGraphViewResponse | null; scanId: string }) {
+  const priorities = view?.scan_id === scanId ? view.remediation_priorities : undefined;
   if (!priorities) return <p className="text-sm text-ink-secondary">Remediation priorities are unavailable for this snapshot. Select a retained scan with recorded path evidence.</p>;
   return (
     <section aria-label="Shared remediation priorities" className="space-y-4">

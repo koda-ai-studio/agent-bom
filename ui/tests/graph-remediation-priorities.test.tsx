@@ -1,8 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { GraphRemediationPriorities } from "@/components/graph-remediation-priorities";
-import { InvestigationTools } from "@/components/investigation-path-workspace";
 import type { FixFirstGraphViewResponse } from "@/lib/api-contracts/graph-views";
 
 const view: FixFirstGraphViewResponse = {
@@ -21,12 +20,14 @@ const view: FixFirstGraphViewResponse = {
 };
 
 describe("graph remediation priorities", () => {
-  it("exposes recommendations through investigation tools with evidence and verification links", () => {
-    render(<InvestigationTools scope={<p>Scope</p>} exposure={<p>Paths</p>} priorities={<GraphRemediationPriorities view={view} scanId={view.scan_id} />} />);
-    fireEvent.click(screen.getByText(/Investigation tools ·/));
-    fireEvent.click(screen.getByRole("button", { name: "Prioritize fixes" }));
+  it("exposes a visible fix-priority entry with evidence and verification links", () => {
+    render(<GraphRemediationPriorities view={view} scanId={view.scan_id} />);
+    expect(screen.getByText("Prioritize fixes")).toBeVisible();
+    expect(screen.getByText("1 candidate · 3 paths assessed")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Shared remediation priorities" })).not.toBeVisible();
+    fireEvent.click(screen.getByText("Prioritize fixes"));
     expect(screen.getByRole("region", { name: "Shared remediation priorities" })).toBeVisible();
-    expect(screen.getByText(/3 paths assessed/)).toBeVisible();
+    expect(within(screen.getByRole("region", { name: "Shared remediation priorities" })).getByText(/3 paths assessed/)).toBeVisible();
     expect(screen.getByText(/Coverage does not predict paths removed or prove a fix/)).toHaveTextContent("node budget");
     expect(screen.getByText("Reachability unknown")).toBeVisible();
     const url = new URL(screen.getByRole("link", { name: "Review path evidence" }).getAttribute("href")!, "http://localhost");
@@ -37,18 +38,21 @@ describe("graph remediation priorities", () => {
 
   it("does not show recommendations from another snapshot", () => {
     render(<GraphRemediationPriorities view={view} scanId="different" />);
+    fireEvent.click(screen.getByText("Prioritize fixes"));
     expect(screen.getByText(/unavailable for this snapshot/)).toBeVisible();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("keeps missing guidance distinct from a clean result", () => {
     render(<GraphRemediationPriorities view={{ ...view, remediation_priorities: { ...view.remediation_priorities!, recommendations: [] } }} scanId={view.scan_id} />);
+    fireEvent.click(screen.getByText("Prioritize fixes"));
     expect(screen.getByText(/No applicable recorded guidance/)).toHaveTextContent("not a clean verdict");
   });
 
   it("does not infer recommendations when an older server omits the field", () => {
     const { remediation_priorities: _priorities, ...legacy } = view;
     render(<GraphRemediationPriorities view={legacy} scanId={view.scan_id} />);
+    fireEvent.click(screen.getByText("Prioritize fixes"));
     expect(screen.getByText(/unavailable for this snapshot/)).toBeVisible();
   });
 });

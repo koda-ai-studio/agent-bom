@@ -154,16 +154,14 @@ export function InvestigationPathWorkspace({
 }
 
 /** Secondary actions share one disclosure so the selected graph stays primary. */
-export function InvestigationTools({ scope, deployment, exposure, priorities }: {
+export function InvestigationTools({ scope, deployment, exposure }: {
   scope: React.ReactNode;
   deployment?: React.ReactNode;
   exposure: React.ReactNode;
-  priorities?: React.ReactNode;
 }) {
   const [active, setActive] = useState("scope");
   const panels = [
     { id: "scope", label: "Evidence scope", content: scope },
-    ...(priorities ? [{ id: "priorities", label: "Prioritize fixes", content: priorities }] : []),
     ...(deployment ? [{ id: "deployment", label: "Should I deploy?", content: deployment }] : []),
     { id: "exposure", label: "Exposure paths", content: exposure },
   ];

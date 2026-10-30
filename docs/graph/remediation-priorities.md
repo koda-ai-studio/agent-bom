@@ -8,8 +8,8 @@ agent-bom graph-paths fixes --scan-id <scan-id> --format json > fix-priorities.j
 
 Use the existing CLI API connection options or configured API credentials.
 The JSON names the exact scan, tenant and snapshot generation, followed by the
-server's recommendations. In the dashboard, open that scan in **Investigation
-tools → Prioritize fixes**. **Review path evidence** opens the same snapshot
+server's recommendations. In the dashboard, open that scan and select **Prioritize fixes** directly
+below the Investigation heading. **Review path evidence** opens the same snapshot
 and finding; **Open verification workflow** carries the source scan and finding
 occurrence to the existing remediation workflow. That workflow labels the scan
 as historical evidence and evaluates verification against current tenant findings.

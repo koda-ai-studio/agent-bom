@@ -778,6 +778,7 @@ function AttackPathInvestigationContent() {
           />
         }
       />
+      <GraphRemediationPriorities view={fixFirstView} scanId={graphData?.scan_id || selectedScanId} />
       <InvestigationNotices
         question={Boolean(requestedQuestion)}
         sharedPathMissing={Boolean(requestedSelectedPath && graphData && !allAttackPaths.some(path => attackPathKey(path) === requestedSelectedPath))}
@@ -946,7 +947,6 @@ function AttackPathInvestigationContent() {
       )}
 
       <InvestigationTools
-        priorities={<GraphRemediationPriorities view={fixFirstView} scanId={graphData?.scan_id || selectedScanId} />}
         scope={
         <div className="space-y-4">
           {!showCorrelationOverview && (!captureMode || correlationCaptureMode) && snapshots.length > 0 ? (
