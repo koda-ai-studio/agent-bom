@@ -138,6 +138,7 @@ nav:
           - Control-Plane Data Model and Store Parity: deployment/control-plane-data-model.md
           - Backend Parity: deployment/backend-parity.md
           - Backend and Security-Lake Strategy: deployment/backend-and-security-lakes.md
+          - Import Lake Evidence: deployment/lake-evidence-ingestion.md
           - Snowflake-Native Backend: deployment/snowflake-backend.md
           - Kubernetes: deployment/kubernetes.md
           - Runtime Monitoring: deployment/runtime-monitoring.md

@@ -1,0 +1,8 @@
+{
+  "schema_version": "agent-bom.lake-mapping/v1",
+  "provider": "local",
+  "source_instance": "sample-security-lake/findings",
+  "exported_at": "2026-10-29T13:00:00Z",
+  "finding_type": "CLOUD_BEST_PRACTICE_FAIL",
+  "asset_type": "cloud_resource"
+}

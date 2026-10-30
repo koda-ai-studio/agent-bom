@@ -30,6 +30,16 @@ warehouse-native governance is the goal, not as a prerequisite for analytics
 scale-out. A typical fully self-hostable stack is `Postgres` + OSS `ClickHouse`
 + optional `S3`-compatible object storage.
 
+## Bring existing lake evidence into Agent-Bom
+
+Use `agent-bom ingest lake` to normalize explicitly mapped JSON/NDJSON finding
+snapshots from local exports or version-pinned S3 objects, then optionally push
+the retained report into the authenticated control plane. Findings retain source
+record IDs, account/region scope, observation times and digest receipts. See
+[Lake evidence ingestion](lake-evidence-ingestion.md) for the first command,
+mapping contract, permissions and limits. This inbound path is separate from
+the outbound warehouse and Iceberg exports below.
+
 ## The product contract
 
 `agent-bom` should not require operators to choose between:

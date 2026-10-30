@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Optional
 import click
 
 from agent_bom.cli._grouped_help import SuggestingGroup
+from agent_bom.cli._lake_ingest import lake_cmd
 from agent_bom.cli._warehouse_ingest import warehouse_cmd
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ def ingest_group() -> None:
     \b
     Subcommands:
       hardware   Ingest hardware/firmware attestation evidence (host/GPU/firmware)
+      lake       Import mapped lake finding snapshots; optionally push to the control plane
       warehouse  Map local exported warehouse rows to graph evidence
     """
 
@@ -160,3 +162,5 @@ def _render_table(graph: UnifiedGraph, *, capture_serials: bool) -> None:
 ingest_group.add_command(hardware_cmd, "hardware")
 
 ingest_group.add_command(warehouse_cmd, "warehouse")
+
+ingest_group.add_command(lake_cmd, "lake")

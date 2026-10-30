@@ -104,7 +104,7 @@ def generate_source_id() -> str:
     return hashlib.sha256(hostname.encode()).hexdigest()[:12]
 
 
-def sanitize_results(results: dict, *, source_id: str | None = None) -> dict:
+def sanitize_results(results: dict, *, source_id: str | None = None, idempotency_key: str | None = None) -> dict:
     """Deep-copy results and strip sensitive data before push.
 
     - Removes config_path from agents
@@ -131,7 +131,7 @@ def sanitize_results(results: dict, *, source_id: str | None = None) -> dict:
 
     # Add source identifier
     sanitized["source_id"] = source_id or str(endpoint_identity["source_id"])
-    sanitized["idempotency_key"] = str(uuid.uuid4())
+    sanitized["idempotency_key"] = idempotency_key or str(uuid.uuid4())
 
     return sanitized
 
@@ -212,6 +212,7 @@ async def _push_async(
     max_delay_seconds: float = _DEFAULT_PUSH_MAX_DELAY,
     return_body: Literal[False] = False,
     source_id: str | None = None,
+    idempotency_key: str | None = None,
 ) -> bool: ...
 
 
@@ -226,6 +227,7 @@ async def _push_async(
     max_delay_seconds: float = _DEFAULT_PUSH_MAX_DELAY,
     return_body: Literal[True],
     source_id: str | None = None,
+    idempotency_key: str | None = None,
 ) -> tuple[bool, dict[str, Any] | None]: ...
 
 
@@ -239,6 +241,7 @@ async def _push_async(
     max_delay_seconds: float = _DEFAULT_PUSH_MAX_DELAY,
     return_body: bool = False,
     source_id: str | None = None,
+    idempotency_key: str | None = None,
 ) -> bool | tuple[bool, dict[str, Any] | None]:
     """POST sanitized results to the central dashboard with bounded retries.
 
@@ -251,7 +254,7 @@ async def _push_async(
     from agent_bom.http_client import create_client
     from agent_bom.security import SecurityError
 
-    sanitized = await asyncio.to_thread(sanitize_results, results, source_id=source_id)
+    sanitized = await asyncio.to_thread(sanitize_results, results, source_id=source_id, idempotency_key=idempotency_key)
     try:
         _validate_push_destination_url(push_url)
     except SecurityError as exc:
@@ -277,7 +280,6 @@ async def _push_async(
     retryable_status = {408, 425, 429, 500, 502, 503, 504}
     last_status: int | None = None
     last_error: str | None = None
-
     async with create_client(timeout=30.0, cert=_push_tls_cert(), verify=_push_tls_verify()) as client:
         for attempt in range(1, max_attempts + 1):
             try:
@@ -337,9 +339,11 @@ def push_results(push_url: str, results: dict, api_key: str | None = None) -> bo
     return bool(result)
 
 
-def push_json(push_url: str, results: dict, api_key: str | None = None, *, source_id: str | None = None) -> dict | None:
+def push_json(
+    push_url: str, results: dict, api_key: str | None = None, *, source_id: str | None = None, idempotency_key: str | None = None
+) -> dict | None:
     """POST sanitized JSON and return the parsed response body on success."""
-    pushed = asyncio.run(_push_async(push_url, results, api_key, return_body=True, source_id=source_id))
+    pushed = asyncio.run(_push_async(push_url, results, api_key, return_body=True, source_id=source_id, idempotency_key=idempotency_key))
     if not isinstance(pushed, tuple):
         return None
     ok, body = pushed
