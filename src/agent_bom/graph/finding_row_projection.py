@@ -14,7 +14,7 @@ from that report lands on the same node.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any
+from typing import Any, TypedDict
 
 from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.core.asset_types import entity_type_for_asset_type
@@ -26,7 +26,7 @@ from agent_bom.graph.declared_assets import declared_asset
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import SOURCE_TIERS, edge_evidence
 from agent_bom.graph.node import UnifiedNode
-from agent_bom.graph.recorded_time import earlier, later
+from agent_bom.graph.recorded_time import earlier, later, normalize_recorded_time
 from agent_bom.graph.relationship_specs import relationship_spec
 from agent_bom.graph.resource_aliases import _build_cloud_resource_alias_index, _resolve_cloud_resource_node_id
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -131,6 +131,18 @@ def _asset_entity(row: dict[str, Any]) -> EntityType | None:
     return entity_type_for_asset_type(asset_type) or _ASSET_FALLBACK.get(asset_type)
 
 
+class _RowTimes(TypedDict, total=False):
+    first_seen: str
+    last_seen: str
+
+
+def _row_times(row: dict[str, Any]) -> _RowTimes:
+    """An imported row's observation outranks the enclosing batch timestamp."""
+    first = normalize_recorded_time(row.get("first_seen"))
+    last = normalize_recorded_time(row.get("last_seen"))
+    return {"first_seen": first or last, "last_seen": last or first} if first or last else {}
+
+
 def _ensure_asset_node(graph: UnifiedGraph, row: dict[str, Any], entity: EntityType, collector: str) -> str | None:
     """The asset a row names, added to the graph when no inventory node carries it."""
     asset = _dict(row.get("asset"))
@@ -157,10 +169,11 @@ def _ensure_asset_node(graph: UnifiedGraph, row: dict[str, Any], entity: EntityT
                 attributes={
                     "asset_type": _text(asset.get("asset_type")),
                     "identifier": sanitize_text(identifier, max_len=500),
-                    **(_native_keys(row, asset, identifier) if declared is not None or entity == EntityType.CLOUD_RESOURCE else {}),
+                    **_native_keys(row, asset, identifier if declared is not None or entity == EntityType.CLOUD_RESOURCE else ""),
                     **(container_kind_attributes(asset) if entity == EntityType.CONTAINER else {}),
                 },
                 data_sources=[collector],
+                **_row_times(row),
             )
         )
     return node_id
@@ -171,6 +184,8 @@ def _native_keys(row: dict[str, Any], asset: dict[str, Any], identifier: str) ->
     keys = {
         "cloud_provider": _text(asset.get("provider")).casefold(),
         "account_id": _text(row.get("account_ref") or asset.get("account_ref")),
+        "region": _text(row.get("region") or asset.get("region")),
+        "environment": _text(row.get("environment") or asset.get("environment")),
     }
     if identifier.startswith(("arn:", "/subscriptions/", "projects/")):
         keys["resource_id"] = identifier
@@ -278,6 +293,7 @@ def _new_node(row: dict[str, Any], node_id: str, collector: str) -> UnifiedNode:
         attributes=attributes,
         compliance_tags=sorted(row_compliance_tags(row)),
         data_sources=[collector],
+        **_row_times(row),
     )
 
 
@@ -342,7 +358,13 @@ def project_finding_rows(graph: UnifiedGraph, findings: Any) -> None:
         if asset is None or edge is None:
             continue
         source, target, relationship = edge
-        graph.add_edge(UnifiedEdge(source=source, target=target, relationship=relationship, evidence=_evidence(row, collector, tier)))
+        times = _row_times(row)
+        if times:
+            asset.first_seen = earlier(asset.first_seen, times["first_seen"])
+            asset.last_seen = later(asset.last_seen, times["last_seen"])
+        graph.add_edge(
+            UnifiedEdge(source=source, target=target, relationship=relationship, evidence=_evidence(row, collector, tier), **times)
+        )
         _propose_label_matches(graph, asset, index.label_candidates(row, entity, asset.id), collector)
         if asset.entity_type in _OBSERVED_ASSETS and collector not in asset.data_sources:
             # A posture source that names a cloud asset is one more observation of it.
