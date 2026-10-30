@@ -31172,7 +31172,7 @@ info:
     \ each one can reach. agent \u2192 MCP server \u2192 packages \u2192 CVEs \u2192\
     \ blast radius."
   title: agent-bom API
-  version: 0.112.0
+  version: 0.112.1
 openapi: 3.1.0
 paths:
   /health:

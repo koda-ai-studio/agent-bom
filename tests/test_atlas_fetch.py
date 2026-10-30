@@ -158,12 +158,13 @@ def test_atlas_curated_count_is_load_bearing() -> None:
     )
 
 
-def test_release_freshness_gate_passes_for_bundled_catalog() -> None:
+def test_release_freshness_gate_passes_for_bundled_catalog(monkeypatch) -> None:
     """The bundled ATLAS catalog must satisfy the release freshness gate."""
     from click.testing import CliRunner
 
     from agent_bom.cli._db import db_framework_status
 
+    monkeypatch.setenv("AGENT_BOM_ATLAS_CATALOG_MODE", "bundled")
     runner = CliRunner()
     result = runner.invoke(
         db_framework_status,
@@ -171,7 +172,7 @@ def test_release_freshness_gate_passes_for_bundled_catalog() -> None:
             "--framework",
             "atlas",
             "--stale-after-days",
-            "365",
+            "180",
             "--fail-on-stale",
             "--format",
             "json",

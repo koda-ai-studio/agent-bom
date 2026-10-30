@@ -48,6 +48,9 @@ python scripts/check_product_surface_contract.py || fail=1
 python scripts/export_openapi.py --check || fail=1
 python scripts/generate_agent_capability_manifest.py --check || fail=1
 
+step "bundled ATLAS catalog freshness (ignore operator caches)"
+AGENT_BOM_ATLAS_CATALOG_MODE=bundled python -m agent_bom db framework-status --framework atlas --stale-after-days 180 --fail-on-stale --format json || fail=1
+
 if [ "$fail" -ne 0 ]; then
   printf '\nPRE-FLIGHT FAILED — do NOT push a release tag.\n' >&2
   exit 1

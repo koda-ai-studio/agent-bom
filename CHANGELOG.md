@@ -7,7 +7,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.112.0] - 2026-10-30
+## [0.112.1] - 2026-10-30
 
 ### Highlights
 - Import customer-selected security-lake findings into the existing authenticated findings and graph workflow, retaining scope, observation times and source receipts.
@@ -15,6 +15,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Investigate component findings with advisory context, fixed versions, connected evidence and clearer graph navigation.
 
 ### Upgrade notes
+- Supersedes the unpublished v0.112.0 tag. Artifact publication was blocked by an expired bundled ATLAS catalog.
 - Base CLI installations no longer include unused Flask and Tornado dependencies. API installations retain the filesystem-jail dependency through `agent-bom[api]`; the developer extra includes the API dependencies.
 - Use the dependency-free `sca-import` extra for external SCA report imports. The existing `snyk` extra remains a deprecated compatibility alias.
 - Lake ingestion accepts bounded JSON/NDJSON snapshots from local files or an explicitly version-pinned S3 object. Warehouse queries, native Parquet ingestion and continuous subscriptions are outside this workflow.
@@ -33,6 +34,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `docs/THREAT_MODEL.md` records the gateway/posture audit outbox (leased, fenced acknowledgements) and the MCP `scan` `project_path` filesystem boundary.
 
 ### Fixed
+- Release preflight and CI inspect the bundled ATLAS catalog even when a newer operator cache exists, using the same 180-day freshness limit. The bundled catalog is refreshed from the upstream source.
 - Affected-advisory answers include image packages and distinguish stale observations from confirmed current evidence; VEX filtering and finding totals use aligned semantics.
 - LangGraph topology retains `Send` fan-out edges. Secret scanning distinguishes CPython module links from password values.
 - Released-image refreshes patch Tornado where installed and verify collector and UI refresh completion.
@@ -4464,8 +4466,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.112.0...HEAD
-[0.112.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.111.0...v0.112.0
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.112.1...HEAD
+[0.112.1]: https://github.com/koda-ai-studio/agent-bom/compare/v0.111.0...v0.112.1
 [0.111.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.110.0...v0.111.0
 [0.110.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.109.0...v0.110.0
 [0.109.0]: https://github.com/msaad00/agent-bom/compare/v0.108.4...v0.109.0
