@@ -8,7 +8,7 @@ description: >-
   security checks. Use when the user mentions vulnerability scanning,
   MCP server trust, compliance, SBOM generation, CIS benchmarks, blast
   radius, or AI supply chain risk.
-version: 0.111.0
+version: 0.112.0
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Install via pipx or pip. No credentials required for

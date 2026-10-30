@@ -4,7 +4,7 @@ description: >-
   Analyze blast radius, attack paths, and threat landscape across your AI
   infrastructure. Use when: "blast radius", "threat intel", "risk score",
   "attack path", "lateral movement", "context graph", "who can reach what".
-version: 0.111.0
+version: 0.112.0
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Install via pipx or pip. No credentials required for
