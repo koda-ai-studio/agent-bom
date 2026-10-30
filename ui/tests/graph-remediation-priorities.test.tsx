@@ -50,7 +50,8 @@ describe("graph remediation priorities", () => {
   });
 
   it("does not infer recommendations when an older server omits the field", () => {
-    const { remediation_priorities: _priorities, ...legacy } = view;
+    const legacy = { ...view };
+    delete legacy.remediation_priorities;
     render(<GraphRemediationPriorities view={legacy} scanId={view.scan_id} />);
     fireEvent.click(screen.getByText("Prioritize fixes"));
     expect(screen.getByText(/unavailable for this snapshot/)).toBeVisible();
