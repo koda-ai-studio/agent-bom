@@ -32,7 +32,7 @@ describe("graph remediation priorities", () => {
     const url = new URL(screen.getByRole("link", { name: "Review path evidence" }).getAttribute("href")!, "http://localhost");
     expect(url.searchParams.get("scan")).toBe(view.scan_id);
     expect(url.searchParams.get("node")).toBe("finding:a");
-    expect(screen.getByRole("link", { name: "Open verification workflow" })).toHaveAttribute("href", "/remediation?view=verification&finding=occurrence%3Aa#campaigns");
+    expect(screen.getByRole("link", { name: "Open verification workflow" })).toHaveAttribute("href", "/remediation?view=verification&scan=scan+%2Fone&finding=occurrence%3Aa#campaigns");
   });
 
   it("does not show recommendations from another snapshot", () => {

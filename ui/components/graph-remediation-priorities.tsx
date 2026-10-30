@@ -22,7 +22,7 @@ export function GraphRemediationPriorities({ view, scanId }: { view: FixFirstGra
       ) : <ol className="space-y-3">
         {priorities.recommendations.map(item => {
           const query = new URLSearchParams({ scan: scanId, node: item.finding_node_id });
-          const workflow = new URLSearchParams({ view: "verification" });
+          const workflow = new URLSearchParams({ view: "verification", scan: scanId });
           if (item.finding_id) workflow.set("finding", item.finding_id);
           return <li key={item.id} className="rounded-xl border border-outline bg-surface p-4">
             <h4 className="break-words text-sm font-semibold text-foreground">{item.rank}. {item.finding_label} · {item.asset_label}</h4>
