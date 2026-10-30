@@ -73,7 +73,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.screenshot({ path: testInfo.outputPath(`component-context-${theme}.png`), fullPage: false, animations: "disabled" });
     await page.getByRole("link", { name: "Findings Recorded component evidence" }).click();
     await expect(page).toHaveURL(url => url.searchParams.get("asset") === asset.id && url.searchParams.get("scan") === scan);
-    await expect(page.getByRole("list", { name: "Component finding records" }).getByText("Dependency vulnerability")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Component finding records" }).getByRole("link", { name: "Dependency vulnerability", exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`component-findings-${theme}.png`), animations: "disabled" });
     await page.getByRole("link", { name: "Inspect control evidence" }).click();
     await expect(page).toHaveURL(url => url.pathname === "/compliance" && url.searchParams.get("asset") === asset.id && url.searchParams.get("scan") === scan);
