@@ -1,10 +1,10 @@
 {
  "demo": {
-  "html": "ab0d24b5a827babac21ae61007f286fcfae77378d2d5f94cee8188c607cf9668",
-  "html_offline": "19a8965cf66b95b0672e5ba739a730ea05432343456c31f724aff957186aa80e",
-  "sarif_exclude_unfixable": "09ab288cae04ab70f09fd77bb590885a61dcbf1afc7d790ef1197e142fc788b6",
-  "sarif_file": "c80435bf07c22264c2d809a1d645d3bb1de0df3bc755fa3d60279c7103b40723",
-  "sarif_stdout": "09ab288cae04ab70f09fd77bb590885a61dcbf1afc7d790ef1197e142fc788b6"
+  "html": "e6eadf670c0de498ad2e12a839488a6034e8018675fb4503abf7c1c9e57bfae4",
+  "html_offline": "0cabfdefa024a13e6870cd36e7e2acbe49b67d36caf9099a0463d7611005cd4a",
+  "sarif_exclude_unfixable": "e6aed20dbd0f811ae88ed2dd8c7e8bcd9a2cf659a3b9186e15ca111521e5f665",
+  "sarif_file": "98fe0db81409281b742d60ee1f0df4148c496144f84faa92740fefd37742cb94",
+  "sarif_stdout": "e6aed20dbd0f811ae88ed2dd8c7e8bcd9a2cf659a3b9186e15ca111521e5f665"
  },
  "empty": {
   "html": "ae73095e76c48adb43d763ef290b8c5de874dfef6f15eb92e44f101577a8f4a7",

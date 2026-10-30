@@ -334,6 +334,7 @@ def _demo_report() -> AIBOMReport:
         return original(report, **kwargs)  # type: ignore[arg-type]
 
     with (
+        mock.patch.dict(os.environ, {"AGENT_BOM_ATLAS_CATALOG_MODE": "bundled"}),
         mock.patch.object(sarif_module, "to_sarif", capture),
         mock.patch("agent_bom.db.local_analytics.record_scan_report_best_effort", lambda *_a, **_k: None),
     ):

@@ -44,6 +44,18 @@ def test_version_bump_smoke_checks_the_scan_pipeline_contract(changed: str) -> N
     assert "tests/test_scan_pipeline_characterization.py" in result.stdout.splitlines()
 
 
+@pytest.mark.parametrize("changed", ["src/agent_bom/data/mitre_atlas_catalog.json", "pyproject.toml"])
+def test_catalog_and_release_smoke_check_renderer_bytes(changed: str) -> None:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/pytest_ci_affected.py"), "--root", ".", "--include-smoke", changed],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "tests/test_output_render_characterization.py" in result.stdout.splitlines()
+
+
 def _write(path: Path, text: str = "x\n") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
