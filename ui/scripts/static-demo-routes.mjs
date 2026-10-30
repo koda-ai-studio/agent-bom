@@ -8,6 +8,7 @@
  * Registered after `installRoutes`, so these handlers win for the paths they
  * cover (Playwright matches routes in reverse registration order).
  */
+import { buildStaticExecutiveBrief } from "./static-demo-brief.mjs";
 import { queryStaticFindings } from "../lib/static-demo-findings.mjs";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -178,6 +179,11 @@ export async function installStaticDemoRoutes(page, { graph, findings, auditEntr
   const readFixture = (apiPath) => page.evaluate(async (url) => (await fetch(url)).json(), apiPath);
   const overview = overviewFromFindings(await readFixture("/v1/overview"), enriched);
   const postureCounts = postureCountsFromFindings(await readFixture("/v1/posture/counts"), enriched);
+  const brief = buildStaticExecutiveBrief({
+    overview, posture: await readFixture("/v1/posture"), compliance: await readFixture("/v1/compliance"),
+    history: await readFixture("/v1/trends?limit=2"), graph, tenantId, scanId, snapshotAt,
+  });
+  await page.route("**/v1/brief", route => fulfill(route, brief));
   await page.route("**/v1/overview", (route) => fulfill(route, overview));
   await page.route("**/v1/posture/counts", (route) => fulfill(route, postureCounts));
   await page.route("**/v1/graph/impact?**", (route) => {

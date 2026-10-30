@@ -18,6 +18,10 @@ import type {
 import { get, put, getBlob, DEMO_STORY_TIMEOUT_MS } from "./api-transport";
 
 export const postureApi = {
+  /** Authenticated current-tenant summary; each source retains its own scope. */
+  getExecutiveBrief: () => get<import("./executive-brief").ExecutiveBrief>("/v1/brief"),
+  getComplianceVerificationKey: () => get<import("./executive-brief").BriefVerificationKey>("/v1/compliance/verification-key"),
+
 
   /** Full posture grade + dimensions */
   getPosture: () => get<PostureResponse>("/v1/posture"),

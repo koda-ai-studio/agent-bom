@@ -10,6 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Dashboard executive brief with Markdown/JSON exports, finding and graph drilldowns, source-scope disclosure, and authenticated compliance-pack/key downloads with explicit verification guidance. The read-only demo retains sample labels and evidence limits.
 - Lake import activation in Connections, with a packaged `agent-bom ingest lake-sample` workflow, private local report artifacts, server-recorded graph persistence counts, and scan-scoped Findings and Investigation links.
 - Authenticated executive briefs through `agent-bom report brief`, `GET /v1/brief`, and the `executive_brief` MCP tool: canonical posture, remediation owners and SLA provenance, ranked exposure paths, technical control evidence, scoped scan history, and links to the signed compliance pack. Sample-data and incomplete-evidence boundaries remain explicit.
 

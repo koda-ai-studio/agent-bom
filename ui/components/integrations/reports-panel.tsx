@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, FileDown, Loader2, Play } from "lucide-react";
 
@@ -191,6 +192,7 @@ export function ReportsPanel() {
 
   return (
     <div className="space-y-5">
+      <Link href="/brief" className="inline-block text-sm underline">Preview and download an executive brief →</Link>
       <PanelIntro
         title="Reports"
         description="Queue an async findings export (gzipped NDJSON) streamed from the hub, then poll and download. Exports are quota-enforced per tenant; the download token is sent via header, never in the URL."
