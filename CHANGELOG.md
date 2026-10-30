@@ -4464,7 +4464,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.111.0...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.112.0...HEAD
+[0.112.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.111.0...v0.112.0
 [0.111.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.110.0...v0.111.0
 [0.110.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.109.0...v0.110.0
 [0.109.0]: https://github.com/msaad00/agent-bom/compare/v0.108.4...v0.109.0
