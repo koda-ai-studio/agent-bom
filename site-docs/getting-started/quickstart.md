@@ -28,6 +28,25 @@ Use this when you want one scan to cover both:
 - project manifests and lockfiles in the current repo
 - local MCP / agent context on your machine
 
+## Open your project evidence in the dashboard
+
+```bash
+pip install 'agent-bom[ui]'
+agent-bom quickstart --project /path/to/repository --dry-run
+agent-bom quickstart --project /path/to/repository --run
+```
+
+This scans only the selected project's manifests, lockfiles and MCP
+configuration, retains a private JSON report, and reads back the exact scan
+and graph before printing Findings and Investigation links. Start the printed
+server command before opening them. Each run has a separate evidence directory;
+the command does not alter project files or apply fixes.
+
+Add `--offline` to skip package-CVE lookup; zero CVEs then is not a clean
+security verdict. Non-default tenants require a matching authenticated
+principal. See the [first-run guide](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#activate-your-own-project-in-the-dashboard)
+for retained receipts, database configuration and failure behavior.
+
 ## Scan instruction and skill files
 
 ```bash
