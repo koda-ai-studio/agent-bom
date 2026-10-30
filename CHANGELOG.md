@@ -17,6 +17,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `docs/THREAT_MODEL.md` records the gateway/posture audit outbox (leased, fenced acknowledgements) and the MCP `scan` `project_path` filesystem boundary.
 
 ### Fixed
+- Finding-backed graph assets retain recorded provider, account, region and environment. Imported rows with different observation times keep their own node and relationship timestamps through persistence instead of inheriting the oldest observation in the batch.
 - Component findings place recorded advisory context, relationship explanations, known fixed versions, connected neighbors, and scoped next steps in a responsive investigation view while preserving snapshot and coverage boundaries.
 - Findings, audit, trace, and graph drill-down links preserve the configured deployment prefix. The static demo reports explicit zeroes for empty severity buckets and directs onboarding links to installation instead of unavailable sign-in.
 - Release automation: the post-release pin job pushes its branch and ends as a labelled skip with the manual `gh pr create` command when the signing key or the "Allow GitHub Actions to create and approve pull requests" setting is missing; the MCP SSE deploy separates "deploy succeeded, probe deferred" (OAuth provider outage, with the token endpoint status) from a failed deploy; the release run calls the docs build alone instead of showing a skipped Pages deploy.
