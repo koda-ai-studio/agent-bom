@@ -24,3 +24,10 @@ it("keeps all recorded domain memberships when grouping occurrences", () => {
   expect(result.total).toBe(1);
   expect(result.facets.domain).toEqual({ vuln: 1, aspm: 1 });
 });
+
+it("returns explicit zeroes for empty severity buckets in a complete sample dataset", () => {
+  const result = queryStaticFindings({ findings: [{ id: "sample", severity: "high" }] }, "/v1/findings");
+  expect(result.facets.severity).toEqual({ critical: 0, high: 1, medium: 0, low: 0, info: 0, unknown: 0 });
+  const empty = queryStaticFindings({ findings: [] }, "/v1/findings");
+  expect(Object.values(empty.facets.severity)).toEqual([0, 0, 0, 0, 0, 0]);
+});

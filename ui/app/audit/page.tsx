@@ -1,5 +1,6 @@
 "use client";
 
+import { ASSET_BASE } from "@/lib/asset-base";
 import { DetailTabs } from "@/components/detail-tabs";
 
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -228,8 +229,8 @@ export default function AuditLogPage() {
                   </div>)}
                 </div>}
                 <div className="flex flex-wrap gap-4 text-emerald-700 dark:text-emerald-400">
-                  {graphParams.size > 0 && <a href={`/security-graph?${graphParams}`}>Open in security graph →</a>}
-                  {(finding || cve) && <a href={`/findings?${new URLSearchParams(finding ? { finding } : { cve })}`}>Open finding →</a>}
+                  {graphParams.size > 0 && <a href={`${ASSET_BASE}/security-graph?${graphParams}`}>Open in security graph →</a>}
+                  {(finding || cve) && <a href={`${ASSET_BASE}/findings?${new URLSearchParams(finding ? { finding } : { cve })}`}>Open finding →</a>}
                 </div>
                 <details><summary className="cursor-pointer text-[var(--text-secondary)]">Structured event evidence</summary>
                   <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs text-[var(--text-secondary)]">{JSON.stringify(entry, null, 2)}</pre>

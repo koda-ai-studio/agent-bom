@@ -47,3 +47,11 @@ it("shows no verify line at all when neither a fix nor a command exists", () => 
   expect(screen.getByText("Fix not provided")).toBeInTheDocument();
   expect(screen.queryByText("No verify command")).not.toBeInTheDocument();
 });
+
+vi.mock("@/lib/asset-base", () => ({ ASSET_BASE: "/agent-bom/demo" }));
+
+it("keeps package and agent drill-down links inside the deployment prefix", () => {
+  mount(row({ agents: ["sample-agent"] }));
+  expect(screen.getByRole("link", { name: "requests@2.0" })).toHaveAttribute("href", "/agent-bom/demo/findings?q=requests");
+  expect(screen.getByRole("link", { name: "Sample Agent" })).toHaveAttribute("href", "/agent-bom/demo/findings?q=sample-agent");
+});

@@ -60,6 +60,7 @@ afterEach(() => {
   global.fetch = originalFetch;
   window.__AGENT_BOM_CONFIG__ = undefined;
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("DemoModeBanner", () => {
@@ -115,5 +116,20 @@ describe("DemoConnectCard", () => {
     );
 
     await waitFor(() => expect(screen.queryByTestId("demo-connect-card")).not.toBeInTheDocument());
+  });
+});
+
+
+describe("static demo onboarding", () => {
+  it("points both entry points to installation and never offers unavailable sign-in", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STATIC_DEMO", "1");
+    render(<AuthProvider><DemoNavSignIn /><DemoConnectCard /></AuthProvider>);
+    const links = await screen.findAllByRole("link");
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      expect(link).toHaveAttribute("href", "https://koda-ai-studio.github.io/agent-bom/getting-started/quickstart/");
+      expect(link).not.toHaveTextContent(/sign in/i);
+    }
+    expect(screen.queryByText(/sign in to register/i)).not.toBeInTheDocument();
   });
 });

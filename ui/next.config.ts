@@ -36,6 +36,16 @@ const nextConfig: NextConfig = {
         priority: 1,
         reuseExistingChunk: true,
       };
+      // Page-lane headers are below appShared's size threshold but occur in
+      // ten route chunks. Share their component and metadata once.
+      config.optimization.splitChunks.cacheGroups.pageLaneShared = {
+        test: /[\\/]ui[\\/](?:components[\\/]page-lane|lib[\\/]page-lanes)\.tsx?$/,
+        name: "page-lane",
+        minChunks: 2,
+        minSize: 0,
+        priority: 2,
+        reuseExistingChunk: true,
+      };
       // Each icon module is far below the default split size, so routes that
       // share icons would otherwise each carry their own copy.
       config.optimization.splitChunks.cacheGroups.lucideShared = {

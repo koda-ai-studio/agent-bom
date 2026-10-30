@@ -32,6 +32,10 @@ const DEEP_LINKS = [
   "/findings?lens=trust", `/advisories?id=${PHP2SHELL_ID}`, "/advisories?tab=declare",
   // The Investigation journey: each step reads its own evidence for the headline path.
   "/security-graph?step=impact", "/security-graph?step=owner", "/security-graph?step=fix", "/remediation?view=verification",
+  `/remediation?scan=${FIXTURE_SCAN_ID}`,
+  // Inventory drill-downs need exact component/snapshot answers, not the unfiltered page.
+  ...fixtureGraph.nodes.flatMap(node => ["/findings", "/compliance"].map(route =>
+    `${route}?${new URLSearchParams({ asset: node.id, scan: FIXTURE_SCAN_ID })}`)),
 ];
 // Pages whose only purpose is a write (sign-in, starting a scan) are never part of a read-only demo.
 const WRITE_ONLY_ROUTES = new Set(["/login", "/scan"]);

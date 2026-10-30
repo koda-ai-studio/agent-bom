@@ -1,5 +1,6 @@
 "use client";
 
+import { ASSET_BASE } from "@/lib/asset-base";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ChevronRight, Loader2, ShieldAlert } from "lucide-react";
@@ -196,13 +197,13 @@ export function TraceExplorerPanel({ agent, scanId }: { agent?: string | undefin
               </details>}
               {selectedSpan.inventory_binding && <div className="border-t border-outline pt-2 text-xs text-ink-secondary">
                 {selectedSpan.inventory_binding.state === "exact_identifier" && selectedSpan.inventory_binding.node_id && selectedSpan.inventory_binding.scan_id ? <>
-                  <a className="underline" href={`/security-graph?lens=estate&scan=${encodeURIComponent(selectedSpan.inventory_binding.scan_id)}&root=${encodeURIComponent(selectedSpan.inventory_binding.node_id)}&investigate=1`}>Inspect reported inventory entity</a>
+                  <a className="underline" href={`${ASSET_BASE}/security-graph?lens=estate&scan=${encodeURIComponent(selectedSpan.inventory_binding.scan_id)}&root=${encodeURIComponent(selectedSpan.inventory_binding.node_id)}&investigate=1`}>Inspect reported inventory entity</a>
                   <p className="mt-1">Exact source-reported identifier and scope match. Workload identity and execution are not independently verified.</p>
                   {!!selectedSpan.inventory_binding.inventory_paths?.length && <div className="mt-3 space-y-2">
                     <p>Inventory relationships do not prove this span executed a package or reached a vulnerability.</p>
                     <ul className="space-y-2">{selectedSpan.inventory_binding.inventory_paths.map(path => <li key={path.finding_node_id}>
                       <p className="break-words">{path.node_labels.join(" → ")}</p>
-                      <a className="underline" href={`/security-graph?lens=estate&scan=${encodeURIComponent(selectedSpan.inventory_binding!.scan_id!)}&root=${encodeURIComponent(path.finding_node_id)}&investigate=1`}>Inspect recorded finding path</a>
+                      <a className="underline" href={`${ASSET_BASE}/security-graph?lens=estate&scan=${encodeURIComponent(selectedSpan.inventory_binding!.scan_id!)}&root=${encodeURIComponent(path.finding_node_id)}&investigate=1`}>Inspect recorded finding path</a>
                     </li>)}</ul>
                     <p>Bounded inventory paths{selectedSpan.inventory_binding.paths_truncated ? "; additional paths may be omitted" : ""}.</p>
                   </div>}

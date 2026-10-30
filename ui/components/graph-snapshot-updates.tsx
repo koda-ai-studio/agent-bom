@@ -1,5 +1,6 @@
 "use client";
 
+import { ASSET_BASE } from "@/lib/asset-base";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuthState } from "@/components/auth-provider";
@@ -35,7 +36,7 @@ function SnapshotUpdates({ scanId, owner }: { scanId: string; owner: string }) {
         : "Checking saved snapshots…"}
     </p>
     {available ? <>
-      <a className="graph-page-action" href={`/security-graph?${next.toString()}`}>Open newer snapshot</a>
+      <a className="graph-page-action" href={`${ASSET_BASE}/security-graph?${next.toString()}`}>Open newer snapshot</a>
       <button type="button" className="graph-page-action" onClick={() => setDismissed(newer.scan_id)}>Keep current</button>
     </> : <button type="button" className="graph-page-action" disabled={checking} onClick={() => void refresh(true)}>Check for updates</button>}
   </aside>;
