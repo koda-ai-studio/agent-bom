@@ -22,6 +22,12 @@ class GraphClientMixin:
     ) -> JsonObject:
         raise NotImplementedError
 
+    def graph_fix_priorities(self, *, scan_id: str) -> JsonObject:
+        """Read server-ranked guidance for one exact snapshot; never apply changes."""
+        if not scan_id.strip():
+            raise ValueError("scan_id is required")
+        return self._request("GET", "/v1/graph/views/fix-first", params={"scan_id": scan_id, "limit": 1})
+
     def consequence_assessment(
         self, *, request: Mapping[str, JsonValue], scan_id: str, snapshot_generation: str | None = None
     ) -> JsonObject:

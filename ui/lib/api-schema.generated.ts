@@ -37855,7 +37855,48 @@ export interface operations {
                         focus?: {
                             [key: string]: unknown;
                         };
+                        /** @description Recorded guidance ranked by marginal path coverage; not a path-removal simulation or verified fix. */
+                        remediation_priorities?: {
+                            assessed_paths: number;
+                            candidate_count: number;
+                            /** @description Recorded path assessment stayed within its bounds; not collection completeness. */
+                            complete: boolean;
+                            /** @enum {string} */
+                            coverage_basis: "recorded_paths_touching_selected_findings";
+                            covered_paths: number;
+                            limitations: string[];
+                            method: string;
+                            path_budget: number;
+                            recommendation_limit: number;
+                            recommendations: {
+                                asset_label: string;
+                                asset_node_id: string;
+                                covered_paths: number;
+                                critical_paths: number;
+                                finding_id: string;
+                                finding_label: string;
+                                finding_node_id: string;
+                                fixed_version: string | null;
+                                guidance: string;
+                                high_paths: number;
+                                id: string;
+                                newly_covered_paths: number;
+                                path_ids: string[];
+                                path_sample_complete: boolean;
+                                rank: number;
+                                remaining_paths_after_selection: number;
+                                unknown_reachability_paths: number;
+                            }[];
+                            remaining_paths: number;
+                            /** @enum {boolean} */
+                            remediation_verified: false;
+                            /** @enum {string} */
+                            schema_version: "graph-remediation-priorities.v1";
+                            /** @enum {string} */
+                            source_coverage: "not_assessed";
+                        };
                         scan_id?: string;
+                        snapshot_generation?: string | null;
                         summary?: {
                             [key: string]: unknown;
                         };

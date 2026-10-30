@@ -28,6 +28,7 @@ import { AttackPathTechniqueChain } from "@/components/attack-path-technique-cha
 import { AttackPathCorrelationProof } from "@/components/attack-path-correlation-proof";
 import { ExposurePathCommandCenter, type ExposurePathView } from "@/components/exposure-path-command-center";
 import { InvestigationPathWorkspace, InvestigationTools } from "@/components/investigation-path-workspace";
+import { GraphRemediationPriorities } from "@/components/graph-remediation-priorities";
 import { DeployGatePanel } from "@/components/deploy-gate-panel";
 import { ExposurePathLens } from "@/components/exposure-path-lens";
 import { GraphPanelSkeleton } from "@/components/graph-state-panels";
@@ -945,6 +946,7 @@ function AttackPathInvestigationContent() {
       )}
 
       <InvestigationTools
+        priorities={<GraphRemediationPriorities view={fixFirstView} scanId={graphData?.scan_id || selectedScanId} />}
         scope={
         <div className="space-y-4">
           {!showCorrelationOverview && (!captureMode || correlationCaptureMode) && snapshots.length > 0 ? (

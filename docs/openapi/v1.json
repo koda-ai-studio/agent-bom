@@ -71851,8 +71851,192 @@
                       "additionalProperties": true,
                       "type": "object"
                     },
+                    "remediation_priorities": {
+                      "additionalProperties": false,
+                      "description": "Recorded guidance ranked by marginal path coverage; not a path-removal simulation or verified fix.",
+                      "properties": {
+                        "assessed_paths": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "candidate_count": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "complete": {
+                          "description": "Recorded path assessment stayed within its bounds; not collection completeness.",
+                          "type": "boolean"
+                        },
+                        "coverage_basis": {
+                          "enum": [
+                            "recorded_paths_touching_selected_findings"
+                          ],
+                          "type": "string"
+                        },
+                        "covered_paths": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "limitations": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "method": {
+                          "type": "string"
+                        },
+                        "path_budget": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "recommendation_limit": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "recommendations": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "asset_label": {
+                                "type": "string"
+                              },
+                              "asset_node_id": {
+                                "type": "string"
+                              },
+                              "covered_paths": {
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "critical_paths": {
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "finding_id": {
+                                "type": "string"
+                              },
+                              "finding_label": {
+                                "type": "string"
+                              },
+                              "finding_node_id": {
+                                "type": "string"
+                              },
+                              "fixed_version": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "guidance": {
+                                "type": "string"
+                              },
+                              "high_paths": {
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "newly_covered_paths": {
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "path_ids": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "maxItems": 5,
+                                "type": "array"
+                              },
+                              "path_sample_complete": {
+                                "type": "boolean"
+                              },
+                              "rank": {
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "remaining_paths_after_selection": {
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "unknown_reachability_paths": {
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "asset_node_id",
+                              "asset_label",
+                              "finding_node_id",
+                              "finding_label",
+                              "finding_id",
+                              "guidance",
+                              "rank",
+                              "covered_paths",
+                              "newly_covered_paths",
+                              "critical_paths",
+                              "high_paths",
+                              "unknown_reachability_paths",
+                              "remaining_paths_after_selection",
+                              "fixed_version",
+                              "path_ids",
+                              "path_sample_complete"
+                            ],
+                            "type": "object"
+                          },
+                          "maxItems": 5,
+                          "type": "array"
+                        },
+                        "remaining_paths": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "remediation_verified": {
+                          "enum": [
+                            false
+                          ],
+                          "type": "boolean"
+                        },
+                        "schema_version": {
+                          "enum": [
+                            "graph-remediation-priorities.v1"
+                          ],
+                          "type": "string"
+                        },
+                        "source_coverage": {
+                          "enum": [
+                            "not_assessed"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "schema_version",
+                        "coverage_basis",
+                        "source_coverage",
+                        "method",
+                        "assessed_paths",
+                        "candidate_count",
+                        "covered_paths",
+                        "remaining_paths",
+                        "path_budget",
+                        "recommendation_limit",
+                        "complete",
+                        "limitations",
+                        "remediation_verified",
+                        "recommendations"
+                      ],
+                      "type": "object"
+                    },
                     "scan_id": {
                       "type": "string"
+                    },
+                    "snapshot_generation": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "summary": {
                       "additionalProperties": true,

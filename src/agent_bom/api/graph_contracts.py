@@ -161,6 +161,74 @@ _EXPOSURE_PATH_OPENAPI_SCHEMA: dict[str, Any] = {
 
 _ATTACK_PATH_ITEM_OPENAPI_SCHEMA["properties"]["exposure_path"] = _EXPOSURE_PATH_OPENAPI_SCHEMA
 
+_REMEDIATION_PRIORITY_PROPERTIES: dict[str, Any] = {
+    **{
+        name: {"type": "string"}
+        for name in (
+            "id",
+            "asset_node_id",
+            "asset_label",
+            "finding_node_id",
+            "finding_label",
+            "finding_id",
+            "guidance",
+        )
+    },
+    **{
+        name: {"type": "integer", "minimum": 0}
+        for name in (
+            "rank",
+            "covered_paths",
+            "newly_covered_paths",
+            "critical_paths",
+            "high_paths",
+            "unknown_reachability_paths",
+            "remaining_paths_after_selection",
+        )
+    },
+    "fixed_version": {"type": ["string", "null"]},
+    "path_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
+    "path_sample_complete": {"type": "boolean"},
+}
+_REMEDIATION_PRIORITIES_PROPERTIES: dict[str, Any] = {
+    "schema_version": {"type": "string", "enum": ["graph-remediation-priorities.v1"]},
+    "coverage_basis": {"type": "string", "enum": ["recorded_paths_touching_selected_findings"]},
+    "source_coverage": {"type": "string", "enum": ["not_assessed"]},
+    "method": {"type": "string"},
+    **{
+        name: {"type": "integer", "minimum": 0}
+        for name in (
+            "assessed_paths",
+            "candidate_count",
+            "covered_paths",
+            "remaining_paths",
+            "path_budget",
+            "recommendation_limit",
+        )
+    },
+    "complete": {"type": "boolean", "description": "Recorded path assessment stayed within its bounds; not collection completeness."},
+    "limitations": {"type": "array", "items": {"type": "string"}},
+    "remediation_verified": {"type": "boolean", "enum": [False]},
+    "recommendations": {
+        "type": "array",
+        "maxItems": 5,
+        "items": {
+            "type": "object",
+            "properties": _REMEDIATION_PRIORITY_PROPERTIES,
+            "required": list(_REMEDIATION_PRIORITY_PROPERTIES),
+            "additionalProperties": False,
+        },
+    },
+}
+_REMEDIATION_PRIORITIES_SCHEMA = {
+    "type": "object",
+    "properties": _REMEDIATION_PRIORITIES_PROPERTIES,
+    "required": list(_REMEDIATION_PRIORITIES_PROPERTIES),
+    "additionalProperties": False,
+    "description": "Recorded guidance ranked by marginal path coverage; not a path-removal simulation or verified fix.",
+}
+
+
 _FIX_FIRST_VIEW_OPENAPI_RESPONSE: dict[str, Any] = {
     "description": "Fix-first graph view with ranked cards and embedded ExposurePath payloads.",
     "content": {
@@ -169,6 +237,7 @@ _FIX_FIRST_VIEW_OPENAPI_RESPONSE: dict[str, Any] = {
                 "type": "object",
                 "properties": {
                     "scan_id": {"type": "string"},
+                    "snapshot_generation": {"type": ["string", "null"]},
                     "tenant_id": {"type": "string"},
                     "created_at": {"type": "string"},
                     "attack_campaigns": {
@@ -189,6 +258,7 @@ _FIX_FIRST_VIEW_OPENAPI_RESPONSE: dict[str, Any] = {
                             "additionalProperties": True,
                         },
                     },
+                    "remediation_priorities": _REMEDIATION_PRIORITIES_SCHEMA,
                     "cards": {
                         "type": "array",
                         "items": {

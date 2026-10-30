@@ -17,7 +17,7 @@ from agent_bom.api.graph_contracts import (
     ScopedGraphResponse,
 )
 from agent_bom.api.graph_estate_changes import graph_estate_changes_read
-from agent_bom.api.graph_generation import pin_generation, verify_generation
+from agent_bom.api.graph_generation import optional_generation, pin_generation, verify_generation
 from agent_bom.api.read_cache import read_cache_get, read_cache_put
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import (
@@ -154,9 +154,21 @@ async def get_fix_first_graph_view(
         raise HTTPException(status_code=503, detail="Graph snapshots not found. Run a scan first.")
 
     cache_params = (("scan_id", requested_scan_id), ("cve", cve), ("package", package), ("agent", agent), ("limit", limit))
+    identity = await _runtime._graph_store_call(
+        optional_generation,
+        graph_store,
+        tenant=tenant,
+        scan_id=requested_scan_id,
+        generation=None,
+        offset=0,
+    )
+    if identity is not None:
+        requested_scan_id = identity[0]
     generation = await _runtime._graph_store_call(evidence_generation, tenant_id=tenant, scan_id=requested_scan_id)
     cached = read_cache_get("fix_first_view", tenant, cache_params, generation=generation)
     if cached is not None:
+        if identity is not None:
+            await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=True)
         return cached
 
     graph = await _runtime._load_graph_for_investigation(
@@ -167,6 +179,12 @@ async def get_fix_first_graph_view(
     payload = await _runtime._graph_compute_call(
         _fix_first_graph_view_payload, graph, cve=cve, package=package, agent=agent, limit=limit, graph_store=graph_store
     )
+    payload["snapshot_generation"] = identity[1] if identity is not None else None
+    if identity is not None:
+        await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(graph.nodes))
+    else:
+        payload["remediation_priorities"]["complete"] = False
+        payload["remediation_priorities"]["limitations"].append("snapshot_generation_unavailable")
     read_cache_put("fix_first_view", tenant, cache_params, payload, generation=generation)
     return payload
 

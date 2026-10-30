@@ -26,6 +26,7 @@ from agent_bom.graph.attack_path_queue import path_population
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.interaction_risk_ids import interaction_risk_agent_ids
 from agent_bom.graph.path_derivation import _build_edge_lookup, _derived_attack_paths
+from agent_bom.graph.remediation_priorities import remediation_priorities
 from agent_bom.graph.scope import GraphScopeKind, select_observed_scope
 from agent_bom.graph.snapshot_paths import resolve_snapshot_attack_paths
 
@@ -234,6 +235,7 @@ def _fix_first_graph_view_payload(
         "tenant_id": graph.tenant_id,
         "created_at": graph.created_at,
         "cards": cards,
+        "remediation_priorities": remediation_priorities(graph, ranked_paths),
         "attack_campaigns": campaigns,
         "summary": {
             "total_paths": len(available_paths),

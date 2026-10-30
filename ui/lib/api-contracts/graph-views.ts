@@ -74,11 +74,50 @@ export interface GraphAttackCampaign {
   expected_risk_reduction_evidence?: { status: string; basis?: string; evidence_refs: string[]; reason_codes?: string[] };
 }
 
+export interface GraphRemediationPriority {
+  id: string;
+  rank: number;
+  asset_node_id: string;
+  asset_label: string;
+  finding_node_id: string;
+  finding_label: string;
+  finding_id: string;
+  fixed_version: string | null;
+  guidance: string;
+  covered_paths: number;
+  newly_covered_paths: number;
+  critical_paths: number;
+  high_paths: number;
+  unknown_reachability_paths: number;
+  remaining_paths_after_selection: number;
+  path_ids: string[];
+  path_sample_complete: boolean;
+}
+
+export interface GraphRemediationPriorities {
+  schema_version: "graph-remediation-priorities.v1";
+  coverage_basis: "recorded_paths_touching_selected_findings";
+  source_coverage: "not_assessed";
+  method: string;
+  assessed_paths: number;
+  candidate_count: number;
+  covered_paths: number;
+  remaining_paths: number;
+  complete: boolean;
+  limitations: string[];
+  path_budget: number;
+  recommendation_limit: number;
+  remediation_verified: false;
+  recommendations: GraphRemediationPriority[];
+}
+
 export interface FixFirstGraphViewResponse {
   scan_id: string;
+  snapshot_generation?: string | null;
   tenant_id: string;
   created_at: string;
   cards: FixFirstPathCard[];
+  remediation_priorities?: GraphRemediationPriorities;
   attack_campaigns?: GraphAttackCampaign[];
   summary: {
     total_paths: number;
