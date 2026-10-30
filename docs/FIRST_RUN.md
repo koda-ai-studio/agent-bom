@@ -179,6 +179,47 @@ agent-bom scan --demo --offline -f json -o /tmp/agent-bom-demo.json
 Use that JSON to push the same evidence into a control plane, inspect the graph,
 or attach deterministic output to an issue.
 
+## Activate your own project in the dashboard
+
+```bash
+pip install 'agent-bom[ui]'
+agent-bom quickstart --project /path/to/repository --dry-run
+agent-bom quickstart --project /path/to/repository --run
+```
+
+The project lane reads the selected repository's manifests, lockfiles and MCP
+configuration with ambient machine discovery disabled. It does not install
+project dependencies, write sample files, apply fixes or start a gateway.
+The normal scan advisory services are used; `--offline` instead inventories
+the project with package-CVE lookup skipped. Inventory alone is not a clean
+security verdict. Review `scan_run` and `coverage_warnings` in the report.
+
+Each run creates a new private directory under
+`$AGENT_BOM_STATE_DIR/activations/` (default `~/.agent-bom/activations/`).
+`--evidence-dir /path/to/new-directory` selects an explicit destination.
+Evidence, state and database paths must be outside the project; existing
+evidence directories are never overwritten. The directory contains:
+
+- `report.json`: the scan's original JSON evidence.
+- `activation.json`: the exact scan ID, tenant, verified graph counts, report
+  SHA-256, database locations and scan-specific Findings/Investigation links.
+
+The completion receipt is written only after the graph and completed scan are
+read back from the configured databases. A failed or incomplete scan retains
+available evidence without issuing a completion receipt. The hash identifies
+the report bytes; it does not authenticate a collector or verify remediation.
+
+Start the printed server command before opening either link. For the default
+tenant it uses explicit loopback analyst mode. A non-default
+`AGENT_BOM_TENANT_ID` requires a matching authenticated API-key/OIDC principal;
+anonymous access and a static `--api-key` read the default tenant. The command
+does not create credentials or change authentication settings. Published
+wheels include the dashboard; source checkouts need `make build-ui`.
+
+After changing the project, repeat the command with a new evidence directory.
+Both reports and graph snapshots remain available for review. A reduced finding
+count or missing graph node alone does not prove a fix.
+
 ## 2. Inspect the Bundled Sample Project
 
 For a single-command sample scan with a persisted graph:

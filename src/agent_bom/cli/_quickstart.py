@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 
 import click
 
+from agent_bom.cli._tenant import resolve_cli_tenant_id
 from agent_bom.samples import write_first_run_sample
 from agent_bom.storage import state_home
 
@@ -33,6 +34,12 @@ class _GraphReceipt(TypedDict):
 
 
 @click.command("quickstart")
+@click.option(
+    "--project",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Activate evidence from this project instead of sample data.",
+)
+@click.option("--evidence-dir", type=click.Path(path_type=Path), help="New private directory outside the project for this run's evidence.")
 @click.option("--dry-run", is_flag=True, help="Print the onboarding plan without writing files or starting services.")
 @click.option(
     "--offline",
@@ -67,8 +74,10 @@ class _GraphReceipt(TypedDict):
     show_default=True,
     help="Enforcement mode for the seeded gateway baseline policy (audit warns before enforcing).",
 )
-@click.option("--port", type=int, default=8422, show_default=True, help="Port suggested for the local API/UI handoff.")
+@click.option("--port", type=click.IntRange(1, 65535), default=8422, show_default=True, help="Port suggested for the local API/UI handoff.")
 def quickstart_cmd(
+    project: Path | None,
+    evidence_dir: Path | None,
     dry_run: bool,
     offline: bool,
     sample_dir: Path,
@@ -84,6 +93,18 @@ def quickstart_cmd(
         raise click.UsageError("--dry-run cannot be combined with --write-sample.")
     if dry_run and execute:
         raise click.UsageError("--dry-run cannot be combined with --run.")
+
+    if project is not None:
+        from agent_bom.cli._project_activation import activate_project
+
+        sample_options = ("sample_dir", "write_sample", "force", "gateway_policy", "gateway_mode")
+        context = click.get_current_context()
+        if any(context.get_parameter_source(name) == click.core.ParameterSource.COMMANDLINE for name in sample_options):
+            raise click.UsageError("Sample and gateway options apply only to sample quickstart, not --project.")
+        activate_project(project=project, evidence_dir=evidence_dir, offline=offline, execute=execute, port=port)
+        return
+    if evidence_dir is not None:
+        raise click.UsageError("--evidence-dir requires --project.")
 
     if execute:
         _run_quickstart(
@@ -298,7 +319,6 @@ def _persist_completed_scan(report_path: Path, database: Path, scan_id: str, sta
     """
     from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
     from agent_bom.api.store import SQLiteJobStore
-    from agent_bom.cli._tenant import resolve_cli_tenant_id
 
     try:
         payload = json.loads(report_path.read_text())
@@ -359,7 +379,6 @@ def _verify_persisted_graph(
         raise click.ClickException("Persisted graph could not be verified in the configured graph database.")
 
     try:
-        from agent_bom.cli._tenant import resolve_cli_tenant_id
         from agent_bom.db.graph_store import load_graph, open_graph_db
 
         with open_graph_db(graph_db) as connection:
@@ -377,7 +396,7 @@ def _verify_persisted_graph(
     return {"scan_id": scan_id, "nodes": len(graph.nodes), "edges": len(graph.edges)}
 
 
-def _control_plane_command(*, control_plane_db: Path, graph_db: Path, port: int) -> str:
+def _control_plane_command(*, control_plane_db: Path, graph_db: Path, port: int, local_analyst: bool = True) -> str:
     """Render a shell-safe command that opens the database just verified."""
 
     environment = []
@@ -385,13 +404,15 @@ def _control_plane_command(*, control_plane_db: Path, graph_db: Path, port: int)
         environment.append(f"AGENT_BOM_STATE_DIR={shlex.quote(str(state_home.state_dir().expanduser().resolve()))}")
     if graph_db != control_plane_db:
         environment.append(f"AGENT_BOM_GRAPH_DB={shlex.quote(str(graph_db))}")
-    environment.append("AGENT_BOM_NO_AUTH_ROLE=analyst")
+    if local_analyst:
+        environment.append("AGENT_BOM_NO_AUTH_ROLE=analyst")
     persisted = (
         "~/.agent-bom/control-plane.db"
         if control_plane_db == (state_home.default_product_state_dir() / "control-plane.db").resolve()
         else shlex.quote(str(control_plane_db))
     )
-    return f"{' '.join(environment)} agent-bom serve --persist {persisted} --host 127.0.0.1 --port {port} --allow-insecure-no-auth"
+    command = f"{' '.join(environment)} agent-bom serve --persist {persisted} --host 127.0.0.1 --port {port}".lstrip()
+    return command + (" --allow-insecure-no-auth" if local_analyst else "")
 
 
 def _write_gateway_baseline(output_path: Path, *, mode: str) -> None:
