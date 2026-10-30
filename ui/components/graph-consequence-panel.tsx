@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuthState } from "@/components/auth-provider";
 import { GraphConsequenceResults } from "@/components/graph-consequence-results";
+import { GraphVulnerabilityImpact } from "@/components/graph-vulnerability-impact";
 import { api } from "@/lib/api";
 import type { GraphConsequenceResponse } from "@/lib/api-types";
 
@@ -14,10 +15,10 @@ type Props = {
 export function GraphConsequencePanel(props: Props) {
   const { session, loading } = useAuthState();
   if (loading || !session) return null;
-  return <ConsequenceForm key={JSON.stringify([session, props.nodeId, props.scanId, props.snapshotGeneration])} {...props} />;
+  return <ConsequenceForm key={JSON.stringify([session, props.nodeId, props.scanId, props.snapshotGeneration])} {...props} tenantId={session.tenant_id} />;
 }
 
-function ConsequenceForm({ nodeId, scanId, snapshotGeneration, findingRoot = false, affectedNodeIds = [] }: Props) {
+function ConsequenceForm({ nodeId, scanId, snapshotGeneration, findingRoot = false, affectedNodeIds = [], tenantId }: Props & { tenantId: string }) {
   const [control, setControl] = useState(false);
   const [affected, setAffected] = useState("");
   const [pending, setPending] = useState(false);
@@ -43,7 +44,8 @@ function ConsequenceForm({ nodeId, scanId, snapshotGeneration, findingRoot = fal
       if (!controller.signal.aborted) setPending(false);
     }
   }
-  return <details className="rounded-lg border border-outline bg-surface-muted p-3 text-xs text-ink-secondary">
+  return <div className="space-y-3">{findingRoot && <GraphVulnerabilityImpact nodeId={nodeId} scanId={scanId} tenantId={tenantId} snapshotGeneration={snapshotGeneration} affectedNodeIds={affectedNodeIds} />}
+    <details className="rounded-lg border border-outline bg-surface-muted p-3 text-xs text-ink-secondary">
     <summary className="cursor-pointer font-semibold text-ink">Investigate consequences · experimental</summary>
     <p className="mt-2">{findingRoot ? "Vulnerability: check this affected asset's prerequisites before tracing authority." : "Assume compromised agent or principal: inspect potential actions, resources and stopping controls."}</p>
     <form className="my-3 space-y-3" onSubmit={event => { event.preventDefault(); void assess(); }}>
@@ -58,5 +60,5 @@ function ConsequenceForm({ nodeId, scanId, snapshotGeneration, findingRoot = fal
     </form>
     {error && <p role="alert">Assessment unavailable. Reload the graph and verify the selected snapshot and assumptions.</p>}
     {result && <GraphConsequenceResults result={result} />}
-  </details>;
+  </details></div>;
 }
