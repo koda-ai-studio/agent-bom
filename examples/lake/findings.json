@@ -1,0 +1,15 @@
+[
+  {
+    "finding_id": "sample-public-storage",
+    "asset_id": "sample-customer-data",
+    "asset_name": "Sample customer data store",
+    "title": "Source reports public storage access",
+    "severity": "high",
+    "observed_at": "2026-10-29T12:00:00Z",
+    "provider": "aws",
+    "account_id": "sample-account",
+    "region": "us-east-1",
+    "remediation_guidance": "Review the recorded storage policy and verify current public-access settings before changing them.",
+    "controls": [{"framework": "cis", "control": "2.1", "version": "3.0"}]
+  }
+]

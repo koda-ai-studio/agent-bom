@@ -400,3 +400,19 @@ production deployment.
 ## Reporting a Security Issue
 
 See [SECURITY.md](../SECURITY.md) for responsible disclosure via GitHub Security Advisories.
+
+## Explicit lake snapshot ingestion
+
+`agent-bom ingest lake` reads the selected local JSON/NDJSON file and mapping.
+For an explicit `s3://` input it uses the AWS SDK credential chain to perform
+`GetObject` for the required object version and expected bucket owner. It never
+lists buckets, subscribes to events, executes lake queries or writes to S3.
+Grant `s3:GetObjectVersion` on the selected object and applicable KMS decrypt
+permission for encrypted objects. Inputs are capped at 16 MiB / 1,000 findings.
+Only mapped fields enter the retained private report.
+
+`--push` sends that report only to the explicitly configured control plane,
+using `AGENT_BOM_PUSH_API_KEY` and the existing outbound URL/sanitization policy.
+Without `--push`, no report is sent. Source collection completeness remains
+unknown; imports do not resolve absent findings or prove exploitability.
+See [lake ingestion](../site-docs/deployment/lake-evidence-ingestion.md).
