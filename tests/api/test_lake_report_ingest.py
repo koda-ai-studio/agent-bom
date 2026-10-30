@@ -46,6 +46,8 @@ def test_authenticated_lake_push_replay_and_tenant_graph_isolation(lake_client):
     job = stores._store.get(job_id, tenant_id="lake-tenant")
     assert job.result["findings"][0]["evidence"]["lake_receipt"]["record_id"] == "finding-one"
     assert job.result["graph_persistence"]["status"] == "persisted"
+    assert created.json()["graph_persistence"] == job.result["graph_persistence"]
+    assert replay.json()["graph_persistence"] == created.json()["graph_persistence"]
     graph = stores._graph_store.load_graph(scan_id=job_id, tenant_id="lake-tenant")
     assert graph.nodes and graph.edges
     assert not stores._graph_store.load_graph(scan_id=job_id, tenant_id="other-tenant").nodes

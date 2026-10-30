@@ -106,7 +106,24 @@ def _pushed_job_receipt(job: ScanJob) -> dict[str, Any]:
         "scan_outcome": str(scan_run.get("outcome") or "failed"),
         "target_scope": result.get("target_scope"),
         "replacement_scope_status": result.get("replacement_scope_status", "unscoped"),
+        "graph_persistence": _public_graph_receipt(result),
     }
+
+
+def _public_graph_receipt(result: dict) -> dict[str, Any]:
+    """Return bounded durable graph facts, excluding arbitrary stored details."""
+    graph = result.get("graph_persistence")
+    if not isinstance(graph, dict) or graph.get("status") != "persisted":
+        return {"status": "unknown"}
+    receipt: dict[str, Any] = {"status": "persisted"}
+    scan_id = graph.get("scan_id")
+    if isinstance(scan_id, str) and scan_id:
+        receipt["scan_id"] = sanitize_text(scan_id, max_len=200)
+    for key in ("nodes", "edges"):
+        value = graph.get(key)
+        if type(value) is int and value >= 0:
+            receipt[key] = value
+    return receipt
 
 
 def _pushed_job_has_persisted_graph(job: ScanJob) -> bool:

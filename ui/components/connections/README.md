@@ -9,6 +9,7 @@ receive that state through props:
 - `connection-wizard.tsx`: provider setup and verification, using wizard controls.
 - `connection-detail.tsx` and `source-detail.tsx`: scoped detail and actions.
 - `evidence.tsx`: recorded configuration and scan-result handoffs.
+- `lake-import.tsx`: local sample, mapped export and authenticated import guidance.
 
 `catalog.tsx`, `display.tsx`, `provider-contract.tsx` and `wizard-support.tsx`
 hold shared definitions and presentation helpers. Leaf modules must not import

@@ -1,0 +1,40 @@
+{
+  "mapping": {
+    "schema_version": "agent-bom.lake-mapping/v1",
+    "provider": "local",
+    "source_instance": "synthetic-pilot-lake/findings",
+    "exported_at": "2026-10-29T13:00:00Z",
+    "finding_type": "CLOUD_BEST_PRACTICE_FAIL",
+    "asset_type": "cloud_resource"
+  },
+  "findings": [
+    {
+      "finding_id": "sample-public-storage",
+      "asset_id": "sample-customer-data",
+      "asset_name": "Sample customer data store",
+      "title": "Sample: source reports public storage access",
+      "severity": "high",
+      "observed_at": "2026-10-29T12:00:00Z",
+      "provider": "aws",
+      "account_id": "sample-account",
+      "region": "us-east-1",
+      "environment": "sample",
+      "description": "Synthetic finding for an isolated pilot. This is not evidence from a cloud account.",
+      "remediation_guidance": "For real evidence, review the recorded storage policy and verify current public-access settings before changing them."
+    },
+    {
+      "finding_id": "sample-storage-logging",
+      "asset_id": "sample-customer-data",
+      "asset_name": "Sample customer data store",
+      "title": "Sample: source reports missing storage access logs",
+      "severity": "medium",
+      "observed_at": "2026-10-29T12:30:00Z",
+      "provider": "aws",
+      "account_id": "sample-account",
+      "region": "us-east-1",
+      "environment": "sample",
+      "description": "Synthetic finding sharing an asset with the public-access sample. Neither finding establishes current configuration.",
+      "remediation_guidance": "For real evidence, verify the recorded logging configuration and destination access policy."
+    }
+  ]
+}

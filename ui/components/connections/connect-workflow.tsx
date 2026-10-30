@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useAuthState } from "@/components/auth-provider";
 import { Card,Section } from "@/components/card";
 import { CONNECTOR_CATALOG,CONNECTOR_CATEGORIES,CONNECTOR_CATEGORY_TONE,type CatalogConnector,type ConnectorCategory,type HubTab } from "@/components/connections/catalog";
@@ -44,6 +45,7 @@ export function HubTabs({
   const tabs: { key: HubTab; label: string; count?: number; icon: typeof Plug }[] = [
     { key: "sources", label: "Sources", count: sourceCount, icon: Boxes },
     { key: "connect", label: "Add source", count: connectCount, icon: Plug },
+    { key: "imports", label: "Lake imports", icon: FileCode },
     { key: "endpoints", label: "Endpoints", icon: Shield },
     { key: "traces", label: "Observability & SIEM", icon: Plug },
   ];
@@ -137,6 +139,11 @@ export function ConnectSegment({
       >
         {gallery}
       </Section>
+
+      <Card className="flex flex-wrap items-center justify-between gap-4">
+        <div><h3 className="font-medium">Already collecting findings in a security lake?</h3><p className="mt-1 text-sm text-ink-secondary">Map a selected export, inspect its report, and import scoped findings and graph evidence.</p></div>
+        <Link href="/connections?tab=imports" className="inline-flex items-center gap-2 text-sm font-medium underline">Import lake evidence <ArrowRight className="h-4 w-4" /></Link>
+      </Card>
 
     </div>
   );
