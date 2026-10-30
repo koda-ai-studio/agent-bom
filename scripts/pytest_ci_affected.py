@@ -39,6 +39,8 @@ SMOKE_TESTS = (
     "tests/test_product_surface_contract.py",
     "tests/api/test_api_scan_findings_wiring.py",
     "tests/api/test_live_export_contracts.py",
+    "tests/api/test_graph_canvas_view.py",
+    "tests/test_scan_pipeline_characterization.py",
 )
 
 
