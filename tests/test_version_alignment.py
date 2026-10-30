@@ -594,10 +594,10 @@ def test_preparing_release_keeps_openclaw_install_pins_published(tmp_path, monke
     cva = _load_script("check_version_alignment.py")
     skill = tmp_path / "integrations/openclaw/SKILL.md"
     skill.parent.mkdir(parents=True)
-    skill.write_text("version: 0.110.0\ndocker: ghcr.io/koda-ai-studio/agent-bom:0.110.0\n`agent-bom verify agent-bom@0.110.0`\n")
-    (tmp_path / "pyproject.toml").write_text('[project]\nversion = "0.110.0"\n')
+    skill.write_text("version: 0.111.0\ndocker: ghcr.io/koda-ai-studio/agent-bom:0.111.0\n`agent-bom verify agent-bom@0.111.0`\n")
+    (tmp_path / "pyproject.toml").write_text('[project]\nversion = "0.111.0"\n')
     published_file = tmp_path / "PUBLISHED_VERSION"
-    published_file.write_text("0.110.0\n")
+    published_file.write_text("0.111.0\n")
     monkeypatch.setattr(bump, "ROOT", tmp_path)
     monkeypatch.setattr(bump, "_load_alignment", lambda: cva)
     monkeypatch.setattr(cva, "ROOT", tmp_path)
@@ -605,16 +605,18 @@ def test_preparing_release_keeps_openclaw_install_pins_published(tmp_path, monke
     monkeypatch.setattr(cva, "SCAN_ROOTS", (skill,))
     monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
     monkeypatch.setattr(cva, "LAUNCHERS", ())
-    monkeypatch.setattr(cva, "_release_tags", lambda: {"v0.110.0", "v0.111.0"})
+    monkeypatch.setattr(cva, "_release_tags", lambda: {"v0.111.0"})
 
-    assert bump.bump("0.111.0") == 0
+    assert bump.bump("0.112.0") == 0
     prepared = skill.read_text()
-    assert "version: 0.111.0" in prepared
-    assert "agent-bom:0.110.0" in prepared
-    assert "agent-bom@0.110.0" in prepared
-    assert bump.bump("0.111.0", check=True) == 0
+    assert "version: 0.112.0" in prepared
+    assert "agent-bom:0.111.0" in prepared
+    assert "agent-bom@0.111.0" in prepared
+    assert published_file.read_text() == "0.111.0\n"
+    assert bump.bump("0.112.0", check=True) == 0
     assert skill.read_text() == prepared
-    assert bump.bump(published="0.111.0") == 0
-    assert "agent-bom:0.111.0" in skill.read_text()
-    assert "agent-bom@0.111.0" in skill.read_text()
+    monkeypatch.setattr(cva, "_release_tags", lambda: {"v0.111.0", "v0.112.0"})
+    assert bump.bump(published="0.112.0") == 0
+    assert "agent-bom:0.112.0" in skill.read_text()
+    assert "agent-bom@0.112.0" in skill.read_text()
     assert bump.bump(check=True) == 0

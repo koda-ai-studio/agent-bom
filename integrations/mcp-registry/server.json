@@ -3,7 +3,7 @@
   "name": "io.github.koda-ai-studio/agent-bom",
   "description": "Scan AI/MCP dependencies, descriptor injection, risky tool inputs and authentication configuration.",
   "title": "agent-bom",
-  "version": "0.111.0",
+  "version": "0.112.0",
   "repository": {
     "url": "https://github.com/koda-ai-studio/agent-bom",
     "source": "github"
@@ -12,7 +12,7 @@
     {
       "registryType": "pypi",
       "identifier": "agent-bom",
-      "version": "0.111.0",
+      "version": "0.112.0",
       "transport": {
         "type": "stdio"
       },

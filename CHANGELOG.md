@@ -7,18 +7,35 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
+## [0.112.0] - 2026-10-30
+
+### Highlights
+- Import customer-selected security-lake findings into the existing authenticated findings and graph workflow, retaining scope, observation times and source receipts.
+- Preview and export scoped executive briefs from the dashboard, CLI, API and MCP, with remediation ownership, evidence drilldowns and explicit verification boundaries.
+- Investigate component findings with advisory context, fixed versions, connected evidence and clearer graph navigation.
+
+### Upgrade notes
+- Base CLI installations no longer include unused Flask and Tornado dependencies. API installations retain the filesystem-jail dependency through `agent-bom[api]`; the developer extra includes the API dependencies.
+- Use the dependency-free `sca-import` extra for external SCA report imports. The existing `snyk` extra remains a deprecated compatibility alias.
+- Lake ingestion accepts bounded JSON/NDJSON snapshots from local files or an explicitly version-pinned S3 object. Warehouse queries, native Parquet ingestion and continuous subscriptions are outside this workflow.
 
 ### Added
 - Dashboard executive brief with Markdown/JSON exports, finding and graph drilldowns, source-scope disclosure, and authenticated compliance-pack/key downloads with explicit verification guidance. The read-only demo retains sample labels and evidence limits.
 - Lake import activation in Connections, with a packaged `agent-bom ingest lake-sample` workflow, private local report artifacts, server-recorded graph persistence counts, and scan-scoped Findings and Investigation links.
+- `agent-bom ingest lake` maps selected finding observations into a private report and can push it to a configured control plane. Input and mapping digests, scoped identifiers and observation times support replay and provenance; source-declared controls remain evidence tags rather than attestations.
+- Per-agent novel-tool alerts use a bounded in-memory baseline and report previously unseen tools after baseline warmup. Alerts are advisory and do not change enforcement decisions.
 - Authenticated executive briefs through `agent-bom report brief`, `GET /v1/brief`, and the `executive_brief` MCP tool: canonical posture, remediation owners and SLA provenance, ranked exposure paths, technical control evidence, scoped scan history, and links to the signed compliance pack. Sample-data and incomplete-evidence boundaries remain explicit.
 
 ### Changed
+- Azure multi-subscription and GCP multi-project onboarding share discovered scopes between inventory and CIS collection, retain per-account attribution, and preserve partial-collection warnings.
+- Scanner, API/storage, graph, output and dashboard modules are split behind existing interfaces, with ratcheted file and function size checks.
 - One lead message on every public surface (README, docs home, PyPI and Docker Hub descriptions, package metadata, registry manifests): "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach." The README leads with the measured real-repository accuracy, shows the `db advisory affected` / `affected_assets` commands for a new CVE, keeps five badges, and points to GitHub Discussions first.
 - `docs/THREAT_MODEL.md` records the gateway/posture audit outbox (leased, fenced acknowledgements) and the MCP `scan` `project_path` filesystem boundary.
 
 ### Fixed
+- Affected-advisory answers include image packages and distinguish stale observations from confirmed current evidence; VEX filtering and finding totals use aligned semantics.
+- LangGraph topology retains `Send` fan-out edges. Secret scanning distinguishes CPython module links from password values.
+- Released-image refreshes patch Tornado where installed and verify collector and UI refresh completion.
 - Finding-backed graph assets retain recorded provider, account, region and environment. Imported rows with different observation times keep their own node and relationship timestamps through persistence instead of inheriting the oldest observation in the batch.
 - Component findings place recorded advisory context, relationship explanations, known fixed versions, connected neighbors, and scoped next steps in a responsive investigation view while preserving snapshot and coverage boundaries.
 - Findings, audit, trace, and graph drill-down links preserve the configured deployment prefix. The static demo reports explicit zeroes for empty severity buckets and directs onboarding links to installation instead of unavailable sign-in.
@@ -28,7 +45,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Completed graph queries keep display labels in the inspector instead of rewriting the URL, preserving newer root navigation and explicit link labels on slower browsers.
 - First-run console output: repeated CI-hardening warnings collapse to one line per rule with a count, IaC rule groups count occurrences instead of splitting per message, a scanned repository is counted as a project rather than an agent, the dependency legend spells out direct/transitive/unknown, a lone critical says why it is P2 rather than P1, and the compliance block appears only with `--compliance` or benchmark evidence (one hint line otherwise).
 - Reports written to a file (including through a saved profile that pins `format`/`output`) confirm the path on stdout instead of leaving it empty.
-- `agent-bom iac` no longer flags `uv pip install --no-cache` as a missing `--no-cache-dir`; the shipped `Dockerfile` pins its Alpine packages and the image self-scan is clean.
+- `agent-bom iac` no longer flags `uv pip install --no-cache` as a missing `--no-cache-dir`; the shipped `Dockerfile` pins its Alpine packages.
 - Secret scanning no longer reports template placeholders as hardcoded secrets. Go/Helm/Jinja `{{ ... }}` actions, `${VAR}`/`$VAR` references, printf verbs (`postgres://%v:%v@%v`), `<placeholder>` values and a value that only repeats its key name (`password = "password"`). The same rejection applies to Terraform `TF-SEC-051`. Findings under `testdata/`, `__fixtures__/` and `__mocks__/` are kept at `low` severity with a `downgrade_reason` instead of their default severity.
 
 ### Deprecated
@@ -4447,7 +4464,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.111.0...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.112.0...HEAD
+[0.112.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.111.0...v0.112.0
 [0.111.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.110.0...v0.111.0
 [0.110.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.109.0...v0.110.0
 [0.109.0]: https://github.com/msaad00/agent-bom/compare/v0.108.4...v0.109.0
