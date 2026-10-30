@@ -21,6 +21,7 @@ from typing import Any
 
 import click
 
+from agent_bom.cli._brief import brief_cmd
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.cli._impact import write_impact_brief
 
@@ -36,6 +37,7 @@ def report_group(ctx: click.Context) -> None:
       diff        Diff two scan reports or CycloneDX/SPDX SBOMs
       rescan      Re-scan vulnerable packages to verify remediation
       impact      Share a bounded impact brief from saved scan evidence
+      brief       Export an executive brief from the authenticated control plane
       compliance-narrative  Generate auditor-facing compliance narrative from a saved scan report
       pipeline-events  Export scan pipeline DAG events as JSONL
       query       Run read-only SQL against the local scan analytics store
@@ -47,6 +49,9 @@ def report_group(ctx: click.Context) -> None:
     """
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
+
+
+report_group.add_command(brief_cmd)
 
 
 @report_group.command("impact")

@@ -400,3 +400,16 @@ circuit-cooldown flags with matching `AGENT_BOM_GATEWAY_UPSTREAM_*` environment
 variables. Invalid or non-finite settings fail startup before control-plane
 requests or binding a listener. CLI flags take precedence; security policies and
 authentication defaults are unchanged. See the [operator limits and defaults](perf/gateway-relay-latency.md#configure-upstream-limits).
+
+## Executive brief read access
+
+`GET /v1/brief` fails closed for anonymous callers outside the explicitly enabled
+sample demo. Scoped API keys need `brief:read` for the aggregate view; a
+`posture:read` grant alone is insufficient. MCP resolves the authenticated tenant
+before invoking the same read. Demo responses carry `sample_data: true`.
+
+The brief is advisory and unsigned. An unavailable graph is reported as
+`exposure_status: unavailable`, never as a clean graph. Other source-read failures
+fail the request through the existing sanitized API error handling. Independently
+read source scopes and snapshot identifiers remain attached; the brief does not
+claim atomic consistency, compliance attestation, or confirmed exploitation.

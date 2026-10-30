@@ -14,6 +14,10 @@ class GovernanceClientMixin:
 
     tenant_id: str | None
 
+    def executive_brief(self, *, limit: int = 5) -> JsonObject:
+        """Read the current tenant's executive summary and evidence links."""
+        return self._request("GET", "/v1/brief", params={"limit": limit})
+
     def _request(
         self,
         method: str,

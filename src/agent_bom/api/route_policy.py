@@ -71,6 +71,7 @@ ROUTE_POLICIES: tuple[RoutePolicy, ...] = (
     RoutePolicy("GET", "/v1/compliance", "viewer", "compliance:read"),
     RoutePolicy("GET", "/v1/posture/backpressure", "viewer", "posture:read"),
     RoutePolicy("GET", "/v1/posture/webhooks/", "analyst", "posture:read"),
+    RoutePolicy("GET", "/v1/brief", "viewer", "brief:read"),
     RoutePolicy("GET", "/v1/posture", "viewer", "posture:read"),
     RoutePolicy("GET", "/v1/auth/debug", "viewer", "auth:read"),
     RoutePolicy("GET", "/v1/auth/me", "viewer", None),

@@ -11,6 +11,7 @@ _TOOL_CAPABILITY_CLASSES = {
     "intel_sources": ["READ", "THREAT_INTEL"],
     "intel_daily_brief": ["READ", "THREAT_INTEL", "INVENTORY"],
     "blast_radius": ["READ", "ANALYZE"],
+    "executive_brief": ["READ", "GRAPH", "COMPLIANCE", "ANALYZE"],
     "exposure_paths": ["READ", "GRAPH", "ANALYZE"],
     "compromise_assessment": ["READ", "GRAPH", "ANALYZE"],
     "consequence_assessment": ["READ", "GRAPH", "ANALYZE"],

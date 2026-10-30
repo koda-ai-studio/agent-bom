@@ -33,3 +33,22 @@ def build_health_payload(*, auth_required: bool, tool_metrics_summary: dict[str,
         "tool_count": tool_metrics_summary["tool_count"],
         "mcp_metrics": tool_metrics_summary,
     }
+
+
+def registry_server_count() -> int:
+    """Count the bundled registry, falling back when its header is unavailable."""
+    from agent_bom.mcp_server_helpers import get_registry_data
+
+    try:
+        registry_servers = int(get_registry_data().get("_total_servers") or 0)
+    except Exception:
+        registry_servers = 0
+    if registry_servers <= 0:
+        # Fall back to counting the bundled map when the header is missing.
+        try:
+            servers = get_registry_data().get("servers") or {}
+            registry_servers = len(servers) if isinstance(servers, dict) else 0
+        except Exception:
+            registry_servers = 0
+
+    return registry_servers

@@ -58,6 +58,41 @@ agent-bom agents --compliance
 agent-bom agents --compliance --compliance-export nist-ai-rmf
 ```
 
+## Executive brief and signed evidence pack
+
+With an authenticated control plane configured, export a leadership brief:
+
+```bash
+agent-bom report brief --api-url https://control-plane.example.com --format markdown > executive-brief.md
+agent-bom report brief --api-url https://control-plane.example.com --format json > executive-brief.json
+```
+
+Set `AGENT_BOM_API_KEY` or `AGENT_BOM_API_TOKEN` through your normal secret
+manager. Scoped API keys need the `brief:read` grant, which authorizes this
+aggregate read of posture, remediation, graph, compliance and scan history.
+An existing `posture:read` grant alone does not authorize the brief.
+The same JSON is available at `GET /v1/brief?limit=5` and through the
+`executive_brief` MCP tool in the `graph`, `audit` and `full` profiles.
+MCP reads the persisted control-plane stores and requires the `api` extra.
+
+The brief preserves canonical owner and SLA source fields, ranked graph paths
+and their completeness metadata, evaluated-control denominators, and scoped
+scan history. Different scans can cover different assets: a historical scan
+score is not subtracted from the current tenant-wide score. These are
+independent source reads, not one atomic snapshot. The brief is unsigned and
+does not attest compliance, execution or exploitation.
+
+For an auditor, follow its `links.evidence_pack` to
+`GET /v1/compliance/report/pack` on the same authenticated control plane.
+That export requires its own `compliance:read` permission. Save the response
+body and signing headers, check the tenant, audit window, expiry and truncation
+fields, and verify the signature using the advertised signing configuration.
+The pack distinguishes finding counts from control-to-finding mapping rows;
+unknown evidence remains unevaluated. A signature alone does not establish
+evidence completeness or independent attestation. See
+[audit and compliance verification](../deployment/audit-and-compliance-verification.md)
+for verification and key-trust boundaries.
+
 ## CIS Benchmarks (cloud)
 
 ```bash

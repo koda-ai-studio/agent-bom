@@ -19,10 +19,10 @@ invoke them.
 scan tools. Use `--profile full` for the complete 90-tool catalog.
 
 <details>
-<summary>Explicit full-profile catalog (98 tools)</summary>
+<summary>Explicit full-profile catalog (99 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `affected_assets`, `intel_match`, `intel_sources`,
-`intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
+`intel_daily_brief`, `youcom_search`, `blast_radius`, `executive_brief`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
 `graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `findings_query`, `finding_detail`,
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,

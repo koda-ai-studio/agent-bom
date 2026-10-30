@@ -7,7 +7,7 @@ the credential-free walkthrough makes real MCP calls and records local timing.
 
 agent-bom starts with 8 scan-profile tools and 3 workflow prompts. Select `--profile graph`,
 `cloud`, `runtime`, or `audit` for specialized tasks. Read `profiles://catalog` for startup commands.
-The explicit `--profile full` catalog exposes 98 tools, 7 resources and 8 workflow prompts so agents can
+The explicit `--profile full` catalog exposes 99 tools, 7 resources and 8 workflow prompts so agents can
 choose structured playbooks instead of guessing tool order.
 Most tools are read-only. 21 write-annotated tools cover scan-history
 diff, Shield, identity, external ingest, CWPP runtime-evidence ingest, access

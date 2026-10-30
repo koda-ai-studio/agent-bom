@@ -1424,6 +1424,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Executive Brief
+         * @description Current posture, remediation priorities, ranked paths and scoped scan history.
+         */
+        get: operations["get_executive_brief_v1_brief_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/campaigns": {
         parameters: {
             query?: never;
@@ -9660,6 +9680,19 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** BriefLinks */
+        BriefLinks: {
+            /** Evidence Pack */
+            evidence_pack: string;
+            /** Exposure Paths */
+            exposure_paths: string;
+            /** Findings */
+            findings: string;
+            /** Verification Key */
+            verification_key: string;
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * BrowserExtensionsRequest
          * @description Request body for POST /v1/scan/browser-extensions.
@@ -13595,6 +13628,46 @@ export interface components {
             weights?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** ExecutiveBriefResponse */
+        ExecutiveBriefResponse: {
+            compliance: components["schemas"]["ComplianceSummaryResponse"];
+            /**
+             * Document Type
+             * @constant
+             */
+            document_type: "executive-brief";
+            /** Evidence Boundary */
+            evidence_boundary: string;
+            exposure_paths: components["schemas"]["GraphExposurePathsResponse"] | null;
+            /**
+             * Exposure Status
+             * @enum {string}
+             */
+            exposure_status: "available" | "unavailable";
+            /** Generated At */
+            generated_at: string;
+            issues: components["schemas"]["IssueCounts"];
+            links: components["schemas"]["BriefLinks"];
+            posture: components["schemas"]["PostureResponse"];
+            /** Remediation Priorities */
+            remediation_priorities: components["schemas"]["OverviewTopRisk"][];
+            /** Sample Data */
+            sample_data: boolean;
+            scan_history: components["schemas"]["TrendsResponse"];
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "v1";
+            /** Scope */
+            scope: {
+                [key: string]: unknown;
+            };
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
         };
         /** ExperimentalFeatureHealth */
         ExperimentalFeatureHealth: {
@@ -28251,6 +28324,50 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_executive_brief_v1_brief_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutiveBriefResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

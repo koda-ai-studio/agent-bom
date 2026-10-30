@@ -6,6 +6,7 @@ from typing import Annotated, Any, Callable, Literal
 
 from pydantic import Field
 
+from agent_bom.mcp_tools.brief import executive_brief_impl
 from agent_bom.mcp_tools.cross_vendor_paths import cross_vendor_paths_impl
 from agent_bom.mcp_tools.findings import finding_detail_impl, findings_query_impl
 from agent_bom.mcp_tools.graph import deploy_decision_impl, exposure_paths_impl
@@ -326,12 +327,34 @@ def _register_finding_detail(
         )
 
 
+def _register_executive_brief(
+    mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
+) -> None:
+    @mcp.tool(annotations=read_only, title="Executive Brief")
+    async def executive_brief(
+        tenant_id: Annotated[str, _TENANT] = "default",
+        limit: Annotated[int, Field(ge=1, le=25, description="Ranked exposures to include, in the dashboard queue order.")] = 5,
+    ) -> str:
+        """Return the leadership brief ``GET /v1/brief`` serves: current tenant posture, open issues,
+        canonical remediation owners and SLA sources, ranked exposure paths, technical control evidence,
+        scope-aware scan history and signed evidence-pack links. Read-only; no independent scoring.
+        """
+        return await execute_tool_async(
+            "executive_brief",
+            executive_brief_impl,
+            tenant_id=tenant_id,
+            limit=limit,
+            _truncate_response=truncate_response,
+        )
+
+
 def register_graph_agent_tools(
     mcp: Any, *, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
 ) -> None:
     """Register the graph tools whose answers match the dashboard queue and REST reads."""
     for register in (
         _register_exposure_paths,
+        _register_executive_brief,
         _register_cross_vendor_paths,
         _register_should_i_deploy,
         _register_graph_reach,

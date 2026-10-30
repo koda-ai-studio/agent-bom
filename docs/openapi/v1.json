@@ -3077,6 +3077,35 @@
         "title": "BackpressurePostureResponse",
         "type": "object"
       },
+      "BriefLinks": {
+        "additionalProperties": true,
+        "properties": {
+          "evidence_pack": {
+            "title": "Evidence Pack",
+            "type": "string"
+          },
+          "exposure_paths": {
+            "title": "Exposure Paths",
+            "type": "string"
+          },
+          "findings": {
+            "title": "Findings",
+            "type": "string"
+          },
+          "verification_key": {
+            "title": "Verification Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_pack",
+          "verification_key",
+          "findings",
+          "exposure_paths"
+        ],
+        "title": "BriefLinks",
+        "type": "object"
+      },
       "BrowserExtensionsRequest": {
         "additionalProperties": false,
         "description": "Request body for POST /v1/scan/browser-extensions.",
@@ -13384,6 +13413,101 @@
           }
         },
         "title": "ExecScoreConfigUpdateRequest",
+        "type": "object"
+      },
+      "ExecutiveBriefResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "compliance": {
+            "$ref": "#/components/schemas/ComplianceSummaryResponse"
+          },
+          "document_type": {
+            "const": "executive-brief",
+            "title": "Document Type",
+            "type": "string"
+          },
+          "evidence_boundary": {
+            "title": "Evidence Boundary",
+            "type": "string"
+          },
+          "exposure_paths": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphExposurePathsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exposure_status": {
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Exposure Status",
+            "type": "string"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "issues": {
+            "$ref": "#/components/schemas/IssueCounts"
+          },
+          "links": {
+            "$ref": "#/components/schemas/BriefLinks"
+          },
+          "posture": {
+            "$ref": "#/components/schemas/PostureResponse"
+          },
+          "remediation_priorities": {
+            "items": {
+              "$ref": "#/components/schemas/OverviewTopRisk"
+            },
+            "title": "Remediation Priorities",
+            "type": "array"
+          },
+          "sample_data": {
+            "title": "Sample Data",
+            "type": "boolean"
+          },
+          "scan_history": {
+            "$ref": "#/components/schemas/TrendsResponse"
+          },
+          "schema_version": {
+            "const": "v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "scope": {
+            "additionalProperties": true,
+            "title": "Scope",
+            "type": "object"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "document_type",
+          "tenant_id",
+          "generated_at",
+          "sample_data",
+          "posture",
+          "issues",
+          "remediation_priorities",
+          "exposure_paths",
+          "exposure_status",
+          "compliance",
+          "scan_history",
+          "scope",
+          "links",
+          "evidence_boundary"
+        ],
+        "title": "ExecutiveBriefResponse",
         "type": "object"
       },
       "ExperimentalFeatureHealth": {
@@ -50463,6 +50587,110 @@
         "summary": "Compare Baseline",
         "tags": [
           "enterprise"
+        ]
+      }
+    },
+    "/v1/brief": {
+      "get": {
+        "description": "Current posture, remediation priorities, ranked paths and scoped scan history.",
+        "operationId": "get_executive_brief_v1_brief_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 25,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutiveBriefResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Get Executive Brief",
+        "tags": [
+          "overview"
         ]
       }
     },

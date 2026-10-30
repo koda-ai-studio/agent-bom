@@ -9,6 +9,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Authenticated executive briefs through `agent-bom report brief`, `GET /v1/brief`, and the `executive_brief` MCP tool: canonical posture, remediation owners and SLA provenance, ranked exposure paths, technical control evidence, scoped scan history, and links to the signed compliance pack. Sample-data and incomplete-evidence boundaries remain explicit.
+
 ### Changed
 - One lead message on every public surface (README, docs home, PyPI and Docker Hub descriptions, package metadata, registry manifests): "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach." The README leads with the measured real-repository accuracy, shows the `db advisory affected` / `affected_assets` commands for a new CVE, keeps five badges, and points to GitHub Discussions first.
 - `docs/THREAT_MODEL.md` records the gateway/posture audit outbox (leased, fenced acknowledgements) and the MCP `scan` `project_path` filesystem boundary.
