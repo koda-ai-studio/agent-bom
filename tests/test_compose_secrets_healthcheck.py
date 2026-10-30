@@ -54,11 +54,6 @@ HEALTHCHECK_EXEMPT: dict[str, set[str]] = {
         # base platform compose and inherited at merge time.
         "api",
     },
-    "docker-compose.demo-override.yml": {
-        # Public-demo overlay on platform + hosted-poc; environment only.
-        # Healthchecks are defined once in the base platform compose.
-        "api",
-    },
     "docker-compose.product.yml": {
         # Overlay applied on top of docker-compose.platform.yml; it only sets
         # authenticated-product environment. Healthchecks are defined once in
@@ -397,7 +392,7 @@ def test_hosted_poc_overlay_keeps_api_and_ui_loopback_only() -> None:
     api_env = services["api"]["environment"]
     assert "ports" not in services["api"]
     assert "ui" not in services
-    # Hardening overlay only — anonymous demo flags live in demo-override.yml.
+    # The customer hardening overlay must never enable anonymous sample access.
     assert api_env == [
         "AGENT_BOM_SESSION_COOKIE_SECURE=1",
     ]
@@ -405,57 +400,27 @@ def test_hosted_poc_overlay_keeps_api_and_ui_loopback_only() -> None:
     assert "AGENT_BOM_DEMO_ESTATE" not in "\n".join(api_env)
 
 
-def test_demo_override_opts_into_anonymous_seeded_estate() -> None:
-    path = COMPOSE_DIR / "docker-compose.demo-override.yml"
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    api_env = (data.get("services") or {})["api"]["environment"]
-    assert api_env == [
-        "AGENT_BOM_DEMO_ESTATE=1",
-        "AGENT_BOM_ALLOW_UNAUTHENTICATED_API=1",
-        "AGENT_BOM_NO_AUTH_ROLE=viewer",
-    ]
+def test_retired_anonymous_demo_overlay_is_absent() -> None:
+    assert not (COMPOSE_DIR / "docker-compose.demo-override.yml").exists()
 
 
-def test_cloud_run_demo_opts_into_the_same_anonymous_estate_as_the_compose_overlay() -> None:
-    """Both ways of running the public demo must opt into identical flags.
-
-    The demo can run as the Cloud Run service this project deploys or as the
-    compose overlay a self-hoster layers on. If the two drift, the hosted demo
-    stops matching the estate the overlay documents.
-    """
+def test_static_demo_has_no_api_deployment_credentials() -> None:
     root = Path(__file__).resolve().parents[1]
-    workflow = yaml.safe_load((root / ".github" / "workflows" / "demo-deploy-cloudrun.yml").read_text(encoding="utf-8"))
-    deploy_step = next(step for step in workflow["jobs"]["deploy"]["steps"] if step.get("id") == "deploy")
-    cloud_run_env = [line for line in deploy_step["with"]["env_vars"].splitlines() if line.strip()]
-
-    overlay = yaml.safe_load((COMPOSE_DIR / "docker-compose.demo-override.yml").read_text(encoding="utf-8"))
-    overlay_env = (overlay.get("services") or {})["api"]["environment"]
-
-    assert cloud_run_env == overlay_env
+    workflow = (root / ".github/workflows/docs-build.yml").read_text()
+    assert "NEXT_PUBLIC_STATIC_DEMO: '1'" in workflow
+    assert "DEMO_GCP_" not in workflow
+    assert "google-github-actions/auth" not in workflow
 
 
-def test_cloud_run_demo_deploy_fails_closed_on_a_stale_or_empty_estate() -> None:
-    """Reachability is not health: assert the version served and the data seeded.
-
-    A deploy that returns 200 while serving the previous revision, or one that
-    boots the right version over an estate with no findings, is the failure this
-    automation exists to catch. Both checks must stay in the verify step.
-    """
+def test_pages_demo_verifies_sample_data_before_deployment() -> None:
     root = Path(__file__).resolve().parents[1]
-    workflow = (root / ".github" / "workflows" / "demo-deploy-cloudrun.yml").read_text(encoding="utf-8")
-
-    # Served version must match the image tag being deployed.
-    assert 'if [ "${SERVED}" != "${EXPECTED}" ]; then' in workflow
-    assert "demo serves ${SERVED}, expected ${EXPECTED}" in workflow
-
-    # Empty findings spine is a demo outage — the deploy must fail closed on it.
-    assert "/v1/findings?limit=1" in workflow
-    assert 'if [ "${TOTAL}" -lt 1 ]; then' in workflow
-    assert "its estate has zero findings" in workflow
-
-    # No AWS/SSM remnants: the demo VM is retired.
-    assert "aws ssm" not in workflow
-    assert "DEMO_INSTANCE_ID" not in workflow
+    build = yaml.safe_load((root / ".github/workflows/docs-build.yml").read_text())
+    commands = [step.get("run", "") for job in build["jobs"].values() for step in job.get("steps", [])]
+    for command in ("generate-static-demo-data.mjs", "static-demo-leak-scan.mjs", "verify-static-demo.mjs", "test:static-demo"):
+        assert any(command in run for run in commands)
+    deploy = yaml.safe_load((root / ".github/workflows/docs.yml").read_text())
+    assert deploy["jobs"]["deploy"]["needs"] == "build"
+    assert not any(step.get("continue-on-error") for job in build["jobs"].values() for step in job.get("steps", []))
 
 
 def test_hosted_preflight_gate_stays_platform_plus_hosted_poc_only() -> None:

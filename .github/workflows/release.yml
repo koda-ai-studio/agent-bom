@@ -412,14 +412,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # GHCR carried only a stale `latest`: no release ever pushed a versioned
-      # tag there. Nine OpenClaw SKILL.md files instruct users to run
-      # `ghcr.io/koda-ai-studio/agent-bom:<version>`, check_release_consistency.py
-      # asserts those pins equal the release version, and
-      # demo-deploy-cloudrun.yml pulls that exact reference to deploy the hosted
-      # demo — so a number was kept perfectly in sync with an artifact that did
-      # not exist. Publishing the same digest to both registries makes the
-      # documented command true rather than merely consistent.
+      # Publish the same digest to both registries so versioned references in
+      # the supported container and OpenClaw instructions resolve identically.
       - name: Login to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:

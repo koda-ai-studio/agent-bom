@@ -6,28 +6,22 @@ authentication, a least-privilege Postgres role, and a **real cloud account
 connected read-only**. It is the deliberate opposite of the public anonymous
 demo.
 
-!!! danger "Safety rule — never mix the two"
-    **Never connect a real cloud account to the anonymous demo.** The public
-    demo layers `deploy/docker-compose.demo-override.yml`
-    (`AGENT_BOM_DEMO_ESTATE=1` + `AGENT_BOM_ALLOW_UNAUTHENTICATED_API=1`) so
-    synthetic data is served to unauthenticated viewers. Real cloud posture,
-    findings, and graph data must only ever live behind the authenticated
-    profile described here.
+!!! danger "Keep customer evidence authenticated"
+    Real cloud posture, findings and graph data belong behind the authenticated
+    profile described here. The [public demo](https://koda-ai-studio.github.io/agent-bom/demo/)
+    is a static GitHub Pages export of labelled sample JSON; it has no live API
+    or cloud connections.
 
 ## Demo vs. authenticated product
 
-Both run from the same `deploy/docker-compose.platform.yml` base; the
-**overlay stack** differs.
-
-| Setting | Public anonymous demo | Authenticated product / secure hosted POC |
+| Setting | Public read-only demo | Authenticated product / secure hosted POC |
 |---|---|---|
-| Overlays | `hosted-poc.yml` + **`demo-override.yml`** | `product.yml` (or `hosted-poc.yml` alone — auth required) |
-| `AGENT_BOM_DEMO_ESTATE` | `1` (synthetic estate seeded) | `0` (never seeded) |
-| `AGENT_BOM_ALLOW_UNAUTHENTICATED_API` | `1` via **demo-override only** | unset / `0` (auth required) |
-| `AGENT_BOM_NO_AUTH_ROLE` | `viewer` (demo-override) | unset (no implicit role) |
-| Auth | none — anyone with the URL | API key and/or OIDC/SAML SSO |
-| Postgres role | falls back to admin owner | **requires** `agent_bom_app` (DML-only, NOSUPERUSER/NOBYPASSRLS) |
-| Data | curated fake graph | real connected cloud posture / CIS / graph |
+| Hosting | GitHub Pages static files | Your infrastructure and `docker-compose.platform.yml` |
+| Overlay | None | `product.yml` or the `hosted-poc.yml` hardening overlay |
+| Auth | Public sample files | API key and/or OIDC/SAML SSO |
+| Cloud access | None | Your authorized read-only connection identity |
+| Persistence | Bundled sample JSON | Postgres with a DML-only `agent_bom_app` role |
+| Data | Labelled sample evidence | Your connected inventory, findings and graphs |
 
 The product overlay is minimal on purpose: it flips the demo guards off,
 forces the non-superuser app role via `:?` (fail-closed) env expansion, and

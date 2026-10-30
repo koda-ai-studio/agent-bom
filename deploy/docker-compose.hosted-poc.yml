@@ -12,8 +12,7 @@
 #     -f deploy/docker-compose.hosted-poc.yml \
 #     up -d --build
 #
-# Auth stays required. Public anonymous demo flags live only in
-# deploy/docker-compose.demo-override.yml (layered by the demo redeploy path).
+# Auth stays required. The public sample demo is a static GitHub Pages site.
 # The hosted_poc_preflight.py security gate forbids
 # AGENT_BOM_ALLOW_UNAUTHENTICATED_API in this overlay.
 #

@@ -40,7 +40,8 @@ REQUIRED_MARKERS = {
         "name: Create GitHub Release",
     ),
     ".github/workflows/ci.yml": ("name: Dogfood GitHub Action",),
-    ".github/workflows/demo-deploy-cloudrun.yml": ("name: Deploy hosted demo to Cloud Run",),
+    ".github/workflows/docs.yml": ("actions/deploy-pages@",),
+    ".github/workflows/docs-build.yml": ("static-demo-leak-scan.mjs", "verify-static-demo.mjs", "npm run test:static-demo"),
     "scripts/check_surface_freshness.py": ('"surface": "Glama"', '"surface": "Smithery"'),
 }
 

@@ -56,7 +56,6 @@ class TestDiscovery:
             "deploy/docker-compose.runtime-example.yml",
             "deploy/docker-compose.hosted-poc.yml",
             "deploy/docker-compose.product.yml",
-            "deploy/docker-compose.demo-override.yml",
             "deploy/supabase/clickhouse/docker-compose.yml",
             "examples/docker-compose-monitoring.yml",
         }

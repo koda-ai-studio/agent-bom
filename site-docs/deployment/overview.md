@@ -149,7 +149,7 @@ release testing, not that the files are broken.
 | **Preview** | Air-gapped image bundle | `scripts/release/build-airgap-image-bundle.sh` | See [Air-Gapped Image Bundle](airgapped-image-bundle.md). |
 | **Preview** | CloudFormation serverless self-scan | `deploy/cloudformation/agent-bom-scan.yaml` | CodeBuild scan that writes reports to S3, without a control plane. |
 | **Reference** | Raw Kubernetes manifests | `deploy/k8s/` | Examples (CronJob, DaemonSet, sidecar). Prefer the Helm chart for real installs. |
-| **Reference** | Dev and example Compose files | `deploy/docker-compose.fullstack.yml`, `docker-compose.runtime-example.yml`, `docker-compose.demo-override.yml`, `docker-compose.yml` (deprecated) | Local development, a sidecar example and the anonymous demo. Not for customer deployments. |
+| **Reference** | Dev and example Compose files | `deploy/docker-compose.fullstack.yml`, `docker-compose.runtime-example.yml`, `docker-compose.yml` (deprecated) | Local development and a sidecar example. Not for customer deployments. |
 | **Community** | Fly.io, Render, Procfile hosts | `deploy/fly.toml`, `deploy/render.yaml`, `deploy/Procfile` | Run the MCP server alone (SSE or streamable HTTP), not the control plane. Config is syntax-checked in tests; no live deploy runs in CI. |
 | **Community** | Railway | `railway.json` | MCP SSE server only. The release workflow `deploy-mcp-sse.yml` deploys it only when the repository variable `DEPLOY_TARGET` is `railway`. |
 
