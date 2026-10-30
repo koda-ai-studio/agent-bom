@@ -26,6 +26,7 @@ from typing import Any
 HEAVY_READ_PATHS = frozenset(
     {
         "/v1/overview",
+        "/v1/brief",
         "/v1/posture",
         "/v1/posture/counts",
         "/v1/findings",

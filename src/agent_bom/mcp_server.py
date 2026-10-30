@@ -1,12 +1,11 @@
 """agent-bom MCP Server — expose security scanning as MCP tools.
-
 Start with:
     agent-bom mcp server                          # stdio (for Claude Desktop, Cursor, etc.)
     agent-bom mcp server --transport sse          # SSE transport (for remote clients)
     agent-bom mcp server --transport streamable-http
 
 Default: 8 focused tools; select a task profile with --profile.
-Full profile Tools (98):
+Full profile Tools (99):
     scan                — Full discovery → scan → output pipeline
     check               — Check a specific package for CVEs before installing
     intel_lookup        — Look up a CVE, GHSA, or OSV advisory from local threat intel
@@ -15,6 +14,7 @@ Full profile Tools (98):
     intel_daily_brief   — Return a local analyst threat brief from governed intel sources
     youcom_search       — Search You.com for current web/news context when YDC_API_KEY is configured
     blast_radius        — Look up blast radius for a specific CVE
+    executive_brief     — Current tenant posture, remediation and signed evidence-pack links
     exposure_paths      — Return ranked ExposurePath JSON for headless agents and MCP clients
     graph_correlate     — Create an immutable correlation from exact snapshot receipts
     graph_correlation_status — Read correlation state, receipts, and analysis bounds

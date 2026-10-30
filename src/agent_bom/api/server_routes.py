@@ -11,6 +11,7 @@ from agent_bom.api.routes.agent_manifest import router as _agent_manifest_router
 from agent_bom.api.routes.ai_scans import router as _ai_scans_router
 from agent_bom.api.routes.assets import router as _assets_router
 from agent_bom.api.routes.blueprints import router as _blueprints_router
+from agent_bom.api.routes.brief import router as _brief_router
 from agent_bom.api.routes.campaigns import router as _campaigns_router
 from agent_bom.api.routes.cloud import router as _cloud_router
 from agent_bom.api.routes.cloud_connections import router as _cloud_connections_router
@@ -67,6 +68,7 @@ def register_domain_routes(application: FastAPI) -> None:
 
     for _router in (
         _adoption_router,
+        _brief_router,
         _assets_router,
         _agent_manifest_router,
         _agent_lifecycle_router,

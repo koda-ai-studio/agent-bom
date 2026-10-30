@@ -15,6 +15,7 @@ from agent_bom.api.read_models._base import (
     SeverityCounts,
     documented,
 )
+from agent_bom.api.read_models.brief import ExecutiveBriefResponse
 from agent_bom.api.read_models.estate import (
     ActivitySource,
     ActivityTimelineResponse,
@@ -177,6 +178,7 @@ __all__ = [
     "ProxyStatusResponse",
     "ReadModel",
     "ReadResponse",
+    "ExecutiveBriefResponse",
     "RecentProxyAlert",
     "RegistryMeta",
     "RegistryPackage",

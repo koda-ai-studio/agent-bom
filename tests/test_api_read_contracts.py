@@ -19,6 +19,7 @@ from agent_bom.api import read_models
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
 TYPED_READS: dict[str, type[read_models.ReadResponse]] = {
+    "/v1/brief": read_models.ExecutiveBriefResponse,
     "/v1/activity": read_models.ActivityTimelineResponse,
     "/v1/agents": read_models.AgentsResponse,
     "/v1/auth/me": read_models.AuthMeResponse,

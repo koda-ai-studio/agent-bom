@@ -8,6 +8,7 @@ from agent_bom.mcp_tools.catalog import registered_mcp_tool_decorator_names as r
 from agent_bom.mcp_tools.metadata_routes import attach_metadata_routes as attach_metadata_routes
 from agent_bom.mcp_tools.server_payloads import build_health_payload as build_health_payload
 from agent_bom.mcp_tools.server_payloads import build_root_metadata as build_root_metadata
+from agent_bom.mcp_tools.server_payloads import registry_server_count
 from agent_bom.mcp_tools.tool_capabilities import _TOOL_CAPABILITY_CLASSES as _TOOL_CAPABILITY_CLASSES
 
 # Immutable release metadata: older releases without this field expose the full catalog.
@@ -62,6 +63,11 @@ _SERVER_CARD_TOOLS = [
         "annotations": {"readOnlyHint": True},
     },
     {"name": "blast_radius", "description": "Look up blast radius for a specific CVE", "annotations": {"readOnlyHint": True}},
+    {
+        "name": "executive_brief",
+        "description": "Current tenant posture, remediation priorities, ranked paths, scope-aware history and signed evidence-pack links",
+        "annotations": {"readOnlyHint": True},
+    },
     {
         "name": "exposure_paths",
         "description": "Return ranked ExposurePath JSON for headless security agents and MCP clients",
@@ -560,19 +566,8 @@ _SERVER_CARD_RESOURCES = [
 
 def build_server_card(*, auth_required: bool = False, profile: str = "full", oauth: bool = False) -> dict[str, Any]:
     from agent_bom import __version__
-    from agent_bom.mcp_server_helpers import get_registry_data
 
-    try:
-        registry_servers = int(get_registry_data().get("_total_servers") or 0)
-    except Exception:
-        registry_servers = 0
-    if registry_servers <= 0:
-        # Fall back to counting the bundled map when the header is missing.
-        try:
-            servers = get_registry_data().get("servers") or {}
-            registry_servers = len(servers) if isinstance(servers, dict) else 0
-        except Exception:
-            registry_servers = 0
+    registry_servers = registry_server_count()
 
     card: dict[str, Any] = {
         "name": "agent-bom",

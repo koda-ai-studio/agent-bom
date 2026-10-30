@@ -1,5 +1,8 @@
 """The remediation queue follows current tenant/target findings, not the newest job."""
 
+from datetime import datetime, timezone
+
+import pytest
 from starlette.testclient import TestClient
 
 from agent_bom.api.server import app
@@ -7,6 +10,20 @@ from tests._clock_helpers import approvable_expiry
 from tests.api.test_push_replacement_scope import pushed
 from tests.api.test_scan_job_sla_history import scan_store  # noqa: F401
 from tests.auth_helpers import proxy_headers
+
+
+@pytest.fixture(autouse=True)
+def fixed_read_clock(monkeypatch):
+    """Keep August-October history fixtures inside the tested 90-day window."""
+    from agent_bom.api import time_window
+
+    class ReadClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            instant = datetime(2026, 10, 1, tzinfo=timezone.utc)
+            return instant.astimezone(tz) if tz is not None else instant.replace(tzinfo=None)
+
+    monkeypatch.setattr(time_window, "datetime", ReadClock)
 
 
 def _plan(tenant="history-tenant"):
@@ -232,3 +249,14 @@ def test_current_remediation_api_carries_held_on_server_credential_names(scan_st
     assert item["server_credential_count"] == 2
     assert "hunter2" not in repr(body)
     assert _plan("another-tenant")["remediation_plan"] == []
+
+
+def test_remediation_default_window_keeps_recent_and_excludes_old_scans(scan_store):  # noqa: F811
+    old, recent = pushed(6, scope="v1:" + "a" * 64), pushed(8, scope="v1:" + "b" * 64)
+    for row, name in ((old, "old-lib"), (recent, "recent-lib")):
+        row.result["findings"][0].update(package=name, package_version="1.0.0", fixed_version="2.0.0")
+        scan_store.put(row)
+    body = _plan()
+    assert [row["package"] for row in body["remediation_plan"]] == ["recent-lib"]
+    assert body["window"]["days"] == 90
+    assert body["window"]["since"] == "2026-07-03T00:00:00+00:00"
