@@ -162,25 +162,19 @@ def test_non_required_heavy_jobs_are_path_gated() -> None:
 def test_enterprise_demo_contract_is_gated_and_packaged() -> None:
     workflow_text = CI_WORKFLOW.read_text(encoding="utf-8")
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
-    deploy_workflow = (ROOT / ".github" / "workflows" / "demo-deploy-cloudrun.yml").read_text(encoding="utf-8")
-
+    build = (ROOT / ".github/workflows/docs-build.yml").read_text()
     assert "scripts/check_enterprise_demo_surfaces.py" in workflow_text
     assert "scripts/check_enterprise_demo_surfaces.py" in makefile
     assert "agent_bom/demo_estate/data/enterprise_observations.jsonl" in workflow_text
-    assert "/v1/demo-estate/story" in deploy_workflow
-    assert "/v1/demo-estate/status" in deploy_workflow
-    assert 'payload["graph_alignment"] == "aligned"' in deploy_workflow
-    assert "rate_limited_after_page_2" in deploy_workflow
+    assert "generate-static-demo-data.mjs" in build
+    assert "verify-static-demo.mjs" in build
+    assert "test:static-demo" in build
 
 
-def test_demo_deploy_new_release_supersedes_stale_approval_wait() -> None:
-    """An obsolete protected-environment wait must not block a newer release."""
-    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "demo-deploy-cloudrun.yml").read_text(encoding="utf-8"))
-
-    assert workflow["concurrency"] == {
-        "group": "demo-deploy-cloudrun",
-        "cancel-in-progress": True,
-    }
+def test_pages_deployment_waits_for_its_verified_build() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/docs.yml").read_text())
+    assert workflow["jobs"]["deploy"]["needs"] == "build"
+    assert workflow["jobs"]["deploy"]["concurrency"] == {"group": "pages", "cancel-in-progress": False}
 
 
 def test_dependency_security_skips_only_proven_docs_only_changes() -> None:

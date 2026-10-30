@@ -5,13 +5,9 @@ name: Deployment Freshness
 # the Smithery catalog matches released tool names and input schemas. Runs
 # daily and on-demand. Opens an issue if stale or misconfigured.
 #
-# No hosted-demo probe here. The public demo IS ours (Cloud Run, see
-# demo-deploy-cloudrun.yml), but its freshness is gated at deploy time: that
-# workflow asserts the served version matches the image it just pushed and that
-# the seeded estate is non-empty, and it fails the deploy otherwise. Its URL is
-# also not a repo-level configured surface, so there is nothing for this daily
-# probe to resolve. If the demo ever needs continuous monitoring rather than
-# deploy-time verification, add it here rather than assuming it is covered.
+# The public sample demo is static GitHub Pages content. docs-build.yml runs
+# its fixture, leak and browser checks; docs.yml owns its Pages deployment.
+# This workflow continues to verify the separate authenticated MCP service.
 
 on:
   schedule:

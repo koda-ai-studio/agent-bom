@@ -17,7 +17,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
-DEMO_WORKFLOW = ROOT / ".github" / "workflows" / "demo-deploy-cloudrun.yml"
 
 # `owner/name` for a documented reference, ignoring the tag.
 _IMAGE_REF = re.compile(r"(?P<repo>(?:ghcr\.io/)?[a-z0-9][a-z0-9._-]*/agent-bom(?:-[a-z]+)?):(?P<tag>[^\s\"'`]+)")
@@ -43,15 +42,12 @@ def _published_repositories() -> set[str]:
     return published
 
 
-def test_release_publishes_the_image_the_demo_deploy_pulls() -> None:
+def test_release_publishes_the_ui_image_the_self_host_profile_pulls() -> None:
     published = _published_repositories()
-    demo = _expand(DEMO_WORKFLOW.read_text(encoding="utf-8"))
-    match = re.search(r"^\s*image:\s*(\S+?):\$\{\{", demo, re.M)
-    assert match, "demo deploy no longer names an image to pull"
-    pulled = match.group(1)
-    assert pulled in published, (
-        f"the hosted demo deploys {pulled!r}, which the release workflow never pushes. Published: {sorted(published)}"
-    )
+    platform = (ROOT / "deploy/docker-compose.platform.yml").read_text()
+    match = re.search(r"image:\s*(agentbom/agent-bom-ui):", platform)
+    assert match, "the self-host profile must name a published UI image"
+    assert match.group(1) in published
 
 
 def test_documented_image_references_name_a_published_registry() -> None:

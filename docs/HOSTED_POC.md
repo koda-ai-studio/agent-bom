@@ -1,139 +1,26 @@
 # Hosted deployment runbook
 
-Two unrelated deployments live in this file. Read the one you need:
-
 | Lane | Who runs it | What it is |
 |---|---|---|
-| [Public demo](#public-demo-cloud-run) | This project | A stateless, anonymous, seeded estate on Cloud Run. Deployed by CI. Nothing for you to stand up. |
-| [Self-host](#self-host-your-own-instance) | You | A gated instance on your own infrastructure that holds real connections and state in Postgres. |
-| [Snowflake Native App](#snowflake-native-app-lane) | Your buyer | agent-bom running inside the customer's own Snowflake account. |
+| [Public demo](https://koda-ai-studio.github.io/agent-bom/demo/) | This project | A read-only static export on GitHub Pages with labelled sample data. |
+| [Self-host](#self-host-your-own-instance) | You | An authenticated instance on your infrastructure with persistent Postgres and real connections. |
+| [Snowflake Native App](#snowflake-native-app-lane) | You | agent-bom inside your Snowflake account. |
 
-They differ in the property that matters: the demo keeps **nothing** between
-boots, so it can be a scale-to-zero container. A self-hosted instance holds real
-connections, so it needs a persistent Postgres and a real secret story.
+## Public demo (GitHub Pages)
 
-## Public demo (Cloud Run)
+Open the [read-only demo](https://koda-ai-studio.github.io/agent-bom/demo/).
+It serves bundled sample JSON and has no live scanner API, cloud credentials,
+sign-in, or writable connections. To inspect your own environment, use the
+[quick start](https://koda-ai-studio.github.io/agent-bom/getting-started/quickstart/)
+or the self-hosted deployment below.
 
-The public demo runs on **Google Cloud Run**, deployed by
-[`.github/workflows/demo-deploy-cloudrun.yml`](../.github/workflows/demo-deploy-cloudrun.yml).
-It serves the seeded estate anonymously at viewer role — there is no login, no
-Postgres, and no VM.
-
-The service is reachable at its Cloud Run URL
-(`https://<service>-<project-number>.<region>.run.app`); the exact URL is linked
-from the README and printed in each deploy's job summary. **No custom domain is
-currently mapped** — see [Custom domain](#custom-domain-optional).
-
-### How a deploy happens
-
-1. The **Release** workflow finishes successfully. This workflow triggers on
-   `workflow_run` completion rather than on the release event directly, because
-   a direct release trigger races the still-running release and would deploy
-   twice. Manual `workflow_dispatch` is also supported, with an optional
-   `image_ref` to pin a specific tag.
-2. The run pauses on the protected `demo` environment for owner approval. The
-   repository is public and the workflow has no `pull_request` trigger, so a
-   fork can neither start it nor reach the cloud credentials.
-3. The job authenticates to Google Cloud with **Workload Identity Federation
-   over OIDC** (`google-github-actions/auth`). No service-account key is stored
-   in this repository.
-4. It deploys `ghcr.io/<owner>/agent-bom:<tag>` to the Cloud Run service. The
-   published image is the CLI (`ENTRYPOINT agent-bom`, default `CMD --help`), so
-   the workflow overrides the args to `api --host 0.0.0.0 --port 8080`, matching
-   how `docker-compose.platform.yml` starts it. `8080` is the port Cloud Run
-   routes to by default.
-5. It verifies the result, and **fails closed** on either of the two failure
-   modes that a plain `200` would hide:
-   - `/health` must report the version that was just deployed, so a deploy that
-     silently keeps serving the previous revision is caught.
-   - `/v1/findings?limit=1` must report a non-empty total, so a demo that boots
-     at the right version over an unseeded estate is caught. Every visitor
-     landing on empty tables is an outage, not a healthy deploy.
-
-A `concurrency` group (`demo-deploy-cloudrun`, `cancel-in-progress: false`)
-serializes deploys, so two releases can never race on the same service.
-
-### Configuration
-
-All settings live on the protected `demo` environment. The workflow stays inert
-until they exist — an unconfigured fork or clone logs the required settings and
-exits successfully rather than failing.
-
-| Setting | Purpose |
-| --- | --- |
-| `vars.DEMO_GCP_PROJECT` | GCP project id hosting the demo |
-| `vars.DEMO_CLOUD_RUN_SERVICE` | Cloud Run service name (e.g. `agent-bom-demo`) |
-| `secrets.DEMO_GCP_WIF_PROVIDER` | Workload Identity provider resource name |
-| `secrets.DEMO_GCP_SERVICE_ACCOUNT` | Service account the workflow impersonates |
-| `vars.DEMO_GCP_REGION` | Optional; defaults to `us-central1` |
-| `vars.DEMO_MIN_INSTANCES` | Optional; defaults to `0` (scale to zero) |
-| `vars.DEMO_MAX_INSTANCES` | Optional; defaults to `2` (hard ceiling on concurrent instances) |
-
-The demo container opts into the anonymous seeded estate with the same three
-environment variables the self-host overlay `deploy/docker-compose.demo-override.yml`
-sets, so the two ways of running the demo cannot drift apart:
-
-```
-AGENT_BOM_DEMO_ESTATE=1
-AGENT_BOM_ALLOW_UNAUTHENTICATED_API=1
-AGENT_BOM_NO_AUTH_ROLE=viewer
-```
-
-### Why not a VM
-
-The demo is a stateless container: it seeds its estate in-process from
-`agent_bom.demo_estate`, bakes no advisory database, and keeps nothing worth
-preserving between boots — the curated scan job is TTL-wiped and reseeded by the
-API's own cleanup loop. An always-on VM therefore bills around the clock to
-serve traffic that arrives in bursts. `--min-instances=0` scales to zero, so an
-idle demo costs nothing.
-
-**The tradeoff.** The first visitor after an idle period pays a cold start
-(image pull, boot, demo seed). If that becomes unacceptable, set
-`vars.DEMO_MIN_INSTANCES=1`; it is wired into the workflow and costs roughly one
-always-on small instance.
-
-### Cost posture
-
-Cloud Run bills CPU only while a request is executing, so a demo sitting at
-`--min-instances=0` costs **nothing** when nobody is looking at it. The free
-tier is 2M requests, 400,000 vCPU-seconds and 1M GiB-seconds per month, which a
-demo does not realistically exceed on organic traffic.
-
-The exposure is therefore not steady-state hosting — it is a crawler hammering
-the URL. Three settings bound that, and all are in the workflow:
-`--max-instances` caps how much can ever run at once, `--concurrency=80` packs
-more requests onto each instance so load costs fewer instances rather than more,
-and `--timeout=60` bounds what any single abusive request can spend.
-
-Set a GCP **budget alert** on the project as the backstop; it is free, and it is
-the only mechanism that tells you about a surprise before the invoice does.
-
-### Custom domain (optional)
-
-The demo is served from its Cloud Run URL. Mapping `demo.agent-bom.com` to it is
-an **optional future step**, not an outstanding fault — nothing depends on the
-custom domain today, and the README links the Cloud Run URL directly.
-
-If you do map it, note that Google documents three paths and they are not
-equivalent:
-
-- **Global external Application Load Balancer** — Google's recommended,
-  generally-available option, and the right choice for anything load-bearing.
-- **Cloud Run domain mappings** — a one-command path
-  (`gcloud beta run domain-mappings create --service SERVICE --domain DOMAIN`),
-  but it is in **preview**, explicitly not production-ready, and available in
-  only a subset of regions. `us-central1` (this deploy's default) is one of
-  them.
-- **Firebase Hosting** — a third option Google documents.
-
-Either way, ownership of the domain must first be verified through Google Search
-Console unless it was bought through Google. See
-[Cloud Run: mapping custom domains](https://cloud.google.com/run/docs/mapping-custom-domains)
-for current details; the preview status and the supported-region list both move.
-
-Whatever is chosen, point DNS at the new front door — **not** at any prior
-origin. The demo has no non-Cloud-Run origin.
+[`.github/workflows/docs-build.yml`](../.github/workflows/docs-build.yml) builds
+the static dashboard, generates sample fixtures, checks for accidental data
+exposure, and runs browser checks with no API behind the site.
+[`.github/workflows/docs.yml`](../.github/workflows/docs.yml) deploys the verified
+site to GitHub Pages. The public demo is no longer deployed to Cloud Run or a VM.
+Release-image smoke tests and customer deployment checks remain separate from
+this static sample journey.
 
 ## Self-host: your own instance
 
@@ -384,10 +271,8 @@ Keep the front door as the only public listener. The Postgres container remains
 internal and `deploy/docker-compose.hosted-poc.yml` binds the API/UI ports to
 loopback, so they are reachable only from the proxy on the host.
 
-An anonymous seeded demo (seeded estate + viewer without login) is **not** this
-overlay. That layers `deploy/docker-compose.demo-override.yml` on top of
-platform + hosted-poc, and it is deliberately excluded from the preflight
-security gate — never combine it with a gated instance holding real connections.
+The public demo is the static GitHub Pages site described above. Never enable
+anonymous API access on an instance holding real connections or customer data.
 
 ### Proof checklist
 

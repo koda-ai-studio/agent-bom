@@ -14,6 +14,6 @@
     {"surface": "sbom", "phase": "post_publish", "verification": "Download and inspect the CycloneDX release SBOM.", "evidence_paths": [".github/workflows/release.yml", "docs/RELEASE_VERIFICATION.md"]},
     {"surface": "signatures", "phase": "post_publish", "verification": "Verify Sigstore bundles for Python and container artifacts.", "evidence_paths": [".github/workflows/release.yml", "docs/RELEASE_VERIFICATION.md"]},
     {"surface": "provenance", "phase": "post_publish", "verification": "Verify GitHub attestations and exported SLSA provenance bundles.", "evidence_paths": [".github/workflows/release.yml", "docs/RELEASE_VERIFICATION.md"]},
-    {"surface": "live_demo", "phase": "post_publish", "verification": "Deploy the exact release image and exercise the seeded incident journey in browser.", "evidence_paths": [".github/workflows/demo-deploy-cloudrun.yml", "scripts/deploy/hosted_poc_preflight.py"]}
+    {"surface": "live_demo", "phase": "post_publish", "verification": "Build and browser-verify the static sample journey without an API; verify its GitHub Pages deployment separately from released container images.", "evidence_paths": [".github/workflows/docs.yml", ".github/workflows/docs-build.yml", "ui/scripts/verify-static-demo.mjs"]}
   ]
 }

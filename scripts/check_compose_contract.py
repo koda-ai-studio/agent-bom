@@ -53,7 +53,6 @@ COMPOSE_GLOBS = (
 OVERLAY_BASES: dict[str, tuple[str, ...]] = {
     "deploy/docker-compose.hosted-poc.yml": ("deploy/docker-compose.platform.yml",),
     "deploy/docker-compose.product.yml": ("deploy/docker-compose.platform.yml",),
-    "deploy/docker-compose.demo-override.yml": ("deploy/docker-compose.platform.yml",),
 }
 
 # Bind-mount sources that are generated rather than committed. `make secrets`

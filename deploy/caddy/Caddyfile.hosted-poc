@@ -2,7 +2,7 @@
 	email {$ACME_EMAIL}
 }
 
-{$AGENT_BOM_HOSTED_DOMAIN:demo.agent-bom.com} {
+{$AGENT_BOM_HOSTED_DOMAIN:agent-bom.example.com} {
 	encode zstd gzip
 
 	header {

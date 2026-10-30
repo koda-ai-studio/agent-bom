@@ -121,7 +121,7 @@ repos:
         entry: python3 scripts/check_release_evidence_matrix.py
         language: system
         pass_filenames: false
-        files: ^(docs/release/release-evidence-matrix\.json|docs/RELEASE_VERIFICATION\.md|\.github/workflows/(ci|release|demo-deploy-cloudrun)\.yml|action\.yml|Dockerfile|ui/Dockerfile|deploy/helm/agent-bom/|deploy/docker/Dockerfile\.collector|integrations/(mcp-registry|glama|smithery)|scripts/(check_release_evidence_matrix|check_surface_freshness|verify_release_wheel)\.py)
+        files: ^(docs/release/release-evidence-matrix\.json|docs/RELEASE_VERIFICATION\.md|\.github/workflows/(ci|release|docs|docs-build)\.yml|action\.yml|Dockerfile|ui/Dockerfile|deploy/helm/agent-bom/|deploy/docker/Dockerfile\.collector|integrations/(mcp-registry|glama|smithery)|scripts/(check_release_evidence_matrix|check_surface_freshness|verify_release_wheel)\.py)
 
   # Blocks a push that would fail CI's lint, version-check or smoke jobs.
   # Run `make ci-local` (all gating jobs, full test shards) before requesting review.
