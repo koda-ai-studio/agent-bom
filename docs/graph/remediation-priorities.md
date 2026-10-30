@@ -43,6 +43,28 @@ collection remain possible. `remediation_verified` is always `false`, and
 make the approved change, then collect fresh evidence and use the verification
 workflow before claiming a fix.
 
+## Explain a CVE's workflow and potential impact
+
+Select a CVE node in Investigation, then **Open CVE impact workspace** in its
+detail panel. Choose the affected component when more than one recorded
+occurrence is linked. The workspace reads that exact tenant, scan, finding and
+component; a different snapshot revision or identity is withheld.
+
+The view separates the affected component, its recorded hosting workflow, and
+connected assets that need review. Advisory entry vector, required privileges,
+user interaction and confidentiality/integrity/availability impact remain
+advisory properties. Local exploitability is not established by these fields.
+Inspect each connected asset's directed relationship receipts and evidence kind,
+then open it in the same snapshot for further investigation. Sharing an
+environment does not establish a route from a vulnerable component to another
+asset, and a credential held by a server is not automatically exposed by a CVE.
+
+The existing consequence assessment remains available for explicit assumptions
+and action-specific authority review. Missing deployment, entry-point, identity
+or control evidence is a collection task; it does not imply safety or successful
+exploitation. Review recorded fix guidance, rescan the same scope, and compare
+evidence before claiming remediation.
+
 ## Scope, bounds and failures
 
 The assessment uses the selected fix-first view's filters before card
