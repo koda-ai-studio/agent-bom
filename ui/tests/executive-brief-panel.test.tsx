@@ -76,3 +76,9 @@ it("downloads the same scoped preview without fetching a different summary", asy
   expect(anchor).toBeDefined();
   click.mockRestore(); created.mockRestore();
 });
+it("does not describe an incomplete posture as having zero findings", async () => {
+  apiMock.getExecutiveBrief.mockResolvedValue({ ...brief, posture: { ...brief.posture, no_data: true } });
+  render(<ExecutiveBriefPanel />);
+  expect(await screen.findByText(/Posture evidence is incomplete/)).toBeVisible();
+  expect(screen.queryByText(/Zero returned issues/)).toBeNull();
+});

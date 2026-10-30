@@ -19,8 +19,8 @@ import { get, put, getBlob, DEMO_STORY_TIMEOUT_MS } from "./api-transport";
 
 export const postureApi = {
   /** Authenticated current-tenant summary; each source retains its own scope. */
-  getExecutiveBrief: () => get<import("./executive-brief").ExecutiveBrief>("/v1/brief"),
-  getComplianceVerificationKey: () => get<import("./executive-brief").BriefVerificationKey>("/v1/compliance/verification-key"),
+  getExecutiveBrief: (signal?: AbortSignal) => get<import("./executive-brief").ExecutiveBrief>("/v1/brief", { force: true, signal }),
+  getComplianceVerificationKey: () => get<import("./executive-brief").BriefVerificationKey>("/v1/compliance/verification-key", { force: true }),
 
 
   /** Full posture grade + dimensions */

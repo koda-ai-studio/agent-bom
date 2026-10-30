@@ -16,9 +16,10 @@ function BriefContent() {
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     let active = true;
-    void api.getExecutiveBrief().then(result => { if (active) setBrief(result); }, () => { if (active) setError(true); })
+    const controller = new AbortController();
+    void api.getExecutiveBrief(controller.signal).then(result => { if (active) setBrief(result); }, () => { if (active) setError(true); })
       .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    return () => { active = false; controller.abort(); };
   }, [revision]);
   function refresh() { setBrief(null); setError(false); setLoading(true); setRevision(value => value + 1); }
   return <div className="space-y-5">
@@ -41,7 +42,7 @@ function BriefContent() {
         <p className="break-words text-xs text-ink-secondary">Tenant: {brief.tenant_id} · Generated: {brief.generated_at}</p>
         <h2 className="text-xl font-semibold">{brief.posture.summary}</h2>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">{[["Open issues", brief.issues.total], ["Critical", brief.issues.critical], ["High", brief.issues.high], ["Known exploited", brief.issues.kev ?? "Unknown"]].map(([label, value]) => <div key={label}><dt className="text-xs text-ink-secondary">{label}</dt><dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd></div>)}</dl>
-        {brief.posture.no_data ? <p className="text-sm">No posture data. Zero returned issues does not establish a clean estate.</p> : null}
+        {brief.posture.no_data ? <p className="text-sm">Posture evidence is incomplete. Returned issue counts do not establish complete coverage.</p> : null}
         <p className="text-sm leading-6 text-ink-secondary">{brief.evidence_boundary}</p>
       </Card>
       <BriefPriorities brief={brief} />
