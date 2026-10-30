@@ -15,12 +15,13 @@ import type {
   EnterpriseDemoStory,
   DemoEstateStatus,
 } from "./api-types";
+import type { components } from "./api-schema.generated";
 import { get, put, getBlob, DEMO_STORY_TIMEOUT_MS } from "./api-transport";
 
 export const postureApi = {
   /** Authenticated current-tenant summary; each source retains its own scope. */
-  getExecutiveBrief: (signal?: AbortSignal) => get<import("./executive-brief").ExecutiveBrief>("/v1/brief", { noStore: true, ...(signal ? { signal } : {}) }),
-  getComplianceVerificationKey: () => get<import("./executive-brief").BriefVerificationKey>("/v1/compliance/verification-key", { noStore: true }),
+  getExecutiveBrief: (signal?: AbortSignal) => get<components["schemas"]["ExecutiveBriefResponse"]>("/v1/brief", { noStore: true, ...(signal ? { signal } : {}) }),
+  getComplianceVerificationKey: () => get<components["schemas"]["ComplianceVerificationKeyResponse"]>("/v1/compliance/verification-key", { noStore: true }),
 
 
   /** Full posture grade + dimensions */
