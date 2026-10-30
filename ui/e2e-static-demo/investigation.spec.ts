@@ -159,3 +159,22 @@ for (const theme of ["dark", "light"]) {
     await page.screenshot({ path: testInfo.outputPath(`findings-drilldown-${theme}.png`), fullPage: true });
   });
 }
+
+for (const theme of ["dark", "light"]) for (const width of [1440, 390]) {
+  test(`component findings keep evidence and next steps readable ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await page.goto(url("/findings?asset=pkg%3Anext&scan=scan-proof-ai-platform"), { waitUntil: "networkidle" });
+    const findings = page.getByRole("list", { name: "Component finding records" });
+    const context = page.getByRole("complementary", { name: "Component context and next steps" });
+    await expect(findings).toContainText("CVE-2025-29927");
+    await expect(findings).toContainText("Why this is linked");
+    await expect(context.getByRole("link", { name: "Review snapshot remediation" })).toHaveAttribute("href", `${BASE_PATH}/remediation?scan=scan-proof-ai-platform`);
+    await expect(context).toContainText("Source collection coverage remains unknown");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const mainBox = (await findings.boundingBox())!, sideBox = (await context.boundingBox())!;
+    if (width > 1000) expect(sideBox.x).toBeGreaterThan(mainBox.x + mainBox.width);
+    else expect(sideBox.y).toBeGreaterThan(mainBox.y);
+    await page.screenshot({ path: testInfo.outputPath(`component-findings-${theme}-${width}.png`), fullPage: true });
+  });
+}

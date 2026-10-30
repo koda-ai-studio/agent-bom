@@ -61,3 +61,20 @@ it("reports missing endpoints rather than claiming clean coverage", async () => 
   expect(await screen.findByText(/Finding coverage is incomplete/)).toBeVisible();
   expect(screen.getByText(/does not establish a clean component/)).toBeVisible();
 });
+
+it("shows useful recorded context and next steps without inferring a blast radius", async () => {
+  const response = page();
+  response.nodes[0]!.attributes = { summary: "Recorded advisory summary", fixed_version: "2.0.1" };
+  response.nodes.push({ id: "server:one", label: "Build service", entity_type: "server", attributes: {} } as GraphIncidentPage["nodes"][number]);
+  response.edges.push({ id: "e2", source: "server:one", target: "aws:one", relationship: "depends_on", direction: "directed" } as GraphIncidentPage["edges"][number]);
+  fetchPage.mockResolvedValue(response);
+  render(<ComponentFindings assetId="aws:one" scanId="snapshot-one" />);
+  expect(await screen.findByText("Recorded advisory summary")).toBeVisible();
+  expect(screen.getByText("2.0.1")).toBeVisible();
+  expect(screen.getByText("shared-library is recorded as affected by Linked vulnerability.")).toBeVisible();
+  expect(screen.getByRole("complementary", { name: "Component context and next steps" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "Build service" })).toHaveAttribute("href", "/security-graph?lens=estate&node=server%3Aone&scan=snapshot-one");
+  expect(screen.getByRole("link", { name: "Review snapshot remediation" })).toHaveAttribute("href", "/remediation?scan=snapshot-one");
+  expect(screen.getByText(/Source collection coverage remains unknown/)).toBeVisible();
+  expect(screen.queryByText(/blast radius: 1/i)).not.toBeInTheDocument();
+});
