@@ -224,6 +224,8 @@ jobs:
         run: uv sync --frozen
 
       - name: Verify bundled MITRE ATLAS catalog freshness
+        env:
+          AGENT_BOM_ATLAS_CATALOG_MODE: bundled
         run: |
           set -euo pipefail
           if ! uv run agent-bom db framework-status --framework atlas --stale-after-days 180 --fail-on-stale --format json; then

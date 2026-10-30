@@ -2,13 +2,13 @@
   "atlas_version": "5.6.0",
   "catalog_id": "mitre_atlas",
   "catalog_type": "mitre_atlas",
-  "fetched_at": 0.0,
-  "normalized_sha256": "cc8e775e438f98ab40358b9db6f33d1ab124887ab4d3dddec59d3f05fded8cfd",
+  "fetched_at": 1793377325.794105,
+  "normalized_sha256": "097cdb64632873c19eac56c5412bc99779ea52a0123275d48e06ffe2bc51a25c",
   "schema_version": 1,
-  "source": "bundled",
+  "source": "synced",
   "sources": {
     "atlas_yaml": {
-      "sha256": "8a5693df51135721796607b8f29cba8ed33d745d5592ed80efbaaab0fba978f2",
+      "sha256": "c9c23971d0db07e2782423d795a20e78d5c2c9bcdc78fc67e24530657daaec41",
       "url": "https://raw.githubusercontent.com/mitre-atlas/atlas-data/main/dist/ATLAS.yaml"
     }
   },
@@ -837,7 +837,7 @@
     },
     "AML.T0054": {
       "attck_reference": "",
-      "description": "Adversaries may induce a large language model (LLM) to ignore, circumvent, or override its safety/alignment behaviors and/or guardails to elicit outputs the model is intended to withhold. Once jailbroken, the LLM may be used in unintended ways by the adversary. Jailbreaks may be achieved via adversa",
+      "description": "Adversaries may induce a large language model (LLM) to ignore, circumvent, or override its safety/alignment behaviors and/or guardrails to elicit outputs the model is intended to withhold. Once jailbroken, the LLM may be used in unintended ways by the adversary. Jailbreaks may be achieved via advers",
       "is_subtechnique": false,
       "name": "LLM Jailbreak",
       "tactics": [
@@ -1482,5 +1482,5 @@
       "tactics": []
     }
   },
-  "updated_at": "2026-05-02"
+  "updated_at": "2026-10-30T16:22:05.794962+00:00"
 }

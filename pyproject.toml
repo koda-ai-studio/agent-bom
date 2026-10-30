@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-bom"
-version = "0.112.0"
+version = "0.112.1"
 description = "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach."
 readme = "docs/registry/PYPI_README.md"
 license = "Apache-2.0"

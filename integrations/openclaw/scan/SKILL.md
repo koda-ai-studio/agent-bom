@@ -5,7 +5,7 @@ description: >-
   image, or SBOM, or inspect a specified CVE. Discover local MCP clients only
   when the user explicitly requests that discovery. Ask for the target when
   a request such as "verify" or "is this safe" does not identify one.
-version: 0.112.0
+version: 0.112.1
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Install via pipx or pip. Native container image
