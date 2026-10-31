@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from agent_bom.finding import Finding
 
 # Reachability cell colors, keyed by the state from ``reachability_label``.
-_REACH_COLOR = {"reachable": "#f87171", "unreachable": "#64748b", "unknown": "#475569"}
+_REACH_COLOR = {"reachable": "#f87171", "unreachable": "#94a3b8", "unknown": "#94a3b8"}
 
 
 def _pager_controls(table_id: str, total: int, page_size: int = _PAGE_SIZE) -> str:
@@ -74,14 +74,24 @@ def _vuln_table(
     if not findings:
         return '<div class="empty-state">&#x2705; No vulnerabilities found in scanned packages.</div>'
 
-    has_missing = any(not finding.cvss_score or not finding.description for finding in findings)
+    has_missing = any(finding.cvss_score is None or finding.epss_score is None or not finding.description for finding in findings)
     hint = ""
     if has_missing:
         hint = (
             '<div class="hint-box">'
-            "&#x1f4a1; <strong>Some entries are missing CVSS scores or descriptions.</strong> "
-            "Run with <code>--enrich</code> to fetch full NVD metadata, CVSS 3.x vectors, EPSS, and CISA KEV status."
+            "<strong>Evidence availability</strong> &middot; Missing scores are not zero. "
+            "Expand a finding for advisory scores, catalog status and recorded context. "
+            "Run with <code>--enrich</code> to request NVD, EPSS and CISA KEV enrichment."
             "</div>"
+        )
+    freshness = report.vuln_data_freshness
+    if freshness and freshness.get("stale"):
+        age = freshness.get("age_days")
+        age_text = f" ({_esc(age)} days old)" if age is not None else ""
+        hint += (
+            '<div class="hint-box"><strong>Recorded vulnerability data is stale</strong>'
+            f"{age_text}. Catalog status reflects the saved evidence, not a current check. "
+            "Refresh with <code>agent-bom db update</code>, then rescan.</div>"
         )
 
     sorted_findings = sorted(
@@ -93,7 +103,7 @@ def _vuln_table(
     ai_assessments = {assessment.finding_id: assessment for assessment in getattr(report, "ai_finding_assessments", []) or []}
     rows = [_vuln_row(idx, finding, ai_assessments) for idx, finding in enumerate(sorted_findings)]
 
-    headers = ["Vuln ID", "Severity", "Package", "CVSS", "EPSS", "KEV", "Reach", "Fix", "Agent / asset context", "Exposed Creds", "Summary"]
+    headers = ["Finding / package", "Severity", "Fixed version", "Evidence"]
 
     filter_bar = (
         '<div class="vuln-filter-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;'
@@ -120,7 +130,7 @@ def _vuln_table(
     return (
         hint
         + filter_bar
-        + '<div class="table-wrap"><table class="data-table sortable paginated" id="vulnTable">'
+        + '<div class="table-wrap"><table class="data-table sortable paginated finding-overview" id="vulnTable">'
         + "<thead><tr>"
         + "".join(f'<th data-col="{i}">{h} <span class="sort-arrow"></span></th>' for i, h in enumerate(headers))
         + "</tr></thead>"
@@ -388,7 +398,7 @@ def _vuln_metric_cells(finding: Finding) -> tuple[str, str, str, str, str, str, 
     sev = severity_value(finding)
     color = _SEV_COLOR.get(sev, "#6b7280")
     cvss_bar = ""
-    if finding.cvss_score:
+    if finding.cvss_score is not None:
         pct = int(finding.cvss_score * 10)
         cvss_bar = (
             f'<div style="display:flex;align-items:center;gap:6px">'
@@ -397,8 +407,8 @@ def _vuln_metric_cells(finding: Finding) -> tuple[str, str, str, str, str, str, 
             f'<strong style="color:{color}">{finding.cvss_score:.1f}</strong></div>'
         )
     else:
-        cvss_bar = '<span style="color:#334155">&mdash;</span>'
-    epss = f"{finding.epss_score:.1%}" if finding.epss_score else '<span style="color:#334155">&mdash;</span>'
+        cvss_bar = '<span class="evidence-unavailable">No score recorded</span>'
+    epss = f"{finding.epss_score:.1%}" if finding.epss_score is not None else '<span class="evidence-unavailable">No score recorded</span>'
     exploit_level = exploit_likelihood_value(finding)
     kev_due = evidence(finding, "kev_due_date", "") if finding.is_kev else ""
     kev_due_attr = f' data-kev-due="{_esc(kev_due)}"' if kev_due else ""
@@ -416,13 +426,15 @@ def _vuln_metric_cells(finding: Finding) -> tuple[str, str, str, str, str, str, 
     elif exploit_level == "public_exploit":
         kev = '<span class="badge-exploit-public" title="EPSS percentile ≥ 80 — public exploit code">PoC</span>'
     else:
-        kev = '<span style="color:#334155">&mdash;</span>'
+        kev = '<span class="evidence-unavailable">No exploitation signal recorded</span>'
     fix = (
         f'<code style="color:#4ade80">{_esc(finding.fixed_version)}</code>'
         if finding.fixed_version
-        else '<span style="color:#475569">No fix</span>'
+        else '<span class="evidence-unavailable">No fix recorded</span>'
     )
     reach_label, reach_state = reachability_label(finding)
+    if reach_state == "unknown":
+        reach_label = "No reachability verdict"
     reach_color = _REACH_COLOR.get(reach_state, "#475569")
     reach_title = {
         "reachable": "Vulnerable code is reached from an entrypoint",
@@ -437,7 +449,7 @@ def _vuln_metric_cells(finding: Finding) -> tuple[str, str, str, str, str, str, 
 
 
 def _vuln_summary(finding: Finding, ai_assessments: dict[str, Any]) -> str:
-    summary_text = (finding.description or "")[:90]
+    summary_text = finding.description or ""
     summary = _esc(summary_text) if summary_text else '<span style="color:#475569;font-style:italic">Run --enrich</span>'
     workflow_parts: list[str] = []
     if finding.owner:
@@ -469,11 +481,8 @@ def _vuln_summary(finding: Finding, ai_assessments: dict[str, Any]) -> str:
 def _vuln_row(idx: int, finding: Finding, ai_assessments: dict[str, Any]) -> str:
     sev, cvss_bar, epss, exploit_level, kev_due_attr, kev, fix, reach_state, reach_cell = _vuln_metric_cells(finding)
     summary = _vuln_summary(finding, ai_assessments)
-    agents_s = ", ".join(_esc(name) for name in finding.affected_agents) or "<span style='color:#334155'>&mdash;</span>"
-    creds_s = (
-        " ".join(f'<code style="color:#fbbf24">{_esc(c)}</code>' for c in finding.exposed_credentials)
-        or "<span style='color:#334155'>&mdash;</span>"
-    )
+    agents_s = ", ".join(_esc(name) for name in finding.affected_agents) or "None recorded"
+    creds_s = " ".join(f'<code style="color:#fbbf24">{_esc(c)}</code>' for c in finding.exposed_credentials) or "None recorded"
     vendor_sev = finding.vendor_severity
     vendor_hint = ""
     if vendor_sev and vendor_sev.lower() != sev:
@@ -491,6 +500,31 @@ def _vuln_row(idx: int, finding: Finding, ai_assessments: dict[str, Any]) -> str
     vuln_id = finding.cve_id or finding.id
     pkg_name = package_name(finding)
     pkg_version = package_version(finding)
+    kev_status = (
+        "Listed"
+        if finding.is_kev
+        else {
+            "not_listed": "Not listed in recorded catalog",
+            "unknown": "Unavailable",
+            "listed": "Listed",
+        }.get(evidence(finding, "kev_status", None), "Not checked")
+    )
+    details = (
+        '<details class="finding-evidence"><summary>View evidence</summary><dl class="finding-evidence-grid">'
+        + "".join(
+            f"<div><dt>{label}</dt><dd>{value}</dd></div>"
+            for label, value in (
+                ("CVSS score", cvss_bar),
+                ("EPSS probability", epss),
+                ("CISA KEV catalog", kev_status),
+                ("Exploitation signal", kev),
+                ("Code reachability", reach_cell),
+                ("Agent / asset context", agents_s),
+                ("Exposed credentials", creds_s),
+            )
+        )
+        + f'</dl><div class="finding-description">{summary}</div></details>'
+    )
     pg_cls = " pg-hidden" if idx >= _PAGE_SIZE else ""
     return (
         f'<tr class="pg-row{pg_cls}" data-severity="{sev}" data-kev="{"1" if finding.is_kev else "0"}"{kev_due_attr} '
@@ -498,18 +532,12 @@ def _vuln_row(idx: int, finding: Finding, ai_assessments: dict[str, Any]) -> str
         f'data-reachability="{reach_state}" '
         f'data-match-tier="{_esc(tier or "")}" '
         f'data-cvss="{finding.cvss_score if finding.cvss_score else 0}">'
-        f'<td><code class="vuln-id">{_esc(vuln_id)}</code>{tier_hint}{runtime_hint}</td>'
+        f'<td><code class="vuln-id">{_esc(vuln_id)}</code>'
+        f'<div class="finding-package">{_esc(pkg_name)}<span>@{_esc(pkg_version)}</span></div>'
+        f"{tier_hint}{runtime_hint}</td>"
         f"<td>{_finding_sev_badge(finding)}{vendor_hint}</td>"
-        f'<td><strong style="color:#e2e8f0">{_esc(pkg_name)}</strong>'
-        f'<span style="color:#475569;font-size:.78rem">@{_esc(pkg_version)}</span></td>'
-        f"<td>{cvss_bar}</td>"
-        f'<td style="text-align:center;font-size:.82rem;color:#94a3b8">{epss}</td>'
-        f'<td style="text-align:center">{kev}</td>'
-        f'<td style="text-align:center">{reach_cell}</td>'
         f"<td>{fix}</td>"
-        f'<td style="font-size:.78rem;color:#94a3b8">{agents_s}</td>'
-        f'<td style="font-size:.78rem">{creds_s}</td>'
-        f'<td style="font-size:.75rem;color:#64748b;max-width:180px">{summary}</td>'
+        f'<td class="finding-evidence-cell">{details}</td>'
         f"</tr>"
     )
 

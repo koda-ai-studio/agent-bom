@@ -54,6 +54,7 @@ SCALE_REPORT_SCRIPT = f"""<script>
       if (row.dataset.detailsReady) return;
       row.dataset.detailsReady = 'true';
       Array.from(row.cells).forEach(function(cell, index) {{ cell.setAttribute('data-label', headings[index] || 'Evidence'); }});
+      if (table.classList.contains('finding-overview')) return;
       var button = document.createElement('button');
       button.className = 'row-detail-toggle'; button.textContent = 'Show evidence';
       button.setAttribute('aria-expanded', 'false');

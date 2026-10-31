@@ -29,6 +29,28 @@ _REPORT_LAYOUT_CSS = """
     .report-disclosure>summary{font-weight:600;font-size:.9rem;color:#e2e8f0;cursor:pointer}
     .report-disclosure[open]>summary{margin-bottom:18px}
     .report-disclosure>.sec-title{display:none}
+    .finding-overview,.finding-overview thead,.finding-overview tbody{display:block;width:100%}
+    .finding-overview tr{display:grid;grid-template-columns:minmax(0,1fr) 110px 150px 145px;align-items:start}
+    .finding-overview th,.finding-overview td{min-width:0;overflow-wrap:anywhere;white-space:normal}
+    .finding-overview th{text-align:left}
+    .finding-overview td{border-bottom:0}
+    .finding-overview tbody tr{border-bottom:1px solid #334155}
+    .finding-overview tbody tr:hover{background:#1e293b}
+    .finding-overview tbody tr:hover td{background:transparent}
+    .finding-overview td:first-child>br{display:none}
+    .finding-overview .match-tier,.finding-overview .workload-runtime-evidence{display:block;margin-top:4px}
+    .finding-overview .vuln-id{font-size:.88rem;color:#bfdbfe;word-break:normal}
+    .finding-package{margin-top:6px;color:#e2e8f0;font-size:.85rem;font-weight:600}
+    .finding-package span{color:#94a3b8;font-weight:400}
+    .finding-overview tr:has(.finding-evidence[open]) .finding-evidence-cell{grid-column:1/-1}
+    .finding-evidence>summary{cursor:pointer;color:#6ee7b7;font-size:.8rem;white-space:nowrap}
+    .finding-evidence[open]>summary{margin-bottom:16px}
+    .finding-evidence-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:16px 24px;padding:18px;background:#0f172a;border:1px solid #334155;border-radius:8px}
+    .finding-evidence-grid div{min-width:0}
+    .finding-evidence-grid dt{font-size:.7rem;color:#94a3b8;margin-bottom:6px}
+    .finding-evidence-grid dd{margin:0;font-size:.83rem;color:#e2e8f0;overflow-wrap:anywhere}
+    .finding-description{font-size:.83rem;line-height:1.7;color:#cbd5e1;max-width:90ch;max-height:20rem;overflow:auto;margin-top:16px;white-space:pre-wrap}
+    .evidence-unavailable{color:#94a3b8;font-size:.8rem}
     :focus-visible{outline:2px solid #38bdf8;outline-offset:3px}
 
     .graph-filter-bar{position:relative!important;top:auto!important;left:auto!important;flex-wrap:wrap;padding-right:50px!important}
@@ -41,6 +63,8 @@ _REPORT_LAYOUT_CSS = """
       .paginated td{display:block;max-width:none!important;width:100%;padding:8px!important;overflow-wrap:anywhere;white-space:normal!important}
       .paginated td::before{content:attr(data-label);display:block;font-size:.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
       .paginated tr:not(.row-expanded) td:nth-child(n+4){display:none}
+      .paginated.finding-overview tr:not(.row-expanded) td.finding-evidence-cell{display:block}
+      .finding-overview .finding-evidence-cell::before{display:none}
       .row-detail-toggle{display:block;margin-top:8px;background:transparent;border:1px solid #475569;border-radius:6px;color:#a7f3d0;padding:5px 10px;font:inherit;font-size:.75rem;cursor:pointer}
       .graph-relationships li{grid-template-columns:minmax(0,1fr);gap:4px}
       .cy-minimap{display:none}
@@ -91,6 +115,10 @@ _REPORT_PRINT_CSS = """\
       .data-table.paginated tr,.data-table.paginated tr.pg-hidden{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border:1px solid #cbd5e1;border-radius:8px;padding:10px;margin:0 0 14px;break-inside:avoid}
       .paginated td{display:block;min-width:0;max-width:none!important;width:auto;padding:4px;overflow-wrap:anywhere;white-space:normal!important;font-size:10px}
       .paginated td::before{content:attr(data-label);display:block;color:#475569;font-size:8px;font-weight:600;margin-bottom:3px}
+      .finding-overview .finding-evidence-cell{grid-column:1/-1}
+      .finding-evidence-grid{grid-template-columns:repeat(3,minmax(0,1fr));background:#fff;border-color:#cbd5e1;padding:10px;gap:10px}
+      .finding-evidence-grid dt,.finding-evidence-grid dd,.finding-evidence>summary{color:#1e293b}
+      .finding-description{max-height:none;overflow:visible;font-size:10px}
       .path-rank,.path-meta span{background:#f1f5f9;border-color:#e2e8f0}
       .path-title{color:#0f172a}
       .path-summary{color:#475569}
