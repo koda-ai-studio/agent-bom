@@ -240,7 +240,7 @@ function NodeCard({
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
       </div>}
-      {shownSubtitle && <div title={typeof shownSubtitle === "string" ? shownSubtitle : undefined} className={`${data.nodeType === "agent" ? "" : "graph-node-context "}mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary`}>{shownSubtitle}</div>}
+      {shownSubtitle && <div style={data.nodeType === "agent" ? { fontSize: "var(--graph-node-meta-size, 12px)", lineHeight: 1.3 } : undefined} title={typeof shownSubtitle === "string" ? shownSubtitle : undefined} className={`${data.nodeType === "agent" ? "" : "graph-node-context "}mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary`}>{shownSubtitle}</div>}
       {footer && <div className={`${data.nodeType === "vulnerability" || data.nodeType === "misconfiguration" ? "" : "graph-node-context "}mt-1 flex max-w-full flex-wrap items-baseline justify-center gap-x-2`} title={data.countScope === "loaded_graph" ? graphCountDescription(data) : undefined}>
         {footer}
       </div>}

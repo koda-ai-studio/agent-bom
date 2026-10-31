@@ -179,6 +179,12 @@ test("larger investigation captions stay inside ordinary layout cards", async ({
   await expect(page.locator(".react-flow__node")).toHaveCount(17);
   await expect.poll(() => page.locator("[data-graph-entity]").evaluateAll(cards =>
     Math.max(...cards.map(card => parseFloat(getComputedStyle(card).width))))).toBeLessThanOrEqual(240);
+  const agent = page.locator('.react-flow__node[data-id="agent"]');
+  await expect.poll(async () => {
+    const hostSize = await agent.getByText("Host not recorded", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+    const kindSize = await agent.getByText("Agent kind not recorded", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+    return hostSize / kindSize;
+  }, { message: "Host context uses the same zoom-readable type size as the agent kind" }).toBeGreaterThanOrEqual(0.95);
 });
 
 for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
