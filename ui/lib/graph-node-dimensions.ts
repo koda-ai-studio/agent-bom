@@ -77,7 +77,8 @@ export const COMPACT_GRAPH_MIN_ZOOM = 0.75;
 export function compactInvestigationLayout(explicitContext: boolean, nodeCount: number, boundedCaptions = false): DagreLrOptions | undefined {
   if (!explicitContext || nodeCount < 1 || nodeCount > 16) return undefined;
   const width = boundedCaptions ? 360 : LINEAGE_NODE_WIDTH;
-  const height = boundedCaptions ? 260 : LINEAGE_NODE_HEIGHT;
+  // Agent kind can wrap on phones; the host row remains visible at overview zoom.
+  const height = boundedCaptions ? 360 : LINEAGE_NODE_HEIGHT;
   return readableLineageDagreLr({
     nodeWidth: width,
     nodeHeight: height,

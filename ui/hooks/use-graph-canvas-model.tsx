@@ -6,7 +6,8 @@ import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/gr
 import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
 import { completeDirectedHopCount, visibleGraphFocus, pathRelationshipIds } from "@/lib/security-graph-focus";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type Node } from "@xyflow/react";
+import { useStore, type FitViewOptions, type Node } from "@xyflow/react";
+import { CONTROLS_OVERLAY, fitPaddingAroundOverlay } from "@/lib/graph-viewport-fit";
 import { withFindingContext } from "@/lib/finding-investigation-href";
 import { ASSET_DRIFT_GRAPH_SCOPE_PARAM, createCanvasLensGraphFilters, createFocusedGraphFilters, graphScopePresetForFilters } from "@/components/lineage-filter";
 import { type LineageNodeData, type LineageNodeType } from "@/components/lineage-nodes";
@@ -33,6 +34,7 @@ import type { GraphPageData } from "@/hooks/use-graph-page-data";
 
 /** The canvas model: flow, aggregation, layout, emphasis, camera and presentation for the loaded graph. */
 export function useGraphCanvasModel(page: GraphPageData) {
+  const canvasWidth = useStore(state => state.width), canvasHeight = useStore(state => state.height);
   const {
     reactFlow, graphViewport, narrowViewport, canvasLayoutAspect, session, authLoading, canvasPage, setCanvasPage,
     snapshots, selectedScanId, graphData, selectedScenarioId, scenarioExpanded, scenarioState, scenarioComparison,
@@ -625,18 +627,19 @@ export function useGraphCanvasModel(page: GraphPageData) {
   // React Flow shares this prop with its queued imperative fit operation.
   // Hover/LOD node objects must not overwrite a user's pending Fit all request
   // with an equivalent-but-new initial anchor options object.
-  const initialViewportOptions = useMemo<ReturnType<typeof graphInitialFitViewOptions>>(
+  const initialViewportOptions = useMemo<FitViewOptions>(
     () => {
       const options = initialAnchorId
         ? graphInitialFitViewOptions([{ id: initialAnchorId, data: {} }], viewportOptions, initialAnchorId)
         : viewportOptions;
       // Scenario views share width with the decision panel and app navigation.
-      // Allow the complete proposed context to fit shorter desktop canvases.
-      if (selectedScenarioId) return { ...options, padding: Math.max(0.2, options.padding), minZoom: 0.05, maxZoom: 1 };
+      // Reserve the actual controls; a speculative caption-growth margin shrinks
+      // short canvases below legible zoom. Manual fits remeasure captions below.
+      if (selectedScenarioId) return { ...options, padding: fitPaddingAroundOverlay(Math.max(0.2, options.padding), { width: canvasWidth, height: canvasHeight }, CONTROLS_OVERLAY.horizontal, 0), minZoom: 0.05, maxZoom: 1 };
       if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: 0.05, maxZoom: displayNodes.length <= 6 ? 1.25 : 1 };
       return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
     },
-    [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport, displayNodes.length, rollupNavigationActive],
+    [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport, displayNodes.length, rollupNavigationActive, canvasWidth, canvasHeight],
   );
   const showMiniMap = useMemo(
     () =>
@@ -683,11 +686,11 @@ export function useGraphCanvasModel(page: GraphPageData) {
   const fitVisible = useCallback(() => {
     setManualCameraScope(cameraScope);
     const generation = ++fitGeneration.current;
-    const options = { ...viewportOptions, padding: Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding) };
+    const options = selectedScenarioId ? { ...initialViewportOptions, nodes: reactFlow.getNodes() } : { ...viewportOptions, padding: Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding) };
     const fit = () => {
       if (fitGeneration.current !== generation) return;
       void reactFlow.fitView({ ...options, duration: 240 }).then(() => {
-        if (!investigationContext) return;
+        if (!investigationContext && !selectedScenarioId) return;
         // Caption sizes change with zoom. Include their final measured extent,
         // but abandon the settling pass after a scope change or user movement.
         requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -698,7 +701,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     // Let React Flow apply manual-camera props before enqueueing the fit;
     // changing its fitView prop otherwise clears the pending imperative fit.
     requestAnimationFrame(() => requestAnimationFrame(fit));
-  }, [reactFlow, viewportOptions, investigationContext, cameraScope]);
+  }, [reactFlow, viewportOptions, investigationContext, cameraScope, selectedScenarioId, initialViewportOptions]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
       await reactFlow.fitView({ ...viewportOptions, minZoom: 0.16, maxZoom: 1, padding: 0.04 });

@@ -154,8 +154,10 @@ const SCENARIOS = {
   },
 };
 
-for (const [name, scenario] of Object.entries(SCENARIOS)) for (const width of [1440, 390]) {
-  test(`${name} reads without false routes at ${width}`, async ({ page }, info) => {
+for (const [name, scenario] of Object.entries(SCENARIOS)) for (const width of [1440, 390])
+for (const theme of name === "agents sharing an MCP server" && width === 390 ? ["dark", "light"] : ["dark"]) {
+  test(`${name} reads without false routes at ${width}${theme === "light" ? " light" : ""}`, async ({ page }, info) => {
+    await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
     await fixture(page, scenario.nodes, scenario.edges);
     await openAgentContext(page, width);
     await expect.poll(() => page.locator(".react-flow__node").count()).toBeGreaterThan(1);

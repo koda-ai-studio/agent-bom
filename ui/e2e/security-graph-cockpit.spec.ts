@@ -601,7 +601,7 @@ for (const proof of [
     expect(canvasBox).not.toBeNull();
     expect(canvasBox!.height).toBeGreaterThanOrEqual(240);
     expect(canvasBox!.y + canvasBox!.height).toBeLessThanOrEqual(proof.height + 16);
-    await expect.poll(() => canvas.evaluate(flow => {
+    const framingIssues = () => canvas.evaluate(flow => {
       const frame = flow.getBoundingClientRect();
       const controls = flow.querySelector(".react-flow__controls")!.getBoundingClientRect();
       const zoom = new DOMMatrixReadOnly(getComputedStyle(flow.querySelector(".react-flow__viewport")!).transform).a;
@@ -616,7 +616,17 @@ for (const proof of [
         for (const el of text) if (parseFloat(getComputedStyle(el).fontSize) * zoom < 12 - 0.01) issues.push(`Small text: ${el.textContent} (${parseFloat(getComputedStyle(el).fontSize) * zoom}px)`);
         return issues;
       });
-    })).toEqual([]);
+    });
+    await expect.poll(framingIssues).toEqual([]);
+    await page.locator(".react-flow__controls-fitview").click();
+    let previousTransform = "", stableSamples = 0;
+    await expect.poll(async () => {
+      const transform = await canvas.locator(".react-flow__viewport").evaluate(el => getComputedStyle(el).transform);
+      stableSamples = transform === previousTransform ? stableSamples + 1 : 0;
+      previousTransform = transform;
+      return stableSamples;
+    }, { intervals: [100] }).toBeGreaterThanOrEqual(4);
+    await expect.poll(framingIssues).toEqual([]);
     const labelCollisions = await visibleGraphLabelCollisions(page);
     expect(labelCollisions).toEqual([]);
     await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
