@@ -514,8 +514,7 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
       plus ``CAN_ACCESS`` edges to the account's resources, so the
       effective-permissions overlay resolves ``HAS_PERMISSION``.
 
-    Explicit partial inventory retains collected assets; failed or unavailable inventory
-    is a no-op. Scan coverage governs reconciliation; source tags remain unchanged.
+    Partial inventory retains collected assets and source tags; failed or unavailable payloads are a no-op.
     """
     if not isinstance(inventory, dict) or inventory.get("status") not in ("ok", "partial"):
         return
