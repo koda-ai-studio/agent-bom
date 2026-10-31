@@ -15,6 +15,7 @@ jobs:
   release:
     name: Verify published release source
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     outputs:
