@@ -5,7 +5,7 @@
 
 Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
-7 tables.
+8 tables.
 
 ```mermaid
 erDiagram
@@ -36,10 +36,15 @@ erDiagram
   sync_meta {
     text source PK
   }
+  vuln_aliases {
+    text vuln_id PK
+    text alias_id PK
+  }
   vulns {
     text id PK
   }
   vulns ||--o{ affected : "vuln_id"
+  vulns ||..o{ vuln_aliases : "logical vuln_id"
 ```
 
 ## Relations
@@ -47,6 +52,7 @@ erDiagram
 | Parent | Child | Column | Kind |
 |---|---|---|---|
 | `vulns` | `affected` | `vuln_id → vulns.id` | declared FK |
+| `vulns` | `vuln_aliases` | `vuln_id → vulns.id` | logical |
 
 ## Shared key columns without an owning table
 
@@ -66,4 +72,5 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `kev_entries` | SQLite | 5 |  | persistent |
 | `osv_cache` | Postgres, SQLite | 3 |  | persistent |
 | `sync_meta` | SQLite | 4 |  | persistent |
+| `vuln_aliases` | SQLite | 2 |  | persistent |
 | `vulns` | SQLite | 12 |  | persistent |

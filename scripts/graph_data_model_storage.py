@@ -111,7 +111,7 @@ _DOMAIN_SPECS: tuple[tuple[str, str, str, str], ...] = (
     (
         "vulndb",
         "Vulnerability intelligence (local database)",
-        "vulns affected cpe_matches epss_scores kev_entries sync_meta osv_cache",
+        "vulns vuln_aliases affected cpe_matches epss_scores kev_entries sync_meta osv_cache",
         "",
     ),
     (

@@ -7,7 +7,7 @@ Every table agent-bom creates, read from the DDL in the code: the Postgres contr
 
 ## Overview
 
-161 tables in 10 domains. 18 declared foreign keys; 36 logical joins derived from shared key-column names. Arrows count relations that cross domains.
+162 tables in 10 domains. 18 declared foreign keys; 37 logical joins derived from shared key-column names. Arrows count relations that cross domains.
 
 ```mermaid
 flowchart LR
@@ -19,7 +19,7 @@ flowchart LR
   runtime["Runtime, gateway and traces<br/>18 tables"]
   compliance["Compliance, audit and evidence<br/>10 tables"]
   connectors["Connectors, delivery and schedules<br/>16 tables"]
-  vulndb["Vulnerability intelligence (local database)<br/>7 tables"]
+  vulndb["Vulnerability intelligence (local database)<br/>8 tables"]
   other["Schema metadata and maintenance<br/>9 tables"]
   runtime -- "1 FK" --> compliance
   scans -- "2 FK" --> compliance
@@ -41,7 +41,7 @@ flowchart LR
 | Runtime, gateway and traces | 18 | [storage-erd/runtime.md](storage-erd/runtime.md) |
 | Compliance, audit and evidence | 10 | [storage-erd/compliance.md](storage-erd/compliance.md) |
 | Connectors, delivery and schedules | 16 | [storage-erd/connectors.md](storage-erd/connectors.md) |
-| Vulnerability intelligence (local database) | 7 | [storage-erd/vulndb.md](storage-erd/vulndb.md) |
+| Vulnerability intelligence (local database) | 8 | [storage-erd/vulndb.md](storage-erd/vulndb.md) |
 | Schema metadata and maintenance | 9 | [storage-erd/other.md](storage-erd/other.md) |
 
 ## How relations are derived
@@ -229,6 +229,7 @@ Excluded:
 | `trace_collection_checkpoints` | [Runtime, gateway and traces](storage-erd/runtime.md) | Postgres | `tenant_id`, `connection_id` | `tenant_id`, `connection_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/trace_collection/schema.py` |
 | `trace_collection_receipts` | [Runtime, gateway and traces](storage-erd/runtime.md) | Postgres | `tenant_id`, `connection_id`, `observation_id` | `tenant_id`, `connection_id`, `observation_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/trace_collection/schema.py` |
 | `trend_history` | [Findings, triage and VEX](storage-erd/findings.md) | Postgres, SQLite | `id` | `id`, `team_id`, `scan_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql`, `api/postgres_audit.py`, `baseline.py` |
+| `vuln_aliases` | [Vulnerability intelligence (local database)](storage-erd/vulndb.md) | SQLite | `vuln_id`, `alias_id` | `vuln_id`, `alias_id` | **none** | persistent | `db/advisory_aliases.py` |
 | `vulnerability_scans` | [Findings, triage and VEX](storage-erd/findings.md) | ClickHouse | `tenant_id`, `scan_id`, `finding_key` | `scan_id`, `tenant_id`, `finding_key` | `tenant_id` | persistent | `deploy/supabase/clickhouse/init.sql`, `cloud/clickhouse.py` |
 | `vulns` | [Vulnerability intelligence (local database)](storage-erd/vulndb.md) | SQLite | `id` | `id` | **none** | persistent | `db/schema.py` |
 | `webhook_subscriptions` | [Connectors, delivery and schedules](storage-erd/connectors.md) | Postgres, SQLite | `tenant_id`, `subscription_id` | `tenant_id`, `subscription_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/storage/registry_schema.py`, `api/webhook_store.py` |
@@ -274,6 +275,7 @@ Rows in these tables are not scoped by `tenant_id` / `team_id`. Many are global 
 | `schema_version` | Schema metadata and maintenance | SQLite |
 | `strong_members` | Graph nodes, edges, snapshots and attack paths | SQLite |
 | `sync_meta` | Vulnerability intelligence (local database) | SQLite |
+| `vuln_aliases` | Vulnerability intelligence (local database) | SQLite |
 | `vulns` | Vulnerability intelligence (local database) | SQLite |
 
 ### Tenant column outside the primary key
