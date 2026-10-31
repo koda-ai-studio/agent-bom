@@ -33,6 +33,21 @@ def test_mcp_images_cannot_overwrite_the_api_release_tags():
     assert any("/agent-bom-mcp:" in tag for tag in _tags(jobs["publish-stdio"]))
 
 
+def test_mcp_resolver_uses_the_default_branch():
+    jobs = _workflow("publish-mcp.yml")["jobs"]
+    resolver_checkout = next(step for step in jobs["release"]["steps"] if str(step.get("uses", "")).startswith("actions/checkout@"))
+    assert resolver_checkout["with"].get("ref") == "${{ github.event.repository.default_branch }}"
+
+
+@pytest.mark.parametrize("name", ["publish-stdio", "publish-sse"])
+def test_mcp_publishers_keep_release_source_inside_buildkit(name):
+    steps = _workflow("publish-mcp.yml")["jobs"][name]["steps"]
+    assert not any(str(step.get("uses", "")).startswith(("actions/checkout@", "./")) for step in steps)
+    assert not any("run" in step for step in steps), "release source must not execute on the publishing runner"
+    build = next(step for step in steps if str(step.get("uses", "")).startswith("docker/build-push-action@"))
+    assert not ({"secrets", "secret-envs", "secret-files", "ssh", "allow"} & build["with"].keys())
+
+
 def test_both_mcp_images_build_the_resolved_release_commit():
     workflow = _workflow("publish-mcp.yml")
     assert workflow["concurrency"]["cancel-in-progress"] is False
@@ -41,10 +56,8 @@ def test_both_mcp_images_build_the_resolved_release_commit():
         job = jobs[name]
         assert job["needs"] == "release"
         assert "needs.release.outputs.publish_current == 'true'" in job["if"]
-        checkout = next(step for step in job["steps"] if str(step.get("uses", "")).startswith("actions/checkout@"))
-        assert checkout["with"]["ref"] == "${{ needs.release.outputs.release_sha }}"
-        assert checkout["with"]["persist-credentials"] is False
         build = next(step for step in job["steps"] if str(step.get("uses", "")).startswith("docker/build-push-action@"))
+        assert build["with"]["context"] == "https://github.com/${{ github.repository }}.git#${{ needs.release.outputs.release_sha }}"
         assert "VERSION=${{ needs.release.outputs.version }}" in build["with"]["build-args"]
         assert "org.opencontainers.image.revision=${{ needs.release.outputs.release_sha }}" in build["with"]["labels"]
 
