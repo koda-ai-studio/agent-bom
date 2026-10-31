@@ -15,6 +15,7 @@ import asyncio
 import json
 import os
 
+import pytest
 from starlette.testclient import TestClient
 
 from agent_bom.api.server import app, configure_api
@@ -163,7 +164,8 @@ def test_cloud_inventory_snowflake_not_configured_when_enabled_without_creds(mon
     assert sf["resource_count"] == 0
 
 
-def test_cloud_inventory_snowflake_returns_canonical_shape_with_data(monkeypatch) -> None:
+@pytest.mark.parametrize("warnings", [[], ["private collection warning"]])
+def test_cloud_inventory_snowflake_returns_canonical_shape_with_data(monkeypatch, warnings) -> None:
     # Gate on + discovery yields resources -> "ok" with the canonical summary.
     from agent_bom.cloud import snowflake
     from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
@@ -184,7 +186,7 @@ def test_cloud_inventory_snowflake_returns_canonical_shape_with_data(monkeypatch
             permissions_used=("INFORMATION_SCHEMA.AGENTS:SELECT",),
             redaction_status=RedactionStatus.CENTRAL_SANITIZER_APPLIED,
         )
-        return agents, []
+        return agents, warnings
 
     monkeypatch.setattr(snowflake, "discover", _fake_discover)
 
@@ -195,7 +197,9 @@ def test_cloud_inventory_snowflake_returns_canonical_shape_with_data(monkeypatch
     sf = body["providers"][0]
     assert set(sf) == _canonical_summary_keys()
     assert sf["provider"] == "snowflake"
-    assert sf["status"] == "ok"
+    assert sf["status"] == ("partial" if warnings else "ok")
+    assert body["status"] == sf["status"]
+    assert "private collection warning" not in json.dumps(body)
     assert sf["resource_count"] == 2
     assert sf["identity_count"] == 0
     assert sf["node_summary"] == {"buckets": 0, "instances": 0, "security_groups": 0, "roles": 0, "users": 0}

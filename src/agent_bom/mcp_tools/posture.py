@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 from agent_bom.cloud.inventory_summary import _summarize_inventory_payload as _summarize_inventory_payload
+from agent_bom.cloud.inventory_summary import inventory_summary_status
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 
@@ -172,11 +173,10 @@ async def cloud_inventory_impl(
         except ProviderExecutionCapacityError:
             return json.dumps({"error": "Cloud provider execution capacity is exhausted; retry later.", "status": "unavailable"})
 
-        any_enabled = any(s["status"] != "disabled" for s in summaries)
         payload = {
             "schema_version": "cloud.inventory.summary.v1",
             "tenant_id": resolved_tenant,
-            "status": "ok" if any_enabled else "disabled",
+            "status": inventory_summary_status(summaries),
             "total_resources": sum(s["resource_count"] for s in summaries),
             "total_identities": sum(s["identity_count"] for s in summaries),
             "providers": summaries,

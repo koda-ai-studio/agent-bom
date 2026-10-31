@@ -45,6 +45,16 @@ missing permissions, and errored or no-data benchmark checks. Failed controls
 alone do not mean collection failed: a complete read can establish bad posture.
 Collection gaps remain partial even when other accounts in the same run succeed.
 
+For the authenticated `GET /v1/cloud/{provider}/inventory` summary and MCP
+`cloud_inventory` tool, inspect both the overall `status` and each provider's
+status. Overall `ok` requires every enabled provider to complete without
+collection warnings; `partial` includes missing credentials, missing SDKs,
+unknown outcomes and denied or incomplete reads, even if the counts are zero.
+`disabled` means no selected provider was enabled. Disabled providers remain
+listed but are outside the attempted collection. Successful resource counts
+remain visible when another provider is incomplete; zero findings or assets
+alone are not a clean security verdict.
+
 Azure's optional Entra directory read includes human users, service principals,
 groups and bounded membership expansion. It requires the separate Microsoft
 Graph token and `AGENT_BOM_ENTRA_DISCOVERY=1`; ARM Reader alone does not enable
