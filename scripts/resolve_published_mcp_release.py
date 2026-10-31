@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve an MCP image build to the latest published release, never moving main."""
+"""Resolve image builds to the latest published release, never moving main."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def resolve_release(repository: str, event_name: str, event: dict, run: Callable
         raise ValueError("Invalid repository")
     if not isinstance(event, dict):
         raise ValueError("Invalid event payload")
-    if event["repository"]["full_name"] != repository or event_name not in {"workflow_run", "workflow_dispatch"}:
+    if event["repository"]["full_name"] != repository or event_name not in {"workflow_run", "workflow_dispatch", "schedule"}:
         raise ValueError("Unsupported release event")
     workflow = event.get("workflow_run", {})
     if event_name == "workflow_run":
@@ -73,7 +73,7 @@ def main() -> int:
         with Path(os.environ["GITHUB_OUTPUT"]).open("a") as stream:
             stream.write("".join(f"{key}={value}\n" for key, value in outputs.items()))
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
-        print("::error::Could not verify the published release source; no MCP image will be published.", file=sys.stderr)
+        print("::error::Could not verify the published release source; no image will be published.", file=sys.stderr)
         return 1
     print("Published release source verified." if outputs["publish_current"] == "true" else "Skipping a superseded release event.")
     return 0
