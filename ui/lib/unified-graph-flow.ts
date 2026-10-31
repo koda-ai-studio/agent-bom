@@ -565,6 +565,7 @@ function toLineageData(
 
 function toFlowEdge(edge: UnifiedEdge, nodeById: Map<string, UnifiedNode>): Edge {
   const relationship = String(edge.relationship);
+  const contextLabel = agentContextRelationshipLabel(edge, nodeById);
   const color = RELATIONSHIP_COLOR_MAP[relationship] ?? "#52525b";
   const legend = relationshipLegendItem(relationship);
   const reachScore = readReachScore(edge.evidence?.effective_reach_score);
@@ -587,13 +588,15 @@ function toFlowEdge(edge: UnifiedEdge, nodeById: Map<string, UnifiedNode>): Edge
     type: "smoothstep",
     data: {
       relationship,
-      relationshipLabel: agentContextRelationshipLabel(edge, nodeById) ?? relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked }),
+      sourceEntityType: nodeById.get(edge.source)?.entity_type,
+      targetEntityType: nodeById.get(edge.target)?.entity_type,
+      relationshipLabel: contextLabel ?? relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked }),
       relationshipCategory: legend.layer,
       traversalClass: GRAPH_EDGE_KIND_META[relationship as GraphEdgeKindKey]?.traversal_class ?? "unknown",
       evidenceMode,
       evidenceLabel: graphEdgeEvidenceLabel(edge),
       evidenceBlocked,
-      hoverDescription: `${relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked })} · ${graphEdgeEvidenceLabel(edge)} · ${edge.direction === "bidirectional" ? "Bidirectional" : "Directed"} · Traversal ${edge.traversable ? "eligible" : "not enabled"}. Select to inspect evidence.`,
+      hoverDescription: `${contextLabel ?? relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked })} · ${graphEdgeEvidenceLabel(edge)} · ${edge.direction === "bidirectional" ? "Bidirectional" : "Directed"} · Traversal ${edge.traversable ? "eligible" : "not enabled"}. Select to inspect evidence.`,
       direction: edge.direction,
       traversable: edge.traversable,
     },

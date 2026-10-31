@@ -69,3 +69,11 @@ it("retains loaded context when an investigation opens its root directly", () =>
   expect(data.agentContext?.membership.items[0]?.node_id).toBe("env");
   expect(data.agentContext?.execution.status).toBe("not_recorded");
 });
+
+import { readableGraphEdges } from "@/lib/graph-utils";
+it("preserves context semantics through the rendered edge label pipeline", () => {
+  const graph = flow([node("agent", "agent"), node("env", "environment"), node("vendor", "provider")], [edge("env", "agent", "contains"), edge("vendor", "agent", "hosts")]);
+  const rendered = readableGraphEdges(graph.edges);
+  expect(rendered.find(e => e.source === "env")?.label).toBe("Includes · membership");
+  expect(rendered.find(e => e.source === "vendor")?.ariaLabel).toContain("Platform for");
+});

@@ -79,3 +79,7 @@ export function agentContextRelationshipLabel(edge: UnifiedEdge, nodes: Map<stri
 export function platformAgentCount(edges: UnifiedEdge[], nodes: Map<string, UnifiedNode>): number {
   return new Set(edges.filter(edge => ["platform_for", "hosts"].includes(String(edge.relationship)) && String(nodes.get(edge.target)?.entity_type) === "agent").map(edge => edge.target)).size;
 }
+
+export function agentRelationshipMetadataLabel(relationship: string, metadata?: Record<string, unknown>): string | undefined {
+  return agentRelationshipLabel(relationship, text(metadata?.sourceEntityType), text(metadata?.targetEntityType));
+}

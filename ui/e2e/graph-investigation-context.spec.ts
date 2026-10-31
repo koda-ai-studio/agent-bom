@@ -196,7 +196,10 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(context.getByRole("region", { name: "Model links", exact: true })).toContainText("Not recorded in this evidence");
     await expect(context.getByRole("region", { name: "Environment membership", exact: true })).toContainText("Production AI");
     await expect(context).toContainText("does not prove runtime execution");
-    if (width === 1440) await expect(page.locator('.react-flow__node[data-id="agent"]')).toContainText("Host not recorded");
+    if (width === 1440) {
+      await expect(page.locator('.react-flow__node[data-id="agent"]')).toContainText("Host not recorded");
+      await expect(page.getByText("Includes · membership", { exact: true })).toBeVisible();
+    }
     await page.screenshot({ path: info.outputPath(`agent-context-${theme}-${width}.png`), fullPage: true });
   });
 }

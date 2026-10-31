@@ -3,6 +3,7 @@
  * Background styling used across all graph views (Lineage, Mesh, Context, Attack Flow).
  */
 
+import { agentRelationshipMetadataLabel } from "@/lib/graph-agent-context";
 import { accessEvidenceLegendItems, accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { GRAPH_LAYER_ENTITY_TYPES, graphKindForNode, graphMetadataForNode } from "@/lib/graph-entity-mapping";
 import { badgeLegendItems, type NodeBadgeKind, type RingSeverity } from "@/lib/graph-node-badges";
@@ -430,6 +431,8 @@ export function relationshipEdgeLabelText(
   relationship: string,
   metadata?: Record<string, unknown>,
 ): string {
+  const contextLabel = agentRelationshipMetadataLabel(relationship, metadata);
+  if (contextLabel) return contextLabel;
   if (relationship === "delegated_to") {
     if (metadata?.evidenceMode === "static") return "Configured delegation";
     if (metadata?.evidenceMode === "unknown") return "Delegation (unverified)";
