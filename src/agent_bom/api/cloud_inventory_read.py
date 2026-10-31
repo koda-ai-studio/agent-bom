@@ -64,7 +64,7 @@ def _snowflake_inventory() -> tuple[dict[str, Any], dict[str, Any]]:
 
     account = env_raw("SNOWFLAKE_ACCOUNT", "").strip() or None
     if agents:
-        status = "ok"
+        status = "partial" if sf_warnings else "ok"
     elif not account:
         status = "no_credentials"  # enabled but not configured (no account/creds)
     elif sf_warnings:
@@ -95,7 +95,7 @@ def _build_inventory_payload(tenant_id: str, selected: list[str], scoped_region:
     payload construction is unit-testable.
     """
     from agent_bom.cloud import aws_inventory, azure_inventory, gcp_inventory
-    from agent_bom.cloud.inventory_summary import _summarize_inventory_payload
+    from agent_bom.cloud.inventory_summary import _summarize_inventory_payload, inventory_summary_status
 
     raw_payloads: list[dict[str, Any]] = []
     summaries: list[dict[str, Any]] = []
@@ -120,11 +120,10 @@ def _build_inventory_payload(tenant_id: str, selected: list[str], scoped_region:
         raw_payloads.append(sf_payload)
         summaries.append(sf_summary)
 
-    any_enabled = any(s["status"] != "disabled" for s in summaries)
     return {
         "schema_version": "cloud.inventory.summary.v1",
         "tenant_id": tenant_id,
-        "status": "ok" if any_enabled else "disabled",
+        "status": inventory_summary_status(summaries),
         "total_resources": sum(s["resource_count"] for s in summaries),
         "total_identities": sum(s["identity_count"] for s in summaries),
         "providers": [_redact_summary(s) for s in summaries],

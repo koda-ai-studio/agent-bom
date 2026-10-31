@@ -159,6 +159,69 @@ def test_cloud_inventory_provider_filter(monkeypatch):
     assert [p["provider"] for p in data["providers"]] == ["aws"]
 
 
+@pytest.mark.parametrize("provider", ["aws", "azure", "gcp"])
+@pytest.mark.parametrize(
+    ("provider_status", "warnings", "missing_permissions", "expected"),
+    [
+        ("ok", [], [], "ok"),
+        ("ok", ["private collector detail"], [], "partial"),
+        ("ok", [], ["inventory.read"], "partial"),
+        ("partial", [], [], "partial"),
+        ("no_credentials", [], [], "partial"),
+        ("boto3_missing", [], [], "partial"),
+        ("sdk_missing", [], [], "partial"),
+        ("error", [], [], "partial"),
+        ("unavailable", [], [], "partial"),
+        ("unexpected", [], [], "partial"),
+        ("disabled", [], [], "disabled"),
+    ],
+)
+def test_cloud_inventory_rest_and_mcp_preserve_collection_gaps(
+    monkeypatch, provider, provider_status, warnings, missing_permissions, expected
+):
+    from agent_bom.api.cloud_inventory_read import _build_inventory_payload
+    from agent_bom.cloud import aws_inventory, azure_inventory, gcp_inventory
+
+    _bind_mcp_tenant(monkeypatch, "inventory-scope")
+    modules = {"aws": aws_inventory, "azure": azure_inventory, "gcp": gcp_inventory}
+    for name, module in modules.items():
+        payload = {
+            "provider": name,
+            "status": provider_status if name == provider else "disabled",
+            "warnings": warnings if name == provider else [],
+            "missing_permissions": missing_permissions if name == provider else [],
+        }
+        monkeypatch.setattr(module, "discover_inventory", lambda _payload=payload, **_kw: _payload)
+    rest = _build_inventory_payload("inventory-scope", list(modules), None)
+    mcp = _run(cloud_inventory_impl(tenant_id="inventory-scope", _truncate_response=_trunc))
+    for result in (rest, mcp):
+        assert result["status"] == expected
+        assert result["total_resources"] == 0
+        assert result["tenant_id"] == "inventory-scope"
+        selected = next(item for item in result["providers"] if item["provider"] == provider)
+        assert selected["status"] == (
+            "unknown" if provider_status == "unexpected" else "partial" if warnings or missing_permissions else provider_status
+        )
+        assert "private collector detail" not in json.dumps(result)
+
+
+def test_cloud_inventory_mixed_success_keeps_counts_and_reports_gap(monkeypatch):
+    from agent_bom.api.cloud_inventory_read import _build_inventory_payload
+    from agent_bom.cloud import aws_inventory, gcp_inventory
+
+    _bind_mcp_tenant(monkeypatch, "inventory-scope")
+    monkeypatch.setattr(
+        aws_inventory, "discover_inventory", lambda **_kw: {"provider": "aws", "status": "ok", "buckets": [{"name": "sample"}]}
+    )
+    monkeypatch.setattr(gcp_inventory, "discover_inventory", lambda **_kw: {"provider": "gcp", "status": "no_credentials"})
+    rest = _build_inventory_payload("inventory-scope", ["aws", "gcp"], None)
+    mcp = _run(cloud_inventory_impl(providers="aws,gcp", tenant_id="inventory-scope", _truncate_response=_trunc))
+    for result in (rest, mcp):
+        assert result["status"] == "partial"
+        assert result["total_resources"] == 1
+        assert [item["status"] for item in result["providers"]] == ["ok", "no_credentials"]
+
+
 def test_cloud_inventory_rejects_unsupported_provider_truthfully(monkeypatch):
     _bind_mcp_tenant(monkeypatch, "t-ci3")
     data = _run(cloud_inventory_impl(providers="snowflake", tenant_id="t-ci3", _truncate_response=_trunc))

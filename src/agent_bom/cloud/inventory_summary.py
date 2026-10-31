@@ -13,9 +13,27 @@ _PUBLIC_INVENTORY_STATUSES = {
     "unknown",
     "disabled",
     "boto3_missing",
+    "sdk_missing",
+    "error",
+    "unavailable",
     "no_credentials",
     "partial",
 }
+
+
+def inventory_summary_status(summaries: list[dict[str, Any]]) -> str:
+    """Summarize enabled collection without treating missing evidence as success.
+
+    Disabled providers are outside the attempted collection. Partial means at
+    least one enabled provider did not complete, even when no assets returned.
+    Counts and provider-specific reasons remain independent of this rollup.
+    """
+    enabled = [summary for summary in summaries if summary.get("status") != "disabled"]
+    if not enabled:
+        return "disabled"
+    if any(summary.get("status") != "ok" or summary.get("warnings") for summary in enabled):
+        return "partial"
+    return "ok"
 
 
 def _summarize_inventory_payload(provider: str, payload: dict[str, Any]) -> dict[str, Any]:
