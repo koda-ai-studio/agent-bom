@@ -37,6 +37,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Cloud inventory summaries in REST and MCP preserve incomplete enabled-provider collection instead of reporting success from enablement alone. Missing SDK states and partial Snowflake discovery remain visible without discarding successful resource counts.
+- Retain collected cloud assets and managed Kubernetes GPU pools from explicitly partial inventory in the graph, while preserving incomplete scan coverage and scoped reconciliation.
 - Release preflight and CI inspect the bundled ATLAS catalog even when a newer operator cache exists, using the same 180-day freshness limit. The bundled catalog is refreshed from the upstream source.
 - Affected-advisory answers include image packages and distinguish stale observations from confirmed current evidence; VEX filtering and finding totals use aligned semantics.
 - LangGraph topology retains `Send` fan-out edges. Secret scanning distinguishes CPython module links from password values.

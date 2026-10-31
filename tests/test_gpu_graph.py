@@ -86,13 +86,18 @@ def _contained_by_cluster(graph: UnifiedGraph, node_id: str) -> bool:
     ("inventory", "expected_pools"),
     [(_eks_inventory, {"gpu-a10g", "train-custom"}), (_gke_inventory, {"l4-shared", "a100-mig"}), (_aks_inventory, {"gpunc", "gput4"})],
 )
-def test_every_inventoried_gpu_pool_hangs_off_its_cluster(inventory: Any, expected_pools: set[str]) -> None:
-    graph = build_unified_graph_from_report({"cloud_inventory": [inventory()]})
+@pytest.mark.parametrize("status", ["ok", "partial"])
+def test_every_inventoried_gpu_pool_hangs_off_its_cluster(inventory: Any, expected_pools: set[str], status: str) -> None:
+    payload = inventory()
+    payload["status"] = status
+    graph = build_unified_graph_from_report({"cloud_inventory": [payload], "generated_at": "2026-10-01T12:00:00Z"})
+    assert graph.observed_at == "2026-10-01T12:00:00+00:00"
     pools = _gpu_pool_nodes(graph)
     assert {p.attributes["resource_name"] for p in pools} == expected_pools  # non-GPU pools stay off the graph
     for pool in pools:
         assert _contained_by_cluster(graph, pool.id), f"{pool.id} is not contained by its cluster node"
         assert pool.attributes["gpu"] is True and pool.attributes["accelerator_type"]
+        assert f"cloud:{payload['provider']}" in pool.data_sources
 
 
 def test_eks_gpu_pool_assumes_its_node_role_and_carries_capacity() -> None:

@@ -35,10 +35,13 @@ def inventory(provider, scope, name="shared", *, native=True):
 
 @pytest.mark.parametrize("provider", ["aws", "azure", "gcp"])
 @pytest.mark.parametrize("native", [True, False])
-def test_same_names_in_distinct_accounts_keep_separate_nodes_and_owners(provider, native):
+@pytest.mark.parametrize("status", ["ok", "partial"])
+def test_same_names_in_distinct_accounts_keep_separate_nodes_and_owners(provider, native, status):
     graph = UnifiedGraph()
     for scope in ("account-a", "account-b"):
-        _add_cloud_inventory(graph, inventory(provider, scope, native=native), "fixture")
+        payload = inventory(provider, scope, native=native)
+        payload["status"] = status
+        _add_cloud_inventory(graph, payload, "fixture")
     resources = [node for node in graph.nodes.values() if node.attributes.get("resource_name") == "shared"]
     assert len(resources) == 2
     for node in resources:
@@ -154,3 +157,17 @@ def test_native_identifier_case_rules_and_original_evidence(provider):
     else:
         assert _resolve_cloud_resource_node_id(graph, provider, original.replace("stable-id", "STABLE-ID")) is None
     assert node.attributes["resource_id"] == original
+
+
+@pytest.mark.parametrize("status", ["error", "no_credentials", "disabled", "unknown", None, ["partial"]])
+def test_unsuccessful_inventory_does_not_project_unverified_resources(status):
+    from agent_bom.graph.gpu_projection import _project_cloud_pools
+    from tests.test_gpu_graph import _eks_inventory
+
+    payload = _eks_inventory()
+    payload["status"] = status
+    graph = UnifiedGraph()
+    _add_cloud_inventory(graph, payload, "fixture")
+    _project_cloud_pools(graph, payload, "fixture")
+    assert not graph.nodes
+    assert not graph.edges

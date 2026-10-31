@@ -716,3 +716,14 @@ provider exception text. A failed read, including interrupted pagination, is
 incomplete evidence; successful results from other resource types are retained.
 A successful empty read produces no warning and does not establish security
 posture beyond the inventory visible to the supplied identity.
+
+### Partial inventory in the graph
+
+An inventory payload with explicit `partial` status retains the assets actually
+collected, including managed Kubernetes GPU pools and their cluster relationships.
+The scan remains partial: missing assets in that collection do not retire previously
+retained assets in the same source scope. A later complete snapshot can reconcile
+that scope. Failed, unavailable or unknown-status payloads do not project assets.
+
+Use the scan coverage details alongside the graph. A retained relationship records
+its source evidence; it does not prove runtime activity or exploitability.

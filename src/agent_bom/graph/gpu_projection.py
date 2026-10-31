@@ -100,7 +100,7 @@ def _link_pool_identity(graph: UnifiedGraph, pool_node_id: str, provider: str, i
 
 def _project_cloud_pools(graph: UnifiedGraph, cloud_inventory: Any, data_source: str) -> None:
     for raw_inventory in cloud_inventory if isinstance(cloud_inventory, list) else [cloud_inventory]:
-        if not isinstance(raw_inventory, dict) or raw_inventory.get("status") != "ok":
+        if not isinstance(raw_inventory, dict) or raw_inventory.get("status") not in ("ok", "partial"):
             continue
         inventory = _normalize_cloud_inventory(raw_inventory)
         provider = clean_graph_part(inventory.get("provider")) or "aws"

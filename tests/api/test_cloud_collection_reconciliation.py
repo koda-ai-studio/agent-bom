@@ -20,13 +20,13 @@ from tests.auth_helpers import PROXY_SECRET, proxy_headers
 BASE_TIME = datetime.now(UTC) - timedelta(hours=2)
 
 
-def report(provider, account, step, *, empty=False, denied=False):
+def report(provider, account, step, *, empty=False, denied=False, status="ok", suffix=""):
     key = "storage_accounts" if provider == "azure" else "buckets"
     inventory = {
         "provider": provider,
         "account_id": account,
-        "status": "ok",
-        key: [] if empty else [{"name": f"{provider}-{account}", "tags": {"revision": str(step)}}],
+        "status": status,
+        key: [] if empty else [{"name": f"{provider}-{account}{suffix}", "tags": {"revision": str(step)}}],
         "warnings": ["Read denied"] if denied else [],
     }
     payload = to_json(AIBOMReport(agents=[], blast_radii=[], cloud_inventory_data=[inventory]))
@@ -39,7 +39,8 @@ def report(provider, account, step, *, empty=False, denied=False):
 
 
 @pytest.mark.parametrize("provider", ["aws", "azure", "gcp"])
-def test_native_partial_full_snapshot_lifecycle_across_accounts_and_tenants(tmp_path, monkeypatch, provider):
+@pytest.mark.parametrize("partial_status", ["ok", "partial"])
+def test_native_partial_full_snapshot_lifecycle_across_accounts_and_tenants(tmp_path, monkeypatch, provider, partial_status):
     monkeypatch.setenv("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", "0")
     monkeypatch.setenv("AGENT_BOM_TRUST_PROXY_AUTH", "1")
     monkeypatch.setenv("AGENT_BOM_TRUST_PROXY_AUTH_SECRET", PROXY_SECRET)
@@ -74,13 +75,20 @@ def test_native_partial_full_snapshot_lifecycle_across_accounts_and_tenants(tmp_
         push(report(provider, "account-a", 1))
         assert set(current().nodes) == nodes
         assert current().nodes[asset].attributes["tags"]["revision"] == "1"
-        partial = report(provider, "account-a", 2, empty=True, denied=True)
+        partial = report(provider, "account-a", 2, denied=partial_status == "ok", status=partial_status, suffix="-new")
         assert partial["scan_run"]["outcome"] == "partial"
         assert push(partial)["scan_outcome"] == "partial"
         assert asset in current().nodes and peer in current().nodes
+        added = asset + "-new"
+        assert current().nodes[added].attributes["tags"]["revision"] == "2"
+        assert current().nodes[asset].attributes["tags"]["revision"] == "1"
+        assert added not in current("cloud-b").nodes
+        monkeypatch.setattr(stores, "_store", SQLiteJobStore(str(jobs_path)))
+        monkeypatch.setattr(stores, "_graph_store", SQLiteGraphStore(str(graph_path)))
+        assert added in current().nodes and asset in current().nodes
         push(report(provider, "account-a", 3, empty=True))
         deleted = current()
-        assert asset not in deleted.nodes and peer in deleted.nodes
+        assert asset not in deleted.nodes and added not in deleted.nodes and peer in deleted.nodes
         assert all(asset not in (edge.source, edge.target) for edge in deleted.edges)
         push(report(provider, "account-a", 1))
         assert asset not in current().nodes
