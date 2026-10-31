@@ -602,6 +602,8 @@ def test_shared_regex_edits_select_policy_enforcement_callers(tmp_path, source):
         "src/agent_bom/enrichment.py",
         "src/agent_bom/enrichment/epss.py",
         "src/agent_bom/output/sarif.py",
+        "src/agent_bom/output/html/tabs.py",
+        "src/agent_bom/output/html/sections_findings.py",
         "src/agent_bom/cli/_check_command.py",
         "src/agent_bom/cli/agents/scan_pipeline/matching.py",
         "src/agent_bom/scanners/package_scan.py",
@@ -618,6 +620,7 @@ def test_output_changes_select_characterization_consumers(tmp_path, source):
             "test_output_render_characterization.py",
             "test_scan_characterization.py",
             "test_scan_verdict_completeness.py",
+            "test_scan_distro_cpe_possibly_affected.py",
         )
     )
     for path in expected:

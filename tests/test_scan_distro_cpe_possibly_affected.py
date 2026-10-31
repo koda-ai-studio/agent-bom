@@ -11,6 +11,7 @@ runtime (``generic`` + CPE) keeps its upstream verdict.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
@@ -246,7 +247,11 @@ def test_html_report_has_possibly_affected_rows(nvd_db, monkeypatch) -> None:
     from agent_bom.output.html import to_html
 
     page = to_html(_scanned_report(nvd_db, monkeypatch))
-    section = page.split('<section id="possibly-affected">', 1)[1].split("</section>", 1)[0]
+    match = re.search(r'<section id="possibly-affected"([^>]*)>(.*?)</section>', page, re.DOTALL)
+    assert match is not None
+    assert 'data-tab="findings"' in match[1]
+    assert 'role="tabpanel"' in match[1]
+    section = match[2]
     assert "Possibly affected" in section and "verify distro advisory" in section
     assert section.count('<tr data-verdict="possibly_affected">') == 2
     assert "CVE-2026-109618" in section and "php8.2-cli" in section and "8.2.29-1~deb12u1" in section
