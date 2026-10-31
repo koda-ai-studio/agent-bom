@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:a4c9adc09a4f1d363e3b001d6618a8bb5fe61b40eb5d95c870dbdfc6e8c94d09",
+  "artifact_sha256": "sha256:3808e49cbb398f017951da10a4cc1e002d1954325a1479878fe4a0fc00232184",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -2846,6 +2846,34 @@
             },
             {
               "attributes": {
+                "agent_context": {
+                  "agent_kind": "unknown",
+                  "execution": {
+                    "items": [],
+                    "recorded_count": 0,
+                    "status": "not_recorded",
+                    "truncated": false
+                  },
+                  "membership": {
+                    "items": [],
+                    "recorded_count": 0,
+                    "status": "not_recorded",
+                    "truncated": false
+                  },
+                  "models": {
+                    "items": [],
+                    "recorded_count": 0,
+                    "status": "not_recorded",
+                    "truncated": false
+                  },
+                  "platforms": {
+                    "items": [],
+                    "recorded_count": 0,
+                    "status": "not_recorded",
+                    "truncated": false
+                  },
+                  "schema_version": "agent.context.v1"
+                },
                 "canonical_id": "runtime-agent:reference-evidence-workload",
                 "correlation": {
                   "conflict_fields": [],
@@ -3888,6 +3916,34 @@
       "nodes": [
         {
           "attributes": {
+            "agent_context": {
+              "agent_kind": "unknown",
+              "execution": {
+                "items": [],
+                "recorded_count": 0,
+                "status": "not_recorded",
+                "truncated": false
+              },
+              "membership": {
+                "items": [],
+                "recorded_count": 0,
+                "status": "not_recorded",
+                "truncated": false
+              },
+              "models": {
+                "items": [],
+                "recorded_count": 0,
+                "status": "not_recorded",
+                "truncated": false
+              },
+              "platforms": {
+                "items": [],
+                "recorded_count": 0,
+                "status": "not_recorded",
+                "truncated": false
+              },
+              "schema_version": "agent.context.v1"
+            },
             "canonical_id": "runtime-agent:reference-evidence-workload",
             "correlation": {
               "conflict_fields": [],
@@ -5031,7 +5087,7 @@
         ]
       }
     ],
-    "manifest_sha256": "sha256:9acfc107347f488f6394b96a2fb9a4838096e1d9b95eaa424dc4980b48760159",
+    "manifest_sha256": "sha256:01c597b6e2d9aeb08eeae2f82eca1746ecd49322aacb0a01896c4c93c564e411",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -5194,7 +5250,7 @@
       "output": {
         "attack_path_count": 1,
         "edge_count": 9,
-        "graph_digest_sha256": "sha256:ace5431997bc2f20143ef25f7857a9f78df8fbcb34d0a7e2039cc1ee59ded125",
+        "graph_digest_sha256": "sha256:89634dc82bbd754e231d72f7e8213cf2b50c5550781592f1052316909405fc99",
         "node_count": 10,
         "scan_id": "reference-evidence-correlation-v1"
       },
