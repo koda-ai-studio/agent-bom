@@ -1,21 +1,21 @@
 {
  "demo": {
   "html": "bfd1dbb96d19791754b25ab3e9591eb38e900694420f74b26028a14069038da1",
-  "html_offline": "798a744eb2da8b131771df64871a8bd9f059a4f959f7de23d48bb797f90b85c2",
+  "html_offline": "e564c231d1cb20c46d375b540a694f1ca0064ca87156c9492238d43d0da784c5",
   "sarif_exclude_unfixable": "e6aed20dbd0f811ae88ed2dd8c7e8bcd9a2cf659a3b9186e15ca111521e5f665",
   "sarif_file": "98fe0db81409281b742d60ee1f0df4148c496144f84faa92740fefd37742cb94",
   "sarif_stdout": "e6aed20dbd0f811ae88ed2dd8c7e8bcd9a2cf659a3b9186e15ca111521e5f665"
  },
  "empty": {
   "html": "c39c136aaa538c5b9ec62061665818ddf47396057cc59b018e4a69ba8a3e9523",
-  "html_offline": "522c4c635fa11bdcd2b5e7773af3ca6fb697c009e8d36c99a1ec31efb719e4f1",
+  "html_offline": "d3a60473430f08f52d1f9c741438b508b1ea99cac9d97bc8f43e862d9c430851",
   "sarif_exclude_unfixable": "4c364483b8987f516d9ea89c61b84b0e87e402fb78ddaa9ed08327cff8dc55c5",
   "sarif_file": "7d12ac521cef687644d61503ab50a9a3adc30f3ca7a80ba413ddaa00dddb2349",
   "sarif_stdout": "4c364483b8987f516d9ea89c61b84b0e87e402fb78ddaa9ed08327cff8dc55c5"
  },
  "rich": {
   "html": "65cf3099fa4e4c035c0e9c618d74481715ab22352881c066430c08633d6aacb6",
-  "html_offline": "68ca525de1184fbf7aaf74d436816d2dc06a9a7465f4842a6a7a91e5cb8a80fe",
+  "html_offline": "8ecf5e27e991ab66119db4ea05412c247fe5a1559eb1f6b617d8908fe5d030a1",
   "sarif_exclude_unfixable": "9d6d2f358d5a0a27cda02187b435cfcf853c42ba850e8855f174cdaa212f33a9",
   "sarif_file": "1c53e44d4411c2e3cf454597afd5f2059ef5c78975b289ed8053668265a54040",
   "sarif_stdout": "3fcecae46b3d630d0d4a3535dd2576687b776fb13f5e08125673074935da4f78"

@@ -2,9 +2,12 @@
 
 import re
 
+import pytest
+
 from agent_bom.models import Agent, AgentType, AIBOMReport, BlastRadius, MCPServer, Package, Severity, Vulnerability
 from agent_bom.output.graph import build_attack_flow_elements
 from agent_bom.output.html import to_html
+from agent_bom.output.html.scripts import SCALE_REPORT_SCRIPT, _apply_offline_assets_mode, render_graph_script
 
 
 def project_report() -> AIBOMReport:
@@ -60,3 +63,19 @@ def test_offline_report_retains_navigation_without_external_graph_libraries():
     assert 'data-tab="graphs"' in page
     assert "<script src=" not in page
     assert "Interactive rendering is disabled" in page
+    assert "function activateTab" in page
+    assert "window.PAGINATORS" in page
+    assert "var CHART_DATA" not in page
+    assert "cytoscape(" not in page
+
+
+@pytest.mark.parametrize("suffix", ["</body>", "\n\n</body>", "\n\n\n</body>", '<script id="later">keep();</script></body>'])
+def test_offline_replacement_preserves_adjacent_scripts_regardless_of_footer_spacing(suffix):
+    graph_script = render_graph_script("{}", "[]", "[]")
+    page = _apply_offline_assets_mode(SCALE_REPORT_SCRIPT + "\n" + graph_script + suffix)
+
+    assert SCALE_REPORT_SCRIPT in page
+    assert page.endswith(suffix)
+    assert "Interactive rendering is disabled" in page
+    assert "var CHART_DATA" not in page
+    assert "cytoscape(" not in page

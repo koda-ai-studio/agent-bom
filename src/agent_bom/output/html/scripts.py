@@ -555,7 +555,8 @@ def _apply_offline_assets_mode(html: str) -> str:
     marker = '<div class="container">\n'
     html = html.replace(marker, marker + _offline_assets_notice(), 1)
     script_start = html.find("\n<script>\n(function() {")
-    script_end = html.rfind("</script>\n\n</body>")
+    # Replace only the graph block; footer whitespace and later scripts are unrelated.
+    script_end = html.find("</script>", script_start) if script_start != -1 else -1
     if script_start != -1 and script_end != -1:
         html = html[:script_start] + "\n" + _offline_assets_script() + html[script_end + len("</script>") :]
     return html
