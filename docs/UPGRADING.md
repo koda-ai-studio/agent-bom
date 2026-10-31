@@ -13,16 +13,21 @@ Do not overwrite evidence from earlier scans.
 
 ## Select the installed surface
 
-In the existing Python virtual environment, choose the same extras you use:
+After publication, in the existing Python virtual environment, choose the
+same extras you use:
 
 ```bash
-python -m pip install --upgrade 'agent-bom==0.112.1'
+python -m pip install --upgrade agent-bom
 # API / dashboard deployment:
-python -m pip install --upgrade 'agent-bom[ui]==0.112.1'
+python -m pip install --upgrade 'agent-bom[ui]'
 # MCP server:
-python -m pip install --upgrade 'agent-bom[mcp-server]==0.112.1'
+python -m pip install --upgrade 'agent-bom[mcp-server]'
 agent-bom --version
 ```
+
+These commands select the latest published package. Confirm the reported
+version is 0.112.1 or a later release whose upgrade notes you have reviewed;
+if it remains 0.111.0, this upgrade has not been applied.
 
 For a uv-managed CLI installation, use `uv tool upgrade agent-bom` after
 publication and verify the resulting version. Preserve any additional cloud
