@@ -115,7 +115,7 @@ def _provider_capabilities(name: str) -> ExtensionCapabilities:
         permissions_used=_PROVIDER_PERMISSIONS_USED.get(name, (f"{name}:read",)),
         outbound_destinations=(name,),
         data_boundary="agentless_read_only",
-        network_access=name != "ollama",
+        network_access=True,
     )
 
 
