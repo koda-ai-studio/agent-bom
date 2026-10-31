@@ -38,6 +38,16 @@ for strings, arrays, brace patterns, separators, missing paths, and files.
 Review this contract when upgrading the plugin. The advisory gate remains
 unchanged and scans the replacement under its actual package name.
 
+The tooling lockfile also pins patched `glob` 14.0.2 and `minimatch` 11.0.1.
+Use `npm run lint` and `npm run codegen:api-schema:check`: these commands
+explicitly preload `scripts/minimatch-compat.mjs` for Redocly 1.x and legacy
+ESLint plugins that expect a callable CommonJS export. The adapter delegates to
+the patched matcher and preserves its named exports; it is not part of the
+dashboard runtime and does not modify installed files. `npm run verify:toolchain`
+checks URL-scoped schema headers, custom accessibility controls, nested source
+matching and aborted glob walks. Review these contracts when upgrading the
+consumers or removing the adapter.
+
 Run the dashboard and API separately when working on frontend changes:
 
 ```bash

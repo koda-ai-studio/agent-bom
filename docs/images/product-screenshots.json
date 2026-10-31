@@ -1,9 +1,9 @@
 {
   "release_version": "0.112.1",
-  "captured_at": "2026-10-30T22:46:09.894Z",
-  "source_commit": "c134be351696ddbe5fad3f8646f1d8eed7e157e1",
+  "captured_at": "2026-10-30T23:53:56.837Z",
+  "source_commit": "85d3026ad96212261bf86d865b0ff61e4568db28",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:318379fb358c4946ed5762afed5bd953df2cc40ba76f3e3f8b5c673b7cbea88f",
+  "capture_inputs_sha256": "sha256:a2cf6d66e4e213e106936482ac6478e75366b0e0fac9388fe15814357f9cb4c8",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -12,7 +12,7 @@
       "page": "/graph?lens=estate&rollup=0&scan=scan-proof-ai-platform&capture=1",
       "scope": "Explicitly synthetic cloud estate with published advisories, derived attack paths and recorded relationships, projected through the shipped graph scope preset; fictional identifiers, no execution or effective-access claim",
       "visible_version": "0.112.1",
-      "sha256": "sha256:f4ddaa5ef5e07583c3af0eab2ed7b228a4964884ed640ac5f288848eea47f9b2"
+      "sha256": "sha256:1ef3d489ed1b2f94c88adb6096a47467836a1c2823c651dc1b8f2aa9e2a19363"
     },
     {
       "presentation": "light desktop",
@@ -28,7 +28,7 @@
       "page": "/graph?lens=estate&rollup=0&scan=scan-proof-ai-platform&capture=1",
       "scope": "Explicitly synthetic repository estate with published advisories, derived attack paths and recorded relationships, projected through the shipped graph scope preset; fictional identifiers, no execution or effective-access claim",
       "visible_version": "0.112.1",
-      "sha256": "sha256:9ac5d0f4a079baefd9417f531a9e62a1c66c04992a9857dbd0284e524411f936"
+      "sha256": "sha256:c1dda2b2920575a0ed891c75a05e2d2ce023b460b8e96c834113df462eede6f6"
     },
     {
       "presentation": "light desktop",
@@ -116,7 +116,7 @@
       "page": "/compliance?asset=pkg%3Anext&scan=scan-proof-ai-platform&capture=1",
       "scope": "Synthetic control applicability mapping explicitly marked not evaluated",
       "visible_version": "0.112.1",
-      "sha256": "sha256:b5654beb51202de1494744bf3ba5e631b3af2683d5e4e15d4236a3232de4b169"
+      "sha256": "sha256:a349a8d5e22a78d4bdb4565a02af703a929bf6c5eafd68414d3ac0992d6e3095"
     },
     {
       "presentation": "dark desktop",
@@ -148,7 +148,7 @@
       "page": "/?capture=1",
       "scope": "Top risks tab from the offline synthetic enterprise estate",
       "visible_version": "0.112.1",
-      "sha256": "sha256:f8f3eb8f54791791b690d758bd911831b820303b47eacbe84998521da6317ac7"
+      "sha256": "sha256:3608f954f135cfa91d06c7bac5e241ad8a904ce5f331be36065e46931c7cb87c"
     },
     {
       "presentation": "light desktop",
@@ -156,7 +156,7 @@
       "page": "/?capture=1",
       "scope": "Executive impact summaries with technical details collapsed",
       "visible_version": "0.112.1",
-      "sha256": "sha256:340e1f80c87e233a1f41b557cf74d86e9b4d9f2ac5722c7f8a9b1beeef71ffb6"
+      "sha256": "sha256:755c66e63df99f2e221d935495214d74ed2a69fd4db211c7bfe54069115217e1"
     },
     {
       "presentation": "dark mobile",
@@ -212,7 +212,7 @@
       "page": "/agents?name=developer-copilot&view=lifecycle&capture=1",
       "scope": "Developer agent lifecycle across MCP servers, package, tool, credential name, and synthetic finding",
       "visible_version": "0.112.1",
-      "sha256": "sha256:1223f277919a8bcb118fb4455f01e38d452e19b0c5de7dff42c6cd31233d3f1b"
+      "sha256": "sha256:693dbee307c089769566f0d3c87a1cadbd54de028fbf6d67654206fd5b2362d7"
     },
     {
       "presentation": "dark desktop",
@@ -220,7 +220,7 @@
       "page": "/graph?lens=mesh&scan=scan-proof-ai-platform&agent=agent%3Adeveloper-copilot&capture=1",
       "scope": "Persisted agent neighborhood with recorded shared filesystem connections and both IDE + SRE agents in scope",
       "visible_version": "0.112.1",
-      "sha256": "sha256:8e05c9af4dbb543e997e031c43da3c831c322520a48c2a4ed79b626d40ba504f"
+      "sha256": "sha256:cd9ddf195824ae66c31154541bc97094fa349806f15def153d4d7778b8984b03"
     },
     {
       "presentation": "dark desktop",
@@ -236,7 +236,7 @@
       "page": "/security-graph?lens=attack-path&scan=scan-proof-ai-platform&capture=1",
       "scope": "Prioritized attack path with graph evidence export and remediation handoff",
       "visible_version": "0.112.1",
-      "sha256": "sha256:ff2d1515c1a842dbc8179921397ce334624a39d70094c685e03462027c5874e8"
+      "sha256": "sha256:1f92090980ae138b23067bb4522aff7b0f2c3ce5867fa03e08df9e6353141818"
     },
     {
       "presentation": "dark desktop",
@@ -343,7 +343,7 @@
       "page": "/security-graph?lens=attack-path&scan=scan-proof-ai-platform&capture=1",
       "scope": "Prioritized attack path in the light theme",
       "visible_version": "0.112.1",
-      "sha256": "sha256:e308bb293043110acdcd73133dc274e05f03099d2c30c5f44e517f475553a847"
+      "sha256": "sha256:99da85697456712d1914fd59089ca632faa598f4609645badd12ca5e5e99ac58"
     },
     {
       "presentation": "dark mobile",
@@ -367,7 +367,7 @@
       "page": "/security-graph?lens=estate&scan=scan-proof-ai-platform&rollup=1&scenario=scenario-private-service-endpoint&state=proposed&capture=1",
       "scope": "Modeled proposed-state comparison at 1568 by 780",
       "visible_version": "0.112.1",
-      "sha256": "sha256:131c9a1f93a0dd43d635276d499e706fad15fb18e196a06ba5593dd672cb0c7b"
+      "sha256": "sha256:9939ac14a3c8054730e1d0f7a07e3d056cac5dd79fa9640b0f0234689b6e2cb9"
     },
     {
       "presentation": "dark desktop",
@@ -407,7 +407,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&root=pkg%3Anext&capture=1",
       "scope": "Same three recorded entities and two relationships in the shared graph workspace",
       "visible_version": "0.112.1",
-      "sha256": "sha256:0bcf8314a9c3b65aa6e020e63448a4c5d8550df7927cd955411226821af040f4"
+      "sha256": "sha256:ca33b580abd74d484fba5071fd30d8298b9465b2fe4b78342cbb2e1c7a7e2f60"
     },
     {
       "presentation": "dark desktop",
@@ -439,7 +439,7 @@
       "page": "/findings?capture=1",
       "scope": "Findings queue with seeded package and CVE evidence from the demo estate",
       "visible_version": "0.112.1",
-      "sha256": "sha256:eadc336e65e451032b2f1e6fff2df3048cdfd5b6b4819eec04ae5e883b96eb6c"
+      "sha256": "sha256:03473e442627d7b20951ff4839ffb2c1f5ed142d63debb495b56b895d3bf29aa"
     },
     {
       "presentation": "dark desktop",

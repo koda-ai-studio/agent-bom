@@ -12,12 +12,12 @@
     "start": "next start",
     "bundle:check": "node scripts/assert-install-matches-lockfile.mjs && node scripts/check-bundle-budget.mjs",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint",
+    "lint": "node --import ./scripts/minimatch-compat.mjs node_modules/eslint/bin/eslint.js",
     "lock:normalize": "npm install --package-lock-only --ignore-scripts",
     "test:runtime-proxy": "node scripts/smoke-runtime-api-proxy.mjs",
     "test:e2e": "node scripts/assert-install-matches-lockfile.mjs && node scripts/assert-build-is-current.mjs && playwright test",
     "test:static-demo": "playwright test --config playwright.static-demo.config.ts",
-    "verify:toolchain": "node scripts/verify-toolchain.mjs && node --test scripts/next-root-dirs.test.mjs",
+    "verify:toolchain": "node scripts/verify-toolchain.mjs && node --test scripts/next-root-dirs.test.mjs && node --import ./scripts/minimatch-compat.mjs --test scripts/tooling-glob-compat.test.mjs",
     "headers:sync": "node scripts/sync-vercel-headers.mjs",
     "headers:check": "node scripts/sync-vercel-headers.mjs --check",
     "capture:product-proof": "node scripts/capture-product-proof.mjs",
@@ -25,8 +25,8 @@
     "capture:inputs-digest:check": "node scripts/refresh-capture-inputs-digest.mjs --check",
     "codegen:graph-schema": "node scripts/codegen-graph-schema.mjs",
     "codegen:graph-schema:check": "node scripts/codegen-graph-schema.mjs --check",
-    "codegen:api-schema": "openapi-typescript ../docs/openapi/v1.json -o lib/api-schema.generated.ts",
-    "codegen:api-schema:check": "openapi-typescript ../docs/openapi/v1.json -o lib/api-schema.generated.ts --check",
+    "codegen:api-schema": "node --import ./scripts/minimatch-compat.mjs node_modules/openapi-typescript/bin/cli.js ../docs/openapi/v1.json -o lib/api-schema.generated.ts",
+    "codegen:api-schema:check": "node --import ./scripts/minimatch-compat.mjs node_modules/openapi-typescript/bin/cli.js ../docs/openapi/v1.json -o lib/api-schema.generated.ts --check",
     "test": "vitest",
     "test:run": "vitest run",
     "storybook": "storybook dev -p 6006",
@@ -50,7 +50,6 @@
   "overrides": {
     "brace-expansion": "5.0.12",
     "postcss": "8.5.23",
-    "minimatch@3.1.5": "10.2.5",
     "sharp": "^0.35.5",
     "js-yaml": "^4.3.2",
     "nanoid": "^3.3.17",
@@ -59,7 +58,9 @@
     },
     "openapi-typescript": {
       "typescript": "$typescript"
-    }
+    },
+    "minimatch": "11.0.1",
+    "glob": "14.0.2"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^16.4.1",
