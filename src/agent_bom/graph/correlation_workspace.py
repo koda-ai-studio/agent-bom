@@ -450,7 +450,6 @@ class CorrelationMergeWorkspace:
             if edge.provenance.get("correlation", {}).get("conflict_fields"):
                 edge_conflicts += 1
             output.add_edge(edge)
-
         annotate_agent_context(output)
         ordered_snapshots = sorted(
             self._snapshots.values(),
