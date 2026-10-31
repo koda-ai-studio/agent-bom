@@ -218,11 +218,7 @@ def _check_ai_4_2(model_ids: list[str] | None = None) -> CISCheckResult:
 
 
 def _check_ai_4_3() -> CISCheckResult:
-    """AI-4.3 — Ollama inference API not exposed beyond localhost.
-
-    Checks whether the Ollama API (port 11434) is accessible on non-loopback
-    interfaces, which would expose unauthenticated model inference to the network.
-    """
+    """Probe the default Ollama port on loopback and one local network interface."""
     result = CISCheckResult(
         check_id="AI-4.3",
         title="Local inference API (Ollama) not network-exposed without auth",
@@ -242,7 +238,7 @@ def _check_ai_4_3() -> CISCheckResult:
         # Get the machine's primary non-loopback IP
         local_ip = _local_ip()
         if not local_ip:
-            result.status = CheckStatus.PASS
+            result.status = CheckStatus.NO_DATA
             result.evidence = "Ollama is running. Could not determine network IP to check exposure."
             return result
 
@@ -281,12 +277,7 @@ _ML_TOOLS: list[tuple[str, int, str]] = [
 
 
 def _check_ai_5_2() -> CISCheckResult:
-    """AI-5.2 — No ML development tools exposed on network interfaces.
-
-    Checks whether common ML tooling (Jupyter, MLflow, Ray, Gradio, etc.) is
-    accessible on non-loopback interfaces, which exposes model training data,
-    experiments, and inference to the network.
-    """
+    """Probe default local ML tool ports on loopback and one network interface."""
     result = CISCheckResult(
         check_id="AI-5.2",
         title="ML development tools not network-exposed (Jupyter, MLflow, Ray, Gradio)",
@@ -312,7 +303,10 @@ def _check_ai_5_2() -> CISCheckResult:
             result.evidence = "No ML development tools detected running on this host."
             return result
 
-        if exposed:
+        if not local_ip:
+            result.status = CheckStatus.NO_DATA
+            result.evidence = f"Detected {checked} local ML tool port(s). Could not determine network IP to check exposure."
+        elif exposed:
             result.status = CheckStatus.FAIL
             result.evidence = f"{len(exposed)} ML tool(s) exposed on {local_ip}: " + "; ".join(exposed)
         else:

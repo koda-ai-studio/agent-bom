@@ -30,6 +30,14 @@ agent-bom reads only what you explicitly ask it to scan:
 | Terraform | `--tf-dir` | `.tf` source files (no state files, no `.tfvars`) |
 | GitHub Actions | `--gha` | `.github/workflows/*.yml` files; reports AI/credential use plus unpinned remote actions, `pull_request_target`, and missing top-level `permissions:` policies |
 | SBOM files | `--sbom` | CycloneDX JSON/XML or SPDX JSON/tag-value you provide |
+| Ollama models | `--ollama`, optionally `--ollama-host` or `OLLAMA_HOST` | `GET /api/tags` on the selected endpoint; no inference or model downloads. Only the implicit localhost default can fall back to local model manifests. |
+
+Ollama API inventory records the endpoint as a runtime probe. An unavailable
+configured endpoint reports incomplete discovery and never substitutes this
+machine's downloaded models. Default local-manifest fallback reports its own
+filesystem scope and a warning; downloaded artifacts do not prove that models
+are currently being served. Endpoint inventory does not establish TLS/auth
+configuration, effective access, public reachability, or compliance.
 
 The MCP tools `kspm_cluster_posture` and `kspm_workload_inventory` require
 `live=true` on each call before using Kubernetes credentials or contacting a
