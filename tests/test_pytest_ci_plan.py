@@ -621,6 +621,7 @@ def test_output_changes_select_characterization_consumers(tmp_path, source):
             "test_scan_characterization.py",
             "test_scan_verdict_completeness.py",
             "test_scan_distro_cpe_possibly_affected.py",
+            "test_export_enrichment_parity.py",
         )
     )
     for path in expected:
