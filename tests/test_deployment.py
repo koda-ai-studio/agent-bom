@@ -815,7 +815,9 @@ def test_refresh_latest_container_keeps_release_code_but_applies_runtime_securit
     workflow = (ROOT / ".github" / "workflows" / "refresh-latest-container.yml").read_text()
 
     assert "main_sha=$MAIN_SHA" in workflow
-    assert 'git checkout "$TAG"' in workflow
+    assert 'git checkout --detach "$RELEASE_SHA"' in workflow
+    assert "needs.release.outputs.release_sha" in workflow
+    assert "git tag -l" not in workflow
     assert "Apply current runtime security overlay" in workflow
     assert 'git checkout "${{ steps.release.outputs.main_sha }}" -- \\' in workflow
     assert "Dockerfile \\" in workflow

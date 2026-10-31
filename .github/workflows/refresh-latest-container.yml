@@ -12,7 +12,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  release:
+    name: Verify published release source
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      release_sha: ${{ steps.resolve.outputs.release_sha }}
+      release_tag: ${{ steps.resolve.outputs.release_tag }}
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: '3.11'
+      - name: Resolve latest published release
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/resolve_published_mcp_release.py
+
   refresh-latest:
+    needs: release
     name: Rebuild and publish latest from latest release tag
     environment: docker-release
     runs-on: ubuntu-latest
@@ -43,22 +67,19 @@ jobs:
 
       - name: Resolve latest release tag
         id: release
+        env:
+          RELEASE_SHA: ${{ needs.release.outputs.release_sha }}
+          RELEASE_TAG: ${{ needs.release.outputs.release_tag }}
+          RELEASE_VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail
           MAIN_SHA=$(git rev-parse HEAD)
-          git fetch --tags --force
-          TAG=$(git tag -l 'v*.*.*' --sort=-version:refname | head -n1)
-          if [ -z "$TAG" ]; then
-            echo "::error::No semver release tag found"
-            exit 1
-          fi
-          VERSION="${TAG#v}"
           {
-            echo "tag=$TAG"
-            echo "version=$VERSION"
+            echo "tag=$RELEASE_TAG"
+            echo "version=$RELEASE_VERSION"
             echo "main_sha=$MAIN_SHA"
           } >> "$GITHUB_OUTPUT"
-          git checkout "$TAG"
+          git checkout --detach "$RELEASE_SHA"
 
       - name: Apply current runtime security overlay
         run: |
@@ -287,6 +308,7 @@ jobs:
           rm -f "$RESPONSE_FILE"
 
   refresh-ui-latest:
+    needs: release
     name: Rebuild and publish UI latest from latest release tag
     environment: docker-release
     runs-on: ubuntu-latest
@@ -317,22 +339,19 @@ jobs:
 
       - name: Resolve latest release tag
         id: release
+        env:
+          RELEASE_SHA: ${{ needs.release.outputs.release_sha }}
+          RELEASE_TAG: ${{ needs.release.outputs.release_tag }}
+          RELEASE_VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail
           MAIN_SHA=$(git rev-parse HEAD)
-          git fetch --tags --force
-          TAG=$(git tag -l 'v*.*.*' --sort=-version:refname | head -n1)
-          if [ -z "$TAG" ]; then
-            echo "::error::No semver release tag found"
-            exit 1
-          fi
-          VERSION="${TAG#v}"
           {
-            echo "tag=$TAG"
-            echo "version=$VERSION"
+            echo "tag=$RELEASE_TAG"
+            echo "version=$RELEASE_VERSION"
             echo "main_sha=$MAIN_SHA"
           } >> "$GITHUB_OUTPUT"
-          git checkout "$TAG"
+          git checkout --detach "$RELEASE_SHA"
 
       - name: Apply current UI runtime security overlay
         run: |
@@ -510,6 +529,7 @@ jobs:
           rm -f "$RESPONSE_FILE"
 
   refresh-collector-latest:
+    needs: release
     name: Rebuild and publish collector latest from latest release tag
     # Rebuild the released collector with current reviewed runtime-security
     # overlays and base-image patches. Python/provider SDK versions stay frozen
@@ -540,22 +560,19 @@ jobs:
 
       - name: Resolve latest release tag
         id: release
+        env:
+          RELEASE_SHA: ${{ needs.release.outputs.release_sha }}
+          RELEASE_TAG: ${{ needs.release.outputs.release_tag }}
+          RELEASE_VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail
           MAIN_SHA=$(git rev-parse HEAD)
-          git fetch --tags --force
-          TAG=$(git tag -l 'v*.*.*' --sort=-version:refname | head -n1)
-          if [ -z "$TAG" ]; then
-            echo "::error::No semver release tag found"
-            exit 1
-          fi
-          VERSION="${TAG#v}"
           {
-            echo "tag=$TAG"
-            echo "version=$VERSION"
+            echo "tag=$RELEASE_TAG"
+            echo "version=$RELEASE_VERSION"
             echo "main_sha=$MAIN_SHA"
           } >> "$GITHUB_OUTPUT"
-          git checkout "$TAG"
+          git checkout --detach "$RELEASE_SHA"
 
       - name: Apply current runtime security overlay
         run: |

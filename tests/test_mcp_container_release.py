@@ -100,7 +100,7 @@ def release_case():
     return repo, event, release, calls, run
 
 
-@pytest.mark.parametrize("event_name", ["workflow_run", "workflow_dispatch"])
+@pytest.mark.parametrize("event_name", ["workflow_run", "workflow_dispatch", "schedule"])
 def test_resolves_published_tag_and_checks_ancestry_and_package_version(resolver, release_case, event_name):
     repo, event, _, calls, run = release_case
     result = resolver.resolve_release(repo, event_name, event, run)
