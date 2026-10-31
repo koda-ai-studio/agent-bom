@@ -567,10 +567,26 @@ automated base-image vulnerability issue when new actionable findings appear.
 
 ### 6. Docker Images
 
-Automated via `.github/workflows/publish-mcp.yml` after each release.
+`release.yml` publishes the CLI/API image to Docker Hub and GHCR with identical
+digests. After that release succeeds, `publish-mcp.yml` publishes the dedicated
+MCP transports from the exact released commit:
 
-Images published:
-- `agentbom/agent-bom:{tag}` — CLI, API, scanner jobs, gateway, and MCP server
+| Image | Entrypoint | Version tag |
+|---|---|---|
+| `agentbom/agent-bom` and `ghcr.io/koda-ai-studio/agent-bom` | CLI/API | `{version}` |
+| `ghcr.io/koda-ai-studio/agent-bom-mcp` | MCP stdio | `v{version}` |
+| `ghcr.io/koda-ai-studio/agent-bom-sse` | MCP HTTP transport | `v{version}` |
+
+Each family has its own `latest` tag. The dedicated stdio repository starts with
+releases produced by this workflow; historical tags are not backfilled. Check
+the completed publish job and registry digest before using a versioned image.
+For a verified stdio image, `docker run --rm -i "$MCP_IMAGE"` starts the MCP
+transport; the MCP client must provide stdin and consume stdout.
+
+Manual MCP workflow runs resolve the latest published stable release. Delayed
+events for superseded releases are skipped. A tag/commit/version mismatch or
+failed ancestry check stops publication; the workflow never substitutes the
+current source version on main. API and MCP images do not share mutable tags.
 
 ---
 
@@ -690,7 +706,8 @@ For dependency-heavy or security-driven releases, also verify:
 |----------|-----------|-----------|---------|
 | **PyPI** | `pyproject.toml` | release.yml | tag push |
 | **Docker Hub** | `Dockerfile` | release.yml | tag push |
-| **GHCR (stdio)** | `Dockerfile.mcp` | publish-mcp.yml | workflow_run |
+| **GHCR (API/CLI mirror)** | `Dockerfile` | release.yml | tag push |
+| **GHCR (stdio)** | `deploy/docker/Dockerfile.mcp` | publish-mcp.yml | workflow_run |
 | **GHCR (SSE)** | `deploy/docker/Dockerfile.sse` | publish-mcp.yml | workflow_run |
 | **Smithery** | workflow API | publish-registries.yml | workflow_run |
 | **Glama directory** | `glama.json` + `integrations/glama/Dockerfile` | provider sync + strict verification | provider daily sync / publish-registries.yml every 6 hours |
