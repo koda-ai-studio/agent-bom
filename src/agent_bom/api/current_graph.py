@@ -27,9 +27,10 @@ from typing import Any, cast
 from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
+from agent_bom.api.current_graph_counts import count_current_nodes
 from agent_bom.api.current_graph_lock import ProjectionLock as _ProjectionLock
 from agent_bom.api.file_lock import exclusive_file_lock
-from agent_bom.api.finding_read_context import forget_read, on_scope_exit, read_once
+from agent_bom.api.finding_read_context import cached_read, forget_read, on_scope_exit, read_once
 from agent_bom.api.findings_current import _finding_snapshot_jobs, scan_collection_incomplete_reasons, scan_evidence_authority_key
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.models import JobStatus
@@ -270,6 +271,26 @@ class CurrentGraphStore:
     def _available_sources(self, tenant: str, jobs: list[Any]) -> tuple[list[Any], tuple[tuple[str, str], ...], set[str]]:
         return available_sources(self._graph_store, tenant, jobs)
 
+    def count_nodes(self, *, tenant_id: str, entity_type: str) -> tuple[str, int]:
+        """Count current source identities without building graph payloads or paths."""
+        _refuse_current_read_while_seeding(tenant_id)
+        return read_once((f"current-node-count:{id(self)}:{entity_type}", tenant_id), lambda: self._count_nodes(tenant_id, entity_type))
+
+    def _count_nodes(self, tenant: str, entity_type: str) -> tuple[str, int]:
+        return count_current_nodes(
+            self,
+            tenant,
+            entity_type,
+            lambda fingerprint, revisions: CURRENT_PREFIX + _digest([_PROJECTION_FORMAT, __version__, tenant, fingerprint, revisions])[:32],
+            _generation_rotating,
+            _UNPINNED_READ_ATTEMPTS,
+        )
+
+    def _check_count_evidence(self, tenant: str, fingerprint: str) -> None:
+        stamp = cached_read((f"current-count-evidence:{id(self)}", tenant))
+        if stamp and (stamp[0] != fingerprint or self._revisions(tenant, (scan for scan, _ in stamp[1])) != stamp[1]):
+            raise _generation_rotating()
+
     def _resolved_id(self, tenant: str) -> str:
         return read_once((f"current-graph:{id(self)}", tenant), lambda: self._resolve_current_id(tenant))
 
@@ -420,6 +441,7 @@ class CurrentGraphStore:
         # older than the live generation.
         epoch = self._promotion_epoch(tenant)
         evidence = self._evidence_state(tenant, request_scoped=True)
+        self._check_count_evidence(tenant, evidence[3])
         if not evidence[0] and self._graph_store.snapshot_identity(tenant_id=tenant, for_paging=True)[0]:
             return ""  # Legacy graph-only stores retain their explicit latest view.
         with self._lock.shared():

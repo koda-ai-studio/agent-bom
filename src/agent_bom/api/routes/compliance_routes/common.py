@@ -360,15 +360,16 @@ def _cached_issue_severity_counts(request: Request, tenant_jobs: list[Any]) -> d
 def estate_agent_count(tenant_id: str) -> dict[str, Any]:
     """Count canonical agent nodes in the inventory's current graph scope.
 
-    The node page applies the same tenant, snapshot and entity-type predicates
-    without computing finding facets or joining every incident relationship.
+    The scalar read uses the same source selection and canonical node IDs
+    without constructing graph payloads, relationships or derived paths.
     """
     try:
-        scan_id, _, _, total, _ = _get_graph_store().page_nodes(
-            tenant_id=tenant_id,
-            entity_types={"agent"},
-            limit=1,
-        )
+        store = _get_graph_store()
+        counter = getattr(store, "count_nodes", None)
+        if callable(counter):
+            scan_id, total = counter(tenant_id=tenant_id, entity_type="agent")
+        else:
+            scan_id, _, _, total, _ = store.page_nodes(tenant_id=tenant_id, entity_types={"agent"}, limit=1)
     except Exception as exc:  # noqa: BLE001
         _logger.warning("Estate agent count unavailable: %s", sanitize_text(exc))
         return {"total": None, "scan_id": None, "basis": "graph_agents"}

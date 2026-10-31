@@ -62,6 +62,32 @@ python scripts/check_scale_evidence.py
 
 ---
 
+## Current-estate agent counts
+
+`GET /v1/posture/counts` uses a scalar SQLite/Postgres query over the current
+source snapshots. It counts stored node IDs without decoding node attributes,
+loading edges, or generating and persisting derived paths. Duplicate IDs follow
+the same ordered-source merge semantics as the full graph; partial and missing
+snapshots retain the same prior evidence.
+
+The response keeps the current-estate identifier derived from the selected
+source revisions. Opening the full graph materializes that view when needed.
+Changing evidence triggers bounded retries; unresolved churn returns an unknown
+agent count, and a subsequent graph read in the same request refuses to mix
+revisions. Existing request-pinned graphs and backends without the scalar query
+retain their node-page read path. No extra index or retained count table is added.
+
+Run the scope, invalidation and API parity regressions with:
+
+```bash
+pytest tests/api/test_current_graph_counts.py tests/api/test_api_agent_population.py
+```
+
+The real Postgres count/RLS regression is included in the existing migrated
+storage-contract CI job (`tests/test_current_graph_assembly_postgres.py`). These
+checks establish count parity, not a production capacity or whole-platform cost
+claim. Use the control-plane load test above to measure your deployment.
+
 ## Scanner hot paths
 
 ### Blast-radius tag indexing — `_index_blast_radii_by_tag`

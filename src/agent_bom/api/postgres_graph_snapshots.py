@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from agent_bom.graph.delta_digest import PriorSnapshotDigest
 
+from agent_bom.db.graph_node_counts import count_snapshot_nodes
 from agent_bom.db.graph_revision import read_snapshot_identity
 from agent_bom.db.graph_store import (
     normalize_graph_tenant_id,
@@ -31,6 +32,12 @@ from .postgres_graph_support import (
 
 class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
     """Resolve, list, purge and delete persisted graph snapshots."""
+
+    def count_snapshot_nodes(self, *, tenant_id: str, scan_ids: list[str], entity_type: str) -> int:
+        """Count ordered source node identities inside the tenant's RLS boundary."""
+        tenant_id = normalize_graph_tenant_id(tenant_id)
+        with _tenant_connection(self._pool) as conn:
+            return count_snapshot_nodes(conn, tenant_id, scan_ids, entity_type, postgres=True)
 
     def snapshot_identity(self, *, tenant_id: str = "", scan_id: str = "", for_paging: bool = False) -> tuple[str, str]:
         """Resolve a generation within the authenticated tenant's connection."""
