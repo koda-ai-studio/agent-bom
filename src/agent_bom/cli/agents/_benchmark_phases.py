@@ -387,6 +387,7 @@ def _run_aisvs_phase(con: Any, ctx: ScanContext, quiet: Any, verbose: Any) -> No
                 "pass": "[green]PASS[/]",
                 "fail": "[red]FAIL[/]",
                 "error": "[yellow]ERR[/]",
+                "no_data": "[dim]NO DATA[/]",
                 "not_applicable": "[dim]N/A[/]",
             }
             from agent_bom.maestro import tag_aisvs_check as _maestro_tag
