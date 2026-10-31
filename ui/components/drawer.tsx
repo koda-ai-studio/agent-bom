@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronLeft, Maximize2, Minimize2, X } from "lucide-react";
 
 const FOCUSABLE_SELECTOR =
   'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -53,6 +53,10 @@ export interface DrawerProps {
   panelLeading?: ReactNode;
   /** Allow operators to widen or narrow the panel. Enabled by default. */
   resizable?: boolean;
+  /** Visible width toggle alongside the existing drag and keyboard handle. */
+  expandable?: boolean;
+  /** Navigation stays visible while the selected view scrolls. */
+  navigation?: ReactNode;
   children: ReactNode;
 }
 
@@ -78,6 +82,8 @@ export function Drawer({
   bodyClassName,
   panelLeading,
   resizable = true,
+  expandable = false,
+  navigation,
   children,
 }: DrawerProps) {
   const [entered, setEntered] = useState(false);
@@ -272,6 +278,13 @@ export function Drawer({
           </div>
           <div className="col-start-2 row-start-1 flex items-center justify-end gap-2">
             {headerAside}
+            {expandable ? <button type="button"
+              aria-label={panelWidth == null ? "Expand drawer" : "Reset drawer width"}
+              title={panelWidth == null ? "Expand drawer" : "Reset drawer width"}
+              onClick={() => setPanelWidth(panelWidth == null ? clampPanelWidth(window.innerWidth * 0.92) : null)}
+              className="hidden rounded-lg border border-outline bg-surface-muted p-2 text-ink-secondary hover:text-foreground sm:inline-flex">
+              {panelWidth == null ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+            </button> : null}
             <button
               type="button"
               onClick={onClose}
@@ -283,6 +296,7 @@ export function Drawer({
           </div>
         </div>
 
+        {navigation ? <div className="shrink-0 px-5 pt-3">{navigation}</div> : null}
         <div className={`min-h-0 flex-1 overflow-y-auto p-5 ${bodyClassName ?? ""}`}>{children}</div>
 
         {footer ? (

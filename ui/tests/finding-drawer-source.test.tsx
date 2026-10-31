@@ -181,3 +181,17 @@ it("labels repeated scans separately from findings in an issue", async () => {
   expect(screen.getByLabelText("Scans observed: 3")).toHaveTextContent("3");
   expect(screen.getByLabelText("Findings in this issue: 2")).toHaveTextContent("2");
 });
+
+it("separates impact from the overview and offers an explicit width control", async () => {
+  const user = userEvent.setup();
+  render(<FindingDrawer vuln={base} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getAllByRole("tab").map(tab => tab.textContent)).toEqual(["Overview", "Impact", "Evidence", "Triage"]);
+  expect(screen.queryByRole("heading", { name: "Impact and attack conditions" })).not.toBeInTheDocument();
+  await user.click(screen.getByRole("tab", { name: "Impact" }));
+  expect(screen.getByRole("heading", { name: "Impact and attack conditions" })).toBeVisible();
+  const panel = screen.getByRole("dialog").querySelector("aside")!;
+  await user.click(screen.getByRole("button", { name: "Expand drawer" }));
+  expect(panel.style.width).not.toBe("");
+  await user.click(screen.getByRole("button", { name: "Reset drawer width" }));
+  expect(panel.style.width).toBe("");
+});

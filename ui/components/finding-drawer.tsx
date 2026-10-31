@@ -42,10 +42,11 @@ import {
   officialAdvisoryLinks,
 } from "@/lib/findings-view";
 
-type TabKey = "overview" | "evidence" | "triage";
+type TabKey = "overview" | "impact" | "evidence" | "triage";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "overview", label: "Overview" },
+  { key: "impact", label: "Impact" },
   { key: "evidence", label: "Evidence" },
   { key: "triage", label: "Triage" },
 ];
@@ -74,6 +75,7 @@ export function FindingDrawer({
 }) {
   const { hasCapability } = useAuthState();
   const canManageExceptions = hasCapability("exceptions.manage");
+  const story = useFindingExploitStory(vuln, graphScanId);
   const [tab, setTab] = useState<TabKey>(lens === "trust" ? "evidence" : "overview");
 
   useEffect(() => {
@@ -85,6 +87,7 @@ export function FindingDrawer({
       open
       onClose={onClose}
       size="2xl"
+      expandable
       ariaLabel={`Finding details for ${vuln.id}`}
       eyebrow={findingsDrawerEyebrow(lens)}
       title={<span className="break-all font-mono">{vuln.id}</span>}
@@ -94,8 +97,7 @@ export function FindingDrawer({
           {severityText(vuln.severity, vuln)}
         </span>
       }
-    >
-      <DetailTabs
+      navigation={<DetailTabs
         tabs={TABS.map((entry) => ({
           ...entry,
           ...(entry.key === "triage" && triage ? { badge: triage.queue_state } : {}),
@@ -103,9 +105,16 @@ export function FindingDrawer({
         value={tab}
         onChange={setTab}
         ariaLabel="Finding detail views"
-      />
+      />}
+    >
 
-      {tab === "overview" ? <OverviewTab vuln={vuln} graphScanId={graphScanId} /> : null}
+      {tab === "overview" ? <OverviewTab vuln={vuln} graphScanId={graphScanId} story={story} /> : null}
+      {tab === "impact" ? <div className="mx-auto max-w-4xl space-y-3">
+        <h3 className="text-base font-semibold text-foreground">Impact and attack conditions</h3>
+        <p className="max-w-prose text-sm leading-6 text-ink-secondary">Review advisory prerequisites and recorded connections. Local exploitability and observed losses require separate evidence.</p>
+        <FindingExploitStory vuln={vuln} graphScanId={graphScanId} story={story} />
+        {story.state.status === "absent" ? <p className="text-sm text-ink-secondary">No impact story is recorded for this finding. Review the Evidence tab and collect the affected component’s relationships.</p> : null}
+      </div> : null}
       {tab === "evidence" ? <EvidenceTab vuln={vuln} graphScanId={graphScanId} /> : null}
       {tab === "triage" ? (
         <TriageTab
@@ -123,9 +132,8 @@ export function FindingDrawer({
 
 // ── Overview ──────────────────────────────────────────────────────────────────
 
-function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: string | undefined }) {
+function OverviewTab({ vuln, graphScanId, story }: { vuln: EnrichedVuln; graphScanId?: string | undefined; story: ReturnType<typeof useFindingExploitStory> }) {
   const scope = findingWorkloadScope(vuln);
-  const story = useFindingExploitStory(vuln, graphScanId);
   const summary = vuln.attack_vector_summary ?? vuln.summary ?? vuln.description ?? "No advisory summary available.";
   const fixCandidates = vuln.remediation_items.filter((item) => item.fixed_version || item.command || item.verify_command);
   const multiVersion = Math.max(vuln.package_version_count ?? 0, vuln.package_versions?.length ?? 0) > 1;
@@ -142,11 +150,11 @@ function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
   ].filter(Boolean);
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-4xl space-y-4">
       <FindingReconfirmation finding={vuln} />
       <div>
         <p className="flex flex-wrap items-baseline gap-2"><span className="break-words text-base font-semibold text-foreground">{packageLabel}</span><span className="text-xs text-ink-tertiary">{findingAssetKind(vuln)}</span></p>
-        <p className="mt-1 text-sm leading-6 text-ink-secondary">{summary}</p>
+        <p className="mt-1 max-w-prose text-sm leading-6 text-ink-secondary">{summary}</p>
       </div>
 
       <Section title="Next action" accent>
@@ -171,7 +179,6 @@ function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
         <FindingExposureSummary vuln={vuln} hostServers={storyHostServers(story.state)} />
         {impact.length ? <p className="mt-2 text-xs text-ink-secondary">{impact.join(" · ")}</p> : null}
         {scope.sbomSources.map((source) => <p key={source} className="mt-1 break-words text-xs text-ink-secondary">SBOM source: {sbomSourceName(source)}</p>)}
-        <FindingExploitStory vuln={vuln} graphScanId={graphScanId} story={story} />
       </Section>
 
       {fixCandidates.length > 0 ? (
