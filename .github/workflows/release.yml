@@ -442,7 +442,7 @@ jobs:
             org.opencontainers.image.version=${{ steps.meta.outputs.version }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.title=agent-bom
-            org.opencontainers.image.description=Open security scanner for AI supply chain and infrastructure — agents, MCP, packages, containers, cloud, GPU, and runtime.
+            org.opencontainers.image.description=AI supply-chain BOM: agents, MCP servers, AI packages and recorded reach.
             org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
             org.opencontainers.image.revision=${{ github.sha }}
 

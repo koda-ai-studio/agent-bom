@@ -79,7 +79,7 @@ jobs:
             org.opencontainers.image.version=${{ needs.release.outputs.version }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.title=agent-bom-mcp
-            org.opencontainers.image.description=Open security scanner for AI supply chain and infrastructure — agents, MCP, packages, containers, cloud, GPU, and runtime. MCP server (stdio).
+            org.opencontainers.image.description=AI supply-chain BOM: agents, MCP servers, AI packages and recorded reach. MCP server (stdio).
             org.opencontainers.image.created=${{ needs.release.outputs.published_at }}
             org.opencontainers.image.revision=${{ needs.release.outputs.release_sha }}
 
@@ -130,7 +130,7 @@ jobs:
             org.opencontainers.image.version=${{ needs.release.outputs.version }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.title=agent-bom-sse
-            org.opencontainers.image.description=Open security scanner for AI supply chain and infrastructure — agents, MCP, packages, containers, cloud, GPU, and runtime. MCP server (streamable HTTP).
+            org.opencontainers.image.description=AI supply-chain BOM: agents, MCP servers, AI packages and recorded reach. MCP server (streamable HTTP).
             org.opencontainers.image.created=${{ needs.release.outputs.published_at }}
             org.opencontainers.image.revision=${{ needs.release.outputs.release_sha }}
 

@@ -37,6 +37,21 @@ store can defeat that local evidence boundary.
 | Gateway and posture audit outboxes | Durable per-tenant, per-destination queues (`gateway_audit_outbox` on Postgres, `posture_webhook_outbox` on SQLite) persist sanitized events before delivery. Rows are tenant-bound with RLS, admission is capped by bytes and row count, and delivery claims hold a database-clock lease; an acknowledgement deletes only rows that still carry the claimant's unexpired lease token (fenced), so a stale worker cannot drop work it no longer owns. Delivery is at least once. | The outbox is a second copy of audit evidence inside the database boundary: a database administrator can read, delete or replay it, and the receiving ledger must deduplicate event IDs. Lease expiry depends on the database clock, not the worker's. |
 | Database and export destinations | Tenant-aware stores, configured encryption, redaction and authenticated delivery. | Database administrators and downstream retention/access policies remain part of the customer's trust boundary. |
 
+## Collection scope and finding evidence
+
+Ollama collection binds inventory to the selected endpoint. Failure of an
+explicit endpoint does not substitute local manifests; implicit local fallback
+is labelled as manifest inventory, not confirmed serving state. Missing AISVS
+exposure evidence remains unknown. See `src/agent_bom/cloud/ollama.py`,
+`tests/cloud/test_cloud_ollama.py` and `tests/test_aisvs_benchmark.py`.
+
+Distribution-ambiguous package matches remain possibly affected until matching
+distribution evidence resolves them. Missing scores and stale catalog evidence
+remain visible in reports; neither proves absence of risk. See
+`tests/test_scan_distro_cpe_possibly_affected.py` and
+`tests/test_html_finding_details.py`. HTML pagination bounds visible rows, while
+the full report remains in memory; it is not a total-memory limit.
+
 ## Image evidence and signature verification
 
 Registry discovery distinguishes `unsigned`, `present-unverified`, `verified`,
@@ -152,6 +167,7 @@ recorded relationships, observed execution, exploitability and impact are
 separate claims. Verify remediation with a new scan of the same scope; a pin
 change alone does not prove a running deployment was updated.
 
-Review this model after security-boundary changes and before release. Source
-review: October 27, 2026, for the 0.111.0 candidate; publication and live
-provider qualification are separate release evidence.
+Review this model after security-boundary changes and before release.
+Collection and report evidence boundaries reviewed October 31, 2026, for the
+0.112.1 candidate. This scoped review does not establish full security review,
+publication or live provider qualification.
