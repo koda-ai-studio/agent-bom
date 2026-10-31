@@ -77,6 +77,8 @@ it("opens CVE workflow and impact from the selected occurrence without assuming 
   expect(within(flow).getByText("orchestrator-server")).toBeVisible();
   expect(within(workspace).getByText("Local exploitability: not established")).toBeVisible();
   expect(within(workspace).getByRole("heading", { name: "Advisory conditions" })).toBeVisible();
+  expect(within(workspace).getByRole("table", { name: "CVSS v3.1 base metrics" })).toBeVisible();
+  expect(within(workspace).getByRole("row", { name: "Attack vector Network" })).toBeVisible();
   expect(within(workspace).getByText(/Sharing an environment does not establish an access path/)).toBeVisible();
   expect(call.mock.calls[0]![0]).toMatchObject({ node: `vuln:${STORY_ADVISORY}`, packageNode: STORY_PACKAGE, scanId: "scan-one" });
   expect(assess).not.toHaveBeenCalled();
