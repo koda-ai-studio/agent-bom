@@ -106,6 +106,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
 
   // Fetch posture grade + cross-domain overview (folded into the header scorecard)
   useEffect(() => {
+    if (importedReport) return;
     let cancelled = false;
     let inFlight = false;
     async function refreshOverview() {
@@ -146,7 +147,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, []);
+  }, [importedReport]);
 
   const demoSeeding = Boolean(overview?.demo_estate_seeding);
   useEffect(() => {
@@ -163,6 +164,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
   // Historical comparisons are separately scoped and loaded on demand.
 
   useEffect(() => {
+    if (importedReport) return;
     let cancelled = false;
 
     async function loadJobs() {
@@ -192,7 +194,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [importedReport]);
 
   const hasOverviewSnapshot = Boolean(overview?.finding_counts);
   useEffect(() => {
