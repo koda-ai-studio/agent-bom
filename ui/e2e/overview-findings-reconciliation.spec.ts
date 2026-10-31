@@ -644,6 +644,8 @@ for (const theme of ["light", "dark"] as const) {
       } }));
       await page.goto("/");
       await expect(page.getByRole("heading", { name: "Start with evidence" })).toBeVisible();
+      await page.getByRole("region", { name: "Start with evidence" }).getByRole("link", { name: "Get started" }).click();
+      await expect(page).toHaveURL(/\/get-started\/?$/);
       const start = page.getByRole("link", { name: "Choose a scan target" });
       await expect(start).toHaveAttribute("href", "/scan");
       const guide = page.getByRole("region", { name: "Start with evidence" });
@@ -652,6 +654,10 @@ for (const theme of ["light", "dark"] as const) {
       await capture(page, testInfo, `first-evidence-${theme}-${width}.png`);
       const writes: string[] = [];
       page.on("request", (request) => { if (["POST", "PUT", "PATCH"].includes(request.method())) writes.push(request.url()); });
+      const preview = guide.getByText("Preview a saved or sample report", { exact: true });
+      await preview.focus();
+      await page.keyboard.press("Enter");
+      await expect(page.getByLabel("Choose report.json")).toBeVisible();
       const invalidAgents = Array.from({ length: 200 }, () => ({ name: "valid", agent_type: "custom", mcp_servers: [] }));
       await page.getByLabel("Choose report.json").setInputFiles({ name: "invalid-report.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ agents: [...invalidAgents, null], blast_radius: [] })) });
       await expect(guide.getByRole("alert")).toContainText("agents[200]: must be an object");
@@ -671,7 +677,7 @@ for (const theme of ["light", "dark"] as const) {
       await capture(page, testInfo, `import-coverage-${theme}-${width}.png`);
       await expect(page.getByRole("heading", { name: "Start with evidence" })).toHaveCount(0);
       expect(writes).toEqual([]);
-      await page.getByRole("button", { name: "Return to live overview" }).click();
+      await page.getByRole("button", { name: "Back to Get started" }).click();
       await expect(page.getByRole("heading", { name: "Start with evidence" })).toBeVisible();
     });
   }

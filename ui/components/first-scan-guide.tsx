@@ -22,9 +22,6 @@ export function FirstScanGuide({ onImport }: { onImport: (data: ScanResult) => v
       <p className="text-xs font-medium uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Your first source → your first investigation</p>
       <h2 id="first-scan-title" className="mt-2 text-2xl font-semibold tracking-tight">Start with evidence</h2>
       <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-secondary">Bring one project or connected source. See what was discovered, investigate a finding and decide what to fix next.</p>
-      <p className="mt-2 text-sm text-ink-secondary">
-        No scans or findings are recorded in the current overview window. This is not a clean security verdict.
-      </p>
       <div className="mt-5 grid gap-4 xl:grid-cols-3">
         <div className="min-w-0 space-y-3 rounded-lg border border-outline p-4">
           <FolderSearch className="h-5 w-5 text-emerald-700 dark:text-emerald-300" aria-hidden="true" />

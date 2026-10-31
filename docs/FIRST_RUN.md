@@ -181,7 +181,9 @@ or attach deterministic output to an issue.
 
 ## Activate your own project in the dashboard
 
-For an existing control plane, open **Overview → Start with evidence**. Choose
+For an existing control plane, open **Overview → Get started** or **Connect → Get started**.
+Overview keeps a compact setup prompt above the risk summary; the dedicated
+Get started page contains the complete guide and browser-only report preview. Choose
 an explicit scan target, connect a supported source, or expand **Show project
 command** to send a project from your machine. The local command requires the
 deployment's ingestion URL and a push-capable key supplied through your secret

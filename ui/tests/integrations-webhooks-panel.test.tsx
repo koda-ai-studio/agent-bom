@@ -96,10 +96,15 @@ describe("WebhooksPanel", () => {
     fireEvent.click(scope.getByRole("button", { name: /Test/i }));
     await waitFor(() => expect(apiMock.testWebhookSubscription).toHaveBeenCalledWith("wh-1"));
 
-    fireEvent.click(scope.getByRole("button", { name: /Disable/i }));
+    // Dispatch proves the request started; the table stays busy until its
+    // refreshed subscription/outbox reads finish. Query the current table.
+    const action = (name: RegExp) => within(screen.getByTestId("webhooks-table")).getByRole("button", { name });
+    await waitFor(() => expect(action(/Disable/i)).toBeEnabled());
+    fireEvent.click(action(/Disable/i));
     await waitFor(() => expect(apiMock.disableWebhookSubscription).toHaveBeenCalledWith("wh-1"));
 
-    fireEvent.click(scope.getByRole("button", { name: /Delete/i }));
+    await waitFor(() => expect(action(/Delete/i)).toBeEnabled());
+    fireEvent.click(action(/Delete/i));
     await waitFor(() => expect(apiMock.deleteWebhookSubscription).toHaveBeenCalledWith("wh-1"));
   });
 
