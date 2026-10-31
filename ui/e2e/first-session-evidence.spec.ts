@@ -50,10 +50,12 @@ for (const theme of ["light", "dark"] as const) {
       await page.keyboard.press("Enter");
       await guide.getByRole("button", { name: "Copy project command" }).click();
       await expect(page.locator("html")).toHaveAttribute("data-copied-command", /--no-discover --context-graph.*AGENT_BOM_PUSH_URL:\?/);
+      await expect(page.locator("html")).toHaveAttribute("data-copied-command", /^AGENT_BOM_PUSH_API_KEY=.*AGENT_BOM_PUSH_API_KEY:\?/);
       await expect(guide.getByText(/including any deployment prefix/)).toBeVisible();
       await guide.locator("summary").filter({ hasText: "Preview a saved or sample report" }).click();
       await expect(guide.getByText(/does not upload it to the control plane or populate its graph/)).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+      await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({ path: testInfo.outputPath(`first-session-${theme}-${width}-expanded.png`), fullPage: true });
     }
     expect(writes).toEqual([]);

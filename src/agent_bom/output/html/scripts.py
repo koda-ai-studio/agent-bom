@@ -14,12 +14,29 @@ _EXTERNAL_SCRIPT_TAGS = (
 )
 
 
+PRINT_DETAILS_JS = """\
+  var printDetails = null;
+  window.addEventListener('beforeprint', function() {
+    if (printDetails !== null) return;
+    printDetails = Array.from(document.querySelectorAll('details')).map(function(el) {
+      var state = {element: el, open: el.open};
+      el.open = true;
+      return state;
+    });
+  });
+  window.addEventListener('afterprint', function() {
+    (printDetails || []).forEach(function(state) { state.element.open = state.open; });
+    printDetails = null;
+  });
+"""
+
 SCALE_REPORT_SCRIPT = f"""<script>
 // agent-bom scale-report: tabs + client-side pagination. Kept in a standalone
 // script (distinct opening so offline mode does not strip it) and independent of
 // the CDN chart/graph libs, so a large report stays tabbed and paginated even
 // when opened offline or from an email attachment.
 (function scaleReport() {{
+  {PRINT_DETAILS_JS}
   window.PAGINATORS = window.PAGINATORS || {{}};
 
   function makePaginator(tableId, filterFn) {{
@@ -32,6 +49,21 @@ SCALE_REPORT_SCRIPT = f"""<script>
     var page = 1;
     var matched = allRows;
     var infoEl = bar ? bar.querySelector('.pager-info') : null;
+    var headings = Array.from(table.querySelectorAll('thead th')).map(function(th) {{ return th.textContent.trim(); }});
+    function prepareRow(row) {{
+      if (row.dataset.detailsReady) return;
+      row.dataset.detailsReady = 'true';
+      Array.from(row.cells).forEach(function(cell, index) {{ cell.setAttribute('data-label', headings[index] || 'Evidence'); }});
+      var button = document.createElement('button');
+      button.className = 'row-detail-toggle'; button.textContent = 'Show evidence';
+      button.setAttribute('aria-expanded', 'false');
+      button.onclick = function() {{
+        var expanded = row.classList.toggle('row-expanded');
+        button.setAttribute('aria-expanded', String(expanded));
+        button.textContent = expanded ? 'Hide evidence' : 'Show evidence';
+      }};
+      if (row.cells[0]) row.cells[0].append(button);
+    }}
     function render() {{
       var total = matched.length;
       var pages = Math.max(1, Math.ceil(total / pageSize));
@@ -40,7 +72,7 @@ SCALE_REPORT_SCRIPT = f"""<script>
       var start = (page - 1) * pageSize;
       var end = start + pageSize;
       allRows.forEach(function(r) {{ r.classList.add('pg-hidden'); }});
-      matched.slice(start, end).forEach(function(r) {{ r.classList.remove('pg-hidden'); }});
+      matched.slice(start, end).forEach(function(r) {{ prepareRow(r); r.classList.remove('pg-hidden'); }});
       if (bar) {{
         if (infoEl) infoEl.innerHTML = total ? (start + 1) + '&ndash;' + Math.min(end, total) + ' of ' + total : '0 of 0';
         var f = bar.querySelector('[data-act="first"]'), pv = bar.querySelector('[data-act="prev"]'),
@@ -69,6 +101,7 @@ SCALE_REPORT_SCRIPT = f"""<script>
       if (sizeSel) sizeSel.addEventListener('change', function() {{ pageSize = parseInt(this.value, 10) || 50; page = 1; render(); }});
     }}
     var api = {{ apply: apply, resort: resort, render: render }};
+    window.addEventListener('beforeprint', function() {{ allRows.forEach(prepareRow); }});
     window.PAGINATORS[tableId] = api;
     apply();
     return api;
@@ -134,8 +167,14 @@ SCALE_REPORT_SCRIPT = f"""<script>
   }}
   function activateTab(key) {{
     if (!key) return;
-    document.querySelectorAll('.tab-btn').forEach(function(b) {{ b.classList.toggle('active', b.getAttribute('data-tab') === key); }});
+    document.querySelectorAll('.tab-btn').forEach(function(b) {{
+      var active = b.getAttribute('data-tab') === key;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', String(active));
+      b.tabIndex = active ? 0 : -1;
+    }});
     document.querySelectorAll('.container>section[data-tab]').forEach(function(s) {{ s.classList.toggle('tab-active', s.getAttribute('data-tab') === key); }});
+    document.dispatchEvent(new Event('agent-bom:report-tab'));
     // Tables re-render because a hidden tab had zero layout width.
     Object.keys(window.PAGINATORS).forEach(function(id) {{ window.PAGINATORS[id].render(); }});
   }}
@@ -143,6 +182,17 @@ SCALE_REPORT_SCRIPT = f"""<script>
     document.body.classList.add('js-tabs');
     tabBar.querySelectorAll('.tab-btn').forEach(function(b) {{
       b.addEventListener('click', function() {{ activateTab(b.getAttribute('data-tab')); window.scrollTo(0, 0); }});
+      b.addEventListener('keydown', function(e) {{
+        var buttons = Array.from(tabBar.querySelectorAll('.tab-btn'));
+        var index = buttons.indexOf(b);
+        if (e.key === 'ArrowRight') index = (index + 1) % buttons.length;
+        else if (e.key === 'ArrowLeft') index = (index + buttons.length - 1) % buttons.length;
+        else if (e.key === 'Home') index = 0;
+        else if (e.key === 'End') index = buttons.length - 1;
+        else return;
+        e.preventDefault();
+        buttons[index].click(); buttons[index].focus();
+      }});
     }});
     var firstTab = tabBar.querySelector('.tab-btn');
     if (firstTab) activateTab(firstTab.getAttribute('data-tab'));
@@ -158,6 +208,7 @@ SCALE_REPORT_SCRIPT = f"""<script>
       if (tabBar && key) {{
         e.preventDefault();
         activateTab(key);
+        if (el) el.querySelectorAll('details.report-disclosure').forEach(function(d) {{ d.open = true; }});
         if (el) setTimeout(function() {{ el.scrollIntoView({{ behavior: 'smooth', block: 'start' }}); }}, 30);
       }}
     }});
@@ -361,16 +412,91 @@ PAGE_INTERACTIONS_JS = """\
   }
 """
 
+GRAPH_VISIBILITY_JS = """\
+  function addGraphViews(graph, container) {
+    var canvas = container.parentNode;
+    canvas.classList.toggle('small-graph', graph.nodes().length <= 20);
+    var toolbar = document.createElement('div');
+    toolbar.className = 'graph-view-switch';
+    var diagram = document.createElement('button'); diagram.textContent = 'Diagram';
+    var relationships = document.createElement('button'); relationships.textContent = 'Relationships';
+    toolbar.append(diagram, relationships);
+    var panel = document.createElement('div'); panel.className = 'graph-relationships';
+    var rows = document.createElement('ol');
+    var pager = document.createElement('div'); pager.className = 'pager';
+    var previous = document.createElement('button'); previous.textContent = 'Previous';
+    var next = document.createElement('button'); next.textContent = 'Next';
+    var count = document.createElement('span'); count.setAttribute('aria-live', 'polite');
+    pager.append(previous, count, next); panel.append(rows, pager);
+    canvas.before(toolbar); canvas.after(panel);
+    var page = 0; var edges = graph.edges(); var size = window.innerWidth < 700 ? 5 : 15;
+    function render() {
+      rows.replaceChildren();
+      edges.slice(page * size, (page + 1) * size).forEach(function(edge) {
+        var item = document.createElement('li');
+        var source = document.createElement('strong'); source.textContent = edge.source().data('label');
+        var relation = document.createElement('span'); relation.textContent = (edge.data('type') || 'related to').replaceAll('_', ' ');
+        var target = document.createElement('strong'); target.textContent = edge.target().data('label');
+        item.append(source, relation, target); rows.append(item);
+      });
+      count.textContent = edges.length ? (page * size + 1) + '–' + Math.min((page + 1) * size, edges.length) + ' of ' + edges.length + ' relationships' : 'No relationships recorded';
+      previous.disabled = page === 0; next.disabled = (page + 1) * size >= edges.length;
+    }
+    previous.onclick = function() { page--; render(); };
+    next.onclick = function() { page++; render(); };
+    function select(showDiagram) {
+      canvas.hidden = !showDiagram; panel.hidden = showDiagram;
+      diagram.setAttribute('aria-pressed', String(showDiagram));
+      relationships.setAttribute('aria-pressed', String(!showDiagram));
+      document.dispatchEvent(new Event('agent-bom:report-tab'));
+    }
+    diagram.onclick = function() { select(true); };
+    relationships.onclick = function() { select(false); };
+    render(); select(window.innerWidth >= 700);
+  }
+  function fitGraphWhenVisible(graph, container) {
+    var fitted = false;
+    var printView = null;
+    var userMoved = false, fitting = false, width = 0, height = 0;
+    graph.on('pan zoom', function() { if (!fitting && !printView) userMoved = true; });
+    function refresh() {
+      if (!container.clientWidth || !container.clientHeight) return;
+      var resized = width !== container.clientWidth || height !== container.clientHeight;
+      width = container.clientWidth; height = container.clientHeight;
+      fitting = true;
+      graph.resize();
+      if (!fitted || (resized && !userMoved)) {
+        graph.fit(graph.elements(), 40);
+        fitted = true;
+      }
+      fitting = false;
+    }
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(refresh).observe(container);
+    window.addEventListener('resize', refresh);
+    window.addEventListener('beforeprint', function() {
+      printView = {zoom: graph.zoom(), pan: graph.pan()};
+      graph.resize(); graph.fit(graph.elements(), 24);
+    });
+    window.addEventListener('afterprint', function() {
+      if (!printView) return;
+      graph.resize(); graph.viewport(printView); printView = null;
+    });
+    document.addEventListener('agent-bom:report-tab', refresh);
+    refresh();
+  }
+"""
+
 _GRAPH_SCRIPT_BODY = "".join(
     (
         SEVERITY_CHART_JS,
         BLAST_RADIUS_CHART_JS,
+        GRAPH_VISIBILITY_JS,
         SUPPLY_CHAIN_GRAPH_JS,
         SUPPLY_CHAIN_SIDEBAR_JS,
         SUPPLY_CHAIN_TOOLS_JS,
         ATTACK_FLOW_GRAPH_JS,
         PAGE_INTERACTIONS_JS,
-        "})();\n</script>",
+        "})();\n</script>\n",
     )
 )
 
@@ -412,7 +538,7 @@ def _offline_assets_script() -> str:
   replace('sevChart', 'Severity chart');
   replace('blastChart', 'Blast-radius chart');
   replace('cy', 'Supply-chain graph');
-  replace('attackCy', 'Attack-flow graph');
+  replace('cyAttack', 'Finding paths');
   document.querySelectorAll('.graph-filter-bar,.graph-controls').forEach(function(el) {
     el.style.display = 'none';
   });
@@ -429,7 +555,8 @@ def _apply_offline_assets_mode(html: str) -> str:
     marker = '<div class="container">\n'
     html = html.replace(marker, marker + _offline_assets_notice(), 1)
     script_start = html.find("\n<script>\n(function() {")
-    script_end = html.rfind("</script>\n\n</body>")
+    # Replace only the graph block; footer whitespace and later scripts are unrelated.
+    script_end = html.find("</script>", script_start) if script_start != -1 else -1
     if script_start != -1 and script_end != -1:
         html = html[:script_start] + "\n" + _offline_assets_script() + html[script_end + len("</script>") :]
     return html

@@ -93,7 +93,7 @@ def _vuln_table(
     ai_assessments = {assessment.finding_id: assessment for assessment in getattr(report, "ai_finding_assessments", []) or []}
     rows = [_vuln_row(idx, finding, ai_assessments) for idx, finding in enumerate(sorted_findings)]
 
-    headers = ["Vuln ID", "Severity", "Package", "CVSS", "EPSS", "KEV", "Reach", "Fix", "Affected Agents", "Exposed Creds", "Summary"]
+    headers = ["Vuln ID", "Severity", "Package", "CVSS", "EPSS", "KEV", "Reach", "Fix", "Agent / asset context", "Exposed Creds", "Summary"]
 
     filter_bar = (
         '<div class="vuln-filter-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;'
@@ -169,7 +169,17 @@ def _blast_table(
             f"<td>{fix}</td>"
             f"</tr>"
         )
-    headers = ["#", "Vuln ID", "Severity", "Blast Score (0&ndash;10)", "Agents Hit", "Creds Exposed", "Tools Reachable", "Flags", "Fix"]
+    headers = [
+        "#",
+        "Vuln ID",
+        "Severity",
+        "Blast Score (0&ndash;10)",
+        "Agent / asset contexts",
+        "Creds Exposed",
+        "Tools Reachable",
+        "Flags",
+        "Fix",
+    ]
     return (
         '<div class="table-wrap"><table class="data-table sortable">'
         + "<thead><tr>"

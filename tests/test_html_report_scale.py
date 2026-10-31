@@ -166,9 +166,12 @@ def test_small_report_still_lists_all_rows_without_windowing():
 
 
 def test_pagination_survives_offline_mode_gracefully():
-    """Offline mode drops interactivity but must remain a valid single page."""
+    """Offline mode keeps local navigation without depending on CDN libraries."""
     report, brs = _large_report(200)
     html = to_html(report, brs, offline_assets=True)
     assert html.startswith("<!DOCTYPE html>")
-    # No dead tab bar in the static offline export.
-    assert 'class="tab-bar"' not in html
+    # Navigation and pagination run in the independent local script.
+    assert 'class="tab-bar"' in html
+    assert "function activateTab" in html
+    assert "window.PAGINATORS" in html
+    assert "<script src=" not in html

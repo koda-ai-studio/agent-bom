@@ -57,7 +57,11 @@ def append_agent_elements(elements: list[dict], agent: "Agent", providers_seen: 
                 "id": aid,
                 "label": agent.name,
                 "type": static.inventory_type.value if static is not None else "agent",
-                "tip": (f"Agent: {agent.name}\nType: {agent.agent_type.value}\nSource: {source}\nServers: {len(agent.mcp_servers)}"),
+                "tip": (
+                    f"Inventory source: {agent.name}\nSource: {source}"
+                    if static is not None
+                    else f"Agent: {agent.name}\nType: {agent.agent_type.value}\nSource: {source}\nServers: {len(agent.mcp_servers)}"
+                ),
                 "agentType": agent.agent_type.value,
                 "configPath": sanitize_path_label(agent.config_path) if agent.config_path else "",
                 # "source"/"target" are reserved Cytoscape edge fields; a node-level

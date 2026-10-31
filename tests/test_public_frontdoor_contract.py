@@ -177,7 +177,11 @@ def test_public_first_run_surfaces_share_one_primary_command() -> None:
 
     site = (ROOT / "site-docs/index.md").read_text(encoding="utf-8")
     for text in (readme, pypi, guide, site):
-        assert text.split("```bash", 1)[1].split("```", 1)[0].strip() == "uvx agent-bom scan ."
+        assert (
+            text.split("```bash", 1)[1].split("```", 1)[0].strip() == "uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html"
+        )
+    assert "Open `agent-bom-report.html`" in readme
+    assert "No MCP configuration" in readme
     assert "pip install agent-bom\nagent-bom scan ." in guide  # supported alternative
     assert "agent-bom scan -p ." not in guide
 

@@ -1,6 +1,7 @@
 import type { AdvisoryAffectedRow } from "@/lib/advisory-affected";
 
 import { formatUtc } from "./advisory-format";
+import { AffectedAssetIdentity } from "./affected-asset-identity";
 import { BlastRadiusLink, PatchTarget, VerdictBadge, VerdictDetail, provenanceLabel, rowKey } from "./affected-row-parts";
 
 /** Narrow screens: one stacked card per asset, the verdict and patch target always on screen. */
@@ -9,10 +10,7 @@ export function AffectedAssetCards({ rows }: { rows: AdvisoryAffectedRow[] }) {
     <ul aria-label="Affected assets" className="space-y-2 lg:hidden">
       {rows.map(row => (
         <li key={rowKey(row)} data-testid="affected-asset-card" className="min-w-0 space-y-2 rounded-xl border border-outline bg-surface px-3 py-2.5">
-          <div className="min-w-0">
-            <p className="break-words text-sm font-medium text-foreground">{row.asset_label}</p>
-            <p className="break-words text-xs text-ink-tertiary">{row.asset.agent || row.asset_type}</p>
-          </div>
+          <AffectedAssetIdentity row={row} />
           <div className="min-w-0">
             <VerdictBadge row={row} />
             <VerdictDetail row={row} />

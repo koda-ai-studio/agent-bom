@@ -111,6 +111,77 @@
     blastCtx.parentNode.replaceChild(p2, blastCtx);
   }
 
+  function addGraphViews(graph, container) {
+    var canvas = container.parentNode;
+    canvas.classList.toggle('small-graph', graph.nodes().length <= 20);
+    var toolbar = document.createElement('div');
+    toolbar.className = 'graph-view-switch';
+    var diagram = document.createElement('button'); diagram.textContent = 'Diagram';
+    var relationships = document.createElement('button'); relationships.textContent = 'Relationships';
+    toolbar.append(diagram, relationships);
+    var panel = document.createElement('div'); panel.className = 'graph-relationships';
+    var rows = document.createElement('ol');
+    var pager = document.createElement('div'); pager.className = 'pager';
+    var previous = document.createElement('button'); previous.textContent = 'Previous';
+    var next = document.createElement('button'); next.textContent = 'Next';
+    var count = document.createElement('span'); count.setAttribute('aria-live', 'polite');
+    pager.append(previous, count, next); panel.append(rows, pager);
+    canvas.before(toolbar); canvas.after(panel);
+    var page = 0; var edges = graph.edges(); var size = window.innerWidth < 700 ? 5 : 15;
+    function render() {
+      rows.replaceChildren();
+      edges.slice(page * size, (page + 1) * size).forEach(function(edge) {
+        var item = document.createElement('li');
+        var source = document.createElement('strong'); source.textContent = edge.source().data('label');
+        var relation = document.createElement('span'); relation.textContent = (edge.data('type') || 'related to').replaceAll('_', ' ');
+        var target = document.createElement('strong'); target.textContent = edge.target().data('label');
+        item.append(source, relation, target); rows.append(item);
+      });
+      count.textContent = edges.length ? (page * size + 1) + '–' + Math.min((page + 1) * size, edges.length) + ' of ' + edges.length + ' relationships' : 'No relationships recorded';
+      previous.disabled = page === 0; next.disabled = (page + 1) * size >= edges.length;
+    }
+    previous.onclick = function() { page--; render(); };
+    next.onclick = function() { page++; render(); };
+    function select(showDiagram) {
+      canvas.hidden = !showDiagram; panel.hidden = showDiagram;
+      diagram.setAttribute('aria-pressed', String(showDiagram));
+      relationships.setAttribute('aria-pressed', String(!showDiagram));
+      document.dispatchEvent(new Event('agent-bom:report-tab'));
+    }
+    diagram.onclick = function() { select(true); };
+    relationships.onclick = function() { select(false); };
+    render(); select(window.innerWidth >= 700);
+  }
+  function fitGraphWhenVisible(graph, container) {
+    var fitted = false;
+    var printView = null;
+    var userMoved = false, fitting = false, width = 0, height = 0;
+    graph.on('pan zoom', function() { if (!fitting && !printView) userMoved = true; });
+    function refresh() {
+      if (!container.clientWidth || !container.clientHeight) return;
+      var resized = width !== container.clientWidth || height !== container.clientHeight;
+      width = container.clientWidth; height = container.clientHeight;
+      fitting = true;
+      graph.resize();
+      if (!fitted || (resized && !userMoved)) {
+        graph.fit(graph.elements(), 40);
+        fitted = true;
+      }
+      fitting = false;
+    }
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(refresh).observe(container);
+    window.addEventListener('resize', refresh);
+    window.addEventListener('beforeprint', function() {
+      printView = {zoom: graph.zoom(), pan: graph.pan()};
+      graph.resize(); graph.fit(graph.elements(), 24);
+    });
+    window.addEventListener('afterprint', function() {
+      if (!printView) return;
+      graph.resize(); graph.viewport(printView); printView = null;
+    });
+    document.addEventListener('agent-bom:report-tab', refresh);
+    refresh();
+  }
   // Cytoscape: Supply chain graph with dagre hierarchical layout
   var cyContainer = document.getElementById('cy');
   if (cyContainer && GRAPH_ELEMENTS.length > 0) {
@@ -118,6 +189,16 @@
       container: cyContainer,
       elements: GRAPH_ELEMENTS,
       style: [
+        {
+          selector: 'node',
+          style: {
+            'label': 'data(label)', 'font-size': 12, 'color': '#e2e8f0',
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': 140,
+            'width': 156, 'height': 60, 'shape': 'round-rectangle',
+            'background-color': '#334155', 'border-color': '#94a3b8', 'border-width': 1.5,
+          },
+        },
         {
           selector: 'node[type="provider"]',
           style: {
@@ -153,7 +234,7 @@
             'height': 40,
             'shape': 'round-rectangle',
             'text-wrap': 'wrap',
-            'text-max-width': '105px',
+            'text-max-width': '110px',
           },
         },
         {
@@ -164,7 +245,7 @@
             'border-width': 2,
             'label': 'data(label)',
             'color': '#6ee7b7',
-            'font-size': '10px',
+            'font-size': '12px',
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 120,
@@ -182,7 +263,7 @@
             'border-width': 2,
             'label': 'data(label)',
             'color': '#fde68a',
-            'font-size': '10px',
+            'font-size': '12px',
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 120,
@@ -200,7 +281,7 @@
             'border-width': 2.5,
             'label': 'data(label)',
             'color': '#fca5a5',
-            'font-size': '10px',
+            'font-size': '12px',
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 120,
@@ -218,7 +299,7 @@
             'border-width': 2,
             'label': 'data(label)',
             'color': '#fca5a5',
-            'font-size': '9px',
+            'font-size': '11px',
             'font-weight': '700',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -242,7 +323,7 @@
             'text-halign': 'center',
             'width': 110,
             'height': 30,
-            'shape': 'diamond',
+            'shape': 'round-rectangle',
             'underlay-color': '#ef4444',
             'underlay-padding': '6px',
             'underlay-opacity': 0.15,
@@ -262,7 +343,7 @@
             'text-halign': 'center',
             'width': 100,
             'height': 28,
-            'shape': 'diamond',
+            'shape': 'round-rectangle',
             'underlay-color': '#fb923c',
             'underlay-padding': '4px',
             'underlay-opacity': 0.1,
@@ -282,7 +363,7 @@
             'text-halign': 'center',
             'width': 90,
             'height': 26,
-            'shape': 'diamond',
+            'shape': 'round-rectangle',
           },
         },
         {
@@ -324,10 +405,25 @@
           selector: '.faded',
           style: { 'opacity': 0.08 },
         },
+        {
+          selector: 'node[type="cve"], node[type^="cve_"]',
+          style: {
+            'label': function(node) { return (node.data('label') || '').split(' ')[0]; },
+            'font-size': 11, 'width': 140, 'height': 42,
+            'text-wrap': 'wrap', 'text-max-width': 128, 'text-overflow-wrap': 'anywhere',
+          },
+        },
+        {
+          selector: 'node[type="directory"], node[type="source_file"], node[type="config_file"]',
+          style: {
+            'label': function(node) { var label = node.data('label') || ''; return label === '.' ? 'Project root' : label.replace(/^project:/, ''); },
+            'text-overflow-wrap': 'anywhere',
+          },
+        },
       ],
       layout: {
         name: 'dagre',
-        rankDir: 'LR',
+        rankDir: window.innerWidth < 700 ? 'TB' : 'LR',
         nodeSep: 50,
         rankSep: 80,
         edgeSep: 15,
@@ -340,7 +436,8 @@
       wheelSensitivity: 0.3,
       autoungrabify: false,
     });
-    cy.ready(function() { cy.fit(cy.elements(), 40); });
+    cy.ready(function() { fitGraphWhenVisible(cy, cyContainer); });
+    addGraphViews(cy, cyContainer);
 
     // Tooltip
     var tip = document.getElementById('tip');
@@ -753,13 +850,23 @@
       elements: ATTACK_FLOW,
       style: [
         {
+          selector: 'node',
+          style: {
+            'label': 'data(label)', 'font-size': 12, 'color': '#e2e8f0',
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': 140,
+            'width': 156, 'height': 60, 'shape': 'round-rectangle',
+            'background-color': '#334155', 'border-color': '#94a3b8', 'border-width': 1.5,
+          },
+        },
+        {
           selector: 'node[type="cve"], node[type^="cve_"]',
           style: {
-            'shape': 'diamond',
+            'shape': 'round-rectangle',
             'width': 120,
             'height': 34,
             'label': 'data(label)',
-            'font-size': '9px',
+            'font-size': '11px',
             'font-weight': '700',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -814,7 +921,7 @@
             'border-width': 2,
             'label': 'data(label)',
             'color': '#fca5a5',
-            'font-size': '9px',
+            'font-size': '11px',
             'font-weight': '700',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -833,7 +940,7 @@
             'border-width': 2,
             'label': 'data(label)',
             'color': '#cbd5e1',
-            'font-size': '10px',
+            'font-size': '12px',
             'font-weight': '600',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -852,7 +959,7 @@
             'border-width': 2,
             'label': 'data(label)',
             'color': '#fde68a',
-            'font-size': '9px',
+            'font-size': '11px',
             'font-weight': '700',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -869,7 +976,7 @@
             'border-width': 2,
             'label': 'data(label)',
             'color': '#c7d2fe',
-            'font-size': '9px',
+            'font-size': '11px',
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 100,
@@ -895,7 +1002,7 @@
             'height': 38,
             'shape': 'round-rectangle',
             'text-wrap': 'wrap',
-            'text-max-width': '105px',
+            'text-max-width': '110px',
           },
         },
         {
@@ -965,10 +1072,25 @@
           selector: '.faded',
           style: { 'opacity': 0.08 },
         },
+        {
+          selector: 'node[type="cve"], node[type^="cve_"]',
+          style: {
+            'label': function(node) { return (node.data('label') || '').split(' ')[0]; },
+            'font-size': 11, 'width': 140, 'height': 42,
+            'text-wrap': 'wrap', 'text-max-width': 128, 'text-overflow-wrap': 'anywhere',
+          },
+        },
+        {
+          selector: 'node[type="directory"], node[type="source_file"], node[type="config_file"]',
+          style: {
+            'label': function(node) { var label = node.data('label') || ''; return label === '.' ? 'Project root' : label.replace(/^project:/, ''); },
+            'text-overflow-wrap': 'anywhere',
+          },
+        },
       ],
       layout: {
         name: 'dagre',
-        rankDir: 'LR',
+        rankDir: window.innerWidth < 700 ? 'TB' : 'LR',
         nodeSep: 40,
         rankSep: 100,
         edgeSep: 12,
@@ -980,7 +1102,8 @@
       maxZoom: 4,
       wheelSensitivity: 0.3,
     });
-    cyAtk.ready(function() { cyAtk.fit(cyAtk.elements(), 40); });
+    cyAtk.ready(function() { fitGraphWhenVisible(cyAtk, cyAtkContainer); });
+    addGraphViews(cyAtk, cyAtkContainer);
 
     // Attack flow tooltip
     cyAtk.on('mouseover', 'node', function(e) {
@@ -1057,6 +1180,7 @@
     var afParts = [];
     if (afCounts.cve) afParts.push('<span style="color:#f87171">' + afCounts.cve + ' CVEs</span>');
     if (afCounts.pkg_vuln) afParts.push('<span style="color:#dc2626">' + afCounts.pkg_vuln + ' pkgs</span>');
+    if (afCounts.directory || afCounts.source_file) afParts.push('<span style="color:#94a3b8">' + ((afCounts.directory || 0) + (afCounts.source_file || 0)) + ' inventory sources</span>');
     if (afCounts.server) afParts.push('<span style="color:#64748b">' + afCounts.server + ' servers</span>');
     if (afCounts.credential) afParts.push('<span style="color:#fbbf24">' + afCounts.credential + ' creds</span>');
     if (afCounts.tool) afParts.push('<span style="color:#818cf8">' + afCounts.tool + ' tools</span>');

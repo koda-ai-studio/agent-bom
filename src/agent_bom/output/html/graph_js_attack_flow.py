@@ -11,13 +11,23 @@ ATTACK_FLOW_GRAPH_JS = """\
       elements: ATTACK_FLOW,
       style: [
         {
+          selector: 'node',
+          style: {
+            'label': 'data(label)', 'font-size': 12, 'color': '#e2e8f0',
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': 140,
+            'width': 156, 'height': 60, 'shape': 'round-rectangle',
+            'background-color': '#334155', 'border-color': '#94a3b8', 'border-width': 1.5,
+          },
+        },
+        {
           selector: 'node[type="cve"], node[type^="cve_"]',
           style: {
-            'shape': 'diamond',
+            'shape': 'round-rectangle',
             'width': 120,
             'height': 34,
             'label': 'data(label)',
-            'font-size': '9px',
+            'font-size': '11px',
             'font-weight': '700',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -72,7 +82,7 @@ ATTACK_FLOW_GRAPH_JS = """\
             'border-width': 2,
             'label': 'data(label)',
             'color': '#fca5a5',
-            'font-size': '9px',
+            'font-size': '11px',
             'font-weight': '700',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -91,7 +101,7 @@ ATTACK_FLOW_GRAPH_JS = """\
             'border-width': 2,
             'label': 'data(label)',
             'color': '#cbd5e1',
-            'font-size': '10px',
+            'font-size': '12px',
             'font-weight': '600',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -110,7 +120,7 @@ ATTACK_FLOW_GRAPH_JS = """\
             'border-width': 2,
             'label': 'data(label)',
             'color': '#fde68a',
-            'font-size': '9px',
+            'font-size': '11px',
             'font-weight': '700',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -127,7 +137,7 @@ ATTACK_FLOW_GRAPH_JS = """\
             'border-width': 2,
             'label': 'data(label)',
             'color': '#c7d2fe',
-            'font-size': '9px',
+            'font-size': '11px',
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 100,
@@ -153,7 +163,7 @@ ATTACK_FLOW_GRAPH_JS = """\
             'height': 38,
             'shape': 'round-rectangle',
             'text-wrap': 'wrap',
-            'text-max-width': '105px',
+            'text-max-width': '110px',
           },
         },
         {
@@ -223,10 +233,25 @@ ATTACK_FLOW_GRAPH_JS = """\
           selector: '.faded',
           style: { 'opacity': 0.08 },
         },
+        {
+          selector: 'node[type="cve"], node[type^="cve_"]',
+          style: {
+            'label': function(node) { return (node.data('label') || '').split(' ')[0]; },
+            'font-size': 11, 'width': 140, 'height': 42,
+            'text-wrap': 'wrap', 'text-max-width': 128, 'text-overflow-wrap': 'anywhere',
+          },
+        },
+        {
+          selector: 'node[type="directory"], node[type="source_file"], node[type="config_file"]',
+          style: {
+            'label': function(node) { var label = node.data('label') || ''; return label === '.' ? 'Project root' : label.replace(/^project:/, ''); },
+            'text-overflow-wrap': 'anywhere',
+          },
+        },
       ],
       layout: {
         name: 'dagre',
-        rankDir: 'LR',
+        rankDir: window.innerWidth < 700 ? 'TB' : 'LR',
         nodeSep: 40,
         rankSep: 100,
         edgeSep: 12,
@@ -238,7 +263,8 @@ ATTACK_FLOW_GRAPH_JS = """\
       maxZoom: 4,
       wheelSensitivity: 0.3,
     });
-    cyAtk.ready(function() { cyAtk.fit(cyAtk.elements(), 40); });
+    cyAtk.ready(function() { fitGraphWhenVisible(cyAtk, cyAtkContainer); });
+    addGraphViews(cyAtk, cyAtkContainer);
 
     // Attack flow tooltip
     cyAtk.on('mouseover', 'node', function(e) {
@@ -315,6 +341,7 @@ ATTACK_FLOW_GRAPH_JS = """\
     var afParts = [];
     if (afCounts.cve) afParts.push('<span style="color:#f87171">' + afCounts.cve + ' CVEs</span>');
     if (afCounts.pkg_vuln) afParts.push('<span style="color:#dc2626">' + afCounts.pkg_vuln + ' pkgs</span>');
+    if (afCounts.directory || afCounts.source_file) afParts.push('<span style="color:#94a3b8">' + ((afCounts.directory || 0) + (afCounts.source_file || 0)) + ' inventory sources</span>');
     if (afCounts.server) afParts.push('<span style="color:#64748b">' + afCounts.server + ' servers</span>');
     if (afCounts.credential) afParts.push('<span style="color:#fbbf24">' + afCounts.credential + ' creds</span>');
     if (afCounts.tool) afParts.push('<span style="color:#818cf8">' + afCounts.tool + ' tools</span>');

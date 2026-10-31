@@ -3,6 +3,7 @@ import { Network } from "lucide-react";
 
 import type { AdvisoryAffectedRow, AffectedProvenance, AffectedVerdict } from "@/lib/advisory-affected";
 import { securityGraphHref } from "@/lib/page-links";
+import { affectedAssetLabel } from "./affected-asset-identity";
 
 const VERDICT_LABEL: Record<AffectedVerdict, string> = {
   affected: "Affected",
@@ -59,7 +60,7 @@ export function BlastRadiusLink({ row }: { row: AdvisoryAffectedRow }) {
   if (!node) return null;
   return (
     <Link href={securityGraphHref({ scan: row.scan_id ?? undefined, node })}
-      aria-label={`Blast radius for ${row.package.name} ${row.installed_version} on ${row.asset_label}`}
+      aria-label={`Blast radius for ${row.package.name} ${row.installed_version} on ${affectedAssetLabel(row)}`}
       className="inline-flex items-center gap-1.5 rounded-lg border border-outline bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-secondary hover:border-outline-strong hover:text-foreground">
       <Network className="h-3.5 w-3.5" aria-hidden /> Blast radius
     </Link>

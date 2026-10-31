@@ -8,6 +8,7 @@ from agent_bom.models import AIBOMReport
 from agent_bom.output.finding_views import (
     severity_value,
 )
+from agent_bom.output.graph_inventory import _static_inventory
 from agent_bom.output.html._common import (
     _esc,
     _sev_badge,
@@ -105,30 +106,28 @@ def _executive_headline_section(findings: list["Finding"], policy_findings: list
     """Leadership paragraph over every finding in the report, with owner/SLA as recorded."""
     from agent_bom.output.executive_headline import build_executive_headline
 
-    headline = build_executive_headline(_headline_row(finding) for finding in [*findings, *policy_findings])
+    headline = build_executive_headline((_headline_row(finding) for finding in [*findings, *policy_findings]), include_risk_sentences=False)
     rows = "".join(
-        "<tr>"
-        f"<td>{_esc(risk.title)}</td>"
-        f"<td>{_sev_badge(_esc(risk.severity))}</td>"
-        f"<td>{_esc(', '.join(risk.affected_agents) or 'none recorded')}</td>"
-        f"<td>{_esc(risk.owner or 'unassigned')}</td>"
-        f"<td>{_esc(risk.sla_due_at or 'no SLA set')}</td>"
-        "</tr>"
+        '<li class="headline-risk">'
+        f"<h3>{_esc(risk.title)}</h3>"
+        f'<div class="headline-risk-meta">{_sev_badge(_esc(risk.severity))}</div>'
+        "<details><summary>Context and ownership</summary><dl>"
+        f"<dt>Recorded context</dt><dd>{_esc(', '.join(risk.affected_agents) or 'none recorded')}</dd>"
+        f"<dt>Risk score</dt><dd>{f'{risk.risk_score:.1f}/10' if risk.risk_score is not None else 'unscored'}</dd>"
+        f"<dt>Owner</dt><dd>{_esc(risk.owner or 'unassigned')}</dd>"
+        f"<dt>SLA target</dt><dd>{_esc(risk.sla_due_at or 'no SLA set')}</dd>"
+        '</dl><p class="headline-risk-note">SLA targets may come from configured policy.</p></details>'
+        "</li>"
         for risk in headline.top_risks
     )
-    table = (
-        '<table style="margin-top:10px"><thead><tr><th>Top risk</th><th>Severity</th><th>Agents reached</th>'
-        f"<th>Owner</th><th>SLA due</th></tr></thead><tbody>{rows}</tbody></table>"
-        if rows
-        else ""
-    )
+    risks = f'<ul class="headline-risks" aria-label="Top risks">{rows}</ul>' if rows else ""
     return (
         '<section id="executive-headline">'
         '<div class="sec-title">Executive headline</div>'
         '<div class="panel">'
         f'<p style="margin:0;line-height:1.55">{_esc(headline.summary)}</p>'
-        f"{table}"
-        f'<p style="margin:10px 0 0;font-size:.72rem;color:#64748b">{_esc(headline.claim_boundary)}</p>'
+        f"{risks}"
+        f'<p style="margin:10px 0 0;font-size:.72rem;color:#94a3b8">{_esc(headline.claim_boundary)}</p>'
         "</div>"
         "</section>"
     )
@@ -138,6 +137,10 @@ def _summary_cards(report: "AIBOMReport", findings: list["Finding"], policy_find
     crit = sum(1 for finding in findings if severity_value(finding) == "critical")
     policy_crit = sum(1 for finding in policy_findings if str(finding.severity).lower() == "critical")
     total_vulns = len(findings)
+    static_count = sum(_static_inventory(agent) is not None for agent in report.agents)
+    inventory_label = (
+        "Inventory sources" if static_count == len(report.agents) and static_count else "Agents / inventory" if static_count else "Agents"
+    )
     cred_servers = sum(1 for a in report.agents for s in a.mcp_servers if s.has_credentials)
     kev_count = sum(1 for finding in findings if finding.is_kev)
 
@@ -156,9 +159,15 @@ def _summary_cards(report: "AIBOMReport", findings: list["Finding"], policy_find
         '<div class="stat-grid">'
         + "".join(
             [
-                card("&#x1f916;", str(report.total_agents), "Agents", "#60a5fa", f"{report.total_servers} servers"),
+                card("&#x1f916;", str(report.total_agents), inventory_label, "#60a5fa", f"{report.total_servers} MCP servers"),
                 card("&#x1f4e6;", str(report.total_packages), "Packages", "#38bdf8", "direct + transitive"),
-                card("&#x26a0;&#xfe0f;", str(total_vulns), "Vulnerabilities", "#f87171" if total_vulns else "#34d399", "across all agents"),
+                card(
+                    "&#x26a0;&#xfe0f;",
+                    str(total_vulns),
+                    "Vulnerabilities",
+                    "#f87171" if total_vulns else "#34d399",
+                    "in recorded inventory",
+                ),
                 card(
                     "&#x1f6e1;&#xfe0f;",
                     str(len(policy_findings)),

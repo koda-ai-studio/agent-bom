@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
+import re
+
 # Tab grouping for the report. Each entry: (tab-key, label, [section ids]).
 # Only tabs whose sections are actually rendered appear in the tab bar, so a
 # small scan collapses to a couple of tabs while a large multi-cloud scan gets
 # the full set. Order here is the tab order left-to-right.
 _TAB_DEFS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("summary", "Summary", ("executive-headline", "summary", "charts")),
-    ("agents", "Agents &amp; Servers", ("riskmap", "inventory", "aiinventory")),
+    ("agents", "Inventory", ("inventory", "aiinventory")),
     (
         "findings",
-        "CVEs &amp; Findings",
-        ("attackflow", "vulns", "policyfindings", "exposure-paths", "blast", "remediation"),
+        "Findings",
+        ("vulns", "policyfindings", "possibly-affected"),
     ),
-    ("compliance", "CIS &amp; Compliance", ("compliance", "cisbenchmarks", "skillaudit")),
+    ("graphs", "Graphs", ("riskmap", "attackflow")),
+    ("remediation", "Remediation", ("remediation", "exposure-paths", "blast")),
+    ("compliance", "Compliance", ("compliance", "cisbenchmarks", "skillaudit")),
     ("governance", "Trust &amp; Governance", ("trust", "enforcement")),
 )
 
@@ -27,13 +31,27 @@ def _apply_tabs(html: str, tab_counts: dict[str, int]) -> str:
     small script (added in the main IIFE) to show one tab at a time. Degrades to
     the full scrollable page when JS is off or when printing.
     """
+    for section, label in {
+        "charts": "Risk charts",
+        "exposure-paths": "Exposure evidence and investigation paths",
+        "blast": "Detailed impact evidence",
+        "cisbenchmarks": "CIS benchmark evidence",
+        "skillaudit": "Skill audit details",
+    }.items():
+        html = re.sub(
+            rf'(<section id="{section}"[^>]*>)(.*?)(</section>)',
+            lambda match: f'{match[1]}<details class="report-disclosure"><summary>{label}</summary>{match[2]}</details>{match[3]}',
+            html,
+            count=1,
+            flags=re.DOTALL,
+        )
     present: list[tuple[str, str]] = []
     for tab_key, label, section_ids in _TAB_DEFS:
         has_any = False
         for sid in section_ids:
             needle = f'<section id="{sid}"'
             if needle in html:
-                html = html.replace(needle, f'<section id="{sid}" data-tab="{tab_key}"', 1)
+                html = html.replace(needle, f'<section id="{sid}" data-tab="{tab_key}" role="tabpanel" aria-labelledby="tab-{tab_key}"', 1)
                 has_any = True
         if has_any:
             present.append((tab_key, label))
@@ -46,8 +64,13 @@ def _apply_tabs(html: str, tab_counts: dict[str, int]) -> str:
         count = tab_counts.get(tab_key, 0)
         badge = f'<span class="tab-count">{count}</span>' if count else ""
         active = " active" if idx == 0 else ""
-        buttons.append(f'<button class="tab-btn{active}" data-tab="{tab_key}" role="tab">{label}{badge}</button>')
-    tab_bar = '<nav class="tab-bar" role="tablist">' + "".join(buttons) + "</nav>\n"
+        selected = "true" if idx == 0 else "false"
+        controls = " ".join(sid for key, _, sections in _TAB_DEFS if key == tab_key for sid in sections if f'id="{sid}"' in html)
+        buttons.append(
+            f'<button class="tab-btn{active}" data-tab="{tab_key}" role="tab" aria-selected="{selected}" '
+            f'id="tab-{tab_key}" aria-controls="{controls}" tabindex="{0 if idx == 0 else -1}">{label}{badge}</button>'
+        )
+    tab_bar = '<nav class="tab-bar" role="tablist" aria-label="Report sections">' + "".join(buttons) + "</nav>\n"
 
     marker = '<div class="container">\n'
     return html.replace(marker, marker + tab_bar, 1)
