@@ -39,7 +39,7 @@ from agent_bom.mcp_tools.scan_response import (
 )
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.resolvers.latest_stable import check_latest_budget, resolved_version_source
-from agent_bom.scanners.local_data_freshness import freshness_snapshot
+from agent_bom.scanners import local_data_freshness
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings
 from agent_bom.security import sanitize_error
@@ -352,7 +352,7 @@ def _attach_pipeline_evidence(report, scanner_warnings: list[str], coverage_warn
 
 def _scan_report(report_cls, agents, blast_radii, scan_sources, *, offline: bool):
     report = report_cls(agents, blast_radii, cloud_inventory_data=imported_cloud_inventory(agents), scan_sources=scan_sources)
-    freshness = freshness_snapshot(offline)
+    freshness = local_data_freshness.freshness_snapshot(offline)
     report.vuln_data_freshness = freshness.to_dict() if freshness is not None else None
     attach_passive_mcp_audit(report)
     return report

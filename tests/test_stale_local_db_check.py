@@ -258,6 +258,7 @@ def test_mcp_scan_report_carries_vuln_data_freshness(monkeypatch, tmp_path):
         )
     )
 
+    assert "vuln_data_freshness" in payload, payload
     freshness = payload["vuln_data_freshness"]
     assert freshness["mode"] == "offline"
     assert freshness["age_days"] == 61
@@ -289,6 +290,25 @@ def test_mcp_scan_reads_freshness_through_the_module_at_call_time(monkeypatch, t
     monkeypatch.setattr("agent_bom.vuln_freshness.compute_freshness", lambda **_kwargs: None)
 
     assert _mcp_scan_payload().get("vuln_data_freshness") is None
+
+
+def test_mcp_scan_uses_current_freshness_snapshot(monkeypatch, tmp_path):
+    import agent_bom.mcp_tools.scanning  # noqa: F401 - import before replacing the reader
+    from agent_bom.scanners import local_data_freshness
+    from agent_bom.vuln_freshness import compute_freshness
+
+    _use_db(monkeypatch, tmp_path, synced_days_ago=61)
+    snapshot = compute_freshness(offline=True)
+    calls = []
+
+    def current_snapshot(offline):
+        calls.append(offline)
+        return snapshot
+
+    monkeypatch.setattr(local_data_freshness, "freshness_snapshot", current_snapshot)
+    payload = _mcp_scan_payload()
+    assert calls == [True]
+    assert payload["vuln_data_freshness"] == snapshot.to_dict()
 
 
 def test_mcp_scan_survives_a_freshness_probe_that_raises(monkeypatch, tmp_path):
