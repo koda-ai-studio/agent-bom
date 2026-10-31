@@ -69,7 +69,9 @@ def test_retirement_waits_for_active_readers_of_the_old_generation(estate):
     assert set(store.load_graph(tenant_id=TENANT).nodes) == {"package-b"}
 
 
-def _pause_before_build(store: CurrentGraphStore, thread_name: str) -> tuple[threading.Event, threading.Event]:
+def _pause_before_build(
+    store: CurrentGraphStore, thread_name: str, *, resume_timeout: float = 10
+) -> tuple[threading.Event, threading.Event]:
     """Hold *thread_name* before it becomes the builder, after it has read the evidence fingerprint."""
     paused, resume = threading.Event(), threading.Event()
     building = store._building
@@ -77,7 +79,7 @@ def _pause_before_build(store: CurrentGraphStore, thread_name: str) -> tuple[thr
     def gated(*args, **kwargs):
         if threading.current_thread().name == thread_name and not paused.is_set():
             paused.set()
-            assert resume.wait(10), "test never resumed the stale resolver"
+            assert resume.wait(resume_timeout), "test never resumed the stale resolver"
         return building(*args, **kwargs)
 
     store._building = gated  # type: ignore[method-assign]
