@@ -81,6 +81,23 @@ def test_release_refresh_replaces_vulnerable_certifi_with_hashed_universal_wheel
     assert f"--hash={wheel['hash']}" in certifi_entry
 
 
+@pytest.mark.parametrize("manifest", ["runtime-security-requirements.txt", "collector-security-requirements.txt"])
+def test_release_refresh_replaces_pyasn1_with_hashed_fixed_wheel(manifest: str) -> None:
+    """Released locks retain 0.6.4 even after main moves to the patched decoder."""
+    overlay = (ROOT / "deploy/docker" / manifest).read_text(encoding="utf-8")
+    entries = overlay.replace("\\\n", "").splitlines()
+    entry = next((entry for entry in entries if entry.startswith("pyasn1==")), "")
+    assert entry, "release refresh must replace pyasn1 from the old release lock"
+    requirement = Requirement(entry.split("--hash=")[0].strip())
+    assert "0.6.4" not in requirement.specifier
+    assert "0.6.5" in requirement.specifier
+    lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
+    package = next(package for package in lock["package"] if package["name"] == "pyasn1")
+    assert package["version"] in requirement.specifier
+    wheel = next(wheel for wheel in package["wheels"] if wheel["url"].endswith("-py3-none-any.whl"))
+    assert f"--hash={wheel['hash']}" in entry
+
+
 def _refresh_step(job: str, name: str) -> tuple[int, dict]:
     import yaml
 
