@@ -22,6 +22,7 @@ export const PRODUCT_ROUTES = [
   "/findings",
   "/fleet",
   "/gateway",
+  "/get-started",
   "/governance",
   "/graph",
   "/help",

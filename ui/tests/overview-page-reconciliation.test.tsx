@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Dashboard from "@/app/page";
+import GetStartedPage from "@/app/get-started/page";
 import type { OverviewResponse } from "@/lib/api";
 
 const cockpitProps = vi.hoisted(() => vi.fn());
@@ -137,6 +138,23 @@ describe("Overview canonical finding counts", () => {
 
   afterEach(() => vi.useRealTimers());
 
+  it("keeps Get started report previews local and returns to source selection", async () => {
+    render(<GetStartedPage />);
+    expect(screen.getByRole("link", { name: "Back to Overview" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("heading", { name: "Send a local project" })).toBeVisible();
+    expect(screen.queryByText(/No scans or findings are recorded/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Preview a saved or sample report"));
+    const file = new File([JSON.stringify({ agents: [], blast_radius: [], scan_run: { outcome: "partial" } })], "report.json", { type: "application/json" });
+    fireEvent.change(screen.getByLabelText("Choose report.json"), { target: { files: [file] } });
+    await screen.findByRole("heading", { name: "Report preview" });
+    expect(screen.getByRole("region", { name: "Imported collection evidence" })).toHaveTextContent("Collection partial");
+    expect(apiMock.listJobs).not.toHaveBeenCalled();
+    expect(apiMock.getOverview).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Back to Get started" }));
+    expect(screen.getByRole("heading", { name: "Get started" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Report preview" })).not.toBeInTheDocument();
+  });
+
   it.each([
     [{ outcome: "partial", requested_scope_count: 2, complete_scope_count: 1, incomplete_scope_count: 1 }, "Collection partial"],
     [{ outcome: "failed" }, "Collection failed"],
@@ -262,6 +280,9 @@ describe("Overview canonical finding counts", () => {
     await act(async () => resolveOverview({ ...empty, headline: { ...empty.headline, scans: 0, latest_scan_at: null }, finding_counts: { critical: 0, high: 0, medium: 0, low: 0, unrated: 0, total: 0, kev: 0 } }));
     fireEvent.click(screen.getByRole("tab", { name: "Top risks" }));
     expect(screen.getByRole("heading", { name: "Start with evidence" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute("href", "/get-started");
+    expect(screen.queryByRole("heading", { name: "Send a local project" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Choose report.json")).not.toBeInTheDocument();
     expect(screen.getByText("No completed scans. Run a scan to assess findings.")).toBeVisible();
     expect(screen.queryByText("Loading prioritized findings…")).not.toBeInTheDocument();
   });

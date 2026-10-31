@@ -1,0 +1,677 @@
+"use client";
+
+import { classifyApiOfflineKind, type ApiOfflineKind } from "@/lib/api-offline-kind";
+import { useQueueTopRisks } from "@/hooks/use-queue-top-risks";
+import { AdvisoryFreshness } from "@/components/advisory-freshness";
+
+import { LocalReportEvidence } from "@/components/local-report-evidence";
+import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
+import {
+  api,
+  ScanJob,
+  ScanResult,
+  JobListItem,
+  PostureResponse,
+  OverviewResponse,
+  formatDate,
+  type PostureCountsResponse,
+  type ComplianceResponse,
+  type InventorySummaryResponse,
+  type InventorySummaryFilters,
+} from "@/lib/api";
+import { FirstScanPrompt } from "@/components/first-scan-prompt";
+import { OverviewHistory } from "@/components/overview-history";
+import { ActivityFeed } from "@/components/activity-feed";
+import {
+  OverviewCockpit,
+  type ExposurePathView,
+  type OverviewComplianceSnapshot,
+  type PostureScoreFormat,
+} from "@/components/overview-cockpit";
+import { ApiOfflineState } from "@/components/api-offline-state";
+import { useDeploymentContext } from "@/hooks/use-deployment-context";
+import { openIssueSeverity } from "@/lib/open-issue-counts";
+import { deploymentModeLabel, hasDeploymentSignals } from "@/lib/deployment-context";
+import { useCaptureMode } from "@/lib/use-capture-mode";
+import { complianceFrameworkSummaries } from "@/lib/compliance-frameworks";
+import {
+  aggregateSeverity,
+  blastCredentials,
+  blastTools,
+  buildExposurePathView,
+  buildExecExposurePaths,
+} from "@/lib/dashboard-data";
+import {
+  ShieldAlert, ArrowRight, Clock,
+  AlertTriangle,
+} from "lucide-react";
+
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+export function OverviewDashboard({ initialReport = null, onExitReport }: { initialReport?: ScanResult | null; onExitReport?: () => void } = {}) {
+  const [jobs, setJobs] = useState<JobListItem[]>([]);
+  const [detailJobs, setDetailJobs] = useState<ScanJob[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(true);
+  const [apiError, setApiError] = useState(false);
+  // Differentiate "API down" from "API rejected my request" (#2196 audit fix).
+  // 401 -> "auth", 403 -> "forbidden", network/5xx -> "network".
+  const [apiErrorKind, setApiErrorKind] = useState<ApiOfflineKind>("network");
+  const [apiErrorDetail, setApiErrorDetail] = useState<string | null>(null);
+  const [importedReport, setImportedReport] = useState<ScanResult | null>(initialReport);
+  const [posture, setPosture] = useState<PostureResponse | null>(null);
+  const [inventorySummary, setInventorySummary] = useState<InventorySummaryResponse | null>(null);
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [inventoryUnavailable, setInventoryUnavailable] = useState(false);
+  const [inventoryUnavailableHref, setInventoryUnavailableHref] = useState("/inventory");
+  const [overview, setOverview] = useState<OverviewResponse | null>(null);
+  const [overviewRefreshing, setOverviewRefreshing] = useState(false);
+  const [overviewUnavailable, setOverviewUnavailable] = useState(false);
+  const [compliance, setCompliance] = useState<ComplianceResponse | null>(null);
+  const [complianceLoading, setComplianceLoading] = useState(true);
+  const [postureOverviewLoading, setPostureOverviewLoading] = useState(true);
+  // Local display-format override; falls back to the persisted per-tenant
+  // config carried on the overview posture. Toggling persists via the API (#3940).
+  const [scoreFormatOverride, setScoreFormatOverride] = useState<PostureScoreFormat | null>(null);
+  const { counts } = useDeploymentContext();
+  const captureMode = useCaptureMode();
+  const seededEvidence = captureMode || Boolean(counts?.scan_sources?.some((source) => source.includes("demo")));
+
+  useEffect(() => {
+    if (importedReport) return;
+    let cancelled = false;
+    const query = new URLSearchParams(window.location.search);
+    const scanId = query.get("scan_id") ?? query.get("scan") ?? undefined;
+    setInventoryLoading(true);
+    const requestedScope = new URLSearchParams();
+    if (scanId) requestedScope.set("scan", scanId);
+    for (const key of ["environment", "provider", "source", "search", "type", "severity", "min_severity"] as const) {
+      const value = query.get(key); if (value) requestedScope.set(key, value);
+    }
+    setInventoryUnavailableHref(requestedScope.size ? `/inventory?${requestedScope}` : "/inventory");
+    const filters: InventorySummaryFilters = {};
+    for (const key of ["environment", "provider", "source", "search", "severity"] as const) {
+      const value = query.get(key); if (value) filters[key] = value;
+    }
+    const types = query.get("type"); if (types) filters.type = types.split(",").filter(Boolean);
+    const minSeverity = query.get("min_severity"); if (minSeverity) filters.minSeverity = minSeverity;
+    void api.getInventorySummary(scanId, filters).then((summary) => {
+      if (!cancelled) { setInventorySummary(summary); setInventoryUnavailable(false); }
+    }, () => { if (!cancelled) { setInventorySummary(null); setInventoryUnavailable(true); } })
+      .finally(() => { if (!cancelled) setInventoryLoading(false); });
+    return () => { cancelled = true; };
+  }, [importedReport]);
+
+  // Fetch posture grade + cross-domain overview (folded into the header scorecard)
+  useEffect(() => {
+    let cancelled = false;
+    let inFlight = false;
+    async function refreshOverview() {
+      if (inFlight) return;
+      inFlight = true;
+      setOverviewRefreshing(true);
+      try {
+        const next = await api.getOverview();
+        if (!cancelled) {
+          setOverview(next);
+          setOverviewUnavailable(false);
+        }
+      } catch {
+        if (!cancelled) setOverviewUnavailable(true);
+      } finally {
+        inFlight = false;
+        if (!cancelled) {
+          setOverviewRefreshing(false);
+          setPostureOverviewLoading(false);
+        }
+      }
+    }
+    void refreshOverview();
+    // Match deployment-context refresh cadence, but publish the overview atomically.
+    const interval = window.setInterval(() => void refreshOverview(), 60_000);
+    void api.getPosture().then((value) => {
+      if (!cancelled) setPosture(value);
+    }, () => {});
+    void api.getCompliance().then(
+      (value) => {
+        if (!cancelled) setCompliance(value);
+      },
+      () => {},
+    ).finally(() => {
+      if (!cancelled) setComplianceLoading(false);
+    });
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const demoSeeding = Boolean(overview?.demo_estate_seeding);
+  useEffect(() => {
+    if (!demoSeeding) return;
+    // Every panel on this page loads once; reload when the seeded evidence lands.
+    const poll = window.setInterval(() => {
+      void api.getOverview().then((next) => {
+        if (!next.demo_estate_seeding) window.location.reload();
+      }, () => {});
+    }, 5_000);
+    return () => window.clearInterval(poll);
+  }, [demoSeeding]);
+
+  // Historical comparisons are separately scoped and loaded on demand.
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadJobs() {
+      setJobsLoading(true);
+      try {
+        const jobsRes = await api.listJobs();
+        if (cancelled) return;
+        const jobsList = Array.isArray(jobsRes?.jobs)
+          ? [...jobsRes.jobs].sort((a, b) => b.created_at.localeCompare(a.created_at))
+          : [];
+        setJobs(jobsList);
+        setApiError(false);
+      } catch (err) {
+        if (cancelled) return;
+        setApiError(true);
+        setApiErrorKind(classifyApiOfflineKind(err));
+        setApiErrorDetail(err instanceof Error ? err.message : null);
+        setJobs([]);
+        setDetailJobs([]);
+      } finally {
+        if (!cancelled) setJobsLoading(false);
+      }
+    }
+
+    void loadJobs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hasOverviewSnapshot = Boolean(overview?.finding_counts);
+  useEffect(() => {
+    // Wait for the summary contract before deciding whether an older server
+    // needs report hydration. Current servers already supply ranked findings.
+    if (postureOverviewLoading) return;
+    let cancelled = false;
+    async function hydrateDetails() {
+      if (apiError || hasOverviewSnapshot) {
+        setDetailJobs([]);
+        setDetailLoading(false);
+        return;
+      }
+
+      const detailIds = jobs
+        .filter((job) => job.status === "done")
+        .slice(0, 10)
+        .map((job) => job.job_id);
+
+      if (detailIds.length === 0) {
+        setDetailJobs([]);
+        setDetailLoading(false);
+        return;
+      }
+
+      setDetailLoading(true);
+      try {
+        const fullJobs = await Promise.all(
+          detailIds.map((jobId) => api.getScan(jobId).catch(() => null))
+        );
+        const hydrated = fullJobs
+          .filter((job): job is ScanJob => Boolean(job))
+          .sort((a, b) => b.created_at.localeCompare(a.created_at));
+        if (!cancelled) setDetailJobs(hydrated);
+      } catch {
+        if (!cancelled) setDetailJobs([]);
+      } finally {
+        if (!cancelled) setDetailLoading(false);
+      }
+    }
+    void hydrateDetails();
+    return () => { cancelled = true; };
+  }, [jobs, apiError, hasOverviewSnapshot, postureOverviewLoading]);
+
+  // When API is down but user imported a local report, synthesise a fake job
+  // so all downstream useMemo aggregators work without changes.
+  const effectiveJobs = useMemo<ScanJob[]>(() => {
+    if (!apiError || !importedReport) return detailJobs;
+    const importedGeneratedAt = importedReport.scan_timestamp ?? importedReport.generated_at ?? "";
+    return [{
+      job_id: "imported",
+      status: "done",
+      created_at: importedGeneratedAt,
+      request: {},
+      progress: [],
+      result: importedReport,
+    }];
+  }, [detailJobs, apiError, importedReport]);
+
+  const effectiveRecentJobs = useMemo<JobListItem[]>(() => {
+    if (!apiError || !importedReport) {
+      const detailsById = new Map(detailJobs.map((job) => [job.job_id, job]));
+      return jobs.map((job) => {
+        const detail = detailsById.get(job.job_id);
+        if (job.status !== "done" || detail?.status !== "done") return job;
+        return {
+          ...job,
+          request: job.request ?? detail.request,
+          summary: job.summary ?? detail.result?.summary,
+        };
+      });
+    }
+    return [];
+  }, [jobs, detailJobs, apiError, importedReport]);
+
+  const doneJobs = useMemo(
+    () => effectiveJobs.filter((j) => j.status === "done" && j.result),
+    [effectiveJobs]
+  );
+
+  // Tag each blast with its originating scan id (the graph snapshot scan_id is
+  // the job id) so the exec→graph drill can target the finding's own scan
+  // instead of falling back to the latest snapshot (#3966).
+  const allBlast = useMemo(
+    () =>
+      doneJobs.flatMap((j) =>
+        ((j.result as ScanResult)?.blast_radius ?? []).map((blast) => ({
+          ...blast,
+          scanId: j.job_id,
+        })),
+      ),
+    [doneJobs]
+  );
+
+  // Blast rows remain useful for exposure-path detail, but they are not an
+  // estate count source: this client hydrates at most ten completed jobs and
+  // would otherwise display a partial/repeated severity histogram. The API's
+  // posture-count spine is current-state, deduplicated, and uses the same
+  // default window as /v1/findings. Imported offline reports are the one local
+  // exception because no server-side canonical view exists for them.
+  const importedSeverity = useMemo(() => aggregateSeverity(allBlast), [allBlast]);
+  const canonicalSeverity = useMemo(() => {
+    if (importedReport) {
+      const summary = importedReport.finding_summary;
+      return summary ? {
+        critical: summary.by_severity.critical ?? 0,
+        high: summary.by_severity.high ?? 0,
+        medium: summary.by_severity.medium ?? 0,
+        low: summary.by_severity.low ?? 0,
+        total: summary.total,
+      } : importedSeverity;
+    }
+    if (counts?.issues) return openIssueSeverity(counts) ?? counts.issues;
+    // Same issue-group unit as /v1/posture/counts, so the first frame never
+    // shows occurrence totals that later change into issue totals.
+    if (overview?.issue_counts) return overview.issue_counts;
+    if (overview?.finding_counts) return overview.finding_counts;
+    const liveCounts = openIssueSeverity(counts);
+    if (liveCounts) return liveCounts;
+    return {
+      critical: overview?.headline.critical ?? 0,
+      high: overview?.headline.high ?? 0,
+      medium: 0,
+      low: 0,
+      total: overview?.headline.critical_high ?? 0,
+    };
+  }, [counts, importedReport, importedSeverity, overview]);
+  const kevCount = useMemo(() => allBlast.filter((b) => (b.is_kev ?? b.cisa_kev) === true).length, [allBlast]);
+  const credentialExposureCount = useMemo(() => allBlast.filter((b) => blastCredentials(b).length > 0).length, [allBlast]);
+  const reachableToolCount = useMemo(() => new Set(allBlast.flatMap(blastTools)).size, [allBlast]);
+
+  const topRisk = useMemo(
+    () =>
+      [...allBlast].sort((a, b) => (b.risk_score ?? b.blast_score) - (a.risk_score ?? a.blast_score))[0] ?? null,
+    [allBlast]
+  );
+  const topExposurePath = useMemo(() => {
+    if (!topRisk) return null;
+    return buildExposurePathView(topRisk, topRisk.scanId);
+  }, [topRisk]);
+
+  // Current overview responses own both counts and ranked risks. Historical job
+  // details must not repopulate a fresh empty snapshot. Keep the earlier merge
+  // only for older servers, and imported reports within their local evidence.
+  const exposurePaths = useMemo<ExposurePathView[]>(
+    () => buildExecExposurePaths(overview?.finding_counts && !importedReport ? [] : allBlast, importedReport ? undefined : overview?.top_risks),
+    [allBlast, overview, importedReport],
+  );
+
+  const queueRisks = useQueueTopRisks(Boolean(overview) && !importedReport, overview?.top_risks);
+
+  // Total packages scanned across all jobs
+  const totalPackages = useMemo(() => {
+    const pkgs = new Set<string>();
+    for (const job of doneJobs) {
+      const result = job.result as ScanResult;
+      for (const agent of result.agents) {
+        for (const srv of agent.mcp_servers) {
+          for (const pkg of srv.packages) {
+            pkgs.add(`${pkg.name}@${pkg.version}`);
+          }
+        }
+      }
+    }
+    return pkgs.size;
+  }, [doneJobs]);
+
+  const summaryStats = useMemo(() => {
+    const latest = effectiveRecentJobs.find((job) => job.status === "done" && job.summary);
+    return latest?.summary ?? null;
+  }, [effectiveRecentJobs]);
+  // Inventory includes connected, cloud and ingested sources in the selected
+  // snapshot. Host discovery is a different scope and must not stand in for it.
+  const displayedAgentCount = importedReport ? (importedReport.agents?.length ?? 0)
+    : counts?.agents?.total ?? (inventoryLoading || !inventorySummary ? null : (inventorySummary.by_type.agent ?? null));
+  const summaryReady = !jobsLoading || Boolean(importedReport);
+  const detailsReady = !detailLoading || Boolean(importedReport);
+
+  const criticalCount = canonicalSeverity.critical;
+  const highCount = canonicalSeverity.high;
+  const displayedKevCount = importedReport
+    ? kevCount
+    : (counts?.issues?.kev ?? (overview?.issue_counts ? (overview.issue_counts.kev ?? overview.headline.kev) : undefined) ?? overview?.finding_counts?.kev ?? counts?.kev ?? overview?.headline.kev ?? 0);
+  const displayedKevOccurrences = importedReport ? null : (overview?.finding_counts?.kev ?? counts?.kev ?? null);
+  const displayedCredentialExposure = importedReport
+    ? credentialExposureCount
+    : (overview?.headline.credential_exposed ?? 0);
+  const displayedReachableTools = detailsReady && (importedReport || !hasOverviewSnapshot) ? reachableToolCount : null;
+  const displayedPackages = hasOverviewSnapshot && !importedReport
+    ? (inventoryLoading || !inventorySummary ? null : (inventorySummary.by_type.package ?? null))
+    : detailsReady
+    ? (totalPackages > 0 ? totalPackages : (seededEvidence ? (summaryStats?.total_packages ?? 0) : totalPackages))
+    : (summaryStats?.total_packages ?? 0);
+
+  const complianceSnapshot = useMemo(
+    () => buildComplianceSnapshot(compliance),
+    [compliance],
+  );
+
+  if (apiError && !importedReport) return <ApiOfflineState onImport={setImportedReport} kind={apiErrorKind} detail={apiErrorDetail} />;
+
+  // The overview's configurable exec risk score (#3940) is authoritative for the
+  // exec grade — it derives from the honest estate counts and the tenant's score
+  // model. Fall back to /v1/posture only until the overview payload lands.
+  const postureGrade = importedReport ? "—" : (overview?.posture.grade ?? posture?.grade ?? "—");
+  const postureScore = importedReport ? undefined : overview ? (overview.posture.score ?? undefined) : posture?.score;
+  const scoreFormat: PostureScoreFormat =
+    scoreFormatOverride ?? overview?.posture.display_format ?? "percent";
+  const scoreBreakdown = importedReport ? null : (overview?.posture.breakdown ?? null);
+  const handleScoreFormatChange = (format: PostureScoreFormat) => {
+    // Optimistic local update, then persist per-tenant. A failed persist (e.g.
+    // a viewer without admin) still keeps the local view; it just won't stick.
+    setScoreFormatOverride(format);
+    api.updateScoreConfig({ display_format: format }).catch(() => {});
+  };
+  const overviewSnapshot = overview?.finding_counts && !importedReport ? overview : null;
+  const latestScanShort = importedReport
+    ? (importedReport.scan_timestamp || importedReport.generated_at
+      ? formatShortScanTime(importedReport.scan_timestamp ?? importedReport.generated_at!)
+      : null)
+    : overviewSnapshot
+    ? (overviewSnapshot.headline.latest_scan_at ? formatShortScanTime(overviewSnapshot.headline.latest_scan_at) : null)
+    : summaryReady && effectiveRecentJobs[0]
+      ? formatShortScanTime(
+          effectiveRecentJobs[0].scan_timestamp ??
+            effectiveRecentJobs[0].generated_at ??
+            effectiveRecentJobs[0].created_at,
+        )
+      : null;
+
+  return (
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{initialReport ? "Report preview" : "Overview"}</h1>
+        <div className="flex flex-wrap gap-4 text-sm text-emerald-800 dark:text-emerald-300"><Link href="/brief">Executive brief →</Link><Link href="/connections">Manage sources →</Link></div>
+      </header>
+
+      {importedReport && <button type="button" onClick={() => onExitReport ? onExitReport() : setImportedReport(null)} className="text-sm text-emerald-800 dark:text-emerald-300">{onExitReport ? "Back to Get started" : "Return to live overview"}</button>}
+      {importedReport && <LocalReportEvidence report={importedReport} />}
+      {!importedReport && demoSeeding && (
+        <p role="status" aria-label="Demo estate seeding" className="rounded-lg border border-outline px-3 py-2 text-sm text-ink-secondary">
+          Seeding the demo estate. Findings and posture appear here when the curated scan lands, usually a few minutes on first start.
+        </p>
+      )}
+      {!importedReport && !demoSeeding && !jobsLoading && !postureOverviewLoading && !overviewUnavailable
+        && effectiveRecentJobs.length === 0 && overview?.headline.scans === 0 && overview.finding_counts?.total === 0
+        && !overview.coverage?.some((lane) => lane.count_exact === false || lane.evidence_status === "partial" || lane.evidence_status === "unavailable")
+        && <FirstScanPrompt />}
+
+      {!importedReport && (overviewUnavailable || (overviewRefreshing && overview)) && (
+        <p role="status" className="text-sm text-ink-secondary">
+          {overviewUnavailable
+            ? (overview ? "Overview refresh unavailable. Showing the last loaded snapshot." : "Overview unavailable.")
+            : "Refreshing overview…"}
+        </p>
+      )}
+
+      <div aria-label="Evidence scopes" className="[overflow-wrap:anywhere] flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-outline px-3 py-2 text-xs text-ink-secondary">
+        <span>Findings: {importedReport ? "Imported report" : "Current tenant · configured window"}</span>
+        <span>Inventory: {importedReport ? "Not linked to a graph snapshot" : inventoryLoading ? "Loading snapshot" : inventorySummary?.evidence_scope === "current_estate" ? "Current tenant estate" : inventorySummary?.scan_id ? `Snapshot ${inventorySummary.scan_id}` : inventorySummary ? "No snapshot yet" : "Unavailable"}</span>
+        {!importedReport && inventorySummary?.scan_id ? <span>{inventorySummary?.filters?.environment ? `Inventory environment: ${inventorySummary.filters.environment}` : "Inventory includes unclassified environments"}</span> : null}
+        {!importedReport && inventorySummary?.filters && Object.values(inventorySummary.filters).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value)) ? <span>Inventory filters do not change the findings window</span> : null}
+      </div>
+      {!importedReport && <AdvisoryFreshness />}
+      <OverviewCockpit
+        localReport={Boolean(importedReport)}
+        inventorySummary={importedReport ? null : inventorySummary}
+        inventoryLoading={!importedReport && inventoryLoading}
+        inventoryUnavailable={Boolean(importedReport) || inventoryUnavailable}
+        inventoryUnavailableHref={importedReport ? "/inventory" : inventoryUnavailableHref}
+        loading={!importedReport && postureOverviewLoading}
+        overviewUnavailable={!importedReport && overviewUnavailable && !overview}
+        complianceLoading={!importedReport && complianceLoading}
+        scanScopeLoading={!importedReport && jobsLoading && !overviewSnapshot}
+        grade={postureGrade}
+        score={postureScore}
+        scoreFormat={scoreFormat}
+        scoreBreakdown={scoreBreakdown}
+        scoreFloored={importedReport ? undefined : overview?.posture.floored}
+        onScoreFormatChange={importedReport ? undefined : handleScoreFormatChange}
+        postureSummary={importedReport ? "Tenant posture is unavailable for an imported report." : overview?.posture.summary ?? posture?.summary}
+        critical={criticalCount}
+        high={highCount}
+        kev={summaryReady ? displayedKevCount : null}
+        kevOccurrences={summaryReady ? displayedKevOccurrences : null}
+        credentials={summaryReady ? displayedCredentialExposure : null}
+        agents={displayedAgentCount}
+        scans={importedReport ? 1 : overviewSnapshot ? overviewSnapshot.headline.scans : summaryReady ? (counts?.scan_count ?? effectiveRecentJobs.length) : null}
+        latestScan={overviewSnapshot || !jobsLoading ? latestScanShort : null}
+        mode={importedReport ? "Imported report" : deploymentModeLabel(counts?.deployment_mode)}
+        summaryReady={Boolean(importedReport || counts || overview)}
+        findingsScopeLabel={importedReport ? "Imported report" : "Current findings · configured window"}
+        severity={canonicalSeverity}
+        domains={importedReport ? null : overview?.domains ?? null}
+        coverage={importedReport ? null : overview?.coverage ?? null}
+        topPath={overview?.finding_counts && !importedReport ? null : topExposurePath}
+        exposurePaths={queueRisks?.paths ?? exposurePaths}
+        riskRanking={queueRisks ? { source: "queue", total: queueRisks.total } : undefined}
+        signals={{
+          tools: summaryReady ? displayedReachableTools : null,
+          packages: summaryReady ? displayedPackages : null,
+          activeServices: importedReport ? 0 : countActiveServices(counts?.services),
+          connected: !importedReport && hasDeploymentSignals(counts),
+        }}
+        compliance={importedReport ? null : complianceSnapshot}
+        services={importedReport ? null : counts?.services ?? null}
+      />
+      {!importedReport && <OverviewHistory headline={overview ? { critical: canonicalSeverity.critical, high: canonicalSeverity.high } : null} />}
+
+      {!importedReport && <details className="rounded-lg border border-outline px-4 py-3"><summary className="cursor-pointer text-sm font-medium">Recent scans & activity</summary>
+      <div className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <section className="lg:col-span-2">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-medium text-foreground">Recent scans</h2>
+            {effectiveRecentJobs.length > 8 && (
+              <Link href="/jobs" className="text-xs text-emerald-500 hover:text-emerald-400 flex items-center gap-1">
+                View all <ArrowRight className="w-3 h-3" />
+              </Link>
+            )}
+          </div>
+          {jobsLoading && !importedReport ? (
+            <div className="text-sm text-ink-secondary">Loading…</div>
+          ) : effectiveRecentJobs.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="space-y-2">
+              {effectiveRecentJobs.slice(0, 8).map((job) => (
+                <JobRow key={job.job_id} job={job} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="mb-3 text-sm font-medium text-foreground">Activity</h2>
+          <ActivityFeed maxItems={15} initialJobs={effectiveRecentJobs.slice(0, 20)} refresh={false} />
+        </section>
+      </div>
+      </details>}
+    </div>
+  );
+}
+
+// ─── Components ───────────────────────────────────────────────────────────────
+
+function formatShortScanTime(iso: string): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function countActiveServices(services: PostureCountsResponse["services"]): number {
+  if (!services) return 0;
+  return Object.values(services).filter((entry) => entry.state === "live" || entry.state === "connected").length;
+}
+
+function scanLabel(job: JobListItem): string {
+  const request = job.request;
+  if (request?.repo_url) return "Repository scan";
+  if (request?.images?.length) return request.images.length === 1 ? "Container image scan" : "Container images scan";
+  if (request?.k8s) return "Kubernetes scan";
+  if (request?.sbom) return "SBOM scan";
+  if (request?.inventory) return "Inventory scan";
+  if (request?.agent_projects?.length) return "Project scan";
+  if (job.status === "running" || job.status === "pending") return "Scan in progress";
+  if (job.status === "failed") return "Failed scan";
+  if (job.status === "cancelled") return "Cancelled scan";
+  return "Completed scan";
+}
+
+function buildComplianceSnapshot(
+  compliance: ComplianceResponse | null,
+): OverviewComplianceSnapshot | null {
+  if (!compliance) return null;
+  const frameworks = complianceFrameworkSummaries(compliance)
+    .filter((framework) => !framework.disabled)
+    .map((framework) => ({
+      id: framework.id,
+      label: framework.label,
+      pass: framework.pass,
+      warn: framework.warn,
+      fail: framework.fail,
+      total: framework.total,
+      kind: framework.kind,
+      ...(framework.applicable === undefined ? {} : { applicable: framework.applicable }),
+      ...(framework.notApplicable === undefined ? {} : { notApplicable: framework.notApplicable }),
+    }));
+  return {
+    overallScore: compliance.overall_score,
+    overallStatus: compliance.overall_status,
+    evaluatedControls: compliance.evaluated_controls,
+    totalControls: compliance.total_controls,
+    frameworks,
+  };
+}
+
+function JobRow({ job }: { job: JobListItem }) {
+  const statusColors: Record<string, string> = {
+    done: "bg-emerald-500",
+    failed: "bg-red-500",
+    running: "bg-yellow-500 animate-pulse",
+    pending: "bg-ink-tertiary",
+    cancelled: "bg-ink-tertiary",
+  };
+  const vulnCount = job.summary?.total_vulnerabilities;
+  const critCount = job.summary?.critical_findings;
+
+  // Detect scan source tags
+  const tags: string[] = [];
+  if (job.request?.images && job.request.images.length > 0) tags.push(`${job.request.images.length} image${job.request.images.length > 1 ? "s" : ""}`);
+  if (job.request?.k8s) tags.push("k8s");
+  if (job.request?.sbom) tags.push("sbom");
+  if (job.request?.inventory) tags.push("inventory");
+
+  return (
+    <Link
+      href={`/scan?id=${job.job_id}`}
+      title={`Scan ${job.job_id}`}
+      className="relative flex flex-wrap items-center gap-4 bg-surface-muted border border-outline hover:border-outline-strong rounded-xl p-4 transition-colors group"
+    >
+      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[job.status] ?? "bg-ink-tertiary"}`} />
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium text-foreground [overflow-wrap:anywhere]">{scanLabel(job)}</span>
+          {tags?.map((t) => (
+            <span key={t} className="text-xs bg-surface-elevated border border-outline rounded px-1.5 py-0.5 text-ink-tertiary">{t}</span>
+          ))}
+        </div>
+        <div className="text-xs text-ink-tertiary flex flex-wrap items-center gap-1 mt-0.5">
+          <Clock className="w-3 h-3" />
+          {formatDate(job.created_at)}
+          <span aria-hidden="true">· {job.job_id.slice(0, 8)}…</span>
+          <span className="sr-only">· Scan ID {job.job_id}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 text-xs">
+        {job.status === "done" && (
+          <>
+            {critCount != null && critCount > 0 && (
+              <span className="text-red-400 font-mono font-semibold">{critCount} CRIT</span>
+            )}
+            {vulnCount != null ? (
+              <span className="text-ink-secondary">{vulnCount} vuln{vulnCount !== 1 ? "s" : ""}</span>
+            ) : (
+              <span className="text-ink-tertiary">Metrics unavailable</span>
+            )}
+          </>
+        )}
+        {job.status === "failed" && (
+          <span className="text-red-400 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> Failed
+          </span>
+        )}
+        {job.status === "running" && (
+          <span className="text-yellow-400">Running…</span>
+        )}
+      </div>
+      <ArrowRight className="w-3.5 h-3.5 text-ink-tertiary group-hover:text-ink-secondary transition-colors flex-shrink-0" />
+    </Link>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="text-center py-16 border border-dashed border-outline rounded-xl">
+      <ShieldAlert className="w-8 h-8 text-ink-tertiary mx-auto mb-3" />
+      <p className="text-ink-tertiary text-sm">No scans yet.</p>
+      <Link
+        href="/scan"
+        className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors"
+      >
+        New Scan
+        <ArrowRight className="w-3.5 h-3.5" />
+      </Link>
+    </div>
+  );
+}

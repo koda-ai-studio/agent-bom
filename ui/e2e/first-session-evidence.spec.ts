@@ -31,6 +31,14 @@ for (const theme of ["light", "dark"] as const) {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.goto("/");
+      const prompt = page.getByRole("region", { name: "Start with evidence" });
+      await expect(prompt).toBeVisible();
+      expect((await prompt.boundingBox())!.height).toBeLessThan(width === 390 ? 260 : 180);
+      await expect(page.getByRole("heading", { name: "Send a local project" })).toHaveCount(0);
+      await page.screenshot({ path: testInfo.outputPath(`overview-compact-${theme}-${width}.png`), fullPage: true });
+      await prompt.getByRole("link", { name: "Get started" }).click();
+      await expect(page).toHaveURL(/\/get-started\/?$/);
+      await expect(page.getByRole("heading", { name: "Get started", exact: true })).toBeVisible();
       const guide = page.getByRole("region", { name: "Start with evidence" });
       await expect(guide).toBeVisible();
       await expect(guide.getByRole("link", { name: "Choose a scan target" })).toHaveAttribute("href", "/scan");
