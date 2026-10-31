@@ -94,7 +94,7 @@ def local_hits_line(count: int, *, offline: bool, prefer_local_db: bool, demo: b
 def _lookup_gap(coverage_warnings: list[dict[str, Any]], *, offline: bool) -> bool:
     """Mirror the ``check`` fail-closed gates: each gap kind only counts in its own mode."""
     kinds = {warning.get("kind") for warning in coverage_warnings}
-    if "package_version_gap" in kinds:
+    if kinds & {"package_version_gap", "distro_release_gap"}:
         return True
     return "offline_ecosystem_gap" in kinds if offline else "remote_lookup_gap" in kinds
 

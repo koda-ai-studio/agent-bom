@@ -578,10 +578,7 @@ async def check_impl(
         from agent_bom.scanners import IncompleteScanError
         from agent_bom.scanners.package_check_result import PackageCheckResult, serialize_vulnerability
 
-        try:
-            name, parsed_version = normalize_check_package_spec(package, version)
-        except ToolError as exc:
-            raise exc
+        name, parsed_version = normalize_check_package_spec(package, version)
         try:
             eco = _validate_ecosystem(ecosystem)
         except ValueError as exc:
@@ -616,6 +613,7 @@ async def check_impl(
                 vuln_data_freshness=evidence[0].freshness if evidence else None,
                 completeness=evidence[0].completeness() if evidence else None,
                 version_source=version_source[0],
+                possibly_affected=tuple(pkg.possibly_affected),
             )
             return _truncate_response(json.dumps(result.service_payload(), indent=2, default=str))
 

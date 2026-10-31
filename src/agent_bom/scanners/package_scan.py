@@ -68,6 +68,7 @@ from agent_bom.scanners.package_matching import _is_version_affected as _is_vers
 from agent_bom.scanners.package_matching import _osv_ecosystems_for_package as _osv_ecosystems_for_package
 from agent_bom.scanners.package_matching import _scanners_patchable as _scanners_patchable
 from agent_bom.scanners.package_matching import _scope_advisory_to_package_release as _scope_advisory_to_package_release
+from agent_bom.scanners.package_matching import demote_ambiguous_distro_matches
 from agent_bom.scanners.package_preparation import (
     _NON_OSV_ECOSYSTEMS,
     _expand_transitive_packages,
@@ -530,9 +531,8 @@ async def scan_packages(
         _resolve_local_versions(unresolved, scan_options.project_dir)
     await _resolve_registry_versions(packages, scan_offline)
 
-    # Capture the version-resolved direct demo inventory before optional online
-    # transitive expansion. Only this curated set is closed evidence; packages
-    # discovered outside it still require a real advisory lookup.
+    # Only the version-resolved direct demo inventory is closed evidence;
+    # packages found by transitive expansion still require a real advisory lookup.
     demo_inventory_keys = {_package_db_key(package) for package in packages} if scan_options.demo_advisories else set()
     if scan_options.resolve_transitive and not scan_offline:
         packages = await _expand_transitive_packages(packages)
@@ -557,9 +557,9 @@ async def scan_packages(
     resolve_upstream_advisory_severity(scannable)
     _flag_suspicious_packages(scannable)
     total_vulns -= _suppress_unfixed_findings(scannable)
+    total_vulns -= demote_ambiguous_distro_matches(scannable)
 
-    # Ignore-rule suppression is applied once after BlastRadius construction by ``agent_bom.ignores``
-    # so JSON/SARIF/VEX/MCP can record why a finding was accepted.
+    # Apply ignores once after BlastRadius construction so outputs can record why findings were accepted.
     return total_vulns
 
 
