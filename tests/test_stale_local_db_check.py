@@ -117,11 +117,11 @@ def _cli_text(*extra: str) -> tuple[int, str]:
 
 
 def _mcp(offline: bool = False) -> dict:
-    from agent_bom.mcp_tools.scanning import check_impl
+    import agent_bom.mcp_tools.scanning
 
     return json.loads(
         asyncio.run(
-            check_impl(
+            agent_bom.mcp_tools.scanning.check_impl(
                 package="lodash@4.17.20",
                 ecosystem="npm",
                 offline=offline,
@@ -240,8 +240,8 @@ def test_mcp_check_matches_cli_for_stale_fixture(monkeypatch, tmp_path, osv, off
 
 
 def test_mcp_scan_report_carries_vuln_data_freshness(monkeypatch, tmp_path):
+    import agent_bom.mcp_tools.scanning
     from agent_bom.mcp_server_scan import _package_spec_agent
-    from agent_bom.mcp_tools.scanning import scan_impl
     from agent_bom.parsers import extract_packages
 
     _use_db(monkeypatch, tmp_path, synced_days_ago=61)
@@ -254,10 +254,13 @@ def test_mcp_scan_report_carries_vuln_data_freshness(monkeypatch, tmp_path):
 
     payload = json.loads(
         asyncio.run(
-            scan_impl(package="lodash@4.17.20", ecosystem="npm", offline=True, _run_scan_pipeline=_pipeline, _truncate_response=lambda r: r)
+            agent_bom.mcp_tools.scanning.scan_impl(
+                package="lodash@4.17.20", ecosystem="npm", offline=True, _run_scan_pipeline=_pipeline, _truncate_response=lambda r: r
+            )
         )
     )
 
+    assert "vuln_data_freshness" in payload, payload
     freshness = payload["vuln_data_freshness"]
     assert freshness["mode"] == "offline"
     assert freshness["age_days"] == 61
@@ -265,8 +268,8 @@ def test_mcp_scan_report_carries_vuln_data_freshness(monkeypatch, tmp_path):
 
 
 def _mcp_scan_payload() -> dict:
+    import agent_bom.mcp_tools.scanning
     from agent_bom.mcp_server_scan import _package_spec_agent
-    from agent_bom.mcp_tools.scanning import scan_impl
     from agent_bom.parsers import extract_packages
 
     async def _pipeline(*_args, **_kwargs):
@@ -277,7 +280,9 @@ def _mcp_scan_payload() -> dict:
 
     return json.loads(
         asyncio.run(
-            scan_impl(package="lodash@4.17.20", ecosystem="npm", offline=True, _run_scan_pipeline=_pipeline, _truncate_response=lambda r: r)
+            agent_bom.mcp_tools.scanning.scan_impl(
+                package="lodash@4.17.20", ecosystem="npm", offline=True, _run_scan_pipeline=_pipeline, _truncate_response=lambda r: r
+            )
         )
     )
 
@@ -289,6 +294,25 @@ def test_mcp_scan_reads_freshness_through_the_module_at_call_time(monkeypatch, t
     monkeypatch.setattr("agent_bom.vuln_freshness.compute_freshness", lambda **_kwargs: None)
 
     assert _mcp_scan_payload().get("vuln_data_freshness") is None
+
+
+def test_mcp_scan_uses_current_freshness_snapshot(monkeypatch, tmp_path):
+    import agent_bom.mcp_tools.scanning  # noqa: F401 - import before replacing the reader
+    from agent_bom.scanners import local_data_freshness
+    from agent_bom.vuln_freshness import compute_freshness
+
+    _use_db(monkeypatch, tmp_path, synced_days_ago=61)
+    snapshot = compute_freshness(offline=True)
+    calls = []
+
+    def current_snapshot(offline):
+        calls.append(offline)
+        return snapshot
+
+    monkeypatch.setattr(local_data_freshness, "freshness_snapshot", current_snapshot)
+    payload = _mcp_scan_payload()
+    assert calls == [True]
+    assert payload["vuln_data_freshness"] == snapshot.to_dict()
 
 
 def test_mcp_scan_survives_a_freshness_probe_that_raises(monkeypatch, tmp_path):
