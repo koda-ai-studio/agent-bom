@@ -50,7 +50,7 @@ def test_provider_contracts_describe_builtin_boundaries_without_loading_sdks() -
     assert providers["azure"]["trust_contract"]["supports_scope_zero"] is True
     assert providers["gcp"]["trust_contract"]["supports_scope_zero"] is True
     assert providers["ollama"]["capabilities"]["scan_modes"] == ["runtime_probe"]
-    assert providers["ollama"]["capabilities"]["network_access"] is False
+    assert providers["ollama"]["capabilities"]["network_access"] is True
 
 
 def test_provider_contracts_preserve_scope_zero_plugin_modes() -> None:
