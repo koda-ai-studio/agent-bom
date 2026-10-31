@@ -631,7 +631,7 @@ class TestAPIContextGraph:
         assert data["unified_graph"]["scan_id"] == job_id
         assert data["unified_graph"]["stats"]["node_types"]["agent"] == 2
         assert {"provider", "agent", "server"} <= set(data["unified_graph"]["stats"]["node_types"])
-        assert {"hosts", "uses", "shares_server"} <= set(data["unified_graph"]["stats"]["relationship_types"])
+        assert {"platform_for", "uses", "shares_server"} <= set(data["unified_graph"]["stats"]["relationship_types"])
 
     def test_api_context_graph_offloads_graph_compute(self, monkeypatch):
         """GET /v1/scan/{id}/context-graph computes graph payloads off the event loop."""

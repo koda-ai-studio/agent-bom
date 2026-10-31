@@ -30,7 +30,7 @@ exports[`lineage inspector rendering before extraction > preserves the accessPol
 
 exports[`lineage inspector rendering before extraction > preserves the account overview DOM 1`] = `"83d197153f8f694b94a7a4ba1bd5c12bd0c22244eda5c177f0bbb8457c6b8634"`;
 
-exports[`lineage inspector rendering before extraction > preserves the agent overview DOM 1`] = `"e8b9e17f8f4ee7cbb69b470ece412ec9d28caabf33010177d03d33071ec67673"`;
+exports[`lineage inspector rendering before extraction > preserves the agent overview DOM 1`] = `"53f765d27118c987a955961ad41fd5ec1b7687e9f2b0cf10fc61934b366e13ad"`;
 
 exports[`lineage inspector rendering before extraction > preserves the apiGateway overview DOM 1`] = `"d27b9b0f5d3d1525f888294c6036a68f2cd8ecec6fc5928af1cbd0a536a0a457"`;
 
@@ -80,7 +80,7 @@ exports[`lineage inspector rendering before extraction > preserves the package o
 
 exports[`lineage inspector rendering before extraction > preserves the policy overview DOM 1`] = `"4d224cbffcced0c16ffca7aa621ffaba07c8ee4527a0b91a1c217ec2c5938854"`;
 
-exports[`lineage inspector rendering before extraction > preserves the provider overview DOM 1`] = `"4d88cc63133bed212075c5978750a77b1002786d676e313a5bf730b1ffa0c56f"`;
+exports[`lineage inspector rendering before extraction > preserves the provider overview DOM 1`] = `"63c717eb29dfbabf6e2ee6e7d9dd5e7a25ca0805fe9a02f8f37c060649342eb4"`;
 
 exports[`lineage inspector rendering before extraction > preserves the role overview DOM 1`] = `"f5512316fb0375894c806fcd9a358cf1c5ea5fcc4f945db7f2d18f8b43b8d04a"`;
 

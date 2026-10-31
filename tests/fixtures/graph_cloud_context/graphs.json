@@ -2542,7 +2542,7 @@
     "edges": [
       {
         "activity_id": 1,
-        "canonical_id": "9fa8c642-6fa2-5503-a2d3-824ed774ce85",
+        "canonical_id": "e7b49617-d8fe-569f-ab04-a879bbe6143b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2551,17 +2551,17 @@
           "tier": "static_scan"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "hosts:provider:aws-bedrock:agent:cloud-assistant",
+        "id": "platform_for:provider:aws-bedrock:agent:cloud-assistant",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "provenance": {},
-        "relationship": "hosts",
+        "relationship": "platform_for",
         "source": "provider:aws-bedrock",
         "source_id": "provider:aws-bedrock",
         "source_run_id": "",
         "source_scan_id": "",
         "target": "agent:cloud-assistant",
         "target_id": "agent:cloud-assistant",
-        "traversable": true,
+        "traversable": false,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
         "weight": 1.0
@@ -3019,6 +3019,64 @@
       },
       {
         "attributes": {
+          "agent_context": {
+            "agent_kind": "custom",
+            "execution": {
+              "items": [
+                {
+                  "account_id": "123456789012",
+                  "entity_type": "cloud_resource",
+                  "evidence_kind": "modeled_infrastructure",
+                  "label": "agent-1",
+                  "last_seen": "2026-09-30T12:00:00+00:00",
+                  "node_id": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
+                  "provider": "aws",
+                  "region": "us-east-1",
+                  "relationship": "hosted_on",
+                  "service": "bedrock",
+                  "source": "cloud_origin",
+                  "source_scan_id": ""
+                }
+              ],
+              "recorded_count": 1,
+              "status": "recorded",
+              "truncated": false
+            },
+            "membership": {
+              "items": [],
+              "recorded_count": 0,
+              "status": "not_recorded",
+              "truncated": false
+            },
+            "models": {
+              "items": [],
+              "recorded_count": 0,
+              "status": "not_recorded",
+              "truncated": false
+            },
+            "platforms": {
+              "items": [
+                {
+                  "account_id": "",
+                  "entity_type": "provider",
+                  "evidence_kind": "static_scan",
+                  "label": "aws-bedrock",
+                  "last_seen": "2026-09-30T12:00:00+00:00",
+                  "node_id": "provider:aws-bedrock",
+                  "provider": "",
+                  "region": "",
+                  "relationship": "platform_for",
+                  "service": "",
+                  "source": "mcp-scan",
+                  "source_scan_id": ""
+                }
+              ],
+              "recorded_count": 1,
+              "status": "recorded",
+              "truncated": false
+            },
+            "schema_version": "agent.context.v1"
+          },
           "agent_type": "custom",
           "canonical_id": "1f420a33-51a5-5c64-80e4-2640231dd210",
           "cloud_origin": {
@@ -3659,10 +3717,11 @@
         "cross_account_trust": 1,
         "has_permission": 1,
         "hosted_on": 1,
-        "hosts": 5,
+        "hosts": 4,
         "manages": 2,
         "member_of": 1,
-        "part_of": 1
+        "part_of": 1,
+        "platform_for": 1
       },
       "severity_counts": {},
       "total_edges": 15,
