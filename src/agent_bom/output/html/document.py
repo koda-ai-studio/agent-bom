@@ -134,7 +134,7 @@ def to_html(
     graph_note = (
         f"agents + servers + {vuln_node_count} vulnerable pkg(s) only — {report.total_packages - vuln_node_count} clean packages hidden"
         if report.total_packages > vuln_node_count
-        else "agents + servers + packages"
+        else "recorded inventory and package relationships"
     )
 
     html = f"""<!DOCTYPE html>
@@ -298,6 +298,7 @@ def to_html(
       </div>
     </div>
     <div class="legend">
+      <span><i style="background:#64748b"></i>Inventory source</span>
       <span><i style="background:#818cf8"></i>Provider</span>
       <span><i style="background:#3b82f6"></i>Agent</span>
       <span><i style="background:#10b981"></i>Server (clean)</span>
@@ -310,7 +311,7 @@ def to_html(
 
   <!-- Agent inventory (collapsible) -->
   <section id="inventory">
-    <div class="sec-title">Agent Inventory</div>
+    <div class="sec-title">Agent and Asset Inventory</div>
     <input type="text" class="inv-search" id="invSearch" placeholder="Search agents, servers, packages&hellip;">
     {_inventory_cards(report)}
   </section>
@@ -355,9 +356,8 @@ def to_html(
 </body>
 </html>"""
     if offline_assets:
-        # Offline mode strips the interactive script layer, so keep the report a
-        # single scrollable page (no tab bar to click into a dead end).
-        return _apply_offline_assets_mode(html)
+        # Navigation and pagination have no network dependency.
+        html = _apply_offline_assets_mode(html)
     tab_counts = {
         "findings": total_vulns + len(policy_findings),
         "agents": len(report.agents),

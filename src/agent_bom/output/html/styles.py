@@ -2,6 +2,107 @@
 
 from __future__ import annotations
 
+_REPORT_LAYOUT_CSS = """
+    .row-detail-toggle{display:none}
+    [hidden]{display:none!important}
+    .graph-view-switch{display:flex;gap:8px;margin-bottom:12px}
+    .graph-view-switch button,.graph-relationships button{background:#1e293b;color:#cbd5e1;border:1px solid #475569;border-radius:7px;padding:8px 12px;cursor:pointer;font:inherit;font-size:.8rem}
+    .graph-view-switch button[aria-pressed="true"]{background:#064e3b;color:#d1fae5;border-color:#10b981}
+    .graph-relationships{border:1px solid #334155;border-radius:12px;padding:16px}
+    .graph-relationships ol{list-style:none;margin:0;padding:0}
+    .graph-relationships li{display:grid;grid-template-columns:minmax(0,1fr) 110px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid #334155;font-size:.83rem;overflow-wrap:anywhere}
+    .graph-relationships li span{color:#94a3b8;font-size:.75rem}
+    .graph-relationships button:disabled{opacity:.4;cursor:default}
+    .graph-container{display:flex;flex-direction:column}
+    .small-graph .cy-minimap{display:none}
+    .graph-filter-bar{order:-1}
+    .headline-risks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px;list-style:none;padding:0;margin:16px 0 0}
+    .headline-risk{min-width:0;padding:16px;border:1px solid #334155;border-radius:10px;background:#0f172a}
+    .headline-risk h3{font-size:.88rem;line-height:1.5;margin:0;overflow-wrap:anywhere}
+    .headline-risk-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .headline-risk summary{cursor:pointer;font-size:.78rem;color:#cbd5e1;margin-top:14px}
+    .headline-risk dl{font-size:.78rem;line-height:1.5;margin:12px 0 0}
+    .headline-risk dt{color:#94a3b8;margin-top:8px}
+    .headline-risk dd{margin:0;overflow-wrap:anywhere;color:#e2e8f0}
+    .headline-risk-note{font-size:.7rem;color:#94a3b8;margin:10px 0 0}
+    .report-disclosure{border:1px solid #334155;border-radius:12px;padding:16px;min-width:0}
+    .report-disclosure>summary{font-weight:600;font-size:.9rem;color:#e2e8f0;cursor:pointer}
+    .report-disclosure[open]>summary{margin-bottom:18px}
+    .report-disclosure>.sec-title{display:none}
+    :focus-visible{outline:2px solid #38bdf8;outline-offset:3px}
+
+    .graph-filter-bar{position:relative!important;top:auto!important;left:auto!important;flex-wrap:wrap;padding-right:50px!important}
+    @media screen and (max-width:700px){
+      .tab-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:2px}
+      .tab-btn{padding:9px 4px;font-size:.75rem;white-space:normal}
+      .paginated,.paginated tbody,.paginated tr:not(.pg-hidden){display:block;width:100%}
+      .paginated thead{display:none}
+      .paginated tr:not(.pg-hidden){border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:12px}
+      .paginated td{display:block;max-width:none!important;width:100%;padding:8px!important;overflow-wrap:anywhere;white-space:normal!important}
+      .paginated td::before{content:attr(data-label);display:block;font-size:.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+      .paginated tr:not(.row-expanded) td:nth-child(n+4){display:none}
+      .row-detail-toggle{display:block;margin-top:8px;background:transparent;border:1px solid #475569;border-radius:6px;color:#a7f3d0;padding:5px 10px;font:inherit;font-size:.75rem;cursor:pointer}
+      .graph-relationships li{grid-template-columns:minmax(0,1fr);gap:4px}
+      .cy-minimap{display:none}
+      .container{padding-left:16px;padding-right:16px}
+      .panel{padding:16px}
+      .report-disclosure{padding:12px}
+      .agent-summary{flex-wrap:wrap;gap:8px;overflow-wrap:anywhere}
+      #cy,#cyAttack{height:clamp(320px,65dvh,560px)}
+      .legend{gap:10px;font-size:.72rem}
+    }
+"""
+
+
+_REPORT_PRINT_CSS = """\
+    @page{size:A4;margin:12mm}
+    @media print{
+      body{background:#fff;color:#1e293b;font-size:12px}
+      .sidebar,.graph-controls,.graph-filter-bar,.vuln-filter-bar,.policy-filter-bar,.toggle-btn,.inv-search,.print-btn,.node-sidebar,.sidebar-toggle,.cy-minimap{display:none!important}
+      .container{margin-left:0;max-width:100%;padding:10px}
+      footer{margin-left:0}
+      section{break-inside:auto;margin-bottom:20px}
+      section[data-tab="graphs"],section#inventory,section#vulns,section#compliance,section#remediation{break-before:page}
+      h3,.sec-title,summary{break-after:avoid}
+      tr,.stat-card,.graph-container{break-inside:avoid}
+      thead{display:table-header-group}
+      .report-disclosure{border:0;padding:0}
+      .graph-view-switch,.graph-relationships{display:none!important}
+      .row-detail-toggle{display:none!important}
+      .graph-container[hidden]{display:flex!important}
+      .report-disclosure>summary,.agent-summary,.agent-name{color:#0f172a}
+      .panel,.stat-card,.agent-card,.server-card,.chart-panel{background:#f8fafc;border:1px solid #e2e8f0;box-shadow:none}
+      .headline-risk{background:#fff;border-color:#cbd5e1;break-inside:avoid}
+      .headline-risk h3,.headline-risk summary,.headline-risk dd{color:#0f172a}
+      .headline-risk dt,.headline-risk-note{color:#475569}
+      .charts-row{grid-template-columns:1fr 1fr;gap:12px;break-inside:avoid}
+      .chart-panel{padding:12px}
+      .chart-wrap,.donut-wrap{height:200px}
+      .charts-row canvas{max-height:200px}
+      .stat-value,.sec-title{color:#0f172a}
+      .data-table th{background:#f1f5f9;color:#334155;border-bottom:2px solid #cbd5e1}
+      .data-table td{border-bottom:1px solid #e2e8f0}
+      .data-table{table-layout:fixed;width:100%}
+      .data-table th,.data-table td{white-space:normal!important;overflow-wrap:anywhere}
+      .panel p,.panel div,.panel span,.panel a,.panel strong,.panel code,.panel td,.agent-detail,.agent-detail *{color:#1e293b!important}
+      .table-wrap{overflow:visible}
+      .paginated,.paginated tbody{display:block;width:100%}
+      .paginated thead{display:none}
+      .data-table.paginated tr,.data-table.paginated tr.pg-hidden{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border:1px solid #cbd5e1;border-radius:8px;padding:10px;margin:0 0 14px;break-inside:avoid}
+      .paginated td{display:block;min-width:0;max-width:none!important;width:auto;padding:4px;overflow-wrap:anywhere;white-space:normal!important;font-size:10px}
+      .paginated td::before{content:attr(data-label);display:block;color:#475569;font-size:8px;font-weight:600;margin-bottom:3px}
+      .path-rank,.path-meta span{background:#f1f5f9;border-color:#e2e8f0}
+      .path-title{color:#0f172a}
+      .path-summary{color:#475569}
+      .path-fix{color:#15803d}
+      #cy,#cyAttack{height:360px;background:#0f172a;border:1px solid #e2e8f0;print-color-adjust:exact}
+      .legend{color:#475569}
+      a{color:#2563eb}
+      footer{color:#94a3b8}
+      .graph-container{border:1px solid #e2e8f0}
+    }
+"""
+
 
 def render_styles(status_color: str) -> str:
     """Return the report's inline <style> block."""
@@ -42,7 +143,6 @@ def render_styles(status_color: str) -> str:
     section{{margin-bottom:44px;scroll-margin-top:20px}}
     .sec-title{{font-size:.82rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid #1e293b}}
     .panel{{background:#1e293b;border-radius:12px;padding:24px;border:1px solid #ffffff08}}
-
     /* STAT CARDS */
     .stat-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}}
     .stat-card{{background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border-radius:10px;padding:20px 22px;border-left:4px solid #334155;border:1px solid #ffffff06;transition:transform .15s,box-shadow .15s}}
@@ -63,8 +163,8 @@ def render_styles(status_color: str) -> str:
     .graph-container:fullscreen{{border-radius:0;background:#0f172a}}
     .graph-container:fullscreen .cy-graph{{height:100vh}}
     .cy-graph{{width:100%;height:600px;background:#0f172a}}
-    #cy{{width:100%;height:600px}}
-    #cyAttack{{width:100%;height:500px}}
+    #cy{{width:100%;height:clamp(320px,60dvh,560px)}}
+    #cyAttack{{width:100%;height:clamp(320px,55dvh,520px)}}
     .graph-controls{{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:4px;z-index:10}}
     .graph-btn{{width:36px;height:36px;border-radius:8px;border:1px solid #334155;background:rgba(15,23,42,.85);color:#94a3b8;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;backdrop-filter:blur(8px)}}
     .graph-btn:hover{{background:#1e293b;color:#e2e8f0;border-color:#475569}}
@@ -111,8 +211,8 @@ def render_styles(status_color: str) -> str:
     #tip{{position:fixed;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;font-size:.76rem;color:#e2e8f0;pointer-events:none;white-space:pre-line;max-width:280px;z-index:9999;display:none;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.4)}}
 
     /* TABS */
-    .tab-bar{{display:flex;gap:2px;flex-wrap:wrap;margin:0 0 28px;border-bottom:1px solid #1e293b;position:sticky;top:0;background:#0b1120;z-index:60;padding-top:6px}}
-    .tab-btn{{background:transparent;border:none;border-bottom:2px solid transparent;color:#64748b;font-size:.82rem;font-weight:600;padding:11px 18px;cursor:pointer;transition:color .15s,border-color .15s;letter-spacing:.01em;white-space:nowrap}}
+    .tab-bar{{display:flex;gap:2px;overflow-x:auto;max-width:100%;margin:0 0 24px;border-bottom:1px solid #334155;position:sticky;top:0;background:#0b1120;z-index:60;padding-top:6px;scrollbar-width:thin}}
+    .tab-btn{{background:transparent;border:none;border-bottom:2px solid transparent;color:#94a3b8;font-size:.82rem;font-weight:600;padding:11px 14px;cursor:pointer;transition:color .15s,border-color .15s;letter-spacing:.01em;white-space:nowrap;flex-shrink:0}}
     .tab-btn:hover{{color:#e2e8f0}}
     .tab-btn.active{{color:#10b981;border-bottom-color:#10b981}}
     .tab-count{{font-size:.66rem;background:#1e293b;color:#94a3b8;border-radius:10px;padding:1px 7px;margin-left:7px;font-weight:700}}
@@ -211,25 +311,6 @@ def render_styles(status_color: str) -> str:
       .node-sidebar{{width:100%}}
     }}
 
+    {_REPORT_LAYOUT_CSS}
     /* PRINT */
-    @media print{{
-      body{{background:#fff;color:#1e293b;font-size:12px}}
-      .sidebar,.graph-controls,.graph-filter-bar,.vuln-filter-bar,.policy-filter-bar,.toggle-btn,.inv-search,.print-btn,.node-sidebar,.sidebar-toggle{{display:none!important}}
-      .container{{margin-left:0;max-width:100%;padding:10px}}
-      footer{{margin-left:0}}
-      section{{page-break-inside:avoid;margin-bottom:20px}}
-      .panel,.stat-card,.agent-card,.server-card,.chart-panel{{background:#f8fafc;border:1px solid #e2e8f0;box-shadow:none}}
-      .stat-value,.sec-title{{color:#0f172a}}
-      .data-table th{{background:#f1f5f9;color:#334155;border-bottom:2px solid #cbd5e1}}
-      .data-table td{{border-bottom:1px solid #e2e8f0}}
-      .path-rank,.path-meta span{{background:#f1f5f9;border-color:#e2e8f0}}
-      .path-title{{color:#0f172a}}
-      .path-summary{{color:#475569}}
-      .path-fix{{color:#15803d}}
-      #cy{{height:400px;background:#f8fafc;border:1px solid #e2e8f0}}
-      .legend{{color:#475569}}
-      a{{color:#2563eb}}
-      footer{{color:#94a3b8}}
-      .graph-container{{border:1px solid #e2e8f0}}
-    }}
-  </style>"""
+{_REPORT_PRINT_CSS}  </style>"""

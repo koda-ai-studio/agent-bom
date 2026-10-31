@@ -114,7 +114,7 @@ def test_executive_headline_names_top_risk_reach_and_unassigned_owner(tmp_path):
     assert "## Executive headline" in out
     headline = out.split("## Executive headline", 1)[1].split("\n## ", 1)[0]
     assert "Hardcoded credential: GitHub Token" in headline
-    assert "2 of 2 findings reach at least one AI agent" in headline
+    assert "2 of 2 findings include recorded agent or asset context" in headline
     assert "owner unassigned" in headline
     assert "SLA due 2026-09-27" in headline
     assert "not a compliance certification" in headline
@@ -161,5 +161,5 @@ def test_a_finding_about_an_agent_counts_as_reaching_that_agent(tmp_path):
     )
     payload = json.loads(_run(path, "--format", "json"))
     headline = payload["executive_headline"]
-    assert "1 of 1 findings reach at least one AI agent" in headline["summary"]
+    assert "1 of 1 findings include recorded agent or asset context" in headline["summary"]
     assert headline["top_risks"][0]["affected_agents"] == ["support-copilot"]

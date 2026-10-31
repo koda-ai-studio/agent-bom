@@ -37,13 +37,13 @@ def test_headline_names_top_risks_reach_owner_and_boundary() -> None:
     section = _executive_headline_section(findings, [])
     text = " ".join(_text(section).split())
     assert 'id="executive-headline"' in section
-    assert "1 of 2 findings reach at least one AI agent" in text
+    assert "1 of 2 findings include recorded agent or asset context" in text
     # Ranked worst-first; each risk states agents reached, owner and SLA.
     assert text.index("CVE-2026-0001") < text.index("CVE-2026-0002")
-    assert "reaches research-agent" in text
-    assert "owner unassigned" in text
-    assert "owner appsec-team" in text
-    assert "SLA due" in text
+    assert "research-agent" in text
+    assert "unassigned" in text
+    assert "appsec-team" in text
+    assert "SLA target" in text
     assert "not a compliance certification" in text
 
 
@@ -68,3 +68,20 @@ def test_full_report_renders_the_headline_before_the_summary_cards() -> None:
     page = to_html(report, [])
     assert 'id="executive-headline"' in page
     assert page.index('id="executive-headline"') < page.index('id="summary"')
+
+
+def test_project_context_is_not_claimed_as_an_ai_agent_and_risks_are_disclosed() -> None:
+    from xml.etree import ElementTree
+
+    section = _executive_headline_section([_finding("CVE-2026-0001: requests", "high", agents=["project:requirements"])], [])
+    text = _text(section)
+    assert "1 of 1 findings include recorded agent or asset context" in text
+    assert "AI agent" not in text
+    assert text.count("CVE-2026-0001: requests") == 1
+    root = ElementTree.fromstring(section)
+    cards = root.findall(".//ul[@aria-label='Top risks']/li")
+    assert len(cards) == 1
+    details = cards[0].find("details")
+    assert details is not None and "open" not in details.attrib
+    assert "project:requirements" in "".join(details.itertext())
+    assert "Owner" in "".join(details.itertext()) and "SLA target" in "".join(details.itertext())

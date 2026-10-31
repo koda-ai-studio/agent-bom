@@ -666,7 +666,7 @@ def _render_executive_headline_markdown(lines: list, headline: dict) -> None:
     lines.extend(["## Executive headline", "", str(headline.get("summary", "")), ""])
     risks = headline.get("top_risks") or []
     if risks:
-        lines.append("| Risk | Severity | Agents reached | Owner | SLA due |")
+        lines.append("| Risk | Severity | Agent / asset context | Owner | SLA target |")
         lines.append("|---|---|---|---|---|")
         for risk in risks:
             agents = ", ".join(risk.get("affected_agents") or []) or "none recorded"
