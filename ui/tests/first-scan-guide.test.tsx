@@ -8,10 +8,29 @@ vi.mock("@/components/auth-provider", () => ({ useAuthState: () => auth }));
 describe("first scan guidance", () => {
   beforeEach(() => { auth.loading = false; auth.hasCapability.mockReturnValue(true); });
 
+  it("offers distinct source paths and explains the retained evidence workflow", () => {
+    render(<FirstScanGuide onImport={vi.fn()} />);
+    expect(screen.getByRole("link", { name: "Connect a source" })).toHaveAttribute("href", "/connections?tab=connect");
+    expect(screen.getByRole("heading", { name: "Send a local project" })).toBeVisible();
+    expect(screen.getByRole("list", { name: "Your first investigation" })).toHaveTextContent("Review inventory");
+    expect(screen.getByRole("list", { name: "Your first investigation" })).toHaveTextContent("Understand impact");
+    expect(screen.getByRole("list", { name: "Your first investigation" })).toHaveTextContent("Fix and verify");
+  });
+
+  it("keeps the local project command explicit, scoped and credential-free", () => {
+    render(<FirstScanGuide onImport={vi.fn()} />);
+    fireEvent.click(screen.getByText("Show project command"));
+    expect(screen.getByText(/agent-bom scan \. --no-discover --context-graph/)).toHaveTextContent('--push-url "${AGENT_BOM_PUSH_URL:?Set the control-plane ingestion URL}"');
+    expect(screen.getByText(/AGENT_BOM_PUSH_API_KEY through your secret manager/)).toBeVisible();
+    expect(screen.getByText(/including any deployment prefix/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Copy project command" })).toBeVisible();
+  });
+
   it("links permitted operators to explicit scan targets", () => {
     render(<FirstScanGuide onImport={vi.fn()} />);
     expect(screen.getByRole("link", { name: "Choose a scan target" })).toHaveAttribute("href", "/scan");
     expect(auth.hasCapability).toHaveBeenCalledWith("scan.run");
+    fireEvent.click(screen.getByText("Preview a saved or sample report"));
     expect(screen.getByText(/does not upload it to the control plane/)).toBeVisible();
   });
 
@@ -27,6 +46,7 @@ describe("first scan guidance", () => {
     const onImport = vi.fn();
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     render(<FirstScanGuide onImport={onImport} />);
+    fireEvent.click(screen.getByText("Preview a saved or sample report"));
     const report = { agents: [], blast_radius: [], scan_timestamp: "2026-09-29T00:00:00Z" };
     fireEvent.change(screen.getByLabelText("Choose report.json"), { target: { files: [new File([JSON.stringify(report)], "report.json", { type: "application/json" })] } });
     await waitFor(() => expect(onImport).toHaveBeenCalledWith(report));
@@ -37,6 +57,7 @@ describe("first scan guidance", () => {
   it("rejects an invalid report before handing it to the dashboard", async () => {
     const onImport = vi.fn();
     render(<FirstScanGuide onImport={onImport} />);
+    fireEvent.click(screen.getByText("Preview a saved or sample report"));
     fireEvent.change(screen.getByLabelText("Choose report.json"), { target: { files: [new File(["not json"], "report.json")] } });
     await waitFor(() => expect(screen.getByRole("alert")).toBeVisible());
     expect(onImport).not.toHaveBeenCalled();

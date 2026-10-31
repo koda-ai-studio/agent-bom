@@ -181,6 +181,20 @@ or attach deterministic output to an issue.
 
 ## Activate your own project in the dashboard
 
+For an existing control plane, open **Overview → Start with evidence**. Choose
+an explicit scan target, connect a supported source, or expand **Show project
+command** to send a project from your machine. The local command requires the
+deployment's ingestion URL and a push-capable key supplied through your secret
+manager; it never embeds credentials in the copied command. Confirm the push
+succeeded and inspect the stored scan in Findings.
+
+Start your investigation with the collected inventory and coverage, open a
+finding to understand its component and conditional impact, then review a fix
+and rescan the same target. Connection verification is not collection, and
+browser-only report preview does not populate the control-plane graph.
+
+To start a separate local dashboard from your own project:
+
 ```bash
 pip install 'agent-bom[ui]'
 agent-bom quickstart --project /path/to/repository --dry-run
