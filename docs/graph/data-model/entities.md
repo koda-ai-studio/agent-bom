@@ -23,7 +23,7 @@ Id formats:
 
 ## `agent`
 
-Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/builder_overlays.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/delta_digest.py`, `graph/dependency_reach.py`, `graph/endpoint_overlay.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/interaction_risk_ids.py`, `graph/runtime_projection.py`, `graph/toxic_findings.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `api/graph_page_stack.py`, `graph/agent_context.py`, `graph/agent_projection.py`, `graph/builder_overlays.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/delta_digest.py`, `graph/dependency_reach.py`, `graph/endpoint_overlay.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/interaction_risk_ids.py`, `graph/runtime_projection.py`, `graph/toxic_findings.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `api_gateway`
 

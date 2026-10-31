@@ -30,7 +30,8 @@ class RelationshipType(str, Enum):
     """Edge relationship types across all graph surfaces."""
 
     # ── Static inventory ──
-    HOSTS = "hosts"  # provider → agent
+    PLATFORM_FOR = "platform_for"  # provider → agent platform association, not execution hosting
+    HOSTS = "hosts"  # infrastructure → hosted inventory
     HOSTED_ON = "hosted_on"  # workload (agent/server/container) → host it runs on
     USES = "uses"  # agent → server
     USES_FRAMEWORK = "uses_framework"  # agent → framework (LangChain/LangGraph/…)

@@ -196,7 +196,7 @@ export function useGraphPageActions(page: GraphPageData & GraphCanvasModel) {
         const rootNode =
           response.nodes.find((node) => node.id === request.rootId) ??
           request.node;
-        if (rootNode && !quiet) setSelectedNode(buildFallbackNodeData(rootNode));
+        if (rootNode && !quiet) setSelectedNode(buildFallbackNodeData(rootNode, response));
         setGraphData(queryResponseToGraphResponse(response));
         setInvestigationMode({
           rootId: request.rootId,

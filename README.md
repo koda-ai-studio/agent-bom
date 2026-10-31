@@ -134,13 +134,18 @@ Product names and logos are trademarks of their owners, used only to identify su
 Correlate retained scans by exact, tenant-scoped identities; trace the recorded
 blast radius from each agent through its MCP servers to packages, findings,
 credentials and data stores. Inspect each relationship's source and evidence
-kind, then rescan the same scope to check what changed.
+kind, then rescan the same scope to check what changed. Agent kind, platform
+association, execution host and model links are separate facts; an environment
+badge does not establish where an agent runs or which model endpoint it calls.
 
 <p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment: Document Intake Agent uses a document-tools MCP server that depends on pillow 9.0.0, linked to KEV-listed CVE-2023-4863; Support Triage Agent uses a ticketing MCP server that references TICKETING_API_KEY, which can access a customer ticket archive" width="1100"></picture></a></p>
 
 *Fictional sample estate. Dashed use, credential and access links are configured
-or modeled, not observed at runtime; path analysis covers the collected snapshot only.*
+or modeled, not observed at runtime; path analysis covers the collected snapshot only.
+The AWS badge describes environment membership. These generic sample agents have
+no recorded execution host or model endpoint.*
 [Open the full-size environment graph](docs/images/graph-environment-dark-live.png).
+[Read agent, hosting and model context](docs/graph/AGENT_CONTEXT.md).
 
 **From agent to verified fix:** select Document Intake Agent → inspect
 CVE-2023-4863 (high, KEV-listed) and the evidence on each arrow → take the

@@ -1,3 +1,4 @@
+import { graphAgentContext } from "@/lib/graph-agent-context";
 import type { Edge } from "@xyflow/react";
 
 import type { FilterState } from "@/components/lineage-filter";
@@ -173,7 +174,7 @@ function versionProvenanceAttribute(
   return typeof nested === "string" ? nested : undefined;
 }
 
-export function buildFallbackNodeData(node: UnifiedNode): LineageNodeData {
+export function buildFallbackNodeData(node: UnifiedNode, graph?: Pick<UnifiedGraphResponse, "nodes" | "edges">): LineageNodeData {
   const attributes = { ...(node.attributes ?? {}), node_id: node.id };
   return {
     label: node.label,
@@ -207,6 +208,9 @@ export function buildFallbackNodeData(node: UnifiedNode): LineageNodeData {
       stringAttribute(attributes, "command") ||
       stringAttribute(attributes, "transport") ||
       stringAttribute(attributes, "url"),
+    ...(node.entity_type === "agent" ? { agentContext: graphAgentContext(node,
+      graph?.edges.filter(edge => edge.source === node.id) ?? [], graph?.edges.filter(edge => edge.target === node.id) ?? [],
+      new Map((graph?.nodes ?? [node]).map(item => [item.id, item]))) } : {}),
     agentType: stringAttribute(attributes, "agent_type"),
     agentStatus: stringAttribute(attributes, "status"),
   };

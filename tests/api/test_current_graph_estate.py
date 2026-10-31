@@ -450,3 +450,28 @@ def test_current_estate_path_indexes_follow_the_resolved_generation(estate, read
     assert len(page.paths) == (2 if reader == "snapshot_cross_vendor_page" else 4)
     historical = getattr(current_store, reader)(**{**args, "scan_id": scan})
     assert historical is not None and historical.scan_id == scan
+
+
+def test_current_agent_context_reconciles_hosts_across_selected_sources(estate):
+    from agent_bom.graph.agent_context import annotate_agent_context
+    from agent_bom.graph.edge import UnifiedEdge
+    from agent_bom.graph.types import RelationshipType
+
+    _, graph_store = estate
+    for month, target, host in [(7, "repo-a", "host-a"), (8, "repo-b", "host-b")]:
+        scan_id = record(estate, month, target)
+        graph = UnifiedGraph(scan_id=scan_id, tenant_id="history-tenant")
+        graph.add_node(UnifiedNode("agent:a", EntityType.AGENT, "agent"))
+        graph.add_node(UnifiedNode(host, EntityType.CONTAINER, host))
+        graph.add_edge(UnifiedEdge("agent:a", host, RelationshipType.HOSTED_ON))
+        annotate_agent_context(graph)
+        graph_store.save_graph(graph)
+    context = current().nodes["agent:a"].attributes["agent_context"]
+    assert {item["node_id"] for item in context["execution"]["items"]} == {"host-a", "host-b"}
+    assert (
+        graph_store.load_graph(tenant_id="history-tenant", scan_id=scan_id)
+        .nodes["agent:a"]
+        .attributes["agent_context"]["execution"]["recorded_count"]
+        == 1
+    )
+    assert not current("other-tenant").nodes

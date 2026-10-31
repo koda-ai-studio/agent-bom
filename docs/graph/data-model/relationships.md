@@ -301,7 +301,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `fleet` → `account`, `agent`, `cloud_resource`, `org`, `server`
 - `provider` → `account`, `agent`, `cloud_resource`, `org`, `server`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_lineage.py`, `graph/endpoint_overlay.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder_cloud_lineage.py`, `graph/endpoint_overlay.py`
 
 ## `imports`
 
@@ -409,6 +409,14 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `tool` → `server`
 
 Emitted by: `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/cloud_compute_projection.py`, `graph/network_entry_projection.py`, `hardware_evidence.py`
+
+## `platform_for`
+
+Class `structural` · directed · not traversable · required evidence `source`, `tier` · 1 pairs
+
+- `provider` → `agent`
+
+Emitted by: `graph/agent_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `possibly_correlates_with`
 

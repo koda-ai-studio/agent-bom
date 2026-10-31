@@ -50,7 +50,8 @@ def test_stale_worker_never_retires_a_generation_another_process_promoted(kind, 
     worker = CurrentGraphStore(estate[1], estate[0])
     assert worker._cache_directory is None, "both workers must share the durable projection cache"
 
-    paused, resume = _pause_before_build(worker, "stale-worker")
+    # Cover the child response (60s), exit (30s) and setup before releasing the gate.
+    paused, resume = _pause_before_build(worker, "stale-worker", resume_timeout=120)
     stale: list[Any] = []
 
     def resolve() -> None:
@@ -69,13 +70,18 @@ def test_stale_worker_never_retires_a_generation_another_process_promoted(kind, 
     other = context.Process(target=_resolve_in_another_process, args=(kind, jobs_path, graph_path, str(state_dir), child_end))
     other.start()
     child_end.close()
-    assert parent_end.poll(60), "the other worker never answered"
-    status, promoted = parent_end.recv()
-    other.join(30)
-    assert status == "ok", promoted
-
-    resume.set()
-    resolver.join(10)
+    try:
+        assert parent_end.poll(60), "the other worker never answered"
+        status, promoted = parent_end.recv()
+        other.join(30)
+        assert status == "ok", promoted
+    finally:
+        resume.set()
+        resolver.join(10)
+        parent_end.close()
+        if other.is_alive():
+            other.terminate()
+            other.join(10)
     assert not resolver.is_alive()
 
     assert worker._projection_store.snapshot_identity(tenant_id=TENANT, scan_id=promoted)[1], "foreign promotion was retired"

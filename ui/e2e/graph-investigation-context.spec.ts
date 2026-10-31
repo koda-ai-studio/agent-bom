@@ -180,3 +180,33 @@ test("larger investigation captions stay inside ordinary layout cards", async ({
   await expect.poll(() => page.locator("[data-graph-entity]").evaluateAll(cards =>
     Math.max(...cards.map(card => parseFloat(getComputedStyle(card).width))))).toBeLessThanOrEqual(240);
 });
+
+for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
+  test(`agent platform and membership do not imply deployment ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+    const agent = { ...node("agent", "agent", "Support workflow"), attributes: { agent_type: "workflow" } };
+    const environment = { ...node("environment", "environment", "Production AI"), attributes: { cloud_provider: "aws" } };
+    await fixture(page, [agent, environment, node("platform", "provider", "Custom workflow")], [edge("environment", "agent", "contains"), edge("platform", "agent", "platform_for")]);
+    await page.goto("/graph?scan=snapshot&root=agent&lens=context");
+    const context = page.getByLabel("Agent execution and model context", { exact: true });
+    await expect(context).toBeVisible();
+    await expect(context.getByRole("region", { name: "Platform association", exact: true })).toContainText("Custom workflow");
+    await expect(context.getByRole("region", { name: "Execution host", exact: true })).toContainText("Not recorded in this evidence");
+    await expect(context.getByRole("region", { name: "Model links", exact: true })).toContainText("Not recorded in this evidence");
+    await expect(context.getByRole("region", { name: "Environment membership", exact: true })).toContainText("Production AI");
+    await expect(context).toContainText("does not prove runtime execution");
+    if (width === 1440) {
+      await expect(page.locator('.react-flow__node[data-id="agent"]')).toContainText("Host not recorded");
+      await expect(page.getByText("Includes · membership", { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Zoom Out", exact: true }).click({ clickCount: 2 });
+      const agentCard = page.locator('.react-flow__node[data-id="agent"]');
+      await expect.poll(async () => {
+        const hostSize = await agentCard.getByText("Host not recorded", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+        const kindSize = await agentCard.getByText("Workflow", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+        return hostSize / kindSize;
+      }, { message: "Host context remains as readable as agent kind after zooming out" }).toBeGreaterThanOrEqual(0.95);
+    }
+    await page.screenshot({ path: info.outputPath(`agent-context-${theme}-${width}.png`), fullPage: true });
+  });
+}

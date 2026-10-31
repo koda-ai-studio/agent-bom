@@ -39,6 +39,7 @@ from agent_bom.core.settings import env_raw
 from agent_bom.demo_estate.boot_seed import SEEDING_CODE, SEEDING_MESSAGE, SEEDING_RETRY_AFTER_SECONDS, demo_estate_seeding
 from agent_bom.graph import UnifiedGraph
 from agent_bom.graph.adjacency_page import CURRENT_ESTATE_SCAN_PREFIX
+from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuses
 from agent_bom.storage.state_home import state_dir
 
@@ -537,6 +538,7 @@ class CurrentGraphStore:
             raise _EvidenceMovedError
         from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
 
+        annotate_agent_context(graph)
         graph.analysis_status = merge_analysis_statuses(source_statuses)
         snapshot_paths = prepare_snapshot_paths(graph)
         try:

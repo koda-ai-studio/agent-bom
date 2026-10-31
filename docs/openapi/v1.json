@@ -36626,6 +36626,7 @@
       "RelationshipType": {
         "description": "Edge relationship types across all graph surfaces.",
         "enum": [
+          "platform_for",
           "hosts",
           "hosted_on",
           "uses",

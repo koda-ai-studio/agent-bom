@@ -7,9 +7,7 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from agent_bom.api.agent_identity_store import (
-    InMemoryAgentIdentityStore,
-)
+from agent_bom.api.agent_identity_store import InMemoryAgentIdentityStore
 from agent_bom.demo_estate.compute_identity_lane import project_compute_lane
 from agent_bom.demo_estate.id_schemes import record_retired_showcase_ids, showcase_misconfig_id
 from agent_bom.demo_estate.showcase_constants import _SHOWCASE_CURRENT_STAMP as _SHOWCASE_CURRENT_STAMP
@@ -51,6 +49,7 @@ from agent_bom.demo_estate.showcase_ids import (
     showcase_tool_id,
 )
 from agent_bom.demo_estate.showcase_packages import seed_showcase_packages
+from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.asset_entity import link_report_findings_to_graph
 from agent_bom.graph.cnapp_overlay import apply_cnapp_overlay
 from agent_bom.graph.container import UnifiedGraph
@@ -115,7 +114,7 @@ def build_showcase_graph(
     node(provider, EntityType.PROVIDER, provider.removeprefix("provider:"), provider=provider.removeprefix("provider:"))
     for aid, label in SHOWCASE_AGENTS.items():
         node(showcase_agent_id(aid), EntityType.AGENT, label, environment="production")
-        edge(provider, showcase_agent_id(aid), RelationshipType.HOSTS)
+        edge(provider, showcase_agent_id(aid), RelationshipType.PLATFORM_FOR, traversable=False)
 
     for sid, (owner, tools) in SHOWCASE_SERVERS.items():
         node(showcase_server_id(sid), EntityType.SERVER, sid)
@@ -387,6 +386,7 @@ def build_showcase_snapshot(
     finalize_showcase_snapshot(graph, profile=profile)
     _annotate_demo_identity_risk(graph)
     project_estate_onto_showcase(graph, tenant_id=tenant_id, profile=profile, scan_report=scan_report)
+    annotate_agent_context(graph)
     if _materialize_showcase_attack_paths(graph):
         _record_showcase_attack_path_analysis(graph)
     return graph

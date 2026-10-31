@@ -1,13 +1,8 @@
 """Export transitive dependency graphs in standalone formats.
 
-Loads a saved ``agent-bom scan --format json`` report and rebuilds the
-agent → server → package → CVE graph for export as:
-
-- **JSON** — machine-readable nodes/edges list
-- **DOT** — Graphviz (render with ``dot -Tsvg deps.dot -o deps.svg``)
-- **Mermaid** — embed in markdown, GitHub issues, Notion, etc.
-- **GraphML** — yEd / Gephi / NetworkX compatible, with AIBOM-typed attributes
-- **Neo4j Cypher** — importable into Neo4j with AIBOM node labels and relationships
+Rebuild the agent → server → package → CVE graph from a saved scan report.
+Formats: JSON nodes/edges, Graphviz DOT, Mermaid, GraphML and Neo4j Cypher.
+GraphML and Cypher retain typed AIBOM attributes and relationships.
 
 Usage::
 
@@ -57,7 +52,7 @@ class _Node:
 
 
 class _Edge:
-    """``relationship`` is the canonical edge ``kind`` exports; only package → CVE ``affects`` differs (``vulnerable_to``)."""
+    """Canonical relationship with a legacy JSON kind for older consumers."""
 
     __slots__ = ("source", "target", "kind", "relationship", "evidence")
 
@@ -69,6 +64,11 @@ class _Edge:
         self.kind = kind
         self.relationship = relationship or kind
         self.evidence = _compact_attributes(evidence)
+
+    @property
+    def display_kind(self) -> str:
+        """Do not present a legacy platform label as physical hosting."""
+        return self.relationship if self.relationship == "platform_for" else self.kind
 
 
 class DepGraph:
@@ -221,7 +221,7 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
             source_id = f"provider:{source}"
             graph.add_node(source_id, source, "provider", attributes={"provider": source})
             graph.add_node(agent_id, agent.get("name", "unknown-agent"), "agent", attributes=_agent_node_attributes(agent))
-            graph.add_edge(source_id, agent_id, "hosts")
+            graph.add_edge(source_id, agent_id, "hosts", relationship="platform_for")
 
         for server in agent.get("mcp_servers", []):
             srv_name = server.get("name", "unknown-server")
@@ -424,7 +424,7 @@ def to_dot(graph: DepGraph, title: str = "agent-bom dependency graph") -> str:
 
     lines.append("    // edges")
     for edge in graph.edges:
-        lines.append(f'    {_dot_id(edge.source)} -> {_dot_id(edge.target)} [label="{edge.kind}"]')
+        lines.append(f'    {_dot_id(edge.source)} -> {_dot_id(edge.target)} [label="{edge.display_kind}"]')
 
     lines.append("}")
     return "\n".join(lines)
@@ -587,7 +587,7 @@ def to_mermaid(
     for edge in visible_edges:
         src = _safe_id(edge.source)
         tgt = _safe_id(edge.target)
-        lines.append(f"    {src} -->|{edge.kind}| {tgt}")
+        lines.append(f"    {src} -->|{edge.display_kind}| {tgt}")
 
     return "\n".join(lines)
 
@@ -725,7 +725,7 @@ def to_graphml(graph: DepGraph) -> str:
         src = _xml_escape(edge.source)
         tgt = _xml_escape(edge.target)
         lines.append(f'    <edge id="e{i}" source="{src}" target="{tgt}">')
-        lines.append(f'      <data key="relationship">{_xml_escape(edge.kind)}</data>')
+        lines.append(f'      <data key="relationship">{_xml_escape(edge.display_kind)}</data>')
         if edge.evidence:
             lines.append(f'      <data key="evidence_json">{_xml_escape(json.dumps(edge.evidence, sort_keys=True))}</data>')
         lines.append("    </edge>")
@@ -803,7 +803,7 @@ def to_cypher(graph: DepGraph) -> str:
     for edge in graph.edges:
         src_label = node_labels.get(edge.source, "Unknown")
         tgt_label = node_labels.get(edge.target, "Unknown")
-        rel_type = _NEO4J_REL_TYPES.get(edge.kind, edge.kind.upper())
+        rel_type = _NEO4J_REL_TYPES.get(edge.display_kind, edge.display_kind.upper())
         src_id = _cypher_str(edge.source)
         tgt_id = _cypher_str(edge.target)
 

@@ -17,6 +17,7 @@ from itertools import groupby
 from pathlib import Path
 from typing import Any
 
+from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.asset_identity import IdentityKey
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.correlation import (
@@ -449,7 +450,7 @@ class CorrelationMergeWorkspace:
             if edge.provenance.get("correlation", {}).get("conflict_fields"):
                 edge_conflicts += 1
             output.add_edge(edge)
-
+        annotate_agent_context(output)
         ordered_snapshots = sorted(
             self._snapshots.values(),
             key=lambda item: (_timestamp_instant(str(item["created_at"])), str(item["scan_id"])),
