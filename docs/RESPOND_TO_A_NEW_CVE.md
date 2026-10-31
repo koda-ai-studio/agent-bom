@@ -30,6 +30,8 @@ without scanning the whole feed. Inserts, corrections and withdrawals update
 the index in the same transaction as the source records. Existing read-only
 databases remain readable through the older lookup path; update a writable
 copy before distributing it to read-only deployments to enable indexed reads.
+This upgrades the feed schema to v9. Retain a pre-upgrade database backup if
+rolling back the binary: older releases can reject a newer feed schema.
 
 ## 1. Declare it if no feed has it yet
 
