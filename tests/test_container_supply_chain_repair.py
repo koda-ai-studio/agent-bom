@@ -221,7 +221,7 @@ def test_collector_refresh_applies_certifi_overlay_after_released_lock() -> None
     requirements = (ROOT / manifest).read_text(encoding="utf-8")
     entries = [line for line in requirements.replace("\\\n", "").splitlines() if line and not line.startswith("#")]
     names = sorted(entry.split("==", 1)[0] for entry in entries)
-    assert names == ["certifi", "filelock"], "collector overlay is limited to universal pure-Python wheels"
+    assert names == ["certifi", "filelock", "pyasn1"], "collector overlay is limited to universal pure-Python wheels"
     assert all("--hash=sha256:" in entry for entry in entries)
 
 
