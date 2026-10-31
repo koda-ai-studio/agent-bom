@@ -514,9 +514,10 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
       plus ``CAN_ACCESS`` edges to the account's resources, so the
       effective-permissions overlay resolves ``HAS_PERMISSION``.
 
-    Missing / empty / non-ok inventory is a no-op; imported data retains its source tag.
+    Explicit partial inventory retains collected assets; failed or unavailable inventory
+    is a no-op. Scan coverage governs reconciliation; source tags remain unchanged.
     """
-    if not isinstance(inventory, dict) or inventory.get("status") != "ok":
+    if not isinstance(inventory, dict) or inventory.get("status") not in ("ok", "partial"):
         return
     # The provider translation below rebuilds an AWS-shaped dict and drops the
     # data/secret/registry/network collections; keep the original to ingest them
