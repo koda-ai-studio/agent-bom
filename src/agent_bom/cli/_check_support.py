@@ -265,6 +265,8 @@ def _check_payload_to_sarif(payload: dict) -> dict:
                     "version": version,
                     "ecosystems": ecosystems,
                     "vulnerability_count": payload.get("vulnerability_count"),
+                    "completeness": payload.get("completeness"),
+                    "possibly_affected": payload.get("possibly_affected") or [],
                 },
             }
         ],

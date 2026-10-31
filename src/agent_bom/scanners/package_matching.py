@@ -18,6 +18,8 @@ from agent_bom.package_utils import (
 )
 from agent_bom.scanners.osv import candidate_package_names as _candidate_package_names
 from agent_bom.scanners.osv import ecosystem_matches as _ecosystem_matches
+from agent_bom.scanners.package_check_result import serialize_vulnerability
+from agent_bom.scanners.state import record_coverage_warning
 
 if TYPE_CHECKING:
     pass
@@ -61,6 +63,36 @@ ECOSYSTEM_MAP = {
 _DEBIAN_OSV_FALLBACKS = ("Debian:11", "Debian:12", "Debian:13", "Debian:14")
 
 _ALPINE_OSV_FALLBACKS = alpine_osv_fallback_ecosystems()
+
+
+def demote_ambiguous_distro_matches(packages: list[Package]) -> int:
+    """Retain cross-release matches as candidates and record the missing scope."""
+    removed = 0
+    for pkg in packages:
+        uncertain = [v for v in pkg.vulnerabilities if v.match_confidence_tier == MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE]
+        if not uncertain:
+            continue
+        detail = (
+            f"{pkg.name}@{pkg.version}: distro release is unknown; matches from other releases are only possibly affected. "
+            "Scan the target image or filesystem with its OS metadata to resolve applicability; no fix is claimed."
+        )
+        recorded = {row["id"] for row in pkg.possibly_affected}
+        for vuln in uncertain:
+            if vuln.id not in recorded:
+                pkg.possibly_affected.append(
+                    {
+                        **serialize_vulnerability(vuln),
+                        "fixed_version": None,
+                        "verdict": "possibly_affected",
+                        "reason": MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE,
+                        "detail": detail,
+                    }
+                )
+                recorded.add(vuln.id)
+        pkg.vulnerabilities = [v for v in pkg.vulnerabilities if v.match_confidence_tier != MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE]
+        removed += len(uncertain)
+        record_coverage_warning({"kind": "distro_release_gap", "ecosystem": pkg.ecosystem, "release": "unknown", "detail": detail})
+    return removed
 
 
 def _resolve_osv_ecosystems(pkg: Package, *, for_local_db: bool) -> list[str]:

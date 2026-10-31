@@ -150,5 +150,5 @@ def serialize_vulnerability(vulnerability: Any) -> dict[str, Any]:
 
 def has_lookup_coverage_gap(warnings: list[dict]) -> bool:
     """Distinguish incomplete advisory lookup from optional enrichment warnings."""
-    kinds = {"offline_ecosystem_gap", "remote_lookup_gap", "package_version_gap"}
+    kinds = {"offline_ecosystem_gap", "remote_lookup_gap", "package_version_gap", "distro_release_gap"}
     return any(warning.get("kind") in kinds for warning in warnings)
