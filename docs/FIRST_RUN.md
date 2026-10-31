@@ -18,11 +18,16 @@ With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), ru
 this from the repository you want to inspect:
 
 ```bash
-uvx agent-bom scan .
+uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
-The terminal shows inventory, prioritized findings, recorded exposure paths,
-fix guidance, and coverage warnings. Start with the highest-severity finding:
+Open `agent-bom-report.html` for inventory, prioritized findings, recorded
+exposure paths, fix guidance and coverage warnings. The command scans the
+selected project; `--no-discover` excludes workstation-wide discovery.
+No MCP configuration in the project means agent/tool relationships may be
+unavailable, while package inventory and advisory findings remain useful.
+Use an explicit inventory or project MCP configuration to add that context.
+Start with the highest-severity finding:
 identify its agent/MCP server and package, review the recommended fix, update
 the dependency and lockfile, and rerun `uvx agent-bom scan .` in the same directory.
 A changed result verifies only the checks and scope named in that scan.
@@ -49,9 +54,10 @@ assistant workflows, not extra CLI commands.
 - A dependency upgrade can remove an advisory match. Verify it by rescanning;
   it does not establish compliance or complete application security.
 
-For an HTML artifact, run `uvx agent-bom scan . -f html -o agent-bom-report.html`.
-Open the report, review the same coverage warnings, and retain it for comparison
-after the fix. JSON and SARIF exports are also available.
+Retain the HTML report for comparison after a fix. To read the report in the
+terminal instead, omit `-f html -o agent-bom-report.html`. JSON and SARIF exports
+are also available. A partial scan still writes the report; inspect its coverage
+warnings before interpreting the findings.
 
 If you prefer pip, install `agent-bom` in a virtual environment and use the same
 commands without the `uvx` prefix:
