@@ -18,6 +18,8 @@ import stat
 import tempfile
 from pathlib import Path
 
+from agent_bom.db.advisory_aliases import ALIAS_BACKFILL, ALIAS_SCHEMA
+
 _logger = logging.getLogger(__name__)
 
 # Default DB path — overridable via env var
@@ -64,7 +66,7 @@ def _validated_db_path(raw: str) -> Path:
 DB_PATH: Path = _validated_db_path(_RAW_DB_PATH)
 
 # Schema version — bump when DDL changes incompatibly
-_SCHEMA_VERSION = 8
+_SCHEMA_VERSION = 9
 # Public alias for readers that must detect a DB written by a newer agent-bom.
 CODE_SCHEMA_VERSION = _SCHEMA_VERSION
 
@@ -134,9 +136,12 @@ _MIGRATIONS: list[tuple[int, int, str]] = [
         DELETE FROM sync_meta WHERE source IN ('osv', 'ghsa');
         """,
     ),
+    # Backfill the reverse alias projection atomically with its readiness marker.
+    (8, 9, ALIAS_SCHEMA + ALIAS_BACKFILL),
 ]
 
-_DDL = """
+_DDL = (
+    """
 PRAGMA journal_mode = WAL;
 PRAGMA synchronous = NORMAL;
 PRAGMA foreign_keys = ON;
@@ -218,6 +223,8 @@ CREATE TABLE IF NOT EXISTS sync_meta (
     metadata_json   TEXT DEFAULT ''     -- source-specific coverage/freshness details
 );
 """
+    + ALIAS_SCHEMA
+)
 
 
 def _set_db_permissions(db_path: Path) -> None:

@@ -31,6 +31,7 @@ from typing import Any
 from agent_bom.advisory_ids import derive_cve_from_advisory_id
 from agent_bom.core.severity import normalize_severity, severity_rank
 from agent_bom.core.timestamps import parse_timestamp
+from agent_bom.db.advisory_aliases import alias_index_ready
 from agent_bom.graph.image_projection import carrier_node_id
 from agent_bom.scanners.advisory_feed_severity import feed_severity
 from agent_bom.scanners.advisory_graph_ids import occurrence_graph_ids
@@ -346,10 +347,17 @@ def _alias_records(conn: sqlite3.Connection, advisory_id: str) -> list[sqlite3.R
     spellings = _id_spellings(advisory_id)
     marks = ",".join("?" * len(spellings))
     own = conn.execute(f"SELECT {_VULN_COLUMNS} FROM vulns WHERE id IN ({marks})", spellings).fetchall()  # nosec B608 - fixed projection
-    naming = conn.execute(
-        f"SELECT {_VULN_COLUMNS} FROM vulns WHERE ',' || upper(aliases) || ',' LIKE ? ORDER BY id LIMIT ?",  # nosec B608 - fixed projection
-        (f"%,{spellings[0]},%", _MAX_ALIAS_RECORDS),
-    ).fetchall()
+    if alias_index_ready(conn):
+        naming = conn.execute(
+            f"SELECT {_VULN_COLUMNS} FROM vulns WHERE id IN "  # nosec B608 - fixed projection
+            "(SELECT vuln_id FROM vuln_aliases WHERE alias_id = ? ORDER BY vuln_id LIMIT ?) ORDER BY id",
+            (spellings[0], _MAX_ALIAS_RECORDS),
+        ).fetchall()
+    else:
+        naming = conn.execute(
+            f"SELECT {_VULN_COLUMNS} FROM vulns WHERE ',' || upper(aliases) || ',' LIKE ? ORDER BY id LIMIT ?",  # nosec B608 - fixed projection
+            (f"%,{spellings[0]},%", _MAX_ALIAS_RECORDS),
+        ).fetchall()
     wanted_cve = derive_cve_from_advisory_id(advisory_id)
     # A stale record aliasing several CVEs (a fused upstream group) keeps its own ranges but is
     # never followed to another CVE's records, as in the scanner (self_consistent_aliases).
