@@ -117,11 +117,11 @@ def _cli_text(*extra: str) -> tuple[int, str]:
 
 
 def _mcp(offline: bool = False) -> dict:
-    from agent_bom.mcp_tools.scanning import check_impl
+    import agent_bom.mcp_tools.scanning
 
     return json.loads(
         asyncio.run(
-            check_impl(
+            agent_bom.mcp_tools.scanning.check_impl(
                 package="lodash@4.17.20",
                 ecosystem="npm",
                 offline=offline,
@@ -240,8 +240,8 @@ def test_mcp_check_matches_cli_for_stale_fixture(monkeypatch, tmp_path, osv, off
 
 
 def test_mcp_scan_report_carries_vuln_data_freshness(monkeypatch, tmp_path):
+    import agent_bom.mcp_tools.scanning
     from agent_bom.mcp_server_scan import _package_spec_agent
-    from agent_bom.mcp_tools.scanning import scan_impl
     from agent_bom.parsers import extract_packages
 
     _use_db(monkeypatch, tmp_path, synced_days_ago=61)
@@ -254,7 +254,9 @@ def test_mcp_scan_report_carries_vuln_data_freshness(monkeypatch, tmp_path):
 
     payload = json.loads(
         asyncio.run(
-            scan_impl(package="lodash@4.17.20", ecosystem="npm", offline=True, _run_scan_pipeline=_pipeline, _truncate_response=lambda r: r)
+            agent_bom.mcp_tools.scanning.scan_impl(
+                package="lodash@4.17.20", ecosystem="npm", offline=True, _run_scan_pipeline=_pipeline, _truncate_response=lambda r: r
+            )
         )
     )
 
@@ -266,8 +268,8 @@ def test_mcp_scan_report_carries_vuln_data_freshness(monkeypatch, tmp_path):
 
 
 def _mcp_scan_payload() -> dict:
+    import agent_bom.mcp_tools.scanning
     from agent_bom.mcp_server_scan import _package_spec_agent
-    from agent_bom.mcp_tools.scanning import scan_impl
     from agent_bom.parsers import extract_packages
 
     async def _pipeline(*_args, **_kwargs):
@@ -278,7 +280,9 @@ def _mcp_scan_payload() -> dict:
 
     return json.loads(
         asyncio.run(
-            scan_impl(package="lodash@4.17.20", ecosystem="npm", offline=True, _run_scan_pipeline=_pipeline, _truncate_response=lambda r: r)
+            agent_bom.mcp_tools.scanning.scan_impl(
+                package="lodash@4.17.20", ecosystem="npm", offline=True, _run_scan_pipeline=_pipeline, _truncate_response=lambda r: r
+            )
         )
     )
 
