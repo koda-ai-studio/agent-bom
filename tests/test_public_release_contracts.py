@@ -92,6 +92,9 @@ def test_each_mcp_reference_contains_complete_catalog() -> None:
         missing_prompts = sorted(name for name in prompt_names if f"`{name}`" not in text)
         assert not missing_tools, f"{relative} missing tools: {missing_tools}"
         assert not missing_prompts, f"{relative} missing prompts: {missing_prompts}"
+    for relative in ("docs/MCP_SECURITY_MODEL.md", "site-docs/reference/mcp-tools.md"):
+        counts = re.findall(r"\b(\d+)-tool\b", _read(relative))
+        assert counts and all(int(count) == len(tool_names) for count in counts), f"{relative} advertises a stale full catalog"
 
 
 def test_public_docs_do_not_teach_removed_or_misparsed_cli_forms() -> None:

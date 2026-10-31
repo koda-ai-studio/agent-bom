@@ -16,7 +16,7 @@ admin role, the tool-specific write scope, and an audit reason; stdio cannot
 invoke them.
 
 `agent-bom mcp server` and the programmatic server default to eight focused
-scan tools. Use `--profile full` for the complete 90-tool catalog.
+scan tools. Use `--profile full` for the complete 99-tool catalog.
 
 <details>
 <summary>Explicit full-profile catalog (99 tools)</summary>
