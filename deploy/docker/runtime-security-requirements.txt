@@ -14,3 +14,7 @@ cryptography==50.0.0 \
 # whose FileLock/BaseFileLock/Timeout use is unchanged in filelock 4).
 filelock==4.2.4 \
     --hash=sha256:301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e
+# CVE-2026-119194 through CVE-2026-119197: released locks retain pyasn1 0.6.4.
+# The patched universal wheel covers both published architectures.
+pyasn1==0.6.5 \
+    --hash=sha256:4017b0fce125096b8573b39c989fdb1a4b19cf761e683398184550fea0e66587

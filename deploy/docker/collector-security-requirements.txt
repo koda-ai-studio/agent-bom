@@ -1,5 +1,5 @@
 # Security-only overlay for collector images rebuilt from a released lock.
-# Keep provider SDK versions frozen; replace only the affected CA bundle.
+# Keep provider SDK versions frozen; replace only reviewed runtime dependencies.
 # The universal certifi wheel works on Debian amd64 and arm64. The API image's
 # cryptography hashes target Alpine and must not be applied to this image.
 # GHSA-6q48-6c7w-9gw2
@@ -9,3 +9,7 @@ certifi==2026.10.19 \
 # 0.111.0 hold filelock 3.32.x. The universal wheel works on Debian amd64 and arm64.
 filelock==4.2.4 \
     --hash=sha256:301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e
+# CVE-2026-119194 through CVE-2026-119197: released locks retain pyasn1 0.6.4.
+# The patched universal wheel covers both published architectures.
+pyasn1==0.6.5 \
+    --hash=sha256:4017b0fce125096b8573b39c989fdb1a4b19cf761e683398184550fea0e66587
