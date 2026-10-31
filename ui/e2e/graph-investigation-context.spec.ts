@@ -179,12 +179,6 @@ test("larger investigation captions stay inside ordinary layout cards", async ({
   await expect(page.locator(".react-flow__node")).toHaveCount(17);
   await expect.poll(() => page.locator("[data-graph-entity]").evaluateAll(cards =>
     Math.max(...cards.map(card => parseFloat(getComputedStyle(card).width))))).toBeLessThanOrEqual(240);
-  const agent = page.locator('.react-flow__node[data-id="agent"]');
-  await expect.poll(async () => {
-    const hostSize = await agent.getByText("Host not recorded", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
-    const kindSize = await agent.getByText("Agent kind not recorded", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
-    return hostSize / kindSize;
-  }, { message: "Host context uses the same zoom-readable type size as the agent kind" }).toBeGreaterThanOrEqual(0.95);
 });
 
 for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
@@ -205,6 +199,13 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     if (width === 1440) {
       await expect(page.locator('.react-flow__node[data-id="agent"]')).toContainText("Host not recorded");
       await expect(page.getByText("Includes · membership", { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Zoom Out", exact: true }).click({ clickCount: 2 });
+      const agentCard = page.locator('.react-flow__node[data-id="agent"]');
+      await expect.poll(async () => {
+        const hostSize = await agentCard.getByText("Host not recorded", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+        const kindSize = await agentCard.getByText("Workflow", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+        return hostSize / kindSize;
+      }, { message: "Host context remains as readable as agent kind after zooming out" }).toBeGreaterThanOrEqual(0.95);
     }
     await page.screenshot({ path: info.outputPath(`agent-context-${theme}-${width}.png`), fullPage: true });
   });
