@@ -24,6 +24,13 @@ rate-limited or out-of-time NVD run shows `PARTIAL`. Key
 handling for workstations, Helm and the GitHub Action is in
 [PERMISSIONS.md](PERMISSIONS.md#where-the-keys-live).
 
+On a writable database, the update also migrates older schemas and builds a
+reverse alias index. Advisory lookups can then retrieve records naming a CVE
+without scanning the whole feed. Inserts, corrections and withdrawals update
+the index in the same transaction as the source records. Existing read-only
+databases remain readable through the older lookup path; update a writable
+copy before distributing it to read-only deployments to enable indexed reads.
+
 ## 1. Declare it if no feed has it yet
 
 When the disclosure is public but no feed carries it, declare it as an
