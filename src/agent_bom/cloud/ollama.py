@@ -10,6 +10,8 @@ import logging
 import os
 from pathlib import Path
 
+import httpx
+
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package
 from agent_bom.security import sanitize_text
@@ -163,13 +165,10 @@ def _agents_from_api(api_models: list[dict], host: str) -> list[Agent]:
 def _discover_via_api(host: str) -> list[dict] | None:
     """Try to get model list from Ollama HTTP API. Returns None if unreachable."""
     try:
-        import httpx
-
         resp = httpx.get(f"{host}/api/tags", timeout=5.0)
         if resp.status_code == 200:
-            data = resp.json()
-            return data.get("models", [])
-    except (ImportError, OSError) as exc:
+            return _api_models(resp)
+    except (httpx.HTTPError, OSError, ValueError) as exc:
         logger.debug("Ollama httpx API probe failed: %s", sanitize_text(exc))
 
     # Fallback: try with sync httpx client (retry-capable)
@@ -181,12 +180,20 @@ def _discover_via_api(host: str) -> list[dict] | None:
             return None
         fallback_resp = sync_get(url, timeout=3)
         if fallback_resp is not None and fallback_resp.status_code == 200:
-            data = fallback_resp.json()
-            return data.get("models", [])
-    except (OSError, ValueError) as exc:
+            return _api_models(fallback_resp)
+    except (httpx.HTTPError, OSError, ValueError) as exc:
         logger.debug("Ollama sync API probe failed: %s", sanitize_text(exc))
 
     return None
+
+
+def _api_models(response: httpx.Response) -> list[dict] | None:
+    """Only an explicit models list establishes a successful inventory."""
+    data = response.json()
+    models = data.get("models") if isinstance(data, dict) else None
+    if not isinstance(models, list) or any(not isinstance(model, dict) for model in models):
+        return None
+    return models
 
 
 def _discover_from_manifests() -> list[tuple[str, str, Path]]:

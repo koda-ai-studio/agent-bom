@@ -69,3 +69,30 @@ def test_empty_successful_api_does_not_fall_back(tmp_path):
     assert agents == []
     assert warnings == []
     manifests.assert_not_called()
+
+
+def test_connection_failure_preserves_default_manifest_fallback(tmp_path, monkeypatch):
+    import httpx
+
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    model = tmp_path / "library" / "tiny"
+    model.mkdir(parents=True)
+    (model / "latest").write_text("{}")
+    with (
+        patch("httpx.get", side_effect=httpx.ConnectError("fixture endpoint unavailable")),
+        patch("agent_bom.http_client.sync_get", return_value=None),
+        patch("agent_bom.cloud.ollama._MANIFEST_DIR", tmp_path),
+    ):
+        agents, warnings = discover()
+    assert len(agents) == 1 and agents[0].source == "ollama-manifest"
+    assert warnings
+
+
+@pytest.mark.parametrize("payload", [{}, [], {"models": None}, {"models": "invalid"}, {"models": [None]}])
+def test_invalid_api_inventory_is_incomplete_instead_of_verified_empty(payload):
+    from unittest.mock import MagicMock
+
+    response = MagicMock(status_code=200)
+    response.json.return_value = payload
+    with patch("httpx.get", return_value=response), patch("agent_bom.http_client.sync_get", return_value=response):
+        assert ollama._discover_via_api("http://localhost:11434") is None
