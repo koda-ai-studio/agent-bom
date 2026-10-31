@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FirstScanGuide } from "@/components/first-scan-guide";
@@ -24,6 +25,26 @@ describe("first scan guidance", () => {
     expect(screen.getByText(/AGENT_BOM_PUSH_API_KEY through your secret manager/)).toBeVisible();
     expect(screen.getByText(/including any deployment prefix/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Copy project command" })).toBeVisible();
+  });
+
+  it("checks push configuration before scanning without putting the key in arguments", () => {
+    render(<FirstScanGuide onImport={vi.fn()} />);
+    const command = screen.getByText(/agent-bom scan \. --no-discover --context-graph/, { selector: "code" }).textContent!;
+    const script = `agent-bom() { printf 'scan-started\\n'; printf '%s\\n' "$@"; test -n "$AGENT_BOM_PUSH_API_KEY"; }; ${command}`;
+    const run = (extra: Record<string, string>) => spawnSync("/bin/bash", ["-c", script], {
+      encoding: "utf8", env: { PATH: "/usr/bin:/bin", NODE_ENV: "test", ...extra },
+    });
+    const missingUrl = run({ AGENT_BOM_PUSH_API_KEY: "fixture-only" });
+    expect(missingUrl.status).not.toBe(0);
+    expect(missingUrl.stdout).not.toContain("scan-started");
+    const missingKey = run({ AGENT_BOM_PUSH_URL: "https://control.example/v1/results/push" });
+    expect(missingKey.status).not.toBe(0);
+    expect(missingKey.stdout).not.toContain("scan-started");
+    expect(missingKey.stderr).toContain("AGENT_BOM_PUSH_API_KEY");
+    const configured = run({ AGENT_BOM_PUSH_URL: "https://control.example/v1/results/push", AGENT_BOM_PUSH_API_KEY: "fixture-only" });
+    expect(configured.status).toBe(0);
+    expect(configured.stdout).toContain("scan-started");
+    expect(configured.stdout).not.toContain("fixture-only");
   });
 
   it("links permitted operators to explicit scan targets", () => {

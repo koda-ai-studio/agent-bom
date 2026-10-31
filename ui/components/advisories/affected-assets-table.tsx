@@ -2,6 +2,7 @@ import type { AdvisoryAffectedRow } from "@/lib/advisory-affected";
 
 import { formatUtc } from "./advisory-format";
 import { AffectedAssetCards } from "./affected-asset-cards";
+import { AffectedAssetIdentity } from "./affected-asset-identity";
 import { BlastRadiusLink, PatchTarget, VerdictBadge, VerdictDetail, provenanceLabel, rowKey } from "./affected-row-parts";
 
 const th = "px-3 py-2 font-medium";
@@ -36,8 +37,7 @@ export function AffectedAssetsTable({ rows }: { rows: AdvisoryAffectedRow[] }) {
             {rows.map(row => (
               <tr key={rowKey(row)} className="align-top">
                 <td className="px-3 py-2">
-                  <p className="truncate font-medium text-foreground" title={row.asset_label}>{row.asset_label}</p>
-                  <p className="truncate text-xs text-ink-tertiary" title={row.asset.agent || row.asset_type}>{row.asset.agent || row.asset_type}</p>
+                  <AffectedAssetIdentity row={row} />
                   <div className="mt-1.5"><BlastRadiusLink row={row} /></div>
                 </td>
                 <td className="px-3 py-2">

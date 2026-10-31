@@ -12,12 +12,14 @@ With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), ru
 from the repository you want to inspect:
 
 ```bash
-uvx agent-bom scan .
+uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
-The scan prints inventory, findings, recorded exposure, evidence coverage, and
-the next remediation step. Review coverage warnings beside the verdict;
-incomplete evidence is not a clean assessment.
+Open `agent-bom-report.html` for inventory, findings, recorded exposure,
+evidence coverage and fix guidance. `--no-discover` keeps discovery within the
+selected project. No MCP configuration? Package findings remain useful;
+agent/tool relationships need discovered configuration or an explicit inventory.
+Review coverage warnings beside the verdict; incomplete evidence is not clean.
 [What this scan does and does not establish](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
 Apply a reviewed fix, update the lockfile, and rerun `uvx agent-bom scan .`
 in the same repository. Run `uvx agent-bom doctor` if the first scan cannot start.

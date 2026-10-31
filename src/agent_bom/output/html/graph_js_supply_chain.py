@@ -11,6 +11,16 @@ SUPPLY_CHAIN_GRAPH_JS = """\
       elements: GRAPH_ELEMENTS,
       style: [
         {
+          selector: 'node',
+          style: {
+            'label': 'data(label)', 'font-size': 12, 'color': '#e2e8f0',
+            'text-valign': 'center', 'text-halign': 'center',
+            'text-wrap': 'wrap', 'text-max-width': 140,
+            'width': 156, 'height': 60, 'shape': 'round-rectangle',
+            'background-color': '#334155', 'border-color': '#94a3b8', 'border-width': 1.5,
+          },
+        },
+        {
           selector: 'node[type="provider"]',
           style: {
             'background-color': '#1e1b4b',
@@ -45,7 +55,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'height': 40,
             'shape': 'round-rectangle',
             'text-wrap': 'wrap',
-            'text-max-width': '105px',
+            'text-max-width': '110px',
           },
         },
         {
@@ -56,7 +66,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'border-width': 2,
             'label': 'data(label)',
             'color': '#6ee7b7',
-            'font-size': '10px',
+            'font-size': '12px',
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 120,
@@ -74,7 +84,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'border-width': 2,
             'label': 'data(label)',
             'color': '#fde68a',
-            'font-size': '10px',
+            'font-size': '12px',
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 120,
@@ -92,7 +102,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'border-width': 2.5,
             'label': 'data(label)',
             'color': '#fca5a5',
-            'font-size': '10px',
+            'font-size': '12px',
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 120,
@@ -110,7 +120,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'border-width': 2,
             'label': 'data(label)',
             'color': '#fca5a5',
-            'font-size': '9px',
+            'font-size': '11px',
             'font-weight': '700',
             'text-valign': 'center',
             'text-halign': 'center',
@@ -134,7 +144,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'text-halign': 'center',
             'width': 110,
             'height': 30,
-            'shape': 'diamond',
+            'shape': 'round-rectangle',
             'underlay-color': '#ef4444',
             'underlay-padding': '6px',
             'underlay-opacity': 0.15,
@@ -154,7 +164,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'text-halign': 'center',
             'width': 100,
             'height': 28,
-            'shape': 'diamond',
+            'shape': 'round-rectangle',
             'underlay-color': '#fb923c',
             'underlay-padding': '4px',
             'underlay-opacity': 0.1,
@@ -174,7 +184,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'text-halign': 'center',
             'width': 90,
             'height': 26,
-            'shape': 'diamond',
+            'shape': 'round-rectangle',
           },
         },
         {
@@ -216,10 +226,25 @@ SUPPLY_CHAIN_GRAPH_JS = """\
           selector: '.faded',
           style: { 'opacity': 0.08 },
         },
+        {
+          selector: 'node[type="cve"], node[type^="cve_"]',
+          style: {
+            'label': function(node) { return (node.data('label') || '').split(' ')[0]; },
+            'font-size': 11, 'width': 140, 'height': 42,
+            'text-wrap': 'wrap', 'text-max-width': 128, 'text-overflow-wrap': 'anywhere',
+          },
+        },
+        {
+          selector: 'node[type="directory"], node[type="source_file"], node[type="config_file"]',
+          style: {
+            'label': function(node) { var label = node.data('label') || ''; return label === '.' ? 'Project root' : label.replace(/^project:/, ''); },
+            'text-overflow-wrap': 'anywhere',
+          },
+        },
       ],
       layout: {
         name: 'dagre',
-        rankDir: 'LR',
+        rankDir: window.innerWidth < 700 ? 'TB' : 'LR',
         nodeSep: 50,
         rankSep: 80,
         edgeSep: 15,
@@ -232,7 +257,8 @@ SUPPLY_CHAIN_GRAPH_JS = """\
       wheelSensitivity: 0.3,
       autoungrabify: false,
     });
-    cy.ready(function() { cy.fit(cy.elements(), 40); });
+    cy.ready(function() { fitGraphWhenVisible(cy, cyContainer); });
+    addGraphViews(cy, cyContainer);
 
     // Tooltip
     var tip = document.getElementById('tip');

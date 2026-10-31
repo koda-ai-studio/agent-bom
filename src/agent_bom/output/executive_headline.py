@@ -81,7 +81,7 @@ def _plural(count: int, word: str) -> str:
 
 
 def _risk_sentence(risk: HeadlineRisk) -> str:
-    reach = f"reaches {', '.join(risk.affected_agents[:3])}" if risk.affected_agents else "reaches no recorded agent"
+    reach = f"linked to {', '.join(risk.affected_agents[:3])}" if risk.affected_agents else "has no recorded agent or asset context"
     if len(risk.affected_agents) > 3:
         reach += f" and {len(risk.affected_agents) - 3} more"
     owner = f"owner {risk.owner}" if risk.owner else "owner unassigned"
@@ -90,7 +90,9 @@ def _risk_sentence(risk: HeadlineRisk) -> str:
     return f"{risk.title} ({risk.severity}, {score}) {reach}; {owner}; {sla}."
 
 
-def build_executive_headline(rows: Iterable[Mapping[str, object]], *, limit: int = 3) -> ExecutiveHeadline:
+def build_executive_headline(
+    rows: Iterable[Mapping[str, object]], *, limit: int = 3, include_risk_sentences: bool = True
+) -> ExecutiveHeadline:
     """Build the headline from finding rows.
 
     Each row may carry ``id``, ``title``, ``severity``, ``risk_score``,
@@ -118,9 +120,12 @@ def build_executive_headline(rows: Iterable[Mapping[str, object]], *, limit: int
 
     sentences = [
         f"{_plural(total, 'finding')} ({critical} critical, {high} high).",
-        f"{reaching} of {total} findings reach at least one AI agent through a recorded path.",
-        f"Top {_plural(len(top), 'risk')}: " + " ".join(f"{index}. {_risk_sentence(risk)}" for index, risk in enumerate(top, start=1)),
+        f"{reaching} of {total} findings include recorded agent or asset context.",
     ]
+    if include_risk_sentences:
+        sentences.append(
+            f"Top {_plural(len(top), 'risk')}: " + " ".join(f"{index}. {_risk_sentence(risk)}" for index, risk in enumerate(top, start=1))
+        )
     if unassigned:
         sentences.append(f"{unassigned} of the top {len(top)} {'has' if unassigned == 1 else 'have'} no owner.")
     return ExecutiveHeadline(summary=" ".join(sentences), top_risks=top)

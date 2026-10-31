@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from agent_bom.models import AIBOMReport, MCPServer
+from agent_bom.output.graph_inventory import _static_inventory
 from agent_bom.output.html._common import (
     _PKG_PREVIEW,
     _SEV_COLOR,
@@ -38,7 +39,7 @@ def _skill_audit_section(report: "AIBOMReport") -> str:
         )
 
     stats_html = (
-        f'<div style="display:flex;gap:24px;margin-bottom:16px;font-size:.82rem;color:#94a3b8">'
+        f'<div style="display:flex;flex-wrap:wrap;gap:12px 24px;margin-bottom:16px;font-size:.82rem;color:#94a3b8">'
         f'<span>Status: <strong style="color:{status_color}">{status_text}</strong></span>'
         f"<span>Packages checked: <strong>{pkgs_checked}</strong></span>"
         f"<span>Servers checked: <strong>{servers_checked}</strong></span>"
@@ -107,7 +108,7 @@ def _ai_inventory_section(report: "AIBOMReport") -> str:
     unique_models = data.get("unique_models", [])
 
     stats_html = (
-        f'<div style="display:flex;gap:24px;margin-bottom:16px;font-size:.82rem;color:#94a3b8">'
+        f'<div style="display:flex;flex-wrap:wrap;gap:12px 24px;margin-bottom:16px;font-size:.82rem;color:#94a3b8">'
         f"<span>Files scanned: <strong>{files_scanned}</strong></span>"
         f"<span>Components: <strong>{total}</strong></span>"
         f"<span>SDKs: <strong>{len(unique_sdks)}</strong></span>"
@@ -168,6 +169,7 @@ def _ai_inventory_section(report: "AIBOMReport") -> str:
 def _inventory_cards(report: "AIBOMReport") -> str:
     cards = []
     for agent in report.agents:
+        static = _static_inventory(agent)
         total_vulns = agent.total_vulnerabilities
         total_creds = sum(len(s.credential_names) for s in agent.mcp_servers)
         agent_badges = []
@@ -184,13 +186,14 @@ def _inventory_cards(report: "AIBOMReport") -> str:
         )
 
         cards.append(
-            f'<details class="agent-card" open>'
+            f'<details class="agent-card">'
             f'<summary class="agent-summary">'
             f"<span>&#x1f916; {_esc(agent.name)}</span>"
             f'<span style="display:flex;align-items:center;gap:8px">'
             f"{badges_html}"
             f'<span style="font-size:.72rem;color:#475569">'
             f"{agent.total_mcp_servers} server(s) &middot; {agent.total_packages} pkg(s)"
+            f"{f' &middot; {len(agent.mcp_servers)} inventory source(s)' if static else ''}"
             f"</span>"
             f"</span>"
             f"</summary>"

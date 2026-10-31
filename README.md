@@ -31,15 +31,20 @@ For AppSec and platform engineers. Self-host free; local scans need no account.
 From the repository you want to inspect, with [uv installed](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx agent-bom scan .
+uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
 Measured on real repositories: [299 of 299 OSV advisories matched across seven
 real repositories, no false positives](site-docs/features/real-repository-accuracy.md).
 
-Read the discovered agents and MCP servers, prioritize the highest-severity
-findings, and follow the affected package's fix guidance. Review coverage gaps
-beside the verdict: incomplete evidence is not a clean assessment.
+Open `agent-bom-report.html` to review inventory, findings, coverage and fix
+guidance. This command scans the selected project, including its recorded MCP
+configuration; `--no-discover` excludes workstation-wide discovery.
+
+No MCP configuration in the project? Package findings still apply. Agent/tool
+relationships require discovered configuration or an explicit inventory; their
+absence is a coverage limit. Review gaps beside the verdict: incomplete evidence
+is not a clean assessment.
 [What this scan does and does not establish](docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
 
 No project handy? Run `uvx agent-bom scan --demo --offline` for a bundled sample.

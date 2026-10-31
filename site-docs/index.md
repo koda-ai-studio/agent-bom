@@ -12,11 +12,16 @@
 For AppSec and platform engineers. Self-host free; local scans need no account.
 
 ```bash
-uvx agent-bom scan .
+uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
 Measured on real repositories: [299 of 299 OSV advisories matched across seven
 real repositories, no false positives](features/real-repository-accuracy.md).
+Open `agent-bom-report.html` to inspect inventory, findings, coverage and fix
+guidance. `--no-discover` excludes workstation-wide discovery. No MCP
+configuration? Package findings remain useful; agent/tool relationships require
+discovered configuration or an explicit inventory.
+
 Centralize the same evidence in your own infrastructure when your team needs a
 shared control plane.
 
@@ -58,10 +63,11 @@ With [uv installed](https://docs.astral.sh/uv/getting-started/installation/),
 scan the repository you want to inspect:
 
 ```bash
-uvx agent-bom scan .
+uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
-Review the affected agent, vulnerability, recorded exposure and recommended fix.
+Open `agent-bom-report.html` and review the affected package, recorded agent
+context, vulnerability and recommended fix.
 Check coverage warnings beside the verdict: incomplete evidence is not clean.
 Apply a reviewed fix and rerun the same command to verify what changed.
 [Read the first-run evidence boundaries](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).

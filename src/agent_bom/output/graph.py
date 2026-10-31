@@ -29,7 +29,13 @@ from agent_bom.output.graph_html import _sanitize_graph_reference_payload as _sa
 from agent_bom.output.graph_html import _to_offline_graph_html as _to_offline_graph_html
 from agent_bom.output.graph_html import _vendor_script_tags as _vendor_script_tags
 from agent_bom.output.graph_html import drawn_header_counts
-from agent_bom.output.graph_inventory import append_agent_elements, append_server_elements, package_edge_type, server_node_id
+from agent_bom.output.graph_inventory import (
+    _static_inventory,
+    append_agent_elements,
+    append_server_elements,
+    package_edge_type,
+    server_node_id,
+)
 from agent_bom.output.graph_policy import _SEVERITY_BADGE as _SEVERITY_BADGE
 from agent_bom.output.graph_policy import _graph_policy_finding_elements as _graph_policy_finding_elements
 from agent_bom.output.graph_policy import _graph_policy_findings as _graph_policy_findings
@@ -155,7 +161,7 @@ def build_graph_elements(
                 "id": sid,
                 "label": server_label,
                 "type": stype,
-                "tip": f"MCP Server: {srv.name}{pkg_note}{cinfo}",
+                "tip": f"{'Inventory source' if static else 'MCP Server'}: {srv.name}{pkg_note}{cinfo}",
                 "command": sanitize_launch_command(srv.command or "", srv.args or [], max_args=3)[:80],
                 "packageCount": len(srv.packages),
                 "vulnPackageCount": vulnerable_pkg_count,
@@ -687,28 +693,11 @@ def build_attack_flow_elements(
     report: "AIBOMReport",
     blast_radii: list["BlastRadius"] | None = None,
 ) -> list[dict]:
-    """Build a CVE-centric attack flow graph showing how vulns compromise assets.
+    """Build recorded CVE → package → context paths.
 
-    Flow direction (left-to-right):
-      CVE → Package → MCP Server → Credentials / Tools / Agents
-
-    This is the *reverse* of the supply chain graph — it shows blast radius
-    propagation from vulnerability to impacted assets.
-
-    Node types:
-      - ``cve``        — CVE/advisory with separate severity metadata
-      - ``pkg_vuln``   — vulnerable package
-      - ``server``     — MCP server affected
-      - ``credential`` — exposed credential (key icon)
-      - ``tool``       — reachable MCP tool
-      - ``agent``      — affected agent
-
-    Edge types:
-      - ``exploits``   — CVE → package
-      - ``runs_on``    — package → server
-      - ``exposes``    — server → credential
-      - ``reaches``    — server → tool
-      - ``compromises``— server → agent
+    Runtime contexts retain MCP server, credential, tool and agent nodes.
+    Static project/SBOM contexts use inventory nodes and ``recorded_in`` edges;
+    inventory presence does not establish a runtime compromise.
     """
     from agent_bom.output.finding_views import cve_findings, package_ecosystem, package_name, package_version, severity_value
 
@@ -770,11 +759,18 @@ def build_attack_flow_elements(
             agent = agents_by_name.get(agent_name)
             if not agent:
                 continue
+            static = _static_inventory(agent)
             for srv in agent.mcp_servers:
                 if finding.affected_servers and srv.name not in finding.affected_servers:
                     continue
                 pkg_match = any((p.name, p.ecosystem, p.version) == target_key for p in srv.packages)
                 if not pkg_match:
+                    continue
+
+                if static is not None:
+                    inventory_id = server_node_id(agent, static, srv)
+                    _add_node(inventory_id, label=srv.name, type=static.inventory_type.value, tip=f"Inventory source: {srv.name}")
+                    _add_edge(pkg_id, inventory_id, "recorded_in")
                     continue
 
                 srv_id = f"srv:{agent.name}:{srv.name}"

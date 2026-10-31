@@ -163,9 +163,10 @@ def _attack_flow_section(findings: list["Finding"]) -> str:
 
     return (
         '<section id="attackflow">'
+        '<details class="report-disclosure"><summary>Finding paths — recorded impact context</summary>'
         '<div class="sec-title">&#x1f525; CVE Attack Flow'
         '<span style="font-size:.68rem;font-weight:400;opacity:.5;margin-left:8px">'
-        f"{len(findings)} CVEs &#x2192; {total_agents} agents &#x2192; "
+        f"{len(findings)} CVEs &#x2192; {total_agents} agent / asset contexts &#x2192; "
         f"{total_creds} credentials &#x2192; {total_tools} tools at risk"
         "</span></div>"
         '<div class="graph-container">'
@@ -180,9 +181,11 @@ def _attack_flow_section(findings: list["Finding"]) -> str:
         '<span><i class="diamond" style="background:#f87171"></i>CVE</span>'
         '<span><i style="background:#dc2626"></i>Vulnerable Package</span>'
         '<span><i style="background:#475569"></i>MCP Server</span>'
+        '<span><i style="background:#64748b"></i>Inventory source</span>'
         '<span><i style="background:#fbbf24"></i>Credential</span>'
         '<span><i style="background:#818cf8"></i>Tool</span>'
         '<span><i style="background:#3b82f6"></i>Agent</span>'
         "</div>"
+        "</details>"
         "</section>"
     )

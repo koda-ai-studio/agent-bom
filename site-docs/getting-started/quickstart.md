@@ -9,14 +9,19 @@ read-only copy of the UI on labelled sample data.
 pip install agent-bom
 ```
 
-## Scan your local AI environment
+## Scan a project and save the evidence
 
 ```bash
-agent-bom scan .
+agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
-This auto-discovers local MCP clients and AI agent configs, extracts configured
-servers and packages, and scans for CVEs.
+Open `agent-bom-report.html` to inspect inventory, findings, coverage and fix
+guidance. This scans only the selected project's manifests, lockfiles and MCP
+configuration. No MCP configuration? Package findings remain useful; agent/tool
+relationships need discovered configuration or an explicit inventory.
+A non-zero exit can be a security verdict or incomplete assessment; inspect the
+saved report and its coverage warnings. After a reviewed fix, rerun the command
+against the same project and compare the reports.
 
 ## Scan a project plus local agent context
 

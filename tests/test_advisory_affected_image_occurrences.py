@@ -110,7 +110,7 @@ def test_affected_answer_covers_image_occurrences_with_asset_type_and_node_id() 
     assert set(rows) == {("package", _IMAGE_NODE), ("package", _SAFE_IMAGE_NODE)}
     assert rows[("package", _IMAGE_NODE)]["verdict"] == "affected"
     assert rows[("package", _IMAGE_NODE)]["fixed_version"] == "10.0.1"
-    assert rows[("package", _IMAGE_NODE)]["asset_label"] == _IMAGE_NODE
+    assert rows[("package", _IMAGE_NODE)]["asset_label"] == "pillow@9.0.0"
     assert rows[("package", _IMAGE_NODE)]["graph"] == {"package_node_id": _IMAGE_NODE, "server_node_id": None, "agent_node_id": None}
     assert rows[("package", _SAFE_IMAGE_NODE)]["verdict"] == "not_affected"
     assert answer["summary"] == {
@@ -215,3 +215,32 @@ def test_legacy_and_current_blast_radius_section_names_are_both_read(section: st
     report[section] = rows
     nodes = {asset.get("node_id") for asset, _, _ in iter_report_packages(report)}
     assert {_IMAGE_NODE, _SAFE_IMAGE_NODE} <= nodes
+
+
+@pytest.mark.parametrize("stored_only", [False, True])
+def test_recorded_asset_labels_do_not_change_occurrence_identity_or_verdict(stored_only: bool) -> None:
+    report = _report()
+
+    def answer():
+        return stored_findings_answer("CVE-2023-4863", [report]) if stored_only else affected_answer(_advisory(), [report])
+
+    original = answer()
+    assert original is not None
+    for row in report["blast_radius"]:
+        if row["asset"]["identifier"] == _IMAGE_NODE:
+            row["asset"]["name"] = "recorded-image-package"
+    renamed = answer()
+    assert renamed is not None
+    target = next(row for row in renamed["rows"] if row["asset_node_id"] == _IMAGE_NODE)
+    assert target["asset_label"] == "recorded-image-package"
+    assert target["graph"]["package_node_id"] == _IMAGE_NODE
+    assert renamed["summary"] == original["summary"]
+    assert {row["id"]: (row["asset"], row["verdict"]) for row in renamed["rows"]} == {
+        row["id"]: (row["asset"], row["verdict"]) for row in original["rows"]
+    }
+    for row in report["blast_radius"]:
+        if row["asset"]["identifier"] == _IMAGE_NODE:
+            row["asset"].pop("name", None)
+    unnamed = answer()
+    assert unnamed is not None
+    assert next(row for row in unnamed["rows"] if row["asset_node_id"] == _IMAGE_NODE)["asset_label"] == _IMAGE_NODE
