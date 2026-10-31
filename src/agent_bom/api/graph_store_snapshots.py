@@ -15,6 +15,7 @@ from agent_bom.api.graph_store_support import (
 from agent_bom.api.graph_store_traversal import SQLiteGraphTraversalMixin
 from agent_bom.api.storage.sqlite_graph_search import ensure_search_index
 from agent_bom.db import graph_store as sqlite_graph_store
+from agent_bom.db.graph_node_counts import count_snapshot_nodes
 from agent_bom.db.graph_revision import read_snapshot_identity
 from agent_bom.db.graph_store_write import checkpoint_wal
 from agent_bom.graph import (
@@ -29,6 +30,17 @@ from agent_bom.graph.snapshot_paths import SnapshotPath
 
 
 class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
+    def count_snapshot_nodes(self, *, tenant_id: str, scan_ids: list[str], entity_type: str) -> int:
+        """Count ordered source node identities with tenant-scoped SQL."""
+        tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
+        conn = self._open_ro_conn()
+        if conn is None:
+            return 0
+        try:
+            return count_snapshot_nodes(conn, tenant_id, scan_ids, entity_type)
+        finally:
+            conn.close()
+
     def snapshot_identity(self, *, tenant_id: str = "", scan_id: str = "", for_paging: bool = False) -> tuple[str, str]:
         """Resolve one durable snapshot generation, including latest, atomically."""
         tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)

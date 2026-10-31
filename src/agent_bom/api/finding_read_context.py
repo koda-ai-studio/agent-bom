@@ -33,6 +33,12 @@ def forget_read(key: tuple[str, str]) -> None:
         cache.pop(key, None)
 
 
+def cached_read(key: tuple[str, str]) -> Any:
+    """Inspect an already established request read without loading a new view."""
+    cache = _read_cache.get()
+    return cache.get(key) if cache is not None else None
+
+
 def on_scope_exit(callback: Callable[[], None]) -> bool:
     """Run *callback* when the active read scope ends; return False when no scope is active."""
     cache = _read_cache.get()

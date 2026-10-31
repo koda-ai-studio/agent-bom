@@ -60,3 +60,38 @@ def test_postgres_source_replaced_during_assembly_never_answers_409(migrated_fre
         reset_current_tenant(token)
     assert exc.value.status_code == 503
     assert exc.value.headers == {"Retry-After": "1"}
+
+
+def test_postgres_current_count_matches_ordered_merge_and_rls(migrated_fresh_database, monkeypatch):  # noqa: F811
+    from agent_bom.api.current_graph import CurrentGraphStore
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from agent_bom.api.store import InMemoryJobStore
+    from agent_bom.graph import EntityType
+    from tests.api.test_current_graph_counts import record
+
+    jobs, backing = InMemoryJobStore(), PostgresGraphStore()
+    store = CurrentGraphStore(backing, jobs)
+    estate = store, backing, jobs
+    token = set_current_tenant(TENANT)
+    try:
+        record(estate, 7, "a", [("shared", EntityType.AGENT), ("conflict", EntityType.PACKAGE)], tenant=TENANT)
+        record(estate, 8, "b", [("shared", EntityType.AGENT), ("conflict", EntityType.AGENT), ("new", EntityType.AGENT)], tenant=TENANT)
+        with monkeypatch.context() as patch:
+            patch.setattr(backing, "load_graph", lambda **kw: pytest.fail("count decoded graph payloads"))
+            identity, count = store.count_nodes(tenant_id=TENANT, entity_type="agent")
+        graph = store.load_graph(tenant_id=TENANT)
+        assert count == 2 == len(graph.nodes_by_type(EntityType.AGENT))
+        assert identity == graph.scan_id
+    finally:
+        reset_current_tenant(token)
+    token = set_current_tenant("different-tenant")
+    try:
+        assert (
+            backing.count_snapshot_nodes(
+                tenant_id=TENANT, scan_ids=[scan.job_id for scan in jobs.list_all(tenant_id=TENANT)], entity_type="agent"
+            )
+            == 0
+        )
+    finally:
+        reset_current_tenant(token)
