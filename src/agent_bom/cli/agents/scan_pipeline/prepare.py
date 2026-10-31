@@ -165,7 +165,8 @@ def _apply_presets_and_modes(opts: ScanOptions, st: ScanState) -> None:
         opts.enrich = True
     elif opts.preset == "quick":
         opts.transitive = False
-        opts.enrich = False
+        if not is_explicit(click.get_current_context(silent=True), "enrich"):
+            opts.enrich = False
 
     # A high or critical vulnerability is a failed security verdict by default. The
     # explicit escape hatch is deliberately limited to vulnerability severity:
