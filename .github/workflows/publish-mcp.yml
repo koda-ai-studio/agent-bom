@@ -29,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           persist-credentials: false
       - name: Verify published release source
@@ -48,11 +49,6 @@ jobs:
       attestations: write   # required for SBOM + provenance attestations
     if: ${{ needs.release.outputs.publish_current == 'true' }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.release.outputs.release_sha }}
-          persist-credentials: false
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
 
@@ -67,7 +63,9 @@ jobs:
         id: build-stdio
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: .
+          # BuildKit fetches the verified release directly; no release checkout
+          # or release scripts run on the publishing runner.
+          context: https://github.com/${{ github.repository }}.git#${{ needs.release.outputs.release_sha }}
           file: deploy/docker/Dockerfile.mcp
           push: true
           provenance: true
@@ -103,11 +101,6 @@ jobs:
       attestations: write   # required for SBOM + provenance attestations
     if: ${{ needs.release.outputs.publish_current == 'true' }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.release.outputs.release_sha }}
-          persist-credentials: false
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
 
@@ -122,7 +115,8 @@ jobs:
         id: build-sse
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: .
+          # Keep the HTTP image on the same verified Git context as stdio.
+          context: https://github.com/${{ github.repository }}.git#${{ needs.release.outputs.release_sha }}
           file: deploy/docker/Dockerfile.sse
           push: true
           provenance: true
