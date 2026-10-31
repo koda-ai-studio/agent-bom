@@ -1,3 +1,4 @@
+import { agentContextRelationshipLabel, graphAgentContext, platformAgentCount } from "@/lib/graph-agent-context";
 import { graphEdgeEvidence, graphEdgeEvidenceLabel } from "@/lib/graph-edge-evidence";
 import { GRAPH_EDGE_KIND_META, type GraphEdgeKindKey } from "@/lib/graph-schema.generated";
 import { nodeRiskAssessment } from "@/lib/node-risk-assessment";
@@ -175,7 +176,7 @@ export function buildUnifiedFlowGraph(
       (edge) =>
         prePrunedNodeIds.has(edge.source) && prePrunedNodeIds.has(edge.target),
     )
-    .map((edge) => toFlowEdge(edge));
+    .map((edge) => toFlowEdge(edge, nodeById));
 
   const connectedNodeIds = new Set<string>();
   for (const edge of prePrunedEdges) {
@@ -329,15 +330,11 @@ function toLineageData(
   if (repository?.slug) data.label = repository.slug;
   switch (nodeType) {
     case "provider":
-      data.agentCount = countOutgoing(
-        node.id,
-        outgoing,
-        RelationshipType.HOSTS,
-        nodeById, new Set([EntityType.AGENT]),
-      );
+      data.agentCount = platformAgentCount(outgoing.get(node.id) ?? [], nodeById);
       data.countHopLimits = { agentCount: 1 };
       break;
     case "agent":
+      data.agentContext = graphAgentContext(node, outgoing.get(node.id) ?? [], incoming.get(node.id) ?? [], nodeById);
       data.agentType = agentType || stringAttr(node, "agent_type");
       if (data.agentType) {
         data.description = topologyAgentTypeLabel(data.agentType);
@@ -566,7 +563,7 @@ function toLineageData(
   return data;
 }
 
-function toFlowEdge(edge: UnifiedEdge): Edge {
+function toFlowEdge(edge: UnifiedEdge, nodeById: Map<string, UnifiedNode>): Edge {
   const relationship = String(edge.relationship);
   const color = RELATIONSHIP_COLOR_MAP[relationship] ?? "#52525b";
   const legend = relationshipLegendItem(relationship);
@@ -590,7 +587,7 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
     type: "smoothstep",
     data: {
       relationship,
-      relationshipLabel: relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked }),
+      relationshipLabel: agentContextRelationshipLabel(edge, nodeById) ?? relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked }),
       relationshipCategory: legend.layer,
       traversalClass: GRAPH_EDGE_KIND_META[relationship as GraphEdgeKindKey]?.traversal_class ?? "unknown",
       evidenceMode,

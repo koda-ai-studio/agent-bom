@@ -420,7 +420,9 @@ const SCOPE_RELATIONSHIPS: Record<
   string[]
 > = {
   inventory: [
+    "platform_for",
     "hosts",
+    "hosted_on",
     "uses",
     "depends_on",
     "provides_tool",

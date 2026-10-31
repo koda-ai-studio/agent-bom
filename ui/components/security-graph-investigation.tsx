@@ -788,6 +788,8 @@ export function SecurityGraphInvestigation({
       </div>
 
       {selectedRelationship && <GraphRelationshipDetail edge={selectedRelationship} scanId={scanId ?? ""}
+        sourceType={activeGraph?.nodes.find(node => node.id === selectedRelationship.source)?.entity_type}
+        targetType={activeGraph?.nodes.find(node => node.id === selectedRelationship.target)?.entity_type}
         sourceLabel={activeGraph?.nodes.find(node => node.id === selectedRelationship.source)?.label ?? selectedRelationship.source}
         targetLabel={activeGraph?.nodes.find(node => node.id === selectedRelationship.target)?.label ?? selectedRelationship.target}
         onClose={() => setSelectedEdge(null)} mobile />}

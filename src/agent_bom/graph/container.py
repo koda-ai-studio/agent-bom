@@ -29,6 +29,7 @@ from agent_bom.graph.technique_mapping import TechniqueMapping as TechniqueMappi
 from agent_bom.graph.technique_mapping import technique_mappings_from_json as technique_mappings_from_json
 from agent_bom.graph.types import EntityType, NodeStatus, RelationshipType
 from agent_bom.graph.util import _now_iso
+from agent_bom.graph.view_filters import INVENTORY_RELATIONSHIPS
 from agent_bom.graph.view_filters import GraphFilterOptions as GraphFilterOptions
 
 
@@ -718,20 +719,7 @@ class UnifiedGraph:
                     EntityType.MISCONFIGURATION,
                 )
             ),
-            edge_filter=lambda e: (
-                e.relationship
-                in (
-                    RelationshipType.HOSTS,
-                    RelationshipType.HOSTED_ON,
-                    RelationshipType.USES,
-                    RelationshipType.DEPENDS_ON,
-                    RelationshipType.PROVIDES_TOOL,
-                    RelationshipType.EXPOSES_CRED,
-                    RelationshipType.REACHES_TOOL,
-                    RelationshipType.SERVES_MODEL,
-                    RelationshipType.CONTAINS,
-                )
-            ),
+            edge_filter=lambda e: e.relationship in INVENTORY_RELATIONSHIPS,
         )
         return self._inherit_completeness(sub)
 

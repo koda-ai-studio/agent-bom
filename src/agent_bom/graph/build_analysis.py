@@ -11,6 +11,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.asset_canonicalize import canonicalize_assets
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_findings import project_credential_findings
@@ -55,6 +56,7 @@ def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports
     # Edges the assessment projections added after fusion.
     _stamp_freshness(graph)
     audit_graph_contract(graph)
+    annotate_agent_context(graph)
     # Finding nodes keep the first observation their rows recorded.
     apply_finding_row_times(graph, report_json.get("findings"))
 

@@ -99,6 +99,7 @@ export enum EntityType {
 
 export enum RelationshipType {
   // Static inventory
+  PLATFORM_FOR = "platform_for",
   HOSTS = "hosts",
   HOSTED_ON = "hosted_on",
   USES = "uses",
@@ -464,6 +465,7 @@ export const ENTITY_COLOR_MAP: Record<string, string> & Record<EntityType, strin
 
 /** Canonical edge colors by relationship type */
 export const RELATIONSHIP_COLOR_MAP: Record<string, string> & Record<RelationshipType, string> = {
+  [RelationshipType.PLATFORM_FOR]: "#6b7280",
   [RelationshipType.HOSTS]: "#6b7280",
   [RelationshipType.HOSTED_ON]: "#78716c",
   [RelationshipType.USES]: "#10b981",

@@ -1,8 +1,6 @@
 """Deterministic correlation of immutable graph snapshots.
 
-Observations merge only on an exact typed identity (a strong provider key,
-or a located runtime occurrence); no relationship absent from every input is
-created, and image artifacts never establish deployment identity.
+Merge exact typed identities without inventing edges or deployment identity.
 """
 
 from __future__ import annotations
@@ -20,6 +18,7 @@ from packageurl import PackageURL
 
 from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.graph import correlation_scope as _scope
+from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.asset_identity import IdentityKey
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION, merged_identity_version, runtime_stable_identity
@@ -471,7 +470,7 @@ def _project_mapping(observations: Iterable[Mapping[str, Any]]) -> dict[str, Any
     projected: dict[str, Any] = {}
     for values in observations:
         for key, value in values.items():
-            if key == _CORRELATION_ATTR or not _non_empty(value):
+            if key in {_CORRELATION_ATTR, "agent_context"} or not _non_empty(value):
                 continue
             projected[str(key)] = deepcopy(value)
     return projected
@@ -481,7 +480,7 @@ def _conflict_fields(observations: Iterable[Mapping[str, Any]]) -> list[str]:
     values_by_key: dict[str, set[str]] = {}
     for values in observations:
         for key, value in values.items():
-            if key in {_CORRELATION_ATTR, "canonical_id", "stable_id", "source_ids"} or not _non_empty(value):
+            if key in {_CORRELATION_ATTR, "agent_context", "canonical_id", "stable_id", "source_ids"} or not _non_empty(value):
                 continue
             values_by_key.setdefault(str(key), set()).add(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str))
     return sorted(key for key, values in values_by_key.items() if len(values) > 1)
@@ -665,7 +664,6 @@ def merge_graph_snapshots(
     created_at: str = "",
 ) -> CorrelationMergeResult:
     """Merge selected immutable snapshots without inventing cross-source edges."""
-
     if len(snapshots) < 2:
         raise ValueError("Correlation requires at least 2 graph snapshots")
     if len(snapshots) > 32:
@@ -716,6 +714,7 @@ def merge_graph_snapshots(
             )
         )
 
+    annotate_agent_context(output)
     manifest = {
         "schema_version": "agent-bom.graph-correlation.v1",
         "identity_version": CORRELATION_IDENTITY_VERSION,

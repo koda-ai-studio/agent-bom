@@ -1,3 +1,4 @@
+import { AgentContextDetails } from "./agent-context";
 import type { LineageNodeData } from "../lineage-nodes";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { severityColor } from "@/lib/api";
@@ -21,7 +22,7 @@ function RepositoryDetails({ data }: { data: LineageNodeData }) {
 function ProviderDetails({ data }: { data: LineageNodeData }) {
   return (<>
 {data.nodeType === "provider" && data.agentCount !== undefined && (
-  <Row label="Hosted agents" value={data.agentCount} />
+  <Row label="Linked agents" value={data.agentCount} />
 )}
   </>);
 }
@@ -30,7 +31,8 @@ function AgentDetails({ data }: { data: LineageNodeData }) {
   return (<>
 {data.nodeType === "agent" && (
   <div className="space-y-3">
-    {data.agentType && <Row label="Type" value={data.agentType} />}
+    {data.agentType && <Row label="Agent kind / client" value={data.agentType} />}
+    <AgentContextDetails context={data.agentContext} />
     {data.agentStatus && (
       <div
         className={`text-xs px-2 py-1 rounded border font-mono ${

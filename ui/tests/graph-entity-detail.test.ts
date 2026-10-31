@@ -147,3 +147,13 @@ it.each([
   expect(url.searchParams.get("scan")).toBe("scan /1");
   expect(url.searchParams.get("q")).toBe(name);
 });
+
+it("hydrates retained agent context when detail includes evidence outside the loaded graph", () => {
+  const detail = {
+    node: { id: "agent:a", entity_type: "agent", attributes: { agent_type: "claude-code", agent_context: { schema_version: "agent.context.v1", agent_kind: "claude-code", execution: { items: [{ node_id: "host:a", label: "Recorded host", entity_type: "cloud_resource", relationship: "hosted_on", provider: "aws" }], recorded_count: 1 } } } },
+    edges_in: [], edges_out: [], neighbors: [], sources: [], impact: { affected_count: 0, affected_by_type: {}, max_depth_reached: 0 },
+  } as unknown as GraphNodeDetailResponse;
+  const merged = mergeGraphNodeDetail(baseNode({ nodeType: "agent", agentType: "unknown" }), detail);
+  expect(merged.agentContext).toMatchObject({ basis: "snapshot", agentKind: "claude-code", execution: { items: [{ label: "Recorded host" }] } });
+  expect(merged.agentType).toBe("claude-code");
+});

@@ -41,3 +41,14 @@ def test_expected_specs_written_with_affects_still_match():
     for relationship in ("affects", "vulnerable_to"):
         spec = {"expected_edges": [["pkg:npm:next@16.2.6", "vuln:CVE-2026-21441", relationship]]}
         assert evaluate_graph(exported, spec).to_dict()["scores"]["edges"]["matched"] == 1, relationship
+
+
+def test_export_presentations_do_not_call_agent_platforms_hosts():
+    from agent_bom.output.graph_export import to_cypher, to_dot, to_graphml, to_mermaid
+
+    graph = build_graph_from_scan_data(_report())
+    for renderer in (to_dot, to_mermaid, to_graphml, to_cypher):
+        rendered = renderer(graph)
+        assert "platform_for" in rendered.lower(), renderer.__name__
+    edges = to_json(graph)["edges"]
+    assert any(edge["kind"] == "hosts" and edge["relationship"] == "platform_for" for edge in edges)

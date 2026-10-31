@@ -93,6 +93,7 @@ Not drawn, because they can connect almost any two types: `possibly_correlates_w
 | `member_of` | `authority` | yes | AI and agents: `agent`<br/>Identity and access: `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user` | `fleet` |
 | `owns` | `governance` | yes | Identity and access: `account`, `group`, `org`, `role`, `service_account`, `service_principal`, `user` | `api_gateway`, `cloud_resource`, `data_store`, `environment` |
 | `part_of` | `structural` | yes | `container`<br/>Identity and access: `account`<br/>AI and agents: `agent`, `server` | `cluster`, `environment`, `fleet`<br/>Identity and access: `org` |
+| `platform_for` | `structural` | no | `provider` | AI and agents: `agent` |
 | `recorded_activity` | `correlation` | no | `resource`<br/>AI and agents: `agent`, `server`, `tool_call`<br/>Identity and access: `federated_identity`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource`<br/>Identity and access: `access_policy`, `credential`, `credential_ref`, `policy`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`, `tool_call`<br/>Code and supply chain: `ci_job`, `config_file`, `package` |
 | `serves_model` | `dependency` | yes | AI and agents: `agent`, `framework`, `server` | `model` |
 | `stores` | `structural` | yes | AI and agents: `server` | `data_store`, `dataset` |

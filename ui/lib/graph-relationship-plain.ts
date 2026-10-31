@@ -37,6 +37,7 @@ const WHY: Record<string, (source: string, target: string) => string> = {
   affects: (s, t) => `${s} identifies ${t} as affected.`,
   depends_on: (s, t) => `${s} declares ${t} as a dependency.`,
   imports: (s, t) => `${s} imports ${t}.`,
+  platform_for: (s, t) => `${s} is the recorded platform associated with ${t}; this does not establish where it runs or which model it calls.`,
   contains: (s, t) => `${s} contains ${t} in the collected inventory.`,
   uses: (s, t) => `${s} is configured to use ${t}.`,
   provides_tool: (s, t) => `${s} lists ${t} as an available tool.`,

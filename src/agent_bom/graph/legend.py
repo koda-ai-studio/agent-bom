@@ -90,6 +90,7 @@ ENTITY_LEGEND: list[LegendEntry] = [
 
 RELATIONSHIP_LEGEND: list[LegendEntry] = [
     # Static inventory
+    LegendEntry(key="platform_for", label="Platform for", color="#6b7280"),
     LegendEntry(key="hosts", label="Hosts", color="#6b7280"),
     LegendEntry(key="hosted_on", label="Hosted On", color="#78716c"),
     LegendEntry(key="uses", label="Uses", color="#10b981"),

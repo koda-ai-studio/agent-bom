@@ -250,6 +250,7 @@ const NODE_TYPE_LEGEND_ITEMS: Record<LineageNodeType, LegendItem> =
  */
 export const RELATIONSHIP_LEGEND_ORDER = [
   // Static inventory
+  "platform_for",
   "hosts",
   "hosted_on",
   "uses",

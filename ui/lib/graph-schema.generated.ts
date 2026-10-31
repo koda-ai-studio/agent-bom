@@ -563,6 +563,7 @@ export enum GraphEdgeKind {
   OBSERVES = "observes",
   OWNS = "owns",
   PART_OF = "part_of",
+  PLATFORM_FOR = "platform_for",
   POSSIBLY_CORRELATES_WITH = "possibly_correlates_with",
   PROTECTS = "protects",
   PROVIDES_TOOL = "provides_tool",
@@ -584,11 +585,11 @@ export enum GraphEdgeKind {
   VULNERABLE_TO = "vulnerable_to",
 }
 
-export type GraphEdgeKindKey = "accessed" | "acted_as" | "affects" | "assumes" | "attached" | "authenticates_as" | "belongs_to" | "called" | "can_access" | "configures" | "contains" | "correlates_with" | "cross_account_trust" | "defines" | "delegated_to" | "depends_on" | "exhibits_drift" | "exploitable_via" | "exposed_to" | "exposes_cred" | "governs" | "has_permission" | "hosted_on" | "hosts" | "imports" | "inherits" | "invoked" | "lateral_path" | "manages" | "member_of" | "observes" | "owns" | "part_of" | "possibly_correlates_with" | "protects" | "provides_tool" | "reaches_tool" | "recorded_activity" | "remediates" | "runs" | "scoped_to" | "serves_model" | "shares_cred" | "shares_server" | "stores" | "trace_step" | "triggers" | "trusts" | "used_credential" | "uses" | "uses_framework" | "vulnerable_to";
+export type GraphEdgeKindKey = "accessed" | "acted_as" | "affects" | "assumes" | "attached" | "authenticates_as" | "belongs_to" | "called" | "can_access" | "configures" | "contains" | "correlates_with" | "cross_account_trust" | "defines" | "delegated_to" | "depends_on" | "exhibits_drift" | "exploitable_via" | "exposed_to" | "exposes_cred" | "governs" | "has_permission" | "hosted_on" | "hosts" | "imports" | "inherits" | "invoked" | "lateral_path" | "manages" | "member_of" | "observes" | "owns" | "part_of" | "platform_for" | "possibly_correlates_with" | "protects" | "provides_tool" | "reaches_tool" | "recorded_activity" | "remediates" | "runs" | "scoped_to" | "serves_model" | "shares_cred" | "shares_server" | "stores" | "trace_step" | "triggers" | "trusts" | "used_credential" | "uses" | "uses_framework" | "vulnerable_to";
 
 export type GraphTraversalClass = "authority" | "correlation" | "dependency" | "derived" | "exposure" | "finding" | "governance" | "runtime" | "structural";
 
-export const GRAPH_EDGE_KINDS: readonly GraphEdgeKindKey[] = ["accessed", "acted_as", "affects", "assumes", "attached", "authenticates_as", "belongs_to", "called", "can_access", "configures", "contains", "correlates_with", "cross_account_trust", "defines", "delegated_to", "depends_on", "exhibits_drift", "exploitable_via", "exposed_to", "exposes_cred", "governs", "has_permission", "hosted_on", "hosts", "imports", "inherits", "invoked", "lateral_path", "manages", "member_of", "observes", "owns", "part_of", "possibly_correlates_with", "protects", "provides_tool", "reaches_tool", "recorded_activity", "remediates", "runs", "scoped_to", "serves_model", "shares_cred", "shares_server", "stores", "trace_step", "triggers", "trusts", "used_credential", "uses", "uses_framework", "vulnerable_to"] as const;
+export const GRAPH_EDGE_KINDS: readonly GraphEdgeKindKey[] = ["accessed", "acted_as", "affects", "assumes", "attached", "authenticates_as", "belongs_to", "called", "can_access", "configures", "contains", "correlates_with", "cross_account_trust", "defines", "delegated_to", "depends_on", "exhibits_drift", "exploitable_via", "exposed_to", "exposes_cred", "governs", "has_permission", "hosted_on", "hosts", "imports", "inherits", "invoked", "lateral_path", "manages", "member_of", "observes", "owns", "part_of", "platform_for", "possibly_correlates_with", "protects", "provides_tool", "reaches_tool", "recorded_activity", "remediates", "runs", "scoped_to", "serves_model", "shares_cred", "shares_server", "stores", "trace_step", "triggers", "trusts", "used_credential", "uses", "uses_framework", "vulnerable_to"] as const;
 
 export interface GraphEdgeKindMeta {
   label: string;
@@ -1345,6 +1346,20 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "resource"
     ],
     "traversable": true,
+    "traversal_class": "structural"
+  },
+  "platform_for": {
+    "label": "Platform for",
+    "color": "#6b7280",
+    "category": "inventory",
+    "direction": "directed",
+    "source_types": [
+      "provider"
+    ],
+    "target_types": [
+      "agent"
+    ],
+    "traversable": false,
     "traversal_class": "structural"
   },
   "possibly_correlates_with": {

@@ -868,6 +868,8 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             const edge = mergedGraphData?.edges.find(item => item.id === selectedRelationship.id);
             if (!edge || !displayEdges.some(item => item.id === edge.id)) return null;
             return <GraphRelationshipDetail edge={edge} scanId={selectedScanId} mobile={narrowViewport}
+              sourceType={mergedGraphData?.nodes.find(item => item.id === edge.source)?.entity_type}
+              targetType={mergedGraphData?.nodes.find(item => item.id === edge.target)?.entity_type}
               sourceLabel={mergedGraphData?.nodes.find(item => item.id === edge.source)?.label || edge.source}
               targetLabel={mergedGraphData?.nodes.find(item => item.id === edge.target)?.label || edge.target}
               onClose={() => setSelectedRelationship(null)} />;

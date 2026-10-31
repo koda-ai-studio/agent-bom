@@ -127,6 +127,7 @@ _ACCESSIBLE = (
 )
 
 _SPECS: tuple[RelationshipSpec, ...] = (
+    _spec(R.PLATFORM_FOR, T.STRUCTURAL, "inventory", (E.PROVIDER,), (E.AGENT,), traversable=False),
     _spec(
         R.HOSTS,
         T.STRUCTURAL,

@@ -1,5 +1,8 @@
 "use client";
 
+import { agentExecutionCaption, type AgentContext } from "@/lib/graph-agent-context";
+import { topologyAgentTypeLabel } from "@/lib/agent-topology-graph";
+
 import { useEffect, useRef, type ComponentType, type ReactNode } from "react";
 import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/react";
 import { Bug, FolderGit2, KeyRound, Wrench } from "lucide-react";
@@ -53,6 +56,7 @@ export type LineageNodeData = {
   occurrenceRole?: string | undefined;
   /** Visible distinction for same-name nodes; never substitutes for their IDs. */
   identityContext?: string | undefined;
+  agentContext?: AgentContext | undefined;
   dimensions?: import("@/lib/graph-schema").NodeDimensions | undefined;
   complianceTags?: string[] | undefined;
   attributes?: Record<string, unknown> | undefined;
@@ -227,7 +231,7 @@ function NodeCard({
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
       <NodeBadgeRow badges={badges}>
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
-          {repository ? "Repository" : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider })}
+          {repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider })}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
@@ -236,7 +240,7 @@ function NodeCard({
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
       </div>}
-      {shownSubtitle && <div className="graph-node-context mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary">{shownSubtitle}</div>}
+      {shownSubtitle && <div title={typeof shownSubtitle === "string" ? shownSubtitle : undefined} className={`${data.nodeType === "agent" ? "" : "graph-node-context "}mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary`}>{shownSubtitle}</div>}
       {footer && <div className={`${data.nodeType === "vulnerability" || data.nodeType === "misconfiguration" ? "" : "graph-node-context "}mt-1 flex max-w-full flex-wrap items-baseline justify-center gap-x-2`} title={data.countScope === "loaded_graph" ? graphCountDescription(data) : undefined}>
         {footer}
       </div>}
@@ -272,7 +276,7 @@ function AgentNode({ data }: { data: LineageNodeData }) {
       ringClass="ring-emerald-400"
       iconClass="text-emerald-600 dark:text-emerald-400"
       target={false}
-      subtitle={entitySource(data)?.label ?? data.agentType}
+      subtitle={agentExecutionCaption(data.agentContext)}
       footer={
         <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-xs text-ink-secondary">
           {data.serverCount !== undefined && (

@@ -216,7 +216,8 @@ def _project_agent(graph: UnifiedGraph, agent: AgentScope, indexes: BuildIndexes
             UnifiedEdge(
                 source=agent.provider_id,
                 target=agent.agent_id,
-                relationship=RelationshipType.HOSTS,
+                relationship=RelationshipType.PLATFORM_FOR,
+                traversable=False,
                 evidence=_discovery_evidence(agent.data_source_tag),
             )
         )

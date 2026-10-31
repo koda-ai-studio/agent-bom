@@ -21,6 +21,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Lake ingestion accepts bounded JSON/NDJSON snapshots from local files or an explicitly version-pinned S3 object. Warehouse queries, native Parquet ingestion and continuous subscriptions are outside this workflow.
 
 ### Added
+- Agent context in the investigation graph separates platform association, recorded execution hosts, model links and environment membership, with bounded references and explicit missing-evidence labels. Generic provider relationships no longer claim hosting.
 - Dedicated Get started page, linked from a compact Overview setup card and Connect navigation, with explicit control-plane scan, source connection and local-project push paths; expandable credential-free commands, inventory-to-impact-to-verification guidance, and a separate browser-only report preview.
 - Project activation with retained scan/graph receipts, shared-fix prioritization, and a CVE impact workspace showing recorded workflows, advisory conditions and conditional reach without claiming local exploitability.
 - Dashboard executive brief with Markdown/JSON exports, finding and graph drilldowns, source-scope disclosure, and authenticated compliance-pack/key downloads with explicit verification guidance. The read-only demo retains sample labels and evidence limits.

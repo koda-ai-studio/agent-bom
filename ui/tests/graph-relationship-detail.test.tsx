@@ -237,3 +237,16 @@ it("returns focus to the inspected edge when the inspector remounts without its 
   expect(otherEdge).not.toHaveFocus();
   view.remove(); other.remove(); vi.useRealTimers(); vi.unstubAllGlobals();
 });
+
+it("explains a historical vendor-hosts-agent record as platform association", () => {
+  render(<GraphRelationshipDetail edge={{ ...edge, relationship: "hosts" }} scanId="snapshot-a" sourceLabel="Vendor" targetLabel="Agent"
+    sourceType="provider" targetType="agent" onClose={vi.fn()} />);
+  expect(screen.getByRole("heading", { name: "Platform for" })).toBeVisible();
+  expect(screen.getByLabelText("Relationship summary")).toHaveTextContent("does not establish where it runs");
+});
+it("keeps environment membership distinct from hosting in the relationship inspector", () => {
+  render(<GraphRelationshipDetail edge={{ ...edge, relationship: "contains" }} scanId="snapshot-a" sourceLabel="AWS environment" targetLabel="Workflow"
+    sourceType="environment" targetType="agent" onClose={vi.fn()} />);
+  expect(screen.getByRole("heading", { name: "Includes · membership" })).toBeVisible();
+  expect(screen.getByLabelText("Relationship summary")).toHaveTextContent("does not establish deployment location");
+});

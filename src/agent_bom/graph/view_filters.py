@@ -5,6 +5,21 @@ from typing import Any
 
 from agent_bom.graph.types import EntityType, RelationshipType
 
+INVENTORY_RELATIONSHIPS = frozenset(
+    {
+        RelationshipType.HOSTS,
+        RelationshipType.PLATFORM_FOR,
+        RelationshipType.HOSTED_ON,
+        RelationshipType.USES,
+        RelationshipType.DEPENDS_ON,
+        RelationshipType.PROVIDES_TOOL,
+        RelationshipType.EXPOSES_CRED,
+        RelationshipType.REACHES_TOOL,
+        RelationshipType.SERVES_MODEL,
+        RelationshipType.CONTAINS,
+    }
+)
+
 
 @dataclass(slots=True)
 class GraphFilterOptions:

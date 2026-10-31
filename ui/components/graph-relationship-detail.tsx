@@ -1,5 +1,6 @@
 "use client";
 
+import { agentRelationshipLabel } from "@/lib/graph-agent-context";
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { GraphRelationshipExplanation } from "@/components/graph-relationship-explanation";
@@ -12,11 +13,13 @@ import { graphEdgeEvidenceMode } from "@/lib/unified-graph-flow";
 import { plainRelationshipSummary } from "@/lib/graph-relationship-plain";
 import type { DisplayRollupEdge } from "@/lib/graph-rollup-view";
 
-export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel, onClose, mobile = false }: {
+export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel, sourceType, targetType, onClose, mobile = false }: {
   edge: UnifiedEdge;
   scanId: string;
   sourceLabel: string;
   targetLabel: string;
+  sourceType?: string | undefined;
+  targetType?: string | undefined;
   onClose: () => void;
   mobile?: boolean;
 }) {
@@ -35,8 +38,10 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
     closeButtonRef.current?.focus();
     return returnFocus;
   }, [mobile, edge.id]);
-  const title = relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });
-  const plain = plainRelationshipSummary(edge, sourceLabel, targetLabel);
+  const contextLabel = agentRelationshipLabel(edge.relationship, sourceType, targetType);
+  const title = contextLabel ?? relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });
+  const plain = plainRelationshipSummary(contextLabel === "Platform for" ? { ...edge, relationship: "platform_for" } : edge, sourceLabel, targetLabel);
+  if (contextLabel === "Includes · membership") plain.why = `${sourceLabel} includes ${targetLabel} in its recorded inventory; membership does not establish deployment location.`;
   const content = <div className="space-y-4 text-sm [overflow-wrap:anywhere]">
     <p className="font-medium">{sourceLabel} {edge.direction === "bidirectional" ? "↔" : "→"} {targetLabel}</p>
     <dl aria-label="Relationship summary" className="space-y-3 rounded-lg border border-outline bg-surface-muted p-3">
