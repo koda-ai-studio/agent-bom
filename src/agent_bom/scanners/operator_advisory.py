@@ -299,7 +299,11 @@ def _row(
         "id": occurrence_id(advisory.id, package, asset, occ.ctx.provenance),
         "advisory_id": advisory.id,
         "asset": dict(asset),
-        "asset_label": asset.get("server") or asset.get("agent") or asset.get("node_id") or str(package.get("asset_name") or ""),
+        "asset_label": asset.get("server")
+        or asset.get("agent")
+        or str(package.get("asset_name") or "").strip()
+        or asset.get("node_id")
+        or "",
         "package": _package_ref(package),
         "installed_version": str(package.get("version") or ""),
         "fixed_version": fixed,

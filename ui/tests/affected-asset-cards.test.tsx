@@ -38,4 +38,25 @@ describe("AffectedAssetCards", () => {
       .toHaveAttribute("href", "/security-graph?lens=attack-path&scan=scan-php-8.3.30&node=pkg%3Ageneric%3Aphp%408.3.30");
     expect(within(clean).getByTestId("patch-target")).toHaveTextContent("Not needed");
   });
+  it("shows a readable package label while preserving distinct occurrence identities and graph targets", () => {
+    const standalone = ["first", "second"].map(scope => {
+      const node = `pkg:pypi:pillow@9.0.0:image:${scope}`;
+      return { ...rows[0]!, asset: { agent: "", server: "", node_id: node }, asset_label: node,
+        asset_type: "package", asset_node_id: node, scan_id: "scan-fixture",
+        package: { name: "pillow", version: "9.0.0", ecosystem: "pypi" }, installed_version: "9.0.0",
+        graph: { package_node_id: node, server_node_id: null, agent_node_id: null } };
+    });
+    render(<AffectedAssetCards rows={standalone} />);
+    const cards = screen.getAllByTestId("affected-asset-card");
+    expect(cards).toHaveLength(2);
+    cards.forEach((card, i) => {
+      expect(within(card).getByText("pillow@9.0.0")).toBeVisible();
+      expect(within(card).getByText("Package occurrence · owner not recorded")).toBeVisible();
+      expect(within(card).getByText("Evidence identity")).toBeVisible();
+      const identity = within(card).getByText(standalone[i]!.asset_node_id);
+      expect(identity.closest("details")).not.toHaveAttribute("open");
+      expect(within(card).getByRole("link")).toHaveAttribute("href", `/security-graph?lens=attack-path&scan=scan-fixture&node=${encodeURIComponent(standalone[i]!.asset_node_id)}`);
+    });
+  });
+
 });

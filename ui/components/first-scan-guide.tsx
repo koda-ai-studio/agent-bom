@@ -7,7 +7,7 @@ import { useAuthState } from "@/components/auth-provider";
 import { LocalReportImport } from "@/components/local-report-import";
 import { CopyTextButton } from "@/components/connections/wizard-controls";
 
-const PROJECT_COMMAND = 'agent-bom scan . --no-discover --context-graph -f json -o report.json --push-url "${AGENT_BOM_PUSH_URL:?Set the control-plane ingestion URL}"';
+const PROJECT_COMMAND = 'AGENT_BOM_PUSH_API_KEY="${AGENT_BOM_PUSH_API_KEY:?Set the control-plane push API key}" agent-bom scan . --no-discover --context-graph -f json -o report.json --push-url "${AGENT_BOM_PUSH_URL:?Set the control-plane ingestion URL}"';
 const FIRST_RUN = "https://koda-ai-studio.github.io/agent-bom/getting-started/quickstart/";
 const INVESTIGATION = [
   { title: "Review inventory", detail: "Confirm the source, assets and collection gaps. Keep the scan ID as your evidence scope." },
@@ -48,6 +48,7 @@ export function FirstScanGuide({ onImport }: { onImport: (data: ScanResult) => v
             <summary className="cursor-pointer text-sm font-medium">Show project command</summary>
             <div className="mt-3 space-y-3">
               <p className="text-xs leading-5 text-ink-secondary">Set AGENT_BOM_PUSH_URL to this deployment’s /v1/results/push endpoint, including any deployment prefix. Supply AGENT_BOM_PUSH_API_KEY through your secret manager with permission to push results.</p>
+              <p className="text-xs leading-5 text-ink-secondary">For Bash or Zsh. The command stops before scanning if either setting is missing. The key stays in the environment, outside the command arguments.</p>
               <code className="block whitespace-pre-wrap break-words rounded-lg bg-surface-muted p-3 text-xs leading-5 [overflow-wrap:anywhere]">{PROJECT_COMMAND}</code>
               <CopyTextButton text={PROJECT_COMMAND} label="Copy project command" />
             </div>

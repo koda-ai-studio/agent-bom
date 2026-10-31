@@ -120,3 +120,32 @@ for (const width of [1280, 1440]) {
     }
   });
 }
+
+for (const theme of ["light", "dark"]) {
+  test(`unnamed package occurrences keep readable labels and exact evidence in ${theme}`, async ({ page }, testInfo) => {
+    await baseline(page, theme);
+    const node = "pkg:pypi:pillow@9.0.0:image:00fcd6ed33ef";
+    const row = { ...php2shell.rows[0], asset: { agent: "", server: "", node_id: node },
+      asset_label: node, asset_type: "package", asset_node_id: node,
+      package: { name: "pillow", version: "9.0.0", ecosystem: "pypi" }, installed_version: "9.0.0",
+      graph: { package_node_id: node, server_node_id: null, agent_node_id: null } };
+    await page.route("**/v1/intel/advisories/*/affected?**", route => route.fulfill({ json: {
+      ...php2shell, rows: [row], count: 1,
+      summary: { affected: 1, possibly_affected: 0, not_affected: 0, clean_scanned: 0, assets_examined: 1, reports_examined: 1 },
+    } }));
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.goto("/advisories?id=CVE-2026-109618");
+      const surface = width === 390 ? page.getByTestId("affected-asset-card").first()
+        : page.getByRole("table", { name: "Affected assets" }).getByRole("row").nth(1);
+      await expect(surface.getByText("pillow@9.0.0", { exact: true })).toBeVisible();
+      await expect(surface.getByText("Package occurrence · owner not recorded")).toBeVisible();
+      await expect(surface.getByText(node, { exact: true })).toBeHidden();
+      await surface.locator("summary").filter({ hasText: "Evidence identity" }).click();
+      await expect(surface.getByText(node, { exact: true })).toBeVisible();
+      await expect(surface.getByRole("link")).toHaveAttribute("href", new RegExp(`node=${encodeURIComponent(node)}`));
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`occurrence-identity-${theme}-${width}.png`), fullPage: true });
+    }
+  });
+}
