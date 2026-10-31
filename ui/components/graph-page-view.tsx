@@ -811,7 +811,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-              <Controls {...(investigationContext ? { onFitView: fitVisible, fitViewOptions: { padding: 0.25, minZoom: 0.05, maxZoom: 1.25 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
+              <Controls {...(investigationContext || selectedScenarioId ? { onFitView: fitVisible, fitViewOptions: selectedScenarioId ? initialViewportOptions : { padding: 0.25, minZoom: 0.05, maxZoom: 1.25 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
                   position={narrowViewport ? "top-right" : "bottom-right"}
