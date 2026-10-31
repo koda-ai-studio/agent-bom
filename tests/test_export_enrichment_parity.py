@@ -277,7 +277,8 @@ def test_html_vuln_table_shows_reachability_unknown_when_absent() -> None:
     report = _report_with_reachability(None)
     html = _vuln_table(report, report.blast_radii)
     assert 'data-reachability="unknown"' in html
-    assert "Unknown" in html
+    assert 'data-reach="unknown"' in html
+    assert "No reachability verdict" in html
 
 
 def test_markdown_findings_table_shows_reachability() -> None:
