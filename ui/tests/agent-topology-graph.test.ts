@@ -9,6 +9,8 @@ import {
   serverHasCredentials,
   formatInventoryAgentLabel,
   topologyAgentDisplayName,
+  topologyAgentKey,
+  topologyAgentTypeLabel,
   topologySummary,
 } from "@/lib/agent-topology-graph";
 import { formatExposureEntityDisplay } from "@/lib/entity-display";
@@ -22,6 +24,11 @@ function agent(name: string, servers: Agent["mcp_servers"] = []): Agent {
 }
 
 describe("agent-topology-graph", () => {
+  it("keeps IDE capitalized so the agent kind cannot be mistaken for idle status", () => {
+    expect(topologyAgentTypeLabel("ide")).toBe("IDE");
+    expect(formatExposureEntityDisplay("Developer Copilot", "agent", { agent_type: "ide" }).subtitle).toBe("IDE");
+  });
+
   it("humanizes agent display names", () => {
     expect(topologyAgentDisplayName(agent("data-pipeline"))).toBe("Data Pipeline");
     expect(
@@ -81,6 +88,28 @@ describe("agent-topology-graph", () => {
     const serverNodes = graph.nodes.filter((node) => node.id.startsWith("srv-"));
     expect(serverNodes).toHaveLength(1);
     expect(serverNodes[0]?.data?.agentCount).toBe(2);
+  });
+
+  it("keeps same-name agents with distinct recorded identities separate", () => {
+    const shared = { name: "github", packages: [] };
+    const graph = buildTopologyGraph([
+      { ...agent("cursor", [shared]), canonical_id: "agent:device-a" },
+      { ...agent("cursor", [shared]), canonical_id: "agent:device-b" },
+    ]);
+    const agents = graph.nodes.filter(node => node.type === "agentNode");
+    expect(new Set(agents.map(node => node.id)).size).toBe(2);
+    expect(new Set(graph.edges.map(edge => edge.id)).size).toBe(2);
+    expect(new Set(graph.edges.map(edge => edge.source)).size).toBe(2);
+    expect(graph.nodes.find(node => node.type === "serverNode")?.data.agentCount).toBe(2);
+  });
+
+  it("preserves recorded source scope for legacy agents without canonical ids", () => {
+    const first = { ...agent("cursor"), source_id: "device-a", config_path: "/workspace/config" };
+    const second = { ...first, source_id: "device-b" };
+    expect(topologyAgentKey(first)).not.toBe(topologyAgentKey(second));
+    expect(buildTopologyGraph([first, second]).nodes).toHaveLength(2);
+    expect(topologyAgentKey({ ...first, canonical_id: "canonical", stable_id: "stable" })).toBe("canonical");
+    expect(topologyAgentKey({ ...first, stable_id: "stable" })).toBe("stable");
   });
 
   it("keeps inventory edges readable (not near-invisible)", () => {

@@ -23,6 +23,8 @@ import {
   filterTopologyAgents,
   limitTopologyAgents,
   topologyAgentDisplayName,
+  topologyAgentKey,
+  type TopologySelection,
   serviceKey,
   serverHasCredentials,
   serverVulnerabilityCount,
@@ -126,7 +128,7 @@ function TopologyFlow({
   onSelect,
 }: {
   agents: Agent[];
-  onSelect: (selection: { kind: "agent"; name: string } | { kind: "server"; serviceKey: string; label: string }) => void;
+  onSelect: (selection: TopologySelection) => void;
 }) {
   const theme = useThemeMode();
   const { fitView, getViewport, setViewport } = useReactFlow();
@@ -166,7 +168,7 @@ function TopologyFlow({
   const handleNodeClick = useCallback(
     (_: unknown, node: Node) => {
       if (node.id.startsWith("agent-")) {
-        onSelect({ kind: "agent", name: String(node.data.slug ?? node.id.replace("agent-", "")) });
+        onSelect({ kind: "agent", name: String(node.data.slug ?? ""), agentKey: String(node.data.agentKey ?? "") });
         return;
       }
       if (node.id.startsWith("srv-")) {
@@ -213,7 +215,7 @@ export function AgentTopology({
 }) {
   const [filter, setFilter] = useState<TopologyFilter>("attention");
   const [selection, setSelection] = useState<
-    { kind: "agent"; name: string } | { kind: "server"; serviceKey: string; label: string } | null
+    TopologySelection | null
   >(null);
   const [showReadout, setShowReadout] = useState(false);
 
@@ -240,7 +242,7 @@ export function AgentTopology({
   ];
 
   const handleSelect = useCallback(
-    (next: { kind: "agent"; name: string } | { kind: "server"; serviceKey: string; label: string }) => {
+    (next: TopologySelection) => {
       setSelection(next);
     },
     [],
@@ -357,9 +359,9 @@ export function AgentTopology({
         <section aria-label="Configured service relationships" className="p-4 md:hidden">
           <ul className="space-y-4">
             {connectedAgents.map((agent) => (
-              <li key={agent.name}>
+              <li key={topologyAgentKey(agent)}>
                 <button type="button" aria-label={`Inspect agent ${topologyAgentDisplayName(agent)}`}
-                  onClick={() => handleSelect({ kind: "agent", name: agent.name })}
+                  onClick={() => handleSelect({ kind: "agent", name: agent.name, agentKey: topologyAgentKey(agent) })}
                   className="text-left text-sm font-semibold text-foreground">
                   {topologyAgentDisplayName(agent)}
                 </button>
@@ -388,9 +390,9 @@ export function AgentTopology({
           <h4 className="text-xs font-semibold text-foreground">No service relationship observed</h4>
           <ul className="mt-2 flex flex-wrap gap-2">
             {unlinkedAgents.map((agent) => (
-              <li key={agent.name}>
+              <li key={topologyAgentKey(agent)}>
                 <button type="button" aria-label={`Inspect ${topologyAgentDisplayName(agent)}`}
-                  onClick={() => handleSelect({ kind: "agent", name: agent.name })}
+                  onClick={() => handleSelect({ kind: "agent", name: agent.name, agentKey: topologyAgentKey(agent) })}
                   className="rounded-lg border border-outline px-3 py-2 text-xs text-foreground hover:bg-[color:var(--surface-muted)]">
                   {topologyAgentDisplayName(agent)}
                 </button>

@@ -7,13 +7,16 @@ import { credentialEnvKeys } from "@/lib/credential-key";
 export const MAX_TOPOLOGY_AGENTS = 75;
 export const MAX_TOPOLOGY_SERVERS = 220;
 export type TopologyFilter = "all" | "attention" | "credentialed" | "unlinked";
+export type TopologySelection =
+  | { kind: "agent"; name: string; agentKey?: string }
+  | { kind: "server"; serviceKey: string; label: string };
 
 type MCPServer = NonNullable<Agent["mcp_servers"]>[number];
 
 export interface TopologyServiceSummary {
   key: string;
   label: string;
-  agentNames: Set<string>;
+  agentKeys: Set<string>;
   pkgCount: number;
   toolCount: number;
   hasCredentials: boolean;
@@ -24,6 +27,7 @@ export interface TopologyServiceSummary {
 
 export function topologyAgentTypeLabel(agentType: string): string {
   const labels: Record<string, string> = {
+    ide: "IDE",
     cursor: "Cursor IDE",
     "claude-desktop": "Claude Desktop",
     "codex-cli": "Codex CLI",
@@ -39,6 +43,15 @@ export function topologyAgentTypeLabel(agentType: string): string {
 
 export function topologyAgentDisplayName(agent: Agent): string {
   return agentRecordDisplayName(agent);
+}
+
+/** Recorded identity wins over display labels; legacy scope is never inferred. */
+export function topologyAgentKey(agent: Agent): string {
+  if (agent.canonical_id || agent.stable_id) return agent.canonical_id || agent.stable_id!;
+  if (agent.source_id || agent.config_path) {
+    return JSON.stringify([agent.agent_type, agent.name, agent.source_id ?? "", agent.config_path ?? ""]);
+  }
+  return agent.name;
 }
 
 /** Humanize slug identifiers only; a name with spaces is already a display name. */
@@ -99,7 +112,7 @@ export function buildServiceSummaries(agents: Agent[]): Map<string, TopologyServ
       const existing = summaries.get(key) ?? {
         key,
         label: server.name,
-        agentNames: new Set<string>(),
+        agentKeys: new Set<string>(),
         pkgCount: 0,
         toolCount: 0,
         hasCredentials: false,
@@ -107,7 +120,7 @@ export function buildServiceSummaries(agents: Agent[]): Map<string, TopologyServ
         warningCount: 0,
         riskScore: 0,
       };
-      existing.agentNames.add(agent.name);
+      existing.agentKeys.add(topologyAgentKey(agent));
       existing.pkgCount += server.packages?.length ?? 0;
       existing.toolCount += server.tools?.length ?? 0;
       existing.hasCredentials = existing.hasCredentials || serverHasCredentials(server);
@@ -157,7 +170,7 @@ export function buildTopologyGraph(agents: Agent[]): { nodes: Node[]; edges: Edg
     return (
       right.riskScore - left.riskScore ||
       Number(right.hasCredentials) - Number(left.hasCredentials) ||
-      right.agentNames.size - left.agentNames.size ||
+      right.agentKeys.size - left.agentKeys.size ||
       left.label.localeCompare(right.label)
     );
   });
@@ -169,12 +182,13 @@ export function buildTopologyGraph(agents: Agent[]): { nodes: Node[]; edges: Edg
     const totalVulns = servers.reduce((sum, server) => sum + serverVulnerabilityCount(server), 0);
     const credCount = servers.filter(serverHasCredentials).length;
     nodes.push({
-      id: `agent-${agent.name}`,
+      id: `agent-${topologyAgentKey(agent)}`,
       type: "agentNode",
       position: { x: 0, y: 0 },
       data: {
         label: topologyAgentDisplayName(agent),
         slug: agent.name,
+        agentKey: topologyAgentKey(agent),
         typeLabel: topologyAgentTypeLabel(agent.agent_type || "agent"),
         agentType: agent.agent_type,
         serverCount: servers.length,
@@ -194,19 +208,19 @@ export function buildTopologyGraph(agents: Agent[]): { nodes: Node[]; edges: Edg
       data: {
         label: service.label,
         serviceKey: service.key,
-        agentCount: service.agentNames.size,
+        agentCount: service.agentKeys.size,
         pkgCount: service.pkgCount,
         toolCount: service.toolCount,
         hasCredentials: service.hasCredentials,
         vulnCount: service.vulnCount,
-        shared: service.agentNames.size > 1,
+        shared: service.agentKeys.size > 1,
         riskScore: service.riskScore,
       },
     });
   }
 
   for (const agent of agents) {
-    const agentId = `agent-${agent.name}`;
+    const agentId = `agent-${topologyAgentKey(agent)}`;
     for (const server of agent.mcp_servers ?? []) {
       const key = serviceKey(server);
       if (!visibleServiceKeys.has(key)) continue;
@@ -237,7 +251,7 @@ export function topologySummary(agents: Agent[]) {
   const attentionServers = [...serviceSummaries.values()].filter(
     (service) => service.hasCredentials || service.vulnCount > 0 || service.warningCount > 0,
   ).length;
-  const sharedServers = [...serviceSummaries.values()].filter((service) => service.agentNames.size > 1).length;
+  const sharedServers = [...serviceSummaries.values()].filter((service) => service.agentKeys.size > 1).length;
 
   return {
     agents: agents.length,

@@ -20,6 +20,28 @@ const agents = [
 ] as unknown as Agent[];
 
 describe("TopologyDetailDrawer", () => {
+  it("does not open an arbitrary record when a legacy name is ambiguous", () => {
+    render(<TopologyDetailDrawer agents={[
+      { ...agents[0]!, canonical_id: "agent:device-a" },
+      { ...agents[0]!, canonical_id: "agent:device-b" },
+    ]} selection={{ kind: "agent", name: "claude-desktop" }} onClose={vi.fn()} />);
+    expect(screen.getByRole("status")).toHaveTextContent("could not be uniquely identified");
+    expect(screen.queryByRole("link", { name: /Open agent record/ })).not.toBeInTheDocument();
+  });
+
+  it("selects the recorded identity instead of the first matching display name", () => {
+    const scoped: Agent[] = [
+      { name: "cursor", canonical_id: "agent:device-a", agent_type: "ide", mcp_servers: [{ name: "dev-only", packages: [] }] },
+      { name: "cursor", canonical_id: "agent:device-b", agent_type: "ide", mcp_servers: [{ name: "prod-only", packages: [] }] },
+    ];
+    render(<TopologyDetailDrawer agents={scoped} selection={{ kind: "agent", name: "cursor", agentKey: "agent:device-b" }} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("tab", { name: /Services/ }));
+    expect(screen.getByText("prod-only")).toBeInTheDocument();
+    expect(screen.queryByText("dev-only")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Actions" }));
+    expect(screen.getByRole("link", { name: /Open agent record/ })).toHaveAttribute("href", "/agents?name=agent%3Adevice-b");
+  });
+
   it("traps modal focus, closes on Escape, and restores the trigger", async () => {
     const onClose = vi.fn();
     const trigger = document.createElement("button");
