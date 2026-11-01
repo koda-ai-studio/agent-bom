@@ -845,7 +845,7 @@ def _render_oddities(tables: dict[str, Table]) -> list[str]:
         "### Tables without a tenant column",
         "",
         "Rows in these tables are not scoped by `tenant_id` / `team_id`. Many are global by design "
-        "(vulnerability intelligence, schema metadata); the rest are worth a second look.",
+        + "(vulnerability intelligence, schema metadata); the rest are worth a second look.",
         "",
         "| Table | Domain | Backends |",
         "|---|---|---|",
@@ -861,7 +861,7 @@ def _render_oddities(tables: dict[str, Table]) -> list[str]:
         "### Tenant column outside the primary key",
         "",
         "These tables carry a tenant column, but their primary key (per backend) does not include it, so two "
-        "tenants cannot hold the same key value.",
+        + "tenants cannot hold the same key value.",
         "",
         "| Table | Backend | Primary key | Tenant column |",
         "|---|---|---|---|",

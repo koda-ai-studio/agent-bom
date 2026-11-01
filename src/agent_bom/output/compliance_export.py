@@ -267,7 +267,7 @@ def export_compliance_bundle(
         "Controls mapped: " + ", ".join(control_mapping),
         "",
         "Note: this local CLI bundle is evidence-backed but unsigned unless AGENT_BOM_AUDIT_HMAC_KEY is set. "
-        "For tenant-scoped signed reports, use the API compliance report endpoint.",
+        + "For tenant-scoped signed reports, use the API compliance report endpoint.",
     ]
 
     artifacts = {

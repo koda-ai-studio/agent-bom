@@ -369,7 +369,6 @@ def discover_vector_dbs(
 # ---------------------------------------------------------------------------
 
 _PINECONE_API_BASE = "https://api.pinecone.io"
-_PINECONE_CONTROLLER_BASE = "https://controller.{environment}.pinecone.io"
 
 
 @dataclass

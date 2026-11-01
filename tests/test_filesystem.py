@@ -133,7 +133,6 @@ def test_syft_nonzero_exit(monkeypatch, tmp_path):
     # Mock OCI parser to return empty result (so Syft fallback is tried)
     import agent_bom.oci_parser as _oci_mod
 
-    _orig_parse = _oci_mod.parse_oci_tarball
     monkeypatch.setattr(
         _oci_mod,
         "parse_oci_tarball",

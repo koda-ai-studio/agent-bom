@@ -64,30 +64,6 @@ _PROVIDER_GO_MODULES: dict[str, str] = {
     "snowflake-labs/snowflake": "github.com/Snowflake-Labs/terraform-provider-snowflake",
 }
 
-# ─── Sensitive key name patterns ──────────────────────────────────────────────
-
-_SENSITIVE_PATTERNS = [
-    "api_key",
-    "apikey",
-    "api-key",
-    "secret",
-    "password",
-    "token",
-    "credential",
-    "private_key",
-    "private-key",
-    "privatekey",
-    "access_key",
-    "secret_key",
-    "auth_token",
-    "bearer_token",
-    "openai",
-    "anthropic",
-    "cohere",
-    "mistral",
-    "huggingface",
-    "hf_token",
-]
 
 # ─── Hardcoded secret regex (inside default = "..." or = "..." assignments) ───
 
@@ -105,9 +81,6 @@ _CRED_NAME_RE = re.compile(
 
 # resource "type" "name" pattern
 _RESOURCE_RE = re.compile(r'^resource\s+"([a-zA-Z][a-zA-Z0-9_]+)"\s+"([^"]+)"', re.MULTILINE)
-
-# required_providers block
-_REQ_PROV_RE = re.compile(r"required_providers\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}", re.DOTALL)
 
 # source = "hashicorp/aws" inside a provider stanza
 _PROV_SOURCE_RE = re.compile(r'source\s*=\s*"([^"]+)"')

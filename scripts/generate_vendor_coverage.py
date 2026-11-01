@@ -677,11 +677,11 @@ def render_markdown(data: dict[str, Any]) -> str:
         "or deep-inventory API support; those columns retain their own source declarations.",
         "",
         "- Supabase: `agent-bom cloud supabase --project-ref <ref> --token-file <private.json> "
-        "--output supabase.json` → scoped project metadata and native advisor report → inspect "
-        "coverage before importing or persisting; empty advisors do not establish clean posture.",
+        + "--output supabase.json` → scoped project metadata and native advisor report → inspect "
+        + "coverage before importing or persisting; empty advisors do not establish clean posture.",
         "- Vercel: `agent-bom cloud vercel --team-id <team> --token-file <private.json> "
-        "--output vercel.json` → team project metadata and a bounded deployment report → inspect "
-        "coverage and the recorded deployment window before importing or persisting.",
+        + "--output vercel.json` → team project metadata and a bounded deployment report → inspect "
+        + "coverage and the recorded deployment window before importing or persisting.",
         "",
         "Benchmarks:",
         "",

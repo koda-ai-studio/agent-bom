@@ -101,7 +101,6 @@ def extract_reference_blobs(payload: Mapping[str, Any]) -> tuple[dict[str, Any],
             slim["framework_ref"] = fw_ref
         else:
             framework_blob = None
-            fw_ref = ""
 
     return slim, intel_blob, framework_blob
 

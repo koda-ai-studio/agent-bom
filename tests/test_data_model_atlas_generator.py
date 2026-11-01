@@ -41,9 +41,9 @@ def test_graph_schema_import_needs_no_installed_runtime_dependencies() -> None:
             "-S",
             "-c",
             "import sys; sys.path.insert(0, 'src'); "
-            "from agent_bom.graph import EntityType, RelationshipType, UnifiedGraph; "
-            "assert EntityType and RelationshipType and UnifiedGraph; "
-            "assert 'pydantic' not in sys.modules",
+            + "from agent_bom.graph import EntityType, RelationshipType, UnifiedGraph; "
+            + "assert EntityType and RelationshipType and UnifiedGraph; "
+            + "assert 'pydantic' not in sys.modules",
         ],
         cwd=ROOT,
         text=True,

@@ -250,8 +250,8 @@ def _render_main(scan: ScanResult) -> list[str]:
         "## Overview",
         "",
         "Entity types grouped into domains by each type's semantic layer (`graph/container.py` `ENTITY_LEGEND`), "
-        "laid out along an attack path. A line counts the relationships allowed between two domains; "
-        "each domain page has the ERD and every relationship by name.",
+        + "laid out along an attack path. A line counts the relationships allowed between two domains; "
+        + "each domain page has the ERD and every relationship by name.",
         "",
         *_mermaid(),
         "",
@@ -288,7 +288,7 @@ def _render_main(scan: ScanResult) -> list[str]:
         f"Consumed by: {analysis_key}.",
         "",
         "| Relationship | Class | Category | Direction | Traversable | Source kinds | Target kinds | Pairs | Consumed by "
-        "| Emitting modules |",
+        + "| Emitting modules |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for spec in specs:
@@ -323,7 +323,7 @@ def _render_evidence(scan: ScanResult) -> list[str]:
         "## Edge evidence tiers",
         "",
         "Every edge carries `evidence.source` (the collector) and `evidence.tier` (`agent_bom.graph.edge_evidence`). "
-        "A collector in the registry below gets its tier filled automatically; any other collector must set it explicitly.",
+        + "A collector in the registry below gets its tier filled automatically; any other collector must set it explicitly.",
         "",
         "| Tier | Meaning | Registered collectors |",
         "|---|---|---|",
@@ -347,9 +347,9 @@ def _render_findings(scan: ScanResult) -> list[str]:
         "## Findings",
         "",
         "Findings (`agent_bom.finding.Finding`) are linked to graph nodes by `graph/asset_entity.py` "
-        "`link_findings_to_graph_nodes`: the finding node is a `vulnerability`, `misconfiguration` or `drift_incident` node; "
-        "the affected asset resolves through the asset-type table below. "
-        "*Graph modules* lists modules under `graph/` that name the finding type (enum member or literal value).",
+        + "`link_findings_to_graph_nodes`: the finding node is a `vulnerability`, `misconfiguration` or `drift_incident` node; "
+        + "the affected asset resolves through the asset-type table below. "
+        + "*Graph modules* lists modules under `graph/` that name the finding type (enum member or literal value).",
         "",
         "| Finding type | Graph modules |",
         "|---|---|",
@@ -378,8 +378,8 @@ def _render_normalization() -> list[str]:
         "## Asset-type normalization",
         "",
         "`agent_bom.core.asset_types.entity_type_for_asset_type` lowercases the vendor or scanner `asset_type`, "
-        "turns `-` and spaces into `_`, then maps it. Every entity type value maps to itself; "
-        "the aliases below map other spellings. Unknown values stay unmapped rather than guessed.",
+        + "turns `-` and spaces into `_`, then maps it. Every entity type value maps to itself; "
+        + "the aliases below map other spellings. Unknown values stay unmapped rather than guessed.",
         "",
         "| Asset type | Entity |",
         "|---|---|",
@@ -406,7 +406,7 @@ def _render_coverage_notes(scan: ScanResult) -> list[str]:
         "## Coverage notes",
         "",
         "Static-scan results. A kind can still be emitted through a table or a variable the scan cannot see; "
-        "treat these as leads to verify, not as defects.",
+        + "treat these as leads to verify, not as defects.",
         "",
         f"- Relationship types with no detected non-demo emitter: {_codes(no_rel)}",
         f"- Entity types with no detected non-demo emitter: {_codes(no_ent)}",

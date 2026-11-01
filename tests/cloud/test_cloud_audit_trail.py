@@ -224,6 +224,26 @@ class _FakeAWSSession:
 
 
 class TestAWSReader:
+    @pytest.mark.parametrize("phase", ["initialize", "read"])
+    def test_missing_botocore_preserves_generic_error_classification(self, monkeypatch, phase):
+        import sys
+
+        # Injected sessions remain usable without the optional AWS SDK.
+        monkeypatch.setitem(sys.modules, "botocore.exceptions", None)
+        failure = RuntimeError("synthetic provider detail")
+
+        def session_factory():
+            if phase == "initialize":
+                raise failure
+            return _FakeAWSSession(_FakeAWSClient(error=failure))
+
+        events, warnings = read_aws_cloudtrail(now=_NOW, session_factory=session_factory)
+        assert events == []
+        expected = "could not initialize CloudTrail client" if phase == "initialize" else "CloudTrail read error"
+        assert len(warnings) == 1
+        assert expected in warnings[0]
+        assert "synthetic provider detail" not in warnings[0]
+
     def test_reads_and_normalizes(self):
         pages = [
             {

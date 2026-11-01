@@ -120,12 +120,12 @@ def test_long_ordinary_response_does_not_backtrack_quadratically():
             sys.executable,
             "-c",
             "from agent_bom.proxy_scanner import ScanConfig, scan_jsonrpc_response; "
-            "message = {'jsonrpc': '2.0', 'id': 1, 'result': 'a' * 200_000}; "
-            "safe, findings = scan_jsonrpc_response(message, ScanConfig(enabled=True)); "
-            "assert safe == message and findings == []; "
-            "message['result'] = 'alice@example.com ' + message['result']; "
-            "safe, findings = scan_jsonrpc_response(message, ScanConfig(enabled=True)); "
-            "assert safe['result'] == '[REDACTED:email] ' + 'a' * 200_000 and findings",
+            + "message = {'jsonrpc': '2.0', 'id': 1, 'result': 'a' * 200_000}; "
+            + "safe, findings = scan_jsonrpc_response(message, ScanConfig(enabled=True)); "
+            + "assert safe == message and findings == []; "
+            + "message['result'] = 'alice@example.com ' + message['result']; "
+            + "safe, findings = scan_jsonrpc_response(message, ScanConfig(enabled=True)); "
+            + "assert safe['result'] == '[REDACTED:email] ' + 'a' * 200_000 and findings",
         ],
         check=True,
         timeout=10,

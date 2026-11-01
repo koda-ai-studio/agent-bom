@@ -295,10 +295,8 @@ def summarize_scorecard_coverage(packages: list[Package]) -> ScorecardEnrichment
             stats.unresolved_packages += 1
         elif pkg.scorecard_score is not None:
             stats.enriched_packages += 1
-        elif repo:
-            stats.failed_packages += 1
         else:
-            stats.unresolved_packages += 1
+            stats.failed_packages += 1
 
     return stats
 

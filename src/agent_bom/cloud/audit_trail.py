@@ -38,7 +38,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from agent_bom.cloud.audit_trail_aws import aws_event_fields
+from agent_bom.cloud.audit_trail_aws import aws_error_types, aws_event_fields
+from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
 
@@ -258,19 +259,15 @@ def read_aws_cloudtrail(
         except ImportError:
             return [], ["aws: boto3 not installed; install 'agent-bom[aws]' to enable audit-trail edges"]
 
-    try:
-        from botocore.exceptions import ClientError, NoCredentialsError  # type: ignore
-    except ImportError:  # pragma: no cover - boto3 implies botocore
-        ClientError = Exception  # type: ignore[assignment,misc]  # noqa: N806
-        NoCredentialsError = Exception  # type: ignore[assignment,misc]  # noqa: N806
+    client_errors, credential_errors = aws_error_types()
 
     try:
         session = session_factory()
         client = session.client("cloudtrail")
-    except NoCredentialsError:
+    except credential_errors:
         return [], ["aws: no credentials resolved for CloudTrail audit-trail read"]
     except Exception as exc:  # pragma: no cover - defensive
-        return [], [f"aws: could not initialize CloudTrail client ({exc})"]
+        return [], [f"aws: could not initialize CloudTrail client ({sanitize_error(exc, generic=True)})"]
 
     events: list[AuditEvent] = []
     truncated = False
@@ -292,13 +289,14 @@ def read_aws_cloudtrail(
                     break
             if truncated:
                 break
-    except ClientError as exc:  # type: ignore[misc]
+    except client_errors as exc:
         code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         if code in {"AccessDenied", "AccessDeniedException", "UnauthorizedOperation"}:
             return [], [_permission_warning("aws", "cloudtrail:LookupEvents denied")]
-        return [], [f"aws: CloudTrail LookupEvents failed ({code or exc})"]
+        detail = sanitize_error(code) if code else sanitize_error(exc, generic=True)
+        return [], [f"aws: CloudTrail LookupEvents failed ({detail})"]
     except Exception as exc:  # pragma: no cover - defensive
-        return [], [f"aws: CloudTrail read error ({exc})"]
+        return [], [f"aws: CloudTrail read error ({sanitize_error(exc, generic=True)})"]
 
     if truncated:
         warnings.append(f"aws: audit-trail capped at {cap} events (raise {_MAX_EVENTS_ENV} to widen)")

@@ -1151,10 +1151,6 @@ def test_broker_azure_uses_decrypted_client_secret(monkeypatch: pytest.MonkeyPat
     captured: dict[str, Any] = {}
     sentinel = object()
 
-    class _FakeClientSecretCredential:
-        def __init__(self, **kwargs: Any) -> None:
-            captured.update(kwargs)
-
     def _factory(**kwargs: Any) -> Any:
         captured.update(kwargs)
         return sentinel

@@ -289,7 +289,6 @@ def _card_brand(digits: str) -> str | None:
         return "amex"
     # Discover: IIN 6011, 65, 644-649, 622126-622925, length 16.
     if n == 16:
-        four = int(digits[:4])
         six = int(digits[:6])
         if digits.startswith("6011") or digits[:2] == "65" or 644 <= int(digits[:3]) <= 649 or 622126 <= six <= 622925:
             return "discover"

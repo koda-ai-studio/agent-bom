@@ -898,15 +898,6 @@ def test_mcp_server_cmd_missing_sdk():
     """Test mcp-server command when MCP SDK is not installed."""
     runner = CliRunner()
 
-    import builtins
-
-    original_import = builtins.__import__
-
-    def mock_import(name, *args, **kwargs):
-        if "mcp_server" in name and "create_mcp_server" not in str(args):
-            raise ImportError("mocked")
-        return original_import(name, *args, **kwargs)
-
     with patch("agent_bom.mcp_server.create_mcp_server", side_effect=ImportError("no mcp")):
         result = runner.invoke(mcp_server_cmd, [])
         assert result.exit_code == 1

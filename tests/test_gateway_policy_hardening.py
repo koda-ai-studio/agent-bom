@@ -359,17 +359,24 @@ def test_webhook_success_returns_true():
     assert deliver_policy_webhook({"idempotency_key": "evt-3"}, url="https://siem.example/ingest", poster=_poster) is True
 
 
-def test_webhook_failure_does_not_block_relay():
+def test_webhook_failure_does_not_block_relay(monkeypatch):
     # A webhook that always errors must not prevent the deny response.
-    def _boom_poster(url, event, headers):
+    calls = []
+
+    def _boom_delivery(event, **kwargs):
+        calls.append((event, kwargs))
         raise ConnectionError("siem unreachable")
+
+    monkeypatch.setattr("agent_bom.gateway_server.deliver_policy_webhook", _boom_delivery)
 
     audit: list[dict[str, Any]] = []
     policy = {"rules": [{"id": "deny-shell", "action": "block", "block_tools": ["run_shell"]}]}
     settings = _settings(audit=audit, policy=policy, policy_webhook_url="https://siem.example/ingest")
     client = TestClient(create_gateway_app(settings), client=("127.0.0.1", 7777))
     resp = client.post("/mcp/filesystem", json=_call(tool="run_shell"))
-    assert _is_blocked(resp)  # relay still denies even though the webhook would fail
+    assert _is_blocked(resp)
+    assert len(calls) == 1
+    assert calls[0][1]["url"] == "https://siem.example/ingest"
 
 
 # ─── Non-enforcement default behaviour unchanged ───────────────────────────

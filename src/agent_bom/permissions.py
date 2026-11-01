@@ -75,28 +75,6 @@ _WRITE_KEYWORDS = frozenset(
     }
 )
 
-_READ_KEYWORDS = frozenset(
-    {
-        "read",
-        "get",
-        "list",
-        "search",
-        "query",
-        "fetch",
-        "find",
-        "describe",
-        "show",
-        "download",
-        "view",
-        "inspect",
-        "check",
-        "count",
-        "browse",
-        "lookup",
-        "resolve",
-        "ping",
-    }
-)
 
 _SHELL_COMMANDS = frozenset({"sh", "bash", "zsh", "cmd", "powershell", "pwsh"})
 

@@ -72,10 +72,6 @@ _ORG_SESSION_NAME = "agent-bom-readonly"
 # (200) and Snowflake's MAX_ACCOUNTS.
 _DEFAULT_MAX_ACCOUNTS = 200
 
-# The single read-only action the fan-out adds on top of the org-enumeration
-# permissions: assuming the per-account read-only role.
-_AWS_ORG_ASSUME_PERMISSION = "sts:AssumeRole"
-
 
 def discover_organization(
     profile: str | None = None,

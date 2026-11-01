@@ -637,9 +637,9 @@ export function useGraphCanvasModel(page: GraphPageData) {
       // short canvases below legible zoom. Manual fits remeasure captions below.
       if (selectedScenarioId) return { ...options, padding: fitPaddingAroundOverlay(Math.max(0.2, options.padding), { width: canvasWidth, height: canvasHeight }, CONTROLS_OVERLAY.horizontal, 0), minZoom: 0.05, maxZoom: 1 };
       if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: 0.05, maxZoom: displayNodes.length <= 6 ? 1.25 : 1 };
-      return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
+      return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : options;
     },
-    [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport, displayNodes.length, rollupNavigationActive, canvasWidth, canvasHeight],
+    [initialAnchorId, viewportOptions, selectedScenarioId, compactInvestigationTopology, narrowViewport, displayNodes.length, rollupNavigationActive, canvasWidth, canvasHeight],
   );
   const showMiniMap = useMemo(
     () =>

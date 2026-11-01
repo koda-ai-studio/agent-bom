@@ -11,7 +11,7 @@ def test_api_stores_does_not_load_neptune_or_scanner_stack():
             sys.executable,
             "-c",
             "import json, sys, agent_bom.api.stores; "
-            "print(json.dumps([name for name in ('agent_bom.api.neptune_graph', 'agent_bom.scanners.risk') if name in sys.modules]))",
+            + "print(json.dumps([name for name in ('agent_bom.api.neptune_graph', 'agent_bom.scanners.risk') if name in sys.modules]))",
         ],
         check=True,
         capture_output=True,

@@ -30,7 +30,6 @@ from agent_bom.sbom_formats.surface_labels import server_surface_description
 
 _SUPPORTED_VERSIONS = {"2.2", "2.3"}
 _NOASSERTION = "NOASSERTION"
-_NONE = "NONE"
 
 
 def _validate_version(version: str) -> str:

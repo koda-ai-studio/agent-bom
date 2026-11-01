@@ -167,7 +167,7 @@ def test_requeue_expired_and_complete(state):
     job = _job("j1")
     state["jobs"]["j1"] = job
     store.enqueue_for_dispatch(job)
-    claimed = store.claim_next("worker-a", lease_seconds=60)
+    store.claim_next("worker-a", lease_seconds=60)
 
     assert store.requeue_expired_leases() == 0  # not expired yet
     state["now"] = 5000

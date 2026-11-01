@@ -54,10 +54,10 @@ def test_adversarial_redaction_inputs_finish_within_bounded_time():
             sys.executable,
             "-c",
             "from agent_bom.redaction.filesystem_coordinates import "
-            "sanitize_filesystem_coordinate, sanitize_progress_path; "
-            "assert sanitize_filesystem_coordinate('fs:/' * 40000 + '<') is None; "
-            "value = 'VEX applied: ' + ' from /' * 40000 + '\\n'; "
-            "assert sanitize_progress_path(value, str) == value",
+            + "sanitize_filesystem_coordinate, sanitize_progress_path; "
+            + "assert sanitize_filesystem_coordinate('fs:/' * 40000 + '<') is None; "
+            + "value = 'VEX applied: ' + ' from /' * 40000 + '\\n'; "
+            + "assert sanitize_progress_path(value, str) == value",
         ],
         check=True,
         timeout=3,

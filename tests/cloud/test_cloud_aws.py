@@ -393,7 +393,7 @@ def test_discover_with_region_and_profile():
     with patch.dict(sys.modules, {"boto3": mock_boto3, "botocore": mock_botocore, "botocore.exceptions": mock_botocore.exceptions}):
         from agent_bom.cloud import aws
 
-        agents, warnings = aws.discover(region="eu-west-1", profile="prod", include_ecs=False)
+        aws.discover(region="eu-west-1", profile="prod", include_ecs=False)
         mock_boto3.Session.assert_called_with(region_name="eu-west-1", profile_name="prod")
 
 

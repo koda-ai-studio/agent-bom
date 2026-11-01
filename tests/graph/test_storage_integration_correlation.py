@@ -178,8 +178,8 @@ def test_correlation_streams_a_store_backed_graph_instead_of_loading_every_node(
             sys.executable,
             "-c",
             "import json, runpy, sys; "
-            "measure = runpy.run_path(sys.argv[1])['_correlation_peak_bytes']; "
-            "print(json.dumps([[measure(n, materialize=m) for n in (500, 4000)] for m in (False, True)]))",
+            + "measure = runpy.run_path(sys.argv[1])['_correlation_peak_bytes']; "
+            + "print(json.dumps([[measure(n, materialize=m) for n in (500, 4000)] for m in (False, True)]))",
             str(Path(__file__).resolve()),
         ],
         capture_output=True,

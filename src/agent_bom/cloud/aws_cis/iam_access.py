@@ -29,7 +29,7 @@ def _check_1_10(iam_client: Any) -> CISCheckResult:
         for user in page["Users"]:
             username = user["UserName"]
             try:
-                login_profile = iam_client.get_login_profile(UserName=username)  # noqa: F841
+                iam_client.get_login_profile(UserName=username)
             except Exception as exc:
                 error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
                 if error_code == "NoSuchEntity":

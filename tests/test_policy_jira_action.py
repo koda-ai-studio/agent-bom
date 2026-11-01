@@ -235,33 +235,18 @@ def test_fire_deduplicates_same_vuln_package(policy_result_with_jira):
     dup = dict(policy_result_with_jira["jira_violations"][0])
     policy_result_with_jira["jira_violations"].append(dup)
 
-    call_count = {"n": 0}
+    with patch("agent_bom.integrations.jira.create_jira_ticket", return_value="SEC-1") as create_ticket:
+        created = fire_policy_jira_actions(
+            policy_result=policy_result_with_jira,
+            jira_url="https://company.atlassian.net",
+            email="user@example.com",
+            api_token="test-token",
+            project_key="SEC",
+        )
 
-    async def _mock_create(*args, **kwargs):
-        call_count["n"] += 1
-        return f"SEC-{call_count['n']}"
-
-    with patch("agent_bom.integrations.jira.create_jira_ticket", side_effect=_mock_create):
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_loop.return_value.is_running.return_value = False
-
-            import asyncio
-
-            with patch.object(asyncio, "get_event_loop") as loop_mock:
-                loop_mock.return_value.is_running.return_value = False
-                # We can't easily run async in sync test without asyncio.run,
-                # so just verify dedup logic in isolation
-                pass
-
-    # Verify deduplicated violations count is 1 (the set logic)
-    seen: set[str] = set()
-    deduped = []
-    for v in policy_result_with_jira["jira_violations"]:
-        key = f"{v['vulnerability_id']}::{v['package']}"
-        if key not in seen:
-            seen.add(key)
-            deduped.append(v)
-    assert len(deduped) == 1
+    assert created == 1
+    create_ticket.assert_awaited_once()
+    assert create_ticket.call_args.kwargs["finding"] == policy_result_with_jira["jira_violations"][0]
 
 
 def test_fire_handles_exception_gracefully(policy_result_with_jira):

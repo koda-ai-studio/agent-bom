@@ -627,7 +627,6 @@ def scan_python_agents(project_path: str) -> tuple[list[Agent], list[str]]:
         # Include ALL non-AI packages too (for full CVE coverage)
         if not pkgs:
             # Framework not in requirements but used in code — add as unknown version
-            display = dict((fkey, dn) for _, (dn, fkey, _) in _FRAMEWORKS.items()).get(d.framework, d.framework)
             pkgs = [
                 Package(
                     name=d.framework,

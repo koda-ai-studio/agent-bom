@@ -120,7 +120,6 @@ _SWIFT_TRAILING_SKIP_PRECEDERS = frozenset(
         "defer",
     },
 )
-_SWIFT_TYPE_DECL_KEYWORDS = ("class", "struct", "enum", "extension", "actor", "protocol")
 _SWIFT_TOOL_RE = re.compile(
     r'\.(?:tool|registerTool|addTool)\s*\(\s*"(?P<name>[^"]+)"',
     re.IGNORECASE,

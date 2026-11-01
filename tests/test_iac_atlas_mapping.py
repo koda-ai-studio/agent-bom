@@ -196,29 +196,7 @@ resource "aws_ecr_repository" "inference" {
 
 
 def test_snowflake_stage_public_grant_maps_to_atlas(tmp_path: Path) -> None:
-    findings = _scan(
-        tmp_path,
-        "snowflake.tf",
-        """
-resource "snowflake_stage" "models" {
-  name     = "snowpark_models"
-  database = "ML"
-  schema   = "PUBLIC"
-}
-
-resource "snowflake_grant_privileges_to_account_role" "g" {
-  account_role_name = "PUBLIC"
-  privileges        = ["USAGE"]
-  on_schema_object {
-    object_type = "STAGE"
-    object_name = "ML.PUBLIC.snowpark_models"
-  }
-}
-""",
-    )
-    # Detection in the stage block — relies on indicator. Direct lookup-only
-    # version: include a `to = "PUBLIC"` style grant inline. We re-scan with
-    # the legacy syntax that the indicator matches.
+    # The legacy stage syntax carries the public-grant indicator.
     findings = _scan(
         tmp_path,
         "snowflake.tf",

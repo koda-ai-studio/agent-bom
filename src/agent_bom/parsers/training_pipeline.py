@@ -39,8 +39,6 @@ _CREDENTIAL_KEYWORDS = {"key", "token", "secret", "password", "credential", "aut
 # Unsafe serialization formats
 _UNSAFE_FORMATS = {"pickle", "pkl", "joblib", "cloudpickle"}
 
-# Safe serialization formats
-_SAFE_FORMATS = {"safetensors", "onnx", "gguf", "ggml", "tflite", "pb"}
 _PIPELINE_PII_TYPES = {
     "US SSN",
     "Credit Card (Visa)",

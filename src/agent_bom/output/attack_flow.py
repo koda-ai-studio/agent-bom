@@ -89,8 +89,6 @@ def build_lateral_movement_flow(
                 y_agent_right += _Y_SPACING
                 x = _X_LM_AGENT_RIGHT
         else:
-            x = _X_LM_AGENT_LEFT if agent_side[agent_nm] == "left" else _X_LM_AGENT_RIGHT
-            y = 0  # already placed
             return
         nodes.append(
             {

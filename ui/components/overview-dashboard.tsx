@@ -515,7 +515,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
               </Link>
             )}
           </div>
-          {jobsLoading && !importedReport ? (
+          {jobsLoading ? (
             <div className="text-sm text-ink-secondary">Loading…</div>
           ) : effectiveRecentJobs.length === 0 ? (
             <EmptyState />

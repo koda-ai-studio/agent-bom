@@ -43,7 +43,6 @@ class _AuditCapture:
 
 
 def test_firewall_check_default_allows_when_no_policy_loaded() -> None:
-    settings = GatewaySettings(registry=_registry(), policy={})
     audit = _AuditCapture()
     settings = GatewaySettings(registry=_registry(), policy={}, audit_sink=audit)
     with TestClient(create_gateway_app(settings)) as client:
