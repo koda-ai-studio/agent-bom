@@ -68,17 +68,36 @@ def _scheme(value: str) -> str | None:
     return head.strip().lower() if sep else None
 
 
+POSTGRES_DSN_IN_SQLITE_PATH_MESSAGE = (
+    "A SQLite store received a Postgres URL as its file path. Postgres is selected through "
+    "AGENT_BOM_POSTGRES_URL (with AGENT_BOM_POSTGRES_PASSWORD_FILE and AGENT_BOM_POSTGRES_MAINTENANCE_URL); "
+    "a Postgres URL in AGENT_BOM_DB is accepted as its alias, while every other store-specific *_DB variable "
+    "must name a SQLite file."
+)
+
+
 def validate_sqlite_path(path: str | os.PathLike[str]) -> str:
     """Reject remote DSNs before SQLite can open files; never echo credentials."""
     value = os.fspath(path)
-    if _scheme(value) or value.strip().lower().startswith(("postgres:/", "postgresql:/")):
+    if value.strip().lower().startswith(("postgres:/", "postgresql:/")):
+        raise ValueError(POSTGRES_DSN_IN_SQLITE_PATH_MESSAGE)
+    if _scheme(value):
         raise ValueError("SQLite requires a filesystem path; configure AGENT_BOM_POSTGRES_URL for Postgres.")
     return value
 
 
 def validate_configured_sqlite_path() -> None:
-    """Fail startup before initializing stores when the SQLite path is a DSN."""
-    validate_sqlite_path(env_raw("AGENT_BOM_DB") or ":memory:")
+    """Fail startup when ``AGENT_BOM_DB`` is a DSN no backend understands.
+
+    A Postgres URL is the documented alias of ``AGENT_BOM_POSTGRES_URL`` and is
+    honoured by every selection ladder (durable store, storage tiers, the
+    per-store Postgres adapters), so it passes here and the SQLite stores it
+    never reaches keep their own fail-closed check.
+    """
+    value = env_raw("AGENT_BOM_DB") or ":memory:"
+    if _is_postgres_url(value):
+        return
+    validate_sqlite_path(value)
 
 
 def resolve_from_dsn(dsn: str) -> BackendSelection:
