@@ -100,6 +100,32 @@ def _explicit_identity_bindings(value: object, *, credential_refs: set[str]) -> 
 # ---------------------------------------------------------------------------
 
 
+def _continue_legacy_servers(config_data: dict) -> list[dict]:
+    """Flatten Continue's deprecated ``experimental.modelContextProtocolServers[].transport`` shape.
+
+    Each entry becomes a standard server dict; unnamed entries are numbered so
+    the servers stay distinguishable in reports.
+    """
+    experimental = config_data.get("experimental")
+    entries = experimental.get("modelContextProtocolServers") if isinstance(experimental, dict) else None
+    if not isinstance(entries, list):
+        return []
+    servers: list[dict] = []
+    for index, entry in enumerate(entries, start=1):
+        if not isinstance(entry, dict):
+            continue
+        transport = entry.get("transport")
+        if not isinstance(transport, dict):
+            continue
+        server = {key: value for key, value in transport.items() if key != "type"}
+        transport_type = str(transport.get("type") or "stdio").lower()
+        if transport_type in {"sse", "http", "streamable-http"} or "url" in server:
+            server["type"] = "sse" if transport_type == "sse" else "http"
+        server["name"] = str(entry.get("name") or f"continue-mcp-{index}")
+        servers.append(server)
+    return servers
+
+
 def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
     """Parse MCP server definitions from a config file.
 
@@ -118,6 +144,8 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
     """
     servers = []
     raw = config_data.get("mcpServers", config_data.get("servers", {}))
+    if not raw:
+        raw = _continue_legacy_servers(config_data)
 
     # Normalize: Continue.dev uses an array instead of an object
     if isinstance(raw, list):

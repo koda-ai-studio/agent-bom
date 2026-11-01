@@ -156,6 +156,11 @@ class ProjectScanTargets:
 
 
 _TREE_SURFACES = frozenset({"jupyter", "sast", "terraform", "iac", "python_source", "ai_source"})
+# Model binaries that ``agent_bom.model_files`` classifies; ``.bin`` is excluded here because
+# only size distinguishes a model shard from any other binary blob.
+_MODEL_FILE_EXTENSIONS = frozenset(
+    {".gguf", ".safetensors", ".onnx", ".pt", ".pth", ".pb", ".tflite", ".mlmodel", ".pkl", ".joblib", ".h5", ".keras"}
+)
 
 
 def _tree_surface_hits(path: Path, root: Path, wanted: frozenset[str]) -> set[str]:
@@ -173,6 +178,8 @@ def _tree_surface_hits(path: Path, root: Path, wanted: frozenset[str]) -> set[st
         hits.add("ai_source")
     if "iac" in wanted and is_iac_file(path, root):
         hits.add("iac")
+    if "model_files" in wanted and suffix in _MODEL_FILE_EXTENSIONS:
+        hits.add("model_files")
     return hits
 
 
@@ -194,6 +201,11 @@ def detect_tree_surfaces(root: Path, wanted: frozenset[str] = _TREE_SURFACES) ->
         if found >= wanted:
             break
     return frozenset(found)
+
+
+def project_has_model_files(root: Path) -> bool:
+    """True when the pruned tree holds a model binary the model-file scanner classifies."""
+    return "model_files" in detect_tree_surfaces(root, frozenset({"model_files"}))
 
 
 def project_has_notebooks(root: Path) -> bool:
