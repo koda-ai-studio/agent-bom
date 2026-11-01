@@ -14,7 +14,6 @@ from agent_bom.core.cvss import normalize_cvss_score
 from agent_bom.db.sync_parsing import _parse_osv_entry as _parse_osv_entry
 
 _logger = logging.getLogger("agent_bom.db.sync")
-_normalize_sync_cvss_score = normalize_cvss_score
 
 
 def _validate_sync_url(url: str, param_name: str = "url") -> None:
