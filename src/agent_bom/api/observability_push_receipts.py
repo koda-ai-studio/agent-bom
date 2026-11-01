@@ -6,6 +6,7 @@ import asyncio
 from typing import Any, cast
 
 from agent_bom.api.correlation_cohort_ingest import CorrelationCohortIngestError, prior_or_conflict
+from agent_bom.api.exec_read_prewarm import schedule_exec_prewarm
 from agent_bom.api.models import JobStatus, PushPayload, ScanJob
 from agent_bom.api.observability_events import _logger
 from agent_bom.api.stores import _get_fleet_store, _get_graph_store, _get_idempotency_store, _get_store
@@ -95,7 +96,10 @@ def _record_push_trend(job: ScanJob, job_result: dict, body: PushPayload) -> Non
     )
 
 
-def _pushed_job_receipt(job: ScanJob) -> dict[str, Any]:
+def _pushed_job_receipt(job: ScanJob, *, prewarm_tenant: str | None = None) -> dict[str, Any]:
+    """The push receipt; a newly committed push also warms the exec reads off the request path."""
+    if prewarm_tenant:
+        schedule_exec_prewarm(prewarm_tenant)
     result = job.result if isinstance(job.result, dict) else {}
     raw_scan_run = result.get("scan_run")
     scan_run: dict[str, Any] = raw_scan_run if isinstance(raw_scan_run, dict) else {}

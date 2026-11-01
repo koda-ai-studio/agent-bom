@@ -95,6 +95,8 @@ nav:
       - Hardware/Firmware Evidence Ingest: features/hardware-evidence.md
       - GPU and AI Infrastructure: features/gpu-ai-infrastructure.md
       - Policy Engine: features/policy.md
+      - Import Lake Evidence: deployment/lake-evidence-ingestion.md
+      - Executive Brief: deployment/executive-brief.md
   - Deployment:
       - Overview: deployment/overview.md
       - Deploy Quickstart: deployment/quickstart.md
@@ -138,8 +140,6 @@ nav:
           - Control-Plane Data Model and Store Parity: deployment/control-plane-data-model.md
           - Backend Parity: deployment/backend-parity.md
           - Backend and Security-Lake Strategy: deployment/backend-and-security-lakes.md
-          - Import Lake Evidence: deployment/lake-evidence-ingestion.md
-          - Executive Brief: deployment/executive-brief.md
           - Snowflake-Native Backend: deployment/snowflake-backend.md
           - Kubernetes: deployment/kubernetes.md
           - Runtime Monitoring: deployment/runtime-monitoring.md

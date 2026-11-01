@@ -7,6 +7,36 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Platform truth for demo and self-hosted deployments
+
+- Live Activity serves an anonymous no-auth session the REST gateway feed (`GET /v1/gateway/feed`, polled every 15 s) instead of a sign-in prompt; the ledger stream still requires a signed-in session, and the empty state appears only when the API returns no events.
+- The executive brief (`GET /v1/brief`, MCP `executive_brief`) carries `sla_status` (overdue / due soon / on track) and a `sla_policy` display name next to the raw ISO `sla_due_at`; the UI renders relative plus absolute dates, an SLA chip and the policy name, including in the Markdown export.
+- The get-started project command pre-fills this deployment's `/v1/results/push` URL, shows the API-key step only when the session needs a key, links key-capable users to the API-key page, and offers an in-product action beside the CLI snippet.
+- `/compliance?framework=iso-27001` (and other API/finding slugs) resolves to the matching framework section; selecting a framework writes its slug back into the address bar.
+- An anonymous reader of the seeded demo estate is labelled "Demo visitor / Read-only demo" instead of "Unauthenticated access".
+- A Postgres URL in `AGENT_BOM_DB` is accepted at boot as the alias of `AGENT_BOM_POSTGRES_URL`, matching every other selector; SQLite store openers still refuse it with a message that names both variables. `docs/DEPLOY_PLATFORM.md` gains the Postgres-without-Compose/Helm checklist.
+- CLI pushes are gzip-compressed by default; the decoded push budget is 256 MiB (the measured 10k-package report is 154 MB) and gzip bodies past a 100:1 expansion are refused as decompression bombs; every push 413 says how to split the scan.
+  - **Upgrade note:** a control plane older than 2026-09-10 (before gzip push decoding, #5193) rejects compressed pushes; set `AGENT_BOM_PUSH_GZIP=0` on collectors that still push to one.
+- The exec read cache is generation-driven with a 15-minute safety TTL, and the four exec reads (counts, compliance summary, fix-first, brief) are warmed in the background right after a demo seed or a results push, so a dashboard opened after either no longer pays the rebuild.
+- Advisory affected-asset rows carry `asset_display` (image ref/tag or server name, kind, owning agent, host) from the graph, the summary names its `count_basis`, and the read is cached per tenant and advisory under the evidence generation.
+- Every demo agent records its kind, the platform it rides and a fictional host it runs on, so the hero attack path no longer reads "Agent kind not recorded · Host not recorded".
+
+### Fixed
+- First-run scan accuracy: private npm workspace members are no longer reported as typosquats or resolved against the public registry; a local `agents/` package is no longer reported as the OpenAI Agents SDK; an unresolvable manifest records a coverage warning instead of aborting the scan with exit 0.
+- JSON reports keep structural identifiers (`exposure_path_id`, `package_purl`, `server_ref`) for scoped npm packages; credential-pattern redaction still applies to every value.
+- Image scans record suppressed unfixed OS-package findings in the summary and never print a clean verdict over them.
+- MCP server: `blast_radius`, `should_i_deploy` and `exposure_paths` consult the current session's scan result before persisted evidence or host discovery.
+- MCP introspection and live audit detect hidden-instruction tool-description poisoning (hidden tags, "do not tell the user", credential-file paths, exfiltration URLs, tool shadowing, base64 blobs) and introspect servers launched by a verified absolute launcher path; skipped servers are recorded with the reason.
+- GitHub Action summary reports the posture grade and path counts recorded in the report instead of recomputing them.
+- One canonical tagline across `--version`, `--help`, the Docker label, Helm chart, GitHub Action, registry manifests, skills and the social preview; the release consistency check enforces it and the MCP registry description length.
+- Browser credential binding regression coverage, closed cleanup and action result readers, failed-scan posture in console summaries, GCP unresolved-boundary evidence, graph accuracy on validated findings and consistent NVD score normalization across sync paths (#6135–#6140).
+
+### Changed
+- npm lockfile parsing no longer emits workspace members or their `node_modules` symlinks as packages; a member's dependencies carry `parent_package=<member>` at depth 1 instead of appearing as root packages.
+- README leads with why an AI supply-chain BOM matters, the standards findings map to, and a four-row offerings table; competitor names are removed from README and docs prose.
+
 ## [0.112.1] - 2026-10-31
 
 ### Highlights

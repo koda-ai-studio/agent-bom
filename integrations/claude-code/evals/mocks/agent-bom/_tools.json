@@ -516,6 +516,20 @@
       "description": "Optional historical scan ID. Omit for the current tenant estate.",
       "title": "Scan Id"
      },
+     "result_id": {
+      "anyOf": [
+       {
+        "maxLength": 128,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "result_id from a scan response in this session. Answers from that scan result instead of the persisted estate graph; omitted, the caller's newest scan result is consulted first.",
+      "title": "Result Id"
+     },
      "limit": {
       "default": 5,
       "description": "Maximum ranked exposure paths to return.",

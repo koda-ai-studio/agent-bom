@@ -1,5 +1,5 @@
 name: 'agent-bom Scan'
-description: 'Security gate for AI-era repos: scan MCP configs, agents, skills, dependencies, IaC and secrets; SARIF, PR summary and SBOM.'
+description: 'AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach. CI gate, SARIF, SBOM.'
 author: 'agent-bom'
 
 branding:
@@ -191,13 +191,13 @@ outputs:
     description: 'Path to generated graph export when format is mermaid, svg, graph, or graph-html.'
     value: ${{ steps.scan.outputs.graph_export_path }}
   exposure-paths-count:
-    description: 'Number of exposure, lateral, or attack paths parsed from JSON graph-capable outputs.'
+    description: 'Exposure paths the report counted (JSON exposure_paths.path_count or SARIF run property exposure_path_count).'
     value: ${{ steps.scan.outputs.exposure_paths_count }}
   blast-radius-critical-count:
-    description: 'Number of critical blast-radius or SARIF findings parsed from the result artifact.'
+    description: 'Critical blast-radius rows in the JSON report, or SARIF results with security-severity >= 9.0 (possibly-affected rows excluded).'
     value: ${{ steps.scan.outputs.blast_radius_critical_count }}
   posture-grade:
-    description: 'Coarse CI posture grade derived from parsed critical/high/finding counts: A, C, D, F, or unknown.'
+    description: 'Posture grade read from the report itself (JSON posture_grade or SARIF run property posture_grade): A-F, N/A when nothing was gradable, or unknown when the artifact carries no grade. Never recomputed from finding counts.'
     value: ${{ steps.scan.outputs.posture_grade }}
 
 runs:

@@ -9694,6 +9694,54 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * BriefPriority
+         * @description An overview top risk plus the SLA presentation every brief consumer renders.
+         *
+         *     ``sla_due_at`` stays the raw ISO timestamp for machines; ``sla_status`` and
+         *     ``sla_policy`` are derived from it and from ``sla_due_at_source`` by one
+         *     shared helper so the API, the MCP tool and the UI never disagree.
+         */
+        BriefPriority: {
+            /** Affected Agents */
+            affected_agents?: string[] | null;
+            /** Affected Servers */
+            affected_servers?: string[] | null;
+            /** Asset Id */
+            asset_id?: string | null;
+            /** Canonical Id */
+            canonical_id?: string | null;
+            /** Cvss Score */
+            cvss_score?: number | null;
+            /** Epss Score */
+            epss_score?: number | null;
+            /** Fixed Version */
+            fixed_version?: string | null;
+            /** Impact Category */
+            impact_category?: string | null;
+            /** Is Kev */
+            is_kev?: boolean | null;
+            /** Owner */
+            owner?: string | null;
+            /** Package */
+            package?: string | null;
+            /** Risk Score */
+            risk_score?: number | null;
+            /** Severity */
+            severity: string;
+            /** Sla Due At */
+            sla_due_at?: string | null;
+            /** Sla Due At Source */
+            sla_due_at_source?: string | null;
+            /** Sla Policy */
+            sla_policy?: string | null;
+            /** Sla Status */
+            sla_status?: ("overdue" | "due_soon" | "on_track" | "unknown") | null;
+            /** Vulnerability Id */
+            vulnerability_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * BrowserExtensionsRequest
          * @description Request body for POST /v1/scan/browser-extensions.
          */
@@ -13651,7 +13699,7 @@ export interface components {
             links: components["schemas"]["BriefLinks"];
             posture: components["schemas"]["PostureResponse"];
             /** Remediation Priorities */
-            remediation_priorities: components["schemas"]["OverviewTopRisk"][];
+            remediation_priorities: components["schemas"]["BriefPriority"][];
             /** Sample Data */
             sample_data: boolean;
             scan_history: components["schemas"]["TrendsResponse"];

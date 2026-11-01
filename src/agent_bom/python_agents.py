@@ -36,12 +36,12 @@ import re
 from pathlib import Path
 from typing import Any, NamedTuple
 
+from agent_bom.ai_components.local_shadow import declared_python_requirements, is_sdk_import
 from agent_bom.ast.call_scopes import call_scopes
 from agent_bom.ast.source_reader import parse_python_source
 from agent_bom.ast_signal_utils import is_agent_tool_decorator
+from agent_bom.core.packages import normalize_package_name
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
-from agent_bom.parsers.declared_requirements import parse_pyproject_dependencies, parse_requirements_txt
-from agent_bom.traversal import iter_discovery_files
 
 # ─── Framework registry ───────────────────────────────────────────────────────
 # Maps canonical PyPI package name → (display_name, framework_key, import_roots)
@@ -67,6 +67,9 @@ _FRAMEWORKS: dict[str, tuple[str, str, list[str]]] = {
 
 # Flat set of all import roots for fast lookup
 _ALL_IMPORT_ROOTS: frozenset[str] = frozenset(root for _, _, roots in _FRAMEWORKS.values() for root in roots)
+_PACKAGES_BY_ROOT: dict[str, tuple[str, ...]] = {
+    root: tuple(pkg for pkg, (_, _, roots) in _FRAMEWORKS.items() if root in roots) for root in _ALL_IMPORT_ROOTS
+}
 
 # ─── Credential env var patterns ──────────────────────────────────────────────
 
@@ -109,6 +112,11 @@ _ENV_REF_RE = re.compile(
 )
 
 
+_SKIP_PARTS: frozenset[str] = frozenset(
+    {".venv", "venv", "env", ".env", "node_modules", "__pycache__", ".git", "dist", "build", "site-packages", "tests", "test"}
+)
+
+
 # ─── Data classes ─────────────────────────────────────────────────────────────
 
 
@@ -127,30 +135,13 @@ class _PythonAgentDef(NamedTuple):
 # ─── Requirement file parsers ─────────────────────────────────────────────────
 
 
-def _collect_requirements(project: Path) -> dict[str, str]:
-    """Collect {package: version} from all requirement files in the project.
-
-    Traversal prunes vendored/generated directories and nested VCS worktrees so
-    a repository that keeps agent worktrees (each a full nested checkout) does
-    not re-count every manifest once per worktree.
-    """
-    pkgs: dict[str, str] = {}
-    for path in iter_discovery_files(project):
-        name = path.name
-        try:
-            if name.startswith("requirements") and name.endswith(".txt"):
-                pkgs.update(parse_requirements_txt(path))
-            elif name == "pyproject.toml":
-                pkgs.update(parse_pyproject_dependencies(path))
-        except OSError:
-            pass
-    return pkgs
+_collect_requirements = declared_python_requirements
 
 
 # ─── Python file analysis ─────────────────────────────────────────────────────
 
 
-def _detect_frameworks_in_imports(tree: ast.Module) -> set[str]:
+def _detect_frameworks_in_imports(tree: ast.Module, ignored_roots: frozenset[str] = frozenset()) -> set[str]:
     """Return set of framework_keys found via import statements."""
     found: set[str] = set()
     for node in ast.walk(tree):
@@ -160,7 +151,7 @@ def _detect_frameworks_in_imports(tree: ast.Module) -> set[str]:
                 root = alias.name.split(".")[0]
         elif isinstance(node, ast.ImportFrom) and node.module:
             root = node.module.split(".")[0]
-        if root and root in _ALL_IMPORT_ROOTS:
+        if root and root in _ALL_IMPORT_ROOTS and root not in ignored_roots:
             for pkg, (_, fkey, roots) in _FRAMEWORKS.items():
                 if root in roots:
                     found.add(fkey)
@@ -232,9 +223,9 @@ def _extract_env_refs_from_ast(tree: ast.Module) -> list[str]:
     return list(dict.fromkeys(refs))
 
 
-def _framework_from_content(content: str) -> str:
+def _framework_from_content(content: str, ignored_roots: frozenset[str] = frozenset()) -> str:
     framework = "unknown"
-    for root in _ALL_IMPORT_ROOTS:
+    for root in _ALL_IMPORT_ROOTS - ignored_roots:
         if re.search(rf"\bimport\s+{re.escape(root)}\b|from\s+{re.escape(root)}\b", content):
             for _, (_, fkey, roots) in _FRAMEWORKS.items():
                 if root in roots:
@@ -245,12 +236,12 @@ def _framework_from_content(content: str) -> str:
     return framework
 
 
-def _extract_agent_defs_regex(content: str, filename: str) -> list[_PythonAgentDef]:
+def _extract_agent_defs_regex(content: str, filename: str, ignored_roots: frozenset[str] = frozenset()) -> list[_PythonAgentDef]:
     """Extract agent definitions from Python source via regex fallback."""
     defs: list[_PythonAgentDef] = []
 
     # Detect framework from imports
-    framework = _framework_from_content(content)
+    framework = _framework_from_content(content, ignored_roots)
 
     # Extract @tool / @function_tool decorated functions
     tool_names = [func for decorator, func in _TOOL_DECORATOR_RE.findall(content) if is_agent_tool_decorator(decorator)]
@@ -293,15 +284,15 @@ def _extract_agent_defs_regex(content: str, filename: str) -> list[_PythonAgentD
     return defs
 
 
-def _extract_agent_defs(content: str, filename: str) -> list[_PythonAgentDef]:
+def _extract_agent_defs(content: str, filename: str, ignored_roots: frozenset[str] = frozenset()) -> list[_PythonAgentDef]:
     """Extract agent definitions from Python source with AST heuristics."""
     try:
         tree = parse_python_source(content, filename=filename)
     except SyntaxError:
-        return _extract_agent_defs_regex(content, filename)
+        return _extract_agent_defs_regex(content, filename, ignored_roots)
 
-    frameworks = _detect_frameworks_in_imports(tree)
-    framework = sorted(frameworks)[0] if frameworks else _framework_from_content(content)
+    frameworks = _detect_frameworks_in_imports(tree, ignored_roots)
+    framework = sorted(frameworks)[0] if frameworks else _framework_from_content(content, ignored_roots)
     env_refs = _extract_env_refs_from_ast(tree)
 
     tool_values: dict[str, tuple[str, str, str]] = {}
@@ -427,38 +418,32 @@ def _extract_agent_defs(content: str, filename: str) -> list[_PythonAgentDef]:
 
     if defs:
         return defs
-    return _extract_agent_defs_regex(content, filename)
+    return _extract_agent_defs_regex(content, filename, ignored_roots)
 
 
-def _scan_python_files(project: Path) -> list[_PythonAgentDef]:
-    """Walk Python files and extract agent definitions."""
+def _shadowed_roots(content: str, py_file: Path, project: Path, declared: frozenset[str]) -> frozenset[str]:
+    """Framework import roots in ``content`` that resolve to a local module rather than the SDK."""
+    return frozenset(
+        root
+        for root in _ALL_IMPORT_ROOTS
+        if root in content and not is_sdk_import(root, _PACKAGES_BY_ROOT[root], py_file, project, declared)
+    )
+
+
+def _scan_python_files(project: Path, declared: frozenset[str] = frozenset()) -> list[_PythonAgentDef]:
+    """Walk Python files and extract agent definitions.
+
+    A definition is an agent only when its file imports a framework; an
+    ``Agent(...)`` call with no framework import, or one whose import resolves
+    to a module the project ships itself, is application code.
+    """
     all_defs: list[_PythonAgentDef] = []
     seen_names: set[str] = set()
 
     py_files = sorted(project.rglob("*.py"))
     # Exclude common non-project dirs below the project root only; a project
     # that itself lives under a ``tests``/``build`` directory is still scanned.
-    py_files = [
-        f
-        for f in py_files
-        if not any(
-            part in f.relative_to(project).parts[:-1]
-            for part in (
-                ".venv",
-                "venv",
-                "env",
-                ".env",
-                "node_modules",
-                "__pycache__",
-                ".git",
-                "dist",
-                "build",
-                "site-packages",
-                "tests",
-                "test",
-            )
-        )
-    ]
+    py_files = [f for f in py_files if not any(part in f.relative_to(project).parts[:-1] for part in _SKIP_PARTS)]
 
     for py_file in py_files[:200]:  # cap at 200 files for performance
         try:
@@ -469,9 +454,14 @@ def _scan_python_files(project: Path) -> list[_PythonAgentDef]:
         # Quick pre-filter: skip files with no agent framework imports
         if not any(root in content for root in _ALL_IMPORT_ROOTS):
             continue
+        ignored_roots = _shadowed_roots(content, py_file, project, declared)
+        if not any(root in content for root in _ALL_IMPORT_ROOTS - ignored_roots):
+            continue
 
-        defs = _extract_agent_defs(content, py_file.relative_to(project).as_posix())
+        defs = _extract_agent_defs(content, py_file.relative_to(project).as_posix(), ignored_roots)
         for d in defs:
+            if d.framework == "unknown":
+                continue
             # Identity is the definition site, not the name: two ``assistant``
             # agents in different files or functions are different agents.
             key = f"{d.framework}:{d.file}:{d.scope}:{d.name}"
@@ -537,6 +527,74 @@ def _definition_identity(project: Path, d: _PythonAgentDef) -> tuple[str, str, d
     return qualified, config_path, metadata
 
 
+def _build_agents(
+    project: Path, agent_defs: list[_PythonAgentDef], framework_packages: dict[str, list[Package]], warnings: list[str]
+) -> list[Agent]:
+    """One Agent per definition; an undeclared framework is warned about once per file."""
+    agents: list[Agent] = []
+    undeclared_warned: set[tuple[str, str]] = set()
+    for d in agent_defs:
+        pkgs = framework_packages.get(d.framework, [])
+
+        # Include ALL non-AI packages too (for full CVE coverage)
+        if not pkgs:
+            # Framework not in requirements but used in code — add as unknown version
+            pkgs = [
+                Package(
+                    name=d.framework,
+                    version="unknown",
+                    ecosystem="pypi",
+                )
+            ]
+            # One warning per (framework, file), not one per agent call in the file.
+            if (d.framework, d.file) not in undeclared_warned:
+                undeclared_warned.add((d.framework, d.file))
+                warnings.append(
+                    f"Framework '{d.framework}' used in {d.file} but not found in "
+                    f"requirements files — version unknown, CVE scan may be incomplete"
+                )
+
+        tools = [
+            MCPTool(
+                name=name,
+                description="agent tool",
+                discovery_source=source,
+                discovery_confidence=confidence,
+            )
+            for name, source, confidence in d.tools
+        ]
+        if d.model:
+            tools.append(MCPTool(name=d.model, description="LLM model"))
+
+        cred_env = {k: "***REDACTED***" for k in d.env_refs}
+        qualified, config_path, metadata = _definition_identity(project, d)
+
+        server = MCPServer(
+            name=f"{d.framework}:{qualified}",
+            command="python",
+            # The defining file is part of the server's identity, so same-named
+            # agents from different files never share one server.
+            args=[d.file] if config_path != str(project) else [],
+            env=cred_env,
+            transport=TransportType.STDIO,
+            surface=ServerSurface.OTHER,
+            packages=pkgs,
+            config_path=config_path,
+            tools=tools,
+        )
+        agent = Agent(
+            name=f"{d.framework}:{qualified}",
+            agent_type=AgentType.CUSTOM,
+            config_path=config_path,
+            mcp_servers=[server],
+            source="python-agents",
+            metadata=metadata,
+        )
+        agents.append(agent)
+
+    return agents
+
+
 # ─── Public API ───────────────────────────────────────────────────────────────
 
 
@@ -591,7 +649,8 @@ def scan_python_agents(project_path: str) -> tuple[list[Agent], list[str]]:
             framework_packages.setdefault(fkey, []).append(pkg)
 
     # 3. Scan Python files for agent definitions
-    agent_defs = _scan_python_files(project)
+    declared = frozenset(normalize_package_name(name, "pypi") for name in req_pkgs)
+    agent_defs = _scan_python_files(project, declared)
     if agent_defs:
         agent_defs = _attach_system_prompts(agent_defs, project)
 
@@ -619,62 +678,4 @@ def scan_python_agents(project_path: str) -> tuple[list[Agent], list[str]]:
         if d.env_refs:
             warnings.append(f"Credential env vars referenced in {d.file} ({d.name}): " + ", ".join(d.env_refs))
 
-    # 5. Build Agent objects
-    agents: list[Agent] = []
-    for d in agent_defs:
-        pkgs = framework_packages.get(d.framework, [])
-
-        # Include ALL non-AI packages too (for full CVE coverage)
-        if not pkgs:
-            # Framework not in requirements but used in code — add as unknown version
-            pkgs = [
-                Package(
-                    name=d.framework,
-                    version="unknown",
-                    ecosystem="pypi",
-                )
-            ]
-            warnings.append(
-                f"Framework '{d.framework}' used in {d.file} but not found in "
-                f"requirements files — version unknown, CVE scan may be incomplete"
-            )
-
-        tools = [
-            MCPTool(
-                name=name,
-                description="agent tool",
-                discovery_source=source,
-                discovery_confidence=confidence,
-            )
-            for name, source, confidence in d.tools
-        ]
-        if d.model:
-            tools.append(MCPTool(name=d.model, description="LLM model"))
-
-        cred_env = {k: "***REDACTED***" for k in d.env_refs}
-        qualified, config_path, metadata = _definition_identity(project, d)
-
-        server = MCPServer(
-            name=f"{d.framework}:{qualified}",
-            command="python",
-            # The defining file is part of the server's identity, so same-named
-            # agents from different files never share one server.
-            args=[d.file] if config_path != str(project) else [],
-            env=cred_env,
-            transport=TransportType.STDIO,
-            surface=ServerSurface.OTHER,
-            packages=pkgs,
-            config_path=config_path,
-            tools=tools,
-        )
-        agent = Agent(
-            name=f"{d.framework}:{qualified}",
-            agent_type=AgentType.CUSTOM,
-            config_path=config_path,
-            mcp_servers=[server],
-            source="python-agents",
-            metadata=metadata,
-        )
-        agents.append(agent)
-
-    return agents, warnings
+    return _build_agents(project, agent_defs, framework_packages, warnings), warnings

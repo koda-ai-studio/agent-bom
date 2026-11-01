@@ -27,10 +27,12 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.api import compliance_hub_store
+from agent_bom.api.advisory_affected_display import attach_asset_display, label_count_basis
 from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.hub_ingest import hub_ingest_store_writes
+from agent_bom.api.read_cache import cached_read
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
-from agent_bom.api.stores import _get_operator_advisory_store
+from agent_bom.api.stores import _get_graph_store, _get_operator_advisory_store
 from agent_bom.db import schema
 from agent_bom.db.operator_advisories import distro_verdicts
 from agent_bom.db.schema import open_existing_db_readonly
@@ -80,12 +82,7 @@ def resolve_advisory(tenant_id: str, advisory_id: str) -> tuple[OperatorAdvisory
     return (feed, "feed") if feed is not None else None
 
 
-def tenant_affected_answer(tenant_id: str, advisory_id: str) -> dict[str, Any] | None:
-    """The whole answer for one advisory over the tenant's stored scans; ``None`` when the id is unknown.
-
-    An id no declaration or feed record knows is answered from the tenant's
-    stored findings that reference it (``stored_findings_answer``).
-    """
+def _uncached_affected_answer(tenant_id: str, advisory_id: str) -> dict[str, Any] | None:
     resolved = resolve_advisory(tenant_id, advisory_id)
     reports = tenant_reports(tenant_id)
     with distro_verdicts() as verdict:
@@ -93,6 +90,37 @@ def tenant_affected_answer(tenant_id: str, advisory_id: str) -> dict[str, Any] |
             return stored_findings_answer(advisory_id, reports, distro_verdict=verdict)
         advisory, source = resolved
         return affected_answer(advisory, reports, source=source, distro_verdict=verdict)
+
+
+def _affected_generation(tenant_id: str) -> str | None:
+    """The tenant's evidence generation (jobs, hub, suppressions, graph); ``None`` disables caching."""
+    from agent_bom.api.routes.compliance_routes.common import evidence_generation
+
+    # ``evidence_generation`` already answers ``None`` for an unreadable token, which disables caching.
+    return evidence_generation(tenant_id)
+
+
+def tenant_affected_answer(tenant_id: str, advisory_id: str) -> dict[str, Any] | None:
+    """The whole answer for one advisory over the tenant's stored scans; ``None`` when the id is unknown.
+
+    An id no declaration or feed record knows is answered from the tenant's
+    stored findings that reference it (``stored_findings_answer``). The answer
+    re-reads every stored report, so it is cached per tenant and advisory while
+    the tenant's evidence generation holds; rows carry the asset display names
+    the graph records and the summary names its counting basis.
+    """
+    key = advisory_id.strip().upper()
+
+    def compute() -> dict[str, Any]:
+        answer = _uncached_affected_answer(tenant_id, advisory_id)
+        if answer is None:
+            return {"_absent": True}
+        attach_asset_display(answer["rows"], tenant_id=tenant_id, store=_get_graph_store())
+        answer["summary"] = label_count_basis(answer["summary"])
+        return answer
+
+    body = cached_read("advisory_affected", tenant_id, (("advisory", key),), compute, generation=_affected_generation(tenant_id))
+    return None if body.get("_absent") else body
 
 
 def _finding_payload(row: dict[str, Any], advisory: dict[str, Any]) -> dict[str, Any]:

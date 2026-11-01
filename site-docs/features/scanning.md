@@ -324,6 +324,13 @@ The artifact is the same findings report with lower-confidence unfixed distro
 rows included; review their match-confidence tier before using them as a CI
 block. Language-package coverage is unaffected by this switch.
 
+The default filter always leaves a receipt: the JSON summary carries
+`suppressed_unfixed_os_findings` (the number of findings the policy removed,
+distinct from operator or VEX suppressions in `suppressed_vulnerabilities`),
+`coverage_warnings` carries a `scan_note` with reason `unfixed_os_suppressed`,
+and the console closes with "No fixable vulnerabilities found; N unfixed
+OS-package finding(s) suppressed" instead of a clean verdict.
+
 RHEL and other supported RPM distributions retain findings whose fix could not
 be resolved; missing fix metadata is not a vendor "won't fix" verdict. RHEL
 advisories are filtered to the observed Enterprise Linux major release before

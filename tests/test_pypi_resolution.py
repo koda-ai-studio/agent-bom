@@ -191,3 +191,28 @@ def test_thirty_requirement_project_resolves_within_bounds(tmp_path, pypi):
     assert all(p.version != "unknown" for p in pkgs.values())
     assert [w["kind"] for w in warnings] == ["scan_note"]
     assert len(fake.requests) == 61
+
+
+def test_post_release_keyed_unnormalized_on_the_registry_resolves_without_crashing(tmp_path, pypi):
+    # PyPI keys releases by the string the publisher uploaded ("3.2.3-2"); the
+    # resolver compares normalized versions ("3.2.3.post2") and must map back.
+    pypi({"legacy": {"3.2.3-2": {"requires_dist": None, "wheel": False}}})
+    (tmp_path / "requirements.txt").write_text("legacy>=3\n")
+    pkgs, warnings = _scan(tmp_path)
+    assert pkgs["legacy"].version == "3.2.3-2"
+    assert any("legacy" in w["detail"] and "metadata" in w["detail"] for w in warnings)
+
+
+def test_resolver_crash_is_a_manifest_coverage_gap_not_a_scan_abort(tmp_path, pypi, monkeypatch):
+    pypi()
+    (tmp_path / "requirements.txt").write_text("requests>=2.31\n")
+
+    def explode(*_args, **_kwargs):
+        raise KeyError("3.2.3.post2")
+
+    monkeypatch.setattr("agent_bom.parsers.python_ladder.resolve_requirements", explode)
+    pkgs, warnings = _scan(tmp_path)
+    assert pkgs["requests"].version == "unknown"
+    gap = next(w for w in warnings if "requirements.txt" in w["detail"] and "not resolved" in w["detail"])
+    assert "KeyError" in gap["detail"]
+    assert "add a lockfile" in gap["detail"]

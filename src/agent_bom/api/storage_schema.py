@@ -12,7 +12,7 @@ CONTROL_PLANE_SCHEMA_TABLE = "control_plane_schema_versions"
 
 
 def postgres_deployment_configured() -> bool:
-    """Return whether either supported environment variable selects Postgres."""
+    """Return whether Postgres is selected: ``AGENT_BOM_POSTGRES_URL``, or its alias, a Postgres URL in ``AGENT_BOM_DB``."""
 
     if os.environ.get("AGENT_BOM_POSTGRES_URL", "").strip():
         return True

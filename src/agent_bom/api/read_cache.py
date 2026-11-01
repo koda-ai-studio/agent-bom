@@ -9,12 +9,17 @@ layer folds them into one generation string (``evidence_generation`` in the
 compliance route helpers) so a body is reused only while every token is
 unchanged, and a bump on any of them retires the entry before the next read.
 
-Bounds: ``READ_CACHE_MAX_ENTRIES`` least-recently-used bodies and a short TTL
-that covers inputs the generation does not (runtime observations, agent
-manifests). Errors are never cached, hits are deep copies, and concurrent
-misses on one key run one computation. The cache is process-local; each
-worker keeps its own and a worker never serves a generation it did not read
-itself. Bodies that vary per principal must put the principal in ``params``.
+Bounds: ``READ_CACHE_MAX_ENTRIES`` least-recently-used bodies and a long
+safety TTL. Invalidation is generation-driven: every push, seed, hub ingest,
+suppression and graph commit advances a store token, so a body is retired the
+moment its inputs change and is otherwise reused. The TTL only bounds inputs
+the generation does not cover (runtime observations, agent manifests); at 60 s
+it forced a 2-4 s rebuild of every exec surface once a minute on an idle
+estate (measured 2026-11-01), which is why it is now 15 minutes. Errors are
+never cached, hits are deep copies, and concurrent misses on one key run one
+computation. The cache is process-local; each worker keeps its own and a
+worker never serves a generation it did not read itself. Bodies that vary per
+principal must put the principal in ``params``.
 """
 
 from __future__ import annotations
@@ -28,7 +33,7 @@ from typing import Any
 
 from agent_bom.core.settings import env_raw
 
-READ_CACHE_TTL_SECONDS = 60.0
+READ_CACHE_TTL_SECONDS = 900.0
 READ_CACHE_MAX_ENTRIES = 64
 
 _Key = tuple[str, str, Hashable]

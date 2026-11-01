@@ -11,6 +11,7 @@ import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
+from agent_bom.api.exec_read_prewarm import schedule_exec_prewarm
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.demo_estate.presentation import EnterpriseDemoStory, build_enterprise_demo_story
 from agent_bom.rbac import require_authenticated_permission
@@ -147,6 +148,8 @@ def prewarm_demo_story() -> bool:
     if not _demo_estate_enabled():
         return False
     _cached_demo_story(SHOWCASE_TENANT)
+    # The seed just moved the evidence generation: warm the exec reads before the first page view.
+    schedule_exec_prewarm(SHOWCASE_TENANT)
     return _peek_demo_story(SHOWCASE_TENANT) is not None
 
 

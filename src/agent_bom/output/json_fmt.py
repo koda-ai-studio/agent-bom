@@ -81,7 +81,7 @@ from agent_bom.output.json_sections import _package_occurrence_to_dict, _severit
 from agent_bom.output.json_writer import write_json_document, write_json_file
 from agent_bom.output.possibly_affected import json_section as possibly_affected_json
 from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
-from agent_bom.output.vulnerability_counts import vulnerability_counts
+from agent_bom.output.vulnerability_counts import report_summary
 from agent_bom.redaction.payload import StreamingRedaction
 from agent_bom.redaction.report_paths import prepare_iac_path_redaction
 from agent_bom.security import (
@@ -730,20 +730,12 @@ def to_json(report: AIBOMReport) -> dict:
             **ai_bom_entities,
         },
         "packages": ai_bom_entities.get("packages", []),
-        "summary": {
-            "total_agents": report.total_agents,
-            "installed_unconfigured_agents": len(report.agents) - report.total_agents,
-            "total_mcp_servers": report.total_servers,
-            "total_packages": report.total_packages,
-            "unique_packages": len(ai_bom_entities.get("packages", [])),
-            **vulnerability_counts(report),
-            "critical_findings": len(report.critical_vulns),
-            "total_findings": finding_summary["total"],
-            "unique_assets": len(asset_inventory),
-            "critical_unified_findings": finding_summary["by_severity"]["critical"],
-            "high_unified_findings": finding_summary["by_severity"]["high"],
-            "coverage_warnings": list(report.coverage_warnings),
-        },
+        "summary": report_summary(
+            report,
+            unique_packages=len(ai_bom_entities.get("packages", [])),
+            finding_summary=finding_summary,
+            unique_assets=len(asset_inventory),
+        ),
         "finding_summary": finding_summary,
         "assets": asset_inventory,
         "coverage_warnings": list(report.coverage_warnings),

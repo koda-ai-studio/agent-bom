@@ -224,7 +224,7 @@ agent-bom findings push ./trivy.json \
   --source trivy
 
 # Full local scan depth from an external report (no control plane required)
-agent-bom agents --external-scan ./findings.sarif -f json -o report.json  # imports; does not execute Semgrep
+agent-bom agents --external-scan ./findings.sarif -f json -o report.json  # imports; does not execute any SAST producer
 agent-bom agents --external-scan ./trivy.json -f json -o report.json
 
 # List findings back from the control plane (lifecycle columns when present)
@@ -243,7 +243,7 @@ compliance, exports) and merges with discovered MCP context; use it for CI gates
 and air-gap reports. Tool-agnostic SARIF from any conforming producer is
 auto-detected on both paths (#3585).
 
-**VM / registry matrix:** scan with Trivy (`trivy rootfs` or `trivy image`), then
+**VM / registry matrix:** scan with an external image scanner (`trivy rootfs` or `trivy image` output), then
 either `--external-scan` for local depth or `findings push` for control-plane
 queue. Registry sweeps: `agent-bom cloud registry-scan --provider ecr --region …`.
 

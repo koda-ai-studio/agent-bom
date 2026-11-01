@@ -67,7 +67,30 @@ CANONICAL_TAGLINE_SURFACES: list[Path] = [
     DOCKER_README,
     SITE_INDEX,
     ROOT / "docs" / "ARCHITECTURE.md",
+    TOP_DOCKERFILE,
+    ROOT / "action.yml",
+    ROOT / "deploy" / "helm" / "agent-bom" / "Chart.yaml",
+    ROOT / "integrations" / "cortex-code" / "SKILL.md",
+    ROOT / "integrations" / "openclaw" / "SKILL.md",
+    ROOT / "integrations" / "docker-mcp-registry" / "server.yaml",
+    ROOT / "integrations" / "smithery.yaml",
+    GLAMA_SERVER,
+    ROOT / "src" / "agent_bom" / "output" / "brand_tokens.py",
 ]
+# Pre-rebrand copy that must not reappear on any public surface (regex, case-insensitive).
+STALE_TAGLINE_RE = re.compile(
+    r"open security scanner|security scanner (?:and graph )?for (?:AI|agentic) infrastructure|Discover\. Scan\. Correlate\. Act",
+    re.IGNORECASE,
+)
+STALE_TAGLINE_SURFACES: list[Path] = [
+    *CANONICAL_TAGLINE_SURFACES,
+    ROOT / "src" / "agent_bom" / "__main__.py",
+    ROOT / "src" / "agent_bom" / "cli" / "__init__.py",
+    ROOT / "integrations" / "mcp-registry" / "server.json",
+    ROOT / "docs" / "images" / "social-preview.source.svg",
+]
+# registry.modelcontextprotocol.io rejects server.json descriptions over 100 chars (HTTP 422).
+MCP_REGISTRY_DESCRIPTION_MAX = 100
 MANAGED_IMAGE_REFS: list[tuple[Path, re.Pattern[str]]] = [
     (ROOT / "deploy" / "docker-compose.pilot.yml", re.compile(r"agentbom/agent-bom(?:-ui)?:([0-9]+\.[0-9]+\.[0-9]+)")),
     (ROOT / "deploy" / "docker-compose.runtime-example.yml", re.compile(r"agentbom/agent-bom(?:-ui)?:([0-9]+\.[0-9]+\.[0-9]+)")),
@@ -300,9 +323,25 @@ def _assert_versions(path: Path, pattern: re.Pattern[str], expected: str, label:
 def _assert_canonical_tagline(description: str) -> None:
     if description != CANONICAL_TAGLINE:
         _fail(f"pyproject.toml description must match the canonical tagline: {CANONICAL_TAGLINE!r}")
+    # Python constants and YAML folded scalars carry the tagline without the trailing period.
+    tagline_body = CANONICAL_TAGLINE.rstrip(".")
     for path in CANONICAL_TAGLINE_SURFACES:
-        if CANONICAL_TAGLINE not in path.read_text():
+        if tagline_body not in path.read_text():
             _fail(f"{path.relative_to(ROOT)} is missing the canonical tagline: {CANONICAL_TAGLINE!r}")
+    for path in STALE_TAGLINE_SURFACES:
+        match = STALE_TAGLINE_RE.search(path.read_text())
+        if match:
+            _fail(f"{path.relative_to(ROOT)} carries pre-rebrand copy {match.group(0)!r}; use the canonical tagline")
+
+
+def _assert_mcp_registry_description_length() -> None:
+    manifest = json.loads((ROOT / "integrations" / "mcp-registry" / "server.json").read_text())
+    length = len(str(manifest.get("description", "")))
+    if length > MCP_REGISTRY_DESCRIPTION_MAX:
+        _fail(
+            f"integrations/mcp-registry/server.json description is {length} chars; "
+            f"the MCP registry rejects more than {MCP_REGISTRY_DESCRIPTION_MAX}"
+        )
 
 
 def _requires_published_storefront(_version: str, environment: dict[str, str] | None = None) -> bool:
@@ -517,6 +556,7 @@ def main() -> int:
     demo_tape = DEMO_TAPE.read_text()
 
     _assert_canonical_tagline(description)
+    _assert_mcp_registry_description_length()
 
     required_github_markers = [
         "img.shields.io/github/actions/workflow/status",

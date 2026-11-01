@@ -74,6 +74,31 @@
       },
       {
         "activity_id": 1,
+        "canonical_id": "dbd66e92-63e7-5514-836a-bb131b55f743",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-12T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-ff00fe84bc01:cursor:cloud:dev-workstation",
+        "last_seen": "2026-10-12T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-ff00fe84bc01:cursor",
+        "source_id": "agent:cfg-ff00fe84bc01:cursor",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:dev-workstation",
+        "target_id": "cloud:dev-workstation",
+        "traversable": false,
+        "valid_from": "2026-10-12T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
         "canonical_id": "c3790fe2-3135-53b2-b8d0-6da062d173ea",
         "confidence": 1.0,
         "direction": "directed",
@@ -92,6 +117,31 @@
         "source_scan_id": "",
         "target": "agent:cfg-a598d2b8e8dc:langchain-service",
         "target_id": "agent:cfg-a598d2b8e8dc:langchain-service",
+        "traversable": false,
+        "valid_from": "2026-10-12T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "8c20bed7-a976-579e-9671-7bba47bd6120",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-12T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-a598d2b8e8dc:langchain-service:cloud:agent-runtime",
+        "last_seen": "2026-10-12T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-a598d2b8e8dc:langchain-service",
+        "source_id": "agent:cfg-a598d2b8e8dc:langchain-service",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:agent-runtime",
+        "target_id": "cloud:agent-runtime",
         "traversable": false,
         "valid_from": "2026-10-12T02:00:00+00:00",
         "valid_to": null,
@@ -124,6 +174,31 @@
       },
       {
         "activity_id": 1,
+        "canonical_id": "247f336c-a986-5006-a555-6b4d6eab5443",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-12T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-969bf9f86941:support-copilot:cloud:agent-runtime",
+        "last_seen": "2026-10-12T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-969bf9f86941:support-copilot",
+        "source_id": "agent:cfg-969bf9f86941:support-copilot",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:agent-runtime",
+        "target_id": "cloud:agent-runtime",
+        "traversable": false,
+        "valid_from": "2026-10-12T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
         "canonical_id": "1146b118-2b9e-51f4-8e51-5a8b09578dc0",
         "confidence": 1.0,
         "direction": "directed",
@@ -149,6 +224,31 @@
       },
       {
         "activity_id": 1,
+        "canonical_id": "1d0418e6-041d-5bcc-b1ab-51125a107a71",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-12T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-b5c905af77f2:data-pipeline:cloud:agent-runtime",
+        "last_seen": "2026-10-12T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-b5c905af77f2:data-pipeline",
+        "source_id": "agent:cfg-b5c905af77f2:data-pipeline",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:agent-runtime",
+        "target_id": "cloud:agent-runtime",
+        "traversable": false,
+        "valid_from": "2026-10-12T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
         "canonical_id": "75568c44-f102-501a-8e34-3b9d6185dc05",
         "confidence": 1.0,
         "direction": "directed",
@@ -167,6 +267,31 @@
         "source_scan_id": "",
         "target": "agent:cfg-8642530c7237:claude-desktop",
         "target_id": "agent:cfg-8642530c7237:claude-desktop",
+        "traversable": false,
+        "valid_from": "2026-10-12T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "19eb58f4-a009-5fd8-b0ed-7f521c897638",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-12T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-8642530c7237:claude-desktop:cloud:dev-workstation",
+        "last_seen": "2026-10-12T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-8642530c7237:claude-desktop",
+        "source_id": "agent:cfg-8642530c7237:claude-desktop",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:dev-workstation",
+        "target_id": "cloud:dev-workstation",
         "traversable": false,
         "valid_from": "2026-10-12T02:00:00+00:00",
         "valid_to": null,
@@ -4552,6 +4677,81 @@
       },
       {
         "attributes": {
+          "fictional": true,
+          "resource_type": "endpoint"
+        },
+        "canonical_id": "d25c5a62-6fad-50ab-999e-f1dd1753bb3f",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "cloud_resource",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-12T02:00:00+00:00",
+          "last_seen": "2026-10-12T02:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-12T02:00:00+00:00",
+        "id": "cloud:dev-workstation",
+        "label": "dev-workstation-01 (macOS endpoint)",
+        "last_seen": "2026-10-12T02:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "fictional": true,
+          "resource_type": "eks_deployment"
+        },
+        "canonical_id": "1e06d941-15dd-50b3-9e1f-592a36804b5d",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "cloud_resource",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-12T02:00:00+00:00",
+          "last_seen": "2026-10-12T02:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-12T02:00:00+00:00",
+        "id": "cloud:agent-runtime",
+        "label": "agent-runtime (EKS deployment)",
+        "last_seen": "2026-10-12T02:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "agent_type": "cursor",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -4593,6 +4793,7 @@
       },
       {
         "attributes": {
+          "agent_type": "langchain",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -4634,6 +4835,7 @@
       },
       {
         "attributes": {
+          "agent_type": "custom",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -4675,6 +4877,7 @@
       },
       {
         "attributes": {
+          "agent_type": "custom",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -4716,6 +4919,7 @@
       },
       {
         "attributes": {
+          "agent_type": "claude-desktop",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -9533,7 +9737,7 @@
       "node_types": {
         "account": 1,
         "agent": 5,
-        "cloud_resource": 4,
+        "cloud_resource": 6,
         "credential": 15,
         "data_store": 3,
         "drift_incident": 2,
@@ -9565,6 +9769,7 @@
         "exposed_to": 1,
         "exposes_cred": 15,
         "has_permission": 10,
+        "hosted_on": 5,
         "invoked": 3,
         "platform_for": 5,
         "provides_tool": 27,
@@ -9579,9 +9784,9 @@
         "high": 11,
         "medium": 5
       },
-      "total_edges": 167,
-      "total_nodes": 121,
-      "total_nodes_source": 121
+      "total_edges": 172,
+      "total_nodes": 123,
+      "total_nodes_source": 123
     },
     "tenant_id": "tenant-a"
   },
@@ -9660,6 +9865,31 @@
       },
       {
         "activity_id": 1,
+        "canonical_id": "dbd66e92-63e7-5514-836a-bb131b55f743",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-ff00fe84bc01:cursor:cloud:dev-workstation",
+        "last_seen": "2026-10-19T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-ff00fe84bc01:cursor",
+        "source_id": "agent:cfg-ff00fe84bc01:cursor",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:dev-workstation",
+        "target_id": "cloud:dev-workstation",
+        "traversable": false,
+        "valid_from": "2026-10-19T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
         "canonical_id": "c3790fe2-3135-53b2-b8d0-6da062d173ea",
         "confidence": 1.0,
         "direction": "directed",
@@ -9678,6 +9908,31 @@
         "source_scan_id": "",
         "target": "agent:cfg-a598d2b8e8dc:langchain-service",
         "target_id": "agent:cfg-a598d2b8e8dc:langchain-service",
+        "traversable": false,
+        "valid_from": "2026-10-19T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "8c20bed7-a976-579e-9671-7bba47bd6120",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-a598d2b8e8dc:langchain-service:cloud:agent-runtime",
+        "last_seen": "2026-10-19T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-a598d2b8e8dc:langchain-service",
+        "source_id": "agent:cfg-a598d2b8e8dc:langchain-service",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:agent-runtime",
+        "target_id": "cloud:agent-runtime",
         "traversable": false,
         "valid_from": "2026-10-19T02:00:00+00:00",
         "valid_to": null,
@@ -9710,6 +9965,31 @@
       },
       {
         "activity_id": 1,
+        "canonical_id": "247f336c-a986-5006-a555-6b4d6eab5443",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-969bf9f86941:support-copilot:cloud:agent-runtime",
+        "last_seen": "2026-10-19T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-969bf9f86941:support-copilot",
+        "source_id": "agent:cfg-969bf9f86941:support-copilot",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:agent-runtime",
+        "target_id": "cloud:agent-runtime",
+        "traversable": false,
+        "valid_from": "2026-10-19T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
         "canonical_id": "1146b118-2b9e-51f4-8e51-5a8b09578dc0",
         "confidence": 1.0,
         "direction": "directed",
@@ -9735,6 +10015,31 @@
       },
       {
         "activity_id": 1,
+        "canonical_id": "1d0418e6-041d-5bcc-b1ab-51125a107a71",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-b5c905af77f2:data-pipeline:cloud:agent-runtime",
+        "last_seen": "2026-10-19T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-b5c905af77f2:data-pipeline",
+        "source_id": "agent:cfg-b5c905af77f2:data-pipeline",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:agent-runtime",
+        "target_id": "cloud:agent-runtime",
+        "traversable": false,
+        "valid_from": "2026-10-19T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
         "canonical_id": "75568c44-f102-501a-8e34-3b9d6185dc05",
         "confidence": 1.0,
         "direction": "directed",
@@ -9753,6 +10058,31 @@
         "source_scan_id": "",
         "target": "agent:cfg-8642530c7237:claude-desktop",
         "target_id": "agent:cfg-8642530c7237:claude-desktop",
+        "traversable": false,
+        "valid_from": "2026-10-19T02:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "19eb58f4-a009-5fd8-b0ed-7f521c897638",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T02:00:00+00:00",
+        "id": "hosted_on:agent:cfg-8642530c7237:claude-desktop:cloud:dev-workstation",
+        "last_seen": "2026-10-19T02:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosted_on",
+        "source": "agent:cfg-8642530c7237:claude-desktop",
+        "source_id": "agent:cfg-8642530c7237:claude-desktop",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud:dev-workstation",
+        "target_id": "cloud:dev-workstation",
         "traversable": false,
         "valid_from": "2026-10-19T02:00:00+00:00",
         "valid_to": null,
@@ -14398,6 +14728,81 @@
       },
       {
         "attributes": {
+          "fictional": true,
+          "resource_type": "endpoint"
+        },
+        "canonical_id": "d25c5a62-6fad-50ab-999e-f1dd1753bb3f",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "cloud_resource",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T02:00:00+00:00",
+          "last_seen": "2026-10-19T02:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T02:00:00+00:00",
+        "id": "cloud:dev-workstation",
+        "label": "dev-workstation-01 (macOS endpoint)",
+        "last_seen": "2026-10-19T02:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "fictional": true,
+          "resource_type": "eks_deployment"
+        },
+        "canonical_id": "1e06d941-15dd-50b3-9e1f-592a36804b5d",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "cloud_resource",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T02:00:00+00:00",
+          "last_seen": "2026-10-19T02:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T02:00:00+00:00",
+        "id": "cloud:agent-runtime",
+        "label": "agent-runtime (EKS deployment)",
+        "last_seen": "2026-10-19T02:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "agent_type": "cursor",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -14439,6 +14844,7 @@
       },
       {
         "attributes": {
+          "agent_type": "langchain",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -14480,6 +14886,7 @@
       },
       {
         "attributes": {
+          "agent_type": "custom",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -14521,6 +14928,7 @@
       },
       {
         "attributes": {
+          "agent_type": "custom",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -14562,6 +14970,7 @@
       },
       {
         "attributes": {
+          "agent_type": "claude-desktop",
           "environment": "production",
           "identity": {
             "aliases": [
@@ -19436,7 +19845,7 @@
       "node_types": {
         "account": 1,
         "agent": 5,
-        "cloud_resource": 4,
+        "cloud_resource": 6,
         "credential": 15,
         "data_store": 3,
         "drift_incident": 2,
@@ -19468,6 +19877,7 @@
         "exposed_to": 2,
         "exposes_cred": 15,
         "has_permission": 13,
+        "hosted_on": 5,
         "invoked": 3,
         "platform_for": 5,
         "provides_tool": 26,
@@ -19482,9 +19892,9 @@
         "high": 14,
         "medium": 6
       },
-      "total_edges": 174,
-      "total_nodes": 122,
-      "total_nodes_source": 122
+      "total_edges": 179,
+      "total_nodes": 124,
+      "total_nodes_source": 124
     },
     "tenant_id": "tenant-a"
   }

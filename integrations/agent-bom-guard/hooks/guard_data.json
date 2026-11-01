@@ -177,9 +177,13 @@
  },
  "known_legitimate": {
   "npm": [
+   "app",
    "bcryptjs",
+   "client",
    "expresso",
-   "preact"
+   "preact",
+   "server",
+   "web"
   ],
   "pypi": [
    "beautifulsoup",

@@ -19,6 +19,8 @@ from agent_bom.db.schema import init_db, open_existing_db_readonly
 from agent_bom.db.sync import sync_db
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.scanners.advisory_affected import (
+    AFFECTED_COUNT_BASIS,
+    AFFECTED_COUNT_BASIS_NOTE,
     AffectedCursorError,
     affected_answer,
     feed_advisory_from_db,
@@ -55,6 +57,8 @@ def test_php2shell_answer_per_asset() -> None:
         "clean_scanned": 1,
         "assets_examined": 3,
         "reports_examined": 3,
+        "count_basis": AFFECTED_COUNT_BASIS,
+        "count_basis_note": AFFECTED_COUNT_BASIS_NOTE,
     }
     assert answer["complete"] is True
     assert _brief(answer["rows"]) == [

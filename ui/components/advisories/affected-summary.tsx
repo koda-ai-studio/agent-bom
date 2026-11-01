@@ -40,6 +40,7 @@ export function AffectedSummaryTiles({ answer }: { answer: AdvisoryAffectedRespo
         <li><StatCard label="Clean scanned" value={summary.clean_scanned} /></li>
       </ul>
       <p className="text-xs text-ink-tertiary">{plural(summary.assets_examined, "asset")} · {plural(summary.reports_examined, "scan report")} examined</p>
+      {summary.count_basis_note ? <p className="text-xs text-ink-tertiary">{summary.count_basis_note}</p> : null}
     </div>
   );
 }

@@ -13,7 +13,7 @@ Example (`alpine:3.14` tarball, 14 apk packages extracted):
 | Scanner | Vulns reported |
 | --- | ---: |
 | agent-bom (pre-fix, stale DB) | 2 |
-| Reference scanner (Grype) | 37 |
+| Reference scanner | 37 |
 
 This is a **P1 accuracy** issue for security buyers evaluating container scanning.
 
@@ -69,7 +69,7 @@ pytest tests/test_doc_architecture_svgs.py -q
 ## Acceptance criteria
 
 1. `alpine:3.14` tarball scan reports **materially more** than 2 vulnerabilities after
-   `db update` on a fresh install (target: within ~20% of Grype on the same tar, acknowledging
+   `db update` on a fresh install (target: within ~20% of the reference scanner on the same tar, acknowledging
    EOL distro variance).
 2. `agent-bom db update` ingests secdb rows for `alpine:v3.14` (verify with
    `sqlite3 ~/.agent-bom/vulns.db "select count(*) from affected where ecosystem='alpine:v3.14'"`).

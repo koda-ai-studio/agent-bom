@@ -172,6 +172,16 @@ def _redact_nested_secrets(value):
     return value
 
 
+def _encode_push_payload(sanitized: Any) -> tuple[bytes, dict[str, str]]:
+    """Serialize a push body once; gzip it (default) and return the matching headers."""
+    from agent_bom.config import PUSH_GZIP
+
+    payload = json.dumps(sanitized, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+    if not PUSH_GZIP:
+        return payload, {}
+    return gzip.compress(payload, compresslevel=1, mtime=0), {"Content-Encoding": "gzip"}
+
+
 def _push_tls_cert() -> str | tuple[str, str] | None:
     cert_file = env_str("AGENT_BOM_PUSH_TLS_CERT_FILE")
     key_file = env_str("AGENT_BOM_PUSH_TLS_KEY_FILE")
@@ -265,17 +275,11 @@ async def _push_async(
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    from agent_bom.config import PUSH_GZIP
-
-    def encode_payload() -> bytes:
-        payload = json.dumps(sanitized, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
-        return gzip.compress(payload, compresslevel=1, mtime=0) if PUSH_GZIP else payload
-
     # Serialize once and reuse exactly the same bytes and idempotency identity
-    # for every retry. Opt-in compression preserves older receiver compatibility.
-    payload = await asyncio.to_thread(encode_payload)
-    if PUSH_GZIP:
-        headers["Content-Encoding"] = "gzip"
+    # for every retry. Compression is on by default; AGENT_BOM_PUSH_GZIP=0 keeps
+    # a receiver that predates gzip push support working.
+    payload, encoding_headers = await asyncio.to_thread(_encode_push_payload, sanitized)
+    headers.update(encoding_headers)
 
     retryable_status = {408, 425, 429, 500, 502, 503, 504}
     last_status: int | None = None

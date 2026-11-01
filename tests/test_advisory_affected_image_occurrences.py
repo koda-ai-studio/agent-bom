@@ -16,7 +16,13 @@ from typing import Any
 import pytest
 
 from agent_bom.db.schema import init_db
-from agent_bom.scanners.advisory_affected import affected_answer, feed_advisory_from_db, stored_findings_answer
+from agent_bom.scanners.advisory_affected import (
+    AFFECTED_COUNT_BASIS,
+    AFFECTED_COUNT_BASIS_NOTE,
+    affected_answer,
+    feed_advisory_from_db,
+    stored_findings_answer,
+)
 from agent_bom.scanners.operator_advisory import OperatorAdvisory, iter_report_packages
 
 _IMAGE_NODE = "pkg:pypi:pillow@9.0.0:image:136d3d0d913e"
@@ -120,6 +126,8 @@ def test_affected_answer_covers_image_occurrences_with_asset_type_and_node_id() 
         "clean_scanned": 1,
         "assets_examined": 3,
         "reports_examined": 1,
+        "count_basis": AFFECTED_COUNT_BASIS,
+        "count_basis_note": AFFECTED_COUNT_BASIS_NOTE,
     }
     assert answer["coverage"] == {"agent_packages": 1, "standalone_packages": 2, "unexamined_sections": []}
     assert answer["complete"] is True
