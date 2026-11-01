@@ -144,6 +144,7 @@ def _remove(path: Path) -> bool:
     try:
         path.unlink()
     except FileNotFoundError:
+        # Another sweep or the store already removed it; absence is the goal.
         pass
     except OSError:
         logger.debug("projection cache sweep could not remove a stale file")

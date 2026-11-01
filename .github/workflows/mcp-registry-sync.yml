@@ -200,6 +200,7 @@ jobs:
       - name: Check whether Actions may open pull requests
         id: pr_policy
         if: (steps.count.outputs.new_count != '0' || steps.count.outputs.corrected_count != '0' || steps.count.outputs.version_count != '0' || steps.count.outputs.cve_count != '0') && steps.signing.outputs.configured == 'true'
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
