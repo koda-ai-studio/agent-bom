@@ -17,8 +17,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `/compliance?framework=iso-27001` (and other API/finding slugs) resolves to the matching framework section; selecting a framework writes its slug back into the address bar.
 - An anonymous reader of the seeded demo estate is labelled "Demo visitor / Read-only demo" instead of "Unauthenticated access".
 - A Postgres URL in `AGENT_BOM_DB` is accepted at boot as the alias of `AGENT_BOM_POSTGRES_URL`, matching every other selector; SQLite store openers still refuse it with a message that names both variables. `docs/DEPLOY_PLATFORM.md` gains the Postgres-without-Compose/Helm checklist.
-- CLI pushes are gzip-compressed by default (`AGENT_BOM_PUSH_GZIP=0` for an older receiver); the decoded push budget is 256 MiB (the measured 10k-package report is 154 MB) and gzip bodies past a 100:1 expansion are refused as decompression bombs; every push 413 says how to split the scan.
-- The exec read cache is generation-driven with a 15-minute safety TTL, so idle dashboards no longer rebuild counts, compliance, fix-first and the brief every minute.
+- CLI pushes are gzip-compressed by default; the decoded push budget is 256 MiB (the measured 10k-package report is 154 MB) and gzip bodies past a 100:1 expansion are refused as decompression bombs; every push 413 says how to split the scan.
+  - **Upgrade note:** a control plane older than 2026-09-10 (before gzip push decoding, #5193) rejects compressed pushes; set `AGENT_BOM_PUSH_GZIP=0` on collectors that still push to one.
+- The exec read cache is generation-driven with a 15-minute safety TTL, and the four exec reads (counts, compliance summary, fix-first, brief) are warmed in the background right after a demo seed or a results push, so a dashboard opened after either no longer pays the rebuild.
+- Advisory affected-asset rows carry `asset_display` (image ref/tag or server name, kind, owning agent, host) from the graph, the summary names its `count_basis`, and the read is cached per tenant and advisory under the evidence generation.
+- Every demo agent records its kind, the platform it rides and a fictional host it runs on, so the hero attack path no longer reads "Agent kind not recorded · Host not recorded".
 
 ## [0.112.1] - 2026-10-31
 

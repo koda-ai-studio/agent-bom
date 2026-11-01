@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from agent_bom.api.agent_identity_store import InMemoryAgentIdentityStore
 from agent_bom.demo_estate.compute_identity_lane import project_compute_lane
 from agent_bom.demo_estate.id_schemes import record_retired_showcase_ids, showcase_misconfig_id
+from agent_bom.demo_estate.showcase_agent_runtime import seed_showcase_agents
 from agent_bom.demo_estate.showcase_constants import _SHOWCASE_CURRENT_STAMP as _SHOWCASE_CURRENT_STAMP
 from agent_bom.demo_estate.showcase_constants import _SHOWCASE_CURRENT_TARGET as _SHOWCASE_CURRENT_TARGET
 from agent_bom.demo_estate.showcase_constants import _SHOWCASE_IMPORT_NOW as _SHOWCASE_IMPORT_NOW
@@ -112,9 +113,7 @@ def build_showcase_graph(
 
     provider = showcase_ids().provider
     node(provider, EntityType.PROVIDER, provider.removeprefix("provider:"), provider=provider.removeprefix("provider:"))
-    for aid, label in SHOWCASE_AGENTS.items():
-        node(showcase_agent_id(aid), EntityType.AGENT, label, environment="production")
-        edge(provider, showcase_agent_id(aid), RelationshipType.PLATFORM_FOR, traversable=False)
+    seed_showcase_agents(node, edge, provider)
 
     for sid, (owner, tools) in SHOWCASE_SERVERS.items():
         node(showcase_server_id(sid), EntityType.SERVER, sid)
