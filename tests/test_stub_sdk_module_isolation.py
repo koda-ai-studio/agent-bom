@@ -20,9 +20,61 @@ import sys
 import types
 from pathlib import Path
 
-from tests.conftest import _restore_stub_sdk_modules, _snapshot_stub_sdk_modules
+from tests.conftest import (
+    _evicted_agent_bom_submodules,
+    _restore_stub_sdk_modules,
+    _resync_agent_bom_submodules,
+    _snapshot_stub_sdk_modules,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _run_in_order(*node_ids: str) -> subprocess.CompletedProcess[str]:
+    """Run node ids in exactly this order in a fresh interpreter."""
+    return subprocess.run(
+        [sys.executable, "-m", "pytest", *node_ids, "-p", "no:randomly", "-p", "no:cacheprovider", "-q", "--no-header"],
+        cwd=_REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+
+
+def test_resync_reinstates_an_agent_bom_submodule_a_patch_dict_exit_evicted():
+    """A parent-package attribute without a ``sys.modules`` entry is put back, same object."""
+    import agent_bom.cloud as cloud_pkg
+    import agent_bom.cloud.databricks as databricks_mod
+
+    assert cloud_pkg.databricks is databricks_mod
+    del sys.modules["agent_bom.cloud.databricks"]
+    try:
+        assert _evicted_agent_bom_submodules() == {"agent_bom.cloud.databricks": databricks_mod}
+        assert _resync_agent_bom_submodules() == 1
+        assert sys.modules["agent_bom.cloud.databricks"] is databricks_mod
+        assert _evicted_agent_bom_submodules() == {}
+    finally:
+        sys.modules["agent_bom.cloud.databricks"] = databricks_mod
+
+
+def test_resync_leaves_consistent_modules_alone():
+    assert _evicted_agent_bom_submodules() == {}
+    assert _resync_agent_bom_submodules() == 0
+
+
+def test_databricks_connection_scan_survives_a_prior_patch_dict_eviction():
+    """The exact CI ordering that failed: the evicting test first, the patching test second.
+
+    ``test_databricks_missing_sdk`` imports ``agent_bom.cloud.databricks`` inside a
+    ``patch.dict(sys.modules)`` block, which evicts it on exit; the connection
+    workflow test then patched the stale package attribute while the runner
+    imported a fresh module and called the real ``discover``.
+    """
+    result = _run_in_order(
+        "tests/cloud/test_cloud.py::test_databricks_missing_sdk",
+        "tests/test_databricks_connection_workflow.py::test_connection_scan_uses_scoped_client_and_marks_partial",
+    )
+    assert result.returncode == 0, f"evicted module split the patch target:\n{result.stdout}\n{result.stderr}"
 
 
 def test_snapshot_restore_drops_stub_modules_a_test_added():

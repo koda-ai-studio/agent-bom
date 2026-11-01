@@ -42,7 +42,7 @@ from agent_bom.graph import UnifiedGraph
 from agent_bom.graph.adjacency_page import CURRENT_ESTATE_SCAN_PREFIX
 from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuses
-from agent_bom.storage.state_home import state_dir
+from agent_bom.storage.projection_cache import cache_path_for, postgres_locator, sqlite_locator, sweep_sibling_projections
 
 CURRENT_PREFIX = CURRENT_ESTATE_SCAN_PREFIX
 _PROJECTION_FORMAT = 3
@@ -126,10 +126,8 @@ def _digest(value: Any) -> str:
 
 def _durable_locator(graph_store: Any) -> str:
     if isinstance(graph_store, SQLiteGraphStore):
-        return "sqlite:" + str(Path(graph_store._db_path).expanduser().resolve())
-    if type(graph_store).__module__ == "agent_bom.api.postgres_graph":
-        return "postgres:" + (env_raw("AGENT_BOM_POSTGRES_URL") or env_raw("AGENT_BOM_DB") or "").strip()
-    return ""
+        return sqlite_locator(graph_store._db_path)
+    return postgres_locator() if type(graph_store).__module__ == "agent_bom.api.postgres_graph" else ""
 
 
 def _durable_cache_path(graph_store: Any) -> Path | None:
@@ -137,11 +135,10 @@ def _durable_cache_path(graph_store: Any) -> Path | None:
     locator = _durable_locator(graph_store)
     if not locator:
         return None
-    directory = state_dir() / "current-estate-cache"
-    path = directory / f"{_digest(locator)[:24]}.db"
+    path = cache_path_for(locator)
     try:
-        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
-        os.chmod(directory, 0o700)
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        os.chmod(path.parent, 0o700)
         os.close(os.open(path, os.O_CREAT | os.O_RDWR, 0o600))
         os.chmod(path, 0o600)
     except OSError:
@@ -188,6 +185,8 @@ class CurrentGraphStore:
         if durable is None:
             self._cache_directory = TemporaryDirectory(prefix="agent-bom-current-")
             durable = Path(self._cache_directory.name) / "projection.db"
+        else:
+            sweep_sibling_projections(durable)
         self._cache_path = str(durable)
         self._projection_store = SQLiteGraphStore(self._cache_path)
         self._lock = _ProjectionLock()

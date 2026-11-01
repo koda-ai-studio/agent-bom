@@ -74,11 +74,6 @@ def test_persist_phase_rebuilds_with_no_prior_current_graph_alive(tmp_path, monk
 
     import agent_bom.graph.builder as builder
 
-    # The scan lazily imports blast_reach, which binds its builder at module
-    # scope. Load that consumer before patching so it cannot retain _tracking
-    # after monkeypatch restores the builder module for subsequent tests.
-    from agent_bom.graph import blast_reach
-
     real_build = builder.build_unified_graph_from_report
     refs: list[weakref.ref] = []
     alive_before_each_build: list[int] = []
@@ -106,5 +101,9 @@ def test_persist_phase_rebuilds_with_no_prior_current_graph_alive(tmp_path, monk
     # The scan actually persisted its snapshot.
     assert store.latest_snapshot_id(tenant_id="default") == job.job_id
 
-    # A late import must not retain this test's tracking wrapper after teardown.
-    assert blast_reach.build_unified_graph_from_report is real_build
+    # Consumers resolve the builder through its module, so a wrapper installed
+    # by any test (this one included) can never be captured by a late import.
+    from agent_bom.graph import blast_reach
+
+    assert not hasattr(blast_reach, "build_unified_graph_from_report")
+    assert blast_reach._builder is builder

@@ -51,6 +51,11 @@ The status response reports whether the demo graph is the synthetic `showcase`
 already holds non-demo graph data. A blocked demo seeds nothing and never
 names or links that data.
 
+Local SQLite state under either directory is bounded: the current-estate
+projection cache is swept on store construction and the scan analytics mirror
+is pruned on write. See [Local state hygiene](STORAGE_BACKENDS.md#local-state-hygiene)
+for the rules, `agent-bom db prune`, and `agent-bom report prune --apply --compact`.
+
 ### Confirm storage readiness
 
 ```bash

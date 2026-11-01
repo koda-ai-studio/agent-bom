@@ -276,3 +276,41 @@ delivery): that revision raises instead of dropping `gateway_audit_outbox`, so
 queued audit evidence is never discarded by a rollback. Rolling back further
 needs the queue drained and the pre-upgrade backup restored with the matching
 application version.
+
+## Local state hygiene
+
+Two local SQLite files grow with every scan and are bounded on write; both
+live under the state directory (`AGENT_BOM_STATE_DIR`, default `~/.agent-bom`,
+or the demo directory when demo estate mode is on).
+
+**Current-estate projection cache** (`<state dir>/current-estate-cache/*.db`):
+one rebuildable projection per backing store (SQLite path or Postgres URL).
+Whenever a current-estate store is constructed — API boot and every fresh
+store — the directory is swept: the newest `8` files by last use always stay
+(one process holds at most eight live stores), anything beyond them or unused
+for more than `AGENT_BOM_CURRENT_ESTATE_CACHE_MAX_AGE_DAYS` (default `14`,
+`<= 0` disables the age rule) is removed with its `-wal`/`-shm` siblings, and
+the projection the process is about to use is never touched. Preview or apply
+the same sweep by hand:
+
+```bash
+agent-bom db prune            # dry run: each candidate with size and age
+agent-bom db prune --yes      # delete them
+```
+
+**Scan analytics mirror** (`<state dir>/local-analytics.sqlite`): every CLI
+scan appends whole runs. On each write the oldest runs are dropped while any
+cap is exceeded — `AGENT_BOM_ANALYTICS_MAX_EVENTS` / `_MAX_FINDINGS` /
+`_MAX_PACKAGES` row caps, `AGENT_BOM_ANALYTICS_MAX_RUN_AGE_DAYS` (default `90`)
+and `AGENT_BOM_ANALYTICS_MAX_BYTES` live bytes (default 2 GiB); the newest run
+is always kept and `<= 0` disables a cap. A database created by this version
+is in SQLite incremental auto-vacuum mode, so pruned pages are returned to the
+OS on the same write. A file created by an earlier version keeps its freelist
+until it is compacted once; `agent-bom report storage` shows `free bytes` and
+says when free pages dominate, and
+
+```bash
+agent-bom report prune --apply --compact
+```
+
+runs `VACUUM`, after which the file also releases pages on every prune.
