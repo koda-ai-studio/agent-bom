@@ -16,6 +16,11 @@ from agent_bom.db.sync_parsing import _parse_osv_entry as _parse_osv_entry
 _logger = logging.getLogger("agent_bom.db.sync")
 
 
+def _normalize_sync_cvss_score(value: Any) -> float | None:
+    """Preserve the sync entry point while using canonical score validation."""
+    return normalize_cvss_score(value)
+
+
 def _validate_sync_url(url: str, param_name: str = "url") -> None:
     """Reject non-HTTPS URLs for sync sources.
 
