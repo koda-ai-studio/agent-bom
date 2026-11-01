@@ -64,9 +64,10 @@ def test_gcp_cis_report_surfaces_errored_checks() -> None:
 def test_print_benchmark_line_includes_errored_count(capsys) -> None:
     from rich.console import Console
 
-    con = Console(file=open("/dev/null", "w"), force_terminal=True, width=120)
-    # Rich still renders; capture via record=True pattern is heavy — assert callable accepts errored.
-    print_benchmark_line(con, "CIS AWS", total=10, passed=3, failed=1, pass_rate=75.0, errored=6)
+    with open("/dev/null", "w") as stream:
+        con = Console(file=stream, force_terminal=True, width=120)
+        # Rich still renders; assert callable accepts errored.
+        print_benchmark_line(con, "CIS AWS", total=10, passed=3, failed=1, pass_rate=75.0, errored=6)
 
 
 def test_discover_lambda_attaches_packages_for_ai_runtime() -> None:

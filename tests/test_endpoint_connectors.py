@@ -90,7 +90,8 @@ def test_jamf_atomic_resume_after_restart_and_encrypted_secret(store, monkeypatc
     mock_client(monkeypatch, handler)
     failed = service.sync_connection(store, "tenant-a", conn.id, SyncRequest())
     assert (failed.status, failed.device_count, failed.cursor, failed.gap) == ("partial", 1, "1", "permission_denied")
-    assert SECRET not in open(store.path, "rb").read().decode(errors="ignore")
+    with open(store.path, "rb") as stream:
+        assert SECRET not in stream.read().decode(errors="ignore")
     fail = False
     restarted = EndpointStore(store.path)
     done = service.sync_connection(restarted, "tenant-a", conn.id, SyncRequest())

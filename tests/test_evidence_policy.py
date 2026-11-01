@@ -373,7 +373,8 @@ def test_proxy_audit_drops_tier_b_into_chain(tmp_path):
         )
     finally:
         log.close()
-    written = [json.loads(line) for line in open(log_path).read().splitlines()]
+    with open(log_path) as stream:
+        written = [json.loads(line) for line in stream.read().splitlines()]
     assert written, "no audit record written"
     record = written[0]
     for tb in ("args", "prompt", "url"):

@@ -264,7 +264,8 @@ def test_provider_imports_envelope_and_attach_helper(module_path, expected_mode)
     import importlib
 
     mod = importlib.import_module(module_path)
-    src = open(mod.__file__).read()  # noqa: SIM115
+    with open(mod.__file__) as stream:
+        src = stream.read()
     # Provider may use the helper or build the envelope inline; either way it
     # must reference the canonical type so the trust contract is auditable.
     assert "attach_envelope_to_agents" in src or "DiscoveryEnvelope(" in src, (

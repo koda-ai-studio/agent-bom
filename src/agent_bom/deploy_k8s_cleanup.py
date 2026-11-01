@@ -86,7 +86,8 @@ def _incluster_api_server() -> str:
 
 
 def _read_serviceaccount_file(path: str) -> str:
-    return open(path, encoding="utf-8").read().strip()
+    with open(path, encoding="utf-8") as stream:
+        return stream.read().strip()
 
 
 def _request(

@@ -22,7 +22,8 @@ def _walk(value):
 
 
 try:
-    data = json.load(open(path, encoding="utf-8"))
+    with open(path, encoding="utf-8") as stream:
+        data = json.load(stream)
     if isinstance(data, dict) and "runs" in data:
         run = data.get("runs", [{}])[0]
         rules = {rule.get("id"): rule for rule in run.get("tool", {}).get("driver", {}).get("rules", [])}

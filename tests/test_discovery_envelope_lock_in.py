@@ -419,7 +419,8 @@ def test_provider_table_covers_every_wired_provider() -> None:
         if full in exclusions:
             continue
         mod = importlib.import_module(full)
-        src = open(mod.__file__).read()  # noqa: SIM115
+        with open(mod.__file__) as stream:
+            src = stream.read()
         if "permissions_used=" in src:
             assert full in declared, (
                 f"{full} declares permissions_used but is missing from the PROVIDERS table in test_discovery_envelope_lock_in.py"
