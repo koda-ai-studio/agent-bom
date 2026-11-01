@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
+from agent_bom.core.cvss import normalize_cvss_score
 from agent_bom.db.sync_parsing import _parse_osv_entry as _parse_osv_entry
 
 _logger = logging.getLogger("agent_bom.db.sync")
