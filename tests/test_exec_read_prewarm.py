@@ -11,7 +11,8 @@ from agent_bom.api import exec_read_prewarm as prewarm
 
 
 @pytest.fixture(autouse=True)
-def _reset():
+def _reset(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AGENT_BOM_EXEC_PREWARM", "1")
     with prewarm._LOCK:
         prewarm._PENDING.clear()
         prewarm._WORKER = None

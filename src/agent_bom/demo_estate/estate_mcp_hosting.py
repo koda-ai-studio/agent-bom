@@ -23,9 +23,9 @@ PLACEMENT_SOURCE = "synthetic-demo-placement"
 _CONTAINER_HOSTS = frozenset({"aws", "azure", "gcp"})
 
 
-def _choose_workload(server: EstateAsset, workloads: Sequence[EstateAsset], *, any_cloud: bool = False) -> EstateAsset | None:
+def _choose_workload(server: EstateAsset, workloads: Sequence[EstateAsset]) -> EstateAsset | None:
     host = server.tags.get("host_provider", "")
-    same_cloud = [w for w in workloads if any_cloud or w.tags.get("host_provider") == host]
+    same_cloud = [w for w in workloads if w.tags.get("host_provider") == host]
     tiers = (
         [w for w in same_cloud if (w.account_scope, w.environment) == (server.account_scope, server.environment)],
         [w for w in same_cloud if w.account_scope == server.account_scope],
@@ -72,13 +72,14 @@ def place_mcp_servers_on_workloads(third_party: Sequence[EstateAsset], delivery:
 
 
 def place_agents_on_workloads(third_party: Sequence[EstateAsset], delivery: Sequence[EstateAsset]) -> tuple[EstateAsset, ...]:
-    """Return ``third_party`` with each cloud-hosted agent bound to one workload and typed by its framework.
+    """Return ``third_party`` with every agent typed by its framework and placed on a workload in its own account.
 
-    An agent without a deployment has no execution context: the graph could say
-    which platform it rides and which model it serves, but not where it runs or
-    what kind of agent it is. The same labelled synthetic placement the MCP
-    servers use gives every third-party agent a ``hosted_on`` workload in its
-    own cloud, and ``agent_type`` names the recorded framework (or ``service``).
+    ``agent_type`` names the recorded framework (or ``service``) for every
+    agent. The same labelled synthetic placement the MCP servers use binds an
+    agent to a ``hosted_on`` workload only inside the agent's own account: the
+    agent's principal lives there, so moving the agent across an account
+    boundary would draw an identity edge that does not exist. An agent whose
+    account holds no workload keeps an honest "host not recorded".
     """
     workloads = [asset for asset in delivery if asset.resource_type == "deployment"]
     placed: list[EstateAsset] = []
@@ -87,23 +88,12 @@ def place_agents_on_workloads(third_party: Sequence[EstateAsset], delivery: Sequ
             placed.append(asset)
             continue
         agent_type = asset.tags.get("agent_framework") or "service"
-        # An agent on a platform without estate workloads is re-homed to a cloud that has
-        # them, host provider included, so the recorded host is never in another cloud.
-        workload = _choose_workload(asset, workloads) or _choose_workload(asset, workloads, any_cloud=True)
+        own_account = [w for w in workloads if w.account_scope == asset.account_scope]
+        workload = _choose_workload(asset, own_account)
         if workload is None:
             placed.append(asset.model_copy(update={"tags": {**asset.tags, "agent_type": agent_type}}))
             continue
-        host_provider = workload.tags.get("host_provider", asset.tags.get("host_provider", ""))
-        placed.append(
-            _placed(
-                asset,
-                workload,
-                deployment=workload.asset_id,
-                placement_source=PLACEMENT_SOURCE,
-                agent_type=agent_type,
-                host_provider=host_provider,
-            )
-        )
+        placed.append(_placed(asset, workload, deployment=workload.asset_id, placement_source=PLACEMENT_SOURCE, agent_type=agent_type))
     return tuple(placed)
 
 

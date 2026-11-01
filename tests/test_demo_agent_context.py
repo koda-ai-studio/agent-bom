@@ -47,12 +47,19 @@ def test_every_showcase_agent_has_kind_host_and_platform() -> None:
             assert host.id.startswith("cloud:") and host.attributes.get("fictional") is True, host.id
 
 
-def test_every_third_party_estate_agent_runs_on_a_workload_in_its_own_cloud(estate) -> None:
+def test_third_party_estate_agents_are_typed_and_placed_only_inside_their_own_account(estate) -> None:
     by_id = {asset.asset_id: asset for asset in estate.assets}
     agents = [a for a in estate.assets if a.resource_type == "agent" and a.tags.get("ai_lane") == "third_party"]
     assert agents
+    placed = [a for a in agents if a.tags.get("deployment")]
+    # Most estate accounts hold no workloads; an agent there keeps an honest "host not recorded".
+    assert placed and len(placed) < len(agents)
     for agent in agents:
         assert agent.tags["agent_type"], agent.asset_id
+        identity = by_id.get(agent.tags.get("uses_identity", ""))
+        if identity is not None:
+            assert identity.account_scope == agent.account_scope, f"{agent.asset_id} was moved away from its own principal"
+    for agent in placed:
         workload = by_id[agent.tags["deployment"]]
         assert workload.resource_type == "deployment"
         assert workload.tags["host_provider"] == agent.tags["host_provider"]
@@ -61,10 +68,10 @@ def test_every_third_party_estate_agent_runs_on_a_workload_in_its_own_cloud(esta
         assert agent.tags["synthetic"] == "true"
 
 
-def test_estate_graph_agents_record_execution_and_kind(estate, estate_graph) -> None:
-    third_party = {a.asset_id for a in estate.assets if a.resource_type == "agent" and a.tags.get("ai_lane") == "third_party"}
-    for agent_id in third_party:
-        node = estate_graph.nodes[agent_id]
-        context = agent_context(estate_graph, node)
-        assert context["agent_kind"] != "unknown", agent_id
-        assert context["execution"]["status"] == "recorded", agent_id
+def test_estate_graph_agents_record_kind_and_execution_only_where_placed(estate, estate_graph) -> None:
+    third_party = [a for a in estate.assets if a.resource_type == "agent" and a.tags.get("ai_lane") == "third_party"]
+    for agent in third_party:
+        context = agent_context(estate_graph, estate_graph.nodes[agent.asset_id])
+        assert context["agent_kind"] != "unknown", agent.asset_id
+        expected = "recorded" if agent.tags.get("deployment") else "not_recorded"
+        assert context["execution"]["status"] == expected, agent.asset_id
