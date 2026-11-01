@@ -18,7 +18,7 @@ requires:
 
 Audit skill and instruction files with agent-bom. This skill is read-only: it reads the files, never runs anything they say, and changes nothing.
 
-1. Pick the target: the path the user named, otherwise the current project. Run `uvx --from agent-bom==0.111.0 agent-bom skills scan '<path>' -q -f json -o "$OUT/skills.json"`. It finds skill and instruction files under the path.
+1. Pick the target: the path the user named, otherwise the current project. Run `uvx --from agent-bom==0.112.1 agent-bom skills scan '<path>' -q -f json -o "$OUT/skills.json"`. It finds skill and instruction files under the path.
 2. Read `summary` (`files_scanned`, `malicious_files`, `suspicious_files`, `findings`) and, per entry in `files[]`, `path`, `status`, `trust` and `audit.findings[]` (`severity`, `category`, `title`, `source_line`, `recommendation`, `context`).
 3. Read each flagged file's frontmatter yourself and list its tool grants (`allowed-tools`, `tools`). Call out broad grants such as `Bash(*)`, unrestricted `Write`/`Edit`, or `WebFetch` combined with secret access. Label these as your own review, separate from agent-bom findings.
 4. Report per file, most severe first: the `status`, each finding's severity, category, title and line, and the recommendation agent-bom gives. Findings whose `context` is `possibly_documentation` were reduced in severity because the text reads like documentation; say so and ask the user to confirm rather than dismissing them.

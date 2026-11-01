@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agent-bom",
-  "version": "0.111.0",
+  "version": "0.112.1",
   "description": "Inventory and audit your AI estate from the shell: scan MCP servers, agents and packages for CVEs, supply-chain risk and exposed credentials; audit MCP configs and skills for injection and risky grants; check a package before you add it; plan fixes. Runs a pinned local CLI; read-only by default.",
   "author": {
     "name": "koda-ai-studio",

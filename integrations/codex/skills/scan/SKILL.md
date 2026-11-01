@@ -20,7 +20,7 @@ optional_bins:
 
 Run an agent-bom scan, then report what matters.
 
-1. Pick the target from the request and run `uvx --from agent-bom==0.111.0 agent-bom --agent-mode scan -q` with:
+1. Pick the target from the request and run `uvx --from agent-bom==0.112.1 agent-bom --agent-mode scan -q` with:
    - nothing named: no extra arguments. It discovers the MCP clients on this machine (Claude Code, Claude Desktop, Cursor, Codex and others) and scans their servers and packages.
    - a container image: `--no-discover --image '<ref>'`
    - an SBOM file: `--no-discover --sbom '<path>'`
@@ -30,7 +30,7 @@ Run an agent-bom scan, then report what matters.
 3. Report, most urgent first:
    - critical and high findings that have a fix, with the fixed version
    - known-exploited (KEV) findings and malicious or typosquatted packages, whatever their severity
-   - findings where an agent can reach a credential, naming the credentials: for their names run `uvx --from agent-bom==0.111.0 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"` (same `-p '<dir>'` if one was named) and read `agents[].mcp_servers[].credential_env_vars`
+   - findings where an agent can reach a credential, naming the credentials: for their names run `uvx --from agent-bom==0.112.1 agent-bom mcp inventory -q -f json > "$OUT/inventory.json"` (same `-p '<dir>'` if one was named) and read `agents[].mcp_servers[].credential_env_vars`
    - one line of totals by severity, and the age of the local vulnerability data when `summary.db_age_days` is more than 1
 4. Quote reachability as agent-bom states it: `graph_reachable` is a graph path, which is "likely", not "confirmed".
 5. Offer the `fix` skill for a remediation plan and the `check` skill before adding a new server or package.
