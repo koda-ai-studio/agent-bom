@@ -245,3 +245,18 @@ def test_cached_compliance_snapshot_reuses_the_body_until_the_generation_moves(m
     assert reader(req, "scan-1")["n"] == 2
     generation["value"] = "g2"
     assert reader(req, None)["n"] == 3
+
+
+def test_default_ttl_is_a_safety_net_not_the_invalidation(monkeypatch):
+    """Generation bumps retire bodies; an idle minute must not force a rebuild."""
+    monkeypatch.delenv("AGENT_BOM_READ_CACHE_TTL_SECONDS", raising=False)
+    assert read_cache.read_cache_ttl() >= 600
+    calls, compute = _counter()
+    now = {"t": 1000.0}
+    monkeypatch.setattr(read_cache.time, "monotonic", lambda: now["t"])
+    read_cache.cached_read("posture", "acme", (), compute, generation="g1")
+    now["t"] += 61.0
+    read_cache.cached_read("posture", "acme", (), compute, generation="g1")
+    assert calls["n"] == 1
+    read_cache.cached_read("posture", "acme", (), compute, generation="g2")
+    assert calls["n"] == 2
