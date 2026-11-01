@@ -130,6 +130,20 @@ def _edges(graph, relationship: RelationshipType):
     return [edge for edge in graph.edges if edge.relationship is relationship]
 
 
+@pytest.mark.parametrize("record_key", ["pab_policies", "pab_bindings"])
+def test_unresolved_gcp_boundaries_do_not_project_proven_access(record_key) -> None:
+    inventory = _gcp_inventory()
+    inventory[record_key] = [{"name": "unresolved-boundary"}]
+
+    graph = build_unified_graph_from_report({"scan_id": "scan-gcp-boundary", "cloud_inventory": inventory})
+
+    assert graph.nodes
+    assert not [edge for edge in _edges(graph, RelationshipType.CAN_ACCESS) if edge.evidence.get("source") == "authorization-evidence"]
+    status = graph.to_dict()["analysis_status"]["authorization_evidence:gcp"]
+    assert status["status"] != "complete"
+    assert status["observed"]["indeterminate_evaluations"] > 0
+
+
 def test_complete_azure_evidence_drives_effective_permission_and_json_status() -> None:
     graph = build_unified_graph_from_report({"scan_id": "scan-azure", "cloud_inventory": _azure_inventory()})
 
