@@ -24,7 +24,6 @@ from pathlib import Path
 from typing import Any
 
 from agent_bom.parsers.prompt_normalize import matching_projections as matching_projections
-from agent_bom.parsers.prompt_normalize import normalize_for_matching as normalize_for_matching
 from agent_bom.parsers.tool_poisoning_patterns import TOOL_POISONING_PATTERNS as _TOOL_POISONING_PATTERNS
 from agent_bom.parsers.tool_poisoning_patterns import encoded_payload_match as encoded_payload_match
 from agent_bom.traversal import iter_discovery_files
