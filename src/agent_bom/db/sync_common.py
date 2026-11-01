@@ -7,13 +7,14 @@ import logging
 import re
 import sqlite3
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import quote
 
+from agent_bom.core.cvss import normalize_cvss_score
 from agent_bom.db.sync_parsing import _parse_osv_entry as _parse_osv_entry
-from agent_bom.scanners.risk import parse_cvss_vector
 
 _logger = logging.getLogger("agent_bom.db.sync")
+_normalize_sync_cvss_score = normalize_cvss_score
 
 
 def _validate_sync_url(url: str, param_name: str = "url") -> None:
@@ -222,32 +223,6 @@ def _nvd_cve_candidates(vuln_id: str, raw_aliases: str = "") -> list[str]:
     return candidates
 
 
-def _normalize_sync_cvss_score(value: Any) -> Optional[float]:
-    """Extract a 0-10 CVSS score from numeric fields or vector strings."""
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        score = float(value)
-        return score if 0.0 <= score <= 10.0 else None
-    if isinstance(value, str):
-        try:
-            score = float(value)
-            return score if 0.0 <= score <= 10.0 else None
-        except ValueError:
-            return parse_cvss_vector(value)
-    if isinstance(value, dict):
-        for key in ("score", "baseScore", "base_score", "cvss", "vector", "vectorString"):
-            nested_score = _normalize_sync_cvss_score(value.get(key))
-            if nested_score is not None:
-                return nested_score
-    if isinstance(value, list):
-        scores = [_normalize_sync_cvss_score(item) for item in value]
-        valid_scores = [score for score in scores if score is not None]
-        if valid_scores:
-            return max(valid_scores)
-    return None
-
-
 def _now_utc() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -346,7 +321,7 @@ def _upsert_nvd_enrichment_row(conn: sqlite3.Connection, cve_id: str, fields: di
     toward the cap) and reaches the unsynced tail instead of re-saturating the
     cap on the same head forever.
     """
-    if not fields.get("cvss_score") and not fields.get("cwe_ids"):
+    if fields.get("cvss_score") is None and not fields.get("cwe_ids"):
         return False
 
     summary = fields.get("summary") or f"NVD entry for {cve_id}"

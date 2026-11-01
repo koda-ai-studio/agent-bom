@@ -411,11 +411,11 @@ def _copy_local_nvd_score(conn: sqlite3.Connection, row_id: str, cve_id: str) ->
         "SELECT cvss_score, cvss_vector, severity FROM vulns WHERE id = ? AND source = 'nvd' AND cvss_score IS NOT NULL",
         (cve_id,),
     ).fetchone()
-    if scored is None:
+    if scored is None or (score := _normalize_sync_cvss_score(scored["cvss_score"])) is None:
         return False
     conn.execute(
         "UPDATE vulns SET cvss_score = ?, cvss_vector = ?, severity = ? WHERE id = ?",
-        (scored["cvss_score"], scored["cvss_vector"], scored["severity"], row_id),
+        (score, scored["cvss_vector"], _cvss_to_severity(score), row_id),
     )
     return True
 
@@ -527,48 +527,17 @@ def sync_nvd(
             _logger.debug("NVD API error for %s: %s", cve_id, exc)
             continue
 
-        # Extract CVSS v3.1 metrics
         cve_items = data.get("vulnerabilities") or []
         if not cve_items:
             continue
 
         cve_data = cve_items[0].get("cve") or {}
-        metrics = cve_data.get("metrics") or {}
-        cvss_score: Optional[float] = None
-        cvss_vector: Optional[str] = None
-        severity: Optional[str] = None
-
-        # Prefer CVSSv31, fall back to CVSSv30, then CVSSv2
-        for metric_key in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
-            metric_list = metrics.get(metric_key) or []
-            if not metric_list:
-                continue
-            cvss_data = metric_list[0].get("cvssData") or {}
-            raw_score = cvss_data.get("baseScore")
-            if raw_score is not None:
-                try:
-                    cvss_score = float(raw_score)
-                except (TypeError, ValueError):
-                    pass
-            cvss_vector = cvss_data.get("vectorString")
-            raw_sev = (cvss_data.get("baseSeverity") or "").lower()
-            if raw_sev in ("critical", "high", "medium", "low"):
-                severity = raw_sev
-            break
-
-        # Extract CWE IDs from NVD weaknesses
-        nvd_cwes: list[str] = []
-        for weakness in cve_data.get("weaknesses", []):
-            for desc in weakness.get("description", []):
-                cwe_val = desc.get("value", "")
-                if cwe_val.startswith("CWE-") and cwe_val not in nvd_cwes:
-                    nvd_cwes.append(cwe_val)
+        fields = _extract_nvd_cve_fields(cve_data)
+        cvss_score, cvss_vector, severity = fields["cvss_score"], fields["cvss_vector"], fields["severity"]
+        nvd_cwes = fields["cwe_ids"]
 
         if cvss_score is None and not nvd_cwes:
             continue
-
-        if not severity and cvss_score is not None:
-            severity = _cvss_to_severity(cvss_score)
 
         # Merge NVD CWE IDs with any existing ones (from OSV/GHSA)
         if nvd_cwes:
