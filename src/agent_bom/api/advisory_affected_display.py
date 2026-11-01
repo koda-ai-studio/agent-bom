@@ -20,15 +20,10 @@ import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from agent_bom.scanners.advisory_affected import AFFECTED_COUNT_BASIS, AFFECTED_COUNT_BASIS_NOTE
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
-
-AFFECTED_COUNT_BASIS = "package_occurrence_per_holding_asset"
-AFFECTED_COUNT_BASIS_NOTE = (
-    "One row per package occurrence on each holding asset (MCP server, container image or standalone package). "
-    "Findings group one occurrence across the servers that hold it, so their total for the same advisory can be lower."
-)
 
 _EMPTY: dict[str, Any] = {}
 

@@ -23,7 +23,9 @@
     "not_affected": 1,
     "clean_scanned": 1,
     "assets_examined": 3,
-    "reports_examined": 3
+    "reports_examined": 3,
+    "count_basis": "package_occurrence_per_holding_asset",
+    "count_basis_note": "One row per package occurrence on each holding asset (MCP server, container image or standalone package). Findings group one occurrence across the servers that hold it, so their total for the same advisory can be lower."
   },
   "complete": true,
   "generation": "gen-php2shell-fixture",
