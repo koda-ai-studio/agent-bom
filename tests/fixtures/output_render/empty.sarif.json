@@ -13,7 +13,9 @@
       },
       "results": [],
       "properties": {
-        "scan_outcome": "complete"
+        "scan_outcome": "complete",
+        "posture_grade": "N/A",
+        "exposure_path_count": 0
       },
       "invocations": [
         {

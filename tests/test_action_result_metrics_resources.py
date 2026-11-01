@@ -11,7 +11,7 @@ import pytest
 
 @pytest.mark.parametrize(
     ("contents", "expected_grade"),
-    [(' {"severity": "critical"}', "F"), ("invalid JSON", "unknown")],
+    [(' {"posture_grade": "C", "blast_radius": [{"severity": "critical"}]}', "C"), ("invalid JSON", "unknown")],
 )
 def test_action_result_metrics_closes_input(tmp_path, monkeypatch, capsys, contents, expected_grade):
     result = tmp_path / "result.json"

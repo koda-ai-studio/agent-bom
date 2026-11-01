@@ -111,11 +111,11 @@ class CoverageWarning:
         return asdict(self)
 
 
-def _surface(warning: dict) -> None:
+def _surface(warning: dict, *, replace: bool = False) -> None:
     try:
         from agent_bom.scanners.state import record_coverage_warning
 
-        record_coverage_warning(warning)
+        record_coverage_warning(warning, replace=replace)
     except Exception:  # noqa: BLE001 - warning surfacing must never break a scan
         pass
 
@@ -128,8 +128,12 @@ def is_scan_note(warning: object) -> bool:
     return isinstance(warning, dict) and warning.get("kind") == SCAN_NOTE_KIND
 
 
-def record_scan_note(*, ecosystem: str, path: str, reason: str, detail: str) -> None:
-    """Record a scan-run note about how evidence was obtained (deduped per path)."""
+def record_scan_note(*, ecosystem: str, path: str, reason: str, detail: str, replace: bool = False) -> None:
+    """Record a scan-run note about how evidence was obtained (deduped per path).
+
+    ``replace`` updates an earlier note for the same path, for receipts whose
+    detail accumulates across scanner batches.
+    """
     note = CoverageWarning(
         ecosystem=ecosystem,
         release=f"{ecosystem}-note:{path}",
@@ -139,7 +143,7 @@ def record_scan_note(*, ecosystem: str, path: str, reason: str, detail: str) -> 
         advisory_rows=0,
     ).to_dict()
     _logger.info("Scan note (%s): %s", path, detail)
-    _surface({**note, "kind": SCAN_NOTE_KIND})
+    _surface({**note, "kind": SCAN_NOTE_KIND}, replace=replace)
 
 
 def record_manifest_parse_warning(*, ecosystem: str, path: str, detail: str) -> None:

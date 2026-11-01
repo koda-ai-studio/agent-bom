@@ -14,6 +14,7 @@ Only requirements that truly cannot be resolved are reported as a gap.
 
 from __future__ import annotations
 
+import logging
 import tomllib
 from pathlib import Path
 
@@ -26,6 +27,9 @@ from agent_bom.models import Package
 from agent_bom.parsers.file_limits import read_text_limited
 from agent_bom.parsers.pypi_resolution import ResolvedDistribution, requirement_applies, resolve_requirements
 from agent_bom.parsers.python_venv import InstalledDistribution, find_project_venv, read_venv
+from agent_bom.security import sanitize_error
+
+_logger = logging.getLogger(__name__)
 
 _ADVICE = "add a lockfile or scan inside the project's virtualenv; Python dependency coverage is partial"
 OFFLINE_GAP = "transitive dependencies not resolved offline; " + _ADVICE
@@ -158,8 +162,7 @@ def _from_registry(manifest: Path, declared: list[Package]) -> list[Package]:
     return packages
 
 
-def complete_unlocked_python(directory: Path, manifest: Path, declared: list[Package]) -> list[Package]:
-    """Apply ladder rungs 2-4 to *declared* packages read from an unlocked *manifest*."""
+def _complete(directory: Path, manifest: Path, declared: list[Package]) -> list[Package]:
     venv = find_project_venv(directory)
     if venv is not None:
         return _from_venv(directory, venv, manifest, declared)
@@ -167,3 +170,19 @@ def complete_unlocked_python(directory: Path, manifest: Path, declared: list[Pac
         _gap(manifest, OFFLINE_GAP)
         return declared
     return _from_registry(manifest, declared)
+
+
+def complete_unlocked_python(directory: Path, manifest: Path, declared: list[Package]) -> list[Package]:
+    """Apply ladder rungs 2-4 to *declared* packages read from an unlocked *manifest*.
+
+    One manifest whose resolution fails (unexpected registry payload, resolver
+    defect) must not abort the whole scan: the declared packages are kept as
+    they were read and the manifest is recorded as a coverage gap.
+    """
+    try:
+        return _complete(directory, manifest, declared)
+    except Exception as exc:  # noqa: BLE001  # broad-except: per-manifest boundary records the gap instead of aborting the scan
+        reason = f"{type(exc).__name__}: {sanitize_error(exc)}"
+        _logger.warning("Unlocked Python manifest %s: dependencies not resolved (%s)", manifest.name, reason)
+        _gap(manifest, f"transitive dependencies not resolved ({reason}); {_ADVICE}")
+        return declared

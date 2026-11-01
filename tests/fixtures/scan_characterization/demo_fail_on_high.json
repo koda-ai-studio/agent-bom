@@ -1,12 +1,13 @@
 {
  "document": {
-  "sha256": "3fce36f5656b1c4fa1caf2402b652b94e3ebc19c665b95c7787dcb37a8548b7f",
+  "sha256": "527aeb3facdf0f2efa6c5df67a827137dd3a040fc9630cca4ec652648e03bbe8",
   "summary": {
    "coverage_warnings": [],
    "critical_findings": 2,
    "critical_unified_findings": 7,
    "high_unified_findings": 11,
    "installed_unconfigured_agents": 0,
+   "suppressed_unfixed_os_findings": 0,
    "suppressed_vulnerabilities": 0,
    "total_agents": 5,
    "total_findings": 51,
