@@ -205,3 +205,12 @@ def test_scan_ecosystem_is_pypi(tmp_path: Path):
     agents, _ = scan_jupyter_notebooks(tmp_path)
     for pkg in agents[0].mcp_servers[0].packages:
         assert pkg.ecosystem == "pypi"
+
+
+def test_pip_install_quoted_range_does_not_invent_a_package(tmp_path: Path):
+    """``"anthropic>=2.0.0,<3"`` names one package; the ``<3`` bound is not a package called ``3``."""
+    nb = _make_notebook([_code_cell('%%capture\n%pip install -q "anthropic>=2.0.0,<3" python-docx pillow python-dotenv')])
+    (tmp_path / "wiki.ipynb").write_text(json.dumps(nb))
+    agents, _ = scan_jupyter_notebooks(tmp_path)
+    names = {p.name for p in agents[0].mcp_servers[0].packages}
+    assert names == {"anthropic", "python-docx", "pillow", "python-dotenv"}

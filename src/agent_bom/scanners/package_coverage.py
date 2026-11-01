@@ -205,18 +205,24 @@ async def _scan_supplemental_advisories(scannable: list[Package], offline: bool)
     return added
 
 
+def _is_first_party(pkg: Package) -> bool:
+    """A workspace member resolved from the repository's own manifests, not a registry."""
+    return pkg.version_source == "workspace" or pkg.reachability_evidence == "workspace_manifest"
+
+
 def _flag_suspicious_packages(scannable: list[Package]) -> None:
     for pkg in scannable:
-        if not pkg.is_malicious:
-            target = check_typosquat(pkg.name, pkg.ecosystem)
-            if target:
-                pkg.is_malicious = True
-                pkg.malicious_reason = f"Possible typosquat of '{target}'"
-            # Dependency confusion check
-            confusion_warning = check_dependency_confusion(pkg)
-            if confusion_warning and not pkg.is_malicious:
-                pkg.is_malicious = True
-                pkg.malicious_reason = confusion_warning
+        if pkg.is_malicious or _is_first_party(pkg):
+            continue
+        target = check_typosquat(pkg.name, pkg.ecosystem)
+        if target:
+            pkg.is_malicious = True
+            pkg.malicious_reason = f"Possible typosquat of '{target}'"
+        # Dependency confusion check
+        confusion_warning = check_dependency_confusion(pkg)
+        if confusion_warning and not pkg.is_malicious:
+            pkg.is_malicious = True
+            pkg.malicious_reason = confusion_warning
 
 
 async def _query_osv_results(
