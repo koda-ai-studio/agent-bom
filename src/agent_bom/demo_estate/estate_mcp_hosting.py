@@ -71,4 +71,35 @@ def place_mcp_servers_on_workloads(third_party: Sequence[EstateAsset], delivery:
     return tuple(placed)
 
 
-__all__ = ["PLACEMENT_SOURCE", "place_mcp_servers_on_workloads"]
+def place_agents_on_workloads(third_party: Sequence[EstateAsset], delivery: Sequence[EstateAsset]) -> tuple[EstateAsset, ...]:
+    """Return ``third_party`` with every agent typed by its framework and placed on a workload in its own account.
+
+    ``agent_type`` names the recorded framework (or ``service``) for every
+    agent. The same labelled synthetic placement the MCP servers use binds an
+    agent to a ``hosted_on`` workload only inside the agent's own account: the
+    agent's principal lives there, so moving the agent across an account
+    boundary would draw an identity edge that does not exist. An agent whose
+    account holds no workload keeps an honest "host not recorded".
+    """
+    workloads = [asset for asset in delivery if asset.resource_type == "deployment"]
+    placed: list[EstateAsset] = []
+    for asset in third_party:
+        if asset.resource_type != "agent":
+            placed.append(asset)
+            continue
+        agent_type = asset.tags.get("agent_framework") or "service"
+        own_account = [w for w in workloads if w.account_scope == asset.account_scope]
+        workload = _choose_workload(asset, own_account)
+        if workload is None:
+            placed.append(asset.model_copy(update={"tags": {**asset.tags, "agent_type": agent_type}}))
+            continue
+        placed.append(_placed(asset, workload, deployment=workload.asset_id, placement_source=PLACEMENT_SOURCE, agent_type=agent_type))
+    return tuple(placed)
+
+
+def place_on_workloads(third_party: Sequence[EstateAsset], delivery: Sequence[EstateAsset]) -> tuple[EstateAsset, ...]:
+    """Servers first (their tools follow them), then agents: the whole third-party lane with a place to run."""
+    return place_agents_on_workloads(place_mcp_servers_on_workloads(third_party, delivery), delivery)
+
+
+__all__ = ["PLACEMENT_SOURCE", "place_agents_on_workloads", "place_mcp_servers_on_workloads", "place_on_workloads"]

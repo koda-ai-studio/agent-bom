@@ -3,11 +3,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FirstScanGuide } from "@/components/first-scan-guide";
 
-const auth = vi.hoisted(() => ({ loading: false, hasCapability: vi.fn() }));
+const auth = vi.hoisted(() => ({ loading: false, hasCapability: vi.fn(), session: { auth_required: true } as Record<string, unknown> | null }));
 vi.mock("@/components/auth-provider", () => ({ useAuthState: () => auth }));
+const PUSH_URL = "http://localhost:3000/v1/results/push";
 
 describe("first scan guidance", () => {
-  beforeEach(() => { auth.loading = false; auth.hasCapability.mockReturnValue(true); });
+  beforeEach(() => { auth.loading = false; auth.hasCapability.mockReturnValue(true); auth.session = { auth_required: true }; });
 
   it("offers distinct source paths and explains the retained evidence workflow", () => {
     render(<FirstScanGuide onImport={vi.fn()} />);
@@ -21,10 +22,13 @@ describe("first scan guidance", () => {
   it("keeps the local project command explicit, scoped and credential-free", () => {
     render(<FirstScanGuide onImport={vi.fn()} />);
     fireEvent.click(screen.getByText("Show project command"));
-    expect(screen.getByText(/agent-bom scan \. --no-discover --context-graph/)).toHaveTextContent('--push-url "${AGENT_BOM_PUSH_URL:?Set the control-plane ingestion URL}"');
+    expect(screen.getByText(/agent-bom scan \. --no-discover --context-graph/)).toHaveTextContent(`--push-url "\${AGENT_BOM_PUSH_URL:-${PUSH_URL}}"`);
     expect(screen.getByText(/AGENT_BOM_PUSH_API_KEY through your secret manager/)).toBeVisible();
-    expect(screen.getByText(/including any deployment prefix/)).toBeVisible();
+    expect(screen.getByText(PUSH_URL, { selector: "code:not(.block)" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Copy project command" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Create an API key" })).toHaveAttribute("href", "/audit");
+    // Never CLI-only: the in-product equivalent sits beside the snippet.
+    expect(screen.getByRole("link", { name: "Scan from this control plane instead" })).toHaveAttribute("href", "/scan");
   });
 
   it("checks push configuration before scanning without putting the key in arguments", () => {
@@ -34,9 +38,10 @@ describe("first scan guidance", () => {
     const run = (extra: Record<string, string>) => spawnSync("/bin/bash", ["-c", script], {
       encoding: "utf8", env: { PATH: "/usr/bin:/bin", NODE_ENV: "test", ...extra },
     });
-    const missingUrl = run({ AGENT_BOM_PUSH_API_KEY: "fixture-only" });
-    expect(missingUrl.status).not.toBe(0);
-    expect(missingUrl.stdout).not.toContain("scan-started");
+    // The deployment URL is pre-filled, so only the key can stop the run.
+    const defaultUrl = run({ AGENT_BOM_PUSH_API_KEY: "fixture-only" });
+    expect(defaultUrl.status).toBe(0);
+    expect(defaultUrl.stdout).toContain(PUSH_URL);
     const missingKey = run({ AGENT_BOM_PUSH_URL: "https://control.example/v1/results/push" });
     expect(missingKey.status).not.toBe(0);
     expect(missingKey.stdout).not.toContain("scan-started");
@@ -44,7 +49,39 @@ describe("first scan guidance", () => {
     const configured = run({ AGENT_BOM_PUSH_URL: "https://control.example/v1/results/push", AGENT_BOM_PUSH_API_KEY: "fixture-only" });
     expect(configured.status).toBe(0);
     expect(configured.stdout).toContain("scan-started");
+    expect(configured.stdout).toContain("https://control.example/v1/results/push");
     expect(configured.stdout).not.toContain("fixture-only");
+  });
+
+  it("tells an anonymous no-auth viewer the truth instead of asking an administrator", () => {
+    auth.session = { auth_required: false, auth_method: "anonymous" };
+    auth.hasCapability.mockReturnValue(false);
+    render(<FirstScanGuide onImport={vi.fn()} />);
+    expect(screen.queryByText(/Ask an administrator/)).not.toBeInTheDocument();
+    expect(screen.getByText(/anonymous access is read-only/i)).toBeVisible();
+    fireEvent.click(screen.getByText("Show project command"));
+    expect(screen.getByText(/requires an API key with push permission issued by the operator/i)).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Create an API key" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Preview a report in this browser instead" })).toBeVisible();
+  });
+
+  it("omits the API-key step when the session can push without one", () => {
+    auth.session = { auth_required: false, auth_method: "anonymous" };
+    auth.hasCapability.mockReturnValue(true);
+    render(<FirstScanGuide onImport={vi.fn()} />);
+    fireEvent.click(screen.getByText("Show project command"));
+    const command = screen.getByText(/agent-bom scan \. --no-discover --context-graph/, { selector: "code" }).textContent!;
+    expect(command).not.toContain("AGENT_BOM_PUSH_API_KEY");
+    expect(command).toContain(PUSH_URL);
+    expect(screen.queryByText(/through your secret manager/)).not.toBeInTheDocument();
+  });
+
+  it("asks a signed-in user without key management to request a push key", () => {
+    auth.hasCapability.mockImplementation((cap: string) => cap === "scan.run");
+    render(<FirstScanGuide onImport={vi.fn()} />);
+    fireEvent.click(screen.getByText("Show project command"));
+    expect(screen.getByText(/Ask an administrator for an API key with push permission/)).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Create an API key" })).not.toBeInTheDocument();
   });
 
   it("links permitted operators to explicit scan targets", () => {
@@ -60,7 +97,7 @@ describe("first scan guidance", () => {
     auth.hasCapability.mockReturnValue(false);
     render(<FirstScanGuide onImport={vi.fn()} />);
     expect(screen.queryByRole("link", { name: "Choose a scan target" })).not.toBeInTheDocument();
-    expect(screen.getByText(pending ? "Checking scan access…" : /Ask an administrator for scan access/)).toBeVisible();
+    expect(screen.getByText(pending ? "Checking scan access…" : /Your role cannot start scans here/)).toBeVisible();
   });
 
   it("previews a validated local report without a network write", async () => {

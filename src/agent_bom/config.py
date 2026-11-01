@@ -609,11 +609,11 @@ FINDINGS_APPROXIMATE_TOTAL_THRESHOLD = _int("AGENT_BOM_FINDINGS_APPROXIMATE_TOTA
 # MaxBodySizeMiddleware. 0 disables the floor entirely (escape hatch
 # for legitimate slow clients in restricted networks).
 API_BODY_MIN_BPS = _int("AGENT_BOM_BODY_MIN_BPS", 256)
-# Per-report upload budget for POST /v1/results/push, measured after gzip decoding.
-# Both wire and decoded bytes are bounded; other API bodies retain their 10 MiB limit.
-API_RESULT_PUSH_MAX_BYTES = _int("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES", 64 * 1024 * 1024)
-# Compress collector report pushes after upgrading the receiving control plane.
-PUSH_GZIP = _bool("AGENT_BOM_PUSH_GZIP", False)
+# Decoded upload budget for POST /v1/results/push: the 10k-package estate measured 154 MB raw
+# (8.7 MB gzipped) on 2026-11-01; gzip expansion is capped separately. Other bodies keep 10 MiB.
+API_RESULT_PUSH_MAX_BYTES = _int("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES", 256 * 1024 * 1024)
+# Pushes are gzip-compressed by default; 0 only for a receiver older than #5193 (2026-09-10).
+PUSH_GZIP = _bool("AGENT_BOM_PUSH_GZIP", True)
 
 
 # ── PostgreSQL Control Plane Tuning ──────────────────────────────────────

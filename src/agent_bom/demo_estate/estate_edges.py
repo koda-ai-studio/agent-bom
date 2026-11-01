@@ -12,6 +12,10 @@ ESTATE_DATA_SOURCE = "demo-estate"
 
 
 def add_estate_edge(graph: UnifiedGraph, source: str, target: str, relationship: RelationshipType, **kwargs: object) -> None:
+    # Where an agent runs is execution context for the agent read, not an attack hop: the
+    # path to a CVE still goes agent -> server -> workload -> image -> package.
+    if relationship is RelationshipType.HOSTED_ON and graph.nodes[source].entity_type is EntityType.AGENT:
+        kwargs.setdefault("traversable", False)
     evidence = fixture_edge_evidence(relationship, ESTATE_DATA_SOURCE, kwargs.pop("evidence", None))  # type: ignore[arg-type]
     graph.add_edge(UnifiedEdge(source=source, target=target, relationship=relationship, evidence=evidence, **kwargs))  # type: ignore[arg-type]
 

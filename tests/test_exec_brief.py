@@ -96,7 +96,11 @@ async def test_brief_preserves_canonical_sources_and_mcp_tenant(empty_estate_cli
     mcp = json.loads(await executive_brief_impl(tenant_id="untrusted-other-tenant", limit=2))
     for body in (rest, mcp):
         assert body["tenant_id"] == tenant
-        assert body["remediation_priorities"] == priorities
+        # Canonical fields pass through untouched; status and policy name are derived from them.
+        assert [
+            {k: v for k, v in row.items() if k not in {"sla_status", "sla_policy"}} for row in body["remediation_priorities"]
+        ] == priorities
+        assert all(row["sla_status"] in {"overdue", "due_soon", "on_track", "unknown"} for row in body["remediation_priorities"])
         assert "owner" not in body["exposure_paths"]["paths"][0]
         assert body["exposure_paths"] == paths
         assert body["scan_history"] == baseline["scan_history"]

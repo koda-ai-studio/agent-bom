@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from importlib.util import find_spec
 
 from agent_bom.core.settings import env_raw
 from agent_bom.storage.base import BackendKind
@@ -68,17 +69,50 @@ def _scheme(value: str) -> str | None:
     return head.strip().lower() if sep else None
 
 
+POSTGRES_DSN_IN_SQLITE_PATH_MESSAGE = (
+    "SQLite requires a filesystem path, but this store received a Postgres URL. Postgres is selected through "
+    "AGENT_BOM_POSTGRES_URL (with AGENT_BOM_POSTGRES_PASSWORD_FILE and AGENT_BOM_POSTGRES_MAINTENANCE_URL); "
+    "a Postgres URL in AGENT_BOM_DB is accepted as its alias, while every other store-specific *_DB variable "
+    "must name a SQLite file."
+)
+POSTGRES_DRIVER_MISSING_MESSAGE = (
+    "SQLite requires a filesystem path, but AGENT_BOM_DB holds a Postgres URL and the Postgres driver is not "
+    "installed. Install agent-bom[postgres] (and prefer AGENT_BOM_POSTGRES_URL for the DSN), or point "
+    "AGENT_BOM_DB at a SQLite file."
+)
+
+
 def validate_sqlite_path(path: str | os.PathLike[str]) -> str:
     """Reject remote DSNs before SQLite can open files; never echo credentials."""
     value = os.fspath(path)
-    if _scheme(value) or value.strip().lower().startswith(("postgres:/", "postgresql:/")):
+    if value.strip().lower().startswith(("postgres:/", "postgresql:/")):
+        raise ValueError(POSTGRES_DSN_IN_SQLITE_PATH_MESSAGE)
+    if _scheme(value):
         raise ValueError("SQLite requires a filesystem path; configure AGENT_BOM_POSTGRES_URL for Postgres.")
     return value
 
 
+def _postgres_driver_available() -> bool:
+    """A spec probe: never imports the driver on the boot path."""
+    return find_spec("psycopg") is not None and find_spec("psycopg_pool") is not None
+
+
 def validate_configured_sqlite_path() -> None:
-    """Fail startup before initializing stores when the SQLite path is a DSN."""
-    validate_sqlite_path(env_raw("AGENT_BOM_DB") or ":memory:")
+    """Fail startup when ``AGENT_BOM_DB`` is a DSN this installation cannot serve.
+
+    A Postgres URL is the documented alias of ``AGENT_BOM_POSTGRES_URL`` and is
+    honoured by every selection ladder (durable store, storage tiers, the
+    per-store Postgres adapters), so it passes here when the Postgres driver is
+    installed; the SQLite stores it never reaches keep their own fail-closed
+    check. On a SQLite-only installation the same URL is refused here, before
+    any store initializes, with a message that names the fix and never the DSN.
+    """
+    value = env_raw("AGENT_BOM_DB") or ":memory:"
+    if _is_postgres_url(value):
+        if not _postgres_driver_available():
+            raise ValueError(POSTGRES_DRIVER_MISSING_MESSAGE)
+        return
+    validate_sqlite_path(value)
 
 
 def resolve_from_dsn(dsn: str) -> BackendSelection:

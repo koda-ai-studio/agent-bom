@@ -18,12 +18,22 @@ pytest.importorskip("fastapi", reason="fastapi not installed")
 from click.testing import CliRunner
 
 from agent_bom.cli import main
+from agent_bom.scanners.advisory_affected import AFFECTED_COUNT_BASIS, AFFECTED_COUNT_BASIS_NOTE
 from tests.api.test_advisory_affected_api import PHP2SHELL, REPORTS, ROUTE
 from tests.api.test_mcp_affected_assets import control_plane  # noqa: F401 - fixture
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "php2shell"
 UI_FIXTURE = Path(__file__).parents[2] / "ui" / "tests" / "fixtures" / "php2shell-affected.json"
-SUMMARY = {"affected": 1, "possibly_affected": 1, "not_affected": 1, "clean_scanned": 1, "assets_examined": 3, "reports_examined": 3}
+SUMMARY = {
+    "affected": 1,
+    "possibly_affected": 1,
+    "not_affected": 1,
+    "clean_scanned": 1,
+    "assets_examined": 3,
+    "reports_examined": 3,
+    "count_basis": AFFECTED_COUNT_BASIS,
+    "count_basis_note": AFFECTED_COUNT_BASIS_NOTE,
+}
 
 
 def _brief(body: dict) -> list[tuple]:

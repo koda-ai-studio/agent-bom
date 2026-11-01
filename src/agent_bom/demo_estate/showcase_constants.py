@@ -71,6 +71,17 @@ SHOWCASE_AGENTS: dict[str, str] = {
 }
 
 
+# What each showcase agent is and the fictional host it runs on: desktop AI
+# clients sit on a demo workstation, service agents on a demo EKS deployment.
+SHOWCASE_AGENT_RUNTIME: dict[str, tuple[str, str]] = {
+    "cursor": ("cursor", "cloud:dev-workstation"),
+    "claude-desktop": ("claude-desktop", "cloud:dev-workstation"),
+    "langchain-service": ("langchain", "cloud:agent-runtime"),
+    "support-copilot": ("custom", "cloud:agent-runtime"),
+    "data-pipeline": ("custom", "cloud:agent-runtime"),
+}
+
+
 SHOWCASE_SERVERS: dict[str, tuple[str, list[str]]] = {
     "filesystem-server": ("cursor", ["read_file", "write_file", "list_directory"]),
     "shell-runner-server": ("cursor", ["run_shell", "exec_command", "read_file"]),

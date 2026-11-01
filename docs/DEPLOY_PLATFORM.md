@@ -250,6 +250,38 @@ smoke.
 For a production-shaped single host (Docker secrets, internal-only Postgres,
 split networks) use `deploy/docker-compose.platform.yml`.
 
+### Postgres without Compose or Helm (bare metal, one checklist)
+
+Every gate below is enforced at boot and each one stops the server with its
+own message; set them all before the first start instead of discovering them
+one restart at a time.
+
+1. **Roles.** Create `agent_bom_app` (LOGIN, NOSUPERUSER, NOBYPASSRLS),
+   `agent_bom_maintenance` (LOGIN, NOSUPERUSER, NOBYPASSRLS) and
+   `agent_bom_rls_maintenance` (NOLOGIN). The names are fixed: the migration
+   step validates them and the API refuses a superuser or BYPASSRLS role.
+2. **Migrations as the admin role.** Run
+   `python deploy/supabase/postgres/compose_migrate.py` with
+   `ALEMBIC_DATABASE_URL` (admin/bootstrap role, never `agent_bom_app`) plus
+   `ALEMBIC_DATABASE_PASSWORD_FILE`, and the two runtime URLs below so it can
+   reconcile their passwords. It stamps `init.sql` baselines and applies
+   `upgrade head`; the API refuses to start on an unmigrated database.
+3. **Runtime URLs.** `AGENT_BOM_POSTGRES_URL` (as `agent_bom_app`) with
+   `AGENT_BOM_POSTGRES_PASSWORD_FILE`, and `AGENT_BOM_POSTGRES_MAINTENANCE_URL`
+   (as `agent_bom_maintenance`) with `AGENT_BOM_POSTGRES_MAINTENANCE_PASSWORD_FILE`.
+   `AGENT_BOM_POSTGRES_URL` is the canonical selector; a Postgres URL in
+   `AGENT_BOM_DB` is accepted as its alias by every store and by the boot
+   gate. Any other `*_DB` variable must name a SQLite file.
+4. **Audit chain key.** `AGENT_BOM_AUDIT_HMAC_KEY` (or
+   `AGENT_BOM_AUDIT_HMAC_KEY_FILE`) is required whenever Postgres is
+   configured, because the shared audit chain must verify across restarts
+   and replicas; the server refuses to start without it.
+5. **Authentication.** Either `--api-key` / `AGENT_BOM_API_KEY`, OIDC or a
+   trusted proxy; `--allow-insecure-no-auth` is for single-user local use only
+   and clamps anonymous access to read-only.
+
+The full variable reference is [`docs/operations/ENV_VARS.md`](operations/ENV_VARS.md).
+
 ---
 
 ## Tier 2 — Kubernetes / EKS

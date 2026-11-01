@@ -643,7 +643,7 @@ export function Nav() {
           </button>
           <ThemeToggle compact className="shrink-0" />
           <ApiStatus collapsed={false} />
-          <AccountMenu />
+          <AccountMenu demoEstate={demoEstate} />
           <button
             ref={mobileMenuButtonRef}
             onClick={() => setMobileOpen(!mobileOpen)}

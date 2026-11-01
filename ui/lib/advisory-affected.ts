@@ -27,6 +27,8 @@ export interface AdvisoryAffectedRow {
   scan_id: string | null;
   last_observed_at: string | null;
   graph: { package_node_id: string; server_node_id: string | null; agent_node_id: string | null };
+  /** Presentation from the graph: the image ref/tag or server name, its kind, the agent and the host it runs on. */
+  asset_display?: { name: string; kind: string; agent: string; host: string } | undefined;
 }
 
 export interface AdvisoryAffectedSummary {
@@ -36,6 +38,9 @@ export interface AdvisoryAffectedSummary {
   clean_scanned: number;
   assets_examined: number;
   reports_examined: number;
+  /** What one row is (`package_occurrence_per_holding_asset`), so this total can differ from grouped findings honestly. */
+  count_basis?: string | undefined;
+  count_basis_note?: string | undefined;
 }
 
 /** `GET /v1/intel/advisories/{id}/affected` — schema `advisory-affected.v1`. */
