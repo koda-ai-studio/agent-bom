@@ -249,6 +249,13 @@ def _authoritative_bundle(payload: Mapping[str, Any], sources: tuple[EvidenceSou
                     )
                 )
 
+    if _records(payload.get("pab_policies")) or _records(payload.get("pab_bindings")):
+        sources = _downgrade_source(
+            sources,
+            "principal_access_boundaries",
+            "pab_targets_not_yet_resolved_to_principals",
+        )
+
     mutable_sources = list(sources)
     required_sources = [
         "allow_policies",
@@ -266,13 +273,6 @@ def _authoritative_bundle(payload: Mapping[str, Any], sources: tuple[EvidenceSou
             )
         )
         required_sources.append("group_memberships")
-
-    if _records(payload.get("pab_policies")) or _records(payload.get("pab_bindings")):
-        sources = _downgrade_source(
-            sources,
-            "principal_access_boundaries",
-            "pab_targets_not_yet_resolved_to_principals",
-        )
 
     return AuthorizationEvidenceBundle(
         provider=AuthorizationProvider.GCP,

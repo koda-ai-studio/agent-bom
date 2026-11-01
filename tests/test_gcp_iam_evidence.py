@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from agent_bom.cloud.authorization_evaluator import evaluate_authorization
 from agent_bom.cloud.authorization_evidence import (
     AuthorizationDecision,
@@ -149,6 +151,37 @@ def test_authoritative_v3_payload_can_allow() -> None:
     assert bundle.source_state("allow_policies") is EvidenceSourceState.COMPLETE
     assert bundle.bindings[0].binding_id == "binding-1:serviceAccount:ci@proj-1.iam.gserviceaccount.com"
     assert result.decision is AuthorizationDecision.ALLOW
+
+
+@pytest.mark.parametrize("record_key", ["pab_policies", "pab_bindings"])
+@pytest.mark.parametrize("source_state", ["complete", "partial", "access_denied"])
+def test_unresolved_pab_records_preserve_incomplete_evidence(record_key, source_state) -> None:
+    payload = _authoritative_payload()
+    payload[record_key] = [{"name": "unresolved-boundary"}]
+    for source in payload["iam_sources"]:
+        if source["name"] == "principal_access_boundaries":
+            source["state"] = source_state
+            source["diagnostics"] = ["original_diagnostic"]
+
+    bundle = normalize_gcp_iam_inventory(payload)
+
+    expected_state = EvidenceSourceState.PARTIAL if source_state == "complete" else EvidenceSourceState(source_state)
+    assert bundle.source_state("principal_access_boundaries") is expected_state
+    source = next(source for source in bundle.sources if source.name == "principal_access_boundaries")
+    assert source.diagnostics == ("original_diagnostic", "pab_targets_not_yet_resolved_to_principals")
+    assert evaluate_authorization(bundle, _request()).decision is AuthorizationDecision.INDETERMINATE
+
+
+def test_unresolved_pab_records_preserve_group_membership_gap() -> None:
+    payload = _authoritative_payload()
+    payload["pab_policies"] = [{"name": "unresolved-boundary"}]
+    payload["allow_policies"][0]["bindings"][0]["members"].append("group:readers@example.com")
+
+    bundle = normalize_gcp_iam_inventory(payload)
+
+    assert bundle.source_state("principal_access_boundaries") is EvidenceSourceState.PARTIAL
+    assert bundle.source_state("group_memberships") is EvidenceSourceState.UNAVAILABLE
+    assert "group_memberships" in bundle.required_sources
 
 
 def test_authoritative_cel_allow_condition_is_preserved_and_indeterminate() -> None:
