@@ -24,8 +24,8 @@ live contracts and the gaps that have been closed.
 - **Warn-and-continue** — most optional scanners, image/connector discovery soft
   catches, skill package verify (network miss → treat as exists to avoid false
   flags), batch skill scan / rescan sibling failures.
-- **Skip-when-unavailable** — planned drivers and optional tooling (Semgrep
-  missing, etc.).
+- **Skip-when-unavailable** — planned drivers and optional tooling (an optional
+  SAST producer missing, etc.).
 
 ## Cancel
 

@@ -288,7 +288,8 @@ def test_banner_is_string():
 
     assert isinstance(BANNER, str)
     assert "agent-bom" in BANNER
-    assert "Open security scanner for AI infrastructure" in BANNER
+    assert "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach" in BANNER
+    assert "Open security scanner" not in BANNER
 
 
 @pytest.mark.parametrize(

@@ -61,3 +61,13 @@ def test_report_title_uses_product_name() -> None:
     assert REPORT_TITLE.startswith(PRODUCT_NAME)
     assert "Agent-BOM" not in REPORT_TITLE
     assert "AI-BOM Report" != REPORT_TITLE
+
+
+def test_version_and_help_share_the_canonical_tagline() -> None:
+    from agent_bom.__main__ import version_message
+    from agent_bom.cli import main
+
+    assert POSITIONING_SHORT == "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach"
+    assert POSITIONING_SHORT in version_message()
+    assert POSITIONING_SHORT in (main.help or "")
+    assert "security scanner for AI infrastructure" not in (main.help or "").lower()

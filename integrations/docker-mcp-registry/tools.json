@@ -253,7 +253,7 @@
   },
   {
     "name": "exposure_paths",
-    "description": "Return the attack-path queue in the dashboard's order, with why each path ranks where it does.\n\nRanking is ``ranking.order`` (evidence tier, KEV, severity, evidence confidence,\ncomposite risk, credential count); every path carries ``rank``, ``evidenceTier``,\n``isKev``, ``severity``, ``evidenceConfidence`` and ``rankingFactors``. Totals,\nfilters and cursor pages match ``/v1/graph/attack-paths``.",
+    "description": "Return the attack-path queue in the dashboard's order, with why each path ranks where it does.\n\nRanking is ``ranking.order`` (evidence tier, KEV, severity, evidence confidence,\ncomposite risk, credential count); every path carries ``rank``, ``evidenceTier``,\n``isKev``, ``severity``, ``evidenceConfidence`` and ``rankingFactors``. Totals,\nfilters and cursor pages match ``/v1/graph/attack-paths``. With ``result_id`` the\npaths are that session scan result's, unfiltered and labelled ``session_scan_result``.",
     "arguments": [
       {
         "name": "tenant_id",
@@ -264,6 +264,11 @@
         "name": "scan_id",
         "type": "string",
         "desc": "Optional historical scan ID. Omit for the current tenant estate."
+      },
+      {
+        "name": "result_id",
+        "type": "string",
+        "desc": "result_id from a scan response in this session. Answers from that scan result instead of the persisted estate graph; omitted, the caller's newest scan result is consulted first."
       },
       {
         "name": "limit",

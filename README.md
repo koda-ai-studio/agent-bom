@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="docs/INTEGRATIONS.md"><img src="docs/images/social-preview.svg" alt="agent-bom — Discover. Scan. Correlate. Act. Security evidence across repositories, software supply chains, AI and MCP, cloud, identity, and data." width="1280" /></a>
+  <a href="docs/INTEGRATIONS.md"><img src="docs/images/social-preview.svg" alt="agent-bom — AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach." width="1280" /></a>
 </p>
 
 <p align="center">
@@ -19,6 +19,8 @@ For AppSec and platform engineers. Self-host free; local scans need no account.
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
+  <a href="#why-an-ai-supply-chain-bom">Why an AI BOM</a> ·
+  <a href="#what-you-get">What you get</a> ·
   <a href="docs/INTEGRATIONS.md">All integrations</a> ·
   <a href="#open-the-sample-graph">Sample graph</a> ·
   <a href="#self-host-in-your-environment">Self-host</a> ·
@@ -86,19 +88,30 @@ The recording uses labeled sample data and bundled advisories. Credential
 references are names, not secret values. Recorded relationships do not prove
 exploitation or successful data access.
 
+## Why an AI supply-chain BOM
+
+Agents and MCP servers ship without an inventory. A CVE in an AI package, a
+poisoned tool description or an over-scoped credential matters by what the
+agent that loads it can reach. A package SBOM stops at packages; agent-bom
+records the chain — agent → MCP server → tool → package → credential → data —
+and keeps the evidence for every edge, so you can answer which agent uses the
+vulnerable component and what it could reach. Findings map to
+[OWASP LLM Top 10, OWASP Agentic Top 10, OWASP MCP Top 10, MITRE ATLAS, EU AI Act and NIST AI RMF](site-docs/features/compliance.md);
+control mappings are investigation context, not certification.
+
 ## What it covers
 
 | Area | What you get |
 |---|---|
-| SBOM, AI-BOM and Agent-BOM | Generate software SBOMs in CycloneDX or SPDX. For an AI-BOM, CycloneDX AI components carry collected model metadata. Native agent-bom JSON connects agents, MCP servers, tools, credential references and packages. |
-| Dependencies | Lockfiles and manifests across Python, JavaScript, Go, Java, .NET, Rust and more, matched against OSV, GitHub advisories and NVD with KEV and EPSS. Ask "am I affected by CVE-X" across every stored scan. |
-| Code | Findings from Semgrep or any SARIF tool, plus native analysis of AI code (prompt-injection sinks, guardrails, tool exposure) and whether your code reaches the vulnerable function. |
-| Containers and IaC | Images scanned in bounded memory and time; Dockerfile, Terraform, Kubernetes, Helm and compose risks with exact lines in SARIF. |
 | AI agents and MCP | Agents, MCP servers, tools and credentials from local configs and agent frameworks, linked to what they can reach. |
-| Cloud and data platforms | Read-only collection from AWS, Azure, GCP, Kubernetes, Databricks and Snowflake, with provider-specific posture checks and graph context. See the [coverage matrix](docs/VENDOR_COVERAGE.md) for each collection lane. |
-| GPU and AI infrastructure | Discover AI workloads on CoreWeave, Nebius, Lambda, RunPod, Vast.ai and Crusoe; inventory GPU containers and Kubernetes GPU nodes. Collection depth varies by provider. |
 | Models and AI platforms | Discover supported OpenAI, Hugging Face, Ollama, MLflow and W&B assets and retain available model provenance alongside dependencies and agent context. |
 | Runtime | An MCP proxy and gateway that alert on poisoned tools and injected results, or block them with `--injection-mode enforce`. |
+| SBOM, AI-BOM and Agent-BOM | Generate software SBOMs in CycloneDX or SPDX. For an AI-BOM, CycloneDX AI components carry collected model metadata. Native agent-bom JSON connects agents, MCP servers, tools, credential references and packages. |
+| Dependencies | Lockfiles and manifests across Python, JavaScript, Go, Java, .NET, Rust and more, matched against OSV, GitHub advisories and NVD with KEV and EPSS. Ask "am I affected by CVE-X" across every stored scan. |
+| Code | Findings imported from any SARIF producer, plus native analysis of AI code (prompt-injection sinks, guardrails, tool exposure) and whether your code reaches the vulnerable function. |
+| Containers and IaC | Images scanned in bounded memory and time; Dockerfile, Terraform, Kubernetes, Helm and compose risks with exact lines in SARIF. |
+| Cloud and data platforms | Read-only collection from AWS, Azure, GCP, Kubernetes, Databricks and Snowflake, with provider-specific posture checks and graph context. See the [coverage matrix](docs/VENDOR_COVERAGE.md) for each collection lane. |
+| GPU and AI infrastructure | Discover AI workloads on CoreWeave, Nebius, Lambda, RunPod, Vast.ai and Crusoe; inventory GPU containers and Kubernetes GPU nodes. Collection depth varies by provider. |
 
 Generate a BOM from a project, or inspect an agent inventory with sample data:
 
@@ -243,6 +256,15 @@ scoped read-only connection, verify access, then start a scan. Use the
 - **Scan** with CLI or CI; export findings, SBOMs and reports.
 - **Centralize** inventory, graph evidence, remediation and compliance in your own control plane.
 - **Enforce** policy on selected live MCP tool calls through the proxy or gateway.
+
+### What you get
+
+| Offering | What it includes | Cost | Start |
+|---|---|---|---|
+| CLI, CI and exports | Local and CI scans; SARIF, CycloneDX, SPDX, JSON and HTML exports; `check` pre-install gate; GitHub Action | Free, Apache-2.0; no account | [First run](docs/FIRST_RUN.md) |
+| Self-hosted control plane | API and dashboard on Compose or Helm with PostgreSQL, SSO/OIDC, roles, tenant isolation, audit chain, lake evidence import and executive briefs | Free, Apache-2.0; your infrastructure | [Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Helm](site-docs/deployment/control-plane-helm.md) |
+| MCP server and agent plugins | `agent-bom mcp server` tool profiles; Claude Code and Codex plugins; OpenClaw and Cortex Code skills | Free; runs locally | [MCP server](docs/MCP_SERVER.md) · [Plugins](integrations/claude-code/README.md) |
+| Hosted service and support | No managed cloud offering today. Community support on GitHub; security reports follow published response targets, not a contractual SLA | — | [Product boundaries](site-docs/deployment/product-boundaries.md) · [Support model](docs/ENTERPRISE_SUPPORT_MODEL.md) |
 
 ### Deployment types and operating modes
 

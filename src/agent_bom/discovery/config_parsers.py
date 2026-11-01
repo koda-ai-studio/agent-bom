@@ -19,6 +19,7 @@ import yaml  # type: ignore[import-untyped]
 from rich.console import Console
 from rich.markup import escape
 
+from agent_bom.discovery.coverage import report_blocked_server
 from agent_bom.discovery.mcp_metadata import connection_metadata
 from agent_bom.models import CredentialIdentityBinding, MCPServer, MCPTool, TransportType
 from agent_bom.security import (
@@ -144,9 +145,7 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
         try:
             validate_mcp_server_config(server_def)
         except SecurityError as e:
-            warning_msg = f"Blocked insecure server '{sanitize_log_label(name)}': {sanitize_log_label(e)}"
-            logger.warning(warning_msg)
-            console.print(f"[yellow]⚠️  {_display_label(warning_msg)}[/yellow]")
+            report_blocked_server(name, e)
             # Include blocked server in report for visibility — no silent skips
             blocked_server = MCPServer(
                 name=name,

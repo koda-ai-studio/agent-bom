@@ -137,6 +137,14 @@ _KNOWN_LEGITIMATE: dict[str, frozenset[str]] = {
             "bcryptjs",
             # TJ Holowaychuk's original test framework (visionmedia/expresso).
             "expresso",
+            # Plain English words that are both long-published registry packages
+            # (franciscop/server since 2016) and the usual first-party workspace
+            # names in a monorepo. A squat of ``semver`` would not pick a
+            # different dictionary word.
+            "server",
+            "client",
+            "web",
+            "app",
         }
     ),
     "pypi": frozenset(

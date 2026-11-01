@@ -1,6 +1,6 @@
 apiVersion: v2
 name: agent-bom
-description: Open security scanner and graph for AI supply chain and infrastructure — discover agents and MCP, map blast radius, and inspect runtime.
+description: "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach. Self-hosted control plane, API and runtime gateway for Kubernetes."
 version: 0.112.1
 appVersion: "0.112.1"
 type: application

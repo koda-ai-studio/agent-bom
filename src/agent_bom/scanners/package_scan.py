@@ -13,7 +13,6 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Optional, cast
 
 from rich.console import Console
@@ -28,7 +27,6 @@ from agent_bom.constants import AI_PACKAGES as _AI_FRAMEWORK_PACKAGES
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.core.versions.prerelease_fix import fix_is_prerelease
 from agent_bom.eu_ai_act import tag_blast_radius as tag_eu_ai_act
-from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.fedramp import tag_blast_radius as tag_fedramp
 from agent_bom.http_client import create_client
 from agent_bom.iso_27001 import tag_blast_radius as tag_iso_27001
@@ -45,6 +43,7 @@ from agent_bom.pci_dss import tag_blast_radius as tag_pci_dss
 from agent_bom.reachability_cve import advisory_affected_symbols_by_path, advisory_affected_symbols_list
 from agent_bom.scanners import cpython_advisory as runtime_cve
 from agent_bom.scanners.blast_radius import expand_blast_radius_hops
+from agent_bom.scanners.clean_verdict import record_unfixed_suppression_receipt, zero_findings_verdict
 from agent_bom.scanners.compat_exports import resolve_legacy_export
 from agent_bom.scanners.distro_cpe_scan import propagate_possibly_affected
 from agent_bom.scanners.kev_default_join import join_default_kev_catalog
@@ -510,6 +509,7 @@ def _suppress_unfixed_findings(scannable: list[Package]) -> int:
             f"  [dim]Suppressed {unfixed_suppressed} unfixed OS-package finding(s) "
             f"(no-dsa/won't-fix) — set AGENT_BOM_INCLUDE_UNFIXED=1 to include[/dim]"
         )
+        record_unfixed_suppression_receipt()  # a clean verdict never hides what the policy removed
     return unfixed_suppressed
 
 
@@ -568,13 +568,7 @@ def _print_vulnerability_summary(total_vulns: int, findings_count: int, *, agent
     if total_vulns:
         console.print(f"  [red]⚠ Found {total_vulns} vulnerabilities across {findings_count} findings[/red]")
     else:
-        from agent_bom.scanners.state import peek_coverage_warnings, peek_scan_warnings
-
-        run = effective_scan_run(SimpleNamespace(agents=agents or [], coverage_warnings=peek_coverage_warnings()))
-        if run.outcome is not ScanOutcome.COMPLETE or peek_scan_warnings():
-            console.print("  [yellow]No vulnerabilities confirmed; coverage gaps limit this assessment[/yellow]")
-        else:
-            console.print("  [green]✓ No known vulnerabilities found[/green]")
+        console.print(zero_findings_verdict(agents or []))
 
 
 def _package_ai_risk_context(pkg: Package, exposed_creds: list[str], exposed_tools: list, phantom_tools: list) -> str | None:

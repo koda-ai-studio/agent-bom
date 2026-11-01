@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Optional, cast
 
 from agent_bom.core.severity import severity_at_or_above
 from agent_bom.models import MCPServer, Severity
+from agent_bom.parsers.prompt_scanner import descriptor_hits
 from agent_bom.runtime.text_normalize import normalize_text as _normalize_text
 
 if TYPE_CHECKING:
@@ -138,33 +139,32 @@ def _extract_schema_descriptions(input_schema: dict | bool | None) -> list[str]:
 def _scan_surface(
     server: MCPServer, name: str, text: str, category: str, kind: str, label: str, asset_identifier: str = ""
 ) -> list[EnforcementFinding]:
-    """Use the same normalized injection rules for every MCP text descriptor."""
-    from agent_bom.parsers.prompt_scanner import _INJECTION_PATTERNS, _UNSAFE_INSTRUCTION_PATTERNS
+    """Use the same normalized injection rules for every MCP text descriptor.
 
-    normalized = _normalize_text(text)
-    findings = []
-    for patterns, risk in ((_INJECTION_PATTERNS, "injection pattern"), (_UNSAFE_INSTRUCTION_PATTERNS, "unsafe instruction")):
-        for pattern, title in patterns:
-            if pattern.search(normalized):
-                findings.append(
-                    EnforcementFinding(
-                        severity="high",
-                        category=category,
-                        server_name=server.name,
-                        tool_name=name,
-                        surface_type=kind,
-                        surface_name=name,
-                        reason=f"{label} contains {risk}: {title}",
-                        recommendation="Review the flagged descriptor for hidden instructions. Verify the MCP server source.",
-                        evidence={
-                            "basis": "descriptor_pattern",
-                            "surface": label,
-                            "asset_identifier": asset_identifier,
-                            "rule_id": f"{label}: {risk}: {title}",
-                        },
-                    )
-                )
-    return findings
+    Rules run on the invisible-character-stripped text first and then on the
+    obfuscation projections, so an instruction hidden by encoding is reported
+    as obfuscated (see :func:`agent_bom.parsers.prompt_scanner.descriptor_hits`).
+    """
+    hits = descriptor_hits(text, _normalize_text(text))
+    return [
+        EnforcementFinding(
+            severity="high",
+            category=category,
+            server_name=server.name,
+            tool_name=name,
+            surface_type=kind,
+            surface_name=name,
+            reason=f"{label} contains {risk}: {title}",
+            recommendation="Review the flagged descriptor for hidden instructions. Verify the MCP server source.",
+            evidence={
+                "basis": "descriptor_pattern",
+                "surface": label,
+                "asset_identifier": asset_identifier,
+                "rule_id": f"{label}: {risk}: {title}",
+            },
+        )
+        for risk, title in hits
+    ]
 
 
 def scan_tool_descriptions(server: MCPServer) -> list[EnforcementFinding]:
