@@ -296,23 +296,29 @@ def validate_package_name(name: str, ecosystem: str) -> None:
 
     # Ecosystem-specific validation
     if ecosystem == "npm":
-        # npm: lowercase, alphanumeric, hyphens, underscores, @ for scoped
-        if not re.match(r"^(@[a-z0-9-_]+/)?[a-z0-9-_]+$", name.lower()):
+        # Scan existing packages too: npm's legacy names allow uppercase and
+        # URL-safe punctuation, including dots. Publishing rules are stricter.
+        if (
+            not re.fullmatch(r"(@[a-zA-Z0-9._~!'()*-]+/)?[a-zA-Z0-9._~!'()*-]+", name)
+            or name.startswith((".", "_", "-"))
+            or name.rsplit("/", 1)[-1].startswith(".")
+            or name.lower() in {"node_modules", "favicon.ico"}
+        ):
             raise SecurityError(f"Invalid npm package name: {name}")
 
     elif ecosystem == "pypi":
         # PyPI: alphanumeric, hyphens, underscores, dots
-        if not re.match(r"^[a-zA-Z0-9-_.]+$", name):
+        if not re.fullmatch(r"[a-zA-Z0-9-_.]+", name):
             raise SecurityError(f"Invalid PyPI package name: {name}")
 
     elif ecosystem == "go":
         # Go: domain/path format
-        if not re.match(r"^[a-zA-Z0-9-_.\/]+$", name):
+        if not re.fullmatch(r"[a-zA-Z0-9-_.\/]+", name):
             raise SecurityError(f"Invalid Go package name: {name}")
 
     elif ecosystem == "cargo":
         # Rust: alphanumeric, hyphens, underscores
-        if not re.match(r"^[a-zA-Z0-9-_]+$", name):
+        if not re.fullmatch(r"[a-zA-Z0-9-_]+", name):
             raise SecurityError(f"Invalid Cargo package name: {name}")
 
     logger.debug(f"Package name validated: {name} ({ecosystem})")
