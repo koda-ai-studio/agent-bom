@@ -25,7 +25,7 @@ metadata:
   install:
     pipx: agent-bom
     pip: agent-bom
-    docker: ghcr.io/koda-ai-studio/agent-bom:0.111.0
+    docker: ghcr.io/koda-ai-studio/agent-bom:0.112.1
   openclaw:
     requires:
       bins: []
@@ -417,6 +417,6 @@ provider's own APIs.
 ## Verification
 
 - **Source**: [github.com/koda-ai-studio/agent-bom](https://github.com/koda-ai-studio/agent-bom) (Apache-2.0)
-- **Sigstore signed**: `agent-bom verify agent-bom@0.111.0`
+- **Sigstore signed**: `agent-bom verify agent-bom@0.112.1`
 - **7,100+ tests** with CodeQL + OpenSSF Scorecard
 - **No telemetry**: Zero tracking, zero analytics

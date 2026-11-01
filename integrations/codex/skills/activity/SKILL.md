@@ -18,7 +18,7 @@ requires:
 
 Review local coding-agent activity with agent-bom. This skill is read-only: the command reads Claude Code and Codex session history files on this machine, sends nothing over the network, and changes nothing.
 
-1. Run `uvx --from agent-bom==0.111.0 agent-bom activity --format json > "$OUT/activity.json"`. Add `--since '<N>d'` if the user named a window (default 30 days) and `--project '<dir>'` only if they named a project directory. Never add `--check-packages`; offer the `check` skill instead.
+1. Run `uvx --from agent-bom==0.112.1 agent-bom activity --format json > "$OUT/activity.json"`. Add `--since '<N>d'` if the user named a window (default 30 days) and `--project '<dir>'` only if they named a project directory. Never add `--check-packages`; offer the `check` skill instead.
 2. Report, in this order:
    - the `summary.headline` exactly as returned, including the window label, and say if `truncated` is true (read limits were reached, so counts are partial)
    - **Unused MCP servers** from `unused_servers`: agent, server and `config_path`. These are configured attack surface with no use in the window; they are candidates to remove. A client whose history was not found is never listed, so do not call its servers unused.
