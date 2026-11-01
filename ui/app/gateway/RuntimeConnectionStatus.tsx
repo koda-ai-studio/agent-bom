@@ -32,7 +32,7 @@ export function RuntimeConnectionStatus({ tenantId, streamState, events, onBlock
   const blocked = events.filter(event => event.decision === "deny").length;
   const cards = [
     ["Configured", setup?.profiles ?? "Loading setup…", "Saved setup snapshot; client installation is not verified."],
-    ["Connected", streamState === "live" ? "Browser stream connected" : streamState === "connecting" ? "Connecting evidence stream" : "Evidence stream interrupted", "This is the browser-to-platform connection."],
+    ["Connected", streamState === "live" ? "Browser stream connected" : streamState === "snapshot" ? "Polled feed snapshot (anonymous read)" : streamState === "connecting" ? "Connecting evidence stream" : "Evidence stream interrupted", "This is the browser-to-platform connection."],
     ["Enforcement", setup?.policy ?? "Loading policy setup…", "Application to endpoints is unverified. Inspect recorded decisions below."],
     ["Recently received", receiptStatus(events[0]?.ingested_at, now), "Receipt freshness is not proof of complete endpoint coverage."],
   ];
