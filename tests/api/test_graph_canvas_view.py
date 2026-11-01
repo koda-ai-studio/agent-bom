@@ -35,6 +35,9 @@ NOT_CANVAS_READS = {
     # Reads /v1/graph/edges/changes rows, a different response.
     ("source_id", "components/graph-edge-changes-panel.tsx"),
     ("target_id", "components/graph-edge-changes-panel.tsx"),
+    # topologyAgentKey reads inventory Agent records, not UnifiedNode canvas rows.
+    ("canonical_id", "lib/agent-topology-graph.ts"),
+    ("source_id", "lib/agent-topology-graph.ts"),
 }
 
 
