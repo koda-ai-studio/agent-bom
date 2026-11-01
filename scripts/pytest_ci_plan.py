@@ -480,6 +480,7 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     "test_scan_characterization.py",
                     "test_scan_verdict_completeness.py",
                     "test_scan_distro_cpe_possibly_affected.py",
+                    "test_export_enrichment_parity.py",
                 }
             )
         if normalized.as_posix() in {

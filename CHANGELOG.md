@@ -7,7 +7,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.112.1] - 2026-10-30
+## [0.112.1] - 2026-10-31
 
 ### Highlights
 - Import customer-selected security-lake findings into the existing authenticated findings and graph workflow, retaining scope, observation times and source receipts.
@@ -15,6 +15,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Investigate component findings with advisory context, fixed versions, connected evidence and clearer graph navigation.
 
 ### Upgrade notes
+- See [0.112.1 upgrade guidance](docs/UPGRADING.md) for package extras, image roles, retained evidence and post-upgrade checks.
 - Supersedes the unpublished v0.112.0 tag. Artifact publication was blocked by an expired bundled ATLAS catalog.
 - Base CLI installations no longer include unused Flask and Tornado dependencies. API installations retain the filesystem-jail dependency through `agent-bom[api]`; the developer extra includes the API dependencies.
 - Use the dependency-free `sca-import` extra for external SCA report imports. The existing `snyk` extra remains a deprecated compatibility alias.
@@ -37,6 +38,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `docs/THREAT_MODEL.md` records the gateway/posture audit outbox (leased, fenced acknowledgements) and the MCP `scan` `project_path` filesystem boundary.
 
 ### Fixed
+- First-run project scans retain an HTML report with responsive evidence tabs, expandable finding details and print layouts. Missing scores remain distinct from zero; stale catalog evidence is labelled explicitly.
+- Explicit enrichment requests remain effective under quick scan profiles. Distribution-ambiguous package matches remain possibly affected and incomplete until distribution evidence resolves them.
+- Ollama discovery preserves the selected endpoint and collection provenance; an unavailable configured endpoint never substitutes local manifest inventory. Missing AISVS exposure evidence remains unknown.
+- Current-agent counts avoid materializing graph paths; retained-report reads reduce repeated decoding, and advisory aliases use indexed lookups.
+- Published MCP images use verified release Git contexts and distinct API/MCP image identities. Released-image dependency refreshes update pyasn1 where installed.
 - Cloud inventory summaries in REST and MCP preserve incomplete enabled-provider collection instead of reporting success from enablement alone. Missing SDK states and partial Snowflake discovery remain visible without discarding successful resource counts.
 - Retain collected cloud assets and managed Kubernetes GPU pools from explicitly partial inventory in the graph, while preserving incomplete scan coverage and scoped reconciliation.
 - Release preflight and CI inspect the bundled ATLAS catalog even when a newer operator cache exists, using the same 180-day freshness limit. The bundled catalog is refreshed from the upstream source.
