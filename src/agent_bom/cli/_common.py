@@ -22,13 +22,42 @@ from agent_bom import __version__
 from agent_bom.core.severity import SEVERITY_POLICY_ORDER
 from agent_bom.inventory import build_agents_from_inventory as _build_agents_from_inventory  # noqa: F401 — compatibility re-export
 from agent_bom.inventory import coerce_agent_type_for_inventory as _coerce_agent_type_for_inventory  # noqa: F401
-from agent_bom.output.brand_tokens import cli_banner_plain
+from agent_bom.output.brand_tokens import POSITIONING_SHORT, cli_banner_plain
 from agent_bom.security import sanitize_env_vars  # noqa: F401 — re-exported by agent_bom.cli
 
 logger = logging.getLogger(__name__)
 
 # Canonical CLI lockup — product name agent-bom, mark is BOM-with-agent-O.
 BANNER = cli_banner_plain(version=__version__)
+
+# ``agent-bom --help`` text; the first line is the canonical tagline.
+MAIN_HELP = f"""agent-bom — {POSITIONING_SHORT}.
+
+\b
+Maps the full trust chain: agent → MCP server → packages → CVEs → blast radius.
+
+\b
+Quick start:
+  agent-bom quickstart                          print local scan, sample-data, and API/UI next steps
+  agent-bom scan                                 discover + scan local agents and MCP servers
+  agent-bom scan -p .                            scan project manifests plus agent/MCP context
+  agent-bom samples first-run                    write an inspectable sample AI stack
+  agent-bom where                                show MCP discovery paths checked on this machine
+  agent-bom mesh                                 show the live machine-wide agent/MCP topology
+  agent-bom mesh --project .                     show project-local topology only
+  agent-bom skills scan .                        scan skills and instruction files
+  agent-bom skills rescan                        revisit previously cataloged skills
+  agent-bom check flask@2.0.0 --ecosystem pypi  pre-install CVE gate
+  agent-bom image nginx:latest                   container image scan
+  agent-bom iac Dockerfile k8s/ infra/main.tf    IaC scan across one or more paths
+  agent-bom proxy "npx @mcp/server-fs /workspace"  MCP security proxy
+
+\b
+Tip: `agent-bom -h` groups commands by scanning, runtime, MCP, reporting, and governance.
+
+\b
+Docs:  https://koda-ai-studio.github.io/agent-bom/
+"""
 
 SEVERITY_ORDER = {label.lower(): rank for label, rank in SEVERITY_POLICY_ORDER.items()}
 PORT_RANGE = click.IntRange(1, 65535)

@@ -16,6 +16,7 @@ from agent_bom.__main__ import version_message
 from agent_bom.cli._agent_mode import AGENT_MODE_ENV_VAR
 from agent_bom.cli._common import (
     BANNER,  # noqa: F401 — re-export for backward compatibility
+    MAIN_HELP,
     SEVERITY_ORDER,
     _build_agents_from_inventory,
     _check_for_update_bg,
@@ -56,6 +57,7 @@ def _print_startup_banner() -> None:
     cls=GroupedGroup,
     context_settings={"help_option_names": ["-h", "--help"]},
     invoke_without_command=True,
+    help=MAIN_HELP,
 )
 @click.option(
     "--profile",
@@ -76,33 +78,6 @@ def _print_startup_banner() -> None:
 )
 @click.pass_context
 def main(ctx: click.Context, profile: str | None, agent_mode: bool):
-    """agent-bom — open security scanner for AI infrastructure.
-
-    \b
-    Maps the full trust chain: agent → MCP server → packages → CVEs → blast radius.
-
-    \b
-    Quick start:
-      agent-bom quickstart                          print local scan, sample-data, and API/UI next steps
-      agent-bom scan                                 discover + scan local agents and MCP servers
-      agent-bom scan -p .                            scan project manifests plus agent/MCP context
-      agent-bom samples first-run                    write an inspectable sample AI stack
-      agent-bom where                                show MCP discovery paths checked on this machine
-      agent-bom mesh                                 show the live machine-wide agent/MCP topology
-      agent-bom mesh --project .                     show project-local topology only
-      agent-bom skills scan .                        scan skills and instruction files
-      agent-bom skills rescan                        revisit previously cataloged skills
-      agent-bom check flask@2.0.0 --ecosystem pypi  pre-install CVE gate
-      agent-bom image nginx:latest                   container image scan
-      agent-bom iac Dockerfile k8s/ infra/main.tf    IaC scan across one or more paths
-      agent-bom proxy "npx @mcp/server-fs /workspace"  MCP security proxy
-
-    \b
-    Tip: `agent-bom -h` groups commands by scanning, runtime, MCP, reporting, and governance.
-
-    \b
-    Docs:  https://koda-ai-studio.github.io/agent-bom/
-    """
     if profile:
         import os as _os
 

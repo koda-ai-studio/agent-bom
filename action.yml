@@ -1,5 +1,5 @@
 name: 'agent-bom Scan'
-description: 'Security gate for AI-era repos: scan MCP configs, agents, skills, dependencies, IaC and secrets; SARIF, PR summary and SBOM.'
+description: 'AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach. CI gate, SARIF, SBOM.'
 author: 'agent-bom'
 
 branding:
