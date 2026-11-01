@@ -54,7 +54,9 @@ from agent_bom.output.sarif_taxonomy import (
     _build_run_taxonomies,
     _compact_taxa_references,
     _framework_taxa_references,
+    _merge_rule_cwe_tags,
     _taxonomies_as_tool_extensions,
+    _unified_rule_properties,
 )
 from agent_bom.output.source_locations import (
     SourceIndex,
@@ -597,12 +599,7 @@ def _unified_finding_rule(finding: Finding, rule_id: str, level: str, security_s
         "fullDescription": {"text": description},
         "helpUri": _UNIFIED_RULE_HELP_URI,
         "defaultConfiguration": {"level": level},
-        "properties": {
-            "security-severity": security_severity,
-            "source": finding.source.value,
-            "finding_type": finding.finding_type.value,
-            **({"tags": list(dict.fromkeys(finding.cwe_ids))} if finding.cwe_ids else {}),
-        },
+        "properties": _unified_rule_properties(finding, security_severity),
     }
     help_body = advisory_help(
         description,
@@ -714,15 +711,6 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
         elif finding.cwe_ids:
             _merge_rule_cwe_tags(catalog.rules, rule_id, finding.cwe_ids)
         catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence))
-
-
-def _merge_rule_cwe_tags(rules: list[dict[str, Any]], rule_id: str, cwe_ids: list[str]) -> None:
-    """A shared rule (one SAST category, several sinks) lists every CWE its results carry."""
-    for rule in reversed(rules):
-        if rule.get("id") == rule_id:
-            tags = rule.setdefault("properties", {}).setdefault("tags", [])
-            tags.extend(cwe for cwe in cwe_ids if cwe not in tags)
-            return
 
 
 def _sarif_invocation(scan_run: ScanRun) -> dict[str, Any]:

@@ -86,3 +86,51 @@ def test_unregistered_platform_collector_is_not_declared(monkeypatch) -> None:
     providers = {row["provider"] for row in generator.build_cloud_matrix()["rows"]}
     assert "supabase" in providers
     assert "vercel" not in providers
+
+
+def test_capability_matrix_rows_cite_sources_and_name_the_dast_gap() -> None:
+    data = json.loads(DOC_JSON.read_text(encoding="utf-8"))
+    rows = {row["id"]: row for row in data["capabilities"]}
+
+    assert {
+        "sca",
+        "secrets",
+        "sast_native",
+        "sast_import",
+        "iac",
+        "mcp_audit",
+        "image_cve",
+        "cloud_posture_live",
+        "cloud_posture_static",
+        "dast_http",
+    } <= set(rows)
+    for row in rows.values():
+        assert row["sources"] and all(s["path"] and s["symbol"] for s in row["sources"]), row["id"]
+        assert row["status"] in {"provided", "not provided"}, row["id"]
+        assert row["detail"], row["id"]
+    assert rows["dast_http"]["status"] == "not provided"
+    assert rows["dast_http"]["values"] == []
+
+
+def test_terraform_provider_counts_match_the_rule_registry() -> None:
+    import re
+
+    from agent_bom.iac import terraform_security as tf
+
+    counts = {"aws": set(), "azure": set(), "gcp": set()}
+    for scope, check in tf._RULES:
+        rule_ids = {f"TF-SEC-{n}" for n in re.findall(r"\d{3}", check.__name__)}  # tf_sec_001_002 -> two ids
+        assert rule_ids, check.__name__
+        for rtype in scope or ("aws_", "azurerm_", "google_"):
+            provider = "azure" if rtype.startswith("azurerm_") else "gcp" if rtype.startswith("google_") else "aws"
+            counts[provider] |= rule_ids
+    data = json.loads(DOC_JSON.read_text(encoding="utf-8"))
+    iac = next(row for row in data["capabilities"] if row["id"] == "iac")
+
+    generated = iac["values"]["terraform"]
+    assert generated["azure"] == len(counts["azure"] - counts["aws"])
+    assert generated["gcp"] == len(counts["gcp"] - counts["aws"])
+    assert generated["aws"] == len(counts["aws"])
+    assert generated["aws"] + generated["azure"] + generated["gcp"] == len(
+        {rid for ids in iac["values"]["terraform_rule_ids"].values() for rid in ids}
+    )

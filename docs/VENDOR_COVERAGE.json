@@ -1,4 +1,366 @@
 {
+  "capabilities": [
+    {
+      "detail": "18 manifest/lockfile parsers: bun, cargo, conda, conda_environment, go, gradle, hex, maven, npm, nuget, php, pip, pip_compile, pnpm, pub, ruby, swift, yarn",
+      "id": "sca",
+      "sources": [
+        {
+          "method": "ast",
+          "path": "src/agent_bom/parsers/__init__.py",
+          "symbol": "_BUILTIN_INVENTORY_PARSERS"
+        }
+      ],
+      "status": "provided",
+      "title": "SCA (dependencies)",
+      "values": [
+        "bun",
+        "cargo",
+        "conda",
+        "conda_environment",
+        "go",
+        "gradle",
+        "hex",
+        "maven",
+        "npm",
+        "nuget",
+        "php",
+        "pip",
+        "pip_compile",
+        "pnpm",
+        "pub",
+        "ruby",
+        "swift",
+        "yarn"
+      ]
+    },
+    {
+      "detail": "35 credential patterns, 4 secret-file patterns, 11 PII patterns; values are never echoed",
+      "id": "secrets",
+      "sources": [
+        {
+          "method": "ast",
+          "path": "src/agent_bom/runtime/patterns.py",
+          "symbol": "CREDENTIAL_PATTERNS, PII_PATTERNS"
+        },
+        {
+          "method": "ast",
+          "path": "src/agent_bom/scanners/secret_lines.py",
+          "symbol": "FILE_SECRET_PATTERNS"
+        }
+      ],
+      "status": "provided",
+      "title": "Secrets",
+      "values": {
+        "credential_patterns": 35,
+        "file_patterns": 4,
+        "pii_patterns": 11
+      }
+    },
+    {
+      "detail": "Python interprocedural taint with 8 sink classes; JS/TS 6 and Go 2 dangerous-sink flow categories. Findings carry severity, CWE and (for LLM prompt sinks) OWASP LLM01.",
+      "id": "sast_native",
+      "sources": [
+        {
+          "method": "ast",
+          "path": "src/agent_bom/ast_python_analysis.py",
+          "symbol": "_TAINT_SINK_TITLES"
+        },
+        {
+          "method": "regex",
+          "path": "src/agent_bom/ast/js_ts/*.py",
+          "symbol": "category=\"js_ts_*\" literals"
+        },
+        {
+          "method": "regex",
+          "path": "src/agent_bom/ast_go.py",
+          "symbol": "category=\"go_*\""
+        }
+      ],
+      "status": "provided",
+      "title": "SAST (native)",
+      "values": {
+        "go": [
+          "go_interprocedural_dangerous_flow",
+          "go_tainted_dangerous_sink"
+        ],
+        "js_ts": [
+          "js_ts_dangerous_call",
+          "js_ts_dynamic_require",
+          "js_ts_path_traversal_sink",
+          "js_ts_sql_query_construction",
+          "js_ts_tainted_dangerous_sink",
+          "js_ts_xss_sink"
+        ],
+        "python": [
+          "tainted_command_execution",
+          "tainted_dangerous_sink",
+          "tainted_dynamic_code_execution",
+          "tainted_llm_prompt",
+          "tainted_path_access",
+          "tainted_sql_query",
+          "tainted_ssrf_sink",
+          "tainted_xss_sink"
+        ]
+      }
+    },
+    {
+      "detail": "SARIF import via --external-scan plus 2 third-party report importers",
+      "id": "sast_import",
+      "sources": [
+        {
+          "method": "file-exists",
+          "path": "src/agent_bom/parsers/sarif.py",
+          "symbol": "module file"
+        },
+        {
+          "method": "ast",
+          "path": "src/agent_bom/parsers/importers/*.py",
+          "symbol": "ImporterManifest(...)"
+        }
+      ],
+      "status": "provided",
+      "title": "SAST (imported)",
+      "values": {
+        "importers": [
+          "prowler",
+          "securityhub"
+        ],
+        "sarif_import": true
+      }
+    },
+    {
+      "detail": "Terraform: AWS 50, Azure 12, GCP 11 rules (CIS ids per provider); other families: CFN 19, COMPOSE 11, DBT-SEC 18, DOCKER 25, DOCKERD 8, GHA 4, HELM 15, IAM 3, K8S 34, TF-AI 10",
+      "id": "iac",
+      "sources": [
+        {
+          "method": "regex",
+          "path": "src/agent_bom/iac/terraform_security*.py",
+          "symbol": "rule_id=\"TF-SEC-NNN\" literals by module"
+        },
+        {
+          "method": "ast-scan",
+          "path": "src/agent_bom/iac/**/*.py",
+          "symbol": "rule-id literals"
+        }
+      ],
+      "status": "provided",
+      "title": "IaC misconfiguration",
+      "values": {
+        "other_families": {
+          "CFN": 19,
+          "COMPOSE": 11,
+          "DBT-SEC": 18,
+          "DOCKER": 25,
+          "DOCKERD": 8,
+          "GHA": 4,
+          "HELM": 15,
+          "IAM": 3,
+          "K8S": 34,
+          "TF-AI": 10
+        },
+        "terraform": {
+          "aws": 50,
+          "azure": 12,
+          "gcp": 11
+        },
+        "terraform_rule_ids": {
+          "aws": [
+            "TF-SEC-001",
+            "TF-SEC-002",
+            "TF-SEC-003",
+            "TF-SEC-004",
+            "TF-SEC-005",
+            "TF-SEC-006",
+            "TF-SEC-007",
+            "TF-SEC-009",
+            "TF-SEC-010",
+            "TF-SEC-011",
+            "TF-SEC-012",
+            "TF-SEC-013",
+            "TF-SEC-014",
+            "TF-SEC-015",
+            "TF-SEC-016",
+            "TF-SEC-017",
+            "TF-SEC-018",
+            "TF-SEC-019",
+            "TF-SEC-020",
+            "TF-SEC-021",
+            "TF-SEC-022",
+            "TF-SEC-023",
+            "TF-SEC-024",
+            "TF-SEC-025",
+            "TF-SEC-026",
+            "TF-SEC-027",
+            "TF-SEC-028",
+            "TF-SEC-029",
+            "TF-SEC-030",
+            "TF-SEC-031",
+            "TF-SEC-032",
+            "TF-SEC-033",
+            "TF-SEC-034",
+            "TF-SEC-035",
+            "TF-SEC-036",
+            "TF-SEC-037",
+            "TF-SEC-038",
+            "TF-SEC-039",
+            "TF-SEC-040",
+            "TF-SEC-041",
+            "TF-SEC-042",
+            "TF-SEC-043",
+            "TF-SEC-044",
+            "TF-SEC-045",
+            "TF-SEC-046",
+            "TF-SEC-047",
+            "TF-SEC-048",
+            "TF-SEC-049",
+            "TF-SEC-050",
+            "TF-SEC-051"
+          ],
+          "azure": [
+            "TF-SEC-101",
+            "TF-SEC-102",
+            "TF-SEC-103",
+            "TF-SEC-104",
+            "TF-SEC-105",
+            "TF-SEC-106",
+            "TF-SEC-107",
+            "TF-SEC-108",
+            "TF-SEC-109",
+            "TF-SEC-110",
+            "TF-SEC-111",
+            "TF-SEC-112"
+          ],
+          "gcp": [
+            "TF-SEC-201",
+            "TF-SEC-202",
+            "TF-SEC-203",
+            "TF-SEC-204",
+            "TF-SEC-205",
+            "TF-SEC-206",
+            "TF-SEC-207",
+            "TF-SEC-208",
+            "TF-SEC-209",
+            "TF-SEC-210",
+            "TF-SEC-211"
+          ]
+        }
+      }
+    },
+    {
+      "detail": "7 static tool-schema rules plus live tools/list introspection (mcp introspect, mcp audit --live). Tool-description poisoning heuristics are limited to the prompt-injection patterns in prompt_scanner.",
+      "id": "mcp_audit",
+      "sources": [
+        {
+          "method": "regex",
+          "path": "src/agent_bom/mcp_tool_rules.py",
+          "symbol": "rule_id=\"MCP-TOOL-NN-*\""
+        },
+        {
+          "method": "file-exists",
+          "path": "src/agent_bom/mcp_introspect.py",
+          "symbol": "module file"
+        }
+      ],
+      "status": "provided",
+      "title": "MCP server audit",
+      "values": {
+        "live_introspection": true,
+        "schema_rules": [
+          "MCP-TOOL-01",
+          "MCP-TOOL-02",
+          "MCP-TOOL-03",
+          "MCP-TOOL-04",
+          "MCP-TOOL-05",
+          "MCP-TOOL-06",
+          "MCP-TOOL-07"
+        ]
+      }
+    },
+    {
+      "detail": "OS package databases: Alpine (apk), Debian/Ubuntu (dpkg), RPM-based (rpm); distro advisory feeds synced: alpine, debian (OSV for the rest)",
+      "id": "image_cve",
+      "sources": [
+        {
+          "method": "ast",
+          "path": "src/agent_bom/parsers/__init__.py",
+          "symbol": "_BUILTIN_INVENTORY_PARSERS"
+        },
+        {
+          "method": "ast",
+          "path": "src/agent_bom/db/sync.py",
+          "symbol": "DEFAULT_SYNC_SOURCES"
+        }
+      ],
+      "status": "provided",
+      "title": "Container image CVE",
+      "values": {
+        "distro_feeds": [
+          "alpine",
+          "debian"
+        ],
+        "os_package_dbs": [
+          "apk",
+          "dpkg",
+          "rpm"
+        ]
+      }
+    },
+    {
+      "detail": "Benchmark checks against the provider API: aws 59, azure 94, databricks 12, gcp 59, snowflake 14",
+      "id": "cloud_posture_live",
+      "sources": [
+        {
+          "method": "json",
+          "path": "src/agent_bom/cloud/benchmark_inventory.json",
+          "symbol": "providers[*].implemented_control_count"
+        }
+      ],
+      "status": "provided",
+      "title": "Cloud posture (live, API)",
+      "values": {
+        "aws": 59,
+        "azure": 94,
+        "databricks": 12,
+        "gcp": 59,
+        "snowflake": 14
+      }
+    },
+    {
+      "detail": "Terraform AWS 50 / Azure 12 / GCP 11; CloudFormation 19 (AWS)",
+      "id": "cloud_posture_static",
+      "sources": [
+        {
+          "method": "regex",
+          "path": "src/agent_bom/iac/terraform_security*.py",
+          "symbol": "rule_id=\"TF-SEC-NNN\" literals by module"
+        }
+      ],
+      "status": "provided",
+      "title": "Cloud posture (static IaC)",
+      "values": {
+        "cloudformation": 19,
+        "terraform": {
+          "aws": 50,
+          "azure": 12,
+          "gcp": 11
+        }
+      }
+    },
+    {
+      "detail": "No HTTP/API/web dynamic testing. Live MCP audit introspects tool schemas; it does not fuzz or probe endpoints.",
+      "id": "dast_http",
+      "sources": [
+        {
+          "method": "glob",
+          "path": "src/agent_bom/**/dast*.py",
+          "symbol": "module files"
+        }
+      ],
+      "status": "not provided",
+      "title": "HTTP/API dynamic testing (DAST)",
+      "values": []
+    }
+  ],
   "cloud_matrix": {
     "gap_count": 180,
     "lanes": [
@@ -2908,7 +3270,7 @@
         },
         {
           "family": "TF-SEC",
-          "rule_count": 50
+          "rule_count": 73
         }
       ],
       "note": "Distinct rule-id literals per prefix.",

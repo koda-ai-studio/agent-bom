@@ -6,6 +6,7 @@ import ast
 from dataclasses import dataclass, field
 
 from agent_bom.ast_flow_scoring import flow_cwe_ids, flow_severity
+from agent_bom.ast_flow_serialize import flow_finding_rows
 
 
 @dataclass
@@ -74,11 +75,7 @@ class ControlFlowEdge:
 
 @dataclass
 class FlowFinding:
-    """A lightweight control-flow or inter-procedural finding.
-
-    ``severity`` and ``cwe_ids`` default from the category (and sink) via
-    :mod:`agent_bom.ast_flow_scoring`, so every consumer ranks the row the same way.
-    """
+    """A lightweight control-flow or inter-procedural finding; severity/CWE default from the category."""
 
     category: str
     title: str
@@ -93,10 +90,8 @@ class FlowFinding:
     cwe_ids: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        if not self.severity:
-            self.severity = flow_severity(self.category)
-        if not self.cwe_ids:
-            self.cwe_ids = flow_cwe_ids(self.category, self.sink)
+        self.severity = self.severity or flow_severity(self.category)
+        self.cwe_ids = self.cwe_ids or flow_cwe_ids(self.category, self.sink)
 
 
 @dataclass
@@ -259,22 +254,7 @@ class ASTAnalysisResult:
                 }
                 for edge in self.cfg_edges
             ],
-            "flow_findings": [
-                {
-                    "category": finding.category,
-                    "title": finding.title,
-                    "detail": finding.detail,
-                    "file": finding.file_path,
-                    "line": finding.line_number,
-                    "entrypoint": finding.entrypoint,
-                    "sink": finding.sink,
-                    "call_path": finding.call_path,
-                    "source": finding.source,
-                    "severity": finding.severity,
-                    "cwe_ids": list(finding.cwe_ids),
-                }
-                for finding in self.flow_findings
-            ],
+            "flow_findings": flow_finding_rows(self.flow_findings),
             "application_entrypoints": [
                 {
                     "name": entry.name,

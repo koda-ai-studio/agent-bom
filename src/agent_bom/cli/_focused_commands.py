@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import click
 
@@ -43,6 +43,11 @@ def _scan_format_option():
         default="console",
         help="Output format",
     )
+
+
+def _flow_row(finding: Any) -> str:
+    cwe = f" [dim]{', '.join(finding.cwe_ids)}[/dim]" if finding.cwe_ids else ""
+    return f"  {finding.file_path}:{finding.line_number}  [red]{finding.severity.upper()}[/red] {finding.title}{cwe}"
 
 
 def _validate_json_or_console_format(command_name: str, output_format: str) -> str:
@@ -582,8 +587,7 @@ def code_cmd(path: str, output_format: str, output_path: Optional[str], quiet: b
         con.print(f"\n[bold]Flow Findings ({len(result.flow_findings)}):[/bold]")
         for finding in result.flow_findings[:8]:
             path = " -> ".join(finding.call_path) if finding.call_path else finding.sink
-            cwe = f" {', '.join(finding.cwe_ids)}" if finding.cwe_ids else ""
-            con.print(f"  {finding.file_path}:{finding.line_number}  [red]{finding.severity.upper()}[/red] {finding.title}[dim]{cwe}[/dim]")
+            con.print(_flow_row(finding))
             con.print(f"    [dim]{path}[/dim]")
 
     stats = result.to_dict()["stats"]
