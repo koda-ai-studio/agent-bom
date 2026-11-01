@@ -165,6 +165,22 @@ Cookies contain a nonce-specific keyed binding, never the raw login key.
 Logout still records nonce revocation after a backing-key change, so restoring
 that key cannot revive a cookie that was explicitly signed out.
 
+Bindings use HMAC-SHA-256 with a server-held signing key and distinct static-key
+and operator-key domains. They authenticate the credential generation; they are
+not password-storage hashes. A cookie alone cannot verify guessed login keys
+without the signing secret. Configure `AGENT_BOM_BROWSER_SESSION_SIGNING_KEY`
+(or its `_FILE` source) with an independently generated secret; do not reuse the
+login key. Compromise of the signing secret breaks this boundary, and these
+bindings do not claim protection against a compromised server. Configured signing
+secrets pass through PBKDF2-HMAC-SHA-256 with 600,000 rounds. The single-process
+fallback uses 32 random bytes and does not survive restart; clustered mode
+requires a persistent signing secret.
+
+Verification rejects an unkeyed digest, a binding from another nonce or signing
+key, and a binding from the other credential domain. These fail-closed contracts
+are exercised in `tests/api/test_browser_session_binding_security.py`, including
+inside an otherwise valid signed envelope to isolate the binding check.
+
 Operator-configured slots also bind cookies to their current stored credential
 generation. Replacing a slot's key invalidates its previous browser sessions;
 reloading an unchanged key preserves that generation while applying the current
