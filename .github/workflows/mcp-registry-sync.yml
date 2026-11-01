@@ -15,6 +15,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -196,7 +197,25 @@ jobs:
           git config commit.gpgsign true
           echo "configured=true" >> "$GITHUB_OUTPUT"
 
-      - name: Create PR if registry changed
+      - name: Check whether Actions may open pull requests
+        id: pr_policy
+        if: (steps.count.outputs.new_count != '0' || steps.count.outputs.corrected_count != '0' || steps.count.outputs.version_count != '0' || steps.count.outputs.cve_count != '0') && steps.signing.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # "Allow GitHub Actions to create and approve pull requests"
+          # (Settings → Actions → General → Workflow permissions). GITHUB_TOKEN
+          # may not be allowed to read the setting; "unknown" still attempts
+          # the PR and classifies the refusal afterwards.
+          PR_CREATE="$(gh api "repos/${GITHUB_REPOSITORY}/actions/permissions/workflow" --jq '.can_approve_pull_request_reviews' 2>/dev/null || echo unknown)"
+          case "$PR_CREATE" in
+            true|false) ;;
+            *) PR_CREATE=unknown ;;
+          esac
+          echo "pr_create=${PR_CREATE}" >> "$GITHUB_OUTPUT"
+          echo "Actions may create PRs: ${PR_CREATE}"
+
+      - name: Push the sync branch and open or update the PR
         if: (steps.count.outputs.new_count != '0' || steps.count.outputs.corrected_count != '0' || steps.count.outputs.version_count != '0' || steps.count.outputs.cve_count != '0') && steps.signing.outputs.configured == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -206,8 +225,12 @@ jobs:
           CVE_COUNT: ${{ steps.count.outputs.cve_count }}
           SOURCE: ${{ steps.count.outputs.sync_source }}
           SOURCE_URL: ${{ steps.count.outputs.sync_source_url }}
+          PR_CREATE: ${{ steps.pr_policy.outputs.pr_create }}
         run: |
-          BRANCH="chore/mcp-registry-$(date +%Y%m%d)"
+          set -euo pipefail
+          # One stable branch: every weekly run force-updates it (with lease),
+          # so a refused PR never leaves a trail of dated orphan branches.
+          BRANCH="chore/mcp-registry-sync"
           git switch -C "$BRANCH" origin/main
           # Stage only registry data and the exact authored paths refreshed above.
           python - <<'PY'
@@ -218,8 +241,10 @@ jobs:
           paths = json.loads(Path("/tmp/registry-count-paths.json").read_text())
           subprocess.run(["git", "add", "--", "src/agent_bom/mcp_registry.json", *paths], check=True)
           PY
-          git commit -S -m "chore: sync MCP registry — ${NEW_COUNT} new, ${CORRECTED_COUNT} trust corrections, ${VERSION_COUNT} versions, ${CVE_COUNT} CVE updates"
+          TITLE="chore: sync MCP registry — ${NEW_COUNT} new, ${CORRECTED_COUNT} trust corrections, ${VERSION_COUNT} versions, ${CVE_COUNT} CVE updates"
+          git commit -S -m "$TITLE"
           git push --force-with-lease origin "$BRANCH"
+          DIFFSTAT="$(git diff --stat origin/main..HEAD | tr '\n' ';')"
           BODY="Automated weekly sync from the official MCP server registry.
 
           **New-server source:** ${SOURCE} (${SOURCE_URL})
@@ -229,17 +254,69 @@ jobs:
           **CVE metadata updates:** ${CVE_COUNT}
 
           Please review the changes in \`src/agent_bom/mcp_registry.json\` before merging."
+          BODY_FILE="$(mktemp)"
+          printf '%s\n' "$BODY" > "$BODY_FILE"
+          MANUAL="gh pr create --repo ${GITHUB_REPOSITORY} --base main --head ${BRANCH} --title '${TITLE}' --body-file pr-body.md"
+          SETTING="Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests"
+
+          fail_closed() {
+            # The sync itself succeeded and the branch is pushed; only the PR
+            # is missing. Surface that in one tracking issue (created once,
+            # updated every week) and fail the run with the real cause so the
+            # Monday red is actionable instead of a bare GraphQL error.
+            ISSUE_TITLE="MCP registry sync: Actions may not open the weekly pull request"
+            ISSUE_BODY="The weekly MCP registry sync pushed \`${BRANCH}\` (${DIFFSTAT}) but GitHub refused to let this workflow open the pull request (${1}).
+
+          **Fix once:** enable **${SETTING}** (docs/operations/CI_RUNBOOK.md, \"MCP registry sync cannot open its PR\"), then re-run the workflow or open the PR by hand:
+
+          \`\`\`bash
+          ${MANUAL}
+          \`\`\`
+
+          Last attempt: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          Pending changes: ${NEW_COUNT} new servers, ${CORRECTED_COUNT} trust corrections, ${VERSION_COUNT} version refreshes, ${CVE_COUNT} CVE metadata updates."
+            ISSUE_FILE="$(mktemp)"
+            printf '%s\n' "$ISSUE_BODY" > "$ISSUE_FILE"
+            ISSUE_NUMBER="$(gh issue list --state open --search "\"${ISSUE_TITLE}\" in:title" --json number,title --jq "[.[] | select(.title == \"${ISSUE_TITLE}\")][0].number // empty")"
+            if [ -n "$ISSUE_NUMBER" ]; then
+              gh issue edit "$ISSUE_NUMBER" --body-file "$ISSUE_FILE"
+              gh issue comment "$ISSUE_NUMBER" --body "Still blocked on $(date -u +%Y-%m-%d): ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            else
+              ISSUE_NUMBER="$(gh issue create --title "$ISSUE_TITLE" --body-file "$ISSUE_FILE" | sed -E 's#.*/([0-9]+)$#\1#')"
+            fi
+            {
+              echo "## MCP registry sync could not open its pull request (${1})"
+              echo
+              echo "Branch \`${BRANCH}\` is pushed with the synced registry. Tracking issue: #${ISSUE_NUMBER}."
+              echo
+              echo "Enable **${SETTING}**, then re-run this workflow, or open the PR by hand:"
+              echo
+              echo '```bash'
+              echo "${MANUAL}"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=MCP registry sync: PR not opened (${1})::Branch ${BRANCH} is pushed; tracking issue #${ISSUE_NUMBER}. Enable '${SETTING}' and re-run."
+            exit 1
+          }
+
+          if [ "$PR_CREATE" = "false" ]; then
+            fail_closed "Actions may not create pull requests"
+          fi
           PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --json number --jq '.[0].number')
           if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
-            gh pr edit "$PR_NUMBER" \
-              --title "chore: sync MCP registry — ${NEW_COUNT} new, ${CORRECTED_COUNT} trust corrections, ${VERSION_COUNT} versions, ${CVE_COUNT} CVE updates" \
-              --body "$BODY"
-          else
-            gh pr create \
-              --title "chore: sync MCP registry — ${NEW_COUNT} new, ${CORRECTED_COUNT} trust corrections, ${VERSION_COUNT} versions, ${CVE_COUNT} CVE updates" \
-              --body "$BODY" \
-              --base main
+            gh pr edit "$PR_NUMBER" --title "$TITLE" --body-file "$BODY_FILE"
+            exit 0
           fi
+          ERR_FILE="$(mktemp)"
+          if gh pr create --title "$TITLE" --body-file "$BODY_FILE" --base main --head "$BRANCH" 2>"$ERR_FILE"; then
+            exit 0
+          fi
+          cat "$ERR_FILE" >&2
+          if grep -q "not permitted to create or approve pull requests" "$ERR_FILE"; then
+            fail_closed "Actions may not create pull requests"
+          fi
+          fail_closed "gh pr create failed"
 
       - name: No changes
         if: steps.count.outputs.new_count == '0' && steps.count.outputs.corrected_count == '0' && steps.count.outputs.version_count == '0' && steps.count.outputs.cve_count == '0'
