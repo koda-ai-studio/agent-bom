@@ -195,9 +195,9 @@ without re-parsing logs.
 | `badge-file` | string | computed | Path to generated shields.io badge JSON when `badge` is set. |
 | `sbom-file` | string | computed | Path to the SBOM / AI-BOM artifact when `sbom-artifact` is `cyclonedx` or `spdx`. |
 | `graph-export-path` | string | computed | Path to generated `mermaid`, `svg`, `graph`, or `graph-html` artifact. |
-| `exposure-paths-count` | string | parsed from graph-capable JSON | Number of exposure, lateral, or attack paths in the result artifact. |
-| `blast-radius-critical-count` | string | parsed from SARIF/JSON | Number of critical blast-radius or SARIF findings. |
-| `posture-grade` | string | derived from parsed counts | Coarse grade: `A`, `C`, `D`, `F`, or `unknown`. |
+| `exposure-paths-count` | string | read from the report | JSON `exposure_paths.path_count`, or the SARIF run property `exposure_path_count`. |
+| `blast-radius-critical-count` | string | read from the report | Critical, unsuppressed `blast_radius` rows in JSON; SARIF results with `security-severity` >= 9.0 (possibly-affected rows excluded). |
+| `posture-grade` | string | read from the report | The scanner's own `posture_grade` (JSON root or SARIF run property): `A`-`F`, `N/A` when nothing was gradable, `unknown` when the artifact carries no grade. Never recomputed from counts. |
 
 ## Stability guarantees
 

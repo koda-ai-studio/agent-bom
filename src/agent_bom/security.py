@@ -66,7 +66,7 @@ from agent_bom.core.security_validation import (
 from agent_bom.redaction.emails import _contains_email, mask_email
 from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.redaction.env_values import container_has_secret
-from agent_bom.redaction.field_policy import _REPORT_AUTH_MODES, _REPORT_COORDINATE_KEYS
+from agent_bom.redaction.field_policy import _REPORT_AUTH_MODES, _REPORT_COORDINATE_KEYS, path_receipt_label
 from agent_bom.redaction.text_memo import memoized_text
 from agent_bom.redaction.text_memo import sanitize_text_memo as sanitize_text_memo
 
@@ -226,35 +226,21 @@ _STRUCTURED_EDGE_ID_RE = re.compile(r"^[^\s>]+->[A-Za-z][A-Za-z0-9_.:-]*->[^\s>]
 _COVERAGE_RECEIPT_RE = re.compile(r"^filesystem-discovery:[0-9a-f]{16}:[a-z_]{1,64}$")
 
 
-# Manifest / scan-note receipt (``coverage.py``): ``<ecosystem>:<path>`` or ``<ecosystem>-note:<path>``.
-_PATH_RECEIPT_RE = re.compile(r"^([a-z][a-z0-9_.-]{0,40}):(.+)$")
-
-
-def _path_receipt_label(value: str) -> str | None:
-    """``pypi-note:/abs/requirements.txt`` -> ``pypi-note:<path:requirements.txt>``; ``None`` for other shapes."""
-    match = _PATH_RECEIPT_RE.fullmatch(value)
-    if match is None or not _looks_like_path_value(match.group(2)):
-        return None
-    return f"{match.group(1)}:{sanitize_path_label(match.group(2))}"
-
-
-def _is_structured_coordinate(key_text: str, value: str) -> bool:
-    """A deterministic identifier whose punctuation and length would trip the entropy detector.
-
-    Deliberately narrow: a coverage receipt in ``release``, or an ``id`` /
-    ``canonical_id`` in the canonical ``source->relation->target`` edge shape
-    whose endpoints match no credential pattern.
-    """
+def _coordinate_label(key_text: str, value: str, max_str_len: int) -> str | None:
+    """Export form of a deterministic id that would trip the entropy detector (edge ids, coverage receipts); else ``None``."""
     if key_text == "release":
-        return _COVERAGE_RECEIPT_RE.fullmatch(value) is not None
+        if _COVERAGE_RECEIPT_RE.fullmatch(value) is not None:
+            return sanitize_text(value, max_len=max_str_len)
+        return path_receipt_label(value, is_path=_looks_like_path_value, label=sanitize_path_label)
     edge_parts = value.split("->")
-    return (
+    is_edge_id = (
         key_text in {"id", "canonical_id"}
         and _STRUCTURED_EDGE_ID_RE.fullmatch(value) is not None
         and len(edge_parts) == 3
         and not _looks_sensitive_value(edge_parts[0])
         and not _looks_sensitive_value(edge_parts[2])
     )
+    return sanitize_text(value, max_len=max_str_len) if is_edge_id else None
 
 
 def _is_obfuscated_credential(value: str) -> bool:
@@ -765,10 +751,8 @@ def _sanitize_sensitive_string(value: str, *, key: object | None, max_str_len: i
             return "***REDACTED***"
         return sanitize_text(value, max_len=max_str_len)
     # Graph edge ids and coverage receipts are coordinates, not opaque credentials.
-    if _is_structured_coordinate(key_text, value):
-        return sanitize_text(value, max_len=max_str_len)
-    if key_text == "release" and (receipt := _path_receipt_label(value)) is not None:
-        return receipt
+    if (coordinate := _coordinate_label(key_text, value, max_str_len)) is not None:
+        return coordinate
     if "://" in value:
         return sanitize_text(value, max_len=max_str_len)
     if key is not None and _key_looks_like_path(key) and _looks_like_path_value(value):

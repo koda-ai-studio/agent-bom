@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
+from agent_bom.evidence.scan_run import ScanOutcome, ScanRun
 from agent_bom.models import Severity
-from agent_bom.security import sanitize_sensitive_payload
+from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
 _SARIF_SEVERITY_MAP = {
     Severity.CRITICAL: "error",
@@ -167,6 +168,40 @@ class _SarifCatalog:
             return False
         self.seen_rule_ids.add(rule_id)
         return True
+
+
+def _sarif_invocation(scan_run: ScanRun) -> dict[str, Any]:
+    return {
+        "executionSuccessful": scan_run.outcome is not ScanOutcome.FAILED,
+        "toolExecutionNotifications": [
+            {
+                "descriptor": {"id": issue.code},
+                "level": issue.severity,
+                "message": {"text": sanitize_text(issue.message) or "Scan execution issue"},
+                "properties": {
+                    "stage": issue.stage,
+                    "source": issue.source,
+                    "affectsCoverage": issue.affects_coverage,
+                },
+            }
+            for issue in scan_run.issues
+        ],
+    }
+
+
+def _sarif_run_properties(report: Any, scan_run: ScanRun) -> dict[str, Any]:
+    """Run-level verdicts CI consumers read instead of recomputing from result severities.
+
+    ``posture_grade`` and ``exposure_path_count`` are the same values the JSON
+    report carries at its root and under ``exposure_paths.path_count``.
+    """
+    from agent_bom.posture import compute_posture_scorecard
+
+    return {
+        "scan_outcome": scan_run.outcome.value,
+        "posture_grade": compute_posture_scorecard(report).grade,
+        "exposure_path_count": sum(1 for br in report.blast_radii if not getattr(br, "suppressed", False)),
+    }
 
 
 def _sarif_location(uri: str, start_line: Any, *, scanned_artifact: str | None = None) -> dict[str, Any]:

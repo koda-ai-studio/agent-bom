@@ -25,6 +25,7 @@
      }
     ],
     "properties": {
+     "exposure_path_count": 0,
      "mcp_audit_coverage": [
       {
        "agent_name": "project:proj",
@@ -69,6 +70,7 @@
        }
       }
      ],
+     "posture_grade": "N/A",
      "scan_outcome": "partial"
     },
     "results": [],

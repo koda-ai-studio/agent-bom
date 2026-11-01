@@ -181,7 +181,7 @@ def complete_unlocked_python(directory: Path, manifest: Path, declared: list[Pac
     """
     try:
         return _complete(directory, manifest, declared)
-    except Exception as exc:  # noqa: BLE001 - per-manifest boundary; the gap is recorded below
+    except Exception as exc:  # noqa: BLE001  # broad-except: per-manifest boundary records the gap instead of aborting the scan
         reason = f"{type(exc).__name__}: {sanitize_error(exc)}"
         _logger.warning("Unlocked Python manifest %s: dependencies not resolved (%s)", manifest.name, reason)
         _gap(manifest, f"transitive dependencies not resolved ({reason}); {_ADVICE}")

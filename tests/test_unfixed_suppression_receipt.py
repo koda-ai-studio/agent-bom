@@ -15,6 +15,7 @@ from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.models import Package, Severity, Vulnerability
 from agent_bom.output.json_fmt import to_json
 from agent_bom.scanners import package_scan, state
+from agent_bom.scanners.clean_verdict import suppressed_unfixed_os_findings
 from agent_bom.scanners.package_scan import _print_vulnerability_summary, _suppress_unfixed_findings
 
 FLAG = "AGENT_BOM_INCLUDE_UNFIXED=1"
@@ -63,6 +64,7 @@ def test_second_suppression_batch_updates_the_receipt_count_instead_of_duplicati
     notes = [w for w in state.peek_coverage_warnings() if w.get("reason") == "unfixed_os_suppressed"]
     assert len(notes) == 1
     assert "3 unfixed OS-package" in notes[0]["detail"]
+    assert suppressed_unfixed_os_findings() == 3
 
 
 def test_scanner_console_never_claims_no_known_vulnerabilities_when_findings_were_suppressed():
