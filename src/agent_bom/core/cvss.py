@@ -105,8 +105,7 @@ def normalize_cvss_score(value: Any) -> Optional[float]:
     if value is None or isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
-        score = float(value)
-        return score if 0.0 <= score <= 10.0 else None
+        return float(value) if 0.0 <= value <= 10.0 else None
     if isinstance(value, str):
         try:
             score = float(value)

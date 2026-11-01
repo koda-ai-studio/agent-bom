@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Callable, Optional
 
+from agent_bom.core.cvss import cvss_to_severity, normalize_cvss_score
 from agent_bom.core.versions.osv import before_limit, is_release_range, range_limits, range_windows
 from agent_bom.db.lookup import _comparator_ecosystem
 from agent_bom.db.osv_metadata import osv_relationship_metadata
@@ -195,29 +196,36 @@ def _parse_ghsa_version_range(version_range: Optional[str]) -> tuple[str, str]:
     return introduced, fixed
 
 
+def _nvd_cvss_fields(metrics: Any) -> tuple[Optional[float], Optional[str], Optional[str]]:
+    """Prefer valid primary assessments, then newest version; keep score/vector paired."""
+    if not isinstance(metrics, dict):
+        return None, None, None
+    candidates: list[dict[str, Any]] = []
+    for key in ("cvssMetricV40", "cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
+        entries = metrics.get(key)
+        if isinstance(entries, list):
+            candidates.extend(entry for entry in entries if isinstance(entry, dict))
+    # Stable ordering keeps the version preference and provider order within a role.
+    for entry in sorted(candidates, key=lambda item: item.get("type") != "Primary"):
+        data = entry.get("cvssData")
+        if not isinstance(data, dict) or not isinstance(data.get("baseScore"), (int, float, str)):
+            continue
+        raw_score = data["baseScore"]
+        if isinstance(raw_score, str):
+            try:
+                raw_score = float(raw_score)
+            except ValueError:
+                continue
+        score = normalize_cvss_score(raw_score)
+        if score is not None:
+            vector = data.get("vectorString")
+            return score, vector if isinstance(vector, str) else None, cvss_to_severity(score).value.lower()
+    return None, None, None
+
+
 def _extract_nvd_cve_fields(cve_data: dict[str, Any]) -> dict[str, Any]:
     """Extract CVSS/CWE/summary fields from one NVD CVE object."""
-    metrics = cve_data.get("metrics") or {}
-    cvss_score: Optional[float] = None
-    cvss_vector: Optional[str] = None
-    severity: Optional[str] = None
-
-    for metric_key in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
-        metric_list = metrics.get(metric_key) or []
-        if not metric_list:
-            continue
-        cvss_data = metric_list[0].get("cvssData") or {}
-        raw_score = cvss_data.get("baseScore")
-        if raw_score is not None:
-            try:
-                cvss_score = float(raw_score)
-            except (TypeError, ValueError):
-                cvss_score = None
-        cvss_vector = cvss_data.get("vectorString")
-        raw_sev = (cvss_data.get("baseSeverity") or "").lower()
-        if raw_sev in ("critical", "high", "medium", "low"):
-            severity = raw_sev
-        break
+    cvss_score, cvss_vector, severity = _nvd_cvss_fields(cve_data.get("metrics"))
 
     nvd_cwes: list[str] = []
     for weakness in cve_data.get("weaknesses", []):
@@ -225,9 +233,6 @@ def _extract_nvd_cve_fields(cve_data: dict[str, Any]) -> dict[str, Any]:
             cwe_val = desc.get("value", "")
             if cwe_val.startswith("CWE-") and cwe_val not in nvd_cwes:
                 nvd_cwes.append(cwe_val)
-
-    if not severity and cvss_score is not None:
-        severity = _cvss_to_severity(cvss_score)
 
     descriptions = cve_data.get("descriptions") or []
     summary = ""
