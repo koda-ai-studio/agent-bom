@@ -25,6 +25,11 @@ def manifest():
     return json.loads((ROOT / "integrations/mcp-registry/server.json").read_text())
 
 
+def test_registry_description_meets_public_api_limit(manifest):
+    """The registry rejects descriptions longer than 100 characters with HTTP 422."""
+    assert 1 <= len(manifest["description"]) <= 100
+
+
 def test_repository_namespace_and_packaged_readme_agree(manifest):
     assert manifest["name"] == "io.github.koda-ai-studio/agent-bom"
     assert manifest["repository"]["url"] == "https://github.com/koda-ai-studio/agent-bom"
