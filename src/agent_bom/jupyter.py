@@ -103,7 +103,14 @@ def _parse_pip_packages(line: str) -> list[tuple[str, str]]:
     results = []
     # Remove flags like -q, --quiet, -U, --upgrade, --no-cache-dir
     cleaned = re.sub(r"\s-[-\w]+(?:\s+\S+)?", " ", line)
-    for match in _PKG_SPEC_RE.finditer(cleaned):
+    # One requirement per whitespace-separated token: ``"anthropic>=2.0.0,<3"``
+    # is a single package with a version range, not ``anthropic`` plus a
+    # package called ``3``.
+    for token in cleaned.split():
+        token = token.strip("\"'")
+        match = _PKG_SPEC_RE.match(token)
+        if not match:
+            continue
         name = match.group(1).strip()
         version = match.group(2) or ""
         # Skip if it looks like a flag or URL

@@ -92,6 +92,7 @@ The agent sees this as part of the tool's interface and may follow the injected 
 
 **What agent-bom does:**
 - `agent-bom scan --enforce` — static analysis of tool descriptions for injection patterns
+- `agent-bom mcp audit --live` and `agent-bom mcp introspect` — the same rules on live tool, resource and prompt descriptors: hidden instruction markup (`<IMPORTANT>`, `<SYSTEM>`, HTML comments), "do not tell the user", credential file reads (`~/.ssh`, `~/.aws`, `id_rsa`, `.kube/config`), data sent to a URL, values smuggled through a parameter, "before/after every tool call" sequencing, and base64-encoded payloads; each rule runs on the raw text and on every de-obfuscation projection separately. Hits are tagged OWASP MCP03 / LLM01 and raise the introspected tool's risk to at least high.
 - `agent-bom proxy` `ArgumentAnalyzer` detector — inspects live tool arguments for prompt injection
 - `agent-bom mcp introspect` — captures tool descriptions and diffs them against baseline
 

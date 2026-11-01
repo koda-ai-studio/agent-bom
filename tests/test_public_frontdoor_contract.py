@@ -25,12 +25,12 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
     svg = source.read_text(encoding="utf-8")
     template_svg = template.read_text(encoding="utf-8")
     for claim in (
-        "Discover. Scan.",
-        "Correlate. Act.",
-        "Security evidence across repositories, supply chains, AI + MCP, cloud, identity, and data.",
-        "Works with your AI tools, cloud infrastructure, data, and identity stack.",
+        "AI supply-chain ",
+        ">BOM<",
+        "Every agent, MCP server and AI package, and what each one can reach.",
+        "Agents → MCP servers → tools → packages → credentials → data, with evidence for every edge.",
         "Open the integration directory for all vendors and coverage",
-        "discover → scan → correlate → act",
+        "agent → MCP server → packages → CVEs → blast radius",
     ):
         assert claim in svg
     for integration in (
@@ -91,12 +91,13 @@ def test_readme_links_to_the_detailed_source_tour():
         assert boundary in tour
 
 
-def test_readme_leads_with_discover_scan_correlate_act_brand_header() -> None:
+def test_readme_leads_with_canonical_tagline_brand_header() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     header = readme.split("<!-- mcp-name:", 1)[0]
 
     assert "docs/images/social-preview.svg" in header
-    assert "Discover. Scan. Correlate. Act." in header
+    assert "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach." in header
+    assert "Discover. Scan. Correlate. Act." not in header
     assert "logo-dark.svg" not in header
     assert header.index("social-preview.svg") < header.index("img.shields.io")
 

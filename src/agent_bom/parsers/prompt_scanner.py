@@ -16,58 +16,19 @@ Supported file types:
 
 from __future__ import annotations
 
-import base64
 import json
 import logging
 import re
-import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from agent_bom.runtime.text_normalize import HOMOGLYPHS, reveal_hidden_text
+from agent_bom.parsers.prompt_normalize import matching_projections as matching_projections
+from agent_bom.parsers.tool_poisoning_patterns import TOOL_POISONING_PATTERNS as _TOOL_POISONING_PATTERNS
+from agent_bom.parsers.tool_poisoning_patterns import encoded_payload_match as encoded_payload_match
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
-
-# ── Obfuscation normalization ──────────────────────────────────────────────
-# Adversarial prompt injections evade naive keyword matching via Unicode
-# homoglyphs, zero-width separators, leetspeak, and base64 encoding. We match
-# every pattern against BOTH the raw text and a normalized projection so these
-# bypasses are caught. Detection only — the projection is never persisted.
-
-# Zero-width / invisible separators an attacker inserts between letters.
-_ZERO_WIDTH = dict.fromkeys(map(ord, "​‌‍⁠⁡⁢⁣⁤﻿­͏᠎"), None)
-# Common Cyrillic/Greek homoglyphs → Latin (NFKC misses these script
-# confusables). Shared with the policy engine so detection and enforcement
-# cannot drift apart on what counts as a look-alike.
-_HOMOGLYPHS = HOMOGLYPHS
-# Leetspeak substitutions (applied to a separate projection to limit false positives).
-_LEET = str.maketrans({"4": "a", "3": "e", "1": "i", "0": "o", "5": "s", "7": "t", "@": "a", "$": "s"})
-_B64_RUN = re.compile(r"[A-Za-z0-9+/]{16,}={0,2}")
-
-
-def normalize_for_matching(text: str) -> str:
-    """Return a normalized projection of ``text`` for obfuscation-resistant matching.
-
-    Decodes invisible tag/selector payloads, folds Unicode (NFKC + homoglyphs), strips
-    zero-width separators, de-leets, and appends decoded base64 — so injections hidden via
-    invisible Unicode, homoglyph, zero-width, leetspeak, or base64 still match. Newline
-    structure is not preserved (this projection is for presence detection only;
-    line numbers come from the raw pass).
-    """
-    folded = unicodedata.normalize("NFKC", reveal_hidden_text(text)).translate(_ZERO_WIDTH).translate(_HOMOGLYPHS)
-    decoded: list[str] = []
-    for m in _B64_RUN.finditer(text):
-        chunk = m.group(0)
-        try:
-            raw = base64.b64decode(chunk + "===", validate=False).decode("utf-8", "ignore")
-        except Exception:  # noqa: BLE001
-            continue
-        if len(raw) > 6 and sum(c.isprintable() for c in raw) / len(raw) > 0.8:
-            decoded.append(raw)
-    return "\n".join([folded, folded.translate(_LEET), *decoded])
-
 
 # ── File discovery patterns ──────────────────────────────────────────────────
 
@@ -367,6 +328,31 @@ _SENSITIVE_DATA_PATTERNS = [
 ]
 
 
+def descriptor_hits(text: str, normalized: str) -> list[tuple[str, str]]:
+    """``(risk label, rule title)`` for every rule an MCP descriptor trips.
+
+    Rules run on ``normalized`` (invisible characters stripped) first, then on
+    each obfuscation projection on its own so no match spans two projections;
+    a hit found only there carries the ``(obfuscated)`` suffix.
+    """
+    projections = [projection for projection in matching_projections(text) if projection != normalized]
+    rule_sets = (
+        (_INJECTION_PATTERNS, "injection pattern"),
+        (_UNSAFE_INSTRUCTION_PATTERNS, "unsafe instruction"),
+        (_TOOL_POISONING_PATTERNS, "tool poisoning pattern"),
+    )
+    hits: list[tuple[str, str]] = []
+    for patterns, risk in rule_sets:
+        for pattern, title in patterns:
+            if pattern.search(normalized):
+                hits.append((risk, title))
+            elif any(pattern.search(projection) for projection in projections):
+                hits.append((risk, f"{title} (obfuscated)"))
+    if encoded_payload_match(text) is not None:
+        hits.append(("tool poisoning pattern", "Encoded payload in descriptor"))
+    return hits
+
+
 # ── Discovery ────────────────────────────────────────────────────────────────
 
 
@@ -443,8 +429,8 @@ def _analyze_content(
                 )
             )
 
-    # High: Prompt injection / jailbreak
-    for pattern, title in _INJECTION_PATTERNS:
+    # High: Prompt injection / jailbreak, including planted tool-poisoning instructions
+    for pattern, title in (*_INJECTION_PATTERNS, *_TOOL_POISONING_PATTERNS):
         for match in pattern.finditer(content):
             findings.append(
                 PromptFinding(
@@ -507,29 +493,38 @@ def _analyze_content(
                 )
             )
 
+    findings.extend(_obfuscated_findings(content, source_file, {f.title for f in findings}))
+
+    return findings
+
+
+def _obfuscated_findings(content: str, source_file: str, seen_titles: set[str]) -> list[PromptFinding]:
+    """Injection rules re-run on the de-obfuscated projections; titles already raised raw are skipped."""
+    findings: list[PromptFinding] = []
     # Obfuscation-resistant pass: re-run the injection + unsafe-instruction
     # patterns against a normalized projection (homoglyph/zero-width/leet/base64
     # decoded) so an attack hidden by encoding is still caught. Findings whose
     # title was already raised in the raw pass are skipped.
-    seen_titles = {f.title for f in findings}
-    normalized = normalize_for_matching(content)
-    if normalized != content:
-        for pattern, title in (*_INJECTION_PATTERNS, *_UNSAFE_INSTRUCTION_PATTERNS):
-            nmatch = pattern.search(normalized)
-            if nmatch and title not in seen_titles:
-                seen_titles.add(title)
-                findings.append(
-                    PromptFinding(
-                        severity="high",
-                        category="prompt_injection",
-                        title=f"{title} (obfuscated)",
-                        detail="Detected only after de-obfuscation (homoglyph/zero-width/leetspeak/base64).",
-                        source_file=source_file,
-                        line_number=1,
-                        matched_text=nmatch.group(0)[:100],
-                        recommendation="An injection was hidden via text obfuscation — treat the source as hostile.",
-                    )
-                )
+    projections = [projection for projection in matching_projections(content) if projection != content]
+    for pattern, title in (*_INJECTION_PATTERNS, *_TOOL_POISONING_PATTERNS, *_UNSAFE_INSTRUCTION_PATTERNS):
+        if title in seen_titles:
+            continue
+        nmatch = next((hit for projection in projections if (hit := pattern.search(projection))), None)
+        if nmatch is None:
+            continue
+        seen_titles.add(title)
+        findings.append(
+            PromptFinding(
+                severity="high",
+                category="prompt_injection",
+                title=f"{title} (obfuscated)",
+                detail="Detected only after de-obfuscation (homoglyph/zero-width/leetspeak/base64).",
+                source_file=source_file,
+                line_number=1,
+                matched_text=nmatch.group(0)[:100],
+                recommendation="An injection was hidden via text obfuscation — treat the source as hostile.",
+            )
+        )
 
     return findings
 

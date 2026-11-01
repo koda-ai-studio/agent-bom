@@ -3,11 +3,38 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from rich.console import Console
+from rich.markup import escape
+
+from agent_bom.coverage import CoverageWarning
 from agent_bom.models import Agent, AgentType
+from agent_bom.scanners.state import record_coverage_warning
+from agent_bom.security import sanitize_log_label
+
+logger = logging.getLogger(__name__)
+_console = Console(stderr=True)
+
+
+def report_blocked_server(name: str, exc: Exception) -> None:
+    """A server the launcher hygiene check rejected is a coverage gap on the report, not only a stderr line."""
+    detail = f"Blocked insecure server '{sanitize_log_label(name)}': {sanitize_log_label(exc)}"
+    logger.warning(detail)
+    _console.print(f"[yellow]⚠️  {escape(sanitize_log_label(detail, max_len=500))}[/yellow]")
+    record_coverage_warning(
+        CoverageWarning(
+            ecosystem="mcp",
+            release=f"mcp-launcher:{sanitize_log_label(name, max_len=120)}",
+            reason="launcher_rejected",
+            detail=f"{detail} The server was recorded as blocked and not introspected live.",
+            package_count=0,
+            advisory_rows=0,
+        ).to_dict()
+    )
 
 
 @dataclass(frozen=True)

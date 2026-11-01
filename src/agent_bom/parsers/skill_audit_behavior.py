@@ -49,7 +49,7 @@ def _scan_behavioral_risks(raw_content: dict[str, str]) -> list[SkillFinding]:
 
     Each file is matched against its raw bytes and against the obfuscation-
     resistant projection shared with the prompt-template scanner
-    (:func:`agent_bom.parsers.prompt_scanner.normalize_for_matching` — NFKC,
+    (:func:`agent_bom.parsers.prompt_normalize.normalize_for_matching` — NFKC,
     homoglyph folding, zero-width stripping, de-leeting, base64 decoding), so
     a homoglyph- or zero-width-obfuscated injection in ``CLAUDE.md`` is caught
     by the same rules that already catch it in ``system_prompt.md``. The raw
@@ -63,7 +63,7 @@ def _scan_behavioral_risks(raw_content: dict[str, str]) -> list[SkillFinding]:
         "possibly_documentation" (evidence that reads as policy prose, demoted
         to low severity so the operator, not the file's author, decides).
     """
-    from agent_bom.parsers.prompt_scanner import normalize_for_matching
+    from agent_bom.parsers.prompt_normalize import normalize_for_matching
 
     findings: list[SkillFinding] = []
 

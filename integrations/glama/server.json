@@ -1,6 +1,6 @@
 {
   "name": "agent-bom",
-  "description": "Security scanner and graph for agentic infrastructure. Starts with 8 focused MCP tools. Audit descriptor injection, risky tool inputs, excess capabilities and authentication configuration.",
+  "description": "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach. Starts with 8 focused MCP tools. Audit descriptor injection, risky tool inputs, excess capabilities and authentication configuration.",
   "version": "0.112.1",
   "license": "Apache-2.0",
   "repository": "https://github.com/koda-ai-studio/agent-bom",

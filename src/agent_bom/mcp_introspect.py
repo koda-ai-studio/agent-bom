@@ -88,6 +88,8 @@ class ServerIntrospection:
     dangerous_combinations: list[str] = field(default_factory=list)
     risk_justification: str = ""
     tool_risk_profiles: list[dict] = field(default_factory=list)
+    # Hidden-instruction / unsafe-instruction hits in live tool descriptors.
+    description_findings: list[dict] = field(default_factory=list)
 
     # Drift analysis
     tools_added: list[str] = field(default_factory=list)
@@ -154,6 +156,7 @@ class ServerIntrospection:
             "dangerous_combinations": _safe_runtime_value(self.dangerous_combinations),
             "risk_justification": _safe_runtime_value(self.risk_justification),
             "tool_risk_profiles": _safe_runtime_value(self.tool_risk_profiles),
+            "description_findings": _safe_runtime_value(self.description_findings),
             "error": _safe_runtime_value(self.error),
         }
         if include_runtime_objects:
@@ -338,20 +341,10 @@ def _lint_prompt(prompt: MCPPrompt) -> list[str]:
 
 
 def _apply_runtime_risk(server: MCPServer, result: ServerIntrospection) -> None:
-    """Compute capability-aware tool/server risk from live introspection data."""
-    from agent_bom.risk_analyzer import score_server_risk, score_tool_risk
+    """Compute capability-aware tool/server risk, including descriptor poisoning, from live data."""
+    from agent_bom.scanners.mcp_descriptor_risk import apply_runtime_risk
 
-    tool_profiles = [score_tool_risk(tool).to_dict() for tool in result.runtime_tools]
-    tool_profiles.sort(key=lambda item: (item["risk_score"], item["tool_name"]), reverse=True)
-    result.tool_risk_profiles = tool_profiles
-
-    server_profile = score_server_risk(result.runtime_tools, credentials=server.credential_names)
-    result.capability_risk_score = round(server_profile.risk_score, 2)
-    result.capability_risk_level = server_profile.risk_level
-    result.capability_counts = server_profile.capabilities
-    result.capability_tools = server_profile.capability_tools
-    result.dangerous_combinations = server_profile.dangerous_combinations
-    result.risk_justification = server_profile.justification
+    apply_runtime_risk(server, result)
 
 
 async def introspect_server(

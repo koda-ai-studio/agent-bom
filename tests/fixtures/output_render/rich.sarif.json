@@ -499,7 +499,7 @@
               "id": 5,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "***REDACTED***",
+                  "fullyQualifiedName": "cred:server:cfg-3c465df1f13e:claude-desktop:0f495e36-e7e7-5b3d-9c41-f6d7331abfb1:API_TOKEN",
                   "kind": "credential"
                 }
               ],
@@ -1705,6 +1705,8 @@
       ],
       "properties": {
         "scan_outcome": "partial",
+        "posture_grade": "N/A",
+        "exposure_path_count": 2,
         "trust_assessment": {
           "verdict": "review",
           "confidence": "medium"

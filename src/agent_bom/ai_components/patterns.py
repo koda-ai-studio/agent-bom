@@ -105,14 +105,7 @@ PYTHON_SDK_PATTERNS: list[SDKPattern] = [
             ("agent_framework", "microsoft-agent-framework", "agent-framework-core"),
         )
     ],
-    SDKPattern(
-        re.compile(_py_import("langchain")),
-        "langchain",
-        AIComponentType.AGENT_FRAMEWORK,
-        "langchain",
-        "pypi",
-        "python",
-    ),
+    SDKPattern(re.compile(_py_import("langchain")), "langchain", AIComponentType.AGENT_FRAMEWORK, "langchain", "pypi", "python"),
     SDKPattern(
         re.compile(_py_import("langgraph")),
         "langgraph",
@@ -130,6 +123,7 @@ PYTHON_SDK_PATTERNS: list[SDKPattern] = [
         "openai-agents",
         "pypi",
         "python",
+        import_root="agents",
     ),
     SDKPattern(
         re.compile(_py_import("llama_index")),

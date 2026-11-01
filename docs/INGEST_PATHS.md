@@ -10,7 +10,7 @@ path normalizes into the same `Finding` / blast-radius model; the difference is
 |------|---------------|----------|-----------|
 | Full local scan depth (blast radius, graph, SBOM) | `agent-bom agents --external-scan <file>` | JSON / SARIF / HTML on disk | `agent-bom graph`, `agent-bom remediate`, or push to control plane |
 | Bulk findings into a running control plane | `agent-bom findings push <file> --api-url …` | Rows in `GET /v1/findings` | Dashboard `/findings`, triage queue, compliance hub |
-| VM / registry image only | Trivy → agent-bom (below) | Same as row above | See [VM and registry matrix](#vm-and-registry-matrix) |
+| VM / registry image only | external image scanner → agent-bom (below) | Same as row above | See [VM and registry matrix](#vm-and-registry-matrix) |
 
 For direct `POST /v1/findings/bulk`, `reconcile_absent` defaults to `false`.
 Send the JSON boolean `true` only for a complete source-scoped snapshot: it
@@ -34,7 +34,7 @@ as the latest result. This guarantee applies to JSON file exports, not every
 output format or power-loss durability. Special-file destinations (such as named
 pipes or device files) are rejected; use the CLI's stdout output mode for a stream.
 
-## SARIF (SAST / Semgrep / CodeQL / Bandit)
+## SARIF (SAST from any producer)
 
 SARIF is auto-detected by the shared typed importer. For **full scan
 depth** — package graph, blast radius, compliance mapping, and local exports —
@@ -75,7 +75,7 @@ A push has no local inventory against which to resolve a name-only dependency;
 use `--external-scan` alongside a project when that correlation is needed.
 
 SAST findings map to the secure-development outcome PR.PS-06 in
-[NIST CSF 2.0, Appendix A](https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf).
+[NIST CSF 2.0, Appendix A](https://doi.org/10.6028/NIST.CSWP.29).
 This is a finding-to-control association, not a compliance certification.
 
 After ingestion, `GET /v1/overview` reports the vulnerability metric as **open
@@ -145,8 +145,8 @@ is an external scanner file (SARIF, Trivy, Grype, Syft).
 
 ## VM and registry matrix
 
-Enterprise VM and registry coverage uses the same Trivy → agent-bom chain; agent-bom
-does not replace the scanner — it ingests and correlates.
+Enterprise VM and registry coverage uses the same external-scanner → agent-bom
+chain; agent-bom does not replace the scanner — it ingests and correlates.
 
 ```bash
 # 1. Scan a VM disk snapshot or golden image (read-only mount)
@@ -174,7 +174,7 @@ agent-bom agents --external-scan trivy.json -f json -o report.json
 ```
 
 Container-first scans can also use `agent-bom image <ref>` when you want
-agent-bom to orchestrate the pull and scan without a separate Trivy invocation.
+agent-bom to orchestrate the pull and scan without a separate scanner invocation.
 
 ## Related docs
 
