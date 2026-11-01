@@ -16,7 +16,6 @@ from agent_bom.__main__ import version_message
 from agent_bom.cli._agent_mode import AGENT_MODE_ENV_VAR
 from agent_bom.cli._common import (
     BANNER,  # noqa: F401 — re-export for backward compatibility
-    MAIN_HELP,
     SEVERITY_ORDER,
     _build_agents_from_inventory,
     _check_for_update_bg,
@@ -38,6 +37,7 @@ from agent_bom.cli._grouped_help import GroupedGroup  # noqa: E402 — needed be
 # working in existing tests — although the canonical import path for new
 # code is ``agent_bom.discovery.discover_all``.
 from agent_bom.discovery import discover_all  # noqa: F401
+from agent_bom.output.brand_tokens import CLI_MAIN_HELP  # noqa: E402
 
 
 def _print_startup_banner() -> None:
@@ -57,7 +57,7 @@ def _print_startup_banner() -> None:
     cls=GroupedGroup,
     context_settings={"help_option_names": ["-h", "--help"]},
     invoke_without_command=True,
-    help=MAIN_HELP,
+    help=CLI_MAIN_HELP,
 )
 @click.option(
     "--profile",

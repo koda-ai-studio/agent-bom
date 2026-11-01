@@ -28,17 +28,6 @@ For AppSec and platform engineers. Self-host free; local scans need no account.
   <a href="https://koda-ai-studio.github.io/agent-bom/">Docs</a>
 </p>
 
-## Why an AI supply-chain BOM
-
-Agents and MCP servers ship without an inventory. A CVE in an AI package, a
-poisoned tool description or an over-scoped credential matters by what the
-agent that loads it can reach. A package SBOM stops at packages; agent-bom
-records the chain — agent → MCP server → tool → package → credential → data —
-and keeps the evidence for every edge, so you can answer which agent uses the
-vulnerable component and what it could reach. Findings map to
-[OWASP LLM Top 10, OWASP Agentic Top 10, OWASP MCP Top 10, MITRE ATLAS, EU AI Act and NIST AI RMF](site-docs/features/compliance.md);
-control mappings are investigation context, not certification.
-
 ## Quick start
 
 From the repository you want to inspect, with [uv installed](https://docs.astral.sh/uv/getting-started/installation/):
@@ -98,6 +87,17 @@ steps:
 The recording uses labeled sample data and bundled advisories. Credential
 references are names, not secret values. Recorded relationships do not prove
 exploitation or successful data access.
+
+## Why an AI supply-chain BOM
+
+Agents and MCP servers ship without an inventory. A CVE in an AI package, a
+poisoned tool description or an over-scoped credential matters by what the
+agent that loads it can reach. A package SBOM stops at packages; agent-bom
+records the chain — agent → MCP server → tool → package → credential → data —
+and keeps the evidence for every edge, so you can answer which agent uses the
+vulnerable component and what it could reach. Findings map to
+[OWASP LLM Top 10, OWASP Agentic Top 10, OWASP MCP Top 10, MITRE ATLAS, EU AI Act and NIST AI RMF](site-docs/features/compliance.md);
+control mappings are investigation context, not certification.
 
 ## What it covers
 
@@ -262,7 +262,7 @@ scoped read-only connection, verify access, then start a scan. Use the
 | Offering | What it includes | Cost | Start |
 |---|---|---|---|
 | CLI, CI and exports | Local and CI scans; SARIF, CycloneDX, SPDX, JSON and HTML exports; `check` pre-install gate; GitHub Action | Free, Apache-2.0; no account | [First run](docs/FIRST_RUN.md) |
-| Self-hosted control plane | API and dashboard on Compose or Helm with PostgreSQL, SSO/OIDC, roles, tenant isolation, audit chain, lake evidence import and executive briefs | Free, Apache-2.0; your infrastructure | [Deployment overview](site-docs/deployment/overview.md) |
+| Self-hosted control plane | API and dashboard on Compose or Helm with PostgreSQL, SSO/OIDC, roles, tenant isolation, audit chain, lake evidence import and executive briefs | Free, Apache-2.0; your infrastructure | [Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Helm](site-docs/deployment/control-plane-helm.md) |
 | MCP server and agent plugins | `agent-bom mcp server` tool profiles; Claude Code and Codex plugins; OpenClaw and Cortex Code skills | Free; runs locally | [MCP server](docs/MCP_SERVER.md) · [Plugins](integrations/claude-code/README.md) |
 | Hosted service and support | No managed cloud offering today. Community support on GitHub; security reports follow published response targets, not a contractual SLA | — | [Product boundaries](site-docs/deployment/product-boundaries.md) · [Support model](docs/ENTERPRISE_SUPPORT_MODEL.md) |
 
