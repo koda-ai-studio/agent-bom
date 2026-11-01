@@ -5,8 +5,8 @@ from __future__ import annotations
 import ast
 from dataclasses import dataclass, field
 
-from agent_bom.ast_flow_scoring import flow_cwe_ids, flow_severity
-from agent_bom.ast_flow_serialize import flow_finding_rows
+from agent_bom.ast.flow_scoring import flow_cwe_ids, flow_severity
+from agent_bom.ast.flow_serialize import flow_finding_rows
 
 
 @dataclass

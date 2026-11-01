@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from agent_bom.ast.flow_scoring import flow_cwe_ids, flow_owasp_llm_tags, flow_severity, is_security_flow_category
 from agent_bom.ast_analyzer import analyze_project
-from agent_bom.ast_flow_scoring import flow_cwe_ids, flow_owasp_llm_tags, flow_severity, is_security_flow_category
 from agent_bom.ast_models import FlowFinding
 from agent_bom.finding import ast_flow_dict_to_finding, is_ast_security_flow
 from agent_bom.models import AIBOMReport

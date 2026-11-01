@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.advisory_ids import vulnerability_enrichment_metadata
-from agent_bom.ast_flow_scoring import flow_cwe_ids, flow_owasp_llm_tags, flow_severity, is_security_flow_category
+from agent_bom.ast.flow_scoring import flow_cwe_ids, flow_owasp_llm_tags, flow_severity, is_security_flow_category
 from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.core.exploitability import fused_triage_priority
 from agent_bom.core.packages import synthesize_purl
