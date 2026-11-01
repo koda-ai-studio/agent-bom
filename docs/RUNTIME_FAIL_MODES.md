@@ -154,6 +154,28 @@ planned to become `enforce` once detector false-positive rates have been
 measured on real catalogs and results. Pin `--injection-mode alert` now if you
 need today's behaviour after that change.
 
+## Control-plane browser credentials
+
+Static-key browser sessions bind to the exact key authenticated during sign-in.
+Every authenticated request rechecks the current environment or mounted-file
+key. Rotation, removal, an unreadable key file, or a switch to clustered mode
+invalidates that session with HTTP 401; existing streams recheck through the
+same authorization lease. Missing shared revocation state remains fail-closed.
+Cookies contain a nonce-specific keyed binding, never the raw login key.
+Logout still records nonce revocation after a backing-key change, so restoring
+that key cannot revive a cookie that was explicitly signed out.
+
+Operator-configured slots also bind cookies to their current stored credential
+generation. Replacing a slot's key invalidates its previous browser sessions;
+reloading an unchanged key preserves that generation while applying the current
+configured role. The cookie exposes neither the stored key hash nor salt.
+
+Upgrading from cookies without these bindings requires a fresh sign-in for
+static-key and operator-key users. Exchange the current key at `/v1/auth/session` through the
+same-origin dashboard. Managed tenant-key sessions continue to use their live
+key record, role and scope ceilings. Invalid non-ASCII CSRF tokens return 403;
+incorrect non-ASCII static credentials return 401 without exposing exceptions.
+
 ## Conditional-access header authority
 
 Gateway transport authentication does not authorize a client to assert its own

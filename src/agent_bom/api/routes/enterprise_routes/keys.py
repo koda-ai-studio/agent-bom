@@ -77,7 +77,7 @@ async def create_browser_session(request: Request, response: Response, body: Bro
     into the first-party UI served from the same origin as the API.
     """
     from agent_bom.api.audit_log import log_action
-    from agent_bom.api.auth import get_key_store
+    from agent_bom.api.auth import OPERATOR_KEY_ID_PREFIX, get_key_store
 
     _check_auth_session_rate_limit(request)
     raw_key = body.api_key.strip()
@@ -87,7 +87,7 @@ async def create_browser_session(request: Request, response: Response, body: Bro
     from agent_bom.api.secret_source import resolve_secret
 
     static_key = resolve_secret("AGENT_BOM_API_KEY")
-    if static_key and secrets.compare_digest(raw_key, static_key):
+    if static_key and secrets.compare_digest(raw_key.encode("utf-8"), static_key.encode("utf-8")):
         from agent_bom.api.middleware import static_api_key_allowed, static_api_key_rejection_message
 
         if not static_api_key_allowed():
@@ -99,6 +99,7 @@ async def create_browser_session(request: Request, response: Response, body: Bro
             role="admin",
             tenant_id="default",
             auth_method="browser_session_static_api_key",
+            static_api_key=static_key,
         )
         log_action(
             "auth.browser_session_created",
@@ -125,6 +126,7 @@ async def create_browser_session(request: Request, response: Response, body: Bro
                 auth_method="browser_session",
                 key_id=api_key.key_id,
                 scopes=list(api_key.scopes),
+                operator_key_hash=api_key.key_hash if api_key.key_id.startswith(OPERATOR_KEY_ID_PREFIX) else None,
             )
             log_action(
                 "auth.browser_session_created",

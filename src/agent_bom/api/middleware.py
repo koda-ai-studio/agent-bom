@@ -10,6 +10,7 @@ from collections.abc import Awaitable, Callable, Iterable
 from typing import TYPE_CHECKING
 
 import anyio.to_thread
+from fastapi import HTTPException
 
 from agent_bom.api.auth import get_key_store
 from agent_bom.api.auth_posture import _AUTH_POSTURE as _AUTH_POSTURE
@@ -148,6 +149,7 @@ from agent_bom.api.route_policy import (
     required_scope,
     scope_catalog,
 )
+from agent_bom.api.session_authorization import authorize_browser_session_async as authorize_browser_session
 from agent_bom.api.storage.deployment import _production_or_clustered_control_plane as _production_or_clustered_control_plane
 from agent_bom.api.storage.deployment import clustered_control_plane_required
 from agent_bom.api.storage_schema import postgres_deployment_configured
@@ -533,7 +535,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         # Simple mode: single static key (backward compatible, all access)
         if not raw_key:
             return Absent()
-        if self._api_key and secrets.compare_digest(raw_key, self._api_key):
+        if self._api_key and secrets.compare_digest(raw_key.encode("utf-8"), self._api_key.encode("utf-8")):
             from agent_bom.api.auth import Role
             from agent_bom.api.dev_auth_state import get_dev_api_key, get_dev_api_role
 
@@ -812,10 +814,6 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             if not verify_csrf(payload, csrf_cookie, csrf_header):
                 return JSONResponse(status_code=403, content={"detail": "Forbidden — missing or invalid CSRF token"})
 
-        from fastapi import HTTPException
-
-        from agent_bom.api.session_authorization import authorize_browser_session_async as authorize_browser_session
-
         key_id = str(payload.get("key_id") or "")
         try:
             effective_role, session_scopes = await authorize_browser_session(
@@ -826,6 +824,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 auth_method=auth_method,
                 method=request.method,
                 path=request.url.path,
+                operator_binding=str(payload.get("operator_key_binding") or ""),
+                nonce=str(payload.get("nonce") or ""),
             )
         except HTTPException as exc:
             return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

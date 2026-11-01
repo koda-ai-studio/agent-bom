@@ -8,6 +8,9 @@ slot no longer configured is revoked in the store and rejected at verify time.
 
 from __future__ import annotations
 
+import hmac
+
+from agent_bom.api.api_key_record import ApiKey, _derive_key
 from agent_bom.api.auth import OPERATOR_KEY_ID_PREFIX, Role, create_api_key_record, get_key_store, register_operator_key_ids
 
 
@@ -36,9 +39,23 @@ def operator_key_id(source: str, slot: int) -> str:
 def seed_operator_keys(source: str, entries: list[tuple[str, str, Role]]) -> bool:
     """Upsert ``(raw_key, name, role)`` entries for ``source`` and retire its unconfigured slots."""
     store = get_key_store()
+    previous = {key.key_id: key for key in store.list_keys(tenant_id="default")}
     key_ids = [operator_key_id(source, slot) for slot in range(1, len(entries) + 1)]
     for key_id, (raw_key, name, role) in zip(key_ids, entries):
-        store.add(create_api_key_record(raw_key, name, role, key_id=key_id, never_expires=True))
+        existing = previous.get(key_id)
+        if (
+            existing
+            and not existing.is_revoked()
+            and hmac.compare_digest(existing.key_hash, _derive_key(raw_key, bytes.fromhex(existing.key_salt)))
+        ):
+            # Keep the credential generation stable across replicas/restarts
+            # that load the same configuration; refreshed role/name still apply.
+            record = ApiKey(
+                key_id=key_id, key_hash=existing.key_hash, key_salt=existing.key_salt, key_prefix=existing.key_prefix, name=name, role=role
+            )
+        else:
+            record = create_api_key_record(raw_key, name, role, key_id=key_id, never_expires=True)
+        store.add(record)
     register_operator_key_ids(source, key_ids)
     if entries:
         stale_prefix = operator_key_id(source, 0)[:-1]

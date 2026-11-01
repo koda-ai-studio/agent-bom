@@ -4,14 +4,23 @@ from __future__ import annotations
 
 from fastapi import HTTPException
 
-from agent_bom.api.auth import ApiKey, Role, get_key_store, scopes_allow
+from agent_bom.api.auth import OPERATOR_KEY_ID_PREFIX, ApiKey, Role, get_key_store, scopes_allow
 from agent_bom.api.route_policy import request_scopes_allow, required_role, required_scope
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.rbac import role_rank
 
 
 async def authorize_browser_session_async(
-    *, role: Role, scopes: list[str], tenant_id: str, key_id: str, auth_method: str, method: str, path: str
+    *,
+    role: Role,
+    scopes: list[str],
+    tenant_id: str,
+    key_id: str,
+    auth_method: str,
+    method: str,
+    path: str,
+    operator_binding: str = "",
+    nonce: str = "",
 ) -> tuple[Role, list[str]]:
     """Keep live backing-key reads off the request/stream event loop."""
     from functools import partial
@@ -28,6 +37,8 @@ async def authorize_browser_session_async(
             auth_method=auth_method,
             method=method,
             path=path,
+            operator_binding=operator_binding,
+            nonce=nonce,
         )
     )
 
@@ -41,11 +52,18 @@ def authorize_browser_session(
     auth_method: str,
     method: str,
     path: str,
+    operator_binding: str = "",
+    nonce: str = "",
 ) -> tuple[Role, list[str]]:
     """Resolve live key ceilings before exposing authority to route handlers."""
     if key_id:
         stored = run_tenant_bound(tenant_id, get_key_store().get, key_id)
         role, scopes = constrain_session_key(role, scopes, tenant_id, stored)
+        if key_id.startswith(OPERATOR_KEY_ID_PREFIX):
+            from agent_bom.api.browser_session import verify_operator_session_binding
+
+            if stored is None or not verify_operator_session_binding(operator_binding, nonce, stored.key_hash):
+                raise HTTPException(status_code=401, detail="Unauthorized — browser session key is no longer active")
     if key_id or auth_method == "managed_trial_oidc":
         scope = required_scope(method, path)
         # Trial tokens do not use the empty-list legacy unrestricted convention.

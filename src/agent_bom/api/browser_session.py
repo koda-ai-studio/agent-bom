@@ -17,6 +17,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from agent_bom.api.api_key_record import OPERATOR_KEY_ID_PREFIX
 from agent_bom.core.settings import env_bool
 
 SESSION_COOKIE_NAME = "agent_bom_session"
@@ -100,6 +101,8 @@ def create_browser_session_token(
     auth_method: str,
     key_id: str | None = None,
     scopes: list[str] | None = None,
+    static_api_key: str | None = None,
+    operator_key_hash: str | None = None,
     max_age_seconds: int,
 ) -> tuple[str, str]:
     now = datetime.now(timezone.utc)
@@ -118,13 +121,63 @@ def create_browser_session_token(
         "exp": int((now + timedelta(seconds=max_age_seconds)).timestamp()),
         "nonce": nonce,
     }
+    signing_key = _signing_key()
+    if auth_method == "browser_session_static_api_key":
+        if not static_api_key:
+            raise BrowserSessionError("browser session requires its authenticated backing key")
+        payload["static_key_binding"] = _static_key_binding(signing_key, nonce, static_api_key)
+    if key_id and key_id.startswith(OPERATOR_KEY_ID_PREFIX):
+        if not operator_key_hash:
+            raise BrowserSessionError("browser session requires its authenticated operator key")
+        payload["operator_key_binding"] = _operator_key_binding(signing_key, nonce, operator_key_hash)
     payload_bytes = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     encoded_payload = _b64encode(payload_bytes)
-    signature = hmac.new(_signing_key(), encoded_payload.encode("ascii"), hashlib.sha256).digest()
+    signature = hmac.new(signing_key, encoded_payload.encode("ascii"), hashlib.sha256).digest()
     return f"{encoded_payload}.{_b64encode(signature)}", csrf
 
 
-def verify_browser_session_token(token: str) -> dict[str, Any]:
+def _static_key_binding(signing_key: bytes, nonce: str, raw_key: str) -> str:
+    # Nonce-bound and keyed: the cookie exposes neither the credential nor an
+    # offline password verifier. Bind the exact key authenticated at exchange.
+    message = f"agent-bom-static-session:v1:{nonce}:{raw_key}".encode("utf-8")
+    return hmac.new(signing_key, message, hashlib.sha256).hexdigest()
+
+
+def _operator_key_binding(signing_key: bytes, nonce: str, key_hash: str) -> str:
+    message = f"agent-bom-operator-session:v1:{nonce}:{key_hash}".encode("utf-8")
+    return hmac.new(signing_key, message, hashlib.sha256).hexdigest()
+
+
+def verify_operator_session_binding(binding: str, nonce: str, key_hash: str) -> bool:
+    """Bind a stable operator slot to its current credential generation."""
+    if not binding or not nonce:
+        return False
+    try:
+        expected = _operator_key_binding(_signing_key(), nonce, key_hash)
+    except (BrowserSessionError, OSError, ValueError):
+        return False
+    return hmac.compare_digest(binding.encode("utf-8"), expected.encode("ascii"))
+
+
+def _verify_static_key_binding(payload: dict[str, Any], signing_key: bytes) -> None:
+    from agent_bom.api.secret_source import resolve_secret
+    from agent_bom.api.storage.deployment import clustered_control_plane_required
+
+    try:
+        current = resolve_secret("AGENT_BOM_API_KEY")
+    except (OSError, ValueError) as exc:
+        raise BrowserSessionError("browser session backing key is unavailable") from exc
+    binding = str(payload.get("static_key_binding") or "")
+    nonce = str(payload.get("nonce") or "")
+    if not current or not binding or not nonce or clustered_control_plane_required():
+        raise BrowserSessionError("browser session backing key is no longer active")
+    expected = _static_key_binding(signing_key, nonce, current)
+    if not hmac.compare_digest(binding.encode("utf-8"), expected.encode("ascii")):
+        raise BrowserSessionError("browser session backing key is no longer active")
+
+
+def _verified_session_payload(token: str) -> tuple[dict[str, Any], bytes]:
+    """Authenticate the envelope without granting access or requiring a live login key."""
     if not token or "." not in token:
         raise BrowserSessionError("browser session cookie is missing or malformed")
     encoded_payload, encoded_signature = token.split(".", 1)
@@ -135,7 +188,8 @@ def verify_browser_session_token(token: str) -> dict[str, Any]:
         raise BrowserSessionError("browser session signature is malformed") from exc
     if len(supplied) != hashlib.sha256().digest_size:
         raise BrowserSessionError("browser session signature is malformed")
-    expected = hmac.new(_signing_key(), payload_ascii, hashlib.sha256).digest()
+    signing_key = _signing_key()
+    expected = hmac.new(signing_key, payload_ascii, hashlib.sha256).digest()
     if not hmac.compare_digest(supplied, expected):
         raise BrowserSessionError("browser session signature is invalid")
     try:
@@ -145,6 +199,13 @@ def verify_browser_session_token(token: str) -> dict[str, Any]:
     exp = int(payload.get("exp") or 0)
     if exp <= int(datetime.now(timezone.utc).timestamp()):
         raise BrowserSessionError("browser session is expired")
+    return payload, signing_key
+
+
+def verify_browser_session_token(token: str) -> dict[str, Any]:
+    payload, signing_key = _verified_session_payload(token)
+    if payload.get("auth_method") == "browser_session_static_api_key":
+        _verify_static_key_binding(payload, signing_key)
     nonce = str(payload.get("nonce") or "")
     if nonce:
         from agent_bom.api.shared_auth_state import AuthStateUnavailable, get_auth_state
@@ -158,7 +219,9 @@ def verify_browser_session_token(token: str) -> dict[str, Any]:
 
 
 def verify_csrf(payload: dict[str, Any], csrf_cookie: str, csrf_header: str) -> bool:
-    if not csrf_cookie or not csrf_header or not hmac.compare_digest(csrf_cookie, csrf_header):
+    if not csrf_cookie or not csrf_header or not csrf_cookie.isascii() or not csrf_header.isascii():
+        return False
+    if not hmac.compare_digest(csrf_cookie, csrf_header):
         return False
     expected = str(payload.get("csrf_sha256") or "")
     nonce = str(payload.get("nonce") or "")
@@ -169,7 +232,9 @@ def verify_csrf(payload: dict[str, Any], csrf_cookie: str, csrf_header: str) -> 
 def revoke_browser_session_token(token: str) -> bool:
     """Revoke a signed browser session nonce until its natural expiry."""
     try:
-        payload = verify_browser_session_token(token)
+        # Logout must persist revocation even after the login key changed; a
+        # later key rollback must not resurrect a cookie the user signed out of.
+        payload, _ = _verified_session_payload(token)
     except BrowserSessionError:
         return False
     nonce = str(payload.get("nonce") or "")
@@ -179,6 +244,8 @@ def revoke_browser_session_token(token: str) -> bool:
     from agent_bom.api.shared_auth_state import get_auth_state
 
     backend = get_auth_state()
+    if backend.is_nonce_revoked(nonce):
+        return False
     backend.revoke_nonce(nonce, exp)
     backend.cleanup_expired()
     return True

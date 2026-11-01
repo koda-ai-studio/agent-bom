@@ -26,6 +26,7 @@ from agent_bom.config import (
 from agent_bom.config import (
     HTTP_RATE_LIMIT_BREAKER_THRESHOLD as RATE_LIMIT_BREAKER_THRESHOLD,
 )
+from agent_bom.core.http_retry import retry_after_seconds
 
 logger = logging.getLogger(__name__)
 
@@ -206,11 +207,8 @@ def _jittered_wait(wait: float) -> float:
 
 
 def _retry_after_wait(response: httpx.Response, backoff: float) -> float:
-    retry_after = response.headers.get("Retry-After")
-    try:
-        return min(float(retry_after), MAX_BACKOFF) if retry_after else backoff
-    except ValueError:
-        return backoff
+    retry_after = retry_after_seconds(response.headers.get("Retry-After"), now=time.time())
+    return min(retry_after, MAX_BACKOFF) if retry_after is not None else backoff
 
 
 async def _sleep_within(wait: float, deadline: float | None) -> bool:

@@ -258,6 +258,8 @@ def _set_browser_session_cookie(
     auth_method: str,
     key_id: str | None = None,
     scopes: list[str] | None = None,
+    static_api_key: str | None = None,
+    operator_key_hash: str | None = None,
 ) -> None:
     from agent_bom.api.browser_session import (
         CSRF_COOKIE_NAME,
@@ -276,6 +278,8 @@ def _set_browser_session_cookie(
             auth_method=auth_method,
             key_id=key_id,
             scopes=scopes,
+            static_api_key=static_api_key,
+            operator_key_hash=operator_key_hash,
             max_age_seconds=max_age,
         )
     except BrowserSessionError as exc:

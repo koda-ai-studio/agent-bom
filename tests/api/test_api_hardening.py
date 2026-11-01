@@ -532,6 +532,7 @@ def test_browser_session_cookies_use_strict_samesite(monkeypatch):
     from agent_bom.api.routes import enterprise
 
     monkeypatch.setenv("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY", "test-browser-session-signing-key")
+    monkeypatch.setenv("AGENT_BOM_API_KEY", "static-key")
     request = SimpleNamespace(headers={}, url=SimpleNamespace(scheme="https"))
     response = Response()
 
@@ -542,6 +543,7 @@ def test_browser_session_cookies_use_strict_samesite(monkeypatch):
         role="admin",
         tenant_id="tenant-alpha",
         auth_method="browser_session_static_api_key",
+        static_api_key="static-key",
     )
 
     set_cookie_values = [value.decode("latin-1") for key, value in response.raw_headers if key.lower() == b"set-cookie"]
@@ -556,6 +558,7 @@ def test_browser_session_cookie_secure_defaults_on_in_production(monkeypatch):
     from agent_bom.api.routes import enterprise
 
     monkeypatch.setenv("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY", "test-browser-session-signing-key")
+    monkeypatch.setenv("AGENT_BOM_API_KEY", "static-key")
     monkeypatch.setenv("AGENT_BOM_ENV", "production")
     monkeypatch.delenv("AGENT_BOM_SESSION_COOKIE_SECURE", raising=False)
     request = SimpleNamespace(headers={}, url=SimpleNamespace(scheme="http"))
@@ -568,6 +571,7 @@ def test_browser_session_cookie_secure_defaults_on_in_production(monkeypatch):
         role="admin",
         tenant_id="tenant-alpha",
         auth_method="browser_session_static_api_key",
+        static_api_key="static-key",
     )
 
     set_cookie_values = [value.decode("latin-1") for key, value in response.raw_headers if key.lower() == b"set-cookie"]
@@ -578,6 +582,7 @@ def test_browser_session_cookie_secure_off_on_local_http(monkeypatch):
     from agent_bom.api.routes import enterprise
 
     monkeypatch.setenv("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY", "test-browser-session-signing-key")
+    monkeypatch.setenv("AGENT_BOM_API_KEY", "static-key")
     monkeypatch.delenv("AGENT_BOM_ENV", raising=False)
     monkeypatch.delenv("AGENT_BOM_DEPLOYMENT_ENV", raising=False)
     monkeypatch.delenv("AGENT_BOM_CONTROL_PLANE_REPLICAS", raising=False)
@@ -592,6 +597,7 @@ def test_browser_session_cookie_secure_off_on_local_http(monkeypatch):
         role="admin",
         tenant_id="tenant-alpha",
         auth_method="browser_session_static_api_key",
+        static_api_key="static-key",
     )
 
     set_cookie_values = [value.decode("latin-1") for key, value in response.raw_headers if key.lower() == b"set-cookie"]
@@ -961,6 +967,7 @@ def test_api_key_middleware_accepts_signed_browser_session(monkeypatch):
     from starlette.routing import Route
 
     monkeypatch.setenv("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY", "test-browser-session-signing-key")
+    monkeypatch.setenv("AGENT_BOM_API_KEY", "static-key")
 
     async def dummy(request):
         return StarletteJSONResponse(
@@ -977,6 +984,7 @@ def test_api_key_middleware_accepts_signed_browser_session(monkeypatch):
         role="admin",
         tenant_id="tenant-alpha",
         auth_method="browser_session_static_api_key",
+        static_api_key="static-key",
         max_age_seconds=300,
     )
     test_app = Starlette(routes=[Route("/v1/scan", dummy, methods=["POST"])])
@@ -1023,6 +1031,7 @@ def test_api_key_middleware_rejects_browser_session_without_csrf(monkeypatch):
     from starlette.routing import Route
 
     monkeypatch.setenv("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY", "test-browser-session-signing-key")
+    monkeypatch.setenv("AGENT_BOM_API_KEY", "static-key")
 
     async def dummy(request):
         return StarletteJSONResponse({"ok": True})
@@ -1032,6 +1041,7 @@ def test_api_key_middleware_rejects_browser_session_without_csrf(monkeypatch):
         role="admin",
         tenant_id="tenant-alpha",
         auth_method="browser_session_static_api_key",
+        static_api_key="static-key",
         max_age_seconds=300,
     )
     test_app = Starlette(routes=[Route("/v1/scan", dummy, methods=["POST"])])
@@ -1052,6 +1062,7 @@ def test_api_key_middleware_rejects_csrf_from_another_session(monkeypatch):
     from starlette.routing import Route
 
     monkeypatch.setenv("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY", "test-browser-session-signing-key")
+    monkeypatch.setenv("AGENT_BOM_API_KEY", "static-key")
 
     async def dummy(request):
         return StarletteJSONResponse({"ok": True})
@@ -1061,6 +1072,7 @@ def test_api_key_middleware_rejects_csrf_from_another_session(monkeypatch):
         role="admin",
         tenant_id="tenant-alpha",
         auth_method="browser_session_static_api_key",
+        static_api_key="static-key",
         max_age_seconds=300,
     )
     _token_b, csrf_b = create_browser_session_token(
@@ -1068,6 +1080,7 @@ def test_api_key_middleware_rejects_csrf_from_another_session(monkeypatch):
         role="admin",
         tenant_id="tenant-alpha",
         auth_method="browser_session_static_api_key",
+        static_api_key="static-key",
         max_age_seconds=300,
     )
     test_app = Starlette(routes=[Route("/v1/scan", dummy, methods=["POST"])])
@@ -1091,6 +1104,7 @@ def test_api_key_middleware_rejects_revoked_browser_session(monkeypatch):
     from starlette.routing import Route
 
     monkeypatch.setenv("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY", "test-browser-session-signing-key")
+    monkeypatch.setenv("AGENT_BOM_API_KEY", "static-key")
 
     async def dummy(request):
         return StarletteJSONResponse({"ok": True})
@@ -1100,6 +1114,7 @@ def test_api_key_middleware_rejects_revoked_browser_session(monkeypatch):
         role="admin",
         tenant_id="tenant-alpha",
         auth_method="browser_session_static_api_key",
+        static_api_key="static-key",
         max_age_seconds=300,
     )
     assert revoke_browser_session_token(token) is True

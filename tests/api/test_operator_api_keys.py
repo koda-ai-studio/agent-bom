@@ -151,3 +151,56 @@ def test_postgres_repeated_boots_keep_one_row_and_retire_removed_keys(monkeypatc
     finally:
         purge()
         reset_pool()
+
+
+@pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="AGENT_BOM_POSTGRES_URL not set")
+def test_postgres_operator_session_binding_survives_reload_but_not_rotation(monkeypatch):
+    from fastapi import HTTPException
+
+    from agent_bom.api.auth import Role
+    from agent_bom.api.browser_session import create_browser_session_token, verify_browser_session_token
+    from agent_bom.api.postgres_access import PostgresKeyStore
+    from agent_bom.api.postgres_common import reset_pool
+    from agent_bom.api.session_authorization import authorize_browser_session
+
+    reset_pool()
+    store = PostgresKeyStore()
+    _boot(monkeypatch, store, f"{ADMIN_KEY}:admin")
+    record = store.verify(ADMIN_KEY)
+    assert record is not None
+    token, _ = create_browser_session_token(
+        subject=record.name,
+        role="admin",
+        tenant_id="default",
+        key_id=record.key_id,
+        auth_method="browser_session",
+        operator_key_hash=record.key_hash,
+        max_age_seconds=300,
+    )
+    payload = verify_browser_session_token(token)
+
+    def authorize():
+        return authorize_browser_session(
+            role=Role.ADMIN,
+            scopes=[],
+            tenant_id="default",
+            key_id=record.key_id,
+            auth_method="browser_session",
+            method="GET",
+            path="/v1/scan",
+            operator_binding=payload["operator_key_binding"],
+            nonce=payload["nonce"],
+        )
+
+    try:
+        _boot(monkeypatch, PostgresKeyStore(), f"{ADMIN_KEY}:admin")
+        assert authorize()[0] == Role.ADMIN
+        _boot(monkeypatch, PostgresKeyStore(), f"{ADMIN_KEY}:viewer")
+        assert authorize()[0] == Role.VIEWER
+        _boot(monkeypatch, PostgresKeyStore(), f"{VIEWER_KEY}:viewer")
+        with pytest.raises(HTTPException) as error:
+            authorize()
+        assert error.value.status_code == 401
+    finally:
+        store.remove(record.key_id)
+        reset_pool()
