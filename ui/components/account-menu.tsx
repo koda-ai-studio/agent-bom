@@ -7,12 +7,16 @@ import { useAuthState } from "@/components/auth-provider";
 import { ThemePreferenceControl } from "@/components/theme-toggle";
 import { sessionPresentation } from "@/lib/session-presentation";
 import { isStaticDemo } from "@/lib/static-demo";
+import { isDemoEstate } from "@/lib/deployment-context";
+import { useDeploymentContext } from "@/hooks/use-deployment-context";
 
 export function AccountMenu() {
   const { session, loading, signOut, hasCapability } = useAuthState();
+  const { counts } = useDeploymentContext();
   const panel = useRef<HTMLDetailsElement>(null);
   const trigger = useRef<HTMLElement>(null);
-  const identity = sessionPresentation(session);
+  const demoEstate = isDemoEstate(counts);
+  const identity = sessionPresentation(session, { demoEstate });
   const displayName = loading ? "Checking session…" : session ? identity.name : "Offline";
   const close = () => { if (panel.current) panel.current.open = false; };
   return <details ref={panel} className="relative shrink-0" onKeyDown={event => {
@@ -31,7 +35,7 @@ export function AccountMenu() {
             <p className="mt-1 text-xs text-ink-secondary">{session ? identity.method : "No control-plane session"}{session?.role_summary?.display_name ? ` · ${session.role_summary.display_name}` : ""}</p>
             {session && <p className="mt-2 text-xs leading-5 text-ink-secondary">{identity.description}</p>}
             <span className="mt-2 inline-flex items-center rounded-full border border-outline bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-secondary">
-              {!session ? "Offline" : isStaticDemo() ? "Read-only demo" : session.auth_required === false ? "Unauthenticated access" : session.authenticated ? "Signed in" : "Sign-in required"}
+              {!session ? "Offline" : isStaticDemo() || (demoEstate && session.auth_required === false) ? "Read-only demo" : session.auth_required === false ? "Unauthenticated access" : session.authenticated ? "Signed in" : "Sign-in required"}
             </span>
           </div>
         </div>
