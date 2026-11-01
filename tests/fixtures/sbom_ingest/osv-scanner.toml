@@ -1,0 +1,21 @@
+# osv-scanner config for the SBOM ingest fixtures in THIS directory only.
+#
+# These CycloneDX/SPDX documents are test inputs: they deliberately pin old
+# component versions (urllib3 2.0.4, requests 2.31.0, jinja2 3.1.2,
+# lodash 4.17.20, Debian openssl 3.0.11) so the SBOM import, advisory
+# matching and possibly-affected tests have known-vulnerable rows to assert
+# on. They are never installed, built or shipped.
+#
+# OpenSSF Scorecard runs osv-scanner recursively over the checkout and reports
+# every match as a project vulnerability (105 hits, "Vulnerabilities 0/10").
+# osv-scanner reads an `osv-scanner.toml` from the scanned file's own directory
+# and does not propagate it to children, so this override is scoped to the
+# fixtures beside it and never touches a real dependency manifest
+# (pyproject.toml / uv.lock / ui/package-lock.json live elsewhere).
+#
+# Do not add real dependency exemptions here; those belong in the repo-root
+# osv-scanner.toml with a reason and an expiry.
+
+[[PackageOverrides]]
+ignore = true
+reason = "Test fixture SBOMs with intentionally outdated component pins; not a dependency of agent-bom."
