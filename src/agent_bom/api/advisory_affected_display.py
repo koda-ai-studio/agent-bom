@@ -20,6 +20,8 @@ import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from agent_bom.security import sanitize_text
+
 logger = logging.getLogger(__name__)
 
 AFFECTED_COUNT_BASIS = "package_occurrence_per_holding_asset"
@@ -96,8 +98,8 @@ def attach_asset_display(rows: list[dict[str, Any]], *, tenant_id: str, store: A
             tags = _tags(first.get(_row_ids(row)[0]))
             second_ids |= {_text(tags.get("container_image")), _text(tags.get("workload"))}
         second = _nodes(store, tenant_id, second_ids)
-    except Exception:  # broad-except: any graph backend error leaves the recorded label in place; the answer must serve
-        logger.debug("affected-asset display enrichment skipped", exc_info=True)
+    except Exception as exc:  # broad-except: any graph backend error leaves the recorded label in place; the answer must serve
+        logger.debug("affected-asset display enrichment skipped: %s", sanitize_text(exc))
         return
     for row in rows:
         asset_id, server_id, agent_id = _row_ids(row)

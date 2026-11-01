@@ -71,18 +71,17 @@ export function FirstScanGuide({ onImport }: { onImport: (data: ScanResult) => v
           <details className="rounded-lg border border-outline p-3">
             <summary className="cursor-pointer text-sm font-medium">Show project command</summary>
             <div className="mt-3 space-y-3">
-              <p className="break-words text-xs leading-5 text-ink-secondary [overflow-wrap:anywhere]">Results push to this deployment at <code className="rounded bg-surface-muted px-1">{pushUrl ?? "…/v1/results/push"}</code>. Set AGENT_BOM_PUSH_URL only to target a different control plane or deployment prefix.</p>
+              <p className="break-words text-xs leading-5 text-ink-secondary [overflow-wrap:anywhere]">Results push to this deployment at <code className="rounded bg-surface-muted px-1">{pushUrl ?? "…/v1/results/push"}</code>; set AGENT_BOM_PUSH_URL only for another control plane or deployment prefix.</p>
               {needsKey ? (
                 <p className="text-xs leading-5 text-ink-secondary">
                   {anonymous
-                    ? "Pushing requires an API key with push permission issued by the operator (agent-bom serve --api-key or AGENT_BOM_API_KEY); anonymous sessions cannot create one. "
+                    ? "Pushing requires an API key with push permission issued by the operator (agent-bom serve --api-key or AGENT_BOM_API_KEY); anonymous sessions cannot create one. Supply it through your secret manager as AGENT_BOM_PUSH_API_KEY."
                     : canCreateKey
                       ? <>Supply AGENT_BOM_PUSH_API_KEY through your secret manager with permission to push results. <Link href="/audit" className="font-medium underline">Create an API key</Link></>
                       : "Supply AGENT_BOM_PUSH_API_KEY through your secret manager. Ask an administrator for an API key with push permission."}
-                  {anonymous ? "Supply it through your secret manager as AGENT_BOM_PUSH_API_KEY." : null}
                 </p>
-              ) : <p className="text-xs leading-5 text-ink-secondary">This session can push without a key; the command sends results anonymously.</p>}
-              <p className="text-xs leading-5 text-ink-secondary">For Bash or Zsh. The command stops before scanning if a required setting is missing. Any key stays in the environment, outside the command arguments.</p>
+              ) : <p className="text-xs leading-5 text-ink-secondary">This session can push without a key.</p>}
+              <p className="text-xs leading-5 text-ink-secondary">Bash or Zsh. The command stops before scanning if a required setting is missing; any key stays in the environment.</p>
               <code className="block whitespace-pre-wrap break-words rounded-lg bg-surface-muted p-3 text-xs leading-5 [overflow-wrap:anywhere]">{command}</code>
               <div className="flex flex-wrap gap-2">
                 <CopyTextButton text={command} label="Copy project command" />

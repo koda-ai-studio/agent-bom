@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Activity, RefreshCw } from "lucide-react";
 import { useAuthState } from "@/components/auth-provider";
 import { PRODUCER_EVIDENCE_HINT } from "@/lib/gateway-feed";
-import { ActivityStreamError, gatewayActivityPage, gatewayFeedSnapshot, mergeActivity, streamGatewayActivity, type GatewayActivity, type ActivityPage } from "@/lib/gateway-activity";
+import { ActivityStreamError, gatewayActivityPage, mergeActivity, streamGatewayActivity, type GatewayActivity, type ActivityPage } from "@/lib/gateway-activity";
+import { gatewayFeedSnapshot } from "@/lib/gateway-feed-snapshot";
 
 
 import { ActivityRows } from "./GatewayActivityRows";

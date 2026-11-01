@@ -19,8 +19,9 @@ const brief = (rows: unknown[]) => ({
 describe("brief timestamps and SLA presentation", () => {
   it("renders relative plus absolute dates without microseconds", () => {
     vi.useFakeTimers(); vi.setSystemTime(NOW);
-    expect(briefTimestamp("2026-11-08T18:32:07.903891+00:00")).toMatch(/^in 7 days · 8 Nov 2026/);
+    expect(briefTimestamp("2026-11-08T18:32:07.903891+00:00")).toMatch(/^in 7 days · 8 Nov 2026, 18:32 UTC$/);
     expect(briefTimestamp("2026-11-08T18:32:07.903891+00:00")).not.toMatch(/903891/);
+    expect(briefTimestamp("2026-11-01T18:35:00Z")).toMatch(/^5 minutes ago · /);
     expect(briefTimestamp(null)).toBe("Not recorded");
     expect(briefTimestamp("control-scan")).toBe("control-scan");
   });
@@ -30,6 +31,9 @@ describe("brief timestamps and SLA presentation", () => {
     expect(slaChipLabel(priority({ sla_status: null, sla_due_at: "2026-10-01T00:00:00Z" }))).toEqual({ label: "Overdue", tone: "danger" });
     expect(slaChipLabel(priority({ sla_status: null, sla_due_at: "2027-01-01T00:00:00Z" }))).toEqual({ label: "On track", tone: "ok" });
     expect(slaChipLabel(priority({ sla_status: null, sla_due_at: null }))).toEqual({ label: "No SLA", tone: "muted" });
+    // Whole days like the API's sla_status: 7.6 days out is still due soon, 8 whole days is on track.
+    expect(slaChipLabel(priority({ sla_status: null, sla_due_at: "2026-11-09T09:00:00Z" }))).toEqual({ label: "Due soon", tone: "warning" });
+    expect(slaChipLabel(priority({ sla_status: null, sla_due_at: "2026-11-09T19:00:00Z" }))).toEqual({ label: "On track", tone: "ok" });
   });
   it("shows the policy display name and the chip instead of raw ids", () => {
     vi.useFakeTimers(); vi.setSystemTime(NOW);

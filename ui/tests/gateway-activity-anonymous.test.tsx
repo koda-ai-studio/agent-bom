@@ -6,7 +6,8 @@ import { activity } from "./fixtures/gateway-activity";
 
 const mocks = vi.hoisted(() => ({ stream: vi.fn(), snapshot: vi.fn(), session: { tenant_id: "default", subject: "anonymous", auth_required: false, auth_method: "anonymous" } as Record<string, unknown> }));
 vi.mock("@/components/auth-provider", () => ({ useAuthState: () => ({ session: mocks.session }) }));
-vi.mock("@/lib/gateway-activity", async () => ({ ...await vi.importActual("@/lib/gateway-activity"), streamGatewayActivity: mocks.stream, gatewayFeedSnapshot: mocks.snapshot }));
+vi.mock("@/lib/gateway-activity", async () => ({ ...await vi.importActual("@/lib/gateway-activity"), streamGatewayActivity: mocks.stream }));
+vi.mock("@/lib/gateway-feed-snapshot", () => ({ gatewayFeedSnapshot: mocks.snapshot }));
 const page = (count: number) => ({ schema_version: "gateway.activity.stream.v1", tenant_id: "default", events: Array.from({ length: count }, (_, i) => ({ ...activity(i + 1), tenant_id: "default" })), next_cursor: "", has_more: false, latest_ordinal: count, retention_floor_ordinal: 1 });
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); mocks.session.auth_required = false; });
 

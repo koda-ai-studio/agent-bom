@@ -12,14 +12,7 @@ export type BriefPriority = ExecutiveBrief["remediation_priorities"][number];
 const DAY_MS = 86_400_000;
 const ABSOLUTE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", hour12: false });
 const RELATIVE = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-
-function relativeLabel(deltaMs: number): string {
-  const minutes = Math.round(deltaMs / 60_000);
-  if (Math.abs(minutes) < 60) return RELATIVE.format(minutes, "minute");
-  const hours = Math.round(deltaMs / 3_600_000);
-  if (Math.abs(hours) < 48) return RELATIVE.format(hours, "hour");
-  return RELATIVE.format(Math.round(deltaMs / DAY_MS), "day");
-}
+const UNITS: [number, Intl.RelativeTimeFormatUnit][] = [[60_000, "minute"], [3_600_000, "hour"], [DAY_MS, "day"]];
 
 /** "in 7 days · 8 Nov 2026, 18:32 UTC": relative for humans, absolute for the record, never microseconds. */
 export function briefTimestamp(value: unknown, now = nowForRelativeTime()): string {
@@ -27,33 +20,34 @@ export function briefTimestamp(value: unknown, now = nowForRelativeTime()): stri
   const parsed = Date.parse(value);
   // A recorded value that is not a date (a scan id) is shown as recorded, never hidden.
   if (!Number.isFinite(parsed)) return value;
-  return `${relativeLabel(parsed - now)} · ${ABSOLUTE.format(parsed)} UTC`;
+  const delta = parsed - now;
+  const [ms, unit] = UNITS.find(([size], i) => i === UNITS.length - 1 || Math.abs(delta / size) < (i === 0 ? 60 : 48))!;
+  return `${RELATIVE.format(Math.round(delta / ms), unit)} · ${ABSOLUTE.format(parsed)} UTC`;
 }
 
 export type SlaTone = "danger" | "warning" | "ok" | "muted";
+const CHIPS: Record<string, { label: string; tone: SlaTone }> = {
+  overdue: { label: "Overdue", tone: "danger" },
+  due_soon: { label: "Due soon", tone: "warning" },
+  on_track: { label: "On track", tone: "ok" },
+};
 
-/** Chip from the API's ``sla_status`` when present, else derived from the same ``sla_due_at`` the API used. */
+/** Chip from the API's ``sla_status`` when present, else derived from ``sla_due_at`` in whole days, as the API derives it. */
 export function slaChipLabel(row: Pick<BriefPriority, "sla_due_at" | "sla_status">, now = nowForRelativeTime()): { label: string; tone: SlaTone } {
-  let status = row.sla_status ?? null;
+  let status = row.sla_status ?? "";
   if (!status) {
     const due = row.sla_due_at ? Date.parse(row.sla_due_at) : Number.NaN;
     status = !Number.isFinite(due) ? "unknown" : due < now ? "overdue" : Math.floor((due - now) / DAY_MS) <= 7 ? "due_soon" : "on_track";
   }
-  switch (status) {
-    case "overdue": return { label: "Overdue", tone: "danger" };
-    case "due_soon": return { label: "Due soon", tone: "warning" };
-    case "on_track": return { label: "On track", tone: "ok" };
-    default: return { label: "No SLA", tone: "muted" };
-  }
+  return CHIPS[status] ?? { label: "No SLA", tone: "muted" };
 }
 
 const POLICY_LABELS: Record<string, string> = { "severity-kev/v1": "Severity and KEV policy (v1)", explicit: "Explicit due date", unknown: "Unattributed due date", unavailable: "No deadline derivable" };
 
 /** Policy display name: the API's ``sla_policy`` when present, else the same table the API uses. */
 export function slaPolicyLabel(row: Pick<BriefPriority, "sla_due_at_source" | "sla_policy">): string {
-  if (row.sla_policy) return row.sla_policy;
   const source = row.sla_due_at_source;
-  return source ? POLICY_LABELS[source] ?? source : "Not recorded";
+  return row.sla_policy || (source ? POLICY_LABELS[source] ?? source : "Not recorded");
 }
 
 export function briefFindingHref(row: ExecutiveBrief["remediation_priorities"][number]): string {

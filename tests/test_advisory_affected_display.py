@@ -25,7 +25,8 @@ POD = "kubernetes:pod:eks-1/tools/shell-runner-0"
 
 class FakeStore:
     def __init__(self, nodes: dict[str, UnifiedNode], edges: list[UnifiedEdge]) -> None:
-        self.nodes, self.edges, self.calls = nodes, edges, []
+        self.nodes, self.edges = nodes, edges
+        self.calls: list[tuple[str, str, frozenset[str]]] = []
 
     def nodes_by_ids(self, *, tenant_id: str = "", scan_id: str = "", node_ids: set[str]) -> list[UnifiedNode]:
         self.calls.append(("nodes", tenant_id, frozenset(node_ids)))
@@ -131,7 +132,7 @@ def test_tenant_answer_carries_display_count_basis_and_is_cached_per_generation(
         return {"advisory": {"id": advisory_id}, "summary": {"affected": 1}, "rows": [_image_row()], "generation": "g"}
 
     monkeypatch.setattr(advisory_affected_read, "_uncached_affected_answer", fake_answer)
-    monkeypatch.setattr(advisory_affected_read, "_get_graph_store", lambda: _store())
+    monkeypatch.setattr(advisory_affected_read, "_get_graph_store", _store)
     generation = {"value": "jobs=1"}
     monkeypatch.setattr(advisory_affected_read, "_affected_generation", lambda tenant_id: generation["value"])
 

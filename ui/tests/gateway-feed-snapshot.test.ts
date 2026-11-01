@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ActivityStreamError, gatewayFeedSnapshot } from "@/lib/gateway-activity";
+import { ActivityStreamError } from "@/lib/gateway-activity";
+import { gatewayFeedSnapshot } from "@/lib/gateway-feed-snapshot";
 
 const feedEvent = (overrides: Record<string, unknown> = {}) => ({
   producer_assurance: "unknown", event_id: "demo-estate-gateway:2026-11-01:1:filesystem-server.read_file", decision_id: "",
