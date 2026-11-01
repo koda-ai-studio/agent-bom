@@ -610,10 +610,13 @@ FINDINGS_APPROXIMATE_TOTAL_THRESHOLD = _int("AGENT_BOM_FINDINGS_APPROXIMATE_TOTA
 # for legitimate slow clients in restricted networks).
 API_BODY_MIN_BPS = _int("AGENT_BOM_BODY_MIN_BPS", 256)
 # Per-report upload budget for POST /v1/results/push, measured after gzip decoding.
-# Both wire and decoded bytes are bounded; other API bodies retain their 10 MiB limit.
-API_RESULT_PUSH_MAX_BYTES = _int("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES", 64 * 1024 * 1024)
-# Compress collector report pushes after upgrading the receiving control plane.
-PUSH_GZIP = _bool("AGENT_BOM_PUSH_GZIP", False)
+# Sized for the advertised 10k-package estate (154 MB raw, 8.7 MB gzipped, measured
+# 2026-11-01) with headroom; gzip bodies are also capped by expansion ratio so a
+# decompression bomb is refused long before this budget. Other API bodies keep 10 MiB.
+API_RESULT_PUSH_MAX_BYTES = _int("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES", 256 * 1024 * 1024)
+# Collector report pushes are gzip-compressed by default (control planes decode them
+# since #5193, 2026-09-10); set to 0 only for a receiver that predates that.
+PUSH_GZIP = _bool("AGENT_BOM_PUSH_GZIP", True)
 
 
 # ── PostgreSQL Control Plane Tuning ──────────────────────────────────────
