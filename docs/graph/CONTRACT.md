@@ -795,7 +795,9 @@ recorded relationships; they do not establish continuous effective permission.
 
 Replay (`GET /v1/graph/edges/active`) returns observations whose recorded interval
 includes the requested time. It deduplicates only exact scoped re-observations;
-unknown scope stays specific to its source snapshot. An open interval means no
+the newest comparable observation is selected before applying its recorded end.
+A later explicit expiry therefore cannot resurrect an older open-ended version.
+Unknown scope stays specific to its source snapshot. An open interval means no
 end was recorded, not that current access is authorized. Old/new snapshot diffs
 still describe membership differences and do not establish revocation.
 

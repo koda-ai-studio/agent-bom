@@ -617,10 +617,6 @@ _VERTEX_RESOURCE_RE = re.compile(
     r"^projects/(?P<project>[a-z0-9-]+)/locations/(?P<location>[a-z0-9-]+)/endpoints/(?P<endpoint>[a-z0-9_-]+)",
     re.IGNORECASE,
 )
-# Vertex regional API hostname: `{region}-aiplatform.googleapis.com` —
-# present in regional client URLs but not parseable into a project/endpoint
-# on its own. We parse it for region only.
-_VERTEX_HOSTNAME_RE = re.compile(r"https?://([a-z0-9-]+)-aiplatform\.googleapis\.com", re.IGNORECASE)
 
 _GCP_PROJECT_ENV_KEYS = (
     "GOOGLE_CLOUD_PROJECT",

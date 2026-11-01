@@ -74,7 +74,6 @@ def test_test_connection_offloads_broker(monkeypatch, wired):
 
 
 def test_test_connection_permission_failure_is_stable_and_marks_unverified(monkeypatch, wired):
-    _record, _offloaded = wired
     marks: list[dict] = []
     monkeypatch.setattr(cloud_connections, "_mark_connection", lambda record, **kwargs: marks.append(kwargs))
 
@@ -118,7 +117,6 @@ def test_test_connection_probe_failures_use_stable_public_states(
     expected_status: str,
     expected_detail: str,
 ):
-    _record, _offloaded = wired
     marks: list[dict] = []
     monkeypatch.setattr(cloud_connections, "_mark_connection", lambda record, **kwargs: marks.append(kwargs))
 
@@ -298,7 +296,6 @@ def test_create_connection_scan_on_create_dispatch_failure_is_sanitized(monkeypa
 @pytest.mark.asyncio
 async def test_slow_connection_test_keeps_event_loop_responsive(monkeypatch, wired):
     """A hung broker endpoint must not pin the loop — the offload proves it."""
-    record, offloaded = wired
     call = BlockingCall()
 
     def _slow_broker(record):

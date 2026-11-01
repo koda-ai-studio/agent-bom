@@ -25,8 +25,6 @@ from agent_bom.demo_estate.showcase_constants import SHOWCASE_TENANT
 _logger = logging.getLogger(__name__)
 
 _ANCHOR = "2026-07-06T15:30:00+00:00"
-_DEMO_CONN_PREFIX = "demo-conn-"
-_DEMO_SOURCE_PREFIX = "demo-src-"
 _DEMO_COST_CALL_ID = "demo-cost-showcase-v1"
 
 

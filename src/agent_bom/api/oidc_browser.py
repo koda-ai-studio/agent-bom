@@ -10,7 +10,6 @@ import base64
 import hashlib
 import hmac
 import json
-import logging
 import os
 import secrets
 import time
@@ -22,7 +21,6 @@ from urllib.request import Request, urlopen
 from agent_bom.api.oidc import OIDCConfig, OIDCError, discover_oidc, verify_oidc_token
 from agent_bom.security import sanitize_error, validate_url
 
-_logger = logging.getLogger(__name__)
 _OIDC_TIMEOUT = 10
 OIDC_PKCE_COOKIE_NAME = "agent_bom_oidc_pkce"
 

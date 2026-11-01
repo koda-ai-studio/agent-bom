@@ -56,12 +56,13 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
     try {
       await page.goto(`${baseUrl}/graph?lens=estate&rollup=0&scan=${graph.scan_id}&capture=1`);
       await page.getByRole("heading", { name: "Investigation", exact: true }).waitFor();
+      if (viewport.width < 640) {
+        await expect(page.getByTestId("graph-path-list")).toBeVisible();
+        await page.screenshot({ path: path.join(output, `${key}-paths.png`) });
+        await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
+      }
       await expect(page.locator(".react-flow__node").first()).toBeVisible();
       if (viewport.width >= 640) await fitReactFlow(page);
-      else {
-        await page.getByRole("button", { name: /^Center graph node:/ }).click();
-        await page.waitForTimeout(300);
-      }
       await page.evaluate(() => window.scrollTo(0, 0));
       await expect(page.getByLabel("Visible relationship evidence")).toBeVisible();
       // Camera animation and readable glyph resizing have separate layout turns.
@@ -121,7 +122,10 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
           await page.keyboard.press("Enter");
           await expect(page.getByLabel("Relationship details", { exact: true })).toBeVisible();
           await expect(page.getByLabel("Relationship summary")).toBeVisible();
+          if (viewport.width < 640) await expect(page.getByRole("dialog", { name: "Relationship details", exact: true })).toHaveCSS("opacity", "1");
           await page.screenshot({ path: path.join(output, `${key}-edge.png`) });
+          await page.getByLabel("Relationship summary").getByText("Still unknown", { exact: true }).scrollIntoViewIfNeeded();
+          await page.screenshot({ path: path.join(output, `${key}-edge-unknown.png`) });
         }
       }
       results.push({ key, elapsedMs: Math.round(performance.now() - started), audit, geometry, errors, evidence: await page.getByLabel("Visible relationship evidence").textContent() });

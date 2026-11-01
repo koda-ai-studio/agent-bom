@@ -65,7 +65,6 @@ def test_gate_flags_new_ad_hoc_env_var(tmp_path: pytest.TempPathFactory, monkeyp
     # allowlist, the ad-hoc var must surface as drift.
     gen = _load_generator()
 
-    fake_root = Path(tmp_path) if not callable(tmp_path) else None  # type: ignore[arg-type]
     fake_root = Path(tmp_path)  # pytest tmp_path is a Path
     config_dir = fake_root / "src_pkg"
     config_dir.mkdir()

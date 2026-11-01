@@ -268,7 +268,7 @@ def test_sigstore_policy_verifies_exact_pae_with_explicit_identity_and_issuer(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     path = _write_sbom(tmp_path)
-    _private_pem, _public_pem = _keys(monkeypatch)
+    _keys(monkeypatch)
     _sign(path)
     Path(str(path) + _SIG_SUFFIX).unlink()
     envelope_path = Path(str(path) + _ATTESTATION_SUFFIX)
@@ -304,7 +304,7 @@ def test_sigstore_policy_verifies_exact_pae_with_explicit_identity_and_issuer(
 
 def test_sigstore_policy_requires_bundle_and_exact_policy_key_id(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = _write_sbom(tmp_path)
-    _private_pem, _public_pem = _keys(monkeypatch)
+    _keys(monkeypatch)
     _sign(path)
     policy = AttestationTrustPolicy.from_sigstore(
         expected_identity_regexp=r"https://github\.com/acme/repo/.+",

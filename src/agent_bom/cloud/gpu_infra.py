@@ -62,14 +62,6 @@ _AMD_IMAGE_PREFIXES = (
     "rocm/rocm-terminal",
 )
 
-# Docker label keys that indicate CUDA/cuDNN version
-_CUDA_LABEL_KEYS = (
-    "com.nvidia.cuda.version",
-    "com.nvidia.cudnn.version",
-    "com.nvidia.cuda_version",
-    "cuda_version",
-    "nvidia_cuda_version",
-)
 
 # AMD ROCm env vars that indicate GPU usage
 _AMD_ENV_VARS = ("ROCR_VISIBLE_DEVICES", "AMD_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES", "HSA_OVERRIDE_GFX_VERSION")

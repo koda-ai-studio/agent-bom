@@ -204,7 +204,7 @@ class GraphCorrelationService:
             try:
                 await self._enqueue(persisted.tenant_id, persisted.correlation_id)
             except CorrelationServiceError:
-                persisted = await asyncio.to_thread(
+                await asyncio.to_thread(
                     self._store.update_correlation_run,
                     tenant_id=persisted.tenant_id,
                     correlation_id=persisted.correlation_id,

@@ -53,8 +53,6 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.identity.credential_policy import classify_credential
 
-_OVERLAY_SOURCE = "nhi-governance"
-
 DEFAULT_DORMANT_DAYS = 90
 
 # Inventory roles, service accounts and Azure service principals share the NHI

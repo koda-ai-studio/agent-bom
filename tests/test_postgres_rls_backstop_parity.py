@@ -91,10 +91,8 @@ def _create_table_columns(ddl: str, table: str) -> set[str]:
                 break
     body = ddl[open_paren + 1 : end]
     cols: set[str] = set()
-    depth = 0
     for raw in body.split("\n"):
         line = raw.strip()
-        # Only split on commas at paren-depth 0 by scanning char state per line.
         segment = line.strip().rstrip(",").strip()
         if not segment or segment.startswith("--"):
             continue

@@ -96,7 +96,6 @@ def _minimal_report():
 
 
 _BASE_AGENT = agent_graph_id_for(_minimal_report()["agents"][0])
-_BASE_AGENT_KEY = _BASE_AGENT.removeprefix("agent:")
 _BASE_SERVER = mcp_server_graph_id_for(_minimal_report()["agents"][0]["mcp_servers"][0], _minimal_report()["agents"][0])
 _CURSOR_SERVER = mcp_server_graph_id_for(_minimal_report()["agents"][1]["mcp_servers"][0], _minimal_report()["agents"][1])
 

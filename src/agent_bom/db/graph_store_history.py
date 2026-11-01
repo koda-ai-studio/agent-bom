@@ -162,11 +162,10 @@ def active_edges_at(conn: sqlite3.Connection, at: str, *, tenant_id: str = "") -
         WHERE ge.tenant_id = ?
           AND gs.created_at <= ?
           AND COALESCE(NULLIF(ge.valid_from, ''), ge.first_seen) <= ?
-          AND (ge.valid_to IS NULL OR ge.valid_to = '' OR ge.valid_to > ?)
         ORDER BY gs.created_at ASC, ge.scan_id ASC
         """,
-        (tenant_id, at, at, at),
-    ).fetchall()
+        (tenant_id, at, at),
+    )
     active_by_key: dict[tuple[Any, ...], dict[str, Any]] = {}
     for row in rows:
         edge = _edge_history_row(row)
@@ -180,7 +179,9 @@ def active_edges_at(conn: sqlite3.Connection, at: str, *, tenant_id: str = "") -
         namespace = ("recorded", *scope) if scope is not None else ("snapshot", edge["scan_id"])
         key = (namespace, edge["source_id"], edge["target_id"], edge["relationship"])
         active_by_key[key] = edge
-    return [active_by_key[key] for key in sorted(active_by_key)]
+    # Resolve the newest comparable observation before testing its expiry.
+    # Filtering expired rows in SQL resurrects an older open-ended version.
+    return [edge for key in sorted(active_by_key) if not (edge := active_by_key[key])["valid_to"] or edge["valid_to"] > at]
 
 
 def changed_edges_between_scans(

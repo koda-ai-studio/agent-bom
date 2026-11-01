@@ -13,13 +13,10 @@ next to its implementation in ``agent_bom/mcp_tools/``.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any
 
 from agent_bom import mcp_server_runtime as _mcp_runtime
-
-logger = logging.getLogger(__name__)
 
 # Registry cache (module-local — was at mcp_server.py line 320-321).
 _registry_cache: dict | None = None

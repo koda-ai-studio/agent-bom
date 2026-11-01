@@ -332,7 +332,7 @@ def render(node_id_formats: dict[str, set[str]], generator: str) -> list[str]:
         "## Normalization",
         "",
         "`core/asset_types.py` maps a vendor or scanner `asset_type` to an entity type "
-        "(full table in the [data model](../DATA_MODEL.md#asset-type-normalization)). Spellings per entity type:",
+        + "(full table in the [data model](../DATA_MODEL.md#asset-type-normalization)). Spellings per entity type:",
         "",
         "| Entity | Accepted `asset_type` spellings |",
         "|---|---|",
@@ -372,7 +372,7 @@ def render(node_id_formats: dict[str, set[str]], generator: str) -> list[str]:
         "## Per entity type",
         "",
         "*Canonical id functions* are `agent_bom.canonical_ids` functions named for the type. "
-        "*Node id formats* are the statically detected `UnifiedNode(id=…)` templates.",
+        + "*Node id formats* are the statically detected `UnifiedNode(id=…)` templates.",
         "",
         "| Entity | Merge branch | Canonical id functions | Node id formats |",
         "|---|---|---|---|",
@@ -388,8 +388,8 @@ def render(node_id_formats: dict[str, set[str]], generator: str) -> list[str]:
         "## Not correlated across sources yet",
         "",
         "Entity types that reach only the generic fallback branch, have no `canonical_ids` function and no "
-        "detected UUIDv5 node id. Two sources describing the same thing merge only if each stamps the same "
-        "`canonical_id` / `stable_id` attribute; otherwise each record stays snapshot-scoped.",
+        + "detected UUIDv5 node id. Two sources describing the same thing merge only if each stamps the same "
+        + "`canonical_id` / `stable_id` attribute; otherwise each record stays snapshot-scoped.",
         "",
         *(f"- {_code(e)}" for e in missing),
         "",

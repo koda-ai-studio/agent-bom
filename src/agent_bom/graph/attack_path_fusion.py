@@ -42,7 +42,6 @@ from agent_bom.graph.types import EntityType, RelationshipType
 
 _logger = logging.getLogger(__name__)
 
-_FUSION_SOURCE = "attack-path-fusion"
 
 # ── Bounds (mirror effective_permissions' caps) ──────────────────────────────
 _MAX_DEPTH = 8  # max hops (edges) in a single chain

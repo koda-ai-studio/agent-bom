@@ -27,8 +27,8 @@ export function graphFitViewOptions(input: GraphViewportInput): GraphFitViewOpti
   const edgeCount = normalizedCount(input.edgeCount);
   const selectedBoost = input.selectedNode ? 0.1 : 0;
 
-  let padding = 0.16;
-  let maxZoom = 1.05;
+  let padding: number;
+  let maxZoom: number;
 
   // maxZoom is only a ceiling; fitting a wide topology can still produce
   // unreadable labels. Initial large-graph framing uses a readable anchor below.

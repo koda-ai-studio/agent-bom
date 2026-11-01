@@ -233,7 +233,6 @@ export function SourcesSegment(props: SourcesSegmentProps) {
           registry={servicesRegistry}
           showUnlock={false}
         />
-        {!isDemoMode ? (
           <button
             onClick={onFleetSync}
             disabled={syncingFleet || !canManageFleet}
@@ -242,7 +241,6 @@ export function SourcesSegment(props: SourcesSegmentProps) {
             <Activity className="h-3.5 w-3.5" />
             {syncingFleet ? "Syncing…" : "Fleet sync"}
           </button>
-        ) : null}
       </div>
 
       <ServiceStateBanner serviceId="data_sources" entry={dataSourcesService} registry={servicesRegistry} />

@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import base64
 import json
-import logging
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -40,7 +39,6 @@ from urllib.request import Request, urlopen
 from agent_bom.api.oidc import OIDCError
 from agent_bom.security import sanitize_error, validate_url
 
-_logger = logging.getLogger(__name__)
 _SNOWFLAKE_TIMEOUT = 10
 
 # Snowflake account hostnames. ``.snowflakecomputing.com`` covers commercial and

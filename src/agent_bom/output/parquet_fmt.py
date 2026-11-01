@@ -31,54 +31,6 @@ from agent_bom.security import sanitize_sensitive_payload
 # reading their original projection unchanged.
 PARQUET_SCHEMA_VERSION = "5"
 
-_COLUMNS = [
-    "cve_id",
-    "package",
-    "version",
-    "ecosystem",
-    "severity",
-    "cvss_score",
-    "epss_score",
-    "is_kev",
-    "is_malicious",
-    "malicious_reason",
-    "published_at",
-    "modified_at",
-    "fixed_version",
-    "cwe_ids",
-    "affected_agents",
-    "affected_servers",
-    "exposed_credentials",
-    "summary",
-    "severity_source",
-    "epss_percentile",
-    "kev_date_added",
-    "kev_due_date",
-    "compliance_tags",
-    "reachability",
-    "symbol_reachability",
-    "reachable_affected_symbols",
-    "graph_reachable",
-    "graph_min_hop_distance",
-    # Appended (not inserted) so positional consumers of the original CVE
-    # columns keep working; new nullable columns for the unified finding types
-    # (COMBINATION / PROMPT_SECURITY / CIS / SAST / secret) that a CVE-only row
-    # leaves null. Mirrors the CSV export (#4279).
-    "finding_type",
-    "finding_id",
-    "title",
-    "scan_id",
-    "generated_at",
-    "source",
-    "asset_identifier",
-    "owner",
-    "sla_due_at",
-    "lifecycle_status",
-    "symbol_reachability_reason",
-    "runtime_dependency_chain",
-    "sla_due_at_source",
-]
-
 
 def _require_pyarrow():
     try:

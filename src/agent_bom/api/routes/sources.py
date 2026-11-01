@@ -374,8 +374,6 @@ async def test_source(request: Request, source_id: str) -> dict:
     tenant_id = _tenant_id(request)
     source = _source_for_request(request, source_id).model_copy(deep=True)
     _validate_credential_ref(request, source)
-    message = "Configuration recorded"
-    status = SourceStatus.CONFIGURED
 
     if (
         source.kind

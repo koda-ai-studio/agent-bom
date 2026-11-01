@@ -108,7 +108,7 @@ export function NhiGovernancePanel({
                 <p className="font-mono text-sm text-foreground">{entry.value}</p>
               </div>
             ))}
-            {!loading && counts.length === 0 ? (
+            {counts.length === 0 ? (
               <p className="text-xs text-ink-tertiary">
                 No NHI count rollups for this snapshot.
               </p>

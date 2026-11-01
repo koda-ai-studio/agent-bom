@@ -6,6 +6,16 @@ import json
 from typing import Any
 
 
+def aws_error_types() -> tuple[tuple[type[Exception], ...], tuple[type[Exception], ...]]:
+    """Keep injected sessions usable without misclassifying non-SDK errors."""
+    try:
+        from botocore.exceptions import ClientError, NoCredentialsError
+    except ImportError:
+        # Empty tuples catch nothing, so the reader's generic handler applies.
+        return (), ()
+    return (ClientError,), (NoCredentialsError,)
+
+
 def aws_event_outcome(raw: dict[str, Any], action: str) -> str:
     # LookupEvents wraps the provider outcome in a JSON string. Keep only its
     # classification; error messages and request/response content are not retained.

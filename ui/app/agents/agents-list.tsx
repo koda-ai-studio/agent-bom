@@ -293,7 +293,7 @@ export function AgentsList() {
 
       {!loading && !error && agents.length === 0 &&
         (counts && !isDeploymentSurfaceAvailable("agents", counts) ? (
-          <DeploymentSurfaceRequiredState surface="agents" counts={counts} detail={error || null} />
+          <DeploymentSurfaceRequiredState surface="agents" counts={counts} />
         ) : (
           <PageEmptyState
             title="No agents discovered yet"

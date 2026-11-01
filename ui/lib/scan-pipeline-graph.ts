@@ -161,7 +161,7 @@ export function cisFailedCount(cis: CisSummary | null | undefined): number | nul
   return cis?.failed != null && cis.failed >= 0 ? cis.failed : null;
 }
 
-function cisDetail(cis: CisSummary): string | undefined {
+function cisDetail(cis: CisSummary): string {
   const failed = cisFailedCount(cis);
   if (cis.total != null && failed != null) return `${failed} fail · ${cis.total} checks`;
   if (failed != null) return `${failed} fail`;
@@ -202,9 +202,7 @@ export function deriveDomainLanes(
     if (!input.cis) return { ...EMPTY_LANE };
     const failed = cisFailedCount(input.cis);
     const lane: DomainLaneData = { ran: true, findings: failed, summarized };
-    const detail = cisDetail(input.cis);
-    if (detail !== undefined) lane.detail = detail;
-    else if (failed === 0) lane.detail = "clean";
+    lane.detail = cisDetail(input.cis);
     return lane;
   })();
 

@@ -539,17 +539,6 @@ async def fetch_pypi_release_metadata(
 # Instruction file provenance (Sigstore)
 # ---------------------------------------------------------------------------
 
-# Instruction files that can have Sigstore provenance bundles
-_INSTRUCTION_FILE_NAMES = frozenset(
-    {
-        "CLAUDE.md",
-        ".cursorrules",
-        "SKILL.md",
-        "skill.md",
-        ".claude/CLAUDE.md",
-    }
-)
-
 
 @dataclass
 class InstructionFileVerification:

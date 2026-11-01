@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -39,8 +40,6 @@ _CREDENTIAL_KEYWORDS = {"key", "token", "secret", "password", "credential", "aut
 # Unsafe serialization formats
 _UNSAFE_FORMATS = {"pickle", "pkl", "joblib", "cloudpickle"}
 
-# Safe serialization formats
-_SAFE_FORMATS = {"safetensors", "onnx", "gguf", "ggml", "tflite", "pb"}
 _PIPELINE_PII_TYPES = {
     "US SSN",
     "Credit Card (Visa)",
@@ -73,6 +72,7 @@ class TrainingRun:
     serialization_format: str = ""
     security_flags: list[dict] = field(default_factory=list)
     compliance_tags: dict[str, list[str]] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         d: dict = {
@@ -80,32 +80,24 @@ class TrainingRun:
             "framework": self.framework,
             "source_file": self.source_file,
         }
-        if self.run_id:
-            d["run_id"] = self.run_id
-        if self.experiment_name:
-            d["experiment_name"] = self.experiment_name
-        if self.model_artifact_path:
-            d["model_artifact_path"] = self.model_artifact_path
-        if self.model_flavor:
-            d["model_flavor"] = self.model_flavor
-        if self.parameters:
-            d["parameters"] = self.parameters
-        if self.metrics:
-            d["metrics"] = self.metrics
-        if self.packages:
-            d["packages"] = self.packages
-        if self.datasets_used:
-            d["datasets_used"] = self.datasets_used
-        if self.created_at:
-            d["created_at"] = self.created_at
-        if self.git_sha:
-            d["git_sha"] = self.git_sha
-        if self.serialization_format:
-            d["serialization_format"] = self.serialization_format
-        if self.security_flags:
-            d["security_flags"] = self.security_flags
-        if self.compliance_tags:
-            d["compliance_tags"] = self.compliance_tags
+        optional = {
+            "run_id": self.run_id,
+            "experiment_name": self.experiment_name,
+            "model_artifact_path": self.model_artifact_path,
+            "model_flavor": self.model_flavor,
+            "parameters": self.parameters,
+            "metrics": self.metrics,
+            "packages": self.packages,
+            "datasets_used": self.datasets_used,
+            "created_at": self.created_at,
+            "git_sha": self.git_sha,
+            "serialization_format": self.serialization_format,
+            "security_flags": self.security_flags,
+            "compliance_tags": self.compliance_tags,
+        }
+        d.update((key, value) for key, value in optional.items() if value)
+        if self.warnings:
+            d["warnings"] = list(self.warnings)
         return d
 
 
@@ -202,12 +194,13 @@ def _content_security_flags(text: str, *, source: str) -> list[dict[str, str]]:
     return flags
 
 
-def _parse_requirements(path: Path) -> list[str]:
+def _parse_requirements(path: Path, warnings: list[str]) -> list[str]:
     """Parse a requirements.txt file into package strings."""
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
         return [line.strip() for line in lines if line.strip() and not line.strip().startswith("#") and not line.strip().startswith("-")]
-    except OSError:
+    except (OSError, UnicodeError):
+        warnings.append("Training requirements could not be read; dependency inventory is incomplete.")
         return []
 
 
@@ -232,14 +225,14 @@ def _detect_serialization_format(flavor: str) -> str:
 # ─── MLflow parsers ─────────────────────────────────────────────────────────
 
 
-def _sibling_files(directory: Path) -> list[Path]:
+def _sibling_files(directory: Path, warnings: list[str]) -> list[Path]:
     """List a run's sibling files; an unreadable directory contributes none."""
     try:
         if not directory.is_dir():
             return []
         return sorted(child for child in directory.iterdir() if child.is_file())
     except OSError:
-        logger.warning("Training metadata directory could not be read; run details are incomplete")
+        warnings.append("Training metadata directory could not be read; run details are incomplete.")
         return []
 
 
@@ -268,30 +261,33 @@ def parse_mlflow_meta_yaml(path: Path) -> TrainingRun | None:
     )
 
     # Read sibling params/ directory
-    for param_file in _sibling_files(path.parent / "params"):
+    for param_file in _sibling_files(path.parent / "params", run.warnings):
         try:
             run.parameters[param_file.name] = param_file.read_text(encoding="utf-8").strip()
-        except OSError:
-            pass
+        except (OSError, UnicodeError):
+            run.warnings.append("MLflow parameters could not be read; run details are incomplete.")
 
     # Read sibling metrics/ directory
-    for metric_file in _sibling_files(path.parent / "metrics"):
+    for metric_file in _sibling_files(path.parent / "metrics", run.warnings):
         try:
             val = metric_file.read_text(encoding="utf-8").strip().split()
-            if len(val) >= 2:
-                # MLflow metric format: timestamp value [step]
-                run.metrics[metric_file.name] = float(val[1])
-            elif val:
-                run.metrics[metric_file.name] = float(val[0])
-        except (OSError, ValueError, IndexError):
-            pass
+            # MLflow metric format: timestamp value [step]. Non-finite values
+            # are not usable measurements and must not leak into JSON output.
+            value = float(val[1] if len(val) >= 2 else val[0])
+            if not math.isfinite(value):
+                raise ValueError("Non-finite metric")
+            run.metrics[metric_file.name] = value
+        except (OSError, UnicodeError, ValueError, IndexError):
+            run.warnings.append("MLflow metrics could not be read or were invalid; run details are incomplete.")
 
     # Read sibling tags/ for git info
     git_file = path.parent / "tags" / "mlflow.source.git.commit"
     try:
         run.git_sha = git_file.read_text(encoding="utf-8").strip()
-    except OSError:
-        pass
+    except FileNotFoundError:
+        pass  # Optional tag is absent; MISSING_PROVENANCE below records this.
+    except (OSError, UnicodeError):
+        run.warnings.append("MLflow provenance could not be read; run details are incomplete.")
 
     if not run.git_sha:
         run.security_flags.append(
@@ -358,7 +354,7 @@ def parse_mlflow_mlmodel(path: Path) -> TrainingRun | None:
     req_path = path.parent / "requirements.txt"
     conda_path = path.parent / "conda.yaml"
     if req_path.exists():
-        run.packages = _parse_requirements(req_path)
+        run.packages = _parse_requirements(req_path, run.warnings)
     elif conda_path.exists():
         # Extract pip deps from conda.yaml
         try:
@@ -376,8 +372,8 @@ def parse_mlflow_mlmodel(path: Path) -> TrainingRun | None:
                             run.packages.append(pkg)
                     elif not stripped.startswith("#") and stripped:
                         in_pip = False
-        except OSError:
-            pass
+        except (OSError, UnicodeError):
+            run.warnings.append("MLflow conda requirements could not be read; dependency inventory is incomplete.")
     else:
         run.security_flags.append(
             {
@@ -466,10 +462,7 @@ def parse_kubeflow_pipeline_yaml(path: Path) -> TrainingPipelineScanResult | Non
 
 
 def parse_wandb_metadata(path: Path) -> TrainingRun | None:
-    """Parse a W&B ``wandb-metadata.json`` file.
-
-    Contains program, args, python version, OS, GPU, CPU info.
-    """
+    """Parse a W&B run's metadata, configuration and final metrics."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
@@ -498,6 +491,7 @@ def parse_wandb_metadata(path: Path) -> TrainingRun | None:
 
     # Look for sibling config.yaml (hyperparameters)
     config_path = path.parent / "config.yaml"
+    config_content = ""
     if config_path.exists():
         try:
             config_content = config_path.read_text(encoding="utf-8")
@@ -505,8 +499,8 @@ def parse_wandb_metadata(path: Path) -> TrainingRun | None:
             for k, v in config_kv.items():
                 if k not in ("_wandb", "wandb_version"):
                     run.parameters[k] = v
-        except OSError:
-            pass
+        except (OSError, UnicodeError):
+            run.warnings.append("W&B configuration could not be read; parameter and credential checks are incomplete.")
 
     # Look for sibling wandb-summary.json (final metrics)
     summary_path = path.parent / "wandb-summary.json"
@@ -516,9 +510,16 @@ def parse_wandb_metadata(path: Path) -> TrainingRun | None:
             if isinstance(summary, dict):
                 for k, v in summary.items():
                     if isinstance(v, (int, float)) and not k.startswith("_"):
-                        run.metrics[k] = float(v)
-        except (json.JSONDecodeError, OSError):
-            pass
+                        try:
+                            value = float(v)
+                            if not math.isfinite(value):
+                                raise ValueError("Non-finite metric")
+                        except (ValueError, OverflowError):
+                            run.warnings.append("W&B metric was invalid; run metrics are incomplete.")
+                            continue
+                        run.metrics[k] = value
+        except (json.JSONDecodeError, OSError, UnicodeError):
+            run.warnings.append("W&B summary could not be read or was invalid; run metrics are incomplete.")
 
     # Security flags
     if not run.git_sha:
@@ -530,23 +531,18 @@ def parse_wandb_metadata(path: Path) -> TrainingRun | None:
             }
         )
 
-    # Check config for credentials
-    if config_path.exists():
-        try:
-            config_text = config_path.read_text(encoding="utf-8")
-            for line in config_text.splitlines():
-                if _has_credential(line) and re.search(r"['\"]?[A-Za-z0-9_-]{20,}['\"]?", line):
-                    run.security_flags.append(
-                        {
-                            "severity": "HIGH",
-                            "type": "EXPOSED_CREDENTIALS",
-                            "description": "W&B config may contain exposed API keys or tokens.",
-                        }
-                    )
-                    break
-            run.security_flags.extend(_content_security_flags(config_text, source=f"W&B config for run '{run.name}'"))
-        except OSError:
-            pass
+    # Reuse the same configuration bytes for parameter and credential checks.
+    for line in config_content.splitlines():
+        if _has_credential(line) and re.search(r"['\"]?[A-Za-z0-9_-]{20,}['\"]?", line):
+            run.security_flags.append(
+                {
+                    "severity": "HIGH",
+                    "type": "EXPOSED_CREDENTIALS",
+                    "description": "W&B config may contain exposed API keys or tokens.",
+                }
+            )
+            break
+    run.security_flags.extend(_content_security_flags(config_content, source=f"W&B config for run '{run.name}'"))
 
     return run
 
@@ -615,6 +611,7 @@ def scan_training_pipelines(paths: list[Path]) -> TrainingPipelineScanResult:
                 result.training_runs.append(run)
                 result.source_files.append(str(path))
 
+    result.warnings.extend(warning for run in result.training_runs for warning in run.warnings)
     return result
 
 

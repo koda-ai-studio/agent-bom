@@ -12,7 +12,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Mapping, Optional
+from typing import Mapping
 
 import toml  # type: ignore[import-untyped]
 import yaml  # type: ignore[import-untyped]
@@ -606,12 +606,6 @@ def audit_cortex_hooks(hooks: dict) -> list[dict]:
             )
 
     return findings
-
-
-# Custom parsers for non-JSON config formats
-_CUSTOM_PARSERS: dict[Optional[str], str] = {
-    # AgentType values mapped to format — imported as AgentType keys in __init__.py
-}
 
 
 def _parse_docker_mcp_catalog(

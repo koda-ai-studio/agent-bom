@@ -154,8 +154,6 @@ class InMemoryMcpConfigStore:
                 raise McpConfigConflictError("MCP client profile already exists; use compare-and-swap to update it")
             stored = deepcopy(assignment)
             self._assert_identity_available(stored)
-            if existing is not None:
-                self._remove_active_index(existing)
             self._rows[stored.config_id] = stored
             if stored.identity_id:
                 self._by_identity.setdefault((stored.tenant_id, stored.identity_id), set()).add(stored.config_id)

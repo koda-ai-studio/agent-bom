@@ -46,8 +46,6 @@ from agent_bom.iac.suppressions import apply_inline_suppressions
 from agent_bom.iac.terraform_security import scan_terraform_security
 from agent_bom.traversal import iter_discovery_files
 
-_DCM_AVAILABLE = True  # dcm.py is on main (#2222 merged)
-
 __all__ = [
     "is_iac_file",
     "scan_iac_directory",

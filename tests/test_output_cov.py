@@ -510,6 +510,17 @@ class TestToSpdx:
         spdx = to_spdx(report)
         assert next(n for n in spdx["@graph"] if n["type"] == "CreationInfo")["specVersion"] == "3.0.1"
 
+    def test_with_agents_and_vulns(self):
+        pkg = _make_pkg()
+        server = _make_server(packages=[pkg])
+        agent = _make_agent(servers=[server])
+        br = _make_blast_radius(pkg=pkg, agents=[agent])
+        report = _make_report(agents=[agent], blast_radii=[br])
+        pkg.vulnerabilities = [br.vulnerability]
+        elements = to_spdx(report)["@graph"]
+        assert any(item.get("name") == pkg.name and item["type"] == "software_Package" for item in elements)
+        assert any(item.get("name") == br.vulnerability.id and item["type"] == "security_Vulnerability" for item in elements)
+
 
 def test_spdx_package_preserves_version_provenance_annotations():
     pkg = _make_pkg()
@@ -542,15 +553,6 @@ def test_json_output_redacts_server_launch_fields():
     assert server_payload["args"] == ["server", "--token", "<redacted>"]
     assert server_payload["url"] == "https://example.com/sse"
     assert server_payload["security_warnings"] == ["token <redacted>"]
-
-    def test_with_agents_and_vulns(self):
-        pkg = _make_pkg()
-        server = _make_server(packages=[pkg])
-        agent = _make_agent(servers=[server])
-        br = _make_blast_radius(pkg=pkg, agents=[agent])
-        report = _make_report(agents=[agent], blast_radii=[br])
-        spdx = to_spdx(report)
-        assert len(spdx["@graph"]) >= 1
 
 
 class TestToJson:

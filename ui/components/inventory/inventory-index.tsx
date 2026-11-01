@@ -156,7 +156,7 @@ export function InventoryIndex() {
         <DataTable<AssetRow> columns={columns} rows={rows} rowKey={row => row.id} caption="Asset inventory"
           selectedKey={selected?.id} maxHeight="32rem" onRowClick={row => { select(row.id); }} />
         <Drawer open={selected !== null} onClose={() => select(null)} title="Asset details" ariaLabel="Asset details" size="xl" resizable={false}>
-        {selected && model ? <>
+        {selected ? <>
           <AssetDetail row={selected} detail={details[selected.id]}
             loading={detailLoadingId === selected.id} error={detailError} scanId={model.scanId} />
         </> : null}

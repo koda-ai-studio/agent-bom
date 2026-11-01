@@ -1,6 +1,11 @@
 /** Compose the summary and small canvas only when both prove the same revision. */
 import type { api } from "./api";
-import type { GraphCompleteness } from "./api-types";
+import type { GraphCompleteness, GraphImpactResponse } from "./api-types";
+
+/** Preserve the server's bounded scope, including longer materialized paths. */
+export function graphImpactDepth(impact: GraphImpactResponse): number {
+  return impact.max_depth ?? impact.interpretation?.max_depth ?? 4;
+}
 
 export type BlastRadiusState = {
   rootId: string;
@@ -20,13 +25,13 @@ export async function loadBlastInvestigation(
   signal?: AbortSignal,
 ) {
   const options = signal ? { signal } : undefined;
-  const impact = await client.getGraphImpact(nodeId, scanId, 4, options);
+  const impact = await client.getGraphImpact(nodeId, scanId, undefined, options);
   if (!impact.snapshot_generation || !impact.scan_id) {
     throw new Error("This backend cannot pin blast-radius evidence. Refresh or use a backend with snapshot revisions.");
   }
   const context = await client.queryGraph({
     roots: [nodeId], scan_id: impact.scan_id, snapshot_generation: impact.snapshot_generation,
-    direction: "reverse", max_depth: 4, max_nodes: 4, max_edges: 32,
+    direction: "reverse", max_depth: graphImpactDepth(impact), max_nodes: 4, max_edges: 32,
     timeout_ms: 2500, traversable_only: false, include_roots: true, include_attack_paths: false,
   }, options);
   if (context.snapshot_generation !== impact.snapshot_generation || context.scan_id !== impact.scan_id || context.tenant_id !== impact.tenant_id) {

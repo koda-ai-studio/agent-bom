@@ -42,11 +42,19 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
   const title = contextLabel ?? relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });
   const plain = plainRelationshipSummary(contextLabel === "Platform for" ? { ...edge, relationship: "platform_for" } : edge, sourceLabel, targetLabel);
   if (contextLabel === "Includes · membership") plain.why = `${sourceLabel} includes ${targetLabel} in its recorded inventory; membership does not establish deployment location.`;
-  const content = <div className="space-y-4 text-sm [overflow-wrap:anywhere]">
-    <p className="font-medium">{sourceLabel} {edge.direction === "bidirectional" ? "↔" : "→"} {targetLabel}</p>
-    <dl aria-label="Relationship summary" className="space-y-3 rounded-lg border border-outline bg-surface-muted p-3">
-      {([["Why linked", plain.why], ["Source", plain.source], ["Evidence", plain.kind], ["Freshness", plain.freshness], ["Still unknown", plain.unknown]] as const).map(([label, value]) =>
-        <div key={label}><dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">{label}</dt><dd className="mt-0.5">{value}</dd></div>)}
+  const content = <div className="space-y-5 text-sm leading-relaxed [overflow-wrap:anywhere]">
+    <p className="text-base font-semibold leading-relaxed text-foreground">{sourceLabel} {edge.direction === "bidirectional" ? "↔" : "→"} {targetLabel}</p>
+    <dl aria-label="Relationship summary" className="space-y-4">
+      <div className="rounded-r-lg border-l-2 border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-3">
+        <dt className="text-xs font-semibold text-accent">Why linked</dt>
+        <dd className="mt-1.5 text-foreground">{plain.why}</dd>
+      </div>
+      {([["Source", plain.source], ["Evidence", plain.kind], ["Freshness", plain.freshness]] as const).map(([label, value]) =>
+        <div key={label} className="border-b border-outline pb-3"><dt className="text-xs font-semibold text-accent">{label}</dt><dd className="mt-1 text-foreground">{value}</dd></div>)}
+      <div className="rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 dark:border-amber-400/25 dark:bg-amber-400/5">
+        <dt className="text-xs font-semibold text-amber-800 dark:text-amber-300">Still unknown</dt>
+        <dd className="mt-1.5 text-foreground">{plain.unknown}</dd>
+      </div>
     </dl>
     <p className="text-xs text-ink-secondary">This recorded relationship does not establish execution or successful data access.</p>
     <details className="rounded-lg border border-outline p-3"><summary className="cursor-pointer font-medium">Technical details</summary>
@@ -68,7 +76,7 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
   </div>;
   if (mobile) return <Drawer open onClose={onClose} title={title} eyebrow="Relationship" ariaLabel="Relationship details" closeLabel="Close relationship details" backdropLabel="Dismiss relationship details">{content}</Drawer>;
   return <aside aria-label="Relationship details" className="w-[min(24rem,36vw)] shrink-0 self-stretch overflow-y-auto border-l border-outline bg-surface text-foreground">
-    <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-outline bg-surface p-4"><div><p className="mb-1 text-[10px] uppercase tracking-wider text-ink-secondary">Recorded relationship</p><h3 className="text-base font-semibold">{title}</h3></div><button ref={closeButtonRef} type="button" aria-label="Close relationship details" onClick={onClose} className="rounded p-2 hover:bg-surface-muted"><X className="h-4 w-4" aria-hidden="true" /></button></header>
+    <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-outline bg-surface p-4"><div><p className="mb-1 text-[10px] uppercase tracking-wider text-ink-secondary">Recorded relationship</p><h3 className="text-lg font-semibold text-accent">{title}</h3></div><button ref={closeButtonRef} type="button" aria-label="Close relationship details" onClick={onClose} className="rounded p-2 hover:bg-surface-muted"><X className="h-4 w-4" aria-hidden="true" /></button></header>
     <div className="p-4">{content}</div>
   </aside>;
 }

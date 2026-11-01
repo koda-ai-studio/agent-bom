@@ -25,8 +25,6 @@ from agent_bom.cli._server import _is_loopback_host
 from agent_bom.cli._tenant import resolve_cli_tenant_id_strict
 from agent_bom.runtime.injection_protection import INJECTION_MODE_HELP, INJECTION_MODES
 
-logger = logging.getLogger(__name__)
-
 
 def _parse_bind(bind: str) -> tuple[str, int]:
     host, sep, port_text = bind.rpartition(":")

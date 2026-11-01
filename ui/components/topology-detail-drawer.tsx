@@ -14,6 +14,8 @@ import {
   serverVulnerabilityCount,
   serviceKey,
   topologyAgentDisplayName,
+  topologyAgentKey,
+  type TopologySelection,
   topologyAgentTypeLabel,
 } from "@/lib/agent-topology-graph";
 
@@ -34,17 +36,25 @@ export function TopologyDetailDrawer({
   onClose,
 }: {
   agents: Agent[];
-  selection:
-    | { kind: "agent"; name: string }
-    | { kind: "server"; serviceKey: string; label: string }
-    | null;
+  selection: TopologySelection | null;
   onClose: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   if (!selection) return null;
 
-  const agent =
-    selection.kind === "agent" ? agents.find((entry) => entry.name === selection.name) : undefined;
+  const candidates = selection.kind === "agent"
+    ? agents.filter(entry => selection.agentKey ? topologyAgentKey(entry) === selection.agentKey : entry.name === selection.name)
+    : [];
+  const agent = candidates.length === 1 ? candidates[0] : undefined;
+  if (selection.kind === "agent" && !agent) {
+    return (
+      <Drawer open onClose={onClose} title={selection.name} ariaLabel="Agent identity unavailable">
+        <p role="status" className="text-sm text-ink-secondary">
+          This agent could not be uniquely identified in the current inventory. Select a record with a recorded identity.
+        </p>
+      </Drawer>
+    );
+  }
   const connectedAgents =
     selection.kind === "server"
       ? agents.filter((entry) =>
@@ -145,7 +155,7 @@ export function TopologyDetailDrawer({
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {connectedAgents.map((entry) => (
-                      <span key={entry.name} className="rounded bg-surface px-2 py-1 text-xs text-ink-secondary">
+                      <span key={topologyAgentKey(entry)} className="rounded bg-surface px-2 py-1 text-xs text-ink-secondary">
                         {topologyAgentDisplayName(entry)}
                       </span>
                     ))}
@@ -165,14 +175,14 @@ export function TopologyDetailDrawer({
           {activeTab === "services" ? (
             <section role="tabpanel" id="topology-services-panel" aria-labelledby="topology-services-tab" className="grid gap-2 sm:grid-cols-2">
               {serverMatches.map(({ agent: entry, server }) => (
-                <ServerCard key={`${entry.name}:${serviceKey(server)}`} agentName={entry.name} server={server} />
+                <ServerCard key={`${topologyAgentKey(entry)}:${serviceKey(server)}`} agentName={entry.name} server={server} />
               ))}
             </section>
           ) : null}
           {activeTab === "actions" ? (
             <section role="tabpanel" id="topology-actions-panel" aria-labelledby="topology-actions-tab" className="grid gap-3 sm:grid-cols-2">
               {selection.kind === "agent" ? (
-                <ActionLink href={`/agents?name=${encodeURIComponent(selection.name)}`} title="Open agent record" description="Review inventory, ownership, and discovered services." />
+                <ActionLink href={`/agents?name=${encodeURIComponent(agent?.canonical_id || agent?.stable_id || selection.name)}`} title="Open agent record" description="Review inventory, ownership, and discovered services." />
               ) : null}
               <ActionLink href="/mesh" title="Open agent mesh" description="Compare agent-to-agent and shared-service relationships." />
               <ActionLink href="/security-graph" title="Open security graph" description="Traverse correlated findings, reachability, and ranked paths." />

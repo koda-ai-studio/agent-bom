@@ -215,6 +215,41 @@ def test_source_recorded_expiry_is_preserved_without_extending_new_observation(s
     assert all(edge.first_seen == T2 and edge.valid_from == T2 for edge in _load(ctx, "second").edges)
 
 
+def test_latest_recorded_expiry_does_not_resurrect_older_open_observation(scope_store):
+    ctx = scope_store
+    ctx.store.save_graph(_graph(ctx, "ACCT1"))
+    second = _graph(ctx, "ACCT1", scan="second", at=T2)
+    expiry = "2026-09-20T02:30:00+00:00"
+    for edge in second.edges:
+        edge.valid_to = expiry
+    ctx.store.save_graph(second)
+    before = _api(ctx, "/v1/graph/edges/active", at=T2)
+    assert before and all(edge["scan_id"] == "second" for edge in before)
+    assert _api(ctx, "/v1/graph/edges/active", at=expiry) == []
+    assert _api(ctx, "/v1/graph/edges/active", at=T3) == []
+    # Reading a later expiry does not rewrite the original positive evidence.
+    assert all(edge.valid_to is None for edge in _load(ctx, "first").edges)
+
+
+@pytest.mark.parametrize("scope_change", ["account", "collector", "unknown"])
+def test_expiry_does_not_retire_an_unrelated_observation(scope_store, scope_change):
+    ctx = scope_store
+    ctx.store.save_graph(_graph(ctx, "ACCT1"))
+    second = _graph(ctx, "ACCT1", scan="second", at=T2)
+    for edge in second.edges:
+        edge.valid_to = "2026-09-20T02:30:00+00:00"
+        if scope_change == "collector":
+            edge.evidence["source"] = "other-collector"
+    for node in second.nodes.values():
+        if scope_change == "account":
+            node.attributes["account_id"] = "OTHER_ACCOUNT"
+        elif scope_change == "unknown":
+            node.attributes.pop("account_id", None)
+    ctx.store.save_graph(second)
+    active = _api(ctx, "/v1/graph/edges/active", at=T3)
+    assert active and all(edge["scan_id"] == "first" for edge in active)
+
+
 def test_mixed_source_snapshot_remains_unchanged_when_one_account_is_rescanned(scope_store):
     ctx = scope_store
     mixed = build_unified_graph_from_report(

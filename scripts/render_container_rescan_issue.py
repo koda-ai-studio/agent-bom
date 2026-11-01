@@ -79,8 +79,8 @@ def render(report: dict, *, platform: str, image_id: str, category: str, evidenc
         "### Why remediate",
         "",
         "The published image contains dependency versions matched to advisories with available fixes. "
-        "Image inventory does not establish runtime reachability or successful exploitation. "
-        "CVSS describes advisory severity; KEV and EPSS are recorded threat context, not proof that this deployment is exploitable.",
+        + "Image inventory does not establish runtime reachability or successful exploitation. "
+        + "CVSS describes advisory severity; KEV and EPSS are recorded threat context, not proof that this deployment is exploitable.",
         "",
         "### Remediation and verification",
         "",

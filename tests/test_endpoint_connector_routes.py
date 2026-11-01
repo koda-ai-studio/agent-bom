@@ -87,7 +87,6 @@ def test_no_plaintext_fallback_without_encryption(client, monkeypatch):
 
 
 def test_openapi_has_shared_models_and_closed_inputs(client):
-    schema = client.get("/openapi.json", headers=headers()).json()
     # Some deployments serve only version-prefixed docs. Inspect the actual app schema instead.
     from agent_bom.api.server import app
 

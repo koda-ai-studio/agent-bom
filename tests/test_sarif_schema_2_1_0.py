@@ -301,7 +301,6 @@ def test_sarif_framework_taxonomy_labels_mappings_vendor_asserted() -> None:
     report.blast_radii[0].nist_800_53_tags = ["SI-10"]
     report.blast_radii[0].iso_27001_tags = ["A.8.8"]
     doc = to_sarif(report)
-    taxonomies = doc["runs"][0]["tool"]["driver"].get("supportedTaxonomies") or doc["runs"][0].get("taxonomies") or []
     # taxonomies live under run.taxonomies in this exporter
     taxonomies = doc["runs"][0].get("taxonomies", [])
     by_name = {t["name"]: t for t in taxonomies}

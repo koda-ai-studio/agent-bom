@@ -461,7 +461,7 @@ def _package_spec_error(name: str, ecosystem: str) -> str | None:
             validate_package_name(name, ecosystem.lower())
             return None
     except SecurityError:
-        pass
+        return f"Invalid {ecosystem} package name '{name}'. Provide a package name followed by an explicit version."
 
     # Other ecosystems do not share one package-name grammar, but shell and
     # requirement operators are never part of a package name after parsing.

@@ -54,7 +54,6 @@ _DB_RESPONSE_MISMATCH = "3\ngithub.com/gin-gonic/gin v1.9.1 h1:TAMPERED==\n" + _
 # GOPROXY list response (newline-separated versions)
 _PROXY_LIST_STABLE = "v1.2.3\nv1.3.0\nv2.0.0\n"
 _PROXY_LIST_WITH_PRERELEASE = "v1.2.3\nv1.3.0-rc1\nv1.3.0-alpha\nv1.4.0-beta.2\nv1.2.4\n"
-_PROXY_LIST_EMPTY = ""
 
 
 def _as_bytes(body: str) -> bytes:

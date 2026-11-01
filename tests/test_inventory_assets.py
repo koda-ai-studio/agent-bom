@@ -27,8 +27,6 @@ from agent_bom.graph import (
     UnifiedNode,
 )
 
-_PROXY_SECRET = "test-inventory-proxy-secret-32-bytes-min"
-
 
 def _node(node_id: str, entity_type: EntityType, label: str, **kw: Any) -> UnifiedNode:
     dims = NodeDimensions(

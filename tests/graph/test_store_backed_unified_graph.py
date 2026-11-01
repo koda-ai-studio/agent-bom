@@ -424,8 +424,8 @@ def _isolated_peak(kind: str, size: int) -> int:
             sys.executable,
             "-c",
             "import runpy, sys; ns = runpy.run_path(sys.argv[1]); "
-            "fn = {'full': ns['_peak_full_in_ram'], 'store': ns['_peak_store_backed']}[sys.argv[2]]; "
-            "print(fn(int(sys.argv[3])))",
+            + "fn = {'full': ns['_peak_full_in_ram'], 'store': ns['_peak_store_backed']}[sys.argv[2]]; "
+            + "print(fn(int(sys.argv[3])))",
             str(Path(__file__).resolve()),
             kind,
             str(size),

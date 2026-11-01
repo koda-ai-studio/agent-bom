@@ -127,6 +127,7 @@ class PostgresGraphHistoryMixin(PostgresGraphSnapshotsMixin):
 
     def active_edges_at(self, at: str, *, tenant_id: str = "") -> list[dict[str, Any]]:
         tenant_id = normalize_graph_tenant_id(tenant_id)
+        active_by_key: dict[tuple[Any, ...], dict[str, Any]] = {}
         with _tenant_connection(self._pool) as conn:
             rows = conn.execute(
                 """
@@ -141,18 +142,17 @@ class PostgresGraphHistoryMixin(PostgresGraphSnapshotsMixin):
                 WHERE ge.tenant_id = %s
                   AND gs.created_at <= %s
                   AND COALESCE(NULLIF(ge.valid_from, ''), ge.first_seen) <= %s
-                  AND (ge.valid_to IS NULL OR ge.valid_to = '' OR ge.valid_to > %s)
                 ORDER BY gs.created_at ASC, ge.scan_id ASC
                 """,
-                (tenant_id, at, at, at),
-            ).fetchall()
-        active_by_key: dict[tuple[Any, ...], dict[str, Any]] = {}
-        for row in rows:
-            edge = self._edge_history_dict(row)
-            scope = observation_scope(edge["evidence"], row[18], row[19], row[20], row[21])
-            namespace = ("recorded", *scope) if scope is not None else ("snapshot", edge["scan_id"])
-            active_by_key[(namespace, edge["source_id"], edge["target_id"], edge["relationship"])] = edge
-        return [active_by_key[key] for key in sorted(active_by_key)]
+                (tenant_id, at, at),
+            )
+            for row in rows:
+                edge = self._edge_history_dict(row)
+                scope = observation_scope(edge["evidence"], row[18], row[19], row[20], row[21])
+                namespace = ("recorded", *scope) if scope is not None else ("snapshot", edge["scan_id"])
+                active_by_key[(namespace, edge["source_id"], edge["target_id"], edge["relationship"])] = edge
+        # A later recorded expiry supersedes the earlier open-ended version.
+        return [edge for key in sorted(active_by_key) if not (edge := active_by_key[key])["valid_to"] or edge["valid_to"] > at]
 
     def changed_edges_between_scans(
         self, scan_id_old: str, scan_id_new: str, *, tenant_id: str = "", rename: dict[str, str] | None = None

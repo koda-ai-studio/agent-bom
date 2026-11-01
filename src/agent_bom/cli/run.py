@@ -10,13 +10,10 @@ limiting, and audit logging.
 from __future__ import annotations
 
 import asyncio
-import logging
 import shlex
 import sys
 
 import click
-
-_logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Server-spec prefix resolution

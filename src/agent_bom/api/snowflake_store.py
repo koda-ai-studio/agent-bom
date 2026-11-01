@@ -46,7 +46,6 @@ def _sf_connect(**kwargs: Any) -> Any:
     return snowflake.connector.connect(**kwargs)
 
 
-_SNOWFLAKE_TENANT_ACCESS_TABLE = "agent_bom_tenant_access"
 _SNOWFLAKE_TENANT_ROW_ACCESS_POLICY = "agent_bom_tenant_isolation"
 _SNOWFLAKE_TENANT_TABLES = (
     "scan_jobs",
