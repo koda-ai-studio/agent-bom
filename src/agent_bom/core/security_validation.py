@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import stat
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -84,6 +85,65 @@ class SecurityError(Exception):
     pass
 
 
+_NOT_A_SANDBOX = (
+    "This check guards against misconfigured server commands only — it is not a sandbox. "
+    "Use container isolation (--isolate) to restrict what a server can do."
+)
+# ``python3.13``, ``node22``, ``npx-cli.js``: a launcher name plus a version or
+# package-manager shim suffix still names the same launcher.
+_LAUNCHER_NAME_RE = re.compile(r"^(?P<base>[a-z][a-z0-9-]*?)(?:[-._]?\d+(?:\.\d+)*)?(?:-cli)?(?:\.(?:js|cjs|mjs|py|sh|cmd|exe))?$")
+
+
+def _launcher_basename_known(name: str) -> bool:
+    lowered = name.lower()
+    if lowered in KNOWN_MCP_LAUNCHERS:
+        return True
+    match = _LAUNCHER_NAME_RE.match(lowered)
+    return bool(match and match.group("base") in KNOWN_MCP_LAUNCHERS)
+
+
+def _unrecognized(label: str) -> SecurityError:
+    recognized = ", ".join(sorted(KNOWN_MCP_LAUNCHERS))
+    return SecurityError(f"Command '{label}' is not a recognized MCP launcher. Recognized launchers: {recognized}. {_NOT_A_SANDBOX}")
+
+
+def _require_launcher_file(command: str) -> None:
+    """Accept an absolute launcher path only when the file it names checks out.
+
+    The basename must be a known launcher, the path must be normalized (no
+    ``.``/``..`` segments), and the file — after following symlinks — must
+    exist, be a regular executable file that is not world-writable, in a
+    directory that is not world-writable (sticky bit included: ``/tmp`` is
+    never a launcher home). A symlink's target must itself name a launcher
+    (``python`` -> ``python3.13``, ``npx`` -> ``npx-cli.js``). Messages carry
+    the basename only.
+    """
+    path = Path(command)
+    name = path.name
+    if not path.is_absolute() or any(part in {".", ".."} for part in path.parts):
+        raise SecurityError(f"Command '{name}' must be a bare launcher name or a normalized absolute path. {_NOT_A_SANDBOX}")
+    if not _launcher_basename_known(name):
+        raise _unrecognized(name)
+    try:
+        resolved = path.resolve(strict=True)
+        link_parent_mode = path.parent.stat().st_mode
+        target = resolved.stat()
+        target_parent_mode = resolved.parent.stat().st_mode
+    except (OSError, RuntimeError):
+        raise SecurityError(f"Launcher '{name}' does not exist at the configured absolute path. {_NOT_A_SANDBOX}") from None
+    if resolved.name != name and not _launcher_basename_known(resolved.name):
+        raise SecurityError(f"Launcher '{name}' resolves to '{resolved.name}', which is not a recognized MCP launcher. {_NOT_A_SANDBOX}")
+    if not stat.S_ISREG(target.st_mode):
+        raise SecurityError(f"Launcher '{name}' is not a regular file. {_NOT_A_SANDBOX}")
+    if not target.st_mode & 0o111:
+        raise SecurityError(f"Launcher '{name}' is not executable. {_NOT_A_SANDBOX}")
+    if target.st_mode & stat.S_IWOTH:
+        raise SecurityError(f"Launcher '{name}' is world-writable; any local user could replace it. {_NOT_A_SANDBOX}")
+    if (link_parent_mode | target_parent_mode) & stat.S_IWOTH:
+        raise SecurityError(f"Launcher '{name}' sits in a world-writable directory; any local user could swap it. {_NOT_A_SANDBOX}")
+    logger.debug("Absolute-path launcher '%s' accepted (resolves to a '%s' file)", name, resolved.name)
+
+
 def require_recognized_launcher(command: str) -> None:
     """
     Require that *command* is a recognized MCP launcher binary.
@@ -96,20 +156,24 @@ def require_recognized_launcher(command: str) -> None:
     the real execution control is container isolation via
     ``agent_bom.proxy_sandbox`` (``--isolate``).
 
+    A bare name must be in :data:`KNOWN_MCP_LAUNCHERS`. An absolute path
+    (``/Users/me/.venv/bin/python``, as Claude Desktop-style configs write it)
+    is accepted when its basename is a known launcher and the file passes the
+    checks in :func:`_require_launcher_file`; relative paths are rejected.
+
     Args:
         command: The launcher command to check
 
     Raises:
         SecurityError: If command is not a recognized MCP launcher
     """
-    if command not in KNOWN_MCP_LAUNCHERS:
-        raise SecurityError(
-            f"Command '{command}' is not a recognized MCP launcher. Recognized launchers: "
-            f"{', '.join(sorted(KNOWN_MCP_LAUNCHERS))}. This check guards against misconfigured "
-            "server commands only — it is not a sandbox. Use container isolation (--isolate) "
-            "to restrict what a server can do."
-        )
-    logger.debug(f"Command '{command}' is a recognized MCP launcher")
+    if command in KNOWN_MCP_LAUNCHERS:
+        logger.debug(f"Command '{command}' is a recognized MCP launcher")
+        return
+    if "/" in command or "\\" in command:
+        _require_launcher_file(command)
+        return
+    raise _unrecognized(command)
 
 
 def validate_arguments(args: list[str]) -> None:
