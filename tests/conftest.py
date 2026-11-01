@@ -140,6 +140,10 @@ os.environ.setdefault("AGENT_BOM_POSTURE_PRECOMPUTE", "0")
 # A plain scan joins the CISA KEV catalog; keep the suite hermetic by reading
 # only local caches (the isolated state dir has none, so KEV reads "unknown").
 os.environ.setdefault("AGENT_BOM_KEV_DEFAULT_JOIN", "cache")
+# Fixture scan reports carry fixed historical timestamps; the 90-day whole-run
+# age cap on the local analytics mirror would silently drop them on write.
+# Tests of the cap itself set the variable explicitly.
+os.environ.setdefault("AGENT_BOM_ANALYTICS_MAX_RUN_AGE_DAYS", "0")
 # Every graph producer must satisfy the relationship contract under test;
 # production defaults to warn and records counts in analysis_status. A module
 # opts out with ``pytest.mark.graph_contract("warn")`` (see pytest_runtest_setup).

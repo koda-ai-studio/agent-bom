@@ -166,6 +166,7 @@ metadata or environment defaults.
 | `db` | Manage the local vulnerability database |
 | `db freshness` | Show the structured vuln-data freshness indicator (sources, age, staleness) surfaced on every scan, API, and MCP tool |
 | `db framework-status` | Show bundled framework catalog freshness |
+| `db prune` | Preview (default) or, with `--yes`, remove stale current-estate projection caches from the local state directory |
 | `doctor` | Check environment readiness for scanning |
 | `self-audit` | Audit this agent-bom deployment's own security and governance posture (auth, tenant isolation, audit-log integrity, secret sealing) with honest pass/fail/warn/unknown results. The tenant-scoped governance audit-chain integrity is verified per tenant against the durable audit store on the API/UI (`GET /v1/self-posture`) — the CLI shows it as an honest unknown |
 | `capabilities` | Show every gated capability, current state, and exact unlock path without printing secret values |

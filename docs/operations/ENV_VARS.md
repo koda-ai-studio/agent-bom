@@ -76,9 +76,11 @@ so they cannot regress silently, but they are not part of this reference.
 ## Analytics Retention
 | Env var | Type | Default | Description |
 |---|---|---|---|
+| `AGENT_BOM_ANALYTICS_MAX_BYTES` | `int` | `2 * 1024 ** 3` | Caps the local scan mirror's live bytes (pages in use, not freelist): oldest whole runs go first until under the cap. ``<= 0`` disables it. |
 | `AGENT_BOM_ANALYTICS_MAX_EVENTS` | `int` | `50000` | Caps local analytics mirrors and runtime observation tables on write. ClickHouse analytics tables carry their own TTL clauses; this knob bounds SQLite/Postgres growth. ``<= 0`` disables pruning. |
 | `AGENT_BOM_ANALYTICS_MAX_FINDINGS` | `int` | `250000` | Caps finding rows in the local scan mirror. Old scan runs are removed atomically; the newest run is always kept. ``<= 0`` disables it. |
 | `AGENT_BOM_ANALYTICS_MAX_PACKAGES` | `int` | `500000` | Caps package rows in the local scan mirror. Old scan runs are removed atomically; the newest run is always kept. ``<= 0`` disables it. |
+| `AGENT_BOM_ANALYTICS_MAX_RUN_AGE_DAYS` | `int` | `90` | Drops whole scan runs generated more than this many days ago from the local scan mirror; the newest run is always kept. ``<= 0`` disables it. |
 | `AGENT_BOM_ANALYTICS_MAX_TRACE_REVISIONS` | `int` | `250000` | Caps imported-trace revision rows per tenant: pruned spans go oldest first, then superseded revisions. ``<= 0`` disables it. |
 
 ## Blast Radius Risk Scoring
@@ -124,6 +126,11 @@ so they cannot regress silently, but they are not part of this reference.
 | `AGENT_BOM_PUSH_TLS_CA_FILE` | `str` | `''` | Custom CA bundle used to verify the control-plane push endpoint. |
 | `AGENT_BOM_PUSH_TLS_CERT_FILE` | `str` | `''` | Optional client certificate and custom CA bundle used when pushing local discovery/finding payloads to a hosted/self-hosted control plane. Empty strings keep the standard HTTPS trust store and no client certificate. |
 | `AGENT_BOM_PUSH_TLS_KEY_FILE` | `str` | `''` | Client certificate private key path; used with PUSH_TLS_CERT_FILE. |
+
+## Current-estate projection cache
+| Env var | Type | Default | Description |
+|---|---|---|---|
+| `AGENT_BOM_CURRENT_ESTATE_CACHE_MAX_AGE_DAYS` | `int` | `14` | Rebuildable per-backing-store projections under ``<state dir>/current-estate-cache``: the newest 8 always stay (the lru_cache(maxsize=8) of live stores per process); older ones go once unused this many days. ``<= 0`` disables the age cap. |
 
 ## DSPM content sampling
 | Env var | Type | Default | Description |
