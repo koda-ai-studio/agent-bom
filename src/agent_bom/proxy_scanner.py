@@ -25,6 +25,7 @@ from agent_bom.parsers.prompt_scanner import (
     _INJECTION_PATTERNS,
     _SECRET_PATTERNS,
     _SENSITIVE_DATA_PATTERNS,
+    _TOOL_POISONING_PATTERNS,
     _UNSAFE_INSTRUCTION_PATTERNS,
 )
 
@@ -335,6 +336,7 @@ def scan_content(text: str, config: ScanConfig) -> list[ScanResult]:
     # Injection scanning
     if "injection" in config.scanners:
         results.extend(_scan_prompt_scanner_patterns(text, _INJECTION_PATTERNS, "injection", "high", is_enforce))
+        results.extend(_scan_prompt_scanner_patterns(text, _TOOL_POISONING_PATTERNS, "injection", "high", is_enforce))
         results.extend(
             _scan_prompt_scanner_patterns(
                 text,

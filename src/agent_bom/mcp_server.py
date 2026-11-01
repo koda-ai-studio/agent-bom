@@ -161,6 +161,7 @@ from agent_bom.mcp_server_metadata import (
 from agent_bom.mcp_server_runtime_catalog import (
     register_runtime_catalog_tools as _register_runtime_catalog_tools,
 )
+from agent_bom.mcp_tools.analysis_registration import register_blast_radius_tool
 from agent_bom.mcp_tools.assessment_registration import register_assessment_tools
 from agent_bom.mcp_tools.graph_registration import register_graph_agent_tools
 from agent_bom.mcp_tools.intel_registration import register_intel_tools
@@ -582,7 +583,6 @@ def create_mcp_server(
     configure_registration(mcp, profile)
 
     # Import tool implementations
-    from agent_bom.mcp_tools.analysis import blast_radius_impl
     from agent_bom.mcp_tools.inventory import inventory_list_impl, inventory_summary_impl
 
     # ── Tool 1: scan ──────────────────────────────────────────────────
@@ -604,52 +604,16 @@ def create_mcp_server(
 
     register_intel_tools(mcp, read_only=_READ_ONLY, _execute_tool_async=_execute_tool_async, _truncate_response=_truncate_response)
 
-    # ── Tool 3: blast_radius ──────────────────────────────────────────
-
-    @mcp.tool(annotations=_READ_ONLY, title="Blast Radius Analysis")
-    async def blast_radius(
-        cve_id: Annotated[str, Field(description="CVE identifier to look up, e.g. 'CVE-2024-1234' or 'GHSA-xxxx'.")],
-        tenant_id: Annotated[str, Field(description="Tenant scope for persisted findings. Defaults to 'default'.")] = "default",
-        scan_id: Annotated[str | None, Field(description="Optional persisted scan scope.")] = None,
-        result_id: Annotated[
-            str | None,
-            Field(
-                max_length=128,
-                description=(
-                    "result_id from a scan response in this session. Answers from that scan result; omitted, the caller's "
-                    "newest scan result is consulted before persisted findings and a host configuration scan."
-                ),
-            ),
-        ] = None,
-    ) -> str:
-        """Look up the blast radius of a specific CVE across your AI agent setup.
-
-        Evidence order: the session's scan result (``result_id``, else the
-        caller's newest, labelled ``session_scan_result``), then the tenant's
-        persisted control-plane findings, then a local MCP configuration scan.
-        Every answer names its ``source``.
-
-        Args:
-            cve_id: The CVE identifier (e.g. "CVE-2024-1234" or "GHSA-xxxx").
-
-        Returns:
-            JSON with blast radius details including risk_score,
-            affected_servers, affected_agents, exposed_credentials, and
-            exposed_tools. Returns found=false if CVE not found.
-        """
-        return await _execute_tool_async(
-            "blast_radius",
-            blast_radius_impl,
-            cve_id=cve_id,
-            tenant_id=tenant_id,
-            scan_id=scan_id,
-            result_id=result_id,
-            _validate_cve_id=_validate_cve_id,
-            _run_scan_pipeline=_run_scan_pipeline,
-            _get_persisted_evidence=_persisted_finding_evidence,
-            _truncate_response=_truncate_response,
-            _result_owner=_scan_result_owner(_mcp_request_ctx.get),
-        )
+    register_blast_radius_tool(
+        mcp,
+        read_only=_READ_ONLY,
+        execute_tool_async=_execute_tool_async,
+        validate_cve_id=_validate_cve_id,
+        run_scan_pipeline=_run_scan_pipeline,
+        get_persisted_evidence=_persisted_finding_evidence,
+        truncate_response=_truncate_response,
+        result_owner=lambda: _scan_result_owner(_mcp_request_ctx.get),
+    )
 
     # Tools 4-5 (exposure_paths, should_i_deploy) live in mcp_tools.graph_registration.
 

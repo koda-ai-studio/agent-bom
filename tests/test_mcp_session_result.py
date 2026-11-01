@@ -206,7 +206,12 @@ def test_blast_radius_impl_explicit_result_id_is_authoritative(tmp_path):
     assert missing["error"]["code"] == "AGENTBOM_MCP_NOT_FOUND_RESOURCE" and missing["error"]["details"]["result_id"] == rid
     unknown = _run(
         blast_radius_impl(
-            cve_id=CVE, result_id="nope", _validate_cve_id=str.upper, _run_scan_pipeline=_pipeline, _truncate_response=str, _result_store=cache
+            cve_id=CVE,
+            result_id="nope",
+            _validate_cve_id=str.upper,
+            _run_scan_pipeline=_pipeline,
+            _truncate_response=str,
+            _result_store=cache,
         )
     )
     assert unknown["error"]["code"] == "AGENTBOM_MCP_VALIDATION_INVALID_ARGUMENT"

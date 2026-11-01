@@ -30,6 +30,15 @@ def enforcement_dict_to_finding(raw: dict) -> "Finding":
     extra_evidence = dict(raw_evidence) if isinstance(raw_evidence, dict) else {}
     # Without a source rule id, the detector's reason is what tells two rows on one surface apart.
     extra_evidence.setdefault("rule_id", sanitize_text(f"{category}: {reason}", max_len=300))
+    # A planted instruction in a descriptor is OWASP MCP03 Tool Poisoning and LLM01 Prompt Injection.
+    poisoning = finding_type is FindingType.INJECTION and category in {
+        "injection",
+        "schema_injection",
+        "resource_injection",
+        "prompt_injection",
+    }
+    owasp_tags = sorted({*(extra_evidence.get("owasp_tags") or []), *(["LLM01"] if poisoning else [])})
+    owasp_mcp_tags = sorted({*(extra_evidence.get("owasp_mcp_tags") or []), *(["MCP03"] if poisoning else [])})
 
     return Finding(
         finding_type=finding_type,
@@ -55,6 +64,8 @@ def enforcement_dict_to_finding(raw: dict) -> "Finding":
         ),
         description=reason,
         remediation_guidance=recommendation or None,
+        owasp_tags=owasp_tags,
+        owasp_mcp_tags=owasp_mcp_tags,
         evidence={
             **cast(dict[str, Any], sanitize_sensitive_payload(extra_evidence)),
             "server_identity": identity,

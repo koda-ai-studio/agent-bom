@@ -11,6 +11,7 @@ from collections.abc import Awaitable
 from typing import Any
 
 from agent_bom.api import audit_log, graph_scan_ids
+from agent_bom.config import MCP_MAX_RESPONSE_CHARS
 from agent_bom.graph.edge_lookup import _EdgeLookup
 from agent_bom.graph.exposure import _exposure_path_for_attack_path, _exposure_ref_for_node, _exposure_relationships_for_path
 from agent_bom.mcp_errors import (
@@ -26,6 +27,7 @@ from agent_bom.mcp_tools import deploy_gate as _deploy_gate
 from agent_bom.mcp_tools import exposure_queue as _exposure_queue
 from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 from agent_bom.mcp_tools.result_store import ResultStore
+from agent_bom.mcp_tools.scan_response import PAGE_MAX_CHARS, section_page
 from agent_bom.mcp_tools.session_result import (
     SESSION_SOURCE,
     SessionResultError,
@@ -261,9 +263,6 @@ async def _session_exposure_paths(
     *, result_id: str, owner: str, store: ResultStore | None, limit: int, view: str, query: dict[str, Any], truncate
 ) -> str:
     """One page of a stored scan result's exposure paths, labelled as session evidence."""
-    from agent_bom.config import MCP_MAX_RESPONSE_CHARS
-    from agent_bom.mcp_tools.scan_response import PAGE_MAX_CHARS, section_page
-
     used = sorted(key for key in _SESSION_PATH_FILTERS if query.get(key) not in (None, 0, 0.0, False, ""))
     if used:
         return mcp_error_json(

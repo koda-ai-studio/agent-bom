@@ -13,6 +13,7 @@ import asyncio
 from typing import Any
 
 from agent_bom.mcp_tools.result_store import ResultStore
+from agent_bom.mcp_tools.scan_response import SCAN_RESULTS
 
 SESSION_SOURCE = "session_scan_result"
 # Report ``riskScore`` / ``risk_score`` are 0-10; the deploy gate thresholds are 0-100.
@@ -25,11 +26,7 @@ class SessionResultError(ValueError):
 
 
 def _store(store: ResultStore | None) -> ResultStore:
-    if store is not None:
-        return store
-    from agent_bom.mcp_tools.scan_response import SCAN_RESULTS
-
-    return SCAN_RESULTS
+    return store if store is not None else SCAN_RESULTS
 
 
 def load_session_report(*, owner: str, result_id: str | None, store: ResultStore | None = None) -> tuple[str, dict[str, Any]] | None:
@@ -178,25 +175,13 @@ def _decision(risk: float, *, warn_risk: float, block_risk: float) -> str:
     return "allow"
 
 
-def session_deploy_decision(
-    report: dict[str, Any],
-    result_id: str,
-    *,
-    candidate: str,
-    tenant_id: str,
-    limit: int,
-    warn_risk: float,
-    block_risk: float,
-    view: str,
-) -> dict[str, Any] | None:
-    """Gate ``candidate`` against the report's exposure paths; ``None`` when nothing names it."""
-    needle = candidate.strip().lower()
+def _matched_paths(report: dict[str, Any], needle: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    """Open exposure paths naming ``needle`` exactly, plus rows whose path the report omitted."""
     paths = [path for path in _rows(report, "exposure_paths") if path.get("suppressed") is not True]
     rows = [row for row in _rows(report, "blast_radius") if row.get("suppressed") is not True]
     rows_by_path = {str(row.get("exposure_path_id") or ""): row for row in rows}
     matched = [path for path in paths if needle in _path_keys(path)]
     matched_ids = {str(path.get("id") or "") for path in matched}
-    # A blast-radius row naming the candidate whose path is not in the report still counts.
     for row in rows:
         path_id = str(row.get("exposure_path_id") or "")
         if needle in _blast_keys(row) and path_id and path_id not in matched_ids:
@@ -215,9 +200,14 @@ def session_deploy_decision(
                     "exposedCredentials": _strings(row.get("exposed_credentials")),
                 }
             )
-    if not matched:
-        return None
     matched.sort(key=lambda path: (-(_risk_100(path.get("riskScore"))), str(path.get("id") or "")))
+    return paths, matched, rows_by_path
+
+
+def _verdict(
+    matched: list[dict[str, Any]], rows_by_path: dict[str, dict[str, Any]], *, warn_risk: float, block_risk: float, result_id: str
+) -> tuple[str, float, bool, list[str]]:
+    """Decision, max risk (0-100), whether reachability was evaluated, and the reasons."""
     max_risk = max(_risk_100(path.get("riskScore")) for path in matched)
     blocking = [path for path in matched if _blocking(path, rows_by_path)]
     reach = [str(path.get("reachability") or rows_by_path.get(str(path.get("id") or ""), {}).get("reachability") or "") for path in matched]
@@ -240,6 +230,27 @@ def session_deploy_decision(
     if not evaluated:
         reasons.append("Reachability is unverified or path evidence is incomplete; this is not an approval to deploy.")
     reasons.append(f"Evidence is the session scan result {result_id}, not the tenant's persisted estate graph.")
+    return decision, max_risk, evaluated, reasons
+
+
+def session_deploy_decision(
+    report: dict[str, Any],
+    result_id: str,
+    *,
+    candidate: str,
+    tenant_id: str,
+    limit: int,
+    warn_risk: float,
+    block_risk: float,
+    view: str,
+) -> dict[str, Any] | None:
+    """Gate ``candidate`` against the report's exposure paths; ``None`` when nothing names it."""
+    paths, matched, rows_by_path = _matched_paths(report, candidate.strip().lower())
+    if not matched:
+        return None
+    decision, max_risk, evaluated, reasons = _verdict(
+        matched, rows_by_path, warn_risk=warn_risk, block_risk=block_risk, result_id=result_id
+    )
     shown = matched[:limit]
     return {
         "schema_version": "v1",
