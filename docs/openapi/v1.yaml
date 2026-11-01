@@ -2176,6 +2176,121 @@ components:
       - exposure_paths
       title: BriefLinks
       type: object
+    BriefPriority:
+      additionalProperties: true
+      description: 'An overview top risk plus the SLA presentation every brief consumer
+        renders.
+
+
+        ``sla_due_at`` stays the raw ISO timestamp for machines; ``sla_status`` and
+
+        ``sla_policy`` are derived from it and from ``sla_due_at_source`` by one
+
+        shared helper so the API, the MCP tool and the UI never disagree.'
+      properties:
+        affected_agents:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Affected Agents
+        affected_servers:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Affected Servers
+        asset_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Asset Id
+        canonical_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Canonical Id
+        cvss_score:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Cvss Score
+        epss_score:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Epss Score
+        fixed_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fixed Version
+        impact_category:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Impact Category
+        is_kev:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Kev
+        owner:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Owner
+        package:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Package
+        risk_score:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Risk Score
+        severity:
+          title: Severity
+          type: string
+        sla_due_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sla Due At
+        sla_due_at_source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sla Due At Source
+        sla_policy:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sla Policy
+        sla_status:
+          anyOf:
+          - enum:
+            - overdue
+            - due_soon
+            - on_track
+            - unknown
+            type: string
+          - type: 'null'
+          title: Sla Status
+        vulnerability_id:
+          title: Vulnerability Id
+          type: string
+      required:
+      - vulnerability_id
+      - severity
+      title: BriefPriority
+      type: object
     BrowserExtensionsRequest:
       additionalProperties: false
       description: Request body for POST /v1/scan/browser-extensions.
@@ -9287,7 +9402,7 @@ components:
           $ref: '#/components/schemas/PostureResponse'
         remediation_priorities:
           items:
-            $ref: '#/components/schemas/OverviewTopRisk'
+            $ref: '#/components/schemas/BriefPriority'
           title: Remediation Priorities
           type: array
         sample_data:

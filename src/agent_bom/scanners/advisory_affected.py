@@ -75,6 +75,13 @@ def _fixed_versions(advisory: OperatorAdvisory) -> list[str]:
     return sorted(fixed, key=_version_key)
 
 
+AFFECTED_COUNT_BASIS = "package_occurrence_per_holding_asset"
+AFFECTED_COUNT_BASIS_NOTE = (
+    "One row per package occurrence on each holding asset (MCP server, container image or standalone package). "
+    "Findings group one occurrence across the servers that hold it, so their total for the same advisory can be lower."
+)
+
+
 def _advisory_view(advisory: OperatorAdvisory, source: str) -> dict[str, Any]:
     return {
         "id": advisory.id,
@@ -142,6 +149,8 @@ def affected_answer(
             "clean_scanned": len(result.assets_examined - flagged),
             "assets_examined": len(result.assets_examined),
             "reports_examined": result.reports_examined,
+            "count_basis": AFFECTED_COUNT_BASIS,
+            "count_basis_note": AFFECTED_COUNT_BASIS_NOTE,
         },
         "coverage": _coverage(result),
         "complete": result.reports_examined > 0 and not retryable and not unexamined,

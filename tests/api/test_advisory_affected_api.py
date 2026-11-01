@@ -85,7 +85,11 @@ def test_affected_assets_answer(estate) -> None:
         "clean_scanned": 1,
         "assets_examined": 3,
         "reports_examined": 3,
+        "count_basis": "package_occurrence_per_holding_asset",
+        "count_basis_note": body["summary"]["count_basis_note"],
     }
+    assert "per package occurrence on each holding asset" in body["summary"]["count_basis_note"]
+    assert all(set(row["asset_display"]) == {"name", "kind", "agent", "host"} for row in body["rows"])
     assert _brief(body) == PHP2SHELL
     assert body["rows"][1]["verdict_reason"] == "distro_backport_unverified"
     assert body["rows"][0]["graph"]["package_node_id"].startswith("pkg:")

@@ -50,7 +50,7 @@ from agent_bom.demo_estate.enterprise_ai import (
 )
 from agent_bom.demo_estate.enterprise_journeys import actor_for, build_journeys, session_trace_id
 from agent_bom.demo_estate.estate_external_stages import record_external_stages
-from agent_bom.demo_estate.estate_mcp_hosting import place_mcp_servers_on_workloads
+from agent_bom.demo_estate.estate_mcp_hosting import place_on_workloads
 
 # Clouds that must show real depth: several accounts, every environment. The
 # graph audit found `environment` silently null for AWS and GCP and Snowflake
@@ -478,7 +478,7 @@ def _build_estate_assets(profile: ScaleProfile, tenant_id: str) -> tuple[EstateA
         workloads_per_cluster=profile.workloads_per_cluster,
         packages_per_image=profile.packages_per_image,
     )
-    return record_external_stages((*cloud, *first_party, *place_mcp_servers_on_workloads(third_party, delivery), *delivery))
+    return record_external_stages((*cloud, *first_party, *place_on_workloads(third_party, delivery), *delivery))
 
 
 _PLACEHOLDER_HASH = "0" * 64

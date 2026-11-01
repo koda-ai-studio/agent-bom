@@ -15,6 +15,18 @@ class BriefLinks(ReadModel):
     exposure_paths: str
 
 
+class BriefPriority(OverviewTopRisk):
+    """An overview top risk plus the SLA presentation every brief consumer renders.
+
+    ``sla_due_at`` stays the raw ISO timestamp for machines; ``sla_status`` and
+    ``sla_policy`` are derived from it and from ``sla_due_at_source`` by one
+    shared helper so the API, the MCP tool and the UI never disagree.
+    """
+
+    sla_status: Literal["overdue", "due_soon", "on_track", "unknown"] | None = None
+    sla_policy: str | None = None
+
+
 class ExecutiveBriefResponse(ReadResponse):
     schema_version: Literal["v1"]
     document_type: Literal["executive-brief"]
@@ -23,7 +35,7 @@ class ExecutiveBriefResponse(ReadResponse):
     sample_data: bool
     posture: PostureResponse
     issues: IssueCounts
-    remediation_priorities: list[OverviewTopRisk]
+    remediation_priorities: list[BriefPriority]
     exposure_paths: GraphExposurePathsResponse | None
     exposure_status: Literal["available", "unavailable"]
     compliance: ComplianceSummaryResponse

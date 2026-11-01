@@ -15,6 +15,7 @@ from agent_bom.api.routes.compliance import get_compliance_summary
 from agent_bom.api.routes.compliance_routes.reads import get_posture_scorecard
 from agent_bom.api.routes.enterprise_routes.governance import get_trends
 from agent_bom.api.routes.overview import get_overview
+from agent_bom.core.sla import annotate_sla_presentation
 from agent_bom.demo_estate import demo_estate_enabled
 from agent_bom.mcp_tools.graph import exposure_paths_for_tenant
 
@@ -46,8 +47,9 @@ async def build_executive_brief(request: Request, *, limit: int = DEFAULT_EXPOSU
         "sample_data": demo_estate_enabled(),
         "posture": posture,
         "issues": overview["issue_counts"],
-        # Preserve the canonical owner/SLA provenance rather than joining on CVE.
-        "remediation_priorities": overview["top_risks"][:limit],
+        # Preserve the canonical owner/SLA provenance rather than joining on CVE;
+        # status and policy name derive from those same fields for every consumer.
+        "remediation_priorities": [annotate_sla_presentation(row) for row in overview["top_risks"][:limit]],
         "exposure_paths": paths if available else None,
         "exposure_status": "available" if available else "unavailable",
         "compliance": compliance,

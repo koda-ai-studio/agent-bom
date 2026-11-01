@@ -137,6 +137,8 @@ os.environ.setdefault("AGENT_BOM_DEMO_STORY_PREWARM", "0")
 # Write-time posture precompute runs on a background thread; tests that count
 # read-time computations opt in explicitly.
 os.environ.setdefault("AGENT_BOM_POSTURE_PRECOMPUTE", "0")
+# The post-seed/post-push exec-read warm-up is a background thread too; its own tests opt in.
+os.environ.setdefault("AGENT_BOM_EXEC_PREWARM", "0")
 # A plain scan joins the CISA KEV catalog; keep the suite hermetic by reading
 # only local caches (the isolated state dir has none, so KEV reads "unknown").
 os.environ.setdefault("AGENT_BOM_KEV_DEFAULT_JOIN", "cache")
