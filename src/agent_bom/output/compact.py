@@ -178,10 +178,7 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
     coverage_incomplete = coverage.get("coverage_state") == "incomplete" or scan_run.outcome is not ScanOutcome.COMPLETE
     high_risk_policy_count = sev_counts.get("CRITICAL", 0) + sev_counts.get("HIGH", 0)
     scorecard_summary = scorecard.summary
-    if scan_run.outcome is ScanOutcome.FAILED:
-        posture = "[bold white on red] SCAN FAILED [/bold white on red]"
-        border_style = "red"
-    elif coverage_incomplete:
+    if coverage_incomplete:
         scorecard_summary = "scan coverage incomplete"
     if high_risk_policy_count and not active_findings:
         scorecard_summary = f"{high_risk_policy_count} high-risk policy/security finding(s) present"
@@ -209,7 +206,10 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
                 break
 
     badge_parts_present = False
-    if coverage_incomplete:
+    if scan_run.outcome is ScanOutcome.FAILED:
+        posture = "[bold white on red] SCAN FAILED [/bold white on red]"
+        border_style = "red"
+    elif coverage_incomplete:
         posture = "[bold black on yellow] PARTIAL COVERAGE [/bold black on yellow]"
         border_style = "yellow"
     elif report.total_vulnerabilities == 0 and not active_findings and not policy_findings:
