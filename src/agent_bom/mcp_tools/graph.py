@@ -25,6 +25,13 @@ from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools import deploy_gate as _deploy_gate
 from agent_bom.mcp_tools import exposure_queue as _exposure_queue
 from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
+from agent_bom.mcp_tools.result_store import ResultStore
+from agent_bom.mcp_tools.session_result import (
+    SESSION_SOURCE,
+    SessionResultError,
+    load_session_report_async,
+    session_deploy_decision,
+)
 from agent_bom.mcp_tools.storage import default_graph_store
 
 logger = logging.getLogger(__name__)
@@ -236,15 +243,84 @@ async def _resolve_exposure_snapshot(tenant_id: str, scan_id: str | None) -> tup
         return None, _graph_read_error(exc)
 
 
+_SESSION_PATH_FILTERS = (
+    "min_risk",
+    "min_severity",
+    "kev",
+    "has_credential",
+    "source_type",
+    "target_id",
+    "finding_id",
+    "credential_id",
+    "node_id",
+    "cursor",
+)
+
+
+async def _session_exposure_paths(
+    *, result_id: str, owner: str, store: ResultStore | None, limit: int, view: str, query: dict[str, Any], truncate
+) -> str:
+    """One page of a stored scan result's exposure paths, labelled as session evidence."""
+    from agent_bom.config import MCP_MAX_RESPONSE_CHARS
+    from agent_bom.mcp_tools.scan_response import PAGE_MAX_CHARS, section_page
+
+    used = sorted(key for key in _SESSION_PATH_FILTERS if query.get(key) not in (None, 0, 0.0, False, ""))
+    if used:
+        return mcp_error_json(
+            CODE_VALIDATION_INVALID_ARGUMENT,
+            "Filters apply to the persisted estate graph; a scan result_id is paged unfiltered",
+            details={"argument": "result_id", "unsupported_with_result_id": used},
+        )
+    try:
+        session = await load_session_report_async(owner=owner, result_id=result_id, store=store)
+    except SessionResultError as exc:
+        return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, exc, details={"argument": "result_id"})
+    if session is None:
+        return mcp_error_json(CODE_NOT_FOUND_RESOURCE, "No scan result for this session", details={"argument": "result_id"})
+    found_id, report = session
+    page = section_page(
+        report, result_id=found_id, section="exposure_paths", offset=0, limit=limit, max_chars=min(PAGE_MAX_CHARS, MCP_MAX_RESPONSE_CHARS)
+    )
+    payload = {
+        "schema_version": "v1",
+        "tool": "exposure_paths",
+        "evidence_scope": SESSION_SOURCE,
+        "result_id": found_id,
+        "scan_id": report.get("scan_id"),
+        "view": view,
+        **page,
+        "provenance": {"source": "mcp_exposure_paths", "basis": SESSION_SOURCE},
+    }
+    encoded = json.dumps(payload, separators=(",", ":"), default=str)
+    return truncate(encoded) if truncate is not None else encoded
+
+
 async def exposure_paths_impl(
     *,
     tenant_id: str = "default",
     view: str = "summary",
+    result_id: str | None = None,
     _get_graph_store=None,
     _truncate_response=None,
+    _result_owner: str = "local",
+    _result_store: ResultStore | None = None,
     **query: Any,
 ) -> str:
-    """MCP entrypoint: resolve the tool tenant, default to the compact summary view."""
+    """MCP entrypoint: resolve the tool tenant, default to the compact summary view.
+
+    With ``result_id`` the paths come from that session scan result instead of
+    the persisted estate graph.
+    """
+    if result_id and result_id.strip():
+        return await _session_exposure_paths(
+            result_id=result_id.strip(),
+            owner=_result_owner,
+            store=_result_store,
+            limit=int(query.get("limit") or 5),
+            view=view,
+            query=query,
+            truncate=_truncate_response,
+        )
     return await exposure_paths_for_tenant(
         tenant_id=resolve_mcp_tool_tenant_id(tenant_id),
         view=view,
@@ -272,15 +348,107 @@ async def exposure_paths_for_tenant(*, tenant_id: str, _get_graph_store=None, _t
 
 
 async def deploy_decision_impl(
-    *, candidate: str, tenant_id: str = "default", _get_graph_store=None, _truncate_response=None, **options: Any
+    *,
+    candidate: str,
+    tenant_id: str = "default",
+    result_id: str | None = None,
+    _get_graph_store=None,
+    _truncate_response=None,
+    _result_owner: str = "local",
+    _result_store: ResultStore | None = None,
+    **options: Any,
 ) -> str:
-    return await deploy_decision_for_tenant(
+    """Gate the candidate against the session's scan result first, then the persisted estate.
+
+    An explicit ``result_id`` is authoritative. Otherwise the caller's newest scan
+    result is searched; when it names the candidate the verdict comes from it,
+    and when it does not the persisted graph decides and the answer says that
+    the session result was searched too.
+    """
+    tenant = resolve_mcp_tool_tenant_id(tenant_id)
+    session_id: str | None = None
+    if not options.get("scan_id"):
+        try:
+            session = await load_session_report_async(owner=_result_owner, result_id=result_id, store=_result_store)
+        except SessionResultError as exc:
+            return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, exc, details={"argument": "result_id"})
+        if session is not None:
+            session_id, report = session
+            verdict = session_deploy_decision(
+                report,
+                session_id,
+                candidate=candidate,
+                tenant_id=tenant,
+                limit=int(options.get("limit") or 5),
+                warn_risk=float(options.get("warn_risk", 40.0)),
+                block_risk=float(options.get("block_risk", 80.0)),
+                view=str(options.get("view") or "summary"),
+            )
+            if verdict is None and result_id:
+                verdict = _session_not_found(report, session_id, candidate=candidate, tenant_id=tenant, options=options)
+            if verdict is not None:
+                encoded = json.dumps(verdict, separators=(",", ":"), default=str)
+                return _truncate_response(encoded) if _truncate_response is not None else encoded
+    answer = await deploy_decision_for_tenant(
         candidate=candidate,
-        tenant_id=resolve_mcp_tool_tenant_id(tenant_id),
+        tenant_id=tenant,
         _get_graph_store=_get_graph_store,
-        _truncate_response=_truncate_response,
+        _truncate_response=None,
         **options,
     )
+    if session_id:
+        answer = _note_session_searched(answer, session_id)
+    return _truncate_response(answer) if _truncate_response is not None else answer
+
+
+def _session_not_found(
+    report: dict[str, Any], result_id: str, *, candidate: str, tenant_id: str, options: dict[str, Any]
+) -> dict[str, Any]:
+    """``not_found`` against the named scan result: the candidate was searched, not approved."""
+    paths = report.get("exposure_paths")
+    count = len(paths.get("paths") or []) if isinstance(paths, dict) else len(paths or []) if isinstance(paths, list) else 0
+    return {
+        "schema_version": "v1",
+        "tool": "should_i_deploy",
+        "tenant_id": tenant_id,
+        "scan_id": report.get("scan_id"),
+        "result_id": result_id,
+        "evidence_scope": SESSION_SOURCE,
+        "candidate": {"value": candidate.strip()},
+        "decision": "not_found",
+        "maxRisk": None,
+        "evidenceStatus": "not_evaluated",
+        "thresholds": {"warnRisk": float(options.get("warn_risk", 40.0)), "blockRisk": float(options.get("block_risk", 80.0))},
+        "reasons": [
+            f"No exposure path or finding in scan result {result_id} names the candidate exactly "
+            "(package name, name@version, CVE, server or agent name); it was not evaluated and this is not an approval to deploy."
+        ],
+        "searchedPaths": count,
+        "matchingTotal": 0,
+        "total": count,
+        "searchComplete": True,
+        "matchedPathCount": 0,
+        "returnedPathCount": 0,
+        "view": str(options.get("view") or "summary"),
+        "matchedPaths": [],
+        "provenance": {"source": "mcp_should_i_deploy", "basis": "no_matching_exposure_path_evidence", "pathSource": SESSION_SOURCE},
+    }
+
+
+def _note_session_searched(answer: str, result_id: str) -> str:
+    """Record on a persisted-graph verdict that the session scan result was searched first."""
+    try:
+        payload = json.loads(answer)
+    except ValueError:
+        return answer
+    if not isinstance(payload, dict) or "decision" not in payload:
+        return answer
+    payload["sessionResultSearched"] = result_id
+    if payload.get("decision") == "not_found":
+        reasons = payload.get("reasons")
+        if isinstance(reasons, list):
+            reasons.append(f"The session scan result {result_id} does not name the candidate either.")
+    return json.dumps(payload, separators=(",", ":"), default=str)
 
 
 async def deploy_decision_for_tenant(

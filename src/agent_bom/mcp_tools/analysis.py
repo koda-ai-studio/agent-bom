@@ -27,6 +27,12 @@ from agent_bom.mcp_tools.finding_graph import exposure_lists, load_snapshot_path
 from agent_bom.mcp_tools.findings import RISK_SCALE
 from agent_bom.mcp_tools.host_local import HostLocalForbiddenError
 from agent_bom.mcp_tools.rest_parity import api_reads
+from agent_bom.mcp_tools.result_store import ResultStore
+from agent_bom.mcp_tools.session_result import (
+    SessionResultError,
+    load_session_report_async,
+    session_blast_radius,
+)
 from agent_bom.mcp_tools.storage import default_graph_store
 
 logger = logging.getLogger(__name__)
@@ -46,13 +52,21 @@ async def blast_radius_impl(
     cve_id: str,
     tenant_id: str = "default",
     scan_id: str | None = None,
+    result_id: str | None = None,
     _validate_cve_id,
     _run_scan_pipeline,
     _truncate_response,
     _get_persisted_evidence: Callable[..., dict[str, Any]] | None = None,
     _get_graph_store: Callable[[], Any] | None = None,
+    _result_owner: str = "local",
+    _result_store: ResultStore | None = None,
 ) -> str:
-    """Implementation of the blast_radius tool."""
+    """Implementation of the blast_radius tool.
+
+    Evidence order: the session's scan result (``result_id``, else the caller's
+    newest), then the tenant's persisted findings, then a scan of this host's
+    MCP configuration. Each answer names its ``source``.
+    """
     try:
         validated_cve = _validate_cve_id(cve_id)
     except ValueError as exc:
@@ -65,6 +79,23 @@ async def blast_radius_impl(
         tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
         if (refusal := seeding_refusal(tenant_id, scan_id)) is not None:
             return refusal
+        session_id: str | None = None
+        if not scan_id:
+            try:
+                session = await load_session_report_async(owner=_result_owner, result_id=result_id, store=_result_store)
+            except SessionResultError as exc:
+                return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, exc, details={"argument": "result_id"})
+            if session is not None:
+                session_id, report = session
+                answer = session_blast_radius(report, session_id, validated_cve)
+                if answer is not None:
+                    return _truncate_response(json.dumps(answer, separators=(",", ":"), default=str))
+                if result_id:
+                    return mcp_error_json(
+                        CODE_NOT_FOUND_RESOURCE,
+                        "CVE not found in the named scan result",
+                        details={"cve_id": cve_id, "result_id": session_id, "source": "session_scan_result"},
+                    )
         if _get_persisted_evidence is not None:
             persisted = _get_persisted_evidence(tenant_id=tenant_id, cve_id=validated_cve, scan_id=scan_id)
             if persisted.get("available"):
@@ -78,10 +109,17 @@ async def blast_radius_impl(
 
         local_matches = [br for br in blast_radii if br.vulnerability.id.upper() == validated_cve.upper()]
         if not local_matches:
+            searched = ["persisted_findings", "host_mcp_configuration"]
+            if session_id:
+                searched.insert(0, f"session_scan_result:{session_id}")
             return mcp_error_json(
                 CODE_NOT_FOUND_RESOURCE,
-                "CVE not found in current scan results",
-                details={"cve_id": cve_id, "suggestion": "Run a fresh scan via the scan tool first."},
+                "CVE not found in the session scan result, persisted findings, or this host's MCP configuration",
+                details={
+                    "cve_id": cve_id,
+                    "searched": searched,
+                    "suggestion": "Scan the project or image that carries this advisory with the scan tool, then retry with its result_id.",
+                },
             )
 
         results = []

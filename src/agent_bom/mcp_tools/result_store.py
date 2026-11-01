@@ -40,6 +40,8 @@ class ResultStore(Protocol):
 
     def get(self, owner: str, result_id: str) -> dict[str, Any] | None: ...
 
+    def latest(self, owner: str) -> tuple[str, dict[str, Any]] | None: ...
+
 
 def scan_result_owner(request_ctx_getter: Callable[[], Any]) -> str:
     """Use verified token material, never request metadata or a shared client ID.
@@ -189,3 +191,21 @@ class DurableScanResultStore:
             return None
         result = json.loads(row[0])
         return result if isinstance(result, dict) else None
+
+    def latest(self, owner: str) -> tuple[str, dict[str, Any]] | None:
+        """The caller's newest unexpired result in this tenant, as ``(result_id, stored)``.
+
+        Analysis tools consult it before any persisted snapshot so a session that
+        just scanned a project is answered from that scan.
+        """
+        tenant, digest = self._tenant(), self._owner_digest(owner)
+        with self._connection(tenant, write=False) as (conn, mark):
+            row = conn.execute(
+                f"SELECT result_id, data FROM mcp_scan_results WHERE tenant_id={mark} AND owner_digest={mark} "  # nosec B608
+                f"AND expires_at>{mark} ORDER BY created_at DESC, result_id DESC LIMIT 1",
+                (tenant, digest, self._clock()),
+            ).fetchone()
+        if row is None:
+            return None
+        result = json.loads(row[1])
+        return (str(row[0]), result) if isinstance(result, dict) else None

@@ -386,6 +386,17 @@ unverified or the path read is incomplete; and `not_found` (with
 `evidenceStatus: "not_evaluated"`, `maxRisk: null`) when no path names the
 candidate. Inspect the linked findings and runtime evidence before deployment.
 
+`blast_radius`, `should_i_deploy` and `exposure_paths` accept `result_id` from a
+`scan` response in the same session. `blast_radius` and `should_i_deploy` read
+the caller's newest scan result even without it: a session that just scanned a
+project is answered from that scan (`source` / `provenance.basis` =
+`session_scan_result`, with the `result_id`) before the tenant's persisted
+findings or graph are consulted, and before any host configuration scan. An
+explicit `result_id` is authoritative and never falls back. `exposure_paths`
+pages the named result unfiltered; the estate filters and cursor apply only to
+the persisted graph. A `not_found` from the persisted graph says when the
+session result was searched too (`sessionResultSearched`).
+
 Continue a larger result with `exposure_paths(cursor="<pagination.next_cursor>")`,
 keeping the same `min_risk`. Stop when `pagination.next_cursor` is null. The
 cursor pins the snapshot; changing the tenant, snapshot, or risk filter requires

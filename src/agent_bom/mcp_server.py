@@ -611,12 +611,23 @@ def create_mcp_server(
         cve_id: Annotated[str, Field(description="CVE identifier to look up, e.g. 'CVE-2024-1234' or 'GHSA-xxxx'.")],
         tenant_id: Annotated[str, Field(description="Tenant scope for persisted findings. Defaults to 'default'.")] = "default",
         scan_id: Annotated[str | None, Field(description="Optional persisted scan scope.")] = None,
+        result_id: Annotated[
+            str | None,
+            Field(
+                max_length=128,
+                description=(
+                    "result_id from a scan response in this session. Answers from that scan result; omitted, the caller's "
+                    "newest scan result is consulted before persisted findings and a host configuration scan."
+                ),
+            ),
+        ] = None,
     ) -> str:
         """Look up the blast radius of a specific CVE across your AI agent setup.
 
-        Reads the tenant's persisted control-plane finding evidence when it is
-        available. Standalone MCP mode falls back to a local MCP configuration
-        scan and labels that narrower source explicitly.
+        Evidence order: the session's scan result (``result_id``, else the
+        caller's newest, labelled ``session_scan_result``), then the tenant's
+        persisted control-plane findings, then a local MCP configuration scan.
+        Every answer names its ``source``.
 
         Args:
             cve_id: The CVE identifier (e.g. "CVE-2024-1234" or "GHSA-xxxx").
@@ -632,10 +643,12 @@ def create_mcp_server(
             cve_id=cve_id,
             tenant_id=tenant_id,
             scan_id=scan_id,
+            result_id=result_id,
             _validate_cve_id=_validate_cve_id,
             _run_scan_pipeline=_run_scan_pipeline,
             _get_persisted_evidence=_persisted_finding_evidence,
             _truncate_response=_truncate_response,
+            _result_owner=_scan_result_owner(_mcp_request_ctx.get),
         )
 
     # Tools 4-5 (exposure_paths, should_i_deploy) live in mcp_tools.graph_registration.
@@ -740,7 +753,13 @@ def create_mcp_server(
         )
 
     register_inventory_asset_tool(mcp, read_only=_READ_ONLY, execute_tool_async=_execute_tool_async, truncate_response=_truncate_response)
-    register_graph_agent_tools(mcp, read_only=_READ_ONLY, execute_tool_async=_execute_tool_async, truncate_response=_truncate_response)
+    register_graph_agent_tools(
+        mcp,
+        read_only=_READ_ONLY,
+        execute_tool_async=_execute_tool_async,
+        truncate_response=_truncate_response,
+        result_owner=lambda: _scan_result_owner(_mcp_request_ctx.get),
+    )
 
     _register_runtime_catalog_tools(
         mcp,
