@@ -1,5 +1,6 @@
 """Unreadable optional training metadata must remain visible as coverage gaps."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -50,6 +51,17 @@ def test_invalid_metric_is_a_gap_not_a_valid_measurement(tmp_path, value):
     payload = scan_training_pipelines([source]).to_dict()
     assert payload["warnings"]
     assert "accuracy" not in payload["training_runs"][0].get("metrics", {})
+
+
+@pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity", "1e400", "1" + "0" * 400])
+def test_invalid_wandb_metric_preserves_valid_metrics_and_json(tmp_path, value):
+    source = tmp_path / "wandb-metadata.json"
+    source.write_text('{"program": "train.py"}')
+    (tmp_path / "wandb-summary.json").write_text('{"invalid": ' + value + ', "accuracy": 0.9}')
+    payload = scan_training_pipelines([source]).to_dict()
+    assert payload["warnings"]
+    assert payload["training_runs"][0]["metrics"] == {"accuracy": 0.9}
+    json.dumps(payload, allow_nan=False)
 
 
 def test_absent_optional_siblings_do_not_report_read_failures(tmp_path):

@@ -80,32 +80,22 @@ class TrainingRun:
             "framework": self.framework,
             "source_file": self.source_file,
         }
-        if self.run_id:
-            d["run_id"] = self.run_id
-        if self.experiment_name:
-            d["experiment_name"] = self.experiment_name
-        if self.model_artifact_path:
-            d["model_artifact_path"] = self.model_artifact_path
-        if self.model_flavor:
-            d["model_flavor"] = self.model_flavor
-        if self.parameters:
-            d["parameters"] = self.parameters
-        if self.metrics:
-            d["metrics"] = self.metrics
-        if self.packages:
-            d["packages"] = self.packages
-        if self.datasets_used:
-            d["datasets_used"] = self.datasets_used
-        if self.created_at:
-            d["created_at"] = self.created_at
-        if self.git_sha:
-            d["git_sha"] = self.git_sha
-        if self.serialization_format:
-            d["serialization_format"] = self.serialization_format
-        if self.security_flags:
-            d["security_flags"] = self.security_flags
-        if self.compliance_tags:
-            d["compliance_tags"] = self.compliance_tags
+        optional = {
+            "run_id": self.run_id,
+            "experiment_name": self.experiment_name,
+            "model_artifact_path": self.model_artifact_path,
+            "model_flavor": self.model_flavor,
+            "parameters": self.parameters,
+            "metrics": self.metrics,
+            "packages": self.packages,
+            "datasets_used": self.datasets_used,
+            "created_at": self.created_at,
+            "git_sha": self.git_sha,
+            "serialization_format": self.serialization_format,
+            "security_flags": self.security_flags,
+            "compliance_tags": self.compliance_tags,
+        }
+        d.update((key, value) for key, value in optional.items() if value)
         if self.warnings:
             d["warnings"] = list(self.warnings)
         return d
@@ -520,7 +510,14 @@ def parse_wandb_metadata(path: Path) -> TrainingRun | None:
             if isinstance(summary, dict):
                 for k, v in summary.items():
                     if isinstance(v, (int, float)) and not k.startswith("_"):
-                        run.metrics[k] = float(v)
+                        try:
+                            value = float(v)
+                            if not math.isfinite(value):
+                                raise ValueError("Non-finite metric")
+                        except (ValueError, OverflowError):
+                            run.warnings.append("W&B metric was invalid; run metrics are incomplete.")
+                            continue
+                        run.metrics[k] = value
         except (json.JSONDecodeError, OSError, UnicodeError):
             run.warnings.append("W&B summary could not be read or was invalid; run metrics are incomplete.")
 
