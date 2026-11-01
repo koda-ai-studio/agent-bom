@@ -9,6 +9,17 @@ const result = { node_id: props.nodeId, scan_id: props.scanId, tenant_id: props.
   affected_count: 3, affected_nodes: ["a", "b", "c"], affected_by_type: { agent: 3 }, max_depth_reached: 2, completeness: { status: "truncated", complete: false, sampled: false, truncated: true, returned: 3 } } as GraphImpactResponse;
 afterEach(() => vi.restoreAllMocks());
 
+it("uses the server's path-aware depth and preserves it when exploring impact", async () => {
+  const read = vi.spyOn(api, "getGraphImpact").mockResolvedValue({
+    ...result, max_depth: 6, max_depth_reached: 6, depth_basis: "longest_materialized_path",
+  } as GraphImpactResponse);
+  render(<GraphPathImpact {...props} findingRoot />);
+  const explore = await screen.findByRole("link", { name: "Explore exposed assets" });
+  expect(read).toHaveBeenCalledWith(props.nodeId, props.scanId, undefined, expect.anything(), "reverse");
+  expect(explore.getAttribute("href")).toContain("depth=6");
+  expect(screen.getByText(/graph connections within 6 steps/)).toBeInTheDocument();
+});
+
 it.each(["node_id", "scan_id", "tenant_id", "snapshot_generation"] as const)("rejects impact from a different %s", async field => {
   vi.spyOn(api, "getGraphImpact").mockResolvedValue({ ...result, [field]: "other" });
   render(<GraphPathImpact {...props} />);
@@ -64,7 +75,7 @@ it("opens each count as a list of its nodes, nearest first, each linking to its 
   const link = within(list).getByRole("link", { name: /data-pipeline/ });
   expect(link.getAttribute("href")).toContain("root=agent%3Aa");
   expect(within(list).getByText(/3 steps/)).toBeVisible();
-  expect(read).toHaveBeenCalledWith("finding:a", "scan-a", 4, expect.anything(), "reverse");
+  expect(read).toHaveBeenCalledWith("finding:a", "scan-a", undefined, expect.anything(), "reverse");
 });
 
 it("toggles to downstream — what this can reach — at the same depth", async () => {
@@ -76,7 +87,7 @@ it("toggles to downstream — what this can reach — at the same depth", async 
   await screen.findByRole("button", { name: /Agent · 1/ });
   fireEvent.click(screen.getByRole("radio", { name: /Downstream/ }));
   expect(await screen.findByRole("button", { name: /Credential · 1/ })).toBeVisible();
-  expect(read).toHaveBeenLastCalledWith("finding:a", "scan-a", 4, expect.anything(), "forward");
+  expect(read).toHaveBeenLastCalledWith("finding:a", "scan-a", undefined, expect.anything(), "forward");
   expect(screen.getByText(/downstream node this can reach/)).toBeVisible();
   const explore = screen.getByRole("link", { name: "Explore downstream relationships" });
   expect(new URL(explore.getAttribute("href")!, "http://x").searchParams.get("direction")).toBe("forward");

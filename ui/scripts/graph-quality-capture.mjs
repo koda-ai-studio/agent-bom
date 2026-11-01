@@ -56,12 +56,13 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
     try {
       await page.goto(`${baseUrl}/graph?lens=estate&rollup=0&scan=${graph.scan_id}&capture=1`);
       await page.getByRole("heading", { name: "Investigation", exact: true }).waitFor();
+      if (viewport.width < 640) {
+        await expect(page.getByTestId("graph-path-list")).toBeVisible();
+        await page.screenshot({ path: path.join(output, `${key}-paths.png`) });
+        await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
+      }
       await expect(page.locator(".react-flow__node").first()).toBeVisible();
       if (viewport.width >= 640) await fitReactFlow(page);
-      else {
-        await page.getByRole("button", { name: /^Center graph node:/ }).click();
-        await page.waitForTimeout(300);
-      }
       await page.evaluate(() => window.scrollTo(0, 0));
       await expect(page.getByLabel("Visible relationship evidence")).toBeVisible();
       // Camera animation and readable glyph resizing have separate layout turns.

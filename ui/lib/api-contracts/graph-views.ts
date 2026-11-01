@@ -194,13 +194,15 @@ export interface GraphImpactResponse {
   scan_id?: string | undefined;
   tenant_id?: string | undefined;
   snapshot_generation?: string | null | undefined;
-  interpretation?: { basis: "recorded_reverse_reachability"; execution: "not_established"; collection_coverage: "unknown"; traversable_only: false; max_depth: number } | undefined;
+  interpretation?: { basis: "recorded_reverse_reachability" | "recorded_forward_reachability"; execution: "not_established"; collection_coverage: "unknown"; traversable_only: false; max_depth: number } | undefined;
   completeness?: GraphCompleteness | undefined;
   node_id: string;
   affected_nodes: string[];
   affected_by_type: Record<string, number>;
   affected_count: number;
   max_depth_reached: number;
+  max_depth?: number | null | undefined;
+  depth_basis?: "requested" | "default" | "longest_materialized_path" | null | undefined;
   direction?: "reverse" | "forward" | undefined;
   /** The nodes behind each count, nearest first (bounded server-side). */
   affected_nodes_detail?: { id: string; label: string; entity_type: string; depth: number }[] | undefined;

@@ -8,6 +8,13 @@ const impact = { ...identity, node_id: "asset", affected_nodes: ["account"], aff
 const client = (context = identity) => ({ getGraphImpact: vi.fn().mockResolvedValue(impact), queryGraph: vi.fn().mockResolvedValue(context) });
 
 describe("blast-radius investigation", () => {
+  it("does not truncate a longer recorded path to the four-step UI default", async () => {
+    const api = client();
+    api.getGraphImpact.mockResolvedValue({ ...impact, max_depth: 6, max_depth_reached: 6 });
+    await loadBlastInvestigation(api, "asset", identity.scan_id);
+    expect(api.getGraphImpact).toHaveBeenCalledWith("asset", identity.scan_id, undefined, undefined);
+    expect(api.queryGraph).toHaveBeenCalledWith(expect.objectContaining({ max_depth: 6, max_nodes: 4 }), undefined);
+  });
   it("pins the resolved snapshot and includes recorded context relationships", async () => {
     const api = client();
     await loadBlastInvestigation(api, "asset", undefined);
