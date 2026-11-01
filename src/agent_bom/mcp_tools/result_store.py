@@ -34,13 +34,17 @@ MAX_RESULT_BYTES = 128 * 1024 * 1024
 
 class ResultStore(Protocol):
     @property
-    def ttl_seconds(self) -> float: ...
+    def ttl_seconds(self) -> float:
+        """Seconds a stored result stays readable."""
 
-    def put(self, owner: str, result: dict[str, Any]) -> str: ...
+    def put(self, owner: str, result: dict[str, Any]) -> str:
+        """Store ``result`` for ``owner`` and return its result id."""
 
-    def get(self, owner: str, result_id: str) -> dict[str, Any] | None: ...
+    def get(self, owner: str, result_id: str) -> dict[str, Any] | None:
+        """Return the stored result or ``None`` when missing or expired."""
 
-    def latest(self, owner: str) -> tuple[str, dict[str, Any]] | None: ...
+    def latest(self, owner: str) -> tuple[str, dict[str, Any]] | None:
+        """Return the newest unexpired ``(result_id, result)`` for ``owner``."""
 
 
 def scan_result_owner(request_ctx_getter: Callable[[], Any]) -> str:
