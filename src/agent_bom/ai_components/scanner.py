@@ -18,11 +18,13 @@ import logging
 import os
 from pathlib import Path
 
+from agent_bom.ai_components.local_shadow import declared_python_packages, is_sdk_import
 from agent_bom.ai_components.models import (
     AIComponent,
     AIComponentReport,
     AIComponentSeverity,
     AIComponentType,
+    SDKPattern,
 )
 from agent_bom.ai_components.patterns import (
     API_KEY_PATTERNS,
@@ -98,7 +100,9 @@ def scan_source(
         if root.is_file():
             _scan_file(root, root.parent, report, manifest_pkgs, seen_keys)
         elif root.is_dir():
-            _walk_directory(root, report, manifest_pkgs, seen_keys)
+            # Shadow checks need the project's own declarations even when the
+            # caller passed none; the manifest set is only for shadow-AI flags.
+            _walk_directory(root, report, manifest_pkgs, seen_keys, manifest_pkgs | declared_python_packages(root))
         else:
             report.warnings.append(f"Path not found: {root}")
 
@@ -126,6 +130,7 @@ def _walk_directory(
     report: AIComponentReport,
     manifest_pkgs: set[str],
     seen_keys: set[str],
+    declared: frozenset[str] | set[str] = frozenset(),
 ) -> None:
     """Walk directory tree, scanning source files."""
     for dirpath, dirnames, filenames in os.walk(root):
@@ -141,7 +146,16 @@ def _walk_directory(
 
         for filename in filenames:
             filepath = Path(dirpath) / filename
-            _scan_file(filepath, root, report, manifest_pkgs, seen_keys)
+            _scan_file(filepath, root, report, manifest_pkgs, seen_keys, declared)
+
+
+def _applicable_sdk_patterns(language: str, filepath: Path, root: Path, declared: frozenset[str]) -> list[SDKPattern]:
+    """SDK patterns for ``language`` minus those whose import root is a module the project ships itself."""
+    return [
+        pattern
+        for pattern in SDK_PATTERNS_BY_LANGUAGE.get(language, [])
+        if not pattern.import_root or is_sdk_import(pattern.import_root, (pattern.package_name,), filepath, root, declared)
+    ]
 
 
 def _scan_file(
@@ -150,10 +164,10 @@ def _scan_file(
     report: AIComponentReport,
     manifest_pkgs: set[str],
     seen_keys: set[str],
+    declared: frozenset[str] | set[str] = frozenset(),
 ) -> None:
     """Scan a single source file for AI components."""
-    ext = filepath.suffix.lower()
-    language = EXTENSION_TO_LANGUAGE.get(ext)
+    language = EXTENSION_TO_LANGUAGE.get(filepath.suffix.lower())
     if not language:
         return
 
@@ -174,8 +188,8 @@ def _scan_file(
     rel_path = str(filepath.relative_to(root)) if filepath.is_relative_to(root) else str(filepath)
 
     # 1. SDK import detection
-    sdk_patterns, view = SDK_PATTERNS_BY_LANGUAGE.get(language, []), regex_prefilter.ContentView(content)
-    for pattern in sdk_patterns:
+    view = regex_prefilter.ContentView(content)
+    for pattern in _applicable_sdk_patterns(language, filepath, root, frozenset(declared)):
         for match in regex_prefilter.finditer(pattern.regex, view):
             # Line number: count newlines before the actual content (not the leading \n in the regex)
             match_text = match.group(0)
