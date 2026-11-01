@@ -217,7 +217,7 @@ labelled sample data, with no install and no backend. Scans, settings and
 sign-in are turned off there. To open the same graph locally:
 
 ```bash
-pip install 'agent-bom[ui]==0.111.0'
+pip install 'agent-bom[ui]==0.112.1'
 agent-bom quickstart --run --offline
 ```
 
@@ -231,8 +231,8 @@ demo for advisory-backed findings or [populate the advisory database](docs/FIRST
 pilot from a [published release checkout](https://github.com/koda-ai-studio/agent-bom/releases):
 
 ```bash
-git clone --depth 1 --branch v0.111.0 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
-AGENT_BOM_IMAGE_TAG=0.111.0 docker compose up -d
+git clone --depth 1 --branch v0.112.1 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
+AGENT_BOM_IMAGE_TAG=0.112.1 docker compose up -d
 ```
 
 Open **http://localhost:3000**, then **Connections** or **New Scan**. The pilot
@@ -365,4 +365,4 @@ or follow the [maintainer path](GOVERNANCE.md) ([review owners](MAINTAINERS.md))
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
-Source version: **v0.112.1** · Latest release: **v0.111.0** · [Changelog](CHANGELOG.md)
+Source version: **v0.112.1** · Latest release: **v0.112.1** · [Changelog](CHANGELOG.md)

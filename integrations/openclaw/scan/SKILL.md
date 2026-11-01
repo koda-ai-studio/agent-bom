@@ -20,7 +20,7 @@ metadata:
   install:
     pipx: agent-bom
     pip: agent-bom
-    docker: ghcr.io/koda-ai-studio/agent-bom:0.111.0
+    docker: ghcr.io/koda-ai-studio/agent-bom:0.112.1
   openclaw:
     requires:
       bins: []
@@ -260,6 +260,6 @@ agent-bom scan --project . --no-discover
 ## Verification
 
 - **Source**: [github.com/koda-ai-studio/agent-bom](https://github.com/koda-ai-studio/agent-bom) (Apache-2.0)
-- **Sigstore signed**: `agent-bom verify agent-bom@0.111.0`
+- **Sigstore signed**: `agent-bom verify agent-bom@0.112.1`
 - **Contracts**: `tests/test_bundled_skill_contract.py` checks skill metadata and the default MCP tool list.
 - **Network boundary**: Online scans use vulnerability providers and the explicitly requested repository or image host; use offline mode when those requests are not authorized.

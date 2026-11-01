@@ -18,7 +18,7 @@ requires:
 
 Plan fixes with agent-bom.
 
-1. Run `uvx --from agent-bom==0.111.0 agent-bom remediate -q -f json -o "$OUT/plan.json"` (add `-p '<dir>'` for a project; with no argument it covers the discovered agents and MCP servers). It plans fixes for this machine or a project only; for other targets, use the `scan` skill.
+1. Run `uvx --from agent-bom==0.112.1 agent-bom remediate -q -f json -o "$OUT/plan.json"` (add `-p '<dir>'` for a project; with no argument it covers the discovered agents and MCP servers). It plans fixes for this machine or a project only; for other targets, use the `scan` skill.
 2. Read `summary` (`total_items`, `fixable`, `unfixable`) and each `remediation_plan[]` item: `priority`, `package`, `ecosystem`, `current_version`, `fixed_version`, `action`, `max_severity`, `has_kev`, `vulnerabilities`, `affected_agents`, `exposed_credentials` and `ranking_rationale`.
 3. Present the plan as a short ordered list by `priority`. Group by the change to make (one package upgrade often clears several CVEs), and for each step give:
    - the exact change, such as `upgrade lodash 4.17.20 -> 4.17.21` and where it is declared
