@@ -43,7 +43,6 @@ Endpoints:
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -69,7 +68,6 @@ from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error
 
 router = APIRouter(tags=["model-keys"])
-_logger = logging.getLogger(__name__)
 
 _READ_DEP = require_authenticated_permission("read")
 _SCAN_DEP = require_authenticated_permission("scan")

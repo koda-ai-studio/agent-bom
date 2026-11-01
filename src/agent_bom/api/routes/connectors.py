@@ -12,7 +12,6 @@ Endpoints:
 from __future__ import annotations
 
 import functools
-import logging
 import re as _re
 from pathlib import Path as _Path
 
@@ -25,7 +24,6 @@ from agent_bom.api.routes.endpoint_connectors import router as endpoint_router
 
 router = APIRouter()
 router.include_router(endpoint_router)
-_logger = logging.getLogger(__name__)
 
 
 # ─── Registry helpers ────────────────────────────────────────────────────────

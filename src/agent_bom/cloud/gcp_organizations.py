@@ -25,7 +25,6 @@ Requires ``google-cloud-resource-manager`` (and optionally
 
 from __future__ import annotations
 
-import logging
 import os
 from typing import Any
 
@@ -39,10 +38,6 @@ from .gcp_inventory import (
     inventory_enabled,
 )
 from .normalization import sanitize_discovery_warning
-
-logger = logging.getLogger(__name__)
-
-_TRUTHY = {"1", "true", "yes", "on"}
 
 # Read-only IAM permissions this discoverer is allowed to exercise. Kept here so
 # the per-run discovery envelope ``permissions_used`` stays honest: the producer

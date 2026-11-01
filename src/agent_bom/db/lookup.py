@@ -10,7 +10,6 @@ same semantics as CLI, image, and OSV scans.
 
 from __future__ import annotations
 
-import logging
 import sqlite3
 from collections import defaultdict
 from contextlib import nullcontext
@@ -26,7 +25,6 @@ from agent_bom.core.versions.osv import comparator_ecosystem as _comparator_ecos
 from agent_bom.core.versions.osv import version_match_state as _version_match_state
 from agent_bom.db.lookup_fixes import LEGACY_RECEIPT_WARNING, UNVERIFIED_RANGE_WARNING, next_window_fix
 
-_logger = logging.getLogger(__name__)
 _LOOKUP_TRACER = get_tracer("agent_bom.db.lookup")
 
 

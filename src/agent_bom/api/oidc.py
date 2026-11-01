@@ -58,37 +58,6 @@ _oidc_failure_lock = threading.Lock()
 _oidc_decode_failures = 0
 
 
-# ── JWKS key cache ──────────────────────────────────────────────────────────────
-
-
-class _JwksCache:
-    """Thread-safe cache for OIDC JWKS (JSON Web Key Sets)."""
-
-    def __init__(self) -> None:
-        self._cache: dict[str, tuple[dict[str, Any], float]] = {}  # url → (jwks, fetched_at)
-        self._lock = threading.Lock()
-
-    def get(self, jwks_uri: str) -> dict[str, Any]:
-        """Return cached JWKS or fetch fresh copy if stale/absent."""
-        with self._lock:
-            entry = self._cache.get(jwks_uri)
-            if entry and (time.monotonic() - entry[1]) < _JWKS_CACHE_TTL:
-                return entry[0]
-
-        # Fetch outside lock to avoid blocking other threads
-        jwks = _fetch_json(jwks_uri)
-        with self._lock:
-            self._cache[jwks_uri] = (jwks, time.monotonic())
-        return jwks
-
-    def invalidate(self, jwks_uri: str) -> None:
-        with self._lock:
-            self._cache.pop(jwks_uri, None)
-
-
-_jwks_cache = _JwksCache()
-
-
 def record_oidc_decode_failure() -> None:
     """Increment the control-plane OIDC decode failure counter."""
     global _oidc_decode_failures

@@ -27,7 +27,6 @@ lands on the last result instead of an empty page.
 
 from __future__ import annotations
 
-import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -43,7 +42,6 @@ from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.rbac import require_authenticated_permission
 
 router = APIRouter(tags=["skills"])
-_logger = logging.getLogger(__name__)
 
 _SCAN_DEP = require_authenticated_permission("scan")
 _READ_DEP = require_authenticated_permission("read")

@@ -165,7 +165,6 @@ with tab_dash:
     agents = result.get("agents", [])
     total_servers = sum(len(a.get("mcp_servers", [])) for a in agents)
     total_pkgs = sum(len(s.get("packages", [])) for a in agents for s in a.get("mcp_servers", []))
-    total_creds = sum(len(s.get("env_keys", [])) for a in agents for s in a.get("mcp_servers", []))
     kev_count = sum(1 for v in all_vulns if v.get("kev"))
 
     col1.metric("Agents", len(agents))

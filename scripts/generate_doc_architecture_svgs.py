@@ -2112,7 +2112,6 @@ _GLYPH_ADVANCE_EM = 0.54
 # why they read as unreadable in the README while being correct at full size.
 # Scaled as far as `_audit_text_fit` allows. The persona band uses two cards per
 # row so commands, outcomes, and proof artifacts retain readable type.
-_ARCHITECTURE_TYPE_SCALE = 1.1
 _PERSONA_TYPE_SCALE = 1.3
 
 

@@ -10,7 +10,6 @@ original registration order.
 from __future__ import annotations
 
 import json
-import logging
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -95,7 +94,6 @@ def _dep(permission: str) -> Any:
 
 
 router = APIRouter(dependencies=[_dep("read")])
-_logger = logging.getLogger(__name__)
 
 # Cap on audit entries pulled into a single signed evidence bundle. When the
 # window holds more than this the bundle marks itself truncated (honest partial

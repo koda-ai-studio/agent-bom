@@ -38,7 +38,6 @@ CFN-020  RDS instance publicly accessible (AWS SEC01, CIS 2.3.2)
 from __future__ import annotations
 
 import json
-import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -72,7 +71,6 @@ from agent_bom.iac.models import IaCFinding
 
 __all__ = ["_SECRET_PATTERNS", "_find_line", "_is_cloudformation", "_load_template", "scan_cloudformation"]
 
-logger = logging.getLogger(__name__)
 
 CfnCheck = Callable[[CfnResource], list[IaCFinding]]
 

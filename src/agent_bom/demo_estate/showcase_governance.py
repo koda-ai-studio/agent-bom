@@ -16,11 +16,8 @@ must not duplicate rows or trample an operator's own blueprints.
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
-
-_logger = logging.getLogger(__name__)
 
 # Marker on every seeded cost row, so a rollover top-up can tell the demo's own
 # spend from an operator's without touching theirs.

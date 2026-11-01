@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 import os
 import stat
 import sys
@@ -28,8 +27,6 @@ except ImportError:  # pragma: no cover - Windows falls back to process locking
     fcntl = None  # type: ignore[assignment]
 
 from agent_bom.security import sanitize_sensitive_payload
-
-logger = logging.getLogger(__name__)
 
 AuditBacklogDestination = Literal["noop", "spillover", "dlq", "dropped"]
 _DEFAULT_MIN_DLQ_BYTES = 1024 * 1024

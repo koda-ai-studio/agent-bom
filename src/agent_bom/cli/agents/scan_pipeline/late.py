@@ -200,28 +200,29 @@ def _scan_datasets(opts: ScanOptions, st: ScanState) -> None:
 
 
 def _scan_training_pipelines(opts: ScanOptions, st: ScanState) -> None:
+    from agent_bom.parsers.training_pipeline import discover_training_files, scan_training_directory, scan_training_pipelines
+
     # ── Step 1l: Training pipeline scan ──────────────────────────────
     # Auto-detect: check project for MLmodel, wandb-metadata.json, pipeline YAML
+    detected_paths = None
     if not opts.skill_only and not opts.no_discover and not opts.training_dirs and opts.project:
         from pathlib import Path as _TPath
 
         _tproj = _TPath(opts.project)
-        _has_training = (
-            list(_tproj.rglob("MLmodel"))[:1] or list(_tproj.rglob("wandb-metadata.json"))[:1] or list(_tproj.rglob("meta.yaml"))[:1]
-        )
-        if _has_training:
+        # One bounded walk shares the scanner's vendor/worktree exclusions.
+        # Reuse its paths below instead of walking the same project again.
+        detected_paths = discover_training_files(_tproj)
+        if detected_paths:
             opts.training_dirs = (opts.project,)
             st.con.print("  [cyan]>[/cyan] Auto-detected training artifacts — scanning...")
 
     if not opts.skill_only and opts.training_dirs:
-        from agent_bom.parsers.training_pipeline import scan_training_directory
-
         all_runs: list = []
         all_serving: list = []
         all_tp_warnings: list[str] = []
         for tdir in opts.training_dirs:
             st.con.print(f"  [cyan]>[/cyan] Scanning for training pipelines in {tdir}...")
-            tp_result = scan_training_directory(tdir)
+            tp_result = scan_training_pipelines(detected_paths) if detected_paths is not None else scan_training_directory(tdir)
             all_runs.extend(tp_result.training_runs)
             all_serving.extend(tp_result.serving_configs)
             all_tp_warnings.extend(tp_result.warnings)
@@ -235,6 +236,7 @@ def _scan_training_pipelines(opts: ScanOptions, st: ScanState) -> None:
                 "training_runs": [r.to_dict() for r in all_runs],
                 "total_runs": len(all_runs),
                 "flagged_count": flagged,
+                "warnings": all_tp_warnings,
             }
             st.scan_sources.append("training_pipelines")
         if all_serving:
