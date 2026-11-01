@@ -87,6 +87,52 @@ def finding_sla_fields(payload: Mapping[str, Any]) -> dict[str, Any]:
     return {"sla_due_at": due, "sla_due_at_source": SLA_POLICY_SOURCE if due is not None else "unavailable", "kev_due_date": kev}
 
 
+# Presentation of the policy source id, shared by the brief route, the MCP
+# ``executive_brief`` tool and the UI (which renders ``sla_policy`` verbatim).
+SLA_POLICY_LABELS: dict[str, str] = {
+    SLA_POLICY_SOURCE: "Severity and KEV policy (v1)",
+    "explicit": "Explicit due date",
+    "unknown": "Unattributed due date",
+    "unavailable": "No deadline derivable",
+}
+#: A deadline this close counts as "due soon" rather than "on track".
+SLA_DUE_SOON_DAYS = 7
+
+
+def sla_policy_label(source: object) -> str:
+    """Display name for a ``sla_due_at_source`` id; unknown ids pass through unchanged."""
+    if not isinstance(source, str) or not source.strip():
+        return "Not recorded"
+    return SLA_POLICY_LABELS.get(source, source)
+
+
+def sla_status(due_at: object, *, now: datetime | None = None) -> str:
+    """``overdue`` / ``due_soon`` / ``on_track`` from the deadline alone, ``unknown`` when there is none."""
+    due = _parse_iso(due_at)
+    if due is None:
+        return "unknown"
+    from datetime import timezone
+
+    current = now or datetime.now(timezone.utc)
+    if due.tzinfo is None:
+        due = due.replace(tzinfo=timezone.utc)
+    if due < current:
+        return "overdue"
+    # Whole days, so a deadline on the seventh calendar day is still "due soon".
+    if (due - current).days <= SLA_DUE_SOON_DAYS:
+        return "due_soon"
+    return "on_track"
+
+
+def annotate_sla_presentation(row: Mapping[str, Any], *, now: datetime | None = None) -> dict[str, Any]:
+    """Return ``row`` plus ``sla_status`` and ``sla_policy``; the raw ISO deadline stays for machines."""
+    return {
+        **row,
+        "sla_status": sla_status(row.get("sla_due_at"), now=now),
+        "sla_policy": sla_policy_label(row.get("sla_due_at_source")),
+    }
+
+
 def carry_finding_sla(payload: Mapping[str, Any], previous: Mapping[str, Any]) -> dict[str, Any]:
     """Keep existing explicit or unattributed dates before ledger replacement."""
     merged = dict(payload)
