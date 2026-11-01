@@ -64,6 +64,8 @@ def local_module_shadows(root_name: str, importing_file: Path, project_root: Pat
         relative = importing_file.resolve().relative_to(project_root.resolve())
         directories = [project_root / parent for parent in relative.parents]
     except (ValueError, OSError):
+        # Keep the default fallback (importing_file.parent) when paths cannot
+        # be resolved/relativized (e.g., file outside project root or FS errors).
         pass
     for directory in dict.fromkeys(directories):
         if (directory / f"{first}.py").is_file():
