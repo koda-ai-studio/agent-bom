@@ -4256,7 +4256,8 @@ def test_graph_html_export():
     report = AIBOMReport()
     with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as f:
         export_graph_html(report, [], f.name)
-        content = open(f.name).read()
+        with open(f.name) as stream:
+            content = stream.read()
     assert "<!DOCTYPE html>" in content
     assert "cytoscape" in content
     assert "agent-bom Supply Chain Graph" in content

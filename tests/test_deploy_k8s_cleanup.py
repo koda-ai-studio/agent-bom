@@ -1,6 +1,33 @@
 from __future__ import annotations
 
+import io
+
+import pytest
+
 from agent_bom.deploy_k8s_cleanup import CleanupOperation, build_cleanup_operations, execute_cleanup
+
+
+@pytest.mark.parametrize("fail_read", [False, True])
+def test_serviceaccount_file_is_closed_after_read(monkeypatch, fail_read):
+    from agent_bom.deploy_k8s_cleanup import _read_serviceaccount_file
+
+    class ServiceAccountFile(io.StringIO):
+        def read(self, *args, **kwargs):
+            if fail_read:
+                raise OSError("fixture read failure")
+            return super().read(*args, **kwargs)
+
+    stream = ServiceAccountFile("  fixture-token\n")
+    monkeypatch.setattr("builtins.open", lambda *args, **kwargs: stream)
+    try:
+        if fail_read:
+            with pytest.raises(OSError, match="fixture read failure"):
+                _read_serviceaccount_file("fixture-token-file")
+        else:
+            assert _read_serviceaccount_file("fixture-token-file") == "fixture-token"
+        assert stream.closed
+    finally:
+        stream.close()
 
 
 def test_build_cleanup_operations_orders_external_secret_then_generated_secret_cleanup():
