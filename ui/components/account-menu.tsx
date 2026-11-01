@@ -7,15 +7,11 @@ import { useAuthState } from "@/components/auth-provider";
 import { ThemePreferenceControl } from "@/components/theme-toggle";
 import { sessionPresentation } from "@/lib/session-presentation";
 import { isStaticDemo } from "@/lib/static-demo";
-import { isDemoEstate } from "@/lib/deployment-context";
-import { useDeploymentContext } from "@/hooks/use-deployment-context";
-
-export function AccountMenu() {
+/** ``demoEstate`` comes from the nav's posture-counts read so the menu never issues a second one. */
+export function AccountMenu({ demoEstate = false }: { demoEstate?: boolean }) {
   const { session, loading, signOut, hasCapability } = useAuthState();
-  const { counts } = useDeploymentContext();
   const panel = useRef<HTMLDetailsElement>(null);
   const trigger = useRef<HTMLElement>(null);
-  const demoEstate = isDemoEstate(counts);
   const identity = sessionPresentation(session, { demoEstate });
   const displayName = loading ? "Checking session…" : session ? identity.name : "Offline";
   const close = () => { if (panel.current) panel.current.open = false; };

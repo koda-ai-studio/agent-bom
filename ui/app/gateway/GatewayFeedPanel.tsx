@@ -98,7 +98,7 @@ function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSea
         setEvents(rows.current);
         setLatest(page.latest_ordinal);
         setState("snapshot");
-        if (page.events.length && Date.now() - notifiedAt > 3000) { notifiedAt = Date.now(); notify.current?.(); }
+        if (page.events.length && nowForRelativeTime() - notifiedAt > 3000) { notifiedAt = nowForRelativeTime(); notify.current?.(); }
       } catch (error) {
         if (controller.signal.aborted) return;
         const kind = error instanceof ActivityStreamError ? error.kind : "transport";
