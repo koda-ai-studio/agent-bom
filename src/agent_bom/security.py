@@ -226,6 +226,18 @@ _STRUCTURED_EDGE_ID_RE = re.compile(r"^[^\s>]+->[A-Za-z][A-Za-z0-9_.:-]*->[^\s>]
 _COVERAGE_RECEIPT_RE = re.compile(r"^filesystem-discovery:[0-9a-f]{16}:[a-z_]{1,64}$")
 
 
+# Manifest / scan-note receipt (``coverage.py``): ``<ecosystem>:<path>`` or ``<ecosystem>-note:<path>``.
+_PATH_RECEIPT_RE = re.compile(r"^([a-z][a-z0-9_.-]{0,40}):(.+)$")
+
+
+def _path_receipt_label(value: str) -> str | None:
+    """``pypi-note:/abs/requirements.txt`` -> ``pypi-note:<path:requirements.txt>``; ``None`` for other shapes."""
+    match = _PATH_RECEIPT_RE.fullmatch(value)
+    if match is None or not _looks_like_path_value(match.group(2)):
+        return None
+    return f"{match.group(1)}:{sanitize_path_label(match.group(2))}"
+
+
 def _is_structured_coordinate(key_text: str, value: str) -> bool:
     """A deterministic identifier whose punctuation and length would trip the entropy detector.
 
@@ -755,6 +767,8 @@ def _sanitize_sensitive_string(value: str, *, key: object | None, max_str_len: i
     # Graph edge ids and coverage receipts are coordinates, not opaque credentials.
     if _is_structured_coordinate(key_text, value):
         return sanitize_text(value, max_len=max_str_len)
+    if key_text == "release" and (receipt := _path_receipt_label(value)) is not None:
+        return receipt
     if "://" in value:
         return sanitize_text(value, max_len=max_str_len)
     if key is not None and _key_looks_like_path(key) and _looks_like_path_value(value):

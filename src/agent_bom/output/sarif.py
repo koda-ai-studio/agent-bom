@@ -135,7 +135,7 @@ def _exposure_related_locations(exposure_path: dict[str, Any]) -> list[dict]:
                 "id": index,
                 "logicalLocations": [
                     {
-                        "fullyQualifiedName": sanitize_advisory_text("title", hop, fallback=hop),
+                        "fullyQualifiedName": sanitize_advisory_text("node_id", hop, fallback=hop),
                         "kind": sanitize_advisory_text("title", kind or "node", fallback="node"),
                     }
                 ],
