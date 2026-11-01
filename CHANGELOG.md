@@ -7,6 +7,21 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- First-run scan accuracy: private npm workspace members are no longer reported as typosquats or resolved against the public registry; a local `agents/` package is no longer reported as the OpenAI Agents SDK; an unresolvable manifest records a coverage warning instead of aborting the scan with exit 0.
+- JSON reports keep structural identifiers (`exposure_path_id`, `package_purl`, `server_ref`) for scoped npm packages; credential-pattern redaction still applies to every value.
+- Image scans record suppressed unfixed OS-package findings in the summary and never print a clean verdict over them.
+- MCP server: `blast_radius`, `should_i_deploy` and `exposure_paths` consult the current session's scan result before persisted evidence or host discovery.
+- MCP introspection and live audit detect hidden-instruction tool-description poisoning (hidden tags, "do not tell the user", credential-file paths, exfiltration URLs, tool shadowing, base64 blobs) and introspect servers launched by a verified absolute launcher path; skipped servers are recorded with the reason.
+- GitHub Action summary reports the posture grade and path counts recorded in the report instead of recomputing them.
+- One canonical tagline across `--version`, `--help`, the Docker label, Helm chart, GitHub Action, registry manifests, skills and the social preview; the release consistency check enforces it and the MCP registry description length.
+- Browser credential binding regression coverage, closed cleanup and action result readers, failed-scan posture in console summaries, GCP unresolved-boundary evidence, graph accuracy on validated findings and consistent NVD score normalization across sync paths (#6135–#6140).
+
+### Changed
+- README leads with why an AI supply-chain BOM matters, the standards findings map to, and a four-row offerings table; competitor names are removed from README and docs prose.
+
 ## [0.112.1] - 2026-10-31
 
 ### Highlights

@@ -15,7 +15,7 @@ For the seven-layer AI-BOM evidence map, see
 | **Kubernetes** | Namespace enumeration, pod MCP detection |
 | **Cloud** | AWS, Snowflake, Azure ML, GCP Vertex AI, Databricks, HuggingFace, Ollama |
 | **AI observability** | LangSmith, Langfuse, Braintrust, Arize/Phoenix, Trubrics, Helicone SDK inventory |
-| **Code** | SAST via Semgrep with CWE mapping |
+| **Code** | Native AST analysis plus imported SARIF from any SAST producer, with CWE mapping |
 
 ## Vendor advisory feeds
 
