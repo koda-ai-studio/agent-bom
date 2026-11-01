@@ -16,7 +16,7 @@ When neither a policy window nor a KEV deadline can be computed the deadline is 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.core.severity import normalize_severity
@@ -111,8 +111,6 @@ def sla_status(due_at: object, *, now: datetime | None = None) -> str:
     due = _parse_iso(due_at)
     if due is None:
         return "unknown"
-    from datetime import timezone
-
     current = now or datetime.now(timezone.utc)
     if due.tzinfo is None:
         due = due.replace(tzinfo=timezone.utc)

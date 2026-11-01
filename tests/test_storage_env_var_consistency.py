@@ -25,8 +25,20 @@ def _clear(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(name, raising=False)
 
 
+def test_sqlite_only_install_refuses_the_alias_before_any_store_and_without_importing_the_driver(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+
+    monkeypatch.setenv("AGENT_BOM_DB", PG)
+    monkeypatch.setattr(factory, "_postgres_driver_available", lambda: False)
+    monkeypatch.setitem(sys.modules, "psycopg", None)  # an import attempt would raise ImportError, not ValueError
+    with pytest.raises(ValueError, match="SQLite.*filesystem") as excinfo:
+        validate_configured_sqlite_path()
+    assert "agent-bom[postgres]" in str(excinfo.value) and "agent_bom_app" not in str(excinfo.value)
+
+
 def test_every_selector_agrees_on_the_alias(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_BOM_DB", PG)
+    monkeypatch.setattr(factory, "_postgres_driver_available", lambda: True)
     assert postgres_deployment_configured() is True
     assert postgres_configured() is True
     assert storage_selection_from_env().postgres is True
