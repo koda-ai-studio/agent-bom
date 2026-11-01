@@ -20,6 +20,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Browser credential binding regression coverage, closed cleanup and action result readers, failed-scan posture in console summaries, GCP unresolved-boundary evidence, graph accuracy on validated findings and consistent NVD score normalization across sync paths (#6135–#6140).
 
 ### Changed
+- npm lockfile parsing no longer emits workspace members or their `node_modules` symlinks as packages; a member's dependencies carry `parent_package=<member>` at depth 1 instead of appearing as root packages.
 - README leads with why an AI supply-chain BOM matters, the standards findings map to, and a four-row offerings table; competitor names are removed from README and docs prose.
 
 ## [0.112.1] - 2026-10-31
