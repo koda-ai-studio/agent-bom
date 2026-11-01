@@ -582,7 +582,8 @@ def code_cmd(path: str, output_format: str, output_path: Optional[str], quiet: b
         con.print(f"\n[bold]Flow Findings ({len(result.flow_findings)}):[/bold]")
         for finding in result.flow_findings[:8]:
             path = " -> ".join(finding.call_path) if finding.call_path else finding.sink
-            con.print(f"  {finding.file_path}:{finding.line_number}  [red]{finding.title}[/red]")
+            cwe = f" {', '.join(finding.cwe_ids)}" if finding.cwe_ids else ""
+            con.print(f"  {finding.file_path}:{finding.line_number}  [red]{finding.severity.upper()}[/red] {finding.title}[dim]{cwe}[/dim]")
             con.print(f"    [dim]{path}[/dim]")
 
     stats = result.to_dict()["stats"]

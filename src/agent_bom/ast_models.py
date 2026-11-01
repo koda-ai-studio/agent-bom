@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 from dataclasses import dataclass, field
 
+from agent_bom.ast_flow_scoring import flow_cwe_ids, flow_severity
+
 
 @dataclass
 class ExtractedPrompt:
@@ -72,7 +74,11 @@ class ControlFlowEdge:
 
 @dataclass
 class FlowFinding:
-    """A lightweight control-flow or inter-procedural finding."""
+    """A lightweight control-flow or inter-procedural finding.
+
+    ``severity`` and ``cwe_ids`` default from the category (and sink) via
+    :mod:`agent_bom.ast_flow_scoring`, so every consumer ranks the row the same way.
+    """
 
     category: str
     title: str
@@ -83,6 +89,14 @@ class FlowFinding:
     sink: str
     call_path: list[str] = field(default_factory=list)
     source: str = ""
+    severity: str = ""
+    cwe_ids: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not self.severity:
+            self.severity = flow_severity(self.category)
+        if not self.cwe_ids:
+            self.cwe_ids = flow_cwe_ids(self.category, self.sink)
 
 
 @dataclass
@@ -256,6 +270,8 @@ class ASTAnalysisResult:
                     "sink": finding.sink,
                     "call_path": finding.call_path,
                     "source": finding.source,
+                    "severity": finding.severity,
+                    "cwe_ids": list(finding.cwe_ids),
                 }
                 for finding in self.flow_findings
             ],

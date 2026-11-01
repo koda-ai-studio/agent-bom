@@ -59,18 +59,24 @@ def _line_number(value: object) -> int:
     return max(line, 1)
 
 
-def _add_rule(rules: dict[str, dict[str, Any]], rule_id: str, title: str, severity: str, category: str) -> None:
+def _add_rule(
+    rules: dict[str, dict[str, Any]], rule_id: str, title: str, severity: str, category: str, cwe_ids: list[str] | None = None
+) -> None:
     if rule_id in rules:
         return
     sev = severity.lower()
+    properties: dict[str, Any] = {
+        "security-severity": _SECURITY_SEVERITY.get(sev, "4.0"),
+        "category": _safe_text(category, max_len=80),
+    }
+    tags = [_safe_text(cwe, max_len=20) for cwe in cwe_ids or [] if str(cwe).startswith("CWE-")]
+    if tags:
+        properties["tags"] = tags
     rules[rule_id] = {
         "id": rule_id,
         "shortDescription": {"text": _safe_text(title, max_len=120) or rule_id},
         "defaultConfiguration": {"level": _LEVELS.get(sev, "warning")},
-        "properties": {
-            "security-severity": _SECURITY_SEVERITY.get(sev, "4.0"),
-            "category": _safe_text(category, max_len=80),
-        },
+        "properties": properties,
     }
 
 
@@ -125,7 +131,8 @@ def convert(data: dict[str, Any]) -> dict[str, Any]:
         line = _line_number(finding.get("line"))
         severity = _severity(finding.get("severity"))
         level = _LEVELS.get(severity, "warning")
-        _add_rule(rules, rule_id, title, severity, category)
+        cwe_ids = finding.get("cwe_ids") if isinstance(finding.get("cwe_ids"), list) else None
+        _add_rule(rules, rule_id, title, severity, category, cwe_ids)
         results.append(_result(rule_id, level, detail, file_path, line, f"{rule_id}:{file_path}:{line}:{detail}"))
 
     ai_components = data.get("ai_components") or {}

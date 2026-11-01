@@ -601,6 +601,7 @@ def _unified_finding_rule(finding: Finding, rule_id: str, level: str, security_s
             "security-severity": security_severity,
             "source": finding.source.value,
             "finding_type": finding.finding_type.value,
+            **({"tags": list(dict.fromkeys(finding.cwe_ids))} if finding.cwe_ids else {}),
         },
     }
     help_body = advisory_help(
@@ -710,7 +711,18 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
         level, security_severity = _sarif_severity(finding.severity or "medium")
         if catalog.claim_rule(rule_id):
             catalog.rules.append(_unified_finding_rule(finding, rule_id, level, security_severity))
+        elif finding.cwe_ids:
+            _merge_rule_cwe_tags(catalog.rules, rule_id, finding.cwe_ids)
         catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence))
+
+
+def _merge_rule_cwe_tags(rules: list[dict[str, Any]], rule_id: str, cwe_ids: list[str]) -> None:
+    """A shared rule (one SAST category, several sinks) lists every CWE its results carry."""
+    for rule in reversed(rules):
+        if rule.get("id") == rule_id:
+            tags = rule.setdefault("properties", {}).setdefault("tags", [])
+            tags.extend(cwe for cwe in cwe_ids if cwe not in tags)
+            return
 
 
 def _sarif_invocation(scan_run: ScanRun) -> dict[str, Any]:
