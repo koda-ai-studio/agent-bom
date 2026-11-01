@@ -12,6 +12,7 @@ from agent_bom.cli.agents.scan_pipeline.state import ScanState
 from agent_bom.core.vex_policy import active_blast_radii
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.scanners import IncompleteScanError, consume_scan_warnings
+from agent_bom.scanners.package_scan import no_fixable_vulnerabilities_line, suppressed_unfixed_os_findings
 from agent_bom.scanners.state import peek_coverage_warnings
 from agent_bom.scanners.supplied_findings import build_supplied_findings
 
@@ -161,6 +162,8 @@ def _print_scan_verdict(opts: ScanOptions, st: ScanState, input_vulnerability_co
             )
         else:
             st.con.print("  [green]✓[/green] Offline scan complete: no known vulnerabilities found in local data")
+    elif suppressed := suppressed_unfixed_os_findings():
+        st.con.print(f"  [yellow]⚠[/yellow] {no_fixable_vulnerabilities_line(suppressed)}")
     else:
         st.con.print("  [green]✓[/green] No known vulnerabilities found")
 

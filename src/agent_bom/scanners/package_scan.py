@@ -510,7 +510,31 @@ def _suppress_unfixed_findings(scannable: list[Package]) -> int:
             f"  [dim]Suppressed {unfixed_suppressed} unfixed OS-package finding(s) "
             f"(no-dsa/won't-fix) — set AGENT_BOM_INCLUDE_UNFIXED=1 to include[/dim]"
         )
+        # One receipt per scan, cumulative across scanner batches, so a clean
+        # verdict never hides that a policy removed findings.
+        from agent_bom.coverage import record_scan_note
+
+        record_scan_note(
+            ecosystem="os-packages",
+            path="unfixed-advisories",
+            reason="unfixed_os_suppressed",
+            detail=_unfixed_suppression_note(suppressed_unfixed_os_findings()),
+            replace=True,
+        )
     return unfixed_suppressed
+
+
+def suppressed_unfixed_os_findings() -> int:
+    """Unfixed OS-package findings the default policy removed in this scan so far."""
+    from agent_bom.scanners.state import peek_scan_performance
+
+    return int(peek_scan_performance().get("unfixed_os_findings_suppressed", 0))
+
+
+def _unfixed_suppression_note(count: int) -> str:
+    return (
+        f"{count} unfixed OS-package finding(s) (no-dsa/won't-fix) suppressed by default; set AGENT_BOM_INCLUDE_UNFIXED=1 to include them"
+    )
 
 
 async def scan_packages(
@@ -573,8 +597,18 @@ def _print_vulnerability_summary(total_vulns: int, findings_count: int, *, agent
         run = effective_scan_run(SimpleNamespace(agents=agents or [], coverage_warnings=peek_coverage_warnings()))
         if run.outcome is not ScanOutcome.COMPLETE or peek_scan_warnings():
             console.print("  [yellow]No vulnerabilities confirmed; coverage gaps limit this assessment[/yellow]")
+        elif suppressed := suppressed_unfixed_os_findings():
+            console.print(f"  [yellow]{no_fixable_vulnerabilities_line(suppressed)}[/yellow]")
         else:
             console.print("  [green]✓ No known vulnerabilities found[/green]")
+
+
+def no_fixable_vulnerabilities_line(suppressed: int) -> str:
+    """Console verdict for a scan whose only findings were policy-suppressed unfixed OS advisories."""
+    return (
+        f"No fixable vulnerabilities found; {suppressed} unfixed OS-package finding(s) suppressed "
+        f"(set AGENT_BOM_INCLUDE_UNFIXED=1 to include)"
+    )
 
 
 def _package_ai_risk_context(pkg: Package, exposed_creds: list[str], exposed_tools: list, phantom_tools: list) -> str | None:

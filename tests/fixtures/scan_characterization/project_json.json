@@ -2062,6 +2062,7 @@
    "critical_unified_findings": 0,
    "high_unified_findings": 0,
    "installed_unconfigured_agents": 0,
+   "suppressed_unfixed_os_findings": 0,
    "suppressed_vulnerabilities": 0,
    "total_agents": 1,
    "total_findings": 0,
