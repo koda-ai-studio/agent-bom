@@ -16,7 +16,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Iterable
 
-from agent_bom.graph.builder import _package_node_id_from_parts, build_unified_graph_from_report
+from agent_bom.graph import builder as _builder
+from agent_bom.graph.builder import _package_node_id_from_parts
 from agent_bom.graph.dependency_reach import compute_dependency_reach
 
 if TYPE_CHECKING:
@@ -76,7 +77,9 @@ def apply_dependency_reachability_to_blast_radii(
             from agent_bom.output.graph_evidence import graph_evidence_sections
 
             report = AIBOMReport(agents=agents, blast_radii=blast_radii, scan_id="reachability-scratch")
-            graph = build_unified_graph_from_report(graph_evidence_sections(report))
+            # Resolve through the module at call time so a patched builder is
+            # honoured everywhere and never captured by a late first import.
+            graph = _builder.build_unified_graph_from_report(graph_evidence_sections(report))
             reach = compute_dependency_reach(graph)
         else:
             reach = reachability_report

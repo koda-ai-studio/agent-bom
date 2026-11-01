@@ -152,7 +152,7 @@ def test_precomputed_reachability_skips_a_second_graph_projection(monkeypatch, r
     def fail_if_rebuilt(*_args, **_kwargs):
         raise AssertionError("dependency reachability rebuilt the report graph")
 
-    monkeypatch.setattr("agent_bom.graph.blast_reach.build_unified_graph_from_report", fail_if_rebuilt)
+    monkeypatch.setattr("agent_bom.graph.builder.build_unified_graph_from_report", fail_if_rebuilt)
 
     stamped = apply_dependency_reachability_to_blast_radii(
         blast_radii,
