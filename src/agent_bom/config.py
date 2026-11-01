@@ -609,13 +609,10 @@ FINDINGS_APPROXIMATE_TOTAL_THRESHOLD = _int("AGENT_BOM_FINDINGS_APPROXIMATE_TOTA
 # MaxBodySizeMiddleware. 0 disables the floor entirely (escape hatch
 # for legitimate slow clients in restricted networks).
 API_BODY_MIN_BPS = _int("AGENT_BOM_BODY_MIN_BPS", 256)
-# Per-report upload budget for POST /v1/results/push, measured after gzip decoding.
-# Sized for the advertised 10k-package estate (154 MB raw, 8.7 MB gzipped, measured
-# 2026-11-01) with headroom; gzip bodies are also capped by expansion ratio so a
-# decompression bomb is refused long before this budget. Other API bodies keep 10 MiB.
+# Decoded upload budget for POST /v1/results/push: the 10k-package estate measured 154 MB raw
+# (8.7 MB gzipped) on 2026-11-01; gzip expansion is capped separately. Other bodies keep 10 MiB.
 API_RESULT_PUSH_MAX_BYTES = _int("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES", 256 * 1024 * 1024)
-# Collector report pushes are gzip-compressed by default (control planes decode them
-# since #5193, 2026-09-10); set to 0 only for a receiver that predates that.
+# Pushes are gzip-compressed by default; 0 only for a receiver older than #5193 (2026-09-10).
 PUSH_GZIP = _bool("AGENT_BOM_PUSH_GZIP", True)
 
 
