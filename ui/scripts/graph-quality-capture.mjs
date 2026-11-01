@@ -122,7 +122,10 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
           await page.keyboard.press("Enter");
           await expect(page.getByLabel("Relationship details", { exact: true })).toBeVisible();
           await expect(page.getByLabel("Relationship summary")).toBeVisible();
+          if (viewport.width < 640) await expect(page.getByRole("dialog", { name: "Relationship details", exact: true })).toHaveCSS("opacity", "1");
           await page.screenshot({ path: path.join(output, `${key}-edge.png`) });
+          await page.getByLabel("Relationship summary").getByText("Still unknown", { exact: true }).scrollIntoViewIfNeeded();
+          await page.screenshot({ path: path.join(output, `${key}-edge-unknown.png`) });
         }
       }
       results.push({ key, elapsedMs: Math.round(performance.now() - started), audit, geometry, errors, evidence: await page.getByLabel("Visible relationship evidence").textContent() });
