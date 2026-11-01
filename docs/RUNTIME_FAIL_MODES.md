@@ -311,6 +311,16 @@ misconfigured server entries. They confer no isolation: a recognized launcher
 The execution control for MCP servers is container isolation —
 `agent_bom.proxy_sandbox` via `--isolate` (see `docs/MCP_SECURITY_MODEL.md`).
 
+The check accepts a bare launcher name from the allowlist, or an absolute path
+(`/opt/project/.venv/bin/python`, as desktop-client configs write it) whose
+basename is a known launcher when the file — symlinks followed — exists, is a
+regular executable that is not world-writable, sits in a non world-writable
+directory (sticky bit included, so `/tmp` never qualifies) and, for a symlink,
+resolves to a launcher name or package-manager shim (`python3.13`,
+`npx-cli.js`). Relative paths, `..` segments, directories and anything else are
+rejected; the rejected server is recorded as `security_blocked` with a
+`launcher_rejected` coverage warning so a live audit never skips it silently.
+
 ## Gateway settings at startup
 
 `agent-bom gateway serve --fleet-enforcement enforce` blocks quarantined
