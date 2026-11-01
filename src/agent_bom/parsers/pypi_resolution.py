@@ -22,7 +22,7 @@ from packaging.markers import Marker, UndefinedComparison, UndefinedEnvironmentN
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.utils import canonicalize_name
-from packaging.version import Version
+from packaging.version import InvalidVersion, Version
 
 from agent_bom.core.settings import env_float
 from agent_bom.http_client import OfflineModeError, create_sync_client, sync_request_with_retry
@@ -185,9 +185,25 @@ class _Index:
 
 
 def _pick(project: _Project, spec: SpecifierSet) -> str | None:
+    """Choose a release and return it under the key the registry uses for it.
+
+    PyPI keys ``releases`` by the string the publisher uploaded (``3.2.3-2``),
+    while the version comparison yields the PEP 440 normal form
+    (``3.2.3.post2``); every later lookup must use the registry's own key.
+    """
     candidates = {v: r for v, r in project.releases.items() if _supports_target(r)}
     resolved = _resolve_pip_version(str(spec), candidates)
-    return None if resolved == "unknown" else resolved
+    if resolved == "unknown":
+        return None
+    if resolved in candidates:
+        return resolved
+    for key in candidates:
+        try:
+            if str(Version(key)) == resolved:
+                return key
+        except InvalidVersion:
+            continue
+    return None
 
 
 def _applies(marker: Marker | None, extras: set[str]) -> bool:
@@ -279,7 +295,8 @@ class _Round:
         requires = self.index.requires.get((name, version))
         project = self.index.projects.get(name)
         if requires is None:
-            if "" in todo and project is not None and not project.releases[version]["wheel"]:
+            release = project.releases.get(version) if project is not None else None
+            if "" in todo and project is not None and not (release or {}).get("wheel"):
                 self._fail(name, f"{version} publishes no dependency metadata (sdist only; not built)")
             return []
         children = []

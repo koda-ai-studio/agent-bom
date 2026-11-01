@@ -6,6 +6,7 @@ import { Activity, RefreshCw } from "lucide-react";
 import { useAuthState } from "@/components/auth-provider";
 import { PRODUCER_EVIDENCE_HINT } from "@/lib/gateway-feed";
 import { ActivityStreamError, gatewayActivityPage, mergeActivity, streamGatewayActivity, type GatewayActivity, type ActivityPage } from "@/lib/gateway-activity";
+import { gatewayFeedSnapshot } from "@/lib/gateway-feed-snapshot";
 
 
 import { ActivityRows } from "./GatewayActivityRows";
@@ -21,17 +22,21 @@ const messages = {
   auth: "Sign in with permission to read gateway activity.",
   unavailable: "Durable activity is unavailable. The last complete batch is preserved.",
   invalid: "Activity response could not be verified. The last complete batch is preserved.",
+  snapshot: "Retained feed snapshot, refreshed every 15 seconds. Live streaming needs a signed-in session; this deployment allows anonymous read access.",
 };
 type StreamState = keyof typeof messages;
+const SNAPSHOT_REFRESH_MS = 15_000;
 
 type FeedProps = { onActivity?: (() => void) | undefined; preview?: boolean; initialFilter?: string; initialSearch?: string };
 
 export function GatewayFeedPanel({ onActivity, preview = false, initialFilter = "", initialSearch = "" }: FeedProps) {
   const { session } = useAuthState();
-  return <ActivityFeed key={`${session?.tenant_id ?? ""}:${session?.subject ?? ""}`} onActivity={onActivity} preview={preview} initialFilter={initialFilter} initialSearch={initialSearch} tenantId={session?.tenant_id ?? undefined} />;
+  // The ledger stream refuses anonymous sessions by design; a no-auth deployment still serves the REST feed.
+  const anonymousRead = session?.auth_required === false;
+  return <ActivityFeed key={`${session?.tenant_id ?? ""}:${session?.subject ?? ""}`} onActivity={onActivity} preview={preview} initialFilter={initialFilter} initialSearch={initialSearch} tenantId={session?.tenant_id ?? undefined} anonymousRead={anonymousRead} />;
 }
 
-function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSearch }: FeedProps & { tenantId: string | undefined }) {
+function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSearch, anonymousRead }: FeedProps & { tenantId: string | undefined; anonymousRead: boolean }) {
   const [events, setEvents] = useState<GatewayActivity[]>([]);
   const [state, setState] = useState<StreamState>("connecting");
   const [filter, setFilter] = useState(initialFilter ?? "");
@@ -74,6 +79,7 @@ function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSea
       } catch (error) {
         if (controller.signal.aborted) return;
         const kind = error instanceof ActivityStreamError ? error.kind : "transport";
+        if (kind === "auth" && anonymousRead) { await snapshot(); return; }
         if (kind !== "transport") { setState(kind); return; }
         failures += 1;
         if (failures > 5) { setState("unavailable"); return; }
@@ -83,9 +89,27 @@ function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSea
         timer = setTimeout(() => void connect(), Math.min(1000 * 2 ** failures, 30000));
       }
     };
+    // Anonymous read-only sessions poll the REST feed the API does serve them.
+    const snapshot = async () => {
+      try {
+        const page = await gatewayFeedSnapshot(controller.signal);
+        if (controller.signal.aborted) return;
+        tenant.current = page.tenant_id;
+        rows.current = mergeActivity(rows.current, page.events);
+        setEvents(rows.current);
+        setLatest(page.latest_ordinal);
+        setState("snapshot");
+        if (page.events.length && nowForRelativeTime() - notifiedAt > 3000) { notifiedAt = nowForRelativeTime(); notify.current?.(); }
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        const kind = error instanceof ActivityStreamError ? error.kind : "transport";
+        setState(kind === "auth" ? "unavailable" : kind === "transport" ? "reconnecting" : kind);
+      }
+      if (!controller.signal.aborted) timer = setTimeout(() => void snapshot(), SNAPSHOT_REFRESH_MS);
+    };
     const start = setTimeout(() => void connect(), 0);
     return () => { clearTimeout(start); clearTimeout(timer); controller.abort(); };
-  }, [epoch, tenantId]);
+  }, [epoch, tenantId, anonymousRead]);
 
   const reconnect = (restart = false) => {
     if (restart) { cursor.current = undefined; rows.current = []; tenant.current = undefined; setEvents([]); setLatest(null); setFrozen(null); }
@@ -120,7 +144,7 @@ function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSea
       </div>
       <div className="flex flex-wrap gap-2">
         {preview ? <Link className="graph-page-action" href={activityHref}>Open live activity</Link> : <button className="graph-page-action" onClick={() => setFrozen(value => value ? null : events)}>{frozen ? `Resume · ${pending} new in buffer` : "Pause view"}</button>}
-        {!preview && <button className="graph-page-action" onClick={() => setHistory(value => !value)}>{history ? "Return to recent activity" : "Browse retained history"}</button>}
+        {!preview && !anonymousRead && <button className="graph-page-action" onClick={() => setHistory(value => !value)}>{history ? "Return to recent activity" : "Browse retained history"}</button>}
         {state === "gap" ? <button className="graph-page-action" onClick={() => reconnect(true)}>Start a new retained window</button> :
           <button className="graph-page-action" onClick={() => reconnect()}><RefreshCw className="h-3 w-3" />Reconnect</button>}
       </div>
@@ -140,7 +164,7 @@ function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSea
       <label className="mb-3 block text-xs text-[var(--text-secondary)]">Search agent, origin, profile, tool or reason
         <input value={search} onChange={event => scope(filter, event.target.value)} className="mt-1 block w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]" placeholder="Filter activity…" />
       </label>
-      {!visible.length && <p className="py-6 text-sm text-[var(--text-secondary)]">{events.length ? "No activity matches this filter." : state === "live" ? "No retained gateway activity yet." : "No verified activity loaded."}</p>}
+      {!visible.length && <p className="py-6 text-sm text-[var(--text-secondary)]">{events.length ? "No activity matches this filter." : state === "live" || state === "snapshot" ? "No retained gateway activity yet." : "No verified activity loaded."}</p>}
       {preview ? <ActivityRows events={visible.slice(0, 5)} /> : <ActivityWindow key={`${filter}:${search}`} events={visible} onFreeze={() => setFrozen(value => value ?? events)} />}
     </>}
     {!preview && <details className="mt-4 text-xs text-[var(--text-secondary)]"><summary className="cursor-pointer">Stream and evidence details</summary><p className="mt-2">Ledger position {latest ?? "unavailable"}. Pausing freezes the view, not collection. History is paged separately; reconnects resume the last complete batch. {PRODUCER_EVIDENCE_HINT}</p></details>}

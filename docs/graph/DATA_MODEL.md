@@ -33,7 +33,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `application` | Application | AI and agents | `app` | 5 / 4001 |  | 2 (+1 demo) |
 | `blueprint` | Blueprint | AI and agents | `orchestration` | 5 / 4001 |  | 1 |
 | `ci_job` | CI/CD Job | Code and supply chain | `ci` | 5 / 4001 |  | 1 (+1 demo) |
-| `cloud_resource` | Cloud Resource | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 20 (+2 demo) |
+| `cloud_resource` | Cloud Resource | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 20 (+3 demo) |
 | `cluster` | Cluster | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 0 (+1 demo) |
 | `code_module` | Code Module | Code and supply chain | `code` | 5 / 4001 |  | 2 |
 | `config_file` | Config File | Code and supply chain | `code` | 5 / 4001 |  | 2 (+1 demo) |
@@ -98,7 +98,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `exposes_cred` | `authority` | inventory | directed | yes | `agent`, `server` | `credential` | 2 | FU, CR | 2 (+1 demo) |
 | `governs` | `governance` | governance | directed | no | `access_policy`, `blueprint`, `policy` | `account`, `agent`, `drift_incident`, `managed_identity`, `org`, `tool` | 10 | — | 3 |
 | `has_permission` | `authority` | identity | directed | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource` (+1 more) | 42 | FU, LT | 5 |
-| `hosted_on` | `dependency` | inventory | directed | yes | `agent`, `container`, `server` | `cloud_resource`, `cluster`, `container`, `fleet` | 12 | — | 4 |
+| `hosted_on` | `dependency` | inventory | directed | yes | `agent`, `container`, `server` | `cloud_resource`, `cluster`, `container`, `fleet` | 12 | — | 4 (+1 demo) |
 | `hosts` | `structural` | inventory | directed | yes | `account`, `cloud_resource`, `environment`, `fleet`, `provider` | `account`, `agent`, `cloud_resource`, `org`, `server` | 25 | — | 2 |
 | `imports` | `dependency` | code_topology | directed | yes | `code_module`, `source_file` | `code_module`, `external_import`, `package` | 6 | — | 0 |
 | `inherits` | `authority` | identity | directed | yes | `group`, `role`, `service_account`, `service_principal`, `user` | `policy`, `role` | 10 | FU | 0 |

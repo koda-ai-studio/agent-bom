@@ -54,6 +54,7 @@ import { AISVSBenchmarkDetail } from "@/components/aisvs-benchmark-detail";
 import { ComplianceNistCatalog } from "@/components/compliance-nist-catalog";
 import { FrameworkIcon } from "@/components/framework-icon";
 import {
+  canonicalFrameworkId,
   complianceFrameworkSummaries,
   complianceScoredTotals,
   controlMatchesQuery,
@@ -131,7 +132,7 @@ function CompliancePageContent() {
   const searchParams = useSearchParams();
   const queryParam = searchParams.get("q") ?? "";
   const scanParam = searchParams.get("scan") ?? "";
-  const frameworkParam = searchParams.get("framework") ?? "";
+  const frameworkParam = canonicalFrameworkId(searchParams.get("framework"));
   const controlParam = searchParams.get("control") ?? "";
   const [data, setData] = useState<ComplianceResponse | null>(null);
   const [mitreCatalog, setMitreCatalog] = useState<FrameworkCatalogMetadata | null>(null);
@@ -528,6 +529,10 @@ function CompliancePageContent() {
           if (f.disabled) return;
           setSelectedFrameworkId(f.id);
           setMobilePane("detail");
+          // Keep the address bar a shareable deep link for the selected framework.
+          const query = new URLSearchParams(window.location.search);
+          query.set("framework", f.id);
+          window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
         }}
         maxHeight="calc(100vh - 22rem)"
         caption="Framework coverage"

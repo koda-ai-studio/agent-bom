@@ -10,13 +10,14 @@ from __future__ import annotations
 import sys
 
 from agent_bom import __version__
+from agent_bom.output.brand_tokens import POSITIONING_SHORT
 
 
 def version_message() -> str:
     """The ``--version`` text, shared with the Click group's version option."""
     return (
         f"agent-bom {__version__}\n"
-        "Open security scanner for AI infrastructure\n"
+        f"{POSITIONING_SHORT}\n"
         f"Python {sys.version.split()[0]} · {sys.platform}\n"
         "Docs:  https://koda-ai-studio.github.io/agent-bom/"
     )

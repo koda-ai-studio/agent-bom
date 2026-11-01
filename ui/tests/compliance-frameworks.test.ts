@@ -185,3 +185,15 @@ it("keeps benchmark collection errors separate from failed controls", () => {
     pass: 1, fail: 2, warn: 3,
   });
 });
+
+describe("framework deep-link slugs", () => {
+  it("resolves API and finding slugs onto the page section ids", async () => {
+    const { canonicalFrameworkId } = await import("@/lib/compliance-frameworks");
+    expect(canonicalFrameworkId("iso-27001")).toBe("iso27001");
+    expect(canonicalFrameworkId("ISO27001")).toBe("iso27001");
+    expect(canonicalFrameworkId("nist")).toBe("nist-ai-rmf");
+    expect(canonicalFrameworkId("soc2")).toBe("soc2");
+    expect(canonicalFrameworkId(" cis ")).toBe("cis");
+    expect(canonicalFrameworkId(null)).toBe("");
+  });
+});

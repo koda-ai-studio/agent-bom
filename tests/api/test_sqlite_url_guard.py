@@ -57,6 +57,8 @@ async def test_lifespan_rejects_remote_url_before_initializing_any_store(monkeyp
 
     monkeypatch.setenv("AGENT_BOM_DB", "postgresql://user:sentinel-password@db.example/production")
     monkeypatch.setattr(sqlite3, "connect", lambda *a, **kw: pytest.fail("Invalid config reached SQLite"))
+    # A SQLite-only installation (no postgres extra), whichever extras this interpreter happens to carry.
+    monkeypatch.setattr("agent_bom.storage.factory._postgres_driver_available", lambda: False)
     with pytest.raises(ValueError, match="SQLite.*filesystem") as exc:
         async with _lifespan(app):
             pass

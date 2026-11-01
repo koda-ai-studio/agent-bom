@@ -143,15 +143,21 @@ def restore_scan_warnings(warnings: list[str], coverage_warnings: list[dict]) ->
             channel.append(warning)
 
 
-def record_coverage_warning(warning: dict) -> None:
-    """Record a structured per-release coverage-gap warning (deduped by release)."""
+def record_coverage_warning(warning: dict, *, replace: bool = False) -> None:
+    """Record a structured per-release coverage-gap warning (deduped by release).
+
+    ``replace`` swaps an earlier entry for the same release instead of keeping
+    it, for receipts whose detail accumulates across scanner batches.
+    """
     captured = _coverage_capture.get()
     if captured is not None:
         captured.append(dict(warning))
     warnings = _coverage_warnings_state()
     release = warning.get("release")
     if any(existing.get("release") == release for existing in warnings):
-        return
+        if not replace:
+            return
+        warnings[:] = [existing for existing in warnings if existing.get("release") != release]
     warnings.append(warning)
 
 

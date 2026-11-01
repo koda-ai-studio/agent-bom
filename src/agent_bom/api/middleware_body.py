@@ -22,6 +22,18 @@ from agent_bom.api.error_envelope import (
 )
 from agent_bom.core.settings import env_raw
 
+#: Decoded/wire ratio above which a gzip push body is treated as a decompression
+#: bomb. Real JSON reports measure ~15-20:1 (154 MB -> 8.7 MB at 10k packages);
+#: zeros reach several thousand to one. Checked only past the warm-up so a small,
+#: highly repetitive but honest report is never refused.
+MAX_GZIP_EXPANSION_RATIO = 100
+GZIP_RATIO_WARMUP_BYTES = 1024 * 1024
+
+PUSH_TOO_LARGE_HINT = (
+    "Split the push into smaller scans (one image, repository or project per run) or raise "
+    "AGENT_BOM_API_RESULT_PUSH_MAX_BYTES on the control plane."
+)
+
 
 class MaxBodySizeMiddleware(BaseHTTPMiddleware):
     """Reject oversized bodies and enforce read deadline + throughput floor (slowloris mitigation).
@@ -75,14 +87,13 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
         path = getattr(request, "scope", {}).get("path", "")
         max_bytes = self._path_limits.get(path, self._max_bytes) if request.method == "POST" else self._max_bytes
 
-        def too_large() -> JSONResponse:
-            return JSONResponse(
-                status_code=413,
-                content={
-                    "detail": f"Request body too large: exceeds the configured upload budget ({max_bytes} bytes)",
-                    "max_bytes": max_bytes,
-                },
-            )
+        push_route = path in self._path_limits and request.method == "POST"
+
+        def too_large(reason: str | None = None) -> JSONResponse:
+            detail = reason or f"Request body too large: exceeds the configured upload budget ({max_bytes} bytes)"
+            if push_route:
+                detail = f"{detail}. {PUSH_TOO_LARGE_HINT}"
+            return JSONResponse(status_code=413, content={"detail": detail, "max_bytes": max_bytes})
 
         encoding = request.headers.get("content-encoding", "identity").strip().lower()
         compressed = encoding == "gzip" and path in self._path_limits and request.method == "POST"
@@ -106,6 +117,11 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+def _expansion_exceeded(decoded_bytes: int, wire_bytes: int) -> bool:
+    """True once the decoded body is past warm-up and inflates beyond the ratio cap."""
+    return decoded_bytes > GZIP_RATIO_WARMUP_BYTES and decoded_bytes > wire_bytes * MAX_GZIP_EXPANSION_RATIO
+
+
 def _append_body_chunk(buffer: io.BytesIO, decoder: Any, max_bytes: int, chunk: bytes) -> bool:
     if decoder is None:
         buffer.write(chunk)
@@ -125,7 +141,7 @@ def _append_body_chunk(buffer: io.BytesIO, decoder: Any, max_bytes: int, chunk: 
 
 
 async def _read_limited_body(
-    self: MaxBodySizeMiddleware, request: StarletteRequest, max_bytes: int, compressed: bool, too_large: Callable[[], JSONResponse]
+    self: MaxBodySizeMiddleware, request: StarletteRequest, max_bytes: int, compressed: bool, too_large: Callable[..., JSONResponse]
 ) -> JSONResponse | None:
     # Drain every body under the same deadline, including clients that
     # provide Content-Length. BytesIO avoids retaining a chunk list plus
@@ -153,6 +169,11 @@ async def _read_limited_body(
                     within_budget = append_chunk(chunk)
                 if not within_budget:
                     return too_large()
+                if decoder is not None and _expansion_exceeded(buffer.tell(), total):
+                    return too_large(
+                        f"Request body refused: gzip compression ratio exceeds {MAX_GZIP_EXPANSION_RATIO}:1, "
+                        "which no genuine scan report reaches"
+                    )
                 now_monotonic = time.monotonic()
                 chunk_history.append((now_monotonic, len(chunk)))
                 if min_bps > 0 and total >= warmup and (now_monotonic - start_monotonic) >= window:

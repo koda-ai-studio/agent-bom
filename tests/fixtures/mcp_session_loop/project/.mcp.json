@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "remote-bridge": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@0.1.15", "https://mcp.example.test/sse"],
+      "env": {"AUTH_TOKEN": "${MCP_TOKEN}"}
+    }
+  }
+}

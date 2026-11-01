@@ -167,6 +167,9 @@ class SDKPattern:
     package_name: str  # package manager name for CVE linking
     ecosystem: str  # pypi, npm, cargo, go, maven, nuget, rubygems
     language: str  # python, javascript, java, go, rust, ruby
+    # Python import root the regex matches; set when a same-named local module
+    # could shadow the SDK and the match must be backed by a declared package.
+    import_root: str = ""
 
 
 @dataclass(frozen=True)

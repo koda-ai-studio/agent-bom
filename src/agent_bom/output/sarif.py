@@ -10,7 +10,7 @@ from agent_bom.asset_provenance import agent_discovery_provenance, sanitize_disc
 from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
-from agent_bom.evidence.scan_run import ScanOutcome, ScanRun, effective_scan_run
+from agent_bom.evidence.scan_run import ScanRun, effective_scan_run
 from agent_bom.exploitability import exploitability_tags, parse_cvss_vector_signals
 from agent_bom.finding import Finding, FindingType
 from agent_bom.models import AIBOMReport, BlastRadius, Severity
@@ -37,7 +37,9 @@ from agent_bom.output.sarif_common import (
     _ecosystem_from_purl,
     _sanitize_sarif_property,
     _sarif_fingerprint_fields,
+    _sarif_invocation,
     _sarif_location,
+    _sarif_run_properties,
     _sarif_severity,
     _SarifCatalog,
     _to_relative_path,
@@ -137,7 +139,7 @@ def _exposure_related_locations(exposure_path: dict[str, Any]) -> list[dict]:
                 "id": index,
                 "logicalLocations": [
                     {
-                        "fullyQualifiedName": sanitize_advisory_text("title", hop, fallback=hop),
+                        "fullyQualifiedName": sanitize_advisory_text("node_id", hop, fallback=hop),
                         "kind": sanitize_advisory_text("title", kind or "node", fallback="node"),
                     }
                 ],
@@ -713,25 +715,6 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
         catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence))
 
 
-def _sarif_invocation(scan_run: ScanRun) -> dict[str, Any]:
-    return {
-        "executionSuccessful": scan_run.outcome is not ScanOutcome.FAILED,
-        "toolExecutionNotifications": [
-            {
-                "descriptor": {"id": issue.code},
-                "level": issue.severity,
-                "message": {"text": sanitize_text(issue.message) or "Scan execution issue"},
-                "properties": {
-                    "stage": issue.stage,
-                    "source": issue.source,
-                    "affectsCoverage": issue.affects_coverage,
-                },
-            }
-            for issue in scan_run.issues
-        ],
-    }
-
-
 def _build_sarif_run(report: AIBOMReport, catalog: _SarifCatalog, scan_run: ScanRun) -> dict[str, Any]:
     taxonomies = _build_run_taxonomies(catalog.results)
     _compact_taxa_references(catalog.results, taxonomies)
@@ -746,7 +729,7 @@ def _build_sarif_run(report: AIBOMReport, catalog: _SarifCatalog, scan_run: Scan
             }
         },
         "results": catalog.results,
-        "properties": {"scan_outcome": scan_run.outcome.value},
+        "properties": _sarif_run_properties(report, scan_run),
         "invocations": [_sarif_invocation(scan_run)],
         **({"automationDetails": {"id": f"agent-bom/{report.scan_id}"}} if report.scan_id else {}),
     }

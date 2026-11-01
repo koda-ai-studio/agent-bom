@@ -289,7 +289,7 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 - `container` → `cloud_resource`, `cluster`, `container`, `fleet`
 - `server` → `cloud_resource`, `cluster`, `container`, `fleet`
 
-Emitted by: `graph/builder_cloud_lineage.py`, `graph/gpu_paths.py`, `graph/gpu_projection.py`, `graph/hosting_projection.py`
+Emitted by: `graph/builder_cloud_lineage.py`, `graph/gpu_paths.py`, `graph/gpu_projection.py`, `graph/hosting_projection.py`; demo fixtures: `demo_estate/showcase_agent_runtime.py`
 
 ## `hosts`
 
@@ -416,7 +416,7 @@ Class `structural` · directed · not traversable · required evidence `source`,
 
 - `provider` → `agent`
 
-Emitted by: `graph/agent_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`; demo fixtures: `demo_estate/showcase_agent_runtime.py`
 
 ## `possibly_correlates_with`
 

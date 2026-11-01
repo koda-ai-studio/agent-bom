@@ -46,6 +46,16 @@ const nextConfig: NextConfig = {
         priority: 2,
         reuseExistingChunk: true,
       };
+      // The shared pagination bar is likewise below that threshold and was
+      // emitted into ten route chunks.
+      config.optimization.splitChunks.cacheGroups.paginationShared = {
+        test: /[\\/]ui[\\/]components[\\/]pagination-bar\.tsx$/,
+        name: "pagination-bar",
+        minChunks: 2,
+        minSize: 0,
+        priority: 2,
+        reuseExistingChunk: true,
+      };
       // Each icon module is far below the default split size, so routes that
       // share icons would otherwise each carry their own copy.
       config.optimization.splitChunks.cacheGroups.lucideShared = {

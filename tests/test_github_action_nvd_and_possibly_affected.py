@@ -47,7 +47,12 @@ def _sarif(results: list[dict]) -> dict:
         {"id": "CVE-2026-0001", "properties": {"security-severity": "8.1"}},
         {"id": "CVE-2026-109618", "properties": {"security-severity": "9.8"}},
     ]
-    return {"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "agent-bom", "rules": rules}}, "results": results}]}
+    # The scanner writes its own verdict into the run properties; the Action passes it through.
+    properties = {"scan_outcome": "complete", "posture_grade": "A", "exposure_path_count": 0}
+    return {
+        "version": "2.1.0",
+        "runs": [{"tool": {"driver": {"name": "agent-bom", "rules": rules}}, "results": results, "properties": properties}],
+    }
 
 
 _CONFIRMED = {"ruleId": "CVE-2026-0001", "level": "error", "message": {"text": "confirmed"}}

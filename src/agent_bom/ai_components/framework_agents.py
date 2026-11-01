@@ -25,6 +25,7 @@ from agent_bom.ai_components.langgraph_prebuilt import (
     unwrap_compile,
 )
 from agent_bom.ai_components.langgraph_topology import collect_langgraph_topology
+from agent_bom.ai_components.local_shadow import declared_python_packages, is_sdk_import
 from agent_bom.ai_components.project_scope import project_scope
 from agent_bom.ai_components.python_scopes import ScopeIndex
 from agent_bom.ast.source_reader import parse_python_source
@@ -72,6 +73,15 @@ _FRAMEWORK_PRIORITY = (
     "openai-assistants",
     "claude-agents",
 )
+_FRAMEWORK_PACKAGES: dict[str, tuple[str, ...]] = {
+    "langchain": ("langchain", "langchain-core", "langchain-community"),
+    "langgraph": ("langgraph", "langgraph-supervisor", "langgraph-swarm"),
+    "autogen": ("pyautogen", "autogen-agentchat"),
+    "crewai": ("crewai",),
+    "openai-agents": ("openai-agents",),
+    "openai-assistants": ("openai",),
+    "claude-agents": ("claude-agent-sdk", "anthropic"),
+}
 _AGENT_CALLS = {
     "Agent",
     "AssistantAgent",
@@ -109,9 +119,11 @@ def scan_framework_agents(*paths: str | Path) -> list[FrameworkAgent]:
     for path in paths:
         root = Path(path)
         files = [root] if root.is_file() else _iter_python_files(root)
-        scope = project_scope((root if root.is_dir() else root.parent).resolve(), scopes)
+        project_root = root if root.is_dir() else root.parent
+        scope = project_scope(project_root.resolve(), scopes)
+        declared = declared_python_packages(project_root)
         for filepath in files:
-            for agent in _scoped(_scan_python_file(filepath, root if root.is_dir() else filepath.parent), scope):
+            for agent in _scoped(_scan_python_file(filepath, project_root, declared), scope):
                 key = agent.stable_id
                 if key in seen:
                     continue
@@ -152,7 +164,7 @@ def _iter_python_files(root: Path) -> list[Path]:
     return files[:500]
 
 
-def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
+def _scan_python_file(filepath: Path, root: Path, declared: frozenset[str] = frozenset()) -> list[FrameworkAgent]:
     try:
         if filepath.stat().st_size > _MAX_FILE_SIZE:
             return []
@@ -161,7 +173,7 @@ def _scan_python_file(filepath: Path, root: Path) -> list[FrameworkAgent]:
     except (OSError, SyntaxError):
         return []
 
-    imports = _detect_frameworks(tree)
+    imports = _detect_frameworks(tree, filepath, root, declared)
     if not imports:
         return []
 
@@ -288,7 +300,7 @@ def _call_aliases(tree: ast.Module) -> dict[str, str]:
     return aliases
 
 
-def _detect_frameworks(tree: ast.Module) -> set[str]:
+def _detect_frameworks(tree: ast.Module, filepath: Path, root: Path, declared: frozenset[str] = frozenset()) -> set[str]:
     frameworks: set[str] = set()
     for node in ast.walk(tree):
         roots: list[str] = []
@@ -297,7 +309,8 @@ def _detect_frameworks(tree: ast.Module) -> set[str]:
         elif isinstance(node, ast.ImportFrom) and node.module:
             roots.append(node.module.split(".")[0])
         for framework, import_roots in _FRAMEWORK_IMPORTS.items():
-            if any(root in import_roots for root in roots):
+            packages = _FRAMEWORK_PACKAGES.get(framework, ())
+            if any(name in import_roots and is_sdk_import(name, packages, filepath, root, declared) for name in roots):
                 frameworks.add(framework)
     return frameworks
 

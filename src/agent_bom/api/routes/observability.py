@@ -631,7 +631,7 @@ async def receive_push(request: Request, body: PushPayload) -> dict:
     finally:
         if idempotency_heartbeat is not None:
             idempotency_heartbeat.__exit__()
-    return _pushed_job_receipt(job)
+    return _pushed_job_receipt(job, prewarm_tenant=tenant_id)
 
 
 @router.post("/ocsf/ingest", tags=["observability"], status_code=202)

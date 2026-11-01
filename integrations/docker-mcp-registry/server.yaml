@@ -17,8 +17,8 @@ meta:
 about:
   title: agent-bom
   description: >-
-    Open security scanner and graph for agentic infrastructure —
-    discover agents and MCP, map blast radius, and inspect runtime.
+    AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.
+    Discover agents and MCP servers, map blast radius, and inspect runtime.
   icon: https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/brand/logo-dark.svg
 
 source:

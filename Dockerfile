@@ -84,7 +84,7 @@ ARG CURL_CA_BUNDLE
 ARG PIP_CERT
 
 LABEL maintainer="W S <34316639+msaad00@users.noreply.github.com>"
-LABEL description="Security scanner for AI infrastructure — CVEs, blast radius, credential exposure, runtime enforcement"
+LABEL description="AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach."
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.source="https://github.com/koda-ai-studio/agent-bom"
 LABEL org.opencontainers.image.licenses="Apache-2.0"

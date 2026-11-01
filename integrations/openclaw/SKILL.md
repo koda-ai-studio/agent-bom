@@ -1,8 +1,8 @@
 ---
 name: agent-bom
 description: >-
-  Open security scanner for agentic infrastructure — agents, MCP, packages,
-  blast radius, runtime, and trust across MCP discovery, CVEs, SBOMs,
+  AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.
+  Covers MCP discovery, CVEs, blast radius, SBOMs,
   CIS benchmarks (AWS, Azure, GCP, Snowflake), OWASP/NIST/MITRE
   compliance, AISVS v1.0, MAESTRO layer tagging, and vector database
   security checks. Use when the user mentions vulnerability scanning,

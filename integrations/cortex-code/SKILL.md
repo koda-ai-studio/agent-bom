@@ -1,9 +1,9 @@
 ---
 name: agent-bom
 description: >-
-  Open security scanner for agentic infrastructure — agents, MCP, packages,
-  blast radius, runtime, and trust across MCP servers, skills, packages,
-  and agents in Cortex Code.
+  AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.
+  Scan MCP servers, skills, packages and agents from Cortex Code and map
+  blast radius, runtime and trust.
 tools:
   - bash
 ---

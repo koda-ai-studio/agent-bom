@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import string
 
-from agent_bom.parsers.prompt_scanner import normalize_for_matching
+from agent_bom.parsers.prompt_normalize import normalize_for_matching
 from agent_bom.parsers.skill_audit_behavior import _scan_behavioral_risks, _scan_content_risks
 from agent_bom.runtime.text_normalize import hidden_payloads, normalize_text, reveal_hidden_text
 

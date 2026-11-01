@@ -15,15 +15,32 @@ from agent_bom.mcp_tools.graph_reach import graph_reach_impl
 
 _TENANT = Field(description="Tenant scope. Defaults to 'default'.")
 _SCAN = Field(description="Optional historical scan ID. Omit for the current tenant estate.")
+_RESULT_ID = Field(
+    max_length=128,
+    description=(
+        "result_id from a scan response in this session. Answers from that scan result "
+        "instead of the persisted estate graph; omitted, the caller's newest scan result is consulted first."
+    ),
+)
+
+
+def _local_owner() -> str:
+    """Module default; the server replaces it with its caller-bound owner resolver."""
+    return "local"
 
 
 def _register_exposure_paths(
-    mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
+    mcp: Any,
+    read_only: Any,
+    execute_tool_async: Callable[..., Any],
+    truncate_response: Callable[[str], str],
+    result_owner: Callable[[], str] = _local_owner,
 ) -> None:
     @mcp.tool(annotations=read_only, title="Exposure Paths")
     async def exposure_paths(
         tenant_id: Annotated[str, _TENANT] = "default",
         scan_id: Annotated[str | None, _SCAN] = None,
+        result_id: Annotated[str | None, _RESULT_ID] = None,
         limit: Annotated[int, Field(ge=1, le=100, description="Maximum ranked exposure paths to return.")] = 5,
         view: Annotated[
             Literal["summary", "full"],
@@ -54,13 +71,16 @@ def _register_exposure_paths(
         Ranking is ``ranking.order`` (evidence tier, KEV, severity, evidence confidence,
         composite risk, credential count); every path carries ``rank``, ``evidenceTier``,
         ``isKev``, ``severity``, ``evidenceConfidence`` and ``rankingFactors``. Totals,
-        filters and cursor pages match ``/v1/graph/attack-paths``.
+        filters and cursor pages match ``/v1/graph/attack-paths``. With ``result_id`` the
+        paths are that session scan result's, unfiltered and labelled ``session_scan_result``.
         """
         return await execute_tool_async(
             "exposure_paths",
             exposure_paths_impl,
             tenant_id=tenant_id,
             scan_id=scan_id,
+            result_id=result_id,
+            _result_owner=result_owner(),
             limit=limit,
             view=view,
             min_risk=min_risk,
@@ -121,7 +141,11 @@ def _register_cross_vendor_paths(
 
 
 def _register_should_i_deploy(
-    mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
+    mcp: Any,
+    read_only: Any,
+    execute_tool_async: Callable[..., Any],
+    truncate_response: Callable[[str], str],
+    result_owner: Callable[[], str] = _local_owner,
 ) -> None:
     @mcp.tool(annotations=read_only, title="Should I Deploy")
     async def should_i_deploy(
@@ -130,6 +154,7 @@ def _register_should_i_deploy(
         ],
         tenant_id: Annotated[str, _TENANT] = "default",
         scan_id: Annotated[str | None, _SCAN] = None,
+        result_id: Annotated[str | None, _RESULT_ID] = None,
         limit: Annotated[int, Field(ge=1, le=25, description="Maximum matched exposure paths to return.")] = 5,
         warn_risk: Annotated[
             float, Field(ge=0, le=100, description="Path risk (0-100) at or above which the decision becomes warn.")
@@ -147,7 +172,9 @@ def _register_should_i_deploy(
         counts every match and ``maxRisk`` is their highest risk. A KEV finding
         reached from an agent with credential exposure blocks unless ruled
         unlikely. No exact match returns ``not_found``. Unverified reachability
-        never yields allow.
+        never yields allow. The session's scan result (``result_id``, else the
+        caller's newest) is searched before the persisted estate graph and the
+        verdict names its basis.
         """
         return await execute_tool_async(
             "should_i_deploy",
@@ -155,6 +182,8 @@ def _register_should_i_deploy(
             candidate=candidate,
             tenant_id=tenant_id,
             scan_id=scan_id,
+            result_id=result_id,
+            _result_owner=result_owner(),
             limit=limit,
             warn_risk=warn_risk,
             block_risk=block_risk,
@@ -349,14 +378,26 @@ def _register_executive_brief(
 
 
 def register_graph_agent_tools(
-    mcp: Any, *, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
+    mcp: Any,
+    *,
+    read_only: Any,
+    execute_tool_async: Callable[..., Any],
+    truncate_response: Callable[[str], str],
+    result_owner: Callable[[], str] = _local_owner,
 ) -> None:
-    """Register the graph tools whose answers match the dashboard queue and REST reads."""
+    """Register the graph tools whose answers match the dashboard queue and REST reads.
+
+    ``result_owner`` resolves the caller whose session scan results
+    ``exposure_paths`` and ``should_i_deploy`` may read; it is called per tool call.
+    """
+    _register_exposure_paths(mcp, read_only, execute_tool_async, truncate_response, result_owner)
     for register in (
-        _register_exposure_paths,
         _register_executive_brief,
         _register_cross_vendor_paths,
-        _register_should_i_deploy,
+    ):
+        register(mcp, read_only, execute_tool_async, truncate_response)
+    _register_should_i_deploy(mcp, read_only, execute_tool_async, truncate_response, result_owner)
+    for register in (
         _register_graph_reach,
         _register_graph_diff,
         _register_findings_query,

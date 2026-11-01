@@ -1,9 +1,16 @@
 import type { AuthMeResponse } from "@/lib/api";
 import { isStaticDemo } from "@/lib/static-demo";
 
-/** Presentation of verified session fields; never interprets a key as a human. */
-export function sessionPresentation(session: AuthMeResponse | null) {
-  if (isStaticDemo()) {
+/**
+ * Presentation of verified session fields; never interprets a key as a human.
+ * ``demoEstate`` is the server's own signal (posture counts list the
+ * ``demo-estate`` source): an anonymous reader of that seeded estate is a demo
+ * visitor, not a warning about a misconfigured deployment.
+ */
+export function sessionPresentation(session: AuthMeResponse | null, context: { demoEstate?: boolean } = {}) {
+  const method = session?.auth_method ?? "";
+  const anonymous = method === "anonymous" || session?.auth_required === false;
+  if (isStaticDemo() || (anonymous && context.demoEstate)) {
     return {
       name: "Demo visitor",
       method: "Read-only demo",
@@ -11,8 +18,6 @@ export function sessionPresentation(session: AuthMeResponse | null) {
       canSignOut: false,
     };
   }
-  const method = session?.auth_method ?? "";
-  const anonymous = method === "anonymous" || session?.auth_required === false;
   const local = method === "browser_session_dev_key";
   const sharedKey = ["api_key", "static_api_key", "browser_session", "browser_session_static_api_key"].includes(method);
   return {

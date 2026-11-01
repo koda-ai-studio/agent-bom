@@ -9,13 +9,44 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 PRODUCT_NAME = "agent-bom"
-# Capability line for meta/prose — not shown under the nav lockup.
-POSITIONING_SHORT = "Open security scanner for AI infrastructure"
-# Longer meta line for OpenAPI / HTML <title> chrome (matches VISUAL_LANGUAGE).
+# Canonical tagline (pyproject ``description`` without the trailing period). One
+# constant feeds ``--version``, ``--help``, the CLI banner and OpenAPI / HTML chrome;
+# ``scripts/check_release_consistency.py`` asserts the non-Python surfaces match.
 POSITIONING_META = "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach"
+POSITIONING_SHORT = POSITIONING_META
 TAGLINE_CHAIN = "agent → MCP server → packages → CVEs → blast radius"
 DOCS_URL = "https://github.com/koda-ai-studio/agent-bom"
 REPORT_TITLE = f"{PRODUCT_NAME} scan report"
+
+# ``agent-bom --help`` text; the first line is the canonical tagline. Kept here, off the
+# scan path, because it carries the docs URL (see tests/test_plugin_egress_hosts.py).
+CLI_MAIN_HELP = f"""agent-bom — {POSITIONING_SHORT}.
+
+\b
+Maps the full trust chain: agent → MCP server → packages → CVEs → blast radius.
+
+\b
+Quick start:
+  agent-bom quickstart                          print local scan, sample-data, and API/UI next steps
+  agent-bom scan                                 discover + scan local agents and MCP servers
+  agent-bom scan -p .                            scan project manifests plus agent/MCP context
+  agent-bom samples first-run                    write an inspectable sample AI stack
+  agent-bom where                                show MCP discovery paths checked on this machine
+  agent-bom mesh                                 show the live machine-wide agent/MCP topology
+  agent-bom mesh --project .                     show project-local topology only
+  agent-bom skills scan .                        scan skills and instruction files
+  agent-bom skills rescan                        revisit previously cataloged skills
+  agent-bom check flask@2.0.0 --ecosystem pypi  pre-install CVE gate
+  agent-bom image nginx:latest                   container image scan
+  agent-bom iac Dockerfile k8s/ infra/main.tf    IaC scan across one or more paths
+  agent-bom proxy "npx @mcp/server-fs /workspace"  MCP security proxy
+
+\b
+Tip: `agent-bom -h` groups commands by scanning, runtime, MCP, reporting, and governance.
+
+\b
+Docs:  https://koda-ai-studio.github.io/agent-bom/
+"""
 
 # Minimal dark mark for API /docs favicon when package data is unavailable.
 MARK_SVG_DARK = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"
@@ -168,6 +199,7 @@ __all__ = [
     "DOCS_URL",
     "LANE_TOKENS",
     "MARK_SVG_DARK",
+    "CLI_MAIN_HELP",
     "POSITIONING_META",
     "POSITIONING_SHORT",
     "PRODUCT_NAME",

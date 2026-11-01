@@ -13,6 +13,29 @@ import type { ComplianceControl, ComplianceResponse } from "@/lib/api";
  */
 export type ComplianceFrameworkKind = "scored" | "applicability";
 
+/**
+ * Deep links arrive with the API / finding slug (``iso-27001``, ``nist``) while
+ * the page sections keep their historical ids (``iso27001``, ``nist-ai-rmf``).
+ * One alias table resolves either spelling so a link never lands on
+ * "framework unavailable" for a framework the assessment does contain.
+ */
+const FRAMEWORK_ID_ALIASES: Record<string, string> = {
+  "iso-27001": "iso27001",
+  iso_27001: "iso27001",
+  nist: "nist-ai-rmf",
+  nist_ai_rmf: "nist-ai-rmf",
+  "owasp-mcp-top10": "owasp-mcp",
+  "owasp-agentic-top10": "owasp-agentic",
+  "nist-800-53": "nist-800-53",
+  nist_800_53: "nist-800-53",
+};
+
+export function canonicalFrameworkId(raw: string | null | undefined): string {
+  const key = (raw ?? "").trim().toLowerCase();
+  if (!key) return "";
+  return FRAMEWORK_ID_ALIASES[key] ?? key;
+}
+
 export interface ComplianceFrameworkSummary {
   id: string;
   label: string;
