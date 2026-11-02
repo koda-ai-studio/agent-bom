@@ -3,17 +3,18 @@ import { isStaticDemo } from "@/lib/static-demo";
 
 /**
  * Presentation of verified session fields; never interprets a key as a human.
- * ``demoEstate`` is the server's own signal (posture counts list the
- * ``demo-estate`` source): an anonymous reader of that seeded estate is a demo
+ * ``demoData`` is the shell's demo-data signal (the same one that shows the
+ * "Demo data" banner): an anonymous reader of labelled sample data is a demo
  * visitor, not a warning about a misconfigured deployment.
  */
-export function sessionPresentation(session: AuthMeResponse | null, context: { demoEstate?: boolean } = {}) {
+export function sessionPresentation(session: AuthMeResponse | null, context: { demoData?: boolean } = {}) {
   const method = session?.auth_method ?? "";
   const anonymous = method === "anonymous" || session?.auth_required === false;
-  if (isStaticDemo() || (anonymous && context.demoEstate)) {
+  if (isStaticDemo() || (anonymous && context.demoData)) {
     return {
       name: "Demo visitor",
       method: "Read-only demo",
+      status: "Read-only demo",
       description: "Everything here is labelled sample data. Install agent-bom to sign in and scan your own environment.",
       canSignOut: false,
     };
@@ -23,6 +24,7 @@ export function sessionPresentation(session: AuthMeResponse | null, context: { d
   return {
     name: anonymous ? "Unauthenticated access" : local ? "Local session" : session?.subject || "Signed-in session",
     method: anonymous ? "Authentication disabled" : local ? "Local development access" : sharedKey ? "API key session" : method.includes("proxy") ? "Trusted proxy" : method.includes("oidc") ? "Single sign-on" : method.includes("saml") ? "SAML single sign-on" : method.replaceAll("_", " ") || "Not signed in",
+    status: !session ? "Offline" : session.auth_required === false ? "Unauthenticated access" : session.authenticated ? "Signed in" : "Sign-in required",
     description: anonymous ? "This deployment allows access without signing in. Signing out cannot protect an unauthenticated server." : local ? "This local session uses the server's temporary development key." : sharedKey ? "This identity belongs to an API key. It does not identify an individual person." : "Identity and role are provided by your configured authentication service.",
     canSignOut: Boolean(session?.authenticated && !anonymous),
   };

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AuthGate } from "@/components/auth-gate";
 import { DemoSeedNotice } from "@/components/demo-seed-notice";
 import { Nav } from "@/components/nav";
+import { ShellDeploymentProvider } from "@/components/shell-deployment-context";
 import { StaticDemoBanner } from "@/components/static-demo-banner";
 import { StaticDemoRouteGate } from "@/components/static-demo-route-gate";
 import { isStaticDemo } from "@/lib/static-demo";
@@ -53,8 +54,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         Skip to content
       </a>
       <AuthGate>
-        <Nav />
-        <ShellMain>{children}</ShellMain>
+        <ShellDeploymentProvider>
+          <Nav />
+          <ShellMain>{children}</ShellMain>
+        </ShellDeploymentProvider>
       </AuthGate>
     </SidebarLayoutProvider>
   );

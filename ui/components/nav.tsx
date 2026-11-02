@@ -9,7 +9,7 @@ import { DemoEstateLabel } from "@/components/demo-estate-label";
 import { DemoNavSignIn } from "@/components/demo-mode-cta";
 import { useSidebarLayout } from "@/components/sidebar-layout";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useDeploymentContext } from "@/hooks/use-deployment-context";
+import { useShellDeploymentContext } from "@/components/shell-deployment-context";
 import { api } from "@/lib/api";
 import { formatCount } from "@/lib/count-label";
 import {
@@ -57,7 +57,7 @@ export function Nav() {
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobileDrawerRef = useRef<HTMLElement | null>(null);
   const previousPathRef = useRef(path);
-  const { counts } = useDeploymentContext();
+  const { counts } = useShellDeploymentContext();
   const openIssues = useMemo(() => openIssueSeverity(counts), [counts]);
   const { session, hasCapability } = useAuthState();
 
@@ -619,7 +619,7 @@ export function Nav() {
             Sources: {deploymentModeLabel(counts.deployment_mode)}
           </Link>
         )}
-        <DemoEstateLabel scanSources={counts?.scan_sources} />
+        <DemoEstateLabel />
         <div className="ml-auto flex min-w-0 items-center gap-0.5 sm:gap-2">
           <button
             onClick={() => setSearchOpen(true)}
@@ -643,7 +643,7 @@ export function Nav() {
           </button>
           <ThemeToggle compact className="shrink-0" />
           <ApiStatus collapsed={false} />
-          <AccountMenu demoEstate={demoEstate} />
+          <AccountMenu />
           <button
             ref={mobileMenuButtonRef}
             onClick={() => setMobileOpen(!mobileOpen)}
