@@ -71,7 +71,7 @@ If a file does not exist, it is silently skipped.
 | Windsurf | `~/.windsurf/mcp.json`, `~/Library/Application Support/Windsurf/User/globalStorage/windsurf.mcp/mcp.json` | `~/.windsurf/mcp.json` |
 | Cline (VS Code) | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` | `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` |
 | VS Code Copilot | `~/Library/Application Support/Code/User/mcp.json` | `~/.config/Code/User/mcp.json` |
-| Continue.dev | `~/.continue/config.json` | same |
+| Continue.dev | `~/.continue/config.yaml`, legacy `~/.continue/config.json` | same |
 | Zed | `~/.config/zed/settings.json` | same |
 | OpenClaw | `~/.openclaw/openclaw.json` | same |
 | Cortex Code | `~/.snowflake/cortex/mcp.json` | same |
