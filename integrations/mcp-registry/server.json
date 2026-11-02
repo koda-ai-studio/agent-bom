@@ -3,7 +3,7 @@
   "name": "io.github.koda-ai-studio/agent-bom",
   "description": "AI supply-chain BOM: agents, MCP servers, packages and recorded reach. Scan and investigate via MCP.",
   "title": "agent-bom",
-  "version": "0.113.0",
+  "version": "0.113.1",
   "repository": {
     "url": "https://github.com/koda-ai-studio/agent-bom",
     "source": "github"
@@ -12,7 +12,7 @@
     {
       "registryType": "pypi",
       "identifier": "agent-bom",
-      "version": "0.113.0",
+      "version": "0.113.1",
       "transport": {
         "type": "stdio"
       },

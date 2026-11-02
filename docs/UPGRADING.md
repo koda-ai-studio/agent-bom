@@ -1,6 +1,6 @@
-# Upgrade to 0.113.0
+# Upgrade to 0.113.1
 
-These instructions target 0.113.0 once its artifacts are published.
+These instructions target 0.113.1 once its artifacts are published.
 The source version alone does not establish package or image availability.
 
 ## Preserve configuration and evidence
@@ -26,8 +26,8 @@ agent-bom --version
 ```
 
 These commands select the latest published package. Confirm the reported
-version is 0.113.0 or a later release whose upgrade notes you have reviewed;
-if it remains 0.112.1 or older, this upgrade has not been applied.
+version is 0.113.1 or a later release whose upgrade notes you have reviewed;
+if it remains 0.113.0 or older, this upgrade has not been applied.
 
 For a uv-managed CLI installation, use `uv tool upgrade agent-bom` after
 publication and verify the resulting version. Preserve any additional cloud
@@ -41,7 +41,20 @@ keep the image role aligned with your deployment manifest. Follow the
 [deployment guide](../site-docs/deployment/overview.md) for your selected
 profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
 
-## Changes that affect an upgrade from 0.112.1
+## Changes from 0.113.0
+
+- **Product view.** Personal is the default browser preference. Select Team or
+  Organization in the sidebar to prioritize shared operations or governance.
+  The preference does not change access permissions or tenant evidence scope.
+- **Optional loading.** Personal and Team overviews omit the compliance request
+  and executive brief. Direct pages remain available to authorized users.
+- **Continue discovery.** User-level `~/.continue/config.yaml` joins legacy
+  JSON discovery. Review the discovered config paths after upgrading; inventory
+  can now include previously missed servers. Discovery does not launch them.
+- **Persistence.** This patch adds no database migration. Preserve the same
+  database, identity settings, signing keys and retained reports during upgrade.
+
+## Earlier changes from 0.112.1
 
 - **Compressed pushes.** CLI pushes are gzip-compressed by default. A control
   plane older than 2026-09-10 rejects them; set `AGENT_BOM_PUSH_GZIP=0` on
