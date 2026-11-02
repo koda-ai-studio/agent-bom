@@ -53,7 +53,7 @@ def apply_dependency_reachability_to_blast_radii(
     agents: list["Agent"],
     *,
     rescore: bool = True,
-    reachability_report: "ReachabilityReport | None" = None,
+    reachability_report: ReachabilityReport | None = None,
 ) -> int:
     """Stamp structural dependency-closure fields on each BlastRadius row.
 
@@ -160,7 +160,7 @@ def apply_symbol_reachability_to_blast_radii(
     blast_radii: list["BlastRadius"],
     ast_result: "ASTAnalysisResult",
     *,
-    packages: list["Package"] | None = None,
+    packages: list[Package] | None = None,
     rescore: bool = True,
 ) -> int:
     """Join CVE affected-symbols to AST symbol reach on each BlastRadius row.
@@ -279,6 +279,4 @@ __all__ = [
     "apply_graph_path_reachability_to_blast_radii",
     "apply_symbol_reachability_to_blast_radii",
     "resync_cve_findings_from_blast_radii",
-    "Package",
-    "ReachabilityReport",
 ]

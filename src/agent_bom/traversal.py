@@ -32,7 +32,7 @@ from agent_bom.coverage import SCOPE_EXCLUSION_REASONS
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.scanners.repo_ignore import RepositoryIgnore
 
-__all__ = ["DEFAULT_MAX_FILES", "RepositoryIgnore", "VENDOR_SKIP_DIRS", "is_nested_worktree_root", "iter_discovery_files"]
+__all__ = ["DEFAULT_MAX_FILES", "VENDOR_SKIP_DIRS", "is_nested_worktree_root", "iter_discovery_files"]
 
 # Directory names never worth descending for source/manifest discovery: VCS
 # metadata, virtualenvs, vendored dependencies, build output, and tool caches.
@@ -189,7 +189,7 @@ def iter_discovery_files(
     on_error: Callable[[OSError], None] | None = None,
     on_prune: Callable[[Path, str], None] | None = None,
     on_limit: Callable[[int], None] | None = None,
-    ignore: "RepositoryIgnore | None" = None,
+    ignore: RepositoryIgnore | None = None,
 ) -> Iterator[Path]:
     """Yield files under *root*, pruning vendored/worktree subtrees while walking.
 

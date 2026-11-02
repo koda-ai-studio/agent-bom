@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from agent_bom.models import Agent, AIBOMReport, BlastRadius
 
 logger = logging.getLogger(__name__)
-__all__ = ["AIBOMReport"]  # fmt: skip
 
 
 @dataclass
@@ -747,8 +746,9 @@ def compliance_narrative_cmd(scan_file: str, framework: Optional[str], output_fo
 
     console = Console()
     saved = _report_from_json(_json.loads(Path(scan_file).read_text()))
+    report: AIBOMReport = cast("AIBOMReport", saved)
     narrative = generate_compliance_narrative(
-        cast("AIBOMReport", saved),
+        report,
         framework=framework,
         # Secrets and code flaws are not vulnerabilities; name the mix honestly.
         finding_label="security finding" if saved.non_advisory_findings else "vulnerability",
