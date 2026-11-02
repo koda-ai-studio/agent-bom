@@ -328,6 +328,7 @@ for (const theme of ["light", "dark"] as const) {
 for (const theme of ["light", "dark"] as const) {
   for (const width of [1440, 390]) {
     test(`framework names retain readable columns in ${theme} at ${width}px`, async ({ page }, testInfo) => {
+      await page.addInitScript(() => localStorage.setItem("agent-bom.product-view", "organization"));
       await page.addInitScript((selectedTheme) => localStorage.setItem("agent-bom-theme", selectedTheme), theme);
       await page.setViewportSize({ width, height: 900 });
       await routeProductFixture(page);
@@ -646,6 +647,8 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.getByRole("heading", { name: "Start with evidence" })).toBeVisible();
       await page.getByRole("region", { name: "Start with evidence" }).getByRole("link", { name: "Get started" }).click();
       await expect(page).toHaveURL(/\/get-started\/?$/);
+      await expect(page.getByRole("heading", { name: "Scan a project on your machine" })).toBeVisible();
+      await page.locator("summary").filter({ hasText: "Share evidence or connect a source" }).click();
       const start = page.getByRole("link", { name: "Choose a scan target" });
       await expect(start).toHaveAttribute("href", "/scan");
       const guide = page.getByRole("region", { name: "Start with evidence" });
