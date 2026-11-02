@@ -7,13 +7,26 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
+## [0.113.1] - 2026-11-02
+
+### Highlights
+- Start with a Personal dashboard view for local scans and report previews; select Team or Organization when shared operations or governance are needed.
+- Personal and Team overviews skip optional compliance loading, and the dashboard reuses the shell's posture-count request.
+- Discover Continue's user-level YAML MCP configuration while preserving passive discovery and legacy JSON support.
 
 ### Added
 - Personal, Team and Organization dashboard views prioritize relevant navigation without changing permissions or evidence scope. Personal onboarding starts with a local report; shared-source setup remains optional, and tenant compliance is omitted from local report previews.
 
 ### Changed
 - Deployment and first-run guides distinguish individual scans, shared team evidence and optional organization governance. Hosting profiles and observed evidence-source labels are documented separately; a local scan does not require a control plane or compliance setup.
+
+### Fixed
+- Continue's `~/.continue/config.yaml` is discovered on macOS, Linux and Windows. Malformed YAML does not hide legacy JSON configurations, and configured commands are not executed during discovery (#6147).
+- Browser coverage explicitly verifies all three product views and expands optional shared setup before testing its controls.
+
+### Upgrade notes
+- Existing browser sessions start in Personal view unless a product view was already saved. Use the sidebar selector to choose Team or Organization; permissions and evidence scope do not change.
+- See [upgrade guidance](docs/UPGRADING.md) for verification after publication. The release does not introduce a database migration.
 
 ## [0.113.0] - 2026-11-01
 
@@ -4545,7 +4558,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.0...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.1...HEAD
+[0.113.1]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.0...v0.113.1
 [0.113.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.112.1...v0.113.0
 [0.112.1]: https://github.com/koda-ai-studio/agent-bom/compare/v0.111.0...v0.112.1
 [0.111.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.110.0...v0.111.0
