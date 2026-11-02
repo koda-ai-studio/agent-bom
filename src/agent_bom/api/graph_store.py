@@ -639,9 +639,8 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
     ) -> dict[str, Any]:
         """Query exact inventory rows and whole-query facets in native SQL.
 
-        The snapshot is resolved once and every count, facet, row, relationship,
-        and finding summary is evaluated against that immutable tenant-scoped
-        snapshot. Facets are self-excluding: each bucket honors every active
+        The snapshot is resolved once and every count, facet, row, relationship, and finding summary is evaluated
+        against that immutable tenant-scoped snapshot. Facets are self-excluding: each bucket honors every active
         filter except its own dimension.
         """
         tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
@@ -663,8 +662,7 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
             finding_placeholders = ",".join("?" for _ in finding_types)
 
             def inventory_cte(*, facets: bool = False) -> str:
-                # Each facet scans the same qualified assets. Materialize this
-                # narrow projection once instead of decoding node JSON per facet.
+                # Each facet scans the same qualified assets: materialize this narrow projection once, not node JSON per facet.
                 projection = "n.id, n.entity_type, n.label, n.attributes, n.data_sources" if facets else "n.*"
                 materialized = "MATERIALIZED" if facets and sqlite3.sqlite_version_info >= (3, 35, 0) else ""
                 return f"""
@@ -782,7 +780,9 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                 """  # nosec B608 - source_where contains only generated placeholders
             )
             facet_params.extend([*source_params, *source_params])
-            facet_rows = conn.execute(inventory_cte(facets=True) + " UNION ALL ".join(facet_sql), [*cte_params, *facet_params]).fetchall()
+            facet_rows = conn.execute(  # nosec B608 - inventory_cte is static SQL with ? groups
+                inventory_cte(facets=True) + " UNION ALL ".join(facet_sql), [*cte_params, *facet_params]
+            ).fetchall()
             facets: dict[str, list[dict[str, Any]]] = {name: [] for name in ("type", "source", "provider", "environment", "severity")}
             total = 0
             for facet, value, count in facet_rows:

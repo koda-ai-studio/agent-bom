@@ -30,7 +30,7 @@ def rekey_table(conn: sqlite3.Connection, table: str, *, key: list[str], create_
         conn.execute("BEGIN IMMEDIATE")
         if primary_key_columns(conn, table) != key:
             conn.execute(f"DROP TABLE IF EXISTS {scratch}")
-            conn.execute(create_sql.format(table=scratch))
+            conn.execute(create_sql.format(table=scratch))  # nosec B608 - callers pass _CREATE_*_SQL constants; scratch is validated
             conn.execute(f"INSERT INTO {scratch} ({columns}) SELECT {columns} FROM {table}")  # nosec B608 - names validated above
             conn.execute(f"DROP TABLE {table}")
             conn.execute(f"ALTER TABLE {scratch} RENAME TO {table}")

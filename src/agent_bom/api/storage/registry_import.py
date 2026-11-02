@@ -137,15 +137,16 @@ def import_registries(
     with pool.connection() as conn:
         lock_snapshot_tenants(conn, records)
         if any(table in {*CONTROL_TABLES, "compliance_hub"} for table in tables):
-            # Static allowlisted identifiers only; one operator-selected import
-            # transaction excludes live writes while canonical upserts run.
+            # Static allowlisted identifiers only; one operator-selected import transaction blocks live writes during canonical upserts.
             locked = {CONTROL_TABLES[t].target_table or t if t in CONTROL_TABLES else t for t in tables}
             if "compliance_hub" in locked:
                 locked.remove("compliance_hub")
                 locked.update(COMPLIANCE_COLUMNS)
             if "sources" in tables:
                 locked.add("credential_refs")
-            conn.execute("LOCK TABLE " + ", ".join(sorted(locked)) + " IN SHARE ROW EXCLUSIVE MODE")
+            conn.execute(  # nosec B608 - tables passed read_source's adapter allowlist; other names are module constants
+                "LOCK TABLE " + ", ".join(sorted(locked)) + " IN SHARE ROW EXCLUSIVE MODE"
+            )
 
         runtime_counts = import_runtime_groups(conn, records)
         for key, count in runtime_counts.items():

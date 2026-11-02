@@ -133,7 +133,9 @@ def _inventory_facets(
                      ) source_buckets GROUP BY value"""  # nosec B608 - generated clauses only
     )
     facet_params.extend([*source_params, *source_params])
-    facet_rows = conn.execute(cte + " UNION ALL ".join(facet_sql), [*cte_params, *facet_params]).fetchall()
+    facet_rows = conn.execute(  # nosec B608 - cte is _inventory_cte(): static SQL with %s groups
+        cte + " UNION ALL ".join(facet_sql), [*cte_params, *facet_params]
+    ).fetchall()
     facets: dict[str, list[dict[str, Any]]] = {name: [] for name in _INVENTORY_FACET_NAMES}
     total = 0
     for facet, value, count in facet_rows:

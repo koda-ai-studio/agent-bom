@@ -171,7 +171,7 @@ class DatabricksStatementCursor:
         if any(len(row) != columns for row in batch):
             raise ExportDestinationError("Databricks parameter count mismatch")
         combined = statement[: match.start(1)] + ", ".join([match.group(1)] * len(batch))
-        self.execute(combined, tuple(value for row in batch for value in row))
+        self.execute(combined, tuple(value for row in batch for value in row))  # nosec B608 - repeats only the matched (?, ...) group
 
     def fetchone(self) -> Any:
         return self._rows.pop(0) if self._rows else None

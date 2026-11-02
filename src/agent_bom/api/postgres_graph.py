@@ -395,7 +395,7 @@ class PostgresGraphStore(
             # short of its own budget and `total` counts a different population.
             sev_sql, sev_params = severity_floor_sql(min_severity_rank, placeholder="%s")
             if sev_sql:
-                query += f" AND {sev_sql}"
+                query += f" AND {sev_sql}"  # nosec B608 - severity_floor_sql: literal column names with %s placeholders; values bound
                 params.extend(sev_params)
 
             budget = resolve_node_budget(node_budget)
@@ -919,7 +919,7 @@ class PostgresGraphStore(
                  AND gn.scan_id = gns.scan_id
                  AND gn.tenant_id = gns.tenant_id
             """
-            where_sql = " AND ".join(search_where)
+            where_sql = " AND ".join(search_where)  # nosec B608 - literal clauses and %s-placeholder helper fragments only
             total_row = conn.execute("SELECT COUNT(*) " + from_clause + " WHERE " + where_sql, params).fetchone()
             total = int((total_row[0] if total_row else 0) or 0)
             if total == 0:

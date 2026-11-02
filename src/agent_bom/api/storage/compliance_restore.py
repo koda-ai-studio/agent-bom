@@ -78,9 +78,10 @@ def _restore_rows(tx: Any, snapshot: ComplianceSnapshot) -> None:
     for table in REFERENCE_KEYS:
         _insert_rows(tx, table, tables[table])
     ordinals = {}
+    upsert = ledger_upsert("postgres") + " RETURNING ordinal"  # nosec B608 - ledger_upsert: fixed columns and ? placeholders
     for row in sorted(tables[LEDGER], key=lambda row: row["ordinal"]):
         values = tuple(encode_hub_payload(row[key]) if key == "payload" else row[key] for key in FIELDS)
-        saved = tx.execute(ledger_upsert("postgres") + " RETURNING ordinal", values).fetchone()
+        saved = tx.execute(upsert, values).fetchone()
         ordinals[row["finding_id"]] = saved[0]
     # Lifecycle fields and historical observation timestamps are preserved.
     # Internal ledger sequence values are mapped to the new Postgres rows.

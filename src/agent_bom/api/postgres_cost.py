@@ -186,8 +186,9 @@ class PostgresCostStore:
 
     def report_totals(self, tenant_id: str, *, agent: str | None = None, cost_center: str | None = None) -> dict[str, Any]:
         scope, params = _cost_scope(tenant_id, agent, cost_center, "%s")
+        query = _REPORT_TOTALS_SQL + scope  # nosec B608 - _cost_scope: literal columns, %s placeholders only
         with _tenant_connection(self._pool) as conn:
-            return _report_totals_row(conn.execute(_REPORT_TOTALS_SQL + scope, params).fetchone())
+            return _report_totals_row(conn.execute(query, params).fetchone())
 
     def list_records(
         self, tenant_id: str, *, limit: int = 1000, agent: str | None = None, cost_center: str | None = None
@@ -197,7 +198,7 @@ class PostgresCostStore:
             "SELECT tenant_id, call_id, agent, session_id, provider, model, input_tokens, output_tokens, "
             "cost_usd, priced, observed_at, cost_center, allocation_tags FROM llm_costs WHERE "
         )
-        sql += scope
+        sql += scope  # nosec B608 - scope from _cost_scope: literal column names joined with %s placeholders; values bound
         sql += " ORDER BY observed_at DESC, call_id DESC LIMIT %s"
         with _tenant_connection(self._pool) as conn:
             rows = conn.execute(sql, [*params, limit]).fetchall()
