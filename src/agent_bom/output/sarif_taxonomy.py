@@ -200,3 +200,24 @@ def _compact_taxa_references(results: list[dict], taxonomies: list[dict]) -> Non
                 continue
             compact.append({"index": taxon_index, "toolComponent": {"index": taxonomy_index}})
         result["taxa"] = compact
+
+
+def _unified_rule_properties(finding: Any, security_severity: str) -> dict[str, Any]:
+    """Rule-level properties for a unified (non-CVE) finding; CWE ids become GitHub-visible tags."""
+    properties: dict[str, Any] = {
+        "security-severity": security_severity,
+        "source": finding.source.value,
+        "finding_type": finding.finding_type.value,
+    }
+    if finding.cwe_ids:
+        properties["tags"] = list(dict.fromkeys(finding.cwe_ids))
+    return properties
+
+
+def _merge_rule_cwe_tags(rules: list[dict], rule_id: str, cwe_ids: list[str]) -> None:
+    """A shared rule (one SAST category, several sinks) lists every CWE its results carry."""
+    for rule in reversed(rules):
+        if rule.get("id") == rule_id:
+            tags = rule.setdefault("properties", {}).setdefault("tags", [])
+            tags.extend(cwe for cwe in cwe_ids if cwe not in tags)
+            return

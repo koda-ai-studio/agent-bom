@@ -16,5 +16,7 @@ FRAMEWORK_HINTS: dict[str, str] = {
     "openai": "OpenAI",
     "@mastra/core": "Mastra",
     "mastra": "Mastra",
-    "@vercel/ai": "Vercel AI SDK",
+    # The Vercel AI SDK publishes as `ai` with providers under `@ai-sdk/*`; there is no `@vercel/ai` package.
+    "ai": "Vercel AI SDK",
+    "@ai-sdk": "Vercel AI SDK",
 }

@@ -24,6 +24,11 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
+try:
+    from scripts import vendor_coverage_capabilities as _capabilities
+except ModuleNotFoundError:  # run as ``python scripts/generate_vendor_coverage.py``
+    import vendor_coverage_capabilities as _capabilities  # type: ignore[no-redef]
+
 ROOT = Path(__file__).resolve().parent.parent
 PKG = "src/agent_bom"
 DOC_MD = ROOT / "docs" / "VENDOR_COVERAGE.md"
@@ -616,6 +621,7 @@ def build_disagreements() -> list[dict[str, Any]]:
 
 def build() -> dict[str, Any]:
     return {
+        "capabilities": _capabilities.build_capabilities(sys.modules[__name__]),
         "cloud_matrix": build_cloud_matrix(),
         "disagreements": build_disagreements(),
         "generator": SCRIPT,
@@ -704,6 +710,8 @@ def render_markdown(data: dict[str, Any]) -> str:
     if notes:
         lines += ["", "Notes:", "", *notes]
 
+    lines += ["", *_capabilities.render_capabilities(data["capabilities"])]
+
     lines += [
         "",
         "## Declared provider lists that disagree",
@@ -737,6 +745,9 @@ def render_markdown(data: dict[str, Any]) -> str:
     ]
     for cat in data["integrations"]:
         lines.append(f"- {cat['title']}: " + ", ".join(_fmt_source(s) for s in cat["sources"]))
+    lines += ["", "Capability matrix:", ""]
+    for row in data["capabilities"]:
+        lines.append(f"- {row['title']}: " + ", ".join(_fmt_source(s) for s in row["sources"]))
     return "\n".join(lines) + "\n"
 
 

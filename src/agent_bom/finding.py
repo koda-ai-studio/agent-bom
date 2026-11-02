@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.advisory_ids import vulnerability_enrichment_metadata
+from agent_bom.ast.flow_scoring import flow_cwe_ids, flow_owasp_llm_tags, flow_severity, is_security_flow_category
 from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.core.exploitability import fused_triage_priority
 from agent_bom.core.packages import synthesize_purl
@@ -153,30 +154,7 @@ def _safe_secret_preview(value: object) -> str:
     return "***REDACTED***"
 
 
-_AST_FLOW_CRITICAL_MARKERS = ("command_execution", "unsafe_deserialization", "dynamic_code_execution")
-_AST_FLOW_HIGH_MARKERS = (
-    "credential_file_access",
-    "dangerous",
-    "unguarded_tool_sink",
-    "command_string",
-    "dynamic_require",
-    "path_access",
-    "path_traversal",
-    "privilege_escalation",
-    "sql",
-    "ssrf",
-    "xss",
-)
-_AST_SECURITY_FLOW_MARKERS = (*_AST_FLOW_CRITICAL_MARKERS, *_AST_FLOW_HIGH_MARKERS)
-_AST_FLOW_CWE_BY_MARKER = {
-    "command_execution": "CWE-78",
-    "unsafe_deserialization": "CWE-502",
-    "path_access": "CWE-22",
-    "path_traversal": "CWE-22",
-    "sql": "CWE-89",
-    "ssrf": "CWE-918",
-    "xss": "CWE-79",
-}
+_AST_FLOW_SEVERITIES = frozenset({"critical", "high", "medium", "low"})
 
 
 def is_ast_security_flow(raw: dict) -> bool:
@@ -184,11 +162,15 @@ def is_ast_security_flow(raw: dict) -> bool:
     from agent_bom.security import sanitize_text
 
     category = sanitize_text(raw.get("category", "") or "", max_len=120).lower()
-    return any(marker in category for marker in _AST_SECURITY_FLOW_MARKERS)
+    return is_security_flow_category(category)
 
 
 def ast_flow_dict_to_finding(raw: dict) -> "Finding":
-    """Promote one native AST flow result into the unified finding stream."""
+    """Promote one native AST flow result into the unified finding stream.
+
+    Rows written by the current analyzer already carry ``severity`` and
+    ``cwe_ids``; older side blocks are scored from the category with the same table.
+    """
     from agent_bom.security import sanitize_text
 
     category = sanitize_text(raw.get("category", "ast_flow") or "ast_flow", max_len=120).lower()
@@ -197,10 +179,11 @@ def ast_flow_dict_to_finding(raw: dict) -> "Finding":
     sink = sanitize_text(raw.get("sink", "") or "", max_len=200)
     raw_line = raw.get("line")
     line = raw_line if isinstance(raw_line, int) and raw_line > 0 else 1
-    severity = "critical" if any(marker in category for marker in _AST_FLOW_CRITICAL_MARKERS) else "high"
-    if not any(marker in category for marker in _AST_SECURITY_FLOW_MARKERS):
-        severity = "medium"
-    cwe_ids = sorted({cwe for marker, cwe in _AST_FLOW_CWE_BY_MARKER.items() if marker in category})
+    row_severity = str(raw.get("severity") or "").lower()
+    severity = row_severity if row_severity in _AST_FLOW_SEVERITIES else flow_severity(category)
+    row_cwes = raw.get("cwe_ids")
+    cwe_ids = sorted({str(c) for c in row_cwes if str(c).startswith("CWE-")}) if isinstance(row_cwes, list) and row_cwes else []
+    cwe_ids = cwe_ids or flow_cwe_ids(category, sink)
     title = sanitize_text(raw.get("title", "") or f"Unsafe flow reaches {sink or 'a sensitive sink'}", max_len=300)
     detail = sanitize_text(raw.get("detail", "") or title, max_len=2_000)
     call_path = [sanitize_text(item, max_len=200) for item in raw.get("call_path", []) if isinstance(item, str)][:20]
@@ -218,6 +201,7 @@ def ast_flow_dict_to_finding(raw: dict) -> "Finding":
         title=title,
         description=detail,
         cwe_ids=cwe_ids,
+        owasp_tags=flow_owasp_llm_tags(category),
         remediation_guidance=(
             "Validate and constrain tool-controlled input before it reaches the sensitive sink; "
             "prefer structured APIs over shell, path, query, or deserialization string construction."

@@ -110,7 +110,7 @@ control mappings are investigation context, not certification.
 | Dependencies | Lockfiles and manifests across Python, JavaScript, Go, Java, .NET, Rust and more, matched against OSV, GitHub advisories and NVD with KEV and EPSS. Ask "am I affected by CVE-X" across every stored scan. |
 | Code | Findings imported from any SARIF producer, plus native analysis of AI code (prompt-injection sinks, guardrails, tool exposure) and whether your code reaches the vulnerable function. |
 | Containers and IaC | Images scanned in bounded memory and time; Dockerfile, Terraform, Kubernetes, Helm and compose risks with exact lines in SARIF. |
-| Cloud and data platforms | Read-only collection from AWS, Azure, GCP, Kubernetes, Databricks and Snowflake, with provider-specific posture checks and graph context. See the [coverage matrix](docs/VENDOR_COVERAGE.md) for each collection lane. |
+| Cloud and data platforms | Read-only collection from AWS, Azure, GCP, Kubernetes, Databricks and Snowflake, with provider-specific posture checks and graph context. See the [coverage matrix](docs/VENDOR_COVERAGE.md) for each collection lane and the [capability matrix](docs/VENDOR_COVERAGE.md#capability-matrix) for per-lane rule counts generated from code. |
 | GPU and AI infrastructure | Discover AI workloads on CoreWeave, Nebius, Lambda, RunPod, Vast.ai and Crusoe; inventory GPU containers and Kubernetes GPU nodes. Collection depth varies by provider. |
 
 Generate a BOM from a project, or inspect an agent inventory with sample data:

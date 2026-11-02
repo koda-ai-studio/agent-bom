@@ -65,6 +65,33 @@ TF-SEC-048  Redshift cluster publicly accessible (AWS SEC01)
 TF-SEC-049  WAF not associated with ALB/CloudFront (AWS SEC05)
 TF-SEC-050  GuardDuty not enabled (AWS SEC04, CIS 4.1)
 TF-SEC-051  Hardcoded secret in a resource argument, any provider (NIST IA-5; CIS AWS 1.14 on aws_ only)
+
+Azure (azurerm_*; CIS Microsoft Azure Foundations IDs as used by the live benchmark)
+TF-SEC-101  Storage account / container allows anonymous public blob access (CIS Azure 3.7)
+TF-SEC-102  Storage account does not require HTTPS (CIS Azure 3.1)
+TF-SEC-103  Storage account minimum TLS below 1.2 (CIS Azure 3.15)
+TF-SEC-104  NSG rule allows inbound traffic from any internet source (CIS Azure 6.1 RDP / 6.2 SSH / 6.4 UDP)
+TF-SEC-105  Database server allows public network access (CIS Azure 4.1.6 on SQL)
+TF-SEC-106  Database server does not enforce SSL / TLS 1.2 (CIS Azure 4.2.2 MySQL, 4.3.1 PostgreSQL)
+TF-SEC-107  Key Vault without purge protection (CIS Azure 8.3)
+TF-SEC-108  Managed disk without customer-managed key encryption (CIS Azure 7.3)
+TF-SEC-109  Network interface attaches a public IP (NIST SC-7)
+TF-SEC-110  NSG flow log disabled or retained < 90 days (NIST AU-12)
+TF-SEC-111  SQL server without an extended auditing policy (CIS Azure 4.1.1)
+TF-SEC-112  SQL database with Transparent Data Encryption disabled (CIS Azure 4.1.2)
+
+GCP (google_*; CIS Google Cloud Platform Foundation IDs as used by the live benchmark)
+TF-SEC-201  Bucket IAM grants allUsers / allAuthenticatedUsers (CIS GCP 5.1)
+TF-SEC-202  Bucket without uniform bucket-level access (CIS GCP 5.2)
+TF-SEC-203  Firewall allows ingress from 0.0.0.0/0 or ::/0 (CIS GCP 3.6 SSH / 3.7 RDP / 3.8 ICMP)
+TF-SEC-204  Cloud SQL instance with a public IP (CIS GCP 6.2)
+TF-SEC-205  Cloud SQL instance does not require SSL (CIS GCP 6.1)
+TF-SEC-206  Cloud SQL instance without automated backups (CIS GCP 6.3)
+TF-SEC-207  Compute instance with an external IP (CIS GCP 4.9)
+TF-SEC-208  OS Login disabled via instance or project metadata (CIS GCP 4.4)
+TF-SEC-209  Serial console enabled via metadata (CIS GCP 4.5)
+TF-SEC-210  Subnetwork without VPC flow logs (CIS GCP 3.9)
+TF-SEC-211  Compute instance with IP forwarding enabled (CIS GCP 4.6)
 """
 
 from __future__ import annotations
@@ -72,7 +99,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from agent_bom.iac import terraform_security_azure_data as _azure_data
+from agent_bom.iac import terraform_security_azure_network as _azure_network
+from agent_bom.iac import terraform_security_azure_storage as _azure_storage
 from agent_bom.iac import terraform_security_database as _database
+from agent_bom.iac import terraform_security_gcp_compute as _gcp_compute
+from agent_bom.iac import terraform_security_gcp_storage_sql as _gcp_storage_sql
 from agent_bom.iac import terraform_security_identity as _identity
 from agent_bom.iac import terraform_security_network as _network
 from agent_bom.iac import terraform_security_secrets as _secrets
@@ -140,6 +172,31 @@ _RULES: tuple[tuple[frozenset[str] | None, TfCheck], ...] = (
     (frozenset({"aws_lb", "aws_alb", "aws_cloudfront_distribution"}), _network.tf_sec_049),
     (frozenset({"aws_guardduty_detector"}), _identity.tf_sec_050),
     (None, _secrets.tf_sec_051),
+    # Azure
+    (frozenset({"azurerm_storage_account", "azurerm_storage_container"}), _azure_storage.tf_sec_101),
+    (frozenset({"azurerm_storage_account"}), _azure_storage.tf_sec_102),
+    (frozenset({"azurerm_storage_account"}), _azure_storage.tf_sec_103),
+    (frozenset({"azurerm_network_security_rule", "azurerm_network_security_group"}), _azure_network.tf_sec_104),
+    (_azure_data.AZURE_DB_SERVER_TYPES, _azure_data.tf_sec_105),
+    (_azure_data.AZURE_SINGLE_SERVER_TYPES | {"azurerm_mssql_server"}, _azure_data.tf_sec_106),
+    (frozenset({"azurerm_key_vault"}), _azure_data.tf_sec_107),
+    (frozenset({"azurerm_managed_disk"}), _azure_data.tf_sec_108),
+    (frozenset({"azurerm_network_interface"}), _azure_network.tf_sec_109),
+    (frozenset({"azurerm_network_watcher_flow_log"}), _azure_network.tf_sec_110),
+    (frozenset({"azurerm_mssql_server"}), _azure_data.tf_sec_111),
+    (frozenset({"azurerm_mssql_database"}), _azure_data.tf_sec_112),
+    # GCP
+    (_gcp_storage_sql.GCS_IAM_TYPES, _gcp_storage_sql.tf_sec_201),
+    (frozenset({"google_storage_bucket"}), _gcp_storage_sql.tf_sec_202),
+    (frozenset({"google_compute_firewall"}), _gcp_compute.tf_sec_203),
+    (frozenset({"google_sql_database_instance"}), _gcp_storage_sql.tf_sec_204),
+    (frozenset({"google_sql_database_instance"}), _gcp_storage_sql.tf_sec_205),
+    (frozenset({"google_sql_database_instance"}), _gcp_storage_sql.tf_sec_206),
+    (frozenset({"google_compute_instance"}), _gcp_compute.tf_sec_207),
+    (_gcp_compute.GCE_METADATA_TYPES, _gcp_compute.tf_sec_208),
+    (frozenset({"google_compute_instance"}), _gcp_compute.tf_sec_209),
+    (frozenset({"google_compute_subnetwork"}), _gcp_compute.tf_sec_210),
+    (frozenset({"google_compute_instance"}), _gcp_compute.tf_sec_211),
 )
 
 

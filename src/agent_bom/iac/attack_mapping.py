@@ -70,6 +70,31 @@ IAC_ATTACK_MAP: dict[str, list[str]] = {
     # Network Isolation
     "TF-SEC-045": ["T1610"],  # Lambda no VPC
     "TF-SEC-015": ["T1530"],  # EKS no envelope encryption
+    # Azure
+    "TF-SEC-101": ["T1190", "T1530"],  # public blob access
+    "TF-SEC-102": ["T1557"],  # HTTP allowed → Adversary-in-the-Middle
+    "TF-SEC-103": ["T1557"],  # TLS < 1.2
+    "TF-SEC-104": ["T1190"],  # NSG open to the internet
+    "TF-SEC-105": ["T1190"],  # database public network access
+    "TF-SEC-106": ["T1557"],  # database SSL not enforced
+    "TF-SEC-107": ["T1485"],  # Key Vault purge → Data Destruction
+    "TF-SEC-108": ["T1530"],  # disk without CMK
+    "TF-SEC-109": ["T1190"],  # VM public IP
+    "TF-SEC-110": ["T1562.008"],  # flow logs off
+    "TF-SEC-111": ["T1562.008"],  # SQL auditing off
+    "TF-SEC-112": ["T1530"],  # TDE disabled
+    # GCP
+    "TF-SEC-201": ["T1190", "T1530"],  # public bucket IAM
+    "TF-SEC-202": ["T1530"],  # per-object ACLs
+    "TF-SEC-203": ["T1190"],  # firewall open to the internet
+    "TF-SEC-204": ["T1190"],  # Cloud SQL public IP
+    "TF-SEC-205": ["T1557"],  # Cloud SQL SSL not required
+    "TF-SEC-206": ["T1485"],  # no backups
+    "TF-SEC-207": ["T1190"],  # instance public IP
+    "TF-SEC-208": ["T1078"],  # OS Login off → Valid Accounts
+    "TF-SEC-209": ["T1021"],  # serial console → Remote Services
+    "TF-SEC-210": ["T1562.008"],  # VPC flow logs off
+    "TF-SEC-211": ["T1090"],  # IP forwarding → Proxy
     # ── Dockerfile ──────────────────────────────────────────────────────────
     "DOCKER-001": ["T1525"],  # :latest / untagged base → Implant Internal Image
     "DOCKER-002": ["T1611"],  # Runs as root → Escape to Host
