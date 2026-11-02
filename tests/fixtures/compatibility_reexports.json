@@ -29,6 +29,9 @@
     "_WARNING_STATES",
     "_days_between"
   ],
+  "agent_bom.api.finding_page_read": [
+    "_finding_reachability_prewarm"
+  ],
   "agent_bom.api.graph_store": [
     "_node_sort_key"
   ],
@@ -75,6 +78,9 @@
     "_transition_managed_trial_tenant",
     "_trial_lifecycle_payload"
   ],
+  "agent_bom.api.routes.gateway_feed": [
+    "_SHADOW_BLOCK_MARKERS"
+  ],
   "agent_bom.api.routes.graph": [
     "_ATTACK_PATH_ITEM_OPENAPI_SCHEMA",
     "_finding_ids_for_path",
@@ -114,6 +120,9 @@
     "_view_filters",
     "_walk_facet_rows",
     "_walk_view_filtered_findings"
+  ],
+  "agent_bom.api.server": [
+    "_analytics_backend_config"
   ],
   "agent_bom.ast.js_ts.facade": [
     "_JS_OBJECT_KEY_LOOKBEHIND",
