@@ -60,7 +60,10 @@ for (const theme of ["light", "dark"] as const) test.describe(theme, () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await fixture(page);
   });
-  test("overview severity and enabled primary action contrast", async ({ page }) => {
+  for (const view of ["personal", "team", "organization"] as const) test(`overview severity and enabled primary action contrast in ${view}`, async ({ page }) => {
+    await page.addInitScript(value => localStorage.setItem("agent-bom.product-view", value), view);
+    const complianceReads: string[] = [];
+    page.on("request", request => { if (new URL(request.url()).pathname === "/v1/compliance") complianceReads.push(request.url()); });
     await page.goto("/");
     await page.getByRole("tab", { name: "Posture", exact: true }).click();
     for (const [label, value] of [["Critical", "4"], ["High", "13"], ["Medium", "5"], ["Low", "1"]]) {
@@ -70,8 +73,10 @@ for (const theme of ["light", "dark"] as const) test.describe(theme, () => {
       await expect(link).toBeFocused();
       await readable(link.getByText(value!, { exact: true }));
     }
-    const action = page.getByRole("link", { name: "Manage sources", exact: false });
+    const action = page.getByRole("link", { name: view === "personal" ? "Scan a project" : "Manage sources", exact: false });
+    await expect(action).toHaveAttribute("href", view === "personal" ? "/get-started" : "/connections");
     await readable(action);
+    expect(complianceReads).toHaveLength(view === "organization" ? 1 : 0);
     await action.hover();
     await readable(action);
     await action.focus();
