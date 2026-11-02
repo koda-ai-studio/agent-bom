@@ -55,7 +55,7 @@ from agent_bom.export.object_destinations import _stream_gzip_ndjson as _stream_
 
 __all__ = ["AzureBlobObjectStoreDestination", "ExportDestination", "ExportDestinationError",
     "ExportPublicationIndeterminateError", "ExportResult", "GcsObjectStoreDestination", "S3ObjectStoreDestination",
-    "_SPOOL_MAX_BYTES", "_object_key", "_stream_gzip_ndjson"]  # fmt: skip
+    "_SPOOL_MAX_BYTES", "_object_key", "_stream_gzip_ndjson", "DEFERRED_EXPORT_KINDS", "SUPPORTED_EXPORT_KINDS"]  # fmt: skip
 
 logger = logging.getLogger(__name__)
 

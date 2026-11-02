@@ -285,6 +285,8 @@
     "_demo_identity_id"
   ],
   "agent_bom.export.destinations": [
+    "DEFERRED_EXPORT_KINDS",
+    "SUPPORTED_EXPORT_KINDS",
     "_object_key",
     "_stream_gzip_ndjson"
   ],
