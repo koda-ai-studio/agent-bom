@@ -213,7 +213,7 @@ def _cyclonedx_severity(vuln: dict) -> tuple[str, float | None]:
             try:
                 cvss_score = float(score)
             except (TypeError, ValueError):
-                pass
+                pass  # unparseable input: fall back to the default below
         if severity != "unknown":
             break
     return severity, cvss_score

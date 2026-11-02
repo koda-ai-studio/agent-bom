@@ -46,7 +46,7 @@ async def _read_bounded_line(reader: asyncio.StreamReader, *, max_bytes: int = _
         try:
             await reader.readuntil(b"\n")
         except (asyncio.IncompleteReadError, asyncio.LimitOverrunError, ValueError):
-            pass
+            pass  # best-effort drain of the oversized line; it is rejected either way
         return None
     except ValueError:
         while True:

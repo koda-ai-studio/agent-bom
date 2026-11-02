@@ -178,7 +178,7 @@ def _detect_install_method() -> tuple[str, str]:
     try:
         parts.append(str(Path(__file__).resolve()))
     except OSError:
-        pass
+        pass  # unresolvable path: leave it out of the fingerprint
     argv = getattr(sys, "argv", None)
     if argv:
         parts.append(str(argv[0] or ""))

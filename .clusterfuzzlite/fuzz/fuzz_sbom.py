@@ -32,7 +32,7 @@ def TestOneInput(data: bytes) -> None:
             if isinstance(obj, dict):
                 parse_cyclonedx(obj)
         except (json.JSONDecodeError, ValueError, TypeError, KeyError, AttributeError):
-            pass
+            pass  # rejected input is an expected fuzz outcome
 
     elif choice == 1:
         # Fuzz parse_spdx with arbitrary JSON
@@ -42,7 +42,7 @@ def TestOneInput(data: bytes) -> None:
             if isinstance(obj, dict):
                 parse_spdx(obj)
         except (json.JSONDecodeError, ValueError, TypeError, KeyError, AttributeError):
-            pass
+            pass  # rejected input is an expected fuzz outcome
 
     else:
         # Fuzz end-to-end load_sbom via a temp file
@@ -55,11 +55,11 @@ def TestOneInput(data: bytes) -> None:
             try:
                 load_sbom(tmp_path)
             except (ValueError, KeyError, TypeError, AttributeError):
-                pass
+                pass  # rejected input is an expected fuzz outcome
             finally:
                 os.unlink(tmp_path)
         except OSError:
-            pass
+            pass  # best-effort cleanup; failure leaves nothing to undo
 
 
 def main():

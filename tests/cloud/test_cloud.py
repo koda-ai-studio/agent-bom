@@ -78,7 +78,7 @@ def _isolate_cloud_provider_imports():
             try:
                 importlib.reload(submod)
             except Exception:
-                pass
+                pass  # the call's own failure is not under test; the assertions below check side effects
 
 
 def _load_cloud_fixture(name: str) -> dict:
@@ -215,7 +215,7 @@ def test_aws_missing_boto3():
         try:
             importlib.reload(aws_mod)
         except Exception:
-            pass
+            pass  # the call's own failure is not under test; the assertions below check side effects
         with pytest.raises(CloudDiscoveryError, match="boto3 is required"):
             from agent_bom.cloud.aws import discover
 

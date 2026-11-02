@@ -25,7 +25,7 @@ def _count_in_file(path: Path, pattern: str) -> list[tuple[int, str]]:
             if re.search(pattern, line):
                 matches.append((i, line.strip()))
     except FileNotFoundError:
-        pass
+        pass  # unreadable path: skip it and keep the default
     return matches
 
 

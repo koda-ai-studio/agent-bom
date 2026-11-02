@@ -425,7 +425,7 @@ def exposure_evidence_dimensions(
     try:
         assessment = ExploitabilityDimension.model_validate(attributes.get("exploitability_assessment"))
     except ValidationError:
-        pass
+        pass  # unparseable input: fall back to the default below
     if assessment is not None:
         exploitability = {
             "status": assessment.status.value,

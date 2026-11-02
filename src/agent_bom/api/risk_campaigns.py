@@ -28,7 +28,7 @@ def _risk(row: Mapping[str, Any]) -> float:
             if math.isfinite(parsed):
                 return round(min(10.0, max(0.0, parsed)), 1)
     except (TypeError, ValueError):
-        pass
+        pass  # unparseable input: fall back to the default below
     return _SEVERITY_SCORE.get(str(row.get("severity") or "").lower(), 0.5)
 
 

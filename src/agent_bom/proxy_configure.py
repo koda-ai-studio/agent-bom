@@ -248,7 +248,7 @@ def apply_proxy_configs(
                     try:
                         os.unlink(tmp_path)
                     except OSError:
-                        pass
+                        pass  # best-effort cleanup; failure leaves nothing to undo
                     raise
                 modified += 1
             except OSError as exc:

@@ -448,7 +448,7 @@ def _packaging_entries(project: Path) -> list[ApplicationEntrypoint]:
             if isinstance(project_scripts, dict):
                 scripts.extend((str(name), str(target), "pyproject.toml:[project.scripts]") for name, target in project_scripts.items())
         except (OSError, tomllib.TOMLDecodeError, UnicodeError):
-            pass
+            pass  # unparseable input: fall back to the default below
     setup_cfg = project / "setup.cfg"
     if setup_cfg.is_file():
         parser = configparser.ConfigParser()
@@ -460,7 +460,7 @@ def _packaging_entries(project: Path) -> list[ApplicationEntrypoint]:
                     name, target = line.split("=", 1)
                     scripts.append((name.strip(), target.strip(), "setup.cfg:[options.entry_points]"))
         except (configparser.Error, OSError, UnicodeError):
-            pass
+            pass  # unparseable input: fall back to the default below
 
     entries: list[ApplicationEntrypoint] = []
     for name, target, provenance in scripts:
@@ -488,7 +488,7 @@ def _packaging_entries(project: Path) -> list[ApplicationEntrypoint]:
                 if function is not None:
                     line_number = function.lineno
             except (OSError, SyntaxError, UnicodeError, ValueError):
-                pass
+                pass  # unparseable input: fall back to the default below
         entries.append(
             ApplicationEntrypoint(
                 name=name,

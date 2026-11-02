@@ -153,7 +153,7 @@ def _get_ollama_models() -> list[str]:
             data = resp.json()
             return [m["name"] for m in data.get("models", [])]
     except (httpx.HTTPError, ValueError, KeyError):
-        pass
+        pass  # endpoint unreachable or malformed reply: report nothing found
     return []
 
 

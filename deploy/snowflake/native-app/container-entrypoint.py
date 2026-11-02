@@ -72,7 +72,7 @@ def _prepare_audit_key() -> None:
                 try:
                     os.unlink(temporary, dir_fd=directory)
                 except FileNotFoundError:
-                    pass
+                    pass  # best-effort cleanup; failure leaves nothing to undo
             os.fsync(directory)
         else:
             try:

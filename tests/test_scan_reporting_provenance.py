@@ -48,3 +48,26 @@ def test_suppressed_unfixed_count_survives_into_json(tmp_path, monkeypatch):
     _build_report(SimpleNamespace(project=str(tmp_path)), st)
     assert to_json(st.report)["scan_performance"]["filtering"]["unfixed_os_findings_suppressed"] == 1
     assert consume_scan_performance()["unfixed_os_findings_suppressed"] == 0
+
+
+def test_freshness_snapshot_failure_is_logged_not_swallowed(tmp_path, monkeypatch, caplog):
+    from agent_bom.cli.agents.scan_pipeline import report as report_stage
+
+    def _broken_summary():
+        raise RuntimeError("epss cache unreadable api_key=sk-live-secret")
+
+    monkeypatch.setattr(report_stage, "epss_source_summary", _broken_summary)
+    st = ScanState(
+        ctx=ScanContext(con=None),
+        scan_outcome=ScanOutcome.COMPLETE,
+        vuln_freshness=VulnDataFreshness(mode="live", sources=["OSV"]),
+    )
+    opts = SimpleNamespace(project=str(tmp_path))
+    _build_report(opts, st)
+    with caplog.at_level("DEBUG", logger="agent_bom.cli.agents.scan_pipeline.report"):
+        _attach_context_data(opts, st)
+
+    assert st.report.vuln_data_freshness is None
+    messages = [r.getMessage() for r in caplog.records if "freshness snapshot unavailable" in r.getMessage()]
+    assert len(messages) == 1
+    assert "sk-live-secret" not in messages[0]

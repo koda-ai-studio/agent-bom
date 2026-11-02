@@ -174,7 +174,7 @@ class AuditSpilloverStore:
                 try:
                     os.mkdir(component, mode=0o700, dir_fd=current_fd)
                 except FileExistsError:
-                    pass
+                    pass  # already present, which is the state we want
                 try:
                     next_fd = os.open(component, flags, dir_fd=current_fd)
                 except OSError as exc:
@@ -561,7 +561,7 @@ class AuditSpilloverStore:
             try:
                 os.unlink(temp_name, dir_fd=parent_fd)
             except FileNotFoundError:
-                pass
+                pass  # best-effort cleanup; failure leaves nothing to undo
             os.close(parent_fd)
 
 

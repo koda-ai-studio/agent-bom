@@ -352,3 +352,19 @@ def test_request_trace_is_receipt_metadata_not_event_identity(boundary, producer
     payload["alerts"][0]["tool"] = "different_tool"
     assert post(boundary, payload).json()["durable_conflict_count"] == 1
     assert json.dumps(ledger.list_activity("tenant-a").events[0], sort_keys=True) == original_json
+
+
+def test_analytics_write_failure_is_logged_without_failing_ingest(boundary, caplog):
+    def _broken(rows, **kwargs):
+        raise RuntimeError("analytics down token=sk-live-secret")
+
+    set_analytics_store(SimpleNamespace(record_events=_broken))
+    with caplog.at_level("WARNING", logger="agent_bom.api.routes.proxy"):
+        response = post(boundary, body("analytics-outage"))
+
+    assert response.status_code == 200
+    _, ledger, _, _ = boundary
+    assert [event["event_id"] for event in ledger.list_activity("tenant-a").events] == ["analytics-outage"]
+    messages = [record.getMessage() for record in caplog.records if "Proxy alert analytics write failed" in record.getMessage()]
+    assert len(messages) == 1
+    assert "sk-live-secret" not in messages[0]

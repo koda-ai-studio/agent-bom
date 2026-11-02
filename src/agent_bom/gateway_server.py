@@ -374,7 +374,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
                     try:
                         await task
                     except asyncio.CancelledError:
-                        pass
+                        pass  # expected: the task was just cancelled
             reload_task = None
             firewall_reload_task = None
             runtime_facts_task = None

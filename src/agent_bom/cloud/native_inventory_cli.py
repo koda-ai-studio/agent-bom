@@ -35,7 +35,7 @@ def _run_json(args: list[str], *, timeout: int = 30, max_bytes: int = 2 * 1024 *
                 else:
                     os.killpg(proc.pid, signal.SIGKILL)
             except ProcessLookupError:
-                pass
+                pass  # the process already exited
 
         def drain(stream: Any, retain: bool) -> None:
             total = 0

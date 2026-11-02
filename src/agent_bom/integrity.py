@@ -643,7 +643,7 @@ def _parse_sigstore_bundle(bundle_path: Path) -> dict:
                 if config_source.get("uri") and not result["signer_identity"]:
                     result["signer_identity"] = config_source["uri"]
             except (ValueError, KeyError):
-                pass
+                pass  # unparseable input: fall back to the default below
 
     return result
 

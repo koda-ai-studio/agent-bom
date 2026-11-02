@@ -182,7 +182,7 @@ class NetworkXBackend:
                     path = self._nx.shortest_path(self._graph, source, node)
                     paths.append(path)
                 except self._nx.NetworkXNoPath:
-                    pass
+                    pass  # unreachable node: no path to record
         return paths
 
     def shortest_path(self, source: str, target: str) -> list[str] | None:

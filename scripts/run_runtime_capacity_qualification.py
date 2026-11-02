@@ -174,7 +174,7 @@ def run(output: Path, *, backend: str, replicas: int = 1) -> dict:
                         if client.get("/health").status_code == 200:
                             break
                     except httpx.HTTPError:
-                        pass
+                        pass  # endpoint unreachable or malformed reply: report nothing found
                     if time.monotonic() > deadline:
                         raise RuntimeError("Qualification HTTP server did not start")
                     time.sleep(0.05)

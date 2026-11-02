@@ -27,7 +27,7 @@ def push_runtime_evidence(
             try:
                 loopback = ipaddress.ip_address(host).is_loopback
             except ValueError:
-                pass
+                pass  # unparseable input: fall back to the default below
         _ = parsed.port
     except ValueError:
         raise SourceAuthenticationError("Configure a valid control-plane API origin") from None

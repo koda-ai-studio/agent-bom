@@ -328,7 +328,7 @@ def test_enrichment_cache_load_failure_logged(caplog):
         try:
             enrichment._load_enrichment_cache()
         except Exception:
-            pass
+            pass  # the call's own failure is not under test; the assertions below check side effects
 
     # Restore
     enrichment._enrichment_cache_loaded = False

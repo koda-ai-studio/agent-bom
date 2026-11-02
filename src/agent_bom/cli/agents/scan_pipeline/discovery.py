@@ -29,7 +29,7 @@ def _create_context(opts: ScanOptions, st: ScanState) -> None:
         _reset_resolver_performance()
         _reset_scan_performance()
     except Exception:
-        pass
+        pass  # performance counters are diagnostics only
 
     # Compute any_cloud for early no-agent check in _discovery
     st.any_cloud = (

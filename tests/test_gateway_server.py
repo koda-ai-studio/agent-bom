@@ -1289,7 +1289,7 @@ def test_managed_upstream_relay_opens_circuit_after_repeated_failures() -> None:
             try:
                 await relay(upstream, message, {})
             except RuntimeError:
-                pass
+                pass  # the raised error is the expected outcome; assertions below check the effects
         try:
             await relay(upstream, message, {})
         except Exception as exc:  # noqa: BLE001

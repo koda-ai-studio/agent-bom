@@ -529,7 +529,7 @@ async def probe_dcgm_endpoint(host: str, port: int = _DCGM_PORT) -> DcgmEndpoint
                 gpu_count = int(line.split()[-1])
                 break
             except (ValueError, IndexError):
-                pass
+                pass  # unparseable input: fall back to the default below
 
     # Extract some metric key names for inventory
     metric_keys = [line.split("{")[0].strip() for line in content.splitlines() if line.startswith("DCGM_FI_") and not line.startswith("#")][

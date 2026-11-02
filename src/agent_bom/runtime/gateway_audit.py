@@ -358,7 +358,7 @@ class ControlPlaneAuditSink:
         try:
             await self._worker
         except asyncio.CancelledError:
-            pass
+            pass  # expected: the task was just cancelled
         self._worker = None
 
     def _own_health(self) -> dict[str, str | int | bool]:

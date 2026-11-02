@@ -23,7 +23,7 @@ def _stop_group(proc: subprocess.Popen) -> None:
         else:
             os.killpg(proc.pid, signal.SIGKILL)
     except ProcessLookupError:
-        pass
+        pass  # the process already exited
     finally:
         if proc.poll() is None:
             proc.kill()

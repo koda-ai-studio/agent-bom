@@ -528,7 +528,7 @@ def _atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
         try:
             os.unlink(temporary)
         except OSError:
-            pass
+            pass  # best-effort cleanup; failure leaves nothing to undo
         raise
 
 
@@ -603,7 +603,7 @@ def sign_sbom_file(
         try:
             sig_out.unlink()
         except OSError:
-            pass
+            pass  # best-effort cleanup; failure leaves nothing to undo
         raise AttestationSigningError("attestation_artifact_write_failed") from None
 
     return AttestationResult(

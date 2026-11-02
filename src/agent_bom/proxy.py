@@ -671,7 +671,7 @@ async def _reap_server(process: asyncio.subprocess.Process, *, grace_seconds: fl
             try:
                 process.kill()
             except ProcessLookupError:
-                pass
+                pass  # the process already exited
         await process.wait()
 
 

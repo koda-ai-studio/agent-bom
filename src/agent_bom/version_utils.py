@@ -265,5 +265,5 @@ async def resolve_maven_metadata(
             if docs:
                 return docs[0].get("latestVersion"), None
         except (ValueError, KeyError):
-            pass
+            pass  # malformed registry reply: fall back below
     return None, None

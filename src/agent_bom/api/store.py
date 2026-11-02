@@ -364,7 +364,7 @@ class SQLiteJobStore:
         try:
             self._conn.execute("PRAGMA shrink_memory")
         except sqlite3.Error:
-            pass
+            pass  # best-effort memory hint
 
     def _close_thread_connection(self) -> None:
         conn = getattr(self._local, "conn", None)

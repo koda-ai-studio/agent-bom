@@ -313,7 +313,7 @@ class _SQLiteWorkspaceBackend:
                     try:
                         p.unlink()
                     except FileNotFoundError:
-                        pass
+                        pass  # best-effort cleanup; failure leaves nothing to undo
 
 
 class _PostgresWorkspaceBackend:

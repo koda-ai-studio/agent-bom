@@ -196,7 +196,7 @@ def _flag_risks(server: dict[str, Any]) -> list[str]:
             if age_days > 180:
                 flags.append(f"abandoned ({age_days}d since last push)")
         except (ValueError, TypeError):
-            pass
+            pass  # unparseable input: fall back to the default below
 
     # Archived on GitHub
     if server.get("github_archived"):

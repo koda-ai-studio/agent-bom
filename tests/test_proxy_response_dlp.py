@@ -299,4 +299,4 @@ def test_sigterm_reaps_running_upstream(tmp_path):
             try:
                 os.kill(child_pid, signal.SIGKILL)
             except ProcessLookupError:
-                pass
+                pass  # the process already exited

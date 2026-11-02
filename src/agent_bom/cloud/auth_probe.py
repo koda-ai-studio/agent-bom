@@ -100,7 +100,7 @@ def _probe_aws() -> Optional[str]:
             method = getattr(creds, "method", None) or "boto3"
             return f"boto3 ({method})"
     except Exception:
-        pass
+        pass  # SDK missing or no default credentials: try the next source
 
     # Named profile selects a section in the shared credentials/config files.
     if os.environ.get("AWS_PROFILE"):
@@ -198,7 +198,7 @@ def _probe_gcp() -> Optional[str]:
         if creds is not None:
             return "google.auth.default()"
     except Exception:
-        pass
+        pass  # SDK missing or no default credentials: report none
     return None
 
 

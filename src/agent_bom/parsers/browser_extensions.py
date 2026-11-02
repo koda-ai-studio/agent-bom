@@ -369,7 +369,7 @@ def _firefox_profile_dirs() -> list[Path]:
     try:
         sysname = os.uname().sysname
     except AttributeError:
-        pass
+        pass  # os.uname is unavailable on Windows: keep the default
 
     if os.name == "nt":
         base = Path(os.environ.get("APPDATA", str(home))) / "Mozilla" / "Firefox" / "Profiles"

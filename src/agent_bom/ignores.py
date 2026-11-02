@@ -88,7 +88,7 @@ def load_ignore_file(path: str | Path | None = None) -> list[dict[str, Any]]:
         try:
             import tomllib as _t  # noqa: F401
         except ImportError:
-            pass
+            pass  # optional dependency absent: keep the default
         # Fall back to a minimal YAML-subset parser (key: value lines only)
         return _parse_minimal_yaml(target)
 

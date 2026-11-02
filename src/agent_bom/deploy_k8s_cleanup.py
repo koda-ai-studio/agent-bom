@@ -135,7 +135,7 @@ def execute_cleanup(operations: list[CleanupOperation]) -> int:
             payload = json.loads(body)
             detail = payload.get("message") or payload.get("details") or body
         except json.JSONDecodeError:
-            pass
+            pass  # unparseable input: fall back to the default below
         suffix = operation.name or operation.label_selector or ""
         sys.stderr.write(f"{operation.kind}: failed {suffix} ({status}) {detail}\n")
     return failed

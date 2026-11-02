@@ -82,7 +82,7 @@ def _single_flight(key: tuple[str, str], load: Callable[[], _T]) -> _T:
                 try:
                     _shared_values[key] = value
                 except TypeError:
-                    pass
+                    pass  # unhashable key: return the value without sharing it
             return cast(_T, value)
     finally:
         with _shared_lock:

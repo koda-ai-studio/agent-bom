@@ -49,7 +49,7 @@ class ReportWorker:
             try:
                 await asyncio.wait_for(self._wake.wait(), timeout=min(1.0, self.lease / 3))
             except asyncio.TimeoutError:
-                pass
+                pass  # the timeout only paces this loop
 
     def tick(self) -> None:
         from agent_bom.api.report_worker import run_claimed_report

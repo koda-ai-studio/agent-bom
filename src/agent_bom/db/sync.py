@@ -118,7 +118,7 @@ def sync_osv(
         try:
             os.unlink(tmp_path)
         except OSError:
-            pass
+            pass  # best-effort cleanup; failure leaves nothing to undo
 
     conn.commit()
     if max_entries > 0:

@@ -809,7 +809,7 @@ def protect_cmd(
         try:
             await task
         except asyncio.CancelledError:
-            pass
+            pass  # expected: the task was just cancelled
         engine.stop()
         stats = engine.status()
         console.print(f"[dim]Tool calls analyzed: {stats['tool_calls_analyzed']}, Alerts: {stats['alerts_generated']}[/dim]")

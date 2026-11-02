@@ -147,7 +147,7 @@ class DistributedScanWorker:
             try:
                 await asyncio.wait_for(self._stop.wait(), timeout=self._poll)
             except asyncio.TimeoutError:
-                pass
+                pass  # the timeout only paces this loop
 
     def _tick(self) -> None:
         # Heartbeat in-flight leases first so a slow scan is never reclaimed by a

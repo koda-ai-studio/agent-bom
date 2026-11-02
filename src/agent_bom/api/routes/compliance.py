@@ -845,7 +845,7 @@ async def ingest_compliance_findings(request: Request) -> dict:
         try:
             tmp_path.unlink(missing_ok=True)
         except OSError:
-            pass
+            pass  # best-effort cleanup; failure leaves nothing to undo
 
     if not findings:
         raise HTTPException(

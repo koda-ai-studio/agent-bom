@@ -285,7 +285,7 @@ class MCPServer:
                 if declared.version == 5 and str(declared) == self.imported_canonical_id:
                     return self.imported_canonical_id
             except (ValueError, AttributeError):
-                pass
+                pass  # unparseable input: fall back to the default below
         return canonical_mcp_server_id(
             self.name,
             self.command,

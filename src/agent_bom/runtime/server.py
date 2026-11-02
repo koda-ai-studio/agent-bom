@@ -158,7 +158,7 @@ async def run_stdin_mode(engine: ProtectionEngine) -> None:
                     sys.stdout.write(json.dumps(alert) + "\n")
                 sys.stdout.flush()
     except asyncio.CancelledError:
-        pass
+        pass  # expected on shutdown
     finally:
         engine.stop()
 
@@ -274,7 +274,7 @@ async def run_http_mode(engine: ProtectionEngine, host: str, port: int, *, allow
             writer.write(http_response.encode("utf-8"))
             await writer.drain()
         except (asyncio.TimeoutError, ConnectionResetError, asyncio.IncompleteReadError):
-            pass
+            pass  # client stalled or dropped: close the connection
         finally:
             writer.close()
 
@@ -284,7 +284,7 @@ async def run_http_mode(engine: ProtectionEngine, host: str, port: int, *, allow
     try:
         await server.serve_forever()
     except asyncio.CancelledError:
-        pass
+        pass  # expected on shutdown
     finally:
         server.close()
         engine.stop()

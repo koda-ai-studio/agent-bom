@@ -82,7 +82,7 @@ class _GatewayAuditTenantRegistry:
             try:
                 os.unlink(temp_name, dir_fd=parent_fd)
             except FileNotFoundError:
-                pass
+                pass  # best-effort cleanup; failure leaves nothing to undo
             os.close(parent_fd)
 
     def discover(self) -> list[str]:

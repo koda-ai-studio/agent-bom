@@ -187,7 +187,7 @@ def _check_ai_4_2(model_ids: list[str] | None = None) -> CISCheckResult:
 
             manifest_root = _MANIFEST_DIR
         except ImportError:
-            pass
+            pass  # optional dependency absent: keep the default
 
         if manifest_root and manifest_root.exists():
             for tag_path in manifest_root.rglob("*"):

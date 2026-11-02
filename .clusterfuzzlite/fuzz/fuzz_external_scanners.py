@@ -45,7 +45,7 @@ def TestOneInput(data: bytes) -> None:
         else:
             parse_syft_json(obj)
     except (ValueError, TypeError, KeyError, AttributeError, IndexError):
-        pass
+        pass  # rejected input is an expected fuzz outcome
 
 
 def main() -> None:

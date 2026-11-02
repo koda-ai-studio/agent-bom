@@ -76,7 +76,7 @@ def test_distinct_concurrent_observations_do_not_lose_scan_count(store, monkeypa
         try:
             second.result(timeout=1)
         except TimeoutError:
-            pass
+            pass  # the raised error is the expected outcome; assertions below check the effects
         finally:
             release_first.set()
         first.result(timeout=10)

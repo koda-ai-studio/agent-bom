@@ -73,7 +73,7 @@ def package_lookup_names(package: PackageArtifact) -> list[str]:
                 if path and not any(part in {".", ".."} for part in path.split("/")):
                     add_name(parsed_url.hostname + path)
         except ValueError:
-            pass
+            pass  # unparseable input: fall back to the default below
     if package.source_package:
         source_name = package.source_package.strip()
         if source_name and normalize_package_name(source_name, package.ecosystem) != normalize_package_name(
