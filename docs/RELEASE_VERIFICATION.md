@@ -638,6 +638,33 @@ the manual command) instead of failing the published release:
 The job authenticates with the run's `GITHUB_TOKEN` (`contents: write`,
 `pull-requests: write`); no personal token is stored.
 
+#### A tag with no release
+
+A `vX.Y.Z` tag can exist while `gh release view vX.Y.Z` says `release not
+found`: the tag push started `release.yml`, a publish job failed before the
+GitHub Release step, and the fix shipped under the next patch (`v0.112.0` →
+`v0.112.1` is the standing example). Treat it as evidence, not as a release:
+
+1. Record what happened: `gh run list --workflow release.yml --branch vX.Y.Z`
+   and the failing job's log. The tag's commit is `git rev-parse vX.Y.Z^{commit}`.
+2. Check what the partial run published before it failed, because every
+   registry is immutable per version: PyPI (`pip index versions agent-bom`),
+   Docker Hub and GHCR tags, the Helm OCI chart, the MCP registry. Anything
+   published under `X.Y.Z` means that version number is spent.
+3. Never re-tag or move the tag: `scripts/check_release_tag_is_new.py` refuses
+   a version that is already tagged or published, PyPI rejects re-uploads, and
+   a moved tag breaks every consumer that already resolved it. Fix forward on
+   `main` and release the next patch.
+4. Leave the tag in place by default. It documents the attempt, and the
+   version consistency gates (`scripts/check_version_alignment.py`,
+   `bump-version.py --check`) do not read it. Deleting it
+   (`git push origin :refs/tags/vX.Y.Z`) is an owner-only, irreversible call
+   to make only after step 2 shows nothing was published under it; a tag that
+   backs a published artifact stays forever.
+5. Note the dangling tag in the next release's CHANGELOG entry or GitHub
+   Release notes so a reader who finds `vX.Y.Z` in `git tag` knows to use
+   `vX.Y.Z+1`.
+
 #### Release checkouts run their own tag
 
 Because pull-only pins track `PUBLISHED_VERSION`, a checkout of tag `vX` still

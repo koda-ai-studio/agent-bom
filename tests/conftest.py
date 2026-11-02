@@ -142,6 +142,10 @@ os.environ.setdefault("AGENT_BOM_EXEC_PREWARM", "0")
 # A plain scan joins the CISA KEV catalog; keep the suite hermetic by reading
 # only local caches (the isolated state dir has none, so KEV reads "unknown").
 os.environ.setdefault("AGENT_BOM_KEV_DEFAULT_JOIN", "cache")
+# Fixture scan reports carry fixed historical timestamps; the 90-day whole-run
+# age cap on the local analytics mirror would silently drop them on write.
+# Tests of the cap itself set the variable explicitly.
+os.environ.setdefault("AGENT_BOM_ANALYTICS_MAX_RUN_AGE_DAYS", "0")
 # Every graph producer must satisfy the relationship contract under test;
 # production defaults to warn and records counts in analysis_status. A module
 # opts out with ``pytest.mark.graph_contract("warn")`` (see pytest_runtest_setup).
@@ -1015,6 +1019,37 @@ def _restore_stub_sdk_modules(snapshot: dict[str, Any]) -> None:
             sys.modules[name] = snapshot[name]
 
 
+def _evicted_agent_bom_submodules() -> dict[str, types.ModuleType]:
+    """agent_bom submodules a parent package still holds but ``sys.modules`` lost.
+
+    ``mock.patch.dict(sys.modules, ...)`` restores the dict by clearing it and
+    re-inserting its snapshot, so an ``agent_bom`` module first imported inside
+    the block vanishes from ``sys.modules`` while its parent package keeps the
+    attribute. The next dotted import then builds a second module object:
+    ``from agent_bom.x import y`` keeps handing out the stale one, and a patch
+    on it never reaches code that imports ``agent_bom.x.y`` at call time.
+    """
+    evicted: dict[str, types.ModuleType] = {}
+    for name, module in list(sys.modules.items()):
+        if not (name == "agent_bom" or name.startswith("agent_bom.")) or not isinstance(module, types.ModuleType):
+            continue
+        for attr, value in list(vars(module).items()):
+            if not isinstance(value, types.ModuleType):
+                continue
+            child = f"{name}.{attr}"
+            if getattr(value, "__name__", None) == child and sys.modules.get(child) is None:
+                evicted[child] = value
+    return evicted
+
+
+def _resync_agent_bom_submodules() -> int:
+    """Re-register evicted agent_bom submodules so one import name maps to one object."""
+    evicted = _evicted_agent_bom_submodules()
+    for name, module in evicted.items():
+        sys.modules[name] = module
+    return len(evicted)
+
+
 @pytest.fixture(autouse=True)
 def reset_global_test_state():
     """Reset process-global caches so test order does not affect outcomes."""
@@ -1077,6 +1112,7 @@ def reset_global_test_state():
     _drain_scan_executor()
     _drain_graph_warmups()
     _restore_stub_sdk_modules(stub_sdk_modules_snapshot)
+    _resync_agent_bom_submodules()
     root_logger.handlers[:] = logging_handlers_snapshot
     root_logger.setLevel(logging_level_snapshot)
     _restore_scanner_globals(scanner_offline_snapshot)

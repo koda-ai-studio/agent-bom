@@ -99,7 +99,7 @@ def test_report_storage_reports_counts_and_configured_caps(tmp_path, monkeypatch
     assert payload["scan_runs"] == 1
     assert payload["findings"] == 1
     assert payload["packages"] == 0
-    assert payload["limits"] == {"scan_runs": 9, "findings": 19, "packages": 99}
+    assert payload["limits"] == {"scan_runs": 9, "findings": 19, "packages": 99, "run_age_days": 0, "bytes": 2 * 1024**3}
     assert payload["bytes"] > 0
 
 

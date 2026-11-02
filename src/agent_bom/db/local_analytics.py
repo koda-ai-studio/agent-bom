@@ -19,14 +19,15 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from agent_bom.analytics_retention import (
-    analytics_max_events,
-    analytics_max_findings,
-    analytics_max_packages,
+    local_mirror_limits,
+    local_mirror_over_limit,
     plan_local_scan_prune,
     prune_local_scan_runs,
+    run_age_days,
 )
 from agent_bom.canonical_ids import canonical_package_id
 from agent_bom.config import LOCAL_ANALYTICS_DB
+from agent_bom.db.local_analytics_sqlite import page_stats, release_free_pages, table_columns, table_exists
 from agent_bom.storage import state_home
 
 SCHEMA_VERSION = 4
@@ -50,13 +51,16 @@ class LocalAnalyticsStore:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
+        # Honored only before the file header exists; the WAL switch below writes it.
+        # An existing file keeps its mode until ``prune(compact=True)`` runs VACUUM.
+        conn.execute("PRAGMA auto_vacuum=INCREMENTAL")
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
         self._init_schema(conn)
         return conn
 
     def _init_schema(self, conn: sqlite3.Connection) -> None:
-        if _table_exists(conn, "scan_runs") and "run_id" not in _table_columns(conn, "scan_runs"):
+        if table_exists(conn, "scan_runs") and "run_id" not in table_columns(conn, "scan_runs"):
             self._migrate_v1_schema(conn)
         self._create_schema(conn)
         self._migrate_canonical_columns(conn)
@@ -148,8 +152,8 @@ class LocalAnalyticsStore:
         )
 
     def _migrate_canonical_columns(self, conn: sqlite3.Connection) -> None:
-        finding_columns = _table_columns(conn, "scan_findings") if _table_exists(conn, "scan_findings") else set()
-        package_columns = _table_columns(conn, "scan_packages") if _table_exists(conn, "scan_packages") else set()
+        finding_columns = table_columns(conn, "scan_findings") if table_exists(conn, "scan_findings") else set()
+        package_columns = table_columns(conn, "scan_packages") if table_exists(conn, "scan_packages") else set()
         if "canonical_id" not in finding_columns:
             conn.execute("ALTER TABLE scan_findings ADD COLUMN canonical_id TEXT NOT NULL DEFAULT ''")
         if "asset_canonical_id" not in finding_columns:
@@ -165,7 +169,7 @@ class LocalAnalyticsStore:
         )
 
     def _migrate_retention_columns(self, conn: sqlite3.Connection) -> None:
-        columns = _table_columns(conn, "scan_runs")
+        columns = table_columns(conn, "scan_runs")
         added_finding_rows = "finding_rows" not in columns
         added_package_rows = "package_rows" not in columns
         if added_finding_rows:
@@ -256,14 +260,12 @@ class LocalAnalyticsStore:
         """Upsert one scan report into normalized local tables."""
         scan_id = str(report_json.get("scan_id") or "").strip()
         if not scan_id:
-            generated_key = str(report_json.get("generated_at") or _now_iso()).replace(":", "").replace("-", "")
-            scan_id = f"local-{generated_key}"
+            scan_id = "local-" + str(report_json.get("generated_at") or _now_iso()).replace(":", "").replace("-", "")
 
         generated_at = str(report_json.get("generated_at") or report_json.get("scan_timestamp") or _now_iso())
         recorded_at = _now_iso()
         run_id = _run_id(report_json)
-        raw_summary = report_json.get("summary")
-        summary: dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
+        summary: dict[str, Any] = report_json["summary"] if isinstance(report_json.get("summary"), dict) else {}
         findings = list(_iter_findings(report_json))
         finding_rows = _finding_rows(run_id, scan_id, findings)
         package_rows = list(_iter_packages(report_json))
@@ -333,8 +335,10 @@ class LocalAnalyticsStore:
                 """,
                 [_package_row(run_id, scan_id, package_row) for package_row in package_rows],
             )
-            prune_local_scan_runs(conn)
+            pruned = prune_local_scan_runs(conn)
             conn.commit()
+            if pruned:
+                release_free_pages(conn)
         return scan_id
 
     def list_scan_runs(self, *, limit: int = 20, tenant_id: str | None = None) -> list[dict[str, Any]]:
@@ -377,26 +381,23 @@ class LocalAnalyticsStore:
                 SELECT
                     COUNT(*) AS scan_runs,
                     COALESCE(SUM(finding_rows), 0) AS findings,
-                    COALESCE(SUM(package_rows), 0) AS packages
+                    COALESCE(SUM(package_rows), 0) AS packages,
+                    MIN(generated_at) AS oldest_generated_at
                 FROM scan_runs
                 """
             ).fetchone()
-        limits = {
-            "scan_runs": analytics_max_events(),
-            "findings": analytics_max_findings(),
-            "packages": analytics_max_packages(),
-        }
-        counts = {
-            "scan_runs": int(row["scan_runs"]),
-            "findings": int(row["findings"]),
-            "packages": int(row["packages"]),
-        }
+            pages = page_stats(conn)
+        limits = local_mirror_limits()
+        counts = {"scan_runs": int(row["scan_runs"]), "findings": int(row["findings"]), "packages": int(row["packages"])}
+        oldest_age = run_age_days(row["oldest_generated_at"]) if row["oldest_generated_at"] else None
         return {
             "db_path": str(self.db_path),
             "bytes": self._storage_bytes(),
             **counts,
+            **pages,
+            "oldest_run_age_days": oldest_age,
             "limits": limits,
-            "over_limit": any(limits[key] > 0 and counts[key] > limits[key] for key in limits),
+            "over_limit": local_mirror_over_limit(counts, limits, oldest_run_age_days=oldest_age, live_bytes=pages["live_bytes"]),
         }
 
     def prune(
@@ -405,23 +406,29 @@ class LocalAnalyticsStore:
         max_runs: int | None = None,
         max_packages: int | None = None,
         max_findings: int | None = None,
+        max_age_days: int | None = None,
+        max_bytes: int | None = None,
         apply: bool = False,
         compact: bool = False,
     ) -> dict[str, Any]:
         """Plan or apply whole-run retention, optionally compacting SQLite."""
         bytes_before = self._storage_bytes()
         with closing(self._connect()) as conn:
+            free_before = page_stats(conn)["free_bytes"]
             stale = plan_local_scan_prune(
                 conn,
                 max_events=max_runs,
                 max_packages=max_packages,
                 max_findings=max_findings,
+                max_age_days=max_age_days,
+                max_bytes=max_bytes,
             )
             if apply and stale:
                 conn.executemany("DELETE FROM scan_runs WHERE run_id = ?", ((run_id,) for run_id in stale))
                 conn.commit()
             if apply and compact:
                 conn.execute("VACUUM")
+            free_after = page_stats(conn)["free_bytes"]
         return {
             "db_path": str(self.db_path),
             "applied": apply,
@@ -429,6 +436,8 @@ class LocalAnalyticsStore:
             "deleted_runs": len(stale),
             "bytes_before": bytes_before,
             "bytes_after": self._storage_bytes(),
+            "free_bytes_before": free_before,
+            "free_bytes_after": free_after,
         }
 
     def _storage_bytes(self) -> int:
@@ -730,12 +739,3 @@ def _float(value: Any) -> float:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
-    row = conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)).fetchone()
-    return row is not None
-
-
-def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
-    return {str(row["name"]) for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}

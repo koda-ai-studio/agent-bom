@@ -472,3 +472,39 @@ If a workflow job is renamed, its old name stays as a required context until
 someone updates the branch protection rule. Symptom: every PR is blocked on a
 check name that no longer exists. Fix: Settings → Branches → main protection
 rule → re-select required contexts.
+
+### MCP registry sync cannot open its PR
+
+`.github/workflows/mcp-registry-sync.yml` runs every Monday, refreshes
+`src/agent_bom/mcp_registry.json`, pushes the single branch
+`chore/mcp-registry-sync` (force-with-lease, so there is never more than one)
+and opens or updates its pull request with the run's `GITHUB_TOKEN`.
+
+GitHub only lets a workflow token open a PR when **Settings → Actions →
+General → Workflow permissions → Allow GitHub Actions to create and approve
+pull requests** is enabled. With it off, `gh pr create` fails with
+`GitHub Actions is not permitted to create or approve pull requests`.
+
+The workflow reads that setting first (`GET
+/repos/{owner}/{repo}/actions/permissions/workflow`,
+`can_approve_pull_request_reviews`) and, when PR creation is refused, fails
+closed: the branch stays pushed, one tracking issue titled
+`MCP registry sync: Actions may not open the weekly pull request` is created
+(or updated and commented on every following week) with the diffstat, the
+pending counts and the manual command, the step summary repeats it, and the
+run ends red with that reason as its `::error`. Symptom of the unfixed state:
+a red run each Monday plus that open issue.
+
+Fix once: enable the setting above (it also lets the release workflow's
+post-release pin PR open itself, see
+[`RELEASE_VERIFICATION.md`](../RELEASE_VERIFICATION.md), "Post-release pin
+sync"), then re-run the workflow from the Actions tab or open the PR by hand:
+
+```bash
+gh pr create --repo <owner>/<repo> --base main --head chore/mcp-registry-sync \
+  --title "chore: sync MCP registry" --body "Weekly registry sync; see the workflow run."
+```
+
+Dated `chore/mcp-registry-YYYYMMDD` branches from runs before this fix are
+orphans of the refused PR creation: compare them against `main`, merge what is
+still wanted through a PR, then delete them.

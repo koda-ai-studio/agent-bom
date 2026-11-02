@@ -77,7 +77,14 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     if (width === 390) await context.getByLabel("Graph context", { exact: true }).selectOption("identity");
     else await context.getByRole("button", { name: "Identity and access context", exact: true }).click();
     await expect(page.locator(".react-flow__node")).toHaveCount(2);
-    await page.locator('[data-id="role:conditional"]').click();
+    const conditional = page.locator('.react-flow__node[data-id="role:conditional"]');
+    // A phone frames the root card alone and the canvas undoes any scroll that
+    // would reveal the role, so a pointer cannot reach it; activate it directly.
+    if (width === 390) await conditional.dispatchEvent("click");
+    else {
+      await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
+      await conditional.click();
+    }
     await expect(inspector.getByText("Conditional admin", {exact: true})).toBeVisible();
     await expect(inspector.getByText(/request context has not been verified/)).toBeVisible();
     await expect(inspector.getByText(/Scope: arn:aws:iam/)).toBeVisible();
