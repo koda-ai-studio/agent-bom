@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, KeyRound, Monitor, Plug, ScrollText, ShieldCheck, UserRound } from "lucide-react";
 import { useAuthState } from "@/components/auth-provider";
 import { ThemePreferenceControl } from "@/components/theme-toggle";
+import { useDemoDataView } from "@/components/shell-deployment-context";
 import { sessionPresentation } from "@/lib/session-presentation";
 
 function MetadataRow({ label, value }: { label: string; value: string }) {
@@ -15,12 +16,12 @@ function MetadataRow({ label, value }: { label: string; value: string }) {
 
 export default function SettingsPage() {
   const { session, hasCapability, signOut } = useAuthState();
-  const identity = sessionPresentation(session);
+  const identity = sessionPresentation(session, { demoData: useDemoDataView() });
   const memberships = session?.memberships ?? [];
   const activeMembership = memberships.find(membership => membership.active);
   // AuthMembership.display_name is the role's UI label, not the organization name.
   const workspaceName = activeMembership?.tenant_id || session?.tenant_id || "Local report only";
-  const status = !session ? "Offline report" : session.auth_required === false ? "Authentication disabled" : session.authenticated ? "Session active" : "Sign-in required";
+  const status = !session ? "Offline report" : identity.status === "Read-only demo" ? "Read-only demo" : session.auth_required === false ? "Authentication disabled" : session.authenticated ? "Session active" : "Sign-in required";
   const destinations = [
     { href: "/connections", name: "Connections", description: "Connect sources and review collection status.", icon: Plug, visible: hasCapability("scan.run") },
     { href: "/audit#access", name: "Access & keys", description: "Review authentication policy and service keys.", icon: KeyRound, visible: hasCapability("keys.manage") },

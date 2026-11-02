@@ -3,17 +3,12 @@
 import Link from "next/link";
 import { FlaskConical } from "lucide-react";
 
-import { useCaptureMode, useReferenceEvidenceLabMode } from "@/lib/use-capture-mode";
+import { useDemoDataView } from "@/components/shell-deployment-context";
+import { useReferenceEvidenceLabMode } from "@/lib/use-capture-mode";
 
-function hasDemoSeedSources(scanSources: string[] | undefined): boolean {
-  if (!scanSources?.length) return false;
-  return scanSources.some((source) => source.includes("demo"));
-}
-
-export function DemoEstateLabel({ scanSources }: { scanSources?: string[] | undefined }) {
-  const captureMode = useCaptureMode();
+export function DemoEstateLabel() {
   const referenceEvidenceLab = useReferenceEvidenceLabMode();
-  const visible = captureMode || hasDemoSeedSources(scanSources);
+  const visible = useDemoDataView();
 
   if (!visible) return null;
 

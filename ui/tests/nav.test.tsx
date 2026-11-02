@@ -75,12 +75,15 @@ vi.mock('@/lib/api', () => ({
 }))
 
 import { Nav } from '@/components/nav'
+import { ShellDeploymentProvider } from '@/components/shell-deployment-context'
 import { SidebarLayoutProvider } from '@/components/sidebar-layout'
 
 function renderNav() {
   return render(
     <SidebarLayoutProvider>
-      <Nav />
+      <ShellDeploymentProvider>
+        <Nav />
+      </ShellDeploymentProvider>
     </SidebarLayoutProvider>,
   )
 }

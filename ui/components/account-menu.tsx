@@ -5,14 +5,13 @@ import { useRef } from "react";
 import { Building2, ChevronDown, LogOut, Settings, UserRound } from "lucide-react";
 import { useAuthState } from "@/components/auth-provider";
 import { ThemePreferenceControl } from "@/components/theme-toggle";
+import { useDemoDataView } from "@/components/shell-deployment-context";
 import { sessionPresentation } from "@/lib/session-presentation";
-import { isStaticDemo } from "@/lib/static-demo";
-/** ``demoEstate`` comes from the nav's posture-counts read so the menu never issues a second one. */
-export function AccountMenu({ demoEstate = false }: { demoEstate?: boolean }) {
+export function AccountMenu() {
   const { session, loading, signOut, hasCapability } = useAuthState();
   const panel = useRef<HTMLDetailsElement>(null);
   const trigger = useRef<HTMLElement>(null);
-  const identity = sessionPresentation(session, { demoEstate });
+  const identity = sessionPresentation(session, { demoData: useDemoDataView() });
   const displayName = loading ? "Checking session…" : session ? identity.name : "Offline";
   const close = () => { if (panel.current) panel.current.open = false; };
   return <details ref={panel} className="relative shrink-0" onKeyDown={event => {
@@ -31,7 +30,7 @@ export function AccountMenu({ demoEstate = false }: { demoEstate?: boolean }) {
             <p className="mt-1 text-xs text-ink-secondary">{session ? identity.method : "No control-plane session"}{session?.role_summary?.display_name ? ` · ${session.role_summary.display_name}` : ""}</p>
             {session && <p className="mt-2 text-xs leading-5 text-ink-secondary">{identity.description}</p>}
             <span className="mt-2 inline-flex items-center rounded-full border border-outline bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-secondary">
-              {!session ? "Offline" : isStaticDemo() || (demoEstate && session.auth_required === false) ? "Read-only demo" : session.auth_required === false ? "Unauthenticated access" : session.authenticated ? "Signed in" : "Sign-in required"}
+              {identity.status}
             </span>
           </div>
         </div>
