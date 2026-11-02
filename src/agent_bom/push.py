@@ -223,7 +223,8 @@ async def _push_async(
     return_body: Literal[False] = False,
     source_id: str | None = None,
     idempotency_key: str | None = None,
-) -> bool: ...
+) -> bool:
+    """Push results and return only whether delivery succeeded."""
 
 
 @overload
@@ -238,7 +239,8 @@ async def _push_async(
     return_body: Literal[True],
     source_id: str | None = None,
     idempotency_key: str | None = None,
-) -> tuple[bool, dict[str, Any] | None]: ...
+) -> tuple[bool, dict[str, Any] | None]:
+    """Push results and also return the parsed response body."""
 
 
 async def _push_async(

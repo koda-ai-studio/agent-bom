@@ -50,7 +50,8 @@ from agent_bom.security import sanitize_security_warnings, sanitize_text, saniti
 class CloudLineageProjection(Protocol):
     def __call__(
         self, graph: UnifiedGraph, *, agent_id: str, agent_dict: dict[str, Any], agent_metadata: dict[str, Any], data_source: str
-    ) -> None: ...
+    ) -> None:
+        """Project one agent's cloud lineage into ``graph``."""
 
 
 @dataclass

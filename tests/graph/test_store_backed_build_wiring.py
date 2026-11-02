@@ -106,14 +106,11 @@ def test_builder_into_store_backed_is_byte_identical(case: tuple[str, dict], mon
     in_ram = UnifiedGraph(scan_id=sid, tenant_id="t1", created_at=_FIXED_CREATED_AT)
     built_ram = build_unified_graph_from_report(report, scan_id=sid, tenant_id="t1", container=in_ram)
 
-    store = _sqlite_store(tenant_id="t1", scan_id=sid)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id=sid) as store:
         built_store = build_unified_graph_from_report(report, scan_id=sid, tenant_id="t1", container=store)
         assert built_store is store
         assert len(built_ram.nodes) > 0
         assert _dumps(built_store) == _dumps(built_ram), "store-backed build diverged from the in-RAM producer"
-    finally:
-        store.close()
 
 
 # ── Overlays run unchanged when the held node subset is evicted mid-build ─────
@@ -173,15 +170,12 @@ def test_cnapp_overlay_store_safe_under_eviction(monkeypatch: pytest.MonkeyPatch
 
     # capacity(4) << 120 nodes: the held cloud_resources are evicted from the LRU
     # during the filter scan, before cnapp mutates them.
-    store = _sqlite_store(tenant_id="t1", scan_id="s", capacity=4)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", capacity=4) as store:
         _make_cnapp_estate(store, resources=30, fillers=60)
         store_stats = apply_cnapp_overlay(store)
         assert store_stats == ram_stats
         assert ram_stats["exposed_nodes"] == 30 and ram_stats["toxic_combinations"] == 30
         assert _dumps(store) == _dumps(ram), "cnapp exposure/toxic mutations lost on eviction"
-    finally:
-        store.close()
 
 
 def _make_iam_estate(g: UnifiedGraph, *, principals: int, fillers: int) -> None:
@@ -217,16 +211,13 @@ def test_effective_permissions_store_safe_under_eviction(monkeypatch: pytest.Mon
     _make_iam_estate(ram, principals=25, fillers=60)
     ram_stats = apply_effective_permissions(ram)
 
-    store = _sqlite_store(tenant_id="t1", scan_id="s", capacity=4)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", capacity=4) as store:
         _make_iam_estate(store, principals=25, fillers=60)
         store_stats = apply_effective_permissions(store)
         assert store_stats == ram_stats
         # Every role is admin-equivalent via the name heuristic — the held-subset write.
         assert all(ram.nodes[f"role:admin-{i}"].attributes.get("admin_equivalent") is True for i in range(25))
         assert _dumps(store) == _dumps(ram), "admin-equivalence mutation lost on eviction"
-    finally:
-        store.close()
 
 
 # ── Producer peak is a bounded fraction of the in-RAM build ───────────────────

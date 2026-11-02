@@ -18,7 +18,8 @@ _DEFAULT_ANALYTICS_MAX_TRACE_REVISIONS = 250_000
 
 
 class _ObservationCapConnection(Protocol):
-    def execute(self, query: str, params: Any = ()) -> Any: ...
+    def execute(self, query: str, params: Any = ()) -> Any:
+        """Run one SQL statement with bound parameters."""
 
 
 def _runtime_observation_queries(placeholder: str) -> tuple[str, str, str]:

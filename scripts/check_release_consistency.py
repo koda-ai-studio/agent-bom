@@ -299,7 +299,7 @@ def _server_card_list(variable_name: str) -> list[dict[str, object]]:
         value = ast.literal_eval(node.value)
         if isinstance(value, list):
             return value
-    _fail(f"{metadata.relative_to(ROOT)} is missing {variable_name}")
+    return _fail(f"{metadata.relative_to(ROOT)} is missing {variable_name}")
 
 
 def _server_card_catalog() -> tuple[list[str], list[str], list[str]]:

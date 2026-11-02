@@ -9,10 +9,10 @@ describe("declared agent-graph routes", () => {
       provenance: "declared", file_path: "app.py", line_number: 50,
     } }} />);
     const rows = screen.getByLabelText("Recorded link evidence");
-    expect(rows).toHaveTextContent("Declared by" + "StateGraph.add_conditional_edges");
-    expect(rows).toHaveTextContent("Branch" + "needs_research");
-    expect(rows).toHaveTextContent("Route role" + "Entry point");
-    expect(rows).toHaveTextContent("Declared at" + "app.py:50");
+    expect(rows).toHaveTextContent(/Declared by\s*StateGraph\.add_conditional_edges/);
+    expect(rows).toHaveTextContent(/Branch\s*needs_research/);
+    expect(rows).toHaveTextContent(/Route role\s*Entry point/);
+    expect(rows).toHaveTextContent(/Declared at\s*app\.py:50/);
   });
 
   it("leaves unrelated links unchanged", () => {

@@ -52,7 +52,8 @@ class Alert:
 class AlertSink(Protocol):
     """Protocol for alert delivery."""
 
-    def send(self, alert: Alert) -> None: ...
+    def send(self, alert: Alert) -> None:
+        """Deliver one alert."""
 
 
 class ConsoleAlertSink:

@@ -176,9 +176,8 @@ def load_scheduled_targets(raw: str | None = None) -> list[ScheduledSideScanTarg
         candidate = Path(source).expanduser()
         is_file = candidate.is_file()
     except OSError:
-        candidate = None
         is_file = False
-    if is_file and candidate is not None:
+    if is_file:
         try:
             text = candidate.read_text(encoding="utf-8")
         except OSError:

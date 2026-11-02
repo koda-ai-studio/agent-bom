@@ -180,3 +180,37 @@ async def test_slow_sender_does_not_delay_non_admission_events_but_admission_sti
         assert not store.pending("admission")
     finally:
         await sink.aclose()
+
+
+def test_shared_sink_exposes_no_single_pod_internals_it_never_initializes():
+    """The shared sink must not inherit spill-file/tenant-routing paths whose state it never sets."""
+    sink = _sink(FakeOutbox(), None)
+    for name in ("_flush_locked", "_persist_and_flush", "_own_health", "_sink_for_event", "_recover_tenant_sinks"):
+        assert not hasattr(sink, name), name
+    assert sink._payload([])["session_id"].startswith("gateway-")
+    assert sink._headers()["Authorization"] == "Bearer placeholder"
+
+
+def test_gateway_lifespan_starts_and_closes_the_shared_sink():
+    from starlette.testclient import TestClient
+
+    from agent_bom.gateway_server import GatewaySettings, create_gateway_app
+    from agent_bom.gateway_upstreams import UpstreamConfig, UpstreamRegistry
+
+    store = FakeOutbox()
+    sent: list[int] = []
+
+    async def sender(payload: dict[str, Any], _headers: dict[str, str]) -> dict[str, Any]:
+        sent.append(len(payload["alerts"]))
+        return _ack(payload["alerts"])
+
+    sink = _sink(store, sender)
+    settings = GatewaySettings(
+        registry=UpstreamRegistry([UpstreamConfig(name="filesystem", url="http://filesystem.invalid")]),
+        policy={},
+        audit_sink=sink,
+    )
+    with TestClient(create_gateway_app(settings), raise_server_exceptions=False):
+        assert sink._worker is not None and not sink._worker.done()
+    assert sink._closed is True
+    assert sink._worker is None

@@ -567,7 +567,6 @@ def update_cmd(ctx: click.Context, args: tuple[str, ...]) -> None:
 # ---------------------------------------------------------------------------
 # Backward-compatible re-exports used by tests
 # ---------------------------------------------------------------------------
-import agent_bom.cli as _self_module  # noqa: E402
 from agent_bom.cli._check import _parse_package_spec  # noqa: E402, F401
 
 # _NoOpDetector is already imported above
@@ -576,8 +575,8 @@ from agent_bom.cli._check import _parse_package_spec  # noqa: E402, F401
 # ---------------------------------------------------------------------------
 from agent_bom.cli._entry import make_entry_point  # noqa: E402
 
-# Use lambda with module lookup so unittest.mock.patch("agent_bom.cli.main") works
-cli_main = make_entry_point(lambda: _self_module.main, "agent-bom")
+# The lambda resolves the module global at call time so unittest.mock.patch("agent_bom.cli.main") works
+cli_main = make_entry_point(lambda: main, "agent-bom")
 
 
 # Re-export 'scan' as the Click command for backward-compat imports.

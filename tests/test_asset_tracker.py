@@ -292,14 +292,11 @@ def test_legacy_asset_database_migrates_to_tenant_schema(tmp_path: Path) -> None
     finally:
         conn.close()
 
-    tracker = AssetTracker(db_path=db_path, tenant_id="default")
-    try:
+    with AssetTracker(db_path=db_path, tenant_id="default") as tracker:
         asset = tracker.get_asset("CVE-2024-0001", "lodash", "npm")
         assert asset is not None
         assert asset["tenant_id"] == "default"
         tracker.record_scan(_report([_finding("CVE-2024-0002", "express", "npm")]))
-    finally:
-        tracker.close()
 
     conn = sqlite3.connect(db_path)
     try:

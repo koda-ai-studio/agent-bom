@@ -18,6 +18,22 @@ from agent_bom.mcp_errors import (
 logger = logging.getLogger(__name__)
 
 
+def marketplace_trust_signals(*, cve_count: int, registry_verified: bool, download_count: int, license_info: str | None) -> list[str]:
+    """Return the ordered trust signals ``marketplace_check`` reports for a package."""
+    signals: list[str] = []
+    if cve_count == 0:
+        signals.append("no-known-cves")
+    if registry_verified:
+        signals.append("registry-verified")
+    if download_count > 100_000:
+        signals.append("high-adoption")
+    elif download_count > 10_000:
+        signals.append("moderate-adoption")
+    if license_info:
+        signals.append(f"license:{license_info}")
+    return signals
+
+
 def registry_lookup_impl(
     *,
     server_name: str | None = None,
@@ -156,18 +172,12 @@ async def marketplace_check_impl(
         except Exception:
             logger.debug("MCP registry verification failed for %s", name)
 
-        # Build trust signals
-        trust_signals = []
-        if len(vulns) == 0:
-            trust_signals.append("no-known-cves")
-        if registry_verified:
-            trust_signals.append("registry-verified")
-        if download_count > 100_000:
-            trust_signals.append("high-adoption")
-        elif download_count > 10_000:
-            trust_signals.append("moderate-adoption")
-        if license_info:
-            trust_signals.append(f"license:{license_info}")
+        trust_signals = marketplace_trust_signals(
+            cve_count=len(vulns),
+            registry_verified=registry_verified,
+            download_count=download_count,
+            license_info=license_info,
+        )
 
         return json.dumps(
             {

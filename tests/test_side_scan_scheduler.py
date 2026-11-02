@@ -282,6 +282,17 @@ def test_load_targets_invalid_json_is_empty(monkeypatch):
     assert load_scheduled_targets() == []
 
 
+def test_load_targets_path_expansion_oserror_falls_back_to_inline_json(monkeypatch):
+    from dataclasses import asdict
+
+    def unavailable_home(self):
+        raise OSError("fixture home lookup unavailable")
+
+    monkeypatch.setattr("agent_bom.api.side_scan_scheduler.Path.expanduser", unavailable_home)
+    targets = load_scheduled_targets(json.dumps([asdict(_GCP_TARGET)]))
+    assert targets == [_GCP_TARGET]
+
+
 def test_load_targets_skips_invalid_provider_and_missing_fields(monkeypatch):
     monkeypatch.setenv(
         "AGENT_BOM_SIDESCAN_SCHEDULER_TARGETS",

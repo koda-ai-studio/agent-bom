@@ -84,7 +84,8 @@ class FeedBatch:
 
 
 class FeedSource(Protocol):
-    def __call__(self, cursor: str | None, after_id: str | None = None) -> FeedBatch: ...
+    def __call__(self, cursor: str | None, after_id: str | None = None) -> FeedBatch:
+        """Return the next advisory batch after the given cursor."""
 
 
 def rematch_enabled() -> bool:

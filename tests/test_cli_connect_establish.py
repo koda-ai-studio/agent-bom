@@ -549,13 +549,12 @@ class TestSchemaConsistency:
             captured["json"] = json.loads(request.content)
             return httpx.Response(201, json={"id": "conn-1", "provider": "aws"})
 
-        client = AgentBomClient(
+        with AgentBomClient(
             base_url="http://cp",
             api_key="k",
             tenant_id="t",
             transport=httpx.MockTransport(handler),
-        )
-        try:
+        ) as client:
             client.create_cloud_connection(
                 provider="aws",
                 display_name="d",
@@ -566,8 +565,6 @@ class TestSchemaConsistency:
                 scan_mode="continuous",
                 auto_scan_on_create=False,
             )
-        finally:
-            client.close()
 
         assert captured["method"] == "POST"
         assert str(captured["url"]).endswith("/v1/cloud/connections")

@@ -122,15 +122,20 @@ def unseal_subscription(subscription: WebhookSubscription) -> WebhookSubscriptio
 
 
 class WebhookSubscriptionStore(Protocol):
-    def put(self, subscription: WebhookSubscription) -> None: ...
+    def put(self, subscription: WebhookSubscription) -> None:
+        """Insert or replace a subscription within its tenant."""
 
-    def get(self, subscription_id: str, *, tenant_id: str) -> WebhookSubscription | None: ...
+    def get(self, subscription_id: str, *, tenant_id: str) -> WebhookSubscription | None:
+        """Return one subscription, or None when it is absent for the tenant."""
 
-    def list(self, tenant_id: str, *, include_disabled: bool = False, limit: int = 200) -> builtins.list[WebhookSubscription]: ...
+    def list(self, tenant_id: str, *, include_disabled: bool = False, limit: int = 200) -> builtins.list[WebhookSubscription]:
+        """Return up to ``limit`` subscriptions for the tenant."""
 
-    def delete(self, subscription_id: str, *, tenant_id: str) -> bool: ...
+    def delete(self, subscription_id: str, *, tenant_id: str) -> bool:
+        """Delete a subscription; return whether one was removed."""
 
-    def matching(self, tenant_id: str, event_type: str) -> builtins.list[WebhookSubscription]: ...
+    def matching(self, tenant_id: str, event_type: str) -> builtins.list[WebhookSubscription]:
+        """Return the tenant's subscriptions that want ``event_type``."""
 
 
 class InMemoryWebhookSubscriptionStore:

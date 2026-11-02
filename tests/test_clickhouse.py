@@ -75,8 +75,9 @@ class TestClickHouseClient:
         """Policy: the client must not accept a password — only an access token."""
         from agent_bom.cloud.clickhouse import ClickHouseClient
 
+        unsupported = {"password": "pw"}
         with pytest.raises(TypeError):
-            ClickHouseClient(url="http://localhost:8123", password="pw")  # type: ignore[call-arg]
+            ClickHouseClient(url="http://localhost:8123", **unsupported)
 
     def test_access_token_falls_back_to_empty(self):
         from agent_bom.cloud.clickhouse import ClickHouseClient

@@ -178,7 +178,8 @@ def test_feed_record_at_scan_time_supersedes_the_operator_finding(estate) -> Non
 
 def test_retiring_the_advisory_resolves_its_findings(estate) -> None:
     client, _, _ = estate
-    assert client.delete("/v1/intel/operator-advisories/CVE-2026-109618").status_code == 204
+    response = client.delete("/v1/intel/operator-advisories/CVE-2026-109618")
+    assert response.status_code == 204
     assert _advisory_findings(client) == []
 
 

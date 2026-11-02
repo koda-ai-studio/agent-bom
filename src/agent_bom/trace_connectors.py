@@ -95,9 +95,11 @@ class _HttpResponse(Protocol):
     status_code: int
 
     @property
-    def headers(self) -> Mapping[str, str]: ...
+    def headers(self) -> Mapping[str, str]:
+        """Response headers."""
 
-    def iter_bytes(self) -> Iterator[bytes]: ...
+    def iter_bytes(self) -> Iterator[bytes]:
+        """Iterate over the response body."""
 
 
 class _HttpClient(Protocol):
@@ -111,7 +113,8 @@ class _HttpClient(Protocol):
         headers: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         json: Any = None,
-    ) -> AbstractContextManager[_HttpResponse]: ...
+    ) -> AbstractContextManager[_HttpResponse]:
+        """Open a streamed HTTP request."""
 
 
 def list_trace_connectors() -> list[dict[str, Any]]:

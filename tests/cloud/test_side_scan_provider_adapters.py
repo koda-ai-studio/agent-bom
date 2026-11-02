@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -659,8 +660,10 @@ async def test_terminal_retry_preserves_counts_without_sdk_calls(tmp_path: Path,
     assert second[0].to_dict()["replayed"] is True
     assert second[0].cleaned_up is True
     assert second[0].execution_status == "scan_complete"
-    assert second[0].snapshot_id == first[0].snapshot_id is not None
-    assert second[0].scan_disk_id == first[0].scan_disk_id is not None
+    assert first[0].snapshot_id is not None
+    assert second[0].snapshot_id == first[0].snapshot_id
+    assert first[0].scan_disk_id is not None
+    assert second[0].scan_disk_id == first[0].scan_disk_id
 
 
 @pytest.mark.asyncio
@@ -776,7 +779,6 @@ async def test_legacy_execution_without_request_scope_is_not_rewritten(tmp_path:
 
 @pytest.mark.asyncio
 async def test_inflight_retry_does_not_start_second_lifecycle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import asyncio
 
     monkeypatch.setenv("AGENT_BOM_SIDESCAN", "1")
     scanning, finish = asyncio.Event(), asyncio.Event()
@@ -807,7 +809,7 @@ async def test_inflight_retry_does_not_start_second_lifecycle(tmp_path: Path, mo
         assert len(snapshots.insert_calls) == 1
     finally:
         finish.set()
-        await task
+        await asyncio.wait_for(task, timeout=10)
 
 
 @pytest.mark.asyncio

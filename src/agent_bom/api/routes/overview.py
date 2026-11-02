@@ -349,7 +349,7 @@ def _capture_hub_overview_snapshot(
             raise
         except Exception:
             _logger.debug("hub overview revision read failed", exc_info=False)
-            _raise_hub_overview_unavailable()
+            return _raise_hub_overview_unavailable()
 
     for _attempt in range(_HUB_SNAPSHOT_MAX_ATTEMPTS):
         revision = _read_revision()
