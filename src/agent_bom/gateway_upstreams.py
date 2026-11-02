@@ -401,11 +401,17 @@ def fetch_discovered_upstreams(
     """
     import httpx
 
+    from agent_bom.security import validate_url
+
+    discovered_url = control_plane_url.rstrip("/") + "/v1/gateway/upstreams/discovered"
+    # The control plane is usually in-cluster, so private targets stay allowed;
+    # the guard still refuses non-HTTP schemes and cloud metadata endpoints.
+    validate_url(discovered_url, allowed_schemes=("http", "https"), allow_private=True)
     headers = {"Accept": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     response = httpx.get(
-        control_plane_url.rstrip("/") + "/v1/gateway/upstreams/discovered",
+        discovered_url,
         headers=headers,
         timeout=timeout,
     )

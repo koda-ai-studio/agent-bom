@@ -520,8 +520,14 @@ def test_fetch_discovered_upstreams_hits_expected_path(monkeypatch: pytest.Monke
         captured["timeout"] = timeout
         return _FakeResponse()
 
+    import socket
+
     import httpx
 
+    monkeypatch.setattr(
+        "agent_bom.core.egress_resolution.socket.getaddrinfo",
+        lambda *a, **k: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))],
+    )
     monkeypatch.setattr(httpx, "get", fake_get)
     result = fetch_discovered_upstreams("https://agent-bom.example.com/", token="abc")
     assert captured["url"] == "https://agent-bom.example.com/v1/gateway/upstreams/discovered"
@@ -561,3 +567,37 @@ def test_operator_yaml_marks_private_network_as_approved(tmp_path):
 def test_upstream_url_rejects_embedded_credentials():
     with pytest.raises(UpstreamConfigError, match="must not contain embedded credentials"):
         UpstreamConfig(name="unsafe", url="https://token@example.com/mcp")
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["http://169.254.169.254/latest/meta-data", "http://metadata.google.internal", "file:///etc/passwd", "gopher://cp:70"],
+)
+def test_fetch_discovered_upstreams_refuses_metadata_and_non_http_targets(monkeypatch: pytest.MonkeyPatch, url: str) -> None:
+    import httpx
+
+    from agent_bom.gateway_upstreams import fetch_discovered_upstreams
+    from agent_bom.security import SecurityError
+
+    def fail_get(*_a, **_k):
+        raise AssertionError("request must not be sent")
+
+    monkeypatch.setattr(httpx, "get", fail_get)
+    with pytest.raises(SecurityError):
+        fetch_discovered_upstreams(url, token="abc")
+
+
+def test_fetch_discovered_upstreams_allows_in_cluster_control_plane(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    from agent_bom.gateway_upstreams import fetch_discovered_upstreams
+
+    class _Ok:
+        def raise_for_status(self) -> None:
+            pass
+
+        def json(self) -> dict:
+            return {"upstreams": []}
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _Ok())
+    assert fetch_discovered_upstreams("http://127.0.0.1:8422") == {"upstreams": []}

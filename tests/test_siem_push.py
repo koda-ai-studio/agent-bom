@@ -228,20 +228,51 @@ def test_splunk_index_included_in_payload(splunk_config, sample_event):
 
 
 def test_splunk_health_check_success(splunk_config):
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-
-    with patch("httpx.get", return_value=mock_resp):
+    with patch("agent_bom.delivery.http_probe", return_value=SendOutcome(http_status=200)) as probe:
         result = SplunkHEC(splunk_config).health_check()
 
     assert result is True
+    url, headers, _timeout = probe.call_args.args
+    assert url == "http://splunk.test:8088/services/collector/health/1.0"
+    assert headers["Authorization"] == "Splunk splunk-token-123"
+    assert probe.call_args.kwargs["allow_private_networks"] is False
 
 
 def test_splunk_health_check_failure(splunk_config):
-    with patch("httpx.get", side_effect=ConnectionError):
+    with patch("agent_bom.delivery.http_probe", return_value=SendOutcome(http_status=None, error="transport failure")):
         result = SplunkHEC(splunk_config).health_check()
 
     assert result is False
+
+
+@pytest.mark.parametrize("connector_cls", [SplunkHEC, ElasticsearchConnector])
+@pytest.mark.parametrize(
+    "url",
+    ["http://169.254.169.254/latest", "https://127.0.0.1:8088", "https://10.1.2.3:9200", "file:///etc/passwd"],
+)
+def test_health_check_refuses_inward_targets_without_connecting(monkeypatch, connector_cls, url):
+    monkeypatch.delenv("AGENT_BOM_ALLOW_PRIVATE_EGRESS_URLS", raising=False)
+    with patch("agent_bom.runtime.egress_transport.build_pinned_sync_client") as client, patch("httpx.get") as raw_get:
+        assert connector_cls(SIEMConfig(name="x", url=url, token="t")).health_check() is False
+    client.assert_not_called()
+    raw_get.assert_not_called()
+
+
+def test_health_check_uses_dns_pinned_client(monkeypatch):
+    import socket
+
+    monkeypatch.setattr(
+        "agent_bom.core.egress_resolution.socket.getaddrinfo",
+        lambda *a, **k: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))],
+    )
+    response = MagicMock(status_code=200)
+    pinned = MagicMock()
+    pinned.__enter__.return_value.request.return_value = response
+    with patch("agent_bom.runtime.egress_transport.build_pinned_sync_client", return_value=pinned) as build:
+        assert ElasticsearchConnector(SIEMConfig(name="elasticsearch", url="https://es.example.com", token="es")).health_check()
+    assert build.call_args.kwargs["allow_private_networks"] is False
+    method, url = pinned.__enter__.return_value.request.call_args.args
+    assert (method, url) == ("GET", "https://es.example.com/_cluster/health")
 
 
 # ─── DatadogLogs.send_event ───────────────────────────────────────────────────

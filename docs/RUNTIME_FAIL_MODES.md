@@ -30,6 +30,7 @@ pending work and loss of acknowledgement; it does not attest the reported agent.
 | Invalid, expensive, or oversized regex in an applicable policy | enforce: deny; audit: explicit invalid-policy receipt | no |
 | Conditional access (evaluation error) | fail-closed | no |
 | Caller identity (invalid/revoked or missing token) | fail-closed | no |
+| JWT verification key fetch (`jwks_uri` / `oidc_issuer` refused by the outbound URL policy: non-HTTPS, private or metadata target without `AGENT_BOM_ALLOW_PRIVATE_EGRESS_URLS`) | fail-closed (treated as JWKS unreachable) | no |
 | Runtime rate limit (store unavailable) | fail-closed (refuses startup) | no |
 | Device posture enrichment (device state unknown) | fail-closed | no |
 | Spend budgets (cost-store error) | fail-open | no |

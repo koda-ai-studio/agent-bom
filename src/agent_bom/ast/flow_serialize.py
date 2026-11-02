@@ -20,6 +20,7 @@ def flow_finding_rows(findings: list[Any]) -> list[dict[str, Any]]:
             "source": finding.source,
             "severity": finding.severity,
             "cwe_ids": list(finding.cwe_ids),
+            **({"suppression": finding.suppression} if finding.suppression else {}),
         }
         for finding in findings
     ]
