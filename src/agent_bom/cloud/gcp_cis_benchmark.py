@@ -167,6 +167,17 @@ __all__ = [
     "logger",
     "run_all_project_benchmarks",
     "run_benchmark",
+    "CheckStatus",
+    "_BIGQUERY_SECTION",
+    "_check_1_10",
+    "_check_1_2",
+    "_check_2_2",
+    "_check_3_2",
+    "_check_4_2",
+    "_check_5_2",
+    "_check_6_2",
+    "_check_7_2",
+    "is_access_denied_error",
 ]
 
 

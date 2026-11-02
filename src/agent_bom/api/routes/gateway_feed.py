@@ -100,7 +100,7 @@ from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.rbac import require_authenticated_permission
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
-__all__ = ["GatewayFeedCompletenessModel"]  # fmt: skip
+__all__ = ["GatewayFeedCompletenessModel", "ACTION_LLM_CALL", "GatewayFeedEventModel"]  # fmt: skip
 
 _FEED_SCHEMA_VERSION = "gateway.feed.v1"
 _STREAM_MAX_SECONDS = 30.0

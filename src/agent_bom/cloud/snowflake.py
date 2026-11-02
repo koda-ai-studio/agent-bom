@@ -90,7 +90,6 @@ from .snowflake_discovery.ai_surfaces import (  # noqa: F401 - facade re-export
     _snowpark_agent,
 )
 from .snowflake_discovery.estate import (  # noqa: F401 - facade re-export
-    _estate_auth_posture,
     _estate_exfil,
     _estate_external_data,
     _estate_governance,
@@ -103,7 +102,6 @@ from .snowflake_discovery.estate import (  # noqa: F401 - facade re-export
     enrich_report_with_snowflake_estate,
 )
 from .snowflake_discovery.identity import (  # noqa: F401 - facade re-export
-    _live_membership_key,
     _live_role_grants,
     _LiveRoleGraph,
     _merge_live_rows,
@@ -111,7 +109,6 @@ from .snowflake_discovery.identity import (  # noqa: F401 - facade re-export
     merge_live_identity_into_object_graph,
 )
 from .snowflake_discovery.security import (  # noqa: F401 - facade re-export
-    _add_auth_user,
     _add_external_stage,
     _add_login_summary,
     _add_network_policy,
@@ -179,7 +176,8 @@ __all__ = ["_MAX_ORG_ACCOUNTS", "_classify_agent_query", "_coerce_int_or_none", 
     "_parse_json_field", "_parse_json_object", "_quote_sf_identifier", "_record_snowflake_inventory_failure", "_sf_truthy",
     "_validate_sf_identifier", "discover_activity", "discover_identity_live", "discover_object_dependencies",
     "discover_organization", "discover_snowflake_external_data", "discover_snowflake_integrations",
-    "discover_snowflake_pipeline", "discover_snowflake_services", "logger"]  # fmt: skip
+    "discover_snowflake_pipeline", "discover_snowflake_services", "logger", "_borrowed_connection",
+    "_snowflake_cloud_origin"]  # fmt: skip
 
 # Opt-in env flag. Default OFF — estate-wide enumeration must be explicitly
 # requested by an operator. Symmetric with the other providers'

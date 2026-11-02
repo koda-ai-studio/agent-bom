@@ -68,4 +68,5 @@ __all__ = [
     "PostgresCostStore",
     "PostgresSourceStore",
     "PostgresTenantQuotaStore",
+    "PostgresCredentialRefStore",
 ]

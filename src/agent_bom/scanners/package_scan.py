@@ -6,17 +6,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import os
-import tempfile
 import threading
-import time
-from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, cast
-
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from agent_bom.advisory_ids import MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE, MATCH_CONFIDENCE_UNVERIFIED_RANGE, upstream_advisory_ids
 from agent_bom.atlas import blast_radius_technique_evidence as atlas_technique_evidence
@@ -53,7 +45,6 @@ from agent_bom.scanners.osv import enrich_results_if_needed as _enrich_results_i
 from agent_bom.scanners.osv import parse_fixed_version, query_osv_batch_impl
 from agent_bom.scanners.package_coverage import (
     _detect_coverage_gaps,
-    _flag_remote_lookup_gap,
     _flag_suspicious_packages,
     _query_osv_results,
     _scan_supplemental_advisories,
@@ -96,8 +87,7 @@ if TYPE_CHECKING:
 
 
 offline_mode: bool = False
-__all__ = ["Console", "ECOSYSTEM_MAP", "IncompleteScanError", "Path", "Progress", "compliance_mode", "dataclass",
-    "logging", "tempfile", "time"]  # fmt: skip
+__all__ = ["ECOSYSTEM_MAP", "IncompleteScanError", "compliance_mode", "prefer_local_db"]  # fmt: skip
 
 
 _scan_cache_init_lock = threading.Lock()

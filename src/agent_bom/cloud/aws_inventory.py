@@ -48,7 +48,6 @@ from .aws import (
 )
 from .aws_iam_collector import collect_iam_roles_usage_evidence
 from .aws_inv._base import (  # noqa: F401 - facade re-export
-    _AWS_BASELINE_PERMISSIONS,
     _AWS_COMPUTE_PERMISSIONS,
     _AWS_DATA_PERMISSIONS,
     _AWS_EC2_PERMISSIONS,
@@ -97,7 +96,6 @@ from .aws_inv.network import (  # noqa: F401 - facade re-export
     _discover_ip_addresses,
     _discover_network_edge,
     _discover_vpcs,
-    _ec2_items,
     _ec2_pages,
     _EdgeStage,
     _internet_gateway_row,
@@ -122,7 +120,6 @@ from .aws_inv.services import (  # noqa: F401 - facade re-export
     _latest_ecr_image_ref,
 )
 from .aws_inv.storage_compute import (  # noqa: F401 - facade re-export
-    _PRIVILEGE_RANK,
     _PUBLIC_ACL_GRANTEE_URIS,
     _account_public_access_block,
     _attached_policies,

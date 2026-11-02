@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from agent_bom.finding import Finding
 
 logger = logging.getLogger(__name__)
-__all__ = ["evaluate_model_provenance_policy", "summarize_model_supply_chain"]  # fmt: skip
+__all__ = ["evaluate_model_provenance_policy", "summarize_model_supply_chain", "INVENTORY_ONLY_MODEL_FLAGS"]  # fmt: skip
 
 # Extension → metadata mapping
 _MODEL_EXTENSIONS: dict[str, dict] = {

@@ -96,9 +96,9 @@ from agent_bom.storage import state_home as _state_home
 from agent_bom.storage.tiers import preflight_storage_backends
 
 _logger = logging.getLogger(__name__)
-__all__ = ["AnalyticsHealth", "PIPELINE_DAG_EDGES", "_api_key", "_dataclass_to_dict",
-    "_get_credential_ref_store", "_load_registry", "_sanitize_api_path", "push_proxy_alert", "set_dev_api_key",
-    "set_job_store"]  # fmt: skip
+__all__ = ["AnalyticsHealth", "PIPELINE_DAG_EDGES", "_api_key", "_dataclass_to_dict", "_get_credential_ref_store",
+    "_load_registry", "_sanitize_api_path", "push_proxy_alert", "set_dev_api_key", "set_job_store",
+    "PIPELINE_DAG_EVENT_SCHEMA", "PostgresPortabilityHealth", "_backend_name", "_get_source_store", "push_proxy_metrics"]  # fmt: skip
 
 # Demo estate mode must resolve every default local store under its own data
 # directory. Pin it before anything below lazily opens a store; this covers

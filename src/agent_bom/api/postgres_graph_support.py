@@ -17,7 +17,6 @@ from agent_bom.graph import EntityType
 from agent_bom.graph.correlation import GraphCorrelationRun
 
 __all__ = [
-    "Callable",
     "PostgresGraphStoreBase",
     "_CORRELATION_RUN_COLUMNS",
     "_DB_LEASE_ISO",
@@ -43,7 +42,7 @@ def select_expired_snapshot_ids(
     rows: Iterable[Sequence[Any]],
     *,
     now: datetime,
-    resolve_days: "Callable[[str], int]",
+    resolve_days: Callable[[str], int],
 ) -> list[tuple[str, str]]:
     """Select ``(scan_id, tenant_id)`` snapshots older than their retention window.
 

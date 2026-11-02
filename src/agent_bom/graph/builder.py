@@ -7,8 +7,6 @@ used for current-state views, traversal, attack paths, and temporal diffs.
 
 from __future__ import annotations
 
-import hashlib as hashlib
-import json as json
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -153,7 +151,7 @@ __all__ = ["NETWORK_INVENTORY_STAGES", "_GCP_LB_COLLECTION", "_NETWORK_EDGE_COLL
     "_normalized_environment", "_package_evidence", "_package_node_id", "_package_node_id_from_parts",
     "_project_snowflake_lanes", "_recorded_exposure_attributes", "_resolve_affected_server_ids",
     "_resolve_cloud_resource_node_id", "_resolve_skill_audit_target_ids", "_resource_environment",
-    "cloud_resource_node_id", "coerce_truthy", "edge_evidence", "hashlib", "json", "sanitize_text"]  # fmt: skip
+    "cloud_resource_node_id", "coerce_truthy", "edge_evidence", "sanitize_text"]  # fmt: skip
 _logger = logging.getLogger(__name__)
 
 

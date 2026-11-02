@@ -64,7 +64,9 @@ from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta as _injec
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger("agent_bom.proxy")
-__all__ = ["_gateway_evaluator", "_safe_compile", "_safe_regex_match", "_safe_regex_search", "_truncate_args"]  # fmt: skip
+__all__ = ["_gateway_evaluator", "_safe_compile", "_safe_regex_match", "_safe_regex_search", "_truncate_args",
+    "AuditDeliveryController", "AuditDeliveryPaths", "AuditDeliveryState", "AuditSpilloverStore", "audit_delivery_paths",
+    "compute_response_hmac", "resolve_rate_limit_threshold"]  # fmt: skip
 
 
 ProxyMetrics = _proxy_audit.ProxyMetrics

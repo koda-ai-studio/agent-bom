@@ -121,7 +121,7 @@ __all__ = ["AuthPosture", "AuthPostureError", "GlobalRateLimitMiddleware", "InMe
     "describe_control_plane_direct_listener_posture", "describe_security_header_posture", "get_auth_posture",
     "get_auth_runtime_status", "get_rate_limit_key_status", "get_rate_limit_runtime_status",
     "get_trusted_proxy_auth_status", "global_ip_rate_limit_rpm", "hsts_header_value", "install_error_envelope",
-    "trusted_proxy_auth_usable", "validate_auth_posture"]  # fmt: skip
+    "trusted_proxy_auth_usable", "validate_auth_posture", "describe_proxy_control_plane_mtls_posture"]  # fmt: skip
 
 
 def static_api_key_allowed() -> bool:

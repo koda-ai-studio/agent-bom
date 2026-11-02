@@ -20,7 +20,7 @@ from agent_bom.output.compliance_narrative import ACCEPTED_FRAMEWORK_SLUGS
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from agent_bom.models import Agent, AIBOMReport, BlastRadius
+    from agent_bom.models import Agent, AIBOMReport
 
 logger = logging.getLogger(__name__)
 

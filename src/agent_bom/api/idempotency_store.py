@@ -45,7 +45,7 @@ from .idempotency_store_memory import InMemoryIdempotencyStore  # noqa: F401 - r
 # without an ``Idempotency-Key`` header still collapses onto one logical batch
 # (stable observation dedup key) instead of minting a fresh random batch id.
 _BATCH_ID_NAMESPACE = uuid.UUID("6f6b4b2e-2c1a-4d9e-9d3b-8a1f0c5e7d42")
-__all__ = ["IdempotencyPayloadError", "InMemoryIdempotencyStore"]  # fmt: skip
+__all__ = ["IdempotencyPayloadError", "InMemoryIdempotencyStore", "IdempotencyRecord"]  # fmt: skip
 _DEFAULT_IDEMPOTENCY_TTL_HOURS = 24
 _DEFAULT_IDEMPOTENCY_RESERVATION_LEASE_SECONDS = 30
 _MAX_IDEMPOTENCY_RESERVATION_LEASE_SECONDS = 300

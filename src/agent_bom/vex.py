@@ -27,7 +27,7 @@ from agent_bom.package_utils import package_purl
 from agent_bom.redaction.log_values import sanitize_log_value
 
 logger = logging.getLogger(__name__)
-__all__ = ["active_blast_radii"]  # fmt: skip
+__all__ = ["active_blast_radii", "is_vex_suppressed"]  # fmt: skip
 
 if TYPE_CHECKING:
     from agent_bom.models import AIBOMReport

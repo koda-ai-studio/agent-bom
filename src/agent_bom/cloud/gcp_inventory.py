@@ -653,4 +653,5 @@ def _discover_load_balancers(
 
 
 __all__ = ["ALL_PROJECTS_ENV_FLAG", "INVENTORY_ENV_FLAG", "all_projects_enabled", "discover_all_project_inventories",
-    "discover_inventory", "inventory_enabled", "_bucket_public"]  # fmt: skip
+    "discover_inventory", "inventory_enabled", "_bucket_public", "_highest_privilege", "_normalize_instance",
+    "_policy_bindings"]  # fmt: skip
