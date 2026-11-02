@@ -114,22 +114,22 @@ def discover_global_configs(agent_types: Optional[list[AgentType]] = None, *, qu
                     if agent_type == AgentType.CORTEX_CODE and config_path.name != "mcp.json":
                         metadata = parse_cortex_code_metadata(str(config_path))
                         if metadata:
-                            # Buffer the findings and flush after the path loop so they
-                            # attach regardless of whether the mcp.json (and thus the
-                            # CORTEX_CODE agent) is discovered before or after this file.
+                            # Buffer findings so metadata attaches regardless of
+                            # whether mcp.json is discovered before or after this file.
                             pending_cortex_metadata.update(metadata)
                             cortex_metadata_path = str(config_path)
                         continue
 
-                    # Custom parsers for non-JSON formats
-                    if agent_type == AgentType.CODEX_CLI:
-                        servers = parse_codex_config(str(config_path))
-                    elif agent_type == AgentType.GOOSE:
-                        servers = parse_goose_config(str(config_path))
-                    elif agent_type == AgentType.SNOWFLAKE_CLI:
-                        servers = parse_snowflake_connections(str(config_path))
+                    parsers = {
+                        AgentType.CODEX_CLI: parse_codex_config,
+                        AgentType.GOOSE: parse_goose_config,
+                        AgentType.SNOWFLAKE_CLI: parse_snowflake_connections,
+                    }
+                    if agent_type in parsers:
+                        servers = parsers[agent_type](str(config_path))
+                    elif agent_type == AgentType.CONTINUE:
+                        servers = _parse_project_config_file(config_path)
                     else:
-                        # Default JSON parsing
                         config_data = _read_json_config_no_symlink(config_path)
                         servers = parse_mcp_config(config_data, str(config_path))
 

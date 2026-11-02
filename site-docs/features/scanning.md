@@ -17,7 +17,7 @@ agent-bom discovers MCP clients and their configured servers by reading config f
 | Gemini CLI | `~/.gemini/settings.json` |
 | Goose | `~/.config/goose/config.yaml` |
 | Cortex Code | `~/.snowflake/cortex/mcp.json` |
-| Continue | `~/.continue/config.json` |
+| Continue | `~/.continue/config.yaml`, legacy `~/.continue/config.json` |
 | Zed | `~/.config/zed/settings.json` |
 | Amazon Q | VS Code globalStorage |
 | JetBrains AI | `~/Library/Application Support/JetBrains/*/mcp.json` |

@@ -128,9 +128,17 @@ CONFIG_LOCATIONS: dict[AgentType, dict[str, list[str]]] = {
     },
     AgentType.CONTINUE: {
         # Continue.dev VS Code extension
-        "Darwin": ["~/.continue/config.json", "~/Library/Application Support/Code/User/globalStorage/continue.continue/config.json"],
-        "Linux": ["~/.continue/config.json", "~/.config/Code/User/globalStorage/continue.continue/config.json"],
-        "Windows": ["~/.continue/config.json", "~/AppData/Roaming/Code/User/globalStorage/continue.continue/config.json"],
+        "Darwin": [
+            "~/.continue/config.yaml",
+            "~/.continue/config.json",
+            "~/Library/Application Support/Code/User/globalStorage/continue.continue/config.json",
+        ],
+        "Linux": ["~/.continue/config.yaml", "~/.continue/config.json", "~/.config/Code/User/globalStorage/continue.continue/config.json"],
+        "Windows": [
+            "~/.continue/config.yaml",
+            "~/.continue/config.json",
+            "~/AppData/Roaming/Code/User/globalStorage/continue.continue/config.json",
+        ],
     },
     AgentType.ZED: {
         # Zed editor MCP config
