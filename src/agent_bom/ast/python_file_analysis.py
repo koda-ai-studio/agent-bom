@@ -6,6 +6,7 @@ import ast
 from dataclasses import dataclass
 from pathlib import Path
 
+from agent_bom.ast.exec_safety import runs_fixed_program, safe_yaml_loaders
 from agent_bom.ast.python_semantics import (
     _DYNAMIC_CODE_CALLS,
     _FILE_MUTATION_CALLS,
@@ -48,6 +49,7 @@ from agent_bom.ast.python_tools import (
 from agent_bom.ast.source_reader import parse_python_source, read_source_for_analysis
 from agent_bom.ast.sql_safety import FunctionSqlScope, ModuleSqlFacts
 from agent_bom.ast.sql_safety import expr_uses_dynamic_string as _expr_uses_dynamic_string
+from agent_bom.ast.url_safety import url_is_pinned
 from agent_bom.ast_models import DetectedGuardrail, ExtractedPrompt, FlowFinding, ToolSignature, _FunctionAnalysis, _PythonToolRegistration
 from agent_bom.ast_signal_utils import _GUARDRAIL_CALL_PATTERNS
 from agent_bom.ast_signal_utils import is_agent_tool_decorator as _is_agent_tool_decorator
@@ -65,6 +67,7 @@ class _PythonFileContext:
     registrations_by_handler: dict[str, _PythonToolRegistration]
     low_level_tools: list[tuple[str, int]]
     sql: ModuleSqlFacts
+    safe_yaml_loaders: frozenset[str] = frozenset()
 
 
 def _import_frameworks_and_guardrails(tree: ast.Module, rel_path: str) -> tuple[list[str], list[DetectedGuardrail]]:
@@ -232,8 +235,8 @@ def _function_call_findings(
         line_number = getattr(inner, "lineno", node.lineno)
         if call_name:
             func_info.called_names.append((call_name, line_number))
-        matches = _tool_call_matches(inner, call_name, line_number, func_info, ctx)
-        matches.extend(_string_construction_matches(inner, call_name, ctx.rel_path, dynamic_string_names, sql_scope))
+        matches = [(category, detail, "") for category, detail in _tool_call_matches(inner, call_name, line_number, func_info, ctx)]
+        matches.extend(_string_construction_matches(inner, call_name, ctx, dynamic_string_names, sql_scope))
         findings.extend(
             FlowFinding(
                 category=category,
@@ -244,8 +247,9 @@ def _function_call_findings(
                 entrypoint=entrypoint,
                 sink=call_name,
                 call_path=[entrypoint, call_name],
+                suppression=suppression,
             )
-            for category, detail in matches
+            for category, detail, suppression in matches
         )
     return findings
 
@@ -263,7 +267,10 @@ def _tool_call_matches(
     is_file_mutation = call_name in _FILE_MUTATION_CALLS and (call_name != "open" or _open_mode_is_mutating(inner))
     if call_name in _DYNAMIC_CODE_CALLS or call_name in _SUBPROCESS_CALLS or is_file_mutation:
         guarded = _is_guarded_call(inner, ctx.parent_map)
-        func_info.dangerous_calls.append((call_name, line_number, guarded))
+        # Helper-chain reachability skips a fixed non-shell program run from an
+        # argv list; tainted arguments into it stay with the taint pass.
+        if not (func_info.node is not None and runs_fixed_program(call_name, inner, func_info.node)):
+            func_info.dangerous_calls.append((call_name, line_number, guarded))
         if func_info.is_tool and not guarded:
             detail = f"{tool} calls `{call_name}` without an obvious validation or authorization branch."
             matches.append(("unguarded_tool_sink", detail))
@@ -279,29 +286,35 @@ def _tool_call_matches(
 def _string_construction_matches(
     inner: ast.Call,
     call_name: str,
-    rel_path: str,
+    ctx: _PythonFileContext,
     dynamic_string_names: set[str],
     sql_scope: FunctionSqlScope,
-) -> list[tuple[str, str]]:
-    """Unsafe deserialization and string-built command, URL and SQL sinks in any function."""
-    matches: list[tuple[str, str]] = []
-    if _is_unsafe_deserialization_call_name(call_name) and not _uses_safe_yaml_loader(inner):
+) -> list[tuple[str, str, str]]:
+    """Unsafe deserialization and string-built command, URL and SQL sinks in any function.
+
+    Each match carries the reviewer marker that suppresses it, or ``""`` when active.
+    """
+    rel_path = ctx.rel_path
+    candidates: list[tuple[str, str]] = []
+    if _is_unsafe_deserialization_call_name(call_name) and not _uses_safe_yaml_loader(inner, ctx.safe_yaml_loaders):
         detail = f"{rel_path} calls `{call_name}` which can deserialize attacker-controlled content without a safe loader."
-        matches.append(("unsafe_deserialization", detail))
+        candidates.append(("unsafe_deserialization", detail))
     built = f"{rel_path} builds"
     if _is_command_execution_call_name(call_name) and _is_shell_execution_call(call_name, inner):
         command_expr = _call_argument_expr(inner, primary_arg_names={"args", "command"})
         if _expr_is_dynamic_or_tracked(command_expr, dynamic_string_names):
             detail = f"{built} a shell command dynamically before calling `{call_name}`, which is a common command injection pattern."
-            matches.append(("command_string_construction", detail))
+            candidates.append(("command_string_construction", detail))
     if _is_http_client_call_name(call_name):
         url_expr = _call_argument_expr(inner, primary_arg_names={"url", "uri", "endpoint"})
-        if _expr_is_dynamic_or_tracked(url_expr, dynamic_string_names):
+        if _expr_is_dynamic_or_tracked(url_expr, dynamic_string_names) and not url_is_pinned(url_expr, sql_scope.strict, inner.lineno):
             detail = f"{built} an outbound URL dynamically before calling `{call_name}`, which is a common SSRF pattern."
-            matches.append(("ssrf_url_construction", detail))
-    if _is_sql_call_name(call_name) and sql_scope.query_is_unsafe(inner):
+            candidates.append(("ssrf_url_construction", detail))
+    suppressions = ctx.sql.suppressions
+    matches = [(category, detail, suppressions.marker_for(category, inner) or "") for category, detail in candidates]
+    if _is_sql_call_name(call_name) and (verdict := sql_scope.verdict(inner)) is not None:
         detail = f"{built} a SQL query dynamically before calling `{call_name}`, which is a common SQL injection pattern."
-        matches.append(("sql_string_construction", detail))
+        matches.append(("sql_string_construction", detail, verdict))
     return matches
 
 
@@ -365,6 +378,7 @@ def _analyze_file(
         registrations_by_handler={registration.handler_name: registration for registration in registrations},
         low_level_tools=low_level_tools,
         sql=ModuleSqlFacts.from_source(tree, source),
+        safe_yaml_loaders=safe_yaml_loaders(tree),
     )
 
     function_analyses: list[_FunctionAnalysis] = []

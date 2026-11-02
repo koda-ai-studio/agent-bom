@@ -497,7 +497,9 @@ def _finalize_result(result: ASTAnalysisResult) -> None:
     # Test fixtures remain visible in inventory, but are not production
     # reachability evidence. Otherwise dev-only imports become build-blocking
     # production CVEs.
-    result.flow_findings = [finding for finding in result.flow_findings if not _is_test_source_path(finding.file_path)]
+    production = [finding for finding in result.flow_findings if not _is_test_source_path(finding.file_path)]
+    result.flow_findings = [finding for finding in production if not finding.suppression]
+    result.suppressed_flow_findings = [finding for finding in production if finding.suppression]
     result.dependency_symbol_reach = [reach for reach in result.dependency_symbol_reach if not _is_test_source_path(reach.file_path)]
     deduped_call_edges: list[CallEdge] = []
     seen_call_edges: set[tuple[str, str, str, int]] = set()

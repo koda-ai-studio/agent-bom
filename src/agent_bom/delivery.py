@@ -35,7 +35,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable
 
-from agent_bom.http_client import check_offline
+from agent_bom.runtime.pinned_request import pinned_request
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 from agent_bom.storage import state_home
 
@@ -209,35 +209,22 @@ def http_sender(
     Redirects and ambient proxies are disabled. Retry/backoff is owned by
     ``DeliveryClient``; forbidden destinations are permanent failures.
     """
-    from agent_bom.runtime.egress_transport import UnsafeDestinationError, build_pinned_sync_client
-    from agent_bom.security import SecurityError, validate_url
-
-    operator_private = os.environ.get("AGENT_BOM_ALLOW_PRIVATE_EGRESS_URLS", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
-    allow_private = (
-        (allow_private_networks and operator_private) if require_operator_private_opt_in else (allow_private_networks or operator_private)
+    status, error, retryable = pinned_request(
+        "POST",
+        url,
+        headers,
+        body,
+        timeout,
+        allow_private_networks=allow_private_networks,
+        require_operator_private_opt_in=require_operator_private_opt_in,
     )
-    try:
-        validate_url(url, allowed_schemes=("https", "http") if allow_private else ("https",), allow_private=allow_private)
-    except SecurityError as exc:
-        return SendOutcome(
-            http_status=None,
-            error=f"url rejected by outbound policy: {sanitize_error(exc)}",
-            retryable=False,
-        )
-    try:
-        check_offline()
-        with build_pinned_sync_client(timeout=timeout, allow_private_networks=allow_private) as client:
-            resp = client.request("POST", url, content=body, headers=headers)
-        return SendOutcome(http_status=resp.status_code)
-    except UnsafeDestinationError:
-        return SendOutcome(http_status=None, error="destination rejected at connect time by outbound policy", retryable=False)
-    except Exception as exc:  # noqa: BLE001 — any transport error becomes a retryable failure
-        return SendOutcome(http_status=None, error=sanitize_error(exc))
+    return SendOutcome(http_status=status, error=error, retryable=retryable)
+
+
+def http_probe(url: str, headers: dict[str, str], timeout: float, *, allow_private_networks: bool = False) -> SendOutcome:
+    """One GET (connector health check) under the same outbound policy as delivery."""
+    status, error, retryable = pinned_request("GET", url, headers, None, timeout, allow_private_networks=allow_private_networks)
+    return SendOutcome(http_status=status, error=error, retryable=retryable)
 
 
 # ── Audit / circuit store ────────────────────────────────────────────────────

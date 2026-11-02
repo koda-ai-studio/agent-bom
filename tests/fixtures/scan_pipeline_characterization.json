@@ -335,8 +335,10 @@
       "total_flow_findings": 0,
       "total_guardrails": 0,
       "total_prompts": 0,
+      "total_suppressed_flow_findings": 0,
       "total_tools": 0
      },
+     "suppressed_flow_findings": [],
      "tools": [],
      "warnings": []
     },

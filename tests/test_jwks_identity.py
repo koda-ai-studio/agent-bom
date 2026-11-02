@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import base64
 import json
+import socket
 import time
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from agent_bom.agent_identity import (
     ANONYMOUS,
@@ -17,6 +20,22 @@ from agent_bom.agent_identity import (
 )
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
+
+_PUBLIC_TEST_IP = "93.184.216.34"
+_real_getaddrinfo = socket.getaddrinfo
+
+
+@pytest.fixture(autouse=True)
+def _public_example_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Identity metadata URLs pass the egress guard; resolve test hosts to a public address offline."""
+
+    def fake_getaddrinfo(host, *args, **kwargs):
+        if isinstance(host, str) and host.endswith("example.com"):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (_PUBLIC_TEST_IP, 0))]
+        return _real_getaddrinfo(host, *args, **kwargs)
+
+    monkeypatch.setattr("agent_bom.core.egress_resolution.socket.getaddrinfo", fake_getaddrinfo)
+    monkeypatch.delenv("AGENT_BOM_ALLOW_PRIVATE_EGRESS_URLS", raising=False)
 
 
 def _b64(d: dict) -> str:
@@ -64,6 +83,46 @@ def test_resolve_jwks_uri_oidc_network_failure():
     with patch("httpx.get", side_effect=httpx.ConnectError("timeout")):
         result = _resolve_jwks_uri({"oidc_issuer": "https://idp.example.com"})
     assert result is None
+
+
+@pytest.mark.parametrize(
+    "issuer",
+    [
+        "http://169.254.169.254/latest/meta-data",
+        "http://127.0.0.1:8080",
+        "https://10.0.0.5",
+        "http://idp.example.com",
+        "file:///etc/passwd",
+    ],
+)
+def test_oidc_discovery_refuses_unsafe_issuer_without_fetching(issuer):
+    with patch("httpx.get") as mock_get:
+        assert _resolve_jwks_uri({"oidc_issuer": issuer}) is None
+    mock_get.assert_not_called()
+
+
+def test_discovered_jwks_uri_pointing_inward_is_not_fetched():
+    discovery = MagicMock()
+    discovery.json.return_value = {"jwks_uri": "http://169.254.169.254/keys"}
+    discovery.raise_for_status = MagicMock()
+    with patch("httpx.get", return_value=discovery) as mock_get:
+        jwks_uri = _resolve_jwks_uri({"oidc_issuer": "https://idp.example.com"})
+        assert _fetch_jwks(str(jwks_uri)) is None
+    assert mock_get.call_count == 1
+
+
+@pytest.mark.parametrize("uri", ["http://169.254.169.254/keys", "https://192.168.1.10/jwks", "gopher://example.com/x"])
+def test_fetch_jwks_refuses_unsafe_uri_without_fetching(uri):
+    with patch("httpx.get") as mock_get:
+        assert _fetch_jwks(uri) is None
+    mock_get.assert_not_called()
+
+
+def test_private_identity_provider_allowed_by_operator_override(monkeypatch):
+    monkeypatch.setenv("AGENT_BOM_ALLOW_PRIVATE_EGRESS_URLS", "1")
+    keys = [{"kty": "RSA", "kid": "k1", "n": "abc", "e": "AQAB"}]
+    with patch("httpx.get", return_value=_mock_jwks_response(keys)):
+        assert _fetch_jwks("https://10.0.0.5/jwks") == {"keys": keys}
 
 
 # ─── _fetch_jwks ──────────────────────────────────────────────────────────────

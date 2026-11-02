@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # ---------------------------------------------------------------------------
 # _discover_via_api
 # ---------------------------------------------------------------------------
@@ -113,3 +115,13 @@ def test_discover_api_model_no_details():
     with patch("agent_bom.cloud.ollama._discover_via_api", return_value=models):
         agents, warnings = discover()
         assert len(agents) == 1
+
+
+@pytest.mark.parametrize("host", ["http://169.254.169.254", "file:///etc", "ftp://ollama:21", "localhost:11434"])
+def test_discover_via_api_refuses_metadata_and_non_http_hosts(host):
+    from agent_bom.cloud.ollama import _discover_via_api
+
+    with patch("agent_bom.cloud.ollama.httpx.get") as raw_get, patch("agent_bom.http_client.sync_get") as fallback:
+        assert _discover_via_api(host) is None
+    raw_get.assert_not_called()
+    fallback.assert_not_called()

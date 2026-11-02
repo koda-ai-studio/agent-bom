@@ -5,6 +5,8 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from agent_bom.db.sql_identifiers import validate_sql_identifier
+
 _AUTO_VACUUM_MODES = {0: "none", 1: "full", 2: "incremental"}
 
 
@@ -36,4 +38,5 @@ def table_exists(conn: sqlite3.Connection, table: str) -> bool:
 
 
 def table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
+    validate_sql_identifier(table)
     return {str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}

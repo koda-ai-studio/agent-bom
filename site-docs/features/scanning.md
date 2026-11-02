@@ -498,6 +498,43 @@ reason is required: a marker without one suppresses nothing. Accepted findings
 leave the active results and the severity gate, and the scan result keeps them
 in `suppressed` so they stay reviewable.
 
+## Source flow rules (`agent-bom code`)
+
+The Python flow rules report SQL text, outbound URLs and shell commands built
+by string interpolation, and unsafe deserializers. They do not report values
+that cannot carry caller input:
+
+- SQL whose interpolated pieces are literals, bind markers (`?`, `%s`),
+  module `UPPER_CASE` constants, numeric coercions (`int(...)`), loop values
+  drawn from literal or constant collections, lists that only ever hold such
+  fragments, psycopg `sql.SQL(...)` composition, or identifiers that passed a
+  validator earlier in the function (a same-module function that raises from
+  an `if` and returns its argument, or any call named `*validate*`);
+- URLs whose scheme and host are fixed by a literal or by a constant base
+  followed by `/`, `?` or `#`, or that passed a validator such as
+  `validate_url(url)` before the request;
+- `yaml.load` / `yaml.load_all` with a module class that subclasses
+  `SafeLoader`/`CSafeLoader` and registers no `python/` constructors;
+- helper chains into `subprocess` calls that run a fixed, non-shell,
+  non-interpreter program from an argv list (tainted arguments into such a
+  call are still reported by the taint rules).
+
+A reviewer can waive one finding with the marker Python tools already use on
+the sink line (or, for SQL, on the line that built the query): `# nosec`
+with the matching bandit id (`B608` SQL, `B310` URL, `B301`/`B506`
+deserialization, `B602`/`B604`/`B605` shell) or `# noqa:` with the matching
+ruff `S` code, followed by a reason:
+
+```python
+conn.execute(f"PRAGMA table_info({table})")  # nosec B608 - callers pass static table names
+```
+
+A waived finding leaves `flow_findings` and the SARIF upload, and is kept in
+`suppressed_flow_findings` with the marker text (`stats.total_suppressed_flow_findings`
+counts them; the SARIF run carries `properties.suppressedFlowFindings`). A bare
+`# nosec` still suppresses for compatibility, but is recorded as
+`(no reason given)` so unreasoned waivers stay visible.
+
 ## Agent SDK source inventory
 
 Scan imports without importing or executing the target application:
