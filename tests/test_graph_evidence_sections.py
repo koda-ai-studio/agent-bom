@@ -121,8 +121,8 @@ def test_graph_built_from_sections_matches_serialized_build() -> None:
 
 def test_surface_graph_derived_findings_skips_full_serialization(monkeypatch: pytest.MonkeyPatch) -> None:
     import agent_bom.output as output_pkg
-    import agent_bom.output.json_fmt as json_fmt
     from agent_bom.graph.scan_findings import surface_graph_derived_findings
+    from agent_bom.output import json_fmt as json_fmt
 
     def _forbidden(_report: AIBOMReport) -> dict:
         raise AssertionError("graph surfacing must not serialize the full report")

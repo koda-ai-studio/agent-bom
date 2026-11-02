@@ -205,7 +205,6 @@ def test_workspace_roundtrip_is_byte_identical_to_direct_stream(tmp_path: Path) 
 
 
 def test_workspace_roundtrip_byte_identical_on_real_builder_fixture(tmp_path: Path) -> None:
-    import json
 
     from agent_bom.graph.builder import build_unified_graph_from_report
 

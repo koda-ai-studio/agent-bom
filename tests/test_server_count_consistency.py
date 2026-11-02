@@ -13,7 +13,7 @@ from io import StringIO
 
 from rich.console import Console
 
-import agent_bom.output as out_mod
+from agent_bom import output as out_mod
 from agent_bom.models import Agent, AgentStatus, AgentType, AIBOMReport, MCPServer, Package, ServerSurface, TransportType
 from agent_bom.output import print_compact_agents, print_compact_summary
 from agent_bom.output.html.sections import _inventory_cards

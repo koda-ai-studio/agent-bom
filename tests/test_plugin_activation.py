@@ -65,8 +65,8 @@ def fake_plugin_module():
 def seeded_registry(monkeypatch):
     """Seed discovery with fake registrations and reset activation state."""
 
-    import agent_bom.plugin_activation as plugin_activation
     import agent_bom.plugin_entrypoints as plugin_entrypoints
+    from agent_bom import plugin_activation as plugin_activation
 
     for env in (
         ENTRYPOINTS_ENABLED_ENV,
@@ -102,7 +102,7 @@ def _enable_all(monkeypatch) -> None:
 
 
 def test_activation_is_off_by_default(monkeypatch, fake_plugin_module) -> None:
-    import agent_bom.plugin_activation as plugin_activation
+    from agent_bom import plugin_activation as plugin_activation
 
     # Even with discovery on, activation stays off without the group flag.
     monkeypatch.setenv(ENTRYPOINTS_ENABLED_ENV, "true")
@@ -119,7 +119,7 @@ def test_activation_is_off_by_default(monkeypatch, fake_plugin_module) -> None:
 
 
 def test_activation_requires_discovery_flag_too(monkeypatch, fake_plugin_module) -> None:
-    import agent_bom.plugin_activation as plugin_activation
+    from agent_bom import plugin_activation as plugin_activation
 
     # Group flag on but discovery off => still inert (double gate).
     monkeypatch.setenv(ACTIVATE_MCP_TOOL_PLUGINS_ENV, "true")
@@ -129,7 +129,7 @@ def test_activation_requires_discovery_flag_too(monkeypatch, fake_plugin_module)
 
 
 def test_mcp_tool_plugin_registers_on_live_server(monkeypatch, fake_plugin_module) -> None:
-    import agent_bom.plugin_activation as plugin_activation
+    from agent_bom import plugin_activation as plugin_activation
 
     _enable_all(monkeypatch)
     mcp = _FakeMcp()
@@ -140,7 +140,7 @@ def test_mcp_tool_plugin_registers_on_live_server(monkeypatch, fake_plugin_modul
 
 
 def test_advisory_source_lookup_is_provenance_tagged(monkeypatch, fake_plugin_module) -> None:
-    import agent_bom.plugin_activation as plugin_activation
+    from agent_bom import plugin_activation as plugin_activation
 
     _enable_all(monkeypatch)
     results = plugin_activation.advisory_source_lookup("CVE-2026-0002")
@@ -152,7 +152,7 @@ def test_advisory_source_lookup_is_provenance_tagged(monkeypatch, fake_plugin_mo
 
 
 def test_runtime_emitter_fan_out_forwards_redacted_envelope(monkeypatch, fake_plugin_module) -> None:
-    import agent_bom.plugin_activation as plugin_activation
+    from agent_bom import plugin_activation as plugin_activation
 
     _enable_all(monkeypatch)
     observation = {
@@ -181,7 +181,7 @@ def test_runtime_emitter_fan_out_forwards_redacted_envelope(monkeypatch, fake_pl
 
 
 def test_failing_plugin_is_isolated_and_sanitized(monkeypatch, fake_plugin_module) -> None:
-    import agent_bom.plugin_activation as plugin_activation
+    from agent_bom import plugin_activation as plugin_activation
 
     _enable_all(monkeypatch)
 
@@ -202,7 +202,7 @@ def test_failing_plugin_is_isolated_and_sanitized(monkeypatch, fake_plugin_modul
 
 
 def test_missing_callable_is_reported_not_raised(monkeypatch, fake_plugin_module) -> None:
-    import agent_bom.plugin_activation as plugin_activation
+    from agent_bom import plugin_activation as plugin_activation
 
     _enable_all(monkeypatch)
     # Remove the register callable so binding must fail gracefully.
@@ -216,7 +216,7 @@ def test_missing_callable_is_reported_not_raised(monkeypatch, fake_plugin_module
 
 
 def test_activation_status_reports_bound_plugins(monkeypatch, fake_plugin_module) -> None:
-    import agent_bom.plugin_activation as plugin_activation
+    from agent_bom import plugin_activation as plugin_activation
 
     _enable_all(monkeypatch)
     status = plugin_activation.plugin_activation_status()
@@ -231,7 +231,7 @@ def test_activation_status_reports_bound_plugins(monkeypatch, fake_plugin_module
 
 
 def test_activation_flags_helper_is_pure_env_read(monkeypatch, fake_plugin_module) -> None:
-    import agent_bom.plugin_activation as plugin_activation
+    from agent_bom import plugin_activation as plugin_activation
 
     assert plugin_activation.activation_flags() == {
         "agent_bom.mcp_tools": False,

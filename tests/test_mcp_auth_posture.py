@@ -107,7 +107,7 @@ def test_oauth_only_credentials_not_flagged_as_static() -> None:
 
 
 def test_static_credential_allowlist_suppresses(monkeypatch) -> None:
-    import agent_bom.mcp_auth_posture as mod
+    from agent_bom import mcp_auth_posture as mod
 
     monkeypatch.setattr(mod, "MCP_AUTH_STATIC_CRED_ALLOWLIST", ["service_api_key"])
     server = _net_server("static", url="https://mcp.example.com/sse", env={"SERVICE_API_KEY": "x"})

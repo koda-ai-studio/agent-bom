@@ -439,7 +439,7 @@ class TestAnonymousViewerAlongsideCredentials:
     def test_flag_on_demo_estate_clamps_anonymous_to_viewer(self, monkeypatch):
         """DEMO_ESTATE clamps the anonymous NO_AUTH_ROLE to viewer, winning over
         an operator-set AGENT_BOM_NO_AUTH_ROLE=admin."""
-        import agent_bom.config as config
+        from agent_bom import config as config
 
         monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE", "1")
         monkeypatch.setattr(config, "DEMO_ESTATE", True)
@@ -2027,8 +2027,8 @@ def test_api_key_middleware_rejects_request_when_tenant_rls_bypass_is_active(mon
     # Stub `is_tenant_rls_bypassed` so the test does not require a live
     # Postgres connection — the bypass flag itself is a process-local
     # contextvar, which makes it cheap and safe to monkeypatch.
-    import agent_bom.api.middleware as middleware_module
     import agent_bom.api.postgres_common as postgres_store_module
+    from agent_bom.api import middleware as middleware_module
 
     monkeypatch.setattr(postgres_store_module, "is_tenant_rls_bypassed", lambda: True)
 
@@ -2058,7 +2058,7 @@ def test_api_key_middleware_does_not_check_rls_bypass_when_postgres_disabled(mon
     async def dummy(request):
         return StarletteJSONResponse({"ok": True})
 
-    import agent_bom.api.middleware as middleware_module
+    from agent_bom.api import middleware as middleware_module
 
     test_app = Starlette(routes=[Route("/v1/auth/me", dummy)])
     test_app.add_middleware(middleware_module.APIKeyMiddleware, api_key="test-key-123")

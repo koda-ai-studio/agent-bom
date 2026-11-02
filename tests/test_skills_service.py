@@ -93,7 +93,7 @@ def test_scan_skill_targets_records_summary_in_hmac_audit_chain(tmp_path):
 
 
 def test_scan_and_rescan_preserve_explicit_audit_tenant(monkeypatch, tmp_path):
-    import agent_bom.api.audit_log as audit
+    from agent_bom.api import audit_log as audit
 
     audit_log = audit.InMemoryAuditLog()
     monkeypatch.setattr(audit, "_audit_log", audit_log)

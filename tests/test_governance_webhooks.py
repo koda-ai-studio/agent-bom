@@ -162,7 +162,7 @@ def test_webhook_api_rejects_unknown_event_and_bad_url(client):
 def test_identity_revoke_emits_webhook(client):
     # Register a catch-all subscription, then revoke an identity and confirm a
     # delivery was queued to the durable outbox for this tenant.
-    import agent_bom.posture_streaming as ps
+    from agent_bom import posture_streaming as ps
     from agent_bom.posture_streaming import WebhookOutbox
 
     captured = []

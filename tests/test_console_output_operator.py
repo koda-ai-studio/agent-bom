@@ -25,7 +25,7 @@ from agent_bom.output.dependency_hierarchy import dependency_count_label
 def _capture(fn, *args, **kwargs) -> str:
     buf = StringIO()
     con = Console(file=buf, width=120, force_terminal=True, no_color=True)
-    import agent_bom.output as out_mod
+    from agent_bom import output as out_mod
 
     orig = out_mod.console
     out_mod.console = con

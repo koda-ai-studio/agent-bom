@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from rich.console import Console
 
-import agent_bom.output.console_render as console_render
 from agent_bom.coverage import record_scan_note
 from agent_bom.models import AIBOMReport
+from agent_bom.output import console_render as console_render
 from agent_bom.output.console_render import print_summary
 from agent_bom.output.json_fmt import to_json
 from agent_bom.scanners.state import capture_coverage_warnings

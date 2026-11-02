@@ -9,7 +9,7 @@ from typing import get_type_hints
 import pytest
 from click.testing import CliRunner
 
-import agent_bom.parsers as parsers
+from agent_bom import parsers as parsers
 from agent_bom.cli import main
 from agent_bom.discovery import parse_mcp_config
 from agent_bom.models import (
@@ -2762,7 +2762,6 @@ def test_cli_main_help_hides_api_but_keeps_it_reachable():
 
 def test_grype_scan_mock(monkeypatch, tmp_path):
     """Grype scanner parses JSON output into Package objects with pre-populated vulns."""
-    import json
     import shutil
     import subprocess
 
@@ -3966,7 +3965,7 @@ def test_remediation_narrative_omits_reach_clause_when_no_credentials():
     and reads as noise — suppress it (P2 honesty)."""
     from rich.console import Console
 
-    import agent_bom.output as output_mod
+    from agent_bom import output as output_mod
     from agent_bom.models import (
         Agent,
         AgentType,

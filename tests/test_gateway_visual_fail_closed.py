@@ -13,7 +13,7 @@ from agent_bom.gateway_upstreams import UpstreamConfig, UpstreamRegistry
 @pytest.mark.parametrize("failure", [TimeoutError, RuntimeError])
 @pytest.mark.parametrize("audit_fails", [False, True])
 def test_visual_failure_withholds_completed_result_without_retry_or_false_redaction(monkeypatch, stage, failure, audit_fails):
-    import agent_bom.gateway_server as gateway
+    from agent_bom import gateway_server as gateway
     from agent_bom.runtime import visual_leak_detector as visual
 
     events = []

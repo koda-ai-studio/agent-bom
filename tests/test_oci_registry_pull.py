@@ -199,7 +199,6 @@ def _pkg():
 def test_malformed_manifest_fails_with_typed_scan_error(registry, field, value):
     image = _image(("bash", "5.2"))
     registry.push_image("team/app", image, "1.0")
-    import json
 
     document = dict(image.manifest)
     document[field] = value
@@ -210,7 +209,6 @@ def test_malformed_manifest_fails_with_typed_scan_error(registry, field, value):
 
 @pytest.mark.parametrize("history", [["bad"], 7, [{"created_by": []}], [{"empty_layer": "false"}]])
 def test_malformed_config_history_fails_with_typed_scan_error(registry, history):
-    import json
 
     image = _image(("bash", "5.2"))
     registry.push_image("team/app", image, "1.0")
@@ -248,7 +246,6 @@ def test_oversized_image_config_is_refused_before_any_layer_is_read(registry, mo
 
 def test_sha512_layer_preserves_digest_in_evidence_and_package_occurrences(registry):
     import hashlib
-    import json
 
     image = _image(("bash", "5.2"))
     registry.push_image("team/app", image, "1.0")

@@ -130,8 +130,8 @@ def _next_steps_target(opts: ScanOptions) -> str:
 
 
 def _render(opts: ScanOptions, st: ScanState) -> None:
-    import agent_bom.output as _out
     import agent_bom.output.console_render as _console_render
+    from agent_bom import output as _out
 
     # Step 5: Output
     st.step_t0 = _time.monotonic()

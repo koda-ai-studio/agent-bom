@@ -1081,7 +1081,7 @@ def test_tool_risk_assessment_validates_requested_config_path_before_discovery()
 
 @pytest.mark.asyncio
 async def test_runtime_production_index_impl_empty_state():
-    import agent_bom.api.routes.proxy as proxy_mod
+    from agent_bom.api.routes import proxy as proxy_mod
     from agent_bom.mcp_tools.runtime import runtime_production_index_impl
 
     proxy_mod._proxy_alerts.clear()
@@ -1113,7 +1113,7 @@ async def test_runtime_blueprints_impl_lists_and_filters():
 
 @pytest.mark.asyncio
 async def test_runtime_blueprint_drift_impl_reports_drift(monkeypatch):
-    import agent_bom.api.routes.proxy as proxy_mod
+    from agent_bom.api.routes import proxy as proxy_mod
     from agent_bom.api.server import push_proxy_metrics
     from agent_bom.mcp_tools.runtime import runtime_blueprint_drift_impl
 
@@ -1456,7 +1456,7 @@ async def test_shield_break_glass_tool_uses_admin_role_context():
 
 @pytest.mark.asyncio
 async def test_proxy_alerts_impl_filters_metadata_only_alerts():
-    import agent_bom.api.routes.proxy as proxy_mod
+    from agent_bom.api.routes import proxy as proxy_mod
     from agent_bom.api.routes.proxy import push_proxy_alert
     from agent_bom.mcp_tools.runtime import proxy_alerts_impl
 

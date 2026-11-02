@@ -281,7 +281,7 @@ def test_legacy_self_consistent_envelope_is_reported_but_never_verified(tmp_path
 
 
 def test_malformed_and_oversized_envelopes_are_bounded(tmp_path: Path, signing_key, monkeypatch) -> None:
-    import agent_bom.sbom_attestation as module
+    from agent_bom import sbom_attestation as module
 
     path = _write_sbom(tmp_path)
     attestation_path = Path(str(path) + _ATTESTATION_SUFFIX)

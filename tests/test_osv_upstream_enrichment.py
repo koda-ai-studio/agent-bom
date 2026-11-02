@@ -132,7 +132,7 @@ def test_v5_upgrade_preserves_findings_but_requires_osv_metadata_refresh(tmp_pat
 def test_failed_migration_rolls_back_ddl_and_receipt(tmp_path, monkeypatch):
     import sqlite3
 
-    import agent_bom.db.schema as schema
+    from agent_bom.db import schema as schema
 
     conn = init_db(tmp_path / "failure.db")
     current = schema._SCHEMA_VERSION

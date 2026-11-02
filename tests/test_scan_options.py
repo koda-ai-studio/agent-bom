@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-import agent_bom.scanners as scanners
+from agent_bom import scanners as scanners
 from agent_bom.models import Agent, AgentType, MCPServer, Package
 from agent_bom.scanners import IncompleteScanError, ScanOptions, scan_agents, scan_agents_sync, scan_packages
 

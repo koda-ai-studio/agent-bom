@@ -133,7 +133,7 @@ def test_console_accounts_for_every_reference_cve(console_reference: tuple[str, 
 def test_php_console_title_and_group_line_reconcile_with_the_total() -> None:
     image, rows = _php_reference()
     report, expected = _report(image, rows)
-    import agent_bom.output as out_mod
+    from agent_bom import output as out_mod
 
     buf = StringIO()
     original = out_mod.console

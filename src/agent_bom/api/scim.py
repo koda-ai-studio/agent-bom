@@ -7,7 +7,6 @@ import os
 import secrets
 from collections.abc import Mapping
 from dataclasses import dataclass
-from json import JSONDecodeError
 from typing import Any
 
 from agent_bom.api.scim_errors import SCIM_ERROR_SCHEMA as SCIM_ERROR_SCHEMA
@@ -98,7 +97,7 @@ def _mapping_scim_bearer_token_bindings() -> list[SCIMBearerTokenBinding]:
         return []
     try:
         payload = json.loads(raw)
-    except JSONDecodeError as exc:
+    except json.JSONDecodeError as exc:
         raise SCIMConfigurationError(f"{_SCIM_TOKEN_MAPPING_ENV} must be a JSON object mapping tenant id to token config") from exc
     if not isinstance(payload, dict):
         raise SCIMConfigurationError(f"{_SCIM_TOKEN_MAPPING_ENV} must be a JSON object mapping tenant id to token config")

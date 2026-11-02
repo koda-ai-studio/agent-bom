@@ -146,7 +146,7 @@ def test_list_uses_server_side_search_and_pagination():
 
 
 def test_list_falls_back_for_legacy_fleet_store_without_query_api():
-    import agent_bom.api.stores as api_stores
+    from agent_bom.api import stores as api_stores
 
     class LegacyFleetStore:
         def __init__(self) -> None:
@@ -209,7 +209,7 @@ def test_get_agent_not_found():
 
 
 def test_get_agent_passes_tenant_to_store():
-    import agent_bom.api.stores as api_stores
+    from agent_bom.api import stores as api_stores
 
     class RecordingFleetStore:
         def __init__(self) -> None:

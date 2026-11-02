@@ -39,8 +39,8 @@ def _patch_entry_points(monkeypatch, entries_by_group: dict[str, list[FakeEntryP
 
 @pytest.fixture(autouse=True)
 def reset_component_registries(monkeypatch):
-    import agent_bom.components.enricher_registry as enricher_registry
-    import agent_bom.components.matcher_registry as matcher_registry
+    from agent_bom.components import enricher_registry as enricher_registry
+    from agent_bom.components import matcher_registry as matcher_registry
 
     monkeypatch.delenv(ENTRYPOINTS_ENABLED_ENV, raising=False)
     enricher_registry._reset_enricher_registry_for_tests()
@@ -110,7 +110,7 @@ def test_enricher_to_dict_is_api_safe() -> None:
 
 
 def test_entry_point_enricher_registration_loads_only_when_enabled(monkeypatch) -> None:
-    import agent_bom.components.enricher_registry as enricher_registry
+    from agent_bom.components import enricher_registry as enricher_registry
 
     module_name = "agent_bom.tests.fake_enricher_driver"
     fake_module = types.ModuleType(module_name)

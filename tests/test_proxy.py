@@ -12,7 +12,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-import agent_bom.proxy as proxy_mod
+from agent_bom import proxy as proxy_mod
 from agent_bom.api.policy_store import GatewayPolicy, GatewayRule
 from agent_bom.proxy import (
     AuditDeliveryController,
@@ -1117,7 +1117,6 @@ def test_proxy_cli_no_cmd_no_url_raises_usage_error():
 
 def test_proxy_sse_server_uses_httpx(tmp_path):
     """_proxy_sse_server creates an httpx.AsyncClient to contact the remote server."""
-    import asyncio
     from unittest.mock import AsyncMock, MagicMock, patch
 
     from agent_bom.proxy import _proxy_sse_server

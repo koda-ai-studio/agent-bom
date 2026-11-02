@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import agent_bom.resolver as resolver
+from agent_bom import resolver as resolver
 from agent_bom.models import Package
 from agent_bom.resolver import (
     _NPM_LATEST_CACHE,

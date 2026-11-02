@@ -100,7 +100,6 @@ def _clear_rate_limit_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _reload_config() -> None:
-    import importlib
 
     import agent_bom.config as _cfg
 

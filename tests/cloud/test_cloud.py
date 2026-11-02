@@ -210,7 +210,7 @@ def test_cloud_discovery_error_is_base():
 def test_aws_missing_boto3():
     """Helpful error when boto3 is not installed."""
     with patch.dict(sys.modules, {"boto3": None, "botocore": None, "botocore.exceptions": None}):
-        import agent_bom.cloud.aws as aws_mod
+        from agent_bom.cloud import aws as aws_mod
 
         try:
             importlib.reload(aws_mod)
@@ -401,7 +401,7 @@ def test_databricks_missing_sdk():
     """Helpful error when databricks-sdk is not installed."""
     with patch.dict(sys.modules, {"databricks": None, "databricks.sdk": None, "databricks.sdk.errors": None}):
         with pytest.raises(CloudDiscoveryError, match="databricks-sdk is required"):
-            import agent_bom.cloud.databricks as db_mod
+            from agent_bom.cloud import databricks as db_mod
 
             importlib.reload(db_mod)
             db_mod.discover()
@@ -573,7 +573,7 @@ def test_snowflake_missing_connector():
     """Helpful error when snowflake-connector-python is not installed."""
     with patch.dict(sys.modules, {"snowflake": None, "snowflake.connector": None, "snowflake.connector.errors": None}):
         with pytest.raises(CloudDiscoveryError, match="snowflake-connector-python is required"):
-            import agent_bom.cloud.snowflake as sf_mod
+            from agent_bom.cloud import snowflake as sf_mod
 
             importlib.reload(sf_mod)
             sf_mod.discover()
@@ -1417,7 +1417,7 @@ def test_hf_missing_sdk():
     """Helpful error when huggingface-hub is not installed."""
     with patch.dict(sys.modules, {"huggingface_hub": None}):
         with pytest.raises(CloudDiscoveryError, match="huggingface-hub is required"):
-            import agent_bom.cloud.huggingface as hf_mod
+            from agent_bom.cloud import huggingface as hf_mod
 
             importlib.reload(hf_mod)
             hf_mod.discover()
@@ -1518,7 +1518,7 @@ def test_wandb_missing_sdk():
     """Helpful error when wandb is not installed."""
     with patch.dict(sys.modules, {"wandb": None}):
         with pytest.raises(CloudDiscoveryError, match="wandb is required"):
-            import agent_bom.cloud.wandb_provider as wb_mod
+            from agent_bom.cloud import wandb_provider as wb_mod
 
             importlib.reload(wb_mod)
             wb_mod.discover()
@@ -1577,7 +1577,7 @@ def test_mlflow_missing_sdk():
     """Helpful error when mlflow is not installed."""
     with patch.dict(sys.modules, {"mlflow": None}):
         with pytest.raises(CloudDiscoveryError, match="mlflow is required"):
-            import agent_bom.cloud.mlflow_provider as ml_mod
+            from agent_bom.cloud import mlflow_provider as ml_mod
 
             importlib.reload(ml_mod)
             ml_mod.discover()
@@ -1631,7 +1631,7 @@ def test_openai_missing_sdk():
     """Helpful error when openai is not installed."""
     with patch.dict(sys.modules, {"openai": None}):
         with pytest.raises(CloudDiscoveryError, match="openai is required"):
-            import agent_bom.cloud.openai_provider as oa_mod
+            from agent_bom.cloud import openai_provider as oa_mod
 
             importlib.reload(oa_mod)
             oa_mod.discover()
@@ -1777,7 +1777,7 @@ def test_azure_missing_sdk():
     """Helpful error when azure-identity is not installed."""
     with patch.dict(sys.modules, {"azure.identity": None, "azure": None}):
         with pytest.raises(CloudDiscoveryError, match="azure-identity is required"):
-            import agent_bom.cloud.azure as az_mod
+            from agent_bom.cloud import azure as az_mod
 
             importlib.reload(az_mod)
             az_mod.discover(subscription_id="sub-123")
@@ -2010,7 +2010,7 @@ def test_azure_ai_foundry_fixture_normalizes_offset_timestamps():
 
 
 def test_discover_from_provider_sanitizes_returned_warnings(monkeypatch):
-    import agent_bom.cloud as cloud_registry
+    from agent_bom import cloud as cloud_registry
 
     module_name = "agent_bom.tests.fake_cloud_provider"
     fake_module = types.ModuleType(module_name)
@@ -2094,7 +2094,7 @@ def test_gcp_missing_sdk():
         },
     ):
         with pytest.raises(CloudDiscoveryError, match="At least one GCP SDK is required"):
-            import agent_bom.cloud.gcp as gcp_mod
+            from agent_bom.cloud import gcp as gcp_mod
 
             importlib.reload(gcp_mod)
             gcp_mod.discover(project_id="my-project")

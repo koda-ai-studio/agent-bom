@@ -130,7 +130,7 @@ def test_issued_api_keys_require_auth_even_with_no_env_config(monkeypatch: pytes
 def test_a_key_store_error_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     """An unavailable applied posture must not open an admin stream."""
 
-    import agent_bom.api.middleware as mw
+    from agent_bom.api import middleware as mw
 
     def _boom() -> object:
         raise RuntimeError("connection pool exhausted")
@@ -141,7 +141,7 @@ def test_a_key_store_error_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_a_posture_derivation_error_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
     """The applied source of truth is the only posture the socket consumes."""
-    import agent_bom.api.middleware as mw
+    from agent_bom.api import middleware as mw
 
     def _boom(**_kwargs: object) -> object:
         raise RuntimeError("posture derivation failed")
@@ -235,7 +235,7 @@ async def test_explicit_anonymous_websocket_clamps_role_when_credentials_exist(m
         def has_keys() -> bool:
             return True
 
-    import agent_bom.api.auth as auth_module
+    from agent_bom.api import auth as auth_module
 
     monkeypatch.setattr(proxy_routes, "_ws_auth_required", lambda: False)
     monkeypatch.setattr(auth_module, "get_key_store", lambda: _Store())
@@ -259,7 +259,7 @@ def test_trusted_proxy_intent_requires_auth_even_when_misconfigured(monkeypatch:
 
 
 def test_websocket_runtime_role_rejects_inactive_scim_identity(monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.api.auth as auth_module
+    from agent_bom.api import auth as auth_module
     from agent_bom.api.auth import SCIMRoleResolution
 
     monkeypatch.setattr(

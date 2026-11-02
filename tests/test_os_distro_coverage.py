@@ -330,8 +330,8 @@ def test_scanner_local_db_path_attaches_distro_vulns(tmp_path, monkeypatch):
     RPM/apk distros."""
     from datetime import datetime, timezone
 
-    import agent_bom.db.schema as schema
-    import agent_bom.scanners as sc
+    from agent_bom import scanners as sc
+    from agent_bom.db import schema as schema
 
     db = tmp_path / "scan.db"
     conn = schema.init_db(db)

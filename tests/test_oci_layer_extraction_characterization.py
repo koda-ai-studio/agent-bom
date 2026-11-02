@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-import agent_bom.oci_parser as oci_parser
+from agent_bom import oci_parser as oci_parser
 from agent_bom.models import Package
 from agent_bom.oci_parser import (
     _RPM_HDR_MAGIC,

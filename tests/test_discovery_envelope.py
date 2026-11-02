@@ -163,7 +163,7 @@ def test_aws_envelope_attached_to_discovered_agents(monkeypatch: pytest.MonkeyPa
     """
     pytest.importorskip("boto3")
 
-    import agent_bom.cloud.aws as aws_module
+    from agent_bom.cloud import aws as aws_module
 
     # Feed a single fake Bedrock agent. Disable the other discovery lanes so this
     # stays an envelope-wiring test and does not require a fake client per AWS API.

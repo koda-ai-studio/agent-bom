@@ -131,8 +131,6 @@ async def scan_impl(
     if detail not in SCAN_DETAIL_LEVELS:
         raise ToolError(f"Invalid detail: {detail!r}. Use one of: {', '.join(SCAN_DETAIL_LEVELS)}")
     if result_id is not None and str(result_id).strip():
-        import asyncio
-
         return await asyncio.to_thread(
             _stored_result_view,
             store,

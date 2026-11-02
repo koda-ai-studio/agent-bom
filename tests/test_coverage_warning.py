@@ -278,7 +278,7 @@ def test_json_and_console_surface_coverage_warnings():
 
     console = Console(record=True, width=120)
     monkey_console = console
-    import agent_bom.output.console_render as cr
+    from agent_bom.output import console_render as cr
 
     original = cr._console
     cr._console = lambda: monkey_console  # type: ignore[assignment]

@@ -49,7 +49,7 @@ def test_compact_console_keeps_long_finding_titles_on_one_line() -> None:
 
     from rich.console import Console
 
-    import agent_bom.output as output
+    from agent_bom import output as output
     from agent_bom.output import compact
 
     report = _report()

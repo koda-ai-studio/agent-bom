@@ -365,7 +365,6 @@ def test_linked_document_trusted_ids_skip_resanitizing_but_never_leak():
     """Exporter-minted identifiers (fixed namespace + counter, no input data)
     may bypass per-ID re-sanitization; anything outside that exact pattern —
     including a secret embedded in a would-be ID — is still redacted."""
-    import re
 
     from agent_bom.output.finding_views import sanitize_output_text
     from agent_bom.output.interop_security import sanitize_linked_document

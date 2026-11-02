@@ -366,7 +366,7 @@ def _reset_registry_state() -> None:
         pass
 
     try:
-        import agent_bom.parsers as parsers
+        from agent_bom import parsers as parsers
 
         parsers._registry_cache = None
     except Exception:
@@ -957,7 +957,6 @@ _SCANNER_GLOBAL_TARGETS = (
 
 
 def _snapshot_scanner_globals() -> list[tuple[Any, str, Any]]:
-    import importlib
 
     snapshot: list[tuple[Any, str, Any]] = []
     for module_name, attr in _SCANNER_GLOBAL_TARGETS:

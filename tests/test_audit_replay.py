@@ -776,7 +776,7 @@ def _write_real_proxy_chain(num_entries: int, sign_key: str | None = None) -> Pa
     import hashlib
     import hmac as hmac_mod
 
-    import agent_bom.proxy_audit as proxy_audit
+    from agent_bom import proxy_audit as proxy_audit
     from agent_bom.proxy_audit import compute_payload_hash, write_audit_record
 
     proxy_audit._AUDIT_CHAIN_STATE.clear()
@@ -905,7 +905,7 @@ def test_audit_cli_exits_2_on_hmac_failure(tmp_path):
 
 def test_audit_cli_exits_1_on_blocked_only_with_blocked(tmp_path):
     """`agent-bom audit --blocked-only` must exit 1 when any blocked entry matches."""
-    import agent_bom.proxy_audit as proxy_audit
+    from agent_bom import proxy_audit as proxy_audit
     from agent_bom.proxy_audit import write_audit_record
 
     proxy_audit._AUDIT_CHAIN_STATE.clear()

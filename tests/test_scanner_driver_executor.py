@@ -14,8 +14,8 @@ from agent_bom.scanners.executor import ScannerDriverError, run_scanner_driver
 
 @pytest.fixture(autouse=True)
 def reset_scanner_registry(monkeypatch):
-    import agent_bom.scanners.registry as scanner_registry
     from agent_bom.extensions import ENTRYPOINTS_ENABLED_ENV
+    from agent_bom.scanners import registry as scanner_registry
 
     monkeypatch.delenv(ENTRYPOINTS_ENABLED_ENV, raising=False)
     scanner_registry._reset_scanner_registry_for_tests()

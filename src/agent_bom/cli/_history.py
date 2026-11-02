@@ -406,7 +406,6 @@ def rescan_command(baseline: str, output: Optional[str], md: Optional[str], enri
       2  Error loading baseline
     """
     import asyncio
-    import json as _json
 
     from rich.console import Console
     from rich.table import Table

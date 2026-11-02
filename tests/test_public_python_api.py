@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 import agent_bom
-from agent_bom import sdk
+import agent_bom.sdk as sdk
 from agent_bom.models import AIBOMReport, Package, Severity, Vulnerability
 
 

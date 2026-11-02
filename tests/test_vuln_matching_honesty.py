@@ -142,7 +142,7 @@ async def test_bare_pip_dep_not_resolved_from_scanner_host(tmp_path, monkeypatch
 @pytest.mark.asyncio
 async def test_uppercase_unknown_sbom_version_is_not_advisory_matched(tmp_path, monkeypatch):
     import agent_bom.resolvers.runtime_resolver as rr
-    import agent_bom.scanners as scanners
+    from agent_bom import scanners as scanners
     from agent_bom.sbom import parse_cyclonedx
     from agent_bom.scanners.package_scan import ScanOptions, consume_scan_warnings, scan_packages
 

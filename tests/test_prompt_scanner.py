@@ -246,7 +246,6 @@ def test_detects_database_connection_string(tmp_path):
 
 def test_scans_json_prompt_file(tmp_path):
     """Extracts and scans prompt text from JSON files."""
-    import json
 
     f = tmp_path / "system_prompt.json"
     f.write_text(
@@ -264,7 +263,6 @@ def test_scans_json_prompt_file(tmp_path):
 
 def test_scans_nested_json_prompt(tmp_path):
     """Scans nested JSON prompt structures."""
-    import json
 
     f = tmp_path / "prompt.json"
     f.write_text(
@@ -386,7 +384,6 @@ def test_prompt_scan_data_in_json_output(tmp_path):
         ],
     )
     assert result.exit_code == 0
-    import json
 
     data = json.loads(out_file.read_text())
     assert data["prompt_scan"]["files_scanned"] == 1

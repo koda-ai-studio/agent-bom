@@ -84,7 +84,7 @@ def test_direct_group_and_assume_permissions_retain_distinct_source_paths(tmp_pa
 
 
 def test_depth_limited_permission_walk_is_not_reported_complete(monkeypatch):
-    import agent_bom.graph.effective_permissions as module
+    from agent_bom.graph import effective_permissions as module
 
     monkeypatch.setattr(module, "_MAX_DEPTH", 2)
     graph = UnifiedGraph(scan_id="depth")
@@ -102,7 +102,7 @@ def test_depth_limited_permission_walk_is_not_reported_complete(monkeypatch):
 
 
 def test_cycle_does_not_falsely_mark_depth_limit(monkeypatch):
-    import agent_bom.graph.effective_permissions as module
+    from agent_bom.graph import effective_permissions as module
 
     monkeypatch.setattr(module, "_MAX_DEPTH", 2)
     graph = UnifiedGraph(scan_id="cycle")
@@ -127,7 +127,7 @@ def test_incomplete_source_graph_cannot_report_complete_permissions(empty):
 
 
 def test_witness_budget_preserves_permission_but_declares_missing_witnesses(monkeypatch):
-    import agent_bom.graph.effective_permissions as module
+    from agent_bom.graph import effective_permissions as module
 
     monkeypatch.setattr(module, "_MAX_PERMISSION_WITNESSES", 2)
     graph = UnifiedGraph(scan_id="witness-limit")

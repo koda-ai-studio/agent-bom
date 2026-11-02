@@ -11,11 +11,11 @@ leaves the pattern unfiltered; it never changes which matches are produced.
 from __future__ import annotations
 
 import re
+import re._constants as sre_constants  # type: ignore[import-not-found]
+import re._parser as sre_parse  # type: ignore[import-not-found]
 from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import cache, cached_property
-from re import _constants as sre_constants  # type: ignore[attr-defined]
-from re import _parser as sre_parse  # type: ignore[attr-defined]
 from typing import Any
 
 _MIN_LITERAL = 2

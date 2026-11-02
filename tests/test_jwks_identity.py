@@ -146,7 +146,7 @@ def test_fetch_jwks_network_error_returns_none():
 
 def test_fetch_jwks_cached(monkeypatch):
     """Second call with same URI should NOT make a second HTTP request."""
-    import agent_bom.agent_identity as mod
+    from agent_bom import agent_identity as mod
 
     # Pre-populate cache
     mod._jwks_cache["https://cached.example.com/jwks"] = ({"keys": []}, time.time())

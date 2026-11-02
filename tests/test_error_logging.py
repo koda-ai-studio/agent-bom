@@ -17,7 +17,7 @@ class TestScanCacheInitLogging:
 
     def setup_method(self):
         # Reset the module-level singleton so _get_scan_cache re-attempts init
-        import agent_bom.scanners as sc
+        from agent_bom import scanners as sc
 
         sc._scan_cache_instance = None
 

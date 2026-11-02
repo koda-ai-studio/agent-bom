@@ -24,7 +24,7 @@ def _capture_posture(report: AIBOMReport) -> str:
     buf = StringIO()
     con = Console(file=buf, width=120, force_terminal=True, no_color=True)
     # Temporarily swap the module-level console
-    import agent_bom.output as out_mod
+    from agent_bom import output as out_mod
 
     orig = out_mod.console
     out_mod.console = con

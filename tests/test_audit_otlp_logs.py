@@ -176,7 +176,7 @@ def test_unavailable_exporter_is_attempted_once_not_on_every_append(monkeypatch)
     # (`validate_url` → `socket.getaddrinfo`) runs under the exporter lock, so it
     # must be attempted exactly once and cached as a no-op — NOT re-run on every
     # audit-append call.
-    import agent_bom.siem.otlp_logs as otlp
+    from agent_bom.siem import otlp_logs as otlp
 
     monkeypatch.setenv("AGENT_BOM_OTEL_LOGS_ENDPOINT", "https://collector.example.com/v1/logs")
     monkeypatch.delenv("AGENT_BOM_OTEL_LOGS_HEADERS", raising=False)

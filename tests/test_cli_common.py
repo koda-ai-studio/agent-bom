@@ -169,7 +169,7 @@ def test_should_skip_update_check_honors_offline_argv(monkeypatch):
 
 
 def test_check_for_update_bg_skips_when_offline(monkeypatch):
-    import agent_bom.cli._common as mod
+    from agent_bom.cli import _common as mod
     from agent_bom.cli._common import _check_for_update_bg
 
     old_result = mod._update_check_result
@@ -199,7 +199,7 @@ def test_check_for_update_bg_skips_when_offline(monkeypatch):
 def test_check_for_update_bg_skips_when_offline_argv(monkeypatch):
     import sys
 
-    import agent_bom.cli._common as mod
+    from agent_bom.cli import _common as mod
     from agent_bom.cli._common import _check_for_update_bg
 
     old_result = mod._update_check_result
@@ -229,7 +229,7 @@ def test_check_for_update_bg_skips_when_offline_argv(monkeypatch):
 
 
 def test_print_update_notice_no_result():
-    import agent_bom.cli._common as mod
+    from agent_bom.cli import _common as mod
     from agent_bom.cli._common import _print_update_notice
 
     old_result = mod._update_check_result
@@ -249,7 +249,7 @@ def test_print_update_notice_no_result():
 
 
 def test_print_update_notice_with_result():
-    import agent_bom.cli._common as mod
+    from agent_bom.cli import _common as mod
     from agent_bom.cli._common import _print_update_notice
 
     old_result = mod._update_check_result

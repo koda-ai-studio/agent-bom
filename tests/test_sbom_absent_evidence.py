@@ -66,7 +66,6 @@ def test_cyclonedx_cvss_vector_survives_native_rating_import():
 
 
 def test_imported_spdx_absent_completeness_stays_unknown_on_cyclonedx_export(tmp_path):
-    import json
 
     from agent_bom.models import AIBOMReport
     from agent_bom.output.cyclonedx_fmt import to_cyclonedx
@@ -80,7 +79,6 @@ def test_imported_spdx_absent_completeness_stays_unknown_on_cyclonedx_export(tmp
 
 
 def test_shared_cyclonedx_component_has_context_specific_parent(tmp_path):
-    import json
 
     from agent_bom.parsers.sbom_context import load_sbom_agents
 

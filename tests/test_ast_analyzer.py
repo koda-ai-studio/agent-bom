@@ -631,7 +631,6 @@ def test_analyze_project_surfaces_gradle_only_java_dependency_symbol_reach(tmp_p
 
 
 def test_analyze_project_surfaces_csharp_dependency_symbol_reach(tmp_path: Path) -> None:
-    import json
 
     lock = {
         "version": 1,
@@ -1398,7 +1397,7 @@ def test_code_command_json_includes_ai_component_inventory(tmp_path: Path):
 
 
 def test_source_selection_walks_the_tree_once_and_groups_by_language(tmp_path: Path, monkeypatch):
-    import agent_bom.ast_analyzer as ast_analyzer
+    from agent_bom import ast_analyzer as ast_analyzer
     from agent_bom.ast_analyzer import ASTAnalysisResult, _select_source_files
 
     sources = ("app.py", "web/index.ts", "web/view.jsx", "svc/main.go", "lib.rs", "App.java", "Prog.cs", "x.rb", "y.php", "z.swift", "k.kt")

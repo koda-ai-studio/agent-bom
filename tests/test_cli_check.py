@@ -380,7 +380,7 @@ def test_sbom_invalid_json_reports_stable_input_error(tmp_path, document):
 
 def test_check_quiet_suppresses_scan_chatter(monkeypatch):
     async def _scan_packages(pkgs, **_kwargs):
-        import agent_bom.scanners as scanners
+        from agent_bom import scanners as scanners
 
         scanners.console.print("scanner noise that should stay hidden")
         for pkg in pkgs:

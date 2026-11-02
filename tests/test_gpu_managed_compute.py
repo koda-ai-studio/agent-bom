@@ -77,7 +77,7 @@ def test_spcs_compute_pools_are_inventoried_with_gpu_family(snowflake_services: 
 
 
 def test_snowflake_fixture_patches_canonical_facade(monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.cloud as cloud
+    from agent_bom import cloud as cloud
 
     canonical = importlib.import_module("agent_bom.cloud.snowflake")
     stale = types.ModuleType(canonical.__name__)

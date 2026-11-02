@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-import agent_bom.ast_analyzer as ast_analyzer
+from agent_bom import ast_analyzer as ast_analyzer
 from agent_bom.ast_analyzer import analyze_project
 
 FIXTURES = Path(__file__).parent / "fixtures"

@@ -8,7 +8,7 @@ import json
 import logging
 import time
 
-import agent_bom.agent_identity as identity_mod
+from agent_bom import agent_identity as identity_mod
 from agent_bom.agent_identity import (
     ANONYMOUS,
     check_identity,

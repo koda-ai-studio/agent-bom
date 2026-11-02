@@ -156,7 +156,7 @@ def test_same_named_cloud_assets_stay_separate_across_accounts_and_regions():
 
 
 def test_push_preserves_explicit_replay_key_and_source(monkeypatch, tmp_path):
-    import agent_bom.push as push
+    from agent_bom import push as push
 
     rows, mapping = fixture()
     source, config, output = [tmp_path / name for name in ("rows.json", "mapping.json", "report.json")]

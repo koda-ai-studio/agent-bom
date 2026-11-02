@@ -169,9 +169,9 @@ class TestBatchSizeConfig:
     """Batch size should be configurable via env var."""
 
     def test_default_batch_size(self):
-        from agent_bom.config import SCANNER_BATCH_SIZE
+        import agent_bom.config
 
-        assert SCANNER_BATCH_SIZE == 1000
+        assert agent_bom.config.SCANNER_BATCH_SIZE == 1000
 
     def test_batch_size_clamped_to_1000(self, monkeypatch):
         """Even if env var is >1000, actual batch should clamp to OSV max."""

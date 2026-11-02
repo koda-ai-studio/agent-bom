@@ -91,7 +91,7 @@ def _swallowed_first_party_imports(path: Path) -> list[tuple[str, str]]:
 
 
 def test_cmmc_has_no_swallowed_import_of_a_missing_symbol() -> None:
-    import agent_bom.cmmc as cmmc
+    from agent_bom import cmmc as cmmc
 
     for module_name, name in _swallowed_first_party_imports(Path(cmmc.__file__)):
         module = importlib.import_module(module_name)

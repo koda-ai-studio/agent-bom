@@ -1068,8 +1068,8 @@ class TestServerLifespanAutoDetect:
 
         mock_sf_connect.return_value = _mock_connection()
 
-        import agent_bom.api.server as srv
         import agent_bom.api.stores as st
+        from agent_bom.api import server as srv
         from agent_bom.api.report_job_store import InMemoryReportJobStore
         from agent_bom.api.skills_scan_store import InMemorySkillsScanStore
 

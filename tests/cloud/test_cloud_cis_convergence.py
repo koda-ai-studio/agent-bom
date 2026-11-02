@@ -168,7 +168,7 @@ def test_cis_fail_posture_and_gate_agree() -> None:
 
     from rich.console import Console
 
-    import agent_bom.output as out_mod
+    from agent_bom import output as out_mod
     from agent_bom.output import print_compact_summary
 
     report = _report()

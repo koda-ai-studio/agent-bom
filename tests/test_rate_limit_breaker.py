@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-import agent_bom.http_client as http_client
+from agent_bom import http_client as http_client
 from agent_bom.http_client import (
     RATE_LIMIT_BREAKER_THRESHOLD,
     registry_breaker_tripped,

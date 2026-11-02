@@ -714,7 +714,6 @@ def protect_cmd(
       Response:      {"type": "response", "tool_name": "read_file", "text": "..."}
       Drift check:   {"type": "drift", "tools": ["read_file", "exec_cmd"]}
     """
-    import asyncio
     import signal
 
     from agent_bom.alerts.dispatcher import AlertDispatcher

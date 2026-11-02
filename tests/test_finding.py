@@ -846,7 +846,7 @@ def test_cve_findings_reuses_dual_write_projection():
 
 def test_report_to_findings_reuses_dual_write_cve_projection(monkeypatch):
     """The unified stream must not rebuild CVEs already materialized by scan."""
-    import agent_bom.finding as finding_module
+    from agent_bom import finding as finding_module
 
     report = _make_report_with_blast_radii(2)
     report.findings = [finding_module.blast_radius_to_finding(br) for br in report.blast_radii]

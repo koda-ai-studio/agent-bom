@@ -475,6 +475,6 @@ def test_python_dash_m_agent_bom_runs_cli() -> None:
         [sys.executable, "-m", "agent_bom", "--version"], capture_output=True, text=True, env=env, check=False, timeout=120
     )
     assert proc.returncode == 0, proc.stderr
-    from agent_bom import __version__
+    import agent_bom
 
-    assert __version__ in proc.stdout
+    assert agent_bom.__version__ in proc.stdout

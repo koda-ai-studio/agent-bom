@@ -98,7 +98,7 @@ def test_whiteout_in_a_higher_layer_removes_the_model(tmp_path: Path) -> None:
 
 def test_oversize_pickle_member_is_reported_unscanned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(model_pickle_scan, "_max_pickle_bytes", lambda: 16)
-    import agent_bom.parsers.oci_model_artifacts as artifacts_mod
+    from agent_bom.parsers import oci_model_artifacts as artifacts_mod
 
     monkeypatch.setattr(artifacts_mod, "_max_pickle_bytes", lambda: 16)
     image = _image(tmp_path, [{"opt/models/big.pt": b"PK\x03\x04" + b"\x00" * 64}])
@@ -108,7 +108,7 @@ def test_oversize_pickle_member_is_reported_unscanned(tmp_path: Path, monkeypatc
 
 
 def test_per_image_cap_is_reported(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.parsers.oci_model_artifacts as artifacts_mod
+    from agent_bom.parsers import oci_model_artifacts as artifacts_mod
 
     monkeypatch.setattr(artifacts_mod, "MAX_ARTIFACTS_PER_IMAGE", 2)
     image = _image(tmp_path, [{f"m/{i}.onnx": b"x" for i in range(4)}])

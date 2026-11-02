@@ -288,7 +288,7 @@ def test_direct_dashboard_html_static_file_strips_csp_meta(tmp_path: Path, monke
     )
     from fastapi import FastAPI
 
-    import agent_bom.api.server as server_module
+    from agent_bom.api import server as server_module
     from agent_bom.api.server import _mount_dashboard
 
     monkeypatch.setattr(server_module, "__file__", str(server_file))
@@ -320,7 +320,7 @@ def test_dashboard_extensionless_route_serves_static_export_page(tmp_path: Path,
 
     from fastapi import FastAPI
 
-    import agent_bom.api.server as server_module
+    from agent_bom.api import server as server_module
     from agent_bom.api.server import _mount_dashboard
 
     monkeypatch.setattr(server_module, "__file__", str(server_file))
@@ -356,7 +356,7 @@ def test_dashboard_client_routes_fall_back_to_app_shell(tmp_path: Path, monkeypa
 
     from fastapi import FastAPI
 
-    import agent_bom.api.server as server_module
+    from agent_bom.api import server as server_module
     from agent_bom.api.server import _mount_dashboard
 
     monkeypatch.setattr(server_module, "__file__", str(server_file))
