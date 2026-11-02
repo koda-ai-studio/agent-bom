@@ -10,6 +10,8 @@ from agent_bom.mcp_errors import CODE_INTERNAL_UNEXPECTED, mcp_error_json
 from agent_bom.mcp_tools.dispatch import resolve_tool_path
 from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstream importers
 
+__all__ = ["register_specialized_ai_tools", "sanitize_error"]
+
 
 def register_specialized_ai_tools(
     mcp: Any,

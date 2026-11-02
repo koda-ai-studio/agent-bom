@@ -11,7 +11,6 @@ Endpoints:
 
 from __future__ import annotations
 
-import logging
 import time
 from collections import OrderedDict, deque
 from datetime import datetime, timezone
@@ -46,9 +45,6 @@ from agent_bom.runtime.gateway_events import GATEWAY_CANONICAL_EVENT_TYPES, GATE
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
-
-
-_logger = logging.getLogger("agent_bom.api.routes.proxy")
 
 
 ws_router = APIRouter()

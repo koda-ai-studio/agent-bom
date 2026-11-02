@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agent_bom.runtime.protection import ProtectionEngine
 
+__all__ = ["_MAX_SHIELD_SESSIONS", "_shield_engines_lock"]
+
 _ShieldKey = tuple[str, str]
 _shield_engines: dict[_ShieldKey, ProtectionEngine] = {}
 _shield_engines_lock = Lock()

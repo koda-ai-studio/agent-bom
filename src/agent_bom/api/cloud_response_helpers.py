@@ -11,6 +11,8 @@ from fastapi import Request
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.config import CLOUD_CIS_TIMEOUT_SECONDS, CLOUD_DISCOVERY_TIMEOUT
 
+__all__ = ["_logger"]
+
 _logger = logging.getLogger("agent_bom.api.routes.cloud")
 
 

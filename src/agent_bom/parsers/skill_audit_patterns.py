@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from typing import NamedTuple
 
+__all__ = ["_BEHAVIORAL_PATTERNS", "_DANGEROUS_ARG_KEYWORDS", "_DANGEROUS_SERVER_NAME_KEYWORDS", "_SHELL_COMMANDS"]
+
 _SHELL_COMMANDS = {"sh", "bash", "cmd", "powershell", "zsh"}
 
 _DANGEROUS_ARG_KEYWORDS = {

@@ -21,6 +21,7 @@ from agent_bom.mcp_tools.host_local import HostLocalForbiddenError, ensure_host_
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
+__all__ = ["audit_integrity_impl", "tool_risk_assessment_impl"]  # fmt: skip
 
 
 def _request_for_tenant(tenant_id: str | None = None, actor: str | None = None) -> SimpleNamespace:
@@ -37,14 +38,7 @@ def _has_shield_write_scope(operator_scopes: str) -> bool:
 
 
 def _authorize_shield_write(
-    *,
-    action: str,
-    operator_role: str,
-    operator_scopes: str,
-    reason: str,
-    tenant_id: str,
-    session_id: str,
-    authenticated_actor: str = "",
+    *, action: str, operator_role: str, operator_scopes: str, reason: str, tenant_id: str, session_id: str, authenticated_actor: str = ""
 ) -> tuple[bool, dict[str, Any]]:
     normalized_role = (operator_role or "").strip().lower()
     clean_reason = (reason or "").strip()

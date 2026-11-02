@@ -10,6 +10,8 @@ from agent_bom.security import sanitize_error
 from .base import CloudDiscoveryError
 from .snowflake_common import _env_or_value, _record_snowflake_inventory_failure, _sf, _sf_truthy
 
+__all__ = ["_LIVE_GRANT_OBJECT_TYPES", "_LIVE_MAX_ROLES", "discover_identity_live", "discover_object_dependencies", "logger"]
+
 # Log under the façade's logger so existing log routing and filters keep applying.
 logger = logging.getLogger("agent_bom.cloud.snowflake")
 

@@ -11,6 +11,8 @@ from rich.console import Console
 from agent_bom.models import Package
 from agent_bom.package_utils import normalize_package_name
 
+__all__ = ["IncompleteScanError", "ScanOptions", "_logger", "console"]
+
 console = Console(stderr=True)
 
 

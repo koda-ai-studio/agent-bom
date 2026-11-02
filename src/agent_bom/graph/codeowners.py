@@ -5,3 +5,5 @@ from agent_bom.domain.codeowners import apply_codeowners as apply_codeowners
 from agent_bom.domain.codeowners import load_codeowners as load_codeowners
 from agent_bom.domain.codeowners import normalize_codeowners as normalize_codeowners
 from agent_bom.domain.codeowners import owner_for_path as owner_for_path
+
+__all__ = ["CodeOwnerRule", "apply_codeowners", "load_codeowners", "normalize_codeowners", "owner_for_path"]

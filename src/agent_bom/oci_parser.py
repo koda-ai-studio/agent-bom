@@ -59,18 +59,13 @@ from agent_bom.parsers.oci_layer import _apply_detected_distro, _layer_whiteouts
 from agent_bom.parsers.oci_layer_secrets import extract_layer_secrets
 from agent_bom.parsers.oci_metadata import _MAX_LEGACY_RPMDB_BYTES as _MAX_LEGACY_RPMDB_BYTES
 from agent_bom.parsers.oci_metadata import _RPM_HDR_MAGIC as _RPM_HDR_MAGIC
-from agent_bom.parsers.oci_metadata import _RPM_TYPE_INT32 as _RPM_TYPE_INT32
 from agent_bom.parsers.oci_metadata import _RPM_TYPE_STRING as _RPM_TYPE_STRING
-from agent_bom.parsers.oci_metadata import _RPMTAG_EPOCH as _RPMTAG_EPOCH
 from agent_bom.parsers.oci_metadata import _RPMTAG_NAME as _RPMTAG_NAME
 from agent_bom.parsers.oci_metadata import _RPMTAG_RELEASE as _RPMTAG_RELEASE
 from agent_bom.parsers.oci_metadata import _RPMTAG_VERSION as _RPMTAG_VERSION
 from agent_bom.parsers.oci_metadata import LayerMetadata as LayerMetadata
 from agent_bom.parsers.oci_metadata import _build_layer_metadata as _build_layer_metadata
-from agent_bom.parsers.oci_metadata import _normalize_dockerfile_instruction as _normalize_dockerfile_instruction
-from agent_bom.parsers.oci_metadata import _normalize_layer_id as _normalize_layer_id
 from agent_bom.parsers.oci_metadata import _parse_legacy_rpmdb_bytes as _parse_legacy_rpmdb_bytes
-from agent_bom.parsers.oci_metadata import _parse_rfc822_name_version as _parse_rfc822_name_version
 from agent_bom.parsers.oci_metadata import _parse_rpm_header_blob as _parse_rpm_header_blob
 from agent_bom.parsers.oci_metadata import is_node_package_manifest_path as is_node_package_manifest_path
 from agent_bom.parsers.oci_stream import LayerLimitError, ScanBudget, open_bounded_layer
@@ -78,6 +73,8 @@ from agent_bom.parsers.oci_types import OCIInputWarning, OCIManifest, OCIParseEr
 
 # Layer stages that record image evidence (not packages); each is a no-op without an active collector.
 _LAYER_EVIDENCE_STAGES = (extract_layer_secrets,)
+__all__ = ["_RPMTAG_NAME", "_RPMTAG_RELEASE", "_RPMTAG_VERSION", "_RPM_HDR_MAGIC", "_RPM_TYPE_STRING",
+    "_parse_legacy_rpmdb_bytes", "_parse_rpm_header_blob", "is_node_package_manifest_path"]  # fmt: skip
 
 
 def _config_ref(manifest: dict) -> str:

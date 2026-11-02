@@ -46,7 +46,6 @@ from agent_bom.demo_estate.enterprise_risk_rules import _DATA_RULES as _DATA_RUL
 from agent_bom.demo_estate.enterprise_risk_rules import _IAC_RULES as _IAC_RULES
 from agent_bom.demo_estate.enterprise_risk_rules import _IDENTITY_RULES as _IDENTITY_RULES
 from agent_bom.demo_estate.enterprise_risk_rules import _TOOL_RULES as _TOOL_RULES
-from agent_bom.demo_estate.enterprise_risk_rules import _DataRule as _DataRule
 from agent_bom.demo_estate.enterprise_risk_rules import _IacRule as _IacRule
 from agent_bom.demo_estate.enterprise_risk_rules import _RuntimeRule as _RuntimeRule
 from agent_bom.finding import (

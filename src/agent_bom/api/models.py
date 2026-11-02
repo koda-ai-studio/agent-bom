@@ -82,6 +82,12 @@ _BATCH_LIST_TARGET_FIELDS = (
     "connectors",
     "filesystem_paths",
 )
+__all__ = ["AnalyticsHealth", "ComplianceAuditIntegrity", "ComplianceEvidenceItem", "ComplianceReportBundle",
+    "ComplianceReportControl", "ComplianceReportScope", "ComplianceReportSummary", "ComplianceSignatureDisclosure",
+    "ComplianceThreatModel", "CredentialRefCreate", "CredentialRefRecord", "CredentialRefStatus", "CredentialRefUpdate",
+    "EntitlementHealth", "HealthResponse", "PostgresPortabilityHealth", "PublicHealthResponse", "SourceCohortRunRequest",
+    "SourceCreate", "SourceCredentialMode", "SourceKind", "SourceRecord", "SourceStatus", "SourceUpdate", "StorageHealth",
+    "TracingHealth", "VersionInfo"]  # fmt: skip
 _BATCH_SINGLE_TARGET_FIELDS = ("inventory", "gha_path", "sbom", "external_scan", "vex", "repo_url")
 
 _SCAN_PATH_MAX_LENGTH = 4096
@@ -952,34 +958,15 @@ if TYPE_CHECKING:
 
 
 _MODEL_EXPORTS = {
-    "SourceKind": "agent_bom.api.source_models",
-    "SourceStatus": "agent_bom.api.source_models",
-    "SourceCredentialMode": "agent_bom.api.source_models",
-    "CredentialRefStatus": "agent_bom.api.source_models",
-    "CredentialRefRecord": "agent_bom.api.source_models",
-    "CredentialRefCreate": "agent_bom.api.source_models",
-    "CredentialRefUpdate": "agent_bom.api.source_models",
-    "SourceRecord": "agent_bom.api.source_models",
-    "SourceCreate": "agent_bom.api.source_models",
-    "SourceUpdate": "agent_bom.api.source_models",
-    "SourceCohortRunRequest": "agent_bom.api.source_models",
-    "VersionInfo": "agent_bom.api.health_models",
-    "TracingHealth": "agent_bom.api.health_models",
-    "AnalyticsHealth": "agent_bom.api.health_models",
-    "PostgresPortabilityHealth": "agent_bom.api.health_models",
-    "StorageHealth": "agent_bom.api.health_models",
-    "EntitlementHealth": "agent_bom.api.health_models",
-    "PublicHealthResponse": "agent_bom.api.health_models",
-    "HealthResponse": "agent_bom.api.health_models",
-    "ComplianceEvidenceItem": "agent_bom.api.compliance_models",
-    "ComplianceReportControl": "agent_bom.api.compliance_models",
-    "ComplianceReportScope": "agent_bom.api.compliance_models",
-    "ComplianceReportSummary": "agent_bom.api.compliance_models",
-    "ComplianceAuditIntegrity": "agent_bom.api.compliance_models",
-    "ComplianceThreatModel": "agent_bom.api.compliance_models",
-    "ComplianceSignatureDisclosure": "agent_bom.api.compliance_models",
-    "ComplianceReportBundle": "agent_bom.api.compliance_models",
-}
+    **dict.fromkeys(("SourceKind", "SourceStatus", "SourceCredentialMode", "CredentialRefStatus", "CredentialRefRecord",
+        "CredentialRefCreate", "CredentialRefUpdate", "SourceRecord", "SourceCreate", "SourceUpdate",
+        "SourceCohortRunRequest",), "agent_bom.api.source_models"),
+    **dict.fromkeys(("VersionInfo", "TracingHealth", "AnalyticsHealth", "PostgresPortabilityHealth", "StorageHealth",
+        "EntitlementHealth", "PublicHealthResponse", "HealthResponse",), "agent_bom.api.health_models"),
+    **dict.fromkeys(("ComplianceEvidenceItem", "ComplianceReportControl", "ComplianceReportScope",
+        "ComplianceReportSummary", "ComplianceAuditIntegrity", "ComplianceThreatModel", "ComplianceSignatureDisclosure",
+        "ComplianceReportBundle",), "agent_bom.api.compliance_models"),
+}  # fmt: skip
 
 
 def __getattr__(name: str) -> Any:

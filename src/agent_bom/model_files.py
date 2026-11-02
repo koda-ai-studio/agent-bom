@@ -18,14 +18,13 @@ from agent_bom.floating_refs import classify_model_revision, is_hex_digest
 from agent_bom.model_pickle_scan import PICKLE_BEARING_EXTENSIONS, scan_pickle_file_flags
 from agent_bom.parsers.model_file_types import _looks_like_pickle_header as _looks_like_pickle_header
 from agent_bom.parsers.model_file_types import is_python_startup_file
-from agent_bom.parsers.model_supply_chain import _UNSAFE_MODEL_EXTENSIONS as _UNSAFE_MODEL_EXTENSIONS
-from agent_bom.parsers.model_supply_chain import evaluate_model_provenance_policy as evaluate_model_provenance_policy
-from agent_bom.parsers.model_supply_chain import summarize_model_supply_chain as summarize_model_supply_chain
+from agent_bom.parsers.model_supply_chain import evaluate_model_provenance_policy, summarize_model_supply_chain
 
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
 
 logger = logging.getLogger(__name__)
+__all__ = ["evaluate_model_provenance_policy", "summarize_model_supply_chain"]  # fmt: skip
 
 # Extension → metadata mapping
 _MODEL_EXTENSIONS: dict[str, dict] = {

@@ -64,6 +64,7 @@ from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta as _injec
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger("agent_bom.proxy")
+__all__ = ["_gateway_evaluator", "_safe_compile", "_safe_regex_match", "_safe_regex_search", "_truncate_args"]  # fmt: skip
 
 
 ProxyMetrics = _proxy_audit.ProxyMetrics
@@ -204,12 +205,7 @@ async def _maybe_block_on_firewall(
     if _firewall_evaluator is None:
         return None
     try:
-        evaluation = await _firewall_evaluator(
-            source_agent,
-            target_agent,
-            frozenset(),
-            frozenset(),
-        )
+        evaluation = await _firewall_evaluator(source_agent, target_agent, frozenset(), frozenset())
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "firewall evaluator raised; allowing call (source=%s, target=%s): %s",

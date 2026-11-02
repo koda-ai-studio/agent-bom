@@ -793,11 +793,5 @@ def build_oauth_as_router(server: OAuthAuthorizationServer) -> APIRouter:
     return router
 
 
-__all__ = [
-    "AuthorizationCode",
-    "OAuthAuthorizationServer",
-    "OAuthError",
-    "OAuthSigningKey",
-    "RegisteredClient",
-    "build_oauth_as_router",
-]
+__all__ = ["AuthorizationCode", "OAuthAuthorizationServer", "OAuthError", "OAuthSigningKey", "RegisteredClient",
+    "build_oauth_as_router", "Response"]  # fmt: skip

@@ -26,9 +26,9 @@ from agent_bom.runtime.trace_input import NON_INFERENCE_OPERATIONS
 from agent_bom.runtime.trace_input import duration_ms as _duration_ms
 
 _ADK_TOOL_RE = re.compile(r"^adk\.tool\.(.+)$")
+__all__ = ["_MAX_TRACE_FILE_BYTES"]  # fmt: skip
 
-# Maximum trace file size (50 MB) — prevents OOM on adversarially large files
-_MAX_TRACE_FILE_BYTES = 50 * 1024 * 1024
+_MAX_TRACE_FILE_BYTES = 50 * 1024 * 1024  # Maximum trace file size (50 MB) — prevents OOM on adversarially large files
 
 # GenAI span name patterns — instrumentation libraries emit these
 _ML_SPAN_PATTERNS = re.compile(

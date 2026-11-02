@@ -19,16 +19,8 @@ from contextlib import ExitStack
 from typing import Any
 
 from agent_bom.api.graph_persistence import (
-    _estimate_graph_entities as _estimate_graph_entities,
-)
-from agent_bom.api.graph_persistence import (
-    _graph_build_workspace_enabled as _graph_build_workspace_enabled,
-)
-from agent_bom.api.graph_persistence import (
-    _graph_store_backed_build_enabled as _graph_store_backed_build_enabled,
-)
-from agent_bom.api.graph_persistence import (
-    _persist_via_build_workspace as _persist_via_build_workspace,
+    _estimate_graph_entities,
+    _graph_store_backed_build_enabled,
 )
 from agent_bom.api.graph_persistence import (
     _record_graph_persistence as _record_graph_persistence,
@@ -36,22 +28,10 @@ from agent_bom.api.graph_persistence import (
 from agent_bom.api.hub_ingest import ingest_runtime_findings
 from agent_bom.api.models import JobStatus, ScanJob, StepStatus
 from agent_bom.api.pipeline_events import (
-    _PIPELINE_PREDECESSORS as _PIPELINE_PREDECESSORS,
-)
-from agent_bom.api.pipeline_events import (
-    _PIPELINE_STEP_INDEX as _PIPELINE_STEP_INDEX,
-)
-from agent_bom.api.pipeline_events import (
-    _PIPELINE_SUCCESSORS as _PIPELINE_SUCCESSORS,
-)
-from agent_bom.api.pipeline_events import (
-    _TERMINAL_STEP_STATUSES as _TERMINAL_STEP_STATUSES,
-)
-from agent_bom.api.pipeline_events import (
-    PIPELINE_DAG_EDGES as PIPELINE_DAG_EDGES,
-)
-from agent_bom.api.pipeline_events import (
-    PIPELINE_DAG_EVENT_SCHEMA as PIPELINE_DAG_EVENT_SCHEMA,
+    PIPELINE_DAG_EDGES,
+    PIPELINE_DAG_EVENT_SCHEMA,
+    iter_pipeline_dag_event_records,
+    pipeline_dag_events_jsonl,
 )
 from agent_bom.api.pipeline_events import (
     PIPELINE_STEPS as PIPELINE_STEPS,
@@ -61,15 +41,6 @@ from agent_bom.api.pipeline_events import (
 )
 from agent_bom.api.pipeline_events import (
     _now as _now,
-)
-from agent_bom.api.pipeline_events import (
-    iter_pipeline_dag_event_records as iter_pipeline_dag_event_records,
-)
-from agent_bom.api.pipeline_events import (
-    pipeline_dag_events_jsonl as pipeline_dag_events_jsonl,
-)
-from agent_bom.api.pipeline_fleet import (
-    _optional_str as _optional_str,
 )
 from agent_bom.api.pipeline_fleet import (
     sync_scan_agents_to_fleet,
@@ -92,9 +63,8 @@ from agent_bom.api.scan_discovery_stages import (
 from agent_bom.api.scan_report_support import _apply_tenant_workflow_metadata as _apply_tenant_workflow_metadata
 from agent_bom.api.scan_report_support import _ast_result_for_symbol_reach as _ast_result_for_symbol_reach
 from agent_bom.api.scan_report_support import _project_paths_for_symbol_reach as _project_paths_for_symbol_reach
-from agent_bom.api.scan_report_support import _promote_repo_dependency_inventory as _promote_repo_dependency_inventory
+from agent_bom.api.scan_report_support import _promote_repo_dependency_inventory, _surface_graph_derived_findings
 from agent_bom.api.scan_report_support import _rendered_result_document as _rendered_result_document
-from agent_bom.api.scan_report_support import _surface_graph_derived_findings as _surface_graph_derived_findings
 from agent_bom.api.scan_snapshot import finalize_with_scan_snapshot
 from agent_bom.api.stores import (
     _compact_terminal_job_in_place,
@@ -111,6 +81,9 @@ from agent_bom.core.tenancy import require_explicit_tenant_id
 from agent_bom.security import sanitize_error, sanitize_text, sanitize_text_memo
 
 _logger = logging.getLogger(__name__)
+__all__ = ["PIPELINE_DAG_EDGES", "PIPELINE_DAG_EVENT_SCHEMA", "_estimate_graph_entities",
+    "_graph_store_backed_build_enabled", "_promote_repo_dependency_inventory", "_surface_graph_derived_findings",
+    "iter_pipeline_dag_event_records", "pipeline_dag_events_jsonl"]  # fmt: skip
 
 
 class ScanCancelledError(Exception):

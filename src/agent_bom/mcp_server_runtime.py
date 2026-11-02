@@ -20,12 +20,12 @@ from agent_bom.mcp_tenant import bound_postgres_tenant
 from agent_bom.mcp_tools.dispatch import _TOOL_ERROR_TYPES as _TOOL_ERROR_TYPES
 from agent_bom.mcp_tools.dispatch import ToolErrorPayload as ToolErrorPayload
 from agent_bom.mcp_tools.dispatch import record_completion as _record_completion
-from agent_bom.mcp_tools.dispatch import resolve_tool_path as resolve_tool_path
-from agent_bom.mcp_tools.dispatch import tool_result_error as tool_result_error
+from agent_bom.mcp_tools.dispatch import resolve_tool_path, tool_result_error
 from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
 from agent_bom.security import sanitize_log_label
 
 _ToolReturn = TypeVar("_ToolReturn")
+__all__ = ["resolve_tool_path", "tool_result_error"]  # fmt: skip
 
 
 def validate_ecosystem(ecosystem: str, valid_ecosystems: AbstractSet[str]) -> str:

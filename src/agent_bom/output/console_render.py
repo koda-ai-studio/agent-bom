@@ -22,19 +22,13 @@ from agent_bom.output.cis_posture import (
     cis_verdict,
 )
 from agent_bom.output.compact import _compact_detail, _coverage_bar
-from agent_bom.output.console_frameworks import print_threat_frameworks as print_threat_frameworks
-from agent_bom.output.console_remediation import build_remediation_plan as build_remediation_plan
-from agent_bom.output.console_remediation import print_remediation_plan as print_remediation_plan
-from agent_bom.output.console_style import SEVERITY_BADGES as SEVERITY_BADGES
+from agent_bom.output.console_frameworks import print_threat_frameworks
+from agent_bom.output.console_remediation import build_remediation_plan, print_remediation_plan
+from agent_bom.output.console_style import SEVERITY_BADGES, _sev_badge
 from agent_bom.output.console_style import SEVERITY_TEXT as SEVERITY_TEXT
 from agent_bom.output.console_style import _finding_sev_badge as _finding_sev_badge
-from agent_bom.output.console_style import _sev_badge as _sev_badge
 from agent_bom.output.console_style import console as console
-from agent_bom.output.console_summary import _osv_lookup_count as _osv_lookup_count
-from agent_bom.output.console_summary import _registry_lookup_count as _registry_lookup_count
-from agent_bom.output.console_summary import print_posture_summary as print_posture_summary
-from agent_bom.output.console_summary import print_scan_performance_summary as print_scan_performance_summary
-from agent_bom.output.console_summary import print_summary as print_summary
+from agent_bom.output.console_summary import print_posture_summary, print_scan_performance_summary, print_summary
 from agent_bom.output.dependency_hierarchy import dependency_count_label, dependency_groups
 from agent_bom.output.finding_views import (
     cve_findings,
@@ -73,6 +67,8 @@ _THREAT_TAG_COLORS = (
     ("soc2_tags", "bright_yellow"),
     ("cis_tags", "bright_magenta"),
 )
+__all__ = ["SEVERITY_BADGES", "_sev_badge", "build_remediation_plan", "print_posture_summary", "print_remediation_plan",
+    "print_scan_performance_summary", "print_summary", "print_threat_frameworks"]  # fmt: skip
 
 
 # ─── Console Output ─────────────────────────────────────────────────────────

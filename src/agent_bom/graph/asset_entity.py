@@ -208,4 +208,5 @@ __all__ = [
     "link_findings_to_graph_nodes",
     "link_report_findings_to_graph",
     "normalize_asset_type",
+    "_ASSET_TYPE_ALIASES",
 ]

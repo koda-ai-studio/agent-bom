@@ -10,6 +10,8 @@ from agent_bom.api.connection_request_validation import _now
 from agent_bom.api.connection_store import CloudConnectionRecord, get_connection_store
 from agent_bom.cloud.gpu_posture import attach_gpu_posture_findings
 
+__all__ = ["_logger"]
+
 _MAX_STATUS_DETAIL = 300
 
 if TYPE_CHECKING:

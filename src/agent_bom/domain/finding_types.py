@@ -9,6 +9,17 @@ from typing import Optional
 
 from agent_bom.canonical_ids import canonical_id
 
+__all__ = [
+    "ControlTag",
+    "EXTERNAL_SOURCE_PREFIX",
+    "FINDING_SCHEMA_VERSION",
+    "FindingSource",
+    "FindingType",
+    "LEGACY_CONTROL_FIELDS",
+    "_LEGACY_CONTROL_VERSION_BY_FRAMEWORK",
+    "stable_id",
+]
+
 FINDING_SCHEMA_VERSION = "1"
 
 EXTERNAL_SOURCE_PREFIX = "external:"

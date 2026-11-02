@@ -54,6 +54,16 @@ from agent_bom.api.storage.runtime_trace_revisions import (
 )
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
 
+__all__ = [
+    "InMemoryRuntimeEventStore",
+    "RuntimeEventStore",
+    "SQLiteRuntimeEventStore",
+    "get_runtime_event_store",
+    "reset_runtime_event_store",
+    "sanitize_runtime_metadata",
+    "set_runtime_event_store",
+]
+
 _BATCH_LOOKUP_CHUNK = 500
 
 

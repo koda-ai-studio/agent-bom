@@ -42,89 +42,33 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import Response
 
 from agent_bom.api.graph_contracts import (
-    _ATTACK_PATH_ITEM_OPENAPI_SCHEMA as _ATTACK_PATH_ITEM_OPENAPI_SCHEMA,
-)
-from agent_bom.api.graph_contracts import (
-    _ATTACK_PATHS_OPENAPI_RESPONSE as _ATTACK_PATHS_OPENAPI_RESPONSE,
-)
-from agent_bom.api.graph_contracts import (
-    _EXPOSURE_PATH_OPENAPI_SCHEMA as _EXPOSURE_PATH_OPENAPI_SCHEMA,
-)
-from agent_bom.api.graph_contracts import (
-    _FIX_FIRST_VIEW_OPENAPI_RESPONSE as _FIX_FIRST_VIEW_OPENAPI_RESPONSE,
-)
-from agent_bom.api.graph_contracts import (
-    _TECHNIQUE_MAPPING_OPENAPI_SCHEMA as _TECHNIQUE_MAPPING_OPENAPI_SCHEMA,
-)
-from agent_bom.api.graph_contracts import (
-    GraphCompletenessResponse as GraphCompletenessResponse,
-)
-from agent_bom.api.graph_contracts import (
-    GraphDeployDecisionRequest as GraphDeployDecisionRequest,
+    _ATTACK_PATHS_OPENAPI_RESPONSE,
+    _EXPOSURE_PATH_OPENAPI_SCHEMA,
+    _FIX_FIRST_VIEW_OPENAPI_RESPONSE,
+    _TECHNIQUE_MAPPING_OPENAPI_SCHEMA,
+    GraphCompletenessResponse,
+    GraphDeployDecisionRequest,
+    GraphScopeDescriptor,
+    IncidentEdgePageCompleteness,
+    IncidentEdgePageResponse,
+    PresetCreate,
+    ScopedGraphCompleteness,
+    ScopedGraphResponse,
 )
 from agent_bom.api.graph_contracts import (
     GraphIdentifier as GraphIdentifier,
-)
-from agent_bom.api.graph_contracts import (
-    GraphScopeDescriptor as GraphScopeDescriptor,
-)
-from agent_bom.api.graph_contracts import (
-    IncidentEdgePageCompleteness as IncidentEdgePageCompleteness,
-)
-from agent_bom.api.graph_contracts import (
-    IncidentEdgePageResponse as IncidentEdgePageResponse,
-)
-from agent_bom.api.graph_contracts import (
-    PresetCreate as PresetCreate,
-)
-from agent_bom.api.graph_contracts import (
-    ScopedGraphCompleteness as ScopedGraphCompleteness,
-)
-from agent_bom.api.graph_contracts import (
-    ScopedGraphResponse as ScopedGraphResponse,
 )
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint, verify_generation
 from agent_bom.api.graph_node_cursor import node_page_continuation, wrap_node_cursor
 from agent_bom.api.graph_page_context import node_page_context_limit, page_attack_context, page_context
 from agent_bom.api.graph_paging import _coalesce_alias, _enforce_node_offset_cap, _paginate, path_order
 from agent_bom.api.graph_presentation import (
-    _finding_ids_for_path as _finding_ids_for_path,
-)
-from agent_bom.api.graph_presentation import (
-    _finding_labels_for_path as _finding_labels_for_path,
-)
-from agent_bom.api.graph_presentation import (
-    _first_href_for_agent as _first_href_for_agent,
-)
-from agent_bom.api.graph_presentation import (
-    _fix_first_card_for_path as _fix_first_card_for_path,
-)
-from agent_bom.api.graph_presentation import (
-    _identity_finding_ids_for_path as _identity_finding_ids_for_path,
-)
-from agent_bom.api.graph_presentation import (
-    _next_actions_for_path as _next_actions_for_path,
-)
-from agent_bom.api.graph_presentation import (
-    _node_ids_for_types as _node_ids_for_types,
-)
-from agent_bom.api.graph_presentation import (
-    _node_labels_for_types as _node_labels_for_types,
-)
-from agent_bom.api.graph_presentation import (
-    _path_identity as _path_identity,
-)
-from agent_bom.api.graph_presentation import (
-    _path_matches_focus as _path_matches_focus,
-)
-from agent_bom.api.graph_presentation import (
-    _path_semantic_key as _path_semantic_key,
-)
-from agent_bom.api.graph_presentation import (
-    _risk_reasons_for_path as _risk_reasons_for_path,
-)
-from agent_bom.api.graph_presentation import (
-    _serialize_attack_path as _serialize_attack_path,
+    _fix_first_card_for_path,
+    _path_identity,
+    _path_matches_focus,
+    _path_semantic_key,
+    _risk_reasons_for_path,
+    _serialize_attack_path,
 )
 from agent_bom.api.graph_presentation import (
     _serialize_attack_path_batch as _serialize_attack_path_batch,
@@ -132,60 +76,66 @@ from agent_bom.api.graph_presentation import (
 from agent_bom.api.graph_query import GraphQueryRequest, _filtered_query_graph, query_payload
 from agent_bom.api.graph_read_docs import ROTATING_RESPONSE
 from agent_bom.api.graph_rollup_prewarm import rollup_cache_key
-from agent_bom.api.graph_store import containment_drilldown_graph as containment_drilldown_graph
+from agent_bom.api.graph_store import containment_drilldown_graph
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import GraphNodeNeighborsResponse, GraphPageResponse, GraphPathsResponse, GraphRollupResponse
 from agent_bom.api.routes.graph_routes import _runtime, reads, schema_routes, vendor_paths, views
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
-from agent_bom.api.routes.graph_routes._runtime import _get_graph_store_or_503 as _get_graph_store_or_503
-from agent_bom.api.routes.graph_routes._runtime import _graph_compute_call as _graph_compute_call
-from agent_bom.api.routes.graph_routes._runtime import _graph_store_call as _graph_store_call
-from agent_bom.api.routes.graph_routes._runtime import _tenant as _tenant
+from agent_bom.api.routes.graph_routes._runtime import _get_graph_store_or_503, _graph_compute_call, _graph_store_call, _tenant
 from agent_bom.api.routes.graph_routes.canvas_view import CANVAS_VIEW_DESCRIPTION, GraphView
 from agent_bom.api.routes.graph_routes.page_edges import _page_edges
-from agent_bom.api.routes.graph_routes.params import _FILTERED_GRAPH_ATTACK_PATH_LIMIT as _FILTERED_GRAPH_ATTACK_PATH_LIMIT
 from agent_bom.api.routes.graph_routes.params import (
+    _FILTERED_GRAPH_ATTACK_PATH_LIMIT,
     _GRAPH_QUERY_ABSOLUTE_LIMITS,
     _GRAPH_QUERY_DEFAULT_BUDGET,
     _parse_entity_type_filter,
     _parse_relationship_filter,
+    _raise_mcp_error_as_http,
     _validate_entity_type_list,
     _validate_relationship_list,
 )
-from agent_bom.api.routes.graph_routes.params import _raise_mcp_error_as_http as _raise_mcp_error_as_http
 from agent_bom.api.routes.graph_routes.path_count import node_page_stats
 from agent_bom.api.routes.graph_routes.payloads import (
     _encode_node_page,
     _encoded_graph_response,
+    _filtered_graph_response,
+    _fix_first_graph_view_payload,
+    _governance_graph_payload,
     _overlay_filter_and_respond,
 )
-from agent_bom.api.routes.graph_routes.payloads import _filtered_graph_response as _filtered_graph_response
-from agent_bom.api.routes.graph_routes.payloads import _fix_first_graph_view_payload as _fix_first_graph_view_payload
-from agent_bom.api.routes.graph_routes.payloads import _governance_graph_payload as _governance_graph_payload
 from agent_bom.api.routes.graph_routes.rollup_inputs import rollup_source, rollup_suppressions
-from agent_bom.api.routes.graph_routes.schema_routes import _RESERVED_GRAPH_EDGE_KINDS as _RESERVED_GRAPH_EDGE_KINDS
-from agent_bom.api.routes.graph_routes.schema_routes import _RESERVED_GRAPH_NODE_KINDS as _RESERVED_GRAPH_NODE_KINDS
-from agent_bom.api.stores import _get_graph_store as _get_graph_store
-from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence as _enrich_loaded_graph_runtime_evidence
+from agent_bom.api.routes.graph_routes.schema_routes import _RESERVED_GRAPH_EDGE_KINDS, _RESERVED_GRAPH_NODE_KINDS
+from agent_bom.api.stores import _get_graph_store
+from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence
 from agent_bom.config import GRAPH_INVESTIGATION_NODE_BUDGET
 from agent_bom.graph import (
     SEVERITY_RANK,
     GraphFilterOptions,
 )
 from agent_bom.graph.completeness import graph_completeness
-from agent_bom.graph.exposure import _exposure_path_for_attack_path as _exposure_path_for_attack_path
-from agent_bom.graph.exposure import _exposure_ref_for_node as _exposure_ref_for_node
-from agent_bom.graph.exposure import _finding_ids_for_nodes as _finding_ids_for_nodes
-from agent_bom.graph.path_derivation import _derived_attack_paths as _derived_attack_paths
-from agent_bom.graph.path_derivation import _derived_governance_attack_paths as _derived_governance_attack_paths
-from agent_bom.graph.path_derivation import _derived_toxic_combination_paths as _derived_toxic_combination_paths
-from agent_bom.graph.path_derivation import _fusion_signals_for_path as _fusion_signals_for_path
-from agent_bom.graph.rollup import ROLLUP_RELATIONSHIPS
+from agent_bom.graph.exposure import _exposure_path_for_attack_path, _exposure_ref_for_node, _finding_ids_for_nodes
+from agent_bom.graph.path_derivation import (
+    _derived_attack_paths,
+    _derived_governance_attack_paths,
+    _derived_toxic_combination_paths,
+    _fusion_signals_for_path,
+)
 from agent_bom.graph.view_payloads import _graph_rollup_payload
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
+__all__ = ["GraphCompletenessResponse", "GraphDeployDecisionRequest", "GraphScopeDescriptor",
+    "IncidentEdgePageCompleteness", "IncidentEdgePageResponse", "PresetCreate", "ScopedGraphCompleteness",
+    "ScopedGraphResponse", "_ATTACK_PATHS_OPENAPI_RESPONSE", "_EXPOSURE_PATH_OPENAPI_SCHEMA",
+    "_FILTERED_GRAPH_ATTACK_PATH_LIMIT", "_FIX_FIRST_VIEW_OPENAPI_RESPONSE", "_RESERVED_GRAPH_EDGE_KINDS",
+    "_RESERVED_GRAPH_NODE_KINDS", "_TECHNIQUE_MAPPING_OPENAPI_SCHEMA", "_derived_attack_paths",
+    "_derived_governance_attack_paths", "_derived_toxic_combination_paths", "_enrich_loaded_graph_runtime_evidence",
+    "_exposure_path_for_attack_path", "_exposure_ref_for_node", "_filtered_graph_response", "_finding_ids_for_nodes",
+    "_fix_first_card_for_path", "_fix_first_graph_view_payload", "_fusion_signals_for_path", "_get_graph_store",
+    "_get_graph_store_or_503", "_governance_graph_payload", "_graph_compute_call", "_graph_store_call", "_path_identity",
+    "_path_matches_focus", "_path_semantic_key", "_raise_mcp_error_as_http", "_risk_reasons_for_path",
+    "_serialize_attack_path", "_tenant", "containment_drilldown_graph"]  # fmt: skip
 
 
 router = APIRouter(route_class=_GraphAdmissionRoute)
@@ -741,11 +691,6 @@ router.include_router(schema_routes.router)
 router.include_router(reads.preset_router)
 
 
-# Edge load for /v1/graph/rollup (default mode). Taken from the roll-up itself
-# rather than restated here, so the set fetched can never be narrower than the
-# set rolled up — which is precisely what a containment-only fetch made it: the
-# roll-up draws the NON-containment edges, so it received nothing to draw.
-_ROLLUP_RELATIONSHIPS = ROLLUP_RELATIONSHIPS
 _ROLLUP_DRILLDOWN_DEFAULT_LIMIT = 200
 _ROLLUP_DRILLDOWN_MAX_LIMIT = 1000
 

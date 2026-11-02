@@ -1,5 +1,7 @@
 """Script section of the interactive standalone graph HTML export."""
 
+__all__ = ["_GRAPH_HTML_TEMPLATE_BODY"]
+
 _GRAPH_HTML_TEMPLATE_BODY = """<script>
 const els={elements_json};
 const topRisks={top_risks_json};

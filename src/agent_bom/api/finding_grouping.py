@@ -16,6 +16,8 @@ from agent_bom.api.finding_view_filters import _copy_first_page_metadata as _cop
 from agent_bom.core.severity import severity_rank
 from agent_bom.evidence.finding_lanes import finding_lane, lane_counts
 
+__all__ = ["_finding_identity", "attach_lane_counts", "cloud_control_severity_counts", "lane_severity_counts", "select_group_lane"]
+
 
 def _finding_group_offset(cursor: str | None, offset: int, sort_key: str) -> int:
     if not cursor:

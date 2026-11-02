@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from agent_bom.models import Agent, AIBOMReport, BlastRadius
 
 logger = logging.getLogger(__name__)
+__all__ = ["AIBOMReport"]  # fmt: skip
 
 
 @dataclass

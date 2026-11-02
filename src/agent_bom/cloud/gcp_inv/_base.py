@@ -6,6 +6,8 @@ from typing import Any
 
 from ..normalization import sanitize_discovery_warning
 
+__all__ = ["_AUTHORIZATION_KEYS", "_INTERNET_RANGES", "_PUBLIC_MEMBERS", "_STAGE_PERMISSIONS"]
+
 # Read-only IAM permissions this scanner is allowed to exercise, by resource
 # class. Kept here so the per-run discovery envelope `permissions_used` stays
 # honest: the producer owns the catalog, not external docs.

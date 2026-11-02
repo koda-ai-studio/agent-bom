@@ -54,7 +54,6 @@ from .gcp_inv._base import (  # noqa: F401 - facade re-export
     _GCP_ROLE_PRIVILEGE,
     _GCP_STORAGE_PERMISSIONS,
     _INTERNET_RANGES,
-    _PRIVILEGE_RANK,
     _PUBLIC_MEMBERS,
     _STAGE_PERMISSIONS,
     _backend_service_identity,
@@ -83,7 +82,6 @@ from .gcp_inv.compute_storage import (  # noqa: F401 - facade re-export
     _normalize_instance,
 )
 from .gcp_inv.iam import (  # noqa: F401 - facade re-export
-    _GCP_SA_USAGE_DEFERRED,
     _build_iam_group_principals,
     _discover_project_iam_bindings,
     _discover_service_accounts,
@@ -654,11 +652,5 @@ def _discover_load_balancers(
 # ---------------------------------------------------------------------------
 
 
-__all__ = [
-    "ALL_PROJECTS_ENV_FLAG",
-    "INVENTORY_ENV_FLAG",
-    "all_projects_enabled",
-    "discover_all_project_inventories",
-    "discover_inventory",
-    "inventory_enabled",
-]
+__all__ = ["ALL_PROJECTS_ENV_FLAG", "INVENTORY_ENV_FLAG", "all_projects_enabled", "discover_all_project_inventories",
+    "discover_inventory", "inventory_enabled", "_bucket_public"]  # fmt: skip

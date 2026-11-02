@@ -80,4 +80,7 @@ __all__ = [
     "composite_delta",
     "symbol_reachability_from_payload",
     "triage_delta",
+    "FUNCTION_REACHABLE",
+    "PACKAGE_REACHABLE",
+    "UNREACHABLE",
 ]

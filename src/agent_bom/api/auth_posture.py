@@ -16,6 +16,22 @@ from agent_bom.api.auth_runtime_state import get_auth_runtime_status as get_auth
 from agent_bom.api.storage.deployment import _production_or_clustered_control_plane
 from agent_bom.core.settings import env_bool, env_raw, env_str
 
+__all__ = [
+    "_AUTH_POSTURE",
+    "_AUTH_RUNTIME_STATUS",
+    "_EMPTY_AUTH_POSTURE",
+    "configure_auth_runtime",
+    "derive_auth_posture",
+    "describe_control_plane_direct_listener_posture",
+    "describe_proxy_control_plane_mtls_posture",
+    "get_auth_posture",
+    "get_auth_runtime_status",
+    "get_trusted_proxy_auth_status",
+    "require_safe_control_plane_listener",
+    "trusted_proxy_auth_usable",
+    "validate_auth_posture",
+]
+
 _TRUSTED_PROXY_SECRET_MIN_BYTES = 32
 
 

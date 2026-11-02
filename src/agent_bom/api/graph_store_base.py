@@ -9,6 +9,8 @@ from contextlib import ExitStack, closing, contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+__all__ = ["GraphStoreProtocol", "SQLiteGraphStoreBase"]
+
 if TYPE_CHECKING:
     pass
 

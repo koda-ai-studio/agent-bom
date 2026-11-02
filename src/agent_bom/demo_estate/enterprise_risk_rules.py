@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from agent_bom.finding import FindingSource, FindingType
 
+__all__ = ["_AI_RULES", "_DATA_RULES", "_IAC_RULES", "_IDENTITY_RULES", "_TOOL_RULES"]
+
 
 # ── Infrastructure as code ───────────────────────────────────────────────────
 class _IacRule:

@@ -44,31 +44,15 @@ from agent_bom.security import sanitize_error
 
 from .base import CloudDiscoveryError
 from .snowflake_ai_surfaces import (
-    _describe_mcp_server_tools as _describe_mcp_server_tools,
-)
-from .snowflake_ai_surfaces import (
-    _discover_cortex_agents as _discover_cortex_agents,
-)
-from .snowflake_ai_surfaces import (
-    _discover_cortex_services as _discover_cortex_services,
-)
-from .snowflake_ai_surfaces import (
-    _discover_custom_tools as _discover_custom_tools,
-)
-from .snowflake_ai_surfaces import (
-    _discover_from_query_history as _discover_from_query_history,
-)
-from .snowflake_ai_surfaces import (
-    _discover_mcp_servers as _discover_mcp_servers,
-)
-from .snowflake_ai_surfaces import (
-    _discover_snowpark_packages as _discover_snowpark_packages,
-)
-from .snowflake_ai_surfaces import (
-    _discover_streamlit_apps as _discover_streamlit_apps,
-)
-from .snowflake_ai_surfaces import (
-    _parse_create_statement_name as _parse_create_statement_name,
+    _describe_mcp_server_tools,
+    _discover_cortex_agents,
+    _discover_cortex_services,
+    _discover_custom_tools,
+    _discover_from_query_history,
+    _discover_mcp_servers,
+    _discover_snowpark_packages,
+    _discover_streamlit_apps,
+    _parse_create_statement_name,
 )
 from .snowflake_common import (
     _CONTROL_CHAR_RE as _CONTROL_CHAR_RE,
@@ -77,10 +61,13 @@ from .snowflake_common import (
     _SAFE_IDENT_RE as _SAFE_IDENT_RE,
 )
 from .snowflake_common import (
-    _SNOWFLAKE_INVENTORY_FAILURES as _SNOWFLAKE_INVENTORY_FAILURES,
-)
-from .snowflake_common import (
-    _coerce_int_or_none as _coerce_int_or_none,
+    _coerce_int_or_none,
+    _parse_json_field,
+    _parse_json_object,
+    _quote_sf_identifier,
+    _record_snowflake_inventory_failure,
+    _sf_truthy,
+    _validate_sf_identifier,
 )
 from .snowflake_common import (
     _coerce_snowflake_days as _coerce_snowflake_days,
@@ -88,26 +75,7 @@ from .snowflake_common import (
 from .snowflake_common import (
     _env_or_value as _env_or_value,
 )
-from .snowflake_common import (
-    _parse_json_field as _parse_json_field,
-)
-from .snowflake_common import (
-    _parse_json_object as _parse_json_object,
-)
-from .snowflake_common import (
-    _quote_sf_identifier as _quote_sf_identifier,
-)
-from .snowflake_common import (
-    _record_snowflake_inventory_failure as _record_snowflake_inventory_failure,
-)
-from .snowflake_common import (
-    _sf_truthy as _sf_truthy,
-)
-from .snowflake_common import (
-    _validate_sf_identifier as _validate_sf_identifier,
-)
 from .snowflake_discovery._base import (  # noqa: F401 - facade re-export
-    _ACTIVE_CONNECTION,
     _active_borrowed_connection,
     _base_connect_kwargs,
     _borrowed_connection,
@@ -116,14 +84,12 @@ from .snowflake_discovery._base import (  # noqa: F401 - facade re-export
     _warn_with,
 )
 from .snowflake_discovery.ai_surfaces import (  # noqa: F401 - facade re-export
-    _attach_custom_tools,
     _discover_ai_surfaces,
     _mine_governance_report,
     _snowflake_cloud_origin,
     _snowpark_agent,
 )
 from .snowflake_discovery.estate import (  # noqa: F401 - facade re-export
-    _estate_activity,
     _estate_auth_posture,
     _estate_exfil,
     _estate_external_data,
@@ -137,7 +103,6 @@ from .snowflake_discovery.estate import (  # noqa: F401 - facade re-export
     enrich_report_with_snowflake_estate,
 )
 from .snowflake_discovery.identity import (  # noqa: F401 - facade re-export
-    _live_grant_key,
     _live_membership_key,
     _live_role_grants,
     _LiveRoleGraph,
@@ -146,7 +111,6 @@ from .snowflake_discovery.identity import (  # noqa: F401 - facade re-export
     merge_live_identity_into_object_graph,
 )
 from .snowflake_discovery.security import (  # noqa: F401 - facade re-export
-    _EXTERNAL_STAGE_SCHEMES,
     _add_auth_user,
     _add_external_stage,
     _add_login_summary,
@@ -165,139 +129,57 @@ from .snowflake_discovery.security import (  # noqa: F401 - facade re-export
     discover_login_anomalies,
 )
 from .snowflake_estate_inventory import (
-    _SF_EXTERNAL_SCHEMES as _SF_EXTERNAL_SCHEMES,
-)
-from .snowflake_estate_inventory import (
-    _SF_INTEGRATION_EGRESS as _SF_INTEGRATION_EGRESS,
-)
-from .snowflake_estate_inventory import (
-    _collect_show_rows as _collect_show_rows,
-)
-from .snowflake_estate_inventory import (
-    _database_row as _database_row,
-)
-from .snowflake_estate_inventory import (
-    _estate_result as _estate_result,
-)
-from .snowflake_estate_inventory import (
-    _open_estate_connection as _open_estate_connection,
-)
-from .snowflake_estate_inventory import (
-    _parse_external_location as _parse_external_location,
-)
-from .snowflake_estate_inventory import (
-    _schema_row as _schema_row,
-)
-from .snowflake_estate_inventory import (
-    _split_fqn_parts as _split_fqn_parts,
-)
-from .snowflake_estate_inventory import (
-    _warehouse_row as _warehouse_row,
-)
-from .snowflake_estate_inventory import (
-    discover_snowflake_external_data as discover_snowflake_external_data,
-)
-from .snowflake_estate_inventory import (
-    discover_snowflake_integrations as discover_snowflake_integrations,
-)
-from .snowflake_estate_inventory import (
-    discover_snowflake_pipeline as discover_snowflake_pipeline,
-)
-from .snowflake_estate_inventory import (
-    discover_snowflake_services as discover_snowflake_services,
+    _parse_external_location,
+    discover_snowflake_external_data,
+    discover_snowflake_integrations,
+    discover_snowflake_pipeline,
+    discover_snowflake_services,
 )
 from .snowflake_governance_findings import (
-    _access_actor as _access_actor,
-)
-from .snowflake_governance_findings import (
-    _access_actor_context as _access_actor_context,
-)
-from .snowflake_governance_findings import (
-    _derive_findings as _derive_findings,
-)
-from .snowflake_governance_findings import (
-    _find_agent_usage_anomalies as _find_agent_usage_anomalies,
-)
-from .snowflake_governance_findings import (
-    _find_elevated_privilege_risks as _find_elevated_privilege_risks,
-)
-from .snowflake_governance_findings import (
-    _find_sensitive_data_access as _find_sensitive_data_access,
-)
-from .snowflake_governance_findings import (
-    _find_write_access_risks as _find_write_access_risks,
+    _derive_findings,
+    _find_agent_usage_anomalies,
+    _find_elevated_privilege_risks,
+    _find_sensitive_data_access,
+    _find_write_access_risks,
 )
 from .snowflake_governance_mining import (
-    _AGENT_QUERY_PATTERNS as _AGENT_QUERY_PATTERNS,
-)
-from .snowflake_governance_mining import (
-    _COMPILED_PATTERNS as _COMPILED_PATTERNS,
-)
-from .snowflake_governance_mining import (
-    _classify_agent_query as _classify_agent_query,
-)
-from .snowflake_governance_mining import (
-    _mine_access_history as _mine_access_history,
-)
-from .snowflake_governance_mining import (
-    _mine_cortex_agent_usage as _mine_cortex_agent_usage,
-)
-from .snowflake_governance_mining import (
-    _mine_grants_to_roles as _mine_grants_to_roles,
-)
-from .snowflake_governance_mining import (
-    _mine_observability_events as _mine_observability_events,
-)
-from .snowflake_governance_mining import (
-    _mine_query_history_365 as _mine_query_history_365,
-)
-from .snowflake_governance_mining import (
-    _mine_tag_references as _mine_tag_references,
-)
-from .snowflake_governance_mining import (
-    discover_activity as discover_activity,
+    _classify_agent_query,
+    _mine_access_history,
+    _mine_cortex_agent_usage,
+    _mine_grants_to_roles,
+    _mine_observability_events,
+    _mine_query_history_365,
+    _mine_tag_references,
+    discover_activity,
 )
 from .snowflake_notebooks import (
-    _discover_snowflake_notebooks as _discover_snowflake_notebooks,
-)
-from .snowflake_object_graph import (
-    _LIVE_GRANT_OBJECT_TYPES as _LIVE_GRANT_OBJECT_TYPES,
+    _discover_snowflake_notebooks,
 )
 from .snowflake_object_graph import (
     _LIVE_MAX_ROLES as _LIVE_MAX_ROLES,
 )
 from .snowflake_object_graph import (
-    _discover_sf_dependencies as _discover_sf_dependencies,
-)
-from .snowflake_object_graph import (
-    _discover_sf_grants as _discover_sf_grants,
-)
-from .snowflake_object_graph import (
-    _discover_sf_objects as _discover_sf_objects,
-)
-from .snowflake_object_graph import (
-    _grant_object_fqn as _grant_object_fqn,
-)
-from .snowflake_object_graph import (
-    _live_show_users as _live_show_users,
-)
-from .snowflake_object_graph import (
-    discover_identity_live as discover_identity_live,
-)
-from .snowflake_object_graph import (
-    discover_object_dependencies as discover_object_dependencies,
+    _discover_sf_grants,
+    _grant_object_fqn,
+    discover_identity_live,
+    discover_object_dependencies,
 )
 from .snowflake_organization import (
-    _SF_ORG_NOT_AUTHORIZED_MARKERS as _SF_ORG_NOT_AUTHORIZED_MARKERS,
-)
-from .snowflake_organization import (
-    _derive_org_findings as _derive_org_findings,
-)
-from .snowflake_organization import (
-    discover_organization as discover_organization,
+    discover_organization,
 )
 
 logger = logging.getLogger(__name__)
+__all__ = ["_MAX_ORG_ACCOUNTS", "_classify_agent_query", "_coerce_int_or_none", "_derive_findings",
+    "_describe_mcp_server_tools", "_discover_cortex_agents", "_discover_cortex_services", "_discover_custom_tools",
+    "_discover_from_query_history", "_discover_mcp_servers", "_discover_sf_grants", "_discover_snowflake_notebooks",
+    "_discover_snowpark_packages", "_discover_streamlit_apps", "_find_agent_usage_anomalies",
+    "_find_elevated_privilege_risks", "_find_sensitive_data_access", "_find_write_access_risks", "_grant_object_fqn",
+    "_mine_access_history", "_mine_cortex_agent_usage", "_mine_grants_to_roles", "_mine_observability_events",
+    "_mine_query_history_365", "_mine_tag_references", "_parse_create_statement_name", "_parse_external_location",
+    "_parse_json_field", "_parse_json_object", "_quote_sf_identifier", "_record_snowflake_inventory_failure", "_sf_truthy",
+    "_validate_sf_identifier", "discover_activity", "discover_identity_live", "discover_object_dependencies",
+    "discover_organization", "discover_snowflake_external_data", "discover_snowflake_integrations",
+    "discover_snowflake_pipeline", "discover_snowflake_services", "logger"]  # fmt: skip
 
 # Opt-in env flag. Default OFF — estate-wide enumeration must be explicitly
 # requested by an operator. Symmetric with the other providers'

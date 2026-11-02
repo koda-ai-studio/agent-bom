@@ -17,6 +17,8 @@ from agent_bom.api.scan_path_jail import _api_scan_path_or_400
 from agent_bom.api.stores import _get_store, _jobs_get, _jobs_is_compacted
 from agent_bom.api.tenancy import require_request_tenant_id
 
+__all__ = ["_bulk_ingest_store_writes", "_hub_store_call", "_logger"]
+
 _logger = logging.getLogger("agent_bom.api.routes.scan")
 
 

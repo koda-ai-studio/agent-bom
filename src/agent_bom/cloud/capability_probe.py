@@ -14,6 +14,22 @@ from typing import Any
 
 from .scan_receipts import scan_verified_capabilities as scan_verified_capabilities
 
+__all__ = [
+    "CapabilityProbeError",
+    "CapabilityProbeResult",
+    "PROBE_INVALID_CONFIGURATION",
+    "PROBE_INVALID_CREDENTIALS",
+    "PROBE_NOT_RUN",
+    "PROBE_PERMISSION_DENIED",
+    "PROBE_TIMEOUT",
+    "PROBE_UNAVAILABLE",
+    "PROBE_VERIFIED",
+    "classify_probe_failure",
+    "probe_failure_detail",
+    "probe_read_capability",
+    "scan_verified_capabilities",
+]
+
 _PROVIDER_CALL_TIMEOUT_SECONDS = 10.0
 
 PROBE_NOT_RUN = "not_run"

@@ -14,6 +14,8 @@ from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType
 from agent_bom.security import sanitize_sensitive_payload
 
+__all__ = ["_SIDESCAN_PROVIDERS"]
+
 
 def _runtime_cohort_graph(*, scan_id: str, tenant_id: str, created_at: str, signals: list[RuntimeWorkloadSignal]) -> UnifiedGraph:
     """Project accepted runtime observations into an exact-identity snapshot."""

@@ -18,12 +18,9 @@ from agent_bom.graph.compat import stamp_export_entity_types
 from agent_bom.graph.node import stable_node_id
 from agent_bom.output.finding_views import package_graph_node_id as _package_node_id
 from agent_bom.output.graph_framework_agents import append_framework_agent_elements
-from agent_bom.output.graph_html import _CDN_FALLBACK_TAGS as _CDN_FALLBACK_TAGS
 from agent_bom.output.graph_html import _GRAPH_HTML_TEMPLATE as _GRAPH_HTML_TEMPLATE
-from agent_bom.output.graph_html import _VENDOR_JS_FILES as _VENDOR_JS_FILES
 from agent_bom.output.graph_html import _graph_overview as _graph_overview
 from agent_bom.output.graph_html import _graph_priority_summary as _graph_priority_summary
-from agent_bom.output.graph_html import _html_escape as _html_escape
 from agent_bom.output.graph_html import _json_for_script as _json_for_script
 from agent_bom.output.graph_html import _sanitize_graph_reference_payload as _sanitize_graph_reference_payload
 from agent_bom.output.graph_html import _to_offline_graph_html as _to_offline_graph_html
@@ -36,17 +33,17 @@ from agent_bom.output.graph_inventory import (
     package_edge_type,
     server_node_id,
 )
-from agent_bom.output.graph_policy import _SEVERITY_BADGE as _SEVERITY_BADGE
+from agent_bom.output.graph_policy import _SEVERITY_BADGE, _provider_label
 from agent_bom.output.graph_policy import _graph_policy_finding_elements as _graph_policy_finding_elements
 from agent_bom.output.graph_policy import _graph_policy_findings as _graph_policy_findings
 from agent_bom.output.graph_policy import _norm_repo_dir as _norm_repo_dir
-from agent_bom.output.graph_policy import _PackageVulnSummary as _PackageVulnSummary
-from agent_bom.output.graph_policy import _provider_label as _provider_label
 from agent_bom.output.graph_policy import _summarize_package_vulns as _summarize_package_vulns
 from agent_bom.security import sanitize_launch_command, sanitize_text
 
 if TYPE_CHECKING:
     from agent_bom.models import AIBOMReport, BlastRadius
+
+__all__ = ["_SEVERITY_BADGE", "_provider_label"]  # fmt: skip
 
 
 def build_graph_elements(

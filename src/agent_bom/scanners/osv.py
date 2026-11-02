@@ -31,6 +31,19 @@ from agent_bom.scanners.osv_details import vuln_needs_enrichment as vuln_needs_e
 from agent_bom.scanners.upstream import upstream_request
 from agent_bom.version_utils import compare_version_order, is_prerelease_version
 
+__all__ = [
+    "OSV_BATCH_URL",
+    "candidate_package_names",
+    "ecosystem_matches",
+    "enrich_results_if_needed",
+    "enrich_vuln_details",
+    "osv_query_names",
+    "package_lookup_names",
+    "parse_fixed_version",
+    "query_osv_batch_impl",
+    "vuln_needs_enrichment",
+]
+
 _logger = logging.getLogger(__name__)
 
 OSV_BATCH_URL = f"{OSV_API_URL}/querybatch"

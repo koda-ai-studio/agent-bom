@@ -8,6 +8,8 @@ from functools import lru_cache
 
 from agent_bom.core.versions.distro import OS_DISTRO_COMPARATOR_FAMILIES
 
+__all__ = ["_GO_PSEUDO_RE", "is_prerelease_version", "normalize_version", "strip_pip_extras", "validate_version"]
+
 _logger = logging.getLogger(__name__)
 
 

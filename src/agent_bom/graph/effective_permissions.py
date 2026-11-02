@@ -33,11 +33,8 @@ from agent_bom.graph.container import InteractionRisk, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.permission_policy import _ACCOUNT_WIDE_IAM_ARN as _ACCOUNT_WIDE_IAM_ARN
-from agent_bom.graph.permission_policy import _ADMIN_EQUIVALENCE_PROBES as _ADMIN_EQUIVALENCE_PROBES
-from agent_bom.graph.permission_policy import _POLICY_DOC_KEYS as _POLICY_DOC_KEYS
 from agent_bom.graph.permission_policy import _admin_equivalence_decisions as _admin_equivalence_decisions
 from agent_bom.graph.permission_policy import _admin_resource_scopes as _admin_resource_scopes
-from agent_bom.graph.permission_policy import _iter_policy_documents as _iter_policy_documents
 from agent_bom.graph.permission_policy import _normalized_policies_for as _normalized_policies_for
 from agent_bom.graph.permission_policy import _potential_conditional_admin as _potential_conditional_admin
 from agent_bom.graph.types import EntityType, RelationshipType

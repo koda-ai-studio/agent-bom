@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from tests.test_postgres_migrated_graph_parity import migrated_fresh_database, pytestmark  # noqa: F401
+from tests.test_postgres_migrated_graph_parity import migrated_fresh_database  # noqa: F401
+from tests.test_postgres_migrated_graph_parity import pytestmark as _migrated_postgres_pytestmark
 from tests.test_vex_graph_severity_counts import _suppressed_graph
+
+pytestmark = _migrated_postgres_pytestmark
 
 
 def test_postgres_snapshot_and_live_counts_exclude_suppressed(migrated_fresh_database, tmp_path):  # noqa: F811

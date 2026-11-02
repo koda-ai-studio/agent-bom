@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
+__all__ = ["_REPORT_AUTH_MODES", "_REPORT_COORDINATE_KEYS", "path_receipt_label"]
+
 _REPORT_COORDINATE_KEYS = {
     "id",
     "canonical_id",

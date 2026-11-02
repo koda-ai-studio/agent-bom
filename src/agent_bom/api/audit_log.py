@@ -27,15 +27,8 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 from agent_bom.api.audit_details import _AUDIT_DETAIL_KEY_RE as _AUDIT_DETAIL_KEY_RE
-from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_COLLECTION_ITEMS as _MAX_AUDIT_DETAIL_COLLECTION_ITEMS
-from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_DEPTH as _MAX_AUDIT_DETAIL_DEPTH
-from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_KEY_LENGTH as _MAX_AUDIT_DETAIL_KEY_LENGTH
-from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_KEYS as _MAX_AUDIT_DETAIL_KEYS
-from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_STRING_LENGTH as _MAX_AUDIT_DETAIL_STRING_LENGTH
 from agent_bom.api.audit_details import _MAX_AUDIT_DETAILS_JSON_BYTES as _MAX_AUDIT_DETAILS_JSON_BYTES
 from agent_bom.api.audit_details import _safe_audit_label as _safe_audit_label
-from agent_bom.api.audit_details import _sanitize_detail_key as _sanitize_detail_key
-from agent_bom.api.audit_details import _sanitize_detail_value as _sanitize_detail_value
 from agent_bom.api.audit_details import sanitize_audit_details as sanitize_audit_details
 from agent_bom.api.secret_source import resolve_secret
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured

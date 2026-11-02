@@ -12,160 +12,22 @@ from urllib.parse import quote as _url_quote
 
 from agent_bom.core.packages import encode_go_module_path as _go_encode_module
 from agent_bom.core.versions.distro import (
-    _APK_POST_SUFFIXES as _APK_POST_SUFFIXES,
-)
-from agent_bom.core.versions.distro import (
-    _APK_PRE_SUFFIXES as _APK_PRE_SUFFIXES,
-)
-from agent_bom.core.versions.distro import (
     _APK_SUFFIX_RE as _APK_SUFFIX_RE,
-)
-from agent_bom.core.versions.distro import (
-    _apk_split_suffix as _apk_split_suffix,
-)
-from agent_bom.core.versions.distro import (
-    _apk_suffix_key as _apk_suffix_key,
-)
-from agent_bom.core.versions.distro import (
-    _apk_suffix_rank as _apk_suffix_rank,
-)
-from agent_bom.core.versions.distro import (
-    _compare_apk_suffix_keys as _compare_apk_suffix_keys,
-)
-from agent_bom.core.versions.distro import (
-    _compare_apk_versions as _compare_apk_versions,
-)
-from agent_bom.core.versions.distro import (
-    _compare_debian_part as _compare_debian_part,
-)
-from agent_bom.core.versions.distro import (
-    _compare_debian_versions as _compare_debian_versions,
-)
-from agent_bom.core.versions.distro import (
-    _compare_rpm_like as _compare_rpm_like,
-)
-from agent_bom.core.versions.distro import (
-    _compare_rpm_versions as _compare_rpm_versions,
-)
-from agent_bom.core.versions.distro import (
-    _consume_rpm_segment as _consume_rpm_segment,
-)
-from agent_bom.core.versions.distro import (
-    _debian_order_char as _debian_order_char,
-)
-from agent_bom.core.versions.distro import (
-    _split_debian_version as _split_debian_version,
-)
-from agent_bom.core.versions.distro import (
-    _split_epoch as _split_epoch,
-)
-from agent_bom.core.versions.go import (
-    _compare_go_versions as _compare_go_versions,
-)
-from agent_bom.core.versions.go import (
-    _go_packaging_operand as _go_packaging_operand,
 )
 from agent_bom.core.versions.go import (
     _go_pseudo_timestamp as _go_pseudo_timestamp,
 )
 from agent_bom.core.versions.maven import (
-    _MAVEN_ALIASES as _MAVEN_ALIASES,
-)
-from agent_bom.core.versions.maven import (
-    _MAVEN_QUALIFIERS as _MAVEN_QUALIFIERS,
-)
-from agent_bom.core.versions.maven import (
-    _MAVEN_RELEASE_INDEX as _MAVEN_RELEASE_INDEX,
-)
-from agent_bom.core.versions.maven import (
-    _MAVEN_SHORT_QUALIFIERS as _MAVEN_SHORT_QUALIFIERS,
-)
-from agent_bom.core.versions.maven import (
     _compare_maven_versions as _compare_maven_versions,
-)
-from agent_bom.core.versions.maven import (
-    _maven_compare_items as _maven_compare_items,
-)
-from agent_bom.core.versions.maven import (
-    _maven_item_rank as _maven_item_rank,
-)
-from agent_bom.core.versions.maven import (
-    _maven_parse as _maven_parse,
-)
-from agent_bom.core.versions.maven import (
-    _maven_qualifier_key as _maven_qualifier_key,
-)
-from agent_bom.core.versions.maven import (
-    _MavenInt as _MavenInt,
-)
-from agent_bom.core.versions.maven import (
-    _MavenList as _MavenList,
-)
-from agent_bom.core.versions.maven import (
-    _MavenStr as _MavenStr,
 )
 from agent_bom.core.versions.nuget import (
     _NUGET_VERSION_RE as _NUGET_VERSION_RE,
-)
-from agent_bom.core.versions.nuget import (
-    _compare_nuget_label as _compare_nuget_label,
-)
-from agent_bom.core.versions.nuget import (
-    _compare_nuget_labels as _compare_nuget_labels,
-)
-from agent_bom.core.versions.nuget import (
-    _compare_nuget_versions as _compare_nuget_versions,
-)
-from agent_bom.core.versions.nuget import (
-    _parse_nuget_version as _parse_nuget_version,
-)
-from agent_bom.core.versions.ordering import (
-    _NUGET_ECOSYSTEMS as _NUGET_ECOSYSTEMS,
-)
-from agent_bom.core.versions.ordering import (
-    _PACKAGIST_ECOSYSTEMS as _PACKAGIST_ECOSYSTEMS,
-)
-from agent_bom.core.versions.ordering import (
-    _RUBYGEMS_ECOSYSTEMS as _RUBYGEMS_ECOSYSTEMS,
-)
-from agent_bom.core.versions.ordering import (
-    _SEMVER_PRERELEASE_TAGS as _SEMVER_PRERELEASE_TAGS,
-)
-from agent_bom.core.versions.ordering import (
-    _compare_with_local_suffix_strip as _compare_with_local_suffix_strip,
-)
-from agent_bom.core.versions.ordering import (
-    _pep440_version as _pep440_version,
-)
-from agent_bom.core.versions.ordering import (
-    _split_local_style_suffix as _split_local_style_suffix,
-)
-from agent_bom.core.versions.ordering import (
-    _strip_semver_prerelease_tag as _strip_semver_prerelease_tag,
 )
 from agent_bom.core.versions.ordering import (
     compare_version_order as compare_version_order,
 )
 from agent_bom.core.versions.ordering import (
     compare_versions as compare_versions,
-)
-from agent_bom.core.versions.php import (
-    _PHP_PART_ORDER as _PHP_PART_ORDER,
-)
-from agent_bom.core.versions.php import (
-    _PHP_UNLISTED_PART as _PHP_UNLISTED_PART,
-)
-from agent_bom.core.versions.php import (
-    _compare_php_versions as _compare_php_versions,
-)
-from agent_bom.core.versions.php import (
-    _php_canonicalize_version as _php_canonicalize_version,
-)
-from agent_bom.core.versions.php import (
-    _php_compare_parts as _php_compare_parts,
-)
-from agent_bom.core.versions.php import (
-    _php_compare_slices as _php_compare_slices,
 )
 from agent_bom.core.versions.ranges import (
     _resolve_version_range as _resolve_version_range,
@@ -179,17 +41,8 @@ from agent_bom.core.versions.ruby import (
 from agent_bom.core.versions.ruby import (
     _GEM_VERSION_RE as _GEM_VERSION_RE,
 )
-from agent_bom.core.versions.ruby import (
-    _compare_gem_versions as _compare_gem_versions,
-)
-from agent_bom.core.versions.ruby import (
-    _gem_canonical_segments as _gem_canonical_segments,
-)
 from agent_bom.core.versions.semver import (
     _STRICT_SEMVER as _STRICT_SEMVER,
-)
-from agent_bom.core.versions.semver import (
-    _compare_strict_semver as _compare_strict_semver,
 )
 from agent_bom.core.versions.validation import (
     _GO_PSEUDO_RE as _GO_PSEUDO_RE,
@@ -225,6 +78,24 @@ from agent_bom.core.versions.validation import (
     validate_version as validate_version,
 )
 from agent_bom.http_client import REGISTRY_LOOKUP_MAX_WAIT, request_with_retry
+
+__all__ = [
+    "_compare_maven_versions",
+    "_go_pseudo_timestamp",
+    "_looks_like_commit_sha",
+    "compare_version_order",
+    "compare_versions",
+    "is_prerelease_version",
+    "normalize_introduced",
+    "normalize_version",
+    "resolve_cargo_metadata",
+    "resolve_go_metadata",
+    "resolve_maven_metadata",
+    "resolve_maven_versions",
+    "strip_pip_extras",
+    "validate_version",
+    "version_in_range",
+]
 
 _logger = logging.getLogger(__name__)
 

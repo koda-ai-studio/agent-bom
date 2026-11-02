@@ -32,14 +32,12 @@ from agent_bom.db.graph_store_correlation import list_correlation_runs as list_c
 from agent_bom.db.graph_store_correlation import update_correlation_run as update_correlation_run
 from agent_bom.db.graph_store_history import _diff_summary_counts as _diff_summary_counts
 from agent_bom.db.graph_store_history import _edge_change_fingerprint as _edge_change_fingerprint
-from agent_bom.db.graph_store_history import _edge_history_row as _edge_history_row
 from agent_bom.db.graph_store_history import active_edges_at as active_edges_at
 from agent_bom.db.graph_store_history import changed_edges_between_scans as changed_edges_between_scans
 from agent_bom.db.graph_store_history import diff_snapshots as diff_snapshots
 from agent_bom.db.graph_store_history import list_snapshots as list_snapshots
 from agent_bom.db.graph_store_history import snapshots_by_ids as snapshots_by_ids
 from agent_bom.db.graph_store_schema import _CREATE_TABLES as _CREATE_TABLES
-from agent_bom.db.graph_store_schema import _DEFAULT_GRAPH_RETENTION_DAYS as _DEFAULT_GRAPH_RETENTION_DAYS
 from agent_bom.db.graph_store_schema import _DEFAULT_GRAPH_WRITE_BATCH_SIZE as _DEFAULT_GRAPH_WRITE_BATCH_SIZE
 from agent_bom.db.graph_store_schema import _FINDING_ENTITY_TYPES as _FINDING_ENTITY_TYPES
 from agent_bom.db.graph_store_schema import _GRAPH_EVIDENCE_EXCLUDED_PRIVATE_FIELDS as _GRAPH_EVIDENCE_EXCLUDED_PRIVATE_FIELDS
@@ -60,8 +58,6 @@ from agent_bom.db.graph_store_schema import _record_purge_state as _record_purge
 from agent_bom.db.graph_store_schema import _table_exists as _table_exists
 from agent_bom.db.graph_store_schema import normalize_graph_tenant_id as normalize_graph_tenant_id
 from agent_bom.db.graph_store_schema import normalize_snapshot_kind as normalize_snapshot_kind
-from agent_bom.db.graph_store_snapshots import _edge_from_snapshot_row as _edge_from_snapshot_row
-from agent_bom.db.graph_store_snapshots import _node_from_snapshot_row as _node_from_snapshot_row
 from agent_bom.db.graph_store_snapshots import _resolve_snapshot as _resolve_snapshot
 from agent_bom.db.graph_store_snapshots import iter_graph_edges as iter_graph_edges
 from agent_bom.db.graph_store_snapshots import iter_graph_nodes as iter_graph_nodes
@@ -95,11 +91,7 @@ from agent_bom.graph import (
     UnifiedNode,
     _now_iso,
 )
-from agent_bom.graph.analysis import (
-    GraphAnalysisStatus,
-    analysis_status_map_from_dict,
-    not_recorded_analysis_status,
-)
+from agent_bom.graph.analysis import GraphAnalysisStatus, analysis_status_map_from_dict, not_recorded_analysis_status
 from agent_bom.graph.container import GraphCompleteness, resolve_node_budget
 from agent_bom.graph.severity_floor import severity_floor_sql
 from agent_bom.graph.snapshot_paths import SnapshotPath, prepare_snapshot_paths
@@ -107,6 +99,12 @@ from agent_bom.security import sanitize_text
 from agent_bom.storage import sqlite_wal, state_home
 
 logger = logging.getLogger(__name__)
+__all__ = ["GRAPH_SNAPSHOT_KINDS", "_batched_rows", "_correlation_run_from_row", "_edge_change_fingerprint",
+    "_executemany_batched", "active_edges_at", "changed_edges_between_scans", "claim_correlation_run_execution",
+    "count_active_correlation_runs", "create_correlation_run", "get_correlation_run",
+    "get_correlation_run_by_idempotency_key", "heartbeat_correlation_run_execution", "iter_graph_edges",
+    "iter_graph_nodes", "list_correlation_runs", "load_rollup_graph", "normalize_snapshot_kind", "prior_delta_digest",
+    "snapshots_by_ids", "update_correlation_run"]  # fmt: skip
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Schema DDL — scan_id is part of every PK for per-scan isolation

@@ -19,6 +19,19 @@ from agent_bom.domain.inventory_types import ServerSurface, TransportType
 from agent_bom.domain.package_model import Package
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
+__all__ = [
+    "CredentialIdentityBinding",
+    "MCPPrompt",
+    "MCPResource",
+    "MCPServer",
+    "MCPTool",
+    "PermissionProfile",
+    "SBOM_DECLARED_MCP_SOURCE",
+    "Severity",
+    "normalize_package_name",
+    "parse_debian_source_name",
+]
+
 
 @dataclass
 class MCPTool:

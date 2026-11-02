@@ -51,6 +51,8 @@ from agent_bom.parsers.oci_types import (
     _append_oci_warning,
 )
 
+__all__ = ["_LAYER_PACKAGE_STAGES"]
+
 
 def _parse_members(scan: _LayerScan, paths: Iterable[str], parse: Callable[[_LayerScan, str], None], failure: str) -> None:
     for path in paths:

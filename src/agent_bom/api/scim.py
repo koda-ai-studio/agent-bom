@@ -14,6 +14,26 @@ from agent_bom.api.scim_errors import scim_error_body as scim_error_body
 from agent_bom.core.settings import env_bool
 from agent_bom.platform_invariants import ReservedTenantIdError, validate_customer_tenant_id
 
+__all__ = [
+    "SCIMBearerTokenBinding",
+    "SCIMConfigurationError",
+    "SCIM_ERROR_SCHEMA",
+    "configured_api_replicas",
+    "configured_scim_bearer_token_bindings",
+    "describe_scim_posture",
+    "extract_scim_roles",
+    "normalize_scim_role",
+    "resolve_scim_bearer_token",
+    "revoke_credentials_for_scim_user",
+    "scim_base_path",
+    "scim_default_role",
+    "scim_enabled_from_env",
+    "scim_error_body",
+    "scim_requires_shared_store",
+    "scim_role_attribute",
+    "scim_tenant_id_from_env",
+]
+
 _SCIM_ROLE_VALUES = ("admin", "analyst", "viewer")
 _SCIM_ROLE_ALIASES = {
     "contributor": "analyst",

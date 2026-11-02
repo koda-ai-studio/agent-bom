@@ -14,9 +14,7 @@ import click
 from agent_bom.cli._param_source import is_explicit
 from agent_bom.cli.agents._context import ScanContext
 from agent_bom.cli.agents._output_terminal import _emit_console_report as _emit_console_report
-from agent_bom.cli.agents._output_terminal import _emit_skill_analysis as _emit_skill_analysis
 from agent_bom.cli.agents._output_terminal import _emit_stdout_report as _emit_stdout_report
-from agent_bom.cli.agents._output_terminal import _emit_stdout_standard as _emit_stdout_standard
 from agent_bom.cli.agents._report_written import announce_report_written
 from agent_bom.models import AIBOMReport
 from agent_bom.output import (

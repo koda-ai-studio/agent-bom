@@ -27,6 +27,18 @@ from agent_bom.core.severity import (  # noqa: F401 - severity_basis re-export
     severity_from_label,
 )
 
+__all__ = [
+    "OsvSeverityBasis",
+    "_logger",
+    "_parse_cvss4_vector",
+    "advisory_id_severity_fallback",
+    "osv_cvss_vector",
+    "osv_severity_basis",
+    "parse_cvss_vector",
+    "parse_osv_severity",
+    "severity_basis",
+]
+
 _logger = logging.getLogger(__name__)
 
 _OSV_MEDIUM_FALLBACK_PREFIXES = ("OSV-", "PYSEC-", "RUSTSEC-", "GO-", "MAL-", "GSD-")

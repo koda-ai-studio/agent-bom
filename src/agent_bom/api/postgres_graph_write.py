@@ -22,6 +22,8 @@ from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, 
 from .postgres_graph_aliases import write_node_aliases
 from .postgres_graph_support import _CORRELATION_RUN_COLUMNS, _correlation_run_from_row, _execute_many_batched
 
+__all__ = ["_ATTACK_PATH_UPSERT_SQL", "_INTERACTION_RISK_UPSERT_SQL", "_SNAPSHOT_UPSERT_SQL", "write_nodes_and_aliases"]
+
 _NODE_UPSERT_SQL = """
             INSERT INTO graph_nodes (
                 id, entity_type, label, category_uid, class_uid, type_uid,

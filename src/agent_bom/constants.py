@@ -18,6 +18,7 @@ import re
 VECTOR_STORE_PACKAGES: frozenset[str] = frozenset(
     "chromadb pinecone-client weaviate-client qdrant-client faiss-cpu faiss-gpu pymilvus milvus pgvector lancedb".split()
 )
+__all__ = ["AI_PACKAGES", "CWE_COMPLIANCE_MAP", "SENSITIVE_PATTERNS"]  # fmt: skip
 
 AI_PACKAGES: frozenset[str] = VECTOR_STORE_PACKAGES | frozenset(
     {
@@ -249,19 +250,7 @@ _CONFIGURATION_WORDS = frozenset(
 # A name carrying one of these is authentication material, or a reference to
 # some, wherever the word appears.  ``SNOWFLAKE_PRIVATE_KEY_PATH`` names the
 # file holding a private key and is as much credential evidence as the key.
-_CREDENTIAL_WORDS = frozenset(
-    {
-        "apikey",
-        "authorization",
-        "bearer",
-        "credential",
-        "key",
-        "password",
-        "passwd",
-        "secret",
-        "token",
-    }
-)
+_CREDENTIAL_WORDS = frozenset({"apikey", "authorization", "bearer", "credential", "key", "password", "passwd", "secret", "token"})
 
 # Weaker evidence: on its own the word names credential material, but qualified
 # by a locator it names a *file or endpoint* that is not itself secret.

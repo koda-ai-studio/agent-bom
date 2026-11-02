@@ -70,7 +70,6 @@ from agent_bom.api.gateway_feed_models import (  # noqa: F401 - re-exported for 
 )
 from agent_bom.api.gateway_feed_normalize import (  # noqa: F401 - re-exported for callers and tests
     _EVENT_TYPES,
-    _SHADOW_BLOCK_MARKERS,
     ACTION_DATA_FILTER_APPLIED,
     ACTION_LLM_CALL,
     ACTION_TOOL_CALL_AUTHORIZED,
@@ -101,6 +100,7 @@ from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.rbac import require_authenticated_permission
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
+__all__ = ["GatewayFeedCompletenessModel"]  # fmt: skip
 
 _FEED_SCHEMA_VERSION = "gateway.feed.v1"
 _STREAM_MAX_SECONDS = 30.0

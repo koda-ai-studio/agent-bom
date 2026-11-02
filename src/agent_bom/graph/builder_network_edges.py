@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__all__ = ["_GCP_LB_COLLECTION", "_NETWORK_EDGE_COLLECTIONS"]
+
 # Generic network-edge collections promoted as CLOUD_RESOURCE inventory nodes.
 # (payload key, cloud service, resource_type, resource_kind, label, id field)
 # Load balancers are intentionally NOT here: AWS uses ``elb_load_balancers`` and

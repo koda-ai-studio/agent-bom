@@ -8,6 +8,8 @@ from agent_bom.api.proxy_runtime_projection import _alert_visible_to_tenant
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.security import sanitize_sensitive_payload
 
+__all__ = ["_MAX_FEED_LOG_LINES"]
+
 
 def _get_configured_log_path() -> _Path | None:
     """Return the server-configured audit log path, if set.

@@ -47,6 +47,7 @@ def _sf_connect(**kwargs: Any) -> Any:
 
 
 _SNOWFLAKE_TENANT_ROW_ACCESS_POLICY = "agent_bom_tenant_isolation"
+__all__ = ["_SNOWFLAKE_TENANT_TABLES"]  # fmt: skip
 _SNOWFLAKE_TENANT_TABLES = (
     "scan_jobs",
     "fleet_agents",

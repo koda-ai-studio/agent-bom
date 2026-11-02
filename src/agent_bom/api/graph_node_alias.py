@@ -7,6 +7,8 @@ from typing import Any
 from agent_bom.graph.node_alias_resolution import resolve_snapshot_node_id as resolve_snapshot_node_id
 from agent_bom.graph.node_alias_resolution import resolve_snapshot_node_ids
 
+__all__ = ["resolve_assessment_node_ids", "resolve_scenario_aliases", "resolve_snapshot_node_id"]
+
 
 def resolve_assessment_node_ids(store: Any, body: Any, *, tenant_id: str, scan_id: str) -> Any:
     """Copy of an assessment request whose ``root_node_id`` / ``affected_node_id`` are canonical in ``scan_id``."""

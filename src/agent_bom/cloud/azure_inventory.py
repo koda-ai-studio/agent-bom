@@ -52,7 +52,6 @@ from .azure_inv._base import (  # noqa: F401 - facade re-export
     _AZURE_STORAGE_PERMISSIONS,
     _COLLECTED_HEAD_KEYS,
     _COLLECTED_TAIL_KEYS,
-    _INTERNET_SOURCES,
     _clean_tags,
     _derive_default_subscription,
     _empty_inventory,
@@ -90,7 +89,6 @@ from .azure_inv.edge import (  # noqa: F401 - facade re-export
     _discover_load_balancers,
 )
 from .azure_inv.identity import (  # noqa: F401 - facade re-export
-    _ENTRA_MEMBER_TYPE,
     _collect_entra_groups,
     _collect_entra_service_principals,
     _collect_entra_users,
@@ -110,7 +108,6 @@ from .azure_inv.network import (  # noqa: F401 - facade re-export
     _discover_route_tables,
     _discover_subnets,
     _discover_virtual_networks,
-    _normalize_network_interface,
     _normalize_nsg,
     _nsg_internet_exposure,
     _route_table_has_internet_route,
@@ -617,12 +614,6 @@ def _entra_directory_client(client: Any, *, force: bool, warnings: list[str]) ->
 # ---------------------------------------------------------------------------
 
 
-__all__ = [
-    "ALL_SUBSCRIPTIONS_ENV_FLAG",
-    "INVENTORY_ENV_FLAG",
-    "all_subscriptions_enabled",
-    "discover_all_subscription_inventories",
-    "discover_inventory",
-    "enumerate_subscription_ids",
-    "inventory_enabled",
-]
+__all__ = ["ALL_SUBSCRIPTIONS_ENV_FLAG", "INVENTORY_ENV_FLAG", "all_subscriptions_enabled",
+    "discover_all_subscription_inventories", "discover_inventory", "enumerate_subscription_ids", "inventory_enabled",
+    "_ENTRA_MAX_GROUPS_EXPANDED", "_append_db_servers", "_classify_storage_account_blobs"]  # fmt: skip

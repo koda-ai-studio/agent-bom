@@ -24,6 +24,8 @@ from agent_bom.api.storage.sqlite_connection import open_wal_connection
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
 from agent_bom.storage.factory import validate_sqlite_path
 
+__all__ = ["SQLiteHubSchema", "compute_effective_reach_score", "resolve_current_ledger_ordinal_sqlite"]
+
 
 def _fetch_ledger_payloads_sqlite(
     conn: sqlite3.Connection,

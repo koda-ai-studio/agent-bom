@@ -151,6 +151,25 @@ except Exception:  # pragma: no cover - normalization always present in practice
         return str(value)[:max_len]
 
 
+__all__ = [
+    "CHECK_REGISTRY",
+    "_IAM_SECTION",
+    "_check_1_1",
+    "_check_1_9",
+    "_check_2_1",
+    "_check_3_1",
+    "_check_4_1",
+    "_check_5_1",
+    "_check_6_1",
+    "_check_7_1",
+    "classify_project_disabled_error",
+    "finalize_read_coverage",
+    "logger",
+    "run_all_project_benchmarks",
+    "run_benchmark",
+]
+
+
 logger = logging.getLogger(__name__)
 
 

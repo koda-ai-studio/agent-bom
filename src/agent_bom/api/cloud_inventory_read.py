@@ -7,6 +7,8 @@ from typing import Any
 from agent_bom.api.cloud_response_helpers import _audit_metadata, _logger, _redact_summary
 from agent_bom.core.settings import env_raw
 
+__all__ = ["_INVENTORY_PROVIDERS"]
+
 _INVENTORY_PROVIDERS = ("aws", "azure", "gcp", "snowflake")
 
 

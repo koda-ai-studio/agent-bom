@@ -116,4 +116,10 @@ __all__ = [
     "persisted_scan_report",
     "tenant_operator_advisory",
     "triage_state",
+    "blast_holders",
+    "estate_context_page",
+    "get_cross_vendor_attack_paths",
+    "get_executive_brief",
+    "public_holders",
+    "stamp_rows",
 ]

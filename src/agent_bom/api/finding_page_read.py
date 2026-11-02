@@ -8,7 +8,6 @@ from typing import Any
 from fastapi import Request
 
 from agent_bom.api import compliance_hub_store, finding_cursor, time_window
-from agent_bom.api import finding_reachability_prewarm as _finding_reachability_prewarm  # noqa: F401 - registers the commit warm-up
 from agent_bom.api.finding_facets import _finding_facets_bounded as _finding_facets_bounded
 from agent_bom.api.finding_grouping import _attach_grouping_metadata as _attach_grouping_metadata
 from agent_bom.api.finding_grouping import _collect_group_occurrences as _collect_group_occurrences

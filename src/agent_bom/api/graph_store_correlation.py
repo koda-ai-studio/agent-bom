@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
+__all__ = ["GraphStoreProtocol", "SQLiteGraphCorrelationMixin"]
+
 if TYPE_CHECKING:
     pass
 

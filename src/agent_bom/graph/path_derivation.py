@@ -27,6 +27,8 @@ from agent_bom.graph.path_evidence import with_technique_mappings as _with_techn
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.workload_pivot_paths import workload_pivot_paths
 
+__all__ = ["_EdgeLookup", "_build_edge_lookup", "_edge_relationships_for_hops", "leads_somewhere", "logger"]
+
 logger = logging.getLogger(__name__)
 
 _RUNTIME_OBSERVED_RELS = frozenset(

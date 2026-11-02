@@ -183,4 +183,7 @@ __all__ = [
     "serialized_seed",
     "start_demo_estate_boot_seed",
     "wait_for_demo_estate_boot_seed",
+    "SEEDING_CODE",
+    "SEEDING_MESSAGE",
+    "SEEDING_RETRY_AFTER_SECONDS",
 ]

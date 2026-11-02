@@ -7,6 +7,18 @@ import logging
 import re
 from typing import Any
 
+__all__ = [
+    "_DYNAMIC_CODE_CALLS",
+    "_FILE_MUTATION_CALLS",
+    "_JS_DYNAMIC_CODE_CALLS",
+    "_JS_FILE_MUTATION_CALLS",
+    "_JS_SUBPROCESS_CALLS",
+    "_JS_TS_FENCED_BLOCK_RE",
+    "_PYTHON_FENCED_BLOCK_RE",
+    "_SUBPROCESS_CALLS",
+    "logger",
+]
+
 logger = logging.getLogger(__name__)
 
 

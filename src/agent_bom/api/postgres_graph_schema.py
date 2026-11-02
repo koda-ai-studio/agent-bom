@@ -5,6 +5,8 @@ from __future__ import annotations
 from .postgres_graph_aliases import NODE_ALIASES_DDL
 from .postgres_graph_path_identity import ADD_IDENTITY_COLUMNS
 
+__all__ = ["_GRAPH_TABLES_DDL", "_GRAPH_TABLES_MIGRATION_DDL"]
+
 _GRAPH_TABLES_DDL: tuple[str, ...] = (
     """
                 CREATE TABLE IF NOT EXISTS graph_nodes (

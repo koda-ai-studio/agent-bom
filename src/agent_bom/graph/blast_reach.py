@@ -279,4 +279,6 @@ __all__ = [
     "apply_graph_path_reachability_to_blast_radii",
     "apply_symbol_reachability_to_blast_radii",
     "resync_cve_findings_from_blast_radii",
+    "Package",
+    "ReachabilityReport",
 ]

@@ -32,6 +32,8 @@ from agent_bom.coverage import SCOPE_EXCLUSION_REASONS
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.scanners.repo_ignore import RepositoryIgnore
 
+__all__ = ["DEFAULT_MAX_FILES", "RepositoryIgnore", "VENDOR_SKIP_DIRS", "is_nested_worktree_root", "iter_discovery_files"]
+
 # Directory names never worth descending for source/manifest discovery: VCS
 # metadata, virtualenvs, vendored dependencies, build output, and tool caches.
 VENDOR_SKIP_DIRS: frozenset[str] = frozenset(

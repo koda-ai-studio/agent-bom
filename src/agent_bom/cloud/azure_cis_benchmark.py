@@ -51,80 +51,16 @@ from typing import Any
 from agent_bom.cloud.cis_scope import bounded_scope_ids
 from agent_bom.security import sanitize_text
 
-from .aws_cis_benchmark import CheckStatus, CISCheckResult
-from .aws_cis_benchmark import finalize_read_coverage as finalize_read_coverage
-from .aws_inventory import is_access_denied_error as is_access_denied_error
+from .aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage
+from .aws_inventory import is_access_denied_error
 
 # The checks live in ``agent_bom.cloud.azure_cis`` by CIS section; every name is
 # re-exported here so imports and patch targets on this module keep working.
 from .azure_cis._base import (
-    _APPSERVICE_SECTION as _APPSERVICE_SECTION,
-)
-from .azure_cis._base import (
-    _DATABASE_SECTION as _DATABASE_SECTION,
-)
-from .azure_cis._base import (
-    _DEFENDER_SECTION as _DEFENDER_SECTION,
-)
-from .azure_cis._base import (
-    _IAM_SECTION as _IAM_SECTION,
-)
-from .azure_cis._base import (
-    _KEYVAULT_SECTION as _KEYVAULT_SECTION,
-)
-from .azure_cis._base import (
     _LOGGING_SECTION as _LOGGING_SECTION,
 )
 from .azure_cis._base import (
-    _NETWORK_SECTION as _NETWORK_SECTION,
-)
-from .azure_cis._base import (
-    _STORAGE_SECTION as _STORAGE_SECTION,
-)
-from .azure_cis._base import (
-    _VM_SECTION as _VM_SECTION,
-)
-from .azure_cis._base import (
     AzureCISReport as AzureCISReport,
-)
-from .azure_cis._base import (
-    _ca_client_app_types as _ca_client_app_types,
-)
-from .azure_cis._base import (
-    _ca_conditions as _ca_conditions,
-)
-from .azure_cis._base import (
-    _ca_enabled as _ca_enabled,
-)
-from .azure_cis._base import (
-    _ca_grant_controls as _ca_grant_controls,
-)
-from .azure_cis._base import (
-    _ca_included_apps as _ca_included_apps,
-)
-from .azure_cis._base import (
-    _ca_included_roles as _ca_included_roles,
-)
-from .azure_cis._base import (
-    _ca_included_users as _ca_included_users,
-)
-from .azure_cis._base import (
-    _ca_sign_in_risk_levels as _ca_sign_in_risk_levels,
-)
-from .azure_cis._base import (
-    _ca_state as _ca_state,
-)
-from .azure_cis._base import (
-    _enum_text as _enum_text,
-)
-from .azure_cis._base import (
-    _mark_unevaluable as _mark_unevaluable,
-)
-from .azure_cis._base import (
-    _pass_or_no_data as _pass_or_no_data,
-)
-from .azure_cis._base import (
-    _resolve_without_conditional_access as _resolve_without_conditional_access,
 )
 from .azure_cis._base import (
     logger as logger,
@@ -258,9 +194,6 @@ from .azure_cis.iam import (
 from .azure_cis.iam import (
     _check_1_10 as _check_1_10,
 )
-from .azure_cis.iam import (
-    _guest_scoped_access_reviews as _guest_scoped_access_reviews,
-)
 from .azure_cis.iam_directory import (
     _check_1_11 as _check_1_11,
 )
@@ -343,7 +276,7 @@ from .azure_cis.logging_checks import (
     _check_5_2_3 as _check_5_2_3,
 )
 from .azure_cis.logging_checks import (
-    _check_activity_log_alert as _check_activity_log_alert,
+    _check_activity_log_alert,
 )
 from .azure_cis.networking import (
     _check_6_1 as _check_6_1,
@@ -364,7 +297,7 @@ from .azure_cis.networking import (
     _check_6_6 as _check_6_6,
 )
 from .azure_cis.networking import (
-    _is_internet_exposed as _is_internet_exposed,
+    _is_internet_exposed,
 )
 from .azure_cis.storage import (
     _check_3_1 as _check_3_1,
@@ -425,6 +358,7 @@ from .base import CloudDiscoveryError
 
 
 _SUBSCRIPTION_DIAGNOSTIC_SETTINGS_API_VERSION = "2021-05-01-preview"
+__all__ = ["_check_activity_log_alert", "_is_internet_exposed", "finalize_read_coverage", "is_access_denied_error"]  # fmt: skip
 
 
 def _list_subscription_diagnostic_settings(credential: Any, subscription_id: str) -> list[dict[str, Any]]:

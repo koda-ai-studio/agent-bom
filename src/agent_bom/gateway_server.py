@@ -39,54 +39,51 @@ from typing import Any, Mapping
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 
-from agent_bom.api.gateway_auth import _api_key_allows_gateway_relay as _api_key_allows_gateway_relay
 from agent_bom.api.gateway_auth import _authenticate_gateway_request as _authenticate_gateway_request
 from agent_bom.api.gateway_auth import _configured_gateway_tenant_id as _configured_gateway_tenant_id
 from agent_bom.api.gateway_auth import _enforce_gateway_anonymous_agents_posture as _enforce_gateway_anonymous_agents_posture
 from agent_bom.api.gateway_auth import _enforce_gateway_auth_posture as _enforce_gateway_auth_posture
-from agent_bom.api.gateway_auth import _env_flag_enabled as _env_flag_enabled
 from agent_bom.api.gateway_auth import _extract_request_token as _extract_request_token
-from agent_bom.api.gateway_auth import _gateway_allows_anonymous_agents as _gateway_allows_anonymous_agents
+from agent_bom.api.gateway_auth import _gateway_allows_anonymous_agents, _is_loopback_host
 from agent_bom.api.gateway_auth import _gateway_requires_auth as _gateway_requires_auth
-from agent_bom.api.gateway_auth import _is_loopback_host as _is_loopback_host
 from agent_bom.api.gateway_auth import _parse_gateway_token_expiry as _parse_gateway_token_expiry
-from agent_bom.api.gateway_auth import _request_has_expected_token as _request_has_expected_token
-from agent_bom.api.gateway_auth import _role_allows_gateway_relay as _role_allows_gateway_relay
 from agent_bom.api.gateway_auth import _validate_runtime_profile_posture as _validate_runtime_profile_posture
 from agent_bom.api.gateway_context import create_gateway_http_app
-from agent_bom.api.gateway_policy import _CONDITIONAL_ACCESS_EVAL_FAILED as _CONDITIONAL_ACCESS_EVAL_FAILED
-from agent_bom.api.gateway_policy import _DRIFT_INCIDENT_LOOKUP_CAP as _DRIFT_INCIDENT_LOOKUP_CAP
-from agent_bom.api.gateway_policy import _agent_cost_anomaly as _agent_cost_anomaly
-from agent_bom.api.gateway_policy import _agent_identity_revoked as _agent_identity_revoked
-from agent_bom.api.gateway_policy import _conditional_access_fail_closed as _conditional_access_fail_closed
-from agent_bom.api.gateway_policy import _DriftLookup as _DriftLookup
-from agent_bom.api.gateway_policy import _evaluate_control_plane_bundle as _evaluate_control_plane_bundle
-from agent_bom.api.gateway_policy import _fleet_containment_reason as _fleet_containment_reason
-from agent_bom.api.gateway_policy import _open_drift_violates_tool as _open_drift_violates_tool
+from agent_bom.api.gateway_policy import (
+    _DRIFT_INCIDENT_LOOKUP_CAP,
+    _agent_cost_anomaly,
+    _agent_identity_revoked,
+    _conditional_access_fail_closed,
+    _DriftLookup,
+    _evaluate_control_plane_bundle,
+    _fleet_containment_reason,
+    _open_drift_violates_tool,
+)
 from agent_bom.api.gateway_policy import _warn_on_quarantined_agents as _warn_on_quarantined_agents
 from agent_bom.api.gateway_rate_limit import _build_gateway_rate_limit_store as _build_gateway_rate_limit_store
-from agent_bom.api.gateway_rate_limit import _gateway_configured_replicas as _gateway_configured_replicas
 from agent_bom.api.gateway_rate_limit import _gateway_rate_limit_runtime_status as _gateway_rate_limit_runtime_status
-from agent_bom.api.gateway_rate_limit import _gateway_shared_rate_limit_required as _gateway_shared_rate_limit_required
-from agent_bom.api.gateway_rate_limit import _rate_limit_bucket_component as _rate_limit_bucket_component
-from agent_bom.api.gateway_relay_context import RelayRuntime
-from agent_bom.api.gateway_relay_context import _emit_gateway_governance_event as _emit_gateway_governance_event
-from agent_bom.api.gateway_relay_context import _message_tool_label as _message_tool_label
-from agent_bom.api.gateway_relay_context import _public_gateway_block_reason as _public_gateway_block_reason
-from agent_bom.api.gateway_relay_context import _public_gateway_error as _public_gateway_error
-from agent_bom.api.gateway_relay_context import _redact_obj_pii as _redact_obj_pii
+from agent_bom.api.gateway_rate_limit import _rate_limit_bucket_component
+from agent_bom.api.gateway_relay_context import (
+    RelayRuntime,
+    _emit_gateway_governance_event,
+    _message_tool_label,
+    _public_gateway_block_reason,
+    _public_gateway_error,
+    _redact_obj_pii,
+)
 from agent_bom.api.gateway_relay_pipeline import run_relay
-from agent_bom.api.gateway_request import _read_bounded_gateway_body as _read_bounded_gateway_body
-from agent_bom.api.gateway_request import _request_client_id as _request_client_id
-from agent_bom.api.gateway_request import _request_context_attributes as _request_context_attributes
-from agent_bom.api.gateway_request import _request_cost_center as _request_cost_center
-from agent_bom.api.gateway_request import _request_device_id as _request_device_id
-from agent_bom.api.gateway_request import _request_environment as _request_environment
-from agent_bom.api.gateway_request import _request_groups as _request_groups
-from agent_bom.api.gateway_request import _request_risk_score as _request_risk_score
-from agent_bom.api.gateway_request import _request_source_ip as _request_source_ip
+from agent_bom.api.gateway_request import (
+    _read_bounded_gateway_body,
+    _request_client_id,
+    _request_context_attributes,
+    _request_cost_center,
+    _request_device_id,
+    _request_environment,
+    _request_groups,
+    _request_risk_score,
+    _request_source_ip,
+)
 from agent_bom.api.gateway_request import _sanitize_for_log as _sanitize_for_log
-from agent_bom.api.gateway_request import _strip_gateway_identity_metadata as _strip_gateway_identity_metadata
 from agent_bom.api.metrics import record_gateway_relay
 from agent_bom.api.oidc_discovery_shim import build_oidc_discovery_shim_router
 from agent_bom.api.tracing import get_tracer
@@ -113,25 +110,16 @@ from agent_bom.runtime.correlation_facts import (
     RuntimeFactsPoller,
 )
 from agent_bom.runtime.fail_mode import gateway_fail_mode_matrix
-from agent_bom.runtime.gateway_audit import ControlPlaneAuditSink as ControlPlaneAuditSink
-from agent_bom.runtime.gateway_audit import build_control_plane_audit_sink as build_control_plane_audit_sink
-from agent_bom.runtime.gateway_audit_local import LocalGatewayAuditSink as LocalGatewayAuditSink
-from agent_bom.runtime.gateway_audit_local import UnavailableGatewayAuditSink
+from agent_bom.runtime.gateway_audit import ControlPlaneAuditSink, build_control_plane_audit_sink
+from agent_bom.runtime.gateway_audit_local import LocalGatewayAuditSink, UnavailableGatewayAuditSink
 from agent_bom.runtime.gateway_audit_local import build_local_gateway_audit_sink as build_local_gateway_audit_sink
-from agent_bom.runtime.gateway_contracts import AuditSink as AuditSink
-from agent_bom.runtime.gateway_contracts import GatewayAuditDeliveryUnavailableError as GatewayAuditDeliveryUnavailableError
-from agent_bom.runtime.gateway_contracts import GatewayAuditSender as GatewayAuditSender
-from agent_bom.runtime.gateway_contracts import UpstreamCaller as UpstreamCaller
+from agent_bom.runtime.gateway_contracts import AuditSink, GatewayAuditDeliveryUnavailableError, GatewayAuditSender, UpstreamCaller
 from agent_bom.runtime.gateway_policy_reload import GatewayPolicyReloader, GatewayPolicyState
 from agent_bom.runtime.gateway_policy_reload import _load_policy_file as _load_policy_file
-from agent_bom.runtime.gateway_relay import GatewayCircuitBreaker as GatewayCircuitBreaker
-from agent_bom.runtime.gateway_relay import GatewayCircuitOpenError as GatewayCircuitOpenError
+from agent_bom.runtime.gateway_relay import GatewayCircuitBreaker, GatewayCircuitOpenError, _default_upstream_caller, _post_upstream_jsonrpc
 from agent_bom.runtime.gateway_relay import GatewayUpstreamRelay as GatewayUpstreamRelay
-from agent_bom.runtime.gateway_relay import _default_upstream_caller as _default_upstream_caller
-from agent_bom.runtime.gateway_relay import _post_upstream_jsonrpc as _post_upstream_jsonrpc
 from agent_bom.runtime.gateway_relay_contract import MAX_GATEWAY_RELAY_MESSAGE_BYTES
-from agent_bom.runtime.gateway_settings import GatewaySettings as GatewaySettings
-from agent_bom.runtime.gateway_settings import validate_gateway_startup_settings
+from agent_bom.runtime.gateway_settings import GatewaySettings, validate_gateway_startup_settings
 from agent_bom.runtime.graph_reachability import ReachabilityMap, load_reachability_map
 from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta
 from agent_bom.security import sanitize_text
@@ -689,11 +677,14 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
 
 
 # Re-export the parser for easier test authoring / CLI glue.
-__all__ = [
-    "ControlPlaneAuditSink",
-    "GatewayAuditDeliveryUnavailableError",
-    "GatewaySettings",
-    "build_control_plane_audit_sink",
-    "create_gateway_app",
-    "parse_jsonrpc",
-]
+__all__ = ["ControlPlaneAuditSink", "GatewayAuditDeliveryUnavailableError", "GatewaySettings",
+    "build_control_plane_audit_sink", "create_gateway_app", "parse_jsonrpc", "AuditSink", "GatewayAuditSender",
+    "GatewayCircuitBreaker", "GatewayCircuitOpenError", "LocalGatewayAuditSink", "UpstreamCaller",
+    "_DRIFT_INCIDENT_LOOKUP_CAP", "_DriftLookup", "_MAX_GATEWAY_MESSAGE_BYTES", "_agent_cost_anomaly",
+    "_agent_identity_revoked", "_conditional_access_fail_closed", "_default_upstream_caller",
+    "_emit_gateway_governance_event", "_evaluate_control_plane_bundle", "_fleet_containment_reason",
+    "_gateway_allows_anonymous_agents", "_is_loopback_host", "_message_tool_label", "_open_drift_violates_tool",
+    "_post_upstream_jsonrpc", "_public_gateway_block_reason", "_public_gateway_error", "_rate_limit_bucket_component",
+    "_read_bounded_gateway_body", "_redact_obj_pii", "_request_client_id", "_request_context_attributes",
+    "_request_cost_center", "_request_device_id", "_request_environment", "_request_groups", "_request_risk_score",
+    "_request_source_ip"]  # fmt: skip

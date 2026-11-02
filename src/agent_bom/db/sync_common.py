@@ -13,6 +13,24 @@ from urllib.parse import quote
 from agent_bom.core.cvss import normalize_cvss_score
 from agent_bom.db.sync_parsing import _parse_osv_entry as _parse_osv_entry
 
+__all__ = [
+    "GHSA_ECOSYSTEMS",
+    "OSV_APPLICATION_ECOSYSTEMS",
+    "_AI_ML_PACKAGES",
+    "_ALPINE_SECDB_BASE_URL",
+    "_ALPINE_SECDB_REPOS",
+    "_BATCH_SIZE",
+    "_DEBIAN_CODENAME_TO_RELEASE",
+    "_DEBIAN_ELTS_TRACKER_JSON_URL",
+    "_DEBIAN_TRACKER_JSON_URL",
+    "_EPSS_CSV_URL",
+    "_EPSS_REDIRECT_HOSTS",
+    "_GHSA_REST_URL",
+    "_KEV_JSON_URL",
+    "_NVD_API_URL",
+    "_OSV_ALL_ZIP_URL",
+]
+
 _logger = logging.getLogger("agent_bom.db.sync")
 
 

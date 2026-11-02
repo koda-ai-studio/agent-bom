@@ -18,24 +18,6 @@ from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.exposure_path import exposure_path_for_report_finding
 from agent_bom.output.finding_views import blast_radius_output_tags, cve_findings
 from agent_bom.output.json_inventory import (
-    _DISCOVERY_PROVENANCE_SCHEMA_FIELDS as _DISCOVERY_PROVENANCE_SCHEMA_FIELDS,
-)
-from agent_bom.output.json_inventory import (
-    _INVENTORY_SCHEMA_AGENT_TYPES as _INVENTORY_SCHEMA_AGENT_TYPES,
-)
-from agent_bom.output.json_inventory import (
-    _INVENTORY_SCHEMA_ECOSYSTEMS as _INVENTORY_SCHEMA_ECOSYSTEMS,
-)
-from agent_bom.output.json_inventory import (
-    _INVENTORY_SCHEMA_TRANSPORTS as _INVENTORY_SCHEMA_TRANSPORTS,
-)
-from agent_bom.output.json_inventory import (
-    _SECURITY_INTELLIGENCE_SCHEMA_FIELDS as _SECURITY_INTELLIGENCE_SCHEMA_FIELDS,
-)
-from agent_bom.output.json_inventory import (
-    _VERSION_PROVENANCE_SCHEMA_FIELDS as _VERSION_PROVENANCE_SCHEMA_FIELDS,
-)
-from agent_bom.output.json_inventory import (
     INVENTORY_SNAPSHOT_SCHEMA_VERSION as INVENTORY_SNAPSHOT_SCHEMA_VERSION,
 )
 from agent_bom.output.json_inventory import (
@@ -43,39 +25,6 @@ from agent_bom.output.json_inventory import (
 )
 from agent_bom.output.json_inventory import (
     _build_inventory_snapshot as _build_inventory_snapshot,
-)
-from agent_bom.output.json_inventory import (
-    _drop_empty as _drop_empty,
-)
-from agent_bom.output.json_inventory import (
-    _schema_agent_type as _schema_agent_type,
-)
-from agent_bom.output.json_inventory import (
-    _schema_discovery_provenance as _schema_discovery_provenance,
-)
-from agent_bom.output.json_inventory import (
-    _schema_ecosystem as _schema_ecosystem,
-)
-from agent_bom.output.json_inventory import (
-    _schema_package as _schema_package,
-)
-from agent_bom.output.json_inventory import (
-    _schema_security_intelligence as _schema_security_intelligence,
-)
-from agent_bom.output.json_inventory import (
-    _schema_server as _schema_server,
-)
-from agent_bom.output.json_inventory import (
-    _schema_tool as _schema_tool,
-)
-from agent_bom.output.json_inventory import (
-    _schema_transport as _schema_transport,
-)
-from agent_bom.output.json_inventory import (
-    _schema_version_provenance as _schema_version_provenance,
-)
-from agent_bom.output.json_inventory import (
-    _snapshot_payload as _snapshot_payload,
 )
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
 from agent_bom.output.json_writer import write_json_document, write_json_file
@@ -90,6 +39,7 @@ from agent_bom.security import (
 from agent_bom.vex import is_vex_suppressed
 
 SCAN_REPORT_SCHEMA_VERSION = "1.0"
+__all__ = ["INVENTORY_SNAPSHOT_SCHEMA_VERSION"]  # fmt: skip
 SCAN_RUN_SCHEMA_VERSION = "1"
 BLAST_RADIUS_SCHEMA_VERSION = "2"
 _FINDING_SEVERITIES = ("critical", "high", "medium", "low", "unknown")

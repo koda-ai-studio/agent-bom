@@ -18,60 +18,28 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Any
 
-from agent_bom.cloud.aws_compute import _aws_instance_network as _aws_instance_network
+from agent_bom.cloud.aws_compute import _aws_instance_network
 from agent_bom.cloud.aws_compute import _discover_ec2_instances as _discover_ec2_instances
 from agent_bom.cloud.aws_compute import _discover_ecs_images as _discover_ecs_images
 from agent_bom.cloud.aws_compute import _discover_sagemaker as _discover_sagemaker
 from agent_bom.cloud.aws_iam import (
-    _AWS_MANAGED_PRIVILEGE as _AWS_MANAGED_PRIVILEGE,
-)
-from agent_bom.cloud.aws_iam import (
-    _WRITE_VERBS as _WRITE_VERBS,
-)
-from agent_bom.cloud.aws_iam import (
-    _account_id_from_arn as _account_id_from_arn,
-)
-from agent_bom.cloud.aws_iam import (
-    _classify_policy_actions as _classify_policy_actions,
+    _AWS_MANAGED_PRIVILEGE,
+    _account_id_from_arn,
+    _classify_policy_actions,
+    _extract_trust_principals,
+    _policy_actions_from_document,
+    _policy_privilege,
 )
 from agent_bom.cloud.aws_iam import (
     _enrich_agents_with_iam as _enrich_agents_with_iam,
 )
-from agent_bom.cloud.aws_iam import (
-    _extract_trust_principals as _extract_trust_principals,
-)
-from agent_bom.cloud.aws_iam import (
-    _policy_actions_from_document as _policy_actions_from_document,
-)
-from agent_bom.cloud.aws_iam import (
-    _policy_privilege as _policy_privilege,
-)
-from agent_bom.cloud.aws_iam import (
-    _principal_name_from_id as _principal_name_from_id,
-)
-from agent_bom.cloud.aws_iam import (
-    _principal_type_from_aws_principal as _principal_type_from_aws_principal,
-)
-from agent_bom.cloud.aws_iam import (
-    _principal_values as _principal_values,
-)
-from agent_bom.cloud.aws_iam import (
-    _role_name_from_arn as _role_name_from_arn,
-)
 from agent_bom.cloud.aws_lambda_packages import (
-    _dedupe_packages as _dedupe_packages,
+    _dedupe_packages,
+    _parse_node_packages_from_zip,
+    _parse_python_packages_from_zip,
 )
 from agent_bom.cloud.aws_lambda_packages import (
     _extract_lambda_packages as _extract_lambda_packages,
-)
-from agent_bom.cloud.aws_lambda_packages import (
-    _packages_from_layer as _packages_from_layer,
-)
-from agent_bom.cloud.aws_lambda_packages import (
-    _parse_node_packages_from_zip as _parse_node_packages_from_zip,
-)
-from agent_bom.cloud.aws_lambda_packages import (
-    _parse_python_packages_from_zip as _parse_python_packages_from_zip,
 )
 from agent_bom.discovery_envelope import DiscoveryEnvelope, RedactionStatus, ScanMode
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
@@ -89,6 +57,9 @@ from .normalization import (
 )
 
 logger = logging.getLogger(__name__)
+__all__ = ["_AWS_MANAGED_PRIVILEGE", "_account_id_from_arn", "_aws_instance_network", "_classify_policy_actions",
+    "_dedupe_packages", "_extract_trust_principals", "_parse_node_packages_from_zip", "_parse_python_packages_from_zip",
+    "_policy_actions_from_document", "_policy_privilege"]  # fmt: skip
 
 _MAX_AWS_DISCOVERY_WORKERS = 4
 

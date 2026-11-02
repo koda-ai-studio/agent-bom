@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from tests.test_graph_page_edge_budget import _graph
-from tests.test_postgres_migrated_graph_parity import migrated_fresh_database, pytestmark  # noqa: F401
+from tests.test_postgres_migrated_graph_parity import migrated_fresh_database  # noqa: F401
+from tests.test_postgres_migrated_graph_parity import pytestmark as _migrated_postgres_pytestmark
+
+pytestmark = _migrated_postgres_pytestmark
 
 
 def test_bounded_edges_preserve_postgres_tenant_and_projection_contract(migrated_fresh_database):  # noqa: F811

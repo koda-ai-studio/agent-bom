@@ -19,11 +19,10 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from tree_sitter import Language, Parser
+    from tree_sitter import Language
     from tree_sitter import Node as TreeSitterNode
 else:
     Language = Any
-    Parser = Any
     TreeSitterNode = Any
 
 

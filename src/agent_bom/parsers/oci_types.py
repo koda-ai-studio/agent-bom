@@ -7,6 +7,31 @@ from dataclasses import dataclass, field
 
 from agent_bom.models import Package
 
+__all__ = [
+    "OCIInputWarning",
+    "OCIManifest",
+    "OCIParseError",
+    "OCIParseResult",
+    "_GEMSPEC_NAME_RE",
+    "_GEMSPEC_PATH_RE",
+    "_GEMSPEC_VER_RE",
+    "_GO_BIN_DIR_RE",
+    "_GO_BIN_MAX_READ",
+    "_GO_BUILDINFO_MAGIC",
+    "_GO_DEP_LINE_RE",
+    "_JAR_DIR_HINTS",
+    "_JAR_EXT_RE",
+    "_JAR_MAX_BYTES",
+    "_OPAQUE_WHITEOUT",
+    "_RPMTAG_ARCH",
+    "_RPM_BDB_PATHS",
+    "_RPM_MANIFEST_PATHS",
+    "_RPM_MANIFEST_RE",
+    "_RPM_NDB_PATHS",
+    "_RPM_SQLITE_PATHS",
+    "_WHITEOUT_PREFIX",
+]
+
 _WHITEOUT_PREFIX = ".wh."
 
 

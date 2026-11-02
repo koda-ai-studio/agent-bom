@@ -50,8 +50,6 @@ from agent_bom.export.object_destinations import _SPOOL_MAX_BYTES as _SPOOL_MAX_
 from agent_bom.export.object_destinations import AzureBlobObjectStoreDestination as AzureBlobObjectStoreDestination
 from agent_bom.export.object_destinations import GcsObjectStoreDestination as GcsObjectStoreDestination
 from agent_bom.export.object_destinations import S3ObjectStoreDestination as S3ObjectStoreDestination
-from agent_bom.export.object_destinations import _object_key as _object_key
-from agent_bom.export.object_destinations import _stream_gzip_ndjson as _stream_gzip_ndjson
 
 logger = logging.getLogger(__name__)
 

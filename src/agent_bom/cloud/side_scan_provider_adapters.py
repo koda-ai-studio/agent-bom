@@ -33,6 +33,14 @@ from .side_scan_owners import azure_disk_owner, gcp_disk_owner
 from .side_scan_provider_ids import _azure_disk_dict, _azure_group_and_name, _azure_resource_group, _gcp_zone, _labels, _tags
 from .side_scan_targets import CloudSideScanTarget
 
+__all__ = [
+    "AzureManagedDiskLifecycleAdapter",
+    "GcpPersistentDiskLifecycleAdapter",
+    "SideScanLifecycleTimeoutError",
+    "SideScanPermissionDeniedError",
+    "sanitized_provider_error",
+]
+
 
 class AzureManagedDiskLifecycleAdapter(_PersistedLifecycleAdapter):
     """Azure Compute SDK adapter for snapshot/temp-disk/collector lifecycle."""

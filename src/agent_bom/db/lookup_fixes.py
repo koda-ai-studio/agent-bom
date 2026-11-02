@@ -12,6 +12,8 @@ from agent_bom.advisory_ids import UNVERIFIED_RANGE_WARNING as UNVERIFIED_RANGE_
 from agent_bom.core.versions.osv import is_valid_fix_version
 from agent_bom.version_utils import compare_version_order
 
+__all__ = ["LEGACY_RECEIPT_WARNING", "UNVERIFIED_RANGE_WARNING", "next_window_fix"]
+
 
 def next_window_fix(
     row: sqlite3.Row,

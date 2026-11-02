@@ -19,6 +19,21 @@ from agent_bom.ai_components.ai_prompts import redact_secrets as redact_secrets
 from agent_bom.config import AI_CACHE_MAX_ENTRIES as _MAX_AI_CACHE
 from agent_bom.security import sanitize_error
 
+__all__ = [
+    "AICallBudget",
+    "AI_PROMPT_VERSION",
+    "DEFAULT_MODEL",
+    "EnrichmentTask",
+    "HF_DEFAULT_MODEL",
+    "OLLAMA_DEFAULT_MODEL",
+    "OLLAMA_MODEL_PREFERENCE",
+    "_AI_RUN_ID",
+    "console",
+    "logger",
+    "resolve_task_model",
+    "retry_async",
+]
+
 console = Console(stderr=True)
 
 

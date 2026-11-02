@@ -32,14 +32,10 @@ from agent_bom.demo_estate.showcase_findings import (
     demo_mcp_auth_findings,
     project_mcp_auth_findings,
 )
-from agent_bom.demo_estate.showcase_fleet import seed_showcase_fleet_and_runtime as seed_showcase_fleet_and_runtime
-from agent_bom.demo_estate.showcase_identities import _DEMO_IDENTITIES as _DEMO_IDENTITIES
-from agent_bom.demo_estate.showcase_identities import _DEMO_JIT_GRANTS as _DEMO_JIT_GRANTS
+from agent_bom.demo_estate.showcase_fleet import seed_showcase_fleet_and_runtime
+from agent_bom.demo_estate.showcase_identities import _DEMO_IDENTITIES, demo_identity_records, seed_showcase_identities
 from agent_bom.demo_estate.showcase_identities import _annotate_demo_identity_risk as _annotate_demo_identity_risk
-from agent_bom.demo_estate.showcase_identities import _demo_identity_id as _demo_identity_id
 from agent_bom.demo_estate.showcase_identities import build_demo_identity_store as build_demo_identity_store
-from agent_bom.demo_estate.showcase_identities import demo_identity_records as demo_identity_records
-from agent_bom.demo_estate.showcase_identities import seed_showcase_identities as seed_showcase_identities
 from agent_bom.demo_estate.showcase_ids import (
     record_retired_showcase_inventory_ids,
     showcase_agent_id,
@@ -66,6 +62,7 @@ if TYPE_CHECKING:
 
 
 _logger = logging.getLogger(__name__)
+__all__ = ["_DEMO_IDENTITIES", "demo_identity_records", "seed_showcase_fleet_and_runtime", "seed_showcase_identities"]  # fmt: skip
 
 
 class _DriftIncident:

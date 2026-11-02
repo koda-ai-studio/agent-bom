@@ -10,3 +10,16 @@ from agent_bom.output.json_fmt import to_json as to_json
 from agent_bom.output.sarif import to_sarif as to_sarif
 from agent_bom.scanners.mcp_audit import audit_mcp_agents as audit_mcp_agents
 from agent_bom.security import sanitize_error as sanitize_error
+
+__all__ = [
+    "AIBOMReport",
+    "IntrospectionError",
+    "audit_mcp_agents",
+    "discovery",
+    "evaluate_agent_permission_posture",
+    "evaluate_mcp_auth_posture",
+    "mcp_introspect",
+    "sanitize_error",
+    "to_json",
+    "to_sarif",
+]

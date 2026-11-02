@@ -4,6 +4,14 @@ from __future__ import annotations
 
 import re
 
+__all__ = [
+    "AGENT_TOOL_DECORATOR_SEGMENTS",
+    "_GUARDRAIL_CALL_PATTERNS",
+    "check_prompt_risks",
+    "classify_prompt_type",
+    "is_agent_tool_decorator",
+]
+
 
 def _line_number_from_index(source: str, index: int) -> int:
     return source[:index].count("\n") + 1

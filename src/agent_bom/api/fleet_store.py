@@ -13,9 +13,7 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from agent_bom.api.fleet_identity import discovered_fleet_identity as discovered_fleet_identity
-from agent_bom.api.fleet_identity import fleet_agent_natural_key as fleet_agent_natural_key
-from agent_bom.api.fleet_identity import match_discovered_fleet_agent as match_discovered_fleet_agent
+from agent_bom.api.fleet_identity import discovered_fleet_identity, fleet_agent_natural_key, match_discovered_fleet_agent
 from agent_bom.api.fleet_models import FleetAgent as FleetAgent
 from agent_bom.api.fleet_models import FleetLifecycleState as FleetLifecycleState
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
@@ -60,6 +58,7 @@ class FleetEndpoint(BaseModel):
 
 
 _ENDPOINT_COLLECTORS = ("applications", "processes", "services", "listeners", "containers", "images")
+__all__ = ["discovered_fleet_identity", "fleet_agent_natural_key", "match_discovered_fleet_agent"]  # fmt: skip
 _ENDPOINT_COLLECTOR_STATUSES = frozenset({"complete", "partial", "unsupported", "unavailable", "permission_denied", "skipped"})
 
 

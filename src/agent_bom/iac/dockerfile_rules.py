@@ -13,6 +13,33 @@ from typing import NamedTuple
 
 from agent_bom.iac.models import IaCFinding
 
+__all__ = [
+    "DockerLine",
+    "PKG_OPTION_TOKEN",
+    "SECRET_ENV_NAME_RE",
+    "_SECRET_ENV_RE",
+    "docker_001_010",
+    "docker_002",
+    "docker_003",
+    "docker_004_022",
+    "docker_005_007",
+    "docker_008",
+    "docker_009",
+    "docker_011",
+    "docker_012",
+    "docker_013",
+    "docker_014",
+    "docker_015",
+    "docker_017",
+    "docker_018",
+    "docker_019",
+    "docker_020",
+    "docker_021",
+    "env_pairs",
+    "is_hardcoded_secret",
+    "is_root_user",
+]
+
 # New rule patterns
 _CHMOD_777_RE = re.compile(r"chmod\s+(?:-[A-Za-z]+\s+)*0?777\b", re.IGNORECASE)
 _COPY_CHMOD_777_RE = re.compile(r"--chmod\s*=\s*0?777\b", re.IGNORECASE)

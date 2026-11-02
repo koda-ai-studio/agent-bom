@@ -29,6 +29,7 @@ from agent_bom.runtime.risk_conditions import evaluate_risk_conditions
 from agent_bom.runtime.text_normalize import normalize_identifier
 
 logger = logging.getLogger(__name__)
+__all__ = ["_safe_compile"]  # fmt: skip
 
 _PATH_ARG_KEYS = {
     "path",
@@ -72,8 +73,7 @@ _SECRET_PATH_PATTERNS = (
 _NETWORK_KEYWORDS = ("http", "fetch", "web", "request", "url", "curl", "download", "upload", "post")
 
 
-# Retained as compatibility exports for proxy integrations.
-_safe_compile = compile_policy_pattern
+_safe_compile = compile_policy_pattern  # Retained as compatibility exports for proxy integrations.
 
 
 def _safe_regex_match(pattern: str, text: str, *, deadline: float | None = None) -> bool:

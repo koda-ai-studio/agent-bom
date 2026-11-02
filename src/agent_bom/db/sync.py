@@ -51,17 +51,13 @@ from agent_bom.db.sync_distributions import sync_alpine_secdb, sync_debian_track
 from agent_bom.db.sync_exploit_feeds import sync_epss, sync_kev
 from agent_bom.db.sync_nvd_window import KEYLESS_BACKFILL_MAX, NvdBudget, NvdRateLimiter, Progress, resolve_time_budget
 from agent_bom.db.sync_nvd_window import sync_nvd_incremental as sync_nvd_incremental
-from agent_bom.db.sync_parsing import _CVSS_SEVERITY as _CVSS_SEVERITY
-from agent_bom.db.sync_parsing import _cpe_version_bound as _cpe_version_bound
 from agent_bom.db.sync_parsing import _cvss_to_severity as _cvss_to_severity
 from agent_bom.db.sync_parsing import _extract_nvd_cpe_matches as _extract_nvd_cpe_matches
 from agent_bom.db.sync_parsing import _extract_nvd_cve_fields as _extract_nvd_cve_fields
-from agent_bom.db.sync_parsing import _is_commit_bound as _is_commit_bound
 from agent_bom.db.sync_parsing import _parse_alpine_secfix_tokens as _parse_alpine_secfix_tokens
 from agent_bom.db.sync_parsing import _parse_debian_tracker_release_entry as _parse_debian_tracker_release_entry
 from agent_bom.db.sync_parsing import _parse_ghsa_version_range as _parse_ghsa_version_range
 from agent_bom.db.sync_parsing import _parse_osv_entry as _parse_osv_entry
-from agent_bom.db.sync_parsing import _window_coverage as _window_coverage
 
 
 def sync_osv(
@@ -628,6 +624,8 @@ def _sync_nvd_source(
 # NVD is a default source: it carries CVEs (and CPE ranges for runtimes such as
 # PHP) that no other feed has yet. Its sync is incremental and newest first.
 DEFAULT_SYNC_SOURCES: tuple[str, ...] = ("osv", "alpine", "debian", "epss", "kev", "nvd")
+__all__ = ["_extract_nvd_cpe_matches", "_parse_alpine_secfix_tokens", "_parse_debian_tracker_release_entry",
+    "_parse_osv_entry"]  # fmt: skip
 
 
 def sync_db(

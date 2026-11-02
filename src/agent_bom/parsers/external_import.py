@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from agent_bom.finding import Finding
     from agent_bom.parsers.external_scanners import ExternalScanImport
 
+__all__ = ["build_external_agent", "fold_external_packages", "merge_external_code_findings", "merge_vulnerability"]
+
 
 def build_external_agent(imported: "ExternalScanImport", report_path: str) -> Agent:
     """Return the synthetic agent that carries an external report's packages."""

@@ -29,6 +29,7 @@ from agent_bom.domain.report_payloads import BenchmarkPayload
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
+__all__ = ["AISVS_CHECK_IDS"]  # fmt: skip
 
 # Default Ollama API port
 _OLLAMA_PORT = 11434

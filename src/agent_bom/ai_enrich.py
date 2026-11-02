@@ -30,15 +30,8 @@ from typing import TYPE_CHECKING, Optional
 from agent_bom import config
 from agent_bom.ai_components.ai_prompts import _ASSIGNMENT_PATTERN as _ASSIGNMENT_PATTERN
 from agent_bom.ai_components.ai_prompts import _IDENTIFIER_RE as _IDENTIFIER_RE
-from agent_bom.ai_components.ai_prompts import _MAX_AI_PROMPT_CHARS as _MAX_AI_PROMPT_CHARS
-from agent_bom.ai_components.ai_prompts import _MAX_AI_SKILL_FILE_CHARS as _MAX_AI_SKILL_FILE_CHARS
+from agent_bom.ai_components.ai_prompts import _MAX_AI_PROMPT_CHARS, redact_secrets
 from agent_bom.ai_components.ai_prompts import _MAX_AI_SKILL_FILES as _MAX_AI_SKILL_FILES
-from agent_bom.ai_components.ai_prompts import _MAX_AI_SKILL_FINDINGS as _MAX_AI_SKILL_FINDINGS
-from agent_bom.ai_components.ai_prompts import _PROMPT_TRUNCATION_MARKER as _PROMPT_TRUNCATION_MARKER
-from agent_bom.ai_components.ai_prompts import _SECRET_PATTERNS as _SECRET_PATTERNS
-from agent_bom.ai_components.ai_prompts import _bounded_ai_text as _bounded_ai_text
-from agent_bom.ai_components.ai_prompts import _bounded_prompt_list as _bounded_prompt_list
-from agent_bom.ai_components.ai_prompts import _bounded_prompt_text as _bounded_prompt_text
 from agent_bom.ai_components.ai_prompts import _build_blast_radius_prompt as _build_blast_radius_prompt
 from agent_bom.ai_components.ai_prompts import _build_executive_summary_prompt as _build_executive_summary_prompt
 from agent_bom.ai_components.ai_prompts import _build_finding_assessment_prompt as _build_finding_assessment_prompt
@@ -46,10 +39,6 @@ from agent_bom.ai_components.ai_prompts import _build_mcp_config_analysis_prompt
 from agent_bom.ai_components.ai_prompts import _build_skill_analysis_prompt as _build_skill_analysis_prompt
 from agent_bom.ai_components.ai_prompts import _build_threat_chain_prompt as _build_threat_chain_prompt
 from agent_bom.ai_components.ai_prompts import _canonical_skill_source_path as _canonical_skill_source_path
-from agent_bom.ai_components.ai_prompts import _compose_bounded_prompt as _compose_bounded_prompt
-from agent_bom.ai_components.ai_prompts import _looks_like_secret_value as _looks_like_secret_value
-from agent_bom.ai_components.ai_prompts import _redact_assignment as _redact_assignment
-from agent_bom.ai_components.ai_prompts import redact_secrets as redact_secrets
 from agent_bom.security import sanitize_error
 
 if TYPE_CHECKING:
@@ -77,6 +66,7 @@ from agent_bom.ai_components.provider_discovery import _has_any_provider, _resol
 from agent_bom.ai_components.providers import _call_llm, _call_llm_structured, _parse_json_response
 
 _DEFAULT_AI_MAX_CALLS = 50  # Hard cap: prevent runaway spend on large monorepos
+__all__ = ["_MAX_AI_PROMPT_CHARS", "redact_secrets"]  # fmt: skip
 
 
 async def enrich_blast_radii(

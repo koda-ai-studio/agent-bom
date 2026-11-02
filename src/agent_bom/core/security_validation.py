@@ -18,6 +18,24 @@ from pathlib import Path
 
 from agent_bom.core.settings import env_raw
 
+__all__ = [
+    "DANGEROUS_ENV_VARS",
+    "KNOWN_MCP_LAUNCHERS",
+    "SHELL_METACHARACTERS",
+    "SecurityError",
+    "_CLOUD_METADATA_HOSTS",
+    "create_safe_subprocess_env",
+    "logger",
+    "require_recognized_launcher",
+    "validate_arguments",
+    "validate_environment",
+    "validate_file_size",
+    "validate_image_ref",
+    "validate_json_file",
+    "validate_package_name",
+    "validate_path",
+]
+
 logger = logging.getLogger("agent_bom.security")
 
 # Recognized MCP server launcher binaries (package managers, runtimes, and

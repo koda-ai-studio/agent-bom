@@ -17,6 +17,19 @@ from agent_bom.discovery.config_parsers import (
 )
 from agent_bom.models import Agent, AgentStatus, AgentType, MCPServer
 
+__all__ = [
+    "AGENT_BINARIES",
+    "COMPOSE_FILE_NAMES",
+    "CONFIG_LOCATIONS",
+    "PROJECT_CONFIG_BLOCK_DIRS",
+    "PROJECT_CONFIG_FILES",
+    "_CUSTOM_PARSERS",
+    "detect_installed_agents",
+    "expand_path",
+    "get_all_discovery_paths",
+    "get_platform",
+]
+
 
 def _read_text_no_symlink(path: Path, *, encoding: str = "utf-8") -> str:
     flags = os.O_RDONLY

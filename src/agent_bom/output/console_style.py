@@ -11,6 +11,8 @@ from agent_bom.output.finding_views import (
     finding_severity,
 )
 
+__all__ = ["SEVERITY_BADGES", "SEVERITY_TEXT", "console", "safe_emoji"]
+
 SEVERITY_TEXT: dict[Severity, str] = {
     Severity.CRITICAL: "red bold",
     Severity.HIGH: "#e67e22 bold",

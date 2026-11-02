@@ -13,6 +13,8 @@ from agent_bom.output.graph_html_template_head import _GRAPH_HTML_TEMPLATE_HEAD
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
 
+__all__ = ["_GRAPH_HTML_TEMPLATE", "drawn_header_counts"]
+
 
 def _graph_priority_summary(findings: list["Finding"], *, collapse_cves: bool = False) -> list[dict]:
     """Summarize the highest-value blast-radius paths for the HTML graph.

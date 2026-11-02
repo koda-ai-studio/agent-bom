@@ -61,9 +61,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from agent_bom.core.symbol_reach import FUNCTION_REACHABLE as FUNCTION_REACHABLE
-from agent_bom.core.symbol_reach import PACKAGE_REACHABLE as PACKAGE_REACHABLE
-from agent_bom.core.symbol_reach import UNREACHABLE as UNREACHABLE
+from agent_bom.core.symbol_reach import FUNCTION_REACHABLE, PACKAGE_REACHABLE, UNREACHABLE
 from agent_bom.package_utils import (
     import_names_for_distribution,
     normalize_package_ecosystem,

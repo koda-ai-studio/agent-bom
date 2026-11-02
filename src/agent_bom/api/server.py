@@ -27,7 +27,7 @@ from agent_bom.api.audit_log import warn_if_ephemeral_hmac_key
 from agent_bom.api.auth import Role, get_key_store
 from agent_bom.api.dev_auth_state import get_dev_api_key as get_dev_api_key
 from agent_bom.api.dev_auth_state import get_dev_api_role as get_dev_api_role
-from agent_bom.api.dev_auth_state import set_dev_api_key as set_dev_api_key
+from agent_bom.api.dev_auth_state import set_dev_api_key
 from agent_bom.api.docs_ui import configure_docs
 from agent_bom.api.error_envelope import ERROR_RESPONSES, install_error_envelope
 from agent_bom.api.experimental_gate import ExperimentalFeatureHealth, SystemHealthResponse
@@ -64,7 +64,7 @@ from agent_bom.api.routes.enterprise_routes._session_helpers import _maybe_attac
 from agent_bom.api.scan_snapshot_store import expire_jobs_and_snapshots
 from agent_bom.api.storage.analytics import peek_analytics_store
 from agent_bom.api.storage_schema import postgres_deployment_configured
-from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hooks
+from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hooks  # noqa: F401 — legacy store injection hooks
     _get_credential_ref_store,
     _get_schedule_store,
     _get_source_store,
@@ -79,13 +79,11 @@ from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hook
     set_exception_store,
     set_fleet_store,
     set_graph_store,
+    set_job_store,
     set_policy_store,
     set_schedule_store,
     set_source_store,
     set_trend_store,
-)
-from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hooks
-    set_job_store as set_job_store,
 )
 from agent_bom.api.tracing import configure_otel_tracing, get_tracing_health
 from agent_bom.config import API_JOB_TTL_SECONDS as _JOB_TTL_SECONDS
@@ -98,6 +96,9 @@ from agent_bom.storage import state_home as _state_home
 from agent_bom.storage.tiers import preflight_storage_backends
 
 _logger = logging.getLogger(__name__)
+__all__ = ["AnalyticsHealth", "PIPELINE_DAG_EDGES", "_api_key", "_dataclass_to_dict",
+    "_get_credential_ref_store", "_load_registry", "_sanitize_api_path", "push_proxy_alert", "set_dev_api_key",
+    "set_job_store"]  # fmt: skip
 
 # Demo estate mode must resolve every default local store under its own data
 # directory. Pin it before anything below lazily opens a store; this covers
@@ -123,7 +124,6 @@ try:
     from fastapi import FastAPI, Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse, RedirectResponse, Response
-    from pydantic import BaseModel  # noqa: F401 — presence check for [api] extra
     from starlette.middleware import Middleware
     from starlette.middleware.gzip import GZipMiddleware
 except ImportError as exc:  # pragma: no cover
@@ -146,7 +146,6 @@ from agent_bom.api.server_dashboard import (  # noqa: E402, F401
 )
 from agent_bom.api.server_schedules import _enqueue_scheduled_scan  # noqa: E402, F401
 from agent_bom.api.server_storage import (  # noqa: E402, F401
-    _analytics_backend_config,
     _analytics_health,
     _apply_worker_thread_limit,
     _backend_name,

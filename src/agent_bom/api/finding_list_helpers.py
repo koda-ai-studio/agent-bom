@@ -11,6 +11,17 @@ from fastapi import HTTPException
 from agent_bom.api.finding_list_projection import project_list_row
 from agent_bom.finding_scope import FINDING_SEVERITY_FILTERS
 
+__all__ = [
+    "_ALLOWED_FINDING_SEVERITIES",
+    "_ALLOWED_FINDING_STATUSES",
+    "_DEFAULT_FINDING_STATUS",
+    "_FACET_LITERAL_SEVERITY_BANDS",
+    "_FACET_PAYLOAD_SCOPE_KEYS",
+    "_FINDING_GROUP_MAX_OCCURRENCES",
+    "_FINDING_GROUP_OCCURRENCE_SAMPLE",
+    "_FRESHNESS_BUCKETS",
+]
+
 _ALLOWED_FINDING_SORTS = ("effective_reach", "cvss", "severity")
 # Lifecycle-status filter (default ``open`` = live posture). ``open`` maps to
 # status IN (open, reopened) in the store; ``resolved`` to status = resolved;

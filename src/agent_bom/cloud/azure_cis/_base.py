@@ -12,6 +12,20 @@ from agent_bom.security import sanitize_error
 from ..aws_cis_benchmark import CheckStatus, CISCheckResult
 from ..azure_graph import SECURITY_DEFAULTS_PATH, GraphError, GraphPermissionDeniedError
 
+__all__ = [
+    "AzureCISReport",
+    "_APPSERVICE_SECTION",
+    "_DATABASE_SECTION",
+    "_DEFENDER_SECTION",
+    "_IAM_SECTION",
+    "_KEYVAULT_SECTION",
+    "_LOGGING_SECTION",
+    "_NETWORK_SECTION",
+    "_STORAGE_SECTION",
+    "_VM_SECTION",
+    "logger",
+]
+
 # Keep the historical logger name so log routing and filters are unchanged.
 logger = logging.getLogger("agent_bom.cloud.azure_cis_benchmark")
 

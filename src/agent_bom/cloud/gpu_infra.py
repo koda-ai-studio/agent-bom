@@ -38,6 +38,7 @@ from agent_bom.scanners.firmware_advisory import check_firmware_advisories
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
+__all__ = ["gpu_infra_to_agents"]  # fmt: skip
 
 # ─── Vendor detection constants ──────────────────────────────────────────────
 
@@ -84,8 +85,6 @@ _K8S_GPU_RESOURCES = {
     "gpu.intel.com/xe": "intel",
 }
 
-# Legacy single-vendor constant kept for backward compatibility
-_K8S_GPU_RESOURCE = "nvidia.com/gpu"
 
 # DCGM exporter default port
 _DCGM_PORT = 9400

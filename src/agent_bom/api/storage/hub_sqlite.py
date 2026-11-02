@@ -18,6 +18,8 @@ from agent_bom.api.storage.hub_schema import SQLiteHubSchema, _bump_overview_rev
 from agent_bom.api.storage.sql import SQLiteBackend
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
+__all__ = ["SQLiteComplianceHubStore", "compute_effective_reach_score"]
+
 
 class SQLiteComplianceHubStore(SQLiteHubSchema):
     """SQLite-backed hub store for single-node persistence.

@@ -7,24 +7,18 @@ import threading
 from typing import TYPE_CHECKING, Any, cast
 
 from agent_bom.api.operator_advisory_store import InMemoryOperatorAdvisoryStore, OperatorAdvisoryStore, SQLiteOperatorAdvisoryStore
-from agent_bom.api.storage.analytics import get_analytics_store
-from agent_bom.api.storage.analytics import set_analytics_store as set_analytics_store
+from agent_bom.api.storage.analytics import get_analytics_store, set_analytics_store
 from agent_bom.api.storage.job_backends import configured_job_store
 from agent_bom.api.storage.job_cache import (
-    _COMPACTED_RESULT_MARKER as _COMPACTED_RESULT_MARKER,
+    _COMPACTED_RESULT_MARKER,
+    _compact_terminal_job_in_place,
+    _jobs_is_compacted,
 )
 from agent_bom.api.storage.job_cache import (
     _compact_terminal_job as _compact_terminal_job,
 )
-from agent_bom.api.storage.job_cache import (
-    _compact_terminal_job_in_place as _compact_terminal_job_in_place,
-)
-from agent_bom.api.storage.job_cache import (
-    _jobs_is_compacted as _jobs_is_compacted,
-)
 from agent_bom.api.storage_schema import postgres_deployment_configured
-from agent_bom.api.tenant_graph_retention_store import _get_tenant_graph_retention_store as _get_tenant_graph_retention_store
-from agent_bom.api.tenant_graph_retention_store import set_tenant_graph_retention_store as set_tenant_graph_retention_store
+from agent_bom.api.tenant_graph_retention_store import _get_tenant_graph_retention_store, set_tenant_graph_retention_store
 from agent_bom.api.tenant_score_config_store import InMemoryTenantScoreConfigStore, SQLiteTenantScoreConfigStore
 from agent_bom.config import API_MAX_IN_MEMORY_JOBS as _MAX_IN_MEMORY_JOBS
 
@@ -43,6 +37,8 @@ if TYPE_CHECKING:
 
 # ── Shared lock (protects lazy init of all stores) ───────────────────────────
 _store_lock = threading.Lock()
+__all__ = ["_COMPACTED_RESULT_MARKER", "_compact_terminal_job_in_place", "_get_tenant_graph_retention_store",
+    "_jobs_is_compacted", "set_analytics_store", "set_tenant_graph_retention_store"]  # fmt: skip
 
 # ─── Job store (pluggable) ───────────────────────────────────────────────────
 _store: Any = None

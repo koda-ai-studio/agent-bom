@@ -370,4 +370,5 @@ __all__ = [
     "list_runtime_emitter_plugins",
     "plugin_entrypoint_warnings",
     "plugin_registry_status",
+    "PluginRegistration",
 ]

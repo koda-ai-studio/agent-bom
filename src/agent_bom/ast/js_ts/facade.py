@@ -23,17 +23,13 @@ from agent_bom.ast.js_ts.framework_imports import FRAMEWORK_HINTS as _JS_TS_FRAM
 from agent_bom.ast.js_ts.tool_declarations import _JS_LIST_TOOLS_SELECTOR_RE as _JS_LIST_TOOLS_SELECTOR_RE
 from agent_bom.ast.js_ts.tool_declarations import _JS_NAME_KEY_RE as _JS_NAME_KEY_RE
 from agent_bom.ast.js_ts.tool_declarations import _JS_OBJECT_KEY_BEFORE_RE as _JS_OBJECT_KEY_BEFORE_RE
-from agent_bom.ast.js_ts.tool_declarations import _JS_OBJECT_KEY_LOOKBEHIND as _JS_OBJECT_KEY_LOOKBEHIND
 from agent_bom.ast.js_ts.tool_declarations import _JS_SET_REQUEST_HANDLER_START_RE as _JS_SET_REQUEST_HANDLER_START_RE
 from agent_bom.ast.js_ts.tool_declarations import _JS_STRING_ARG_RE as _JS_STRING_ARG_RE
 from agent_bom.ast.js_ts.tool_declarations import _JS_TOOLS_ARRAY_START_RE as _JS_TOOLS_ARRAY_START_RE
-from agent_bom.ast.js_ts.tool_declarations import _js_bracket_depths as _js_bracket_depths
 from agent_bom.ast.js_ts.tool_declarations import _js_first_string_argument as _js_first_string_argument
 from agent_bom.ast.js_ts.tool_declarations import _js_low_level_tool_declarations as _js_low_level_tool_declarations
-from agent_bom.ast.js_ts.tool_declarations import _js_name_property_at_depth_one as _js_name_property_at_depth_one
 from agent_bom.ast.js_ts.tool_declarations import _js_named_option_argument as _js_named_option_argument
 from agent_bom.ast.js_ts.tool_declarations import _js_object_key_before as _js_object_key_before
-from agent_bom.ast.js_ts.tool_declarations import _js_object_literals_at_depth as _js_object_literals_at_depth
 from agent_bom.ast.source_reader import read_source_for_analysis
 from agent_bom.ast_models import CallEdge, DependencySymbolReach, DetectedGuardrail, ExtractedPrompt, FlowFinding, ToolSignature
 from agent_bom.ast_signal_utils import _GUARDRAIL_CALL_PATTERNS, check_prompt_risks, classify_prompt_type
@@ -45,6 +41,7 @@ if TYPE_CHECKING:
     from agent_bom.ast.js_ts.engine import JSTSAstAnalysis, JSTSFunction, JSTSToolRegistration
 
 _MAX_FILE_SIZE = 512 * 1024  # 512KB
+__all__ = ["_JS_TS_EXTS"]  # fmt: skip
 _JS_TS_EXTS = frozenset({".js", ".jsx", ".ts", ".tsx"})
 # ``registerTool`` is the current registration API of @modelcontextprotocol/sdk;
 # ``tool`` is the earlier one that thousands of published servers still use.

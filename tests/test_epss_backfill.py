@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import agent_bom.cli  # noqa: F401  # agent_bom.enrichment cannot be the first agent_bom import (import cycle)
+import agent_bom.cli as _  # noqa: F401 - agent_bom.enrichment cannot be the first agent_bom import (import cycle)
 from agent_bom import enrichment
 from agent_bom.models import Severity, Vulnerability
 from agent_bom.scanners import epss_backfill

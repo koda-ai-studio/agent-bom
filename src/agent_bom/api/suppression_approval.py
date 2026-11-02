@@ -11,6 +11,23 @@ from agent_bom.api.suppression_policy import SelfApprovalError as SelfApprovalEr
 from agent_bom.api.suppression_policy import expiry_window_error, require_distinct_approver
 from agent_bom.core.timestamps import parse_identity_timestamp
 
+__all__ = [
+    "APPROVAL_VERSION",
+    "ApprovalPersistenceError",
+    "ExceptionStore",
+    "SelfApprovalError",
+    "SuppressionApprovalRequest",
+    "VulnException",
+    "activate_suppression",
+    "approval_error",
+    "exception_response",
+    "persist_approval",
+    "reset_suppression_request",
+    "suppression_active",
+    "suppression_requested",
+    "suppression_review_fields",
+]
+
 
 class VulnException(Protocol):
     """Fields of a suppression record the activation contract reads and writes.

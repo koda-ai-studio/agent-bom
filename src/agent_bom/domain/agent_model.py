@@ -16,6 +16,8 @@ from agent_bom.domain.inventory_types import AgentStatus, AgentType, _utc_now_is
 from agent_bom.domain.mcp_model import MCPServer
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
+__all__ = ["Agent", "Severity", "classify_agent_kind", "normalize_package_name", "parse_debian_source_name"]
+
 
 @dataclass
 class Agent:

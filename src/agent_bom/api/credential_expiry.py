@@ -9,11 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Iterable
 
-from agent_bom.core.credential_policy import _BLOCKING_STATES as _BLOCKING_STATES
-from agent_bom.core.credential_policy import _STATE_PRIORITY as _STATE_PRIORITY
-from agent_bom.core.credential_policy import _WARNING_STATES as _WARNING_STATES
 from agent_bom.core.credential_policy import DEFAULT_NEAR_EXPIRY_DAYS as DEFAULT_NEAR_EXPIRY_DAYS
-from agent_bom.core.credential_policy import _days_between as _days_between
 from agent_bom.core.credential_policy import _parse_timestamp as _parse_timestamp
 from agent_bom.identity.credential_policy import _env_int as _env_int
 from agent_bom.identity.credential_policy import classify_credential as classify_credential
@@ -21,6 +17,17 @@ from agent_bom.identity.credential_policy import evaluate_credentials as evaluat
 from agent_bom.identity.credential_policy import max_age_days as max_age_days
 from agent_bom.identity.credential_policy import near_expiry_days as near_expiry_days
 from agent_bom.identity.credential_policy import rotation_interval_days as rotation_interval_days
+
+__all__ = [
+    "DEFAULT_NEAR_EXPIRY_DAYS",
+    "_env_int",
+    "_parse_timestamp",
+    "classify_credential",
+    "describe_credential_expiry_posture",
+    "max_age_days",
+    "near_expiry_days",
+    "rotation_interval_days",
+]
 
 
 def _control_plane_records(posture: dict[str, Any]) -> list[dict[str, Any]]:

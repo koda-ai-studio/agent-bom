@@ -10,6 +10,8 @@ from fastapi import Request
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.core.severity import SEVERITY_DISPLAY_BUCKETS, SEVERITY_THRESHOLD_LABELS, UNRATED_SEVERITY_BUCKET, severity_display_bucket
 
+__all__ = ["_COVERAGE_LABELS"]
+
 _SEVERITY_KEYS = SEVERITY_THRESHOLD_LABELS
 
 
