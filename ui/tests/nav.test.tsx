@@ -96,6 +96,7 @@ function renderExpandedNav() {
 
 describe('Nav', () => {
   beforeEach(() => {
+    window.localStorage.setItem('agent-bom.product-view', 'organization')
     mockedPathname = '/'
     window.history.replaceState({}, '', '/')
     authStateMock.session = null
@@ -105,6 +106,54 @@ describe('Nav', () => {
     authStateMock.hasCapability.mockReset()
     authStateMock.hasCapability.mockReturnValue(false)
     vi.clearAllMocks()
+  })
+
+  it('keeps governance optional in Personal view with all pages discoverable', () => {
+    window.localStorage.setItem('agent-bom.product-view', 'personal')
+    renderExpandedNav()
+    expect(screen.getByRole('combobox', { name: 'Product view' })).toHaveValue('personal')
+    expect(screen.queryByRole('button', { name: /^governance$/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Show all pages' }))
+    expect(screen.getByRole('button', { name: /^governance$/i })).toBeInTheDocument()
+  })
+
+  it('switches primary navigation between Personal, Team and Organization', () => {
+    window.localStorage.setItem('agent-bom.product-view', 'personal')
+    renderExpandedNav()
+    const selector = screen.getByRole('combobox', { name: 'Product view' })
+    expect(screen.queryByRole('button', { name: /^operations$/i })).not.toBeInTheDocument()
+    fireEvent.change(selector, { target: { value: 'team' } })
+    expect(screen.getByRole('button', { name: /^operations$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^governance$/i })).not.toBeInTheDocument()
+    fireEvent.change(selector, { target: { value: 'organization' } })
+    expect(screen.getByRole('button', { name: /^governance$/i })).toBeInTheDocument()
+  })
+
+  it('does not promote Governance for a Findings link shared by multiple groups', () => {
+    window.localStorage.setItem('agent-bom.product-view', 'personal')
+    mockedPathname = '/findings'
+    renderExpandedNav()
+    expect(screen.queryByRole('button', { name: /^governance$/i })).not.toBeInTheDocument()
+  })
+
+  it('retains the active governance route when Personal is selected', () => {
+    window.localStorage.setItem('agent-bom.product-view', 'personal')
+    mockedPathname = '/compliance'
+    renderExpandedNav()
+    expect(screen.getByRole('link', { name: /^compliance$/i })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it.each(['personal', 'team', 'organization'])('keeps search complete and role restrictions intact in %s', (view) => {
+    window.localStorage.setItem('agent-bom.product-view', view)
+    authStateMock.session = { authenticated: true, auth_required: true, tenant_id: 'fixture-tenant', subject: 'fixture-viewer', role: 'viewer', role_summary: { display_name: 'Viewer', capabilities: [] } }
+    renderExpandedNav()
+    fireEvent.keyDown(window, { key: 'k', metaKey: true })
+    const palette = screen.getByRole('dialog', { name: /command palette/i })
+    const hrefs = within(palette).getAllByRole('link').map((link) => link.getAttribute('href'))
+    expect(hrefs).toContain('/compliance')
+    expect(hrefs).not.toContain('/governance')
+    expect(hrefs).not.toContain('/self-posture')
+    expect(hrefs).not.toContain('/scan')
   })
 
   it('renders the Posture nav group', () => {

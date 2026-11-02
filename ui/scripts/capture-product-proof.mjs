@@ -2915,7 +2915,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     {
       path: "dashboard-live.png",
       page: "/?capture=1",
-      scope: "Posture and current findings with compliance and security-area disclosures collapsed using their controls",
+      scope: "Organization view: posture and current findings with compliance and security-area disclosures collapsed using their controls",
       presentation: `${CAPTURE_THEME} desktop`,
     },
     {
@@ -3213,6 +3213,9 @@ async function main() {
       });
       await capturePage.addInitScript((selectedTheme) => {
         window.localStorage.setItem("agent-bom-theme", selectedTheme);
+        // The governance tour exercises the selectable Organization view.
+        // This is a display preference; fixture evidence and access stay unchanged.
+        window.localStorage.setItem("agent-bom.product-view", "organization");
       }, theme);
       return capturePage;
     };

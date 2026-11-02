@@ -3,6 +3,17 @@
 Scan a repository, inspect the affected agent and package, apply a reviewed fix,
 then rescan the same scope. No account or control plane is required.
 
+For individual use, the report and a verified fix are the complete starting
+workflow. You do not need to configure compliance frameworks, an identity
+provider, PostgreSQL or a shared dashboard. Framework mappings may appear as
+context in findings; they do not require a governance program or establish
+certification.
+
+Add a CI gate when you want repeatable checks. Add a shared control plane when
+you need retained scans and team review. See the
+[deployment chooser](../site-docs/deployment/overview.md#choose-your-workflow)
+for the optional team and organization paths.
+
 **Investigating through an assistant?** Follow the
 [three MCP workflows](MCP_SERVER.md): find affected agents, inspect an
 exposure path's receipts, and compare retained scans. The credential-free

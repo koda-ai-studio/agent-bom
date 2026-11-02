@@ -1,5 +1,6 @@
 "use client";
 
+import { useProductView } from "@/lib/product-view";
 import { Collapsible } from "@/components/collapsible";
 import { DetailTabs } from "@/components/detail-tabs";
 import { OverviewAssets } from "@/components/overview-assets";
@@ -50,17 +51,19 @@ export function OverviewCockpit({
   compliance = null,
   services = null,
 }: OverviewCockpitProps) {
+  const productView = useProductView();
+  const showCompliance = !localReport && productView === "organization";
   const [riskTab, setRiskTab] = useState<"risks" | "posture" | "assets">("posture");
   const hasScanEvidence = Boolean(summaryReady && scans && scans > 0);
-  // Once scans exist the chip always renders, but an unevidenced score reads as
+  // In Organization view, scans retain a chip, but an unevidenced score reads as
   // an em dash — the SAME treatment the Trust Center gives this status. Hiding
   // the chip instead would leave the reader unable to tell "not measured" from
   // "not loaded"; printing the raw percentage claimed compliance we never
   // evidenced.
-  const complianceEvaluated = hasScanEvidence && compliance != null && hasEvaluatedCompliance(compliance);
+  const complianceEvaluated = showCompliance && hasScanEvidence && compliance != null && hasEvaluatedCompliance(compliance);
   const complianceScore = complianceEvaluated
     ? `${Math.round(compliance.overallScore)}%`
-    : hasScanEvidence && compliance != null
+    : showCompliance && hasScanEvidence && compliance != null
       ? "—"
       : undefined;
 
@@ -115,14 +118,14 @@ export function OverviewCockpit({
             <ScoreExplainer breakdown={scoreBreakdown} grade={grade} floored={scoreFloored} />
         </div>
       </section>
-      <div className="grid items-start gap-6 xl:grid-cols-2 xl:items-stretch">
-        <section aria-label="Compliance & frameworks" className="min-w-0 rounded-2xl border border-outline bg-surface p-5 sm:p-6">
+      <div className={`grid items-start gap-6 ${showCompliance ? "xl:grid-cols-2 xl:items-stretch" : ""}`}>
+        {showCompliance && <section aria-label="Compliance & frameworks" className="min-w-0 rounded-2xl border border-outline bg-surface p-5 sm:p-6">
           <Collapsible bare title="Compliance & frameworks" titleClassName={SECTION_TITLE_CLASS} defaultOpen
-            actions={localReport ? undefined : <ViewAllFrameworksLink />}>
-            {localReport ? <p className="text-sm text-ink-secondary">Tenant compliance assessment is unavailable for this local report.</p> : <ComplianceSnapshotPanel compliance={compliance} hasScanEvidence={hasScanEvidence}
-              loading={loading || complianceLoading || scanScopeLoading} scanScopeKnown={scans !== null} />}
+            actions={<ViewAllFrameworksLink />}>
+            <ComplianceSnapshotPanel compliance={compliance} hasScanEvidence={hasScanEvidence}
+              loading={loading || complianceLoading || scanScopeLoading} scanScopeKnown={scans !== null} />
           </Collapsible>
-        </section>
+        </section>}
         <section aria-label="Findings by security area" className="min-w-0 rounded-2xl border border-outline bg-surface p-5 sm:p-6">
           <Collapsible bare title="Findings by security area" titleClassName={SECTION_TITLE_CLASS} defaultOpen>
             {loading && !domains ? (

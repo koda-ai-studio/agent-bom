@@ -13,14 +13,60 @@ decision matrix. The rest of the deployment docs either deepen one of these
 supported paths or act as reference material for teams intentionally diverging
 from them.
 
-## Decision in one line
+## Choose your workflow
+
+Start with the work you need to do, then choose where to run it. These paths
+use the same open-source product; they are not editions, license tiers or
+authorization roles.
+
+### Individual / developer
+
+From the project you want to inspect, with [uv installed](https://docs.astral.sh/uv/getting-started/installation/):
+
+```bash
+uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
+```
+
+Open the report, review coverage, fix a finding and rescan the same scope.
+Add CI gates, MCP tools, a local proxy or a dashboard only when useful.
+
+### Team
+
+Start with CLI or GitHub Action checks. Retain reports or scan IDs, review
+findings and compare follow-up scans. Add an authenticated control plane when
+evidence needs to be shared; connect sources, fleet collection or shared
+runtime policy as needed.
+
+### Organization
+
+Start with a shared control plane and the identity, storage and operating
+controls required for the deployment. Review scoped inventory, findings and
+audit evidence. Add framework assessments and executive reports for governance
+needs, with SSO, additional tenants and retention/export integrations as required.
+
+Individual use does not require PostgreSQL, SSO, compliance configuration or
+executive reporting. A team can also use only CLI/CI reports. Framework tags
+in a finding are context, not an obligation to adopt a governance workflow or
+proof of certification. Local proxy and MCP server use are available without
+adopting an organization-wide control plane.
+
+"Local" describes where work or collection happens, not who owns it: a team
+can retain local scans, and one developer can inspect a cloud workload. The
+dashboard offers Personal, Team and Organization views to prioritize relevant
+pages. The view is a browser preference; it does not change access or evidence
+scope.
+See [Modes and alignment](deployment-modes-and-alignment.md)
+for the distinction between workflow, hosting and observed evidence.
+
+## Choose where to run it
 
 | Situation | Deploy | Get |
 |---|---|---|
 | **Laptop scan** | `pip install agent-bom` | local findings, SBOM, SARIF, HTML, graph export |
-| **Team demo** | `docker compose` pilot | shared API + UI control plane on one workstation |
+| **Dashboard evaluation** | `docker compose` pilot | loopback-only API + UI with SQLite on one workstation; not a shared deployment |
+| **Shared team instance** | authenticated Compose platform | API + UI with PostgreSQL, configured identity and protected network access |
 | **Production** | Helm / EKS Terraform | tenant-aware self-hosted control plane in your cluster |
-| **Private customer / CISO instance** | `docker compose` platform + product overlay | login-gated single host, no demo data, real cloud connected read-only |
+| **Private cloud-connected instance** | `docker compose` platform + product overlay | login-gated single host, no demo data, real cloud connected read-only |
 | **Snowflake evaluation** | SPCS / Native App preview | installation contract; Native App scan dispatch is unavailable |
 
 The software is open source; hosting, database storage, identity, monitoring and
@@ -33,15 +79,17 @@ for support tiers and preview limitations.
 | Component | When to run it | Boundary |
 |---|---|---|
 | CLI / CI scanner | First scan or build gate | No control-plane database, login service or paid model is required. |
+| Loopback API + UI with SQLite | Evaluate the dashboard on one workstation | The pilot is local-only. Configure authenticated shared hosting before making it available to other users. |
 | API + UI + PostgreSQL | Shared inventory, retained findings, graph and governance | PostgreSQL is the default shared transactional and graph store; apply the documented migrations and role separation. |
 | Chosen identity provider | Shared authenticated access | Use the documented authentication flow for each surface. Keycloak is an available self-hosted choice; it is not required for local scans. |
 | Grafana + Prometheus | Metrics, dashboards and alerts | Optional. Reuse an existing monitoring stack where possible. |
 | ClickHouse | Measured event-analytics or retention pressure | Optional analytics sink; it does not replace PostgreSQL jobs, authorization or graph persistence. |
 | MCP proxy / gateway | Selected tool-call enforcement | Add where inline policy is needed; validate authentication and failure behavior before routing traffic. |
 
-Start with a [local scan](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md) or the pilot below,
-retain an exported report, then connect one scoped source to the shared control
-plane. Core checks do not require LLM enrichment. Standard vulnerability lookups
+Start with a [local scan](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md),
+retain an exported report and verify a fix. Use the pilot below if you want to
+evaluate the dashboard. Connect a scoped source to an authenticated shared
+control plane when shared evidence is useful. Core checks do not require LLM enrichment. Standard vulnerability lookups
 may contact external services; use the documented offline path when required.
 
 For identity setup, use [authenticated deployment](authenticated-hosted-instance.md)
@@ -50,8 +98,7 @@ registration and resource-audience requirements; verify the actual client flow
 before advertising compatibility.
 
 For the private, login-gated single-host instance where a real cloud account is
-connected read-only (the customer / CISO experience, distinct from the public
-anonymous demo), follow
+connected read-only, follow
 [Hosted Authenticated Instance + Connect Your Cloud](authenticated-hosted-instance.md).
 
 `agent-bom` is one product with two deployable images:
@@ -96,6 +143,7 @@ when your platform team needs that specific detail.
 
 | You are trying to... | Start with | Stop there unless... |
 |---|---|---|
+| inspect one project | [First Run Guide](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md) | you need CI checks, shared evidence or runtime enforcement |
 | run a local pilot | [Docker](docker.md) | you need EKS, SSO, or fleet sync |
 | deploy in vanilla EKS | [Vanilla EKS Quickstart](eks-vanilla-quickstart.md) | you need service mesh, ESO, or cert-manager |
 | deploy in hardened AWS / EKS | [Your Own AWS / EKS](own-infra-eks.md) | you need a lower-level Helm or Terraform reference |
@@ -109,23 +157,26 @@ Everything else in the deployment section is reference material.
 | Surface | Deploy when | What it gives you |
 |---|---|---|
 | **Scan** | day 1 | discovery, package/image/IaC/cloud checks, findings, blast radius |
-| **Fleet** | day 1 for teams | endpoint and collector inventory without inline traffic control |
+| **Fleet** | endpoint or collector inventory needs to be centralized | endpoint and collector inventory without inline traffic control |
 | **API + UI** | self-hosted pilots and production | auth, RBAC, tenant scope, graph, remediation, audit, policy |
 | **Proxy** | selected local or sidecar MCPs | inline local MCP inspection, policy decisions, signed audit events |
 | **Gateway** | shared remote MCP traffic | central remote MCP relay, policy distribution, audit events |
 | **MCP server mode** | agent-invoked scanning | exposes `agent-bom` as read-mostly MCP tools, resources, and prompts |
 
-Default rollout: deploy API + UI with Postgres, add scans and fleet sync, then
-add proxy or gateway only where runtime enforcement is worth the extra operating
-surface.
+For individual use, start with a scan and its report. For shared use, deploy an
+authenticated API + UI with Postgres and retain the first scan before adding
+more sources. Add fleet sync for endpoint inventory, compliance workflows for
+governance needs, and proxy or gateway where runtime enforcement is needed.
 
 ## Deployment Defaults
 
 | Decision | Default |
 |---|---|
-| **first pilot** | `deploy/docker-compose.pilot.yml` |
+| **first individual scan** | CLI and an exported report; no shared services |
+| **dashboard evaluation** | `deploy/docker-compose.pilot.yml`, loopback-only with SQLite |
+| **shared single host** | authenticated `deploy/docker-compose.platform.yml` with PostgreSQL |
 | **production installer** | `scripts/deploy/install.sh eks` + `deploy/terraform/platform-eks` |
-| **system of record** | Postgres |
+| **shared production system of record** | Postgres |
 | **analytics/lake** | optional ClickHouse, Snowflake, OTEL, or S3 exports |
 | **runtime enforcement** | selected proxy or gateway, not all traffic by default |
 
@@ -138,7 +189,7 @@ release testing, not that the files are broken.
 
 | Tier | Target | Files | What to expect |
 |---|---|---|---|
-| **Supported** | Docker Compose pilot | `deploy/docker-compose.pilot.yml` | Default first deployment. Exercised by `scripts/deploy/install.sh pilot`. |
+| **Supported** | Docker Compose pilot | `deploy/docker-compose.pilot.yml` | Local dashboard evaluation. Exercised by `scripts/deploy/install.sh pilot`; loopback-only, not a shared service. |
 | **Supported** | Docker Compose platform (plus `hosted-poc` / `product` overlays) | `deploy/docker-compose.platform.yml` | Production-shaped single host. Overlays are layered on the platform file only. |
 | **Supported** | Helm chart | `deploy/helm/agent-bom/` | The control-plane and runtime chart. Production values live in `examples/`. |
 | **Supported** | EKS Terraform | `deploy/terraform/platform-eks/` | The reference production install (`scripts/deploy/install.sh eks`). |
@@ -231,7 +282,7 @@ flowchart LR
 Truth block:
 - Operators enter through customer ingress and TLS; the API remains the auth,
   RBAC, tenant, and audit authority.
-- Postgres is the required system of record. ClickHouse, Snowflake, S3, SIEM,
+- Postgres is the system of record for this shared production topology. ClickHouse, Snowflake, S3, SIEM,
   and OTEL are optional export paths.
 - agent-bom integrates with customer-owned IdP, secrets, cloud APIs, MCP
   servers, and endpoints; it does not replace or host them.
@@ -386,7 +437,7 @@ operator polish, not the core trust boundary.
 
 The deployment model is intentionally split by trust boundary:
 
-1. **Discovery and scan paths** read from repos, images, manifests, cloud APIs, or local configs and write findings into the control plane.
+1. **Discovery and scan paths** read from repos, images, manifests, cloud APIs, or local configs and write reports. Control-plane jobs and explicit result pushes also retain evidence in the control plane.
 2. **Fleet ingest** persists workstation and collector inventory without requiring a shared privileged daemon across every endpoint.
 3. **Proxy/runtime** stays near the MCP servers so enforcement is low-latency and least-privilege.
 4. **Gateway** centralizes policy definition and auditability, and can also

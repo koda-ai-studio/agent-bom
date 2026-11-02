@@ -1,10 +1,15 @@
 # Deploy agent-bom anywhere
 
-agent-bom is one product with one control plane (API + UI) and a stateless
-scanner. You can run that control plane wherever you want it — on a laptop, on
-your own Kubernetes cluster, or as a hosted service where you operate the
-control plane and customers connect read-only. This guide covers all three
-tiers, each with the exact command.
+This guide installs the optional self-hosted control plane (API + UI) for
+retained scans, shared inventory and team review. For an individual project
+scan, start with the [First Run Guide](FIRST_RUN.md); no control plane,
+PostgreSQL, identity provider or compliance setup is required.
+
+Choose a host for the control plane: a loopback-only laptop pilot, an
+authenticated single host, or your own Kubernetes cluster. The
+[deployment chooser](../site-docs/deployment/overview.md#choose-your-workflow)
+separates those hosting choices from individual, team and organization
+workflows. This is customer-operated software, not a managed cloud offering.
 
 ## One script, pick your host
 
@@ -13,7 +18,9 @@ scripts/deploy/install.sh list          # all targets
 scripts/deploy/install.sh pilot         # laptop Docker pilot
 ```
 
-### Local pilot (fastest proof)
+<a id="local-pilot-fastest-proof"></a>
+
+### Local pilot (dashboard evaluation)
 
 Run the pilot from a release tag checkout and set `AGENT_BOM_IMAGE_TAG` to that
 tag, so the containers run the same release as the checked-out files:

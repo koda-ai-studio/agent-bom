@@ -9,6 +9,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Personal, Team and Organization dashboard views prioritize relevant navigation without changing permissions or evidence scope. Personal onboarding starts with a local report; shared-source setup remains optional, and tenant compliance is omitted from local report previews.
+
+### Changed
+- Deployment and first-run guides distinguish individual scans, shared team evidence and optional organization governance. Hosting profiles and observed evidence-source labels are documented separately; a local scan does not require a control plane or compliance setup.
+
 ## [0.113.0] - 2026-11-01
 
 ### Highlights
