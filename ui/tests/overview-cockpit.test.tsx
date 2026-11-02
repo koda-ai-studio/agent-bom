@@ -7,6 +7,7 @@ import { buildExecExposurePaths } from "@/lib/dashboard-data";
 import type { OverviewResponse, OverviewTopRisk } from "@/lib/api";
 
 beforeEach(() => {
+  window.localStorage.setItem("agent-bom.product-view", "organization");
   vi.stubGlobal("ResizeObserver", class {
     constructor(private callback: ResizeObserverCallback) {}
     observe() { this.callback([{ contentRect: { width: 1000 } } as ResizeObserverEntry], this as unknown as ResizeObserver); }
@@ -62,6 +63,12 @@ describe("OverviewCockpit", () => {
     exposurePaths: [],
     signals: { tools: 23, packages: 17, activeServices: 7, connected: true },
   };
+
+  it("does not present tenant compliance as a requirement for a local report", () => {
+    render(<OverviewCockpit {...baseProps} localReport />);
+    expect(screen.queryByRole("region", { name: "Compliance & frameworks" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Findings by security area" })).toBeVisible();
+  });
 
   it("starts with posture and orders risk and asset drilldowns consistently", () => {
     render(<OverviewCockpit {...baseProps} />);

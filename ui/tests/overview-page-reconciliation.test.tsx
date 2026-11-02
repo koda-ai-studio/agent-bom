@@ -115,6 +115,7 @@ function staleScan(jobId: string) {
 
 describe("Overview canonical finding counts", () => {
   beforeEach(() => {
+    window.localStorage.setItem("agent-bom.product-view", "organization");
     vi.clearAllMocks();
     deploymentState.pending = false;
     apiMock.getInventorySummary.mockResolvedValue(null);
@@ -137,6 +138,16 @@ describe("Overview canonical finding counts", () => {
   });
 
   afterEach(() => vi.useRealTimers());
+
+  it.each(["personal", "team"])("keeps compliance and executive reporting optional in %s", async (view) => {
+    window.localStorage.setItem("agent-bom.product-view", view);
+    render(<Dashboard />);
+    await waitFor(() => expect(apiMock.getOverview).toHaveBeenCalled());
+    expect(apiMock.getCompliance).not.toHaveBeenCalled();
+    expect(screen.queryByRole("region", { name: "Compliance & frameworks" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Executive brief/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Evidence scopes")).toHaveTextContent("Current tenant");
+  });
 
   it("keeps Get started report previews local and returns to source selection", async () => {
     render(<GetStartedPage />);

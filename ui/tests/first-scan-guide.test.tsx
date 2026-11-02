@@ -8,7 +8,18 @@ vi.mock("@/components/auth-provider", () => ({ useAuthState: () => auth }));
 const PUSH_URL = "http://localhost:3000/v1/results/push";
 
 describe("first scan guidance", () => {
-  beforeEach(() => { auth.loading = false; auth.hasCapability.mockReturnValue(true); auth.session = { auth_required: true }; });
+  beforeEach(() => { window.localStorage.setItem("agent-bom.product-view", "team"); auth.loading = false; auth.hasCapability.mockReturnValue(true); auth.session = { auth_required: true }; });
+
+  it("starts personal use with a local report and makes sharing optional", () => {
+    window.localStorage.setItem("agent-bom.product-view", "personal");
+    render(<FirstScanGuide onImport={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "Scan a project on your machine" })).toBeVisible();
+    const command = screen.getByLabelText("Local scan command");
+    expect(command).toHaveTextContent("--no-discover");
+    expect(command).not.toHaveTextContent("--push-url");
+    expect(command).not.toHaveTextContent("API_KEY");
+    expect(screen.getByText("Share evidence or connect a source").closest("details")).not.toHaveAttribute("open");
+  });
 
   it("offers distinct source paths and explains the retained evidence workflow", () => {
     render(<FirstScanGuide onImport={vi.fn()} />);
